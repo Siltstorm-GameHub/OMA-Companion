@@ -11,7 +11,9 @@ import { Check, Loader2 } from "lucide-react";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";
 import TacticCardTile from "./TacticCardTile";
+import StatBadges from "./StatBadges";
 import { DUEL_DECK_MIN_UNIT_CARDS, DUEL_DECK_TOTAL_SIZE } from "@/lib/battle-engine/duel-constants";
+import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
 
 export interface DuelDeckUnitCard {
   cardId: string;
@@ -109,8 +111,14 @@ export default function DuelDeckEditor({
             {unitCards.map(({ cardId, card, level }) => {
               const isSelected = selectedUnits.includes(cardId);
               const isDisabled = !isSelected && atCap;
+              const { attack, defense } = scaleStatsForLevel({
+                baseHp: card.baseHp,
+                baseAttack: card.baseAttack,
+                baseDefense: card.baseDefense,
+                level,
+              });
               return (
-                <div key={cardId} className="relative">
+                <div key={cardId} className="relative space-y-1">
                   <button
                     type="button"
                     onClick={() => toggleUnit(cardId)}
@@ -121,9 +129,15 @@ export default function DuelDeckEditor({
                       className="rounded-xl transition-shadow"
                       style={{ boxShadow: isSelected ? "0 0 0 3px #14b8a6, 0 0 20px rgba(20,184,166,0.5)" : undefined }}
                     >
-                      <BattleCardView card={{ ...card, level }} />
+                      {/* Passiv-Fähigkeiten feuern in OMA Duels nie — hidePassives
+                          blendet sie hier aus, damit der Deck-Editor nichts
+                          verspricht, was im Duell keine Wirkung hat. */}
+                      <BattleCardView card={{ ...card, level }} hidePassives />
                     </div>
                   </button>
+                  <div className="flex justify-center">
+                    <StatBadges attack={attack} defense={defense} />
+                  </div>
                   {isSelected && (
                     <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center pointer-events-none">
                       <Check className="w-3 h-3 text-black" />

@@ -32,6 +32,7 @@ const actionSchema = z.discriminatedUnion("type", [
     type: z.literal("playTactic"),
     handCardId: z.string().min(1),
     mode: z.enum(["instant", "setFaceDown"]),
+    targetSlotIndex: z.number().int().min(0).optional(),
   }),
   z.object({
     type: z.literal("declareAttack"),

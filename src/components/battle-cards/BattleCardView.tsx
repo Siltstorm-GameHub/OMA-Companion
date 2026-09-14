@@ -134,7 +134,20 @@ function SkillRow({
   );
 }
 
-export default function BattleCardView({ card, dimmed = false }: { card: BattleCardData; dimmed?: boolean }) {
+export default function BattleCardView({
+  card,
+  dimmed = false,
+  hidePassives = false,
+}: {
+  card: BattleCardData;
+  dimmed?: boolean;
+  /** OMA Duels: Passiv-Fähigkeiten feuern dort nie (keine Initiative-Runden-
+   *  Trigger wie battleStart/turnStart/roundEnd), ihre Anzeige wäre also
+   *  irreführend — blendet sie auf Vorder- UND Rückseite aus, ohne die
+   *  gemeinsame Komponente für den alten PVE-Modus (wo Passive real wirken)
+   *  anzufassen. */
+  hidePassives?: boolean;
+}) {
   const [flipped, setFlipped] = useState(false);
   // Fällt auf das Klassen-Icon zurück, falls das Artwork nicht lädt (Netzwerk-
   // Hänger/Timeout), statt die Karte dauerhaft leer zu lassen.
@@ -264,14 +277,16 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             <StatTile label="SPD" value={card.speed} />
           </div>
 
-          <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06] shrink-0">
-            <span className="flex items-center gap-1 text-[10px] text-emerald-400" title={card.passivePositive.name}>
-              <MobaIcon name="like" className="w-3 h-3" /> {card.passivePositive.name}
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-rose-400" title={card.passiveNegative.name}>
-              <ThumbsDown className="w-3 h-3" /> {card.passiveNegative.name}
-            </span>
-          </div>
+          {!hidePassives && (
+            <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06] shrink-0">
+              <span className="flex items-center gap-1 text-[10px] text-emerald-400" title={card.passivePositive.name}>
+                <MobaIcon name="like" className="w-3 h-3" /> {card.passivePositive.name}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-rose-400" title={card.passiveNegative.name}>
+                <ThumbsDown className="w-3 h-3" /> {card.passiveNegative.name}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ── Rückseite ── */}
@@ -300,8 +315,12 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2.5 pr-1 -mr-1"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <SkillRow icon={MOBA_ICON.like} iconColor="#34d399" skill={card.passivePositive} />
-            <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
+            {!hidePassives && (
+              <>
+                <SkillRow icon={MOBA_ICON.like} iconColor="#34d399" skill={card.passivePositive} />
+                <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
+              </>
+            )}
             <SkillRow icon={MOBA_ICON.attack} iconColor="#60a5fa" skill={card.activeSkill} />
             <SkillRow icon={Flame} iconColor="#fbbf24" skill={card.ultimateSkill} />
           </div>
