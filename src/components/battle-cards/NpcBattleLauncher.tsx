@@ -26,10 +26,10 @@ import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";
 import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 
-const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; color: string; colorDark: string }> = {
-  EASY: { label: "Einfach", color: "#34d399", colorDark: "#065f46" },
-  MEDIUM: { label: "Mittel", color: "#f59e0b", colorDark: "#92400e" },
-  HARD: { label: "Schwer", color: "#f87171", colorDark: "#991b1b" },
+const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; btn: string }> = {
+  EASY: { label: "Einfach", btn: "btn6" },
+  MEDIUM: { label: "Mittel", btn: "btn7" },
+  HARD: { label: "Schwer", btn: "btn9" },
 };
 const DIFFICULTY_ORDER: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
@@ -87,19 +87,21 @@ export default function NpcBattleLauncher() {
               whileTap={{ scale: 0.94, y: 1 }}
               onClick={() => start(difficulty)}
               disabled={loading !== null}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-black transition-opacity disabled:opacity-50"
-              style={{
-                background: `linear-gradient(180deg, ${config.color}ee 0%, ${config.color} 55%, ${config.colorDark} 100%)`,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.15), 0 2px 0 ${config.colorDark}`,
-              }}
+              className="moba-img-button moba-img-button--npc disabled:opacity-50"
             >
-              {loading === difficulty ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <span className="text-xs font-black uppercase">{config.label}</span>
-              )}
-              <span className="flex items-center gap-0.5 text-[10px] font-bold bg-black/20 px-1.5 py-0.5 rounded-full">
-                <CoinIcon size={10} /> {NPC_BATTLE_WIN_REWARD[difficulty]}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/battle-cards/moba/buttons/${config.btn}_normal.png`} alt="" aria-hidden />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/battle-cards/moba/buttons/${config.btn}_hovered.png`} alt="" aria-hidden className="moba-img-button-hover" />
+              <span className="moba-button-label">
+                {loading === difficulty ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <span className="text-xs font-black uppercase">{config.label}</span>
+                )}
+                <span className="flex items-center gap-0.5 text-[10px] font-bold bg-black/20 px-1.5 py-0.5 rounded-full normal-case">
+                  <CoinIcon size={10} /> {NPC_BATTLE_WIN_REWARD[difficulty]}
+                </span>
               </span>
             </motion.button>
           );

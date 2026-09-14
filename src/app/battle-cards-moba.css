@@ -362,6 +362,18 @@
   letter-spacing: 0.04em;
 }
 
+/* ── Kompakter Bild-Button (btn6/7/9) — NPC-Schwierigkeitsstufen. Flacheres
+   Seitenverhältnis als die großen Duels/Gems-CTAs, Label gestapelt statt
+   nebeneinander (Name + Belohnungs-Chip passen sonst nicht nebeneinander). ── */
+.moba-img-button--npc {
+  aspect-ratio: 218 / 77;
+}
+.moba-img-button--npc .moba-button-label {
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 2px;
+}
+
 /* ── Modus-Kopfzeile (nach Wahl von OMA Duels/OMA Gems) — Zurück-Button +
    Titel, nachgebaut aus der Zurück-Leiste oben links in den Kit-Mockups
    (Gold-/Orange-Gradient-Button mit Chevron statt schlichtem Textbutton). ── */
