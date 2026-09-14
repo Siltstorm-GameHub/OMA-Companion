@@ -320,7 +320,6 @@ function UnitCard({
   cardRef?: (el: HTMLButtonElement | null) => void;
 }) {
   const config = getClassConfig(unit.class);
-  const Icon = config.icon;
   const hpPct = unit.maxHp > 0 ? Math.max(0, unit.currentHp / unit.maxHp) : 0;
   const borderColor = LEVEL_BORDER[unit.level] ?? LEVEL_BORDER[1];
   const canPickTarget = !!glow && !!onClick && unit.isAlive;
@@ -498,7 +497,8 @@ function UnitCard({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <Icon className="w-5 h-5 sm:w-7 sm:h-7 relative" style={{ color: config.color, opacity: 0.55 }} />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={config.icon} alt="" aria-hidden className="w-5 h-5 sm:w-7 sm:h-7 relative object-contain" style={{ opacity: 0.55 }} />
         )}
         <div
           className={`absolute inset-0 rounded-md pointer-events-none ${canFireUltimate && !glow ? "animate-pulse" : ""}`}
@@ -1298,7 +1298,6 @@ function LiveBattleBody({
               const isMine = myTeam !== null && u.teamId === myTeam;
               const ringColor = isMine ? "#3b82f6" : "#ef4444";
               const config = getClassConfig(u.class);
-              const Icon = config.icon;
               return (
                 <div key={`${id}-${i}`} className="relative shrink-0" style={{ opacity: 1 - i * 0.08 }}>
                   <div
@@ -1311,7 +1310,8 @@ function LiveBattleBody({
                       <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                        <Icon className="w-6 h-6" style={{ color: config.color }} />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={config.icon} alt="" aria-hidden className="w-6 h-6 object-contain" />
                       </div>
                     )}
                   </div>

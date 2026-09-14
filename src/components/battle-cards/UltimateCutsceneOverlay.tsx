@@ -33,7 +33,6 @@ export default function UltimateCutsceneOverlay({
   fixed?: boolean;
 }) {
   const config = getClassConfig(actorClass);
-  const Icon = config.icon;
 
   return (
     <motion.div
@@ -160,7 +159,8 @@ export default function UltimateCutsceneOverlay({
             transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
           />
         )}
-        <Icon className="w-10 h-10 relative" style={{ color: config.color }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={config.icon} alt="" aria-hidden className="w-10 h-10 relative object-contain" />
       </motion.div>
       <p className="text-sm text-gray-400">{actorName}</p>
       <p className="text-xl font-black text-white text-center px-4">{skillName}</p>

@@ -8,10 +8,10 @@
 // Duplikat-Zähler sitzen direkt auf der Kachel. Antippen öffnet die volle
 // Detailansicht (BattleCardView + Upgrade) in einem Modal.
 
-import { Lock, ArrowUp, Zap } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER, MOBA_CARD_FRAME_IMAGE, type BattleCardData } from "./BattleCardView";
 import { tableValueForLevel, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 import CoinIcon from "@/components/CoinIcon";
+import MobaIcon from "./MobaIcon";
 
 /** Clash-Royale-artiges Upgrade-Badge — ragt über den unteren Rand des
  *  Kartenbilds statt als separate Textzeile unter der Kachel zu stehen (siehe
@@ -62,7 +62,7 @@ function CardUpgradeBadge({
           boxShadow: "0 0 10px rgba(16,185,129,0.7), inset 0 1px 0 rgba(255,255,255,0.5)",
         }}
       >
-        <ArrowUp className="w-3 h-3 shrink-0" strokeWidth={3} />
+        <MobaIcon name="chevronUp" className="w-3 h-3 shrink-0" />
         {cost}
         <CoinIcon size={9} />
       </span>
@@ -84,7 +84,7 @@ function CardUpgradeBadge({
         className="absolute inset-y-0 left-0 transition-all"
         style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#f59e0b" : "#3b82f6" }}
       />
-      <Zap className="w-2.5 h-2.5 shrink-0 relative" style={{ color: hasEnoughDuplicates ? "#fef3c7" : "#bfdbfe" }} />
+      <MobaIcon name="attack" className="w-2.5 h-2.5 shrink-0 relative" />
       <span className="relative inline-flex items-center gap-0.5">
         {hasEnoughDuplicates ? (
           <>
@@ -125,7 +125,6 @@ export default function CardTile({
   onClick: () => void;
 }) {
   const classConfig = getClassConfig(card.class);
-  const ClassIcon = classConfig.icon;
   const borderColor = locked ? "rgba(255,255,255,0.1)" : LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
 
   return (
@@ -160,9 +159,9 @@ export default function CardTile({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
           ) : locked ? (
-            <Lock className="w-6 h-6 text-gray-600" />
+            <MobaIcon name="lock" className="w-6 h-6 opacity-50" />
           ) : (
-            <ClassIcon className="w-8 h-8" style={{ color: classConfig.color, opacity: 0.55 }} />
+            <img src={classConfig.icon} alt="" aria-hidden className="w-8 h-8 object-contain" style={{ opacity: 0.65 }} />
           )}
         </div>
 

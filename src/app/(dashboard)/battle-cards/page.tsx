@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { IdCard, Trophy } from "lucide-react";
+import MobaIcon from "@/components/battle-cards/MobaIcon";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -198,7 +198,7 @@ export default async function BattleCardsPage() {
             href="/battle-cards/my-card"
             className="moba-pill normal-case font-semibold px-3 py-2 hover:bg-white/[0.06] transition-colors shrink-0"
           >
-            <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
+            <MobaIcon name="profile" className="w-3.5 h-3.5" /> Meine Community-Karte
           </Link>
         )}
       </div>
@@ -244,7 +244,7 @@ export default async function BattleCardsPage() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-[color:var(--moba-accent)]/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
-              <Trophy className="w-4 h-4 text-[color:var(--moba-accent)]" />
+              <MobaIcon name="trophy" className="w-4 h-4" />
             </div>
             <div>
               <p className="text-sm font-semibold text-[color:var(--moba-ink)]">Rangliste</p>

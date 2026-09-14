@@ -11,7 +11,7 @@
 // gewählten Modus (siehe getCombinedElo/getBattleRank).
 
 import { useState } from "react";
-import { Swords, ChevronUp, Users, Bot, Gem } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import { motion, AnimatePresence } from "motion/react";
 import MatchmakingWidget from "./MatchmakingWidget";
 import ChallengeUserPicker from "./ChallengeUserPicker";
@@ -69,15 +69,15 @@ export default function BattleLauncher({
             whileTap={{ scale: 0.96, y: 2 }}
             animate={{
               boxShadow: [
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7f1130, 0 14px 28px rgba(225,29,72,0.45)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7f1130, 0 14px 40px rgba(225,29,72,0.7)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7f1130, 0 14px 28px rgba(225,29,72,0.45)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 28px rgba(232,150,28,0.45)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 40px rgba(232,150,28,0.75)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 28px rgba(232,150,28,0.45)",
               ],
             }}
             transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }}
             className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)" }} />
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
@@ -88,7 +88,7 @@ export default function BattleLauncher({
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
             />
             <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
-              <Swords className="w-5 h-5" /> OMA Duels
+              <MobaIcon name="crossedSwords" className="w-5 h-5" /> OMA Duels
             </span>
           </motion.button>
 
@@ -98,15 +98,15 @@ export default function BattleLauncher({
             whileTap={{ scale: 0.96, y: 2 }}
             animate={{
               boxShadow: [
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #3b0764, 0 14px 28px rgba(124,58,237,0.45)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #3b0764, 0 14px 40px rgba(124,58,237,0.7)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #3b0764, 0 14px 28px rgba(124,58,237,0.45)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 28px rgba(14,165,233,0.45)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 40px rgba(14,165,233,0.75)",
+                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 28px rgba(14,165,233,0.45)",
               ],
             }}
             transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.3 } }}
             className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)" }} />
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
@@ -117,7 +117,7 @@ export default function BattleLauncher({
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut", delay: 0.9 }}
             />
             <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
-              <Gem className="w-5 h-5" /> OMA Gems
+              <MobaIcon name="gem" className="w-5 h-5" /> OMA Gems
             </span>
           </motion.button>
         </div>
@@ -146,16 +146,16 @@ export default function BattleLauncher({
           className="moba-button-fill"
           style={{
             background: isDuels
-              ? "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)"
-              : "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
+              ? "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)"
+              : "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)",
           }}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
         <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
-          {isDuels ? <Swords className="w-4 h-4" /> : <Gem className="w-4 h-4" />}
+          {isDuels ? <MobaIcon name="crossedSwords" className="w-4 h-4" /> : <MobaIcon name="gem" className="w-4 h-4" />}
           {isDuels ? "OMA Duels" : "OMA Gems"}
-          <ChevronUp className="w-4 h-4" />
+          <MobaIcon name="chevronUp" className="w-4 h-4" />
         </span>
       </motion.button>
 
@@ -169,7 +169,7 @@ export default function BattleLauncher({
               className="space-y-2"
             >
               <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <Users className="w-3.5 h-3.5" /> Gegen Spieler
+                <MobaIcon name="friends" className="w-3.5 h-3.5" /> Gegen Spieler
               </p>
               <div className="space-y-3">
                 <MatchmakingWidget />
@@ -184,7 +184,7 @@ export default function BattleLauncher({
               className="space-y-2"
             >
               <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <Bot className="w-3.5 h-3.5" /> Gegen NPC
+                <MobaIcon name="boss" className="w-3.5 h-3.5" /> Gegen NPC
               </p>
               <div className="space-y-3">
                 <NpcBattleLauncher />
@@ -208,7 +208,7 @@ export default function BattleLauncher({
               className="space-y-2"
             >
               <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <Users className="w-3.5 h-3.5" /> Gegen Spieler
+                <MobaIcon name="friends" className="w-3.5 h-3.5" /> Gegen Spieler
               </p>
               <div className="space-y-3">
                 <GemsChallengeUserPicker />
@@ -222,7 +222,7 @@ export default function BattleLauncher({
               className="space-y-2"
             >
               <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <Bot className="w-3.5 h-3.5" /> Gegen NPC
+                <MobaIcon name="boss" className="w-3.5 h-3.5" /> Gegen NPC
               </p>
               <div className="space-y-3">
                 <NpcPuzzleBattleLauncher />

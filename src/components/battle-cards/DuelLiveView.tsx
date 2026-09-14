@@ -20,7 +20,9 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Loader2, Shield, Swords, Volume2, VolumeX, Wind, X } from "lucide-react";
+import { Loader2, Wind, X } from "lucide-react";
+import MobaIcon from "./MobaIcon";
+import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
 import TacticCardTile from "./TacticCardTile";
@@ -290,7 +292,7 @@ function FloatingLayer({ effects }: { effects: FloatingEffect[] }) {
  *  wie in echtem Yu-Gi-Oh). Schwert = Angriff, Schild = Verteidigung. */
 function StanceBadge({ stance }: { stance: DuelStance }) {
   const isDefense = stance === "defense";
-  const Icon = isDefense ? Shield : Swords;
+  const iconSrc = isDefense ? MOBA_ICON.shield : MOBA_ICON.sword;
   return (
     <span
       className={`absolute top-1 right-1 z-10 w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm ${
@@ -298,7 +300,7 @@ function StanceBadge({ stance }: { stance: DuelStance }) {
       }`}
       title={STANCE_LABEL[stance]}
     >
-      <Icon className="w-3 h-3" />
+      <img src={iconSrc} alt="" aria-hidden className="w-3 h-3 object-contain" />
     </span>
   );
 }
@@ -338,7 +340,6 @@ function UnitSlot({
   }
 
   const config = getClassConfig(unit.class);
-  const Icon = config.icon;
   const ultimateReady = unit.isAlive && unit.rage >= unit.ultimateCost;
 
   return (
@@ -347,7 +348,7 @@ function UnitSlot({
       disabled={!onClick}
       onClick={onClick}
       className={`relative w-full h-28 rounded-lg border overflow-hidden text-left transition-transform ${
-        selected ? "border-teal-400" : ultimateReady ? "border-amber-400 duel-ultimate-glow" : "border-slate-700"
+        selected ? "border-teal-400" : ultimateReady ? "border-amber-400 duel-ultimate-glow" : "border-[color:var(--moba-accent-line)]"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
         backgroundImage: unit.imageUrl
@@ -355,19 +356,19 @@ function UnitSlot({
           : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundColor: unit.imageUrl ? undefined : "#1e293b",
+        backgroundColor: unit.imageUrl ? undefined : "#0a0e2e",
       }}
     >
       <FloatingLayer effects={floating} />
       {unit.isAlive && <StanceBadge stance={unit.stance} />}
       {!unit.imageUrl && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <Icon className="w-8 h-8 opacity-30" style={{ color: config.color }} />
+          <img src={config.icon} alt="" aria-hidden className="w-8 h-8 opacity-40 object-contain" />
         </div>
       )}
       <div className="absolute inset-x-0 bottom-0 p-1.5 space-y-1">
         <div className="flex items-center gap-1 min-w-0">
-          <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+          <img src={config.icon} alt="" aria-hidden className="w-3 h-3 shrink-0 object-contain" />
           <span className="text-[11px] font-semibold text-white truncate drop-shadow">{unit.name}</span>
           <span className="text-[9px] text-slate-300 shrink-0">Lv{unit.level}</span>
         </div>
@@ -744,11 +745,11 @@ export default function DuelLiveView({
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         <div className="flex items-center justify-between">
           <button onClick={handleExit} className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
-            <ChevronLeft className="w-4 h-4" /> Verlassen
+            <MobaIcon name="chevronLeft" className="w-4 h-4" /> Verlassen
           </button>
           <div className="flex items-center gap-3">
             <button onClick={toggleSoundMuted} className="text-slate-500 hover:text-slate-300" aria-label="Sound umschalten">
-              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              <MobaIcon name={soundMuted ? "soundOff" : "soundOn"} className="w-4 h-4" />
             </button>
             <span className="text-sm text-slate-300">Zug {snapshot.round}</span>
             {!finished && <RadialTimer secondsLeft={secondsLeft} />}
@@ -1103,7 +1104,7 @@ export default function DuelLiveView({
               disabled={busy}
               className="flex-1 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 flex items-center justify-center gap-2"
             >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MobaIcon name="crossedSwords" className="w-4 h-4" />}
               Zug beenden
             </button>
           </div>

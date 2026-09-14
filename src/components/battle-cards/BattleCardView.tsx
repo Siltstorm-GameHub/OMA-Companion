@@ -11,9 +11,11 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { ThumbsUp, ThumbsDown, Zap, Flame, RotateCcw } from "lucide-react";
+import { ThumbsDown, Flame, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
+import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
+import MobaIcon from "./MobaIcon";
 
 export interface BattleCardSkill {
   name: string;
@@ -100,21 +102,24 @@ function StatTile({ label, value }: { label: string; value: number }) {
 }
 
 function SkillRow({
-  icon: Icon,
+  icon,
   iconColor,
   skill,
 }: {
-  icon: LucideIcon;
+  /** MOBA-Icon-Pfad (string) für Skills mit Kit-Entsprechung, sonst als
+   *  Ausnahme ein Lucide-Icon (z.B. Flame/ThumbsDown — kein Kit-Äquivalent). */
+  icon: string | LucideIcon;
   iconColor: string;
   skill: BattleCardSkill;
 }) {
+  const Icon = typeof icon === "string" ? null : icon;
   return (
     <div className="flex gap-2">
       <div
         className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center mt-0.5"
         style={{ background: `${iconColor}22`, color: iconColor }}
       >
-        <Icon className="w-3.5 h-3.5" />
+        {Icon ? <Icon className="w-3.5 h-3.5" /> : <img src={icon as string} alt="" aria-hidden className="w-3.5 h-3.5 object-contain" />}
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -136,7 +141,6 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
   const [imgFailed, setImgFailed] = useState(false);
   const level = card.level ?? 1;
   const classConfig = getClassConfig(card.class);
-  const ClassIcon = classConfig.icon;
   const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
   // Höchststufe (prismatisch) bekommt zusätzlich einen stärkeren Glow + wiederkehrenden
   // Lichtsweep, damit sie sich auch in der vollen Flip-Karte (nicht nur der
@@ -207,7 +211,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
                 onError={() => setImgFailed(true)}
               />
             ) : (
-              <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
+              <img src={classConfig.icon} alt="" aria-hidden className="w-12 h-12 object-contain" style={{ opacity: 0.6 }} />
             )}
             {/* Aktivitäts-Badge zieht in die Artwork-Box um — dort bereits ausreichend von
                 der Rahmen-Ornamentik entfernt, statt am äußeren Karten-Eck zu kollidieren. */}
@@ -235,7 +239,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
           </div>
 
           <div className="flex items-center justify-center gap-1.5 shrink-0">
-            <ClassIcon className="w-3 h-3 shrink-0" style={{ color: classConfig.color }} />
+            <img src={classConfig.icon} alt="" aria-hidden className="w-3 h-3 shrink-0 object-contain" />
             <span
               className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: `${classConfig.color}22`, color: classConfig.color }}
@@ -262,7 +266,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
 
           <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06] shrink-0">
             <span className="flex items-center gap-1 text-[10px] text-emerald-400" title={card.passivePositive.name}>
-              <ThumbsUp className="w-3 h-3" /> {card.passivePositive.name}
+              <MobaIcon name="like" className="w-3 h-3" /> {card.passivePositive.name}
             </span>
             <span className="flex items-center gap-1 text-[10px] text-rose-400" title={card.passiveNegative.name}>
               <ThumbsDown className="w-3 h-3" /> {card.passiveNegative.name}
@@ -296,9 +300,9 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2.5 pr-1 -mr-1"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <SkillRow icon={ThumbsUp} iconColor="#34d399" skill={card.passivePositive} />
+            <SkillRow icon={MOBA_ICON.like} iconColor="#34d399" skill={card.passivePositive} />
             <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
-            <SkillRow icon={Zap} iconColor="#60a5fa" skill={card.activeSkill} />
+            <SkillRow icon={MOBA_ICON.attack} iconColor="#60a5fa" skill={card.activeSkill} />
             <SkillRow icon={Flame} iconColor="#fbbf24" skill={card.ultimateSkill} />
           </div>
         </div>

@@ -14,18 +14,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Sparkles,
-  ArrowUp,
-  ArrowDown,
-  Zap,
-  ChevronsRight,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { Play, Pause, RotateCcw, Sparkles } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
@@ -290,7 +280,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             transition={{ duration: 0.5 }}
           />
           <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 0], y: -10 }} transition={{ duration: 0.5 }}>
-            <ArrowUp className="w-4 h-4" style={{ color: "#4ade80" }} />
+            <MobaIcon name="chevronUp" className="w-4 h-4" />
           </motion.div>
         </motion.div>
       );
@@ -308,7 +298,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             transition={{ duration: 0.5 }}
           />
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 0], y: 10 }} transition={{ duration: 0.5 }}>
-            <ArrowDown className="w-4 h-4" style={{ color: "#fb7185" }} />
+            <MobaIcon name="chevronDown" className="w-4 h-4" />
           </motion.div>
         </motion.div>
       );
@@ -320,7 +310,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             animate={{ opacity: [0, 1, 0], y: -12, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <Zap className="w-5 h-5" style={{ color: "#60a5fa" }} />
+            <MobaIcon name="attack" className="w-5 h-5" />
           </motion.div>
         </motion.div>
       );
@@ -457,7 +447,6 @@ function UnitTile({
   vfx: VfxEvent | null;
 }) {
   const config = CLASS_CONFIG[roster.class];
-  const Icon = config.icon;
   const hpPct = Math.max(0, runtime.currentHp / runtime.maxHp);
 
   const attacking = vfx?.kind === "cast";
@@ -506,7 +495,7 @@ function UnitTile({
             className="w-full h-full rounded-md flex items-center justify-center relative"
             style={{ background: `${config.color}22` }}
           >
-            <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.5 }} />
+            <img src={config.icon} alt="" aria-hidden className="w-6 h-6 object-contain" style={{ opacity: 0.6 }} />
           </div>
         )}
         <AnimatePresence>{vfx && <SkillEffectOverlay vfx={vfx} />}</AnimatePresence>
@@ -523,7 +512,7 @@ function UnitTile({
       </div>
 
       <div className="flex items-center justify-center gap-1 mb-0.5">
-        <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+        <img src={config.icon} alt="" aria-hidden className="w-3 h-3 shrink-0 object-contain" />
         <p className="text-[10px] font-semibold text-white text-center truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
           {roster.name}
         </p>
@@ -750,7 +739,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
               title="Zum Ergebnis springen"
             >
-              <ChevronsRight className="w-3.5 h-3.5" /> Überspringen
+              <MobaIcon name="chevronRight" className="w-3.5 h-3.5" /> Überspringen
             </motion.button>
           </>
         )}
@@ -762,7 +751,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
           title={soundOn ? "Ton aus" : "Ton an"}
           aria-label={soundOn ? "Ton aus" : "Ton an"}
         >
-          {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          <MobaIcon name={soundOn ? "soundOn" : "soundOff"} className="w-3.5 h-3.5" />
         </motion.button>
       </div>
 

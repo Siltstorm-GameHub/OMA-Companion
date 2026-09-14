@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Trophy, Info } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import BattleRankBadge from "@/components/battle-cards/BattleRankBadge";
 import { PLACEMENT_MATCHES } from "@/lib/battle-cards/elo";
@@ -40,7 +40,7 @@ function RankBadge({ place, isRanked }: { place: number; isRanked: boolean }) {
       style={{ background: style.gradient, boxShadow: `0 0 0 1px ${style.ring}88, 0 2px 4px rgba(0,0,0,0.4)` }}
       title={`Platz ${place}`}
     >
-      <Trophy className="w-3 h-3 text-black/70" strokeWidth={2.5} />
+      <MobaIcon name="trophy" className="w-3 h-3" />
     </div>
   );
 }
@@ -49,7 +49,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
   if (rows.length === 0) {
     return (
       <div className="moba-panel rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
-        <Trophy className="w-6 h-6 text-gray-600" />
+        <MobaIcon name="trophy" className="w-6 h-6 opacity-50" />
         <p className="text-sm text-gray-500">Noch keine ausgetragenen Kämpfe — sei der Erste!</p>
       </div>
     );
@@ -60,7 +60,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
-        <Info className="w-3 h-3 shrink-0" />
+        <MobaIcon name="info" className="w-3 h-3 shrink-0" />
         Sortiert nach Elo · Rang ab {PLACEMENT_MATCHES} Platzierungsspielen
       </p>
       {rows.map((row, i) => {

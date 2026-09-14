@@ -12,7 +12,8 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { X, Sparkles, ScissorsLineDashed, Shield, Zap } from "lucide-react";
+import { X, Sparkles, ScissorsLineDashed } from "lucide-react";
+import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
@@ -48,7 +49,7 @@ interface OpenPackResponse {
  *  als BattleCardView, das auf Helden-Stats (Klasse/HP/Angriff/...) zugeschnitten
  *  ist und für Taktik-Karten nicht passt. */
 function TacticCardReveal({ tacticCard }: { tacticCard: RevealedTacticCard }) {
-  const Icon = tacticCard.kind === "TRAP" ? Shield : Zap;
+  const iconSrc = tacticCard.kind === "TRAP" ? MOBA_ICON.shield : MOBA_ICON.attack;
   const accent = tacticCard.kind === "TRAP" ? "#f43f5e" : "#f59e0b";
   return (
     <div
@@ -58,7 +59,7 @@ function TacticCardReveal({ tacticCard }: { tacticCard: RevealedTacticCard }) {
         boxShadow: `0 0 0 1.5px ${accent}88, 0 8px 24px rgba(0,0,0,0.5)`,
       }}
     >
-      <Icon className="w-8 h-8 mx-auto" style={{ color: accent }} />
+      <img src={iconSrc} alt="" aria-hidden className="w-8 h-8 mx-auto object-contain" />
       <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>
         {tacticCard.kind === "TRAP" ? "Falle" : "Item"}
       </p>

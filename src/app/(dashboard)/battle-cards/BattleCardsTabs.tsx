@@ -2,9 +2,9 @@
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { TabPanel } from "@/components/admin/Tabs";
-import { Swords, LayoutGrid, Users, Map } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import MobaIcon from "@/components/battle-cards/MobaIcon";
+import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 
 type TabKey = "kampf" | "kampagne" | "karten" | "community";
 
@@ -18,11 +18,11 @@ function isTabKey(v: string | null): v is TabKey {
 // nur die Form + der navy/orange Rahmen drumherum ändern sich. Die
 // Farbcodierung pro Reiter bleibt erhalten (wichtig für Wiedererkennung:
 // Kampf=Rose, Kampagne=Grün, Karten=Violett, Community=Amber).
-const TABS: { key: TabKey; label: string; icon: LucideIcon; accent: string; glow: string }[] = [
-  { key: "kampf", label: "Kampf", icon: Swords, accent: "#fb7185", glow: "rgba(251,113,133,0.7)" },
-  { key: "kampagne", label: "Kampagne", icon: Map, accent: "#34d399", glow: "rgba(52,211,153,0.7)" },
-  { key: "karten", label: "Karten", icon: LayoutGrid, accent: "#a78bfa", glow: "rgba(167,139,250,0.7)" },
-  { key: "community", label: "Community", icon: Users, accent: "#fbbf24", glow: "rgba(251,191,36,0.7)" },
+const TABS: { key: TabKey; label: string; icon: MobaIconName; accent: string; glow: string }[] = [
+  { key: "kampf", label: "Kampf", icon: "crossedSwords", accent: "#fb7185", glow: "rgba(251,113,133,0.7)" },
+  { key: "kampagne", label: "Kampagne", icon: "map", accent: "#34d399", glow: "rgba(52,211,153,0.7)" },
+  { key: "karten", label: "Karten", icon: "champions", accent: "#a78bfa", glow: "rgba(167,139,250,0.7)" },
+  { key: "community", label: "Community", icon: "friends", accent: "#fbbf24", glow: "rgba(251,191,36,0.7)" },
 ];
 
 function BattleCardsTabsInner({
@@ -53,7 +53,6 @@ function BattleCardsTabsInner({
       <div className="moba-panel flex items-end justify-around gap-1 px-2 pt-8 pb-2">
         {TABS.map((tab) => {
           const isActive = tab.key === active;
-          const Icon = tab.icon;
           const showBadge = tab.key === "kampf" && kampfBadge > 0;
           return (
             <motion.button
@@ -78,7 +77,7 @@ function BattleCardsTabsInner({
                     animate={{ scale: 1, rotate: 0, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.05 }}
                   >
-                    <Icon className="w-6 h-6 text-white" strokeWidth={2.4} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.4))" }} />
+                    <MobaIcon name={tab.icon} className="w-6 h-6" />
                   </motion.div>
                   <AnimatePresence>
                     {showBadge && (
@@ -98,7 +97,7 @@ function BattleCardsTabsInner({
                 <div className="moba-diamond-tab">
                   <div className="moba-diamond-shape" />
                   <div className="moba-diamond-icon">
-                    <Icon className="w-4 h-4 text-[color:var(--moba-ink-dim)]" strokeWidth={2} />
+                    <MobaIcon name={tab.icon} className="w-4 h-4 opacity-55" />
                   </div>
                   {showBadge && (
                     <span className="absolute -top-0.5 right-0 z-10 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#04061a]">

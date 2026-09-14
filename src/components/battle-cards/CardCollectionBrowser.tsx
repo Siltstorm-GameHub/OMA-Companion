@@ -13,8 +13,9 @@
 // sich erst im Detail-Modal beim Antippen.
 
 import { useEffect, useState } from "react";
-import { Loader2, Shield, Swords, HeartPulse } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import MobaIcon from "./MobaIcon";
+import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 import CoinIcon from "@/components/CoinIcon";
 import CardTile from "./CardTile";
 import CardDetailModal, { type CardDetailSelection } from "./CardDetailModal";
@@ -27,11 +28,11 @@ const PAGE_SIZE = 12;
 
 type CardClassFilter = "ALL" | "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
-const FILTERS: { key: CardClassFilter; label: string; icon?: LucideIcon }[] = [
+const FILTERS: { key: CardClassFilter; label: string; icon?: MobaIconName }[] = [
   { key: "ALL", label: "Alle" },
-  { key: "TANK", label: "Tank", icon: Shield },
-  { key: "DAMAGE_DEALER", label: "Damage Dealer", icon: Swords },
-  { key: "SUPPORT", label: "Support", icon: HeartPulse },
+  { key: "TANK", label: "Tank", icon: "shield" },
+  { key: "DAMAGE_DEALER", label: "Damage Dealer", icon: "sword" },
+  { key: "SUPPORT", label: "Support", icon: "magic" },
 ];
 
 export interface OwnedCardEntry {
@@ -189,7 +190,7 @@ export default function CardCollectionBrowser({
       {/* Klassen-Filter + Münzstand */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          {FILTERS.map(({ key, label, icon: Icon }) => (
+          {FILTERS.map(({ key, label, icon }) => (
             <button
               key={key}
               type="button"
@@ -199,7 +200,7 @@ export default function CardCollectionBrowser({
                 filter === key ? "moba-tab-active" : "hover:bg-white/[0.06]"
               }`}
             >
-              {Icon && <Icon className="w-3.5 h-3.5" />}
+              {icon && <MobaIcon name={icon} className="w-3.5 h-3.5" />}
               {label}
             </button>
           ))}

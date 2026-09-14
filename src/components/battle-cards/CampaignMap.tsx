@@ -13,7 +13,8 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Lock, Star, Swords, Crown, Loader2 } from "lucide-react";
+import { Star, Crown, Loader2 } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import CoinIcon from "@/components/CoinIcon";
@@ -112,7 +113,7 @@ function LevelNode({
           }}
         >
           {locked ? (
-            <Lock className="w-6 h-6 text-gray-600" />
+            <MobaIcon name="lock" className="w-6 h-6 opacity-50" />
           ) : level.isBoss ? (
             <Crown className="w-7 h-7 text-white" strokeWidth={2.2} />
           ) : (
@@ -220,7 +221,7 @@ export default function CampaignMap() {
         <p className="relative text-[9px] font-bold text-violet-300 uppercase tracking-widest">OMA Gems</p>
         <div className="relative flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <Swords className="w-4 h-4 text-rose-400" />
+            <MobaIcon name="crossedSwords" className="w-4 h-4" />
             <h2 className="font-battle text-sm text-white uppercase tracking-wide">{chapterName}</h2>
           </div>
           <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">

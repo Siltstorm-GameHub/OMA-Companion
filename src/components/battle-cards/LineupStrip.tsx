@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
+import MobaIcon from "./MobaIcon";
 
 const LINEUP_SIZE = 5;
 
@@ -26,7 +26,6 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
             );
           }
           const classConfig = getClassConfig(entry.card.class);
-          const ClassIcon = classConfig.icon;
           const borderColor = LEVEL_BORDER[entry.level] ?? LEVEL_BORDER[1];
           return (
             <div
@@ -42,16 +41,16 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={entry.card.imageUrl} alt={entry.card.name} className="w-full h-full object-cover" />
                 ) : (
-                  <ClassIcon className="w-4 h-4" style={{ color: classConfig.color, opacity: 0.6 }} />
+                  <img src={classConfig.icon} alt="" aria-hidden className="w-4 h-4 object-contain" style={{ opacity: 0.65 }} />
                 )}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 shrink-0">
+      <div className="flex items-center gap-1 text-xs font-semibold text-[color:var(--moba-ink-dim)] shrink-0">
         {cards.length}/{LINEUP_SIZE}
-        <ChevronRight className="w-3.5 h-3.5" />
+        <MobaIcon name="chevronRight" className="w-3.5 h-3.5" />
       </div>
     </Link>
   );
