@@ -104,6 +104,9 @@ interface DuelLogEntry {
   defenderUnitId?: string;
   attackerTeam?: TeamId;
   defendingTeam?: TeamId;
+  winnerUnitId?: string;
+  loserUnitId?: string;
+  damagedTeam?: TeamId;
   remainingLp?: number;
   unitId?: string;
   winner?: TeamId | "DRAW";
@@ -187,15 +190,16 @@ const ATTACK_LABEL: Record<DuelAttackType, string> = {
 
 /** Tooltip fürs Angriffsfeld — der Normalangriff hat kein Karten-individuelles
  *  Verhalten mehr (kein Skill-Knopf), verdient aber trotzdem eine kurze
- *  Erklärung der Verteidigungsstellungs-Regel, die sonst nirgends im UI
- *  auftaucht. */
+ *  Erklärung der echten Yu-Gi-Oh-Kampfregeln, die sonst nirgends im UI
+ *  auftauchen: sowohl gegen Angriffs- als auch gegen Verteidigungsstellung
+ *  entscheidet ein direkter ATK/DEF-Vergleich statt persistenter HP. */
 const NORMAL_ATTACK_DESCRIPTION =
-  "Schaden über mehrere Angriffe hinweg. Gegen eine Einheit in Verteidigung entscheidet ATK vs. DEF: höher zerstört sie ohne Schaden für dich, niedriger prallt ab und du nimmst die Differenz als Rückschlag auf deine LP.";
+  "Gegen Angriffsstellung: höherer ATK zerstört die andere Einheit, die unterlegene Seite nimmt die Differenz als LP-Schaden (bei Gleichstand werden beide zerstört). Gegen Verteidigung: ATK > DEF zerstört sie ohne Schaden für dich, ATK < DEF prallt ab und DU nimmst die Differenz als Rückschlag.";
 
 const STANCE_LABEL: Record<DuelStance, string> = { attack: "Angriff", defense: "Verteidigung" };
 const STANCE_HINT: Record<DuelStance, string> = {
-  attack: "Kann angreifen, nimmt aber vollen Schaden.",
-  defense: "Kann selbst nicht angreifen — blockt Angriffe je nach ATK/DEF ganz oder wirft Schaden zurück.",
+  attack: "Kann angreifen, wird aber bei einem Angriff nach ATK-Vergleich zerstört (nicht nur beschädigt).",
+  defense: "Kann selbst nicht angreifen — übersteht Angriffe je nach ATK/DEF unbeschadet oder wird komplett zerstört.",
 };
 
 /** Das Ultimate wirkt in OMA Duels über eine feste, klassenabhängige Formel
@@ -593,6 +597,45 @@ export default function DuelLiveView({
             });
           }
           playShieldSound();
+          break;
+        }
+        case "attackClash": {
+          const loser = entry.loserUnitId ? locateUnit(entry.loserUnitId, candidates) : null;
+          if (loser) {
+            spawned.push({
+              id: `${spawned.length}-${entry.loserUnitId}-clash`,
+              side: loser.side,
+              anchor: { kind: "slot", slotIndex: loser.unit.slotIndex },
+              text: "Zerstört!",
+              tone: "crit",
+            });
+            pulse(`${loser.side}-${loser.unit.slotIndex}`, setFlashKeys, 450);
+          }
+          const damagedSide: "self" | "opponent" = entry.damagedTeam === newSnapshot.viewerTeam ? "self" : "opponent";
+          spawned.push({
+            id: `${spawned.length}-clash-lp-${entry.round}`,
+            side: damagedSide,
+            anchor: { kind: "lp" },
+            text: `-${entry.amount}`,
+            tone: "damage",
+          });
+          playDamageSoundFor(loser?.unit.class, true);
+          break;
+        }
+        case "attackClashDraw": {
+          for (const id of [entry.attackerUnitId, entry.defenderUnitId]) {
+            const unit = id ? locateUnit(id, candidates) : null;
+            if (!unit) continue;
+            spawned.push({
+              id: `${spawned.length}-${id}-clash-draw`,
+              side: unit.side,
+              anchor: { kind: "slot", slotIndex: unit.unit.slotIndex },
+              text: "Zerstört!",
+              tone: "crit",
+            });
+            pulse(`${unit.side}-${unit.unit.slotIndex}`, setFlashKeys, 450);
+          }
+          playDamageSoundFor(undefined, true);
           break;
         }
         case "lpChange": {
@@ -1110,6 +1153,10 @@ function describeLogEntry(entry: DuelLogEntry): string {
       return `Angriff zu schwach — ${entry.amount} Rückprall-Schaden für den Angreifer.`;
     case "defenseBounce":
       return "Angriff prallt wirkungslos ab (ATK = DEF).";
+    case "attackClash":
+      return `Kampf entschieden — unterlegene Einheit zerstört, ${entry.amount} Rückschlag-Schaden.`;
+    case "attackClashDraw":
+      return "Beide Einheiten haben gleich starken Angriff — beide zerstört.";
     case "lpChange":
       return `Lebenspunkte-Effekt: ${entry.amount && entry.amount >= 0 ? "+" : ""}${entry.amount}`;
     case "tacticPlayed":
