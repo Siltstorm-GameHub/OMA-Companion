@@ -153,6 +153,16 @@ interface FloatingEffect {
 const START_LP = 4000;
 const TURN_SECONDS = Math.round(DUEL_TURN_TIMEOUT_MS / 1000);
 
+// ---------- Hand-Fächer (Hover/Tap zum Fokussieren, Ziehen zum Spielen) ----------
+const HAND_ANGLE_STEP = 7; // Grad pro Karten-Abstand von der Mitte
+const HAND_MAX_ANGLE = 18; // Deckelt die Drehung bei großen Händen
+const HAND_CARD_WIDTH = 92; // px
+const HAND_OVERLAP = 40; // px negative Marge zwischen Karten (Fächer-Überlappung)
+/** Wie weit sich Karten am Rand des Fächers nach unten wegdrehen (px pro Abstands-Einheit). */
+const HAND_ARC_DROP = 5;
+/** Mindest-Bewegung in px, ab der ein Pointer-Down als Ziehen statt als Tippen gilt. */
+const DRAG_THRESHOLD = 8;
+
 const PHASE_LABEL: Record<DuelPhase, string> = {
   main1: "Hauptphase 1",
   battle: "Kampfphase",
@@ -313,6 +323,7 @@ function UnitSlot({
   floating,
   selectable,
   selected,
+  dragOver,
   flashing,
   lunging,
   onClick,
@@ -321,6 +332,10 @@ function UnitSlot({
   floating: FloatingEffect[];
   selectable?: boolean;
   selected?: boolean;
+  /** Beim Ziehen einer Karte gerade unter dem Zeigefinger/Mauszeiger — kräftigere
+   *  Hervorhebung als das normale `selectable`, damit die Drop-Zone während
+   *  des Ziehens eindeutig erkennbar ist. */
+  dragOver?: boolean;
   flashing?: boolean;
   lunging?: boolean;
   onClick?: () => void;
@@ -332,9 +347,11 @@ function UnitSlot({
         disabled={!selectable}
         onClick={onClick}
         className={`relative w-full h-28 rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
-          selectable
-            ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
-            : "border-[color:var(--moba-accent-line)] bg-black/20 text-[color:var(--moba-ink-dim)]"
+          dragOver
+            ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
+            : selectable
+              ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
+              : "border-[color:var(--moba-accent-line)] bg-black/20 text-[color:var(--moba-ink-dim)]"
         }`}
       >
         {selectable ? "Hierhin beschwören" : "Leer"}
@@ -448,6 +465,27 @@ export default function DuelLiveView({
 
   const prevSnapshotsRef = useRef<LiveDuelSnapshot[]>([]);
   const lastLogLengthRef = useRef<number>(0);
+
+  // Gefächerte Hand: Hover (Maus) bzw. Tippen (Finger) hebt eine Karte fokussiert
+  // hervor; Ziehen (Maus oder Finger, per Pointer-Events — funktioniert für
+  // beides gleich) legt Helden-/Taktikkarten direkt aufs Spielfeld.
+  const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
+  const [dragCard, setDragCard] = useState<{ card: LiveDuelHandCard; x: number; y: number } | null>(null);
+  const [dragHoverSlot, setDragHoverSlot] = useState<number | null>(null);
+  const [dragHoverBoard, setDragHoverBoard] = useState(false);
+  const dragStartRef = useRef<{ pointerId: number; startX: number; startY: number; card: LiveDuelHandCard; moved: boolean } | null>(
+    null
+  );
+  const selfSlotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  // Hält die jeweils aktuellen Handler-Closures für den unten EINMALIG (leeres
+  // Deps-Array) registrierten Pointer-Listener — der Listener selbst darf sich
+  // während eines laufenden Zugs nicht neu registrieren (würde Events mitten im
+  // Ziehen verlieren), braucht aber trotzdem immer den aktuellen `snapshot`.
+  const latestRef = useRef<{
+    handleDrop: (card: LiveDuelHandCard, x: number, y: number) => void;
+    selectHandCard: (card: LiveDuelHandCard) => void;
+  }>({ handleDrop: () => {}, selectHandCard: () => {} });
 
   function resetSelection() {
     setPendingSummon(null);
@@ -723,6 +761,129 @@ export default function DuelLiveView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.round, snapshot?.activeTeam]);
 
+  // Global registrierte Pointer-Listener fürs Ziehen aus der Hand — EINMALIG
+  // (leeres Deps-Array), damit ein laufendes Ziehen nie durch eine Neu-
+  // Registrierung (z.B. durch den 1s-Poll) Events verliert. Liest den aktuellen
+  // Zustand über Refs (dragStartRef) bzw. ruft die jeweils aktuellste
+  // Handler-Version über latestRef auf, statt veraltete Closures einzufangen.
+  useEffect(() => {
+    function pointInside(el: HTMLElement | null, x: number, y: number): boolean {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }
+    function onMove(e: PointerEvent) {
+      const start = dragStartRef.current;
+      if (!start || start.pointerId !== e.pointerId) return;
+      const dx = e.clientX - start.startX;
+      const dy = e.clientY - start.startY;
+      if (!start.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+        start.moved = true;
+        setFocusedCardId(null);
+      }
+      if (start.moved) {
+        setDragCard({ card: start.card, x: e.clientX, y: e.clientY });
+        if (start.card.kind === "unit") {
+          const idx = selfSlotRefs.current.findIndex((el) => pointInside(el, e.clientX, e.clientY));
+          setDragHoverSlot(idx >= 0 ? idx : null);
+        } else {
+          setDragHoverBoard(pointInside(boardRef.current, e.clientX, e.clientY));
+        }
+      }
+    }
+    function endDrag(e: PointerEvent) {
+      const start = dragStartRef.current;
+      if (!start || start.pointerId !== e.pointerId) return;
+      if (start.moved) {
+        latestRef.current.handleDrop(start.card, e.clientX, e.clientY);
+      } else {
+        setFocusedCardId((prev) => (prev === start.card.cardId ? null : start.card.cardId));
+        latestRef.current.selectHandCard(start.card);
+      }
+      dragStartRef.current = null;
+      setDragCard(null);
+      setDragHoverSlot(null);
+      setDragHoverBoard(false);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", endDrag);
+    window.addEventListener("pointercancel", endDrag);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", endDrag);
+      window.removeEventListener("pointercancel", endDrag);
+    };
+  }, []);
+
+  // Vor den frühen Returns berechnet (Refs dürfen laut react-hooks/refs nicht
+  // während des Renderns mutiert werden — die Synchronisierung unten muss
+  // deshalb ein echter Effekt sein, der bei jedem Render neu die aktuellsten
+  // Closures einträgt) — null-sicher, damit die Reihenfolge der Hooks über den
+  // Ladezustand hinweg stabil bleibt.
+  const canAct = !!snapshot && snapshot.activeTeam === snapshot.viewerTeam && snapshot.status !== "finished" && !busy;
+  const isMainPhase = !!snapshot && (snapshot.phase === "main1" || snapshot.phase === "main2");
+
+  function selectHandCard(card: LiveDuelHandCard) {
+    if (!snapshot || !canAct || !isMainPhase) return;
+    if (card.kind === "unit") {
+      if (snapshot.normalSummonUsed) return;
+      setPendingAttack(null);
+      setPendingTactic(null);
+      setPendingSummon((prev) => (prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, stance: "attack" }));
+    } else {
+      if (snapshot.tacticPlayedThisTurn) return;
+      setPendingAttack(null);
+      setPendingSummon(null);
+      // Modus ergibt sich fix aus der Kartenart (Item -> sofort, Falle ->
+      // verdeckt) — löst aber NICHT mehr sofort aus: Effekt lesen + ggf. Ziel
+      // wählen + explizit bestätigen (siehe Bestätigen-Panel unten).
+      const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
+      setPendingTactic((prev) =>
+        prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, mode, requiresTarget: card.requiresTarget }
+      );
+    }
+  }
+
+  /** Ziehen einer Handkarte auf eine gültige Ablagezone: Helden-Karten direkt
+   *  auf einen leeren eigenen Feld-Slot (immer in Angriffsstellung — wer die
+   *  Verteidigungsstellung will, tippt die Karte stattdessen an, siehe
+   *  selectHandCard/pendingSummon), Taktik-Karten irgendwo auf das Spielfeld
+   *  (öffnet denselben Bestätigen-Dialog wie ein Antippen, siehe pendingTactic). */
+  function handleDrop(card: LiveDuelHandCard, x: number, y: number) {
+    if (!snapshot || !canAct || !isMainPhase) return;
+    const pointInside = (el: HTMLElement | null) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    };
+    if (card.kind === "unit") {
+      if (snapshot.normalSummonUsed) return;
+      const slotIndex = selfSlotRefs.current.findIndex((el) => pointInside(el));
+      if (slotIndex >= 0 && !snapshot.self.field[slotIndex]) {
+        void postAction({ type: "summon", handCardId: card.cardId, slotIndex, stance: "attack" });
+      }
+    } else {
+      if (snapshot.tacticPlayedThisTurn) return;
+      if (pointInside(boardRef.current)) {
+        const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
+        setPendingSummon(null);
+        setPendingAttack(null);
+        setPendingTactic({ handCardId: card.cardId, mode, requiresTarget: card.requiresTarget });
+      }
+    }
+  }
+
+  function handleCardPointerDown(e: React.PointerEvent, card: LiveDuelHandCard, disabled: boolean) {
+    if (disabled || !canAct || !isMainPhase) return;
+    dragStartRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, card, moved: false };
+  }
+
+  // Hält latestRef aktuell, ohne während des Renderns direkt in die Ref zu
+  // schreiben (siehe Kommentar oben) — läuft nach jedem Commit.
+  useEffect(() => {
+    latestRef.current = { handleDrop, selectHandCard };
+  });
+
   async function postAction(action: DuelAction) {
     setBusy(true);
     setActionError(null);
@@ -771,35 +932,12 @@ export default function DuelLiveView({
   const finished = snapshot.status === "finished";
   const won = snapshot.winner === snapshot.viewerTeam;
   const drew = snapshot.winner === "DRAW";
-  const canAct = isMyTurn && !finished && !busy;
-  const isMainPhase = snapshot.phase === "main1" || snapshot.phase === "main2";
 
   function effectsFor(side: "self" | "opponent", slotIndex: number) {
     return floatingEffects.filter((e) => e.side === side && e.anchor.kind === "slot" && e.anchor.slotIndex === slotIndex);
   }
   function lpEffectsFor(side: "self" | "opponent") {
     return floatingEffects.filter((e) => e.side === side && e.anchor.kind === "lp");
-  }
-
-  function selectHandCard(card: LiveDuelHandCard) {
-    if (!canAct || !isMainPhase) return;
-    if (card.kind === "unit") {
-      if (snapshot!.normalSummonUsed) return;
-      setPendingAttack(null);
-      setPendingTactic(null);
-      setPendingSummon((prev) => (prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, stance: "attack" }));
-    } else {
-      if (snapshot!.tacticPlayedThisTurn) return;
-      setPendingAttack(null);
-      setPendingSummon(null);
-      // Modus ergibt sich fix aus der Kartenart (Item -> sofort, Falle ->
-      // verdeckt) — löst aber NICHT mehr sofort aus: Effekt lesen + ggf. Ziel
-      // wählen + explizit bestätigen (siehe Bestätigen-Panel unten).
-      const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
-      setPendingTactic((prev) =>
-        prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, mode, requiresTarget: card.requiresTarget }
-      );
-    }
   }
 
   function pickSummonSlot(slotIndex: number) {
@@ -894,6 +1032,12 @@ export default function DuelLiveView({
           <PhaseStepper phase={snapshot.phase} />
         )}
 
+        {/* Spielfeld (Gegner + eigenes Feld) — gemeinsame Ablagezone fürs Ziehen
+            einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen"). */}
+        <div
+          ref={boardRef}
+          className={`space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+        >
         {/* Gegner */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-400">
@@ -965,7 +1109,11 @@ export default function DuelLiveView({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {snapshot.self.field.map((slot, i) => {
-              const isSummonTarget = canAct && isMainPhase && !slot && pendingSummon !== null;
+              const isSummonTarget =
+                canAct &&
+                isMainPhase &&
+                !slot &&
+                (pendingSummon !== null || (dragCard?.card.kind === "unit" && !snapshot.normalSummonUsed));
               const canChangeStance =
                 canAct && isMainPhase && slot?.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
               const canDeclareAttack =
@@ -977,12 +1125,13 @@ export default function DuelLiveView({
               const isSelectedTacticTarget = pendingTactic?.requiresTarget === "ally" && pendingTactic.targetSlotIndex === i;
 
               return (
-                <div key={i} className="space-y-1">
+                <div key={i} className="space-y-1" ref={(el) => { selfSlotRefs.current[i] = el; }}>
                   <UnitSlot
                     unit={slot}
                     floating={effectsFor("self", i)}
                     selectable={isSummonTarget || isValidTacticTarget}
                     selected={isSelectedAttacker || isSelectedTacticTarget}
+                    dragOver={dragHoverSlot === i}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
                     onClick={isSummonTarget ? () => pickSummonSlot(i) : isValidTacticTarget ? () => pickTacticTarget(i) : undefined}
@@ -1032,6 +1181,7 @@ export default function DuelLiveView({
             <p className="text-[10px] text-teal-300 text-center">Eigenes Ziel für die Taktikkarte wählen …</p>
           )}
         </div>
+        </div>
 
         {/* Hauptphase 1/2 — Beschwörung + Stellungswechsel + Taktik-Karte */}
         {isMyTurn && !finished && isMainPhase && (
@@ -1042,48 +1192,94 @@ export default function DuelLiveView({
               {snapshot.tacticPlayedThisTurn && <span className="text-amber-300"> · Taktik-Karte bereits genutzt</span>}
               {pendingSummon && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {(snapshot.self.hand ?? []).map((card) => {
-                const isSelectedSummon = pendingSummon?.handCardId === card.cardId;
-                const isSelectedTactic = pendingTactic?.handCardId === card.cardId;
-                const isDisabled =
-                  (card.kind === "unit" && snapshot.normalSummonUsed) || (card.kind === "tactic" && snapshot.tacticPlayedThisTurn);
+            <p className="text-[10px] text-slate-500 text-center">
+              Antippen/Hovern zum Anschauen · Helden-Karte auf ein Feld ziehen zum Beschwören (Angriffsstellung —
+              für Verteidigung antippen) · Taktik-Karte aufs Spielfeld ziehen zum Spielen
+            </p>
+            {/* Gefächerte Hand: unfokussierte Karten überlappen sich wie echte
+                Spielkarten (nur Bild/Name als "Peek" sichtbar), die fokussierte
+                Karte hebt sich gerade, vergrößert und voll lesbar aus dem Fächer.
+                Ziehen (Pointer-Events, siehe handleCardPointerDown) funktioniert
+                unabhängig vom Fokus-Zustand. */}
+            <div className="relative pt-9" style={{ minHeight: 168 }}>
+              <div className="flex justify-center items-end">
+                {(snapshot.self.hand ?? []).map((card, i, arr) => {
+                  const isSelectedSummon = pendingSummon?.handCardId === card.cardId;
+                  const isSelectedTactic = pendingTactic?.handCardId === card.cardId;
+                  const isDisabled =
+                    (card.kind === "unit" && snapshot.normalSummonUsed) || (card.kind === "tactic" && snapshot.tacticPlayedThisTurn);
+                  const isFocused = focusedCardId === card.cardId;
+                  const isBeingDragged = dragCard?.card.cardId === card.cardId;
 
-                if (card.kind === "unit" && card.unitCard) {
-                  const level = card.unitCard.level ?? 1;
-                  const { attack, defense } = scaleStatsForLevel({
-                    baseHp: card.unitCard.baseHp,
-                    baseAttack: card.unitCard.baseAttack,
-                    baseDefense: card.unitCard.baseDefense,
-                    level,
-                  });
+                  const center = (arr.length - 1) / 2;
+                  const offset = i - center;
+                  const angle = Math.max(-HAND_MAX_ANGLE, Math.min(HAND_MAX_ANGLE, offset * HAND_ANGLE_STEP));
+                  const arcDrop = Math.abs(offset) * HAND_ARC_DROP;
+                  const transform = isFocused
+                    ? "translateY(-56px) scale(1.35) rotate(0deg)"
+                    : `translateY(${arcDrop}px) rotate(${angle}deg)`;
+
+                  let stats: { attack: number; defense: number } | null = null;
+                  if (card.kind === "unit" && card.unitCard) {
+                    stats = scaleStatsForLevel({
+                      baseHp: card.unitCard.baseHp,
+                      baseAttack: card.unitCard.baseAttack,
+                      baseDefense: card.unitCard.baseDefense,
+                      level: card.unitCard.level ?? 1,
+                    });
+                  }
+
                   return (
                     <div
                       key={card.cardId}
-                      className={`w-28 shrink-0 rounded-lg p-1 space-y-1 transition-colors ${isSelectedSummon ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
+                      onPointerDown={(e) => handleCardPointerDown(e, card, isDisabled)}
+                      onPointerEnter={(e) => {
+                        if (e.pointerType === "mouse" && !isDisabled) setFocusedCardId(card.cardId);
+                      }}
+                      onPointerLeave={(e) => {
+                        if (e.pointerType === "mouse") setFocusedCardId((f) => (f === card.cardId ? null : f));
+                      }}
+                      className={`relative shrink-0 space-y-1 ${isSelectedSummon || isSelectedTactic ? "ring-2 ring-teal-400 rounded-lg" : ""}`}
+                      style={{
+                        width: HAND_CARD_WIDTH,
+                        marginLeft: i === 0 ? 0 : -HAND_OVERLAP,
+                        transformOrigin: "bottom center",
+                        transform,
+                        zIndex: isFocused ? 200 : i,
+                        transition: isBeingDragged ? "none" : "transform 0.18s ease-out",
+                        opacity: isBeingDragged ? 0.25 : isDisabled ? 0.4 : 1,
+                        touchAction: "none",
+                        cursor: isDisabled ? "default" : "grab",
+                      }}
                     >
-                      <CardTile card={card.unitCard} level={level} onClick={() => selectHandCard(card)} />
-                      <div className="flex justify-center">
-                        <StatBadges attack={attack} defense={defense} />
-                      </div>
+                      {card.kind === "unit" && card.unitCard ? (
+                        <>
+                          <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => {}} />
+                          {isFocused && stats && (
+                            <div className="flex justify-center">
+                              <StatBadges attack={stats.attack} defense={stats.defense} />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <TacticCardTile
+                            card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
+                            selected={isSelectedTactic}
+                            disabled={isDisabled}
+                            onClick={() => {}}
+                          />
+                          {isFocused && (
+                            <p className="text-[9px] text-slate-300 text-center leading-snug bg-black/70 rounded p-1">
+                              {card.tacticDescription ?? "Keine Beschreibung verfügbar."}
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
                   );
-                }
-
-                return (
-                  <div key={card.cardId} className={`w-28 shrink-0 space-y-1 ${isDisabled ? "opacity-40" : ""}`}>
-                    <TacticCardTile
-                      card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
-                      selected={isSelectedTactic}
-                      disabled={isDisabled}
-                      onClick={() => selectHandCard(card)}
-                    />
-                    <p className="text-[9px] text-slate-400 text-center leading-snug line-clamp-4">
-                      {card.tacticDescription ?? "Keine Beschreibung verfügbar."}
-                    </p>
-                  </div>
-                );
-              })}
+                })}
+              </div>
             </div>
             {pendingSummon && (
               <div className="space-y-1">
@@ -1192,6 +1388,38 @@ export default function DuelLiveView({
           ))}
         </div>
       </div>
+
+      {/* "Geist"-Karte, die dem Finger/Mauszeiger beim Ziehen folgt — rein
+          visuell (pointer-events: none), die eigentliche Hit-Testing-Logik
+          läuft über die Slot-/Board-Refs in handleDrop. */}
+      {dragCard && (
+        <div
+          className="pointer-events-none fixed z-[500]"
+          style={{
+            left: dragCard.x - HAND_CARD_WIDTH / 2,
+            top: dragCard.y - 70,
+            width: HAND_CARD_WIDTH,
+            transform: "rotate(-4deg) scale(1.08)",
+            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+          }}
+        >
+          {dragCard.card.kind === "unit" && dragCard.card.unitCard ? (
+            <CardTile card={dragCard.card.unitCard} level={dragCard.card.unitCard.level ?? 1} onClick={() => {}} />
+          ) : (
+            <TacticCardTile
+              card={{
+                id: dragCard.card.cardId,
+                name: dragCard.card.name,
+                kind: dragCard.card.tacticKind ?? "INSTANT",
+                imageUrl: dragCard.card.imageUrl,
+              }}
+              selected={false}
+              disabled={false}
+              onClick={() => {}}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
