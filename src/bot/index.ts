@@ -7,6 +7,8 @@ import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, checkpointVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
 import { prisma } from "@/lib/prisma";
 
+console.log(`🚀 Bot-Prozess startet (pid ${process.pid}, Node ${process.version})…`);
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -240,6 +242,11 @@ process.on("uncaughtException", (err) => {
   // Kurz warten, dann sauber neu starten
   setTimeout(() => process.exit(1), 500);
 });
+
+// ── Diagnose: warum/wie der Prozess endet (Render-Deploy-Log war bisher leer) ─
+process.on("SIGTERM", () => console.log("🛑 SIGTERM empfangen (vermutlich Render-Deploy/Restart)"));
+process.on("SIGINT", () => console.log("🛑 SIGINT empfangen"));
+process.on("exit", (code) => console.log(`👋 Prozess beendet sich mit Code ${code}`));
 
 // ── Discord Disconnect → automatisch reconnecten ─────────────────────────────
 client.on(Events.ShardDisconnect, (event, shardId) => {
