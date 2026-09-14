@@ -38,7 +38,7 @@ export default function DashboardChrome({
     <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
-      <AuroraBackground />
+      <AuroraBackground variant={isBattleCards ? "battle-cards" : "default"} />
 
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
       {/* Battle Cards läuft ohne Ticker — CSS-Var --top-ticker oben zieht den

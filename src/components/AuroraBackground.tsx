@@ -1,6 +1,21 @@
 "use client";
 
-export default function AuroraBackground() {
+export default function AuroraBackground({ variant = "default" }: { variant?: "default" | "battle-cards" }) {
+  if (variant === "battle-cards") {
+    // Battle Cards hat einen eigenen dunkelblauen MOBA-Skin (siehe
+    // battle-cards-moba.css, --moba-bg) — die App-weiten Teal-/Rot-
+    // Farbflecken passen stilistisch nicht dazu und schimmern sonst an den
+    // Rändern/hinter dem UI durch. Hier nur die dunkle Basisfläche, randlos
+    // über den ganzen Bildschirm gezogen, ohne die farbigen Blobs.
+    return (
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none select-none overflow-hidden"
+        style={{ zIndex: 1, background: "#04061a" }}
+      />
+    );
+  }
+
   return (
     <div
       aria-hidden="true"
