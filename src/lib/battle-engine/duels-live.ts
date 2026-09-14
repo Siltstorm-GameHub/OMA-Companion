@@ -38,7 +38,7 @@ import {
 } from "./duel-constants";
 import { applyShieldAbsorption } from "./damage";
 import { executeEffect, getLevelValue, tickStatModifierDurations } from "./effects";
-import { grantRage, performAction } from "./engine";
+import { grantRage } from "./engine";
 import { createRng, randomSeed, type Rng } from "./rng";
 import { createBattleUnitState } from "./stats";
 import type { BattleLogEntry, BattleUnitDefinition, BattleUnitState, TacticCardDefinition, TeamId } from "./types";
@@ -129,6 +129,21 @@ export type DuelLogEntry =
     }
   /** ATK === DEF: nichts passiert. */
   | { type: "defenseBounce"; round: number; attackerUnitId: string; defenderUnitId: string }
+  /** Angriffsstellung gegen Angriffsstellung, wie im echten Yu-Gi-Oh: der
+   *  höhere ATK-Wert zerstört die andere Einheit, deren Seite die Differenz
+   *  als LP-Schaden nimmt ("winner" gewinnt, "loser" wird zerstört); bei
+   *  Gleichstand werden BEIDE Einheiten zerstört (siehe separate "death"-
+   *  Einträge dafür), kein LP-Schaden. */
+  | {
+      type: "attackClash";
+      round: number;
+      winnerUnitId: string;
+      loserUnitId: string;
+      damagedTeam: TeamId;
+      amount: number;
+      remainingLp: number;
+    }
+  | { type: "attackClashDraw"; round: number; attackerUnitId: string; defenderUnitId: string }
   /** Taktikkarten-Effekt mit direktem LP-Ziel (ownLp/enemyLp) — siehe applyTacticEffects. */
   | { type: "lpChange"; round: number; team: TeamId; amount: number; remainingLp: number; reason: "tactic" };
 
@@ -421,6 +436,17 @@ function requireLivingUnit(player: DuelPlayerState, slotIndex: number, message: 
   return unit;
 }
 
+/** Zerstört eine Einheit direkt (kein Schaden über die generische Effekt-
+ *  Engine, kein Schild-Schutz — wie ein Kampf-Zerstören im echten Yu-Gi-Oh,
+ *  das durch keinen "Schild"-Mechanismus abgefangen wird). */
+function destroyUnit(unit: BattleUnitState, log: DuelLogEntry[], round: number): void {
+  unit.currentHp = 0;
+  if (unit.isAlive) {
+    unit.isAlive = false;
+    log.push({ type: "death", round, unitId: unit.instanceId });
+  }
+}
+
 /** Wendet rohen Schaden direkt auf eine Einheit an (Schild-Absorption +
  *  Tod), ohne über die generische Skill-Effekt-Engine zu laufen — für die
  *  klassenbasierten Ultimate-Formeln (siehe applyClassUltimate), die feste
@@ -570,11 +596,7 @@ function resolveDeclaredAttack(
 
   if (defenderUnit.stance === "defense") {
     if (attacker.attack > defenderUnit.defense) {
-      defenderUnit.currentHp = 0;
-      if (defenderUnit.isAlive) {
-        defenderUnit.isAlive = false;
-        log.push({ type: "death", round, unitId: defenderUnit.instanceId });
-      }
+      destroyUnit(defenderUnit, log, round);
       log.push({ type: "defenseDestroyed", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
     } else if (attacker.attack < defenderUnit.defense) {
       const reflect = defenderUnit.defense - attacker.attack;
@@ -595,7 +617,44 @@ function resolveDeclaredAttack(
     return;
   }
 
-  performAction(attacker, "normalAttack", allFieldUnits(state), rng, round, asBattleLog(log), 1, defenderUnit.instanceId);
+  // Angriffsstellung gegen Angriffsstellung — jetzt ebenfalls die echte
+  // Yu-Gi-Oh-Kampfregel statt des früheren HP-basierten Mehrfach-Treffer-
+  // Modells (kein Crit-Chance-Zufall mehr, wie im echten Spiel): der höhere
+  // ATK-Wert zerstört die andere Einheit, deren Besitzer die Differenz als
+  // LP-Schaden nimmt. Bei Gleichstand werden BEIDE Einheiten zerstört, ohne
+  // LP-Schaden.
+  if (attacker.attack > defenderUnit.attack) {
+    const diff = attacker.attack - defenderUnit.attack;
+    destroyUnit(defenderUnit, log, round);
+    opponent.lifePoints = Math.max(0, opponent.lifePoints - diff);
+    log.push({
+      type: "attackClash",
+      round,
+      winnerUnitId: attacker.instanceId,
+      loserUnitId: defenderUnit.instanceId,
+      damagedTeam: opponentTeamId,
+      amount: diff,
+      remainingLp: opponent.lifePoints,
+    });
+  } else if (attacker.attack < defenderUnit.attack) {
+    const diff = defenderUnit.attack - attacker.attack;
+    const attackerPlayer = playerState(state, team);
+    destroyUnit(attacker, log, round);
+    attackerPlayer.lifePoints = Math.max(0, attackerPlayer.lifePoints - diff);
+    log.push({
+      type: "attackClash",
+      round,
+      winnerUnitId: defenderUnit.instanceId,
+      loserUnitId: attacker.instanceId,
+      damagedTeam: team,
+      amount: diff,
+      remainingLp: attackerPlayer.lifePoints,
+    });
+  } else {
+    destroyUnit(attacker, log, round);
+    destroyUnit(defenderUnit, log, round);
+    log.push({ type: "attackClashDraw", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
+  }
 }
 
 // ---------- Zugende ----------
@@ -775,14 +834,25 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
       if (targetIsEmpty && opponentHasLivingUnit(opponent)) {
         throw new DuelLiveError("Ein Direktangriff ist nur möglich, wenn die Gegenseite keine Einheit mehr auf dem Feld hat.");
       }
-      if (action.attackType === "ultimate") {
-        const cost = attacker.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
-        if (attacker.rage < cost) throw new DuelLiveError("Nicht genug Rage für das Ultimate.");
+      const ultimateCost = attacker.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
+      if (action.attackType === "ultimate" && attacker.rage < ultimateCost) {
+        throw new DuelLiveError("Nicht genug Rage für das Ultimate.");
       }
 
       triggerTraps(opponentTeamId, state, action, rng, log, round);
       resolveDeclaredAttack(team, state, attacker, action.attackType, targetSlotIndex, rng, log, round);
       attacker.attackedThisTurn = true;
+
+      if (action.attackType === "ultimate") {
+        // Rage-Kosten abziehen — applyClassUltimate löst das Ultimate über
+        // eine eigene Formel auf (kein performAction() mehr, siehe dort), das
+        // Abziehen der Kosten (vorher Teil von performAction) muss deshalb
+        // hier separat passieren, sonst bliebe die Rage-Leiste nach dem
+        // Einsatz fälschlich voll.
+        attacker.rage = Math.max(0, attacker.rage - ultimateCost);
+        log.push({ type: "rageChange", round, unitId: attacker.instanceId, amount: -ultimateCost, newRage: attacker.rage, reason: "action" });
+      }
+
       grantRage(attacker, RAGE_PER_ACTION, round, asBattleLog(log), "action");
       break;
     }
