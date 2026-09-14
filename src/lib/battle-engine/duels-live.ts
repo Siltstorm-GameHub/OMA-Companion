@@ -105,7 +105,10 @@ export type DuelLogEntry =
       defendingTeam: TeamId;
       amount: number;
       remainingLp: number;
-    };
+    }
+  /** Deck-Out (wie im echten Yu-Gi-Oh): `team` musste ziehen, konnte aber
+   *  nicht (Nachziehstapel leer) — sofortige Niederlage, siehe applyTurn. */
+  | { type: "deckOut"; round: number; team: TeamId };
 
 export interface LiveDuelState {
   seed: number;
@@ -148,16 +151,22 @@ function createEmptyFieldSlots(): DuelFieldSlot[] {
   return Array.from({ length: DUEL_FIELD_SIZE }, () => ({ unit: null }));
 }
 
-function drawCards(player: DuelPlayerState, count: number): void {
+/** @returns true, falls ein Zug-Versuch am leeren Nachziehstapel gescheitert
+ *  ist ("Decking Out") — der Aufrufer muss diesen Fall dann als sofortige
+ *  Niederlage für `player` werten (siehe applyTurn). Beim Start-Handaufbau
+ *  (createDuelState) ist das praktisch ausgeschlossen, da ein Duell-Deck
+ *  immer DUEL_DECK_TOTAL_SIZE (> DUEL_START_HAND_SIZE) Karten hat. */
+function drawCards(player: DuelPlayerState, count: number): boolean {
   for (let i = 0; i < count; i++) {
     const next = player.deckCardIds.shift();
-    if (!next) break; // Deck leer: kein Draw, kein Fatal (siehe Entscheidung im Plan)
+    if (!next) return true; // Deck leer, obwohl noch gezogen werden musste -> Deck-Out
     if (player.handCardIds.length >= DUEL_HAND_CAP) {
       player.graveyardCardIds.push(next); // Hand voll: gezogene Karte verfällt
     } else {
       player.handCardIds.push(next);
     }
   }
+  return false;
 }
 
 export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDeckInput, seed: number = randomSeed()): LiveDuelState {
@@ -588,11 +597,19 @@ function applyTurn(state: LiveDuelState, team: TeamId, submission: DuelTurnSubmi
   // mit der Starthand ohne einen vorherigen Übergang, der erste tatsächliche
   // Kartenzug passiert erst HIER beim Wechsel in Zug 2 — genau wie in echtem
   // Yu-Gi-Oh, wo nur der Startspieler seine eigene erste Ziehphase auslässt.
-  drawCards(opponent, DUEL_DRAW_PER_ROUND);
+  const deckedOut = drawCards(opponent, DUEL_DRAW_PER_ROUND);
   log.push({ type: "roundEnd", round });
   state.activeTeam = opponentTeamId;
   state.round += 1;
   state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
+
+  // Deck-Out: die neue aktive Seite konnte ihre Pflichtkarte nicht ziehen ->
+  // sofortige Niederlage (wie im echten Yu-Gi-Oh), unabhängig vom LP-Stand.
+  if (deckedOut) {
+    state.winner = team;
+    log.push({ type: "deckOut", round: state.round, team: opponentTeamId });
+    log.push({ type: "battleEnd", winner: team, round: state.round });
+  }
 
   return state;
 }

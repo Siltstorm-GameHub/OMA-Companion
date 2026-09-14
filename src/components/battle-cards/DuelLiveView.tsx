@@ -1142,6 +1142,8 @@ function describeLogEntry(entry: DuelLogEntry): string {
       return "Taktik-Karte gespielt.";
     case "trapTriggered":
       return "Eine Falle wurde ausgelöst!";
+    case "deckOut":
+      return "Nachziehstapel leer — keine Karte mehr zum Ziehen!";
     case "roundEnd":
       return `— Zug ${entry.round} beendet —`;
     case "battleEnd":
