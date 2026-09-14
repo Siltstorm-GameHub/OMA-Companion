@@ -78,8 +78,6 @@ export default function BattleLauncher({
             className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
             <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
               className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
@@ -87,7 +85,7 @@ export default function BattleLauncher({
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
             />
-            <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
+            <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
               <MobaIcon name="crossedSwords" className="w-5 h-5" /> OMA Duels
             </span>
           </motion.button>
@@ -107,8 +105,6 @@ export default function BattleLauncher({
             className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
             <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
               className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
@@ -116,7 +112,7 @@ export default function BattleLauncher({
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut", delay: 0.9 }}
             />
-            <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
+            <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
               <MobaIcon name="gem" className="w-5 h-5" /> OMA Gems
             </span>
           </motion.button>
@@ -150,8 +146,6 @@ export default function BattleLauncher({
               : "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)",
           }}
         />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
         <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
           {isDuels ? <MobaIcon name="crossedSwords" className="w-4 h-4" /> : <MobaIcon name="gem" className="w-4 h-4" />}
           {isDuels ? "OMA Duels" : "OMA Gems"}
