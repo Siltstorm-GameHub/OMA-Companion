@@ -30,7 +30,13 @@ import {
   DUEL_START_HAND_SIZE,
   DUEL_START_LP,
   DUEL_TURN_TIMEOUT_MS,
+  DUEL_ULTIMATE_DAMAGE_DEALER_MULTIPLIER,
+  DUEL_ULTIMATE_DAMAGE_DEALER_OVERKILL_FACTOR,
+  DUEL_ULTIMATE_SUPPORT_HEAL_MULTIPLIER,
+  DUEL_ULTIMATE_SUPPORT_RAGE_BONUS,
+  DUEL_ULTIMATE_TANK_SHIELD_FACTOR,
 } from "./duel-constants";
+import { applyShieldAbsorption } from "./damage";
 import { executeEffect, getLevelValue } from "./effects";
 import { grantRage, performAction } from "./engine";
 import { createRng, randomSeed, type Rng } from "./rng";
@@ -400,16 +406,118 @@ function requireLivingUnit(player: DuelPlayerState, slotIndex: number, message: 
   return unit;
 }
 
+/** Wendet rohen Schaden direkt auf eine Einheit an (Schild-Absorption +
+ *  Tod), ohne über die generische Skill-Effekt-Engine zu laufen — für die
+ *  klassenbasierten Ultimate-Formeln (siehe applyClassUltimate), die feste
+ *  eigene Werte statt eines Karten-Effekts nutzen. */
+function applyRawDamageToUnit(target: BattleUnitState, rawAmount: number, sourceId: string, log: DuelLogEntry[], round: number): void {
+  const { hpDamage, remainingShield } = applyShieldAbsorption(rawAmount, target.shield);
+  target.shield = remainingShield;
+  target.currentHp = Math.max(0, target.currentHp - hpDamage);
+  log.push({ type: "damage", round, sourceId, targetId: target.instanceId, amount: hpDamage, isCrit: false, remainingHp: target.currentHp });
+  if (target.currentHp <= 0 && target.isAlive) {
+    target.isAlive = false;
+    log.push({ type: "death", round, unitId: target.instanceId });
+  }
+}
+
+/** Ultimate ignoriert die Stellung des Ziels bewusst (wirkt wie ein mächtiger
+ *  Spruch statt eines normalen Kampf-Schlagabtauschs) UND wird nicht mehr aus
+ *  den frei am Karten-Content hängenden ultimateSkill.effects gespeist,
+ *  sondern aus einer festen, klassenabhängigen Formel — damit sich TANK/
+ *  DAMAGE_DEALER/SUPPORT im Ultimate spürbar unterschiedlich anfühlen, egal
+ *  welche konkrete Karte gespielt wird (Name/Beschreibung/Kosten bleiben
+ *  weiterhin pro Karte individuell, siehe ultimateSkillName/-cost).
+ *  - TANK: Schaden aus der eigenen DEF statt ATK, danach Team-Schild.
+ *  - DAMAGE_DEALER: reiner ATK-Burst mit Durchschlag (Überschuss trifft LP).
+ *  - SUPPORT: kein Angriff — heilt und pusht Rage fürs ganze eigene Team. */
+function applyClassUltimate(
+  team: TeamId,
+  state: LiveDuelState,
+  attacker: BattleUnitState,
+  targetSlotIndex: number,
+  log: DuelLogEntry[],
+  round: number
+): void {
+  const opponentTeamId = opponentTeam(team);
+  const opponent = playerState(state, opponentTeamId);
+  const selfPlayer = playerState(state, team);
+  const defenderUnit = opponent.field[targetSlotIndex]?.unit ?? null;
+
+  function dealDamageOrFace(amount: number): void {
+    if (defenderUnit && defenderUnit.isAlive) {
+      applyRawDamageToUnit(defenderUnit, amount, attacker.instanceId, log, round);
+    } else {
+      opponent.lifePoints = Math.max(0, opponent.lifePoints - amount);
+      log.push({
+        type: "faceDamage",
+        round,
+        attackerUnitId: attacker.instanceId,
+        defendingTeam: opponentTeamId,
+        amount,
+        remainingLp: opponent.lifePoints,
+      });
+    }
+  }
+
+  switch (attacker.def.class) {
+    case "TANK": {
+      const amount = attacker.defense;
+      dealDamageOrFace(amount);
+      const shieldAmount = Math.round(amount * DUEL_ULTIMATE_TANK_SHIELD_FACTOR);
+      for (const slot of selfPlayer.field) {
+        if (!slot.unit?.isAlive) continue;
+        slot.unit.shield += shieldAmount;
+        log.push({ type: "shieldApplied", round, sourceId: attacker.instanceId, targetId: slot.unit.instanceId, amount: shieldAmount });
+      }
+      break;
+    }
+
+    case "DAMAGE_DEALER": {
+      const amount = Math.round(attacker.attack * DUEL_ULTIMATE_DAMAGE_DEALER_MULTIPLIER);
+      if (defenderUnit && defenderUnit.isAlive) {
+        const overkill = Math.max(0, amount - defenderUnit.currentHp);
+        applyRawDamageToUnit(defenderUnit, amount, attacker.instanceId, log, round);
+        const spill = Math.round(overkill * DUEL_ULTIMATE_DAMAGE_DEALER_OVERKILL_FACTOR);
+        if (spill > 0) {
+          opponent.lifePoints = Math.max(0, opponent.lifePoints - spill);
+          log.push({
+            type: "faceDamage",
+            round,
+            attackerUnitId: attacker.instanceId,
+            defendingTeam: opponentTeamId,
+            amount: spill,
+            remainingLp: opponent.lifePoints,
+          });
+        }
+      } else {
+        dealDamageOrFace(amount);
+      }
+      break;
+    }
+
+    case "SUPPORT": {
+      const healAmount = Math.round(attacker.defense * DUEL_ULTIMATE_SUPPORT_HEAL_MULTIPLIER);
+      for (const slot of selfPlayer.field) {
+        if (!slot.unit?.isAlive) continue;
+        slot.unit.currentHp = Math.min(slot.unit.maxHp, slot.unit.currentHp + healAmount);
+        log.push({ type: "heal", round, sourceId: attacker.instanceId, targetId: slot.unit.instanceId, amount: healAmount, newHp: slot.unit.currentHp });
+        grantRage(slot.unit, DUEL_ULTIMATE_SUPPORT_RAGE_BONUS, round, asBattleLog(log), "action");
+      }
+      break;
+    }
+  }
+}
+
 /** Löst EINEN deklarierten Angriff auf. Normalangriff gegen eine Einheit in
- *  Verteidigungsstellung folgt jetzt der echten Yu-Gi-Oh-Regel: ATK > DEF
- *  zerstört die Einheit (kein LP-Schaden), ATK < DEF lässt sie unbeschadet
- *  überstehen und schickt die Differenz als LP-Schaden an die ANGREIFENDE
- *  Seite zurück, ATK === DEF passiert nichts. Normalangriff gegen eine
- *  Einheit in Angriffsstellung bleibt beim bestehenden HP-basierten
- *  Kampfmodell (Crit-Chance, Schaden über mehrere Angriffe hinweg) — das war
- *  nicht Teil der Anfrage. Ultimate ignoriert die Stellung bewusst (siehe
- *  Chat-Antwort): es wirkt immer mit seinem vollen definierten Effekt, wie
- *  ein mächtiger Spruch statt eines normalen Kampf-Schlagabtauschs. */
+ *  Verteidigungsstellung folgt der echten Yu-Gi-Oh-Regel: ATK > DEF zerstört
+ *  die Einheit (kein LP-Schaden), ATK < DEF lässt sie unbeschadet überstehen
+ *  und schickt die Differenz als LP-Schaden an die ANGREIFENDE Seite zurück,
+ *  ATK === DEF passiert nichts. Normalangriff gegen eine Einheit in
+ *  Angriffsstellung bleibt beim bestehenden HP-basierten Kampfmodell
+ *  (Crit-Chance, Schaden über mehrere Angriffe hinweg). Ultimate läuft über
+ *  applyClassUltimate — dort auch die Sonderfälle "Ziel-Slot leer"/"kein
+ *  Ziel-Slot" (Direktangriff). */
 function resolveDeclaredAttack(
   team: TeamId,
   state: LiveDuelState,
@@ -420,6 +528,11 @@ function resolveDeclaredAttack(
   log: DuelLogEntry[],
   round: number
 ): void {
+  if (attackType === "ultimate") {
+    applyClassUltimate(team, state, attacker, targetSlotIndex, log, round);
+    return;
+  }
+
   const opponentTeamId = opponentTeam(team);
   const opponent = playerState(state, opponentTeamId);
   const defenderUnit = opponent.field[targetSlotIndex]?.unit ?? null;
@@ -437,11 +550,6 @@ function resolveDeclaredAttack(
       amount,
       remainingLp: opponent.lifePoints,
     });
-    return;
-  }
-
-  if (attackType === "ultimate") {
-    performAction(attacker, "ultimate", allFieldUnits(state), rng, round, asBattleLog(log), 1, defenderUnit.instanceId);
     return;
   }
 
