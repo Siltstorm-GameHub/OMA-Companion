@@ -185,7 +185,18 @@ const ATTACK_LABEL: Record<DuelAttackType, string> = {
   ultimate: "Ultimate",
 };
 
+/** Tooltip fürs Angriffsfeld — der Normalangriff hat kein Karten-individuelles
+ *  Verhalten mehr (kein Skill-Knopf), verdient aber trotzdem eine kurze
+ *  Erklärung der Verteidigungsstellungs-Regel, die sonst nirgends im UI
+ *  auftaucht. */
+const NORMAL_ATTACK_DESCRIPTION =
+  "Schaden über mehrere Angriffe hinweg. Gegen eine Einheit in Verteidigung entscheidet ATK vs. DEF: höher zerstört sie ohne Schaden für dich, niedriger prallt ab und du nimmst die Differenz als Rückschlag auf deine LP.";
+
 const STANCE_LABEL: Record<DuelStance, string> = { attack: "Angriff", defense: "Verteidigung" };
+const STANCE_HINT: Record<DuelStance, string> = {
+  attack: "Kann angreifen, nimmt aber vollen Schaden.",
+  defense: "Kann selbst nicht angreifen — blockt Angriffe je nach ATK/DEF ganz oder wirft Schaden zurück.",
+};
 
 /** Das Ultimate wirkt in OMA Duels über eine feste, klassenabhängige Formel
  *  statt über den freien Karten-Effekt (siehe applyClassUltimate in
@@ -906,6 +917,7 @@ export default function DuelLiveView({
                   {slot && canChangeStance && (
                     <button
                       onClick={() => toggleFieldStance(slot)}
+                      title={STANCE_HINT[slot.stance === "attack" ? "defense" : "attack"]}
                       className="w-full text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
                     >
                       → {STANCE_LABEL[slot.stance === "attack" ? "defense" : "attack"]}
@@ -915,6 +927,7 @@ export default function DuelLiveView({
                     <div className="flex flex-wrap gap-1">
                       <button
                         onClick={() => selectAttack(slot, "normalAttack")}
+                        title={NORMAL_ATTACK_DESCRIPTION}
                         className={`text-[10px] px-1.5 py-0.5 rounded border ${
                           isSelectedAttacker && pendingAttack?.attackType === "normalAttack"
                             ? "border-teal-400 bg-teal-500/20 text-teal-200"
@@ -979,31 +992,42 @@ export default function DuelLiveView({
                 }
 
                 return (
-                  <div key={card.cardId} className="w-28 shrink-0">
+                  <div key={card.cardId} className="w-28 shrink-0 space-y-1">
                     <TacticCardTile
                       card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
                       selected={false}
                       disabled={false}
                       onClick={() => selectHandCard(card)}
                     />
+                    {/* Taktik-Karten lösen sofort beim Antippen aus (Items sofort,
+                        Fallen verdeckt) — die Beschreibung MUSS deshalb hier schon
+                        sichtbar sein, nicht erst nach dem Spielen. */}
+                    <p className="text-[9px] text-slate-400 text-center leading-snug line-clamp-4">
+                      {card.tacticDescription ?? "Keine Beschreibung verfügbar."}
+                    </p>
                   </div>
                 );
               })}
             </div>
             {pendingSummon && (
-              <div className="flex gap-2 text-[11px]">
-                <button
-                  onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "attack" } : prev))}
-                  className={`px-2 py-1 rounded border ${pendingSummon.stance === "attack" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
-                >
-                  Angriffsstellung
-                </button>
-                <button
-                  onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "defense" } : prev))}
-                  className={`px-2 py-1 rounded border ${pendingSummon.stance === "defense" ? "border-sky-400 text-sky-200" : "border-slate-700 text-slate-400"}`}
-                >
-                  Verteidigungsstellung
-                </button>
+              <div className="space-y-1">
+                <div className="flex gap-2 text-[11px]">
+                  <button
+                    onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "attack" } : prev))}
+                    title={STANCE_HINT.attack}
+                    className={`px-2 py-1 rounded border ${pendingSummon.stance === "attack" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
+                  >
+                    Angriffsstellung
+                  </button>
+                  <button
+                    onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "defense" } : prev))}
+                    title={STANCE_HINT.defense}
+                    className={`px-2 py-1 rounded border ${pendingSummon.stance === "defense" ? "border-sky-400 text-sky-200" : "border-slate-700 text-slate-400"}`}
+                  >
+                    Verteidigungsstellung
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">{STANCE_HINT[pendingSummon.stance]}</p>
               </div>
             )}
           </div>
