@@ -33,6 +33,11 @@ export default function DashboardChrome({
   // auf Desktop) bleibt bewusst erhalten, damit man den Bereich verlassen kann.
   const isBattleCards = pathname === "/battle-cards" || pathname.startsWith("/battle-cards/");
   const hideTicker = isBattleCards;
+  // Laufender Kampf (klassisch + OMA Duels) rendert sich selbst als
+  // Vollbild-Overlay mit eigenem "Verlassen"-Button (siehe LiveBattlePage) —
+  // die mobile BottomNav braucht es dort nicht zum Verlassen, überlappt aber
+  // (gleicher z-index 50, im DOM nach dem Kampf-Overlay) unten die Karten.
+  const isLiveBattle = pathname.startsWith("/battle-cards/live/");
 
   return (
     <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
@@ -82,10 +87,12 @@ export default function DashboardChrome({
       {/* Community-Lobby-Chat */}
       <FloatingLobbyChat />
 
-      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
-      <div className="lg:hidden">
-        <BottomNav />
-      </div>
+      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy, außer im laufenden Kampf) ───────── */}
+      {!isLiveBattle && (
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
+      )}
     </div>
   );
 }
