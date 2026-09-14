@@ -1,18 +1,18 @@
 // ============================================
 // Battle-Engine — OMA Duels (Yu-Gi-Oh-artiges Live-PvP)
 // ============================================
-// Ersetzt den alten sequentiellen Duell-Modus (interactive.ts, Modi
-// "PVP_CHALLENGE"/"PVP_MATCHMAKING"): Deck/Hand/Feld/Beschwörung, echter
-// Zug-Wechsel (wie im echten Yu-Gi-Oh) statt "eine Einheit ist an der Reihe".
-//
-// Frühere Version dieses Moduls löste Runden SIMULTAN auf (beide Seiten
-// wählen blind, dann gemeinsame Auflösung, Block/Ausweichen als reaktive
-// Gegenwette). Das wurde bewusst auf echten Zug-Wechsel umgestellt: eine
-// Zug-Einreichung wird SOFORT aufgelöst (kein Warten auf eine zweite
-// Einreichung), Verteidigung kommt jetzt aus einer öffentlich sichtbaren
-// Angriffs-/Verteidigungsstellung (siehe DuelStance) statt einer verdeckten
-// Reaktion — der Angreifer sieht das gegnerische Feld ja bereits vollständig,
-// bevor er zuschlägt, es gibt nichts zu erraten.
+// Echte Yu-Gi-Oh-Phasenstruktur: Hauptphase 1 -> Kampfphase -> Hauptphase 2 ->
+// Zugende (Ziehen/Standby laufen automatisch beim Zugwechsel, siehe
+// endTurnInternal — es gibt dafür bewusst keine eigene Phase, da in diesem
+// Spiel nichts an eine Standby-Phase gebunden ist). Jede einzelne Aktion
+// (Beschwören, Stellung wechseln, Taktik-Karte spielen, ein Angriff, eine
+// Phase weiterschalten) ist eine EIGENE Server-Anfrage und wird sofort
+// validiert + aufgelöst — anders als die frühere Version, die einen ganzen
+// Zug als eine gebündelte Einreichung entgegennahm. Das ist nötig, um
+// innerhalb der Kampfphase mehrere Angriffe einzeln (mit dazwischenliegenden
+// Fallen-Reaktionen) aufzulösen und Hauptphase-1/2-Sonderregeln (z.B. "nur
+// eine Normalbeschwörung pro Zug, aber über beide Hauptphasen hinweg") wie im
+// echten Spiel abzubilden.
 //
 // Reine Funktionen, keine DB-Abhängigkeit — analog zu interactive.ts/engine.ts.
 // Der komplette Zustand ist JSON-serialisierbar (LiveDuelState), lebt in
@@ -21,10 +21,9 @@
 // PVE/OMA-Gems (interactive.ts, board-match3.ts) sind NICHT betroffen — dieser
 // Modus ersetzt ausschließlich die beiden alten PvP-Duell-Modi.
 
-import { RAGE_PER_ACTION } from "./constants";
+import { RAGE_PER_ACTION, ULTIMATE_SKILL_COST } from "./constants";
 import {
   DUEL_COMEBACK_RAGE_FACTOR,
-  DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER,
   DUEL_DRAW_PER_ROUND,
   DUEL_FIELD_SIZE,
   DUEL_HAND_CAP,
@@ -32,7 +31,7 @@ import {
   DUEL_START_LP,
   DUEL_TURN_TIMEOUT_MS,
 } from "./duel-constants";
-import { executeEffect } from "./effects";
+import { executeEffect, getLevelValue } from "./effects";
 import { grantRage, performAction } from "./engine";
 import { createRng, randomSeed, type Rng } from "./rng";
 import { createBattleUnitState } from "./stats";
@@ -40,12 +39,16 @@ import type { BattleLogEntry, BattleUnitDefinition, BattleUnitState, TacticCardD
 
 export class DuelLiveError extends Error {}
 
-export type DuelActionType = "normalAttack" | "active" | "ultimate";
-
 /** Angriffs-/Verteidigungsstellung einer Feld-Einheit — öffentlich sichtbare
- *  Information für beide Seiten (wie in echtem Yu-Gi-Oh), beeinflusst den
- *  Schadens-Multiplikator bei eingehenden Angriffen (siehe resolveAttacks). */
+ *  Information für beide Seiten (wie in echtem Yu-Gi-Oh). Eine angreifende
+ *  Einheit gegen eine Einheit in Verteidigungsstellung löst die echte
+ *  ATK-vs-DEF-Kampfmathematik aus (siehe resolveDeclaredAttack), keinen
+ *  bloßen Schadens-Multiplikator mehr. */
 export type DuelStance = "attack" | "defense";
+
+/** Ziehen/Standby laufen automatisch beim Zugwechsel (siehe endTurnInternal)
+ *  und brauchen deshalb keine eigene Phase. */
+export type DuelPhase = "main1" | "battle" | "main2";
 
 export interface DuelFieldSlot {
   unit: BattleUnitState | null;
@@ -69,22 +72,20 @@ export interface DuelPlayerState {
   lifePoints: number;
 }
 
-export interface DuelAttackAction {
-  slotIndex: number;
-  action: DuelActionType;
-  /** Pflicht — gegnerischer Feld-Slot-Index (auch wenn dieser leer ist: dann
-   *  Face-Damage). */
-  targetSlotIndex?: number;
-}
+// ---------- Zug-Aktionen ----------
+// Eine Aktion = eine Server-Anfrage, sofort aufgelöst. Ersetzt die frühere
+// "ein ganzer Zug in einer Einreichung"-Struktur (DuelTurnSubmission).
 
-export interface DuelTurnSubmission {
-  summon?: { handCardId: string; slotIndex: number; stance: DuelStance };
-  /** Stellungswechsel für bereits VOR diesem Zug vorhandene Feld-Einheiten,
-   *  die diesen Zug noch nicht angegriffen haben (siehe validateSubmission). */
-  stanceChanges?: { slotIndex: number; stance: DuelStance }[];
-  playTactic?: { handCardId: string; mode: "instant" | "setFaceDown"; slotIndex?: number };
-  attacks: DuelAttackAction[];
-}
+export type DuelAction =
+  | { type: "summon"; handCardId: string; slotIndex: number; stance: DuelStance }
+  | { type: "changeStance"; slotIndex: number; stance: DuelStance }
+  | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown" }
+  | { type: "declareAttack"; slotIndex: number; attackType: "normalAttack" | "ultimate"; targetSlotIndex: number }
+  /** Schaltet main1 -> battle -> main2 -> Zugende weiter. */
+  | { type: "advancePhase" }
+  /** Beendet den Zug sofort, aus jeder Phase heraus (wie im echten Spiel: man
+   *  kann von Hauptphase 1 direkt in die End-Phase gehen, ohne anzugreifen). */
+  | { type: "endTurn" };
 
 /** Erweitert die bestehenden BattleLogEntry-Varianten (damage/heal/death/
  *  rageChange/...) um Duels-spezifische Ereignisse — bewusst ein eigener Typ
@@ -106,9 +107,24 @@ export type DuelLogEntry =
       amount: number;
       remainingLp: number;
     }
-  /** Deck-Out (wie im echten Yu-Gi-Oh): `team` musste ziehen, konnte aber
-   *  nicht (Nachziehstapel leer) — sofortige Niederlage, siehe applyTurn. */
-  | { type: "deckOut"; round: number; team: TeamId };
+  /** Angriff auf eine Einheit in Verteidigungsstellung, ATK > DEF: Einheit
+   *  zerstört, keine LP-Schaden (wie im echten Yu-Gi-Oh). */
+  | { type: "defenseDestroyed"; round: number; attackerUnitId: string; defenderUnitId: string }
+  /** ATK < DEF: die verteidigende Einheit übersteht den Angriff unbeschadet,
+   *  die ANGREIFENDE Seite nimmt die Differenz als LP-Schaden (Rückprall). */
+  | {
+      type: "defenseReflect";
+      round: number;
+      attackerUnitId: string;
+      defenderUnitId: string;
+      attackerTeam: TeamId;
+      amount: number;
+      remainingLp: number;
+    }
+  /** ATK === DEF: nichts passiert. */
+  | { type: "defenseBounce"; round: number; attackerUnitId: string; defenderUnitId: string }
+  /** Taktikkarten-Effekt mit direktem LP-Ziel (ownLp/enemyLp) — siehe applyTacticEffects. */
+  | { type: "lpChange"; round: number; team: TeamId; amount: number; remainingLp: number; reason: "tactic" };
 
 export interface LiveDuelState {
   seed: number;
@@ -116,12 +132,14 @@ export interface LiveDuelState {
   /** Fortlaufende Zug-Nummer (nicht mehr "beide haben gewählt"-Runde) — UI zeigt "Zug X". */
   round: number;
   activeTeam: TeamId;
+  phase: DuelPhase;
+  /** Normalbeschwörung: max. 1 pro Zug, über Hauptphase 1 UND 2 hinweg (wie im
+   *  echten Yu-Gi-Oh). Wird bei jedem Zugwechsel zurückgesetzt. */
+  normalSummonUsed: boolean;
   playerA: DuelPlayerState;
   playerB: DuelPlayerState;
-  /** Epoch-ms, Schachuhr-Prinzip: nur für die gerade aktive Seite relevant.
-   *  NUR hier in stateJson, kein eigenes DB-Feld (siehe getLiveBattleSnapshot/
-   *  turnDeadline-Vorbild in interactive.ts/live-battle.ts: Timeout wird lazy
-   *  beim nächsten Poll geprüft, kein Sweep-Job nötig). */
+  /** Epoch-ms, Schachuhr-Prinzip: nur für die gerade aktive Seite relevant,
+   *  läuft über den GESAMTEN Zug (alle Phasen), nicht pro Einzelaktion. */
   turnDeadline: number;
   log: DuelLogEntry[];
   winner: TeamId | "DRAW" | null;
@@ -151,22 +169,20 @@ function createEmptyFieldSlots(): DuelFieldSlot[] {
   return Array.from({ length: DUEL_FIELD_SIZE }, () => ({ unit: null }));
 }
 
-/** @returns true, falls ein Zug-Versuch am leeren Nachziehstapel gescheitert
- *  ist ("Decking Out") — der Aufrufer muss diesen Fall dann als sofortige
- *  Niederlage für `player` werten (siehe applyTurn). Beim Start-Handaufbau
- *  (createDuelState) ist das praktisch ausgeschlossen, da ein Duell-Deck
- *  immer DUEL_DECK_TOTAL_SIZE (> DUEL_START_HAND_SIZE) Karten hat. */
-function drawCards(player: DuelPlayerState, count: number): boolean {
+/** Kein Deck-Out: ein leerer Nachziehstapel bedeutet einfach kein Draw, keine
+ *  Niederlage (siehe checkDuelWinner — die Niederlagebedingung ist bewusst
+ *  ausschließlich LP <= 0 oder "keine Handkarten UND keine Feld-Einheiten
+ *  mehr", unabhängig vom Deck-Stand). */
+function drawCards(player: DuelPlayerState, count: number): void {
   for (let i = 0; i < count; i++) {
     const next = player.deckCardIds.shift();
-    if (!next) return true; // Deck leer, obwohl noch gezogen werden musste -> Deck-Out
+    if (!next) break;
     if (player.handCardIds.length >= DUEL_HAND_CAP) {
       player.graveyardCardIds.push(next); // Hand voll: gezogene Karte verfällt
     } else {
       player.handCardIds.push(next);
     }
   }
-  return false;
 }
 
 export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDeckInput, seed: number = randomSeed()): LiveDuelState {
@@ -201,6 +217,8 @@ export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDec
     rngState: rng.getState(),
     round: 1,
     activeTeam: "A",
+    phase: "main1",
+    normalSummonUsed: false,
     playerA,
     playerB,
     turnDeadline: Date.now() + DUEL_TURN_TIMEOUT_MS,
@@ -227,6 +245,10 @@ function allFieldUnits(state: LiveDuelState): BattleUnitState[] {
     .filter((unit): unit is BattleUnitState => unit !== null);
 }
 
+function opponentHasLivingUnit(opponent: DuelPlayerState): boolean {
+  return opponent.field.some((slot) => slot.unit?.isAlive);
+}
+
 /** DuelLogEntry ⊇ BattleLogEntry (reine Erweiterung um zusätzliche Varianten) —
  *  Aufrufe der bestehenden Engine-Funktionen (grantRage/performAction/
  *  executeEffect), die BattleLogEntry[] erwarten, dürfen denselben Log-Array
@@ -236,74 +258,443 @@ function asBattleLog(log: DuelLogEntry[]): BattleLogEntry[] {
   return log as unknown as BattleLogEntry[];
 }
 
-// ---------- Validierung ----------
+/** Zu Beginn jedes eigenen Zugs zurückgesetzt (siehe endTurnInternal) —
+ *  Buchhaltung für die Phasenregeln (kein Angriff/keine zweite Stellungswahl
+ *  im Beschwörungszug, kein zweiter Stellungswechsel, keine Stellungsänderung
+ *  nach einem Angriff). */
+function resetTurnFlags(player: DuelPlayerState): void {
+  for (const slot of player.field) {
+    if (!slot.unit) continue;
+    slot.unit.summonedThisTurn = false;
+    slot.unit.attackedThisTurn = false;
+    slot.unit.stanceLockedThisTurn = false;
+  }
+}
 
-function validateSubmission(player: DuelPlayerState, submission: DuelTurnSubmission): void {
-  if (submission.summon) {
-    const { handCardId, slotIndex } = submission.summon;
-    if (!player.handCardIds.includes(handCardId)) {
-      throw new DuelLiveError("Diese Karte ist nicht auf deiner Hand.");
+// ---------- Taktikkarten: Anker + Ziel-Modell ----------
+
+/** Virtueller Platzhalter-Akteur für Taktikkarten-Effekte, wenn keine eigene
+ *  Feld-Einheit lebt — dient NUR der Team-Zuordnung (allEnemies/allAllies
+ *  funktionieren rein über teamId, siehe targeting.ts), ist bewusst NICHT
+ *  Teil von allUnits (kein gültiges Angriffsziel). Ersetzt die frühere Regel
+ *  "ohne eigene Einheit verpufft die ganze Karte wirkungslos" — nur Effekte,
+ *  die tatsächlich eine eigene Einheit als Ziel bräuchten (z.B. "self"),
+ *  laufen weiterhin ins Leere, alle anderen (allEnemies, ownLp/enemyLp, ...)
+ *  wirken jetzt zuverlässig. */
+function createVirtualCaster(team: TeamId): BattleUnitState {
+  const emptySkill = { name: "", description: "", cost: 0, effects: [] };
+  return {
+    instanceId: `${team}-virtual-caster`,
+    teamId: team,
+    def: {
+      cardId: "virtual-caster",
+      name: "",
+      class: "SUPPORT",
+      level: 1,
+      baseHp: 0,
+      baseAttack: 0,
+      baseDefense: 0,
+      speed: 0,
+      passivePositive: { name: "", description: "", trigger: "battleStart", effects: [] },
+      passiveNegative: { name: "", description: "", trigger: "battleStart", effects: [] },
+      activeSkill: emptySkill,
+      ultimateSkill: emptySkill,
+    },
+    currentHp: 0,
+    maxHp: 0,
+    attack: 0,
+    defense: 0,
+    speed: 0,
+    rage: 0,
+    shield: 0,
+    statModifiers: [],
+    isAlive: false,
+  };
+}
+
+function resolveTacticCaster(team: TeamId, player: DuelPlayerState): BattleUnitState {
+  return player.field.find((slot) => slot.unit?.isAlive)?.unit ?? createVirtualCaster(team);
+}
+
+/** Wendet die Effekte einer Taktikkarte an (Item sofort, oder Falle bei
+ *  Auslösung). `ownLp`/`enemyLp`-Ziele ändern lifePoints direkt (kein Anker
+ *  nötig); alle anderen Ziele laufen über die reguläre Effekt-Engine mit
+ *  einem Anker (echte Feld-Einheit, sonst ein virtueller Platzhalter, siehe
+ *  resolveTacticCaster). */
+function applyTacticEffects(
+  team: TeamId,
+  state: LiveDuelState,
+  def: TacticCardDefinition,
+  rng: Rng,
+  log: DuelLogEntry[],
+  round: number
+): void {
+  const player = playerState(state, team);
+  const opponent = playerState(state, opponentTeam(team));
+  const caster = resolveTacticCaster(team, player);
+
+  for (const effect of def.effects) {
+    if (effect.target.kind === "ownLp" || effect.target.kind === "enemyLp") {
+      const isOwn = effect.target.kind === "ownLp";
+      const targetPlayer = isOwn ? player : opponent;
+      const targetTeam = isOwn ? team : opponentTeam(team);
+      const value = Math.max(0, Math.round(getLevelValue(effect.valuePerLevel, 1)));
+
+      if (effect.type === "damage") {
+        targetPlayer.lifePoints = Math.max(0, targetPlayer.lifePoints - value);
+        log.push({ type: "lpChange", round, team: targetTeam, amount: -value, remainingLp: targetPlayer.lifePoints, reason: "tactic" });
+      } else if (effect.type === "heal") {
+        targetPlayer.lifePoints += value;
+        log.push({ type: "lpChange", round, team: targetTeam, amount: value, remainingLp: targetPlayer.lifePoints, reason: "tactic" });
+      }
+      // shield/statModifier/rageChange ergeben für einen reinen LP-Pool
+      // keinen Sinn und werden mit diesen Zielen nicht autorisiert.
+      continue;
     }
-    if (!player.unitDefsByCardId[handCardId]) {
-      throw new DuelLiveError("Diese Handkarte ist keine Einheiten-Karte.");
-    }
-    const slot = player.field[slotIndex];
-    if (!slot || slot.unit) {
-      throw new DuelLiveError("Dieser Feld-Slot ist ungültig oder bereits belegt.");
-    }
+
+    executeEffect(effect, 1, {
+      actor: caster,
+      allUnits: allFieldUnits(state),
+      rng,
+      round,
+      log: asBattleLog(log),
+      skillName: def.name,
+      suddenDeathMultiplier: 1,
+    });
+  }
+}
+
+function matchesTrigger(condition: TacticCardDefinition["triggerCondition"], action: DuelAction): boolean {
+  if (!condition) return false;
+  switch (condition.type) {
+    case "onEnemyAttack":
+      return action.type === "declareAttack" && action.attackType === "normalAttack";
+    case "onEnemySummon":
+      return action.type === "summon";
+    case "onEnemyUltimate":
+      return action.type === "declareAttack" && action.attackType === "ultimate";
+    default:
+      return false;
+  }
+}
+
+function triggerTraps(owner: TeamId, state: LiveDuelState, action: DuelAction, rng: Rng, log: DuelLogEntry[], round: number): void {
+  const player = playerState(state, owner);
+  const existingTraps = [...player.setTraps];
+  for (const trap of existingTraps) {
+    const def = player.tacticDefsById[trap.tacticCardId];
+    if (!def || !matchesTrigger(def.triggerCondition, action)) continue;
+
+    applyTacticEffects(owner, state, def, rng, log, round);
+    player.setTraps = player.setTraps.filter((t) => t !== trap);
+    player.graveyardCardIds.push(trap.tacticCardId);
+    log.push({ type: "trapTriggered", round, team: owner, tacticCardId: trap.tacticCardId });
+  }
+}
+
+// ---------- Kampfauflösung ----------
+
+function requireLivingUnit(player: DuelPlayerState, slotIndex: number, message: string): BattleUnitState {
+  const unit = player.field[slotIndex]?.unit;
+  if (!unit || !unit.isAlive) throw new DuelLiveError(message);
+  return unit;
+}
+
+/** Löst EINEN deklarierten Angriff auf. Normalangriff gegen eine Einheit in
+ *  Verteidigungsstellung folgt jetzt der echten Yu-Gi-Oh-Regel: ATK > DEF
+ *  zerstört die Einheit (kein LP-Schaden), ATK < DEF lässt sie unbeschadet
+ *  überstehen und schickt die Differenz als LP-Schaden an die ANGREIFENDE
+ *  Seite zurück, ATK === DEF passiert nichts. Normalangriff gegen eine
+ *  Einheit in Angriffsstellung bleibt beim bestehenden HP-basierten
+ *  Kampfmodell (Crit-Chance, Schaden über mehrere Angriffe hinweg) — das war
+ *  nicht Teil der Anfrage. Ultimate ignoriert die Stellung bewusst (siehe
+ *  Chat-Antwort): es wirkt immer mit seinem vollen definierten Effekt, wie
+ *  ein mächtiger Spruch statt eines normalen Kampf-Schlagabtauschs. */
+function resolveDeclaredAttack(
+  team: TeamId,
+  state: LiveDuelState,
+  attacker: BattleUnitState,
+  attackType: "normalAttack" | "ultimate",
+  targetSlotIndex: number,
+  rng: Rng,
+  log: DuelLogEntry[],
+  round: number
+): void {
+  const opponentTeamId = opponentTeam(team);
+  const opponent = playerState(state, opponentTeamId);
+  const defenderUnit = opponent.field[targetSlotIndex]?.unit ?? null;
+
+  if (!defenderUnit || !defenderUnit.isAlive) {
+    // Direktangriff — Validierung in applyAction stellt bereits sicher, dass
+    // die Gegenseite dafür wirklich keine lebende Einheit mehr hat.
+    const amount = attacker.attack;
+    opponent.lifePoints = Math.max(0, opponent.lifePoints - amount);
+    log.push({
+      type: "faceDamage",
+      round,
+      attackerUnitId: attacker.instanceId,
+      defendingTeam: opponentTeamId,
+      amount,
+      remainingLp: opponent.lifePoints,
+    });
+    return;
   }
 
-  if (submission.playTactic) {
-    const { handCardId } = submission.playTactic;
-    if (!player.handCardIds.includes(handCardId)) {
-      throw new DuelLiveError("Diese Taktik-Karte ist nicht auf deiner Hand.");
-    }
-    if (!player.tacticDefsById[handCardId]) {
-      throw new DuelLiveError("Diese Handkarte ist keine Taktik-Karte.");
-    }
+  if (attackType === "ultimate") {
+    performAction(attacker, "ultimate", allFieldUnits(state), rng, round, asBattleLog(log), 1, defenderUnit.instanceId);
+    return;
   }
 
-  if (submission.summon && submission.playTactic && submission.summon.handCardId === submission.playTactic.handCardId) {
-    throw new DuelLiveError("Dieselbe Karte kann nicht gleichzeitig beschworen und als Taktik-Karte gespielt werden.");
+  if (defenderUnit.stance === "defense") {
+    if (attacker.attack > defenderUnit.defense) {
+      defenderUnit.currentHp = 0;
+      if (defenderUnit.isAlive) {
+        defenderUnit.isAlive = false;
+        log.push({ type: "death", round, unitId: defenderUnit.instanceId });
+      }
+      log.push({ type: "defenseDestroyed", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
+    } else if (attacker.attack < defenderUnit.defense) {
+      const reflect = defenderUnit.defense - attacker.attack;
+      const attackerPlayer = playerState(state, team);
+      attackerPlayer.lifePoints = Math.max(0, attackerPlayer.lifePoints - reflect);
+      log.push({
+        type: "defenseReflect",
+        round,
+        attackerUnitId: attacker.instanceId,
+        defenderUnitId: defenderUnit.instanceId,
+        attackerTeam: team,
+        amount: reflect,
+        remainingLp: attackerPlayer.lifePoints,
+      });
+    } else {
+      log.push({ type: "defenseBounce", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
+    }
+    return;
   }
 
-  // Stellungswechsel nur für Einheiten, die bereits VOR diesem Zug auf dem
-  // Feld standen (ein gerade erst beschworener Slot ist zu diesem Zeitpunkt
-  // noch leer, kann also gar nicht referenziert werden) und lebendig sind.
-  const stanceChangeSlots = new Set<number>();
-  for (const change of submission.stanceChanges ?? []) {
-    const slot = player.field[change.slotIndex];
-    if (!slot?.unit || !slot.unit.isAlive) {
-      throw new DuelLiveError("Stellungswechsel für eine leere oder ungültige Position.");
-    }
-    stanceChangeSlots.add(change.slotIndex);
-  }
+  performAction(attacker, "normalAttack", allFieldUnits(state), rng, round, asBattleLog(log), 1, defenderUnit.instanceId);
+}
 
-  for (const attack of submission.attacks) {
-    const slot = player.field[attack.slotIndex];
-    if (!slot?.unit || !slot.unit.isAlive) {
-      throw new DuelLiveError("Angriff für eine leere oder ungültige Position.");
-    }
-    if (attack.targetSlotIndex === undefined) {
-      throw new DuelLiveError("Für diese Aktion fehlt eine Zielposition.");
-    }
-    if (stanceChangeSlots.has(attack.slotIndex)) {
-      throw new DuelLiveError("Eine Einheit kann nicht im selben Zug Stellung wechseln und angreifen.");
+// ---------- Zugende ----------
+
+function clearDeadUnits(player: DuelPlayerState): void {
+  for (const slot of player.field) {
+    if (slot.unit && !slot.unit.isAlive) {
+      player.graveyardCardIds.push(slot.unit.def.cardId);
+      slot.unit = null;
     }
   }
 }
 
-// ---------- Einreichen ----------
+/** Eine Seite ohne Handkarten UND ohne Feld-Einheiten hat keine Möglichkeit
+ *  mehr, das Spiel zu beeinflussen — zweite Niederlage-Bedingung neben LP <= 0
+ *  (bewusst unabhängig vom Deck-Stand: kein separates Deck-Out). */
+function hasNoResourcesLeft(player: DuelPlayerState): boolean {
+  return player.handCardIds.length === 0 && player.field.every((slot) => !slot.unit);
+}
 
-export function submitDuelAction(state: LiveDuelState, team: TeamId, submission: DuelTurnSubmission): LiveDuelState {
+export function checkDuelWinner(playerA: DuelPlayerState, playerB: DuelPlayerState): TeamId | "DRAW" | null {
+  const aDown = playerA.lifePoints <= 0 || hasNoResourcesLeft(playerA);
+  const bDown = playerB.lifePoints <= 0 || hasNoResourcesLeft(playerB);
+  if (aDown && bDown) return "DRAW";
+  if (aDown) return "B";
+  if (bDown) return "A";
+  return null;
+}
+
+/** Comeback-Bonus: vereinfacht anhand aktuellem HP-Rückstand am Zugende (nicht
+ *  nur Schaden dieses Zugs) — reicht fürs Grundgerüst. Einmal pro Zugende für
+ *  die gerade beendende Seite (nicht mehr pro einzelnem Angriff, seit Angriffe
+ *  jetzt einzeln statt gebündelt eingereicht werden). */
+function grantComebackRage(team: TeamId, state: LiveDuelState, round: number): void {
+  const player = playerState(state, team);
+  for (const slot of player.field) {
+    if (!slot.unit?.isAlive) continue;
+    const missingPercent = 1 - slot.unit.currentHp / slot.unit.maxHp;
+    if (missingPercent > 0) {
+      const bonus = Math.round(DUEL_COMEBACK_RAGE_FACTOR * missingPercent * RAGE_PER_ACTION);
+      grantRage(slot.unit, bonus, round, asBattleLog(state.log), "action");
+    }
+  }
+}
+
+/** Ziehen/Standby (automatisch) + Zugwechsel — analog zum "End Phase"-Übergang
+ *  im echten Yu-Gi-Oh. Kein Sonderfall für "kein Draw im allerersten Zug"
+ *  nötig: Zug 1 (Startspieler) läuft direkt mit der Starthand, der erste
+ *  tatsächliche Kartenzug passiert erst HIER beim Wechsel in Zug 2 — genau
+ *  wie im echten Spiel, wo nur der Startspieler seine eigene erste
+ *  Ziehphase auslässt. */
+function endTurnInternal(state: LiveDuelState, finishingTeam: TeamId, round: number): void {
+  grantComebackRage(finishingTeam, state, round);
+
+  const nextTeam = opponentTeam(finishingTeam);
+  const nextPlayer = playerState(state, nextTeam);
+  drawCards(nextPlayer, DUEL_DRAW_PER_ROUND);
+
+  state.log.push({ type: "roundEnd", round });
+  state.activeTeam = nextTeam;
+  state.round += 1;
+  state.phase = "main1";
+  state.normalSummonUsed = false;
+  resetTurnFlags(nextPlayer);
+  state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
+}
+
+// ---------- Aktions-Anwendung ----------
+
+function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): LiveDuelState {
+  const rng = createRng(state.rngState);
+  const round = state.round;
+  const log = state.log;
+  const player = playerState(state, team);
+  const opponentTeamId = opponentTeam(team);
+  const opponent = playerState(state, opponentTeamId);
+
+  switch (action.type) {
+    case "summon": {
+      if (state.phase !== "main1" && state.phase !== "main2") {
+        throw new DuelLiveError("Beschwörung ist nur in einer Hauptphase möglich.");
+      }
+      if (state.normalSummonUsed) {
+        throw new DuelLiveError("Du hast in diesem Zug bereits eine Einheit beschworen.");
+      }
+      const { handCardId, slotIndex, stance } = action;
+      if (!player.handCardIds.includes(handCardId)) {
+        throw new DuelLiveError("Diese Karte ist nicht auf deiner Hand.");
+      }
+      const def = player.unitDefsByCardId[handCardId];
+      if (!def) throw new DuelLiveError("Diese Handkarte ist keine Einheiten-Karte.");
+      const slot = player.field[slotIndex];
+      if (!slot || slot.unit) throw new DuelLiveError("Dieser Feld-Slot ist ungültig oder bereits belegt.");
+
+      const instanceId = `${team}-${slotIndex}-${handCardId}-${round}`;
+      const unit = createBattleUnitState(def, team, instanceId);
+      unit.stance = stance;
+      unit.summonedThisTurn = true;
+      slot.unit = unit;
+      player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
+      state.normalSummonUsed = true;
+      log.push({ type: "summon", round, team, slotIndex, unitId: instanceId, cardId: handCardId });
+
+      triggerTraps(opponentTeamId, state, action, rng, log, round);
+      break;
+    }
+
+    case "changeStance": {
+      if (state.phase !== "main1" && state.phase !== "main2") {
+        throw new DuelLiveError("Die Stellung kann nur in einer Hauptphase gewechselt werden.");
+      }
+      const unit = requireLivingUnit(player, action.slotIndex, "Stellungswechsel für eine leere oder ungültige Position.");
+      if (unit.summonedThisTurn) {
+        throw new DuelLiveError("Eine gerade erst beschworene Einheit kann ihre Stellung diesen Zug nicht mehr ändern.");
+      }
+      if (unit.stanceLockedThisTurn) {
+        throw new DuelLiveError("Diese Einheit hat ihre Stellung in diesem Zug bereits gewechselt.");
+      }
+      if (unit.attackedThisTurn) {
+        throw new DuelLiveError("Eine Einheit, die bereits angegriffen hat, kann ihre Stellung nicht mehr ändern.");
+      }
+      unit.stance = action.stance;
+      unit.stanceLockedThisTurn = true;
+      log.push({ type: "stanceChanged", round, team, slotIndex: action.slotIndex, stance: action.stance });
+      break;
+    }
+
+    case "playTactic": {
+      if (state.phase !== "main1" && state.phase !== "main2") {
+        throw new DuelLiveError("Taktik-Karten können nur in einer Hauptphase gespielt werden.");
+      }
+      const { handCardId, mode } = action;
+      if (!player.handCardIds.includes(handCardId)) {
+        throw new DuelLiveError("Diese Taktik-Karte ist nicht auf deiner Hand.");
+      }
+      const def = player.tacticDefsById[handCardId];
+      if (!def) throw new DuelLiveError("Diese Handkarte ist keine Taktik-Karte.");
+      if (mode === "setFaceDown" && def.kind !== "TRAP") {
+        throw new DuelLiveError("Nur Fallen können verdeckt gesetzt werden.");
+      }
+      if (mode === "instant" && def.kind !== "INSTANT") {
+        throw new DuelLiveError("Nur Items können sofort gespielt werden.");
+      }
+
+      player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
+      log.push({ type: "tacticPlayed", round, team, tacticCardId: handCardId, mode });
+
+      if (mode === "setFaceDown") {
+        player.setTraps.push({ tacticCardId: handCardId, slotIndex: player.setTraps.length });
+      } else {
+        applyTacticEffects(team, state, def, rng, log, round);
+        player.graveyardCardIds.push(handCardId);
+      }
+      break;
+    }
+
+    case "declareAttack": {
+      if (state.phase !== "battle") throw new DuelLiveError("Angriffe sind nur in der Kampfphase möglich.");
+      const attacker = requireLivingUnit(player, action.slotIndex, "Angriff von einer leeren oder ungültigen Position.");
+      if (attacker.summonedThisTurn) {
+        throw new DuelLiveError("Eine gerade erst beschworene Einheit kann diesen Zug noch nicht angreifen.");
+      }
+      if (attacker.attackedThisTurn) {
+        throw new DuelLiveError("Diese Einheit hat in diesem Zug bereits angegriffen.");
+      }
+      if (attacker.stance === "defense") {
+        throw new DuelLiveError("Eine Einheit in Verteidigungsstellung kann nicht angreifen.");
+      }
+
+      const { targetSlotIndex } = action;
+      if (targetSlotIndex < 0 || targetSlotIndex >= DUEL_FIELD_SIZE) {
+        throw new DuelLiveError("Ungültige Zielposition.");
+      }
+      const defenderUnit = opponent.field[targetSlotIndex]?.unit ?? null;
+      const targetIsEmpty = !defenderUnit || !defenderUnit.isAlive;
+      if (targetIsEmpty && opponentHasLivingUnit(opponent)) {
+        throw new DuelLiveError("Ein Direktangriff ist nur möglich, wenn die Gegenseite keine Einheit mehr auf dem Feld hat.");
+      }
+      if (action.attackType === "ultimate") {
+        const cost = attacker.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
+        if (attacker.rage < cost) throw new DuelLiveError("Nicht genug Rage für das Ultimate.");
+      }
+
+      triggerTraps(opponentTeamId, state, action, rng, log, round);
+      resolveDeclaredAttack(team, state, attacker, action.attackType, targetSlotIndex, rng, log, round);
+      attacker.attackedThisTurn = true;
+      grantRage(attacker, RAGE_PER_ACTION, round, asBattleLog(log), "action");
+      break;
+    }
+
+    case "advancePhase": {
+      if (state.phase === "main1") state.phase = "battle";
+      else if (state.phase === "battle") state.phase = "main2";
+      else endTurnInternal(state, team, round);
+      break;
+    }
+
+    case "endTurn": {
+      endTurnInternal(state, team, round);
+      break;
+    }
+  }
+
+  clearDeadUnits(state.playerA);
+  clearDeadUnits(state.playerB);
+  state.winner = state.winner ?? checkDuelWinner(state.playerA, state.playerB);
+  state.rngState = rng.getState();
+
+  if (state.winner && log[log.length - 1]?.type !== "battleEnd") {
+    log.push({ type: "battleEnd", winner: state.winner, round: state.round });
+  }
+
+  return state;
+}
+
+export function submitDuelAction(state: LiveDuelState, team: TeamId, action: DuelAction): LiveDuelState {
   if (state.winner) throw new DuelLiveError("Dieses Duell ist bereits beendet.");
   if (team !== state.activeTeam) throw new DuelLiveError("Du bist gerade nicht am Zug.");
-
-  validateSubmission(playerState(state, team), submission);
-  return applyTurn(state, team, submission);
+  return applyAction(state, team, action);
 }
 
-// ---------- Timeout (lazy, kein Sweep-Job — siehe getLiveBattleSnapshot-Vorbild) ----------
+// ---------- Automatik (Timeout-Fallback + NPC-KI) ----------
 
 function pickDefaultTargetSlot(opponent: DuelPlayerState): number {
   let bestIndex = 0;
@@ -316,31 +707,54 @@ function pickDefaultTargetSlot(opponent: DuelPlayerState): number {
       found = true;
     }
   });
-  return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Face-Damage in resolveAttacks
+  return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Direktangriff, falls Gegner leer ist
 }
 
-/** Einfache Standard-Entscheidung: greift mit jeder eigenen lebenden Feld-
- *  Einheit die gegnerische Einheit mit der niedrigsten Verteidigung an, und
- *  beschwört bei freiem Slot die erste Einheiten-Karte aus der Hand (immer in
- *  Angriffsstellung). Dient zweifach: (1) Timeout-Fallback für einen
- *  säumigen menschlichen Spieler (siehe checkDuelTimeout), (2) die komplette
- *  "KI" für OMA-Duels-NPC-Kämpfe (siehe duel-live-battle.ts) — bewusst
- *  dieselbe simple Logik für beide Fälle, statt eine eigene NPC-KI zu
- *  duplizieren. */
-export function computeAutoSubmission(player: DuelPlayerState, opponent: DuelPlayerState): DuelTurnSubmission {
-  const attacks: DuelAttackAction[] = [];
-  player.field.forEach((slot, slotIndex) => {
-    if (!slot.unit?.isAlive) return;
-    attacks.push({ slotIndex, action: "normalAttack", targetSlotIndex: pickDefaultTargetSlot(opponent) });
-  });
+/** Spielt den REST des aktuellen Zugs automatisch zu Ende — phasenweise
+ *  (main1 -> battle -> main2 -> Zugende), exakt wie ein Mensch es über
+ *  mehrere Einzelaktionen täte, nur ohne Zwischenstopps. Dient zweifach: (1)
+ *  Timeout-Fallback für einen säumigen menschlichen Spieler (siehe
+ *  checkDuelTimeout), (2) die komplette "KI" für OMA-Duels-NPC-Kämpfe (siehe
+ *  duel-live-battle.ts) — bewusst dieselbe simple Logik für beide Fälle.
+ *  Einfache Standard-Entscheidung: beschwört bei freiem Slot + ungenutzter
+ *  Normalbeschwörung die erste Einheiten-Karte aus der Hand (Angriffsstellung),
+ *  greift danach mit jeder noch verfügbaren eigenen Einheit die gegnerische
+ *  Einheit mit der niedrigsten Verteidigung an (kein Ultimate — bewusst
+ *  einfach gehalten). */
+export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
+  let current = state;
 
-  const emptySlotIndex = player.field.findIndex((slot) => !slot.unit);
-  const summonCardId = emptySlotIndex >= 0 ? player.handCardIds.find((id) => player.unitDefsByCardId[id]) : undefined;
+  if (current.phase === "main1" && !current.winner) {
+    const player = playerState(current, team);
+    const emptySlotIndex = player.field.findIndex((slot) => !slot.unit);
+    const summonCardId =
+      !current.normalSummonUsed && emptySlotIndex >= 0
+        ? player.handCardIds.find((id) => player.unitDefsByCardId[id])
+        : undefined;
+    if (summonCardId) {
+      current = applyAction(current, team, { type: "summon", handCardId: summonCardId, slotIndex: emptySlotIndex, stance: "attack" });
+    }
+    if (!current.winner) current = applyAction(current, team, { type: "advancePhase" });
+  }
 
-  return {
-    summon: summonCardId ? { handCardId: summonCardId, slotIndex: emptySlotIndex, stance: "attack" } : undefined,
-    attacks,
-  };
+  if (current.phase === "battle" && !current.winner) {
+    const player = playerState(current, team);
+    const opponent = playerState(current, opponentTeam(team));
+    for (let slotIndex = 0; slotIndex < player.field.length; slotIndex++) {
+      if (current.winner) break;
+      const unit = player.field[slotIndex]?.unit;
+      if (!unit?.isAlive || unit.summonedThisTurn || unit.attackedThisTurn || unit.stance === "defense") continue;
+      const targetSlotIndex = opponentHasLivingUnit(opponent) ? pickDefaultTargetSlot(opponent) : 0;
+      current = applyAction(current, team, { type: "declareAttack", slotIndex, attackType: "normalAttack", targetSlotIndex });
+    }
+    if (!current.winner) current = applyAction(current, team, { type: "advancePhase" });
+  }
+
+  if (current.phase === "main2" && !current.winner) {
+    current = applyAction(current, team, { type: "advancePhase" }); // main2 -> Zugende
+  }
+
+  return current;
 }
 
 export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
@@ -348,268 +762,8 @@ export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
   if (Date.now() < state.turnDeadline) return state;
 
   const team = state.activeTeam;
-  const submission = computeAutoSubmission(playerState(state, team), playerState(state, opponentTeam(team)));
   if (team === "A") state.timeoutStreakA += 1;
   else state.timeoutStreakB += 1;
 
-  return applyTurn(state, team, submission);
-}
-
-// ---------- Zug-Auflösung ----------
-
-function applySummon(team: TeamId, player: DuelPlayerState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
-  if (!submission.summon) return;
-  const { handCardId, slotIndex, stance } = submission.summon;
-  const def = player.unitDefsByCardId[handCardId];
-  const slot = player.field[slotIndex];
-  if (!def || !slot || slot.unit) return; // defensiv, bereits in validateSubmission geprüft
-
-  const instanceId = `${team}-${slotIndex}-${handCardId}-${round}`;
-  const unit = createBattleUnitState(def, team, instanceId);
-  unit.stance = stance;
-  slot.unit = unit;
-  player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
-  log.push({ type: "summon", round, team, slotIndex, unitId: instanceId, cardId: handCardId });
-}
-
-function applyStanceChanges(team: TeamId, player: DuelPlayerState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
-  for (const change of submission.stanceChanges ?? []) {
-    const unit = player.field[change.slotIndex]?.unit;
-    if (!unit) continue; // defensiv, bereits in validateSubmission geprüft
-    unit.stance = change.stance;
-    log.push({ type: "stanceChanged", round, team, slotIndex: change.slotIndex, stance: change.stance });
-  }
-}
-
-function applyTacticPlay(
-  team: TeamId,
-  state: LiveDuelState,
-  submission: DuelTurnSubmission,
-  rng: Rng,
-  log: DuelLogEntry[],
-  round: number
-): void {
-  if (!submission.playTactic) return;
-  const player = playerState(state, team);
-  const { handCardId, mode, slotIndex } = submission.playTactic;
-  const def = player.tacticDefsById[handCardId];
-  if (!def) return;
-
-  player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
-  log.push({ type: "tacticPlayed", round, team, tacticCardId: handCardId, mode });
-
-  if (mode === "setFaceDown") {
-    player.setTraps.push({ tacticCardId: handCardId, slotIndex: slotIndex ?? player.setTraps.length });
-    return;
-  }
-
-  // INSTANT: Effekte sofort anwenden. Effect/EffectTarget sind an eine
-  // Akteur-Einheit gebunden (siehe effects.ts) — als Anker dient die erste
-  // eigene lebende Feld-Einheit. Ohne eigene Feld-Einheit verpufft der Effekt
-  // (vereinfachtes Grundgerüst; ein reines "Ziel = LP-Pool"-Effekt-Modell wäre
-  // ein Folgeschritt für Karten, die nicht an Einheiten hängen sollen).
-  const anchor = player.field.find((slot) => slot.unit?.isAlive)?.unit;
-  if (anchor) {
-    for (const effect of def.effects) {
-      executeEffect(effect, 1, {
-        actor: anchor,
-        allUnits: allFieldUnits(state),
-        rng,
-        round,
-        log: asBattleLog(log),
-        skillName: def.name,
-        suddenDeathMultiplier: 1,
-      });
-    }
-  }
-  player.graveyardCardIds.push(handCardId);
-}
-
-function matchesTrigger(condition: TacticCardDefinition["triggerCondition"], attackerSubmission: DuelTurnSubmission): boolean {
-  if (!condition) return false;
-  switch (condition.type) {
-    case "onEnemyAttack":
-      return attackerSubmission.attacks.some((a) => a.action === "normalAttack" || a.action === "active");
-    case "onEnemySummon":
-      return !!attackerSubmission.summon;
-    case "onEnemyUltimate":
-      return attackerSubmission.attacks.some((a) => a.action === "ultimate");
-    default:
-      return false;
-  }
-}
-
-function triggerTraps(
-  owner: TeamId,
-  state: LiveDuelState,
-  existingTraps: DuelTrapInPlay[],
-  attackerSubmission: DuelTurnSubmission,
-  rng: Rng,
-  log: DuelLogEntry[],
-  round: number
-): void {
-  const player = playerState(state, owner);
-  for (const trap of existingTraps) {
-    const def = player.tacticDefsById[trap.tacticCardId];
-    if (!def || !matchesTrigger(def.triggerCondition, attackerSubmission)) continue;
-
-    const anchor = player.field.find((slot) => slot.unit?.isAlive)?.unit;
-    if (anchor) {
-      for (const effect of def.effects) {
-        executeEffect(effect, 1, {
-          actor: anchor,
-          allUnits: allFieldUnits(state),
-          rng,
-          round,
-          log: asBattleLog(log),
-          skillName: def.name,
-          suddenDeathMultiplier: 1,
-        });
-      }
-    }
-    player.setTraps = player.setTraps.filter((t) => t !== trap);
-    player.graveyardCardIds.push(trap.tacticCardId);
-    log.push({ type: "trapTriggered", round, team: owner, tacticCardId: trap.tacticCardId });
-  }
-}
-
-/** Löst die deklarierten Angriffe EINER Seite auf — die Gegenseite hat in
- *  diesem Zug nichts eingereicht, ihr Feld-Zustand (inkl. `stance`) ist
- *  bereits bekannt/sichtbar, kein "Gegenreaktion erraten" mehr nötig. */
-function resolveAttacks(
-  team: TeamId,
-  state: LiveDuelState,
-  submission: DuelTurnSubmission,
-  rng: Rng,
-  log: DuelLogEntry[],
-  round: number
-): void {
-  const player = playerState(state, team);
-  const opponentTeamId = opponentTeam(team);
-  const opponent = playerState(state, opponentTeamId);
-
-  for (const attack of submission.attacks) {
-    const attacker = player.field[attack.slotIndex]?.unit;
-    if (!attacker || !attacker.isAlive) continue;
-    const targetSlotIndex = attack.targetSlotIndex;
-    if (targetSlotIndex === undefined) continue;
-
-    const defenderUnit = opponent.field[targetSlotIndex]?.unit;
-
-    if (!defenderUnit || !defenderUnit.isAlive) {
-      // Ziel-Slot leer -> Face-Damage, 1:1 des attack-Werts, kein performAction.
-      const amount = attacker.attack;
-      opponent.lifePoints = Math.max(0, opponent.lifePoints - amount);
-      log.push({
-        type: "faceDamage",
-        round,
-        attackerUnitId: attacker.instanceId,
-        defendingTeam: opponentTeamId,
-        amount,
-        remainingLp: opponent.lifePoints,
-      });
-      continue;
-    }
-
-    const multiplier = defenderUnit.stance === "defense" ? DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER : 1;
-    performAction(attacker, attack.action, allFieldUnits(state), rng, round, asBattleLog(log), multiplier, defenderUnit.instanceId);
-  }
-}
-
-function grantTurnRage(team: TeamId, state: LiveDuelState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
-  const player = playerState(state, team);
-
-  for (const attack of submission.attacks) {
-    const unit = player.field[attack.slotIndex]?.unit;
-    if (!unit || !unit.isAlive) continue;
-    grantRage(unit, RAGE_PER_ACTION, round, asBattleLog(log), "action");
-  }
-
-  // Comeback-Bonus: vereinfacht anhand aktuellem HP-Rückstand (nicht nur
-  // Schaden dieses Zugs) — reicht fürs Grundgerüst, siehe Plan. Nur für die
-  // aktive Seite (wer gerade dran ist, bekommt ggf. etwas Aufholhilfe).
-  for (const slot of player.field) {
-    if (!slot.unit?.isAlive) continue;
-    const missingPercent = 1 - slot.unit.currentHp / slot.unit.maxHp;
-    if (missingPercent > 0) {
-      const bonus = Math.round(DUEL_COMEBACK_RAGE_FACTOR * missingPercent * RAGE_PER_ACTION);
-      grantRage(slot.unit, bonus, round, asBattleLog(log), "action");
-    }
-  }
-}
-
-function clearDeadUnits(player: DuelPlayerState): void {
-  for (const slot of player.field) {
-    if (slot.unit && !slot.unit.isAlive) {
-      player.graveyardCardIds.push(slot.unit.def.cardId);
-      slot.unit = null;
-    }
-  }
-}
-
-export function checkDuelWinner(playerA: DuelPlayerState, playerB: DuelPlayerState): TeamId | "DRAW" | null {
-  const aDown = playerA.lifePoints <= 0;
-  const bDown = playerB.lifePoints <= 0;
-  if (aDown && bDown) return "DRAW";
-  if (aDown) return "B";
-  if (bDown) return "A";
-  return null;
-}
-
-/** Wertet EINEN kompletten Spielerzug sofort aus (kein Warten auf eine
- *  zweite Einreichung — nur eine Seite ist pro Zug aktiv). */
-function applyTurn(state: LiveDuelState, team: TeamId, submission: DuelTurnSubmission): LiveDuelState {
-  const rng = createRng(state.rngState);
-  const round = state.round;
-  const log = state.log;
-  const opponentTeamId = opponentTeam(team);
-  const opponent = playerState(state, opponentTeamId);
-
-  // Fallen-Snapshot VOR dieser Auflösung — eine gerade erst verdeckt
-  // gesetzte eigene Falle kann in DIESEM Zug (logisch: erst im nächsten
-  // gegnerischen Zug) noch nicht auslösen; hier geht es um die bereits
-  // VORHER liegenden Fallen der Gegenseite.
-  const existingOpponentTraps = [...opponent.setTraps];
-
-  applySummon(team, playerState(state, team), submission, log, round);
-  applyStanceChanges(team, playerState(state, team), submission, log, round);
-  applyTacticPlay(team, state, submission, rng, log, round);
-  triggerTraps(opponentTeamId, state, existingOpponentTraps, submission, rng, log, round);
-  resolveAttacks(team, state, submission, rng, log, round);
-  grantTurnRage(team, state, submission, log, round);
-
-  // Tote Feld-Einheiten auf BEIDEN Seiten räumen — sonst bleibt der Slot für
-  // immer blockiert (ein "death"-Log-Eintrag wurde bereits beim tödlichen
-  // Treffer geschrieben, hier nur der stille Feld-Zustandswechsel).
-  clearDeadUnits(state.playerA);
-  clearDeadUnits(state.playerB);
-
-  state.winner = checkDuelWinner(state.playerA, state.playerB);
-  state.rngState = rng.getState();
-
-  if (state.winner) {
-    log.push({ type: "battleEnd", winner: state.winner, round });
-    return state;
-  }
-
-  // Zug wechselt — die neue aktive Seite zieht 1 Karte. Kein Sonderfall für
-  // "kein Draw im allerersten Zug" nötig: Zug 1 (Startspieler) läuft direkt
-  // mit der Starthand ohne einen vorherigen Übergang, der erste tatsächliche
-  // Kartenzug passiert erst HIER beim Wechsel in Zug 2 — genau wie in echtem
-  // Yu-Gi-Oh, wo nur der Startspieler seine eigene erste Ziehphase auslässt.
-  const deckedOut = drawCards(opponent, DUEL_DRAW_PER_ROUND);
-  log.push({ type: "roundEnd", round });
-  state.activeTeam = opponentTeamId;
-  state.round += 1;
-  state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
-
-  // Deck-Out: die neue aktive Seite konnte ihre Pflichtkarte nicht ziehen ->
-  // sofortige Niederlage (wie im echten Yu-Gi-Oh), unabhängig vom LP-Stand.
-  if (deckedOut) {
-    state.winner = team;
-    log.push({ type: "deckOut", round: state.round, team: opponentTeamId });
-    log.push({ type: "battleEnd", winner: team, round: state.round });
-  }
-
-  return state;
+  return runAutoTurn(state, team);
 }

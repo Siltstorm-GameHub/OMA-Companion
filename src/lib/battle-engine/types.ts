@@ -30,7 +30,15 @@ export type EffectTarget =
   | { kind: "singleEnemy"; select: SingleEnemySelector }
   | { kind: "allEnemies" }
   | { kind: "singleAlly"; select: SingleAllySelector }
-  | { kind: "allAllies" };
+  | { kind: "allAllies" }
+  /** Nur für OMA-Duels-Taktikkarten (duels-live.ts) — zielt direkt auf den
+   *  eigenen/gegnerischen Lebenspunkte-Pool statt auf eine Feld-Einheit, damit
+   *  ein Effekt auch ohne eigene Feld-Einheit als Anker wirken kann. Der
+   *  reguläre Einheiten-Kampf (engine.ts/interactive.ts) nutzt diese Ziele
+   *  nie — resolveEffectTargets() gibt dafür bewusst eine leere Liste zurück,
+   *  die eigentliche LP-Änderung übernimmt duels-live.ts vorab selbst. */
+  | { kind: "ownLp" }
+  | { kind: "enemyLp" };
 
 // ---------- Effekte ----------
 // `valuePerLevel` hat 5 Einträge (Stufe 1-5), analog zu den JSON-Feldern im
@@ -162,11 +170,18 @@ export interface BattleUnitState {
   shield: number;
   statModifiers: ActiveStatModifier[];
   isAlive: boolean;
-  /** Nur für OMA Duels (duels-live.ts) — Angriffs-/Verteidigungsstellung,
-   *  beeinflusst dort den Schadens-Multiplikator bei eingehenden Angriffen.
+  /** Nur für OMA Duels (duels-live.ts) — Angriffs-/Verteidigungsstellung, löst
+   *  dort die echte ATK-vs-DEF-Kampfauflösung aus (siehe resolveDeclaredAttack).
    *  Optional, damit der alte sequentielle Modus (interactive.ts) unverändert
    *  bleibt; dort schlicht ungenutzt. */
   stance?: "attack" | "defense";
+  /** Ab hier: reine Zug-Buchhaltung für OMA Duels' Phasensystem (main1/battle/
+   *  main2), analog zu `stance` optional und im alten Modus ungenutzt. Wird zu
+   *  Beginn jedes eigenen Zugs für alle Feld-Einheiten der aktiven Seite
+   *  zurückgesetzt (siehe resetTurnFlags in duels-live.ts). */
+  summonedThisTurn?: boolean;
+  attackedThisTurn?: boolean;
+  stanceLockedThisTurn?: boolean;
 }
 
 export type Team = BattleUnitDefinition[];
