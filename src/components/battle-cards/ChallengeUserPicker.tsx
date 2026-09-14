@@ -10,8 +10,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, Swords, X } from "lucide-react";
+import { X } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import MobaIcon from "./MobaIcon";
 import MatchupBadge from "./MatchupBadge";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
@@ -78,23 +79,17 @@ export default function ChallengeUserPicker() {
   }
 
   return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: "linear-gradient(180deg, #1c1826 0%, #14121b 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(167,139,250,0.35), 0 3px 0 #4c1d95",
-      }}
-    >
+    <div className="moba-panel rounded-2xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-          <Swords className="w-4 h-4 text-violet-400" />
+        <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
+          <MobaIcon name="crossedSwords" className="w-5 h-5" />
         </div>
         <p className="text-sm font-semibold text-white">Nutzer direkt herausfordern</p>
       </div>
 
       {selected ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-black/20 border border-[color:var(--moba-accent-line)]">
             <RankedAvatar rankPoints={selected.rankPoints} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
             <span className="flex-1 text-sm text-white truncate">{uname(selected)}</span>
             <MatchupBadge strength={matchup} />
@@ -105,26 +100,25 @@ export default function ChallengeUserPicker() {
           <button
             onClick={challenge}
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
-            style={{
-              background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
-              boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #3b0764",
-            }}
+            className="moba-button w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
           >
-            <Swords className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Herausfordern"}
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+            <span className="moba-button-label relative flex items-center gap-1.5">
+              <MobaIcon name="crossedSwords" className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Herausfordern"}
+            </span>
           </button>
         </div>
       ) : (
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
+          <MobaIcon name="search" className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Nutzer suchen…"
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)]"
           />
           {results.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full glass-heavy rounded-xl overflow-hidden border border-white/10">
+            <div className="moba-panel absolute z-10 mt-1 w-full rounded-xl overflow-hidden">
               {results.map(u => (
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">

@@ -18,11 +18,12 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Bot, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import DuelLiveView from "./DuelLiveView";
 import ErrorNotice from "./ErrorNotice";
 import CoinIcon from "@/components/CoinIcon";
+import MobaIcon from "./MobaIcon";
 import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 
 const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; color: string; colorDark: string }> = {
@@ -69,16 +70,10 @@ export default function NpcBattleLauncher() {
   }
 
   return (
-    <div
-      className="rounded-2xl p-4 space-y-2.5"
-      style={{
-        background: "linear-gradient(180deg, #142120 0%, #0f1716 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(45,212,191,0.35), 0 3px 0 #0f766e",
-      }}
-    >
+    <div className="moba-panel rounded-2xl p-4 space-y-2.5">
       <div className="flex items-center gap-2">
         <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-          <Bot className="w-4 h-4 text-teal-400" />
+          <MobaIcon name="boss" className="w-5 h-5" />
         </div>
         <p className="text-sm font-semibold text-white">Kampf gegen NPC</p>
       </div>

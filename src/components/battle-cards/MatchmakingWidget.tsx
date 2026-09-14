@@ -10,7 +10,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Swords, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 
 const POLL_INTERVAL_MS = 2500;
 
@@ -81,13 +82,7 @@ export default function MatchmakingWidget() {
 
   if (waiting) {
     return (
-      <div
-        className="rounded-2xl p-4 flex items-center gap-3"
-        style={{
-          background: "linear-gradient(180deg, #1c1710 0%, #14120c 100%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 rgba(120,53,15,0.6)",
-        }}
-      >
+      <div className="moba-panel rounded-2xl p-4 flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
           <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
         </div>
@@ -97,7 +92,7 @@ export default function MatchmakingWidget() {
         </div>
         <button
           onClick={cancel}
-          className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-400 hover:bg-white/[0.1] transition-colors shrink-0"
+          className="moba-pill normal-case font-semibold px-3 py-1.5 hover:bg-white/[0.06] transition-colors shrink-0"
         >
           <X className="w-3.5 h-3.5" /> Abbrechen
         </button>
@@ -109,14 +104,10 @@ export default function MatchmakingWidget() {
     <button
       onClick={join}
       disabled={busy}
-      className="w-full rounded-2xl p-4 flex items-center gap-3 text-left active:translate-y-0.5 transition-transform disabled:opacity-50"
-      style={{
-        background: "linear-gradient(180deg, #23191c 0%, #181215 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,113,133,0.35), 0 3px 0 #7f1130, 0 8px 16px rgba(225,29,72,0.2)",
-      }}
+      className="moba-panel w-full rounded-2xl p-4 flex items-center gap-3 text-left active:translate-y-0.5 transition-transform disabled:opacity-50"
     >
       <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-        <Swords className="w-4 h-4 text-rose-400" />
+        <MobaIcon name="crossedSwords" className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white">Zufallsgegner suchen</p>

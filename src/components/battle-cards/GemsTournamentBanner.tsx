@@ -10,10 +10,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Gem, Loader2, Trophy } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import CountdownBadge from "@/components/CountdownBadge";
 import RankedAvatar from "@/components/RankedAvatar";
 import LiveBattleView from "./LiveBattleView";
+import MobaIcon from "./MobaIcon";
 
 interface TournamentData {
   id: string;
@@ -84,17 +85,11 @@ export default function GemsTournamentBanner() {
   const attemptsLeft = tournament.maxAttemptsPerUser - tournament.attemptsUsed;
 
   return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: "linear-gradient(180deg, #1e1b2e 0%, #14101f 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(167,139,250,0.35), 0 3px 0 #4c1d95",
-      }}
-    >
+    <div className="moba-panel rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <Trophy className="w-4 h-4 text-violet-300" />
+          <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
+            <MobaIcon name="trophy" className="w-5 h-5" />
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{tournament.title}</p>

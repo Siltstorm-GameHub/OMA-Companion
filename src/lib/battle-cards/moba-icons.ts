@@ -38,6 +38,7 @@ export const MOBA_ICON = {
   profile: `${BASE}/profile.png`, // Community-Karte
   star: `${BASE}/star.png`, // Level-Sterne
   clock: `${BASE}/clock.png`, // wartend
+  search: `${BASE}/search.png`,
   gem: "/battle-cards/moba/gem.png",
   coin: "/battle-cards/moba/coin.png",
 } as const;
