@@ -37,7 +37,7 @@ import {
   DUEL_ULTIMATE_TANK_SHIELD_FACTOR,
 } from "./duel-constants";
 import { applyShieldAbsorption } from "./damage";
-import { executeEffect, getLevelValue } from "./effects";
+import { executeEffect, getLevelValue, tickStatModifierDurations } from "./effects";
 import { grantRage, performAction } from "./engine";
 import { createRng, randomSeed, type Rng } from "./rng";
 import { createBattleUnitState } from "./stats";
@@ -274,6 +274,21 @@ function resetTurnFlags(player: DuelPlayerState): void {
     slot.unit.summonedThisTurn = false;
     slot.unit.attackedThisTurn = false;
     slot.unit.stanceLockedThisTurn = false;
+  }
+}
+
+/** Zählt befristete statModifier-Effekte (z.B. "für 2 Runden" auf einer
+ *  Taktikkarte) beim Beginn des eigenen Zugs herunter — ohne diesen Aufruf
+ *  wären solche Effekte in OMA Duels dauerhaft statt befristet, da hier (im
+ *  Unterschied zu runBattle()/interactive.ts) sonst nirgends
+ *  tickStatModifierDurations() läuft. Zählt eine "Runde" als "eine eigene
+ *  Zug-Wiederkehr" — ein "2 Runden"-Effekt hält also über die nächsten 2
+ *  eigenen Züge an, unabhängig davon, wie viele gegnerische Züge dazwischen
+ *  liegen. */
+function tickPlayerStatModifiers(player: DuelPlayerState): void {
+  for (const slot of player.field) {
+    if (!slot.unit) continue;
+    tickStatModifierDurations(slot.unit);
   }
 }
 
@@ -645,6 +660,7 @@ function endTurnInternal(state: LiveDuelState, finishingTeam: TeamId, round: num
   state.phase = "main1";
   state.normalSummonUsed = false;
   resetTurnFlags(nextPlayer);
+  tickPlayerStatModifiers(nextPlayer);
   state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
 }
 

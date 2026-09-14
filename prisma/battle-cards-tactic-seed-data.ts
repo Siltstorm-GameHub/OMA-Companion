@@ -83,14 +83,14 @@ export const TACTIC_CARDS: TacticCardSeed[] = [
     name: "WLAN-Turbo (Router neu gestartet)",
     kind: "INSTANT",
     flavorText: "Aus und wieder an — der Klassiker.",
-    description: "Erhöht die Geschwindigkeit der eigenen aktiven Einheit für 2 Runden.",
+    description: "Erhöht die Verteidigung der eigenen aktiven Einheit für 2 Runden deutlich.",
     effects: [
       {
         type: "statModifier",
         target: { kind: "self" },
-        stat: "speed",
-        mode: "flat",
-        valuePerLevel: [15],
+        stat: "defense",
+        mode: "percent",
+        valuePerLevel: [0.3],
         duration: 2,
       },
     ],
@@ -102,14 +102,14 @@ export const TACTIC_CARDS: TacticCardSeed[] = [
     name: "Server-Lag",
     kind: "TRAP",
     flavorText: "256ms Ping, gefühlt 3 Sekunden.",
-    description: "Löst aus, sobald der Gegner angreift — verlangsamt danach alle gegnerischen Einheiten für 1 Runde.",
+    description: "Löst aus, sobald der Gegner angreift — schwächt sofort den Angriff aller gegnerischen Einheiten für 1 Runde (trifft auch den gerade laufenden Angriff).",
     effects: [
       {
         type: "statModifier",
         target: { kind: "allEnemies" },
-        stat: "speed",
-        mode: "flat",
-        valuePerLevel: [-20],
+        stat: "attack",
+        mode: "percent",
+        valuePerLevel: [-0.2],
         duration: 1,
       },
     ],
@@ -151,17 +151,14 @@ export const TACTIC_CARDS: TacticCardSeed[] = [
     name: "Report-Button gedrückt",
     kind: "TRAP",
     flavorText: "Wegen \"unsportlichem Verhalten\" gemeldet.",
-    description: "Löst aus, sobald der Gegner ein Ultimate einsetzt — schwächt dessen Angriff kurzzeitig.",
-    effects: [
-      {
-        type: "statModifier",
-        target: { kind: "allEnemies" },
-        stat: "attack",
-        mode: "percent",
-        valuePerLevel: [-0.25],
-        duration: 1,
-      },
-    ],
+    // Schild statt Angriffs-Debuff: Ultimates lösen klassenabhängig entweder
+    // Schaden (TANK/DAMAGE_DEALER, beide über die schild-respektierende
+    // Rohschaden-Auflösung, siehe applyClassUltimate in duels-live.ts) oder
+    // reine Heilung ohne Ziel (SUPPORT) aus — ein Angriffs-Debuff würde bei
+    // TANK/SUPPORT (beide auf DEF basierend) ins Leere laufen, ein Schild
+    // dämpft dagegen jeden eingehenden Schaden unabhängig von der Klasse.
+    description: "Löst aus, sobald der Gegner ein Ultimate einsetzt — gibt dem eigenen Feld sofort einen Schild, um den Einschlag abzufedern.",
+    effects: [{ type: "shield", target: { kind: "allAllies" }, valuePerLevel: [100] }],
     triggerCondition: { type: "onEnemyUltimate" },
   },
   {
