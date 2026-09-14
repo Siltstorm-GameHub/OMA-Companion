@@ -27,6 +27,7 @@ import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
 import TacticCardTile from "./TacticCardTile";
+import StatBadges from "./StatBadges";
 import ErrorNotice from "./ErrorNotice";
 import { DUEL_TURN_TIMEOUT_MS } from "@/lib/battle-engine/duel-constants";
 import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
@@ -79,6 +80,7 @@ interface LiveDuelHandCard {
   unitCard?: BattleCardData;
   tacticKind?: "INSTANT" | "TRAP";
   tacticDescription?: string;
+  requiresTarget?: "enemy" | "ally";
 }
 
 interface LiveDuelPlayer {
@@ -124,6 +126,7 @@ interface LiveDuelSnapshot {
   activeTeam: TeamId;
   phase: DuelPhase;
   normalSummonUsed: boolean;
+  tacticPlayedThisTurn: boolean;
   self: LiveDuelPlayer;
   opponent: LiveDuelPlayer;
   log: DuelLogEntry[];
@@ -134,7 +137,7 @@ interface LiveDuelSnapshot {
 type DuelAction =
   | { type: "summon"; handCardId: string; slotIndex: number; stance: DuelStance }
   | { type: "changeStance"; slotIndex: number; stance: DuelStance }
-  | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown" }
+  | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown"; targetSlotIndex?: number }
   | { type: "declareAttack"; slotIndex: number; attackType: DuelAttackType; targetSlotIndex: number }
   | { type: "advancePhase" }
   | { type: "endTurn" };
@@ -268,25 +271,6 @@ function RadialTimer({ secondsLeft }: { secondsLeft: number }) {
           {secondsLeft}
         </span>
       </div>
-    </div>
-  );
-}
-
-/** Kompakte ATK/DEF-Anzeige — auf dem Feld (mit allen aktiven Buffs/Debuffs
- *  aus Taktikkarten) und auf Handkarten (Basiswerte auf aktueller Stufe)
- *  gleichermaßen genutzt, damit diese Werte in beiden Situationen sofort
- *  ablesbar sind (statt nur beim Öffnen der Kartendetails). */
-function StatBadges({ attack, defense }: { attack: number; defense: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="flex items-center gap-0.5 text-[10px] font-bold text-rose-200 bg-rose-950/70 rounded px-1 py-0.5">
-        <img src={MOBA_ICON.sword} alt="ATK" className="w-2.5 h-2.5 object-contain" />
-        {attack}
-      </span>
-      <span className="flex items-center gap-0.5 text-[10px] font-bold text-sky-200 bg-sky-950/70 rounded px-1 py-0.5">
-        <img src={MOBA_ICON.shield} alt="DEF" className="w-2.5 h-2.5 object-contain" />
-        {defense}
-      </span>
     </div>
   );
 }
@@ -454,6 +438,13 @@ export default function DuelLiveView({
   const [pendingSummon, setPendingSummon] = useState<{ handCardId: string; stance: DuelStance } | null>(null);
   // Angriff: Einheit + Angriffsart auswählen -> Ziel-Slot antippen (löst sofort aus).
   const [pendingAttack, setPendingAttack] = useState<{ slotIndex: number; attackType: DuelAttackType } | null>(null);
+  // Taktik-Karte: Karte auswählen -> Effekt lesen (+ ggf. Ziel wählen) -> explizit bestätigen.
+  const [pendingTactic, setPendingTactic] = useState<{
+    handCardId: string;
+    mode: "instant" | "setFaceDown";
+    requiresTarget?: "enemy" | "ally";
+    targetSlotIndex?: number;
+  } | null>(null);
 
   const prevSnapshotsRef = useRef<LiveDuelSnapshot[]>([]);
   const lastLogLengthRef = useRef<number>(0);
@@ -461,6 +452,7 @@ export default function DuelLiveView({
   function resetSelection() {
     setPendingSummon(null);
     setPendingAttack(null);
+    setPendingTactic(null);
   }
 
   function toggleSoundMuted() {
@@ -794,11 +786,19 @@ export default function DuelLiveView({
     if (card.kind === "unit") {
       if (snapshot!.normalSummonUsed) return;
       setPendingAttack(null);
+      setPendingTactic(null);
       setPendingSummon((prev) => (prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, stance: "attack" }));
     } else {
-      // Taktik-Karten lösen sofort aus — Modus ergibt sich fix aus der Kartenart.
+      if (snapshot!.tacticPlayedThisTurn) return;
+      setPendingAttack(null);
+      setPendingSummon(null);
+      // Modus ergibt sich fix aus der Kartenart (Item -> sofort, Falle ->
+      // verdeckt) — löst aber NICHT mehr sofort aus: Effekt lesen + ggf. Ziel
+      // wählen + explizit bestätigen (siehe Bestätigen-Panel unten).
       const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
-      void postAction({ type: "playTactic", handCardId: card.cardId, mode });
+      setPendingTactic((prev) =>
+        prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, mode, requiresTarget: card.requiresTarget }
+      );
     }
   }
 
@@ -825,6 +825,21 @@ export default function DuelLiveView({
   function pickAttackTarget(targetSlotIndex: number) {
     if (!pendingAttack) return;
     void postAction({ type: "declareAttack", ...pendingAttack, targetSlotIndex });
+  }
+
+  function pickTacticTarget(targetSlotIndex: number) {
+    setPendingTactic((prev) => (prev ? { ...prev, targetSlotIndex } : prev));
+  }
+
+  function confirmTactic() {
+    if (!pendingTactic) return;
+    if (pendingTactic.requiresTarget && pendingTactic.targetSlotIndex === undefined) return;
+    void postAction({
+      type: "playTactic",
+      handCardId: pendingTactic.handCardId,
+      mode: pendingTactic.mode,
+      targetSlotIndex: pendingTactic.targetSlotIndex,
+    });
   }
 
   const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
@@ -908,6 +923,14 @@ export default function DuelLiveView({
                 snapshot.phase === "battle" &&
                 !!pendingAttack &&
                 (opponentHasUnits ? !!slot?.isAlive : true);
+              const isValidTacticTarget =
+                canAct && isMainPhase && pendingTactic?.requiresTarget === "enemy" && !!slot?.isAlive;
+              const selectable = isValidAttackTarget || isValidTacticTarget;
+              const onClick = isValidAttackTarget
+                ? () => pickAttackTarget(i)
+                : isValidTacticTarget
+                  ? () => pickTacticTarget(i)
+                  : undefined;
               return (
                 <UnitSlot
                   key={i}
@@ -915,8 +938,9 @@ export default function DuelLiveView({
                   floating={effectsFor("opponent", i)}
                   flashing={flashKeys.has(`opponent-${i}`)}
                   lunging={lungeKeys.has(`opponent-${i}`)}
-                  selectable={isValidAttackTarget}
-                  onClick={isValidAttackTarget ? () => pickAttackTarget(i) : undefined}
+                  selectable={selectable}
+                  selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
+                  onClick={onClick}
                 />
               );
             })}
@@ -925,6 +949,9 @@ export default function DuelLiveView({
             <p className="text-[10px] text-teal-300 text-center">
               {opponentHasUnits ? "Ziel wählen …" : "Gegner hat keine Einheiten mehr — Direktangriff: beliebiges Feld antippen."}
             </p>
+          )}
+          {pendingTactic?.requiresTarget === "enemy" && (
+            <p className="text-[10px] text-teal-300 text-center">Gegnerisches Ziel für die Taktikkarte wählen …</p>
           )}
         </div>
 
@@ -945,17 +972,20 @@ export default function DuelLiveView({
                 canAct && snapshot.phase === "battle" && slot?.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
               const ultimateReady = !!slot?.isAlive && slot.rage >= slot.ultimateCost;
               const isSelectedAttacker = pendingAttack?.slotIndex === i;
+              const isValidTacticTarget =
+                canAct && isMainPhase && pendingTactic?.requiresTarget === "ally" && !!slot?.isAlive;
+              const isSelectedTacticTarget = pendingTactic?.requiresTarget === "ally" && pendingTactic.targetSlotIndex === i;
 
               return (
                 <div key={i} className="space-y-1">
                   <UnitSlot
                     unit={slot}
                     floating={effectsFor("self", i)}
-                    selectable={isSummonTarget}
-                    selected={isSelectedAttacker}
+                    selectable={isSummonTarget || isValidTacticTarget}
+                    selected={isSelectedAttacker || isSelectedTacticTarget}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
-                    onClick={isSummonTarget ? () => pickSummonSlot(i) : undefined}
+                    onClick={isSummonTarget ? () => pickSummonSlot(i) : isValidTacticTarget ? () => pickTacticTarget(i) : undefined}
                   />
                   {slot && canChangeStance && (
                     <button
@@ -998,6 +1028,9 @@ export default function DuelLiveView({
               );
             })}
           </div>
+          {pendingTactic?.requiresTarget === "ally" && (
+            <p className="text-[10px] text-teal-300 text-center">Eigenes Ziel für die Taktikkarte wählen …</p>
+          )}
         </div>
 
         {/* Hauptphase 1/2 — Beschwörung + Stellungswechsel + Taktik-Karte */}
@@ -1006,12 +1039,15 @@ export default function DuelLiveView({
             <div className="text-xs text-slate-400">
               Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
               {snapshot.normalSummonUsed && <span className="text-amber-300"> · Normalbeschwörung bereits genutzt</span>}
+              {snapshot.tacticPlayedThisTurn && <span className="text-amber-300"> · Taktik-Karte bereits genutzt</span>}
               {pendingSummon && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1">
               {(snapshot.self.hand ?? []).map((card) => {
-                const isSelected = pendingSummon?.handCardId === card.cardId;
-                const isDisabled = card.kind === "unit" && snapshot.normalSummonUsed;
+                const isSelectedSummon = pendingSummon?.handCardId === card.cardId;
+                const isSelectedTactic = pendingTactic?.handCardId === card.cardId;
+                const isDisabled =
+                  (card.kind === "unit" && snapshot.normalSummonUsed) || (card.kind === "tactic" && snapshot.tacticPlayedThisTurn);
 
                 if (card.kind === "unit" && card.unitCard) {
                   const level = card.unitCard.level ?? 1;
@@ -1024,7 +1060,7 @@ export default function DuelLiveView({
                   return (
                     <div
                       key={card.cardId}
-                      className={`w-28 shrink-0 rounded-lg p-1 space-y-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
+                      className={`w-28 shrink-0 rounded-lg p-1 space-y-1 transition-colors ${isSelectedSummon ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
                     >
                       <CardTile card={card.unitCard} level={level} onClick={() => selectHandCard(card)} />
                       <div className="flex justify-center">
@@ -1035,16 +1071,13 @@ export default function DuelLiveView({
                 }
 
                 return (
-                  <div key={card.cardId} className="w-28 shrink-0 space-y-1">
+                  <div key={card.cardId} className={`w-28 shrink-0 space-y-1 ${isDisabled ? "opacity-40" : ""}`}>
                     <TacticCardTile
                       card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
-                      selected={false}
-                      disabled={false}
+                      selected={isSelectedTactic}
+                      disabled={isDisabled}
                       onClick={() => selectHandCard(card)}
                     />
-                    {/* Taktik-Karten lösen sofort beim Antippen aus (Items sofort,
-                        Fallen verdeckt) — die Beschreibung MUSS deshalb hier schon
-                        sichtbar sein, nicht erst nach dem Spielen. */}
                     <p className="text-[9px] text-slate-400 text-center leading-snug line-clamp-4">
                       {card.tacticDescription ?? "Keine Beschreibung verfügbar."}
                     </p>
@@ -1073,6 +1106,40 @@ export default function DuelLiveView({
                 <p className="text-[10px] text-slate-500">{STANCE_HINT[pendingSummon.stance]}</p>
               </div>
             )}
+            {/* Taktik-Karte: Effekt lesen + ggf. Ziel wählen (siehe Feld oben) +
+                explizit bestätigen — löst NICHT mehr sofort beim Antippen aus. */}
+            {pendingTactic &&
+              (() => {
+                const card = (snapshot.self.hand ?? []).find((c) => c.cardId === pendingTactic.handCardId);
+                const targetChosen = !pendingTactic.requiresTarget || pendingTactic.targetSlotIndex !== undefined;
+                return (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/[0.06] p-2.5 space-y-2">
+                    <div>
+                      <p className="text-xs font-semibold text-amber-200">
+                        {card?.name ?? "Taktik-Karte"} · {pendingTactic.mode === "setFaceDown" ? "wird verdeckt gesetzt" : "wird sofort gespielt"}
+                      </p>
+                      <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
+                        {card?.tacticDescription ?? "Keine Beschreibung verfügbar."}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPendingTactic(null)}
+                        className="flex-1 rounded-md border border-slate-700 text-slate-300 text-[11px] py-1.5 hover:border-slate-500"
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        onClick={confirmTactic}
+                        disabled={!targetChosen || busy}
+                        className="flex-1 rounded-md bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold text-[11px] py-1.5"
+                      >
+                        {pendingTactic.requiresTarget && !targetChosen ? "Erst Ziel wählen" : "Bestätigen"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
           </div>
         )}
 

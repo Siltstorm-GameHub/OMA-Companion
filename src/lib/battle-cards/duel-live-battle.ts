@@ -17,6 +17,7 @@ import {
   checkDuelTimeout,
   runAutoTurn,
   createDuelState,
+  requiresTacticTarget,
   submitDuelAction as submitDuelActionPure,
   DuelLiveError,
   type DuelAction,
@@ -53,7 +54,7 @@ function toState(live: Pick<LiveBattle, "stateJson">): LiveDuelState {
   // des Phasen-Umbaus noch im alten Ein-Einreichung-pro-Zug-Format (kein
   // `phase`), lässt sich nicht sinnvoll fortsetzen — klarer Fehler statt
   // stillschweigend falschem Verhalten.
-  if (!state || typeof state !== "object" || !("activeTeam" in state) || !("phase" in state)) {
+  if (!state || typeof state !== "object" || !("activeTeam" in state) || !("phase" in state) || !("tacticPlayedThisTurn" in state)) {
     throw new LiveDuelBattleError(
       "Dieses Duell nutzt ein veraltetes Format (vor der Umstellung auf das Phasensystem) und kann nicht fortgesetzt werden."
     );
@@ -133,6 +134,11 @@ export interface LiveDuelHandCard {
    *  Fallen, z.B. "Löst aus, sobald der Gegner angreift — ..."), fürs
    *  Karten-Detailpanel in DuelLiveView.tsx. */
   tacticDescription?: string;
+  /** Nur bei kind === "tactic" und tacticKind === "INSTANT" gesetzt — die
+   *  Karte hat einen singleEnemy/singleAlly-Effekt und braucht deshalb vor
+   *  dem Spielen eine Zielwahl (siehe requiresTacticTarget in duels-live.ts).
+   *  Fallen wählen ihr Ziel weiterhin automatisch beim Auslösen. */
+  requiresTarget?: "enemy" | "ally";
 }
 
 export interface LiveDuelPlayerSnapshot {
@@ -163,6 +169,9 @@ export interface LiveDuelSnapshot {
   /** Normalbeschwörung bereits in diesem Zug verbraucht (max. 1, über beide
    *  Hauptphasen hinweg). */
   normalSummonUsed: boolean;
+  /** Taktik-Karte bereits in diesem Zug gespielt (max. 1, über beide
+   *  Hauptphasen hinweg). */
+  tacticPlayedThisTurn: boolean;
   self: LiveDuelPlayerSnapshot;
   opponent: LiveDuelPlayerSnapshot;
   log: LiveDuelState["log"];
@@ -237,6 +246,7 @@ function toHandCard(player: DuelPlayerState, cardId: string): LiveDuelHandCard |
       tacticKind: tacticDef.kind,
       imageUrl: tacticDef.imageUrl,
       tacticDescription: tacticDef.description,
+      requiresTarget: tacticDef.kind === "INSTANT" ? (requiresTacticTarget(tacticDef) ?? undefined) : undefined,
     };
   }
 
@@ -272,6 +282,7 @@ function buildSnapshot(live: LiveBattle, state: LiveDuelState, viewerId: string)
     activeTeam: state.activeTeam,
     phase: state.phase,
     normalSummonUsed: state.normalSummonUsed,
+    tacticPlayedThisTurn: state.tacticPlayedThisTurn,
     self: toPlayerSnapshot(selfPlayer, true),
     opponent: toPlayerSnapshot(opponentPlayer, false),
     log: state.log,

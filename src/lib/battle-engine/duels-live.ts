@@ -85,7 +85,19 @@ export interface DuelPlayerState {
 export type DuelAction =
   | { type: "summon"; handCardId: string; slotIndex: number; stance: DuelStance }
   | { type: "changeStance"; slotIndex: number; stance: DuelStance }
-  | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown" }
+  | {
+      type: "playTactic";
+      handCardId: string;
+      mode: "instant" | "setFaceDown";
+      /** Nur nötig, wenn die Karte einen singleEnemy/singleAlly-Effekt hat
+       *  (siehe requiresTacticTarget) — Feld-Slot-Index auf der jeweils
+       *  passenden Seite (Gegner bei singleEnemy, eigenes Feld bei
+       *  singleAlly). Nur für sofort gespielte Items relevant: eine verdeckt
+       *  gesetzte Falle wählt ihr Ziel weiterhin automatisch beim Auslösen,
+       *  da zu diesem Zeitpunkt noch nicht feststeht, welche Einheiten dann
+       *  überhaupt noch leben. */
+      targetSlotIndex?: number;
+    }
   | { type: "declareAttack"; slotIndex: number; attackType: "normalAttack" | "ultimate"; targetSlotIndex: number }
   /** Schaltet main1 -> battle -> main2 -> Zugende weiter. */
   | { type: "advancePhase" }
@@ -157,6 +169,11 @@ export interface LiveDuelState {
   /** Normalbeschwörung: max. 1 pro Zug, über Hauptphase 1 UND 2 hinweg (wie im
    *  echten Yu-Gi-Oh). Wird bei jedem Zugwechsel zurückgesetzt. */
   normalSummonUsed: boolean;
+  /** Taktik-Karte: ebenfalls max. 1 pro Zug (Items + Fallen zusammen), über
+   *  beide Hauptphasen hinweg — bewusste Balancing-Grenze für dieses (im
+   *  Unterschied zum echten Yu-Gi-Oh kleine) Kartenspiel. Wird bei jedem
+   *  Zugwechsel zurückgesetzt. */
+  tacticPlayedThisTurn: boolean;
   playerA: DuelPlayerState;
   playerB: DuelPlayerState;
   /** Epoch-ms, Schachuhr-Prinzip: nur für die gerade aktive Seite relevant,
@@ -240,6 +257,7 @@ export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDec
     activeTeam: "A",
     phase: "main1",
     normalSummonUsed: false,
+    tacticPlayedThisTurn: false,
     playerA,
     playerB,
     turnDeadline: Date.now() + DUEL_TURN_TIMEOUT_MS,
@@ -352,18 +370,35 @@ function resolveTacticCaster(team: TeamId, player: DuelPlayerState): BattleUnitS
   return player.field.find((slot) => slot.unit?.isAlive)?.unit ?? createVirtualCaster(team);
 }
 
+/** Nur ein singleEnemy/singleAlly-Effekt macht ein explizites Ziel-Wahlrecht
+ *  nötig — alle anderen Ziele (self/allAllies/allEnemies/ownLp/enemyLp)
+ *  treffen automatisch alles Zutreffende, ohne Auswahl. Prüft nur das ERSTE
+ *  passende Effekt-Ziel einer Karte (keine der aktuellen Karten mischt
+ *  mehrere Einzel-Ziel-Effekte), analog zu forcedTargetId in interactive.ts. */
+export function requiresTacticTarget(def: TacticCardDefinition): "enemy" | "ally" | null {
+  for (const effect of def.effects) {
+    if (effect.target.kind === "singleEnemy") return "enemy";
+    if (effect.target.kind === "singleAlly") return "ally";
+  }
+  return null;
+}
+
 /** Wendet die Effekte einer Taktikkarte an (Item sofort, oder Falle bei
  *  Auslösung). `ownLp`/`enemyLp`-Ziele ändern lifePoints direkt (kein Anker
  *  nötig); alle anderen Ziele laufen über die reguläre Effekt-Engine mit
  *  einem Anker (echte Feld-Einheit, sonst ein virtueller Platzhalter, siehe
- *  resolveTacticCaster). */
+ *  resolveTacticCaster). `forcedTargetId`: vom Spieler gewähltes Ziel für
+ *  einen singleEnemy/singleAlly-Effekt (siehe requiresTacticTarget) — nur bei
+ *  sofort gespielten Items möglich, Fallen wählen beim Auslösen weiterhin
+ *  automatisch (siehe DuelAction["playTactic"].targetSlotIndex). */
 function applyTacticEffects(
   team: TeamId,
   state: LiveDuelState,
   def: TacticCardDefinition,
   rng: Rng,
   log: DuelLogEntry[],
-  round: number
+  round: number,
+  forcedTargetId?: string
 ): void {
   const player = playerState(state, team);
   const opponent = playerState(state, opponentTeam(team));
@@ -396,6 +431,7 @@ function applyTacticEffects(
       log: asBattleLog(log),
       skillName: def.name,
       suddenDeathMultiplier: 1,
+      forcedTargetId,
     });
   }
 }
@@ -718,6 +754,7 @@ function endTurnInternal(state: LiveDuelState, finishingTeam: TeamId, round: num
   state.round += 1;
   state.phase = "main1";
   state.normalSummonUsed = false;
+  state.tacticPlayedThisTurn = false;
   resetTurnFlags(nextPlayer);
   tickPlayerStatModifiers(nextPlayer);
   state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
@@ -787,6 +824,9 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
       if (state.phase !== "main1" && state.phase !== "main2") {
         throw new DuelLiveError("Taktik-Karten können nur in einer Hauptphase gespielt werden.");
       }
+      if (state.tacticPlayedThisTurn) {
+        throw new DuelLiveError("Du hast in diesem Zug bereits eine Taktik-Karte gespielt.");
+      }
       const { handCardId, mode } = action;
       if (!player.handCardIds.includes(handCardId)) {
         throw new DuelLiveError("Diese Taktik-Karte ist nicht auf deiner Hand.");
@@ -800,13 +840,28 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
         throw new DuelLiveError("Nur Items können sofort gespielt werden.");
       }
 
+      let forcedTargetId: string | undefined;
+      if (mode === "instant") {
+        const targetKind = requiresTacticTarget(def);
+        if (targetKind) {
+          if (action.targetSlotIndex === undefined) {
+            throw new DuelLiveError("Für diese Taktikkarte muss ein Ziel gewählt werden.");
+          }
+          const targetPlayer = targetKind === "enemy" ? opponent : player;
+          const targetUnit = targetPlayer.field[action.targetSlotIndex]?.unit;
+          if (!targetUnit || !targetUnit.isAlive) throw new DuelLiveError("Ungültiges Ziel.");
+          forcedTargetId = targetUnit.instanceId;
+        }
+      }
+
       player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
+      state.tacticPlayedThisTurn = true;
       log.push({ type: "tacticPlayed", round, team, tacticCardId: handCardId, mode });
 
       if (mode === "setFaceDown") {
         player.setTraps.push({ tacticCardId: handCardId, slotIndex: player.setTraps.length });
       } else {
-        applyTacticEffects(team, state, def, rng, log, round);
+        applyTacticEffects(team, state, def, rng, log, round, forcedTargetId);
         player.graveyardCardIds.push(handCardId);
       }
       break;
@@ -904,6 +959,13 @@ function pickDefaultTargetSlot(opponent: DuelPlayerState): number {
   return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Direktangriff, falls Gegner leer ist
 }
 
+/** Für einen singleAlly-Taktikkarten-Effekt der KI/Timeout-Automatik: erste
+ *  eigene lebende Feld-Einheit, sonst kein gültiges Ziel. */
+function pickDefaultAllySlot(player: DuelPlayerState): number | undefined {
+  const index = player.field.findIndex((slot) => slot.unit?.isAlive);
+  return index >= 0 ? index : undefined;
+}
+
 /** Spielt den REST des aktuellen Zugs automatisch zu Ende — phasenweise
  *  (main1 -> battle -> main2 -> Zugende), exakt wie ein Mensch es über
  *  mehrere Einzelaktionen täte, nur ohne Zwischenstopps. Dient zweifach: (1)
@@ -920,6 +982,8 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
 
   if (current.phase === "main1" && !current.winner) {
     const player = playerState(current, team);
+    const opponent = playerState(current, opponentTeam(team));
+
     const emptySlotIndex = player.field.findIndex((slot) => !slot.unit);
     const summonCardId =
       !current.normalSummonUsed && emptySlotIndex >= 0
@@ -928,6 +992,28 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
     if (summonCardId) {
       current = applyAction(current, team, { type: "summon", handCardId: summonCardId, slotIndex: emptySlotIndex, stance: "attack" });
     }
+
+    const tacticCardId =
+      !current.winner && !current.tacticPlayedThisTurn ? player.handCardIds.find((id) => player.tacticDefsById[id]) : undefined;
+    if (tacticCardId) {
+      const def = player.tacticDefsById[tacticCardId];
+      const mode: "instant" | "setFaceDown" = def.kind === "TRAP" ? "setFaceDown" : "instant";
+      const targetKind = mode === "instant" ? requiresTacticTarget(def) : null;
+      const targetSlotIndex =
+        targetKind === "enemy"
+          ? opponentHasLivingUnit(opponent)
+            ? pickDefaultTargetSlot(opponent)
+            : undefined
+          : targetKind === "ally"
+            ? pickDefaultAllySlot(player)
+            : undefined;
+      // Braucht die Karte ein Ziel, findet aber keins -> die KI verzichtet
+      // defensiv auf diese Karte, statt eine unerfüllbare Aktion zu senden.
+      if (!targetKind || targetSlotIndex !== undefined) {
+        current = applyAction(current, team, { type: "playTactic", handCardId: tacticCardId, mode, targetSlotIndex });
+      }
+    }
+
     if (!current.winner) current = applyAction(current, team, { type: "advancePhase" });
   }
 
@@ -939,7 +1025,9 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
       const unit = player.field[slotIndex]?.unit;
       if (!unit?.isAlive || unit.summonedThisTurn || unit.attackedThisTurn || unit.stance === "defense") continue;
       const targetSlotIndex = opponentHasLivingUnit(opponent) ? pickDefaultTargetSlot(opponent) : 0;
-      current = applyAction(current, team, { type: "declareAttack", slotIndex, attackType: "normalAttack", targetSlotIndex });
+      const ultimateCost = unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
+      const attackType: "normalAttack" | "ultimate" = unit.rage >= ultimateCost ? "ultimate" : "normalAttack";
+      current = applyAction(current, team, { type: "declareAttack", slotIndex, attackType, targetSlotIndex });
     }
     if (!current.winner) current = applyAction(current, team, { type: "advancePhase" });
   }
