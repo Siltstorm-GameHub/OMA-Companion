@@ -12,17 +12,26 @@ function isTabKey(v: string | null): v is TabKey {
   return v === "kampf" || v === "kampagne" || v === "karten" || v === "community";
 }
 
-// MOBA-Style-Reiter: statt runder Medaillons (Clash-Royale-artig) jetzt
-// diamantförmige Akzente (siehe .moba-diamond-tab in battle-cards-moba.css)
-// — Grundprinzip (aktiver Reiter poppt aus der Leiste nach oben) bleibt,
-// nur die Form + der navy/orange Rahmen drumherum ändern sich. Die
-// Farbcodierung pro Reiter bleibt erhalten (wichtig für Wiedererkennung:
-// Kampf=Rose, Kampagne=Grün, Karten=Violett, Community=Amber).
-const TABS: { key: TabKey; label: string; icon: MobaIconName; accent: string; glow: string }[] = [
-  { key: "kampf", label: "Kampf", icon: "crossedSwords", accent: "#fb7185", glow: "rgba(251,113,133,0.7)" },
-  { key: "kampagne", label: "Kampagne", icon: "map", accent: "#34d399", glow: "rgba(52,211,153,0.7)" },
-  { key: "karten", label: "Karten", icon: "champions", accent: "#a78bfa", glow: "rgba(167,139,250,0.7)" },
-  { key: "community", label: "Community", icon: "friends", accent: "#fbbf24", glow: "rgba(251,191,36,0.7)" },
+// MOBA-Style-Nav-Leiste nach Referenz-Screenshot: dünne Gold-Linie nur oben,
+// Ecken-Schnörkel unten links/rechts, Diamant-Trenner zwischen den Reitern,
+// aktiver Reiter als abgerundetes Quadrat-Badge (kein Diamant mehr) mit
+// kleinem Diamant-Ornament darüber (siehe .moba-nav-* in
+// battle-cards-moba.css). Die Farbcodierung pro Reiter bleibt erhalten
+// (wichtig für Wiedererkennung: Kampf=Rose, Kampagne=Grün, Karten=Violett,
+// Community=Amber).
+const TABS: {
+  key: TabKey;
+  label: string;
+  icon: MobaIconName;
+  accent: string;
+  accentDark: string;
+  accentLight: string;
+  glow: string;
+}[] = [
+  { key: "kampf", label: "Kampf", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
+  { key: "kampagne", label: "Kampagne", icon: "navDungeon", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
+  { key: "karten", label: "Karten", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
+  { key: "community", label: "Community", icon: "navRank", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
 ];
 
 function BattleCardsTabsInner({
@@ -50,69 +59,49 @@ function BattleCardsTabsInner({
 
   return (
     <div className="space-y-5">
-      <div className="moba-panel flex items-end justify-around gap-1 px-2 pt-8 pb-2">
+      <div className="moba-nav-bar">
+        <img src="/battle-cards/moba/nav-corner-left.png" alt="" className="moba-nav-corner left" />
+        <img src="/battle-cards/moba/nav-corner-right.png" alt="" className="moba-nav-corner right" />
         {TABS.map((tab) => {
           const isActive = tab.key === active;
           const showBadge = tab.key === "kampf" && kampfBadge > 0;
           return (
-            <motion.button
+            <button
               key={tab.key}
               type="button"
               onClick={() => setActive(tab.key)}
               aria-current={isActive ? "page" : undefined}
-              whileTap={{ scale: 0.92 }}
-              className="relative flex flex-col items-center gap-1 flex-1"
+              className={`moba-nav-item ${isActive ? "active" : ""}`}
+              style={{
+                ["--accent" as string]: tab.accent,
+                ["--accent-dark" as string]: tab.accentDark,
+                ["--accent-light" as string]: tab.accentLight,
+                ["--glow" as string]: tab.glow,
+              }}
             >
-              {isActive ? (
-                <motion.div
-                  layoutId="tab-diamond"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="moba-diamond-tab active"
-                  style={{ ["--accent" as string]: tab.accent, ["--glow" as string]: tab.glow }}
-                >
-                  <div className="moba-diamond-shape" />
-                  <motion.div
-                    className="moba-diamond-icon"
-                    initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
-                    animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.05 }}
-                  >
-                    <MobaIcon name={tab.icon} className="w-6 h-6" />
-                  </motion.div>
-                  <AnimatePresence>
-                    {showBadge && (
-                      <motion.span
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        className="absolute -top-1 -right-1 z-10 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#04061a] shadow-md"
-                      >
-                        {kampfBadge > 9 ? "9+" : kampfBadge}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
+              {isActive && (
+                <motion.div layoutId="tab-badge" transition={{ type: "spring", stiffness: 500, damping: 30 }} className="moba-nav-badge">
+                  <MobaIcon name={tab.icon} className="w-6 h-6" />
                 </motion.div>
-              ) : (
-                <div className="moba-diamond-tab">
-                  <div className="moba-diamond-shape" />
-                  <div className="moba-diamond-icon">
-                    <MobaIcon name={tab.icon} className="w-4 h-4 opacity-55" />
-                  </div>
-                  {showBadge && (
-                    <span className="absolute -top-0.5 right-0 z-10 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#04061a]">
-                      {kampfBadge > 9 ? "9+" : kampfBadge}
-                    </span>
-                  )}
-                </div>
               )}
-              <span
-                className="text-[10px] font-black uppercase tracking-wide transition-colors"
-                style={{ color: isActive ? tab.accent : "var(--moba-ink-dim)" }}
-              >
-                {tab.label}
+              <span className="moba-nav-icon">
+                <MobaIcon name={tab.icon} className="w-[22px] h-[22px]" />
               </span>
-            </motion.button>
+              <AnimatePresence>
+                {showBadge && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 45 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                    className="moba-nav-notif"
+                  >
+                    <span>{kampfBadge > 9 ? "9+" : kampfBadge}</span>
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              <span className="moba-nav-label">{tab.label}</span>
+            </button>
           );
         })}
       </div>

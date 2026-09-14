@@ -176,6 +176,7 @@ export default function GemsResultScreen({
           style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
         >
           <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            <div className="moba-hex-lattice" />
           <div className="moba-hex-border" />
           <div className="moba-hex-diamond left" />
           <div className="moba-hex-diamond right" />

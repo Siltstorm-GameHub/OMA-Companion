@@ -112,39 +112,118 @@
   white-space: nowrap;
 }
 
-/* ── Diamant-Tab (Bottom-Nav / Reiter) ── */
-.moba-diamond-tab {
+/* ── Bottom-Nav-Leiste — nachgebaut aus dem Kit-Mockup (Navy-Leiste, dünne
+   Gold-Linie NUR oben, Schnörkel-Eckakzente unten links/rechts (aus
+   card-frame.png gecroppt, siehe nav-corner-*.png), Diamant-Trenner zwischen
+   den Einträgen). Ersetzt die frühere Diamant-Tab-Leiste, die vom Mockup
+   abwich (dort ist der aktive Reiter ein abgerundetes Quadrat, kein Diamant). */
+.moba-nav-bar {
   position: relative;
-  width: 40px;
-  height: 40px;
+  display: flex;
+  background: linear-gradient(180deg, var(--moba-bg-elevated) 0%, var(--moba-bg) 100%);
+  border-top: 2px solid #d99a2b;
+  border-radius: 0 0 10px 10px;
+  padding: 26px 12px 10px;
+  gap: 2px;
+  overflow: hidden;
 }
-.moba-diamond-tab .moba-diamond-shape {
+.moba-nav-bar .moba-nav-corner {
   position: absolute;
-  inset: 0;
-  transform: rotate(45deg);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid var(--moba-accent-line);
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  bottom: 0;
+  width: 60px;
+  height: 60px;
+  pointer-events: none;
+  opacity: 0.9;
 }
-.moba-diamond-tab.active {
-  width: 50px;
-  height: 50px;
-  margin-top: -16px;
-}
-.moba-diamond-tab.active .moba-diamond-shape {
-  background: radial-gradient(circle at 35% 30%, #ffd9a0, var(--accent, #e8963c));
-  border-color: #ffd9a0;
-  box-shadow: 0 0 0 3px var(--moba-bg), 0 0 14px var(--glow, rgba(255, 180, 90, 0.7));
-}
-.moba-diamond-tab .moba-diamond-icon {
+.moba-nav-bar .moba-nav-corner.left { left: 0; }
+.moba-nav-bar .moba-nav-corner.right { right: 0; }
+
+.moba-nav-item {
   position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.moba-nav-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: 13px;
+  width: 4px;
+  height: 4px;
+  background: #d9ad4d;
+  opacity: 0.45;
+  transform: rotate(45deg);
+}
+.moba-nav-item .moba-nav-icon {
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.moba-nav-item .moba-nav-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--moba-accent);
+  opacity: 0.75;
+}
+.moba-nav-item.active .moba-nav-icon {
+  visibility: hidden;
+}
+.moba-nav-item.active .moba-nav-label {
+  opacity: 1;
+}
+.moba-nav-item .moba-nav-badge {
+  position: absolute;
+  bottom: 22px;
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  background: radial-gradient(circle at 35% 25%, var(--accent, #ffb15c), var(--accent-dark, #c9660c));
+  border: 2px solid var(--accent-light, #ffcf8a);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 16px var(--glow, rgba(255, 150, 50, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.moba-nav-item .moba-nav-badge::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 7px;
+  height: 7px;
+  background: var(--accent-light, #ffcf8a);
+  box-shadow: 0 0 5px var(--glow, rgba(255, 180, 90, 0.8));
+}
+.moba-nav-item .moba-nav-notif {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  width: 15px;
+  height: 15px;
+  background: #e8481c;
+  border: 1.5px solid var(--moba-bg);
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+.moba-nav-item .moba-nav-notif span {
+  transform: rotate(-45deg);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
 }
 
 /* ── Leere Slots (Feld, Sammlung) ── */
@@ -184,32 +263,46 @@
   z-index: 0;
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2);
 }
-.moba-hex-button .moba-hex-border {
+/* Diagonales Gitter-Muster im Füllfarbverlauf — matcht die leichte
+   Karo-Textur der START/CONTINUE-Buttons im Kit-Mockup. */
+.moba-hex-button .moba-hex-lattice {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 14px);
+}
+.moba-hex-button .moba-hex-border {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 1.5px solid #f2d78a;
   clip-path: inherit;
 }
 .moba-hex-button .moba-hex-diamond {
   position: absolute;
   top: 50%;
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   transform: translateY(-50%) rotate(45deg);
-  background: var(--hex-accent, #ffd9a0);
+  background: rgba(4, 6, 26, 0.85);
+  border: 1.5px solid #f2d78a;
   box-shadow: 0 0 6px var(--hex-glow, rgba(255, 180, 90, 0.7));
-  z-index: 2;
+  z-index: 3;
 }
-.moba-hex-button .moba-hex-diamond.left { left: -5px; }
-.moba-hex-button .moba-hex-diamond.right { right: -5px; }
+.moba-hex-button .moba-hex-diamond.left { left: -6px; }
+.moba-hex-button .moba-hex-diamond.right { right: -6px; }
 .moba-hex-button .moba-button-label {
   position: relative;
-  z-index: 2;
-  font-family: var(--font-battle), sans-serif;
+  z-index: 4;
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 /* ── Ecken-Klammer-Zeile (list-row.png) — Ranglisten-/Listen-Zeilen mit dem

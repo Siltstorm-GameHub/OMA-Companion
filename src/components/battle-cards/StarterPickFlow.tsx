@@ -287,6 +287,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
           style={{ ["--hex-accent" as string]: stepDef.color, ["--hex-glow" as string]: `${stepDef.color}99` }}
         >
           <div className="moba-hex-fill" style={{ background: `linear-gradient(180deg, ${stepDef.color} 0%, ${stepDef.color} 100%)` }} />
+            <div className="moba-hex-lattice" />
           <div className="moba-hex-border" />
           <div className="moba-hex-diamond left" />
           <div className="moba-hex-diamond right" />

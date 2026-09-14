@@ -71,6 +71,7 @@ export default function BattleLauncher({
             style={{ ["--hex-accent" as string]: "#ffd9a0", ["--hex-glow" as string]: "rgba(232,150,28,0.6)" }}
           >
             <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+            <div className="moba-hex-lattice" />
             <div className="moba-hex-border" />
             <div className="moba-hex-diamond left" />
             <div className="moba-hex-diamond right" />
@@ -94,6 +95,7 @@ export default function BattleLauncher({
             style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
           >
             <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            <div className="moba-hex-lattice" />
             <div className="moba-hex-border" />
             <div className="moba-hex-diamond left" />
             <div className="moba-hex-diamond right" />

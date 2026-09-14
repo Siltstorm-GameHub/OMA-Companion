@@ -101,6 +101,7 @@ export default function RankUpOverlay({ rankUp, onClose }: { rankUp: RankUpData;
           style={{ ["--hex-accent" as string]: "#fde68a", ["--hex-glow" as string]: "rgba(217,119,6,0.6)" }}
         >
           <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #fde68a 0%, #d97706 100%)" }} />
+            <div className="moba-hex-lattice" />
           <div className="moba-hex-border" />
           <div className="moba-hex-diamond left" />
           <div className="moba-hex-diamond right" />
