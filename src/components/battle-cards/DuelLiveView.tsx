@@ -368,7 +368,8 @@ function UnitSlot({
         type="button"
         disabled={!selectable}
         onClick={onClick}
-        className={`relative w-full h-28 rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
+        style={{ height: "clamp(64px, 15vh, 112px)" }}
+        className={`relative w-full rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
           dragOver
             ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
             : selectable
@@ -390,7 +391,7 @@ function UnitSlot({
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative w-full h-28 rounded-lg overflow-hidden text-left transition-transform ${
+      className={`relative w-full rounded-lg overflow-hidden text-left transition-transform ${
         isDefense
           ? "border-[3px] border-sky-400 duel-defense-glow"
           : selected
@@ -400,6 +401,7 @@ function UnitSlot({
               : "border border-[color:var(--moba-accent-line)]"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
+        height: "clamp(64px, 15vh, 112px)",
         backgroundImage: unit.imageUrl
           ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
           : undefined,
@@ -482,6 +484,15 @@ export default function DuelLiveView({
   const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
   const [lungeKeys, setLungeKeys] = useState<Set<string>>(new Set());
 
+  // Mobile-Layout: Kampf-Log als Overlay statt im Hauptfluss (spart am meisten
+  // Platz), pro Zug nur die Aktions-Buttons der ausgewählten eigenen Einheit
+  // statt aller lebenden Einheiten gleichzeitig, und der Dauerhinweis-Text nur
+  // auf Nachfrage — siehe UnitSlot/Feld-Rendering und Root-JSX weiter unten.
+  const [logOpen, setLogOpen] = useState(false);
+  const [unreadLogCount, setUnreadLogCount] = useState(0);
+  const [activeSelfSlot, setActiveSelfSlot] = useState<number | null>(null);
+  const [hintOpen, setHintOpen] = useState(false);
+
   // Beschwörung: Karte auswählen -> Stellung wählen -> Ziel-Slot antippen (löst sofort aus).
   const [pendingSummon, setPendingSummon] = useState<{ handCardId: string; stance: DuelStance } | null>(null);
   // Angriff: Einheit + Angriffsart auswählen -> Ziel-Slot antippen (löst sofort aus).
@@ -522,12 +533,21 @@ export default function DuelLiveView({
     setPendingSummon(null);
     setPendingAttack(null);
     setPendingTactic(null);
+    setActiveSelfSlot(null);
   }
 
   function toggleSoundMuted() {
     setSoundMutedState((prev) => {
       const next = !prev;
       setSoundMuted(next);
+      return next;
+    });
+  }
+
+  function toggleLog() {
+    setLogOpen((prev) => {
+      const next = !prev;
+      if (next) setUnreadLogCount(0);
       return next;
     });
   }
@@ -761,6 +781,10 @@ export default function DuelLiveView({
           setFloatingEffects((prev) => prev.filter((f) => f.id !== e.id));
         }, 1100);
       });
+    }
+
+    if (entries.length > 0 && !logOpen) {
+      setUnreadLogCount((prev) => prev + entries.length);
     }
 
     lastLogLengthRef.current = newSnapshot.log.length;
@@ -1042,7 +1066,10 @@ export default function DuelLiveView({
   const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#04061a] text-[color:var(--moba-ink)] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 bg-[#04061a] text-[color:var(--moba-ink)] flex flex-col overflow-hidden"
+      style={{ height: "100dvh" }}
+    >
       <style>{`
         @keyframes duelFloatUp { 0% { opacity: 0; transform: translateY(4px) scale(0.9); } 15% { opacity: 1; transform: translateY(-6px) scale(1); } 100% { opacity: 0; transform: translateY(-32px) scale(1); } }
         .duel-float { animation: duelFloatUp 1.1s ease-out forwards; }
@@ -1068,12 +1095,24 @@ export default function DuelLiveView({
         }
         .duel-card-reveal { animation: duelCardReveal 1.3s ease-out forwards; }
       `}</style>
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Content-Rahmen: 100dvh-basierte Flex-Spalte statt linearer space-y-4-
+          Stapelung — Header/Phasenanzeige und die Hand-/Aktions-Leiste bleiben
+          fix (shrink-0), nur das Spielfeld wächst/schrumpft (flex-1 min-h-0).
+          overflow-y-auto bleibt als Sicherheitsnetz für sehr kleine Screens. */}
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3 overflow-y-auto">
+        <div className="shrink-0 flex items-center justify-between">
           <button onClick={handleExit} className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
             <MobaIcon name="chevronLeft" className="w-4 h-4" /> Verlassen
           </button>
           <div className="flex items-center gap-3">
+            <button onClick={toggleLog} className="relative text-slate-500 hover:text-slate-300" aria-label="Kampf-Log anzeigen">
+              <MobaIcon name="info" className="w-4 h-4" />
+              {unreadLogCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-teal-500 text-[9px] font-bold text-black flex items-center justify-center">
+                  {Math.min(unreadLogCount, 9)}
+                </span>
+              )}
+            </button>
             <button onClick={toggleSoundMuted} className="text-slate-500 hover:text-slate-300" aria-label="Sound umschalten">
               <MobaIcon name={soundMuted ? "soundOff" : "soundOn"} className="w-4 h-4" />
             </button>
@@ -1082,29 +1121,33 @@ export default function DuelLiveView({
           </div>
         </div>
 
-        {finished ? (
-          <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
-            <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
-            {snapshot.resultBattleId && (
-              <a
-                href={`/battle-cards/battles/${snapshot.resultBattleId}`}
-                className="inline-block rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm px-4 py-2"
-              >
-                Kampfbericht ansehen
-              </a>
-            )}
-          </div>
-        ) : !isMyTurn ? (
-          <p className="text-xs text-slate-400 text-center">Gegner ist am Zug …</p>
-        ) : (
-          <PhaseStepper phase={snapshot.phase} />
-        )}
+        <div className="shrink-0">
+          {finished ? (
+            <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
+              <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
+              {snapshot.resultBattleId && (
+                <a
+                  href={`/battle-cards/battles/${snapshot.resultBattleId}`}
+                  className="inline-block rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm px-4 py-2"
+                >
+                  Kampfbericht ansehen
+                </a>
+              )}
+            </div>
+          ) : !isMyTurn ? (
+            <p className="text-xs text-slate-400 text-center">Gegner ist am Zug …</p>
+          ) : (
+            <PhaseStepper phase={snapshot.phase} />
+          )}
+        </div>
 
         {/* Spielfeld (Gegner + eigenes Feld) — gemeinsame Ablagezone fürs Ziehen
-            einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen"). */}
+            einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen").
+            flex-1 min-h-0: einziger wachsender Bereich im Layout, Header und
+            Hand-/Aktionsleiste bleiben fix (siehe Content-Rahmen oben). */}
         <div
           ref={boardRef}
-          className={`space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+          className={`flex-1 min-h-0 space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
         >
         {/* Gegner */}
         <div className="space-y-2">
@@ -1194,38 +1237,71 @@ export default function DuelLiveView({
                 canAct && isMainPhase && slot?.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
               const canDeclareAttack =
                 canAct && snapshot.phase === "battle" && slot?.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
-              const ultimateReady = !!slot?.isAlive && slot.rage >= slot.ultimateCost;
               const isSelectedAttacker = pendingAttack?.slotIndex === i;
               const isValidTacticTarget =
                 canAct && isMainPhase && pendingTactic?.requiresTarget === "ally" && !!slot?.isAlive;
               const isSelectedTacticTarget = pendingTactic?.requiresTarget === "ally" && pendingTactic.targetSlotIndex === i;
+              // Aktions-Buttons (Stellung/Angriff/Ultimate) werden nicht mehr pro
+              // Einheit dauerhaft eingeblendet (kostet auf dem Handy zu viel Platz),
+              // sondern nur für die per Antippen ausgewählte aktive Einheit — siehe
+              // das gemeinsame Aktions-Panel unterhalb des Feld-Grids.
+              const hasOwnActions = !isSummonTarget && !isValidTacticTarget && !!slot?.isAlive && (canChangeStance || canDeclareAttack);
+              const isActiveSlot = activeSelfSlot === i;
+              const slotOnClick = isSummonTarget
+                ? () => pickSummonSlot(i)
+                : isValidTacticTarget
+                  ? () => pickTacticTarget(i)
+                  : hasOwnActions
+                    ? () => setActiveSelfSlot((prev) => (prev === i ? null : i))
+                    : undefined;
 
               return (
-                <div key={i} className="space-y-1" ref={(el) => { selfSlotRefs.current[i] = el; }}>
+                <div key={i} ref={(el) => { selfSlotRefs.current[i] = el; }}>
                   <UnitSlot
                     unit={slot}
                     floating={effectsFor("self", i)}
-                    selectable={isSummonTarget || isValidTacticTarget}
-                    selected={isSelectedAttacker || isSelectedTacticTarget}
+                    selectable={isSummonTarget || isValidTacticTarget || hasOwnActions}
+                    selected={isSelectedAttacker || isSelectedTacticTarget || (hasOwnActions && isActiveSlot)}
                     dragOver={dragHoverSlot === i}
                     // Als Angreifer gewählt -> nur der eigene ATK-Wert zählt für
                     // diese Aktion, egal welche Stellung das Ziel hat.
                     statHighlight={isSelectedAttacker ? "attack" : null}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
-                    onClick={isSummonTarget ? () => pickSummonSlot(i) : isValidTacticTarget ? () => pickTacticTarget(i) : undefined}
+                    onClick={slotOnClick}
                   />
-                  {slot && canChangeStance && (
+                </div>
+              );
+            })}
+          </div>
+          {pendingTactic?.requiresTarget === "ally" && (
+            <p className="text-[10px] text-teal-300 text-center">Eigenes Ziel für die Taktikkarte wählen …</p>
+          )}
+          {activeSelfSlot !== null &&
+            snapshot.self.field[activeSelfSlot] &&
+            (() => {
+              const slot = snapshot.self.field[activeSelfSlot]!;
+              const canChangeStance =
+                canAct && isMainPhase && slot.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
+              const canDeclareAttack =
+                canAct && snapshot.phase === "battle" && slot.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
+              const ultimateReady = slot.isAlive && slot.rage >= slot.ultimateCost;
+              const isSelectedAttacker = pendingAttack?.slotIndex === activeSelfSlot;
+              if (!canChangeStance && !canDeclareAttack) return null;
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/[0.06] p-1.5">
+                  <span className="text-[10px] font-semibold text-teal-300 px-0.5 truncate">{slot.name}</span>
+                  {canChangeStance && (
                     <button
                       onClick={() => toggleFieldStance(slot)}
                       title={STANCE_HINT[slot.stance === "attack" ? "defense" : "attack"]}
-                      className="w-full text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
                     >
                       → {STANCE_LABEL[slot.stance === "attack" ? "defense" : "attack"]}
                     </button>
                   )}
-                  {slot && canDeclareAttack && (
-                    <div className="flex flex-wrap gap-1">
+                  {canDeclareAttack && (
+                    <>
                       <button
                         onClick={() => selectAttack(slot, "normalAttack")}
                         title={NORMAL_ATTACK_DESCRIPTION}
@@ -1250,31 +1326,41 @@ export default function DuelLiveView({
                           {ATTACK_LABEL.ultimate}
                         </button>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               );
-            })}
-          </div>
-          {pendingTactic?.requiresTarget === "ally" && (
-            <p className="text-[10px] text-teal-300 text-center">Eigenes Ziel für die Taktikkarte wählen …</p>
-          )}
+            })()}
         </div>
         </div>
 
         {/* Hauptphase 1/2 — Beschwörung + Stellungswechsel + Taktik-Karte */}
         {isMyTurn && !finished && isMainPhase && (
-          <div className="space-y-2">
-            <div className="text-xs text-slate-400">
-              Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
-              {snapshot.normalSummonUsed && <span className="text-amber-300"> · Normalbeschwörung bereits genutzt</span>}
-              {snapshot.tacticPlayedThisTurn && <span className="text-amber-300"> · Taktik-Karte bereits genutzt</span>}
-              {pendingSummon && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
+          <div className="shrink-0 space-y-2">
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
+              <span>
+                Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
+                {snapshot.normalSummonUsed && <span className="text-amber-300"> · Normalbeschwörung bereits genutzt</span>}
+                {snapshot.tacticPlayedThisTurn && <span className="text-amber-300"> · Taktik-Karte bereits genutzt</span>}
+                {pendingSummon && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
+              </span>
+              <button
+                type="button"
+                onClick={() => setHintOpen((prev) => !prev)}
+                aria-label="Hinweis zur Handkarten-Bedienung anzeigen"
+                className={`shrink-0 w-4 h-4 rounded-full border text-[10px] font-bold flex items-center justify-center ${
+                  hintOpen ? "border-teal-400 text-teal-300" : "border-slate-600 text-slate-500"
+                }`}
+              >
+                ?
+              </button>
             </div>
-            <p className="text-[10px] text-slate-500 text-center">
-              Antippen/Hovern zum Anschauen · Helden-Karte auf ein Feld ziehen zum Beschwören (Angriffsstellung —
-              für Verteidigung antippen) · Taktik-Karte aufs Spielfeld ziehen zum Spielen
-            </p>
+            {hintOpen && (
+              <p className="text-[10px] text-slate-500 text-center">
+                Antippen/Hovern zum Anschauen · Helden-Karte auf ein Feld ziehen zum Beschwören (Angriffsstellung —
+                für Verteidigung antippen) · Taktik-Karte aufs Spielfeld ziehen zum Spielen
+              </p>
+            )}
             {/* Gefächerte Hand: unfokussierte Karten überlappen sich wie echte
                 Spielkarten (nur Bild/Name als "Peek" sichtbar), die fokussierte
                 Karte hebt sich gerade, vergrößert und voll lesbar aus dem Fächer.
@@ -1419,7 +1505,7 @@ export default function DuelLiveView({
         )}
 
         {actionError && (
-          <div className="flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-2">
             <div className="flex-1">
               <ErrorNotice message={actionError} />
             </div>
@@ -1434,13 +1520,13 @@ export default function DuelLiveView({
         )}
 
         {!finished && !isMyTurn && (
-          <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+          <button disabled className="shrink-0 w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
             <Wind className="w-4 h-4" /> Gegner ist am Zug …
           </button>
         )}
 
         {canAct && (
-          <div className="flex gap-2">
+          <div className="shrink-0 flex gap-2">
             {snapshot.phase !== "main2" && (
               <button
                 onClick={() => postAction({ type: "advancePhase" })}
@@ -1461,12 +1547,33 @@ export default function DuelLiveView({
           </div>
         )}
 
-        <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2 max-h-40 overflow-y-auto text-[11px] text-[color:var(--moba-ink-dim)] space-y-0.5">
-          {snapshot.log.slice(-15).map((entry, i) => (
-            <div key={i}>{describeLogEntry(entry)}</div>
-          ))}
-        </div>
       </div>
+
+      {/* Kampf-Log als Overlay-Drawer statt im Hauptfluss — spart auf dem Handy
+          den meisten Platz, ohne den Verlauf ganz zu verstecken (siehe
+          toggleLog/unreadLogCount und der Info-Button im Header). */}
+      {logOpen && (
+        <div className="fixed inset-0 z-[550] flex flex-col justify-end" onClick={toggleLog}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-2xl w-full mx-auto rounded-t-xl border-t border-x border-[color:var(--moba-accent-line)] bg-[#0a0e2e] p-3 space-y-2"
+            style={{ maxHeight: "60vh" }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-300">Kampf-Log</span>
+              <button onClick={toggleLog} className="text-slate-500 hover:text-slate-300" aria-label="Kampf-Log schließen">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto text-[11px] text-[color:var(--moba-ink-dim)] space-y-0.5" style={{ maxHeight: "calc(60vh - 40px)" }}>
+              {snapshot.log.slice(-40).map((entry, i) => (
+                <div key={i}>{describeLogEntry(entry)}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* "Geist"-Karte, die dem Finger/Mauszeiger beim Ziehen folgt — rein
           visuell (pointer-events: none), die eigentliche Hit-Testing-Logik
