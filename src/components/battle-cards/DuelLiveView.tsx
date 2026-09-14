@@ -3,17 +3,18 @@
 // ============================================
 // OMA Duels (Yu-Gi-Oh-artiges Live-PvP) — Vollbild-Spielbrett
 // ============================================
-// Echter Zug-Wechsel (wie im echten Yu-Gi-Oh): pro Zug ist genau eine Seite
-// aktiv (30s-Schachuhr, siehe DUEL_TURN_TIMEOUT_MS), die Gegenseite sieht in
-// dieser Zeit eine reine Lesevaransicht. Frühere Version dieser Komponente
-// löste Runden simultan auf (beide blind, Block/Ausweichen als Gegenwette) —
-// das ist jetzt einer öffentlich sichtbaren Angriffs-/Verteidigungsstellung
-// gewichen (siehe UnitSlot-Stellungs-Badge), da der Angreifer das gegnerische
-// Feld ohnehin schon vollständig sieht, bevor er zuschlägt.
+// Echte Yu-Gi-Oh-Phasenstruktur: Hauptphase 1 -> Kampfphase -> Hauptphase 2 ->
+// Zugende (30s-Schachuhr über den GESAMTEN Zug, siehe DUEL_TURN_TIMEOUT_MS).
+// Jede Aktion (Beschwören, Stellung wechseln, Taktik-Karte spielen, ein
+// Angriff, eine Phase weiterschalten) ist ein EIGENER Server-Request, der
+// sofort aufgelöst wird — kein lokal gesammelter Zug-Entwurf mehr wie in der
+// Vorversion. Nur ein Normalangriff pro Einheit (kein separater Skill-Knopf
+// mehr), Ultimate bleibt erhalten, wird aber erst angezeigt, sobald genug
+// Rage vorhanden ist.
 //
-// Zeigt echte Kartenbilder auf dem Feld/in der Hand (statt reiner Stat-
-// Balken), verdeckte Kartenrücken für die gegnerische Hand/Fallen, Treffer-
-// Feedback (fliegende Zahlen, kurzer Impact-Flash) und Sound.
+// Zeigt echte Kartenbilder auf dem Feld/in der Hand, verdeckte Kartenrücken
+// für die gegnerische Hand/Fallen, Treffer-Feedback (fliegende Zahlen, kurzer
+// Impact-Flash) und Sound.
 //
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik läuft
 // ausschließlich serverseitig (lib/battle-cards/duel-live-battle.ts).
@@ -42,8 +43,9 @@ import {
 import type { UnitClass } from "@/lib/battle-engine/types";
 
 type TeamId = "A" | "B";
-type DuelActionType = "normalAttack" | "active" | "ultimate";
+type DuelAttackType = "normalAttack" | "ultimate";
 type DuelStance = "attack" | "defense";
+type DuelPhase = "main1" | "battle" | "main2";
 
 interface LiveDuelUnit {
   instanceId: string;
@@ -58,10 +60,11 @@ interface LiveDuelUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   stance: DuelStance;
-  activeSkillName: string;
-  activeSkillDescription: string;
   ultimateSkillName: string;
   ultimateSkillDescription: string;
+  summonedThisTurn: boolean;
+  attackedThisTurn: boolean;
+  stanceLockedThisTurn: boolean;
 }
 
 interface LiveDuelHandCard {
@@ -95,6 +98,8 @@ interface DuelLogEntry {
   amount?: number;
   isCrit?: boolean;
   attackerUnitId?: string;
+  defenderUnitId?: string;
+  attackerTeam?: TeamId;
   defendingTeam?: TeamId;
   remainingLp?: number;
   unitId?: string;
@@ -111,6 +116,8 @@ interface LiveDuelSnapshot {
   turnDeadline: number;
   viewerTeam: TeamId;
   activeTeam: TeamId;
+  phase: DuelPhase;
+  normalSummonUsed: boolean;
   self: LiveDuelPlayer;
   opponent: LiveDuelPlayer;
   log: DuelLogEntry[];
@@ -118,11 +125,13 @@ interface LiveDuelSnapshot {
   resultBattleId: string | null;
 }
 
-interface DraftAttack {
-  slotIndex: number;
-  action: DuelActionType;
-  targetSlotIndex?: number;
-}
+type DuelAction =
+  | { type: "summon"; handCardId: string; slotIndex: number; stance: DuelStance }
+  | { type: "changeStance"; slotIndex: number; stance: DuelStance }
+  | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown" }
+  | { type: "declareAttack"; slotIndex: number; attackType: DuelAttackType; targetSlotIndex: number }
+  | { type: "advancePhase" }
+  | { type: "endTurn" };
 
 interface FloatingEffect {
   id: string;
@@ -135,66 +144,45 @@ interface FloatingEffect {
 const START_LP = 4000;
 const TURN_SECONDS = Math.round(DUEL_TURN_TIMEOUT_MS / 1000);
 
-/** Yu-Gi-Oh-artige Zuggliederung fürs UI — die Engine löst den kompletten Zug
- *  als EINE Einreichung sofort auf; die Phasen strukturieren nur, in welcher
- *  Reihenfolge der aktive Spieler seine Entwurfs-Auswahl trifft, bevor er den
- *  Zug beendet. Hauptphase bündelt bewusst Beschwörung + Stellungswechsel +
- *  Taktik-Karte (wie im echten Yu-Gi-Oh, wo alles davon zur Main Phase
- *  gehört), statt separate Phasen dafür zu erzwingen. */
-type DuelPhase = "main" | "battle" | "confirm";
+const PHASE_LABEL: Record<DuelPhase, string> = {
+  main1: "Hauptphase 1",
+  battle: "Kampfphase",
+  main2: "Hauptphase 2",
+};
+const PHASE_ORDER: DuelPhase[] = ["main1", "battle", "main2"];
 
-const DUEL_PHASES: { key: DuelPhase; label: string }[] = [
-  { key: "main", label: "Hauptphase" },
-  { key: "battle", label: "Kampfphase" },
-  { key: "confirm", label: "Bestätigen" },
-];
-
-function PhaseStepper({ phase, onSelect }: { phase: DuelPhase; onSelect: (p: DuelPhase) => void }) {
-  const currentIndex = DUEL_PHASES.findIndex((p) => p.key === phase);
+function PhaseStepper({ phase }: { phase: DuelPhase }) {
+  const currentIndex = PHASE_ORDER.indexOf(phase);
   return (
     <div className="flex items-center gap-1.5">
-      {DUEL_PHASES.map((p, i) => {
-        const isActive = p.key === phase;
+      {PHASE_ORDER.map((p, i) => {
+        const isActive = p === phase;
         const isPast = i < currentIndex;
         return (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => (i <= currentIndex ? onSelect(p.key) : undefined)}
-            disabled={i > currentIndex}
-            className={`flex-1 text-center text-[10px] font-semibold py-1.5 rounded-md border transition-colors ${
+          <div
+            key={p}
+            className={`flex-1 text-center text-[10px] font-semibold py-1.5 rounded-md border ${
               isActive
                 ? "border-teal-400 bg-teal-500/15 text-teal-200"
                 : isPast
-                  ? "border-[color:var(--moba-accent-line-strong)] text-[color:var(--moba-ink)] hover:border-[color:var(--moba-accent)] cursor-pointer"
-                  : "border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] cursor-not-allowed"
+                  ? "border-[color:var(--moba-accent-line-strong)] text-[color:var(--moba-ink)]"
+                  : "border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)]"
             }`}
           >
-            {i + 1}. {p.label}
-          </button>
+            {i + 1}. {PHASE_LABEL[p]}
+          </div>
         );
       })}
     </div>
   );
 }
 
-const ACTION_LABEL: Record<DuelActionType, string> = {
+const ATTACK_LABEL: Record<DuelAttackType, string> = {
   normalAttack: "Angriff",
-  active: "Skill",
   ultimate: "Ultimate",
 };
 
 const STANCE_LABEL: Record<DuelStance, string> = { attack: "Angriff", defense: "Verteidigung" };
-
-/** Statische Kurzbeschreibung für den generischen Angriff — Skill/Ultimate
- *  sind pro Karte unterschiedlich, siehe describeAction(). */
-const NORMAL_ATTACK_DESCRIPTION = "Normaler Schaden auf ein gewähltes Ziel.";
-
-function describeAction(action: DuelActionType, unit: LiveDuelUnit): string {
-  if (action === "active") return `${unit.activeSkillName}: ${unit.activeSkillDescription}`;
-  if (action === "ultimate") return `${unit.ultimateSkillName}: ${unit.ultimateSkillDescription}`;
-  return NORMAL_ATTACK_DESCRIPTION;
-}
 
 const TONE_COLOR: Record<FloatingEffect["tone"], string> = {
   damage: "#fb7185",
@@ -288,23 +276,6 @@ function FloatingLayer({ effects }: { effects: FloatingEffect[] }) {
   );
 }
 
-/** Stellungs-Badge — öffentlich sichtbar für beide Seiten (kein Geheimnis,
- *  wie in echtem Yu-Gi-Oh). Schwert = Angriff, Schild = Verteidigung. */
-function StanceBadge({ stance }: { stance: DuelStance }) {
-  const isDefense = stance === "defense";
-  const iconSrc = isDefense ? MOBA_ICON.shield : MOBA_ICON.sword;
-  return (
-    <span
-      className={`absolute top-1 right-1 z-10 w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm ${
-        isDefense ? "bg-sky-500/30 text-sky-200" : "bg-rose-500/30 text-rose-200"
-      }`}
-      title={STANCE_LABEL[stance]}
-    >
-      <img src={iconSrc} alt="" aria-hidden className="w-3 h-3 object-contain" />
-    </span>
-  );
-}
-
 function UnitSlot({
   unit,
   floating,
@@ -341,14 +312,21 @@ function UnitSlot({
 
   const config = getClassConfig(unit.class);
   const ultimateReady = unit.isAlive && unit.rage >= unit.ultimateCost;
+  const isDefense = unit.stance === "defense";
 
   return (
     <button
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative w-full h-28 rounded-lg border overflow-hidden text-left transition-transform ${
-        selected ? "border-teal-400" : ultimateReady ? "border-amber-400 duel-ultimate-glow" : "border-[color:var(--moba-accent-line)]"
+      className={`relative w-full h-28 rounded-lg overflow-hidden text-left transition-transform ${
+        isDefense
+          ? "border-[3px] border-sky-400 duel-defense-glow"
+          : selected
+            ? "border border-teal-400"
+            : ultimateReady
+              ? "border border-amber-400 duel-ultimate-glow"
+              : "border border-[color:var(--moba-accent-line)]"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
         backgroundImage: unit.imageUrl
@@ -360,7 +338,20 @@ function UnitSlot({
       }}
     >
       <FloatingLayer effects={floating} />
-      {unit.isAlive && <StanceBadge stance={unit.stance} />}
+      {isDefense && unit.isAlive ? (
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-1 bg-sky-500/80 py-0.5">
+          <img src={MOBA_ICON.shield} alt="" aria-hidden className="w-3 h-3 object-contain" />
+          <span className="text-[9px] font-black tracking-wide text-white">VERTEIDIGUNG</span>
+        </div>
+      ) : unit.isAlive ? (
+        <span
+          className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm bg-rose-500/30 text-rose-200"
+          title={STANCE_LABEL.attack}
+        >
+          <img src={MOBA_ICON.sword} alt="" aria-hidden className="w-3 h-3 object-contain" />
+        </span>
+      ) : null}
+      {isDefense && <div className="absolute inset-0 bg-sky-500/10" />}
       {!unit.imageUrl && (
         <div className="absolute inset-0 flex items-center justify-center">
           <img src={config.icon} alt="" aria-hidden className="w-8 h-8 opacity-40 object-contain" />
@@ -401,10 +392,6 @@ export default function DuelLiveView({
   }
   const [snapshot, setSnapshot] = useState<LiveDuelSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Fehler NACH dem ersten erfolgreichen Laden (ungültige Aktion, kurzer
-  // Netzwerk-Hänger beim Poll, ...) — schließbarer Hinweis über dem laufenden
-  // Kampf statt der Vollbild-Fehleransicht, die den Kampf-Zustand verdeckt und
-  // deren "Zurück"-Button den Kampf fälschlich verlässt (siehe handleExit).
   const [actionError, setActionError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -414,28 +401,17 @@ export default function DuelLiveView({
   const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
   const [lungeKeys, setLungeKeys] = useState<Set<string>>(new Set());
 
-  const [phase, setPhase] = useState<DuelPhase>("main");
-  const lastPhaseResetTurnRef = useRef<string | null>(null);
-
-  const [pendingSummonCardId, setPendingSummonCardId] = useState<string | null>(null);
-  const [summonStance, setSummonStance] = useState<DuelStance>("attack");
-  const [summonSlot, setSummonSlot] = useState<{ handCardId: string; slotIndex: number; stance: DuelStance } | null>(null);
-  const [stanceChanges, setStanceChanges] = useState<Record<number, DuelStance>>({});
-  const [tacticChoice, setTacticChoice] = useState<{ handCardId: string; mode: "instant" | "setFaceDown" } | null>(null);
-  const [attackDrafts, setAttackDrafts] = useState<Record<number, DraftAttack>>({});
-  const [configuringSlot, setConfiguringSlot] = useState<number | null>(null);
+  // Beschwörung: Karte auswählen -> Stellung wählen -> Ziel-Slot antippen (löst sofort aus).
+  const [pendingSummon, setPendingSummon] = useState<{ handCardId: string; stance: DuelStance } | null>(null);
+  // Angriff: Einheit + Angriffsart auswählen -> Ziel-Slot antippen (löst sofort aus).
+  const [pendingAttack, setPendingAttack] = useState<{ slotIndex: number; attackType: DuelAttackType } | null>(null);
 
   const prevSnapshotsRef = useRef<LiveDuelSnapshot[]>([]);
   const lastLogLengthRef = useRef<number>(0);
 
-  function resetDraft() {
-    setPendingSummonCardId(null);
-    setSummonStance("attack");
-    setSummonSlot(null);
-    setStanceChanges({});
-    setTacticChoice(null);
-    setAttackDrafts({});
-    setConfiguringSlot(null);
+  function resetSelection() {
+    setPendingSummon(null);
+    setPendingAttack(null);
   }
 
   function toggleSoundMuted() {
@@ -533,6 +509,60 @@ export default function DuelLiveView({
           playDamageSoundFor(source?.unit.class, false);
           break;
         }
+        case "defenseDestroyed": {
+          const target = entry.defenderUnitId ? locateUnit(entry.defenderUnitId, candidates) : null;
+          if (target) {
+            spawned.push({
+              id: `${spawned.length}-${entry.defenderUnitId}-destroyed`,
+              side: target.side,
+              anchor: { kind: "slot", slotIndex: target.unit.slotIndex },
+              text: "Zerstört!",
+              tone: "crit",
+            });
+            pulse(`${target.side}-${target.unit.slotIndex}`, setFlashKeys, 450);
+          }
+          playDamageSoundFor(target?.unit.class, true);
+          break;
+        }
+        case "defenseReflect": {
+          const side: "self" | "opponent" = entry.attackerTeam === newSnapshot.viewerTeam ? "self" : "opponent";
+          spawned.push({
+            id: `${spawned.length}-reflect-${entry.round}`,
+            side,
+            anchor: { kind: "lp" },
+            text: `-${entry.amount}`,
+            tone: "damage",
+          });
+          playDamageSoundFor(undefined, false);
+          break;
+        }
+        case "defenseBounce": {
+          const target = entry.defenderUnitId ? locateUnit(entry.defenderUnitId, candidates) : null;
+          if (target) {
+            spawned.push({
+              id: `${spawned.length}-${entry.defenderUnitId}-bounce`,
+              side: target.side,
+              anchor: { kind: "slot", slotIndex: target.unit.slotIndex },
+              text: "Geblockt",
+              tone: "info",
+            });
+          }
+          playShieldSound();
+          break;
+        }
+        case "lpChange": {
+          const side: "self" | "opponent" = entry.team === newSnapshot.viewerTeam ? "self" : "opponent";
+          const amount = entry.amount ?? 0;
+          spawned.push({
+            id: `${spawned.length}-lp-${entry.round}`,
+            side,
+            anchor: { kind: "lp" },
+            text: amount >= 0 ? `+${amount}` : `${amount}`,
+            tone: amount >= 0 ? "heal" : "damage",
+          });
+          if (amount >= 0) playHealSound();
+          break;
+        }
         case "action":
           if (entry.actionType === "ultimate") {
             const actor = entry.actorId ? locateUnit(entry.actorId, candidates) : null;
@@ -601,19 +631,39 @@ export default function DuelLiveView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.status, liveBattleId]);
 
-  // Neuer Zug (Runde ODER wer dran ist hat sich geändert) -> Entwurf leeren
-  // und zurück auf Hauptphase (sonst bliebe man z.B. in der Bestätigen-Phase
-  // des VORHERIGEN eigenen Zugs hängen).
+  // Neuer Zug (Runde ODER wer dran ist hat sich geändert) -> Auswahl leeren.
+  const lastTurnKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!snapshot) return;
     const turnKey = `${snapshot.round}-${snapshot.activeTeam}`;
-    if (turnKey !== lastPhaseResetTurnRef.current) {
-      lastPhaseResetTurnRef.current = turnKey;
-      setPhase("main");
-      resetDraft();
+    if (turnKey !== lastTurnKeyRef.current) {
+      lastTurnKeyRef.current = turnKey;
+      resetSelection();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.round, snapshot?.activeTeam]);
+
+  async function postAction(action: DuelAction) {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/battle-cards/duel/${liveBattleId}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(typeof data.error === "string" ? data.error : "Aktion fehlgeschlagen.");
+        return;
+      }
+      processNewLogEntries(data);
+      setSnapshot(data);
+      resetSelection();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (error) {
     return (
@@ -641,8 +691,8 @@ export default function DuelLiveView({
   const finished = snapshot.status === "finished";
   const won = snapshot.winner === snapshot.viewerTeam;
   const drew = snapshot.winner === "DRAW";
-
-  const usedHandCardId = pendingSummonCardId ?? summonSlot?.handCardId ?? tacticChoice?.handCardId ?? null;
+  const canAct = isMyTurn && !finished && !busy;
+  const isMainPhase = snapshot.phase === "main1" || snapshot.phase === "main2";
 
   function effectsFor(side: "self" | "opponent", slotIndex: number) {
     return floatingEffects.filter((e) => e.side === side && e.anchor.kind === "slot" && e.anchor.slotIndex === slotIndex);
@@ -651,80 +701,45 @@ export default function DuelLiveView({
     return floatingEffects.filter((e) => e.side === side && e.anchor.kind === "lp");
   }
 
-  function toggleHandCard(card: LiveDuelHandCard) {
-    if (!isMyTurn || finished) return;
-    if (usedHandCardId === card.cardId) {
-      setPendingSummonCardId(null);
-      setSummonSlot(null);
-      setTacticChoice(null);
-      return;
-    }
+  function selectHandCard(card: LiveDuelHandCard) {
+    if (!canAct || !isMainPhase) return;
     if (card.kind === "unit") {
-      setTacticChoice(null);
-      setSummonSlot(null);
-      setSummonStance("attack");
-      setPendingSummonCardId(card.cardId);
+      if (snapshot!.normalSummonUsed) return;
+      setPendingAttack(null);
+      setPendingSummon((prev) => (prev?.handCardId === card.cardId ? null : { handCardId: card.cardId, stance: "attack" }));
     } else {
-      setPendingSummonCardId(null);
-      setSummonSlot(null);
-      setTacticChoice({ handCardId: card.cardId, mode: "instant" });
+      // Taktik-Karten lösen sofort aus — Modus ergibt sich fix aus der Kartenart.
+      const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
+      void postAction({ type: "playTactic", handCardId: card.cardId, mode });
     }
   }
 
   function pickSummonSlot(slotIndex: number) {
-    if (!pendingSummonCardId) return;
-    setSummonSlot({ handCardId: pendingSummonCardId, slotIndex, stance: summonStance });
-    setPendingSummonCardId(null);
+    if (!pendingSummon) return;
+    void postAction({ type: "summon", handCardId: pendingSummon.handCardId, slotIndex, stance: pendingSummon.stance });
   }
 
-  function toggleStanceChange(slotIndex: number, current: DuelStance) {
-    setStanceChanges((prev) => {
-      if (slotIndex in prev) {
-        const next = { ...prev };
-        delete next[slotIndex];
-        return next;
-      }
-      return { ...prev, [slotIndex]: current === "attack" ? "defense" : "attack" };
-    });
+  function toggleFieldStance(unit: LiveDuelUnit) {
+    if (!canAct || !isMainPhase) return;
+    if (unit.summonedThisTurn || unit.stanceLockedThisTurn || unit.attackedThisTurn) return;
+    void postAction({ type: "changeStance", slotIndex: unit.slotIndex, stance: unit.stance === "attack" ? "defense" : "attack" });
   }
 
-  function setSlotAction(slotIndex: number, action: DuelActionType) {
-    setAttackDrafts((prev) => ({ ...prev, [slotIndex]: { slotIndex, action } }));
-    setConfiguringSlot(slotIndex);
+  function selectAttack(unit: LiveDuelUnit, attackType: DuelAttackType) {
+    if (!canAct || snapshot!.phase !== "battle") return;
+    if (unit.summonedThisTurn || unit.attackedThisTurn) return;
+    setPendingSummon(null);
+    setPendingAttack((prev) =>
+      prev?.slotIndex === unit.slotIndex && prev.attackType === attackType ? null : { slotIndex: unit.slotIndex, attackType }
+    );
   }
 
-  function chooseTarget(slotIndex: number, targetSlotIndex: number) {
-    setAttackDrafts((prev) => ({ ...prev, [slotIndex]: { ...prev[slotIndex], slotIndex, targetSlotIndex } }));
-    setConfiguringSlot(null);
+  function pickAttackTarget(targetSlotIndex: number) {
+    if (!pendingAttack) return;
+    void postAction({ type: "declareAttack", ...pendingAttack, targetSlotIndex });
   }
 
-  async function endTurn() {
-    setBusy(true);
-    setActionError(null);
-    try {
-      const body = {
-        summon: summonSlot ?? undefined,
-        stanceChanges: Object.entries(stanceChanges).map(([slotIndex, stance]) => ({ slotIndex: Number(slotIndex), stance })),
-        playTactic: tacticChoice ?? undefined,
-        attacks: Object.values(attackDrafts),
-      };
-      const res = await fetch(`/api/battle-cards/duel/${liveBattleId}/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setActionError(data.error ?? "Zug konnte nicht abgeschlossen werden.");
-        return;
-      }
-      processNewLogEntries(data);
-      setSnapshot(data);
-      resetDraft();
-    } finally {
-      setBusy(false);
-    }
-  }
+  const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#04061a] text-[color:var(--moba-ink)] overflow-y-auto">
@@ -737,6 +752,8 @@ export default function DuelLiveView({
         .duel-lunge { animation: duelLunge 0.3s ease-out; }
         @keyframes duelUltimateGlow { 0%, 100% { box-shadow: 0 0 6px 1px rgba(251,191,36,0.5); } 50% { box-shadow: 0 0 14px 4px rgba(251,191,36,0.85); } }
         .duel-ultimate-glow { animation: duelUltimateGlow 1.4s ease-in-out infinite; }
+        @keyframes duelDefenseGlow { 0%, 100% { box-shadow: 0 0 8px 2px rgba(56,189,248,0.55); } 50% { box-shadow: 0 0 16px 5px rgba(56,189,248,0.9); } }
+        .duel-defense-glow { animation: duelDefenseGlow 1.6s ease-in-out infinite; }
         @keyframes duelPulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0.5); } 50% { box-shadow: 0 0 0 5px rgba(45,212,191,0); } }
         .duel-pulse-ring { animation: duelPulseRing 1.6s ease-in-out infinite; }
         @keyframes duelLpCritical { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
@@ -771,7 +788,7 @@ export default function DuelLiveView({
         ) : !isMyTurn ? (
           <p className="text-xs text-slate-400 text-center">Gegner ist am Zug …</p>
         ) : (
-          <PhaseStepper phase={phase} onSelect={setPhase} />
+          <PhaseStepper phase={snapshot.phase} />
         )}
 
         {/* Gegner */}
@@ -797,10 +814,30 @@ export default function DuelLiveView({
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {snapshot.opponent.field.map((slot, i) => (
-              <UnitSlot key={i} unit={slot} floating={effectsFor("opponent", i)} flashing={flashKeys.has(`opponent-${i}`)} lunging={lungeKeys.has(`opponent-${i}`)} />
-            ))}
+            {snapshot.opponent.field.map((slot, i) => {
+              const isValidAttackTarget =
+                canAct &&
+                snapshot.phase === "battle" &&
+                !!pendingAttack &&
+                (opponentHasUnits ? !!slot?.isAlive : true);
+              return (
+                <UnitSlot
+                  key={i}
+                  unit={slot}
+                  floating={effectsFor("opponent", i)}
+                  flashing={flashKeys.has(`opponent-${i}`)}
+                  lunging={lungeKeys.has(`opponent-${i}`)}
+                  selectable={isValidAttackTarget}
+                  onClick={isValidAttackTarget ? () => pickAttackTarget(i) : undefined}
+                />
+              );
+            })}
           </div>
+          {pendingAttack && (
+            <p className="text-[10px] text-teal-300 text-center">
+              {opponentHasUnits ? "Ziel wählen …" : "Gegner hat keine Einheiten mehr — Direktangriff: beliebiges Feld antippen."}
+            </p>
+          )}
         </div>
 
         <div className="h-px bg-[color:var(--moba-accent-line)]" />
@@ -813,53 +850,58 @@ export default function DuelLiveView({
           </div>
           <div className="grid grid-cols-3 gap-2">
             {snapshot.self.field.map((slot, i) => {
-              const draft = attackDrafts[i];
-              const isSummonTarget = isMyTurn && phase === "main" && !slot && pendingSummonCardId !== null;
+              const isSummonTarget = canAct && isMainPhase && !slot && pendingSummon !== null;
+              const canChangeStance =
+                canAct && isMainPhase && slot?.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
+              const canDeclareAttack =
+                canAct && snapshot.phase === "battle" && slot?.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
+              const ultimateReady = !!slot?.isAlive && slot.rage >= slot.ultimateCost;
+              const isSelectedAttacker = pendingAttack?.slotIndex === i;
+
               return (
                 <div key={i} className="space-y-1">
                   <UnitSlot
                     unit={slot}
                     floating={effectsFor("self", i)}
                     selectable={isSummonTarget}
-                    selected={!!draft || summonSlot?.slotIndex === i}
+                    selected={isSelectedAttacker}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
                     onClick={isSummonTarget ? () => pickSummonSlot(i) : undefined}
                   />
-                  {isMyTurn && phase === "battle" && slot?.isAlive && !finished && !(i in stanceChanges) && (
-                    <>
-                      <div className="flex flex-wrap gap-1">
-                        {(["normalAttack", "active", "ultimate"] as DuelActionType[]).map((action) => (
-                          <button
-                            key={action}
-                            onClick={() => setSlotAction(i, action)}
-                            title={describeAction(action, slot)}
-                            className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                              draft?.action === action
-                                ? "border-teal-400 bg-teal-500/20 text-teal-200"
-                                : "border-slate-700 text-slate-400 hover:border-slate-500"
-                            }`}
-                          >
-                            {ACTION_LABEL[action]}
-                          </button>
-                        ))}
-                      </div>
-                      {draft && (
-                        <p className="text-[10px] text-slate-400 leading-snug">{describeAction(draft.action, slot)}</p>
-                      )}
-                    </>
+                  {slot && canChangeStance && (
+                    <button
+                      onClick={() => toggleFieldStance(slot)}
+                      className="w-full text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
+                    >
+                      → {STANCE_LABEL[slot.stance === "attack" ? "defense" : "attack"]}
+                    </button>
                   )}
-                  {isMyTurn && phase === "battle" && configuringSlot === i && (
+                  {slot && canDeclareAttack && (
                     <div className="flex flex-wrap gap-1">
-                      {snapshot.opponent.field.map((oppSlot, targetIndex) => (
+                      <button
+                        onClick={() => selectAttack(slot, "normalAttack")}
+                        className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                          isSelectedAttacker && pendingAttack?.attackType === "normalAttack"
+                            ? "border-teal-400 bg-teal-500/20 text-teal-200"
+                            : "border-slate-700 text-slate-400 hover:border-slate-500"
+                        }`}
+                      >
+                        {ATTACK_LABEL.normalAttack}
+                      </button>
+                      {ultimateReady && (
                         <button
-                          key={targetIndex}
-                          onClick={() => chooseTarget(i, targetIndex)}
-                          className="text-[10px] px-1.5 py-0.5 rounded border border-rose-500/50 text-rose-300 hover:bg-rose-500/10"
+                          onClick={() => selectAttack(slot, "ultimate")}
+                          title={`${slot.ultimateSkillName}: ${slot.ultimateSkillDescription}`}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                            isSelectedAttacker && pendingAttack?.attackType === "ultimate"
+                              ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                              : "border-amber-600/60 text-amber-300 hover:border-amber-400"
+                          }`}
                         >
-                          {oppSlot ? `${oppSlot.name} (${STANCE_LABEL[oppSlot.stance]})` : "Direkt (Face)"}
+                          {ATTACK_LABEL.ultimate}
                         </button>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
@@ -868,179 +910,58 @@ export default function DuelLiveView({
           </div>
         </div>
 
-        {/* Hauptphase — Beschwörung + Stellungswechsel + Taktik-Karte */}
-        {isMyTurn && !finished && phase === "main" && (
-          <div className="space-y-3">
-            {/* Stellungswechsel bereits vorhandener Einheiten */}
-            {snapshot.self.field.some((s) => s?.isAlive) && (
-              <div className="space-y-1">
-                <p className="text-xs text-slate-400">Stellung wechseln</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {snapshot.self.field.map((s, i) =>
-                    s?.isAlive ? (
-                      <button
-                        key={i}
-                        onClick={() => toggleStanceChange(i, s.stance)}
-                        className={`text-[10px] px-2 py-1 rounded border ${
-                          i in stanceChanges
-                            ? "border-teal-400 bg-teal-500/20 text-teal-200"
-                            : "border-slate-700 text-slate-400 hover:border-slate-500"
-                        }`}
-                      >
-                        {s.name}: {STANCE_LABEL[i in stanceChanges ? stanceChanges[i] : s.stance]}
-                        {i in stanceChanges ? " (neu)" : ""}
-                      </button>
-                    ) : null
-                  )}
-                </div>
-              </div>
-            )}
+        {/* Hauptphase 1/2 — Beschwörung + Stellungswechsel + Taktik-Karte */}
+        {isMyTurn && !finished && isMainPhase && (
+          <div className="space-y-2">
+            <div className="text-xs text-slate-400">
+              Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
+              {snapshot.normalSummonUsed && <span className="text-amber-300"> · Normalbeschwörung bereits genutzt</span>}
+              {pendingSummon && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {(snapshot.self.hand ?? []).map((card) => {
+                const isSelected = pendingSummon?.handCardId === card.cardId;
+                const isDisabled = card.kind === "unit" && snapshot.normalSummonUsed;
 
-            <div className="space-y-2">
-              <div className="text-xs text-slate-400">
-                Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
-                {pendingSummonCardId && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {(snapshot.self.hand ?? []).map((card) => {
-                  const isSelected = usedHandCardId === card.cardId;
-
-                  if (card.kind === "unit" && card.unitCard) {
-                    return (
-                      <div
-                        key={card.cardId}
-                        className={`w-28 shrink-0 rounded-lg p-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""}`}
-                      >
-                        <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => toggleHandCard(card)} />
-                      </div>
-                    );
-                  }
-
+                if (card.kind === "unit" && card.unitCard) {
                   return (
-                    <div key={card.cardId} className="w-28 shrink-0">
-                      <TacticCardTile
-                        card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
-                        selected={isSelected}
-                        disabled={false}
-                        onClick={() => toggleHandCard(card)}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              {pendingSummonCardId && (
-                <div className="flex gap-2 text-[11px]">
-                  <button
-                    onClick={() => setSummonStance("attack")}
-                    className={`px-2 py-1 rounded border ${summonStance === "attack" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
-                  >
-                    Angriffsstellung
-                  </button>
-                  <button
-                    onClick={() => setSummonStance("defense")}
-                    className={`px-2 py-1 rounded border ${summonStance === "defense" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
-                  >
-                    Verteidigungsstellung
-                  </button>
-                </div>
-              )}
-              {tacticChoice && (
-                <div className="flex gap-2 text-[11px]">
-                  <button
-                    onClick={() => setTacticChoice((prev) => (prev ? { ...prev, mode: "instant" } : prev))}
-                    className={`px-2 py-1 rounded border ${tacticChoice.mode === "instant" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
-                  >
-                    Sofort spielen
-                  </button>
-                  <button
-                    onClick={() => setTacticChoice((prev) => (prev ? { ...prev, mode: "setFaceDown" } : prev))}
-                    className={`px-2 py-1 rounded border ${tacticChoice.mode === "setFaceDown" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
-                  >
-                    Verdeckt setzen
-                  </button>
-                </div>
-              )}
-              {(() => {
-                const selectedCard = (snapshot.self.hand ?? []).find((c) => c.cardId === usedHandCardId);
-                if (!selectedCard) return null;
-                if (selectedCard.kind === "unit" && selectedCard.unitCard) {
-                  const u = selectedCard.unitCard;
-                  return (
-                    <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2.5 space-y-1.5 text-[11px]">
-                      <p className="text-emerald-300">
-                        <span className="font-semibold">{u.passivePositive.name}:</span> {u.passivePositive.description}
-                      </p>
-                      <p className="text-rose-300">
-                        <span className="font-semibold">{u.passiveNegative.name}:</span> {u.passiveNegative.description}
-                      </p>
-                      <p className="text-teal-300">
-                        <span className="font-semibold">{u.activeSkill.name}</span> ({u.activeSkill.cost} Rage): {u.activeSkill.description}
-                      </p>
-                      <p className="text-amber-300">
-                        <span className="font-semibold">{u.ultimateSkill.name}</span> ({u.ultimateSkill.cost} Rage):{" "}
-                        {u.ultimateSkill.description}
-                      </p>
+                    <div
+                      key={card.cardId}
+                      className={`w-28 shrink-0 rounded-lg p-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
+                    >
+                      <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => selectHandCard(card)} />
                     </div>
                   );
                 }
+
                 return (
-                  <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2.5 text-[11px] text-[color:var(--moba-ink-dim)]">
-                    {selectedCard.tacticDescription ?? "Keine Beschreibung verfügbar."}
+                  <div key={card.cardId} className="w-28 shrink-0">
+                    <TacticCardTile
+                      card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
+                      selected={false}
+                      disabled={false}
+                      onClick={() => selectHandCard(card)}
+                    />
                   </div>
                 );
-              })()}
+              })}
             </div>
-          </div>
-        )}
-
-        {/* Bestätigen — Zusammenfassung des gesamten Zugs */}
-        {isMyTurn && !finished && phase === "confirm" && (
-          <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-3 space-y-1.5 text-xs">
-            <p className="text-slate-500 font-semibold uppercase tracking-wide text-[10px]">Zusammenfassung</p>
-            <p className="text-slate-300">
-              <span className="text-slate-500">Beschwörung: </span>
-              {summonSlot
-                ? `${snapshot.self.hand?.find((c) => c.cardId === summonSlot.handCardId)?.name ?? "?"} → Feld-Slot ${summonSlot.slotIndex + 1} (${STANCE_LABEL[summonSlot.stance]})`
-                : "—"}
-            </p>
-            <p className="text-slate-300">
-              <span className="text-slate-500">Stellungswechsel: </span>
-              {Object.keys(stanceChanges).length === 0
-                ? "—"
-                : Object.entries(stanceChanges)
-                    .map(([slotIndex, stance]) => `${snapshot.self.field[Number(slotIndex)]?.name ?? "?"} → ${STANCE_LABEL[stance]}`)
-                    .join(", ")}
-            </p>
-            <p className="text-slate-300">
-              <span className="text-slate-500">Taktik-Karte: </span>
-              {tacticChoice
-                ? `${snapshot.self.hand?.find((c) => c.cardId === tacticChoice.handCardId)?.name ?? "?"} (${
-                    tacticChoice.mode === "instant" ? "sofort" : "verdeckt"
-                  })`
-                : "—"}
-            </p>
-            <div className="text-slate-300">
-              <span className="text-slate-500">Angriffe: </span>
-              {Object.values(attackDrafts).length === 0 ? (
-                "—"
-              ) : (
-                <ul className="mt-1 space-y-0.5 list-disc list-inside">
-                  {Object.values(attackDrafts).map((fa) => {
-                    const unitName = snapshot.self.field[fa.slotIndex]?.name ?? "?";
-                    const targetName =
-                      fa.targetSlotIndex === undefined
-                        ? null
-                        : (snapshot.opponent.field[fa.targetSlotIndex]?.name ?? "Direkt (Face)");
-                    return (
-                      <li key={fa.slotIndex}>
-                        {unitName}: {ACTION_LABEL[fa.action]}
-                        {targetName ? ` → ${targetName}` : ""}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            {pendingSummon && (
+              <div className="flex gap-2 text-[11px]">
+                <button
+                  onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "attack" } : prev))}
+                  className={`px-2 py-1 rounded border ${pendingSummon.stance === "attack" ? "border-teal-400 text-teal-200" : "border-slate-700 text-slate-400"}`}
+                >
+                  Angriffsstellung
+                </button>
+                <button
+                  onClick={() => setPendingSummon((prev) => (prev ? { ...prev, stance: "defense" } : prev))}
+                  className={`px-2 py-1 rounded border ${pendingSummon.stance === "defense" ? "border-sky-400 text-sky-200" : "border-slate-700 text-slate-400"}`}
+                >
+                  Verteidigungsstellung
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1065,44 +986,21 @@ export default function DuelLiveView({
           </button>
         )}
 
-        {isMyTurn && !finished && phase === "main" && (
-          <button
-            onClick={() => setPhase("battle")}
-            className="w-full rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold py-2.5"
-          >
-            Weiter zur Kampfphase →
-          </button>
-        )}
-
-        {isMyTurn && !finished && phase === "battle" && (
+        {canAct && (
           <div className="flex gap-2">
+            {snapshot.phase !== "main2" && (
+              <button
+                onClick={() => postAction({ type: "advancePhase" })}
+                disabled={busy}
+                className="flex-1 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold py-2.5"
+              >
+                Weiter zur {PHASE_LABEL[PHASE_ORDER[PHASE_ORDER.indexOf(snapshot.phase) + 1]]} →
+              </button>
+            )}
             <button
-              onClick={() => setPhase("main")}
-              className="flex-1 rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm font-semibold py-2.5"
-            >
-              ← Zurück
-            </button>
-            <button
-              onClick={() => setPhase("confirm")}
-              className="flex-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold py-2.5"
-            >
-              Weiter →
-            </button>
-          </div>
-        )}
-
-        {isMyTurn && !finished && phase === "confirm" && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPhase("battle")}
-              className="flex-1 rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm font-semibold py-2.5"
-            >
-              ← Zurück
-            </button>
-            <button
-              onClick={endTurn}
+              onClick={() => postAction({ type: "endTurn" })}
               disabled={busy}
-              className="flex-1 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold py-2.5 flex items-center justify-center gap-2"
+              className="flex-1 rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] disabled:opacity-50 text-[color:var(--moba-ink)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2"
             >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MobaIcon name="crossedSwords" className="w-4 h-4" />}
               Zug beenden
@@ -1138,6 +1036,14 @@ function describeLogEntry(entry: DuelLogEntry): string {
       return `Heilung: ${entry.amount}`;
     case "death":
       return "Eine Einheit wurde besiegt.";
+    case "defenseDestroyed":
+      return "Angriff durchbrochen — die verteidigende Einheit wurde zerstört.";
+    case "defenseReflect":
+      return `Angriff zu schwach — ${entry.amount} Rückprall-Schaden für den Angreifer.`;
+    case "defenseBounce":
+      return "Angriff prallt wirkungslos ab (ATK = DEF).";
+    case "lpChange":
+      return `Lebenspunkte-Effekt: ${entry.amount && entry.amount >= 0 ? "+" : ""}${entry.amount}`;
     case "tacticPlayed":
       return "Taktik-Karte gespielt.";
     case "trapTriggered":

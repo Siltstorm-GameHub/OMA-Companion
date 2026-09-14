@@ -23,14 +23,6 @@ export const DUEL_DRAW_PER_ROUND = 1;
  *  Runden-Modell. */
 export const DUEL_TURN_TIMEOUT_MS = 30_000;
 
-/** Abschwächungsfaktor für Schaden gegen eine Einheit in Verteidigungsstellung
- *  — zweckentfremdet performAction()s suddenDeathMultiplier-Parameter
- *  (normalerweise Sudden-Death-Skalierung) als generischen Schadens-
- *  Multiplikator. Anders als der frühere (simultane) Block-Mechanismus ist
- *  das jetzt eine deterministische Eigenschaft der (öffentlich sichtbaren)
- *  Zielstellung, keine erratene Reaktion mehr. */
-export const DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER = 0.4;
-
 /** Comeback-Bonus: zusätzliche Rage proportional zu fehlenden HP% einer eigenen
  *  Feld-Einheit — hilft der zurückliegenden Seite, wieder ins Spiel zu kommen. */
 export const DUEL_COMEBACK_RAGE_FACTOR = 0.3;

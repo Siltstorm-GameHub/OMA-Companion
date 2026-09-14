@@ -101,5 +101,11 @@ export function resolveEffectTargets(
     }
     case "allAllies":
       return allies;
+    // Reine OMA-Duels-Ziele (LP-Pool statt Feld-Einheit) — duels-live.ts fängt
+    // diese VOR dem Aufruf von executeEffect ab und wendet sie selbst auf
+    // DuelPlayerState.lifePoints an; hier gibt es dafür bewusst keine Einheit.
+    case "ownLp":
+    case "enemyLp":
+      return [];
   }
 }
