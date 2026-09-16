@@ -176,22 +176,32 @@ export default function CardTile({
           />
         )}
 
+        {/* Namensschild als Teil der Karte selbst (Verlaufs-Banner über dem
+            unteren Artwork-Rand) statt separater Textzeile darunter — die
+            Karte soll wie EIN Objekt wirken, nicht wie Bild + schwebender
+            Titel. Level-Chip liegt darüber, damit beides nebeneinander lesbar
+            bleibt. */}
+        <div className="absolute inset-x-0 bottom-0 z-[6] pt-5 pb-1 px-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
+          <p className={`font-battle text-[10px] leading-tight truncate text-center ${locked ? "text-gray-500" : "text-white"}`}>
+            {card.name}
+          </p>
+        </div>
         {!locked && (
           <span
-            className="absolute bottom-1 left-1 text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"
+            className="absolute bottom-1 left-1 z-[7] text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"
             style={{ color: borderColor }}
           >
             Lv.{level}
           </span>
         )}
         {!locked && typeof duplicates === "number" && (
-          <span className="absolute top-1 right-1 text-[9px] font-bold leading-none px-1.5 py-1 rounded-full bg-black/70 backdrop-blur-sm text-violet-300">
+          <span className="absolute top-1 right-1 z-[7] text-[9px] font-bold leading-none px-1.5 py-1 rounded-full bg-black/70 backdrop-blur-sm text-violet-300">
             ×{duplicates}
           </span>
         )}
         {!locked && isNew && (
           <span
-            className="absolute -left-6 top-2.5 w-20 text-center text-[8px] font-black uppercase tracking-widest text-black py-0.5 shadow-md"
+            className="absolute -left-6 top-2.5 z-[7] w-20 text-center text-[8px] font-black uppercase tracking-widest text-black py-0.5 shadow-md"
             style={{ background: "linear-gradient(90deg, #fbbf24, #f59e0b)", transform: "rotate(-45deg)" }}
           >
             Neu
@@ -213,11 +223,6 @@ export default function CardTile({
           />
         )}
       </div>
-      <p
-        className={`font-battle text-[11px] truncate w-full text-center mt-2 ${locked ? "text-gray-600" : "text-white"}`}
-      >
-        {card.name}
-      </p>
     </button>
   );
 }

@@ -368,8 +368,7 @@ function UnitSlot({
         type="button"
         disabled={!selectable}
         onClick={onClick}
-        style={{ height: "clamp(64px, 15vh, 112px)" }}
-        className={`relative w-full rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
+        className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
           dragOver
             ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
             : selectable
@@ -391,7 +390,7 @@ function UnitSlot({
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative w-full rounded-lg overflow-hidden text-left transition-transform ${
+      className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
         isDefense
           ? "border-[3px] border-sky-400 duel-defense-glow"
           : selected
@@ -401,7 +400,6 @@ function UnitSlot({
               : "border border-[color:var(--moba-accent-line)]"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
-        height: "clamp(64px, 15vh, 112px)",
         backgroundImage: unit.imageUrl
           ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
           : undefined,
@@ -983,7 +981,7 @@ export default function DuelLiveView({
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#04061a] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[60] bg-[#04061a] flex items-center justify-center p-6">
         <div className="max-w-sm w-full space-y-3">
           <ErrorNotice message={error} size="lg" />
           <button onClick={handleExit} className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm py-2">
@@ -996,7 +994,7 @@ export default function DuelLiveView({
 
   if (!snapshot) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#04061a] flex items-center justify-center">
+      <div className="fixed inset-0 z-[60] bg-[#04061a] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
       </div>
     );
@@ -1067,7 +1065,7 @@ export default function DuelLiveView({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#04061a] text-[color:var(--moba-ink)] flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[60] bg-[#04061a] text-[color:var(--moba-ink)] flex flex-col overflow-hidden"
       style={{ height: "100dvh" }}
     >
       <style>{`
@@ -1413,7 +1411,7 @@ export default function DuelLiveView({
                       onPointerLeave={(e) => {
                         if (e.pointerType === "mouse") setFocusedCardId((f) => (f === card.cardId ? null : f));
                       }}
-                      className={`relative shrink-0 space-y-1 ${isSelectedSummon || isSelectedTactic ? "ring-2 ring-teal-400 rounded-lg" : ""}`}
+                      className={`relative shrink-0 ${isSelectedSummon || isSelectedTactic ? "ring-2 ring-teal-400 rounded-lg" : ""}`}
                       style={{
                         width: HAND_CARD_WIDTH,
                         marginLeft: i === 0 ? 0 : -HAND_OVERLAP,
@@ -1427,16 +1425,16 @@ export default function DuelLiveView({
                       }}
                     >
                       {card.kind === "unit" && card.unitCard ? (
-                        <>
+                        <div className="rounded-lg overflow-hidden">
                           <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => {}} />
                           {isFocused && stats && (
-                            <div className="flex justify-center">
+                            <div className="-mt-1 rounded-b-lg bg-[rgba(12,12,16,0.92)] py-1 flex justify-center">
                               <StatBadges attack={stats.attack} defense={stats.defense} />
                             </div>
                           )}
-                        </>
+                        </div>
                       ) : (
-                        <>
+                        <div className="rounded-lg overflow-hidden">
                           <TacticCardTile
                             card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
                             selected={isSelectedTactic}
@@ -1444,11 +1442,11 @@ export default function DuelLiveView({
                             onClick={() => {}}
                           />
                           {isFocused && (
-                            <p className="text-[9px] text-slate-300 text-center leading-snug bg-black/70 rounded p-1">
+                            <p className="-mt-1 text-[9px] text-slate-300 text-center leading-snug bg-[rgba(12,12,16,0.92)] rounded-b-lg p-1">
                               {card.tacticDescription ?? "Keine Beschreibung verfügbar."}
                             </p>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                   );

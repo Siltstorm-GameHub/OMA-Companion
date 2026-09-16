@@ -38,7 +38,7 @@ export default function TacticCardTile({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center gap-1.5 w-full text-left disabled:opacity-40 disabled:cursor-not-allowed"
+      className="flex flex-col items-center w-full text-left disabled:opacity-40 disabled:cursor-not-allowed"
       aria-label={`${card.name} — ${isTrap ? "Falle" : "Item"}`}
     >
       <div
@@ -54,14 +54,19 @@ export default function TacticCardTile({
         ) : (
           <img src={iconSrc} alt="" aria-hidden className="w-8 h-8 object-contain" style={{ opacity: 0.7 }} />
         )}
+        {/* Namensschild als Verlaufs-Banner im Bild statt separater Zeile
+            darunter — dieselbe "eine Karte, kein schwebender Titel"-Sprache
+            wie CardTile.tsx. */}
+        <div className="absolute inset-x-0 bottom-0 z-[6] pt-5 pb-1 px-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
+          <p className="font-battle text-[10px] leading-tight truncate text-center text-white">{card.name}</p>
+        </div>
         <span
-          className="absolute bottom-1 left-1 text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"
+          className="absolute bottom-1 left-1 z-[7] text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"
           style={{ color: accent }}
         >
           {isTrap ? "Falle" : "Item"}
         </span>
       </div>
-      <p className="font-battle text-[11px] truncate w-full text-center text-white">{card.name}</p>
     </button>
   );
 }
