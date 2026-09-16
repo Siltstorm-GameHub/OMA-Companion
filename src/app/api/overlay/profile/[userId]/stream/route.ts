@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 import { getRankProgress, getRankFullLabel } from "@/lib/ranks";
+import { getGameCoverUrl } from "@/lib/game-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,11 @@ async function loadProfileOverlayState(userId: string) {
   });
   if (!user) return null;
 
-  const nextRegistration = await prisma.eventRegistration.findFirst({
-    where: { userId, event: { startAt: { gt: new Date() }, status: { notIn: ["finished", "closed"] }, hidden: false } },
-    orderBy: { event: { startAt: "asc" } },
-    select: { event: { select: { id: true, title: true, startAt: true, game: true } } },
+  const upcomingEvents = await prisma.event.findMany({
+    where: { startAt: { gt: new Date() }, status: { notIn: ["finished", "closed"] }, hidden: false },
+    orderBy: { startAt: "asc" },
+    take: 3,
+    select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true },
   });
 
   const { rank, pct } = getRankProgress(user.rankPoints);
@@ -38,9 +40,10 @@ async function loadProfileOverlayState(userId: string) {
     rankPct: pct,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
     badges: await resolveShowcaseEntries(user.id, user.showcaseBadgesJson),
-    nextEvent: nextRegistration?.event
-      ? { id: nextRegistration.event.id, title: nextRegistration.event.title, startAt: nextRegistration.event.startAt, game: nextRegistration.event.game }
-      : null,
+    upcomingEvents: upcomingEvents.map(e => ({
+      id: e.id, title: e.title, startAt: e.startAt, game: e.game,
+      coverUrl: e.coverImageUrl ?? getGameCoverUrl(e.game),
+    })),
   };
 }
 

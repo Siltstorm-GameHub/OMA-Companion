@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Calendar, Clock, Gamepad2 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import { getGameFallbackGradient } from "@/lib/game-cover";
 import {
   MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, BadgesPanel, TopEdge,
   panelMotionStyle, combinedElementStyle, useVisibilityCycles,
@@ -19,7 +21,7 @@ type ProfileState = {
   rankPct: number;
   favoriteGames: FavoriteGame[];
   badges: ShowcaseBadge[];
-  nextEvent: { id: string; title: string; startAt: string; game: string | null } | null;
+  upcomingEvents: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[];
 };
 
 /** Elemente des persönlichen Profil-Overlays — kleinerer Satz als beim Event-Overlay, da kein
@@ -33,7 +35,7 @@ export type ProfileLayoutPositions = Partial<Record<ProfileElementKey, ProfileLa
 export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; height: number }> = {
   brand:     { width: 300, height: 78 },
   rank:      { width: 320, height: 90 },
-  nextEvent: { width: 380, height: 90 },
+  nextEvent: { width: 400, height: 110 },
   favorites: { width: 460, height: 220 },
   badges:    { width: 460, height: 220 },
 };
@@ -135,7 +137,7 @@ export default function ProfileOverlayClient({
   const elementAvailable: Record<ProfileElementKey, boolean> = {
     brand: true,
     rank: !!state,
-    nextEvent: !!state?.nextEvent,
+    nextEvent: !!state?.upcomingEvents.length,
     favorites: !!state?.favoriteGames.length,
     badges: !!state?.badges.length,
   };
@@ -194,7 +196,7 @@ export default function ProfileOverlayClient({
                   isVisible(prevSlot.key),
                 )}
               >
-                <ProfileElementContent elementKey={prevSlot.key} state={state} />
+                <ProfileElementContent elementKey={prevSlot.key} state={state} rotateSeconds={rotateSeconds} />
               </div>
             )}
             {slot && (
@@ -205,7 +207,7 @@ export default function ProfileOverlayClient({
                   isVisible(slot.key),
                 )}
               >
-                <ProfileElementContent elementKey={slot.key} state={state} />
+                <ProfileElementContent elementKey={slot.key} state={state} rotateSeconds={rotateSeconds} />
               </div>
             )}
           </div>
@@ -215,11 +217,11 @@ export default function ProfileOverlayClient({
   );
 }
 
-function ProfileElementContent({ elementKey, state }: { elementKey: ProfileElementKey; state: ProfileState | null }) {
+function ProfileElementContent({ elementKey, state, rotateSeconds }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number }) {
   if (!state) return null;
   switch (elementKey) {
     case "rank":      return <RankTile rankLabel={state.rankLabel} rankPct={state.rankPct} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
-    case "nextEvent": return state.nextEvent ? <NextEventTile event={state.nextEvent} /> : null;
+    case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
     case "badges":    return <BadgesPanel badges={state.badges} />;
     default:          return null;
@@ -252,21 +254,79 @@ function RankTile({ rankLabel, rankPct, rankPoints, image, name }: { rankLabel: 
   );
 }
 
-/** "Nächstes Event"-Kachel — cross-promotet die Community-Events direkt im Personal-Stream. */
-function NextEventTile({ event }: { event: { title: string; startAt: string; game: string | null } }) {
+/** "Nächstes Event"-Kachel — cross-promotet die kommenden Community-Events direkt im Personal-Stream.
+ *  Rotiert intern durch bis zu 3 Events (unabhängig von einer Anmeldung des Streamers), im selben
+ *  Takt wie die übrigen Overlay-Elemente. */
+function NextEventTile({ events, rotateSeconds }: { events: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[]; rotateSeconds: number }) {
+  const [index, setIndex] = useState(0);
+  const [fadeIn, setFadeIn] = useState(true);
+
+  useEffect(() => {
+    setIndex(0);
+    setFadeIn(true);
+    if (events.length <= 1) return;
+    const showMs = Math.max(4, rotateSeconds) * 1000;
+    const interval = setInterval(() => {
+      setFadeIn(false);
+      setTimeout(() => {
+        setIndex(i => (i + 1) % events.length);
+        setFadeIn(true);
+      }, 250);
+    }, showMs);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events.map(e => e.id).join(","), rotateSeconds]);
+
+  const [coverFailed, setCoverFailed] = useState(false);
+  useEffect(() => setCoverFailed(false), [index]);
+
+  const event = events[index] ?? events[0];
   const date = new Date(event.startAt);
   const dateLabel = date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
   const timeLabel = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const showCover = event.coverUrl && !coverFailed;
 
   return (
     <PanelShell title="Nächstes Event">
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {event.title}
-        </span>
-        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
-          {dateLabel} · {timeLabel} Uhr{event.game ? ` · ${event.game}` : ""}
-        </span>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: 12,
+          opacity: fadeIn ? 1 : 0, transition: "opacity 250ms ease",
+        }}
+      >
+        <div style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
+          {showCover ? (
+            // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
+            <img
+              src={event.coverUrl!}
+              alt=""
+              onError={() => setCoverFailed(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: getGameFallbackGradient(event.game) }} />
+          )}
+          <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {event.title}
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>
+              <Calendar size={13} style={{ flexShrink: 0, color: "#5eead4" }} />
+              {dateLabel}
+              <Clock size={13} style={{ flexShrink: 0, marginLeft: 4, color: "#5eead4" }} />
+              {timeLabel} Uhr
+            </span>
+            {event.game && (
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <Gamepad2 size={13} style={{ flexShrink: 0, color: "#5eead4" }} />
+                {event.game}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </PanelShell>
   );
