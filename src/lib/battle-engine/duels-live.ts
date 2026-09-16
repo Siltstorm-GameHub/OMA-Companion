@@ -157,7 +157,12 @@ export type DuelLogEntry =
     }
   | { type: "attackClashDraw"; round: number; attackerUnitId: string; defenderUnitId: string }
   /** Taktikkarten-Effekt mit direktem LP-Ziel (ownLp/enemyLp) — siehe applyTacticEffects. */
-  | { type: "lpChange"; round: number; team: TeamId; amount: number; remainingLp: number; reason: "tactic" };
+  | { type: "lpChange"; round: number; team: TeamId; amount: number; remainingLp: number; reason: "tactic" }
+  /** Zusätzlich zum generischen rageChange-Eintrag (siehe grantComebackRage) --
+   *  rein fürs UI, um den Comeback-Bonus sichtbar von normalem Rage-Gewinn zu
+   *  unterscheiden, ohne den geteilten grantRage()-Reason-Union in engine.ts
+   *  anzufassen. */
+  | { type: "comebackBonus"; round: number; unitId: string; amount: number };
 
 export interface LiveDuelState {
   seed: number;
@@ -731,7 +736,10 @@ function grantComebackRage(team: TeamId, state: LiveDuelState, round: number): v
     const missingPercent = 1 - slot.unit.currentHp / slot.unit.maxHp;
     if (missingPercent > 0) {
       const bonus = Math.round(DUEL_COMEBACK_RAGE_FACTOR * missingPercent * RAGE_PER_ACTION);
-      grantRage(slot.unit, bonus, round, asBattleLog(state.log), "action");
+      if (bonus > 0) {
+        grantRage(slot.unit, bonus, round, asBattleLog(state.log), "action");
+        state.log.push({ type: "comebackBonus", round, unitId: slot.unit.instanceId, amount: bonus });
+      }
     }
   }
 }

@@ -1049,9 +1049,16 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
     <FlipFace justify="center">
       {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
       <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
-      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
-        Old Masters Ally
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
+          Old Masters Ally
+        </span>
+        {/* Für Zuschauer: schnell erkennbar, wo sie die Community/App finden — ohne diesen
+           Hinweis kannte man die URL nur, wenn der Streamer sie mündlich erwähnt. */}
+        <span style={{ fontSize: 12, fontWeight: 500, color: "#5eead4" }}>
+          www.oma-app.de
+        </span>
+      </div>
     </FlipFace>
   );
 
