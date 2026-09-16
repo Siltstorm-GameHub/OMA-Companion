@@ -1066,7 +1066,13 @@ export default function DuelLiveView({
   return (
     <div
       className="fixed inset-0 z-[60] bg-[#04061a] text-[color:var(--moba-ink)] flex flex-col overflow-hidden"
-      style={{ height: "100dvh" }}
+      // 100svh statt 100dvh: dvh berichtet auf manchen mobilen Browsern (v.a.
+      // Android-Chrome-Versionen mit unzuverlässigem dvh-Support) kurzzeitig die
+      // GROSSE Viewport-Höhe (inkl. eingeklappter Adressleiste), bevor sie sich
+      // korrigiert — der feste Fuß (Phasen-/Zugende-Buttons) landet dann unterhalb
+      // des tatsächlich sichtbaren Bereichs. svh ist garantiert die kleinste
+      // mögliche Höhe (Adressleiste sichtbar) und damit immer sicher sichtbar.
+      style={{ height: "100svh", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <style>{`
         @keyframes duelFloatUp { 0% { opacity: 0; transform: translateY(4px) scale(0.9); } 15% { opacity: 1; transform: translateY(-6px) scale(1); } 100% { opacity: 0; transform: translateY(-32px) scale(1); } }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Calendar, Clock, Gamepad2 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import { getGameFallbackGradient } from "@/lib/game-cover";
+import { BRAND_LOGO } from "@/lib/brand";
 import {
   MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, BadgesPanel, TopEdge,
   panelMotionStyle, combinedElementStyle, useVisibilityCycles,
@@ -241,13 +242,28 @@ function RankTile({ rankLabel, rankPct, rankPoints, image, name }: { rankLabel: 
       }}
     >
       <TopEdge radius={14} />
-      <RankedAvatar rankPoints={rankPoints} src={image} alt={name} size={48} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {rankLabel}
-        </span>
-        <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${rankPct}%`, borderRadius: 999, background: "linear-gradient(90deg, #14b8a6, #5eead4)" }} />
+      {/* Wasserzeichen — analog PanelShell, damit auch die nicht auf PanelShell basierende
+         Rang-Kachel das OMA-Logo im Hintergrund trägt. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img
+        src={BRAND_LOGO}
+        alt=""
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "contain", padding: 20,
+          opacity: 0.05, filter: "grayscale(1)",
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
+        <RankedAvatar rankPoints={rankPoints} src={image} alt={name} size={48} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {rankLabel}
+          </span>
+          <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${rankPct}%`, borderRadius: 999, background: "linear-gradient(90deg, #14b8a6, #5eead4)" }} />
+          </div>
         </div>
       </div>
     </div>
