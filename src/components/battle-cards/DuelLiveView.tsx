@@ -1096,10 +1096,17 @@ export default function DuelLiveView({
         .duel-card-reveal { animation: duelCardReveal 1.3s ease-out forwards; }
       `}</style>
       {/* Content-Rahmen: 100dvh-basierte Flex-Spalte statt linearer space-y-4-
-          Stapelung — Header/Phasenanzeige und die Hand-/Aktions-Leiste bleiben
-          fix (shrink-0), nur das Spielfeld wächst/schrumpft (flex-1 min-h-0).
-          overflow-y-auto bleibt als Sicherheitsnetz für sehr kleine Screens. */}
-      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3 overflow-y-auto">
+          Stapelung. Header/Phasenanzeige oben und die Phasen-/Zug-Buttons ganz
+          unten sind ein FESTER Rahmen (shrink-0, außerhalb jeder Scroll-Zone)
+          — nur der mittlere Bereich (Spielfeld + Hand + Fehleranzeigen) ist
+          eine einzige scrollbare Zone. Vorher hatten sowohl der Content-Rahmen
+          als auch das Spielfeld je ein eigenes overflow-y-auto: Bei wenig
+          Platz (z.B. Hauptphase mit ausgeklappter Handkarten-Fächerung)
+          quetschte das Spielfeld auf 0px zusammen, der äußere Rahmen musste
+          gescrollt werden, um "Zug beenden"/"Weiter zur Phase" überhaupt zu
+          sehen — leicht zu übersehen. Jetzt sind diese Buttons als fixer
+          Fuß nie Teil der Scroll-Berechnung und daher immer sichtbar. */}
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3">
         <div className="shrink-0 flex items-center justify-between">
           <button onClick={handleExit} className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
             <MobaIcon name="chevronLeft" className="w-4 h-4" /> Verlassen
@@ -1141,13 +1148,15 @@ export default function DuelLiveView({
           )}
         </div>
 
+        {/* Einzige scrollbare Zone: Spielfeld + Hand + Fehleranzeigen. Wächst
+            zwischen dem festen Header oben und den festen Phasen-/Zug-Buttons
+            unten (siehe Kommentar am Content-Rahmen). */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
         {/* Spielfeld (Gegner + eigenes Feld) — gemeinsame Ablagezone fürs Ziehen
-            einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen").
-            flex-1 min-h-0: einziger wachsender Bereich im Layout, Header und
-            Hand-/Aktionsleiste bleiben fix (siehe Content-Rahmen oben). */}
+            einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen"). */}
         <div
           ref={boardRef}
-          className={`flex-1 min-h-0 overflow-y-auto space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+          className={`space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
         >
         {/* Gegner */}
         <div className="space-y-2">
@@ -1520,11 +1529,15 @@ export default function DuelLiveView({
         )}
 
         {!finished && !isMyTurn && (
-          <button disabled className="shrink-0 w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+          <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
             <Wind className="w-4 h-4" /> Gegner ist am Zug …
           </button>
         )}
+        </div>
 
+        {/* Fester Fuß außerhalb der Scroll-Zone — siehe Kommentar am
+            Content-Rahmen: dadurch immer sichtbar, egal wie viel Platz
+            Spielfeld/Hand gerade brauchen. */}
         {canAct && (
           <div className="shrink-0 flex gap-2">
             {snapshot.phase !== "main2" && (
