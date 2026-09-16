@@ -103,7 +103,13 @@ export type DuelAction =
   | { type: "advancePhase" }
   /** Beendet den Zug sofort, aus jeder Phase heraus (wie im echten Spiel: man
    *  kann von Hauptphase 1 direkt in die End-Phase gehen, ohne anzugreifen). */
-  | { type: "endTurn" };
+  | { type: "endTurn" }
+  /** Antwort des Falleninhabers auf eine offene pendingTrapDecision (siehe
+   *  LiveDuelState) -- einzige erlaubte Aktion, solange eine Entscheidung
+   *  aussteht, und einzige Aktion, die NICHT von state.activeTeam kommt
+   *  (der Falleninhaber ist ja die nicht-aktive Seite). Bezieht sich implizit
+   *  auf state.pendingTrapDecision.candidateTacticCardId. */
+  | { type: "resolveTrapDecision"; activate: boolean };
 
 /** Erweitert die bestehenden BattleLogEntry-Varianten (damage/heal/death/
  *  rageChange/...) um Duels-spezifische Ereignisse — bewusst ein eigener Typ
@@ -188,6 +194,26 @@ export interface LiveDuelState {
   winner: TeamId | "DRAW" | null;
   timeoutStreakA: number;
   timeoutStreakB: number;
+  /** Ist gesetzt, solange der Falleninhaber entscheiden muss, ob eine zu
+   *  triggerAction passende gesetzte Falle aktiviert wird (siehe
+   *  triggerTraps/resolveTrapDecision). Solange dieses Feld gesetzt ist, darf
+   *  NUR ownerTeam handeln, und NUR mit "resolveTrapDecision" -- siehe
+   *  submitDuelAction. */
+  pendingTrapDecision: DuelPendingTrapDecision | null;
+}
+
+export interface DuelPendingTrapDecision {
+  ownerTeam: TeamId;
+  /** Aktion, die den Fallen-Check ausgelöst hat -- wird bei declareAttack
+   *  gebraucht, um den Angriff erst NACH allen Fallen-Entscheidungen
+   *  aufzulösen (siehe applyAction/resumeAfterTrapDecisions). */
+  triggeringAction: DuelAction;
+  /** tacticCardId der aktuell zur Entscheidung stehenden Falle. */
+  candidateTacticCardId: string;
+  /** Fallen, die für DIESE triggeringAction schon entschieden wurden (egal ob
+   *  aktiviert oder abgelehnt) -- werden bei der Kandidatensuche übersprungen,
+   *  damit dieselbe Falle nicht zweimal gefragt wird. */
+  askedTacticCardIds: string[];
 }
 
 export interface DuelDeckInput {
@@ -270,6 +296,7 @@ export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDec
     winner: null,
     timeoutStreakA: 0,
     timeoutStreakB: 0,
+    pendingTrapDecision: null,
   };
 }
 
@@ -450,23 +477,49 @@ function matchesTrigger(condition: TacticCardDefinition["triggerCondition"], act
       return action.type === "summon";
     case "onEnemyUltimate":
       return action.type === "declareAttack" && action.attackType === "ultimate";
+    case "onEnemyStanceChange":
+      return action.type === "changeStance";
     default:
       return false;
   }
 }
 
-function triggerTraps(owner: TeamId, state: LiveDuelState, action: DuelAction, rng: Rng, log: DuelLogEntry[], round: number): void {
+/** Sucht die nächste noch unentschiedene, zur triggeringAction passende
+ *  gesetzte Falle des Besitzers (owner) und pausiert die Auflösung, indem sie
+ *  state.pendingTrapDecision setzt -- statt sie (wie früher) automatisch
+ *  anzuwenden. Gibt true zurück, wenn eine Entscheidung aussteht (der
+ *  Aufrufer MUSS seine eigene weitere Auflösung an dieser Stelle abbrechen),
+ *  sonst false (keine passende Falle mehr -> normal weitermachen).
+ *  askedTacticCardIds enthält für DIESE triggeringAction schon entschiedene
+ *  Fallen (egal ob aktiviert oder abgelehnt), damit dieselbe Falle nicht
+ *  zweimal gefragt wird -- siehe resolveTrapDecision-Case in applyAction. */
+function beginTrapCheck(
+  owner: TeamId,
+  state: LiveDuelState,
+  triggeringAction: DuelAction,
+  askedTacticCardIds: string[]
+): boolean {
   const player = playerState(state, owner);
-  const existingTraps = [...player.setTraps];
-  for (const trap of existingTraps) {
-    const def = player.tacticDefsById[trap.tacticCardId];
-    if (!def || !matchesTrigger(def.triggerCondition, action)) continue;
+  const candidate = player.setTraps.find(
+    (trap) =>
+      !askedTacticCardIds.includes(trap.tacticCardId) &&
+      matchesTrigger(player.tacticDefsById[trap.tacticCardId]?.triggerCondition, triggeringAction)
+  );
+  if (!candidate) return false;
 
-    applyTacticEffects(owner, state, def, rng, log, round);
-    player.setTraps = player.setTraps.filter((t) => t !== trap);
-    player.graveyardCardIds.push(trap.tacticCardId);
-    log.push({ type: "trapTriggered", round, team: owner, tacticCardId: trap.tacticCardId });
-  }
+  state.pendingTrapDecision = {
+    ownerTeam: owner,
+    triggeringAction,
+    candidateTacticCardId: candidate.tacticCardId,
+    askedTacticCardIds,
+  };
+  // Der Falleninhaber ist die nicht-aktive Seite und hat sonst keine eigene
+  // Zug-Uhr laufen -- turnDeadline (Schachuhr-Prinzip, sonst nur für
+  // state.activeTeam relevant) wird hier zweckentfremdet als Frist für DIESE
+  // Entscheidung, damit ein untätiger Falleninhaber das Duell nicht für immer
+  // blockiert (siehe checkDuelTimeout).
+  state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
+  return true;
 }
 
 // ---------- Kampfauflösung ----------
@@ -768,6 +821,43 @@ function endTurnInternal(state: LiveDuelState, finishingTeam: TeamId, round: num
   state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
 }
 
+/** Löst einen zuvor deklarierten Angriff auf, NACHDEM alle passenden Fallen
+ *  des Verteidigers entschieden wurden (siehe beginTrapCheck/
+ *  resolveTrapDecision) -- entspricht dem Teil von applyAction's alter
+ *  "declareAttack"-Case, der früher direkt NACH triggerTraps lief. Wird sowohl
+ *  im Sofortfall (keine passende Falle gefunden) als auch im verzögerten Fall
+ *  (nach der letzten Fallen-Entscheidung) aufgerufen. */
+function resumeDeclareAttackAfterTraps(
+  attackingTeam: TeamId,
+  state: LiveDuelState,
+  action: Extract<DuelAction, { type: "declareAttack" }>,
+  rng: Rng,
+  log: DuelLogEntry[],
+  round: number
+): void {
+  const attacker = playerState(state, attackingTeam).field[action.slotIndex]?.unit;
+  if (!attacker || !attacker.isAlive) {
+    // Der Angreifer wurde durch eine Fallenwirkung selbst zerstört (oder ist
+    // sonst nicht mehr da) -- der Angriff verpufft einfach, statt zu crashen.
+    return;
+  }
+
+  resolveDeclaredAttack(attackingTeam, state, attacker, action.attackType, action.targetSlotIndex, rng, log, round);
+  attacker.attackedThisTurn = true;
+
+  if (action.attackType === "ultimate") {
+    // Rage-Kosten abziehen — applyClassUltimate löst das Ultimate über eine
+    // eigene Formel auf (kein performAction() mehr, siehe dort), das Abziehen
+    // der Kosten (vorher Teil von performAction) muss deshalb hier separat
+    // passieren, sonst bliebe die Rage-Leiste nach dem Einsatz fälschlich voll.
+    const ultimateCost = attacker.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
+    attacker.rage = Math.max(0, attacker.rage - ultimateCost);
+    log.push({ type: "rageChange", round, unitId: attacker.instanceId, amount: -ultimateCost, newRage: attacker.rage, reason: "action" });
+  }
+
+  grantRage(attacker, RAGE_PER_ACTION, round, asBattleLog(log), "action");
+}
+
 // ---------- Aktions-Anwendung ----------
 
 function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): LiveDuelState {
@@ -804,7 +894,7 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
       state.normalSummonUsed = true;
       log.push({ type: "summon", round, team, slotIndex, unitId: instanceId, cardId: handCardId });
 
-      triggerTraps(opponentTeamId, state, action, rng, log, round);
+      beginTrapCheck(opponentTeamId, state, action, []);
       break;
     }
 
@@ -825,6 +915,8 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
       unit.stance = action.stance;
       unit.stanceLockedThisTurn = true;
       log.push({ type: "stanceChanged", round, team, slotIndex: action.slotIndex, stance: action.stance });
+
+      beginTrapCheck(opponentTeamId, state, action, []);
       break;
     }
 
@@ -902,21 +994,12 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
         throw new DuelLiveError("Nicht genug Rage für das Ultimate.");
       }
 
-      triggerTraps(opponentTeamId, state, action, rng, log, round);
-      resolveDeclaredAttack(team, state, attacker, action.attackType, targetSlotIndex, rng, log, round);
-      attacker.attackedThisTurn = true;
-
-      if (action.attackType === "ultimate") {
-        // Rage-Kosten abziehen — applyClassUltimate löst das Ultimate über
-        // eine eigene Formel auf (kein performAction() mehr, siehe dort), das
-        // Abziehen der Kosten (vorher Teil von performAction) muss deshalb
-        // hier separat passieren, sonst bliebe die Rage-Leiste nach dem
-        // Einsatz fälschlich voll.
-        attacker.rage = Math.max(0, attacker.rage - ultimateCost);
-        log.push({ type: "rageChange", round, unitId: attacker.instanceId, amount: -ultimateCost, newRage: attacker.rage, reason: "action" });
+      if (beginTrapCheck(opponentTeamId, state, action, [])) {
+        // Fallen-Entscheidung offen -- der Angriff wird über resolveTrapDecision
+        // fortgesetzt, sobald der Falleninhaber geantwortet hat (siehe unten).
+        break;
       }
-
-      grantRage(attacker, RAGE_PER_ACTION, round, asBattleLog(log), "action");
+      resumeDeclareAttackAfterTraps(team, state, action, rng, log, round);
       break;
     }
 
@@ -929,6 +1012,43 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
 
     case "endTurn": {
       endTurnInternal(state, team, round);
+      break;
+    }
+
+    case "resolveTrapDecision": {
+      const pending = state.pendingTrapDecision;
+      if (!pending) throw new DuelLiveError("Es gibt gerade keine offene Fallen-Entscheidung.");
+      if (team !== pending.ownerTeam) throw new DuelLiveError("Diese Fallen-Entscheidung gehört nicht dir.");
+
+      const trapOwner = playerState(state, pending.ownerTeam);
+      const candidateId = pending.candidateTacticCardId;
+
+      if (action.activate) {
+        const trap = trapOwner.setTraps.find((t) => t.tacticCardId === candidateId);
+        const def = trapOwner.tacticDefsById[candidateId];
+        if (trap && def) {
+          applyTacticEffects(pending.ownerTeam, state, def, rng, log, round);
+          trapOwner.setTraps = trapOwner.setTraps.filter((t) => t !== trap);
+          trapOwner.graveyardCardIds.push(candidateId);
+          log.push({ type: "trapTriggered", round, team: pending.ownerTeam, tacticCardId: candidateId });
+        }
+      }
+
+      const askedTacticCardIds = [...pending.askedTacticCardIds, candidateId];
+      const triggeringAction = pending.triggeringAction;
+      state.pendingTrapDecision = null;
+
+      if (beginTrapCheck(pending.ownerTeam, state, triggeringAction, askedTacticCardIds)) {
+        // Noch eine weitere passende Falle zur Entscheidung.
+        break;
+      }
+
+      // Keine weiteren Fallen mehr -- Original-Aktion fortsetzen, falls sie
+      // eine eigene Fortsetzung braucht (aktuell nur declareAttack; summon ist
+      // zu diesem Zeitpunkt schon vollständig angewendet).
+      if (triggeringAction.type === "declareAttack") {
+        resumeDeclareAttackAfterTraps(opponentTeam(pending.ownerTeam), state, triggeringAction, rng, log, round);
+      }
       break;
     }
   }
@@ -947,6 +1067,20 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
 
 export function submitDuelAction(state: LiveDuelState, team: TeamId, action: DuelAction): LiveDuelState {
   if (state.winner) throw new DuelLiveError("Dieses Duell ist bereits beendet.");
+
+  // Solange eine Fallen-Entscheidung aussteht, darf NUR der Falleninhaber
+  // handeln (das ist die nicht-aktive Seite -- state.activeTeam bleibt dabei
+  // unverändert), und NUR mit resolveTrapDecision.
+  if (state.pendingTrapDecision) {
+    if (team !== state.pendingTrapDecision.ownerTeam) {
+      throw new DuelLiveError("Gerade läuft eine Fallen-Entscheidung der Gegenseite -- warte, bis sie geantwortet hat.");
+    }
+    if (action.type !== "resolveTrapDecision") {
+      throw new DuelLiveError("Erst muss die offene Fallen-Entscheidung beantwortet werden.");
+    }
+    return applyAction(state, team, action);
+  }
+
   if (team !== state.activeTeam) throw new DuelLiveError("Du bist gerade nicht am Zug.");
   return applyAction(state, team, action);
 }
@@ -974,6 +1108,23 @@ function pickDefaultAllySlot(player: DuelPlayerState): number | undefined {
   return index >= 0 ? index : undefined;
 }
 
+/** Löst jede offene Fallen-Entscheidung automatisch auf (immer "aktivieren"
+ *  -- kostenlos für einen Bot/eine KI, daher die einfachste sinnvolle
+ *  Heuristik) -- nötig, weil weder ein NPC-Gegner noch ein per Timeout
+ *  automatisch weitergespielter Zug einen echten Client haben, der auf die
+ *  Entscheidungs-Anfrage antworten könnte. Muss nach JEDER applyAction in
+ *  runAutoTurn aufgerufen werden, die eine Falle auslösen könnte (summon,
+ *  declareAttack) -- sonst würde die nächste Automatik-Aktion eine noch
+ *  offene pendingTrapDecision stillschweigend überschreiben. Ein no-op,
+ *  wenn gerade keine Entscheidung ansteht. */
+function resolveAutoTrapDecisions(state: LiveDuelState): LiveDuelState {
+  let current = state;
+  while (current.pendingTrapDecision && !current.winner) {
+    current = applyAction(current, current.pendingTrapDecision.ownerTeam, { type: "resolveTrapDecision", activate: true });
+  }
+  return current;
+}
+
 /** Spielt den REST des aktuellen Zugs automatisch zu Ende — phasenweise
  *  (main1 -> battle -> main2 -> Zugende), exakt wie ein Mensch es über
  *  mehrere Einzelaktionen täte, nur ohne Zwischenstopps. Dient zweifach: (1)
@@ -999,6 +1150,14 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
         : undefined;
     if (summonCardId) {
       current = applyAction(current, team, { type: "summon", handCardId: summonCardId, slotIndex: emptySlotIndex, stance: "attack" });
+      // Eine dadurch ausgelöste Fallen-Entscheidung gehört der GEGENSEITE von
+      // team (der wirklich handelnden Seite) -- die kann ein echter Mensch
+      // sein (z.B. im PVE-Modus: die Falle des menschlichen Spielers, durch
+      // den Bot-Zug ausgelöst). Autopilot MUSS hier anhalten und darf diese
+      // Entscheidung nicht selbst treffen -- siehe checkDuelTimeout für den
+      // einzigen legitimen Fall, sie automatisch aufzulösen (der Inhaber hat
+      // SEINE EIGENE Frist verstreichen lassen).
+      if (current.pendingTrapDecision) return current;
     }
 
     const tacticCardId =
@@ -1036,6 +1195,9 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
       const ultimateCost = unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
       const attackType: "normalAttack" | "ultimate" = unit.rage >= ultimateCost ? "ultimate" : "normalAttack";
       current = applyAction(current, team, { type: "declareAttack", slotIndex, attackType, targetSlotIndex });
+      // Siehe Kommentar beim summon-Fall oben -- auch hier kann die
+      // ausgelöste Fallen-Entscheidung einem echten Menschen gehören.
+      if (current.pendingTrapDecision) return current;
     }
     if (!current.winner) current = applyAction(current, team, { type: "advancePhase" });
   }
@@ -1050,6 +1212,17 @@ export function runAutoTurn(state: LiveDuelState, team: TeamId): LiveDuelState {
 export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
   if (state.winner) return state;
   if (Date.now() < state.turnDeadline) return state;
+
+  if (state.pendingTrapDecision) {
+    // Der Falleninhaber (die nicht-aktive Seite) hat innerhalb seiner Frist
+    // nicht geantwortet -- automatisch entscheiden (immer aktivieren), damit
+    // ein untätiger Mitspieler das Duell nicht auf unbestimmte Zeit blockiert.
+    // Kein Timeout-Streak für state.activeTeam -- die war hier gar nicht
+    // säumig, sondern wartet selbst auf die Gegenseite.
+    const resolved = resolveAutoTrapDecisions(state);
+    resolved.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
+    return resolved;
+  }
 
   const team = state.activeTeam;
   if (team === "A") state.timeoutStreakA += 1;

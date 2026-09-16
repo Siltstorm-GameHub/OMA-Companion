@@ -100,6 +100,7 @@ const tacticTriggerConditionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("onEnemyAttack") }),
   z.object({ type: z.literal("onEnemySummon") }),
   z.object({ type: z.literal("onEnemyUltimate") }),
+  z.object({ type: z.literal("onEnemyStanceChange") }),
 ]);
 
 export function parseTacticEffects(json: unknown, context: string) {

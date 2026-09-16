@@ -23,6 +23,7 @@ import {
   type DuelAction,
   type DuelDeckInput,
   type DuelFieldSlot,
+  type DuelPendingTrapDecision,
   type DuelPhase,
   type DuelPlayerState,
   type DuelStance,
@@ -174,6 +175,12 @@ export interface LiveDuelSnapshot {
   tacticPlayedThisTurn: boolean;
   self: LiveDuelPlayerSnapshot;
   opponent: LiveDuelPlayerSnapshot;
+  /** Nur gesetzt, solange eine Fallen-Aktivierungs-Entscheidung offen ist.
+   *  `forSelf: true` nur für den Falleninhaber (mit Kartenname, damit er
+   *  weiß, worüber er entscheidet) -- der Gegenseite wird NIE der Kartenname
+   *  verraten (gleiche Konvention wie beim anonymen trapTriggered-Reveal,
+   *  siehe DuelLiveView.tsx), nur dass gerade irgendeine Entscheidung läuft. */
+  pendingTrapDecision: { forSelf: true; tacticCardName: string } | { forSelf: false } | null;
   log: LiveDuelState["log"];
   winner: LiveDuelState["winner"];
   playerAId: string;
@@ -267,6 +274,22 @@ function toPlayerSnapshot(player: DuelPlayerState, revealHand: boolean): LiveDue
   };
 }
 
+function toPendingTrapDecisionSnapshot(
+  pending: DuelPendingTrapDecision | null,
+  viewerTeam: TeamId,
+  state: LiveDuelState
+): LiveDuelSnapshot["pendingTrapDecision"] {
+  if (!pending) return null;
+  if (pending.ownerTeam !== viewerTeam) return { forSelf: false };
+  const owner = playerStateFor(state, pending.ownerTeam);
+  const name = owner.tacticDefsById[pending.candidateTacticCardId]?.name ?? "Falle";
+  return { forSelf: true, tacticCardName: name };
+}
+
+function playerStateFor(state: LiveDuelState, team: TeamId): DuelPlayerState {
+  return team === "A" ? state.playerA : state.playerB;
+}
+
 function buildSnapshot(live: LiveBattle, state: LiveDuelState, viewerId: string): LiveDuelSnapshot {
   const viewerTeam = teamOf(live, viewerId);
   const selfPlayer = viewerTeam === "A" ? state.playerA : state.playerB;
@@ -285,6 +308,7 @@ function buildSnapshot(live: LiveBattle, state: LiveDuelState, viewerId: string)
     tacticPlayedThisTurn: state.tacticPlayedThisTurn,
     self: toPlayerSnapshot(selfPlayer, true),
     opponent: toPlayerSnapshot(opponentPlayer, false),
+    pendingTrapDecision: toPendingTrapDecisionSnapshot(state.pendingTrapDecision, viewerTeam, state),
     log: state.log,
     winner: state.winner,
     playerAId: live.playerAId,
@@ -350,7 +374,11 @@ async function finalizeDuelBattle(live: LiveBattle, state: LiveDuelState) {
 function maybeAutoSubmitBot(state: LiveDuelState, mode: string): LiveDuelState {
   if (!parseDuelsPveMode(mode)) return state;
   let current = state;
-  while (!current.winner && current.activeTeam === "B") {
+  // Hält auch an, sobald eine Fallen-Entscheidung offen ist (z.B. eine Falle
+  // des menschlichen Spielers, ausgelöst durch den Bot-Zug) -- activeTeam
+  // bleibt währenddessen "B", ohne den Stopp würde runAutoTurn hier sofort
+  // wieder denselben (unveränderten) Zustand zurückgeben -> Endlosschleife.
+  while (!current.winner && !current.pendingTrapDecision && current.activeTeam === "B") {
     current = runAutoTurn(current, "B");
   }
   return current;

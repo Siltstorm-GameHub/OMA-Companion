@@ -42,6 +42,7 @@ const actionSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("advancePhase") }),
   z.object({ type: z.literal("endTurn") }),
+  z.object({ type: z.literal("resolveTrapDecision"), activate: z.boolean() }),
 ]);
 
 export async function POST(req: Request, ctx: RouteContext<"/api/battle-cards/duel/[id]/action">) {

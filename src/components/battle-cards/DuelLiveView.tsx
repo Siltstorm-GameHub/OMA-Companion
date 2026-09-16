@@ -20,6 +20,7 @@
 // ausschließlich serverseitig (lib/battle-cards/duel-live-battle.ts).
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Loader2, Wind, X } from "lucide-react";
 import MobaIcon from "./MobaIcon";
@@ -130,6 +131,7 @@ interface LiveDuelSnapshot {
   tacticPlayedThisTurn: boolean;
   self: LiveDuelPlayer;
   opponent: LiveDuelPlayer;
+  pendingTrapDecision: { forSelf: true; tacticCardName: string } | { forSelf: false } | null;
   log: DuelLogEntry[];
   winner: TeamId | "DRAW" | null;
   resultBattleId: string | null;
@@ -141,14 +143,15 @@ type DuelAction =
   | { type: "playTactic"; handCardId: string; mode: "instant" | "setFaceDown"; targetSlotIndex?: number }
   | { type: "declareAttack"; slotIndex: number; attackType: DuelAttackType; targetSlotIndex: number }
   | { type: "advancePhase" }
-  | { type: "endTurn" };
+  | { type: "endTurn" }
+  | { type: "resolveTrapDecision"; activate: boolean };
 
 interface FloatingEffect {
   id: string;
   side: "self" | "opponent";
   anchor: { kind: "slot"; slotIndex: number } | { kind: "lp" };
   text: string;
-  tone: "damage" | "crit" | "heal" | "shield" | "info";
+  tone: "damage" | "crit" | "heal" | "shield" | "info" | "comeback";
 }
 
 /** Großer, kurzer Reveal-Effekt in Bildschirmmitte für aktivierte Items/
@@ -248,6 +251,7 @@ const TONE_COLOR: Record<FloatingEffect["tone"], string> = {
   heal: "#34d399",
   shield: "#60a5fa",
   info: "#e5e7eb",
+  comeback: "#fbbf24",
 };
 
 function HpBar({ current, max }: { current: number; max: number }) {
@@ -481,6 +485,17 @@ export default function DuelLiveView({
   }
   const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
   const [lungeKeys, setLungeKeys] = useState<Set<string>>(new Set());
+
+  // Portal auf document.body (wie LiveBattleView.tsx/MobileTopBar.tsx) — sonst
+  // sperrt eine Ahnen-Komponente mit eigenem Stacking-Context (hier: <main>
+  // in DashboardChrome.tsx, position:relative + z-index) den eigentlich
+  // höheren z-index dieses Vollbild-Overlays ein, wodurch die fixe mobile
+  // BottomNav (z-index 50, außerhalb von <main>) trotzdem darüber gemalt wird
+  // und den festen Fuß (Phasen-/Zugende-Buttons) verdeckt.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Mobile-Layout: Kampf-Log als Overlay statt im Hauptfluss (spart am meisten
   // Platz), pro Zug nur die Aktions-Buttons der ausgewählten eigenen Einheit
@@ -763,6 +778,20 @@ export default function DuelLiveView({
           // anonymer Reveal für beide Seiten.
           spawnCardReveal({ kind: "TRAP", side: entry.team === newSnapshot.viewerTeam ? "self" : "opponent" });
           break;
+        case "comebackBonus": {
+          const unit = entry.unitId ? locateUnit(entry.unitId, candidates) : null;
+          if (unit) {
+            spawned.push({
+              id: `${spawned.length}-${entry.unitId}-comeback`,
+              side: unit.side,
+              anchor: { kind: "slot", slotIndex: unit.unit.slotIndex },
+              text: `+${entry.amount} Rage (Comeback)`,
+              tone: "comeback",
+            });
+            pulse(`${unit.side}-${unit.unit.slotIndex}`, setFlashKeys, 450);
+          }
+          break;
+        }
         case "battleEnd":
           if (entry.winner === newSnapshot.viewerTeam) playVictorySound();
           else if (entry.winner !== "DRAW") playDefeatSound();
@@ -893,7 +922,10 @@ export default function DuelLiveView({
   // deshalb ein echter Effekt sein, der bei jedem Render neu die aktuellsten
   // Closures einträgt) — null-sicher, damit die Reihenfolge der Hooks über den
   // Ladezustand hinweg stabil bleibt.
-  const canAct = !!snapshot && snapshot.activeTeam === snapshot.viewerTeam && snapshot.status !== "finished" && !busy;
+  const canAct =
+    !!snapshot && snapshot.activeTeam === snapshot.viewerTeam && snapshot.status !== "finished" && !busy && !snapshot.pendingTrapDecision;
+  const pendingTrapForSelf = snapshot?.pendingTrapDecision?.forSelf ? snapshot.pendingTrapDecision : null;
+  const pendingTrapForOpponent = !!snapshot?.pendingTrapDecision && !snapshot.pendingTrapDecision.forSelf;
   const isMainPhase = !!snapshot && (snapshot.phase === "main1" || snapshot.phase === "main2");
 
   function selectHandCard(card: LiveDuelHandCard) {
@@ -979,8 +1011,10 @@ export default function DuelLiveView({
     }
   }
 
+  if (!mounted) return null;
+
   if (error) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[60] bg-[#04061a] flex items-center justify-center p-6">
         <div className="max-w-sm w-full space-y-3">
           <ErrorNotice message={error} size="lg" />
@@ -988,15 +1022,17 @@ export default function DuelLiveView({
             Zurück
           </button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (!snapshot) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[60] bg-[#04061a] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -1063,7 +1099,7 @@ export default function DuelLiveView({
 
   const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] bg-[#04061a] text-[color:var(--moba-ink)] flex flex-col overflow-hidden"
       // 100svh statt 100dvh: dvh berichtet auf manchen mobilen Browsern (v.a.
@@ -1137,6 +1173,30 @@ export default function DuelLiveView({
             <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
               <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
             </div>
+          ) : pendingTrapForSelf ? (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-200 text-center">
+                „{pendingTrapForSelf.tacticCardName}" aktivieren?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => postAction({ type: "resolveTrapDecision", activate: false })}
+                  disabled={busy}
+                  className="flex-1 rounded-md border border-slate-700 text-slate-300 text-[11px] py-1.5 hover:border-slate-500 disabled:opacity-50"
+                >
+                  Liegen lassen
+                </button>
+                <button
+                  onClick={() => postAction({ type: "resolveTrapDecision", activate: true })}
+                  disabled={busy}
+                  className="flex-1 rounded-md bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-[11px] py-1.5"
+                >
+                  Aktivieren
+                </button>
+              </div>
+            </div>
+          ) : pendingTrapForOpponent ? (
+            <p className="text-xs text-amber-300 text-center">Der Gegner überlegt, ob er eine Falle aktiviert …</p>
           ) : !isMyTurn ? (
             <p className="text-xs text-slate-400 text-center">Gegner ist am Zug …</p>
           ) : (
@@ -1524,7 +1584,12 @@ export default function DuelLiveView({
           </div>
         )}
 
-        {!finished && !isMyTurn && (
+        {!finished && !pendingTrapForSelf && pendingTrapForOpponent && (
+          <button disabled className="w-full rounded-lg bg-black/30 border border-amber-500/30 text-amber-300 text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+            <Wind className="w-4 h-4" /> Gegner überlegt (Falle) …
+          </button>
+        )}
+        {!finished && !pendingTrapForSelf && !pendingTrapForOpponent && !isMyTurn && (
           <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
             <Wind className="w-4 h-4" /> Gegner ist am Zug …
           </button>
@@ -1649,7 +1714,8 @@ export default function DuelLiveView({
           </div>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1687,6 +1753,8 @@ function describeLogEntry(entry: DuelLogEntry): string {
       return "Taktik-Karte gespielt.";
     case "trapTriggered":
       return "Eine Falle wurde ausgelöst!";
+    case "comebackBonus":
+      return `Comeback-Bonus: +${entry.amount} Rage für eine angeschlagene Einheit.`;
     case "roundEnd":
       return `— Zug ${entry.round} beendet —`;
     case "battleEnd":

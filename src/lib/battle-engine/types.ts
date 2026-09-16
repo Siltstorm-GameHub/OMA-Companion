@@ -193,7 +193,8 @@ export type TacticCardKind = "INSTANT" | "TRAP";
 export type TrapTriggerCondition =
   | { type: "onEnemyAttack" }
   | { type: "onEnemySummon" }
-  | { type: "onEnemyUltimate" };
+  | { type: "onEnemyUltimate" }
+  | { type: "onEnemyStanceChange" };
 
 /** Statische Definition einer Taktik-Karte (Item/Falle), analog zu
  *  `BattleUnitDefinition` — DB-frei, entsteht aus `TacticCard` via
