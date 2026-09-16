@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import ProfileOverlayClient, { type ProfileElementKey, type ProfileLayoutPositions } from "./ProfileOverlayClient";
 
-const ELEMENT_KEYS: ProfileElementKey[] = ["brand", "rank", "nextEvent", "favorites", "badges"];
+const ELEMENT_KEYS: ProfileElementKey[] = ["brand", "rank", "nextEvent", "favorites"];
 
 /** `?layout=brand:1.5,90.6;rank:20,90.6,s1.2,c8-4` — Prozent von 1920×1080 je Element, siehe
  *  Event-Overlay-Pendant in overlay/[id]/page.tsx für die identische Notation (optionale

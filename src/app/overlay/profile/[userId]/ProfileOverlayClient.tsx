@@ -227,7 +227,6 @@ function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, ha
     case "rank":      return <RankTile rankLabel={state.rankLabel} rankPct={state.rankPct} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
     case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} isVisible={isVisible} hasCycle={hasCycle} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
-    case "badges":    return <BadgesPanel badges={state.badges} />;
     default:          return null;
   }
 }

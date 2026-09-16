@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, ExternalLink, Tv2, Check, Repeat, Move, Sparkles, TrendingUp, CalendarClock, Gamepad2, Award, Maximize2, Timer } from "lucide-react";
+import { Copy, ExternalLink, Tv2, Check, Repeat, Move, Sparkles, TrendingUp, CalendarClock, Gamepad2, Maximize2, Timer } from "lucide-react";
 import { toast } from "sonner";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "@/app/overlay/PositionCanvas";
 import {
@@ -17,19 +17,17 @@ const DEFAULT_POSITIONS: Record<ProfileElementKey, Pos> = {
   rank:      { x: 66,  y: 2.6 },
   nextEvent: { x: 66,  y: 2.6 },
   favorites: { x: 5,   y: 40 },
-  badges:    { x: 5,   y: 63 },
 };
 
 export default function SettingsClient({
-  userId, displayName, token, hasFavorites, hasBadges,
-}: { userId: string; displayName: string; token: string; hasFavorites: boolean; hasBadges: boolean }) {
+  userId, displayName, token, hasFavorites,
+}: { userId: string; displayName: string; token: string; hasFavorites: boolean }) {
   const elementOptions = useMemo<ElementOption[]>(() => [
     { key: "brand",     label: "OMA-Logo & Ich",         icon: Sparkles,      fixed: true },
     { key: "rank",      label: "Rang",                    icon: TrendingUp },
     { key: "nextEvent", label: "Nächstes Event",           icon: CalendarClock },
     ...(hasFavorites ? [{ key: "favorites" as const, label: "Lieblingsspiele", icon: Gamepad2 }] : []),
-    ...(hasBadges ? [{ key: "badges" as const, label: "Abzeichen", icon: Award }] : []),
-  ], [hasFavorites, hasBadges]);
+  ], [hasFavorites]);
 
   const [enabled, setEnabled] = useState<Set<ProfileElementKey>>(new Set(elementOptions.map(o => o.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);

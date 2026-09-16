@@ -13,7 +13,6 @@ const DEFAULT_POSITIONS: Record<ElementKey, { x: number; y: number }> = {
   seriesTable:  { x: 74.6, y: 2.6 },
   participants: { x: 74.6, y: 2.6 },
   favorites:    { x: 5,    y: 40 },
-  badges:       { x: 5,    y: 63 },
 };
 
 const ELIMINATION_FORMATS = ["single_elimination", "double_elimination"];
@@ -24,12 +23,12 @@ const ELIMINATION_FORMATS = ["single_elimination", "double_elimination"];
  * Elementen von Anfang an aktiv, analog zum Default-Zustand von SettingsClient.tsx (dort startet
  * `enabled` ja ebenfalls mit allen relevanten Elementen). Ohne diesen Parameter faellt die
  * Overlay-Seite auf das alte, sehr eingeschraenkte Legacy-Layout zurueck (nur Brand+Ticker+ein
- * rotierendes Panel), in dem liveinfo/favorites/badges gar nicht erst gerendert werden — die
+ * rotierendes Panel), in dem liveinfo/favorites gar nicht erst gerendert werden — die
  * Sichtbarkeits-Schalter im Widget haetten fuer diese Elemente dann nie eine Wirkung.
  *
- * favorites/badges bleiben hier aussen vor: sie haengen vom Profil eines konkreten Streamers ab
- * (?streamer=... Parameter), den ein generischer Event-Link nicht kennt, und wuerden ohnehin
- * ohne Streamer-Kontext leer bleiben. Wer sie will, richtet sich einen personalisierten Link in
+ * favorites bleibt hier aussen vor: es haengt vom Profil eines konkreten Streamers ab
+ * (?streamer=... Parameter), den ein generischer Event-Link nicht kennt, und wuerde ohnehin
+ * ohne Streamer-Kontext leer bleiben. Wer es will, richtet sich einen personalisierten Link in
  * den Overlay-Einstellungen der App ein.
  *
  * `hasSeries`: gehoert das Event zu einer Eventreihe, wird "seriesTable" (Gesamttabelle) auf
