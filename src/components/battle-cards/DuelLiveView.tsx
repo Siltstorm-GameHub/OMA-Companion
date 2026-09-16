@@ -1130,14 +1130,6 @@ export default function DuelLiveView({
           {finished ? (
             <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
               <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
-              {snapshot.resultBattleId && (
-                <a
-                  href={`/battle-cards/battles/${snapshot.resultBattleId}`}
-                  className="inline-block rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm px-4 py-2"
-                >
-                  Kampfbericht ansehen
-                </a>
-              )}
             </div>
           ) : !isMyTurn ? (
             <p className="text-xs text-slate-400 text-center">Gegner ist am Zug …</p>
