@@ -952,8 +952,11 @@ export default function DuelLiveView({
   /** Ziehen einer Handkarte auf eine gültige Ablagezone: Helden-Karten direkt
    *  auf einen leeren eigenen Feld-Slot (immer in Angriffsstellung — wer die
    *  Verteidigungsstellung will, tippt die Karte stattdessen an, siehe
-   *  selectHandCard/pendingSummon), Taktik-Karten irgendwo auf das Spielfeld
-   *  (öffnet denselben Bestätigen-Dialog wie ein Antippen, siehe pendingTactic). */
+   *  selectHandCard/pendingSummon). Taktik-Karten ohne Zielwahl werden beim
+   *  Ziehen aufs Spielfeld SOFORT bestätigt — das Ziehen selbst ist die
+   *  Bestätigung. Braucht die Karte ein Ziel (singleEnemy/singleAlly), kann
+   *  ein generischer Drop aufs Feld dieses Ziel nicht kennen, daher öffnet er
+   *  dort denselben Bestätigen-Dialog wie ein Antippen (siehe pendingTactic). */
   function handleDrop(card: LiveDuelHandCard, x: number, y: number) {
     if (!snapshot || !canAct || !isMainPhase) return;
     const pointInside = (el: HTMLElement | null) => {
@@ -973,7 +976,12 @@ export default function DuelLiveView({
         const mode: "instant" | "setFaceDown" = card.tacticKind === "TRAP" ? "setFaceDown" : "instant";
         setPendingSummon(null);
         setPendingAttack(null);
-        setPendingTactic({ handCardId: card.cardId, mode, requiresTarget: card.requiresTarget });
+        if (card.requiresTarget) {
+          setPendingTactic({ handCardId: card.cardId, mode, requiresTarget: card.requiresTarget });
+        } else {
+          setPendingTactic(null);
+          playTacticCard(card.cardId, mode);
+        }
       }
     }
   }
@@ -1078,23 +1086,24 @@ export default function DuelLiveView({
     setPendingTactic((prev) => (prev ? { ...prev, targetSlotIndex } : prev));
   }
 
+  /** Optimistischer Reveal mit Name/Bild, solange die Karte noch in der
+   *  eigenen Hand steht — danach kennt der Snapshot sie nicht mehr (Items
+   *  landen anonym im Friedhof, Fallen liegen verdeckt), siehe
+   *  processNewLogEntries für den gegnerischen bzw. Fallen-Fall. Gemeinsam
+   *  genutzt vom Bestätigen-Button (confirmTactic) UND vom direkten Ziehen
+   *  aufs Feld ohne Zwischenschritt (siehe handleDrop). */
+  function playTacticCard(handCardId: string, mode: "instant" | "setFaceDown", targetSlotIndex?: number) {
+    if (mode === "instant") {
+      const card = (snapshot!.self.hand ?? []).find((c) => c.cardId === handCardId);
+      if (card) spawnCardReveal({ kind: "INSTANT", side: "self", name: card.name, imageUrl: card.imageUrl });
+    }
+    void postAction({ type: "playTactic", handCardId, mode, targetSlotIndex });
+  }
+
   function confirmTactic() {
     if (!pendingTactic) return;
     if (pendingTactic.requiresTarget && pendingTactic.targetSlotIndex === undefined) return;
-    // Optimistischer Reveal mit Name/Bild, solange die Karte noch in der
-    // eigenen Hand steht — danach kennt der Snapshot sie nicht mehr (Items
-    // landen anonym im Friedhof, Fallen liegen verdeckt), siehe
-    // processNewLogEntries für den gegnerischen bzw. Fallen-Fall.
-    if (pendingTactic.mode === "instant") {
-      const card = (snapshot!.self.hand ?? []).find((c) => c.cardId === pendingTactic.handCardId);
-      if (card) spawnCardReveal({ kind: "INSTANT", side: "self", name: card.name, imageUrl: card.imageUrl });
-    }
-    void postAction({
-      type: "playTactic",
-      handCardId: pendingTactic.handCardId,
-      mode: pendingTactic.mode,
-      targetSlotIndex: pendingTactic.targetSlotIndex,
-    });
+    playTacticCard(pendingTactic.handCardId, pendingTactic.mode, pendingTactic.targetSlotIndex);
   }
 
   const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
@@ -1540,14 +1549,9 @@ export default function DuelLiveView({
                 const targetChosen = !pendingTactic.requiresTarget || pendingTactic.targetSlotIndex !== undefined;
                 return (
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/[0.06] p-2.5 space-y-2">
-                    <div>
-                      <p className="text-xs font-semibold text-amber-200">
-                        {card?.name ?? "Taktik-Karte"} · {pendingTactic.mode === "setFaceDown" ? "wird verdeckt gesetzt" : "wird sofort gespielt"}
-                      </p>
-                      <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
-                        {card?.tacticDescription ?? "Keine Beschreibung verfügbar."}
-                      </p>
-                    </div>
+                    <p className="text-xs font-semibold text-amber-200">
+                      {card?.name ?? "Taktik-Karte"} · {pendingTactic.mode === "setFaceDown" ? "wird verdeckt gesetzt" : "wird sofort gespielt"}
+                    </p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setPendingTactic(null)}
