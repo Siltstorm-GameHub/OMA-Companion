@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Trophy, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Award, Maximize2, Timer,
+  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Trophy, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Maximize2, Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";
@@ -19,7 +19,6 @@ const ELEMENT_OPTIONS: ElementOption[] = [
   { key: "seriesTable",  label: "Gesamttabelle (Eventreihe)",   icon: Trophy,     forFormats: null },
   { key: "participants", label: "Teilnehmer",                   icon: Users,      forFormats: null },
   { key: "favorites",    label: "Lieblingsspiele",               icon: Gamepad2,   forFormats: null },
-  { key: "badges",       label: "Abzeichen",                     icon: Award,      forFormats: null },
 ];
 
 /** Ausgangspositionen (Prozent von 1920×1080). Tabelle/Teilnehmer teilen sich bewusst dieselbe
@@ -37,18 +36,16 @@ const DEFAULT_POSITIONS: Record<ElementKey, Pos> = {
   seriesTable:  { x: 74.6, y: 2.6 },
   participants: { x: 74.6, y: 2.6 },
   favorites:    { x: 5,    y: 40 },
-  badges:       { x: 5,    y: 63 },
 };
 
 export default function SettingsClient({
-  eventId, eventTitle, format, token, streamerId, hasFavorites, hasBadges, hasSeries,
+  eventId, eventTitle, format, token, streamerId, hasFavorites, hasSeries,
 }: {
   eventId: string; eventTitle: string; format: string | null; token: string;
-  streamerId: string | null; hasFavorites: boolean; hasBadges: boolean; hasSeries: boolean;
+  streamerId: string | null; hasFavorites: boolean; hasSeries: boolean;
 }) {
   const relevantElements = ELEMENT_OPTIONS.filter(o => {
     if (o.key === "favorites") return hasFavorites;
-    if (o.key === "badges") return hasBadges;
     if (o.key === "seriesTable") return hasSeries;
     return !o.forFormats || (format && o.forFormats.includes(format));
   });

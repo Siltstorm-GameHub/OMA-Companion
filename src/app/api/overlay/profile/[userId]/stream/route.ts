@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
-import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 import { getRankProgress, getRankFullLabel } from "@/lib/ranks";
 import { getGameCoverUrl } from "@/lib/game-cover";
 
@@ -19,7 +18,7 @@ async function loadProfileOverlayState(userId: string) {
     where: { id: userId },
     select: {
       id: true, name: true, username: true, image: true, rankPoints: true, twitchLogin: true,
-      favoriteGamesJson: true, showcaseBadgesJson: true,
+      favoriteGamesJson: true,
     },
   });
   if (!user) return null;
@@ -39,7 +38,6 @@ async function loadProfileOverlayState(userId: string) {
     rankLabel: getRankFullLabel(rank),
     rankPct: pct,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
-    badges: await resolveShowcaseEntries(user.id, user.showcaseBadgesJson),
     upcomingEvents: upcomingEvents.map(e => ({
       id: e.id, title: e.title, startAt: e.startAt, game: e.game,
       coverUrl: e.coverImageUrl ?? getGameCoverUrl(e.game),

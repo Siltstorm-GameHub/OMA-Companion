@@ -6,9 +6,9 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { getGameFallbackGradient } from "@/lib/game-cover";
 import { BRAND_LOGO } from "@/lib/brand";
 import {
-  MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, BadgesPanel, TopEdge,
+  MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, TopEdge,
   panelMotionStyle, combinedElementStyle, useVisibilityCycles,
-  type Corner, type PanelPhase, type FavoriteGame, type ShowcaseBadge, type OverlayStreamer, type ElementCycle,
+  type Corner, type PanelPhase, type FavoriteGame, type OverlayStreamer, type ElementCycle,
 } from "@/app/overlay/[id]/OverlayClient";
 
 type ProfileState = {
@@ -21,15 +21,14 @@ type ProfileState = {
   rankLabel: string;
   rankPct: number;
   favoriteGames: FavoriteGame[];
-  badges: ShowcaseBadge[];
   upcomingEvents: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[];
 };
 
 /** Elemente des persönlichen Profil-Overlays — kleinerer Satz als beim Event-Overlay, da kein
  *  Turnierkontext existiert. "brand" bleibt fix und nie Teil eines Stapels, der Rest darf sich
  *  wie beim Event-Overlay zu einer rotierenden Gruppe stapeln. */
-export type ProfileElementKey = "brand" | "rank" | "nextEvent" | "favorites" | "badges";
-export const PROFILE_STACKABLE: ProfileElementKey[] = ["rank", "nextEvent", "favorites", "badges"];
+export type ProfileElementKey = "brand" | "rank" | "nextEvent" | "favorites";
+export const PROFILE_STACKABLE: ProfileElementKey[] = ["rank", "nextEvent", "favorites"];
 export type ProfileLayoutEntry = { x: number; y: number; scale?: number; cycle?: ElementCycle };
 export type ProfileLayoutPositions = Partial<Record<ProfileElementKey, ProfileLayoutEntry>>;
 
@@ -38,7 +37,6 @@ export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; he
   rank:      { width: 320, height: 90 },
   nextEvent: { width: 400, height: 110 },
   favorites: { width: 460, height: 220 },
-  badges:    { width: 460, height: 220 },
 };
 
 const EDGE_MARGIN = 28;
@@ -132,7 +130,7 @@ export default function ProfileOverlayClient({
   const streamer: OverlayStreamer | null = state ? {
     id: state.id, name: state.name, username: state.username, image: state.image,
     rankPoints: state.rankPoints, twitchLogin: state.twitchLogin,
-    favoriteGames: state.favoriteGames, badges: state.badges,
+    favoriteGames: state.favoriteGames,
   } : null;
 
   const elementAvailable: Record<ProfileElementKey, boolean> = {
@@ -140,7 +138,6 @@ export default function ProfileOverlayClient({
     rank: !!state,
     nextEvent: !!state?.upcomingEvents.length,
     favorites: !!state?.favoriteGames.length,
-    badges: !!state?.badges.length,
   };
 
   const stacks: Record<string, { pos: { x: number; y: number }; keys: ProfileElementKey[] }> = {};
@@ -197,7 +194,10 @@ export default function ProfileOverlayClient({
                   isVisible(prevSlot.key),
                 )}
               >
-                <ProfileElementContent elementKey={prevSlot.key} state={state} rotateSeconds={rotateSeconds} />
+                <ProfileElementContent
+                  elementKey={prevSlot.key} state={state} rotateSeconds={rotateSeconds}
+                  isVisible={isVisible(prevSlot.key)} hasCycle={!!layout?.[prevSlot.key]?.cycle}
+                />
               </div>
             )}
             {slot && (
@@ -208,7 +208,10 @@ export default function ProfileOverlayClient({
                   isVisible(slot.key),
                 )}
               >
-                <ProfileElementContent elementKey={slot.key} state={state} rotateSeconds={rotateSeconds} />
+                <ProfileElementContent
+                  elementKey={slot.key} state={state} rotateSeconds={rotateSeconds}
+                  isVisible={isVisible(slot.key)} hasCycle={!!layout?.[slot.key]?.cycle}
+                />
               </div>
             )}
           </div>
@@ -218,11 +221,11 @@ export default function ProfileOverlayClient({
   );
 }
 
-function ProfileElementContent({ elementKey, state, rotateSeconds }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number }) {
+function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, hasCycle }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number; isVisible: boolean; hasCycle: boolean }) {
   if (!state) return null;
   switch (elementKey) {
     case "rank":      return <RankTile rankLabel={state.rankLabel} rankPct={state.rankPct} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
-    case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} /> : null;
+    case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} isVisible={isVisible} hasCycle={hasCycle} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
     case "badges":    return <BadgesPanel badges={state.badges} />;
     default:          return null;
@@ -271,27 +274,54 @@ function RankTile({ rankLabel, rankPct, rankPoints, image, name }: { rankLabel: 
 }
 
 /** "Nächstes Event"-Kachel — cross-promotet die kommenden Community-Events direkt im Personal-Stream.
- *  Rotiert intern durch bis zu 3 Events (unabhängig von einer Anmeldung des Streamers), im selben
- *  Takt wie die übrigen Overlay-Elemente. */
-function NextEventTile({ events, rotateSeconds }: { events: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[]; rotateSeconds: number }) {
+ *  Rotiert intern durch bis zu 3 Events (unabhängig von einer Anmeldung des Streamers).
+ *
+ *  Zwei Rotationsmodi, je nachdem ob für diese Kachel ein Sichtbarkeits-Zyklus (`hasCycle`)
+ *  konfiguriert ist:
+ *  - Ohne Zyklus: freilaufender Timer im `rotateSeconds`-Takt wie die übrigen Overlay-Elemente.
+ *  - Mit Zyklus: die Kachel bleibt durchgehend gemountet und wird nur weich ein-/ausgeblendet
+ *    (siehe combinedElementStyle) — ein freilaufender Timer würde dann auch während der
+ *    unsichtbaren Phase weiterzählen und je nach "on"-Fensterlänge zufällig nur einen
+ *    Ausschnitt der Events zeigen. Stattdessen wird hier bei jedem Off→On-Wechsel exakt ein
+ *    Event weitergeschaltet, sodass man bei jedem Erscheinen genau eins sieht und über mehrere
+ *    Zyklusdurchläufe hinweg garantiert alle der Reihe nach.
+ */
+function NextEventTile({
+  events, rotateSeconds, isVisible, hasCycle,
+}: { events: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[]; rotateSeconds: number; isVisible: boolean; hasCycle: boolean }) {
   const [index, setIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
+  const advance = () => {
+    setFadeIn(false);
+    setTimeout(() => {
+      setIndex(i => (i + 1) % events.length);
+      setFadeIn(true);
+    }, 250);
+  };
 
+  // Event-Liste hat sich geändert (neues Event kam rein/fiel raus) → von vorn beginnen.
   useEffect(() => {
     setIndex(0);
     setFadeIn(true);
-    if (events.length <= 1) return;
+  }, [events.map(e => e.id).join(",")]);
+
+  // Zyklus-Modus: bei jedem Off→On-Wechsel einen weiterschalten.
+  const wasVisibleRef = useRef(isVisible);
+  useEffect(() => {
+    const wasVisible = wasVisibleRef.current;
+    wasVisibleRef.current = isVisible;
+    if (hasCycle && !wasVisible && isVisible && events.length > 1) advance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, hasCycle, events.length]);
+
+  // Timer-Modus: nur aktiv ohne Zyklus.
+  useEffect(() => {
+    if (hasCycle || events.length <= 1) return;
     const showMs = Math.max(4, rotateSeconds) * 1000;
-    const interval = setInterval(() => {
-      setFadeIn(false);
-      setTimeout(() => {
-        setIndex(i => (i + 1) % events.length);
-        setFadeIn(true);
-      }, 250);
-    }, showMs);
+    const interval = setInterval(advance, showMs);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events.map(e => e.id).join(","), rotateSeconds]);
+  }, [hasCycle, events.map(e => e.id).join(","), rotateSeconds]);
 
   const [coverFailed, setCoverFailed] = useState(false);
   useEffect(() => setCoverFailed(false), [index]);

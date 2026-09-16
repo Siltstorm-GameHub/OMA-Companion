@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
-import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
 import { loadSeriesRanking } from "@/lib/seriesRanking";
 
@@ -100,13 +99,12 @@ async function loadOverlayState(eventId: string) {
 async function loadStreamer(streamerId: string) {
   const user = await prisma.user.findUnique({
     where: { id: streamerId },
-    select: { id: true, name: true, username: true, image: true, rankPoints: true, twitchLogin: true, favoriteGamesJson: true, showcaseBadgesJson: true },
+    select: { id: true, name: true, username: true, image: true, rankPoints: true, twitchLogin: true, favoriteGamesJson: true },
   });
   if (!user) return null;
   return {
     id: user.id, name: user.name, username: user.username, image: user.image, rankPoints: user.rankPoints, twitchLogin: user.twitchLogin,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
-    badges: await resolveShowcaseEntries(user.id, user.showcaseBadgesJson),
   };
 }
 
@@ -121,9 +119,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return new Response("Invalid token", { status: 403 });
   }
 
-  // Streamer-Profildaten ändern sich praktisch nie während eine Stream läuft (Lieblingsspiele/
-  // Abzeichen-Showcase werden im Profil gepflegt, nicht live) — einmal pro Verbindung laden statt
-  // bei jedem Poll-Tick erneut abzufragen.
+  // Streamer-Profildaten ändern sich praktisch nie während eine Stream läuft (Lieblingsspiele
+  // werden im Profil gepflegt, nicht live) — einmal pro Verbindung laden statt bei jedem
+  // Poll-Tick erneut abzufragen.
   const streamer = streamerId ? await loadStreamer(streamerId).catch(() => null) : null;
 
   const encoder = new TextEncoder();

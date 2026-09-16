@@ -40,7 +40,6 @@ export function displayName(u: OverlayUser | undefined | null): string {
 }
 
 export type FavoriteGame = { name: string; appId: number | null };
-export type ShowcaseBadge = { icon: string; name: string; image: string | null };
 export type OverlayStreamer = {
   id: string;
   name: string | null;
@@ -49,7 +48,6 @@ export type OverlayStreamer = {
   rankPoints: number;
   twitchLogin: string | null;
   favoriteGames: FavoriteGame[];
-  badges: ShowcaseBadge[];
 };
 
 type OverlayState = {
@@ -85,8 +83,8 @@ export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" |
  *  per Drag & Drop positionieren. "brand" ist als einziges fix und nie Teil eines Stapels
  *  (siehe STACKABLE_ELEMENTS) — alle anderen dürfen sich zu einer rotierenden Gruppe stapeln,
  *  wenn der Streamer sie in den Einstellungen aufeinander zieht. */
-export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "seriesTable" | "participants" | "favorites" | "badges";
-export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "seriesTable", "participants", "favorites", "badges"];
+export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "seriesTable" | "participants" | "favorites";
+export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "seriesTable", "participants", "favorites"];
 /** `cycle` lässt ein Element abwechselnd für `onSec` sichtbar und für `offSec` unsichtbar
  *  sein statt dauerhaft zu stehen — z.B. um Platz mit dem Gameplay zu teilen, ohne zu stapeln. */
 export type ElementCycle = { onSec: number; offSec: number };
@@ -98,8 +96,8 @@ export type LayoutPositions = Partial<Record<ElementKey, LayoutEntry>>; // Proze
  *  großzügiger als die tatsächliche Mindestgröße bemessen (Inhalt variiert), damit sich
  *  Elemente in den Einstellungen auch bei mehr Inhalt nie ungewollt berühren. */
 // Einheitliche Maße je Elementpaar (für sauberes Ausrichten in der Vorschau): OMA-Logo und
-// Live/Event/Spiel teilen sich eine Größe, Abzeichen und Lieblingsspiele ebenso, Tabelle und
-// Teilnehmer ebenso. Aktuelles Match und Turnierbaum behalten ihre eigene, inhaltsbedingte Größe.
+// Live/Event/Spiel teilen sich eine Größe, Tabelle und Teilnehmer ebenso. Aktuelles Match und
+// Turnierbaum behalten ihre eigene, inhaltsbedingte Größe.
 export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }> = {
   brand:        { width: 300, height: 78 },
   liveinfo:     { width: 300, height: 78 },
@@ -109,7 +107,6 @@ export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }>
   seriesTable:  { width: 460, height: 310 },
   participants: { width: 460, height: 310 },
   favorites:    { width: 460, height: 220 },
-  badges:       { width: 460, height: 220 },
 };
 
 export const PANEL_FADE_MS = 900;
@@ -397,7 +394,7 @@ export default function OverlayClient({
    *  dadurch gültig. */
   layout: LayoutPositions | null;
   /** User, der den Link erzeugt hat (siehe stream-register) — versorgt die Flip-Kachel-Rückseite
-   *  sowie Lieblingsspiele/Abzeichen mit echten Profildaten. Null bei älteren Links. */
+   *  sowie Lieblingsspiele mit echten Profildaten. Null bei älteren Links. */
   streamerId: string | null;
 }) {
   const [state, setState] = useState<OverlayState | null>(null);
@@ -489,7 +486,6 @@ export default function OverlayClient({
     seriesTable: (state?.seriesTable?.ranking.length ?? 0) > 0,
     participants: participantCount > 0,
     favorites: !!state?.streamer?.favoriteGames.length,
-    badges: !!state?.streamer?.badges.length,
   };
 
   // Welche der stapelbaren Elemente überhaupt Inhalt hätten — dieselbe Datenverfügbarkeit wie
@@ -509,7 +505,6 @@ export default function OverlayClient({
     seriesTable: contentAvailable.seriesTable,
     participants: contentAvailable.participants,
     favorites: contentAvailable.favorites,
-    badges: contentAvailable.badges,
   };
 
   // Stapel bilden: alle aktiven, stapelbaren Elemente mit identischer Layout-Position (auf
@@ -801,7 +796,6 @@ function ElementContent({
     case "seriesTable":  return seriesTable ? <SeriesTablePanel seriesTable={seriesTable} compact={compact} /> : null;
     case "participants": return <ParticipantsPanel participants={participants} />;
     case "favorites":    return <FavoritesPanel games={streamer?.favoriteGames ?? []} />;
-    case "badges":       return <BadgesPanel badges={streamer?.badges ?? []} />;
     default:              return null;
   }
 }
@@ -1153,29 +1147,6 @@ export function FavoritesPanel({ games }: { games: FavoriteGame[] }) {
           </div>
         ))}
       </AutoScrollViewport>
-    </PanelShell>
-  );
-}
-
-/** Abzeichen-Showcase des Streamers (`showcaseBadgesJson` aus dem Profil, max. 3 selbst gewählt). */
-export function BadgesPanel({ badges }: { badges: ShowcaseBadge[] }) {
-  return (
-    <PanelShell title="Abzeichen">
-      <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-        {badges.map((b, i) => (
-          <div key={`${b.name}-${i}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0 }}>
-            {b.image ? (
-              // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
-              <img src={b.image} alt="" width={40} height={40} style={{ width: 40, height: 40, objectFit: "contain" }} />
-            ) : (
-              <span style={{ fontSize: 32, lineHeight: 1 }}>{b.icon}</span>
-            )}
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 110 }}>
-              {b.name}
-            </span>
-          </div>
-        ))}
-      </div>
     </PanelShell>
   );
 }
