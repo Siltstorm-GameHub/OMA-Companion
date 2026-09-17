@@ -87,6 +87,28 @@
    an einem Ende) — auf den breiten, rechteckigen CTA-Buttons hier gestreckt
    sah der Diamant wie ein zufälliges Deko-Element aus. Buttons bekommen
    stattdessen nur noch Verlauf + Kanten-Highlight (s.o.), kein Bild-Overlay. */
+/* ── Bild-Fill (btn8/btn10 aus INPUT/BUTTONS) — echte Kit-Grafik statt der
+   CSS-Gradient-Fläche oben, für die zwei Farbtöne, zu denen es eine passend
+   rechteckige Kit-Grafik gibt (Amber=btn8, Blau=btn10). Andere Farbtöne
+   bleiben vorerst beim CSS-Gradient (.moba-button-fill), bis eine
+   entsprechende Kit-Grafik existiert. */
+.moba-button .moba-img-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: inherit;
+}
+.moba-button .moba-img-fill-hover {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.moba-button:hover .moba-img-fill-hover,
+.moba-button:active .moba-img-fill-hover {
+  opacity: 1;
+}
 .moba-button .moba-button-label {
   position: relative;
   z-index: 2;

@@ -73,7 +73,10 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
           disabled={saving}
           className="moba-button flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50"
         >
-          <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/battle-cards/moba/buttons/btn8_normal.png" alt="" aria-hidden className="moba-img-fill" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/battle-cards/moba/buttons/btn8_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
           <span className="moba-button-label relative flex items-center gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? "Speichert…" : "Speichern"}

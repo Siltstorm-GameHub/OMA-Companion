@@ -102,7 +102,10 @@ export default function ChallengeUserPicker() {
             disabled={submitting}
             className="moba-button w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn8_normal.png" alt="" aria-hidden className="moba-img-fill" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn8_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
             <span className="moba-button-label relative flex items-center gap-1.5">
               <MobaIcon name="crossedSwords" className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Herausfordern"}
             </span>

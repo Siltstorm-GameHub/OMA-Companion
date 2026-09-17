@@ -116,7 +116,10 @@ export default function GemsTournamentBanner() {
             disabled={starting || attemptsLeft <= 0}
             className="moba-button w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn10_normal.png" alt="" aria-hidden className="moba-img-fill" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn10_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
             <span className="moba-button-label relative flex items-center gap-1.5">
               {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MobaIcon name="gem" className="w-3.5 h-3.5" />}
               {starting ? "Startet…" : "Jetzt kämpfen"}
