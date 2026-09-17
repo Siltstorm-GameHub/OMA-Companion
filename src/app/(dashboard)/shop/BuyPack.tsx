@@ -83,9 +83,33 @@ function PackCard({
   }
 
   return (
-    <div className="glass card-shine rounded-2xl border border-white/[0.06] overflow-hidden">
-      <div className="p-5 flex flex-col items-center gap-4 text-center">
-        <PackCoverArt kind={kind} showLabel={false} className="w-32 h-[178px] shrink-0" />
+    <div className="group relative rounded-2xl overflow-hidden">
+      {/* MOBA-Kit-Shop-Karte statt generischer "glass"-Kachel (Assets/UI/MOBA
+          Style/PNG/DIALOGS/CARD & FRAME/shop & Character/item) — Rahmen
+          wechselt bei Hover auf die Gold-Glow-Variante, exakt das gleiche
+          Stretch-Muster (objectFit:"fill") wie MOBA_CARD_FRAME_IMAGE bei den
+          Battle-Cards selbst. */}
+      <img src="/battle-cards/moba/shop-card/bg.png" alt="" aria-hidden className="absolute inset-0 w-full h-full z-0" style={{ objectFit: "fill" }} />
+      <img
+        src="/battle-cards/moba/shop-card/frame.png"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 w-full h-full z-10 pointer-events-none transition-opacity group-hover:opacity-0"
+        style={{ objectFit: "fill" }}
+      />
+      <img
+        src="/battle-cards/moba/shop-card/frame-hovered.png"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ objectFit: "fill" }}
+      />
+      {limitReached && (
+        <img src="/battle-cards/moba/shop-card/locked.png" alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" style={{ objectFit: "fill" }} />
+      )}
+
+      <div className="relative z-30 p-5 flex flex-col items-center gap-4 text-center">
+        <PackCoverArt kind={kind} showLabel={false} className={`w-32 h-[178px] shrink-0 ${limitReached ? "opacity-30" : ""}`} />
         <div>
           <p className="text-sm font-semibold text-white">{info.label}</p>
           <p className="text-xs text-gray-500 mt-1">{info.description}</p>
