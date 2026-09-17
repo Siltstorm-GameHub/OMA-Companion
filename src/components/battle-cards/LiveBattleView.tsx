@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2, Skull, Handshake, Star } from "lucide-react";
 import MobaIcon from "./MobaIcon";
+import MobaConfirmDialog from "./MobaConfirmDialog";
 import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
@@ -622,6 +623,7 @@ export default function LiveBattleView({
   const [ultimateBusy, setUltimateBusy] = useState(false);
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
   const [mounted, setMounted] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
   // Wer GERADE angreift (kurzzeitig, siehe unten) — macht Angriffe des Gegners
   // (insbesondere match-ausgelöste Angriffe bei OMA Gems, die sonst ohne jede
@@ -945,7 +947,7 @@ export default function LiveBattleView({
         <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
           <button
             type="button"
-            onClick={handleExit}
+            onClick={() => (!snapshot || snapshot.status === "finished" ? handleExit() : setShowLeaveConfirm(true))}
             className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
           >
             <MobaIcon name="chevronLeft" className="w-4 h-4" /> Zurück
@@ -1020,6 +1022,19 @@ export default function LiveBattleView({
           />
         )}
       </div>
+
+      <MobaConfirmDialog
+        open={showLeaveConfirm}
+        tone="warning"
+        title="Kampf verlassen?"
+        message="Dein Kampf läuft im Hintergrund weiter, bis er endet oder dein Zug per Timeout übersprungen wird."
+        confirmLabel="Verlassen"
+        onConfirm={() => {
+          setShowLeaveConfirm(false);
+          handleExit();
+        }}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
     </div>,
     document.body
   );

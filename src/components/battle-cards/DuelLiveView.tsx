@@ -25,6 +25,8 @@ import { useRouter } from "next/navigation";
 import { Loader2, Wind, X, Handshake, Skull } from "lucide-react";
 import MobaIcon from "./MobaIcon";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
+import MobaConfirmDialog from "./MobaConfirmDialog";
+import MobaDivider from "./MobaDivider";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
 import TacticCardTile from "./TacticCardTile";
@@ -501,6 +503,7 @@ export default function DuelLiveView({
   const [actionError, setActionError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [, setTick] = useState(0);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   const [floatingEffects, setFloatingEffects] = useState<FloatingEffect[]>([]);
@@ -1187,7 +1190,10 @@ export default function DuelLiveView({
           Fuß nie Teil der Scroll-Berechnung und daher immer sichtbar. */}
       <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3">
         <div className="shrink-0 flex items-center justify-between">
-          <button onClick={handleExit} className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
+          <button
+            onClick={() => (finished ? handleExit() : setShowLeaveConfirm(true))}
+            className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm"
+          >
             <MobaIcon name="chevronLeft" className="w-4 h-4" /> Verlassen
           </button>
           <div className="flex items-center gap-3">
@@ -1377,7 +1383,7 @@ export default function DuelLiveView({
           )}
         </div>
 
-        <div className="h-px bg-[color:var(--moba-accent-line)]" />
+        <MobaDivider />
 
         {/* Eigenes Feld */}
         <div className="space-y-2">
@@ -1804,6 +1810,19 @@ export default function DuelLiveView({
           </div>
         </div>
       ))}
+
+      <MobaConfirmDialog
+        open={showLeaveConfirm}
+        tone="warning"
+        title="Duell verlassen?"
+        message="Dein Kampf läuft im Hintergrund weiter, bis er endet oder dein Zug per Timeout übersprungen wird."
+        confirmLabel="Verlassen"
+        onConfirm={() => {
+          setShowLeaveConfirm(false);
+          handleExit();
+        }}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
     </div>,
     document.body
   );
