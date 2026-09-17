@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Save, Loader2 } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
+import MobaInputBox from "./MobaInputBox";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
@@ -15,6 +16,7 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
   const [title, setTitle] = useState(card.title);
   const [flavorText, setFlavorText] = useState(card.flavorText);
   const [saving, setSaving] = useState(false);
+  const [flavorFocused, setFlavorFocused] = useState(false);
 
   async function save() {
     setSaving(true);
@@ -45,26 +47,48 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
       <div className="space-y-4">
         <label className="block">
           <span className="text-xs text-gray-500">Untertitel ({title.length}/{TITLE_MAX})</span>
-          <input
+          <MobaInputBox
             type="text"
             value={title}
             maxLength={TITLE_MAX}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="z.B. Die Wächterin"
-            className="mt-1 w-full px-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)]"
+            className="mt-1 w-full px-3 py-2"
           />
         </label>
 
         <label className="block">
           <span className="text-xs text-gray-500">Beschreibung ({flavorText.length}/{FLAVOR_MAX})</span>
-          <textarea
-            value={flavorText}
-            maxLength={FLAVOR_MAX}
-            onChange={(e) => setFlavorText(e.target.value)}
-            rows={4}
-            placeholder="Kurzer Flavor-Text für deine Karte…"
-            className="mt-1 w-full px-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)] resize-none"
-          />
+          {/* MobaInputBox ist auf <input> zugeschnitten -- hier dieselben zwei
+              Ebenen (box1-normal/-highlighted) direkt um das <textarea>, da es
+              die einzige mehrzeilige Stelle im Projekt ist (kein eigenes
+              Bauteil nötig). */}
+          <div className="relative mt-1">
+            <img
+              src="/battle-cards/moba/input-box/box1-normal.png"
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full transition-opacity"
+              style={{ objectFit: "fill", opacity: flavorFocused ? 0 : 1 }}
+            />
+            <img
+              src="/battle-cards/moba/input-box/box1-highlighted.png"
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full transition-opacity"
+              style={{ objectFit: "fill", opacity: flavorFocused ? 1 : 0 }}
+            />
+            <textarea
+              value={flavorText}
+              maxLength={FLAVOR_MAX}
+              onChange={(e) => setFlavorText(e.target.value)}
+              onFocus={() => setFlavorFocused(true)}
+              onBlur={() => setFlavorFocused(false)}
+              rows={4}
+              placeholder="Kurzer Flavor-Text für deine Karte…"
+              className="relative z-10 w-full px-3 py-2 bg-transparent text-white text-sm placeholder:text-slate-500 focus:outline-none resize-none"
+            />
+          </div>
         </label>
 
         <button

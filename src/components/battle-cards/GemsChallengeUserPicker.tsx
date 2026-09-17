@@ -15,6 +15,7 @@ import { X } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import LiveBattleView from "./LiveBattleView";
 import MobaIcon from "./MobaIcon";
+import MobaInputBox from "./MobaInputBox";
 import MatchupBadge from "./MatchupBadge";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
@@ -122,12 +123,12 @@ export default function GemsChallengeUserPicker() {
         </div>
       ) : (
         <div className="relative">
-          <MobaIcon name="search" className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
-          <input
+          <MobaInputBox
+            icon={<MobaIcon name="search" className="w-3.5 h-3.5" />}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Nutzer suchen…"
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)]"
+            className="w-full pr-3 py-2"
           />
           {results.length > 0 && (
             <div className="moba-panel absolute z-10 mt-1 w-full rounded-xl overflow-hidden">
