@@ -22,7 +22,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Loader2, Wind, X } from "lucide-react";
+import { Loader2, Wind, X, Handshake, Skull } from "lucide-react";
 import MobaIcon from "./MobaIcon";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
@@ -287,16 +287,35 @@ function LpBar({ lp }: { lp: number }) {
   );
 }
 
+/** Grad-Wert je Dringlichkeitsstufe, um das im MOBA-Kit fest grün eingefärbte
+ *  Ability-Ring-Asset (ability-ring-fg.png) per hue-rotate auf die jeweilige
+ *  Ampelfarbe zu drehen, statt drei eigene Ring-Varianten pflegen zu müssen —
+ *  s. auch ULTIMATE_RING_FILTER auf UnitSlot, gleiche Technik. */
+const TIMER_RING_FILTER = {
+  teal: "hue-rotate(50deg) saturate(1.3) brightness(1.05)",
+  amber: "hue-rotate(280deg) saturate(1.5) brightness(1.15)",
+  rose: "hue-rotate(232deg) saturate(1.6) brightness(1.1)",
+} as const;
+
 function RadialTimer({ secondsLeft }: { secondsLeft: number }) {
   const pct = Math.max(0, Math.min(1, secondsLeft / TURN_SECONDS));
-  const color = secondsLeft <= 5 ? "#f43f5e" : secondsLeft <= 10 ? "#f59e0b" : "#2dd4bf";
-  const deg = Math.round(pct * 360);
+  const stage: keyof typeof TIMER_RING_FILTER = secondsLeft <= 5 ? "rose" : secondsLeft <= 10 ? "amber" : "teal";
+  const color = stage === "rose" ? "#f43f5e" : stage === "amber" ? "#f59e0b" : "#2dd4bf";
   return (
-    <div
-      className="relative w-10 h-10 rounded-full shrink-0"
-      style={{ background: `conic-gradient(${color} ${deg}deg, #1e293b ${deg}deg)` }}
-    >
-      <div className="absolute inset-[3px] rounded-full bg-[#04061a] flex items-center justify-center">
+    <div className="relative w-10 h-10 shrink-0">
+      <img src={MOBA_ICON.abilityRingBg} alt="" aria-hidden className="absolute inset-0 w-full h-full opacity-60" />
+      <img
+        src={MOBA_ICON.abilityRingFg}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 w-full h-full"
+        style={{
+          filter: TIMER_RING_FILTER[stage],
+          WebkitMaskImage: `conic-gradient(#000 ${pct * 100}%, transparent ${pct * 100}%)`,
+          maskImage: `conic-gradient(#000 ${pct * 100}%, transparent ${pct * 100}%)`,
+        }}
+      />
+      <div className="absolute inset-[6px] rounded-full bg-[#04061a] flex items-center justify-center">
         <span className="text-[11px] font-bold tabular-nums" style={{ color }}>
           {secondsLeft}
         </span>
@@ -387,6 +406,7 @@ function UnitSlot({
 
   const config = getClassConfig(unit.class);
   const ultimateReady = unit.isAlive && unit.rage >= unit.ultimateCost;
+  const chargePct = Math.min(100, (unit.rage / unit.ultimateCost) * 100);
   const isDefense = unit.stance === "defense";
 
   return (
@@ -427,6 +447,22 @@ function UnitSlot({
         </span>
       ) : null}
       {isDefense && <div className="absolute inset-0 bg-sky-500/10" />}
+      {unit.isAlive && (
+        <div className="absolute top-1 left-1 z-10 w-5 h-5" title={ultimateReady ? "Ultimate einsatzbereit" : "Ultimate lädt"}>
+          <img src={MOBA_ICON.abilityRingBg} alt="" aria-hidden className="absolute inset-0 w-full h-full opacity-60" />
+          <img
+            src={MOBA_ICON.abilityRingFg}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full"
+            style={{
+              filter: ultimateReady ? "hue-rotate(280deg) saturate(1.5) brightness(1.15)" : "hue-rotate(150deg) saturate(1.3)",
+              WebkitMaskImage: `conic-gradient(#000 ${chargePct}%, transparent ${chargePct}%)`,
+              maskImage: `conic-gradient(#000 ${chargePct}%, transparent ${chargePct}%)`,
+            }}
+          />
+        </div>
+      )}
       {!unit.imageUrl && (
         <div className="absolute inset-0 flex items-center justify-center">
           <img src={config.icon} alt="" aria-hidden className="w-8 h-8 opacity-40 object-contain" />
@@ -440,12 +476,6 @@ function UnitSlot({
         </div>
         <StatBadges attack={unit.attack} defense={unit.defense} highlight={statHighlight} />
         <HpBar current={unit.currentHp} max={unit.maxHp} />
-        <div className="h-1 w-full rounded-full bg-black/40 overflow-hidden">
-          <div
-            className={`h-full rounded-full ${ultimateReady ? "bg-amber-400" : "bg-violet-500"}`}
-            style={{ width: `${Math.min(100, (unit.rage / unit.ultimateCost) * 100)}%` }}
-          />
-        </div>
       </div>
     </button>
   );
@@ -1179,8 +1209,63 @@ export default function DuelLiveView({
 
         <div className="shrink-0">
           {finished ? (
-            <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
-              <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
+            <div className="relative rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 py-5 text-center overflow-hidden">
+              {/* Schwingen-Deko aus dem MOBA-Kit hinter dem Medaillon — per
+                  CSS-Filter statt eigener Asset-Varianten für Sieg/Niederlage/
+                  Unentschieden eingefärbt (warmes Gold bleibt für den Sieg
+                  unverändert, Niederlage wird Richtung Rot verschoben,
+                  Unentschieden komplett entsättigt). */}
+              <img
+                src="/battle-cards/moba/victory/bg-wings.png"
+                alt=""
+                aria-hidden
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[260px] max-w-none pointer-events-none"
+                style={{
+                  filter: drew
+                    ? "grayscale(1) opacity(0.5)"
+                    : won
+                      ? "none"
+                      : "grayscale(0.4) sepia(0.6) hue-rotate(300deg) saturate(3) brightness(0.8)",
+                }}
+              />
+              <div className="relative space-y-2">
+                <div className="relative w-16 h-16 mx-auto">
+                  <img
+                    src="/battle-cards/moba/victory/icon-frame.png"
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 w-full h-full object-contain"
+                    style={{
+                      filter: drew ? "grayscale(1)" : won ? "none" : "grayscale(0.3) hue-rotate(300deg) saturate(2.5)",
+                    }}
+                  />
+                  <div
+                    className="absolute inset-[14%] rounded-full flex items-center justify-center"
+                    style={{
+                      background: drew
+                        ? "radial-gradient(circle at 35% 28%, #9ca3af, #4b5563)"
+                        : won
+                          ? "radial-gradient(circle at 35% 28%, #fde68a, #d97706)"
+                          : "radial-gradient(circle at 35% 28%, #fca5a5, #b91c1c)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    }}
+                  >
+                    {drew ? (
+                      <Handshake className="w-6 h-6 text-black/70" strokeWidth={2.2} />
+                    ) : won ? (
+                      <MobaIcon name="trophy" className="w-6 h-6" />
+                    ) : (
+                      <Skull className="w-6 h-6 text-black/70" strokeWidth={2.2} />
+                    )}
+                  </div>
+                </div>
+                <div
+                  className="font-battle text-lg uppercase tracking-wide"
+                  style={{ color: drew ? "#d1d5db" : won ? "#fbbf24" : "#f87171" }}
+                >
+                  {drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}
+                </div>
+              </div>
             </div>
           ) : pendingTrapForSelf ? (
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3 space-y-2">
@@ -1226,7 +1311,7 @@ export default function DuelLiveView({
         {/* Gegner */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Gegner</span>
+            <span className="text-rose-300 font-medium">Gegner</span>
             <div className="flex items-center gap-2">
               <span>Deck {snapshot.opponent.deckCount}</span>
               <div className="flex items-center gap-1">
@@ -1296,6 +1381,7 @@ export default function DuelLiveView({
 
         {/* Eigenes Feld */}
         <div className="space-y-2">
+          <span className="text-xs text-sky-300 font-medium">Du</span>
           <div className="relative">
             <FloatingLayer effects={lpEffectsFor("self")} />
             <LpBar lp={snapshot.self.lifePoints} />

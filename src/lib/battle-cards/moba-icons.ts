@@ -48,6 +48,9 @@ export const MOBA_ICON = {
   navRank: `${BASE}/nav-rank.png`, // Community-Reiter (Rang-Medaillen-Icon aus Referenz-Screenshot)
   duelsIcon: `${BASE}/duels-icon.png`, // "Duels"-Button (Avatar-RPG-Kit, gekreuzte Schwerter)
   gemsIcon: `${BASE}/gems-icon.png`, // "Gems"-Button (Avatar-RPG-Kit, Chaos-Edelstein)
+  // OMA Duels — HUD (Quelle: Assets/UI/MOBA Style/PNG/HUD/INGAME).
+  abilityRingBg: "/battle-cards/moba/hud/ability-ring-bg.png", // gedimmter Ring, immer sichtbar
+  abilityRingFg: "/battle-cards/moba/hud/ability-ring-fg.png", // heller Ring, grün eingefärbt -- per hue-rotate() umgefärbt und per CSS-Maske (conic-gradient) auf den Fortschritt beschnitten statt separater Assets pro Farbe/Füllstand
 } as const;
 
 export type MobaIconName = keyof typeof MOBA_ICON;
