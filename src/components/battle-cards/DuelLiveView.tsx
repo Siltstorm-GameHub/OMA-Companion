@@ -156,6 +156,34 @@ interface FloatingEffect {
   tone: "damage" | "crit" | "heal" | "shield" | "info" | "comeback";
 }
 
+/** Kurzer Sprite-Flipbook-Effekt (Pixel Fight FX) genau auf der getroffenen
+ *  Feld-Einheit, zusätzlich zum Flash/den fliegenden Zahlen -- crit=true
+ *  nutzt den größeren roten Burst (auch für "Zerstört!"-Momente), sonst den
+ *  kleinen neutralen. */
+interface ImpactBurst {
+  id: string;
+  side: "self" | "opponent";
+  slotIndex: number;
+  crit: boolean;
+}
+
+/** Größerer Element-Effekt (Pixel Fight FX, Premium_Skills_*) genau auf der
+ *  Einheit, die gerade ihr Ultimate einsetzt -- ein Element pro Klasse, damit
+ *  ein Ultimate optisch mehr Gewicht hat als ein normaler Treffer (siehe
+ *  ImpactBurst). Alle drei Spritesheets sind bewusst einreihig und 16px hoch
+ *  (gleiche Konvention), nur die Framezahl unterscheidet sich. */
+interface UltimateBurst {
+  id: string;
+  side: "self" | "opponent";
+  slotIndex: number;
+  unitClass: UnitClass;
+}
+const ULTIMATE_FX: Record<UnitClass, { src: string; frames: number; durationMs: number }> = {
+  TANK: { src: "/battle-cards/fx/ultimate/tank.png", frames: 8, durationMs: 400 },
+  DAMAGE_DEALER: { src: "/battle-cards/fx/ultimate/damage-dealer.png", frames: 15, durationMs: 650 },
+  SUPPORT: { src: "/battle-cards/fx/ultimate/support.png", frames: 10, durationMs: 450 },
+};
+
 /** Großer, kurzer Reveal-Effekt in Bildschirmmitte für aktivierte Items/
  *  Fallen — deutlich auffälliger als die kleinen fliegenden Zahlen, damit
  *  "eine Taktikkarte wurde gerade eingesetzt" nicht im Kampfgeschehen
@@ -368,6 +396,8 @@ function UnitSlot({
   statHighlight,
   flashing,
   lunging,
+  burst,
+  ultimateBurst,
   onClick,
 }: {
   unit: LiveDuelUnit | null;
@@ -385,6 +415,8 @@ function UnitSlot({
   statHighlight?: "attack" | "defense" | null;
   flashing?: boolean;
   lunging?: boolean;
+  burst?: ImpactBurst | null;
+  ultimateBurst?: UltimateBurst | null;
   onClick?: () => void;
 }) {
   if (!unit) {
@@ -435,6 +467,35 @@ function UnitSlot({
       }}
     >
       <FloatingLayer effects={floating} />
+      {burst && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+          <div
+            className="duel-impact-burst"
+            style={{
+              width: burst.crit ? 96 : 64,
+              height: burst.crit ? 96 : 64,
+              backgroundImage: `url(/battle-cards/fx/impact/${burst.crit ? "hit-crit" : "hit-small"}.png)`,
+              backgroundSize: "1000% 100%",
+              imageRendering: "pixelated",
+            }}
+          />
+        </div>
+      )}
+      {ultimateBurst && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+          <div
+            className="duel-ultimate-burst"
+            style={{
+              width: 128,
+              height: 128,
+              backgroundImage: `url(${ULTIMATE_FX[ultimateBurst.unitClass].src})`,
+              backgroundSize: `${ULTIMATE_FX[ultimateBurst.unitClass].frames * 100}% 100%`,
+              animation: `duelImpactBurst ${ULTIMATE_FX[ultimateBurst.unitClass].durationMs}ms steps(${ULTIMATE_FX[ultimateBurst.unitClass].frames}) forwards`,
+              imageRendering: "pixelated",
+            }}
+          />
+        </div>
+      )}
       {isDefense && unit.isAlive ? (
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-1 bg-sky-500/80 py-0.5">
           <img src={MOBA_ICON.shield} alt="" aria-hidden className="w-3 h-3 object-contain" />
@@ -518,6 +579,24 @@ export default function DuelLiveView({
   }
   const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
   const [lungeKeys, setLungeKeys] = useState<Set<string>>(new Set());
+  const [impactBursts, setImpactBursts] = useState<ImpactBurst[]>([]);
+
+  function spawnImpactBurst(side: "self" | "opponent", slotIndex: number, crit: boolean) {
+    const id = `impact-${Date.now()}-${Math.random()}`;
+    setImpactBursts((prev) => [...prev, { id, side, slotIndex, crit }]);
+    setTimeout(() => {
+      setImpactBursts((prev) => prev.filter((b) => b.id !== id));
+    }, 500);
+  }
+
+  const [ultimateBursts, setUltimateBursts] = useState<UltimateBurst[]>([]);
+  function spawnUltimateBurst(side: "self" | "opponent", slotIndex: number, unitClass: UnitClass) {
+    const id = `ultimate-${Date.now()}-${Math.random()}`;
+    setUltimateBursts((prev) => [...prev, { id, side, slotIndex, unitClass }]);
+    setTimeout(() => {
+      setUltimateBursts((prev) => prev.filter((b) => b.id !== id));
+    }, ULTIMATE_FX[unitClass].durationMs);
+  }
 
   // Portal auf document.body (wie LiveBattleView.tsx/MobileTopBar.tsx) — sonst
   // sperrt eine Ahnen-Komponente mit eigenem Stacking-Context (hier: <main>
@@ -639,6 +718,7 @@ export default function DuelLiveView({
               tone: entry.isCrit ? "crit" : "damage",
             });
             pulse(`${target.side}-${target.unit.slotIndex}`, setFlashKeys, 450);
+            spawnImpactBurst(target.side, target.unit.slotIndex, !!entry.isCrit);
           }
           if (source) pulse(`${source.side}-${source.unit.slotIndex}`, setLungeKeys, 300);
           playDamageSoundFor(source?.unit.class, !!entry.isCrit);
@@ -697,6 +777,7 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${target.side}-${target.unit.slotIndex}`, setFlashKeys, 450);
+            spawnImpactBurst(target.side, target.unit.slotIndex, true);
           }
           if (attacker) pulse(`${attacker.side}-${attacker.unit.slotIndex}`, setLungeKeys, 300);
           playDamageSoundFor(target?.unit.class, true);
@@ -744,6 +825,7 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${loser.side}-${loser.unit.slotIndex}`, setFlashKeys, 450);
+            spawnImpactBurst(loser.side, loser.unit.slotIndex, true);
           }
           if (winner) pulse(`${winner.side}-${winner.unit.slotIndex}`, setLungeKeys, 300);
           const damagedSide: "self" | "opponent" = entry.damagedTeam === newSnapshot.viewerTeam ? "self" : "opponent";
@@ -769,6 +851,7 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${unit.side}-${unit.unit.slotIndex}`, setFlashKeys, 450);
+            spawnImpactBurst(unit.side, unit.unit.slotIndex, true);
           }
           playDamageSoundFor(undefined, true);
           break;
@@ -786,12 +869,14 @@ export default function DuelLiveView({
           if (amount >= 0) playHealSound();
           break;
         }
-        case "action":
-          if (entry.actionType === "ultimate") {
-            const actor = entry.actorId ? locateUnit(entry.actorId, candidates) : null;
-            playUltimateSoundFor(actor?.unit.class);
+        case "ultimateUsed": {
+          const actor = entry.unitId ? locateUnit(entry.unitId, candidates) : null;
+          if (actor) {
+            spawnUltimateBurst(actor.side, actor.unit.slotIndex, actor.unit.class);
           }
+          playUltimateSoundFor(actor?.unit.class);
           break;
+        }
         case "summon":
           playCardRevealSound();
           break;
@@ -1089,6 +1174,12 @@ export default function DuelLiveView({
   function lpEffectsFor(side: "self" | "opponent") {
     return floatingEffects.filter((e) => e.side === side && e.anchor.kind === "lp");
   }
+  function burstFor(side: "self" | "opponent", slotIndex: number) {
+    return impactBursts.find((b) => b.side === side && b.slotIndex === slotIndex) ?? null;
+  }
+  function ultimateBurstFor(side: "self" | "opponent", slotIndex: number) {
+    return ultimateBursts.find((b) => b.side === side && b.slotIndex === slotIndex) ?? null;
+  }
 
   function pickSummonSlot(slotIndex: number) {
     if (!pendingSummon) return;
@@ -1176,6 +1267,13 @@ export default function DuelLiveView({
           100% { opacity: 0; transform: scale(1) translateY(-14px); }
         }
         .duel-card-reveal { animation: duelCardReveal 1.3s ease-out forwards; }
+        /* Treffer-Sprite (Pixel Fight FX, Super Pixel Impact FX Pack 1) --
+           background-position 0%->100% mit steps() ist die übliche Technik
+           für ein Spritesheet-Flipbook unabhängig von der tatsächlichen
+           Pixelgröße (background-size setzt die Bildbreite relativ zur
+           Element-Box auf framesCount*100%, siehe Inline-Style am Element). */
+        @keyframes duelImpactBurst { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+        .duel-impact-burst { animation: duelImpactBurst 500ms steps(10) forwards; background-repeat: no-repeat; }
       `}</style>
       {/* Content-Rahmen: 100dvh-basierte Flex-Spalte statt linearer space-y-4-
           Stapelung. Header/Phasenanzeige oben und die Phasen-/Zug-Buttons ganz
@@ -1365,6 +1463,8 @@ export default function DuelLiveView({
                   floating={effectsFor("opponent", i)}
                   flashing={flashKeys.has(`opponent-${i}`)}
                   lunging={lungeKeys.has(`opponent-${i}`)}
+                  burst={burstFor("opponent", i)}
+                  ultimateBurst={ultimateBurstFor("opponent", i)}
                   selectable={selectable}
                   selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
                   statHighlight={statHighlight}
@@ -1434,6 +1534,8 @@ export default function DuelLiveView({
                     statHighlight={isSelectedAttacker ? "attack" : null}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
+                    burst={burstFor("self", i)}
+                    ultimateBurst={ultimateBurstFor("self", i)}
                     onClick={slotOnClick}
                   />
                 </div>
@@ -1838,6 +1940,8 @@ function describeLogEntry(entry: DuelLogEntry): string {
       return "Eine Karte wurde beschworen.";
     case "stanceChanged":
       return `Stellungswechsel: ${entry.stance === "defense" ? "Verteidigung" : "Angriff"}.`;
+    case "ultimateUsed":
+      return "Ultimate eingesetzt!";
     case "faceDamage":
       return `Direkter Treffer: ${entry.amount} Schaden`;
     case "damage":
