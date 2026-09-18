@@ -168,7 +168,11 @@ export type DuelLogEntry =
    *  rein fürs UI, um den Comeback-Bonus sichtbar von normalem Rage-Gewinn zu
    *  unterscheiden, ohne den geteilten grantRage()-Reason-Union in engine.ts
    *  anzufassen. */
-  | { type: "comebackBonus"; round: number; unitId: string; amount: number };
+  | { type: "comebackBonus"; round: number; unitId: string; amount: number }
+  /** Eigener Eintrag statt der geteilten "action"-Variante aus types.ts (die
+   *  in diesem Modul nirgends gepusht wird) -- rein fürs UI (Ultimate-Sound +
+   *  Element-Effekt, siehe DuelLiveView.tsx), keine Spiellogik hängt daran. */
+  | { type: "ultimateUsed"; round: number; unitId: string; team: TeamId };
 
 export interface LiveDuelState {
   seed: number;
@@ -853,6 +857,7 @@ function resumeDeclareAttackAfterTraps(
     const ultimateCost = attacker.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
     attacker.rage = Math.max(0, attacker.rage - ultimateCost);
     log.push({ type: "rageChange", round, unitId: attacker.instanceId, amount: -ultimateCost, newRage: attacker.rage, reason: "action" });
+    log.push({ type: "ultimateUsed", round, unitId: attacker.instanceId, team: attackingTeam });
   }
 
   grantRage(attacker, RAGE_PER_ACTION, round, asBattleLog(log), "action");
