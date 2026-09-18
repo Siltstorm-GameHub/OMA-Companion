@@ -472,6 +472,21 @@ function UnitSlot({
           />
         </div>
       )}
+      {deathBurst && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div
+            className="duel-death-burst"
+            style={{
+              width: 140,
+              height: 140,
+              backgroundImage: `url(${DEATH_FX.src})`,
+              backgroundSize: `${DEATH_FX.frames * 100}% 100%`,
+              animation: `duelImpactBurst ${DEATH_FX.durationMs}ms steps(${DEATH_FX.frames}) forwards`,
+              imageRendering: "pixelated",
+            }}
+          />
+        </div>
+      )}
     </>
   );
 

@@ -11,10 +11,8 @@ import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import Link from "next/link";
 import Image from "next/image";
-import { CountUp } from "@/components/CountUp";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
-import EventCoverDefault from "@/components/EventCoverDefault";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
@@ -28,6 +26,7 @@ import RankUpFlare from "@/components/RankUpFlare";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
+import EventsTile, { type EventTileItem } from "@/components/EventsTile";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
@@ -50,7 +49,7 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, activeOrPollEvents, upcomingEvents, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
@@ -70,19 +69,22 @@ const getGlobalDashboardData = unstable_cache(
         },
         take: 5,
       }),
-      // Active or umfrage event takes priority over upcoming
-      prisma.event.findFirst({
+      // Aktive/Umfrage-Events haben Vorrang vor rein anstehenden — bis zu 3 Events insgesamt
+      // für die rotierende Events-Kachel im Dashboard.
+      prisma.event.findMany({
         where:   { hidden: false, status: { in: ["active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
         orderBy: { startAt: "desc" },
+        take:    3,
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
           series: { select: { coverImageUrl: true } },
         },
       }),
-      prisma.event.findFirst({
+      prisma.event.findMany({
         where:   { hidden: false, status: { in: ["open", "active"] }, startAt: { gte: new Date() }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
         orderBy: { startAt: "asc" },
+        take:    3,
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
@@ -117,7 +119,16 @@ const getGlobalDashboardData = unstable_cache(
         select:  { id: true, title: true, game: true, startAt: true, completionData: true, seriesId: true },
       }),
     ]);
-    const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
+    // Aktive/Umfrage-Events zuerst, danach anstehende auffüllen — dedupliziert, max. 3
+    // Events für die rotierende Kachel.
+    const seenEventIds = new Set<string>();
+    const dashboardEvents = [...activeOrPollEvents, ...upcomingEvents]
+      .filter(ev => {
+        if (seenEventIds.has(ev.id)) return false;
+        seenEventIds.add(ev.id);
+        return true;
+      })
+      .slice(0, 3);
 
     // Pro Reihe: nächstes offenes/laufendes/volles Event, Season-Fortschritt (fertige/gesamte Events)
     // und aktueller Spitzenreiter (via computeStatStandings, dieselbe Logik wie die Reihen-Gesamttabelle).
@@ -152,7 +163,7 @@ const getGlobalDashboardData = unstable_cache(
       };
     });
 
-    return { memberCount, activeEvents, activeSeries: enrichedSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
+    return { memberCount, activeEvents, activeSeries: enrichedSeries, dashboardEvents, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
   },
   ["dashboard-global"],
   { revalidate: 300, tags: ["dashboard-global"] }
@@ -190,7 +201,7 @@ export default async function DashboardPage() {
   const month = nowParts.month;
   const year  = nowParts.year;
 
-  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
+  const { memberCount, activeEvents, activeSeries, dashboardEvents, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
     await getGlobalDashboardData();
 
   // Namen der Spitzenreiter außerhalb des globalen Caches auflösen, damit Namensänderungen sofort
@@ -225,7 +236,7 @@ export default async function DashboardPage() {
     nextRegisteredEvent,
     finishedClipContest,
     activeClipContest,
-    isRegisteredForNextEvent,
+    registeredDashboardEventIds,
     squadCount,
     mySquadMembership,
     previewSquads,
@@ -277,9 +288,10 @@ export default async function DashboardPage() {
       orderBy: [{ year: "desc" }, { month: "desc" }],
       select:  { id: true, month: true, year: true },
     }),
-    userId && nextEvent
-      ? prisma.eventRegistration.findFirst({ where: { userId, eventId: nextEvent.id }, select: { id: true } }).then(r => !!r)
-      : false,
+    userId && dashboardEvents.length
+      ? prisma.eventRegistration.findMany({ where: { userId, eventId: { in: dashboardEvents.map(ev => ev.id) } }, select: { eventId: true } })
+          .then(rows => new Set(rows.map(r => r.eventId)))
+      : new Set<string>(),
     prisma.squad.count({ where: { hidden: false } }),
     userId
       ? prisma.squadMembership.findFirst({
@@ -362,6 +374,23 @@ export default async function DashboardPage() {
   const winnerClips = winnerNominationIds
     .map(id => winnerClipsUnordered.find(c => c.id === id))
     .filter((c): c is NonNullable<typeof c> => !!c);
+
+  // Plain-Object-Liste für die client-seitig rotierende Events-Kachel — Countdown wird hier
+  // (mit dem Server-"now") vorberechnet statt live im Client zu ticken.
+  const eventTileItems: EventTileItem[] = dashboardEvents.map(ev => ({
+    id: ev.id,
+    title: ev.title,
+    game: ev.game,
+    category: ev.category,
+    status: ev.status,
+    coverImageUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
+    countdownText: ev.status === "umfrage" && ev.polls[0]
+      ? formatCountdown(new Date(ev.polls[0].endAt), now, "Umfrage endet in")
+      : formatCountdown(new Date(ev.startAt), now),
+    registrationsCount: ev._count.registrations,
+    maxPlayers: ev.maxPlayers,
+    isRegistered: registeredDashboardEventIds.has(ev.id),
+  }));
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
@@ -622,93 +651,8 @@ export default async function DashboardPage() {
         {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
 
-          {/* Events Hub */}
-          <Link href="/events"
-            className="surface animate-slide-up stagger-1 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-            style={{ borderRadius: "6px", border: `1px solid ${acc("teal", 0.12)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-
-            {/* Cover art area */}
-            <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
-              {/* Game cover background */}
-              {nextEvent?.game ? (
-                <GameCover
-                  game={nextEvent.game}
-                  coverUrl={nextEvent.coverImageUrl ?? nextEvent.series?.coverImageUrl ?? null}
-                  className="absolute inset-0 w-full h-full"
-                  rounded="rounded-none"
-                  imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
-                  brandBadge
-                />
-              ) : (
-                <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
-              )}
-              {/* Status badge */}
-              {nextEvent && nextEvent.status === "active" ? (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: acc("red", 0.16), border: `1px solid ${acc("red", 0.3)}`, color: "#f87171" }}>
-                  <span className="relative flex w-1.5 h-1.5">
-                    <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 animate-ping" />
-                    <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-red-400" />
-                  </span>
-                  Live
-                </div>
-              ) : nextEvent && nextEvent.status === "umfrage" ? (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: acc("amber", 0.16), border: `1px solid ${acc("amber", 0.3)}`, color: "#fbbf24" }}>
-                  <span className="relative flex w-1.5 h-1.5">
-                    <span className="absolute inline-flex w-full h-full rounded-full bg-amber-400 animate-ping" />
-                    <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  </span>
-                  Umfragephase
-                </div>
-              ) : (
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                  <CountUp to={activeEvents} duration={700} /> aktiv
-                </div>
-              )}
-              {nextEvent && isRegisteredForNextEvent && (
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
-                  <CheckCircle2 className="w-3 h-3" /> Angemeldet
-                </div>
-              )}
-              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
-              <div className="absolute bottom-0 inset-x-0 h-14"
-                style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
-            </div>
-
-            {/* Info area */}
-            <div className="px-4 pb-4 pt-2 flex-1 min-h-0">
-              <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">
-                {nextEvent?.game ?? "Events"}
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="font-display text-base font-black text-white leading-tight truncate flex-1 min-w-0">
-                  {nextEvent ? nextEvent.title : "Keine anstehenden Events"}
-                </p>
-                {nextEvent && <EventCategoryBadge category={nextEvent.category} className="shrink-0" />}
-              </div>
-              {nextEvent ? (
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="flex items-center gap-1 text-[12px] font-bold"
-                    style={{ color: nextEvent.status === "umfrage" ? "#fbbf24" : "#2dd4bf" }}>
-                    {nextEvent.status === "umfrage" ? <Scroll className="w-3.5 h-3.5" /> : <Timer className="w-3.5 h-3.5" />}
-                    {nextEvent.status === "umfrage" && nextEvent.polls[0]
-                      ? formatCountdown(new Date(nextEvent.polls[0].endAt), now, "Umfrage endet in")
-                      : formatCountdown(new Date(nextEvent.startAt), now)}
-                  </span>
-                  <span className="flex items-center gap-1 ml-auto text-[11px] text-gray-500">
-                    <Users className="w-3 h-3" />
-                    {nextEvent._count.registrations}{nextEvent.maxPlayers ? `/${nextEvent.maxPlayers}` : ""}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-[11px] text-gray-600 mt-1">Alle Events ansehen →</p>
-              )}
-            </div>
-          </Link>
+          {/* Events Hub — rotiert client-seitig durch bis zu 3 anstehende/aktive Events */}
+          <EventsTile items={eventTileItems} activeEvents={activeEvents} />
 
           {/* Clip des Monats Hub */}
           <ClipOfMonthTile
