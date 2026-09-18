@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
-import { countOccupiedSlots } from "@/lib/gameservers";
+import { countOccupiedSlots, promoteNextWaitlisted } from "@/lib/gameservers";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -67,6 +67,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     users: [application.userId],
     placeholders: { "{serverName}": application.server.name },
   }).catch(() => {});
+
+  await promoteNextWaitlisted(application.serverId);
 
   return NextResponse.json(updated);
 }

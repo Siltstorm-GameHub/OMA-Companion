@@ -23,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   denied: "Abgelehnt",
   revoked: "Entzogen",
   expired: "Abgelaufen",
+  waitlisted: "Warteliste",
 };
 
 function formatDate(iso: string) {
@@ -55,8 +56,11 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
   }
 
   const pending = applications.filter((a) => a.status === "pending");
+  const waitlisted = [...applications.filter((a) => a.status === "waitlisted")].sort(
+    (a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime()
+  );
   const approved = applications.filter((a) => a.status === "approved");
-  const others = applications.filter((a) => !["pending", "approved"].includes(a.status));
+  const others = applications.filter((a) => !["pending", "approved", "waitlisted"].includes(a.status));
 
   return (
     <div className="space-y-6">
@@ -85,6 +89,31 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
                   <X className="w-3.5 h-3.5" /> Ablehnen
                 </button>
               </div>
+            </div>
+          ))
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-white">Warteliste ({waitlisted.length})</h2>
+        {waitlisted.length === 0 ? (
+          <p className="text-xs text-gray-500">Niemand auf der Warteliste.</p>
+        ) : (
+          waitlisted.map((app, i) => (
+            <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+              <span className="text-xs font-semibold text-violet-300 w-5 shrink-0 text-center">{i + 1}</span>
+              <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
+                  <p className="text-xs text-gray-500">beworben am {formatDate(app.appliedAt)}</p>
+                  {app.message && <p className="text-xs text-gray-400 mt-0.5 italic">„{app.message}&quot;</p>}
+                </div>
+              </Link>
+              <button onClick={() => act(app.id, "deny")} disabled={actingId === app.id}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0">
+                {actingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />} Ablehnen
+              </button>
             </div>
           ))
         )}

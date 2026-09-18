@@ -248,6 +248,15 @@
         ],
         "createdAt": "2026-09-14T08:16:23.845Z",
         "reason": "user provided a reference screenshot explicitly asking for this exact gold-fill/dark-outline game-HUD text effect on .font-battle headings"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/servers/ApplyButton.tsx"
+        ],
+        "createdAt": "2026-09-18T20:43:52.819Z",
+        "reason": "text-gray-500 hover:text-red-400 on a transparent button with hover:bg-red-500/10 - color changes together with the hover background, matches existing 'Zurueckziehen' pattern already used elsewhere in the codebase, not a static gray-on-color contrast issue"
       }
     ]
   }

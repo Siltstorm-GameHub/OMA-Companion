@@ -19,6 +19,11 @@ type Server = {
   port: string | null;
   password: string | null;
   ampInstanceId: string | null;
+  queryType: string | null;
+  gamedigType: string | null;
+  queryPort: string | null;
+  queryTelnetPort: string | null;
+  queryTelnetPassword: string | null;
   maxSlots: number;
   isActive: boolean;
   openAccess: boolean;
@@ -40,12 +45,21 @@ type FormState = {
   host: string;
   port: string;
   password: string;
+  statusSource: "none" | "amp" | "gamedig";
   ampInstanceId: string;
+  gamedigType: string;
+  queryPort: string;
+  queryTelnetPort: string;
+  queryTelnetPassword: string;
   maxSlots: string;
   openAccess: boolean;
 };
 
-const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", ampInstanceId: "", maxSlots: "10", openAccess: false };
+const EMPTY_FORM: FormState = {
+  name: "", game: "", description: "", host: "", port: "", password: "",
+  statusSource: "none", ampInstanceId: "", gamedigType: "", queryPort: "", queryTelnetPort: "", queryTelnetPassword: "",
+  maxSlots: "10", openAccess: false,
+};
 
 type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
 
@@ -131,7 +145,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           host: form.host.trim(),
           port: form.port.trim() || undefined,
           password: form.password.trim() || undefined,
-          ampInstanceId: form.ampInstanceId.trim() || undefined,
+          ampInstanceId: form.statusSource === "amp" ? form.ampInstanceId.trim() || undefined : undefined,
+          queryType: form.statusSource === "gamedig" ? "gamedig" : undefined,
+          gamedigType: form.statusSource === "gamedig" ? form.gamedigType.trim() || undefined : undefined,
+          queryPort: form.statusSource === "gamedig" ? form.queryPort.trim() || undefined : undefined,
+          queryTelnetPort: form.statusSource === "gamedig" ? form.queryTelnetPort.trim() || undefined : undefined,
+          queryTelnetPassword: form.statusSource === "gamedig" ? form.queryTelnetPassword.trim() || undefined : undefined,
           maxSlots: Number(form.maxSlots),
           openAccess: form.openAccess,
         }),
@@ -156,7 +175,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       host: server.host,
       port: server.port ?? "",
       password: server.password ?? "",
+      statusSource: server.queryType === "gamedig" ? "gamedig" : server.ampInstanceId ? "amp" : "none",
       ampInstanceId: server.ampInstanceId ?? "",
+      gamedigType: server.gamedigType ?? "",
+      queryPort: server.queryPort ?? "",
+      queryTelnetPort: server.queryTelnetPort ?? "",
+      queryTelnetPassword: server.queryTelnetPassword ?? "",
       maxSlots: String(server.maxSlots),
       openAccess: server.openAccess,
     });
@@ -175,7 +199,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           host: editForm.host.trim(),
           port: editForm.port.trim() || null,
           password: editForm.password.trim() || null,
-          ampInstanceId: editForm.ampInstanceId.trim() || null,
+          ampInstanceId: editForm.statusSource === "amp" ? editForm.ampInstanceId.trim() || null : null,
+          queryType: editForm.statusSource === "gamedig" ? "gamedig" : null,
+          gamedigType: editForm.statusSource === "gamedig" ? editForm.gamedigType.trim() || null : null,
+          queryPort: editForm.statusSource === "gamedig" ? editForm.queryPort.trim() || null : null,
+          queryTelnetPort: editForm.statusSource === "gamedig" ? editForm.queryTelnetPort.trim() || null : null,
+          queryTelnetPassword: editForm.statusSource === "gamedig" ? editForm.queryTelnetPassword.trim() || null : null,
           maxSlots: Number(editForm.maxSlots),
           openAccess: editForm.openAccess,
         }),
@@ -271,16 +300,36 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <div className="col-span-2 flex gap-2">
-            <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-            <button type="button" onClick={() => fetchFromAmp("create")} disabled={fetchingAmp === "create" || !form.ampInstanceId.trim()}
-              title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
-              {fetchingAmp === "create" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Von AMP übernehmen
-            </button>
-          </div>
+          <select value={form.statusSource} onChange={(e) => setForm({ ...form, statusSource: e.target.value as FormState["statusSource"] })}
+            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
+            <option value="none">Live-Status: keiner</option>
+            <option value="amp">Live-Status: AMP-Controller</option>
+            <option value="gamedig">Live-Status: Direkte Abfrage (Docker-Server ohne AMP)</option>
+          </select>
+          {form.statusSource === "amp" && (
+            <div className="col-span-2 flex gap-2">
+              <input placeholder="AMP Instance-ID" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+              <button type="button" onClick={() => fetchFromAmp("create")} disabled={fetchingAmp === "create" || !form.ampInstanceId.trim()}
+                title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
+                {fetchingAmp === "create" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                Von AMP übernehmen
+              </button>
+            </div>
+          )}
+          {form.statusSource === "gamedig" && (
+            <>
+              <input placeholder="GameDig-Typ (z.B. enshrouded, sdtd)" value={form.gamedigType} onChange={(e) => setForm({ ...form, gamedigType: e.target.value })}
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+              <input placeholder="Query-Port (falls != Port)" value={form.queryPort} onChange={(e) => setForm({ ...form, queryPort: e.target.value })}
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+              <input placeholder="Telnet-Port (optional, für Spielernamen bei 7DTD)" value={form.queryTelnetPort} onChange={(e) => setForm({ ...form, queryTelnetPort: e.target.value })}
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+              <input placeholder="Telnet-Passwort (optional)" value={form.queryTelnetPassword} onChange={(e) => setForm({ ...form, queryTelnetPassword: e.target.value })}
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+            </>
+          )}
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
           <input type="checkbox" checked={form.openAccess} onChange={(e) => setForm({ ...form, openAccess: e.target.checked })}
@@ -373,16 +422,36 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <div className="col-span-2 flex gap-2">
-                      <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                      <button type="button" onClick={() => fetchFromAmp("edit")} disabled={fetchingAmp === "edit" || !editForm.ampInstanceId.trim()}
-                        title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
-                        {fetchingAmp === "edit" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                        Von AMP übernehmen
-                      </button>
-                    </div>
+                    <select value={editForm.statusSource} onChange={(e) => setEditForm({ ...editForm, statusSource: e.target.value as FormState["statusSource"] })}
+                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20">
+                      <option value="none">Live-Status: keiner</option>
+                      <option value="amp">Live-Status: AMP-Controller</option>
+                      <option value="gamedig">Live-Status: Direkte Abfrage (Docker-Server ohne AMP)</option>
+                    </select>
+                    {editForm.statusSource === "amp" && (
+                      <div className="col-span-2 flex gap-2">
+                        <input placeholder="AMP Instance-ID" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                        <button type="button" onClick={() => fetchFromAmp("edit")} disabled={fetchingAmp === "edit" || !editForm.ampInstanceId.trim()}
+                          title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
+                          {fetchingAmp === "edit" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                          Von AMP übernehmen
+                        </button>
+                      </div>
+                    )}
+                    {editForm.statusSource === "gamedig" && (
+                      <>
+                        <input placeholder="GameDig-Typ (z.B. enshrouded, sdtd)" value={editForm.gamedigType} onChange={(e) => setEditForm({ ...editForm, gamedigType: e.target.value })}
+                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                        <input placeholder="Query-Port (falls != Port)" value={editForm.queryPort} onChange={(e) => setEditForm({ ...editForm, queryPort: e.target.value })}
+                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                        <input placeholder="Telnet-Port (optional)" value={editForm.queryTelnetPort} onChange={(e) => setEditForm({ ...editForm, queryTelnetPort: e.target.value })}
+                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                        <input placeholder="Telnet-Passwort (optional)" value={editForm.queryTelnetPassword} onChange={(e) => setEditForm({ ...editForm, queryTelnetPassword: e.target.value })}
+                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                      </>
+                    )}
                   </div>
                   <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
                     <input type="checkbox" checked={editForm.openAccess} onChange={(e) => setEditForm({ ...editForm, openAccess: e.target.checked })}

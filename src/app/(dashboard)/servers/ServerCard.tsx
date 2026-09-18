@@ -29,6 +29,7 @@ type Server = {
   available: number;
   light: Light;
   myStatus: string;
+  waitlistPosition?: number;
   openAccess: boolean;
   host?: string;
   port?: string | null;
@@ -115,10 +116,18 @@ export default function ServerCard({ server }: { server: Server }) {
           {isLoading ? (
             <span className="motion-safe:animate-pulse inline-block h-3 w-24 rounded bg-white/10 mt-1" />
           ) : liveStatus.online && liveStatus.currentPlayers !== null ? (
-            <p className="text-xs mt-1 tabular-nums" style={{ color: PRESENCE_ONLINE }}>
-              {liveStatus.currentPlayers}
-              {liveStatus.maxPlayers !== null ? `/${liveStatus.maxPlayers}` : ""} Spieler online
-            </p>
+            <>
+              <p className="text-xs mt-1 tabular-nums" style={{ color: PRESENCE_ONLINE }}>
+                {liveStatus.currentPlayers}
+                {liveStatus.maxPlayers !== null ? `/${liveStatus.maxPlayers}` : ""} Spieler online
+              </p>
+              {liveStatus.players && liveStatus.players.length > 0 && (
+                <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                  {liveStatus.players.slice(0, 6).join(", ")}
+                  {liveStatus.players.length > 6 ? ` +${liveStatus.players.length - 6} weitere` : ""}
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-xs text-gray-500 mt-1">Server offline</p>
           )}
@@ -131,7 +140,7 @@ export default function ServerCard({ server }: { server: Server }) {
 
       <div className="flex items-center justify-end pt-1 border-t border-white/[0.05]">
         {!showCredentials && (
-          <ApplyButton serverId={server.id} status={server.myStatus} isFull={server.available <= 0} />
+          <ApplyButton serverId={server.id} status={server.myStatus} isFull={server.available <= 0} waitlistPosition={server.waitlistPosition} />
         )}
       </div>
 

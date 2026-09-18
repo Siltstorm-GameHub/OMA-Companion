@@ -101,6 +101,8 @@ const GAME_MAP: Record<string, string> = {
   "sons of the forest":     steam(1592110),
   "green hell":             steam(815370),
   "subnautica":             steam(264710),
+  "enshrouded":             steam(1203620),
+  "7 days to die":          steam(251570),
 
   // ─── Coop / Party ─────────────────────────────────────────────────
   "among us":               steam(945360),
@@ -226,6 +228,7 @@ export const KNOWN_GAMES: string[] = [
   "Rust", "Valheim", "Terraria", "Don't Starve Together",
   "ARK: Survival Evolved", "ARK: Survival Ascended",
   "The Forest", "Sons of the Forest", "Green Hell", "Subnautica",
+  "Enshrouded", "7 Days to Die",
   // Coop / Party
   "Among Us", "It Takes Two", "A Way Out",
   "Overcooked 2", "Overcooked", "Pummel Party",

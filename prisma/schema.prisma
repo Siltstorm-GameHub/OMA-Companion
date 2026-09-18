@@ -1152,6 +1152,11 @@ model GameServer {
   port          String?
   password      String? // Server-Passwort – nur für genehmigte User sichtbar
   ampInstanceId String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
+  queryType     String? // "amp" | "gamedig" — welches Live-Status-Backend genutzt wird (null = kein Live-Status)
+  gamedigType   String? // GameDig "type"-Key für die direkte Abfrage, z.B. "enshrouded" oder "sdtd" (7 Days to Die)
+  queryPort     String? // Query-Port für die direkte Abfrage, falls abweichend vom Connect-Port (`port`)
+  queryTelnetPort     String? // Optional: Telnet-Port für Spielernamen (z.B. 7 Days to Die liefert Namen nur via Telnet)
+  queryTelnetPassword String? // Optional: Telnet-Passwort, passend zu queryTelnetPort
   maxSlots      Int
   isActive      Boolean  @default(true)
   openAccess    Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
@@ -1168,7 +1173,7 @@ model ServerApplication {
   id              String    @id @default(cuid())
   serverId        String
   userId          String
-  status          String    @default("pending") // pending | approved | denied | revoked
+  status          String    @default("pending") // pending | approved | denied | revoked | waitlisted
   message         String?
   adminNote       String?
   appliedAt       DateTime  @default(now())

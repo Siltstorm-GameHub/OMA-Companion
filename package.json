@@ -24,6 +24,7 @@
     "@vercel/blob": "^2.6.1",
     "canvas-confetti": "^1.9.4",
     "discord.js": "^14.26.4",
+    "gamedig": "^5.3.3",
     "lucide-react": "^1.17.0",
     "motion": "^12.42.2",
     "next": "16.2.6",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/gamedig": "^5.0.3",
     "@types/node": "^20.19.41",
     "@types/react": "^19",
     "@types/react-dom": "^19",

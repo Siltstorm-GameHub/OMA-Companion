@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export type LiveStatus = { online: boolean; currentPlayers: number | null; maxPlayers: number | null };
+export type LiveStatus = { online: boolean; currentPlayers: number | null; maxPlayers: number | null; players: string[] | null };
 
 // Live-Status aller Server wird app-weit gemeinsam gepollt (ein Request alle 20s,
 // egal wie viele Komponenten gerade zuhören — ServerCard, Dashboard-Widget, etc.)

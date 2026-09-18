@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { countOccupiedSlots } from "@/lib/gameservers";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -18,17 +19,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { serverId_userId: { serverId, userId } },
   });
 
-  const hasActive = existing && (existing.status === "pending" || existing.status === "approved");
+  const hasActive = existing && ["pending", "approved", "waitlisted"].includes(existing.status);
   if (hasActive) return NextResponse.json({ error: "Bereits beworben oder freigeschaltet" }, { status: 400 });
 
   const occupied = await countOccupiedSlots(serverId);
-  if (occupied >= server.maxSlots) return NextResponse.json({ error: "Server ist voll" }, { status: 400 });
+  // Ist der Server voll, landet die Bewerbung auf der Warteliste statt abgelehnt zu werden —
+  // sie rückt automatisch zu "pending" auf, sobald eine Freigabe entzogen wird (promoteNextWaitlisted).
+  const status = occupied >= server.maxSlots ? "waitlisted" : "pending";
 
   const application = await prisma.serverApplication.upsert({
     where: { serverId_userId: { serverId, userId } },
-    create: { serverId, userId, message },
+    create: { serverId, userId, message, status },
     update: {
-      status: "pending",
+      status,
       message,
       adminNote: null,
       decidedAt: null,
@@ -36,6 +39,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       appliedAt: new Date(),
     },
   });
+
+  if (status === "waitlisted") {
+    await dispatchNotification("server_waitlisted", {
+      users: [userId],
+      placeholders: { "{serverName}": server.name },
+    }).catch(() => {});
+  }
 
   return NextResponse.json(application, { status: 201 });
 }
@@ -47,7 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id: serverId } = await params;
 
   await prisma.serverApplication.deleteMany({
-    where: { serverId, userId, status: "pending" },
+    where: { serverId, userId, status: { in: ["pending", "waitlisted"] } },
   });
 
   return NextResponse.json({ ok: true });

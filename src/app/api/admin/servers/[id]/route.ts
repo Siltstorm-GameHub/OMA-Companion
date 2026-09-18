@@ -14,6 +14,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     port: string | null;
     password: string | null;
     ampInstanceId: string | null;
+    queryType: string | null;
+    gamedigType: string | null;
+    queryPort: string | null;
+    queryTelnetPort: string | null;
+    queryTelnetPassword: string | null;
     maxSlots: number;
     isActive: boolean;
     openAccess: boolean;

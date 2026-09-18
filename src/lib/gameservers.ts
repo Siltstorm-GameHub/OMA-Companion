@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getInstanceSummaries } from "@/lib/amp";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export type TrafficLight = "green" | "yellow" | "red";
 
@@ -19,6 +20,28 @@ export async function countOccupiedSlots(serverId: string): Promise<number> {
 
 export async function countPendingApplications(serverId?: string): Promise<number> {
   return prisma.serverApplication.count({ where: { status: "pending", ...(serverId ? { serverId } : {}) } });
+}
+
+export async function countWaitlistedApplications(serverId?: string): Promise<number> {
+  return prisma.serverApplication.count({ where: { status: "waitlisted", ...(serverId ? { serverId } : {}) } });
+}
+
+// Rückt die älteste Warteliste-Bewerbung eines Servers zu "pending" auf, sobald ein Slot frei
+// wird (z.B. nach Entzug einer Freigabe). Kein Auto-Approve — ein Moderator muss weiterhin
+// manuell genehmigen, konsistent mit dem übrigen Freigabe-Flow bei Gameservern.
+export async function promoteNextWaitlisted(serverId: string): Promise<void> {
+  const next = await prisma.serverApplication.findFirst({
+    where: { serverId, status: "waitlisted" },
+    orderBy: { appliedAt: "asc" },
+    include: { server: true },
+  });
+  if (!next) return;
+
+  await prisma.serverApplication.update({ where: { id: next.id }, data: { status: "pending" } });
+  await dispatchNotification("server_waitlist_promoted", {
+    users: [next.userId],
+    placeholders: { "{serverName}": next.server.name },
+  }).catch(() => {});
 }
 
 // Server-Liste für die Admin-Verwaltung inkl. Ampel und Anzahl offener Bewerbungen.
@@ -85,7 +108,8 @@ export type VisibleServer = {
   occupied: number;
   available: number;
   light: TrafficLight;
-  myStatus: "none" | "pending" | "approved" | "denied" | "revoked";
+  myStatus: "none" | "pending" | "approved" | "denied" | "revoked" | "waitlisted";
+  waitlistPosition?: number;
   openAccess: boolean;
   host?: string;
   port?: string | null;
@@ -113,6 +137,12 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
       // openAccess gewährt Zugangsdaten ohne Bewerbung — aber nur für angemeldete User (userId gesetzt).
       // Nicht angemeldete User (userId undefined) sehen den Server nur, nie die Zugangsdaten.
       const hasApproved = application?.status === "approved" || (server.openAccess && !!userId);
+      const waitlistPosition =
+        application?.status === "waitlisted"
+          ? (await prisma.serverApplication.count({
+              where: { serverId: server.id, status: "waitlisted", appliedAt: { lt: application.appliedAt } },
+            })) + 1
+          : undefined;
 
       return {
         id: server.id,
@@ -124,6 +154,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         available,
         light: trafficLight(available, server.maxSlots),
         myStatus: hasApproved ? "approved" : ((application?.status as VisibleServer["myStatus"]) ?? "none"),
+        ...(waitlistPosition !== undefined ? { waitlistPosition } : {}),
         openAccess: server.openAccess,
         ...(hasApproved
           ? { host: server.host, port: server.port, password: server.password }

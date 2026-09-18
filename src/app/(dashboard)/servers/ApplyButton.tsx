@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Send, X } from "lucide-react";
 
-export default function ApplyButton({ serverId, status, isFull }: { serverId: string; status: string; isFull: boolean }) {
+export default function ApplyButton({
+  serverId, status, isFull, waitlistPosition,
+}: { serverId: string; status: string; isFull: boolean; waitlistPosition?: number }) {
   const [loading, setLoading] = useState(false);
   const [showMessageBox, setShowMessageBox] = useState(false);
   const [message, setMessage] = useState("");
@@ -58,11 +60,17 @@ export default function ApplyButton({ serverId, status, isFull }: { serverId: st
     );
   }
 
-  if (isFull) {
+  if (status === "waitlisted") {
     return (
-      <button disabled className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-gray-600 cursor-not-allowed border border-white/[0.06]">
-        Server voll
-      </button>
+      <div className="flex items-center gap-2">
+        <span className="text-xs px-2.5 py-1.5 rounded-lg bg-violet-500/10 text-violet-300 border border-violet-500/20">
+          Warteliste{waitlistPosition ? ` · Platz ${waitlistPosition}` : ""}
+        </span>
+        <button onClick={cancel} disabled={loading}
+          className="text-xs px-2.5 py-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50">
+          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Zurückziehen"}
+        </button>
+      </div>
     );
   }
 
@@ -93,7 +101,7 @@ export default function ApplyButton({ serverId, status, isFull }: { serverId: st
   return (
     <button onClick={() => setShowMessageBox(true)}
       className="text-xs px-3 py-1.5 rounded-lg font-medium bg-teal-600 hover:bg-teal-500 text-white transition-colors">
-      Bewerben
+      {isFull ? "Für Warteliste bewerben" : "Bewerben"}
     </button>
   );
 }

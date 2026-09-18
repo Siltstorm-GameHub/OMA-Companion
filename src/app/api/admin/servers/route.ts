@@ -18,6 +18,11 @@ export async function POST(req: NextRequest) {
     port?: string;
     password?: string;
     ampInstanceId?: string;
+    queryType?: string;
+    gamedigType?: string;
+    queryPort?: string;
+    queryTelnetPort?: string;
+    queryTelnetPassword?: string;
     maxSlots?: number;
     openAccess?: boolean;
   };
@@ -35,6 +40,11 @@ export async function POST(req: NextRequest) {
       port: body.port?.trim() || null,
       password: body.password?.trim() || null,
       ampInstanceId: body.ampInstanceId?.trim() || null,
+      queryType: body.queryType?.trim() || null,
+      gamedigType: body.gamedigType?.trim() || null,
+      queryPort: body.queryPort?.trim() || null,
+      queryTelnetPort: body.queryTelnetPort?.trim() || null,
+      queryTelnetPassword: body.queryTelnetPassword?.trim() || null,
       maxSlots: body.maxSlots,
       openAccess: body.openAccess ?? false,
       createdBy: admin.id,
