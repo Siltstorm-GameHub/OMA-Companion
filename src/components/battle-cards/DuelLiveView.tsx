@@ -184,6 +184,17 @@ const ULTIMATE_FX: Record<UnitClass, { src: string; frames: number; durationMs: 
   SUPPORT: { src: "/battle-cards/fx/ultimate/support.png", frames: 10, durationMs: 450 },
 };
 
+/** Explosion (Pixel Fight FX, Super Pixel Explosion FX Pack 1) beim Tod einer
+ *  Feld-Einheit -- EIN Eintrag deckt alle Todesursachen ab ("death" wird von
+ *  der Engine bei jedem Kill gepusht, egal ob normaler Schaden, Ultimate,
+ *  Kampf-Kollision oder durchbrochene Verteidigung, siehe duels-live.ts). */
+interface DeathBurst {
+  id: string;
+  side: "self" | "opponent";
+  slotIndex: number;
+}
+const DEATH_FX = { src: "/battle-cards/fx/death/explosion.png", frames: 14, durationMs: 700 };
+
 /** Großer, kurzer Reveal-Effekt in Bildschirmmitte für aktivierte Items/
  *  Fallen — deutlich auffälliger als die kleinen fliegenden Zahlen, damit
  *  "eine Taktikkarte wurde gerade eingesetzt" nicht im Kampfgeschehen
@@ -398,6 +409,7 @@ function UnitSlot({
   lunging,
   burst,
   ultimateBurst,
+  deathBurst,
   onClick,
 }: {
   unit: LiveDuelUnit | null;
@@ -417,55 +429,19 @@ function UnitSlot({
   lunging?: boolean;
   burst?: ImpactBurst | null;
   ultimateBurst?: UltimateBurst | null;
+  deathBurst?: DeathBurst | null;
   onClick?: () => void;
 }) {
-  if (!unit) {
-    return (
-      <button
-        type="button"
-        disabled={!selectable}
-        onClick={onClick}
-        className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
-          dragOver
-            ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
-            : selectable
-              ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
-              : "border-[color:var(--moba-accent-line)] bg-black/20 text-[color:var(--moba-ink-dim)]"
-        }`}
-      >
-        {selectable ? "Hierhin beschwören" : "Leer"}
-      </button>
-    );
-  }
-
-  const config = getClassConfig(unit.class);
-  const ultimateReady = unit.isAlive && unit.rage >= unit.ultimateCost;
-  const chargePct = Math.min(100, (unit.rage / unit.ultimateCost) * 100);
-  const isDefense = unit.stance === "defense";
-
-  return (
-    <button
-      type="button"
-      disabled={!onClick}
-      onClick={onClick}
-      className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
-        isDefense
-          ? "border-[3px] border-sky-400 duel-defense-glow"
-          : selected
-            ? "border border-teal-400"
-            : ultimateReady
-              ? "border border-amber-400 duel-ultimate-glow"
-              : "border border-[color:var(--moba-accent-line)]"
-      } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
-      style={{
-        backgroundImage: unit.imageUrl
-          ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
-          : undefined,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundColor: unit.imageUrl ? undefined : "#0a0e2e",
-      }}
-    >
+  // Effekt-Ebenen (fliegende Zahlen, Treffer-/Ultimate-Burst) müssen auch
+  // dann noch rendern, wenn der Slot HIER schon leer ist: eine soeben
+  // gestorbene Einheit wird server-seitig SOFORT aus dem Feld entfernt
+  // (clearDeadUnits läuft am Ende jeder applyAction, noch bevor der Snapshot
+  // gebaut wird) -- der Slot ist im Snapshot, der die Todes-Meldung trägt,
+  // also schon null. Ohne diese gemeinsame Ebene VOR der leer/voll-Weiche
+  // würden Flash, "Zerstört!"-Text und Burst bei jedem Kill lautlos
+  // verschluckt, weil der frühe Return unten sie nie erreicht hätte.
+  const overlayEffects = (
+    <>
       <FloatingLayer effects={floating} />
       {burst && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
@@ -496,6 +472,60 @@ function UnitSlot({
           />
         </div>
       )}
+    </>
+  );
+
+  if (!unit) {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          disabled={!selectable}
+          onClick={onClick}
+          className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
+            dragOver
+              ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
+              : selectable
+                ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
+                : "border-[color:var(--moba-accent-line)] bg-black/20 text-[color:var(--moba-ink-dim)]"
+          }`}
+        >
+          {selectable ? "Hierhin beschwören" : "Leer"}
+        </button>
+        {overlayEffects}
+      </div>
+    );
+  }
+
+  const config = getClassConfig(unit.class);
+  const ultimateReady = unit.isAlive && unit.rage >= unit.ultimateCost;
+  const chargePct = Math.min(100, (unit.rage / unit.ultimateCost) * 100);
+  const isDefense = unit.stance === "defense";
+
+  return (
+    <div className="relative">
+    <button
+      type="button"
+      disabled={!onClick}
+      onClick={onClick}
+      className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
+        isDefense
+          ? "border-[3px] border-sky-400 duel-defense-glow"
+          : selected
+            ? "border border-teal-400"
+            : ultimateReady
+              ? "border border-amber-400 duel-ultimate-glow"
+              : "border border-[color:var(--moba-accent-line)]"
+      } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
+      style={{
+        backgroundImage: unit.imageUrl
+          ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: unit.imageUrl ? undefined : "#0a0e2e",
+      }}
+    >
       {isDefense && unit.isAlive ? (
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-1 bg-sky-500/80 py-0.5">
           <img src={MOBA_ICON.shield} alt="" aria-hidden className="w-3 h-3 object-contain" />
@@ -541,6 +571,8 @@ function UnitSlot({
         <HpBar current={unit.currentHp} max={unit.maxHp} />
       </div>
     </button>
+    {overlayEffects}
+    </div>
   );
 }
 
@@ -596,6 +628,15 @@ export default function DuelLiveView({
     setTimeout(() => {
       setUltimateBursts((prev) => prev.filter((b) => b.id !== id));
     }, ULTIMATE_FX[unitClass].durationMs);
+  }
+
+  const [deathBursts, setDeathBursts] = useState<DeathBurst[]>([]);
+  function spawnDeathBurst(side: "self" | "opponent", slotIndex: number) {
+    const id = `death-${Date.now()}-${Math.random()}`;
+    setDeathBursts((prev) => [...prev, { id, side, slotIndex }]);
+    setTimeout(() => {
+      setDeathBursts((prev) => prev.filter((b) => b.id !== id));
+    }, DEATH_FX.durationMs);
   }
 
   // Portal auf document.body (wie LiveBattleView.tsx/MobileTopBar.tsx) — sonst
@@ -777,7 +818,6 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${target.side}-${target.unit.slotIndex}`, setFlashKeys, 450);
-            spawnImpactBurst(target.side, target.unit.slotIndex, true);
           }
           if (attacker) pulse(`${attacker.side}-${attacker.unit.slotIndex}`, setLungeKeys, 300);
           playDamageSoundFor(target?.unit.class, true);
@@ -825,7 +865,6 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${loser.side}-${loser.unit.slotIndex}`, setFlashKeys, 450);
-            spawnImpactBurst(loser.side, loser.unit.slotIndex, true);
           }
           if (winner) pulse(`${winner.side}-${winner.unit.slotIndex}`, setLungeKeys, 300);
           const damagedSide: "self" | "opponent" = entry.damagedTeam === newSnapshot.viewerTeam ? "self" : "opponent";
@@ -851,9 +890,19 @@ export default function DuelLiveView({
               tone: "crit",
             });
             pulse(`${unit.side}-${unit.unit.slotIndex}`, setFlashKeys, 450);
-            spawnImpactBurst(unit.side, unit.unit.slotIndex, true);
           }
           playDamageSoundFor(undefined, true);
+          break;
+        }
+        /** Deckt EINHEITLICH jede Todesursache ab (die Engine pusht diesen
+         *  Eintrag bei jedem Kill zusätzlich zum jeweiligen Kampf-Ergebnis-
+         *  Eintrag, siehe destroyUnit/applyRawDamageToUnit in duels-live.ts)
+         *  -- daher spawnen defenseDestroyed/attackClash/attackClashDraw
+         *  hier bewusst KEINEN eigenen Treffer-Burst mehr, sonst gäbe es zwei
+         *  Effekte auf demselben Slot. */
+        case "death": {
+          const unit = entry.unitId ? locateUnit(entry.unitId, candidates) : null;
+          if (unit) spawnDeathBurst(unit.side, unit.unit.slotIndex);
           break;
         }
         case "lpChange": {
@@ -1180,6 +1229,9 @@ export default function DuelLiveView({
   function ultimateBurstFor(side: "self" | "opponent", slotIndex: number) {
     return ultimateBursts.find((b) => b.side === side && b.slotIndex === slotIndex) ?? null;
   }
+  function deathBurstFor(side: "self" | "opponent", slotIndex: number) {
+    return deathBursts.find((b) => b.side === side && b.slotIndex === slotIndex) ?? null;
+  }
 
   function pickSummonSlot(slotIndex: number) {
     if (!pendingSummon) return;
@@ -1465,6 +1517,7 @@ export default function DuelLiveView({
                   lunging={lungeKeys.has(`opponent-${i}`)}
                   burst={burstFor("opponent", i)}
                   ultimateBurst={ultimateBurstFor("opponent", i)}
+                  deathBurst={deathBurstFor("opponent", i)}
                   selectable={selectable}
                   selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
                   statHighlight={statHighlight}
@@ -1536,6 +1589,7 @@ export default function DuelLiveView({
                     lunging={lungeKeys.has(`self-${i}`)}
                     burst={burstFor("self", i)}
                     ultimateBurst={ultimateBurstFor("self", i)}
+                    deathBurst={deathBurstFor("self", i)}
                     onClick={slotOnClick}
                   />
                 </div>
