@@ -7,6 +7,7 @@ import GameCover from "@/components/GameCover";
 import { AvatarStack } from "@/components/AvatarStack";
 import ClientTime from "@/components/ClientTime";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
@@ -46,7 +47,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
   const participants = ev.registrations.map(r => r.user);
   const date = new Date(ev.startAt);
   const isoStr = date.toISOString();
-  const serverTimeFallback = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
 
   const genre = ev.genre as string | null | undefined;
   const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
@@ -78,7 +79,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
       <div className="relative flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">
           {ev.title}
-          <span className="text-gray-500 font-normal"> · {date.toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
+          <span className="text-gray-500 font-normal"> · {formatBerlinDate(date, { day: "numeric", month: "numeric", year: "numeric" })}</span>
         </p>
 
         {/* Game + Genre */}
@@ -98,7 +99,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
 
         <div className="flex items-center gap-2 mt-1">
           <p className="text-[10px] text-gray-500">
-            {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long" })}
+            {formatBerlinDate(date, { day: "2-digit", month: "long" })}
             {" · "}
             <ClientTime iso={isoStr} serverDisplay={serverTimeFallback} /> Uhr
           </p>

@@ -5,6 +5,7 @@ import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/qu
 import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import QuestRegenerateButton from "./QuestRegenerateButton";
+import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [
   "Januar","Februar","März","April","Mai","Juni",
@@ -17,12 +18,13 @@ export default async function QuestsPage() {
   const userId = me.id;
   const isStaff = me.role === "admin" || me.role === "moderator";
 
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const daysLeft    = daysInMonth - now.getDate();
+  // Letzter Tag des Monats (UTC-Kalenderarithmetik ist zeitzonenunabhängig für reine Tageszahlen).
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const daysLeft    = daysInMonth - nowParts.day;
 
   const [, currentQuests, historyQuests] = await Promise.all([
     generateMonthlyQuests(month, year),

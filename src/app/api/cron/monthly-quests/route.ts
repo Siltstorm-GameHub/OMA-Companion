@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateMonthlyQuests } from "@/lib/quests";
+import { getBerlinDateParts } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,9 +14,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
   const result = await generateMonthlyQuests(month, year);
   if (!result) {

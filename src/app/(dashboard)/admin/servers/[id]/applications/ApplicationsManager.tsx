@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Check, X, Ban, Loader2 } from "lucide-react";
+import { formatBerlinDate } from "@/lib/time";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -25,7 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatBerlinDate(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export default function ApplicationsManager({ initialApplications }: { initialApplications: Application[] }) {

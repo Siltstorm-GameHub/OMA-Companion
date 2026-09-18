@@ -7,6 +7,7 @@ import { getScopeTitle } from "@/lib/wanderpocal";
 import DashboardChrome from "./DashboardChrome";
 import PartnerFooter from "@/components/PartnerFooter";
 import type { NewsItem } from "@/components/TopNewsFeed";
+import { getBerlinDateParts } from "@/lib/time";
 
 // Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:
 // Dashboard, Events, Rangliste als "Schaufenster" für nicht eingeloggte Besucher).
@@ -45,8 +46,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userId = session?.user?.id;
 
   const now = new Date();
-  const currentQuestMonth = now.getMonth() + 1;
-  const currentQuestYear = now.getFullYear();
+  const nowParts = getBerlinDateParts(now);
+  const currentQuestMonth = nowParts.month;
+  const currentQuestYear = nowParts.year;
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
   const [activeOrPollEvent, upcomingEvent, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal] = await Promise.all([

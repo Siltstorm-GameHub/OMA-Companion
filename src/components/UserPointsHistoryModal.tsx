@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/admin/Tabs";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 
 interface Transaction {
   id: string;
@@ -41,7 +42,7 @@ function groupByMonth(txs: Transaction[]) {
   const groups: Record<string, Transaction[]> = {};
   for (const tx of txs) {
     const d = new Date(tx.createdAt);
-    const key = d.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+    const key = formatBerlinDate(d, { month: "long", year: "numeric" });
     if (!groups[key]) groups[key] = [];
     groups[key].push(tx);
   }
@@ -295,9 +296,9 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                               </span>
                             </div>
                             <p className="text-[10px] text-gray-600 mt-0.5">
-                              {d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                              {formatBerlinDate(d, { day: "2-digit", month: "2-digit", year: "numeric" })}
                               {" · "}
-                              {d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                              {formatBerlinTime(d, { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
 

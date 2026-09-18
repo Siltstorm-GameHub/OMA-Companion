@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateMonthlyQuests } from "@/lib/quests";
+import { getBerlinDateParts } from "@/lib/time";
 
 export async function GET() {
   const me = await getSessionUser();
   if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = me.id;
 
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const month = nowParts.month;
+  const year = nowParts.year;
 
   // Auto-generate if none exist for this month
   await generateMonthlyQuests(month, year);
@@ -33,9 +34,9 @@ export async function POST() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const month = nowParts.month;
+  const year = nowParts.year;
 
   // Delete existing quests for this month (cascade deletes progress)
   const existing = await prisma.quest.findMany({ where: { month, year }, select: { id: true } });

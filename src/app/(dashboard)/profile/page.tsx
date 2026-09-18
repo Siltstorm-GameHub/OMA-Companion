@@ -18,6 +18,7 @@ import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection from "./SquadsSection";
 import ProfileEditor from "./ProfileEditor";
 import ProfileCompletion from "./ProfileCompletion";
+import { getBerlinDateParts, formatBerlinDate } from "@/lib/time";
 import ProfileStatTiles from "./ProfileStatTiles";
 import ProfileRecentEvents from "./ProfileRecentEvents";
 import CommunityJobsPanel from "./CommunityJobsPanel";
@@ -40,9 +41,10 @@ export default async function ProfilePage() {
 
   const userId = me.id;
 
-  const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const now = new Date();
+  const nowParts = getBerlinDateParts(now);
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
   const [[user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships], wanderpokalStatusData] =
     await Promise.all([
@@ -142,7 +144,7 @@ export default async function ProfilePage() {
   const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount }, earnedSystemKeys);
   const earnedBadges = badges.filter(b => b.earned);
-  const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const memberSince  = formatBerlinDate(user.createdAt, { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const totalUsers = await prisma.user.count();
@@ -187,7 +189,7 @@ export default async function ProfilePage() {
   };
 
   const editorBirthday = user.birthday
-    ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
+    ? (() => { const b = getBerlinDateParts(user.birthday!); return `${String(b.day).padStart(2, "0")}-${String(b.month).padStart(2, "0")}`; })()
     : null;
 
   // Aktueller Halter je Wanderpokal-Scope, für die "wer hält den Pokal
@@ -220,7 +222,7 @@ export default async function ProfilePage() {
     id:       p.id,
     title:    p.title,
     modelUrl: eventPokalModelUrl(p.category),
-    meta:     p.awardedAt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    meta:     formatBerlinDate(p.awardedAt, { day: "2-digit", month: "2-digit", year: "numeric" }),
   }));
 
   return (

@@ -38,6 +38,7 @@ import LeaderboardTabs from "@/components/battle-cards/LeaderboardTabs";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
+import { formatBerlinDate } from "@/lib/time";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
@@ -250,7 +251,7 @@ export default async function BattleCardsPage() {
               <p className="text-sm font-semibold text-[color:var(--moba-ink)]">Rangliste</p>
               {currentSeasonWindow && (
                 <p className="text-[10px] text-[color:var(--moba-ink-dim)]">
-                  Saison {currentSeasonWindow.seasonNumber} · endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
+                  Saison {currentSeasonWindow.seasonNumber} · endet am {formatBerlinDate(currentSeasonWindow.end)}
                 </p>
               )}
             </div>

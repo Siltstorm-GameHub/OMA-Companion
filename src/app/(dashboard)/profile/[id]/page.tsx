@@ -18,6 +18,7 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import BattleChallengeWidget from "@/components/battle-cards/BattleChallengeWidget";
 import ProfileStatTiles from "../ProfileStatTiles";
+import { getBerlinDateParts, formatBerlinDate } from "@/lib/time";
 import ProfileRecentEvents from "../ProfileRecentEvents";
 import ProfileQuestsAndTournaments from "../ProfileQuestsAndTournaments";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
@@ -73,8 +74,9 @@ export default async function PublicProfilePage({
   if (viewerId === id) redirect("/profile");
 
   const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const nowParts = getBerlinDateParts(now);
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
   const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, pokale, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships] =
     await Promise.all([
@@ -192,7 +194,7 @@ export default async function PublicProfilePage({
   const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount }, earnedSystemKeys);
   const earnedBadges = badges.filter(b => b.earned);
-  const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const memberSince  = formatBerlinDate(user.createdAt, { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const showcaseBadgeKeys: string[] = (() => {
@@ -223,7 +225,7 @@ export default async function PublicProfilePage({
   });
   const eventPokalItems: Trophy3DItem[] = pokale.map(p => ({
     id: p.id, title: p.title, modelUrl: eventPokalModelUrl(p.category),
-    meta: p.awardedAt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    meta: formatBerlinDate(p.awardedAt, { day: "2-digit", month: "2-digit", year: "numeric" }),
   }));
 
   return (

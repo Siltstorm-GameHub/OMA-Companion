@@ -5,6 +5,7 @@ import { Flag, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { formatBerlinDate } from "@/lib/time";
 
 /**
  * Generisches Anfechtungs-Formular: listet einzelne Bewertungen zu einem
@@ -95,7 +96,7 @@ export default function DisputeVotesModal({
                   {v.voter.username ?? v.voter.name}
                   {v.stars != null && <span className="text-amber-400"> · {v.stars}★</span>}
                 </span>
-                <span className="text-[10px] text-gray-600">{new Date(v.createdAt).toLocaleDateString("de-DE")}</span>
+                <span className="text-[10px] text-gray-600">{formatBerlinDate(v.createdAt)}</span>
               </div>
               {v.reason && <p className="text-[11px] text-gray-500">{v.reason}</p>}
               {v.disputed ? (

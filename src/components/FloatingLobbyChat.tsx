@@ -6,6 +6,7 @@ import { MessageCircle, X, Send, Bell, Settings } from "lucide-react";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Tabs } from "@/components/admin/Tabs";
+import { formatBerlinTime } from "@/lib/time";
 
 const NOTIF_DISPLAY_LIMIT = 30;
 
@@ -555,7 +556,7 @@ export function FloatingLobbyChat() {
                           {msg.content}
                         </div>
                         <span className="text-[10px] text-gray-600">
-                          {new Date(msg.createdAt).toLocaleTimeString("de-DE", {
+                          {formatBerlinTime(msg.createdAt, {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}

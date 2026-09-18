@@ -1,11 +1,12 @@
 import { prisma } from "./prisma";
 import { getRank, type RankEntry } from "./ranks";
 import { getBadgeDef } from "./badges";
+import { getBerlinDateParts } from "./time";
 
 /** Abgeschlossene Jahre, für die ein Rückblick sinnvoll ist (Beitrittsjahr bis letztes volles Jahr). */
 export function getAvailableReviewYears(memberSince: Date): number[] {
-  const currentYear = new Date().getFullYear();
-  const startYear   = memberSince.getFullYear();
+  const currentYear = getBerlinDateParts().year;
+  const startYear   = getBerlinDateParts(memberSince).year;
   const years: number[] = [];
   for (let y = currentYear - 1; y >= startYear; y--) years.push(y);
   return years;

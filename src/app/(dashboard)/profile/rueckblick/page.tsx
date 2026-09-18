@@ -15,6 +15,7 @@ import {
   Gift, CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal,
   ArrowRight, Award, Sparkles, Dices, Target, Heart, TrendingUp,
 } from "lucide-react";
+import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [
   "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -38,7 +39,7 @@ export default async function YearReviewPage({
   const availableYears = getAvailableReviewYears(user.createdAt);
 
   if (availableYears.length === 0) {
-    const nextYear = new Date().getFullYear() + 1;
+    const nextYear = getBerlinDateParts().year + 1;
     return (
       <div className="p-5 sm:p-6 max-w-3xl mx-auto animate-fade-in">
         <EmptyState

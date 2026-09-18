@@ -3,6 +3,7 @@ import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-s
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { sendDiscordMessage } from "./discord-rest";
 import { DISCORD_COLORS } from "./discord-colors";
+import { formatBerlinDateTime } from "./time";
 
 /**
  * Coach/Manager: erstellt Trainings-Termine für neue/unerfahrene Spieler und
@@ -51,7 +52,7 @@ export async function createTrainingSession(
       title: `🎓 Neuer Trainings-Termin: ${data.title.trim()}`,
       description: data.description || "Neuer Trainings-Termin — meldet euch in der App an!",
       color: DISCORD_COLORS.eventNew,
-      fields: [{ name: "📆 Start", value: data.startAt.toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" }), inline: true }],
+      fields: [{ name: "📆 Start", value: formatBerlinDateTime(data.startAt, { dateStyle: "full", timeStyle: "short" }), inline: true }],
       footer: { text: "OMA Companion · Community-Jobs · Coach" },
     }).catch(() => {});
   }

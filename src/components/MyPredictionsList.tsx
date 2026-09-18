@@ -4,6 +4,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Target, Trash2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import { formatBerlinDate } from "@/lib/time";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
 
@@ -72,7 +73,7 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
               <p className="text-xs text-gray-500 truncate">
                 Tipp: <span className="text-gray-400">{uname(p.predictedUser)}</span>
                 <span className="text-gray-700"> · Einsatz {p.wager}</span>
-                <span className="text-gray-700"> · {new Date(p.eventStartAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
+                <span className="text-gray-700"> · {formatBerlinDate(p.eventStartAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
               </p>
             </div>
             {p.resolved ? (

@@ -5,6 +5,7 @@ import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
 import RankedAvatar from "@/components/RankedAvatar";
+import { formatBerlinDateTime } from "@/lib/time";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -98,7 +99,7 @@ export default function BracketView({
                         {/* Scheduled time if set */}
                         {match.scheduledAt && (
                           <div className="px-2 py-1 rgba(255,255,255,0.04) border-b border-white/5 text-[10px] text-gray-500 text-center">
-                            {new Date(match.scheduledAt).toLocaleString("de-DE", {
+                            {formatBerlinDateTime(match.scheduledAt, {
                               day: "2-digit", month: "2-digit",
                               hour: "2-digit", minute: "2-digit",
                             })}

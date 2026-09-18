@@ -17,6 +17,7 @@ import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { SERIES_ICONS, resolveSeriesColor } from "@/lib/series-icons";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -53,11 +54,6 @@ const SETTINGS_TABS: { key: SettingsTabKey; label: string }[] = [
   { key: "stats",   label: "Stats & Bonus" },
   { key: "legacy",  label: "Legacy" },
 ];
-
-function toDatetimeLocal(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 // Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
 // auch direkt in der Eventreihe sieht, welches Event gerade Handlung braucht.
@@ -427,13 +423,13 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
 
   function openGenerateModal() {
     const suggested = suggestedNextDate();
-    setGenerateDateStr(toDatetimeLocal(suggested ?? new Date()));
+    setGenerateDateStr(toDatetimeLocalBerlin(suggested ?? new Date()));
     setShowGenerateModal(true);
   }
 
   async function generateNextEvent() {
     if (!generateDateStr) return;
-    const overrideDate = new Date(generateDateStr);
+    const overrideDate = fromDatetimeLocalBerlin(generateDateStr);
     if (isNaN(overrideDate.getTime())) { toast.error("Ungültiges Datum"); return; }
 
     setGeneratingNext(true);
@@ -445,7 +441,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
     setGeneratingNext(false);
     if (res.ok) {
       const { event: newEv } = await res.json();
-      const dateStr = new Date(newEv.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const dateStr = formatBerlinDate(newEv.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
       toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
       setShowGenerateModal(false);
       router.refresh();
@@ -1288,7 +1284,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                 const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-gray-500" };
                 const isFinished = ev.status === "finished";
                 const isFirstFinished = isFinished && sortedSeriesEvents[i - 1]?.status !== "finished";
-                const date = new Date(ev.startAt).toLocaleDateString("de-DE", {
+                const date = formatBerlinDate(ev.startAt, {
                   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
                 });
                 const attention = needsAttention(ev);
@@ -1313,7 +1309,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                           </span>
                         )}
                         {ev.title}
-                        <span className="text-gray-500 font-normal"> · {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
+                        <span className="text-gray-500 font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
                           <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
                             <EyeOff className="w-2.5 h-2.5" /> ausgeblendet

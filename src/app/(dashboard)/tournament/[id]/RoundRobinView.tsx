@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Clock, Trophy, StickyNote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
+import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -164,12 +165,12 @@ export default function RoundRobinView({
                   } ${played ? "opacity-75" : ""}`}>
                   {match.scheduledAt && (
                     <div className="text-center shrink-0 w-12">
-                      <p className="text-sm font-bold text-white">{new Date(match.scheduledAt).getDate()}</p>
+                      <p className="text-sm font-bold text-white">{getBerlinDateParts(match.scheduledAt).day}</p>
                       <p className="text-[10px] text-gray-500 uppercase">
-                        {new Date(match.scheduledAt).toLocaleString("de-DE", { month: "short" })}
+                        {formatBerlinDate(match.scheduledAt, { month: "short" })}
                       </p>
                       <p className="text-[10px] text-gray-600">
-                        {new Date(match.scheduledAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                        {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                   )}

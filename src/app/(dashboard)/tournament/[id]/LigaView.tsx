@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Trophy, Clock, StickyNote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
+import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -233,13 +234,13 @@ export default function LigaView({
                         {match.scheduledAt && !played && (
                           <div className="text-center shrink-0 w-12">
                             <p className="text-sm font-bold text-white">
-                              {new Date(match.scheduledAt).getDate()}
+                              {getBerlinDateParts(match.scheduledAt).day}
                             </p>
                             <p className="text-[10px] text-gray-500 uppercase">
-                              {new Date(match.scheduledAt).toLocaleString("de-DE", { month: "short" })}
+                              {formatBerlinDate(match.scheduledAt, { month: "short" })}
                             </p>
                             <p className="text-[10px] text-gray-600">
-                              {new Date(match.scheduledAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                              {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         )}
@@ -294,7 +295,7 @@ export default function LigaView({
                         {played && match.scheduledAt && (
                           <div className="shrink-0 text-[10px] text-gray-600 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {new Date(match.playedAt as string).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                            {formatBerlinDate(match.playedAt as string, { day: "2-digit", month: "2-digit" })}
                           </div>
                         )}
                       </div>

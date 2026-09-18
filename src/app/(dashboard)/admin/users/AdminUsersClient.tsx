@@ -6,6 +6,7 @@ import Link from "next/link";
 import { LogIn, UserX, UserMinus, History } from "lucide-react";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
 import { Badge, Select, Button } from "@/components/ui";
+import { formatBerlinDateTime } from "@/lib/time";
 
 type Role = "user" | "moderator" | "admin";
 
@@ -26,7 +27,7 @@ interface UserRow {
 
 function formatLastLogin(iso: string | null): string {
   if (!iso) return "–";
-  return new Date(iso).toLocaleString("de-DE", {
+  return formatBerlinDateTime(iso, {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });

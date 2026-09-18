@@ -7,6 +7,7 @@ import {
   getEffectiveCommunityJobs, getMaxSlots, getPayoutTiers, getVoteBonusTiers,
   resolveTier, resolveVoteBonusMultiplier,
 } from "./community-job-config";
+import { formatBerlinDate } from "./time";
 
 /** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
 async function syncDiscordRoleForUser(userId: string, jobKey: string | null): Promise<void> {
@@ -194,7 +195,7 @@ export async function applyForJob(
       orderBy: { revokedAt: "desc" },
     });
     if (lastRevoked?.reapplyBlockedUntil && lastRevoked.reapplyBlockedUntil > new Date()) {
-      return { error: `Bewerbung erst wieder ab ${lastRevoked.reapplyBlockedUntil.toLocaleDateString("de-DE")} möglich` };
+      return { error: `Bewerbung erst wieder ab ${formatBerlinDate(lastRevoked.reapplyBlockedUntil)} möglich` };
     }
   }
 
@@ -360,7 +361,7 @@ export async function renewContract(userId: string): Promise<RenewResult> {
 
   const now = new Date();
   const renewalOpensAt = addMonths(member.contractStartAt, RENEWAL_OPENS_AFTER_MONTHS);
-  if (now < renewalOpensAt) return { error: `Verlängerung erst ab ${renewalOpensAt.toLocaleDateString("de-DE")} möglich` };
+  if (now < renewalOpensAt) return { error: `Verlängerung erst ab ${formatBerlinDate(renewalOpensAt)} möglich` };
   if (now > member.contractEndAt) return { error: "Vertrag ist bereits abgelaufen" };
 
   const contractEndAt = addMonths(member.contractEndAt, CONTRACT_MONTHS);
@@ -576,7 +577,7 @@ export async function runContractReminderCheck(referenceDate: Date = new Date())
   });
   for (const m of members) {
     notifyJob("community_job_contract_expiring", m.userId, m.jobKey, {
-      "{contractEndDate}": m.contractEndAt.toLocaleDateString("de-DE"),
+      "{contractEndDate}": formatBerlinDate(m.contractEndAt),
     });
   }
   return { reminded: members.length };

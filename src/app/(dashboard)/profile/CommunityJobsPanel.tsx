@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
+import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 import { upload } from "@vercel/blob/client";
 import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, CLIP_UPLOAD_PREFIX, isVideoUrl } from "@/lib/upload-limits";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
@@ -320,7 +321,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           <div>
             <p className="text-sm font-semibold text-white">Büro</p>
             <p className="text-[11px] text-gray-500">
-              Vertrag bis {contractEnd.toLocaleDateString("de-DE")}
+              Vertrag bis {formatBerlinDate(contractEnd)}
               {membership.status === "WARNED" && <span className="text-amber-400"> · Verwarnt</span>}
             </p>
           </div>
@@ -529,7 +530,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           <div className="space-y-1">
             {payouts.map((p, i) => (
               <div key={p.id} className={`flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 ${i === 0 ? "bg-white/[0.04]" : ""}`}>
-                <span className="text-gray-500 w-20 shrink-0">{new Date(p.weekStart).toLocaleDateString("de-DE")}</span>
+                <span className="text-gray-500 w-20 shrink-0">{formatBerlinDate(p.weekStart)}</span>
                 <span className="text-gray-400 truncate flex-1 text-center">{p.tierLabel ?? "Keine Bewertung"}</span>
                 <span className={`font-medium w-24 text-right ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
               </div>
@@ -893,7 +894,7 @@ function TrainingSessionList() {
     <div className="space-y-1.5">
       {items.map(s => (
         <div key={s.id} className="flex items-center justify-between text-xs gap-2">
-          <span className="text-gray-300 truncate">{s.title} — {new Date(s.startAt).toLocaleString("de-DE")}</span>
+          <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}</span>
           <span className="flex items-center gap-2 shrink-0">
             <span className="text-gray-600">{s._count.signups} angemeldet</span>
             <Button size="sm" variant="outline" disabled={busy === s.id} onClick={() => signup(s.id)}>Anmelden</Button>
@@ -1266,7 +1267,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, onDone }: { eventId?
   return (
     <div className="space-y-3">
       <Select value={eventId} onChange={e => setEventId(e.target.value)} className="w-full">
-        {events.map(e => <option key={e.id} value={e.id}>{e.title} — {new Date(e.startAt).toLocaleDateString("de-DE")}</option>)}
+        {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
       </Select>
 
       <div className="flex gap-1.5">

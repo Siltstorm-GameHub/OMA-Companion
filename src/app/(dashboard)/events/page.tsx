@@ -18,6 +18,7 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
+import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
 import EventPredictionsPanel from "./EventPredictionsPanel";
@@ -139,8 +140,12 @@ export default async function EventsPage() {
 
   // Anstehende Events nach Monat gruppieren, damit die Liste bei vielen
   // Events pro Monat nicht unübersichtlich wird (Monate sind über Sticky-Header abgrenzbar).
-  const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
-  const monthKey = (d: Date | null) => d ? `${d.getFullYear()}-${d.getMonth()}` : "tbd";
+  const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: BERLIN_TZ });
+  const monthKey = (d: Date | null) => {
+    if (!d) return "tbd";
+    const p = getBerlinDateParts(d);
+    return `${p.year}-${p.month - 1}`;
+  };
   const monthLabel = (d: Date | null) => {
     if (!d) return "Termin TBD";
     const label = MONTH_FORMATTER.format(d);
@@ -229,7 +234,7 @@ export default async function EventsPage() {
             </div>
             <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
               <span className="flex items-center gap-1 font-medium tabular-nums">
-                {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
+                {getBerlinDateParts(date).day}. {formatBerlinDate(date, { month: "short" })}
               </span>
               <span className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
@@ -286,7 +291,7 @@ export default async function EventsPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
             <p className="text-[11px] text-gray-500">
-              {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short" })}
+              {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short" })}
               {ev.series && <> · {ev.series.name}</>}
             </p>
           </div>
@@ -399,7 +404,7 @@ export default async function EventsPage() {
                   {ev.title}
                 </p>
                 <p className="text-[10px] text-gray-600">
-                  {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                  {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                   {ev.series && <> · {ev.series.name}</>}
                 </p>
               </div>
@@ -440,7 +445,7 @@ export default async function EventsPage() {
                       {ev.title}
                     </Link>
                     <p className="text-[10px] text-gray-600">
-                      {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                      {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                       {ev.series && <> · {ev.series.name}</>}
                     </p>
                   </div>

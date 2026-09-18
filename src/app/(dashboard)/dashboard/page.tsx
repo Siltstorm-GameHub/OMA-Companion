@@ -18,6 +18,7 @@ import EventCoverDefault from "@/components/EventCoverDefault";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
+import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -171,8 +172,9 @@ export default async function DashboardPage() {
   const userRole    = sessionUser?.role ?? "user";
 
   const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const nowParts = getBerlinDateParts(now);
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
   const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
     await getGlobalDashboardData();
@@ -305,9 +307,14 @@ export default async function DashboardPage() {
   const myPoints     = sessionUser?.points ?? 0;
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 
-  const startOfThisMonth = new Date(year, month - 1, 1);
-  const startOfLastMonth = new Date(year, month - 2, 1);
-  const startOfNextMonth = new Date(year, month, 1);
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const lastMonth = month === 1 ? 12 : month - 1;
+  const lastMonthYear = month === 1 ? year - 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextMonthYear = month === 12 ? year + 1 : year;
+  const startOfThisMonth = fromDatetimeLocalBerlin(`${year}-${pad2(month)}-01T00:00`);
+  const startOfLastMonth = fromDatetimeLocalBerlin(`${lastMonthYear}-${pad2(lastMonth)}-01T00:00`);
+  const startOfNextMonth = fromDatetimeLocalBerlin(`${nextMonthYear}-${pad2(nextMonth)}-01T00:00`);
 
   // Bei mehreren gleichauf liegenden Gewinner-Clips rotiert die Dashboard-Kachel client-seitig durch alle
   const winnerNominationIds = finishedClipContest?.winnerNominationIds ?? [];
@@ -1071,7 +1078,7 @@ export default async function DashboardPage() {
                     {ev.summary}
                   </p>
                   <p className="text-[10px] text-gray-700 mt-2">
-                    {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" })}
+                    {formatBerlinDate(ev.startAt, { day: "numeric", month: "short", year: "numeric" })}
                     {ev.game ? ` · ${ev.game}` : ""}
                   </p>
                 </Link>

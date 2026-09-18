@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import SeriesIcon from "@/components/SeriesIcon";
 import SquadRosterManager from "@/components/squads/SquadRosterManager";
+import { formatBerlinDate } from "@/lib/time";
 
 const EVENT_STATUS_LABEL: Record<string, string> = {
   open: "Offen", active: "Läuft", closed: "Voll", umfrage: "Umfragephase", finished: "Beendet",
@@ -152,7 +153,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
                   <span className="text-sm text-white flex-1 truncate">{e.title}</span>
                   {e.game && <span className="text-xs text-gray-500 shrink-0">{e.game}</span>}
                   <span className="text-xs text-gray-600 shrink-0 tabular-nums">
-                    {new Date(e.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {formatBerlinDate(e.startAt, { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-gray-400 shrink-0">
                     {e.hidden ? "Ausgeblendet" : EVENT_STATUS_LABEL[e.status] ?? e.status}

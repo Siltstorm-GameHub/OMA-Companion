@@ -3,19 +3,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
+import { getBerlinDateParts } from "@/lib/time";
 
 function toDateInputValue(d: Date) {
-  // Lokale Kalender-Bestandteile verwenden statt toISOString() (das nach UTC
-  // konvertiert und dadurch in Zeitzonen östlich von UTC einen Tag/Monat zurückspringt).
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  // Berlin-Kalendertag statt Browser-/Server-Lokalzeit — die Community ist ausschließlich
+  // für Europe/Berlin gedacht, unabhängig davon, in welcher Zeitzone der Browser läuft.
+  const { year, month, day } = getBerlinDateParts(d);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function defaultPeriodStart() {
-  const now = new Date();
-  return toDateInputValue(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const now = getBerlinDateParts();
+  const month = now.month === 1 ? 12 : now.month - 1;
+  const year = now.month === 1 ? now.year - 1 : now.year;
+  return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
 function defaultPeriodEnd() {

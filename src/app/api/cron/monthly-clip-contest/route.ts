@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { collectNominations, finalizeContest, notifyNewContest } from "@/lib/clip-contest";
+import { getBerlinDateParts, fromDatetimeLocalBerlin } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -27,8 +28,9 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 2. Auto-create a contest for last month if nothing is running/scheduled ──
-  // Only attempted on the 1st, to avoid needless Twitch API calls every day.
-  if (now.getDate() !== 1) {
+  // Only attempted on the 1st (Berlin-Kalendertag), to avoid needless Twitch API calls every day.
+  const nowParts = getBerlinDateParts(now);
+  if (nowParts.day !== 1) {
     return NextResponse.json({ ok: true, results });
   }
 
@@ -38,10 +40,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, results });
   }
 
-  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const monthStart = new Date(prevYear, prevMonth - 1, 1);
-  const monthEnd = new Date(prevYear, prevMonth, 1);
+  const prevMonth = nowParts.month === 1 ? 12 : nowParts.month - 1;
+  const prevYear = nowParts.month === 1 ? nowParts.year - 1 : nowParts.year;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const monthStart = fromDatetimeLocalBerlin(`${prevYear}-${pad(prevMonth)}-01T00:00`);
+  const afterMonth = prevMonth === 12 ? 1 : prevMonth + 1;
+  const afterYear = prevMonth === 12 ? prevYear + 1 : prevYear;
+  const monthEnd = fromDatetimeLocalBerlin(`${afterYear}-${pad(afterMonth)}-01T00:00`);
 
   const existing = await prisma.monthlyClipContest.findFirst({
     where: { periodStart: { gte: monthStart, lt: monthEnd } },

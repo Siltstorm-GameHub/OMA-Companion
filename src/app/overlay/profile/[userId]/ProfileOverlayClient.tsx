@@ -5,6 +5,7 @@ import { Calendar, Clock, Gamepad2 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import { getGameFallbackGradient } from "@/lib/game-cover";
 import { BRAND_LOGO } from "@/lib/brand";
+import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 import {
   MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, TopEdge,
   panelMotionStyle, combinedElementStyle, useVisibilityCycles,
@@ -327,8 +328,8 @@ function NextEventTile({
 
   const event = events[index] ?? events[0];
   const date = new Date(event.startAt);
-  const dateLabel = date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
-  const timeLabel = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = formatBerlinDate(date, { weekday: "short", day: "2-digit", month: "2-digit" });
+  const timeLabel = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
   const showCover = event.coverUrl && !coverFailed;
 
   return (

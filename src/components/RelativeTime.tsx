@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 
 function formatRelative(date: Date): string {
   const now   = new Date();
@@ -15,7 +16,7 @@ function formatRelative(date: Date): string {
   if (absSec < 2592000){ const w = Math.round(absSec / 604800); return future ? `in ${w} Wo.`    : `vor ${w} Wo.`;   }
 
   // Absolute date for older/farther entries
-  return date.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" });
+  return formatBerlinDate(date, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 interface RelativeTimeProps {
@@ -41,7 +42,7 @@ export function RelativeTime({ date, showTooltip = true, className }: RelativeTi
     return () => clearInterval(id);
   }, [d]);
 
-  const absolute = d.toLocaleString("de-DE", {
+  const absolute = formatBerlinDateTime(d, {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });

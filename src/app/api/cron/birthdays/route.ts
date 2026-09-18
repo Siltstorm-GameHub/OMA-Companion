@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { awardPoints } from "@/lib/points";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import { getBerlinDateParts } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,9 @@ export async function GET(req: NextRequest) {
   }
 
   const now   = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day   = String(now.getDate()).padStart(2, "0");
+  const nowParts = getBerlinDateParts(now);
+  const month = String(nowParts.month).padStart(2, "0");
+  const day   = String(nowParts.day).padStart(2, "0");
 
   const usersWithBirthday = await prisma.user.findMany({
     where: {
@@ -37,8 +39,9 @@ export async function GET(req: NextRequest) {
 
   for (const user of usersWithBirthday) {
     if (!user.birthday) continue;
-    const bMonth = String(user.birthday.getMonth() + 1).padStart(2, "0");
-    const bDay   = String(user.birthday.getDate()).padStart(2, "0");
+    const bParts = getBerlinDateParts(user.birthday);
+    const bMonth = String(bParts.month).padStart(2, "0");
+    const bDay   = String(bParts.day).padStart(2, "0");
     if (bMonth !== month || bDay !== day) continue;
 
     // 24h Boost aktivieren

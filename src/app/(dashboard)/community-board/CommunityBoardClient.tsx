@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
 import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
+import { formatBerlinDate } from "@/lib/time";
 
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
@@ -85,7 +86,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
           <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
           <div className="min-w-0">
             <span className="block text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span>
-            <span className="text-[10px] text-gray-600">{new Date(entry.publishedAt).toLocaleDateString("de-DE")}</span>
+            <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
           </div>
         </a>
         {entry.kind === "marketing_post" && (
@@ -282,7 +283,7 @@ function CommentSection({
                     <RankedAvatar rankPoints={c.author.rankPoints} src={c.author.image} alt={authorLabel(c.author)} size={16} />
                     <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span>
                   </a>
-                  <span className="text-[10px] text-gray-600 shrink-0">{new Date(c.createdAt).toLocaleDateString("de-DE")}</span>
+                  <span className="text-[10px] text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
                 </div>
                 <p className="text-xs text-gray-300 whitespace-pre-wrap">{c.bodyMarkdown}</p>
                 <div className="flex items-center gap-2">

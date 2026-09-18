@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { calcStreak } from "@/lib/streak";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet, Lightbulb } from "lucide-react";
+import { formatBerlinDate } from "@/lib/time";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
@@ -251,7 +252,7 @@ export default async function DonationsPage() {
                   <p className="text-sm font-semibold text-white">{e.title}</p>
                   {e.description && <p className="text-xs text-gray-500 mt-0.5">{e.description}</p>}
                   <p className="text-xs text-gray-600 mt-1">
-                    {new Date(e.date).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+                    {formatBerlinDate(e.date, { day: "2-digit", month: "long", year: "numeric" })}
                   </p>
                 </div>
                 <span className="text-sm font-bold text-red-400 shrink-0 tabular-nums">−{fmt(e.amount)} €</span>

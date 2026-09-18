@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { formatBerlinDate } from "@/lib/time";
 
 export async function POST(
   _req: NextRequest,
@@ -49,7 +50,7 @@ export async function POST(
 
 Event: ${event.title}
 Spiel: ${event.game ?? "unbekannt"}
-Datum: ${new Date(event.startAt).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+Datum: ${formatBerlinDate(event.startAt, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
 Teilnehmer (${participants.length}): ${participants.join(", ")}
 ${rankingNames ? `Platzierungen: ${rankingNames}` : ""}
 ${mvpName ? `MVP: ${mvpName}` : ""}

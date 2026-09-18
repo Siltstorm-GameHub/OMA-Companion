@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getBerlinDateParts } from "@/lib/time";
 
 export async function GET() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const currentMonth = nowParts.month;
+  const currentYear = nowParts.year;
 
   // Active voting contest: last month's clips being voted on this month
   const activeContest = await prisma.monthlyClipContest.findFirst({

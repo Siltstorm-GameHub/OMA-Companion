@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus, Pencil, Check, X, Ban } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { formatBerlinDate } from "@/lib/time";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -294,7 +295,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                 {contest.status === "voting" && (
                   <>
                     <span>·</span>
-                    <span>endet {new Date(contest.votingEndsAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                    <span>endet {formatBerlinDate(contest.votingEndsAt, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                     <button
                       onClick={() => finishNow(contest.id)}
                       disabled={finishing === contest.id}

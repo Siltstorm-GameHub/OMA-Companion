@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyN
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
+import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
 
 /** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen (1 statt 1.00, 1.5 statt 1.50). */
 function fmtUpTo2(n: number): string {
@@ -444,12 +445,12 @@ export default function FfaView({
               <div key={match.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
-                    <p className="text-sm font-bold text-white">{new Date(match.scheduledAt).getDate()}</p>
+                    <p className="text-sm font-bold text-white">{getBerlinDateParts(match.scheduledAt).day}</p>
                     <p className="text-[10px] text-gray-500 uppercase">
-                      {new Date(match.scheduledAt).toLocaleString("de-DE", { month: "short" })}
+                      {formatBerlinDate(match.scheduledAt, { month: "short" })}
                     </p>
                     <p className="text-[10px] text-gray-600">
-                      {new Date(match.scheduledAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                      {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 )}
@@ -528,7 +529,7 @@ export default function FfaView({
                       {match.playedAt && (
                         <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />
-                          {new Date(match.playedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                          {formatBerlinDate(match.playedAt, { day: "2-digit", month: "2-digit" })}
                         </span>
                       )}
                       {isAvg && matchWinnerId && (

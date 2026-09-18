@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatBerlinDate } from "@/lib/time";
 
 /**
  * "Letzte Events"-Liste — extrahiert aus `page.tsx`, damit sie sowohl von der
@@ -43,7 +44,7 @@ export default function ProfileRecentEvents({ eventRegs, userId }: Props) {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">{reg.event.title}</p>
                 <p className="text-[10px] text-gray-600 mt-0.5">
-                  {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                  {formatBerlinDate(reg.event.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                   {reg.event.game ? ` · ${reg.event.game}` : ""}
                 </p>
               </div>

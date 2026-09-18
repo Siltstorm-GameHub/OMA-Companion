@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
 import { sendDiscordDM } from "./discord-rest";
 import type { QuestType } from "./quests-meta";
+import { getBerlinDateParts } from "./time";
 
 export type { QuestType } from "./quests-meta";
 export { QUEST_TYPE_META } from "./quests-meta";
@@ -140,9 +141,9 @@ export async function generateMonthlyQuests(month: number, year: number) {
 
   notifyNewQuests(month, year, created).catch(() => {});
 
-  const today = new Date();
-  if (today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() > 2) {
-    warnLateGeneration(month, year, today.getDate()).catch(() => {});
+  const today = getBerlinDateParts();
+  if (today.year === year && today.month === month && today.day > 2) {
+    warnLateGeneration(month, year, today.day).catch(() => {});
   }
 
   return created;
@@ -159,9 +160,9 @@ export async function updateQuestProgress(
   type: QuestType,
   increment: number
 ): Promise<{ title: string; reward: number }[]> {
-  const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const nowParts = getBerlinDateParts();
+  const month = nowParts.month;
+  const year  = nowParts.year;
 
   let quests = await prisma.quest.findMany({ where: { type, month, year } });
   if (!quests.length) {

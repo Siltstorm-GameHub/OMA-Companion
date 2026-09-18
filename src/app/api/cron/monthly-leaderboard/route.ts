@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,10 +16,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now              = new Date();
-  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
-  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(),     1, 0, 0, 0, 0);
-  const monthName        = firstOfLastMonth.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const now = new Date();
+  const nowParts = getBerlinDateParts(now);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const lastMonth = nowParts.month === 1 ? 12 : nowParts.month - 1;
+  const lastMonthYear = nowParts.month === 1 ? nowParts.year - 1 : nowParts.year;
+  const firstOfLastMonth = fromDatetimeLocalBerlin(`${lastMonthYear}-${pad(lastMonth)}-01T00:00`);
+  const firstOfThisMonth = fromDatetimeLocalBerlin(`${nowParts.year}-${pad(nowParts.month)}-01T00:00`);
+  const monthName        = formatBerlinDate(firstOfLastMonth, { month: "long", year: "numeric" });
 
   const raw = await prisma.pointTransaction.groupBy({
     by:    ["userId"],

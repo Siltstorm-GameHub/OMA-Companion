@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getBerlinDateParts } from "@/lib/time";
 
 // Public: Gesamtpool, Ausgaben, Spender-Übersicht (ohne Beträge), Monats-Historie
 export async function GET() {
@@ -65,9 +66,9 @@ function calcStreak(entries: { year: number; month: number }[]): number {
     a.year !== b.year ? b.year - a.year : b.month - a.month
   );
 
-  const now = new Date();
-  let checkYear  = now.getFullYear();
-  let checkMonth = now.getMonth() + 1; // aktuelle Monat
+  const nowParts = getBerlinDateParts();
+  let checkYear  = nowParts.year;
+  let checkMonth = nowParts.month; // aktuelle Monat
 
   let streak = 0;
   for (const entry of sorted) {

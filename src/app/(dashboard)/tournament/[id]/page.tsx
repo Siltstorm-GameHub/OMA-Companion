@@ -15,6 +15,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
+import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
@@ -551,7 +552,7 @@ export default async function TournamentDetailPage({
   const heroFirstPlaceRankPts  = firstPlace?.rankPoints ?? placementRankPts(1);
   const hasHeroFirstPlace      = heroFirstPlaceCoins > 0 || heroFirstPlaceRankPts > 0;
   const date = new Date(event.startAt);
-  const serverTimeFallback = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
 
   // Stats für Header
   const playedMatches = event.matches.filter(m =>
@@ -669,7 +670,7 @@ export default async function TournamentDetailPage({
               )}
               <span className="flex items-center gap-1.5 text-sm text-gray-400">
                 <Clock className="w-3.5 h-3.5" />
-                {date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
                 {" · "}
                 <ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
               </span>
