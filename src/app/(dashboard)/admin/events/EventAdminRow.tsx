@@ -8,6 +8,7 @@ import {
   Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, BarChart2, Plus, CheckCircle2,
 } from "lucide-react";
 import { describeMonthlyModes } from "@/lib/recurrence";
+import { formatBerlinDate } from "@/lib/time";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
@@ -492,7 +493,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     setGeneratingNext(false);
     if (res.ok) {
       const { event: newEv } = await res.json();
-      const dateStr = new Date(newEv.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const dateStr = formatBerlinDate(newEv.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
       toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
       router.refresh();
     } else {
@@ -571,7 +572,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
               {event.type === "tournament" && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              {new Date(event.startAt).toLocaleDateString("de-DE")}
+              {formatBerlinDate(event.startAt)}
               {event.series && <span className="text-teal-700 ml-1.5">· {event.series.name}</span>}
               {" · "}{event._count.registrations} Anmeldungen{event.maxPlayers ? ` / ${event.maxPlayers}` : ""}
               {" · "}{event.game ?? "Kein Spiel"}
@@ -828,7 +829,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             return (
                               <div className="mt-2 space-y-1.5">
                                 <p className="text-[10px] text-gray-500">
-                                  Basierend auf dem Datum dieses Events ({new Date(event.startAt).toLocaleDateString("de-DE")}):
+                                  Basierend auf dem Datum dieses Events ({formatBerlinDate(event.startAt)}):
                                 </p>
                                 {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
                                   <button

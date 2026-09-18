@@ -14,6 +14,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import TournamentManagerMobile from "./TournamentManagerMobile";
+import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -47,17 +48,15 @@ const STATUS_OPTIONS = ["active", "finished", "pending"];
 export const userName = (u: User) => u.username ?? u.name ?? "?";
 
 export function fmtDate(iso: string | Date) {
-  return new Date(iso).toLocaleString("de-DE", {
+  return formatBerlinDateTime(iso, {
     day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 }
 
-/** Aktueller Zeitpunkt im Format, das <input type="datetime-local"> erwartet (lokale Zeitzone,
- *  nicht UTC) — Basis für die Vorbelegung "Datum & Uhrzeit" beim Öffnen von "Match hinzufügen". */
+/** Aktueller Zeitpunkt im Format, das <input type="datetime-local"> erwartet (als Berlin-
+ *  Wanduhrzeit) — Basis für die Vorbelegung "Datum & Uhrzeit" beim Öffnen von "Match hinzufügen". */
 export function nowForDatetimeLocal(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toDatetimeLocalBerlin(new Date());
 }
 
 // ─── Creation Form ────────────────────────────────────────────────────────────
@@ -560,7 +559,7 @@ export default function TournamentManager({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: mTitle || null, scheduledAt: mScheduled ? new Date(mScheduled).toISOString() : null,
+        title: mTitle || null, scheduledAt: mScheduled ? fromDatetimeLocalBerlin(mScheduled).toISOString() : null,
         notes: mNotes || null, round: mRound,
         player1Id: is1v1 ? mP1 || null : null,
         player2Id: is1v1 ? mP2 || null : null,

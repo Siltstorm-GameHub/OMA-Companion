@@ -23,6 +23,7 @@ import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
 import { getClassConfig } from "@/components/battle-cards/BattleCardView";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -231,12 +232,6 @@ function parseSpectatorReward(json: string | null | undefined) {
   try { return JSON.parse(json) as { coins: number; rankPoints: number }; }
   catch { return { coins: 5, rankPoints: 0 }; }
 }
-function toDatetimeLocal(d: Date | string) {
-  const dt = new Date(d);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-}
-
 type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -258,14 +253,14 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [game, setGame]               = useState<string>(event.game ?? "");
   const [genre, setGenre]             = useState<EventGenre | null>(event.genre ?? null);
   const [category, setCategory]       = useState<EventCategory>(event.category ?? "casual");
-  const [startAt, setStartAt]         = useState<string>(toDatetimeLocal(event.startAt));
+  const [startAt, setStartAt]         = useState<string>(toDatetimeLocalBerlin(event.startAt));
   const [maxPlayers, setMaxPlayers]   = useState<string>(event.maxPlayers?.toString() ?? "");
   const [discordChannelId, setDiscordChannelId] = useState<string>(event.discordChannelId ?? "");
   const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
 
   /* ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ── */
   const isGemsTournament = game === "OMA Gems";
-  const [gemsEndAt, setGemsEndAt] = useState<string>(event.gemsTournament ? toDatetimeLocal(event.gemsTournament.endAt) : "");
+  const [gemsEndAt, setGemsEndAt] = useState<string>(event.gemsTournament ? toDatetimeLocalBerlin(event.gemsTournament.endAt) : "");
   const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(event.gemsTournament?.difficulty ?? "MEDIUM");
   const [gemsMaxAttempts, setGemsMaxAttempts] = useState<string>(String(event.gemsTournament?.maxAttemptsPerUser ?? 3));
   // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
@@ -488,7 +483,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         game: game.trim() || null,
         genre: genre || null,
         category,
-        startAt: new Date(startAt).toISOString(),
+        startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
         maxPlayers: maxPlayers ? Number(maxPlayers) : null,
         discordChannelId: discordChannelId.trim() || null,
         placementRewardsJson: JSON.stringify({
@@ -504,7 +499,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
         ...(isGemsTournament && gemsEndAt && {
-          gemsEndAt: new Date(gemsEndAt).toISOString(),
+          gemsEndAt: fromDatetimeLocalBerlin(gemsEndAt).toISOString(),
           gemsDifficulty,
           gemsMaxAttempts: Number(gemsMaxAttempts) || 3,
           ...(gemsMonsterIds.length > 0 && { gemsMonsterIds }),

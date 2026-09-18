@@ -10,6 +10,7 @@ import Link from "next/link";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import GameNameInput from "@/components/GameNameInput";
 import EventAdminRow from "./EventAdminRow";
+import { formatBerlinDate } from "@/lib/time";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import { TOURNAMENT_FORMATS, LEGACY_LIGA_OPTION } from "@/lib/tournament-formats";
 
@@ -142,7 +143,7 @@ export default function SeriesAdminRow({
     setGeneratingNext(false);
     if (res.ok) {
       const { event: newEv } = await res.json();
-      const dateStr = new Date(newEv.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      const dateStr = formatBerlinDate(newEv.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
       toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
       router.refresh();
     } else {

@@ -14,6 +14,7 @@ import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import InfoTooltip from "@/components/InfoTooltip";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
 import { getClassConfig } from "@/components/battle-cards/BattleCardView";
+import { fromDatetimeLocalBerlin, formatBerlinDateTime, formatBerlinDate } from "@/lib/time";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -255,15 +256,19 @@ export default function EventSetupWizard({
 
   const monthlyDescriptions = useMemo(() => {
     if (!seriesStartDate || recurrenceType !== "monthly") return null;
-    try { return describeMonthlyModes(new Date(seriesStartDate)); } catch { return null; }
+    try { return describeMonthlyModes(fromDatetimeLocalBerlin(seriesStartDate)); } catch { return null; }
   }, [seriesStartDate, recurrenceType]);
 
   const previewDates = useMemo(() => {
     if (!seriesStartDate) return [];
-    const start = new Date(seriesStartDate);
+    let start: Date;
+    try { start = fromDatetimeLocalBerlin(seriesStartDate); } catch { return []; }
     if (isNaN(start.getTime())) return [];
     if (recurrenceType === "none") return [start];
-    const endLimit = seriesEndDate ? new Date(seriesEndDate + "T23:59:59") : null;
+    let endLimit: Date | null = null;
+    if (seriesEndDate) {
+      try { endLimit = fromDatetimeLocalBerlin(seriesEndDate + "T23:59:59"); } catch { endLimit = null; }
+    }
     const dates: Date[] = [start];
     // With endDate: generate ALL dates (no cap) to show exact count
     // Without endDate: preview only next 5
@@ -361,7 +366,7 @@ export default function EventSetupWizard({
 
     const body: Record<string, unknown> = {
       title: title.trim(),
-      startAt: new Date(startAt).toISOString(),
+      startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
       game: game || null,
       genre: genre || null,
       platform: platforms.length > 0 ? platforms.join(", ") : null,
@@ -391,7 +396,7 @@ export default function EventSetupWizard({
     }
 
     if (isGemsTournament && gemsEndAt) {
-      body.gemsEndAt = new Date(gemsEndAt).toISOString();
+      body.gemsEndAt = fromDatetimeLocalBerlin(gemsEndAt).toISOString();
       body.gemsDifficulty = gemsDifficulty;
       body.gemsMaxAttempts = Number(gemsMaxAttempts) || 3;
       if (gemsMonsterIds.length > 0) body.gemsMonsterIds = gemsMonsterIds;
@@ -460,8 +465,8 @@ export default function EventSetupWizard({
         placementRewardsJson: { placements: eventType === "community" ? placements.map(p => ({ ...p, rankPoints: 0 })) : placements },
         pollsConfigJson: polls.length > 0 ? polls : null,
         seriesStatConfig,
-        startDate: seriesStartDate ? new Date(seriesStartDate).toISOString() : null,
-        endDate: seriesEndDate ? new Date(seriesEndDate + "T23:59:59").toISOString() : null,
+        startDate: seriesStartDate ? fromDatetimeLocalBerlin(seriesStartDate).toISOString() : null,
+        endDate: seriesEndDate ? fromDatetimeLocalBerlin(seriesEndDate + "T23:59:59").toISOString() : null,
         eventType,
         hidden: seriesHidden,
         registrationLocked: seriesRegistrationLocked,
@@ -1095,7 +1100,7 @@ export default function EventSetupWizard({
               {previewDates.map((d, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
                   <span className="text-teal-500 text-xs w-5 text-right shrink-0">#{i + 1}</span>
-                  <span>{d.toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                  <span>{formatBerlinDateTime(d, { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
               ))}
             </div>
@@ -1624,13 +1629,13 @@ export default function EventSetupWizard({
             </div>
           </div>
           <div className="space-y-1 text-sm text-gray-300">
-            {startAt && <p>📅 {new Date(startAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>}
+            {startAt && <p>📅 {formatBerlinDateTime(fromDatetimeLocalBerlin(startAt), { dateStyle: "medium", timeStyle: "short" })}</p>}
             {game && <p>🎮 {game}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
             {maxPlayers && <p>👥 Max. {maxPlayers} Spieler</p>}
             {spectatorMode && <p>👁️ Zuschauer-Modus aktiv</p>}
             {eventType === "tournament" && !isGemsTournament && <p>⚔️ Format: {FORMATS.find(f => f.value === format)?.label}</p>}
             {isGemsTournament && gemsEndAt && (
-              <p>💎 Turnier bis {new Date(gemsEndAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
+              <p>💎 Turnier bis {formatBerlinDateTime(fromDatetimeLocalBerlin(gemsEndAt), { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
             )}
             {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
             {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}
@@ -1675,8 +1680,8 @@ export default function EventSetupWizard({
             {fixedGame && <p>🎮 {fixedGame}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
             {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === seriesFormat)?.label}</p>}
             <p>🔄 Wiederholung: {recLabel}</p>
-            {seriesStartDate && <p>📅 Start: {new Date(seriesStartDate).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>}
-            {seriesEndDate && <p>⏹️ Ende: {new Date(seriesEndDate).toLocaleDateString("de-DE", { dateStyle: "medium" })}</p>}
+            {seriesStartDate && <p>📅 Start: {formatBerlinDateTime(fromDatetimeLocalBerlin(seriesStartDate), { dateStyle: "medium", timeStyle: "short" })}</p>}
+            {seriesEndDate && <p>⏹️ Ende: {formatBerlinDate(fromDatetimeLocalBerlin(seriesEndDate + "T00:00"), { dateStyle: "medium" })}</p>}
             {previewDates.length > 0 && seriesEndDate && (
               <p>📋 {previewDates.length} Termine werden direkt angelegt</p>
             )}
