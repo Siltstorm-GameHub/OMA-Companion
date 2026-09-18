@@ -10,6 +10,7 @@ import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
+import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 
 const STATUS_LABELS: Record<string, string> = {
   open:     "Offen",
@@ -114,8 +115,8 @@ function HiddenToggle({ id, type, hidden }: { id: string; type: "event" | "serie
 function EventRow({ ev }: { ev: Event }) {
   const statusStyle = STATUS_STYLES[ev.status] ?? STATUS_STYLES.finished;
   const statusLabel = STATUS_LABELS[ev.status] ?? ev.status;
-  const date = new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const time = new Date(ev.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const date = formatBerlinDate(ev.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = formatBerlinTime(ev.startAt, { hour: "2-digit", minute: "2-digit" });
   const attention = needsAttention(ev);
   return (
     <Link

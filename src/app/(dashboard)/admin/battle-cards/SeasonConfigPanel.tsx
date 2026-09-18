@@ -3,16 +3,23 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Play, Loader2, RotateCcw } from "lucide-react";
 import type { SeasonConfig } from "@/lib/season/season-config";
+import { formatBerlinDateTime, getBerlinDateParts, fromDatetimeLocalBerlin } from "@/lib/time";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("de-DE");
+  return formatBerlinDateTime(iso);
+}
+
+function toDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const { year, month, day } = getBerlinDateParts(iso);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
   const [config, setConfig] = useState(initial);
-  const [dateInput, setDateInput] = useState(initial.season1StartAt?.slice(0, 10) ?? "");
-  const [eloResetDateInput, setEloResetDateInput] = useState(initial.eloHardResetAt?.slice(0, 10) ?? "");
+  const [dateInput, setDateInput] = useState(toDateInputValue(initial.season1StartAt));
+  const [eloResetDateInput, setEloResetDateInput] = useState(toDateInputValue(initial.eloHardResetAt));
   const [saving, setSaving] = useState(false);
   const [savingEloReset, setSavingEloReset] = useState(false);
   const [running, setRunning] = useState(false);
@@ -24,7 +31,7 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       const res = await fetch("/api/admin/battle-cards/season", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ season1StartAt: dateInput ? new Date(dateInput).toISOString() : null }),
+        body: JSON.stringify({ season1StartAt: dateInput ? fromDatetimeLocalBerlin(dateInput + "T00:00").toISOString() : null }),
       });
       if (!res.ok) { toast.error("Speichern fehlgeschlagen"); return; }
       const data: SeasonConfig = await res.json();
@@ -51,7 +58,7 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       const res = await fetch("/api/admin/battle-cards/season", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eloHardResetAt: eloResetDateInput ? new Date(eloResetDateInput).toISOString() : null }),
+        body: JSON.stringify({ eloHardResetAt: eloResetDateInput ? fromDatetimeLocalBerlin(eloResetDateInput + "T00:00").toISOString() : null }),
       });
       if (!res.ok) { toast.error("Speichern fehlgeschlagen"); return; }
       const data: SeasonConfig = await res.json();

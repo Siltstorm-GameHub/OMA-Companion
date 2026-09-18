@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2, Plus, Euro, Heart, ShoppingCart, TrendingDown, Wallet, Lightbulb, Pencil, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni",
   "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -22,6 +23,7 @@ type Idea = { id: string; title: string; description: string | null; estimatedCo
 type User = { id: string; name: string | null; image: string | null };
 
 const now = new Date();
+const nowBerlin = getBerlinDateParts(now);
 
 function fmt(n: number) {
   return n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,15 +61,15 @@ export default function AdminDonationsClient({
   // Donation form
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("");
-  const [month,  setMonth]  = useState(now.getMonth() + 1);
-  const [year,   setYear]   = useState(now.getFullYear());
+  const [month,  setMonth]  = useState(nowBerlin.month);
+  const [year,   setYear]   = useState(nowBerlin.year);
   const [note,   setNote]   = useState("");
 
   // Expense form
   const [exTitle, setExTitle]  = useState("");
   const [exDesc,  setExDesc]   = useState("");
   const [exAmt,   setExAmt]    = useState("");
-  const [exDate,  setExDate]   = useState(now.toISOString().slice(0, 10));
+  const [exDate,  setExDate]   = useState(`${nowBerlin.year}-${String(nowBerlin.month).padStart(2, "0")}-${String(nowBerlin.day).padStart(2, "0")}`);
 
   // Idea form
   const [ideaTitle, setIdeaTitle] = useState("");
@@ -83,7 +85,7 @@ export default function AdminDonationsClient({
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const balance    = totalPool - totalSpent;
-  const years = [now.getFullYear() + 1, now.getFullYear(), now.getFullYear() - 1];
+  const years = [nowBerlin.year + 1, nowBerlin.year, nowBerlin.year - 1];
 
   async function handleAddDonation(e: React.FormEvent) {
     e.preventDefault();
@@ -322,7 +324,7 @@ export default function AdminDonationsClient({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{e.title}</p>
                   <p className="text-xs text-gray-500">
-                    {new Date(e.date).toLocaleDateString("de-DE")}
+                    {formatBerlinDate(e.date)}
                     {e.description && <span className="ml-1">· {e.description}</span>}
                   </p>
                 </div>

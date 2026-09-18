@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 
 type Message = {
   id:        string;
@@ -27,11 +28,11 @@ type FormState = {
 };
 
 function toLocalInputValue(iso: string) {
-  return iso.slice(0, 16); // "YYYY-MM-DDTHH:mm"
+  return toDatetimeLocalBerlin(new Date(iso));
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("de-DE", {
+  return formatBerlinDate(iso, {
     day: "2-digit", month: "2-digit", year: "numeric",
   });
 }
@@ -87,8 +88,8 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
     try {
       const payload = {
         ...form,
-        startDate: new Date(form.startDate).toISOString(),
-        endDate:   new Date(form.endDate).toISOString(),
+        startDate: fromDatetimeLocalBerlin(form.startDate).toISOString(),
+        endDate:   fromDatetimeLocalBerlin(form.endDate).toISOString(),
       };
 
       if (editId) {

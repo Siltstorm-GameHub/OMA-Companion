@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
 import type { PayoutTier, VoteBonusTier } from "@/lib/community-job-config";
+import { formatBerlinDate } from "@/lib/time";
 
 interface JobRef { key: string; label: string; emoji: string }
 interface AdminApplication { id: string; jobKey: string; status: string; message: string | null; appliedAt: string; user: { id: string; username: string | null; name: string | null } }
@@ -129,7 +130,7 @@ export default function CommunityJobsAdminPanel({
             {waitlisted.map(a => (
               <div key={a.id} className="p-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-gray-300">{a.user.username ?? a.user.name} → {jobLabel(a.jobKey)}</p>
-                <Badge tone="info">seit {new Date(a.appliedAt).toLocaleDateString("de-DE")}</Badge>
+                <Badge tone="info">seit {formatBerlinDate(a.appliedAt)}</Badge>
               </div>
             ))}
           </div>
@@ -359,7 +360,7 @@ function MemberRow({
           <p className="text-xs text-white">{member.user.username ?? member.user.name} — {jobLabel}</p>
           <p className="text-[11px] text-gray-500">
             {member.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
-            Vertrag bis {new Date(member.contractEndAt).toLocaleDateString("de-DE")}
+            Vertrag bis {formatBerlinDate(member.contractEndAt)}
           </p>
         </div>
         <div className="flex gap-1.5 shrink-0">

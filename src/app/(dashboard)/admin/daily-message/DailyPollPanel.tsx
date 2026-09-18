@@ -7,6 +7,7 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import PollOptionGameInput from "@/components/admin/PollOptionGameInput";
 import CoinIcon from "@/components/CoinIcon";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 
 type Option = { id: string; label: string; gameName: string | null; steamAppId: number | null; order: number };
 type Vote   = {
@@ -53,11 +54,11 @@ type FormState = {
 };
 
 function toLocalInputValue(iso: string) {
-  return iso.slice(0, 16);
+  return toDatetimeLocalBerlin(new Date(iso));
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatBerlinDate(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function defaultForm(): FormState {
@@ -80,7 +81,7 @@ function isCurrentlyActive(p: Poll) {
 }
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatBerlinDateTime(iso, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function voteAnswerText(v: Vote, options: Option[]): string {
@@ -149,8 +150,8 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
     try {
       const payload = {
         ...form,
-        startDate: new Date(form.startDate).toISOString(),
-        endDate:   new Date(form.endDate).toISOString(),
+        startDate: fromDatetimeLocalBerlin(form.startDate).toISOString(),
+        endDate:   fromDatetimeLocalBerlin(form.endDate).toISOString(),
         options: form.options.filter(o => o.label.trim()),
       };
 
