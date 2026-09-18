@@ -12,12 +12,21 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const {
     eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson,
-    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, gemsEndAt, gemsDifficulty, gemsMaxAttempts,
+    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, endAt, gemsDifficulty, gemsMaxAttempts,
     gemsMonsterIds, ...data
   } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
   const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
+
+  if (endAt !== undefined) data.endAt = endAt ? new Date(endAt) : null;
+  if (data.endAt) {
+    const startAtValue = data.startAt ? new Date(data.startAt) : (await prisma.event.findUnique({ where: { id: eventId }, select: { startAt: true } }))?.startAt;
+    if (startAtValue && data.endAt <= startAtValue) {
+      return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
+    }
+  }
+
   // Captains dürfen die Squad-Bindung ihres Events nur auf ein Squad setzen, das sie selbst
   // captainen (nicht entfernen oder auf ein fremdes Squad umbiegen) — sonst könnten sie die
   // Anmeldebeschränkung faktisch aufheben oder ein fremdes Team betreffen.
@@ -88,7 +97,11 @@ export async function PATCH(req: NextRequest) {
   // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich Schwierigkeit oder
   // Monster-Auswahl ändert UND noch keine Versuche existieren — sonst bleiben laufende
   // Angriffe fair vergleichbar.
-  if (gemsEndAt) {
+  // gemsDifficulty wird nur mitgeschickt, wenn das Event ein OMA-Gems-Turnier ist UND das
+  // generische Ende-Feld gesetzt ist (siehe EventEditClient.tsx) — das Turnier-Ende selbst
+  // liegt jetzt auf Event.endAt (oben in `data` mit übernommen), GemsTournament.endAt wird
+  // für neue/aktualisierte Turniere bewusst nicht mehr geschrieben (deprecated).
+  if (gemsDifficulty !== undefined) {
     const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
     const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
     const monsterCardIds: string[] | undefined =
@@ -104,7 +117,6 @@ export async function PATCH(req: NextRequest) {
       await prisma.gemsTournament.update({
         where: { id: existing.id },
         data: {
-          endAt: new Date(gemsEndAt),
           difficulty,
           maxAttemptsPerUser,
           ...((difficultyChanged || monstersChanged) && attemptCount === 0
@@ -119,7 +131,6 @@ export async function PATCH(req: NextRequest) {
       await prisma.gemsTournament.create({
         data: {
           eventId,
-          endAt: new Date(gemsEndAt),
           difficulty,
           maxAttemptsPerUser,
           bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),

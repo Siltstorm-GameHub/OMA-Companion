@@ -1246,7 +1246,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Automatischer Discord-Ergebnis-Post — nur beim tatsächlichen (ersten) Übergang in "finished",
   // nicht während der Umfragephase und nicht bei erneutem Abschließen eines bereits fertigen Events
   // (sonst würde der Kanal bei jeder nachträglichen Korrektur erneut zugespammt).
-  if (!hasPendingPollPhase && event.status !== "finished") {
+  // Stilles Beenden ohne Teilnehmer: kein Discord-Ergebnis-Post, wenn keine einzige
+  // Spieler-Anmeldung existiert (Zuschauer zählen nicht) — es gibt schlicht nichts zu verkünden.
+  if (!hasPendingPollPhase && event.status !== "finished" && event.registrations.some(r => r.role === "player")) {
     (async () => {
       const winners = eventWinnerIds.length > 0
         ? await prisma.user.findMany({

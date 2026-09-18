@@ -22,7 +22,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   if (event.status === "finished" || event.status === "closed")
     return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
-  if (event.registrationLocked || event.series?.registrationLocked)
+  // Serverseitige Durchsetzung der Registrierungssperre bei Event-Start — unabhängig davon, ob
+  // der Lazy-Sync (syncDueEventActivations, "open" → "active") für dieses Event schon gelaufen ist.
+  if (event.registrationLocked || event.series?.registrationLocked || event.startAt <= new Date())
     return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
   // Squad-Beschränkung gilt nur für Spieler, nicht für Zuschauer (siehe Event.squadId-Kommentar im Schema).
   const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;

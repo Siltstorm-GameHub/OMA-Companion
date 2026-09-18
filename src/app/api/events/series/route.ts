@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     category, genre, fixedGame, fixedFormat, discordChannelId,
     recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
-    startDate, endDate, hidden, registrationLocked, squadId,
+    startDate, endDate, firstEventEndAt, hidden, registrationLocked, squadId,
     spectatorMode, spectatorRewardJson,
     groupId, seasonNumber,
   } = body;
@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
   else await requireRole("moderator");
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
+  if (startDate && firstEventEndAt && new Date(firstEventEndAt) <= new Date(startDate)) {
+    return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
+  }
 
   const placementJson     = placementRewardsJson != null ? JSON.stringify(placementRewardsJson) : null;
   const pollsJson         = pollsConfigJson      != null ? JSON.stringify(pollsConfigJson)      : null;
@@ -66,16 +69,21 @@ export async function POST(req: NextRequest) {
     if (startDate) {
       const start = new Date(startDate);
       const end   = endDate ? new Date(endDate) : null;
+      // Dauer des ersten Termins (falls Ende mitgegeben) — wird von calcNextDate auf jeden
+      // weiteren generierten Termin übertragen, damit die Serie ihre Spannweite behält.
+      const firstEnd = firstEventEndAt ? new Date(firstEventEndAt) : null;
+      const durationMs = firstEnd ? firstEnd.getTime() - start.getTime() : undefined;
 
       if (recurrenceType && recurrenceType !== "none" && end) {
-        const dates: Date[] = [start];
-        let current = start;
+        const dates: (Date & { endAt?: Date })[] = [Object.assign(new Date(start), firstEnd ? { endAt: firstEnd } : {})];
+        let current: Date = start;
         while (true) {
           const next = calcNextDate(
             current,
             recurrenceType as RecurrenceType,
             (recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
             start,
+            durationMs,
           );
           if (next > end) break;
           dates.push(next);
@@ -87,6 +95,7 @@ export async function POST(req: NextRequest) {
             data: {
               title: `${name.trim()} #${i + 1}`,
               startAt: dates[i],
+              endAt: dates[i].endAt ?? null,
               seriesId: series.id,
               category: category ?? "casual",
               genre: genre ?? null,
@@ -109,6 +118,7 @@ export async function POST(req: NextRequest) {
           data: {
             title: `${name.trim()} #1`,
             startAt: start,
+            endAt: firstEnd,
             seriesId: series.id,
             category: category ?? "casual",
             genre: genre ?? null,

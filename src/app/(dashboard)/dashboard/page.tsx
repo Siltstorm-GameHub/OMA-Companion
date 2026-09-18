@@ -19,6 +19,7 @@ import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
+import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -89,7 +90,13 @@ const getGlobalDashboardData = unstable_cache(
         },
       }),
       prisma.event.findMany({
-        where:   { hidden: false, status: "finished", summary: { not: null }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
+        where:   {
+          hidden: false, status: "finished", summary: { not: null },
+          // Still beendete Events ohne Teilnehmer (siehe complete/route.ts) haben keine
+          // sinnvollen Ergebnisse/Berichte, die hier gezeigt werden könnten.
+          registrations: { some: { role: "player" } },
+          OR: [{ seriesId: null }, { series: { hidden: false } }],
+        },
         orderBy: { startAt: "desc" },
         take:    3,
         select:  { id: true, title: true, game: true, startAt: true, summary: true },
@@ -100,6 +107,9 @@ const getGlobalDashboardData = unstable_cache(
         where: {
           hidden: false, status: "finished",
           startAt: { gte: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
+          // Events, die ganz ohne Spieler-Anmeldung "still" beendet wurden (siehe complete/route.ts),
+          // sollen nicht als "Ergebnisse sind da" auftauchen — es gibt schlicht keine Ergebnisse.
+          registrations: { some: { role: "player" } },
           OR: [{ seriesId: null }, { series: { hidden: false } }],
         },
         orderBy: { startAt: "desc" },
@@ -167,6 +177,10 @@ function formatCountdown(target: Date, now: Date, prefix: string = "in"): string
 }
 
 export default async function DashboardPage() {
+  // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen) — muss abgeschlossen
+  // sein, bevor unten Event-Status gelesen wird (siehe src/lib/event-lifecycle.ts).
+  await syncDueEventActivations();
+
   const sessionUser = await getSessionUser();
   const userId      = sessionUser?.id;
   const userRole    = sessionUser?.role ?? "user";

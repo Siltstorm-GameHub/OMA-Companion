@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       events: {
         orderBy: { startAt: "asc" },
         select: {
-          startAt: true, title: true, maxPlayers: true, pointReward: true, type: true,
+          startAt: true, endAt: true, title: true, maxPlayers: true, pointReward: true, type: true,
           discordChannelId: true, game: true, pollsConfigJson: true, category: true, genre: true,
           spectatorMode: true, spectatorRewardJson: true, seriesEventConfigJson: true,
         },
@@ -87,6 +87,12 @@ export async function POST(req: NextRequest) {
   const referenceEvent = hasEvents ? series.events[0] : null;                       // ältestes Event = Referenz für Monthly-Modus
   const lastEvent       = hasEvents ? series.events[series.events.length - 1] : null;
 
+  // Dauer des letzten Events (falls dessen endAt gesetzt war) — wird auf den neu generierten
+  // Termin übertragen, damit die Serie ihre Spannweite behält (z.B. "Mo 18:00–So 23:59").
+  const durationMs = lastEvent?.endAt
+    ? new Date(lastEvent.endAt).getTime() - new Date(lastEvent.startAt).getTime()
+    : undefined;
+
   const nextDate = overrideDate
     ? new Date(overrideDate)
     : calcNextDate(
@@ -94,8 +100,13 @@ export async function POST(req: NextRequest) {
         series.recurrenceType as RecurrenceType,
         (series.recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
         new Date(referenceEvent!.startAt),
+        durationMs,
       );
   if (isNaN(nextDate.getTime())) return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
+  // Bei manuell überschriebenem Termin (overrideDate) trägt calcNextDate nicht das .endAt an —
+  // Dauer hier stattdessen direkt auf den manuellen Termin anwenden.
+  const nextEndAt = (nextDate as Date & { endAt?: Date }).endAt
+    ?? (overrideDate && durationMs ? new Date(nextDate.getTime() + durationMs) : null);
 
   const game            = series.fixedGame ?? lastEvent?.game ?? null;
   const discordChannelId = series.discordChannelId ?? lastEvent?.discordChannelId ?? null;
@@ -115,6 +126,7 @@ export async function POST(req: NextRequest) {
       genre,
       category,
       startAt: nextDate,
+      endAt: nextEndAt,
       maxPlayers:  lastEvent?.maxPlayers  ?? null,
       pointReward: lastEvent?.pointReward ?? 50,
       type:        lastEvent?.type        ?? "community",

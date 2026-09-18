@@ -254,13 +254,19 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [genre, setGenre]             = useState<EventGenre | null>(event.genre ?? null);
   const [category, setCategory]       = useState<EventCategory>(event.category ?? "casual");
   const [startAt, setStartAt]         = useState<string>(toDatetimeLocalBerlin(event.startAt));
+  // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar. Bei OMA-Gems-Turnieren
+  // vorbefüllt aus event.endAt (bzw. als Fallback aus dem deprecateten gemsTournament.endAt für
+  // Altdaten, die noch nicht per Backfill-Script migriert wurden).
+  const [endAt, setEndAt] = useState<string>(
+    event.endAt ? toDatetimeLocalBerlin(event.endAt)
+      : event.gemsTournament?.endAt ? toDatetimeLocalBerlin(event.gemsTournament.endAt) : ""
+  );
   const [maxPlayers, setMaxPlayers]   = useState<string>(event.maxPlayers?.toString() ?? "");
   const [discordChannelId, setDiscordChannelId] = useState<string>(event.discordChannelId ?? "");
   const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
 
   /* ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ── */
   const isGemsTournament = game === "OMA Gems";
-  const [gemsEndAt, setGemsEndAt] = useState<string>(event.gemsTournament ? toDatetimeLocalBerlin(event.gemsTournament.endAt) : "");
   const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(event.gemsTournament?.difficulty ?? "MEDIUM");
   const [gemsMaxAttempts, setGemsMaxAttempts] = useState<string>(String(event.gemsTournament?.maxAttemptsPerUser ?? 3));
   // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
@@ -484,6 +490,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         genre: genre || null,
         category,
         startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
+        endAt: endAt ? fromDatetimeLocalBerlin(endAt).toISOString() : null,
         maxPlayers: maxPlayers ? Number(maxPlayers) : null,
         discordChannelId: discordChannelId.trim() || null,
         placementRewardsJson: JSON.stringify({
@@ -498,8 +505,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         twitchClipUrl: twitchClipUrl.trim() || null,
         coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
-        ...(isGemsTournament && gemsEndAt && {
-          gemsEndAt: fromDatetimeLocalBerlin(gemsEndAt).toISOString(),
+        ...(isGemsTournament && endAt && {
           gemsDifficulty,
           gemsMaxAttempts: Number(gemsMaxAttempts) || 3,
           ...(gemsMonsterIds.length > 0 && { gemsMonsterIds }),
@@ -875,9 +881,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           </div>
 
-          <div>
-            <label className={labelCls}>Datum & Uhrzeit</label>
-            <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
+              <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Ende (optional)</label>
+              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
+            </div>
           </div>
 
           {/* ── Twitch Clip ── */}
@@ -1008,11 +1020,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           {isGemsTournament && (
             <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
               <p className="text-xs font-semibold text-violet-300">OMA Gems Turnier-Einstellungen</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className={labelCls}>Turnier-Ende</label>
-                  <input type="datetime-local" value={gemsEndAt} onChange={e => setGemsEndAt(e.target.value)} className={inputCls} />
-                </div>
+              <p className="text-[11px] text-gray-500 -mt-1">Das Turnier-Ende wird über das allgemeine „Ende&quot;-Feld oben festgelegt.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Schwierigkeit</label>
                   <select value={gemsDifficulty} onChange={e => setGemsDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")} className={inputCls}>
@@ -1102,14 +1111,19 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Datum & Uhrzeit</label>
+              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
               <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Max. Spieler</label>
-              <input type="number" min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
-                placeholder="unbegrenzt" className={inputCls} />
+              <label className={labelCls}>Ende (optional)</label>
+              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
             </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Max. Spieler</label>
+            <input type="number" min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+              placeholder="unbegrenzt" className={inputCls} />
           </div>
 
           <div>

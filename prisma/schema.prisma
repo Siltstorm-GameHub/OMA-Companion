@@ -263,6 +263,7 @@ model Event {
   genre               EventGenre?
   category            EventCategory @default(casual)
   startAt             DateTime
+  endAt               DateTime? // Optionales Ende (Datum/Uhrzeit) — generisch für alle Event-Typen, siehe formatBerlinRange
   maxPlayers          Int?
   pointReward         Int           @default(50)
   spectatorMode       Boolean       @default(false)
@@ -1853,7 +1854,11 @@ model GemsTournament {
   id                 String    @id @default(cuid())
   eventId            String    @unique
   event              Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  endAt              DateTime
+  // DEPRECATED: zugunsten von Event.endAt. Bleibt optional (statt entfernt) bestehen, weil
+  // bestehende Produktionsdaten hier liegen und ohne Live-DB-Zugriff kein sicheres
+  // Backfill+Drop in einem Schritt möglich ist — siehe scripts/backfill-gems-event-endat.ts.
+  // Neue Turniere setzen dieses Feld nicht mehr, nur noch Event.endAt.
+  endAt              DateTime?
   difficulty         String    @default("MEDIUM") // NpcDifficulty: EASY | MEDIUM | HARD
   maxAttemptsPerUser Int       @default(3)
   bossTeamJson       String

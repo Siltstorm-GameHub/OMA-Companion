@@ -172,6 +172,9 @@ export default function EventSetupWizard({
   // ── Event mode state ─────────────────────────────────────────────────────────
   const [title, setTitle]             = useState("");
   const [startAt, setStartAt]         = useState("");
+  // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar, bei OMA-Gems-Turnieren
+  // wie bisher genutzt (siehe isGemsTournament unten), schreibt aber auf Event.endAt.
+  const [endAt, setEndAt]             = useState("");
   const [game, setGame]               = useState("");
   const [genre, setGenre]             = useState<EventGenre | null>(null);
   const [platforms, setPlatforms]     = useState<string[]>([]);
@@ -189,7 +192,6 @@ export default function EventSetupWizard({
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
 
   // ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ────────────────────────────
-  const [gemsEndAt, setGemsEndAt] = useState("");
   const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [gemsMaxAttempts, setGemsMaxAttempts] = useState("3");
   // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
@@ -213,6 +215,10 @@ export default function EventSetupWizard({
   // muss der Admin für die neue Saison bewusst neu festlegen.
   const [seriesStartDate, setSeriesStartDate] = useState("");
   const [seriesEndDate, setSeriesEndDate]     = useState("");
+  // Ende (Datum/Uhrzeit) des ERSTEN Termins — optional, ergibt die Dauer, die pro Serientermin
+  // beibehalten wird (siehe calcNextDate durationMs in recurrence.ts). Nicht zu verwechseln mit
+  // seriesEndDate (Kalendertag, bis zu dem die Serie überhaupt neue Termine generiert).
+  const [seriesFirstEventEndAt, setSeriesFirstEventEndAt] = useState("");
   const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>(seasonPrefill?.recurrenceType ?? "none");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>(seasonPrefill?.recurrenceMonthlyMode ?? "dayOfMonth");
   const [statParticipationPts, setStatParticipationPts] = useState(seasonPrefill?.statParticipationPts ?? 5);
@@ -367,6 +373,7 @@ export default function EventSetupWizard({
     const body: Record<string, unknown> = {
       title: title.trim(),
       startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
+      endAt: endAt ? fromDatetimeLocalBerlin(endAt).toISOString() : null,
       game: game || null,
       genre: genre || null,
       platform: platforms.length > 0 ? platforms.join(", ") : null,
@@ -395,8 +402,7 @@ export default function EventSetupWizard({
       if (hasStat) body.statFields = JSON.stringify(statFields);
     }
 
-    if (isGemsTournament && gemsEndAt) {
-      body.gemsEndAt = fromDatetimeLocalBerlin(gemsEndAt).toISOString();
+    if (isGemsTournament && endAt) {
       body.gemsDifficulty = gemsDifficulty;
       body.gemsMaxAttempts = Number(gemsMaxAttempts) || 3;
       if (gemsMonsterIds.length > 0) body.gemsMonsterIds = gemsMonsterIds;
@@ -467,6 +473,7 @@ export default function EventSetupWizard({
         seriesStatConfig,
         startDate: seriesStartDate ? fromDatetimeLocalBerlin(seriesStartDate).toISOString() : null,
         endDate: seriesEndDate ? fromDatetimeLocalBerlin(seriesEndDate + "T23:59:59").toISOString() : null,
+        firstEventEndAt: (seriesStartDate && seriesFirstEventEndAt) ? fromDatetimeLocalBerlin(seriesFirstEventEndAt).toISOString() : null,
         eventType,
         hidden: seriesHidden,
         registrationLocked: seriesRegistrationLocked,
@@ -625,15 +632,21 @@ export default function EventSetupWizard({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Datum & Uhrzeit *</label>
+            <label className={labelCls}>Datum & Uhrzeit (Start) *</label>
             <input type="datetime-local" required value={startAt} onChange={e => setStartAt(e.target.value)}
               className={inputCls} style={inputStyle} />
           </div>
           <div>
-            <label className={labelCls}>Max. Spieler</label>
-            <input type="number" min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
-              placeholder="unbegrenzt" className={inputCls} style={inputStyle} />
+            <label className={labelCls}>Ende (optional)</label>
+            <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
+              className={inputCls} style={inputStyle} />
           </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Max. Spieler</label>
+          <input type="number" min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+            placeholder="unbegrenzt" className={inputCls} style={inputStyle} />
         </div>
 
         <div>
@@ -648,14 +661,10 @@ export default function EventSetupWizard({
             <p className="text-[11px] text-gray-500 leading-relaxed">
               Alle User treten im Zeitraum zwischen Start und Ende gegen dasselbe feste Gegner-Team an — ihr bester
               Score zählt fürs Ranking. Auf der Battle-Cards-Seite erscheint dafür automatisch ein Banner mit
-              Countdown. Platzierungsbelohnungen werden weiter unten im Schritt Belohnungen festgelegt.
+              Countdown. Platzierungsbelohnungen werden weiter unten im Schritt Belohnungen festgelegt. Das
+              Turnier-Ende wird über das „Ende&quot;-Feld oben festgelegt.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className={labelCls}>Turnier-Ende</label>
-                <input type="datetime-local" value={gemsEndAt} onChange={e => setGemsEndAt(e.target.value)}
-                  className={inputCls} style={inputStyle} />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Schwierigkeit</label>
                 <select value={gemsDifficulty} onChange={e => setGemsDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")}
@@ -1046,6 +1055,17 @@ export default function EventSetupWizard({
             <p className="text-[10px] text-gray-600 mt-1">Alle Termine bis hierhin werden direkt erstellt</p>
           </div>
         </div>
+
+        {seriesStartDate && (
+          <div>
+            <label className={labelCls}>Ende des ersten Termins (optional)</label>
+            <input type="datetime-local" value={seriesFirstEventEndAt} onChange={e => setSeriesFirstEventEndAt(e.target.value)}
+              className={inputCls} style={inputStyle} />
+            <p className="text-[10px] text-gray-600 mt-1">
+              Die Spanne (z.B. „Mo 18:00–So 23:59&quot;) wird auf alle automatisch generierten Folgetermine übertragen.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className={labelCls}>Wiederholung</label>
@@ -1630,12 +1650,13 @@ export default function EventSetupWizard({
           </div>
           <div className="space-y-1 text-sm text-gray-300">
             {startAt && <p>📅 {formatBerlinDateTime(fromDatetimeLocalBerlin(startAt), { dateStyle: "medium", timeStyle: "short" })}</p>}
+            {endAt && <p>⏹️ Ende: {formatBerlinDateTime(fromDatetimeLocalBerlin(endAt), { dateStyle: "medium", timeStyle: "short" })}</p>}
             {game && <p>🎮 {game}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
             {maxPlayers && <p>👥 Max. {maxPlayers} Spieler</p>}
             {spectatorMode && <p>👁️ Zuschauer-Modus aktiv</p>}
             {eventType === "tournament" && !isGemsTournament && <p>⚔️ Format: {FORMATS.find(f => f.value === format)?.label}</p>}
-            {isGemsTournament && gemsEndAt && (
-              <p>💎 Turnier bis {formatBerlinDateTime(fromDatetimeLocalBerlin(gemsEndAt), { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
+            {isGemsTournament && endAt && (
+              <p>💎 Turnier bis {formatBerlinDateTime(fromDatetimeLocalBerlin(endAt), { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
             )}
             {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
             {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}

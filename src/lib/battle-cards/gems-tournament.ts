@@ -74,10 +74,11 @@ export async function getCurrentGemsTournament(viewerId: string): Promise<GemsTo
       id: true,
       title: true,
       startAt: true,
-      gemsTournament: { select: { id: true, endAt: true, maxAttemptsPerUser: true } },
+      endAt: true,
+      gemsTournament: { select: { id: true, maxAttemptsPerUser: true } },
     },
   });
-  if (!event?.gemsTournament) return null;
+  if (!event?.gemsTournament || !event.endAt) return null;
   const tournament = event.gemsTournament;
 
   const [attemptsUsed, viewerAttempt, topAttempts] = await Promise.all([
@@ -98,7 +99,7 @@ export async function getCurrentGemsTournament(viewerId: string): Promise<GemsTo
     eventId: event.id,
     title: event.title,
     startAt: event.startAt.toISOString(),
-    endAt: tournament.endAt.toISOString(),
+    endAt: event.endAt.toISOString(),
     maxAttemptsPerUser: tournament.maxAttemptsPerUser,
     attemptsUsed,
     bestScore: viewerAttempt?.bestScore ?? 0,
@@ -137,7 +138,7 @@ function parseRewardsConfig(json: string | null): RewardsConfig {
  *  über GemsTournament.finalizedAt (einmal gesetzt, nie wieder verarbeitet). */
 export async function finalizeDueGemsTournaments(): Promise<{ finalized: string[] }> {
   const due = await prisma.gemsTournament.findMany({
-    where: { finalizedAt: null, endAt: { lte: new Date() } },
+    where: { finalizedAt: null, event: { endAt: { lte: new Date() } } },
     include: { event: { select: { id: true, placementRewardsJson: true } } },
   });
 

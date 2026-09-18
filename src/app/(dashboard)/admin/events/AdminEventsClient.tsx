@@ -10,7 +10,7 @@ import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
-import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
+import { formatBerlinDate, formatBerlinTime, formatBerlinRange } from "@/lib/time";
 
 const STATUS_LABELS: Record<string, string> = {
   open:     "Offen",
@@ -32,6 +32,7 @@ type Event = {
   title: string;
   status: string;
   startAt: Date;
+  endAt: Date | null;
   game: string | null;
   format: string | null;
   tournamentStatus: string | null;
@@ -116,7 +117,9 @@ function EventRow({ ev }: { ev: Event }) {
   const statusStyle = STATUS_STYLES[ev.status] ?? STATUS_STYLES.finished;
   const statusLabel = STATUS_LABELS[ev.status] ?? ev.status;
   const date = formatBerlinDate(ev.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
-  const time = formatBerlinTime(ev.startAt, { hour: "2-digit", minute: "2-digit" });
+  const time = ev.endAt
+    ? formatBerlinRange(ev.startAt, ev.endAt, { hour: "2-digit", minute: "2-digit" })
+    : formatBerlinTime(ev.startAt, { hour: "2-digit", minute: "2-digit" });
   const attention = needsAttention(ev);
   return (
     <Link

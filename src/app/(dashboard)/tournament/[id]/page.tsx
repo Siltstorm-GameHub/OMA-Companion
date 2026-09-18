@@ -16,6 +16,7 @@ import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
+import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
@@ -113,6 +114,10 @@ export default async function TournamentDetailPage({
   const me    = await getSessionUser();
   const isMod = me?.role === "moderator" || me?.role === "admin";
   const isAdmin = me?.role === "admin";
+
+  // Lazy Auto-Aktivierung des Events, falls fällig (nur bei Spieler-Anmeldungen) — muss vor dem
+  // Fetch unten abgeschlossen sein, damit der gelesene Status aktuell ist (siehe event-lifecycle.ts).
+  await syncDueEventActivations();
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -673,6 +678,9 @@ export default async function TournamentDetailPage({
                 {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
                 {" · "}
                 <ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
+                {event.endAt && (
+                  <> – {formatBerlinTime(event.endAt, { hour: "2-digit", minute: "2-digit" })} Uhr</>
+                )}
               </span>
             </div>
           </div>

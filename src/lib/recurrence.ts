@@ -25,43 +25,57 @@ export function describeMonthlyModes(refDate: Date): {
   };
 }
 
-/** Calculate the next occurrence date given the last event date and recurrence settings (alles in Berlin-Wanduhrzeit). */
+/**
+ * Calculate the next occurrence date given the last event date and recurrence settings (alles in
+ * Berlin-Wanduhrzeit). Optional `durationMs` (z.B. abgeleitet aus einem vorhandenen `Event.endAt`
+ * eines Referenztermins) wird auf den neu berechneten Termin angewendet, damit z.B. eine wöchentliche
+ * "Mo 18:00–So 23:59"-Serie ihre Spannweite behält — der zurückgegebene Date-Wert ist weiterhin der
+ * Start (unverändert für bestehende Aufrufer), das errechnete Ende hängt zusätzlich als `.endAt` dran.
+ */
 export function calcNextDate(
   lastDate: Date,
   recurrenceType: RecurrenceType,
   monthlyMode: MonthlyMode,
   referenceDate: Date,
-): Date {
+  durationMs?: number,
+): Date & { endAt?: Date } {
   const last = getBerlinDateParts(lastDate);
   const h = last.hour;
   const m = last.minute;
 
+  let next: Date;
   if (recurrenceType === "weekly" || recurrenceType === "biweekly") {
     const days = recurrenceType === "weekly" ? 7 : 14;
     // Über UTC-Kalendertage vorrücken (Kalendertag-Arithmetik ist zeitzonenunabhängig),
     // dann als Berlin-Wanduhrzeit (gleiche Stunde/Minute) neu interpretieren.
     const advanced = new Date(Date.UTC(last.year, last.month - 1, last.day));
     advanced.setUTCDate(advanced.getUTCDate() + days);
-    return buildBerlinDate(advanced.getUTCFullYear(), advanced.getUTCMonth() + 1, advanced.getUTCDate(), h, m);
+    next = buildBerlinDate(advanced.getUTCFullYear(), advanced.getUTCMonth() + 1, advanced.getUTCDate(), h, m);
+  } else {
+    // monthly
+    const nextMonth = last.month + 1;
+    const nextYear  = last.year + (nextMonth > 12 ? 1 : 0);
+    const adjMonth  = ((nextMonth - 1) % 12) + 1;
+
+    const ref = getBerlinDateParts(referenceDate);
+
+    if (monthlyMode === "weekdayOfMonth") {
+      const weekday = weekdayOf(ref.year, ref.month, ref.day);
+      const n       = Math.ceil(ref.day / 7);
+      next = nthWeekdayOfMonth(nextYear, adjMonth, weekday, n, h, m);
+    } else {
+      // dayOfMonth
+      const targetDay   = ref.day;
+      const daysInMonth = daysInMonthOf(nextYear, adjMonth);
+      next = buildBerlinDate(nextYear, adjMonth, Math.min(targetDay, daysInMonth), h, m);
+    }
   }
 
-  // monthly
-  const nextMonth = last.month + 1;
-  const nextYear  = last.year + (nextMonth > 12 ? 1 : 0);
-  const adjMonth  = ((nextMonth - 1) % 12) + 1;
-
-  const ref = getBerlinDateParts(referenceDate);
-
-  if (monthlyMode === "weekdayOfMonth") {
-    const weekday = weekdayOf(ref.year, ref.month, ref.day);
-    const n       = Math.ceil(ref.day / 7);
-    return nthWeekdayOfMonth(nextYear, adjMonth, weekday, n, h, m);
+  const result = next as Date & { endAt?: Date };
+  if (durationMs != null && durationMs > 0) {
+    result.endAt = new Date(next.getTime() + durationMs);
   }
-
-  // dayOfMonth
-  const targetDay   = ref.day;
-  const daysInMonth = daysInMonthOf(nextYear, adjMonth);
-  return buildBerlinDate(nextYear, adjMonth, Math.min(targetDay, daysInMonth), h, m);
+  return result;
 }
 
 function daysInMonthOf(year: number, month1: number): number {

@@ -3,8 +3,13 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import AdminEventsClient from "./AdminEventsClient";
+import { syncDueEventActivations } from "@/lib/event-lifecycle";
 
 export default async function AdminEventsPage() {
+  // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen), muss vor dem Event-Fetch
+  // unten abgeschlossen sein (siehe src/lib/event-lifecycle.ts).
+  await syncDueEventActivations();
+
   const { captainedSquadIds } = await requireModeratorOrAnySquadCaptain();
   // Reine Captains (globale Rolle "user") sehen hier nur Events/Reihen ihrer eigenen Squad(s) —
   // Moderator/Admin (captainedSquadIds === null) sehen wie bisher die gesamte Plattform.
@@ -15,6 +20,7 @@ export default async function AdminEventsPage() {
     title: true,
     status: true,
     startAt: true,
+    endAt: true,
     game: true,
     format: true,
     tournamentStatus: true,

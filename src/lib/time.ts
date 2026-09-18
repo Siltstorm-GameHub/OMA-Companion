@@ -38,6 +38,21 @@ export function formatBerlinDateTime(
   return d.toLocaleString(locale, { ...options, timeZone: BERLIN_TZ });
 }
 
+/**
+ * Formatiert einen Zeitraum in Europe/Berlin — z.B. "Mo, 18:00 – So, 23:59". Ist `endAt` nicht
+ * gesetzt, verhält es sich wie `formatBerlinDateTime` und liefert nur den Startzeitpunkt.
+ */
+export function formatBerlinRange(
+  startAt: Date | string | number,
+  endAt?: Date | string | number | null,
+  options?: Intl.DateTimeFormatOptions,
+  locale: string = DEFAULT_LOCALE,
+): string {
+  const opts: Intl.DateTimeFormatOptions = options ?? { weekday: "short", hour: "2-digit", minute: "2-digit" };
+  if (!endAt) return formatBerlinDateTime(startAt, opts, locale);
+  return `${formatBerlinDateTime(startAt, opts, locale)} – ${formatBerlinDateTime(endAt, opts, locale)}`;
+}
+
 /** Die einzelnen Wanduhrzeit-Komponenten eines Zeitpunkts in Europe/Berlin. */
 export interface BerlinDateParts {
   year: number;

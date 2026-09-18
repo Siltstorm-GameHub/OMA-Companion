@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   const {
-    title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
+    title, description, game, genre, category, startAt, endAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
     placementRewardsJson, hidden, registrationLocked, squadId,
-    gemsEndAt, gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
+    gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
   } = body;
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
   }
 
   const startDate = new Date(startAt);
+  const endDate = endAt ? new Date(endAt) : null;
+  if (endDate && endDate <= startDate) {
+    return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
+  }
 
   // Inherit tournament settings from series if linking to one
   let seriesFormat: string | null = null;
@@ -124,6 +128,7 @@ export async function POST(req: NextRequest) {
       genre:           genre || null,
       category:        category || "casual",
       startAt: startDate,
+      endAt: endDate,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       type:            type ?? "community",
       seriesId:        seriesId || null,
@@ -147,7 +152,7 @@ export async function POST(req: NextRequest) {
   // OMA-Gems-Turnier: automatisch angehängt, sobald game === "OMA Gems" gewählt wurde und ein
   // Turnierende mitgeschickt wurde (siehe EventSetupWizard.tsx). Das Boss-Team wird EINMALIG
   // erzeugt und persistiert, damit alle Teilnehmer exakt dasselbe Gegner-Team bekommen.
-  if (game === "OMA Gems" && gemsEndAt) {
+  if (game === "OMA Gems" && endDate) {
     const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
     const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
     const monsterCardIds: string[] | undefined =
@@ -157,7 +162,8 @@ export async function POST(req: NextRequest) {
     await prisma.gemsTournament.create({
       data: {
         eventId: event.id,
-        endAt: new Date(gemsEndAt),
+        // GemsTournament.endAt bewusst NICHT gesetzt (deprecated) — das Turnierende liegt
+        // jetzt auf Event.endAt (siehe endDate oben).
         difficulty,
         maxAttemptsPerUser,
         bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),

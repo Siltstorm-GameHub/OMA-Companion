@@ -18,7 +18,8 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
-import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
+import { formatBerlinDate, formatBerlinRange, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
+import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
 import EventPredictionsPanel from "./EventPredictionsPanel";
@@ -45,6 +46,10 @@ const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
 export default async function EventsPage() {
+  // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen), muss vor dem Event-Fetch
+  // unten abgeschlossen sein (siehe src/lib/event-lifecycle.ts).
+  await syncDueEventActivations();
+
   const me     = await getSessionUser();
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
@@ -54,7 +59,9 @@ export default async function EventsPage() {
       where:   { hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
       orderBy: { startAt: "asc" },
       include: {
-        _count:        { select: { registrations: true } },
+        // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
+        // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
+        _count:        { select: { registrations: { where: { role: "player" } } } },
         series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
@@ -120,7 +127,10 @@ export default async function EventsPage() {
   ];
 
   const now = Date.now();
-  const isRecentlyFinished = (i: AnyItem) => i.finished && (now - i.endedAt) <= RECENTLY_FINISHED_MS;
+  // Still beendete Events ohne Spieler-Anmeldung (siehe complete/route.ts) tauchen nicht im
+  // "Kürzlich beendet"-Bereich auf — sie landen direkt im eingeklappten "Abgeschlossen"-Bereich.
+  const isRecentlyFinished = (i: AnyItem) =>
+    i.finished && (now - i.endedAt) <= RECENTLY_FINISHED_MS && i.ev._count.registrations > 0;
 
   // Kürzlich (≤3 Tage) beendete Events bleiben ganz oben sichtbar, damit Nutzer die Ergebnisse
   // nicht verpassen — erst danach wandern sie in den eingeklappten "Abgeschlossen"-Bereich.
@@ -234,7 +244,9 @@ export default async function EventsPage() {
             </div>
             <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
               <span className="flex items-center gap-1 font-medium tabular-nums">
-                {getBerlinDateParts(date).day}. {formatBerlinDate(date, { month: "short" })}
+                {ev.endAt
+                  ? formatBerlinRange(date, ev.endAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+                  : `${getBerlinDateParts(date).day}. ${formatBerlinDate(date, { month: "short" })}`}
               </span>
               <span className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />

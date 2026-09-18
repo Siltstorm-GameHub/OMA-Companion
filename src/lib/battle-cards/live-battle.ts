@@ -844,7 +844,9 @@ export async function startLiveGemsTournamentBattle(
 
   const now = new Date();
   if (now < tournament.event.startAt) throw new LiveBattleError("Dieses Turnier hat noch nicht begonnen.");
-  if (now > tournament.endAt) throw new LiveBattleError("Dieses Turnier ist bereits vorbei.");
+  // event.endAt ist der maßgebliche Endzeitpunkt (GemsTournament.endAt ist deprecated, siehe
+  // Schema-Kommentar) — kein endAt gesetzt bedeutet: das Turnier läuft zeitlich unbegrenzt.
+  if (tournament.event.endAt && now > tournament.event.endAt) throw new LiveBattleError("Dieses Turnier ist bereits vorbei.");
 
   const attemptsUsed = await prisma.liveBattle.count({
     where: { playerAId: userId, mode: tournamentModeFor(tournament.id) },
