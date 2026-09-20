@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { title, bodyMarkdown, eventId, coverAssetId, referencedMarketingPostId } = await req.json().catch(() => ({}));
+  const { title, bodyMarkdown, eventId, coverAssetId, referencedMarketingPostId, category, draft } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof bodyMarkdown !== "string") {
     return NextResponse.json({ error: "Titel und Text erforderlich" }, { status: 400 });
   }
@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
     eventId: typeof eventId === "string" ? eventId : undefined,
     coverAssetId: typeof coverAssetId === "string" ? coverAssetId : undefined,
     referencedMarketingPostId: typeof referencedMarketingPostId === "string" ? referencedMarketingPostId : undefined,
+    category: typeof category === "string" && category ? category : undefined,
+    draft: draft === true,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

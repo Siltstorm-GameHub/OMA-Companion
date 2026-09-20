@@ -107,6 +107,29 @@ export async function listGuildTextChannels(): Promise<DiscordTextChannel[]> {
     .map(c => ({ id: c.id, name: c.name, category: c.parent_id ? categories.get(c.parent_id) ?? null : null }));
 }
 
+export interface DiscordGuildEmoji { id: string; name: string; animated: boolean }
+
+let emojiCache: { at: number; emojis: DiscordGuildEmoji[] } | null = null;
+const EMOJI_CACHE_MS = 10 * 60_000;
+
+/** Eigene Emojis des Servers (DISCORD_GUILD_ID), 10 Minuten gecacht. Leere Liste, wenn Bot/Server nicht konfiguriert oder Abruf fehlschlägt. */
+export async function listGuildEmojis(): Promise<DiscordGuildEmoji[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId || !process.env.DISCORD_BOT_TOKEN) return [];
+  if (emojiCache && Date.now() - emojiCache.at < EMOJI_CACHE_MS) return emojiCache.emojis;
+
+  const res = await fetch(`${BASE}/guilds/${guildId}/emojis`, { headers: authHeader() });
+  if (!res.ok) return emojiCache?.emojis ?? [];
+
+  const all = await res.json() as { id: string; name: string | null; animated?: boolean; available?: boolean }[];
+  const emojis = all
+    .filter(e => e.name && e.available !== false)
+    .map(e => ({ id: e.id, name: e.name as string, animated: e.animated === true }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  emojiCache = { at: Date.now(), emojis };
+  return emojis;
+}
+
 /** Datum auf Deutsch formatieren (Europe/Berlin) */
 export function fmtDateDE(d: Date): string {
   return d.toLocaleString("de-DE", {

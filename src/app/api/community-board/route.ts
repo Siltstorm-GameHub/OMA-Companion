@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { plainExcerpt, readingMinutes } from "@/lib/report-text";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,11 @@ export async function GET(req: NextRequest) {
 
   const [reports, assets, marketingPosts, ideas, guides] = await Promise.all([
     prisma.jobReport.findMany({
-      where: { hiddenByAdminAt: null },
+      where: { hiddenByAdminAt: null, isDraft: false },
       orderBy: { publishedAt: "desc" },
       take: limit,
       include: {
+        event: { select: { id: true, title: true } },
         author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
         coverAsset: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
         referencedMarketingPost: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
@@ -83,6 +85,11 @@ export async function GET(req: NextRequest) {
       id: r.id,
       publishedAt: r.publishedAt,
       title: r.title,
+      category: r.category,
+      event: r.event,
+      // Nur Auszug im Feed — den vollen Text lädt das Board beim Aufklappen (GET /reports/[id]).
+      excerpt: plainExcerpt(r.bodyMarkdown, 320),
+      readingMinutes: readingMinutes(r.bodyMarkdown),
       author: r.author,
       upvotes: r._count.votes,
       votedByMe: r.votes.length > 0,

@@ -1,14 +1,17 @@
 "use client";
 import JobBadge from "@/components/community-jobs/JobBadge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag, MessageCircle, Send, Trash2, BookOpen } from "lucide-react";
+import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
 import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
+import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLite";
+import EmojiPanel from "@/components/community-jobs/EmojiPicker";
+import { REPORT_CATEGORIES, reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
 
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
@@ -21,6 +24,10 @@ interface FeedEntry {
   caption?: string;
   description?: string;
   game?: string | null;
+  category?: string | null;
+  event?: { id: string; title: string } | null;
+  excerpt?: string;
+  readingMinutes?: number;
   type?: string;
   url?: string;
   status?: string;
@@ -55,6 +62,9 @@ function Linkified({ text }: { text: string }) {
   );
 }
 
+const CHIP_ON = "bg-teal-500 text-black border-teal-500";
+const CHIP_OFF = "bg-white/[0.04] text-gray-300 border-white/10 hover:text-white";
+
 function authorLabel(a: Author): string {
   return a.username ?? a.name ?? "Unbekannt";
 }
@@ -63,6 +73,15 @@ export default function CommunityBoardClient() {
   const { data: session } = useSession();
   const currentUserId = (session?.user as { id?: string } | undefined)?.id;
   const [feed, setFeed] = useState<FeedEntry[] | null>(null);
+  const [isJournalist, setIsJournalist] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Nur aktive Journalisten sehen "Bericht ergänzen".
+    api<{ activeMembership: { jobKey: string } | null }>("/api/community-jobs")
+      .then(d => setIsJournalist(d.activeMembership?.jobKey === "journalist"))
+      .catch(() => {});
+  }, []);
 
   async function reload() {
     try {
@@ -82,17 +101,249 @@ export default function CommunityBoardClient() {
     return <p className="text-sm text-gray-600 text-center py-12">Noch keine Community-Job-Beiträge.</p>;
   }
 
+  const usedCategories = REPORT_CATEGORIES.filter(c => feed.some(e => e.kind === "report" && e.category === c.key));
+  const visibleFeed = category ? feed.filter(e => e.kind === "report" && e.category === category) : feed;
+
   return (
-    // Ab lg mehrspaltiger Masonry-Flow statt einer einzelnen langen Kette —
-    // die Karten haben durch Bilder/Contributions/Idea-Text stark unterschiedliche
-    // Höhen, CSS-Columns verteilen das ohne JS-Messen sinnvoll auf die Breite.
-    <div className="columns-1 lg:columns-2 xl:columns-3 gap-4">
-      {feed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} onChanged={reload} />)}
+    <div className="space-y-4">
+      {usedCategories.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Berichte nach Kategorie filtern">
+          <button role="tab" aria-selected={category === null} onClick={() => setCategory(null)}
+            className={`text-[11px] font-semibold rounded-full px-3 py-1 border transition-colors ${category === null ? CHIP_ON : CHIP_OFF}`}>Alle</button>
+          {usedCategories.map(c => (
+            <button key={c.key} role="tab" aria-selected={category === c.key} onClick={() => setCategory(category === c.key ? null : c.key)}
+              className={`text-[11px] font-semibold rounded-full px-3 py-1 border transition-colors ${category === c.key ? CHIP_ON : CHIP_OFF}`}>{c.label}</button>
+          ))}
+        </div>
+      )}
+      {/* Ab lg mehrspaltiger Masonry-Flow statt einer einzelnen langen Kette —
+          die Karten haben durch Bilder/Contributions/Idea-Text stark unterschiedliche
+          Höhen, CSS-Columns verteilen das ohne JS-Messen sinnvoll auf die Breite. */}
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-4">
+        {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} />)}
+      </div>
     </div>
   );
 }
 
-function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
+/** Bericht im Board: Auszug + "Bericht lesen" (lädt den vollen Text nach), Bewertungen, Ergänzungen (schreiben/bearbeiten/löschen). */
+function ReportBody({ entry, currentUserId, isJournalist, onChanged }: {
+  entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void;
+}) {
+  const [full, setFull] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function toggleRead() {
+    if (open) { setOpen(false); return; }
+    if (full === null) {
+      setLoading(true);
+      try {
+        const data = await api<{ report: { bodyMarkdown: string } }>(`/api/community-jobs/reports/${entry.id}`);
+        setFull(data.report.bodyMarkdown);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Bericht konnte nicht geladen werden");
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+    }
+    setOpen(true);
+  }
+
+  const categoryLabel = reportCategoryLabel(entry.category);
+  return (
+    <>
+      <p className="text-sm font-semibold text-white">{entry.title}</p>
+      {(categoryLabel || entry.event || entry.readingMinutes) && (
+        <div className="flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
+          {categoryLabel && <Badge tone="info">{categoryLabel}</Badge>}
+          {entry.event && (
+            <a href={`/tournament/${entry.event.id}`} className="inline-flex items-center gap-1 hover:text-teal-300 transition-colors">
+              <CalendarDays className="w-3 h-3" /> {entry.event.title}
+            </a>
+          )}
+          {entry.readingMinutes ? <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {entry.readingMinutes} Min. Lesezeit</span> : null}
+        </div>
+      )}
+      {entry.coverAsset && (
+        // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
+        <img src={entry.coverAsset.url} alt="" className="w-full h-auto rounded-lg" />
+      )}
+
+      {open && full !== null
+        ? <MarkdownLite text={full} className="text-xs" />
+        : entry.excerpt ? <p className="text-xs text-gray-400"><EmojiText text={entry.excerpt} /></p> : null}
+      <button onClick={toggleRead} disabled={loading} aria-expanded={open}
+        className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+        {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+        {open ? "Bericht einklappen" : "Ganzen Bericht lesen"}
+      </button>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+          onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+          onDone={onChanged} label="Bericht" />
+        {entry.author.id === currentUserId && (
+          <DisputeTrigger kind="jobReportVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/votes`} listKey="votes" />
+        )}
+        {entry.coverAsset && (
+          <>
+            <UpvoteButton votedByMe={false} upvotes={entry.coverAsset.upvotes}
+              onVote={added => api(`/api/community-jobs/media/${entry.coverAsset!.id}/vote`, { method: added ? "POST" : "DELETE" })}
+              onDone={onChanged} label={`Bild von ${authorLabel(entry.coverAsset.author)}`} icon={<ImagePlus className="w-3 h-3" />} />
+            {entry.coverAsset.author.id === currentUserId && (
+              <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.coverAsset.id}/votes`} listKey="votes" />
+            )}
+          </>
+        )}
+        {entry.referencedMarketingPost && (
+          <>
+            <UpvoteButton votedByMe={false} upvotes={entry.referencedMarketingPost.upvotes}
+              onVote={added => api(`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost!.id}/vote`, { method: added ? "POST" : "DELETE" })}
+              onDone={onChanged} label={`Post von ${authorLabel(entry.referencedMarketingPost.author)}`} icon={<Megaphone className="w-3 h-3" />} />
+            {entry.referencedMarketingPost.author.id === currentUserId && (
+              <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost.id}/votes`} listKey="votes" />
+            )}
+          </>
+        )}
+      </div>
+
+      {entry.contributions && entry.contributions.length > 0 && (
+        <div className="pl-3 border-l-2 border-white/10 space-y-3">
+          {entry.contributions.map(c => (
+            <ContributionItem key={c.id} reportId={entry.id} contribution={c} currentUserId={currentUserId} onChanged={onChanged} />
+          ))}
+        </div>
+      )}
+      {isJournalist && <ContributionForm reportId={entry.id} onDone={onChanged} />}
+    </>
+  );
+}
+
+function ContributionItem({ reportId, contribution: c, currentUserId, onChanged }: {
+  reportId: string; contribution: NonNullable<FeedEntry["contributions"]>[number]; currentUserId: string | undefined; onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(c.bodyMarkdown);
+  const [busy, setBusy] = useState(false);
+  const mine = c.author.id === currentUserId;
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api(`/api/community-jobs/reports/${reportId}/contributions/${c.id}`, { method: "PATCH", body: JSON.stringify({ bodyMarkdown: draft }) });
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove() {
+    if (!window.confirm("Ergänzung wirklich löschen?")) return;
+    try {
+      await api(`/api/community-jobs/reports/${reportId}/contributions/${c.id}`, { method: "DELETE" });
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Löschen fehlgeschlagen");
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}<JobBadge userId={c.author.id} variant="compact" className="ml-1" /></p>
+      {editing ? (
+        <div className="space-y-1.5">
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={5000}
+            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40 resize-y" />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setDraft(c.bodyMarkdown); }}>Abbrechen</Button>
+            <Button size="sm" loading={busy} disabled={!draft.trim()} onClick={save}>Speichern</Button>
+          </div>
+        </div>
+      ) : (
+        <MarkdownLite text={c.bodyMarkdown} className="text-xs" />
+      )}
+      <div className="flex items-center gap-2">
+        <UpvoteButton votedByMe={false} upvotes={c.upvotes}
+          onVote={added => api(`/api/community-jobs/reports/${reportId}/contributions/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
+          onDone={onChanged} label="Ergänzung" />
+        {mine && (
+          <>
+            <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${reportId}/contributions/${c.id}/votes`} listKey="votes" />
+            {!editing && (
+              <>
+                <button onClick={() => setEditing(true)} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+                <button onClick={remove} aria-label="Ergänzung löschen" className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Aktive Journalisten dürfen jeden Bericht ergänzen — ohne Freigabe des Autors. */
+function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertEmoji(emoji: string) {
+    const el = areaRef.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    setText(text.slice(0, start) + emoji + text.slice(end));
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(start + emoji.length, start + emoji.length); });
+  }
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await api(`/api/community-jobs/reports/${reportId}/contributions`, { method: "POST", body: JSON.stringify({ bodyMarkdown: text }) });
+      toast.success("Ergänzung veröffentlicht");
+      setText(""); setOpen(false);
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ergänzung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+        + Bericht ergänzen
+      </button>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      <textarea ref={areaRef} value={text} onChange={e => setText(e.target.value)} rows={4} maxLength={5000} autoFocus
+        placeholder="Deine Ergänzung (Markdown möglich: **fett**, - Liste, [Link](https://…))"
+        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+      {emojiOpen && <EmojiPanel onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
+      <div className="flex items-center justify-between gap-1.5">
+        <button onClick={() => setEmojiOpen(v => !v)} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={emojiOpen}
+          className={`p-1.5 rounded hover:text-white hover:bg-white/[0.06] transition-colors ${emojiOpen ? "text-teal-300" : "text-gray-400"}`}>
+          <Smile className="w-4 h-4" />
+        </button>
+        <div className="flex gap-1.5">
+          <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setText(""); setEmojiOpen(false); }}>Abbrechen</Button>
+          <Button size="sm" loading={busy} disabled={!text.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedCard({ entry, currentUserId, isJournalist, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void }) {
   return (
     <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
       <div className="flex items-center justify-between">
@@ -112,61 +363,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
         {entry.kind === "guide" && <Badge tone="info"><BookOpen className="w-2.5 h-2.5" /> Anleitung{entry.game ? ` · ${entry.game}` : ""}</Badge>}
       </div>
 
-      {entry.kind === "report" && (
-        <>
-          <p className="text-sm font-semibold text-white">{entry.title}</p>
-          {entry.coverAsset && (
-            // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-            <img src={entry.coverAsset.url} alt="" className="w-full h-auto rounded-lg" />
-          )}
-          <div className="flex items-center gap-3 flex-wrap">
-            <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-              onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-              onDone={onChanged} label="Bericht" />
-            {entry.author.id === currentUserId && (
-              <DisputeTrigger kind="jobReportVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/votes`} listKey="votes" />
-            )}
-            {entry.coverAsset && (
-              <>
-                <UpvoteButton votedByMe={false} upvotes={entry.coverAsset.upvotes}
-                  onVote={added => api(`/api/community-jobs/media/${entry.coverAsset!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                  onDone={onChanged} label={`Bild von ${authorLabel(entry.coverAsset.author)}`} icon={<ImagePlus className="w-3 h-3" />} />
-                {entry.coverAsset.author.id === currentUserId && (
-                  <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.coverAsset.id}/votes`} listKey="votes" />
-                )}
-              </>
-            )}
-            {entry.referencedMarketingPost && (
-              <>
-                <UpvoteButton votedByMe={false} upvotes={entry.referencedMarketingPost.upvotes}
-                  onVote={added => api(`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                  onDone={onChanged} label={`Post von ${authorLabel(entry.referencedMarketingPost.author)}`} icon={<Megaphone className="w-3 h-3" />} />
-                {entry.referencedMarketingPost.author.id === currentUserId && (
-                  <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost.id}/votes`} listKey="votes" />
-                )}
-              </>
-            )}
-          </div>
-          {entry.contributions && entry.contributions.length > 0 && (
-            <div className="pl-3 border-l-2 border-white/10 space-y-2">
-              {entry.contributions.map(c => (
-                <div key={c.id} className="space-y-1">
-                  <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}<JobBadge userId={c.author.id} variant="compact" className="ml-1" /></p>
-                  <p className="text-xs text-gray-300">{c.bodyMarkdown}</p>
-                  <div className="flex items-center gap-2">
-                    <UpvoteButton votedByMe={false} upvotes={c.upvotes}
-                      onVote={added => api(`/api/community-jobs/reports/${entry.id}/contributions/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                      onDone={onChanged} label="Ergänzung" />
-                    {c.author.id === currentUserId && (
-                      <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/contributions/${c.id}/votes`} listKey="votes" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      {entry.kind === "report" && <ReportBody entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={onChanged} />}
 
       {entry.kind === "asset" && (
         <>

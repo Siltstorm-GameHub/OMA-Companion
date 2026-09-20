@@ -146,7 +146,7 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
     setBusy(true);
     try {
       if (entry.kind === "report") {
-        await api(`/api/community-jobs/reports/${entry.id}`, { method: "PATCH", body: JSON.stringify({ title, bodyMarkdown: entry.bodyMarkdown ?? "" }) });
+        await api(`/api/community-jobs/reports/${entry.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
       } else if (entry.kind === "asset") {
         await api(`/api/community-jobs/media/${entry.id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
       } else if (entry.kind === "marketing_post") {

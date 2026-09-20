@@ -14,6 +14,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
+import ReportEditor from "@/components/community-jobs/ReportEditor";
+import { JournalistStatsBlock } from "@/components/community-jobs/JournalistTools";
+import { reportCategoryLabel } from "@/lib/report-categories";
 import {
   CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
 } from "@/components/community-jobs/CoachTools";
@@ -749,7 +752,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       </>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size="md">
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={membership.jobKey === "journalist" ? "lg" : "md"}>
         <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
       </Modal>
       {ConfirmDialogElement}
@@ -921,59 +924,83 @@ function ImageEditControls({
   );
 }
 
+interface MyReport {
+  id: string; title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
+  coverAssetId: string | null; referencedMarketingPostId: string | null; isDraft: boolean; publishedAt: string;
+  _count: { votes: number; contributions: number };
+}
+
 function ReportList() {
-  const [items, setItems] = useState<{ id: string; title: string; bodyMarkdown?: string; publishedAt: string; _count: { votes: number; contributions: number } }[]>([]);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [items, setItems] = useState<MyReport[] | null>(null);
+  const [editing, setEditing] = useState<MyReport | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [statsKey, setStatsKey] = useState(0);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   function reload() {
-    api<{ reports: typeof items }>("/api/community-jobs/reports").then(d => setItems(d.reports)).catch(() => {});
+    api<{ reports: MyReport[] }>("/api/community-jobs/reports").then(d => {
+      // Entwürfe zuerst, danach neueste zuerst.
+      setItems([...d.reports].sort((a, b) => Number(b.isDraft) - Number(a.isDraft) || new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()));
+      setStatsKey(k => k + 1);
+    }).catch(() => setItems([]));
   }
   useEffect(reload, []);
 
-  function startEdit(r: (typeof items)[number]) {
-    setEditing(r.id); setTitle(r.title); setBody(r.bodyMarkdown ?? "");
-  }
-  async function save(id: string) {
+  async function publish(r: MyReport) {
+    setBusy(r.id);
     try {
-      await api(`/api/community-jobs/reports/${id}`, { method: "PATCH", body: JSON.stringify({ title, bodyMarkdown: body }) });
-      toast.success("Gespeichert");
-      setEditing(null); reload();
+      await api(`/api/community-jobs/reports/${r.id}/publish`, { method: "POST" });
+      toast.success("Veröffentlicht");
+      reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+    finally { setBusy(null); }
   }
-  async function remove(id: string) {
-    if (!confirm("Bericht wirklich löschen?")) return;
+  async function remove(r: MyReport) {
+    const ok = await confirm({
+      title: r.isDraft ? "Entwurf löschen?" : "Bericht löschen?",
+      description: r.isDraft ? `„${r.title}“ wird gelöscht.` : `„${r.title}“ wird samt Ergänzungen und Bewertungen gelöscht.`,
+      confirmLabel: "Löschen", variant: "danger",
+    });
+    if (!ok) return;
     try {
-      await api(`/api/community-jobs/reports/${id}`, { method: "DELETE" });
-      toast.success("Gelöscht"); reload();
+      await api(`/api/community-jobs/reports/${r.id}`, { method: "DELETE" });
+      toast.success("Gelöscht");
+      reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
 
-  if (!items.length) return <p className="text-xs text-gray-600">Noch keine Berichte veröffentlicht.</p>;
+  if (!items) return null;
   return (
-    <div className="space-y-1.5">
-      {items.map(r => editing === r.id ? (
-        <div key={r.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
-          <input value={title} onChange={e => setTitle(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-          <textarea value={body} onChange={e => setBody(e.target.value)} rows={3}
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
-          <div className="flex justify-end gap-1.5">
-            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-            <Button size="sm" onClick={() => save(r.id)}>Speichern</Button>
-          </div>
-        </div>
+    <div className="space-y-3">
+      <JournalistStatsBlock refreshKey={statsKey} />
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-600">Noch keine Berichte. Über „Neuer Beitrag“ schreibst du deinen ersten — mit „Aus Event vorbefüllen“ startest du direkt mit den Fakten.</p>
       ) : (
-        <div key={r.id} className="flex items-center justify-between text-xs">
-          <span className="text-gray-300 truncate">{r.title}</span>
-          <span className="flex items-center gap-2 shrink-0 ml-2">
-            <VoteRow upvotes={r._count.votes} votedByMe={false} />
-            <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>
-            <EditDeleteBar onEdit={() => startEdit(r)} onDelete={() => remove(r.id)} />
-          </span>
+        <div className="space-y-1.5">
+          {items.map(r => (
+            <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="flex items-center gap-1.5 min-w-0">
+                {r.isDraft && <Badge tone="warning">Entwurf</Badge>}
+                {reportCategoryLabel(r.category) && <Badge tone="neutral">{reportCategoryLabel(r.category)}</Badge>}
+                <span className="text-gray-300 truncate">{r.title}</span>
+              </span>
+              <span className="flex items-center gap-2 shrink-0">
+                {!r.isDraft && <VoteRow upvotes={r._count.votes} votedByMe={false} />}
+                {!r.isDraft && <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>}
+                {r.isDraft && <Button size="sm" variant="outline" loading={busy === r.id} onClick={() => publish(r)}>Veröffentlichen</Button>}
+                <EditDeleteBar onEdit={() => setEditing(r)} onDelete={() => remove(r)} />
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={editing?.isDraft ? "Entwurf bearbeiten" : "Bericht bearbeiten"} size="lg">
+        {editing && (
+          <ReportEditor reportId={editing.id} initial={editing} onDone={() => { setEditing(null); reload(); }} />
+        )}
+      </Modal>
+      {ConfirmDialogElement}
     </div>
   );
 }
@@ -1429,6 +1456,7 @@ function IdeaList() {
 
 function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [coachKind, setCoachKind] = useState<"session" | "guide">("session");
+  if (jobKey === "journalist") return <ReportEditor eventId={eventId} prefill={prefill} onDone={onDone} />;
   if (jobKey === "coach") {
     return (
       <div className="space-y-3">
@@ -1514,9 +1542,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
   async function submit() {
     setBusy(true);
     try {
-      if (jobKey === "journalist") {
-        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: withLink(body, prefill?.link), eventId }) });
-      } else if (jobKey === "coach") {
+      if (jobKey === "coach") {
         await api("/api/community-jobs/coach/training-sessions", {
           method: "POST", body: JSON.stringify({
             title, description: body, startAt: new Date(startAt).toISOString(),

@@ -11,7 +11,7 @@ export async function GET() {
 
   const [reports, assets, posts, ideas, guides] = await Promise.all([
     prisma.jobReport.count({
-      where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
+      where: { hiddenByAdminAt: null, isDraft: false, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
     }),
     prisma.jobMediaAsset.count({
       where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },

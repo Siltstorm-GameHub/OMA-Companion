@@ -1305,6 +1305,8 @@ model JobReport {
   hiddenByAdminAt           DateTime? // redaktionelle Moderation, unabhängig von Stimmen-Anfechtungen
   hiddenReason              String?
   discordMessageId          String? // für Reaktions-Rückzuordnung (spätere Phase)
+  category                  String? // turnierbericht | interview | meinung | guide | news (siehe report-categories.ts)
+  isDraft                   Boolean   @default(false) // Entwurf: nur für den Autor sichtbar, nicht im Board, keine Bewertung
 
   author                  User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event                   Event?                  @relation(fields: [eventId], references: [id])

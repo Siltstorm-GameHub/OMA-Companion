@@ -59,7 +59,7 @@ async function eventsWithoutReports(): Promise<EventRecommendation[]> {
   const events = await prisma.event.findMany({
     where: {
       hidden: false, status: "finished", startAt: { gte: since },
-      jobReports: { none: { hiddenByAdminAt: null } },
+      jobReports: { none: { hiddenByAdminAt: null, isDraft: false } },
     },
     orderBy: { startAt: "desc" },
     take: 10,

@@ -510,3 +510,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS "CoachGuideVote_guideId_voterId_key" ON "Coach
 
 ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "badgeLevel" INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "peakBadgeLevel" INTEGER NOT NULL DEFAULT 1;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Journalist: Kategorien + Entwürfe für Berichte
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "category" TEXT;
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "isDraft" BOOLEAN NOT NULL DEFAULT false;
