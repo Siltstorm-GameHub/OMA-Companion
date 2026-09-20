@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, Sun, Moon, ShieldAlert } from "lucide-react";
+import { useGuestGate } from "@/components/GuestGate";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import RankedAvatar from "@/components/RankedAvatar";
 import { useState, useRef, useEffect } from "react";
@@ -47,6 +48,7 @@ export default function MobileTopBar() {
   const { data: session } = useSession();
   const myRankPoints      = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
   const { theme, toggle } = useTheme();
+  const { isGuest, openGate } = useGuestGate();
   const [open, setOpen]   = useState(false);
   const [mounted, setMounted] = useState(false);
   const btnRef            = useRef<HTMLButtonElement>(null);
@@ -160,7 +162,20 @@ export default function MobileTopBar() {
           </Link>
         ) : null}
 
+        {/* Gäste: statt Profil-Menü ein direkter Weg zu Beitritt/Login */}
+        {isGuest && (
+          <button
+            type="button"
+            onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shrink-0"
+            style={{ background: "#5865F2" }}
+          >
+            Anmelden
+          </button>
+        )}
+
         {/* Avatar Button */}
+        {!isGuest && (
         <button
           ref={btnRef}
           onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
@@ -183,6 +198,7 @@ export default function MobileTopBar() {
             className={open ? "outline-2 outline-teal-500/50 outline-offset-2" : "outline-1 outline-teal-500/[0.22] outline-offset-1"}
           />
         </button>
+        )}
       </header>
 
       {dropdown}

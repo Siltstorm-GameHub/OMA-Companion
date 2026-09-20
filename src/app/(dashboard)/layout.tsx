@@ -8,12 +8,7 @@ import DashboardChrome from "./DashboardChrome";
 import PartnerFooter from "@/components/PartnerFooter";
 import type { NewsItem } from "@/components/TopNewsFeed";
 import { getBerlinDateParts } from "@/lib/time";
-
-// Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:
-// Dashboard, Events, Rangliste als "Schaufenster" für nicht eingeloggte Besucher).
-// Bewusst nur die exakten Übersichtsseiten, keine Unterseiten wie /events/series/[id]
-// oder /tournament/[id] — die verlangen weiterhin ein Login.
-const GUEST_ALLOWED_PATHS = ["/dashboard", "/events", "/leaderboard"];
+import { GUEST_ALLOWED_PATHS } from "@/lib/guest-access";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -232,7 +227,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <DashboardChrome newsItems={newsItems} partnerFooter={<PartnerFooter />}>
+    <DashboardChrome
+      newsItems={newsItems}
+      partnerFooter={<PartnerFooter />}
+      isGuest={!session}
+      inviteUrl={process.env.DISCORD_INVITE_URL ?? null}
+    >
       {children}
     </DashboardChrome>
   );

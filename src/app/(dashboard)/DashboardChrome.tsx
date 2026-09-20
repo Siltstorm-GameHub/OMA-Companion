@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import { BackToTop } from "@/components/BackToTop";
 import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
+import { GuestGateProvider, GuestBanner } from "@/components/GuestGate";
 
 /**
  * `partnerFooter` kommt bewusst als bereits gerendertes ReactNode vom Server-
@@ -20,11 +21,13 @@ import AuroraBackground from "@/components/AuroraBackground";
  * durchreichen, nie direkt importieren.
  */
 export default function DashboardChrome({
-  children, newsItems, partnerFooter,
+  children, newsItems, partnerFooter, isGuest, inviteUrl,
 }: {
   children: React.ReactNode;
   newsItems: NewsItem[];
   partnerFooter: React.ReactNode;
+  isGuest: boolean;
+  inviteUrl: string | null;
 }) {
   const pathname = usePathname();
   // Battle Cards ist ein eigenständiger Spielmodus-Bereich — Partner-Footer,
@@ -40,6 +43,7 @@ export default function DashboardChrome({
   const isLiveBattle = pathname.startsWith("/battle-cards/live/");
 
   return (
+    <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
     <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
@@ -76,6 +80,7 @@ export default function DashboardChrome({
           className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
           style={{ position: "relative", zIndex: 2 }}
         >
+          <GuestBanner />
           {children}
           {partnerFooter}
         </main>
@@ -94,5 +99,6 @@ export default function DashboardChrome({
         </div>
       )}
     </div>
+    </GuestGateProvider>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { GateLink } from "@/components/GuestGate";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
@@ -63,7 +63,7 @@ export default function BottomNav() {
         )}
 
         {items.map(({ label, href, icon: Icon, active, showPollBadge }) => (
-          <Link
+          <GateLink
             key={href}
             href={href}
             className="flex-1 flex flex-col items-center justify-center relative"
@@ -98,7 +98,7 @@ export default function BottomNav() {
             >
               {label}
             </span>
-          </Link>
+          </GateLink>
         ))}
       </div>
     </nav>

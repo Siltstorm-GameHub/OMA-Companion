@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
+import { GateLink, useGuestGate } from "@/components/GuestGate";
 
 const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
@@ -58,7 +59,7 @@ const NavLink = forwardRef<HTMLAnchorElement, {
   const color = active ? activeColor : hov ? "var(--nav-text-hover)" : inactiveColor;
 
   return (
-    <Link
+    <GateLink
       ref={ref}
       href={href}
       title={label}
@@ -96,7 +97,7 @@ const NavLink = forwardRef<HTMLAnchorElement, {
       >
         {label}
       </span>
-    </Link>
+    </GateLink>
   );
 });
 
@@ -105,6 +106,7 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
   const pathname          = usePathname();
   const { data: session } = useSession();
   const { theme, toggle } = useTheme();
+  const { isGuest, openGate } = useGuestGate();
   const [avatarOpen, setAvatarOpen]     = useState(false);
   const [bump, setBump] = useState<{ left: number; top: number; width: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -232,7 +234,21 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
       </div>
 
       {/* Avatar + Dropdown — auf Battle Cards ausgeblendet (siehe DashboardChrome) */}
-      {!hideBrandAndProfile && (
+      {!hideBrandAndProfile && isGuest && (
+      <>
+      <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
+      <button
+        type="button"
+        onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 9, border: "none", cursor: "pointer",
+          background: "#5865F2", color: "#fff", fontSize: 12.5, fontWeight: 650, whiteSpace: "nowrap", flexShrink: 0 }}
+      >
+        Anmelden
+      </button>
+      </>
+      )}
+
+      {!hideBrandAndProfile && !isGuest && (
       <>
       <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
 

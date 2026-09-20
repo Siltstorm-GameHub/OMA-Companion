@@ -9,7 +9,8 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { CountUp } from "@/components/CountUp";
-import Link from "next/link";
+import { GateLink, GuestMoreCta } from "@/components/GuestGate";
+import { GUEST_LEADERBOARD_LIMIT } from "@/lib/guest-access";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
@@ -108,7 +109,7 @@ export default async function LeaderboardPage() {
   const userId = me?.id;
   const isAdmin = me?.role === "admin" || me?.role === "moderator";
 
-  const [users, eventsWithWinners, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
+  const [allUsers, eventsWithWinners, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
       take: 50,
@@ -131,6 +132,9 @@ export default async function LeaderboardPage() {
       orderBy: { takenAt: "desc" },
     }),
   ]);
+
+  // Gäste sehen nur die Top-Plätze als Vorgeschmack, die volle Liste gibt es nach dem Login.
+  const users = me ? allUsers : allUsers.slice(0, GUEST_LEADERBOARD_LIMIT);
 
   const winMap = new Map<string, number>();
   for (const ev of eventsWithWinners) {
@@ -221,7 +225,7 @@ export default async function LeaderboardPage() {
             const rankDelta   = hasSnapshot && prevRank !== null ? prevRank - currentRank : null;
 
             return (
-              <Link key={u.id}
+              <GateLink key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
                 className={`card-cut card-hover relative flex flex-col items-center surface p-4 sm:p-5 flex-1 max-w-[200px] overflow-hidden
                   ${cfg.heightOffset} ${cfg.order} transition-all`}
@@ -269,7 +273,7 @@ export default async function LeaderboardPage() {
                   {userWins > 0 && <span className="flex items-center gap-0.5"><Swords className="w-2.5 h-2.5" />{userWins}</span>}
                   {rankDelta !== null && <RankDeltaBadge delta={rankDelta} />}
                 </div>
-              </Link>
+              </GateLink>
             );
           })}
         </div>
@@ -326,7 +330,7 @@ export default async function LeaderboardPage() {
               : "text-white";
 
             return (
-              <Link key={u.id}
+              <GateLink key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
                 className={`grid items-center gap-x-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up
                   [grid-template-columns:2rem_2.25rem_1fr_7rem]
@@ -393,11 +397,13 @@ export default async function LeaderboardPage() {
                   <p className="text-[9px] text-amber-600/70">Punkte</p>
                 </div>
 
-              </Link>
+              </GateLink>
             );
           })}
         </div>
       </div>
+
+      <GuestMoreCta message={`Die komplette Top ${allUsers.length} gibt's nach dem Login`} />
     </div>
   );
 }

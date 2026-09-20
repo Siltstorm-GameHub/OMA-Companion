@@ -10,7 +10,8 @@ import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
 import CoinIcon from "@/components/CoinIcon";
-import Link from "next/link";
+import { GateLink, GateButton, GuestMoreCta } from "@/components/GuestGate";
+import { GUEST_UPCOMING_EVENTS_LIMIT, GUEST_FINISHED_EVENTS_LIMIT } from "@/lib/guest-access";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
 import EventCardLink from "./EventCardLink";
@@ -161,8 +162,12 @@ export default async function EventsPage() {
     const label = MONTH_FORMATTER.format(d);
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
+  // Gäste sehen nur einen Ausschnitt der Events als Vorgeschmack.
+  const visibleUpcoming = userId ? upcomingItems : upcomingItems.slice(0, GUEST_UPCOMING_EVENTS_LIMIT);
+  const visibleFinished = userId ? finishedItems : finishedItems.slice(0, GUEST_FINISHED_EVENTS_LIMIT);
+  const guestHasMore = !userId && (upcomingItems.length > visibleUpcoming.length || finishedItems.length > visibleFinished.length);
   const upcomingGroups: { key: string; label: string; items: AnyItem[] }[] = [];
-  for (const item of upcomingItems) {
+  for (const item of visibleUpcoming) {
     const key = monthKey(item.date);
     let group = upcomingGroups.find(g => g.key === key);
     if (!group) {
@@ -224,14 +229,14 @@ export default async function EventsPage() {
             </span>
           )}
           {hasSeries && (
-            <Link href={`/events/series/${ev.seriesId}`}
+            <GateLink href={`/events/series/${ev.seriesId}`}
               className="absolute top-10 left-2.5 right-2.5 z-10 inline-flex w-fit max-w-[calc(100%-1.25rem)] items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full transition-opacity hover:opacity-90 group/series shadow-[0_1px_6px_rgba(0,0,0,0.4)]"
               style={{ background: seriesColor }}>
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/95 shrink-0">
                 <SeriesIcon name={ev.series?.icon} className="w-3 h-3" />
               </span>
               <span className="text-xs font-bold text-white truncate">{ev.series?.name}</span>
-            </Link>
+            </GateLink>
           )}
           <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
             <div className="flex items-center gap-2 mb-1.5">
@@ -273,6 +278,18 @@ export default async function EventsPage() {
                 {!isPartnerStreamer && (
                   <StreamRegisterButton eventId={ev.id} isStreaming={isCommunityStreamer} />
                 )}
+              </div>
+            )}
+            {!userId && canRegister && (
+              <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                <GateButton
+                  href={cardHref}
+                  title="Zum Mitspielen anmelden"
+                  message="Für die Event-Anmeldung brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
+                  className="text-xs px-3 py-1.5 rounded-lg font-semibold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors"
+                >
+                  Anmelden &amp; mitmachen
+                </GateButton>
               </div>
             )}
             {userId && canRegister && !isRegistered && isRegistrationLocked && (
@@ -320,10 +337,10 @@ export default async function EventsPage() {
         );
       }
       return (
-        <Link key={`ev-recent-${ev.id}`} href={cardHref}
+        <GateLink key={`ev-recent-${ev.id}`} href={cardHref}
           className={`${cardCls} hover:opacity-100 hover:grayscale-0`}>
           {content}
-        </Link>
+        </GateLink>
       );
   };
 
@@ -345,11 +362,11 @@ export default async function EventsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/clip-des-monats"
+          <GateLink href="/clip-des-monats"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass border border-[#9146ff]/20 hover:border-[#9146ff]/40 transition-colors group text-sm">
             <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" />
             <span className="text-gray-300 group-hover:text-white transition-colors">Clip des Monats</span>
-          </Link>
+          </GateLink>
           {isMod && <SyncButton />}
         </div>
       </div>
@@ -407,7 +424,7 @@ export default async function EventsPage() {
           </div>
 
           {hiddenEvents.map(ev => (
-            <Link key={`hidden-${ev.id}`}
+            <GateLink key={`hidden-${ev.id}`}
               href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
               <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
@@ -428,12 +445,12 @@ export default async function EventsPage() {
                   <EyeOff className="w-2.5 h-2.5" /> Ausgeblendet
                 </span>
               </div>
-            </Link>
+            </GateLink>
           ))}
         </div>
       )}
 
-      {finishedItems.length > 0 && (
+      {visibleFinished.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-3 pb-1">
             <div className="h-px flex-1 bg-white/[0.05]" />
@@ -441,7 +458,7 @@ export default async function EventsPage() {
             <div className="h-px flex-1 bg-white/[0.05]" />
           </div>
 
-          {finishedItems.map(item => {
+          {visibleFinished.map(item => {
               const { ev } = item;
               const discordUrl = ev.discordEventId && GUILD_ID
                 ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
@@ -452,10 +469,10 @@ export default async function EventsPage() {
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
                   <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
-                    <Link href={`/tournament/${ev.id}`}
+                    <GateLink href={`/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
                       {ev.title}
-                    </Link>
+                    </GateLink>
                     <p className="text-[10px] text-gray-600">
                       {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                       {ev.series && <> · {ev.series.name}</>}
@@ -480,6 +497,7 @@ export default async function EventsPage() {
           })}
         </div>
       )}
+      {guestHasMore && <GuestMoreCta message="Alle Events gibt's nach dem Login" />}
         </>}
         predictionsPanel={
           userId ? (
