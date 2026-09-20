@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useNow } from "@/lib/useNow";
-import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check, UserX, RotateCcw } from "lucide-react";
+import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { usePollCountdown } from "@/components/PollCountdown";
 import RankedAvatar from "@/components/RankedAvatar";
 
@@ -34,18 +34,10 @@ type Poll = {
   excludedUserIds: string[];
 };
 
-type Registration = {
-  userId: string;
-  role: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
-};
-
 type Props = {
   eventId: string;
   userId: string | undefined;
   initialPolls: Poll[];
-  eventRegistrations: Registration[];
-  isAdmin?: boolean;
 };
 
 function CountdownBadge({ startAt }: { startAt: string }) {
@@ -67,17 +59,11 @@ function PollCard({
   userId,
   eventId,
   onVoted,
-  isAdmin = false,
-  eventRegistrations,
-  onExclusionChanged,
 }: {
   poll: Poll;
   userId: string | undefined;
   eventId: string;
   onVoted: (pollId: string, targetId: string) => void;
-  isAdmin?: boolean;
-  eventRegistrations: Registration[];
-  onExclusionChanged: () => void;
 }) {
   const now = useNow();
   const startAt = new Date(poll.startAt).getTime();
@@ -89,37 +75,6 @@ function PollCard({
   const [voting, setVoting] = useState(false);
   const [error, setError]   = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(isPast && !isActive);
-  const [excluding, setExcluding] = useState<string | null>(null);
-
-  const canManageCandidates = isAdmin && (poll.answerType === "players" || poll.answerType === "spectators");
-  const excludedUsers = canManageCandidates
-    ? eventRegistrations
-        .filter(r => poll.excludedUserIds.includes(r.userId))
-        .map(r => r.user)
-    : [];
-
-  async function setExcludedUserIds(next: string[]) {
-    try {
-      const res = await fetch(`/api/admin/polls/${poll.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ excludedUserIds: next }),
-      });
-      if (res.ok) onExclusionChanged();
-    } finally {
-      setExcluding(null);
-    }
-  }
-
-  function excludeCandidate(targetUserId: string) {
-    setExcluding(targetUserId);
-    void setExcludedUserIds([...poll.excludedUserIds, targetUserId]);
-  }
-
-  function reincludeCandidate(targetUserId: string) {
-    setExcluding(targetUserId);
-    void setExcludedUserIds(poll.excludedUserIds.filter(id => id !== targetUserId));
-  }
 
   const totalVotes = Object.values(poll.voteCounts).reduce((a, b) => a + b, 0);
 
@@ -287,42 +242,10 @@ function PollCard({
                       <span className="text-xs text-gray-600 w-8 text-right">{pct}%</span>
                     </div>
                   </button>
-                  {canManageCandidates && (
-                    <button
-                      type="button"
-                      title="Von der Wahl ausschließen"
-                      disabled={excluding === answer.id}
-                      onClick={() => excludeCandidate(answer.id)}
-                      className="absolute right-1.5 top-1.5 p-1 rounded-md text-gray-600 hover:text-red-400 hover:bg-black/20 transition-colors disabled:opacity-40"
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
               );
             })}
           </div>
-
-          {/* Ausgeschlossene Kandidaten (nur Moderatoren) */}
-          {canManageCandidates && excludedUsers.length > 0 && (
-            <div className="pt-1 space-y-1.5">
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest">Ausgeschlossen</p>
-              {excludedUsers.map(u => (
-                <div key={u.id} className="flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 bg-black/10 border border-white/[0.04]">
-                  <span className="text-xs text-gray-500 truncate">{u.username ?? u.name ?? u.id}</span>
-                  <button
-                    type="button"
-                    title="Wieder zur Wahl zulassen"
-                    disabled={excluding === u.id}
-                    onClick={() => reincludeCandidate(u.id)}
-                    className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-300 transition-colors disabled:opacity-40 shrink-0"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Zulassen
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
           {error && <p className="text-xs text-red-400">{error}</p>}
           {voting && <p className="text-xs text-gray-500">Stimme wird abgegeben…</p>}
@@ -332,7 +255,7 @@ function PollCard({
   );
 }
 
-export default function PollsSection({ eventId, userId, initialPolls, eventRegistrations, isAdmin = false }: Props) {
+export default function PollsSection({ eventId, userId, initialPolls }: Props) {
   const [polls, setPolls] = useState<Poll[]>(initialPolls);
 
   const refresh = useCallback(async () => {
@@ -343,11 +266,9 @@ export default function PollsSection({ eventId, userId, initialPolls, eventRegis
   }, [eventId]);
 
   useEffect(() => {
-    // Merge answerOptions from eventRegistrations for initial render when API data arrives later
-    void eventRegistrations; // already handled server-side in initialPolls
     const id = setInterval(refresh, 30_000);
     return () => clearInterval(id);
-  }, [refresh, eventRegistrations]);
+  }, [refresh]);
 
   function handleVoted(pollId: string, targetId: string) {
     setPolls(prev =>
@@ -385,8 +306,7 @@ export default function PollsSection({ eventId, userId, initialPolls, eventRegis
       {activePolls.length > 0 && (
         <div className="space-y-2">
           {activePolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted}
-              isAdmin={isAdmin} eventRegistrations={eventRegistrations} onExclusionChanged={refresh} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
           ))}
         </div>
       )}
@@ -394,8 +314,7 @@ export default function PollsSection({ eventId, userId, initialPolls, eventRegis
       {upcomingPolls.length > 0 && (
         <div className="space-y-2">
           {upcomingPolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted}
-              isAdmin={isAdmin} eventRegistrations={eventRegistrations} onExclusionChanged={refresh} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
           ))}
         </div>
       )}
@@ -403,8 +322,7 @@ export default function PollsSection({ eventId, userId, initialPolls, eventRegis
       {pastPolls.length > 0 && (
         <div className="space-y-2">
           {pastPolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted}
-              isAdmin={isAdmin} eventRegistrations={eventRegistrations} onExclusionChanged={refresh} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
           ))}
         </div>
       )}

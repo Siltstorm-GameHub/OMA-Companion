@@ -113,7 +113,6 @@ export default async function TournamentDetailPage({
   const { id: eventId } = await params;
   const me    = await getSessionUser();
   const isMod = me?.role === "moderator" || me?.role === "admin";
-  const isAdmin = me?.role === "admin";
 
   // Lazy Auto-Aktivierung des Events, falls fällig (nur bei Spieler-Anmeldungen) — muss vor dem
   // Fetch unten abgeschlossen sein, damit der gelesene Status aktuell ist (siehe event-lifecycle.ts).
@@ -992,8 +991,6 @@ export default async function TournamentDetailPage({
             eventId={event.id}
             userId={userId}
             initialPolls={initialPolls}
-            eventRegistrations={allRegistrations}
-            isAdmin={isAdmin}
           />
         </div>
       )}

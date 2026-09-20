@@ -32,7 +32,10 @@ type AdminPoll = {
 
 type Props = {
   eventId: string;
+  /** Stimmen einsehen/nachtragen/entfernen — nur Admins */
   isAdmin: boolean;
+  /** Kandidaten ausschließen — Moderatoren und Admins */
+  isMod: boolean;
   /** Event ist bereits vollständig abgeschlossen ("finished") — nur noch Ergebnis-Übersicht,
    * keine Stimmen-/Kandidaten-Verwaltung mehr (die ist nur während der Umfragephase sinnvoll). */
   readOnly?: boolean;
@@ -154,11 +157,12 @@ function AddVoteForm({
   );
 }
 
-export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, registeredUsers, spectatorUsers, allUsers }: Props) {
+export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = false, registeredUsers, spectatorUsers, allUsers }: Props) {
   const [polls, setPolls] = useState<PublicPoll[] | null>(null);
   const [adminPolls, setAdminPolls] = useState<Record<string, AdminPoll>>({});
   const [savingFor, setSavingFor] = useState<string | null>(null);
   const canManage = isAdmin && !readOnly;
+  const canExclude = isMod && !readOnly;
 
   const userById = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
   // Muss oberhalb der frühen Returns stehen: nach einem bedingten return darf kein Hook folgen.
@@ -255,7 +259,7 @@ export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, reg
         <span className="text-xs font-semibold text-violet-300">Live-Umfragen</span>
         {!canManage && (
           <span className="text-[10px] text-gray-600 ml-auto">
-            {readOnly ? "Nur lesend – Event ist bereits abgeschlossen" : "Nur lesend – Stimmen nachtragen erfordert Admin-Rechte"}
+            {readOnly ? "Nur lesend – Event ist bereits abgeschlossen" : "Stimmen nachtragen erfordert Admin-Rechte"}
           </span>
         )}
       </div>
@@ -324,12 +328,18 @@ export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, reg
                 </div>
               )}
 
-              {/* Admin: Kandidaten von der Umfrage ausschließen */}
-              {canManage && candidatePool.length > 0 && (
-                <div className="pt-1 space-y-1.5">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest flex items-center gap-1">
-                    <UserX className="w-3 h-3" /> Kandidaten
-                  </p>
+              {/* Moderator/Admin: Kandidaten von der Umfrage ausschließen (Klick auf den Namen) */}
+              {canExclude && candidatePool.length > 0 && (
+                <div className="rounded-lg border border-red-500/15 bg-red-500/[0.03] p-2.5 space-y-2">
+                  <div className="flex items-start gap-1.5">
+                    <UserX className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-red-300">Kandidaten ausschließen</p>
+                      <p className="text-[11px] text-gray-400 leading-snug">
+                        Klick auf einen Namen schließt die Person aus dieser Umfrage aus (bereits abgegebene Stimmen für sie werden entfernt). Erneuter Klick lässt sie wieder zu.
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {candidatePool.map(u => {
                       const isExcluded = excludedSet.has(u.id);
@@ -341,12 +351,13 @@ export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, reg
                           disabled={isSaving}
                           onClick={() => toggleExcluded(poll, u.id)}
                           title={isExcluded ? "Wieder zur Wahl zulassen" : "Von der Umfrage ausschließen"}
-                          className={`text-[11px] px-2 py-1 rounded-full border transition-colors disabled:opacity-50 ${
+                          className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
                             isExcluded
-                              ? "border-red-800/50 bg-red-950/20 text-red-400/70 line-through"
-                              : "border-white/[0.08] bg-white/[0.03] text-gray-300 hover:border-red-700/50 hover:text-red-300"
+                              ? "border-red-700/60 bg-red-950/30 text-red-400/80 line-through"
+                              : "border-white/[0.12] bg-white/[0.05] text-gray-200 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
                           }`}
                         >
+                          {isExcluded && <UserX className="w-3 h-3 shrink-0" />}
                           {userName(u)}
                         </button>
                       );

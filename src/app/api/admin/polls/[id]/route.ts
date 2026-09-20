@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireRole, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await requireRole("admin");
+  // Moderatoren dürfen Kandidaten ausschließen; alles andere (Zeiten, Stimmen nachtragen/entfernen,
+  // Gewinner) bleibt Admins vorbehalten.
+  const user = await requireRole("moderator");
   const { id: pollId } = await params;
 
   const poll = await prisma.eventPoll.findUnique({ where: { id: pollId } });
@@ -22,6 +24,11 @@ export async function PATCH(
     winnerIds?: string[];
     excludedUserIds?: string[];
   };
+
+  const onlyExclusion = Object.keys(body).every(k => k === "excludedUserIds");
+  if (!onlyExclusion && !hasMinRole(user.role, "admin")) {
+    return NextResponse.json({ error: "Nur Admins dürfen diese Änderung vornehmen" }, { status: 403 });
+  }
 
   const updateData: Record<string, unknown> = {};
 

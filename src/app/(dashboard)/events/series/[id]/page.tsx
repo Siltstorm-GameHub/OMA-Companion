@@ -95,7 +95,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const me     = await getSessionUser();
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
-  const isAdmin = me?.role === "admin";
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
@@ -665,8 +664,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 eventId={group.eventId}
                 userId={userId}
                 initialPolls={group.polls}
-                eventRegistrations={group.registrations}
-                isAdmin={isAdmin}
               />
             </div>
           ))}

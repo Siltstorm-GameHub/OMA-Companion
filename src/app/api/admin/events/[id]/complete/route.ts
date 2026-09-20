@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
@@ -99,7 +99,9 @@ export async function POST(
   ctx: { params: Promise<{ id: string }> }
 ) {
   const { id: eventId } = await ctx.params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  // Systemaufrufe (Cron/Widget mit CRON_SECRET) haben keine Session — sonst würde die Berechtigungs-
+  // prüfung sie vorab nach /login umleiten, bevor completeEvent() sie als System erkennt.
+  if (!isSystemCall(req)) await requireModeratorOrEventSquadCaptain(eventId);
 
   // Abschluss gegen Parallelaufrufe sperren. Ohne das lesen zwei gleichzeitig speichernde
   // Moderatoren beide denselben Ausgangsstand (isReEdit === false) und zahlen beide die
@@ -199,7 +201,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     placements?: PlacementReward[];
     // Spectator rewards
     spectatorAttendedIds?: string[];
-    /** Admin-only: noch offene EventPolls sofort schließen (endAt -> jetzt) und mit abschließen */
+    /** Moderator/Admin: noch offene EventPolls sofort schließen (endAt -> jetzt) und mit abschließen */
     closeOpenPolls?: boolean;
     /** Nachträglich/beim Abschluss ausgeschlossene User (z.B. Disqualifikation): bleiben in den Stats
      *  und Tabellen sichtbar, erhalten aber keine Münzen, Ligapunkte oder Rang-Punkte aus diesem Event. */
@@ -682,9 +684,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     allUnpaidPolls = [...allUnpaidPolls, ...reopenedPolls];
   }
 
-  // Admin-only: noch offene Umfragen sofort schließen (Umfragephase manuell beenden,
-  // statt auf das natürliche Ablaufen von endAt zu warten).
-  if (body.closeOpenPolls && currentUser.role === "admin") {
+  // Moderator/Admin (nicht Squad-Captains): noch offene Umfragen sofort schließen (Umfragephase
+  // manuell beenden, statt auf das natürliche Ablaufen von endAt zu warten).
+  if (body.closeOpenPolls && hasMinRole(currentUser.role, "moderator")) {
     const stillOpenIds = allUnpaidPolls.filter(p => new Date(p.endAt) > now).map(p => p.id);
     if (stillOpenIds.length > 0) {
       pointOps.push(prisma.eventPoll.updateMany({ where: { id: { in: stillOpenIds } }, data: { endAt: now } }));

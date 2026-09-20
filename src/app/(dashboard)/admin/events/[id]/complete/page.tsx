@@ -1,4 +1,4 @@
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
@@ -251,6 +251,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       pendingEventPolls={pendingEventPolls}
       spectatorRewardJson={spectatorRewardJson}
       isAdmin={currentUser.role === "admin"}
+      isMod={hasMinRole(currentUser.role, "moderator")}
       isReEdit={isReEdit}
       status={event.status}
       initialData={initialData}

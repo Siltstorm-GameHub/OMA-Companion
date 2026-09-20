@@ -196,10 +196,13 @@ function CatalogView({
 
 // ── Büro (aktiver Job) ────────────────────────────────────────────────────────
 
+const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
+const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
+
 interface Recommendations {
   events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean }[];
-  steamSales: { id: number; name: string; discountPercent?: number; url: string }[];
-  steamReleases: { id: number; name: string; url: string }[];
+  steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
+  steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
 }
 interface Payout { id: string; weekStart: string; weekEnd: string; rawScore: number; tierLabel: string | null; baseCoins: number; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
@@ -218,6 +221,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [createOpen, setCreateOpen] = useState(false);
   const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
   const [showAllEvents, setShowAllEvents] = useState(false);
+  const [steamTab, setSteamTab] = useState<"sales" | "new">("sales");
   const [tab, setTab] = useState<"work" | "pay">("work");
   const [guideOpen, setGuideOpen] = useState(false);
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -451,7 +455,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       <>
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
-        <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-3">
+        <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-4">
           <SectionHeader tone="blue" icon={<Lightbulb className="w-3.5 h-3.5" />} title="Empfehlungen für deine Beiträge" />
 
           {recs.events.length > 0 && (() => {
@@ -462,56 +466,87 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
             // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
             const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(membership.jobKey);
             return (
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Events ohne Beitrag</p>
-                {visibleEvents.map(e => (
-                  <div key={e.eventId} className="flex items-center justify-between gap-2 pl-4">
-                    <p className="text-xs text-gray-400 min-w-0 truncate">
-                      • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
-                      {" — "}<span className="text-amber-400">{e.reason}</span>
-                      {e.urgency && <span className={`ml-1.5 ${e.urgent ? "text-red-400" : "text-gray-600"}`}>· {e.urgency}</span>}
-                    </p>
-                    <span className="flex items-center gap-2 shrink-0">
-                      <button onClick={() => openCreateForm(isEventScopedJob ? e.eventId : undefined)}
-                        className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">
-                        Erstellen
-                      </button>
-                      <button onClick={() => dismissRecommendation(e.eventId)} title="Nicht relevant — ausblenden"
-                        className="text-gray-600 hover:text-red-400 transition-colors">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
+                <div className="space-y-1.5">
+                  {visibleEvents.map(e => (
+                    <div key={e.eventId} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                      {e.urgency && (
+                        <span className={`shrink-0 min-w-[3.25rem] text-center text-[10px] font-semibold rounded-lg px-2 py-1 border ${
+                          e.urgent ? URGENT_CHIP : CALM_CHIP
+                        }`}>{e.urgency}</span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-200 truncate">
+                          {e.url ? <Link href={e.url} className="hover:text-teal-300 transition-colors">{e.title}</Link> : e.title}
+                        </p>
+                        <p className="text-[11px] text-amber-400/90">{e.reason}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button size="sm" variant="outline" onClick={() => openCreateForm(isEventScopedJob ? e.eventId : undefined)}>Erstellen</Button>
+                        <button onClick={() => dismissRecommendation(e.eventId)} title="Nicht relevant — ausblenden" aria-label="Ausblenden"
+                          className="p-1.5 text-gray-600 hover:text-red-400 transition-colors">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 {hiddenCount > 0 && (
-                  <button onClick={() => setShowAllEvents(true)} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors pl-4">
-                    +{hiddenCount} weitere
+                  <button onClick={() => setShowAllEvents(true)} className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+                    +{hiddenCount} weitere anzeigen
                   </button>
                 )}
               </div>
             );
           })()}
-          {recs.steamSales.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><Tag className="w-3 h-3" /> Aktuelle Sales</p>
-              {recs.steamSales.map(s => (
-                <p key={`sale-${s.id}`} className="text-xs text-gray-400 pl-4">
-                  • <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
-                  {s.discountPercent ? <span className="text-emerald-400"> -{s.discountPercent}%</span> : ""}
-                </p>
-              ))}
-            </div>
-          )}
-          {recs.steamReleases.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><Rocket className="w-3 h-3" /> Neuveröffentlichungen</p>
-              {recs.steamReleases.map(s => (
-                <p key={`new-${s.id}`} className="text-xs text-gray-400 pl-4">
-                  • <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
-                </p>
-              ))}
-            </div>
-          )}
+
+          {(recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (() => {
+            const activeSteamTab = steamTab === "sales" && recs.steamSales.length === 0 ? "new"
+              : steamTab === "new" && recs.steamReleases.length === 0 ? "sales" : steamTab;
+            const items = activeSteamTab === "sales" ? recs.steamSales : recs.steamReleases;
+            const both = recs.steamSales.length > 0 && recs.steamReleases.length > 0;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5">
+                    {activeSteamTab === "sales"
+                      ? <><Tag className="w-3.5 h-3.5 text-emerald-400" /> Aktuelle Steam-Sales</>
+                      : <><Rocket className="w-3.5 h-3.5 text-blue-400" /> Neuveröffentlichungen</>}
+                  </p>
+                  {both && (
+                    <div className="flex rounded-lg border border-white/10 overflow-hidden text-[10px] font-semibold" role="tablist">
+                      {([["sales", "Sales"], ["new", "Neu"]] as const).map(([key, label]) => (
+                        <button key={key} role="tab" aria-selected={activeSteamTab === key} onClick={() => setSteamTab(key)}
+                          className={`px-2.5 py-1 transition-colors ${activeSteamTab === key ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+                  {items.map(s => (
+                    <a key={`${activeSteamTab}-${s.id}`} href={s.url} target="_blank" rel="noopener noreferrer"
+                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/30 transition-colors">
+                      <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
+                        {s.headerImage && (
+                          // eslint-disable-next-line @next/next/no-img-element -- Steam-CDN-Cover, beliebiger Host
+                          <img src={s.headerImage} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                        )}
+                        {s.discountPercent ? (
+                          <span className="absolute top-1.5 right-1.5 text-[11px] font-bold text-emerald-950 bg-emerald-400 rounded-md px-1.5 py-0.5">
+                            -{s.discountPercent}%
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="px-2.5 py-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

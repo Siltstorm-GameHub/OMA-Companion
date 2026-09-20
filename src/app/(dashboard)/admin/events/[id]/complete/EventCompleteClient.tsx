@@ -69,6 +69,8 @@ interface Props {
   pendingEventPolls: { label: string; endAt: string }[];
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isAdmin: boolean;
+  /** Moderator oder Admin (Squad-Captains ohne Moderator-Rolle: false) */
+  isMod: boolean;
   isReEdit: boolean;
   /** Event-Status aus der DB — bestimmt maßgeblich den Anzeigemodus (aktiv/umfrage/finished),
    * unabhängig davon ob completionData konsistent gepflegt wurde (z.B. nach manueller Statusänderung). */
@@ -123,7 +125,7 @@ export default function EventCompleteClient({
   registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
-  isAdmin, isReEdit, status,
+  isAdmin, isMod, isReEdit, status,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
   const router = useRouter();
@@ -141,9 +143,9 @@ export default function EventCompleteClient({
 
   // Läuft noch eine in-App-Umfrage (EventPoll), deren Abstimmungsfenster noch nicht vorbei ist?
   const openEventPolls = pendingEventPolls.filter(p => new Date(p.endAt) > new Date());
-  // Im Poll-Only-Modus: schließt das Speichern hier die Umfragephase endgültig ab (Admin kann noch
-  // offene Umfragen zwangsweise beenden; ohne offene Umfragen passiert das ohnehin automatisch)?
-  const willFinalizePolls = isPollOnly && (isAdmin || openEventPolls.length === 0);
+  // Im Poll-Only-Modus: schließt das Speichern hier die Umfragephase endgültig ab (Moderator/Admin können
+  // noch offene Umfragen zwangsweise beenden; ohne offene Umfragen passiert das ohnehin automatisch)?
+  const willFinalizePolls = isPollOnly && (isMod || openEventPolls.length === 0);
 
   /* ── Gewinner-Stat ── */
   const [winnerStatField, setWinnerStatField] = useState<string>(
@@ -429,7 +431,7 @@ export default function EventCompleteClient({
           excludedUserIds:         excludedUsers.size > 0 ? [...excludedUsers] : undefined,
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
-          closeOpenPolls:          keepPollOpen ? false : (isPollOnly ? isAdmin : undefined),
+          closeOpenPolls:          keepPollOpen ? false : (isPollOnly ? isMod : undefined),
           keepPollOpen:            keepPollOpen || undefined,
         }),
       });
@@ -503,7 +505,7 @@ export default function EventCompleteClient({
             Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen, Gesamttabelle und der Event-Gewinner
             wurden bereits festgelegt und sind nicht mehr änderbar. Umfrageergebnisse unten einsehen bzw. Stimmen
             nachtragen und Finale Platzierung bei Bedarf anpassen (z.B. Disqualifikation). Beim Speichern wird
-            {isAdmin ? " die Umfragephase beendet und das Event komplett abgeschlossen." : " die Umfragephase abgeschlossen, sobald alle Umfragen abgelaufen sind."}
+            {isMod ? " die Umfragephase beendet und das Event komplett abgeschlossen." : " die Umfragephase abgeschlossen, sobald alle Umfragen abgelaufen sind."}
           </span>
         </div>
       )}
@@ -522,8 +524,8 @@ export default function EventCompleteClient({
           <span>
             {openEventPolls.length === 1 ? "Es läuft noch eine Umfrage" : "Es laufen noch Umfragen"} auf der Event-Seite: {" "}
             {openEventPolls.map(p => `„${p.label}" bis ${new Date(p.endAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
-            {" "}{isPollOnly && isAdmin
-              ? "Als Admin wird sie beim Speichern hier trotzdem sofort zwangsweise beendet und mit abgeschlossen."
+            {" "}{isPollOnly && isMod
+              ? "Als Moderator/Admin wird sie beim Speichern hier trotzdem sofort zwangsweise beendet und mit abgeschlossen."
               : <>Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Ligapunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.</>}
           </span>
         </div>
@@ -533,6 +535,7 @@ export default function EventCompleteClient({
         <LivePollsPanel
           eventId={eventId}
           isAdmin={isAdmin}
+          isMod={isMod}
           readOnly={isFinishedSummary}
           registeredUsers={registeredUsers}
           spectatorUsers={spectatorUsers}
@@ -965,10 +968,10 @@ export default function EventCompleteClient({
 
           {/* Confirm buttons */}
           <div className="space-y-2">
-            {/* Admins schließen mit dem Haupt-Button während der Umfragephase sonst automatisch die
-                Umfrage mit ab — dieser Button erlaubt es, Änderungen an Finaler Platzierung/Begründung
+            {/* Moderatoren/Admins schließen mit dem Haupt-Button während der Umfragephase sonst automatisch
+                die Umfrage mit ab — dieser Button erlaubt es, Änderungen an Finaler Platzierung/Begründung
                 zwischendurch zu sichern, ohne die Umfragephase zu beenden. */}
-            {isPollOnly && isAdmin && rankingDirty && (
+            {isPollOnly && isMod && rankingDirty && (
               <button
                 onClick={() => handleConfirm(false, true)}
                 disabled={loading}
