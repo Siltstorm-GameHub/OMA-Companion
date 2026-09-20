@@ -23,10 +23,15 @@ export async function queryGameServer(
   if (!port) return OFFLINE;
 
   try {
+    // Kurze Timeouts: ein nicht erreichbarer Server darf den Status-Endpunkt nicht blockieren
+    // (GameDig-Default wären bis zu ~30 s, das reißt das Serverless-Zeitlimit und nimmt auch AMP-Server den Status).
     const result = await GameDig.query({
       type: gamedigType,
       host,
       port: Number(port),
+      maxRetries: 0,
+      socketTimeout: 2000,
+      attemptTimeout: 4000,
       ...(telnetPort && telnetPassword ? { telnetPort: Number(telnetPort), telnetPassword } : {}),
     });
 

@@ -21,31 +21,33 @@ export async function GET() {
 
   const result: Record<string, StatusEntry> = {};
 
-  const ampServers = servers.filter((s) => s.ampInstanceId);
-  if (ampServers.length > 0) {
-    try {
-      const instances = await getInstances();
-      const statusByInstanceId = new Map(instances.map((instance) => [instance.InstanceID, toInstanceStatus(instance)]));
-      for (const server of ampServers) {
-        const status = server.ampInstanceId ? statusByInstanceId.get(server.ampInstanceId) : undefined;
-        if (status) {
-          result[server.id] = { online: status.online, currentPlayers: status.currentPlayers, maxPlayers: status.maxPlayers, players: null };
-        }
-      }
-    } catch {
-      // AMP nicht erreichbar o.ä. — Seite bleibt nutzbar, nur ohne Live-Status für diese Server.
-    }
-  }
-
+  const ampServers = servers.filter((s) => s.ampInstanceId && s.queryType !== "gamedig");
   const gamedigServers = servers.filter((s) => s.queryType === "gamedig" && s.gamedigType);
-  await Promise.all(
-    gamedigServers.map(async (server) => {
+
+  // AMP und direkte Abfragen laufen parallel, damit ein hängender Server die anderen nicht ausbremst.
+  await Promise.all([
+    (async () => {
+      if (ampServers.length === 0) return;
+      try {
+        const instances = await getInstances();
+        const statusByInstanceId = new Map(instances.map((instance) => [instance.InstanceID, toInstanceStatus(instance)]));
+        for (const server of ampServers) {
+          const status = server.ampInstanceId ? statusByInstanceId.get(server.ampInstanceId) : undefined;
+          if (status) {
+            result[server.id] = { online: status.online, currentPlayers: status.currentPlayers, maxPlayers: status.maxPlayers, players: null };
+          }
+        }
+      } catch {
+        // AMP nicht erreichbar o.ä. — Seite bleibt nutzbar, nur ohne Live-Status für diese Server.
+      }
+    })(),
+    ...gamedigServers.map(async (server) => {
       result[server.id] = await queryGameServer(
         server.host, server.queryPort ?? server.port, server.gamedigType!,
         server.queryTelnetPort, server.queryTelnetPassword
       );
-    })
-  );
+    }),
+  ]);
 
   return NextResponse.json(result);
 }
