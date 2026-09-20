@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
  * vom eigenen Job-Status — der pragmatischste Ort für die Ad-hoc-Bewertung.
  */
 
-interface Coach { userId: string; username: string | null }
+interface Coach { userId: string; username: string | null; availableUntil?: string | null }
 interface RateableSession { id: string; title: string; startAt: string; coach: { id: string; username: string | null; name: string | null } }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -92,7 +92,10 @@ function CoachChip({ coach, trainingSessionId, label, onRated }: {
     return (
       <button onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 text-xs bg-white/[0.03] border border-white/10 rounded-full px-3 py-1.5 text-gray-300 hover:text-white hover:border-teal-500/30 transition-colors">
-        {label ?? coach.username ?? "?"} <Star className="w-3 h-3 text-amber-400" />
+        {coach.availableUntil && !label && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" title="Gerade verfügbar" />}
+        {label ?? coach.username ?? "?"}
+        {coach.availableUntil && !label && <span className="text-[10px] text-emerald-400">verfügbar</span>}
+        <Star className="w-3 h-3 text-amber-400" />
       </button>
     );
   }

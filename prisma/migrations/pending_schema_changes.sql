@@ -418,3 +418,26 @@ ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryPort" TEXT;
 ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryTelnetPort" TEXT;
 ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryTelnetPassword" TEXT;
 -- serverapplication.status bekommt neuen möglichen Wert "waitlisted" (freier String, kein ALTER nötig)
+
+-- ═══════════════════════════════════════════════════════════════
+-- Coach: Event-Bezug, Terminserien, Erinnerung, Anwesenheit, Mentees, Verfügbarkeit
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "CoachTrainingSession" ADD COLUMN IF NOT EXISTS "eventId" TEXT;
+ALTER TABLE "CoachTrainingSession" ADD COLUMN IF NOT EXISTS "seriesId" TEXT;
+ALTER TABLE "CoachTrainingSession" ADD COLUMN IF NOT EXISTS "reminderSentAt" TIMESTAMP(3);
+CREATE INDEX IF NOT EXISTS "CoachTrainingSession_eventId_idx" ON "CoachTrainingSession"("eventId");
+
+ALTER TABLE "CoachTrainingSignup" ADD COLUMN IF NOT EXISTS "attended" BOOLEAN;
+
+ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "availableUntil" TIMESTAMP(3);
+
+CREATE TABLE IF NOT EXISTS "CoachMentee" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "coachId"   TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "menteeId"  TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "note"      TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CoachMentee_coachId_menteeId_key" ON "CoachMentee"("coachId", "menteeId");
+CREATE INDEX IF NOT EXISTS "CoachMentee_coachId_idx" ON "CoachMentee"("coachId");

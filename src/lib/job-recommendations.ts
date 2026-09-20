@@ -22,6 +22,10 @@ export interface EventRecommendation {
   urgency?: string;
   /** true = kurz vor Ablauf des Empfehlungs-Fensters, wird in der UI hervorgehoben. */
   urgent?: boolean;
+  /** true = `eventId` ist ein echtes Event (Formular wird damit vorbelegt) — sonst ein Hinweis ohne Event-Bezug. */
+  eventScoped?: boolean;
+  /** true = kein "Erstellen"-Button (z.B. "Anwesenheit eintragen" — dort gibt es nichts zu erstellen). */
+  noCreate?: boolean;
 }
 
 export interface JobRecommendations {
@@ -83,20 +87,86 @@ async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
 }
 
 /**
- * Coach hat aktuell keinen anstehenden Trainings-Termin — sanfter Anstoß,
- * einen anzulegen. Keine externen Datensignale nötig (siehe Plan: "grobe
- * Heuristik, kein Muss für v1"), bewusst simpel gehalten.
+ * Coach-Empfehlungen (grobe Heuristiken, kein Muss für v1):
+ *  - kein anstehender eigener Termin
+ *  - neue Spieler (< 14 Tage dabei) ohne jede Trainings-Anmeldung
+ *  - anstehende Events (Spiel bekannt) ohne Vorbereitungs-Training
+ *  - eigener Termin in den nächsten 48h ohne Anmeldungen
+ *  - vergangener eigener Termin (14 Tage) mit noch nicht eingetragener Anwesenheit
  */
 async function coachRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
-  const upcoming = await prisma.coachTrainingSession.count({
-    where: { coachId: userId, startAt: { gte: new Date() } },
-  });
-  if (upcoming > 0) return [];
-  return [{
-    eventId: "coach-no-upcoming-session", title: "Noch kein Trainings-Termin geplant",
-    startAt: new Date(), reason: "Lege einen neuen Trainings-Termin an, um neuen Spielern zu helfen",
-    url: "/profile", // führt zurück ins eigene Büro, wo der Termin angelegt wird
-  }];
+  const now = new Date();
+  const recs: EventRecommendation[] = [];
+
+  const [upcomingOwn, newcomers, eventsWithoutTraining, emptySoon, unmarkedPast] = await Promise.all([
+    prisma.coachTrainingSession.count({ where: { coachId: userId, startAt: { gte: now } } }),
+    prisma.user.count({
+      where: {
+        id: { not: userId },
+        createdAt: { gte: new Date(now.getTime() - 14 * 86_400_000) },
+        coachTrainingSignups: { none: {} },
+      },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, game: { not: null }, startAt: { gte: now, lte: new Date(now.getTime() + LOOKAHEAD_DAYS * 86_400_000) } },
+      orderBy: { startAt: "asc" }, take: 20,
+    }),
+    prisma.coachTrainingSession.findMany({
+      where: { coachId: userId, startAt: { gte: now, lte: new Date(now.getTime() + 2 * 86_400_000) }, signups: { none: {} } },
+      orderBy: { startAt: "asc" }, take: 5,
+    }),
+    prisma.coachTrainingSession.findMany({
+      where: {
+        coachId: userId, startAt: { lt: now, gte: new Date(now.getTime() - 14 * 86_400_000) },
+        signups: { some: { attended: null } },
+      },
+      orderBy: { startAt: "desc" }, take: 5,
+    }),
+  ]);
+
+  if (upcomingOwn === 0) {
+    recs.push({
+      eventId: "coach-no-upcoming-session", title: "Noch kein Trainings-Termin geplant",
+      startAt: now, reason: "Lege einen neuen Trainings-Termin an, um neuen Spielern zu helfen",
+      url: "/profile", // führt zurück ins eigene Büro, wo der Termin angelegt wird
+    });
+  }
+
+  if (newcomers > 0) {
+    recs.push({
+      eventId: "coach-newcomers", title: newcomers === 1 ? "1 neuer Spieler ohne Training" : `${newcomers} neue Spieler ohne Training`,
+      startAt: now, reason: "Lade sie zu einem Einsteiger-Termin ein", url: "/profile",
+    });
+  }
+
+  if (eventsWithoutTraining.length > 0) {
+    const covered = await prisma.coachTrainingSession.findMany({
+      where: { eventId: { in: eventsWithoutTraining.map(e => e.id) } }, select: { eventId: true },
+    });
+    const coveredIds = new Set(covered.map(c => c.eventId));
+    for (const e of eventsWithoutTraining.filter(ev => !coveredIds.has(ev.id)).slice(0, 5)) {
+      recs.push({
+        eventId: e.id, title: e.title, startAt: e.startAt, reason: `Noch kein Vorbereitungs-Training${e.game ? ` (${e.game})` : ""}`,
+        url: `/tournament/${e.id}`, eventScoped: true, ...upcomingEventUrgency(e.startAt),
+      });
+    }
+  }
+
+  for (const s of emptySoon) {
+    recs.push({
+      eventId: `coach-empty-${s.id}`, title: s.title, startAt: s.startAt, reason: "Noch keine Anmeldungen",
+      url: "/profile", noCreate: true, ...upcomingEventUrgency(s.startAt),
+    });
+  }
+
+  for (const s of unmarkedPast) {
+    recs.push({
+      eventId: `coach-attendance-${s.id}`, title: s.title, startAt: s.startAt, reason: "Anwesenheit noch nicht eingetragen",
+      url: "/profile", noCreate: true, ...pastEventUrgency(s.startAt),
+    });
+  }
+
+  return recs;
 }
 
 /** Visionär hat diese Woche noch keine Idee eingereicht — analog zum Coach-Hinweis oben. */

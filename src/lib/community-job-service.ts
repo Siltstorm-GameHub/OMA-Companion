@@ -118,7 +118,7 @@ export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadg
 export interface CommunityJobCatalogEntry {
   key: string; label: string; emoji: string; description: string;
   maxSlots: number; filledSlots: number;
-  holders: { userId: string; username: string | null; status: string; lastPayoutCoins: number | null }[];
+  holders: { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil: string | null }[];
   waitlistCount: number;
 }
 
@@ -146,6 +146,8 @@ export async function getCommunityJobCatalog(): Promise<CommunityJobCatalogEntry
         username: m.user.username ?? m.user.name,
         status: m.status,
         lastPayoutCoins: last?.coinsAwarded ?? null,
+        // Nur solange die Verfügbarkeit ("Ich helfe gerade") noch läuft.
+        availableUntil: m.availableUntil && m.availableUntil > new Date() ? m.availableUntil.toISOString() : null,
       };
     }));
 

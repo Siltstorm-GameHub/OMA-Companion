@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown, Star,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown, Star, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
+import { CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees } from "@/components/community-jobs/CoachTools";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
@@ -34,7 +35,7 @@ const JOB_ICONS: Record<string, typeof Newspaper> = {
   coach: GraduationCap, visionaer: Lightbulb,
 };
 
-interface CatalogHolder { userId: string; username: string | null; status: string; lastPayoutCoins: number | null }
+interface CatalogHolder { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil?: string | null }
 interface CatalogEntry {
   key: string; label: string; emoji: string; description: string;
   maxSlots: number; filledSlots: number; holders: CatalogHolder[]; waitlistCount: number;
@@ -42,7 +43,7 @@ interface CatalogEntry {
 interface Membership {
   id: string; jobKey: string; status: string;
   contractStartAt: string; contractEndAt: string;
-  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string;
+  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string; availableUntil?: string | null;
 }
 interface Application { id: string; jobKey: string; status: string; appliedAt: string }
 interface Overview { catalog: CatalogEntry[]; activeMembership: Membership | null; myApplications: Application[] }
@@ -168,6 +169,7 @@ function CatalogView({
               <div className="flex flex-wrap gap-1.5 pl-12">
                 {job.holders.map(h => (
                   <span key={h.userId} className="text-[10px] text-gray-500 bg-white/[0.03] rounded-full px-2 py-0.5">
+                    {h.availableUntil && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 align-middle" title="Gerade verfügbar" />}
                     {h.username ?? "?"}{h.lastPayoutCoins != null && ` · ${h.lastPayoutCoins} Münzen`}
                   </span>
                 ))}
@@ -197,7 +199,11 @@ function CatalogView({
 // ── Büro (aktiver Job) ────────────────────────────────────────────────────────
 
 /** Vorbelegung für einen Beitrag zu einem Steam-Spiel; `link` wird beim Absenden automatisch angehängt, falls er im Text fehlt. */
-interface PostPrefill { title?: string; body?: string; link?: string; linkLabel?: string }
+interface PostPrefill {
+  title?: string; body?: string; link?: string; linkLabel?: string;
+  /** Coach-Termin: Beginn (datetime-local), Plätze, Event-Bezug. */
+  startAt?: string; capacity?: string; eventId?: string;
+}
 
 function withLink(text: string, link?: string): string {
   if (!link || text.includes(link)) return text;
@@ -223,7 +229,7 @@ const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean }[];
+  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean }[];
   steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
   steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
 }
@@ -244,6 +250,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [createOpen, setCreateOpen] = useState(false);
   const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
   const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
+  const [toolsKey, setToolsKey] = useState(0);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [steamTab, setSteamTab] = useState<"sales" | "new">("sales");
   const [tab, setTab] = useState<"work" | "pay">("work");
@@ -492,6 +499,8 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
             // Nur Journalist/Fotograf/Marketing-Manager-Empfehlungen zeigen auf ein echtes Event —
             // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
             const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(membership.jobKey);
+            // Coach-Empfehlung "neue Spieler": kein Event, aber ein sinnvoller Vorschlag fürs Formular.
+            const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
@@ -510,7 +519,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                         <p className="text-[11px] text-amber-400/90">{e.reason}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Button size="sm" variant="outline" onClick={() => openCreateForm(isEventScopedJob ? e.eventId : undefined)}>Erstellen</Button>
+                        {!e.noCreate && (
+                          <Button size="sm" variant="outline"
+                            onClick={() => openCreateForm(isEventScopedJob || e.eventScoped ? e.eventId : undefined, e.eventId === "coach-newcomers" ? newcomerPrefill : undefined)}>
+                            Erstellen
+                          </Button>
+                        )}
                         <button onClick={() => dismissRecommendation(e.eventId)} title="Nicht relevant — ausblenden" aria-label="Ausblenden"
                           className="p-1.5 text-gray-600 hover:text-red-400 transition-colors">
                           <X className="w-3.5 h-3.5" />
@@ -619,7 +633,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       <div className="p-4 border-b border-white/[0.04] space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
           action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
-        <JobToolContent jobKey={membership.jobKey} />
+        <JobToolContent key={toolsKey} jobKey={membership.jobKey} membership={membership} onDuplicate={p => openCreateForm(undefined, p)} />
       </div>
 
       {/* Warteliste */}
@@ -733,7 +747,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size="md">
-        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); onChanged(); }} />
+        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
       </Modal>
       {ConfirmDialogElement}
     </div>
@@ -786,11 +800,25 @@ function SectionHeader({
 
 // ── Job-spezifische Werkzeuge ─────────────────────────────────────────────────
 
-function JobToolContent({ jobKey }: { jobKey: string }) {
+function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onDuplicate: (prefill: PostPrefill) => void }) {
+  const [menteeKey, setMenteeKey] = useState(0);
+  return (
+    <div className="space-y-4">
+      <CoachAvailability initialUntil={membership.availableUntil} />
+      <CoachStatsBlock />
+      <TrainingSessionList onDuplicate={onDuplicate} />
+      <CoachAttendance onMenteeAdded={() => setMenteeKey(k => k + 1)} />
+      <CoachMentees refreshKey={menteeKey} />
+      <CoachRatingsReceived />
+    </div>
+  );
+}
+
+function JobToolContent({ jobKey, membership, onDuplicate }: { jobKey: string; membership: Membership; onDuplicate: (prefill: PostPrefill) => void }) {
   if (jobKey === "journalist") return <ReportList />;
   if (jobKey === "fotograf") return <AssetList />;
   if (jobKey === "marketing_manager") return <MarketingPostList />;
-  if (jobKey === "coach") return <><TrainingSessionList /><CoachRatingsReceived /></>;
+  if (jobKey === "coach") return <CoachToolbox membership={membership} onDuplicate={onDuplicate} />;
   if (jobKey === "visionaer") return <IdeaList />;
   return null;
 }
@@ -1062,7 +1090,7 @@ function MarketingPostList() {
 }
 
 interface TrainingSession {
-  id: string; title: string; startAt: string; capacity: number | null;
+  id: string; title: string; description?: string | null; eventId?: string | null; startAt: string; capacity: number | null;
   isMine: boolean; signedUp: boolean;
   coach: { id: string; username: string | null; name: string | null };
   _count: { signups: number };
@@ -1082,7 +1110,7 @@ function defaultTrainingStart(): string {
 
 const INPUT_CLS = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
 
-function TrainingSessionList() {
+function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPrefill) => void }) {
   const [items, setItems] = useState<TrainingSession[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -1167,6 +1195,17 @@ function TrainingSessionList() {
                     className="text-gray-500 hover:text-teal-400 transition-colors" aria-expanded={openParticipants === s.id}>
                     {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet
                   </button>
+                  {onDuplicate && (
+                    <button title="Duplizieren (Vorschlag: eine Woche später)" aria-label="Termin duplizieren"
+                      onClick={() => onDuplicate({
+                        title: s.title, body: s.description ?? "",
+                        startAt: toLocalInput(new Date(new Date(s.startAt).getTime() + 7 * 86_400_000)),
+                        capacity: s.capacity != null ? String(s.capacity) : undefined, eventId: s.eventId ?? undefined,
+                      })}
+                      className="p-1 text-gray-600 hover:text-teal-400 transition-colors">
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
                 </span>
               </div>
@@ -1336,13 +1375,23 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
   const [busy, setBusy] = useState(false);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
   const [channelId, setChannelId] = useState("");
-  const [startAt, setStartAt] = useState(defaultTrainingStart);
-  const [capacity, setCapacity] = useState("");
+  const [startAt, setStartAt] = useState(() => prefill?.startAt ?? defaultTrainingStart());
+  const [capacity, setCapacity] = useState(prefill?.capacity ?? "");
+  const [coachEventId, setCoachEventId] = useState(prefill?.eventId ?? eventId ?? "");
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
+  const [events, setEvents] = useState<EventOption[]>([]);
 
   useEffect(() => {
     if (jobKey !== "coach") return;
     api<{ channels: DiscordChannel[] }>("/api/community-jobs/discord-channels").then(d => setChannels(d.channels)).catch(() => {});
-  }, [jobKey]);
+    api<EventOption[]>("/api/events").then(all => {
+      const upcoming = all.filter(e => new Date(e.startAt).getTime() > Date.now());
+      setEvents(upcoming);
+      // Vom Event aus gestartet (Empfehlung): Titel vorschlagen, wenn noch keiner da ist.
+      const preset = upcoming.find(e => e.id === (prefill?.eventId ?? eventId));
+      if (preset) setTitle(t => t || `Vorbereitung: ${preset.title}`);
+    }).catch(() => {});
+  }, [jobKey]); // eslint-disable-line react-hooks/exhaustive-deps -- nur beim Öffnen laden
 
   async function submit() {
     setBusy(true);
@@ -1354,6 +1403,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
           method: "POST", body: JSON.stringify({
             title, description: body, startAt: new Date(startAt).toISOString(),
             capacity: capacity.trim() ? Number(capacity) : undefined,
+            eventId: coachEventId || undefined, repeatWeeks: repeatWeeks > 1 ? repeatWeeks : undefined,
             discordChannelId: channelId || undefined,
           }),
         });
@@ -1392,6 +1442,27 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
               Plätze (optional)
               <input type="number" min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
                 className="block w-28 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1 text-[11px] text-gray-500 flex-1 min-w-[200px]">
+              Vorbereitung für Event (optional)
+              <Select value={coachEventId} className="w-full" onChange={e => {
+                setCoachEventId(e.target.value);
+                const ev = events.find(x => x.id === e.target.value);
+                if (ev) setTitle(t => t || `Vorbereitung: ${ev.title}`);
+              }}>
+                <option value="">Kein Event</option>
+                {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title} — {formatBerlinDate(ev.startAt)}</option>)}
+              </Select>
+            </label>
+            <label className="space-y-1 text-[11px] text-gray-500">
+              Wiederholung
+              <Select value={String(repeatWeeks)} className="w-full" onChange={e => setRepeatWeeks(Number(e.target.value))}>
+                <option value="1">Einmalig</option>
+                <option value="4">Wöchentlich, 4 Termine</option>
+                <option value="8">Wöchentlich, 8 Termine</option>
+              </Select>
             </label>
           </div>
           {channels.length > 0 && (

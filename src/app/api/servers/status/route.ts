@@ -37,8 +37,9 @@ export async function GET() {
             result[server.id] = { online: status.online, currentPlayers: status.currentPlayers, maxPlayers: status.maxPlayers, players: null };
           }
         }
-      } catch {
+      } catch (err) {
         // AMP nicht erreichbar o.ä. — Seite bleibt nutzbar, nur ohne Live-Status für diese Server.
+        console.error("[servers/status] AMP-Abfrage fehlgeschlagen:", err);
       }
     })(),
     ...gamedigServers.map(async (server) => {

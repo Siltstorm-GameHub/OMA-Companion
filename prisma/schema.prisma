@@ -121,6 +121,8 @@ model User {
   coachTrainingSignups             CoachTrainingSignup[]
   coachRatingsReceived             CoachRating[]               @relation("CoachRatingTarget")
   coachRatingsGiven                CoachRating[]               @relation("CoachRatingRater")
+  coachMenteesAsCoach              CoachMentee[]               @relation("CoachMenteeCoach")
+  coachMenteesAsMentee             CoachMentee[]               @relation("CoachMenteeMentee")
   communityIdeas                   CommunityIdea[]
   communityIdeaVotes               CommunityIdeaVote[]
   communityBoardComments           CommunityBoardComment[]
@@ -1231,6 +1233,7 @@ model CommunityJobMember {
   revokedAt           DateTime?
   reapplyBlockedUntil DateTime? // nur bei REVOKED gesetzt (Default revokedAt + 2 Wochen)
   lastContributionAt  DateTime? // für Inaktivitäts-Check
+  availableUntil      DateTime? // Coach: "Ich bin jetzt für Ad-hoc-Hilfe verfügbar" bis zu diesem Zeitpunkt
   handedOffFromUserId String? // Snapshot-Info für Transparenz-Historie, kein FK
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1453,12 +1456,16 @@ model CoachTrainingSession {
   startAt     DateTime
   capacity    Int?
   createdAt   DateTime @default(now())
+  eventId        String? // optional: Vorbereitungs-Training für ein Event (bewusst kein FK, wie handedOffFromUserId)
+  seriesId       String? // gleiche ID für alle Termine einer Terminserie
+  reminderSentAt DateTime? // Tages-Erinnerung an die Teilnehmer schon verschickt
 
   coach   User                  @relation(fields: [coachId], references: [id], onDelete: Cascade)
   signups CoachTrainingSignup[]
   ratings CoachRating[]
 
   @@index([coachId])
+  @@index([eventId])
 }
 
 model CoachTrainingSignup {
@@ -1466,11 +1473,27 @@ model CoachTrainingSignup {
   sessionId String
   userId    String
   createdAt DateTime @default(now())
+  attended  Boolean? // null = noch nicht eingetragen, sonst Anwesenheit laut Coach
 
   session CoachTrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, userId])
+}
+
+/// Spieler, die ein Coach persönlich begleitet (privat für den Coach, mit Notiz).
+model CoachMentee {
+  id        String   @id @default(cuid())
+  coachId   String
+  menteeId  String
+  note      String?
+  createdAt DateTime @default(now())
+
+  coach  User @relation("CoachMenteeCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  mentee User @relation("CoachMenteeMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, menteeId])
+  @@index([coachId])
 }
 
 model CoachRating {

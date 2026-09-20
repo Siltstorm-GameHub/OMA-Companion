@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
 import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck } from "@/lib/community-job-service";
+import { runCoachSessionReminders } from "@/lib/coach-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,8 +41,9 @@ export async function GET(req: NextRequest) {
   const expiry = await step("expiry", () => runContractExpiryCheck());
   const inactivity = await step("inactivity", () => runInactivityCheck());
   const reminder = await step("reminder", () => runContractReminderCheck());
+  const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
 
-  const hasError = [payout, expiry, inactivity, reminder].some(r => "error" in r)
+  const hasError = [payout, expiry, inactivity, reminder, coachReminders].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  return NextResponse.json({ payout, expiry, inactivity, reminder }, { status: hasError ? 500 : 200 });
+  return NextResponse.json({ payout, expiry, inactivity, reminder, coachReminders }, { status: hasError ? 500 : 200 });
 }
