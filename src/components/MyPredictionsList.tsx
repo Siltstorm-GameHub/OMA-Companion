@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -71,7 +72,7 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white truncate group-hover:text-violet-300 transition-colors">{p.eventTitle}</p>
               <p className="text-xs text-gray-500 truncate">
-                Tipp: <span className="text-gray-400">{uname(p.predictedUser)}</span>
+                Tipp: <span className="text-gray-400">{uname(p.predictedUser)}<JobBadge userId={p.predictedUser.id} variant="compact" className="ml-1" /></span>
                 <span className="text-gray-700"> · Einsatz {p.wager}</span>
                 <span className="text-gray-700"> · {formatBerlinDate(p.eventStartAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
               </p>

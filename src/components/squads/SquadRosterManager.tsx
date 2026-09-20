@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -88,7 +89,7 @@ export default function SquadRosterManager({
         {memberships.map(m => (
           <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05]">
             <Avatar u={m.user} />
-            <span className="text-sm text-white flex-1 truncate">{userName(m.user)}</span>
+            <span className="text-sm text-white flex-1 truncate">{userName(m.user)}<JobBadge userId={m.user.id} variant="compact" className="ml-1" /></span>
             {m.role === "captain" && (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 shrink-0">
                 <Crown className="w-3 h-3" /> Captain

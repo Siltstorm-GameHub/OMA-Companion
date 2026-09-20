@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
-import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck } from "@/lib/community-job-service";
+import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck, runBadgeLevelUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
 
 export const runtime = "nodejs";
@@ -38,12 +38,15 @@ export async function GET(req: NextRequest) {
   }
 
   const payout = await step("payout", () => runWeeklyPayout());
+  // Direkt nach dem Payout, damit die neue Woche schon in die Stufe einfließt — und vor dem Vertragsablauf,
+  // damit auslaufende Verträge ihre letzte Stufe (fürs "Ehem."-Zeichen) festhalten.
+  const badges = await step("badges", () => runBadgeLevelUpdate());
   const expiry = await step("expiry", () => runContractExpiryCheck());
   const inactivity = await step("inactivity", () => runInactivityCheck());
   const reminder = await step("reminder", () => runContractReminderCheck());
   const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
 
-  const hasError = [payout, expiry, inactivity, reminder, coachReminders].some(r => "error" in r)
+  const hasError = [payout, badges, expiry, inactivity, reminder, coachReminders].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  return NextResponse.json({ payout, expiry, inactivity, reminder, coachReminders }, { status: hasError ? 500 : 200 });
+  return NextResponse.json({ payout, badges, expiry, inactivity, reminder, coachReminders }, { status: hasError ? 500 : 200 });
 }

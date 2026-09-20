@@ -8,6 +8,9 @@ import {
   resolveTier, resolveVoteBonusMultiplier,
 } from "./community-job-config";
 import { formatBerlinDate } from "./time";
+import {
+  BADGE_WINDOW_WEEKS, FORMER_BADGE_MIN_LEVEL, levelFromPoints, weeklyBadgePoints, type JobBadgeData,
+} from "./job-badges";
 
 /** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
 async function syncDiscordRoleForUser(userId: string, jobKey: string | null): Promise<void> {
@@ -80,7 +83,7 @@ export async function getActiveMembership(userId: string) {
 }
 
 export type ProfileJobBadge =
-  | { employed: true; jobKey: string; jobLabel: string; jobEmoji: string; status: string; tierLabel: string | null }
+  | { employed: true; jobKey: string; jobLabel: string; jobEmoji: string; status: string; tierLabel: string | null; badgeLevel: number }
   | { employed: false; unemployedSinceMonths: number };
 
 /**
@@ -98,7 +101,7 @@ export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadg
     return {
       employed: true, jobKey: active.jobKey,
       jobLabel: job?.label ?? active.jobKey, jobEmoji: job?.emoji ?? "💼",
-      status: active.status, tierLabel: lastPayout?.tierLabel ?? null,
+      status: active.status, tierLabel: lastPayout?.tierLabel ?? null, badgeLevel: active.badgeLevel,
     };
   }
 
@@ -609,4 +612,72 @@ export async function runContractReminderCheck(referenceDate: Date = new Date())
     });
   }
   return { reminded: members.length };
+}
+
+// ── Badges (Ansehens-Stufe hinter dem Usernamen) ─────────────────────────────
+
+/**
+ * Berechnet für alle aktiven Inhaber die Ansehens-Stufe neu: Wochenpunkte der letzten
+ * BADGE_WINDOW_WEEKS Wochen (aus der erreichten Gehaltsstufe, siehe weeklyBadgePoints) → Stufe 1–4.
+ * Die Stufe kann steigen UND sinken; `peakBadgeLevel` merkt sich die höchste der Amtszeit (für das
+ * "Ehem."-Zeichen). Läuft im täglichen Payout-Cron NACH dem Wochen-Payout.
+ */
+export async function runBadgeLevelUpdate(referenceDate: Date = new Date()): Promise<{ updated: number }> {
+  const since = new Date(referenceDate.getTime() - BADGE_WINDOW_WEEKS * 7 * 86_400_000);
+  const members = await prisma.communityJobMember.findMany({ where: { status: { in: ["ACTIVE", "WARNED"] } } });
+  const tiersByJob = new Map<string, Awaited<ReturnType<typeof getPayoutTiers>>>();
+
+  let updated = 0;
+  for (const m of members) {
+    if (!tiersByJob.has(m.jobKey)) tiersByJob.set(m.jobKey, await getPayoutTiers(m.jobKey));
+    const tiers = [...(tiersByJob.get(m.jobKey) ?? [])].sort((a, b) => a.minScore - b.minScore);
+
+    const payouts = await prisma.communityJobWeeklyPayout.findMany({
+      where: { userId: m.userId, jobKey: m.jobKey, weekStart: { gte: since } },
+      select: { rawScore: true },
+    });
+    const points = payouts.reduce((sum, p) => {
+      const tier = resolveTier(tiers, p.rawScore);
+      return sum + weeklyBadgePoints(tier ? tiers.indexOf(tier) + 1 : 0, tiers.length);
+    }, 0);
+
+    const level = levelFromPoints(points);
+    const peak = Math.max(m.peakBadgeLevel, level);
+    if (level !== m.badgeLevel || peak !== m.peakBadgeLevel) {
+      await prisma.communityJobMember.update({ where: { id: m.id }, data: { badgeLevel: level, peakBadgeLevel: peak } });
+      updated++;
+    }
+  }
+  return { updated };
+}
+
+/**
+ * Badge-Daten für viele Nutzer auf einmal: aktueller Job (mit Stufe, ggf. verwarnt) — oder, wenn kein
+ * Job, das "Ehem."-Zeichen mit der höchsten je erreichten Stufe (mindestens FORMER_BADGE_MIN_LEVEL).
+ * Nutzer ohne beides fehlen im Ergebnis.
+ */
+export async function getJobBadges(userIds: string[]): Promise<Record<string, JobBadgeData>> {
+  const ids = [...new Set(userIds)].slice(0, 200);
+  const result: Record<string, JobBadgeData> = {};
+  if (ids.length === 0) return result;
+
+  const active = await prisma.communityJobMember.findMany({
+    where: { userId: { in: ids }, status: { in: ["ACTIVE", "WARNED"] } },
+    orderBy: { assignedAt: "asc" }, // spätere (jüngste) Amtszeit überschreibt
+    select: { userId: true, jobKey: true, badgeLevel: true, status: true },
+  });
+  for (const m of active) {
+    result[m.userId] = { jobKey: m.jobKey, level: m.badgeLevel, ...(m.status === "WARNED" ? { warned: true } : {}) };
+  }
+
+  const rest = ids.filter(id => !result[id]);
+  if (rest.length > 0) {
+    const former = await prisma.communityJobMember.findMany({
+      where: { userId: { in: rest }, status: { in: ["REVOKED", "QUIT", "EXPIRED"] }, peakBadgeLevel: { gte: FORMER_BADGE_MIN_LEVEL } },
+      orderBy: [{ peakBadgeLevel: "asc" }, { assignedAt: "asc" }], // beste/jüngste überschreibt
+      select: { userId: true, jobKey: true, peakBadgeLevel: true },
+    });
+    for (const m of former) result[m.userId] = { jobKey: m.jobKey, level: m.peakBadgeLevel, former: true };
+  }
+  return result;
 }

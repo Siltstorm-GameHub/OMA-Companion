@@ -1,5 +1,6 @@
 "use client";
 
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -91,7 +92,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
+                        <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}<JobBadge userId={user.id} variant="compact" className="ml-1" /></p>
                         <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
                       </div>
                     </Link>
@@ -188,7 +189,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
+                          <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}<JobBadge userId={user.id} variant="compact" className="ml-1" /></p>
                           <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
                         </div>
                       </Link>

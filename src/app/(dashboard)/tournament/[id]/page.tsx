@@ -1,3 +1,4 @@
+import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -1075,7 +1076,7 @@ export default async function TournamentDetailPage({
                       <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
-                          <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                          <span className="truncate">{userName(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" />{isMe && " (du)"}</span>
                           {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
                           {excludedUserIds.has(user.id) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
@@ -1117,7 +1118,7 @@ export default async function TournamentDetailPage({
                         <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
-                            <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                            <span className="truncate">{userName(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" />{isMe && " (du)"}</span>
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                               <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
                             </span>

@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -172,7 +173,7 @@ function CatalogView({
                 {job.holders.map(h => (
                   <span key={h.userId} className="text-[10px] text-gray-500 bg-white/[0.03] rounded-full px-2 py-0.5">
                     {h.availableUntil && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 align-middle" title="Gerade verfügbar" />}
-                    {h.username ?? "?"}{h.lastPayoutCoins != null && ` · ${h.lastPayoutCoins} Münzen`}
+                    {h.username ?? "?"}<JobBadge userId={h.userId} variant="compact" className="ml-1" />{h.lastPayoutCoins != null && ` · ${h.lastPayoutCoins} Münzen`}
                   </span>
                 ))}
               </div>
@@ -644,7 +645,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           <SectionHeader tone="orange" icon={<UserPlus className="w-3.5 h-3.5" />} title={`${waitlist.length} ${waitlist.length === 1 ? "Bewerber wartet" : "Bewerber warten"}`} />
           {waitlist.map(w => (
             <div key={w.id} className="flex items-center justify-between gap-2 bg-white/[0.03] rounded-lg px-2.5 py-1.5">
-              <span className="text-xs text-gray-300">{w.user.username ?? w.user.name}</span>
+              <span className="text-xs text-gray-300">{w.user.username ?? w.user.name}<JobBadge userId={w.user.id} variant="compact" className="ml-1" /></span>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => handoff(w.id, w.user.username ?? w.user.name ?? "dem Bewerber")}>Job übergeben</Button>
             </div>
           ))}
@@ -1284,7 +1285,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
             return (
               <div key={s.id} className="flex items-center justify-between text-xs gap-2">
                 <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}
-                  <span className="text-gray-600"> · {s.coach.username ?? s.coach.name}</span>
+                  <span className="text-gray-600"> · {s.coach.username ?? s.coach.name}<JobBadge userId={s.coach.id} variant="compact" className="ml-1" /></span>
                   {s.signedUp && s.meetingUrl && <> · <MeetingLink url={s.meetingUrl} /></>}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">

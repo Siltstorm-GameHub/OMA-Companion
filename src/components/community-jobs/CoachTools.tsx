@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Check, X, Trash2, ChevronDown, Target, UserPlus, Search, Loader2 } from "lucide-react";
@@ -236,7 +237,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
               <div className="px-2.5 pb-2.5 space-y-1">
                 {s.participants.map(p => (
                   <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-gray-300 truncate">{nameOf(p)}</span>
+                    <span className="text-gray-300 truncate">{nameOf(p)}<JobBadge userId={p.id} variant="compact" className="ml-1" /></span>
                     <span className="flex items-center gap-1 shrink-0">
                       <button onClick={() => mark(s.id, p.id, p.attended === true ? null : true)} aria-pressed={p.attended === true} title="Anwesend"
                         className={`p-1 rounded ${p.attended === true ? PRESENT_ON : PRESENT_OFF}`}>
@@ -342,7 +343,7 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
       {items.map(m => (
         <div key={m.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-gray-200 truncate">{nameOf(m.mentee)}</span>
+            <span className="text-gray-200 truncate">{nameOf(m.mentee)}<JobBadge userId={m.mentee.id} variant="compact" className="ml-1" /></span>
             <span className="flex items-center gap-2 shrink-0 text-gray-500">
               {m.trainingsAttended} {m.trainingsAttended === 1 ? "Training" : "Trainings"}
               <button onClick={() => remove(m)} title="Entfernen" aria-label="Mentee entfernen" className="text-gray-600 hover:text-red-400 transition-colors">
@@ -365,7 +366,7 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
         <div className="rounded-lg bg-white/[0.04] divide-y divide-white/[0.04]">
           {found.filter(u => !known.has(u.id)).map(u => (
             <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-white/[0.04] text-left">
-              {nameOf(u)} <UserPlus className="w-3.5 h-3.5 text-teal-400" />
+              <span className="truncate">{nameOf(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span> <UserPlus className="w-3.5 h-3.5 text-teal-400" />
             </button>
           ))}
         </div>
@@ -423,7 +424,7 @@ export function CoachHelpInbox() {
       {open.map(r => (
         <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="text-gray-200 font-medium">{nameOf(r.requester)}</span>
+            <span className="text-gray-200 font-medium">{nameOf(r.requester)}<JobBadge userId={r.requester.id} variant="compact" className="ml-1" /></span>
             <span className="text-gray-600">{formatBerlinDateTime(r.createdAt, { dateStyle: "short", timeStyle: "short" })}</span>
           </div>
           <p className="text-xs text-gray-300 whitespace-pre-line">{r.message}</p>
@@ -536,7 +537,7 @@ export function CoachNewcomers({ onMenteeAdded }: { onMenteeAdded?: () => void }
       {data.newcomers.map(n => (
         <div key={n.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs text-gray-200 truncate">{nameOf(n)}</p>
+            <p className="text-xs text-gray-200 truncate">{nameOf(n)}<JobBadge userId={n.id} variant="compact" className="ml-1" /></p>
             <p className="text-[10px] text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">

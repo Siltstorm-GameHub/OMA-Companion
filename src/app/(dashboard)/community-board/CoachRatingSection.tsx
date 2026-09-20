@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Star, GraduationCap, Search, LifeBuoy } from "lucide-react";
@@ -169,7 +170,7 @@ function CoachCard({ coach }: { coach: Coach }) {
         <div className="min-w-0 space-y-1">
           <p className="text-sm text-white flex items-center gap-1.5">
             {coach.availableUntil && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" title="Gerade verfügbar" />}
-            {name}
+            {name}<JobBadge userId={coach.userId} />
             {coach.availableUntil && <span className="text-[10px] text-emerald-400">verfügbar</span>}
           </p>
           {coach.specialties && coach.specialties.length > 0 && (

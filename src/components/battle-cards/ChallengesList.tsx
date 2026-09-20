@@ -4,6 +4,7 @@
 // Battle-Cards-Herausforderungen — Liste + Annehmen/Ablehnen
 // ============================================
 
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -50,7 +51,10 @@ function PlayerBadge({ user, accent }: { user?: ChallengeUser; accent: string })
       >
         <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={40} className="w-10 h-10" />
       </span>
-      <span className="font-battle text-xs text-white truncate max-w-[92px]">{displayName(user)}</span>
+      <span className="flex items-center justify-center gap-1 max-w-full">
+        <span className="font-battle text-xs text-white truncate max-w-[92px]">{displayName(user)}</span>
+        <JobBadge userId={user?.id} variant="compact" />
+      </span>
     </Link>
   );
 }

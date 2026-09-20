@@ -7,6 +7,7 @@
 // kann man ohne Umweg über ein Profil direkt einen beliebigen Nutzer suchen und
 // herausfordern (nutzt dieselbe /api/battle-cards/challenges-Route).
 
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ export default function ChallengeUserPicker() {
         <div className="space-y-3">
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-black/20 border border-[color:var(--moba-accent-line)]">
             <RankedAvatar rankPoints={selected.rankPoints} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
-            <span className="flex-1 text-sm text-white truncate">{uname(selected)}</span>
+            <span className="flex-1 text-sm text-white truncate">{uname(selected)}<JobBadge userId={selected.id} variant="compact" className="ml-1" /></span>
             <MatchupBadge strength={matchup} />
             <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white shrink-0">
               <X className="w-3.5 h-3.5" />
@@ -127,7 +128,7 @@ export default function ChallengeUserPicker() {
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
                   <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
-                  <span className="text-sm text-white truncate">{uname(u)}</span>
+                  <span className="text-sm text-white truncate">{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span>
                 </button>
               ))}
             </div>

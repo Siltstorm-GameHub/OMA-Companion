@@ -1,5 +1,6 @@
 "use client";
 
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, Users } from "lucide-react";
@@ -98,7 +99,7 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
-                        {p.name}
+                        {p.name}<JobBadge userId={p.id} variant="compact" className="ml-1" />
                         {isSelf && <span className="ml-1.5 text-[10px] text-teal-500">(du)</span>}
                       </p>
                       <p className={`text-[10px] ${rank.color} flex items-center gap-1`}>

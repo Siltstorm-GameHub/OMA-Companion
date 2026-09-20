@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -144,7 +145,7 @@ export default function ProfileMobileView(props: Props) {
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-bold text-white truncate">{displayName}</p>
+            <p className="text-lg font-bold text-white truncate">{displayName}<JobBadge userId={userId} className="ml-1.5" /></p>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${rankColor} mt-0.5`}>
               <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {rankLabel}
             </span>

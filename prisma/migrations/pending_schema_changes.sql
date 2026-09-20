@@ -503,3 +503,10 @@ CREATE TABLE IF NOT EXISTS "CoachGuideVote" (
   "disputeResolvedById" TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "CoachGuideVote_guideId_voterId_key" ON "CoachGuideVote"("guideId", "voterId");
+
+-- ═══════════════════════════════════════════════════════════════
+-- Community-Job-Badges: Ansehens-Stufe hinter dem Usernamen
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "badgeLevel" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "peakBadgeLevel" INTEGER NOT NULL DEFAULT 1;

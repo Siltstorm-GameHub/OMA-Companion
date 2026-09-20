@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { RelativeTime } from "@/components/RelativeTime";
@@ -69,7 +70,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
               <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-3">
                 <div className="min-w-0 flex-1">
                   <Link href={`/profile/${tx.user.id}`} className="text-sm text-white font-medium hover:underline">
-                    {tx.user.username ?? tx.user.name ?? "?"}
+                    {tx.user.username ?? tx.user.name ?? "?"}<JobBadge userId={tx.user.id} variant="compact" className="ml-1" />
                   </Link>
                   <span className="text-gray-500 text-sm ml-2">{cleanReason(tx.reason)}</span>
                 </div>

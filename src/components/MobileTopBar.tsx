@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -104,7 +105,7 @@ export default function MobileTopBar() {
           size={28}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-white truncate">{session?.user?.name ?? "Gast"}</p>
+          <p className="text-xs font-semibold text-white truncate">{session?.user?.name ?? "Gast"}<JobBadge userId={(session?.user as { id?: string } | undefined)?.id} variant="compact" className="ml-1" /></p>
           <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(20,184,166,0.7)" }}>
             <img src="/Muenze Icon.png" alt="" width={10} height={10} style={{ objectFit: "contain" }} />
             {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0}

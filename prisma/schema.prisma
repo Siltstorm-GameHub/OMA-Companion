@@ -1242,6 +1242,8 @@ model CommunityJobMember {
   lastContributionAt  DateTime? // für Inaktivitäts-Check
   availableUntil      DateTime? // Coach: "Ich bin jetzt für Ad-hoc-Hilfe verfügbar" bis zu diesem Zeitpunkt
   specialties         String[]  @default([]) // Coach: Spezialgebiete (Spiele/Sprachen), max. 6 Tags
+  badgeLevel          Int       @default(1) // Ansehens-Stufe 1–4 (Badge hinter dem Usernamen), wöchentlich neu berechnet
+  peakBadgeLevel      Int       @default(1) // höchste je erreichte Stufe dieser Amtszeit — bestimmt das "Ehem."-Zeichen
   handedOffFromUserId String? // Snapshot-Info für Transparenz-Historie, kein FK
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

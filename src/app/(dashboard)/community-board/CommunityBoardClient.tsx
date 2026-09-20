@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -98,7 +99,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
         <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
           <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
           <div className="min-w-0">
-            <span className="block text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span>
+            <span className="flex items-center gap-1.5 min-w-0"><span className="text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span><JobBadge userId={entry.author.id} /></span>
             <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
           </div>
         </a>
@@ -150,7 +151,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
             <div className="pl-3 border-l-2 border-white/10 space-y-2">
               {entry.contributions.map(c => (
                 <div key={c.id} className="space-y-1">
-                  <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}</p>
+                  <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}<JobBadge userId={c.author.id} variant="compact" className="ml-1" /></p>
                   <p className="text-xs text-gray-300">{c.bodyMarkdown}</p>
                   <div className="flex items-center gap-2">
                     <UpvoteButton votedByMe={false} upvotes={c.upvotes}
@@ -297,7 +298,7 @@ function CommentSection({
                 <div className="flex items-center justify-between gap-2">
                   <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                     <RankedAvatar rankPoints={c.author.rankPoints} src={c.author.image} alt={authorLabel(c.author)} size={16} />
-                    <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span>
+                    <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span><JobBadge userId={c.author.id} variant="compact" />
                   </a>
                   <span className="text-[10px] text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
                 </div>

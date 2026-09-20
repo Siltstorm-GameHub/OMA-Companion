@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -536,7 +537,7 @@ export function FloatingLobbyChat() {
                         <RankedAvatar rankPoints={msg.user.rankPoints} src={msg.user.image} alt={displayName(msg.user)} size={28} />
                       </Link>
                       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-                        <span className="text-[10px] text-gray-500">{displayName(msg.user)}</span>
+                        <span className="text-[10px] text-gray-500">{displayName(msg.user)}<JobBadge userId={msg.user.id} variant="compact" className="ml-1" /></span>
                         <div
                           className="text-sm px-3 py-1.5 leading-snug"
                           style={

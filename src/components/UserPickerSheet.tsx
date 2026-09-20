@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import { Search, X, ChevronDown, Users } from "lucide-react";
 
@@ -112,7 +113,7 @@ export function UserPickerSheet({
                           {uname(u)[0]?.toUpperCase()}
                         </div>
                       )}
-                      <span className="truncate font-medium">{uname(u)}</span>
+                      <span className="truncate font-medium">{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span>
                       {isSelected && (
                         <div className="ml-auto w-4 h-4 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
@@ -166,7 +167,7 @@ function PickerGrid({
         {users.map(u => (
           <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
             <input type="checkbox" checked={selected.includes(u.id)} onChange={() => onToggle(u.id)} className="rounded shrink-0" />
-            <span className="text-white truncate">{uname(u)}</span>
+            <span className="text-white truncate">{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span>
           </label>
         ))}
       </div>

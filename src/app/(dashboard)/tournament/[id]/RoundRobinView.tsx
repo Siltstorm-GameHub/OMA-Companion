@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Clock, Trophy, StickyNote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
@@ -111,7 +112,7 @@ export default function RoundRobinView({
                       <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <RankedAvatar rankPoints={s.user.rankPoints} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
                         <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
-                          {uname(s.user)}{isMe && " (du)"}
+                          {uname(s.user)}<JobBadge userId={s.user.id} variant="compact" className="ml-1" />{isMe && " (du)"}
                         </span>
                       </Link>
                       {excludedSet.has(s.userId) && (
@@ -177,7 +178,7 @@ export default function RoundRobinView({
                   <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                     {/* Player 1 */}
                     <div className={`flex items-center gap-2 flex-1 justify-end min-w-0 ${match.winnerId === match.player1Id ? "text-emerald-300" : match.winnerId ? "text-gray-600" : p1?.id === userId ? "text-rose-300" : "text-white"}`}>
-                      <span className="text-sm font-medium truncate">{p1 ? uname(p1) : "TBD"}</span>
+                      <span className="text-sm font-medium truncate">{p1 ? <>{uname(p1)}<JobBadge userId={p1.id} variant="compact" className="ml-1" /></> : "TBD"}</span>
                       {p1 && <RankedAvatar rankPoints={p1.rankPoints} src={p1.image} alt={uname(p1)} size={24} className="w-6 h-6" />}
                     </div>
 
@@ -195,7 +196,7 @@ export default function RoundRobinView({
                     {/* Player 2 */}
                     <div className={`flex items-center gap-2 flex-1 min-w-0 ${match.winnerId === match.player2Id ? "text-emerald-300" : match.winnerId ? "text-gray-600" : p2?.id === userId ? "text-rose-300" : "text-white"}`}>
                       {p2 && <RankedAvatar rankPoints={p2.rankPoints} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}
-                      <span className="text-sm font-medium truncate">{p2 ? uname(p2) : "TBD"}</span>
+                      <span className="text-sm font-medium truncate">{p2 ? <>{uname(p2)}<JobBadge userId={p2.id} variant="compact" className="ml-1" /></> : "TBD"}</span>
                     </div>
                   </div>
 

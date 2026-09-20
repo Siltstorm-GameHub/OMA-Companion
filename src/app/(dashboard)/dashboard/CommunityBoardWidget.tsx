@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2, BookOpen } from "lucide-react";
@@ -113,7 +114,7 @@ export default function CommunityBoardWidget() {
                         <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}
+                          {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-6 group-hover:text-teal-200 transition-colors whitespace-normal">
@@ -144,7 +145,7 @@ export default function CommunityBoardWidget() {
                         <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}
+                          {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 group-hover:text-teal-200 transition-colors">

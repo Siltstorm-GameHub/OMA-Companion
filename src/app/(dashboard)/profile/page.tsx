@@ -1,3 +1,4 @@
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
@@ -275,6 +276,7 @@ export default async function ProfilePage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
                 <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
+                <JobBadge userId={userId} />
                 <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
                   <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(currentRank)}
                 </span>

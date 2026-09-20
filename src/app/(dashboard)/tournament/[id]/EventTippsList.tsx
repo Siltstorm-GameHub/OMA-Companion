@@ -1,3 +1,4 @@
+import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Coins, Target, Check, X } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -39,12 +40,12 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
           <div key={i} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
             <Link href={`/profile/${t.user.id}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
               <Avatar u={t.user} />
-              <span className="text-xs text-gray-300 truncate">{uname(t.user)}</span>
+              <span className="text-xs text-gray-300 truncate">{uname(t.user)}<JobBadge userId={t.user.id} variant="compact" className="ml-1" /></span>
             </Link>
             <span className="text-xs text-gray-600">tippt auf</span>
             <Link href={`/profile/${t.predictedUser.id}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
               <Avatar u={t.predictedUser} />
-              <span className="text-xs text-white font-medium truncate">{uname(t.predictedUser)}</span>
+              <span className="text-xs text-white font-medium truncate">{uname(t.predictedUser)}<JobBadge userId={t.predictedUser.id} variant="compact" className="ml-1" /></span>
             </Link>
             {t.resolved && (
               t.correct ? (

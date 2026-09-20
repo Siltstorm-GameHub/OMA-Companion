@@ -1,3 +1,4 @@
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { calcStreak } from "@/lib/streak";
@@ -319,7 +320,7 @@ export default async function DonationsPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
-                      {user.name ?? "Unbekannt"}
+                      {user.name ?? "Unbekannt"}<JobBadge userId={user.id} variant="compact" className="ml-1" />
                       {isMe && <span className="text-teal-400 ml-1 text-xs">(Du)</span>}
                     </p>
                     <p className="text-xs text-gray-500">

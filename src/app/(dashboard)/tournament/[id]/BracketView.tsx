@@ -1,4 +1,5 @@
 "use client";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
@@ -133,7 +134,7 @@ export default function BracketView({
                                   user     ? "text-white" :
                                              "text-gray-600 italic"
                                 }`}>
-                                  {user ? <>{uname(user)}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</> : "TBD"}
+                                  {user ? <>{uname(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" /><WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</> : "TBD"}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">

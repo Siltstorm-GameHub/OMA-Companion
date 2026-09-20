@@ -1,3 +1,4 @@
+import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
@@ -258,6 +259,7 @@ export default async function LeaderboardPage() {
                 </div>
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
                   {displayName}
+                  <JobBadge userId={u.id} variant="compact" className="ml-1" />
                   <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                   {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                 </p>
@@ -365,6 +367,7 @@ export default async function LeaderboardPage() {
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
                       {displayName}
+                      <JobBadge userId={u.id} variant="compact" className="ml-1" />
                       <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                       {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                     </p>
