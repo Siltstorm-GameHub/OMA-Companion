@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag, MessageCircle, Send, Trash2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
@@ -13,12 +13,13 @@ import { formatBerlinDate } from "@/lib/time";
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
 interface FeedEntry {
-  kind: "report" | "asset" | "marketing_post" | "idea";
+  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
   id: string;
   publishedAt: string;
   title?: string;
   caption?: string;
   description?: string;
+  game?: string | null;
   type?: string;
   url?: string;
   status?: string;
@@ -107,6 +108,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
           </Badge>
         )}
         {entry.kind === "idea" && entry.status === "CLOSED" && <Badge tone="neutral">Abstimmung beendet</Badge>}
+        {entry.kind === "guide" && <Badge tone="info"><BookOpen className="w-2.5 h-2.5" /> Anleitung{entry.game ? ` · ${entry.game}` : ""}</Badge>}
       </div>
 
       {entry.kind === "report" && (
@@ -215,6 +217,8 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
           </div>
         </>
       )}
+
+      {entry.kind === "guide" && <GuideBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} />}
 
       <CommentSection entityType={entry.kind} entityId={entry.id} currentUserId={currentUserId} />
     </div>
@@ -325,6 +329,36 @@ function CommentSection({
         </div>
       )}
     </div>
+  );
+}
+
+const GUIDE_PREVIEW_CHARS = 420;
+
+/** Coach-Anleitung: Text bei Länge eingeklappt, Daumen-hoch wie bei Berichten, Anfechten für den Autor. */
+function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = entry.description ?? "";
+  const long = text.length > GUIDE_PREVIEW_CHARS;
+  return (
+    <>
+      <p className="text-sm font-semibold text-white">{entry.title}</p>
+      <p className="text-xs text-gray-400 whitespace-pre-line">
+        <Linkified text={long && !expanded ? `${text.slice(0, GUIDE_PREVIEW_CHARS).trimEnd()}…` : text} />
+      </p>
+      {long && (
+        <button onClick={() => setExpanded(v => !v)} className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
+          {expanded ? "Weniger anzeigen" : "Ganze Anleitung lesen"}
+        </button>
+      )}
+      <div className="flex items-center gap-2">
+        <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+          onVote={added => api(`/api/community-jobs/coach/guides/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+          onDone={onChanged} label="Anleitung" />
+        {entry.author.id === currentUserId && (
+          <DisputeTrigger kind="coachGuideVote" fetchUrl={`/api/community-jobs/coach/guides/${entry.id}/votes`} listKey="votes" />
+        )}
+      </div>
+    </>
   );
 }
 

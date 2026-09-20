@@ -9,7 +9,7 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const [reports, assets, posts, ideas] = await Promise.all([
+  const [reports, assets, posts, ideas, guides] = await Promise.all([
     prisma.jobReport.count({
       where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
     }),
@@ -22,7 +22,10 @@ export async function GET() {
     prisma.communityIdea.count({
       where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
     }),
+    prisma.coachGuide.count({
+      where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
+    }),
   ]);
 
-  return NextResponse.json({ count: reports + assets + posts + ideas });
+  return NextResponse.json({ count: reports + assets + posts + ideas + guides });
 }

@@ -13,7 +13,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
-import { CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees } from "@/components/community-jobs/CoachTools";
+import {
+  CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
+} from "@/components/community-jobs/CoachTools";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
@@ -43,7 +45,7 @@ interface CatalogEntry {
 interface Membership {
   id: string; jobKey: string; status: string;
   contractStartAt: string; contractEndAt: string;
-  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string; availableUntil?: string | null;
+  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string; availableUntil?: string | null; specialties?: string[];
 }
 interface Application { id: string; jobKey: string; status: string; appliedAt: string }
 interface Overview { catalog: CatalogEntry[]; activeMembership: Membership | null; myApplications: Application[] }
@@ -202,7 +204,7 @@ function CatalogView({
 interface PostPrefill {
   title?: string; body?: string; link?: string; linkLabel?: string;
   /** Coach-Termin: Beginn (datetime-local), Plätze, Event-Bezug. */
-  startAt?: string; capacity?: string; eventId?: string;
+  startAt?: string; capacity?: string; eventId?: string; meetingUrl?: string;
 }
 
 function withLink(text: string, link?: string): string {
@@ -804,11 +806,15 @@ function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onD
   const [menteeKey, setMenteeKey] = useState(0);
   return (
     <div className="space-y-4">
+      <CoachHelpInbox />
       <CoachAvailability initialUntil={membership.availableUntil} />
+      <CoachSpecialties initial={membership.specialties} />
       <CoachStatsBlock />
       <TrainingSessionList onDuplicate={onDuplicate} />
       <CoachAttendance onMenteeAdded={() => setMenteeKey(k => k + 1)} />
+      <CoachNewcomers onMenteeAdded={() => setMenteeKey(k => k + 1)} />
       <CoachMentees refreshKey={menteeKey} />
+      <CoachGuideList />
       <CoachRatingsReceived />
     </div>
   );
@@ -1090,8 +1096,9 @@ function MarketingPostList() {
 }
 
 interface TrainingSession {
-  id: string; title: string; description?: string | null; eventId?: string | null; startAt: string; capacity: number | null;
-  isMine: boolean; signedUp: boolean;
+  id: string; title: string; description?: string | null; eventId?: string | null; seriesId?: string | null; meetingUrl?: string | null;
+  startAt: string; capacity: number | null;
+  isMine: boolean; signedUp: boolean; onWaitlist?: boolean; waitlistCount?: number;
   coach: { id: string; username: string | null; name: string | null };
   _count: { signups: number };
   participants?: { id: string; username: string | null; name: string | null }[];
@@ -1110,11 +1117,21 @@ function defaultTrainingStart(): string {
 
 const INPUT_CLS = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
 
+function MeetingLink({ url }: { url?: string | null }) {
+  if (!url) return null;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-300 hover:text-teal-200 underline underline-offset-2" onClick={e => e.stopPropagation()}>
+      Treffpunkt
+    </a>
+  );
+}
+
 function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPrefill) => void }) {
   const [items, setItems] = useState<TrainingSession[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", startAt: "", capacity: "" });
+  const [form, setForm] = useState({ title: "", startAt: "", capacity: "", meetingUrl: "", message: "", wholeSeries: false });
+  const [deleting, setDeleting] = useState<{ id: string; message: string } | null>(null);
   const [openParticipants, setOpenParticipants] = useState<string | null>(null);
   const { confirm, ConfirmDialogElement } = useConfirm();
 
@@ -1138,27 +1155,41 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
 
   function startEdit(s: TrainingSession) {
     setEditing(s.id);
-    setForm({ title: s.title, startAt: toLocalInput(new Date(s.startAt)), capacity: s.capacity != null ? String(s.capacity) : "" });
+    setDeleting(null);
+    setForm({
+      title: s.title, startAt: toLocalInput(new Date(s.startAt)), capacity: s.capacity != null ? String(s.capacity) : "",
+      meetingUrl: s.meetingUrl ?? "", message: "", wholeSeries: false,
+    });
   }
-  async function save(id: string) {
-    await run(id, async () => {
-      await api(`/api/community-jobs/coach/training-sessions/${id}`, {
+  async function save(s: TrainingSession) {
+    await run(s.id, async () => {
+      await api(`/api/community-jobs/coach/training-sessions/${s.id}`, {
         method: "PATCH", body: JSON.stringify({
           title: form.title, startAt: new Date(form.startAt).toISOString(),
           capacity: form.capacity.trim() ? Number(form.capacity) : null,
+          meetingUrl: form.meetingUrl.trim() || null,
+          scope: form.wholeSeries ? "series" : "single", message: form.message.trim() || undefined,
         }),
       });
       setEditing(null);
-    }, "Gespeichert");
+    }, form.wholeSeries ? "Serie gespeichert" : "Gespeichert");
   }
   async function remove(s: TrainingSession) {
+    // Termine einer Serie: Auswahl "nur dieser" / "ab hier alle" inline statt einfachem Bestätigen.
+    if (s.seriesId) { setDeleting({ id: s.id, message: "" }); setEditing(null); return; }
     const ok = await confirm({
       title: "Termin löschen?",
-      description: `„${s.title}“ wird gelöscht${s._count.signups > 0 ? ` — ${s._count.signups} angemeldete Teilnehmer verlieren den Termin` : ""}.`,
+      description: `„${s.title}“ wird gelöscht${s._count.signups > 0 ? ` — ${s._count.signups} angemeldete Teilnehmer werden benachrichtigt` : ""}.`,
       confirmLabel: "Löschen", variant: "danger",
     });
     if (!ok) return;
     await run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}`, { method: "DELETE" }), "Gelöscht");
+  }
+  async function removeSeries(s: TrainingSession, scope: "single" | "series", message: string) {
+    const qs = new URLSearchParams({ scope });
+    if (message.trim()) qs.set("message", message.trim());
+    setDeleting(null);
+    await run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}?${qs}`, { method: "DELETE" }), scope === "series" ? "Serie abgesagt" : "Gelöscht");
   }
 
   if (!items) return null;
@@ -1181,19 +1212,42 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                   <input type="number" min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
                 </label>
               </div>
+              <input value={form.meetingUrl} onChange={e => setForm(f => ({ ...f, meetingUrl: e.target.value }))} placeholder="Treffpunkt-Link (z.B. Discord-Voice-Kanal)" className={`w-full ${INPUT_CLS}`} />
+              <input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} maxLength={200} placeholder="Hinweis an die Teilnehmer (optional)" className={`w-full ${INPUT_CLS}`} />
+              {s.seriesId && (
+                <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <input type="checkbox" checked={form.wholeSeries} onChange={e => setForm(f => ({ ...f, wholeSeries: e.target.checked }))} />
+                  Für diesen und alle folgenden Termine der Serie übernehmen (Zeit wird um dieselbe Differenz verschoben)
+                </label>
+              )}
               <div className="flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-                <Button size="sm" loading={busy === s.id} disabled={!form.title.trim() || !form.startAt} onClick={() => save(s.id)}>Speichern</Button>
+                <Button size="sm" loading={busy === s.id} disabled={!form.title.trim() || !form.startAt} onClick={() => save(s)}>Speichern</Button>
+              </div>
+            </div>
+          ) : deleting?.id === s.id ? (
+            <div key={s.id} className="space-y-1.5 bg-red-500/[0.06] border border-red-500/20 rounded-lg p-2">
+              <p className="text-xs text-gray-200">„{s.title}“ gehört zu einer Serie. Was absagen?</p>
+              <input value={deleting.message} onChange={e => setDeleting({ id: s.id, message: e.target.value })} maxLength={200}
+                placeholder="Hinweis an die Teilnehmer (optional)" className={`w-full ${INPUT_CLS}`} />
+              <div className="flex flex-wrap justify-end gap-1.5">
+                <Button size="sm" variant="ghost" onClick={() => setDeleting(null)}>Abbrechen</Button>
+                <Button size="sm" variant="outline" onClick={() => removeSeries(s, "single", deleting.message)}>Nur diesen Termin</Button>
+                <Button size="sm" variant="danger" onClick={() => removeSeries(s, "series", deleting.message)}>Diesen + alle folgenden</Button>
               </div>
             </div>
           ) : (
             <div key={s.id} className="space-y-1">
               <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}</span>
+                <span className="text-gray-300 truncate">
+                  {s.title} — {formatBerlinDateTime(s.startAt)}
+                  {s.seriesId && <span className="text-gray-600"> · Serie</span>}
+                  {s.meetingUrl && <> · <MeetingLink url={s.meetingUrl} /></>}
+                </span>
                 <span className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setOpenParticipants(openParticipants === s.id ? null : s.id)}
                     className="text-gray-500 hover:text-teal-400 transition-colors" aria-expanded={openParticipants === s.id}>
-                    {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet
+                    {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet{(s.waitlistCount ?? 0) > 0 ? ` · ${s.waitlistCount} wartend` : ""}
                   </button>
                   {onDuplicate && (
                     <button title="Duplizieren (Vorschlag: eine Woche später)" aria-label="Termin duplizieren"
@@ -1201,6 +1255,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                         title: s.title, body: s.description ?? "",
                         startAt: toLocalInput(new Date(new Date(s.startAt).getTime() + 7 * 86_400_000)),
                         capacity: s.capacity != null ? String(s.capacity) : undefined, eventId: s.eventId ?? undefined,
+                        meetingUrl: s.meetingUrl ?? undefined,
                       })}
                       className="p-1 text-gray-600 hover:text-teal-400 transition-colors">
                       <Copy className="w-3.5 h-3.5" />
@@ -1230,16 +1285,27 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
               <div key={s.id} className="flex items-center justify-between text-xs gap-2">
                 <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}
                   <span className="text-gray-600"> · {s.coach.username ?? s.coach.name}</span>
+                  {s.signedUp && s.meetingUrl && <> · <MeetingLink url={s.meetingUrl} /></>}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   <span className="text-gray-600">{s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet</span>
                   {s.signedUp ? (
                     <Button size="sm" variant="ghost" disabled={busy === s.id}
                       onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/signup`, { method: "DELETE" }), "Abgemeldet")}>Abmelden</Button>
+                  ) : s.onWaitlist ? (
+                    <Button size="sm" variant="ghost" disabled={busy === s.id}
+                      onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/waitlist`, { method: "DELETE" }), "Von der Warteliste entfernt")}>
+                      Warteliste verlassen
+                    </Button>
+                  ) : full ? (
+                    <Button size="sm" variant="outline" disabled={busy === s.id}
+                      onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/waitlist`, { method: "POST" }), "Du stehst auf der Warteliste")}>
+                      Auf Warteliste{(s.waitlistCount ?? 0) > 0 ? ` (${s.waitlistCount})` : ""}
+                    </Button>
                   ) : (
-                    <Button size="sm" variant="outline" disabled={busy === s.id || full}
+                    <Button size="sm" variant="outline" disabled={busy === s.id}
                       onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/signup`, { method: "POST" }), "Angemeldet")}>
-                      {full ? "Ausgebucht" : "Anmelden"}
+                      Anmelden
                     </Button>
                   )}
                 </span>
@@ -1361,6 +1427,20 @@ function IdeaList() {
 // ── Erstellungs-Formulare ─────────────────────────────────────────────────────
 
 function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
+  const [coachKind, setCoachKind] = useState<"session" | "guide">("session");
+  if (jobKey === "coach") {
+    return (
+      <div className="space-y-3">
+        <div className="flex gap-1.5">
+          <Button size="sm" variant={coachKind === "session" ? "primary" : "outline"} onClick={() => setCoachKind("session")}>Trainings-Termin</Button>
+          <Button size="sm" variant={coachKind === "guide" ? "primary" : "outline"} onClick={() => setCoachKind("guide")}>Anleitung</Button>
+        </div>
+        {coachKind === "session"
+          ? <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />
+          : <GuideForm onDone={onDone} />}
+      </div>
+    );
+  }
   if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} onDone={onDone} />;
   if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
@@ -1368,6 +1448,42 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
 
 /** Journalist (Bericht), Coach (Trainings-Termin), Visionär (Idee) — alle drei sind Titel + Text. */
 interface DiscordChannel { id: string; name: string; category: string | null }
+
+/** Coach: Einsteiger-Anleitung fürs Community-Board (wird per Daumen-hoch bewertet, zählt in den Score). */
+function GuideForm({ onDone }: { onDone: () => void }) {
+  const [title, setTitle] = useState("");
+  const [game, setGame] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await api("/api/community-jobs/coach/guides", { method: "POST", body: JSON.stringify({ title, game: game || undefined, bodyMarkdown: body }) });
+      toast.success("Anleitung veröffentlicht");
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Titel, z.B. „Erste Schritte in R6 Siege“"
+        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+      <input value={game} onChange={e => setGame(e.target.value)} maxLength={40} placeholder="Spiel (optional)"
+        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+      <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar."
+        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
+        <Button loading={busy} disabled={!title.trim() || !body.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
+      </div>
+    </div>
+  );
+}
 
 function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [title, setTitle] = useState(prefill?.title ?? "");
@@ -1379,6 +1495,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
   const [capacity, setCapacity] = useState(prefill?.capacity ?? "");
   const [coachEventId, setCoachEventId] = useState(prefill?.eventId ?? eventId ?? "");
   const [repeatWeeks, setRepeatWeeks] = useState(1);
+  const [meetingUrl, setMeetingUrl] = useState(prefill?.meetingUrl ?? "");
   const [events, setEvents] = useState<EventOption[]>([]);
 
   useEffect(() => {
@@ -1404,6 +1521,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             title, description: body, startAt: new Date(startAt).toISOString(),
             capacity: capacity.trim() ? Number(capacity) : undefined,
             eventId: coachEventId || undefined, repeatWeeks: repeatWeeks > 1 ? repeatWeeks : undefined,
+            meetingUrl: meetingUrl.trim() || undefined,
             discordChannelId: channelId || undefined,
           }),
         });
@@ -1465,6 +1583,8 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
               </Select>
             </label>
           </div>
+          <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} maxLength={300} placeholder="Treffpunkt-Link (optional, z.B. Discord-Voice-Kanal)"
+            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
           {channels.length > 0 && (
             <Select value={channelId} onChange={e => setChannelId(e.target.value)} className="w-full">
               <option value="">Keine Discord-Ankündigung</option>

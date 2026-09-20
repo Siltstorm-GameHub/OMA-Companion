@@ -15,7 +15,7 @@ import { prisma } from "./prisma";
 
 export type VoteKind =
   | "jobReportVote" | "jobReportContributionVote" | "jobMediaAssetVote" | "marketingPostVote" | "coachRating"
-  | "communityIdeaVote" | "communityBoardCommentVote";
+  | "communityIdeaVote" | "communityBoardCommentVote" | "coachGuideVote";
 
 interface VoteOwnerLookup {
   getOwnerId(voteId: string): Promise<{ ownerId: string; voterId: string } | null>;
@@ -142,6 +142,27 @@ const lookups: Record<VoteKind, VoteOwnerLookup> = {
     },
     async resolveDispute(voteId, resolution, adminId) {
       await prisma.communityIdeaVote.update({
+        where: { id: voteId },
+        data: { disputeResolution: resolution, disputeResolvedById: adminId },
+      });
+    },
+  },
+  coachGuideVote: {
+    async getOwnerId(voteId) {
+      const vote = await prisma.coachGuideVote.findUnique({
+        where: { id: voteId },
+        include: { guide: { select: { authorId: true } } },
+      });
+      return vote ? { ownerId: vote.guide.authorId, voterId: vote.voterId } : null;
+    },
+    async setDispute(voteId, disputed, reason) {
+      await prisma.coachGuideVote.update({
+        where: { id: voteId },
+        data: { disputed, disputeReason: reason, disputeResolution: disputed ? "PENDING" : null },
+      });
+    },
+    async resolveDispute(voteId, resolution, adminId) {
+      await prisma.coachGuideVote.update({
         where: { id: voteId },
         data: { disputeResolution: resolution, disputeResolvedById: adminId },
       });

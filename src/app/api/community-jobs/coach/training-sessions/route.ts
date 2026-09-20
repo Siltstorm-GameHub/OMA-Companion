@@ -23,6 +23,7 @@ export async function GET() {
       include: {
         coach: { select: { id: true, username: true, name: true } },
         signups: { select: { userId: true, user: { select: { id: true, username: true, name: true } } } },
+        waitlist: { select: { userId: true } },
       },
     }),
     prisma.coachTrainingSession.findMany({
@@ -43,8 +44,10 @@ export async function GET() {
     }),
   ]);
 
-  const sessions = upcoming.map(({ signups, ...s }) => ({
+  const sessions = upcoming.map(({ signups, waitlist, ...s }) => ({
     ...s,
+    onWaitlist: waitlist.some(w => w.userId === user.id),
+    waitlistCount: waitlist.length,
     isMine: s.coachId === user.id,
     signedUp: signups.some(x => x.userId === user.id),
     _count: { signups: signups.length },
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { title, description, startAt, capacity, discordChannelId, eventId, repeatWeeks } = await req.json().catch(() => ({}));
+  const { title, description, startAt, capacity, discordChannelId, eventId, repeatWeeks, meetingUrl } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof startAt !== "string") {
     return NextResponse.json({ error: "Titel und Startzeit erforderlich" }, { status: 400 });
   }
@@ -72,6 +75,7 @@ export async function POST(req: NextRequest) {
     discordChannelId: typeof discordChannelId === "string" ? discordChannelId : undefined,
     eventId: typeof eventId === "string" && eventId ? eventId : undefined,
     repeatWeeks: typeof repeatWeeks === "number" ? repeatWeeks : undefined,
+    meetingUrl: typeof meetingUrl === "string" ? meetingUrl : undefined,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

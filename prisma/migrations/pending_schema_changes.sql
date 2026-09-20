@@ -441,3 +441,65 @@ CREATE TABLE IF NOT EXISTS "CoachMentee" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "CoachMentee_coachId_menteeId_key" ON "CoachMentee"("coachId", "menteeId");
 CREATE INDEX IF NOT EXISTS "CoachMentee_coachId_idx" ON "CoachMentee"("coachId");
+
+-- ═══════════════════════════════════════════════════════════════
+-- Coach: Treffpunkt/Zusammenfassung, Warteliste, Hilfe-Anfragen, Outreach, Anleitungen, Spezialgebiete
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "CoachTrainingSession" ADD COLUMN IF NOT EXISTS "meetingUrl" TEXT;
+ALTER TABLE "CoachTrainingSession" ADD COLUMN IF NOT EXISTS "summary" TEXT;
+ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "specialties" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+
+CREATE TABLE IF NOT EXISTS "CoachTrainingWaitlistEntry" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "sessionId" TEXT         NOT NULL REFERENCES "CoachTrainingSession"("id") ON DELETE CASCADE,
+  "userId"    TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CoachTrainingWaitlistEntry_sessionId_userId_key" ON "CoachTrainingWaitlistEntry"("sessionId", "userId");
+
+CREATE TABLE IF NOT EXISTS "CoachHelpRequest" (
+  "id"          TEXT         NOT NULL PRIMARY KEY,
+  "coachId"     TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "requesterId" TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "message"     TEXT         NOT NULL,
+  "status"      TEXT         NOT NULL DEFAULT 'OPEN',
+  "reply"       TEXT,
+  "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "answeredAt"  TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS "CoachHelpRequest_coachId_status_idx" ON "CoachHelpRequest"("coachId", "status");
+CREATE INDEX IF NOT EXISTS "CoachHelpRequest_requesterId_createdAt_idx" ON "CoachHelpRequest"("requesterId", "createdAt");
+
+CREATE TABLE IF NOT EXISTS "CoachOutreach" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "coachId"   TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "userId"    TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "kind"      TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CoachOutreach_coachId_userId_kind_key" ON "CoachOutreach"("coachId", "userId", "kind");
+
+CREATE TABLE IF NOT EXISTS "CoachGuide" (
+  "id"              TEXT         NOT NULL PRIMARY KEY,
+  "authorId"        TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "title"           TEXT         NOT NULL,
+  "bodyMarkdown"    TEXT         NOT NULL,
+  "game"            TEXT,
+  "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "hiddenByAdminAt" TIMESTAMP(3),
+  "hiddenReason"    TEXT
+);
+CREATE INDEX IF NOT EXISTS "CoachGuide_authorId_idx" ON "CoachGuide"("authorId");
+
+CREATE TABLE IF NOT EXISTS "CoachGuideVote" (
+  "id"                  TEXT         NOT NULL PRIMARY KEY,
+  "guideId"             TEXT         NOT NULL REFERENCES "CoachGuide"("id") ON DELETE CASCADE,
+  "voterId"             TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "disputed"            BOOLEAN      NOT NULL DEFAULT false,
+  "disputeReason"       TEXT,
+  "disputeResolution"   TEXT,
+  "disputeResolvedById" TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "CoachGuideVote_guideId_voterId_key" ON "CoachGuideVote"("guideId", "voterId");

@@ -168,11 +168,26 @@ export function CoachStatsBlock() {
 // ── Anwesenheit vergangener Termine ──────────────────────────────────────────
 
 interface PastParticipant { id: string; username: string | null; name: string | null; attended: boolean | null }
-interface PastSession { id: string; title: string; startAt: string; participants: PastParticipant[] }
+interface PastSession { id: string; title: string; startAt: string; summary?: string | null; participants: PastParticipant[] }
 
 export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void }) {
   const [past, setPast] = useState<PastSession[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const [sending, setSending] = useState<string | null>(null);
+
+  async function sendSummary(sessionId: string) {
+    setSending(sessionId);
+    try {
+      await api(`/api/community-jobs/coach/training-sessions/${sessionId}/summary`, { method: "POST", body: JSON.stringify({ summary: summaries[sessionId] ?? "" }) });
+      toast.success("Zusammenfassung an die Teilnehmer gesendet");
+      setPast(list => (list ?? []).map(x => x.id === sessionId ? { ...x, summary: summaries[sessionId] } : x));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setSending(null);
+    }
+  }
 
   useEffect(() => {
     api<{ past: PastSession[] }>("/api/community-jobs/coach/training-sessions").then(d => setPast(d.past)).catch(() => setPast([]));
@@ -237,6 +252,15 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
                     </span>
                   </div>
                 ))}
+                <div className="pt-1.5 space-y-1">
+                  <textarea value={summaries[s.id] ?? s.summary ?? ""} onChange={e => setSummaries(v => ({ ...v, [s.id]: e.target.value }))}
+                    rows={3} maxLength={1500} placeholder="Zusammenfassung/Tipps für die Teilnehmer (wird als Benachrichtigung gesendet)"
+                    className={`w-full resize-none ${INPUT}`} />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-gray-600">{s.summary ? "Bereits gesendet — erneutes Senden benachrichtigt nochmal." : "Noch nicht gesendet."}</span>
+                    <Button size="sm" variant="outline" loading={sending === s.id} disabled={!(summaries[s.id] ?? s.summary ?? "").trim()} onClick={() => sendSummary(s.id)}>Senden</Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -346,6 +370,255 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Hilfe-Anfragen (Posteingang) ─────────────────────────────────────────────
+
+interface HelpRequest {
+  id: string; message: string; status: string; reply: string | null; createdAt: string;
+  requester: { id: string; username: string | null; name: string | null };
+}
+
+export function CoachHelpInbox() {
+  const [items, setItems] = useState<HelpRequest[] | null>(null);
+  const [replies, setReplies] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+
+  function reload() {
+    api<{ requests: HelpRequest[] }>("/api/community-jobs/coach/help-requests").then(d => setItems(d.requests)).catch(() => setItems([]));
+  }
+  useEffect(reload, []);
+
+  async function answer(id: string, withReply: boolean) {
+    setBusy(id);
+    try {
+      await api(`/api/community-jobs/coach/help-requests/${id}`, {
+        method: "PATCH", body: JSON.stringify({ reply: withReply ? (replies[id] ?? "") : undefined }),
+      });
+      toast.success(withReply && (replies[id] ?? "").trim() ? "Antwort gesendet" : "Anfrage abgeschlossen");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!items) return null;
+  const open = items.filter(r => r.status === "OPEN");
+  const answered = items.filter(r => r.status !== "OPEN");
+  if (open.length === 0 && answered.length === 0) {
+    return (
+      <div className="space-y-1">
+        <p className={LABEL}>Hilfe-Anfragen</p>
+        <p className="text-[11px] text-gray-600">Noch keine Anfragen. Spieler können dich im Community-Board jederzeit um Hilfe bitten — auch wenn du nicht als „verfügbar“ markiert bist.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      <p className={LABEL}>Hilfe-Anfragen {open.length > 0 && <span className="ml-1 text-amber-400 normal-case tracking-normal">({open.length} offen)</span>}</p>
+      {open.map(r => (
+        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-gray-200 font-medium">{nameOf(r.requester)}</span>
+            <span className="text-gray-600">{formatBerlinDateTime(r.createdAt, { dateStyle: "short", timeStyle: "short" })}</span>
+          </div>
+          <p className="text-xs text-gray-300 whitespace-pre-line">{r.message}</p>
+          <textarea value={replies[r.id] ?? ""} onChange={e => setReplies(v => ({ ...v, [r.id]: e.target.value }))} rows={2} maxLength={500}
+            placeholder="Antwort (optional) — die Person bekommt sie als Benachrichtigung" className={`w-full resize-none ${INPUT}`} />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" loading={busy === r.id} onClick={() => answer(r.id, false)}>Ohne Antwort schließen</Button>
+            <Button size="sm" loading={busy === r.id} disabled={!(replies[r.id] ?? "").trim()} onClick={() => answer(r.id, true)}>Antworten</Button>
+          </div>
+        </div>
+      ))}
+      {answered.length > 0 && (
+        <p className="text-[10px] text-gray-600">Zuletzt beantwortet: {answered.map(r => nameOf(r.requester)).join(", ")}</p>
+      )}
+    </div>
+  );
+}
+
+// ── Spezialgebiete ───────────────────────────────────────────────────────────
+
+export function CoachSpecialties({ initial }: { initial?: string[] }) {
+  const [tags, setTags] = useState<string[]>(initial ?? []);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function save(next: string[]) {
+    setBusy(true);
+    try {
+      const res = await api<{ specialties: string[] }>("/api/community-jobs/coach/specialties", {
+        method: "PUT", body: JSON.stringify({ specialties: next }),
+      });
+      setTags(res.specialties);
+      setDraft("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <p className={LABEL}>Meine Spezialgebiete</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {tags.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 text-[11px] text-teal-200 bg-teal-500/10 border border-teal-500/25 rounded-full pl-2.5 pr-1.5 py-0.5">
+            {t}
+            <button onClick={() => save(tags.filter(x => x !== t))} disabled={busy} aria-label={`${t} entfernen`} className="text-teal-400/70 hover:text-red-300">
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        {tags.length < 6 && (
+          <input value={draft} onChange={e => setDraft(e.target.value)} maxLength={30} disabled={busy}
+            onKeyDown={e => { if (e.key === "Enter" && draft.trim()) { e.preventDefault(); save([...tags, draft]); } }}
+            placeholder="Spiel/Sprache + Enter" className={`w-44 ${INPUT}`} />
+        )}
+      </div>
+      <p className="text-[10px] text-gray-600">Bis zu 6 Tags (z.B. „R6 Siege“, „Deutsch“). Neulinge finden dich damit im Community-Board über die Coach-Suche.</p>
+    </div>
+  );
+}
+
+// ── Neulinge ─────────────────────────────────────────────────────────────────
+
+interface Newcomer {
+  id: string; username: string | null; name: string | null; createdAt: string;
+  eventsJoined: number; isMentee: boolean; welcomed: boolean; invited: boolean;
+}
+
+export function CoachNewcomers({ onMenteeAdded }: { onMenteeAdded?: () => void }) {
+  const [data, setData] = useState<{ newcomers: Newcomer[]; nextSession: { id: string; title: string; startAt: string } | null } | null>(null);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  function reload() {
+    api<{ newcomers: Newcomer[]; nextSession: { id: string; title: string; startAt: string } | null }>("/api/community-jobs/coach/newcomers")
+      .then(setData).catch(() => setData({ newcomers: [], nextSession: null }));
+  }
+  useEffect(reload, []);
+
+  async function act(userId: string, action: "welcome" | "invite" | "mentee") {
+    setBusy(`${userId}:${action}`);
+    try {
+      if (action === "mentee") {
+        await api("/api/community-jobs/coach/mentees", { method: "POST", body: JSON.stringify({ menteeId: userId }) });
+        onMenteeAdded?.();
+      } else {
+        await api("/api/community-jobs/coach/newcomers", {
+          method: "POST", body: JSON.stringify({
+            userId, action, message: action === "welcome" && message.trim() ? message : undefined,
+            sessionId: action === "invite" ? data?.nextSession?.id : undefined,
+          }),
+        });
+      }
+      toast.success(action === "welcome" ? "Willkommens-Nachricht gesendet" : action === "invite" ? "Einladung gesendet" : "Als Mentee hinzugefügt");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!data || data.newcomers.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className={LABEL}>Neue Spieler ohne Training ({data.newcomers.length})</p>
+      <input value={message} onChange={e => setMessage(e.target.value)} maxLength={300} placeholder="Eigener Willkommens-Text (optional, sonst Standardtext)" className={`w-full ${INPUT}`} />
+      {data.newcomers.map(n => (
+        <div key={n.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-gray-200 truncate">{nameOf(n)}</p>
+            <p className="text-[10px] text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button size="sm" variant="outline" disabled={n.welcomed || busy !== null} loading={busy === `${n.id}:welcome`} onClick={() => act(n.id, "welcome")}>
+              {n.welcomed ? "Begrüßt" : "Willkommen"}
+            </Button>
+            <Button size="sm" variant="outline" disabled={!data.nextSession || n.invited || busy !== null} loading={busy === `${n.id}:invite`}
+              title={data.nextSession ? `Zu „${data.nextSession.title}“ einladen` : "Lege zuerst einen Termin an"} onClick={() => act(n.id, "invite")}>
+              {n.invited ? "Eingeladen" : "Einladen"}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={n.isMentee || busy !== null} loading={busy === `${n.id}:mentee`} onClick={() => act(n.id, "mentee")}
+              icon={<UserPlus className="w-3.5 h-3.5" />}>
+              {n.isMentee ? "Mentee" : "Mentee"}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Anleitungen (eigene Liste) ───────────────────────────────────────────────
+
+interface Guide { id: string; title: string; bodyMarkdown: string; game: string | null; _count: { votes: number } }
+
+export function CoachGuideList() {
+  const [items, setItems] = useState<Guide[] | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", game: "", body: "" });
+
+  function reload() {
+    api<{ guides: Guide[] }>("/api/community-jobs/coach/guides").then(d => setItems(d.guides)).catch(() => setItems([]));
+  }
+  useEffect(reload, []);
+
+  async function save(id: string) {
+    try {
+      await api(`/api/community-jobs/coach/guides/${id}`, {
+        method: "PATCH", body: JSON.stringify({ title: form.title, bodyMarkdown: form.body, game: form.game || null }),
+      });
+      toast.success("Gespeichert");
+      setEditing(null);
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+  async function remove(g: Guide) {
+    if (!window.confirm(`Anleitung „${g.title}“ wirklich löschen?`)) return;
+    try {
+      await api(`/api/community-jobs/coach/guides/${g.id}`, { method: "DELETE" });
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+
+  if (!items) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className={LABEL}>Meine Anleitungen ({items.length})</p>
+      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
+      {items.map(g => editing === g.id ? (
+        <div key={g.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+          <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" maxLength={120} className={`w-full ${INPUT}`} />
+          <input value={form.game} onChange={e => setForm(f => ({ ...f, game: e.target.value }))} placeholder="Spiel (optional)" maxLength={40} className={`w-full ${INPUT}`} />
+          <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={5} maxLength={6000} className={`w-full resize-none ${INPUT}`} />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button size="sm" disabled={!form.title.trim() || !form.body.trim()} onClick={() => save(g.id)}>Speichern</Button>
+          </div>
+        </div>
+      ) : (
+        <div key={g.id} className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-gray-300 truncate">{g.title}{g.game && <span className="text-gray-600"> · {g.game}</span>}</span>
+          <span className="flex items-center gap-2 shrink-0 text-gray-500">
+            👍 {g._count.votes}
+            <button onClick={() => { setEditing(g.id); setForm({ title: g.title, game: g.game ?? "", body: g.bodyMarkdown }); }} className="hover:text-teal-400 transition-colors">Bearbeiten</button>
+            <button onClick={() => remove(g)} aria-label="Löschen" className="hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

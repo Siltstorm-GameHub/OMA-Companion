@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2 } from "lucide-react";
+import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2, BookOpen } from "lucide-react";
 import { acc, type AccentName } from "@/lib/accentColors";
 import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
@@ -17,7 +17,7 @@ import { isVideoUrl } from "@/lib/upload-limits";
  */
 
 interface FeedEntry {
-  kind: "report" | "asset" | "marketing_post" | "idea";
+  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
   id: string;
   publishedAt: string;
   title?: string;
@@ -32,11 +32,11 @@ interface FeedEntry {
 }
 
 const KIND_ICON: Record<FeedEntry["kind"], typeof Newspaper> = {
-  report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Lightbulb,
+  report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Lightbulb, guide: BookOpen,
 };
 
 const KIND_ACCENT: Record<FeedEntry["kind"], AccentName> = {
-  report: "teal", asset: "violet", marketing_post: "amber", idea: "rose",
+  report: "teal", asset: "violet", marketing_post: "amber", idea: "rose", guide: "teal",
 };
 
 function entryLabel(e: FeedEntry): string {

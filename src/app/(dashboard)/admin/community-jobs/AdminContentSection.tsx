@@ -18,7 +18,7 @@ import { isVideoUrl } from "@/lib/upload-limits";
 
 interface Author { id: string; username: string | null; name: string | null }
 interface FeedEntry {
-  kind: "report" | "asset" | "marketing_post" | "idea";
+  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
   id: string;
   title?: string;
   caption?: string;
@@ -48,9 +48,9 @@ function entryImage(e: FeedEntry): { url: string; assetId?: string; via: "coverA
   return null;
 }
 
-const KIND_ICON = { report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Newspaper } as const;
+const KIND_ICON = { report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Newspaper, guide: Newspaper } as const;
 const KIND_LABEL: Record<FeedEntry["kind"], string> = {
-  report: "Bericht", asset: "Fotograf-Asset", marketing_post: "Marketing-Post", idea: "Idee",
+  report: "Bericht", asset: "Fotograf-Asset", marketing_post: "Marketing-Post", idea: "Idee", guide: "Anleitung",
 };
 
 export default function AdminContentSection() {
@@ -59,7 +59,7 @@ export default function AdminContentSection() {
 
   function reload() {
     api<{ feed: FeedEntry[] }>("/api/community-board?limit=50")
-      .then(d => setEntries(d.feed.filter(e => e.kind !== "idea")))
+      .then(d => setEntries(d.feed.filter(e => e.kind !== "idea" && e.kind !== "guide")))
       .catch(() => setEntries([]));
   }
   useEffect(reload, []);

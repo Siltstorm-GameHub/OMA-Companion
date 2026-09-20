@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const limit = Math.min(50, Number(searchParams.get("limit")) || 20);
 
-  const [reports, assets, marketingPosts, ideas] = await Promise.all([
+  const [reports, assets, marketingPosts, ideas, guides] = await Promise.all([
     prisma.jobReport.findMany({
       where: { hiddenByAdminAt: null },
       orderBy: { publishedAt: "desc" },
@@ -62,6 +62,16 @@ export async function GET(req: NextRequest) {
       include: {
         author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
         votes: { where: { voterId: user.id }, select: { id: true, stars: true } },
+        _count: { select: { votes: true } },
+      },
+    }),
+    prisma.coachGuide.findMany({
+      where: { hiddenByAdminAt: null },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: {
+        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
+        votes: { where: { voterId: user.id }, select: { id: true } },
         _count: { select: { votes: true } },
       },
     }),
@@ -123,6 +133,17 @@ export async function GET(req: NextRequest) {
       author: i.author,
       voteCount: i._count.votes,
       votedByMe: i.votes.length > 0,
+    })),
+    ...guides.map(g => ({
+      kind: "guide" as const,
+      id: g.id,
+      publishedAt: g.createdAt,
+      title: g.title,
+      description: g.bodyMarkdown,
+      game: g.game,
+      author: g.author,
+      upvotes: g._count.votes,
+      votedByMe: g.votes.length > 0,
     })),
   ].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime()).slice(0, limit);
 

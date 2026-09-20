@@ -9,5 +9,6 @@ import "./journalist-service";
 import "./fotograf-service";
 import "./marketing-manager-service";
 import "./coach-service";
+import "./coach-guide-service";
 import "./visionaer-service";
 import "./community-board-comment-service";

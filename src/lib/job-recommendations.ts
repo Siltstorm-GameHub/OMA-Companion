@@ -98,7 +98,7 @@ async function coachRecommendationsFor(userId: string): Promise<EventRecommendat
   const now = new Date();
   const recs: EventRecommendation[] = [];
 
-  const [upcomingOwn, newcomers, eventsWithoutTraining, emptySoon, unmarkedPast] = await Promise.all([
+  const [upcomingOwn, newcomers, eventsWithoutTraining, emptySoon, unmarkedPast, openHelp] = await Promise.all([
     prisma.coachTrainingSession.count({ where: { coachId: userId, startAt: { gte: now } } }),
     prisma.user.count({
       where: {
@@ -122,7 +122,15 @@ async function coachRecommendationsFor(userId: string): Promise<EventRecommendat
       },
       orderBy: { startAt: "desc" }, take: 5,
     }),
+    prisma.coachHelpRequest.count({ where: { coachId: userId, status: "OPEN" } }),
   ]);
+
+  if (openHelp > 0) {
+    recs.push({
+      eventId: "coach-open-help", title: openHelp === 1 ? "1 offene Hilfe-Anfrage" : `${openHelp} offene Hilfe-Anfragen`,
+      startAt: now, reason: "Jemand wartet auf deine Antwort", url: "/profile", noCreate: true, urgent: true,
+    });
+  }
 
   if (upcomingOwn === 0) {
     recs.push({

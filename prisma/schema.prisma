@@ -123,6 +123,13 @@ model User {
   coachRatingsGiven                CoachRating[]               @relation("CoachRatingRater")
   coachMenteesAsCoach              CoachMentee[]               @relation("CoachMenteeCoach")
   coachMenteesAsMentee             CoachMentee[]               @relation("CoachMenteeMentee")
+  coachHelpReceived                CoachHelpRequest[]          @relation("CoachHelpReceived")
+  coachHelpSent                    CoachHelpRequest[]          @relation("CoachHelpSent")
+  coachOutreachSent                CoachOutreach[]             @relation("CoachOutreachSent")
+  coachOutreachReceived            CoachOutreach[]             @relation("CoachOutreachReceived")
+  coachGuides                      CoachGuide[]
+  coachGuideVotes                  CoachGuideVote[]
+  coachWaitlistEntries             CoachTrainingWaitlistEntry[]
   communityIdeas                   CommunityIdea[]
   communityIdeaVotes               CommunityIdeaVote[]
   communityBoardComments           CommunityBoardComment[]
@@ -1234,6 +1241,7 @@ model CommunityJobMember {
   reapplyBlockedUntil DateTime? // nur bei REVOKED gesetzt (Default revokedAt + 2 Wochen)
   lastContributionAt  DateTime? // für Inaktivitäts-Check
   availableUntil      DateTime? // Coach: "Ich bin jetzt für Ad-hoc-Hilfe verfügbar" bis zu diesem Zeitpunkt
+  specialties         String[]  @default([]) // Coach: Spezialgebiete (Spiele/Sprachen), max. 6 Tags
   handedOffFromUserId String? // Snapshot-Info für Transparenz-Historie, kein FK
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1459,13 +1467,94 @@ model CoachTrainingSession {
   eventId        String? // optional: Vorbereitungs-Training für ein Event (bewusst kein FK, wie handedOffFromUserId)
   seriesId       String? // gleiche ID für alle Termine einer Terminserie
   reminderSentAt DateTime? // Tages-Erinnerung an die Teilnehmer schon verschickt
+  meetingUrl     String? // Treffpunkt (z.B. Discord-Voice-Kanal-Link)
+  summary        String? // Nachbereitung: Zusammenfassung/Tipps des Coaches nach dem Termin
 
   coach   User                  @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  signups CoachTrainingSignup[]
-  ratings CoachRating[]
+  signups  CoachTrainingSignup[]
+  ratings  CoachRating[]
+  waitlist CoachTrainingWaitlistEntry[]
 
   @@index([coachId])
   @@index([eventId])
+}
+
+/// Warteliste für ausgebuchte Termine — rückt automatisch nach, sobald ein Platz frei wird.
+model CoachTrainingWaitlistEntry {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  session CoachTrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+}
+
+/// "Hilfe anfragen" — unabhängig von der Verfügbarkeit des Coaches.
+model CoachHelpRequest {
+  id          String    @id @default(cuid())
+  coachId     String
+  requesterId String
+  message     String
+  status      String    @default("OPEN") // OPEN | ANSWERED
+  reply       String?
+  createdAt   DateTime  @default(now())
+  answeredAt  DateTime?
+
+  coach     User @relation("CoachHelpReceived", fields: [coachId], references: [id], onDelete: Cascade)
+  requester User @relation("CoachHelpSent", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([coachId, status])
+  @@index([requesterId, createdAt])
+}
+
+/// Protokoll versendeter Willkommens-/Einladungs-Nachrichten an Neulinge (verhindert Doppel-Versand).
+model CoachOutreach {
+  id        String   @id @default(cuid())
+  coachId   String
+  userId    String
+  kind      String // "welcome" | "invite:<sessionId>"
+  createdAt DateTime @default(now())
+
+  coach User @relation("CoachOutreachSent", fields: [coachId], references: [id], onDelete: Cascade)
+  user  User @relation("CoachOutreachReceived", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, userId, kind])
+}
+
+/// Einsteiger-Anleitungen des Coaches im Community-Board (Daumen-hoch-Bewertung wie bei Berichten).
+model CoachGuide {
+  id              String    @id @default(cuid())
+  authorId        String
+  title           String
+  bodyMarkdown    String
+  game            String?
+  createdAt       DateTime  @default(now())
+  hiddenByAdminAt DateTime?
+  hiddenReason    String?
+
+  author User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  CoachGuideVote[]
+
+  @@index([authorId])
+}
+
+model CoachGuideVote {
+  id                  String   @id @default(cuid())
+  guideId             String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  guide CoachGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  voter User       @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([guideId, voterId])
 }
 
 model CoachTrainingSignup {
