@@ -1144,7 +1144,7 @@ export default function TournamentManager({
                           // Breite Bildschirme: wenige Stat-Spalten → Spieler in zwei Tabellen nebeneinander,
                           // damit große Runden nicht endlos in die Höhe wachsen. Schmal: untereinander.
                           const statCols = visibleStatFields.length + (trackMatchWin ? 1 : 0) + (trackPlacement ? 1 : 0);
-                          const twoCol = statCols <= 3 && match.entries.length >= 4;
+                          const twoCol = statCols <= 3 && match.entries.length >= 2;
                           const half = Math.ceil(match.entries.length / 2);
                           const groups = twoCol ? [match.entries.slice(0, half), match.entries.slice(half)] : [match.entries];
                           return (
