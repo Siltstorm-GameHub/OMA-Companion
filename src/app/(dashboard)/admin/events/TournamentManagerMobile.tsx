@@ -633,8 +633,8 @@ function FocusedFfaCard({
         <p className="text-[11px] text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {teamError}</p>
       )}
 
-      {/* Teilnehmer */}
-      <div className="space-y-2">
+      {/* Teilnehmer — auf breiteren Touch-Screens (Tablet) zweispaltig, solange pro Spieler nur wenige Werte erfasst werden */}
+      <div className={`grid grid-cols-1 gap-2 items-start ${fieldCount <= 3 && match.entries.length >= 4 ? "md:grid-cols-2" : ""}`}>
         {match.entries.map(entry => {
           const user = allUsers.find(u => u.id === entry.userId);
           const entryTeam = entry.userId ? teams[entry.userId] : undefined;

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import { useRouter } from "next/navigation";
@@ -51,6 +51,20 @@ export function fmtDate(iso: string | Date) {
   return formatBerlinDateTime(iso, {
     day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
+}
+
+type ViewMode = "auto" | "touch" | "desktop";
+const VIEW_MODE_KEY = "tm-view-mode";
+const viewModeListeners = new Set<() => void>();
+function subscribeViewMode(l: () => void) {
+  viewModeListeners.add(l);
+  return () => { viewModeListeners.delete(l); };
+}
+function readViewMode(): ViewMode {
+  try {
+    const v = localStorage.getItem(VIEW_MODE_KEY);
+    return v === "touch" || v === "desktop" ? v : "auto";
+  } catch { return "auto"; }
 }
 
 /** Aktueller Zeitpunkt im Format, das <input type="datetime-local"> erwartet (als Berlin-
@@ -361,6 +375,14 @@ export default function TournamentManager({
   // ── Panel visibility ──────────────────────────────────────────────────
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
+
+  // Ansicht: "auto" (Touch-UI bei schmalem Viewport oder Finger-Eingabe) oder manuell erzwungen.
+  // Pro Gerät im Browser gemerkt; gilt für alle Nutzer inkl. Desktop-PC.
+  const viewMode = useSyncExternalStore(subscribeViewMode, readViewMode, () => "auto" as ViewMode);
+  function changeViewMode(v: ViewMode) {
+    try { localStorage.setItem(VIEW_MODE_KEY, v); } catch { /* ignore */ }
+    viewModeListeners.forEach(l => l());
+  }
 
   // ── Participant management ────────────────────────────────────────────
   const [addParticipantId, setAddParticipantId] = useState("");
@@ -769,7 +791,19 @@ export default function TournamentManager({
   // RENDER
   // ═══════════════════════════════════════════════════════════════════
   return (
-    <div className="space-y-4">
+    <div className="tm-root space-y-4" data-tm-view={viewMode}>
+
+      <div className="flex items-center justify-end gap-1.5 text-[11px] text-gray-500">
+        <span>Ansicht:</span>
+        {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
+          <button key={v} type="button" onClick={() => changeViewMode(v)}
+            className={`px-2.5 py-1 rounded-md border transition-colors ${
+              viewMode === v ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════
           Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
@@ -1106,7 +1140,17 @@ export default function TournamentManager({
                           </p>
                         )}
                         {(trackMatchWin || trackPlacement || visibleStatFields.length > 0) && (
-                        <div className="overflow-x-auto">
+                        (() => {
+                          // Breite Bildschirme: wenige Stat-Spalten → Spieler in zwei Tabellen nebeneinander,
+                          // damit große Runden nicht endlos in die Höhe wachsen. Schmal: untereinander.
+                          const statCols = visibleStatFields.length + (trackMatchWin ? 1 : 0) + (trackPlacement ? 1 : 0);
+                          const twoCol = statCols <= 3 && match.entries.length >= 4;
+                          const half = Math.ceil(match.entries.length / 2);
+                          const groups = twoCol ? [match.entries.slice(0, half), match.entries.slice(half)] : [match.entries];
+                          return (
+                        <div className={twoCol ? "grid grid-cols-1 xl:grid-cols-2 gap-x-8" : ""}>
+                        {groups.map((group, gi) => (
+                        <div key={gi} className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-500 border-b border-gray-700">
@@ -1119,7 +1163,7 @@ export default function TournamentManager({
                               </tr>
                             </thead>
                             <tbody>
-                              {match.entries.map(entry => {
+                              {group.map(entry => {
                                 const user    = allUsers.find(u => u.id === entry.userId);
                                 const existing: Record<string, number> = entry.statsJson ? JSON.parse(entry.statsJson) : {};
                                 const row     = ed[entry.userId ?? ""] ?? {};
@@ -1178,6 +1222,10 @@ export default function TournamentManager({
                             </tbody>
                           </table>
                         </div>
+                        ))}
+                        </div>
+                          );
+                        })()
                         )}
                       </>
                       )}

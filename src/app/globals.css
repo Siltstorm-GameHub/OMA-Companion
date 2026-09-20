@@ -1122,3 +1122,9 @@ a.card-hover:active { transform: scale(0.985); }
   .tm-touch-only { display: block; }
   .tm-desktop-only { display: none; }
 }
+
+/* Manuelle Ansichtswahl (Umschalter in TournamentManager) überstimmt die automatische Erkennung */
+.tm-root[data-tm-view="touch"] .tm-touch-only { display: block; }
+.tm-root[data-tm-view="touch"] .tm-desktop-only { display: none; }
+.tm-root[data-tm-view="desktop"] .tm-touch-only { display: none; }
+.tm-root[data-tm-view="desktop"] .tm-desktop-only { display: block; }
