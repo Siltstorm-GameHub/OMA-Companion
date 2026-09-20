@@ -464,47 +464,55 @@ export async function getProjectedPayout(
 }
 
 /**
- * Wöchentlicher Payout-Lauf: für alle aktiven Mitglieder einmalig pro Woche.
- * Idempotent — überspringt Mitglieder, für die diese Woche schon eine Zeile existiert.
+ * Wöchentlicher Payout-Lauf: zahlt die zuletzt ABGESCHLOSSENE Woche vor
+ * `referenceDate` aus (nicht die laufende — deren Bewertungen wären am Montag
+ * früh noch fast leer). Idempotent — überspringt Mitglieder, für die diese
+ * Woche schon eine Zeile existiert. Ein Fehler bei einem Mitglied bricht den
+ * Lauf nicht ab, sondern wird gezählt und geloggt.
  */
-export async function runWeeklyPayout(referenceDate: Date = new Date()): Promise<{ paid: number; skipped: number }> {
-  const { weekStart, weekEnd } = getWeekBounds(referenceDate);
+export async function runWeeklyPayout(referenceDate: Date = new Date()): Promise<{ paid: number; skipped: number; failed: number }> {
+  const { weekStart, weekEnd } = getWeekBounds(new Date(referenceDate.getTime() - 7 * 86_400_000));
   const members = await prisma.communityJobMember.findMany({
-    where: { status: { in: ["ACTIVE", "WARNED"] } },
+    where: { status: { in: ["ACTIVE", "WARNED"] }, contractStartAt: { lt: weekEnd } },
   });
 
-  let paid = 0, skipped = 0;
+  let paid = 0, skipped = 0, failed = 0;
   for (const member of members) {
-    const existing = await prisma.communityJobWeeklyPayout.findUnique({
-      where: { userId_jobKey_weekStart: { userId: member.userId, jobKey: member.jobKey, weekStart } },
-    }).catch(() => null);
-    if (existing) { skipped++; continue; }
-
-    const outcome = await computeWeeklyPayout(member, weekStart, weekEnd);
-
-    await prisma.$transaction(async tx => {
-      await tx.communityJobWeeklyPayout.create({
-        data: {
-          userId: outcome.userId, jobKey: outcome.jobKey, weekStart, weekEnd,
-          rawScore: outcome.rawScore, tierLabel: outcome.tierLabel,
-          baseCoins: outcome.baseCoins, voteBonusMultiplier: outcome.voteBonusMultiplier,
-          coinsAwarded: outcome.coinsAwarded,
-        },
+    try {
+      const existing = await prisma.communityJobWeeklyPayout.findUnique({
+        where: { userId_jobKey_weekStart: { userId: member.userId, jobKey: member.jobKey, weekStart } },
       });
-      if (outcome.coinsAwarded > 0) {
-        const job = getCommunityJob(outcome.jobKey);
-        await tx.user.update({ where: { id: outcome.userId }, data: { points: { increment: outcome.coinsAwarded } } });
-        await tx.pointTransaction.create({
+      if (existing) { skipped++; continue; }
+
+      const outcome = await computeWeeklyPayout(member, weekStart, weekEnd);
+
+      await prisma.$transaction(async tx => {
+        await tx.communityJobWeeklyPayout.create({
           data: {
-            userId: outcome.userId, amount: outcome.coinsAwarded,
-            reason: `${COIN_PREFIX} Wochengehalt: ${job?.label ?? outcome.jobKey}${outcome.tierLabel ? ` (${outcome.tierLabel})` : ""}`,
+            userId: outcome.userId, jobKey: outcome.jobKey, weekStart, weekEnd,
+            rawScore: outcome.rawScore, tierLabel: outcome.tierLabel,
+            baseCoins: outcome.baseCoins, voteBonusMultiplier: outcome.voteBonusMultiplier,
+            coinsAwarded: outcome.coinsAwarded,
           },
         });
-      }
-    });
-    paid++;
+        if (outcome.coinsAwarded > 0) {
+          const job = getCommunityJob(outcome.jobKey);
+          await tx.user.update({ where: { id: outcome.userId }, data: { points: { increment: outcome.coinsAwarded } } });
+          await tx.pointTransaction.create({
+            data: {
+              userId: outcome.userId, amount: outcome.coinsAwarded,
+              reason: `${COIN_PREFIX} Wochengehalt: ${job?.label ?? outcome.jobKey}${outcome.tierLabel ? ` (${outcome.tierLabel})` : ""}`,
+            },
+          });
+        }
+      });
+      paid++;
+    } catch (err) {
+      failed++;
+      console.error(`[community-job-payout] Auszahlung fehlgeschlagen (User ${member.userId}, Job ${member.jobKey}):`, err);
+    }
   }
-  return { paid, skipped };
+  return { paid, skipped, failed };
 }
 
 /**
@@ -522,8 +530,25 @@ export async function runContractExpiryCheck(referenceDate: Date = new Date()): 
   return { expired: expiredMembers.length };
 }
 
-/** Inaktivitäts-Mahnung: keine Beiträge seit INACTIVITY_WARNING_DAYS → WARNED (falls noch nicht verwarnt). */
-export async function runInactivityCheck(referenceDate: Date = new Date()): Promise<{ warned: number }> {
+/**
+ * Inaktivitäts-Mahnung: keine Beiträge seit INACTIVITY_WARNING_DAYS → WARNED (falls noch nicht verwarnt).
+ * Umgekehrt wird eine Verwarnung aufgehoben (→ ACTIVE), sobald das Mitglied nach der Verwarnung
+ * wieder beigetragen hat — sonst bliebe "Verwarnt" bis Vertragsende bestehen und blockiert die Verlängerung.
+ */
+export async function runInactivityCheck(referenceDate: Date = new Date()): Promise<{ warned: number; recovered: number }> {
+  const warnedMembers = await prisma.communityJobMember.findMany({
+    where: { status: "WARNED", warnedAt: { not: null }, lastContributionAt: { not: null } },
+  });
+  const recoveredIds = warnedMembers
+    .filter(m => m.lastContributionAt! > m.warnedAt!)
+    .map(m => m.id);
+  if (recoveredIds.length > 0) {
+    await prisma.communityJobMember.updateMany({
+      where: { id: { in: recoveredIds } },
+      data: { status: "ACTIVE", warnedAt: null, warningReason: null },
+    });
+  }
+
   const threshold = new Date(referenceDate.getTime() - INACTIVITY_WARNING_DAYS * 86_400_000);
   const candidates = await prisma.communityJobMember.findMany({
     where: {
@@ -542,7 +567,7 @@ export async function runInactivityCheck(referenceDate: Date = new Date()): Prom
     });
     notifyJob("community_job_warned", m.userId, m.jobKey, { "{reason}": reason });
   }
-  return { warned: candidates.length };
+  return { warned: candidates.length, recovered: recoveredIds.length };
 }
 
 /** Admin-/Automatik-Entzug wegen anhaltend schlechter Leistung oder wiederholter Verwarnung. */

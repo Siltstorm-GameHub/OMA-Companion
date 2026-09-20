@@ -1108,3 +1108,17 @@ a.card-hover:active { transform: scale(0.985); }
   .animate-glow-pulse, .aurora-text, .animate-blur-reveal,
   .animate-number-pop, .scan-on-load::before { animation: none !important; }
 }
+
+/*
+ * ── Turnier-Ergebniseingabe: Touch- vs. Desktop-Ansicht ─────────
+ * Umschaltung nach Eingabegerät statt nur nach Breite: ein 10"-Tablet im
+ * Querformat ist >1024px breit, soll aber trotzdem das Touch-UI bekommen.
+ * Touch-UI = schmaler Viewport ODER primärer Zeiger ist grob (Finger).
+ * Reines CSS, damit es kein Hydration-Flackern gibt.
+ */
+.tm-touch-only { display: none; }
+.tm-desktop-only { display: block; }
+@media (max-width: 1023.98px), (pointer: coarse) {
+  .tm-touch-only { display: block; }
+  .tm-desktop-only { display: none; }
+}

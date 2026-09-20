@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
@@ -40,6 +42,7 @@ interface CatalogEntry {
 interface Membership {
   id: string; jobKey: string; status: string;
   contractStartAt: string; contractEndAt: string;
+  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string;
 }
 interface Application { id: string; jobKey: string; status: string; appliedAt: string }
 interface Overview { catalog: CatalogEntry[]; activeMembership: Membership | null; myApplications: Application[] }
@@ -198,7 +201,7 @@ interface Recommendations {
   steamSales: { id: number; name: string; discountPercent?: number; url: string }[];
   steamReleases: { id: number; name: string; url: string }[];
 }
-interface Payout { id: string; weekStart: string; rawScore: number; tierLabel: string | null; coinsAwarded: number; voteBonusMultiplier: number }
+interface Payout { id: string; weekStart: string; weekEnd: string; rawScore: number; tierLabel: string | null; baseCoins: number; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
 interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
 interface ServerSummary { id: string; name: string; game: string }
@@ -215,6 +218,11 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [createOpen, setCreateOpen] = useState(false);
   const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
   const [showAllEvents, setShowAllEvents] = useState(false);
+  const [tab, setTab] = useState<"work" | "pay">("work");
+  const [guideOpen, setGuideOpen] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inViewRef = useRef(true);
 
   function openCreateForm(eventId?: string) {
     setCreateEventId(eventId);
@@ -244,17 +252,30 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     // denselben Komponenten-Zustand ohne Remount/Refetch wiederverwenden. Deshalb
     // zusätzlich ein kurzes Polling, damit die Kachel sich spätestens nach wenigen
     // Sekunden von selbst korrigiert, unabhängig vom Navigationsweg.
+    // Gepollt wird nur, solange das Büro tatsächlich sichtbar ist (Browser-Tab im
+    // Vordergrund UND Element nicht per display:none ausgeblendet) — ein per CSS
+    // versteckter, aber gemounteter Reiter fragt sonst dauerhaft umsonst ab.
     function reloadProjected() {
+      if (document.hidden || !inViewRef.current) return;
       api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
     }
     reloadProjected();
     const interval = setInterval(reloadProjected, 15_000);
-    function onVisible() { if (!document.hidden) reloadProjected(); }
-    document.addEventListener("visibilitychange", onVisible);
+    const observer = typeof IntersectionObserver !== "undefined" && rootRef.current
+      ? new IntersectionObserver(entries => {
+          const visible = entries.some(e => e.isIntersecting);
+          const becameVisible = visible && !inViewRef.current;
+          inViewRef.current = visible;
+          if (becameVisible) reloadProjected();
+        })
+      : null;
+    if (observer && rootRef.current) observer.observe(rootRef.current);
+    document.addEventListener("visibilitychange", reloadProjected);
     window.addEventListener("focus", reloadProjected);
     return () => {
       clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", reloadProjected);
       window.removeEventListener("focus", reloadProjected);
     };
   }, [membership.jobKey]);
@@ -270,7 +291,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const latestPayout = payouts[0];
 
   async function quit() {
-    if (!confirm("Job wirklich kündigen?")) return;
+    const ok = await confirm({
+      title: "Job kündigen?",
+      description: "Du scheidest sofort aus: das Gehalt der laufenden Woche entfällt und die Discord-Rolle wird entfernt. Der Slot wird frei — bewirbst du dich später neu, landest du ggf. auf der Warteliste.",
+      confirmLabel: "Kündigen", variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await api("/api/community-jobs/quit", { method: "POST" });
@@ -296,8 +322,13 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     }
   }
 
-  async function handoff(targetApplicationId: string) {
-    if (!confirm("Job wirklich an diesen Bewerber übergeben?")) return;
+  async function handoff(targetApplicationId: string, applicantName: string) {
+    const ok = await confirm({
+      title: `Job an ${applicantName} übergeben?`,
+      description: `${applicantName} übernimmt sofort deinen Job. Du scheidest aus, das Gehalt der laufenden Woche entfällt.`,
+      confirmLabel: "Übergeben", variant: "danger",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await api("/api/community-jobs/handoff", { method: "POST", body: JSON.stringify({ targetApplicationId }) });
@@ -310,8 +341,13 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     }
   }
 
+  const jobGuide = COMMUNITY_JOBS.find(j => j.key === membership.jobKey)?.officeGuideMarkdown;
+  const lastActivity = new Date(membership.lastContributionAt ?? membership.assignedAt ?? membership.contractStartAt);
+  const daysSinceContribution = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
+  const recCount = recs ? recs.events.length : 0;
+
   return (
-    <div className="glass card-shine rounded-2xl overflow-hidden">
+    <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-white/[0.04] flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
@@ -334,7 +370,9 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
 
       {/* Dashboard */}
       <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
-        <DashTile tone="blue" icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
+        <DashTile tone="blue" icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche"
+          value={latestPayout ? `${latestPayout.coinsAwarded} Münzen` : "–"}
+          sub={latestPayout ? (latestPayout.tierLabel ?? "Keine Bewertung") : undefined} />
         <DashTile tone="amber" icon={<Coins className="w-3.5 h-3.5" />} label="Diese Woche"
           value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
           sub={projected ? `Max. ${projected.maxCoinsAwarded}` : undefined} />
@@ -349,68 +387,68 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"}` : undefined} />
       </div>
 
-      {bonusTiers.length > 0 && (() => {
-        const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
-        const ownVotes = projected?.ownVotes ?? 0;
-        const nextTier = sortedTiers.find(t => t.minVotes > ownVotes);
-        const minV = sortedTiers[0].minVotes;
-        const maxV = sortedTiers[sortedTiers.length - 1].minVotes;
-        const span = maxV - minV;
-        // Position auf der Gesamtskala (niedrigste bis höchste Stufe), nicht nur bis zur nächsten Stufe.
-        const posPct = (v: number) => (span > 0 ? Math.min(100, Math.max(0, ((v - minV) / span) * 100)) : 0);
-        const fillPct = posPct(ownVotes);
-        return (
-          <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
-            <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
-            <p className="text-[11px] text-gray-500 leading-relaxed">
-              Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
-              Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
+      {/* Verwarnung / Inaktivitäts-Hinweis */}
+      {membership.status === "WARNED" && (
+        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.06] flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold text-amber-300">
+              Verwarnt{membership.warnedAt ? ` seit ${formatBerlinDate(new Date(membership.warnedAt))}` : ""}
             </p>
-
-            {projected != null && (
-              <div className="space-y-1">
-                {span > 0 && (
-                  // Kein horizontales Padding auf dem Container: `left: %` für die Marker wird
-                  // sonst gegen eine andere Box (Padding-Box) berechnet als die Balkenbreite selbst
-                  // (normaler Fluss, durch das Padding eingerückt) — Marker und Balken würden dann
-                  // nicht mehr zueinander passen. Stattdessen wird nur das Label je Marker an den
-                  // Rändern per Ankerpunkt (0%/-50%/-100%) so verschoben, dass es nicht übersteht.
-                  <div className="relative pt-3 pb-5">
-                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
-                        style={{ width: `${fillPct}%` }} />
-                    </div>
-                    {sortedTiers.map(t => {
-                      const isCurrent = t.multiplier === projected.voteBonusMultiplier;
-                      const p = posPct(t.minVotes);
-                      const labelAnchor = p <= 1 ? "0%" : p >= 99 ? "-100%" : "-50%";
-                      return (
-                        <div key={t.label} className="absolute top-4" style={{ left: `${p}%` }}>
-                          <div className={
-                            isCurrent
-                              ? "w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full bg-white border-2 border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.3)]"
-                              : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-gray-900 border-2 border-gray-400"
-                          } />
-                          <span className={`absolute top-3 whitespace-nowrap text-[10px] ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
-                            style={{ transform: `translateX(${labelAnchor})` }}>
-                            ×{t.multiplier.toFixed(1)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-[10px] text-gray-500">
-                  {nextTier
-                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{nextTier.multiplier.toFixed(1)})</>
-                    : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
-                </p>
-              </div>
-            )}
+            <p className="text-[11px] text-gray-400">
+              {membership.warningReason ?? "Inaktivität: keine neuen Beiträge"}. Ein neuer Beitrag hebt die Verwarnung auf
+              (wird täglich geprüft). Bis dahin kannst du den Vertrag nicht verlängern.
+            </p>
           </div>
-        );
-      })()}
+        </div>
+      )}
+      {membership.status === "ACTIVE" && daysSinceContribution >= 7 && (
+        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.03] flex items-start gap-2.5">
+          <Clock className="w-4 h-4 text-amber-500/70 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-gray-400">
+            Dein letzter Beitrag ist {daysSinceContribution} Tage her. Nach 14 Tagen ohne Beitrag erhältst du eine Verwarnung.
+          </p>
+        </div>
+      )}
 
+      {/* Anleitung */}
+      {jobGuide && (
+        <div className="border-b border-white/[0.04]">
+          <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
+            className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-white/[0.02] transition-colors">
+            <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
+              <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dein Job
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
+          </button>
+          {guideOpen && (
+            <div className="px-4 pb-4 space-y-2 text-xs text-gray-400 leading-relaxed">
+              <p>{jobGuide}</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500">
+                <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
+                <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
+                <li>Der Vertrag läuft 3 Monate, Verlängern ist ab dem 3. Monat möglich.</li>
+                <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung.</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex border-b border-white/[0.04]" role="tablist">
+        {([["work", "Arbeit", recCount], ["pay", "Gehalt", 0]] as const).map(([key, label, count]) => (
+          <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+            className={`flex-1 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest transition-colors border-b-2 ${
+              tab === key ? "text-teal-300 border-teal-400" : "text-gray-500 border-transparent hover:text-gray-300"
+            }`}>
+            {label}{count > 0 && <span className="ml-1.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-0.5">{count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === "work" && (
+      <>
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
         <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-3">
@@ -517,31 +555,113 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           {waitlist.map(w => (
             <div key={w.id} className="flex items-center justify-between gap-2 bg-white/[0.03] rounded-lg px-2.5 py-1.5">
               <span className="text-xs text-gray-300">{w.user.username ?? w.user.name}</span>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => handoff(w.id)}>Job übergeben</Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => handoff(w.id, w.user.username ?? w.user.name ?? "dem Bewerber")}>Job übergeben</Button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Gehaltshistorie */}
-      {payouts.length > 0 && (
-        <div className="p-4 space-y-2">
-          <SectionHeader tone="emerald" icon={<Wallet className="w-3.5 h-3.5" />} title="Gehaltshistorie" />
-          <div className="space-y-1">
-            {payouts.map((p, i) => (
-              <div key={p.id} className={`flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 ${i === 0 ? "bg-white/[0.04]" : ""}`}>
-                <span className="text-gray-500 w-20 shrink-0">{formatBerlinDate(p.weekStart)}</span>
-                <span className="text-gray-400 truncate flex-1 text-center">{p.tierLabel ?? "Keine Bewertung"}</span>
-                <span className={`font-medium w-24 text-right ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
+      </>
+      )}
+
+      {tab === "pay" && (
+      <>
+      {bonusTiers.length > 0 && (() => {
+        const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
+        const ownVotes = projected?.ownVotes ?? 0;
+        const nextTier = sortedTiers.find(t => t.minVotes > ownVotes);
+        const minV = sortedTiers[0].minVotes;
+        const maxV = sortedTiers[sortedTiers.length - 1].minVotes;
+        const span = maxV - minV;
+        // Position auf der Gesamtskala (niedrigste bis höchste Stufe), nicht nur bis zur nächsten Stufe.
+        const posPct = (v: number) => (span > 0 ? Math.min(100, Math.max(0, ((v - minV) / span) * 100)) : 0);
+        const fillPct = posPct(ownVotes);
+        return (
+          <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
+            <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
+              Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
+            </p>
+
+            {projected != null && (
+              <div className="space-y-1">
+                {span > 0 && (
+                  // Kein horizontales Padding auf dem Container: `left: %` für die Marker wird
+                  // sonst gegen eine andere Box (Padding-Box) berechnet als die Balkenbreite selbst
+                  // (normaler Fluss, durch das Padding eingerückt) — Marker und Balken würden dann
+                  // nicht mehr zueinander passen. Stattdessen wird nur das Label je Marker an den
+                  // Rändern per Ankerpunkt (0%/-50%/-100%) so verschoben, dass es nicht übersteht.
+                  <div className="relative pt-3 pb-5">
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
+                        style={{ width: `${fillPct}%` }} />
+                    </div>
+                    {sortedTiers.map(t => {
+                      const isCurrent = t.multiplier === projected.voteBonusMultiplier;
+                      const p = posPct(t.minVotes);
+                      const labelAnchor = p <= 1 ? "0%" : p >= 99 ? "-100%" : "-50%";
+                      return (
+                        <div key={t.label} className="absolute top-4" style={{ left: `${p}%` }}>
+                          <div className={
+                            isCurrent
+                              ? "w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full bg-white border-2 border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.3)]"
+                              : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-gray-900 border-2 border-gray-400"
+                          } />
+                          <span className={`absolute top-3 whitespace-nowrap text-[10px] ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
+                            style={{ transform: `translateX(${labelAnchor})` }}>
+                            ×{t.multiplier.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-500">
+                  {nextTier
+                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{nextTier.multiplier.toFixed(1)})</>
+                    : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
+                </p>
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        );
+      })()}
+
+      {/* Gehaltshistorie */}
+      <div className="p-4 space-y-2">
+        <SectionHeader tone="emerald" icon={<Wallet className="w-3.5 h-3.5" />} title="Gehaltshistorie" />
+        {payouts.length === 0 ? (
+          <p className="text-[11px] text-gray-600">Noch keine Auszahlung. Das Gehalt wird jeweils montags für die abgeschlossene Vorwoche gebucht.</p>
+        ) : (
+          <div className="space-y-1">
+            {payouts.map((p, i) => {
+              const weekLabel = `${formatBerlinDate(new Date(p.weekStart))} – ${formatBerlinDate(new Date(new Date(p.weekEnd).getTime() - 1))}`;
+              return (
+                <div key={p.id} className={`text-xs rounded-lg px-2.5 py-1.5 space-y-0.5 ${i === 0 ? "bg-white/[0.04]" : ""}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-500">{weekLabel}</span>
+                    <span className={`font-medium ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
+                  </div>
+                  <p className="text-[10px] text-gray-600">
+                    {p.tierLabel ?? "Keine Bewertung"} · Score {p.rawScore}
+                    {p.baseCoins > 0 && <> · Basis {p.baseCoins}</>}
+                    {" · "}Bonus ×{p.voteBonusMultiplier.toFixed(1)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      </>
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size="md">
         <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} onDone={() => { setCreateOpen(false); onChanged(); }} />
       </Modal>
+      {ConfirmDialogElement}
     </div>
   );
 }

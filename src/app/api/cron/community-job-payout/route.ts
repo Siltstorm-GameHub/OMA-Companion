@@ -18,16 +18,30 @@ function isAuthorized(req: NextRequest): boolean {
  * Reihenfolge wichtig (siehe Plan): erst Payout, DANN Vertragsablauf/Inaktivität —
  * sonst verliert ein User mit genau in dieser Woche endendem Vertrag sein bereits
  * verdientes anteiliges Gehalt.
+ *
+ * Jeder Schritt läuft isoliert: wirft einer, laufen die übrigen trotzdem, und die
+ * Antwort enthält den Fehler statt eines pauschalen 500.
  */
+async function step<T>(name: string, fn: () => Promise<T>): Promise<T | { error: string }> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`[community-job-payout] Schritt "${name}" fehlgeschlagen:`, err);
+    return { error: err instanceof Error ? err.message : "Unbekannter Fehler" };
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const payout = await runWeeklyPayout();
-  const expiry = await runContractExpiryCheck();
-  const inactivity = await runInactivityCheck();
-  const reminder = await runContractReminderCheck();
+  const payout = await step("payout", () => runWeeklyPayout());
+  const expiry = await step("expiry", () => runContractExpiryCheck());
+  const inactivity = await step("inactivity", () => runInactivityCheck());
+  const reminder = await step("reminder", () => runContractReminderCheck());
 
-  return NextResponse.json({ payout, expiry, inactivity, reminder });
+  const hasError = [payout, expiry, inactivity, reminder].some(r => "error" in r)
+    || ("failed" in payout && payout.failed > 0);
+  return NextResponse.json({ payout, expiry, inactivity, reminder }, { status: hasError ? 500 : 200 });
 }

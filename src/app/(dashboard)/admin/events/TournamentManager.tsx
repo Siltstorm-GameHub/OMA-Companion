@@ -775,7 +775,7 @@ export default function TournamentManager({
           Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
           Desktop-Tabelle, siehe TournamentManagerMobile.
           ══════════════════════════════════════════════════════════════ */}
-      <div className="lg:hidden">
+      <div className="tm-touch-only">
         <TournamentManagerMobile
           tournament={tournament}
           allUsers={allUsers}
@@ -831,7 +831,7 @@ export default function TournamentManager({
       {/* ══════════════════════════════════════════════════════════════
           Desktop — bestehende Tabellen-/Bracket-Ansicht.
           ══════════════════════════════════════════════════════════════ */}
-      <div className="hidden lg:block space-y-4">
+      <div className="tm-desktop-only space-y-4">
 
       {/* ── Header bar ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
