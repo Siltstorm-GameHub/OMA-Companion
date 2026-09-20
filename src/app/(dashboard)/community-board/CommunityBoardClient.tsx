@@ -41,6 +41,18 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+/** Macht http(s)-Links in Beitragstexten klickbar (öffnet extern, ohne Referrer/Opener). */
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) => /^https?:\/\//.test(part)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-teal-300 hover:text-teal-200 underline underline-offset-2 break-all">{part}</a>
+        : <span key={i}>{part}</span>)}
+    </>
+  );
+}
+
 function authorLabel(a: Author): string {
   return a.username ?? a.name ?? "Unbekannt";
 }
@@ -155,7 +167,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
 
       {entry.kind === "asset" && (
         <>
-          {entry.caption && <p className="text-sm text-gray-300">{entry.caption}</p>}
+          {entry.caption && <p className="text-sm text-gray-300 whitespace-pre-line"><Linkified text={entry.caption} /></p>}
           {entry.url && (
             isVideoUrl(entry.url)
               ? <video src={entry.url} controls className="w-full h-auto rounded-lg" />
@@ -175,7 +187,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
 
       {entry.kind === "marketing_post" && (
         <>
-          <p className="text-sm text-gray-300">{entry.caption}</p>
+          <p className="text-sm text-gray-300 whitespace-pre-line"><Linkified text={entry.caption ?? ""} /></p>
           {(entry.imageUrl || entry.asset?.url) && (
             // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
             <img src={entry.imageUrl ?? entry.asset!.url} alt="" className="w-full h-auto rounded-lg" />
@@ -194,7 +206,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
       {entry.kind === "idea" && (
         <>
           <p className="text-sm font-semibold text-white">{entry.title}</p>
-          <p className="text-xs text-gray-400">{entry.description}</p>
+          <p className="text-xs text-gray-400 whitespace-pre-line"><Linkified text={entry.description ?? ""} /></p>
           <div className="flex items-center gap-2">
             <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
             {entry.author.id === currentUserId && (

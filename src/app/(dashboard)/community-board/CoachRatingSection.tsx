@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
  */
 
 interface Coach { userId: string; username: string | null }
+interface RateableSession { id: string; title: string; startAt: string; coach: { id: string; username: string | null; name: string | null } }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -21,28 +22,52 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export default function CoachRatingSection() {
   const [coaches, setCoaches] = useState<Coach[] | null>(null);
+  const [rateable, setRateable] = useState<RateableSession[]>([]);
 
   useEffect(() => {
     api<{ catalog: { key: string; holders: Coach[] }[] }>("/api/community-jobs")
       .then(d => setCoaches(d.catalog.find(j => j.key === "coach")?.holders ?? []))
       .catch(() => setCoaches([]));
+    // Vergangene Trainings, an denen ich teilgenommen und die ich noch nicht bewertet habe.
+    api<{ rateable: RateableSession[] }>("/api/community-jobs/coach/training-sessions")
+      .then(d => setRateable(d.rateable ?? []))
+      .catch(() => {});
   }, []);
 
-  if (!coaches || coaches.length === 0) return null;
+  if (!coaches || (coaches.length === 0 && rateable.length === 0)) return null;
 
   return (
     <div className="glass card-shine rounded-2xl p-4 space-y-3">
       <h2 className="text-xs font-semibold text-white flex items-center gap-1.5">
         <GraduationCap className="w-3.5 h-3.5 text-teal-400" /> Coaches bewerten
       </h2>
-      <div className="flex flex-wrap gap-2">
-        {coaches.map(c => <CoachChip key={c.userId} coach={c} />)}
-      </div>
+      {rateable.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] text-gray-500">Du warst bei diesen Trainings dabei — wie war es?</p>
+          <div className="flex flex-wrap gap-2">
+            {rateable.map(t => (
+              <CoachChip key={t.id} coach={{ userId: t.coach.id, username: t.coach.username ?? t.coach.name }}
+                trainingSessionId={t.id} label={`${t.title} · ${t.coach.username ?? t.coach.name ?? "?"}`}
+                onRated={() => setRateable(list => list.filter(x => x.id !== t.id))} />
+            ))}
+          </div>
+        </div>
+      )}
+      {coaches.length > 0 && (
+        <div className="space-y-2">
+          {rateable.length > 0 && <p className="text-[11px] text-gray-500">Spontane Bewertung</p>}
+          <div className="flex flex-wrap gap-2">
+            {coaches.map(c => <CoachChip key={c.userId} coach={c} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function CoachChip({ coach }: { coach: Coach }) {
+function CoachChip({ coach, trainingSessionId, label, onRated }: {
+  coach: Coach; trainingSessionId?: string; label?: string; onRated?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(5);
   const [reason, setReason] = useState("");
@@ -51,10 +76,11 @@ function CoachChip({ coach }: { coach: Coach }) {
   async function submit() {
     setBusy(true);
     try {
-      await api("/api/community-jobs/coach/ratings", { method: "POST", body: JSON.stringify({ coachId: coach.userId, stars, reason }) });
+      await api("/api/community-jobs/coach/ratings", { method: "POST", body: JSON.stringify({ coachId: coach.userId, stars, reason, trainingSessionId }) });
       toast.success("Bewertung abgegeben");
       setOpen(false);
       setReason("");
+      onRated?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Bewertung fehlgeschlagen");
     } finally {
@@ -66,14 +92,14 @@ function CoachChip({ coach }: { coach: Coach }) {
     return (
       <button onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 text-xs bg-white/[0.03] border border-white/10 rounded-full px-3 py-1.5 text-gray-300 hover:text-white hover:border-teal-500/30 transition-colors">
-        {coach.username ?? "?"} <Star className="w-3 h-3 text-amber-400" />
+        {label ?? coach.username ?? "?"} <Star className="w-3 h-3 text-amber-400" />
       </button>
     );
   }
 
   return (
     <div className="w-full space-y-2 bg-white/[0.03] rounded-lg p-3">
-      <p className="text-xs text-white">{coach.username ?? "?"} bewerten</p>
+      <p className="text-xs text-white">{label ?? coach.username ?? "?"} bewerten</p>
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map(n => (
           <button key={n} onClick={() => setStars(n)}>

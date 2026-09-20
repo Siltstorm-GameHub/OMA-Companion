@@ -30,7 +30,8 @@ export async function createTrainingSession(
 ): Promise<CreateSessionResult> {
   if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
   if (!data.title.trim()) return { error: "Titel erforderlich" };
-  if (data.startAt.getTime() < Date.now()) return { error: "Termin muss in der Zukunft liegen" };
+  if (Number.isNaN(data.startAt.getTime()) || data.startAt.getTime() < Date.now()) return { error: "Termin muss in der Zukunft liegen" };
+  if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1)) return { error: "Kapazität muss mindestens 1 sein" };
 
   const session = await prisma.coachTrainingSession.create({
     data: {
@@ -68,6 +69,7 @@ export async function signupForSession(userId: string, sessionId: string): Promi
   });
   if (!session) return { error: "Termin nicht gefunden" };
   if (session.coachId === userId) return { error: "Du bist der Coach dieses Termins" };
+  if (session.startAt.getTime() < Date.now()) return { error: "Termin hat bereits begonnen" };
   if (session.capacity != null && session._count.signups >= session.capacity) return { error: "Termin ist ausgebucht" };
 
   const existing = await prisma.coachTrainingSignup.findUnique({
@@ -79,6 +81,62 @@ export async function signupForSession(userId: string, sessionId: string): Promi
   return { ok: true };
 }
 
+export async function unsignFromSession(userId: string, sessionId: string): Promise<SignupResult> {
+  const session = await prisma.coachTrainingSession.findUnique({ where: { id: sessionId } });
+  if (!session) return { error: "Termin nicht gefunden" };
+  if (session.startAt.getTime() < Date.now()) return { error: "Termin hat bereits begonnen" };
+  await prisma.coachTrainingSignup.deleteMany({ where: { sessionId, userId } });
+  return { ok: true };
+}
+
+export type MutationResult = { ok: true } | { error: string };
+
+/** Coach des Termins ODER Admin (isAdmin) darf ändern; Startzeit muss in der Zukunft liegen, Kapazität nicht unter die aktuellen Anmeldungen fallen. */
+export async function updateTrainingSession(
+  coachId: string, sessionId: string,
+  data: { title?: string; description?: string | null; startAt?: Date; capacity?: number | null },
+  opts: { isAdmin?: boolean } = {},
+): Promise<MutationResult> {
+  const session = await prisma.coachTrainingSession.findUnique({
+    where: { id: sessionId }, include: { _count: { select: { signups: true } } },
+  });
+  if (!session) return { error: "Termin nicht gefunden" };
+  if (session.coachId !== coachId && !opts.isAdmin) return { error: "Nur der Coach dieses Termins kann ihn ändern" };
+  if (session.startAt.getTime() < Date.now()) return { error: "Vergangene Termine lassen sich nicht mehr ändern" };
+  if (data.title !== undefined && !data.title.trim()) return { error: "Titel erforderlich" };
+  if (data.startAt !== undefined && (Number.isNaN(data.startAt.getTime()) || data.startAt.getTime() < Date.now())) {
+    return { error: "Termin muss in der Zukunft liegen" };
+  }
+  if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1)) return { error: "Kapazität muss mindestens 1 sein" };
+  if (data.capacity != null && data.capacity < session._count.signups) {
+    return { error: `Es sind bereits ${session._count.signups} Teilnehmer angemeldet` };
+  }
+
+  await prisma.coachTrainingSession.update({
+    where: { id: sessionId },
+    data: {
+      ...(data.title !== undefined ? { title: data.title.trim() } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.startAt !== undefined ? { startAt: data.startAt } : {}),
+      ...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
+    },
+  });
+  return { ok: true };
+}
+
+/** Löschen nur, solange es noch keine Bewertungen gibt (sie hängen per Cascade am Termin). */
+export async function deleteTrainingSession(coachId: string, sessionId: string, opts: { isAdmin?: boolean } = {}): Promise<MutationResult> {
+  const session = await prisma.coachTrainingSession.findUnique({
+    where: { id: sessionId }, include: { _count: { select: { ratings: true } } },
+  });
+  if (!session) return { error: "Termin nicht gefunden" };
+  if (session.coachId !== coachId && !opts.isAdmin) return { error: "Nur der Coach dieses Termins kann ihn löschen" };
+  if (session._count.ratings > 0) return { error: "Termin hat bereits Bewertungen und kann nicht gelöscht werden" };
+
+  await prisma.coachTrainingSession.delete({ where: { id: sessionId } });
+  return { ok: true };
+}
+
 export type RateResult = { ok: true } | { error: string };
 
 /** Bewertung nach einem Trainings-Termin — ein Teilnehmer, ein Rating pro Termin. */
@@ -87,6 +145,10 @@ export async function rateAfterTraining(
 ): Promise<RateResult> {
   const validation = validateRatingInput(raterId, coachId, stars, reason);
   if (validation) return validation;
+
+  const session = await prisma.coachTrainingSession.findUnique({ where: { id: trainingSessionId } });
+  if (!session || session.coachId !== coachId) return { error: "Termin gehört nicht zu diesem Coach" };
+  if (session.startAt.getTime() > Date.now()) return { error: "Der Termin hat noch nicht stattgefunden" };
 
   const signup = await prisma.coachTrainingSignup.findUnique({
     where: { sessionId_userId: { sessionId: trainingSessionId, userId: raterId } },

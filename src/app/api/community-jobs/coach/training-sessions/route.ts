@@ -5,20 +5,46 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** Anstehende Trainings-Termine (für alle sichtbar — Coach-Büro + Anmeldung). */
+/**
+ * Anstehende Trainings-Termine (für alle sichtbar — Coach-Büro + Anmeldung), je mit
+ * `isMine` (eigener Termin) und `signedUp` (bin ich angemeldet). Die Teilnehmerliste
+ * bekommt nur der Coach des Termins. Zusätzlich `rateable`: vergangene Termine
+ * (30 Tage), an denen der User teilgenommen und noch nicht bewertet hat.
+ */
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const sessions = await prisma.coachTrainingSession.findMany({
-    where: { startAt: { gte: new Date() } },
-    orderBy: { startAt: "asc" },
-    include: {
-      coach: { select: { id: true, username: true, name: true } },
-      _count: { select: { signups: true } },
-    },
-  });
-  return NextResponse.json({ sessions });
+  const now = new Date();
+  const [upcoming, rateable] = await Promise.all([
+    prisma.coachTrainingSession.findMany({
+      where: { startAt: { gte: now } },
+      orderBy: { startAt: "asc" },
+      include: {
+        coach: { select: { id: true, username: true, name: true } },
+        signups: { select: { userId: true, user: { select: { id: true, username: true, name: true } } } },
+      },
+    }),
+    prisma.coachTrainingSession.findMany({
+      where: {
+        startAt: { lt: now, gte: new Date(now.getTime() - 30 * 86_400_000) },
+        coachId: { not: user.id },
+        signups: { some: { userId: user.id } },
+        ratings: { none: { raterId: user.id } },
+      },
+      orderBy: { startAt: "desc" },
+      include: { coach: { select: { id: true, username: true, name: true } } },
+    }),
+  ]);
+
+  const sessions = upcoming.map(({ signups, ...s }) => ({
+    ...s,
+    isMine: s.coachId === user.id,
+    signedUp: signups.some(x => x.userId === user.id),
+    _count: { signups: signups.length },
+    participants: s.coachId === user.id ? signups.map(x => x.user) : undefined,
+  }));
+  return NextResponse.json({ sessions, rateable });
 }
 
 export async function POST(req: NextRequest) {

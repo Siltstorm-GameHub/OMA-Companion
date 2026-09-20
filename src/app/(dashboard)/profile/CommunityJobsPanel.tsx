@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -196,6 +196,29 @@ function CatalogView({
 
 // ── Büro (aktiver Job) ────────────────────────────────────────────────────────
 
+/** Vorbelegung für einen Beitrag zu einem Steam-Spiel; `link` wird beim Absenden automatisch angehängt, falls er im Text fehlt. */
+interface PostPrefill { title?: string; body?: string; link?: string; linkLabel?: string }
+
+function withLink(text: string, link?: string): string {
+  if (!link || text.includes(link)) return text;
+  return `${text.trim()}\n\n${link}`;
+}
+
+function steamPrefill(kind: "sales" | "new", jobKey: string, s: { name: string; discountPercent?: number; url: string }): PostPrefill {
+  const discount = s.discountPercent ? ` (-${s.discountPercent}%)` : "";
+  const headline = kind === "sales" ? `${s.name} im Steam-Sale${discount}` : `Neu auf Steam: ${s.name}`;
+  const line = kind === "sales"
+    ? `${s.name} ist gerade im Steam-Sale${s.discountPercent ? ` mit -${s.discountPercent}%` : ""}.`
+    : `${s.name} ist neu auf Steam erschienen.`;
+  return {
+    title: jobKey === "visionaer" ? `Gemeinsam spielen: ${s.name}?` : headline,
+    body: jobKey === "visionaer" ? `${line} Wäre das etwas für die Community?\n\n${s.url}` : `${line}\n\n${s.url}`,
+    link: s.url, linkLabel: s.name,
+  };
+}
+
+const SWITCH_ON = "bg-teal-500 text-black shadow-sm";
+const SWITCH_OFF = "text-gray-300 hover:text-white";
 const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
@@ -220,6 +243,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
+  const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [steamTab, setSteamTab] = useState<"sales" | "new">("sales");
   const [tab, setTab] = useState<"work" | "pay">("work");
@@ -228,8 +252,9 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const rootRef = useRef<HTMLDivElement>(null);
   const inViewRef = useRef(true);
 
-  function openCreateForm(eventId?: string) {
+  function openCreateForm(eventId?: string, prefill?: PostPrefill) {
     setCreateEventId(eventId);
+    setCreatePrefill(prefill);
     setCreateOpen(true);
   }
 
@@ -349,6 +374,8 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const lastActivity = new Date(membership.lastContributionAt ?? membership.assignedAt ?? membership.contractStartAt);
   const daysSinceContribution = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
   const recCount = recs ? recs.events.length : 0;
+  // Journalist (Bericht), Visionär (Idee) und Marketing Manager (Werbe-Post) können direkt zu einem Steam-Spiel posten.
+  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(membership.jobKey);
 
   return (
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
@@ -515,10 +542,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                       : <><Rocket className="w-3.5 h-3.5 text-blue-400" /> Neuveröffentlichungen</>}
                   </p>
                   {both && (
-                    <div className="flex rounded-lg border border-white/10 overflow-hidden text-[10px] font-semibold" role="tablist">
+                    <div className="flex rounded-full bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold" role="tablist">
                       {([["sales", "Sales"], ["new", "Neu"]] as const).map(([key, label]) => (
                         <button key={key} role="tab" aria-selected={activeSteamTab === key} onClick={() => setSteamTab(key)}
-                          className={`px-2.5 py-1 transition-colors ${activeSteamTab === key ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>
+                          className={`px-4 py-1.5 rounded-full transition-colors ${
+                            activeSteamTab === key ? SWITCH_ON : SWITCH_OFF
+                          }`}>
                           {label}
                         </button>
                       ))}
@@ -527,21 +556,31 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                 </div>
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                   {items.map(s => (
-                    <a key={`${activeSteamTab}-${s.id}`} href={s.url} target="_blank" rel="noopener noreferrer"
-                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/30 transition-colors">
-                      <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
-                        {s.headerImage && (
-                          // eslint-disable-next-line @next/next/no-img-element -- Steam-CDN-Cover, beliebiger Host
-                          <img src={s.headerImage} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                        )}
-                        {s.discountPercent ? (
-                          <span className="absolute top-1.5 right-1.5 text-[11px] font-bold text-emerald-950 bg-emerald-400 rounded-md px-1.5 py-0.5">
-                            -{s.discountPercent}%
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="px-2.5 py-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
-                    </a>
+                    <div key={`${activeSteamTab}-${s.id}`}
+                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/30 transition-colors flex flex-col">
+                      <a href={s.url} target="_blank" rel="noopener noreferrer" className="block">
+                        <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
+                          {s.headerImage && (
+                            // eslint-disable-next-line @next/next/no-img-element -- Steam-CDN-Cover, beliebiger Host
+                            <img src={s.headerImage} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                          )}
+                          {s.discountPercent ? (
+                            <span className="absolute top-1.5 right-1.5 text-[11px] font-bold text-emerald-950 bg-emerald-400 rounded-md px-1.5 py-0.5">
+                              -{s.discountPercent}%
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
+                      </a>
+                      {canPostAboutSteam && (
+                        <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
+                          <Button size="sm" variant="outline" className="w-full justify-center"
+                            onClick={() => openCreateForm(undefined, steamPrefill(activeSteamTab, membership.jobKey, s))}>
+                            Beitrag dazu
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -694,7 +733,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size="md">
-        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} onDone={() => { setCreateOpen(false); onChanged(); }} />
+        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); onChanged(); }} />
       </Modal>
       {ConfirmDialogElement}
     </div>
@@ -1022,40 +1061,155 @@ function MarketingPostList() {
   );
 }
 
+interface TrainingSession {
+  id: string; title: string; startAt: string; capacity: number | null;
+  isMine: boolean; signedUp: boolean;
+  coach: { id: string; username: string | null; name: string | null };
+  _count: { signups: number };
+  participants?: { id: string; username: string | null; name: string | null }[];
+}
+
+function pad2(n: number): string { return String(n).padStart(2, "0"); }
+/** Wert für <input type="datetime-local"> (lokale Zeit des Browsers). */
+function toLocalInput(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function defaultTrainingStart(): string {
+  const d = new Date(Date.now() + 86_400_000);
+  d.setHours(18, 0, 0, 0);
+  return toLocalInput(d);
+}
+
+const INPUT_CLS = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
+
 function TrainingSessionList() {
-  const [items, setItems] = useState<{ id: string; title: string; startAt: string; coach: { id: string }; _count: { signups: number } }[]>([]);
+  const [items, setItems] = useState<TrainingSession[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", startAt: "", capacity: "" });
+  const [openParticipants, setOpenParticipants] = useState<string | null>(null);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   function reload() {
-    api<{ sessions: typeof items }>("/api/community-jobs/coach/training-sessions").then(d => setItems(d.sessions)).catch(() => {});
+    api<{ sessions: TrainingSession[] }>("/api/community-jobs/coach/training-sessions").then(d => setItems(d.sessions)).catch(() => setItems([]));
   }
   useEffect(reload, []);
 
-  async function signup(id: string) {
+  async function run(id: string, fn: () => Promise<unknown>, successMsg: string) {
     setBusy(id);
     try {
-      await api(`/api/community-jobs/coach/training-sessions/${id}/signup`, { method: "POST" });
-      toast.success("Angemeldet");
+      await fn();
+      toast.success(successMsg);
       reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Anmeldung fehlgeschlagen");
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
     } finally {
       setBusy(null);
     }
   }
 
-  if (!items.length) return <p className="text-xs text-gray-600">Keine anstehenden Trainings-Termine.</p>;
+  function startEdit(s: TrainingSession) {
+    setEditing(s.id);
+    setForm({ title: s.title, startAt: toLocalInput(new Date(s.startAt)), capacity: s.capacity != null ? String(s.capacity) : "" });
+  }
+  async function save(id: string) {
+    await run(id, async () => {
+      await api(`/api/community-jobs/coach/training-sessions/${id}`, {
+        method: "PATCH", body: JSON.stringify({
+          title: form.title, startAt: new Date(form.startAt).toISOString(),
+          capacity: form.capacity.trim() ? Number(form.capacity) : null,
+        }),
+      });
+      setEditing(null);
+    }, "Gespeichert");
+  }
+  async function remove(s: TrainingSession) {
+    const ok = await confirm({
+      title: "Termin löschen?",
+      description: `„${s.title}“ wird gelöscht${s._count.signups > 0 ? ` — ${s._count.signups} angemeldete Teilnehmer verlieren den Termin` : ""}.`,
+      confirmLabel: "Löschen", variant: "danger",
+    });
+    if (!ok) return;
+    await run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}`, { method: "DELETE" }), "Gelöscht");
+  }
+
+  if (!items) return null;
+  const mine = items.filter(s => s.isMine);
+  const others = items.filter(s => !s.isMine);
+  if (items.length === 0) return <p className="text-xs text-gray-600">Keine anstehenden Trainings-Termine.</p>;
+
   return (
-    <div className="space-y-1.5">
-      {items.map(s => (
-        <div key={s.id} className="flex items-center justify-between text-xs gap-2">
-          <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}</span>
-          <span className="flex items-center gap-2 shrink-0">
-            <span className="text-gray-600">{s._count.signups} angemeldet</span>
-            <Button size="sm" variant="outline" disabled={busy === s.id} onClick={() => signup(s.id)}>Anmelden</Button>
-          </span>
+    <div className="space-y-3">
+      {mine.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Termine</p>
+          {mine.map(s => editing === s.id ? (
+            <div key={s.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" className={`w-full ${INPUT_CLS}`} />
+              <div className="flex flex-wrap items-center gap-2">
+                <input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} className={INPUT_CLS} />
+                <label className="flex items-center gap-1 text-[10px] text-gray-500">
+                  Plätze
+                  <input type="number" min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
+                </label>
+              </div>
+              <div className="flex justify-end gap-1.5">
+                <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+                <Button size="sm" loading={busy === s.id} disabled={!form.title.trim() || !form.startAt} onClick={() => save(s.id)}>Speichern</Button>
+              </div>
+            </div>
+          ) : (
+            <div key={s.id} className="space-y-1">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setOpenParticipants(openParticipants === s.id ? null : s.id)}
+                    className="text-gray-500 hover:text-teal-400 transition-colors" aria-expanded={openParticipants === s.id}>
+                    {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet
+                  </button>
+                  <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
+                </span>
+              </div>
+              {openParticipants === s.id && (
+                <p className="pl-3 text-[11px] text-gray-500">
+                  {s.participants && s.participants.length > 0
+                    ? s.participants.map(p => p.username ?? p.name ?? "?").join(", ")
+                    : "Noch keine Anmeldungen."}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
+
+      {others.length > 0 && (
+        <div className="space-y-1.5">
+          {mine.length > 0 && <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Weitere Termine</p>}
+          {others.map(s => {
+            const full = s.capacity != null && s._count.signups >= s.capacity;
+            return (
+              <div key={s.id} className="flex items-center justify-between text-xs gap-2">
+                <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}
+                  <span className="text-gray-600"> · {s.coach.username ?? s.coach.name}</span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-gray-600">{s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet</span>
+                  {s.signedUp ? (
+                    <Button size="sm" variant="ghost" disabled={busy === s.id}
+                      onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/signup`, { method: "DELETE" }), "Abgemeldet")}>Abmelden</Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled={busy === s.id || full}
+                      onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/signup`, { method: "POST" }), "Angemeldet")}>
+                      {full ? "Ausgebucht" : "Anmelden"}
+                    </Button>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {ConfirmDialogElement}
     </div>
   );
 }
@@ -1069,6 +1223,7 @@ function CoachRatingsReceived() {
   }, []);
 
   if (!items) return null;
+  const average = items.length > 0 ? items.reduce((sum, r) => sum + r.stars, 0) / items.length : 0;
   return (
     <div className="pt-3 mt-3 border-t border-white/[0.04] space-y-1.5">
       <div className="flex items-center justify-between">
@@ -1076,6 +1231,27 @@ function CoachRatingsReceived() {
         {items.length > 0 && <Button size="sm" variant="ghost" onClick={() => setDisputeOpen(true)}>Ansehen/Anfechten</Button>}
       </div>
       {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Bewertungen erhalten.</p>}
+      {items.length > 0 && (
+        <>
+          <p className="text-xs text-gray-300 flex items-center gap-1">
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            <span className="font-semibold">{average.toFixed(1)}</span>
+            <span className="text-gray-600">· {items.length} {items.length === 1 ? "Bewertung" : "Bewertungen"}</span>
+          </p>
+          <div className="space-y-1">
+            {items.slice(0, 5).map(r => (
+              <div key={r.id} className="text-[11px] text-gray-500 flex items-start gap-2">
+                <span className="text-amber-400 shrink-0">{"★".repeat(r.stars)}<span className="text-gray-700">{"★".repeat(5 - r.stars)}</span></span>
+                <span className="min-w-0">
+                  <span className="text-gray-400">{r.rater.username ?? r.rater.name ?? "?"}:</span> {r.reason}
+                  {r.disputed && <span className="text-amber-500"> · angefochten</span>}
+                </span>
+              </div>
+            ))}
+            {items.length > 5 && <p className="text-[10px] text-gray-600">+{items.length - 5} weitere unter „Ansehen/Anfechten“</p>}
+          </div>
+        </>
+      )}
       <DisputeVotesModal open={disputeOpen} onClose={() => setDisputeOpen(false)} kind="coachRating"
         fetchUrl="/api/community-jobs/coach/ratings" listKey="ratings" voterField="rater" />
     </div>
@@ -1145,21 +1321,23 @@ function IdeaList() {
 
 // ── Erstellungs-Formulare ─────────────────────────────────────────────────────
 
-function CreateContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?: string; onDone: () => void }) {
+function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} onDone={onDone} />;
-  if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} onDone={onDone} />;
-  return <TextContentForm jobKey={jobKey} eventId={eventId} onDone={onDone} />;
+  if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
+  return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
 }
 
 /** Journalist (Bericht), Coach (Trainings-Termin), Visionär (Idee) — alle drei sind Titel + Text. */
 interface DiscordChannel { id: string; name: string; category: string | null }
 
-function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?: string; onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
+  const [title, setTitle] = useState(prefill?.title ?? "");
+  const [body, setBody] = useState(prefill?.body ?? "");
   const [busy, setBusy] = useState(false);
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
   const [channelId, setChannelId] = useState("");
+  const [startAt, setStartAt] = useState(defaultTrainingStart);
+  const [capacity, setCapacity] = useState("");
 
   useEffect(() => {
     if (jobKey !== "coach") return;
@@ -1170,16 +1348,17 @@ function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?
     setBusy(true);
     try {
       if (jobKey === "journalist") {
-        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: body, eventId }) });
+        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: withLink(body, prefill?.link), eventId }) });
       } else if (jobKey === "coach") {
         await api("/api/community-jobs/coach/training-sessions", {
           method: "POST", body: JSON.stringify({
-            title, description: body, startAt: new Date(Date.now() + 86_400_000).toISOString(),
+            title, description: body, startAt: new Date(startAt).toISOString(),
+            capacity: capacity.trim() ? Number(capacity) : undefined,
             discordChannelId: channelId || undefined,
           }),
         });
       } else if (jobKey === "visionaer") {
-        await api("/api/community-jobs/ideas", { method: "POST", body: JSON.stringify({ title, description: body }) });
+        await api("/api/community-jobs/ideas", { method: "POST", body: JSON.stringify({ title, description: withLink(body, prefill?.link) }) });
       }
       toast.success("Veröffentlicht");
       onDone();
@@ -1196,9 +1375,25 @@ function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Text" rows={5}
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+      {prefill?.link && (
+        <p className="text-[11px] text-gray-500 flex items-center gap-1">
+          <Tag className="w-3 h-3" /> Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.
+        </p>
+      )}
       {jobKey === "coach" && (
         <>
-          <p className="text-[11px] text-gray-600">Termin wird standardmäßig für morgen angelegt — Zeitpunkt lässt sich später anpassen.</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1 text-[11px] text-gray-500">
+              Beginn
+              <input type="datetime-local" value={startAt} min={toLocalInput(new Date())} onChange={e => setStartAt(e.target.value)}
+                className="block bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
+            </label>
+            <label className="space-y-1 text-[11px] text-gray-500">
+              Plätze (optional)
+              <input type="number" min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
+                className="block w-28 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            </label>
+          </div>
           {channels.length > 0 && (
             <Select value={channelId} onChange={e => setChannelId(e.target.value)} className="w-full">
               <option value="">Keine Discord-Ankündigung</option>
@@ -1209,7 +1404,7 @@ function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?
       )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
-        <Button loading={busy} disabled={!title.trim() || !body.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>
+        <Button loading={busy} disabled={!title.trim() || !body.trim() || (jobKey === "coach" && !startAt)} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>
           Veröffentlichen
         </Button>
       </div>
@@ -1356,10 +1551,10 @@ interface EventOption { id: string; title: string; startAt: string }
 
 type PostImageMode = "none" | "library" | "studio" | "upload";
 
-function CreateMarketingPostForm({ eventId: initialEventId, onDone }: { eventId?: string; onDone: () => void }) {
+function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: { eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [eventId, setEventId] = useState(initialEventId ?? "");
-  const [caption, setCaption] = useState("");
+  const [caption, setCaption] = useState(prefill?.body ?? "");
   const [assetId, setAssetId] = useState("");
   const [studioImageUrl, setStudioImageUrl] = useState("");
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
@@ -1400,7 +1595,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, onDone }: { eventId?
     try {
       await api("/api/community-jobs/marketing-posts", {
         method: "POST", body: JSON.stringify({
-          eventId, caption,
+          eventId, caption: withLink(caption, prefill?.link),
           assetId: imageMode === "library" ? (assetId || undefined) : undefined,
           imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
             : imageMode === "upload" ? (uploadedImageUrl || undefined) : undefined,
