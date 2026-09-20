@@ -130,6 +130,10 @@ model User {
   coachGuides                      CoachGuide[]
   coachGuideVotes                  CoachGuideVote[]
   coachWaitlistEntries             CoachTrainingWaitlistEntry[]
+  reportSeries                     ReportSeries[]
+  photoRequests                    PhotoRequest[]              @relation("PhotoRequester")
+  interviewsAsJournalist           InterviewRequest[]          @relation("InterviewJournalist")
+  interviewsAsInterviewee          InterviewRequest[]          @relation("InterviewInterviewee")
   communityIdeas                   CommunityIdea[]
   communityIdeaVotes               CommunityIdeaVote[]
   communityBoardComments           CommunityBoardComment[]
@@ -1307,16 +1311,87 @@ model JobReport {
   discordMessageId          String? // für Reaktions-Rückzuordnung (spätere Phase)
   category                  String? // turnierbericht | interview | meinung | guide | news (siehe report-categories.ts)
   isDraft                   Boolean   @default(false) // Entwurf: nur für den Autor sichtbar, nicht im Board, keine Bewertung
+  seriesId                  String? // Berichtsreihe ("Teil 1–3"), nur eigene Reihen des Autors
+  editedAt                  DateTime? // "Korrigiert am" — gesetzt, wenn ein veröffentlichter Bericht inhaltlich geändert wurde
+  lastEditNote              String? // kurzer Korrekturhinweis zur letzten Änderung (öffentlich)
+  notifiedMentions          String[]  @default([]) // User-IDs, die für @-Erwähnungen schon benachrichtigt wurden
+  updatedAt                 DateTime  @default(now()) @updatedAt
 
   author                  User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event                   Event?                  @relation(fields: [eventId], references: [id])
   coverAsset              JobMediaAsset?          @relation(fields: [coverAssetId], references: [id])
   referencedMarketingPost MarketingPost?          @relation("ReportReferencesMarketingPost", fields: [referencedMarketingPostId], references: [id])
+  series                  ReportSeries?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  revisions               JobReportRevision[]
   votes                   JobReportVote[]
   contributions           JobReportContribution[]
 
   @@index([eventId])
   @@index([authorId])
+  @@index([seriesId])
+}
+
+/// Berichtsreihe eines Journalisten (z.B. "Turnier-Rückblick: Teil 1–3").
+model ReportSeries {
+  id        String   @id @default(cuid())
+  authorId  String
+  title     String
+  createdAt DateTime @default(now())
+
+  author  User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reports JobReport[]
+
+  @@index([authorId])
+}
+
+/// Frühere Fassung eines veröffentlichten Berichts (Versionsverlauf) — wird beim Überschreiben gesichert.
+model JobReportRevision {
+  id           String   @id @default(cuid())
+  reportId     String
+  title        String
+  bodyMarkdown String
+  note         String? // Korrekturhinweis der Änderung, die diese Fassung abgelöst hat
+  savedAt      DateTime @default(now())
+
+  report JobReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+/// Bildwunsch eines Journalisten an die Fotografen.
+model PhotoRequest {
+  id               String    @id @default(cuid())
+  requesterId      String
+  eventId          String?
+  description      String
+  status           String    @default("OPEN") // OPEN | FULFILLED | CLOSED
+  fulfilledAssetId String?
+  fulfilledById    String?
+  createdAt        DateTime  @default(now())
+  fulfilledAt      DateTime?
+
+  requester User @relation("PhotoRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([requesterId])
+}
+
+/// Interview-Anfrage eines Journalisten an ein Community-Mitglied.
+model InterviewRequest {
+  id            String    @id @default(cuid())
+  journalistId  String
+  intervieweeId String
+  questionsJson String // JSON: string[]
+  answersJson   String? // JSON: string[] (gleiche Länge wie die Fragen)
+  status        String    @default("PENDING") // PENDING | ANSWERED | DECLINED
+  createdAt     DateTime  @default(now())
+  answeredAt    DateTime?
+
+  journalist User @relation("InterviewJournalist", fields: [journalistId], references: [id], onDelete: Cascade)
+  interviewee User @relation("InterviewInterviewee", fields: [intervieweeId], references: [id], onDelete: Cascade)
+
+  @@index([intervieweeId, status])
+  @@index([journalistId])
 }
 
 model JobReportVote {

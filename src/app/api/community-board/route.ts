@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { plainExcerpt, readingMinutes } from "@/lib/report-text";
+import { reportFeedInclude, toReportFeedEntry } from "@/lib/report-feed";
 
 export const dynamic = "force-dynamic";
 
@@ -23,17 +23,7 @@ export async function GET(req: NextRequest) {
       where: { hiddenByAdminAt: null, isDraft: false },
       orderBy: { publishedAt: "desc" },
       take: limit,
-      include: {
-        event: { select: { id: true, title: true } },
-        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
-        coverAsset: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
-        referencedMarketingPost: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
-        contributions: {
-          include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } },
-        },
-        votes: { where: { voterId: user.id }, select: { id: true } },
-        _count: { select: { votes: true } },
-      },
+      include: reportFeedInclude(user.id),
     }),
     prisma.jobMediaAsset.findMany({
       where: { hiddenByAdminAt: null },
@@ -80,38 +70,14 @@ export async function GET(req: NextRequest) {
   ]);
 
   const feed = [
-    ...reports.map(r => ({
-      kind: "report" as const,
-      id: r.id,
-      publishedAt: r.publishedAt,
-      title: r.title,
-      category: r.category,
-      event: r.event,
-      // Nur Auszug im Feed — den vollen Text lädt das Board beim Aufklappen (GET /reports/[id]).
-      excerpt: plainExcerpt(r.bodyMarkdown, 320),
-      readingMinutes: readingMinutes(r.bodyMarkdown),
-      author: r.author,
-      upvotes: r._count.votes,
-      votedByMe: r.votes.length > 0,
-      // Zusammengesetzte Ansicht: Cover-Bild (Fotograf) und referenzierter Marketing-Post
-      // sind eigenständige, unabhängig bewertbare Komponenten mit eigenem Autor.
-      coverAsset: r.coverAsset && {
-        id: r.coverAsset.id, url: r.coverAsset.url, author: r.coverAsset.author, upvotes: r.coverAsset._count.votes,
-      },
-      referencedMarketingPost: r.referencedMarketingPost && {
-        id: r.referencedMarketingPost.id, caption: r.referencedMarketingPost.caption,
-        author: r.referencedMarketingPost.author, upvotes: r.referencedMarketingPost._count.votes,
-      },
-      contributions: r.contributions.map(c => ({
-        id: c.id, bodyMarkdown: c.bodyMarkdown, author: c.author, upvotes: c._count.votes,
-      })),
-    })),
+    ...reports.map(toReportFeedEntry),
     ...assets.map(a => ({
       kind: "asset" as const,
       id: a.id,
       publishedAt: a.createdAt,
       type: a.type,
       url: a.url,
+      eventId: a.eventId,
       caption: a.caption,
       author: a.author,
       upvotes: a._count.votes,

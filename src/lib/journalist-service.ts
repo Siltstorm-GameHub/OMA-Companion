@@ -8,6 +8,37 @@ import { countCommentVoteScore } from "./community-board-comment-service";
 import { isVideoUrl } from "./upload-limits";
 import { isReportCategory, reportCategoryLabel, REPORT_TITLE_MAX, REPORT_BODY_MAX, CONTRIBUTION_MAX } from "./report-categories";
 import { plainExcerpt } from "./report-text";
+import { dispatchNotification } from "./notify-dispatch";
+import { extractMentionedUserIds } from "./report-mentions";
+
+export function appBaseUrl(): string { return process.env.NEXTAUTH_URL ?? "https://oma-app.de"; }
+export function reportPath(id: string): string { return `/community-board/report/${id}`; }
+
+async function userDisplayName(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { username: true, name: true } }).catch(() => null);
+  return u?.username ?? u?.name ?? "Jemand";
+}
+
+/** Benachrichtigt neu genannte Nutzer (`[@Name](user:id)`), je Bericht nur einmal pro Person. */
+async function notifyMentions(reportId: string, authorId: string, title: string, body: string): Promise<void> {
+  const report = await prisma.jobReport.findUnique({ where: { id: reportId }, select: { notifiedMentions: true } });
+  if (!report) return;
+  const wanted = extractMentionedUserIds(body).filter(id => id !== authorId && !report.notifiedMentions.includes(id));
+  if (wanted.length === 0) return;
+  const existing = await prisma.user.findMany({ where: { id: { in: wanted } }, select: { id: true } });
+  const ids = existing.map(u => u.id);
+  if (ids.length === 0) return;
+  await prisma.jobReport.update({ where: { id: reportId }, data: { notifiedMentions: [...report.notifiedMentions, ...ids] } });
+  dispatchNotification("report_mention", {
+    users: ids, placeholders: { "{authorName}": await userDisplayName(authorId), "{title}": title, "{url}": reportPath(reportId) },
+  }).catch(() => {});
+}
+
+async function validateSeries(authorId: string, seriesId: string | null | undefined): Promise<string | null> {
+  if (!seriesId) return null;
+  const series = await prisma.reportSeries.findUnique({ where: { id: seriesId }, select: { authorId: true } });
+  return series && series.authorId === authorId ? null : "Reihe nicht gefunden";
+}
 
 /**
  * Journalist: Berichte + Ergänzungen anderer Journalisten, Daumen-hoch-Bewertung.
@@ -29,7 +60,7 @@ async function requireActiveJournalist(userId: string): Promise<boolean> {
 
 interface ReportInput {
   title: string; bodyMarkdown: string; category?: string | null; eventId?: string | null;
-  coverAssetId?: string | null; referencedMarketingPostId?: string | null;
+  coverAssetId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null;
 }
 
 /** Prüft Länge/Kategorie und dass verknüpfte Datensätze existieren (Cover nur Standbilder, kein Video). */
@@ -64,7 +95,7 @@ export async function createReport(
   data: ReportInput & { draft?: boolean },
 ): Promise<CreateReportResult> {
   if (!(await requireActiveJournalist(authorId))) return { error: "Du bist gerade kein aktiver Journalist" };
-  const invalid = await validateReportRefs(data);
+  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(authorId, data.seriesId));
   if (invalid) return { error: invalid };
 
   const report = await prisma.jobReport.create({
@@ -72,7 +103,7 @@ export async function createReport(
       authorId, title: data.title.trim(), bodyMarkdown: data.bodyMarkdown,
       eventId: data.eventId || null, coverAssetId: data.coverAssetId || null,
       referencedMarketingPostId: data.referencedMarketingPostId || null,
-      category: data.category || null, isDraft: data.draft === true,
+      category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true,
     },
   });
   if (!data.draft) await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
@@ -86,6 +117,7 @@ async function afterPublish(reportId: string, authorId: string, title: string, b
     data: { lastContributionAt: new Date() },
   });
   announceAndStore(reportId, authorId, title, body, category).catch(() => {});
+  notifyMentions(reportId, authorId, title, body).catch(() => {});
 }
 
 async function announceAndStore(reportId: string, authorId: string, title: string, body: string, category: string | null): Promise<void> {
@@ -98,6 +130,7 @@ async function announceAndStore(reportId: string, authorId: string, title: strin
     title: label ? `${label}: ${title}` : title, description: plainExcerpt(body, 300),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
     jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📰", channelId,
+    url: `${appBaseUrl()}${reportPath(reportId)}`,
   });
   if (messageId) await prisma.jobReport.update({ where: { id: reportId }, data: { discordMessageId: messageId } });
 }
@@ -146,6 +179,16 @@ export async function addContribution(
     where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
     data: { lastContributionAt: new Date() },
   });
+
+  // Autor benachrichtigen + in der Ergänzung genannte Personen (der Autor selbst bekommt nur die Ergänzungs-Nachricht).
+  const authorName = await userDisplayName(authorId);
+  const placeholders = { "{authorName}": authorName, "{title}": report.title, "{url}": reportPath(reportId) };
+  if (report.authorId !== authorId) dispatchNotification("report_contribution", { users: [report.authorId], placeholders }).catch(() => {});
+  const mentioned = extractMentionedUserIds(bodyMarkdown).filter(id => id !== authorId && id !== report.authorId);
+  if (mentioned.length > 0) {
+    const existing = await prisma.user.findMany({ where: { id: { in: mentioned } }, select: { id: true } });
+    if (existing.length > 0) dispatchNotification("report_mention", { users: existing.map(u => u.id), placeholders }).catch(() => {});
+  }
   return { ok: true, contributionId: contribution.id };
 }
 
@@ -160,19 +203,29 @@ export async function updateReport(
   authorId: string, reportId: string,
   data: {
     title: string; bodyMarkdown?: string; coverAssetId?: string | null; category?: string | null;
-    eventId?: string | null; referencedMarketingPostId?: string | null;
+    eventId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null; editNote?: string;
   },
   opts: { isAdmin?: boolean } = {},
 ): Promise<MutationResult> {
   const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
   if (!report) return { error: "Bericht nicht gefunden" };
   if (report.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Bericht zu bearbeiten" };
-  const invalid = await validateReportRefs(data);
+  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(report.authorId, data.seriesId));
   if (invalid) return { error: invalid };
 
-  await prisma.jobReport.update({
+  // Veröffentlichte Berichte: bei inhaltlicher Änderung die alte Fassung sichern und "Korrigiert am" setzen.
+  const contentChanged = !report.isDraft
+    && (data.title.trim() !== report.title || (data.bodyMarkdown !== undefined && data.bodyMarkdown !== report.bodyMarkdown));
+  const note = data.editNote?.trim().slice(0, 200) || null;
+
+  const revisionOps = contentChanged
+    ? [prisma.jobReportRevision.create({ data: { reportId, title: report.title, bodyMarkdown: report.bodyMarkdown, note } })]
+    : [];
+  await prisma.$transaction([...revisionOps, prisma.jobReport.update({
     where: { id: reportId },
     data: {
+      ...(contentChanged ? { editedAt: new Date(), lastEditNote: note } : {}),
+      ...(data.seriesId !== undefined ? { seriesId: data.seriesId || null } : {}),
       title: data.title.trim(),
       ...(data.bodyMarkdown !== undefined ? { bodyMarkdown: data.bodyMarkdown } : {}),
       ...(data.coverAssetId !== undefined ? { coverAssetId: data.coverAssetId } : {}),
@@ -180,7 +233,8 @@ export async function updateReport(
       ...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
       ...(data.referencedMarketingPostId !== undefined ? { referencedMarketingPostId: data.referencedMarketingPostId } : {}),
     },
-  });
+  })]);
+  if (!report.isDraft) notifyMentions(reportId, report.authorId, data.title.trim(), data.bodyMarkdown ?? report.bodyMarkdown).catch(() => {});
   return { ok: true };
 }
 
@@ -227,7 +281,18 @@ export async function voteReport(voterId: string, reportId: string): Promise<Vot
 
   await prisma.jobReportVote.create({ data: { reportId, voterId } });
   onCommunityJobVoteCast(voterId).catch(() => {});
+  notifyVoteMilestone(reportId, report.authorId, report.title).catch(() => {});
   return { ok: true };
+}
+
+const VOTE_MILESTONES = [5, 10, 25, 50, 100];
+
+async function notifyVoteMilestone(reportId: string, authorId: string, title: string): Promise<void> {
+  const count = await prisma.jobReportVote.count({ where: { reportId } });
+  if (!VOTE_MILESTONES.includes(count)) return;
+  await dispatchNotification("report_votes_milestone", {
+    users: [authorId], placeholders: { "{count}": String(count), "{title}": title, "{url}": reportPath(reportId) },
+  });
 }
 
 export async function unvoteReport(voterId: string, reportId: string): Promise<VoteResult> {
@@ -345,3 +410,108 @@ registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   ]);
   return reportVotes + contributionVotes;
 });
+
+// ── Reihen ───────────────────────────────────────────────────────────────────
+
+const SERIES_TITLE_MAX = 100;
+
+export async function listMySeries(authorId: string) {
+  return prisma.reportSeries.findMany({
+    where: { authorId }, orderBy: { createdAt: "desc" },
+    include: { _count: { select: { reports: true } } },
+  });
+}
+
+export async function createSeries(authorId: string, title: string): Promise<{ ok: true; seriesId: string } | { error: string }> {
+  if (!(await requireActiveJournalist(authorId))) return { error: "Du bist gerade kein aktiver Journalist" };
+  const t = title.trim();
+  if (!t) return { error: "Titel erforderlich" };
+  if (t.length > SERIES_TITLE_MAX) return { error: `Titel ist zu lang (max. ${SERIES_TITLE_MAX} Zeichen)` };
+  const series = await prisma.reportSeries.create({ data: { authorId, title: t } });
+  return { ok: true, seriesId: series.id };
+}
+
+/** Löscht die Reihe; die Berichte bleiben bestehen (nur die Zuordnung entfällt). */
+export async function deleteSeries(authorId: string, seriesId: string): Promise<MutationResult> {
+  const series = await prisma.reportSeries.findUnique({ where: { id: seriesId } });
+  if (!series || series.authorId !== authorId) return { error: "Reihe nicht gefunden" };
+  await prisma.reportSeries.delete({ where: { id: seriesId } });
+  return { ok: true };
+}
+
+/** Alle veröffentlichten Teile einer Reihe in Veröffentlichungs-Reihenfolge (für die Navigation auf der Bericht-Seite). */
+export async function getSeriesParts(seriesId: string) {
+  return prisma.jobReport.findMany({
+    where: { seriesId, isDraft: false, hiddenByAdminAt: null },
+    orderBy: { publishedAt: "asc" }, select: { id: true, title: true },
+  });
+}
+
+// ── Versionsverlauf ──────────────────────────────────────────────────────────
+
+/** Frühere Fassungen eines Berichts — nur für Autor bzw. Admin. */
+export async function listRevisions(viewerId: string, reportId: string, opts: { isAdmin?: boolean } = {}) {
+  const report = await prisma.jobReport.findUnique({ where: { id: reportId }, select: { authorId: true } });
+  if (!report || (report.authorId !== viewerId && !opts.isAdmin)) return null;
+  return prisma.jobReportRevision.findMany({ where: { reportId }, orderBy: { savedAt: "desc" }, take: 30 });
+}
+
+// ── Rückblick (Woche/Monat) ──────────────────────────────────────────────────
+
+function berlinMonthStart(now: Date): { start: Date; label: string } {
+  const parts = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", year: "numeric", month: "numeric" }).formatToParts(now);
+  const year = Number(parts.find(p => p.type === "year")?.value);
+  const month = Number(parts.find(p => p.type === "month")?.value);
+  // Erster des Monats 00:00 Berliner Zeit ≈ 22:00/23:00 UTC des Vortags — hier genügt der UTC-Tagesanfang abzüglich 2h.
+  const start = new Date(Date.UTC(year, month - 1, 1) - 2 * 3_600_000);
+  const label = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", month: "long", year: "numeric" }).format(now);
+  return { start, label };
+}
+
+/**
+ * Vorlage für einen Wochen- oder Monatsrückblick aus den Daten der Community: beliebteste Berichte
+ * (mit Links) und Events des Zeitraums. Der Journalist ergänzt Highlights/Ausblick.
+ */
+export async function buildRecap(period: "week" | "month"): Promise<{ title: string; body: string; category: string }> {
+  const now = new Date();
+  const month = berlinMonthStart(now);
+  const since = period === "week" ? new Date(now.getTime() - 7 * 86_400_000) : month.start;
+  const base = appBaseUrl();
+
+  const [reports, events] = await Promise.all([
+    prisma.jobReport.findMany({
+      where: { isDraft: false, hiddenByAdminAt: null, publishedAt: { gte: since } },
+      select: { id: true, title: true, author: { select: { id: true, username: true, name: true } }, _count: { select: { votes: true } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, startAt: { gte: since, lte: now } },
+      orderBy: { startAt: "asc" }, take: 8,
+      select: { id: true, title: true, game: true, finalRankingJson: true, _count: { select: { registrations: true } } },
+    }),
+  ]);
+
+  const top = [...reports].sort((a, b) => b._count.votes - a._count.votes).slice(0, 5);
+  const winnerIds = events.map(e => {
+    try { const r = e.finalRankingJson ? JSON.parse(e.finalRankingJson) : []; return Array.isArray(r) && typeof r[0] === "string" ? r[0] as string : null; } catch { return null; }
+  });
+  const winners = await prisma.user.findMany({
+    where: { id: { in: winnerIds.filter((x): x is string => !!x) } }, select: { id: true, username: true, name: true },
+  });
+  const winnerName = (id: string | null) => { const u = winners.find(w => w.id === id); return u ? (u.username ?? u.name ?? "?") : null; };
+
+  const lines: string[] = [];
+  lines.push(period === "week" ? "Was diese Woche in der Community los war:" : `Was im ${month.label} in der Community los war:`, "");
+  lines.push("## Beliebteste Berichte");
+  if (top.length === 0) lines.push("Noch keine Berichte in diesem Zeitraum.");
+  top.forEach((r, i) => lines.push(`${i + 1}. [${r.title.replace(/[\[\]]/g, "")}](${base}${reportPath(r.id)}) — von [@${(r.author.username ?? r.author.name ?? "?").replace(/[\[\]]/g, "")}](user:${r.author.id}) · ${r._count.votes} 👍`));
+  lines.push("", "## Events");
+  if (events.length === 0) lines.push("Keine Events in diesem Zeitraum.");
+  events.forEach((e, i) => {
+    const w = winnerName(winnerIds[i]);
+    lines.push(`- **${e.title}**${e.game ? ` (${e.game})` : ""} — ${e._count.registrations} Anmeldungen${w ? ` · Sieger: ${w}` : ""}`);
+  });
+  lines.push("", "## Meine Highlights", "- …", "- …", "", "## Ausblick", "…");
+
+  const title = period === "week" ? "Wochenrückblick" : `Monatsrückblick ${month.label}`;
+  return { title, body: lines.join("\n"), category: "news" };
+}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CUSTOM_EMOJI_PATTERN, customEmojiUrl, parseCustomEmojiToken } from "@/lib/discord-emoji";
+import { parseMentionHref } from "@/lib/report-mentions";
 
 /**
  * Kleiner, sicherer Markdown-Renderer für Berichte und Ergänzungen — rendert ausschließlich React-Knoten
@@ -55,6 +56,9 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) return <code key={key} className="px-1 rounded bg-white/10 text-[0.9em]">{part.slice(1, -1)}</code>;
     const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
     if (link) {
+      // @-Erwähnung: [@Name](user:<id>) → Link aufs Profil
+      const mentioned = parseMentionHref(link[2]);
+      if (mentioned) return <a key={key} href={`/profile/${mentioned}`} className="text-teal-300 font-medium hover:underline">{link[1]}</a>;
       const href = safeHref(link[2]);
       return href
         ? <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>{link[1]}</a>
@@ -76,7 +80,10 @@ type Block =
   | { type: "quote"; lines: string[] }
   | { type: "ul" | "ol"; items: string[] }
   | { type: "image"; alt: string; url: string }
+  | { type: "table"; header: string[]; rows: string[][] }
   | { type: "hr" };
+
+const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/;
 
 function parseBlocks(md: string): Block[] {
   const blocks: Block[] = [];
@@ -92,6 +99,17 @@ function parseBlocks(md: string): Block[] {
 
     const image = line.trim().match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
     if (image) { blocks.push({ type: "image", alt: image[1], url: image[2] }); i++; continue; }
+
+    // Tabelle: Kopfzeile, Trennzeile (| --- | --- |), Datenzeilen
+    if (line.trim().startsWith("|") && i + 1 < lines.length && TABLE_SEPARATOR.test(lines[i + 1])) {
+      const cells = (row: string) => row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+      const header = cells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim().startsWith("|")) { rows.push(cells(lines[i])); i++; }
+      blocks.push({ type: "table", header, rows });
+      continue;
+    }
 
     if (/^>\s?/.test(line)) {
       const quote: string[] = [];
@@ -113,7 +131,7 @@ function parseBlocks(md: string): Block[] {
 
     const paragraph: string[] = [];
     while (i < lines.length && lines[i].trim()
-      && !/^(#{1,3}\s|>\s?|\s*[-*]\s+|\s*\d+\.\s+|\s*---+\s*$)/.test(lines[i])
+      && !/^(#{1,3}\s|>\s?|\s*[-*]\s+|\s*\d+\.\s+|\s*---+\s*$|\s*\|)/.test(lines[i])
       && !/^\s*!\[[^\]]*\]\([^)\s]+\)\s*$/.test(lines[i])) {
       paragraph.push(lines[i]); i++;
     }
@@ -144,6 +162,23 @@ export default function MarkdownLite({ text, className = "" }: { text: string; c
             return <ol key={key} className="list-decimal pl-5 space-y-0.5">{b.items.map((it, j) => <li key={j}>{renderInline(it, `${key}-${j}`)}</li>)}</ol>;
           case "hr":
             return <hr key={key} className="border-white/10" />;
+          case "table":
+            return (
+              <div key={key} className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr>{b.header.map((h, j) => <th key={j} className="text-left font-semibold text-gray-200 border-b border-white/15 px-2 py-1">{renderInline(h, `${key}-h${j}`)}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {b.rows.map((row, r) => (
+                      <tr key={r} className="border-b border-white/5">
+                        {row.map((c, j) => <td key={j} className="px-2 py-1 text-gray-300">{renderInline(c, `${key}-${r}-${j}`)}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           case "image":
             return IMAGE_HOST.test(b.url) ? (
               // eslint-disable-next-line @next/next/no-img-element -- Bild aus unserem Blob-Speicher, beliebige Abmessungen

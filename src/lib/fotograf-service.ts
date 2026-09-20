@@ -4,6 +4,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
+import { fulfillPhotoRequest } from "./photo-request-service";
 import { countCommentVoteScore } from "./community-board-comment-service";
 
 /**
@@ -28,7 +29,7 @@ export type UploadAssetResult = { ok: true; assetId: string } | { error: string 
 
 export async function uploadAsset(
   authorId: string,
-  data: { type: AssetType; url: string; caption?: string; eventId?: string },
+  data: { type: AssetType; url: string; caption?: string; eventId?: string; requestId?: string },
 ): Promise<UploadAssetResult> {
   if (!(await requireActiveFotograf(authorId))) return { error: "Du bist gerade kein aktiver Fotograf" };
   if (!ASSET_TYPES.includes(data.type)) return { error: "Ungültiger Asset-Typ" };
@@ -43,6 +44,8 @@ export async function uploadAsset(
   });
 
   announceAndStore(asset.id, authorId, data.caption ?? data.type, data.url).catch(() => {});
+  // Auf einen Bildwunsch eines Journalisten hochgeladen → Wunsch als erfüllt markieren.
+  if (data.requestId) fulfillPhotoRequest(authorId, data.requestId, asset.id).catch(() => {});
   return { ok: true, assetId: asset.id };
 }
 

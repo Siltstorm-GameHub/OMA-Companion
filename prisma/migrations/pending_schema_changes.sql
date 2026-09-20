@@ -517,3 +517,59 @@ ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "peakBadgeLevel" INTEG
 
 ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "category" TEXT;
 ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "isDraft" BOOLEAN NOT NULL DEFAULT false;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Journalist: Reihen, Versionsverlauf, @-Erwähnungen, Bildwünsche, Interviews
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "ReportSeries" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "authorId"  TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "title"     TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "ReportSeries_authorId_idx" ON "ReportSeries"("authorId");
+
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "seriesId" TEXT REFERENCES "ReportSeries"("id") ON DELETE SET NULL;
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "editedAt" TIMESTAMP(3);
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "lastEditNote" TEXT;
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "notifiedMentions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS "JobReport_seriesId_idx" ON "JobReport"("seriesId");
+
+CREATE TABLE IF NOT EXISTS "JobReportRevision" (
+  "id"           TEXT         NOT NULL PRIMARY KEY,
+  "reportId"     TEXT         NOT NULL REFERENCES "JobReport"("id") ON DELETE CASCADE,
+  "title"        TEXT         NOT NULL,
+  "bodyMarkdown" TEXT         NOT NULL,
+  "note"         TEXT,
+  "savedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "JobReportRevision_reportId_idx" ON "JobReportRevision"("reportId");
+
+CREATE TABLE IF NOT EXISTS "PhotoRequest" (
+  "id"               TEXT         NOT NULL PRIMARY KEY,
+  "requesterId"      TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "eventId"          TEXT,
+  "description"      TEXT         NOT NULL,
+  "status"           TEXT         NOT NULL DEFAULT 'OPEN',
+  "fulfilledAssetId" TEXT,
+  "fulfilledById"    TEXT,
+  "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "fulfilledAt"      TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS "PhotoRequest_status_createdAt_idx" ON "PhotoRequest"("status", "createdAt");
+CREATE INDEX IF NOT EXISTS "PhotoRequest_requesterId_idx" ON "PhotoRequest"("requesterId");
+
+CREATE TABLE IF NOT EXISTS "InterviewRequest" (
+  "id"            TEXT         NOT NULL PRIMARY KEY,
+  "journalistId"  TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "intervieweeId" TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "questionsJson" TEXT         NOT NULL,
+  "answersJson"   TEXT,
+  "status"        TEXT         NOT NULL DEFAULT 'PENDING',
+  "createdAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "answeredAt"    TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS "InterviewRequest_intervieweeId_status_idx" ON "InterviewRequest"("intervieweeId", "status");
+CREATE INDEX IF NOT EXISTS "InterviewRequest_journalistId_idx" ON "InterviewRequest"("journalistId");

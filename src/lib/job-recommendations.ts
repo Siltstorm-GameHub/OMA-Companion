@@ -24,6 +24,8 @@ export interface EventRecommendation {
   urgent?: boolean;
   /** true = `eventId` ist ein echtes Event (Formular wird damit vorbelegt) — sonst ein Hinweis ohne Event-Bezug. */
   eventScoped?: boolean;
+  /** Vorlage für einen Rückblick (Journalist): der Editor füllt Titel/Text aus den Community-Daten. */
+  recap?: "week" | "month";
   /** true = kein "Erstellen"-Button (z.B. "Anwesenheit eintragen" — dort gibt es nichts zu erstellen). */
   noCreate?: boolean;
 }
@@ -63,11 +65,106 @@ async function eventsWithoutReports(): Promise<EventRecommendation[]> {
     },
     orderBy: { startAt: "desc" },
     take: 10,
+    include: { _count: { select: { registrations: true } } },
   });
-  return events.map(e => ({
-    eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch kein Bericht", url: `/tournament/${e.id}`,
-    ...pastEventUrgency(e.startAt),
-  }));
+  // Events mit vielen Teilnehmern zuerst — dort lohnt ein Bericht am meisten.
+  return events
+    .sort((a, b) => b._count.registrations - a._count.registrations)
+    .map(e => ({
+      eventId: e.id, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: e._count.registrations > 0 ? `Noch kein Bericht · ${e._count.registrations} Teilnehmer` : "Noch kein Bericht",
+      ...pastEventUrgency(e.startAt),
+    }));
+}
+
+/** Berliner Kalenderdatum (Jahr/Monat/Tag) und Anzahl Tage des Monats. */
+function berlinDateParts(d: Date): { year: number; month: number; day: number; daysInMonth: number } {
+  const parts = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", year: "numeric", month: "numeric", day: "numeric" }).formatToParts(d);
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value);
+  const year = get("year"), month = get("month"), day = get("day");
+  return { year, month, day, daysInMonth: new Date(Date.UTC(year, month, 0)).getUTCDate() };
+}
+
+/**
+ * Journalist-Empfehlungen: Events ohne Bericht (nach Teilnehmerzahl), Events heute, alte Entwürfe,
+ * Berichte ohne Titelbild, neue Ergänzungen zu eigenen Berichten, kurze Berichte anderer zum Ergänzen
+ * und am Monatsende der Monatsrückblick.
+ */
+async function journalistRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
+  const now = new Date();
+  const recs: EventRecommendation[] = await eventsWithoutReports();
+
+  const endOfToday = new Date(now.getTime() + 24 * 3_600_000);
+  const [todayEvents, oldDrafts, noCover, contributions, others] = await Promise.all([
+    prisma.event.findMany({
+      where: { hidden: false, startAt: { gte: now, lte: endOfToday } }, orderBy: { startAt: "asc" }, take: 3,
+    }),
+    prisma.jobReport.findMany({
+      where: { authorId: userId, isDraft: true, updatedAt: { lt: new Date(now.getTime() - 7 * 86_400_000) } },
+      orderBy: { updatedAt: "asc" }, take: 3, select: { id: true, title: true, updatedAt: true },
+    }),
+    prisma.jobReport.findMany({
+      where: { authorId: userId, isDraft: false, coverAssetId: null, publishedAt: { gte: new Date(now.getTime() - 14 * 86_400_000) } },
+      orderBy: { publishedAt: "desc" }, take: 3, select: { id: true, title: true },
+    }),
+    prisma.jobReportContribution.findMany({
+      where: { report: { authorId: userId, isDraft: false }, authorId: { not: userId }, createdAt: { gte: new Date(now.getTime() - 7 * 86_400_000) } },
+      select: { report: { select: { id: true, title: true } } },
+    }),
+    prisma.jobReport.findMany({
+      where: { authorId: { not: userId }, isDraft: false, hiddenByAdminAt: null, publishedAt: { gte: new Date(now.getTime() - 14 * 86_400_000) } },
+      orderBy: { publishedAt: "desc" }, take: 20,
+      select: { id: true, title: true, bodyMarkdown: true, contributions: { where: { authorId: userId }, select: { id: true } } },
+    }),
+  ]);
+
+  for (const e of todayEvents) {
+    recs.push({
+      eventId: e.id, title: e.title, startAt: e.startAt, reason: "Heute — Vorbericht schreiben",
+      url: `/tournament/${e.id}`, eventScoped: true, urgency: "Heute", urgent: true,
+    });
+  }
+  for (const d of oldDrafts) {
+    const age = Math.max(7, daysBetween(now, d.updatedAt));
+    recs.push({
+      eventId: `journalist-draft-${d.id}`, title: d.title, startAt: d.updatedAt, reason: `Entwurf liegt seit ${age} Tagen`,
+      url: "/profile", noCreate: true, urgency: `vor ${age}d`, urgent: false,
+    });
+  }
+  for (const r of noCover) {
+    recs.push({
+      eventId: `journalist-nocover-${r.id}`, title: r.title, startAt: now, reason: "Noch kein Titelbild",
+      url: `/community-board/report/${r.id}`, noCreate: true,
+    });
+  }
+  const contribByReport = new Map<string, { title: string; count: number }>();
+  for (const c of contributions) {
+    const cur = contribByReport.get(c.report.id) ?? { title: c.report.title, count: 0 };
+    cur.count += 1;
+    contribByReport.set(c.report.id, cur);
+  }
+  for (const [id, v] of contribByReport) {
+    recs.push({
+      eventId: `journalist-contrib-${id}`, title: v.title, startAt: now,
+      reason: `${v.count} neue ${v.count === 1 ? "Ergänzung" : "Ergänzungen"} — vielleicht überarbeiten`,
+      url: `/community-board/report/${id}`, noCreate: true,
+    });
+  }
+  for (const r of others.filter(x => x.bodyMarkdown.length < 700 && x.contributions.length === 0).slice(0, 3)) {
+    recs.push({
+      eventId: `journalist-short-${r.id}`, title: r.title, startAt: now, reason: "Kurzer Bericht — vielleicht ergänzen?",
+      url: `/community-board/report/${r.id}`, noCreate: true,
+    });
+  }
+
+  const { day, daysInMonth } = berlinDateParts(now);
+  if (day >= daysInMonth - 2) {
+    recs.push({
+      eventId: "journalist-recap-month", title: "Monatsrückblick", startAt: now,
+      reason: "Der Monat endet bald — die Vorlage füllt sich aus den Community-Daten", url: "/profile", recap: "month",
+    });
+  }
+  return recs;
 }
 
 async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
@@ -254,7 +351,7 @@ export async function dismissRecommendation(userId: string, jobKey: string, item
 
 export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {
   let events: EventRecommendation[] = [];
-  if (jobKey === "journalist") events = await eventsWithoutReports();
+  if (jobKey === "journalist") events = await journalistRecommendationsFor(userId);
   else if (jobKey === "fotograf") events = await eventsWithoutAssets();
   else if (jobKey === "marketing_manager") events = await upcomingEventsWithoutMarketingPost();
   else if (jobKey === "coach") events = await coachRecommendationsFor(userId);

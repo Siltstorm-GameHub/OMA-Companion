@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { registerOwnVoteCounter } from "./community-job-service";
+import { dispatchNotification } from "./notify-dispatch";
+import { plainExcerpt } from "./report-text";
 
 /**
  * Community-Board-Kommentare: generisches, job-übergreifendes Kommentar-Modell
@@ -65,6 +67,11 @@ export async function addComment(
   const comment = await prisma.communityBoardComment.create({
     data: { entityType, entityId, authorId, bodyMarkdown: bodyMarkdown.trim() },
   });
+
+  // Kommentar unter einem Bericht → den Autor benachrichtigen (nicht bei Kommentaren am eigenen Bericht).
+  if (entityType === "report") {
+    notifyReportComment(entityId, authorId, bodyMarkdown).catch(() => {});
+  }
   return { ok: true, commentId: comment.id };
 }
 
@@ -133,3 +140,16 @@ async function countOwnCommentVotes(userId: string, weekStart: Date, weekEnd: Da
 // wird von jedem Job-Score-Resolver einzeln über `countCommentVoteScore`
 // eingerechnet, da `registerScoreResolver` pro Job-Key nur einen Resolver kennt.
 registerOwnVoteCounter(countOwnCommentVotes);
+
+async function notifyReportComment(reportId: string, commenterId: string, body: string): Promise<void> {
+  const report = await prisma.jobReport.findUnique({ where: { id: reportId }, select: { authorId: true, title: true, isDraft: true } });
+  if (!report || report.isDraft || report.authorId === commenterId) return;
+  const commenter = await prisma.user.findUnique({ where: { id: commenterId }, select: { username: true, name: true } });
+  await dispatchNotification("report_comment", {
+    users: [report.authorId],
+    placeholders: {
+      "{authorName}": commenter?.username ?? commenter?.name ?? "Jemand", "{title}": report.title,
+      "{excerpt}": plainExcerpt(body, 100), "{url}": `/community-board/report/${reportId}`,
+    },
+  });
+}

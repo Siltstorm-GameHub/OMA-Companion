@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { id } = await params;
-  const { title, bodyMarkdown, coverAssetId, category, eventId, referencedMarketingPostId } = await req.json().catch(() => ({}));
+  const { title, bodyMarkdown, coverAssetId, category, eventId, referencedMarketingPostId, seriesId, editNote } = await req.json().catch(() => ({}));
   if (typeof title !== "string") {
     return NextResponse.json({ error: "Titel erforderlich" }, { status: 400 });
   }
@@ -38,6 +38,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       category: category === undefined ? undefined : (typeof category === "string" && category ? category : null),
       eventId: eventId === undefined ? undefined : (typeof eventId === "string" && eventId ? eventId : null),
       referencedMarketingPostId: referencedMarketingPostId === undefined ? undefined : (typeof referencedMarketingPostId === "string" && referencedMarketingPostId ? referencedMarketingPostId : null),
+      seriesId: seriesId === undefined ? undefined : (typeof seriesId === "string" && seriesId ? seriesId : null),
+      editNote: typeof editNote === "string" ? editNote : undefined,
     },
     { isAdmin },
   );

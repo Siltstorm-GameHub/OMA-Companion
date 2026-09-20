@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { type, url, caption, eventId } = await req.json().catch(() => ({}));
+  const { type, url, caption, eventId, requestId } = await req.json().catch(() => ({}));
   if (typeof type !== "string" || !ASSET_TYPES.includes(type as never)) {
     return NextResponse.json({ error: "Ungültiger Asset-Typ" }, { status: 400 });
   }
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     type: type as never, url,
     caption: typeof caption === "string" ? caption : undefined,
     eventId: typeof eventId === "string" ? eventId : undefined,
+    requestId: typeof requestId === "string" ? requestId : undefined,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

@@ -15,7 +15,8 @@ import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
-import { JournalistStatsBlock } from "@/components/community-jobs/JournalistTools";
+import { JournalistStatsBlock, JournalistExtras } from "@/components/community-jobs/JournalistTools";
+import { PhotoRequestList } from "@/components/community-jobs/FotografTools";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import {
   CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
@@ -209,6 +210,10 @@ interface PostPrefill {
   title?: string; body?: string; link?: string; linkLabel?: string;
   /** Coach-Termin: Beginn (datetime-local), Plätze, Event-Bezug. */
   startAt?: string; capacity?: string; eventId?: string; meetingUrl?: string;
+  /** Journalist: Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
+  recap?: "week" | "month";
+  /** Fotograf: Upload erfüllt diesen Bildwunsch. */
+  photoRequestId?: string;
 }
 
 function withLink(text: string, link?: string): string {
@@ -235,7 +240,7 @@ const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean }[];
+  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month" }[];
   steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
   steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
 }
@@ -527,7 +532,9 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!e.noCreate && (
                           <Button size="sm" variant="outline"
-                            onClick={() => openCreateForm(isEventScopedJob || e.eventScoped ? e.eventId : undefined, e.eventId === "coach-newcomers" ? newcomerPrefill : undefined)}>
+                            onClick={() => (e.recap
+                              ? openCreateForm(undefined, { recap: e.recap })
+                              : openCreateForm(isEventScopedJob || e.eventScoped ? e.eventId : undefined, e.eventId === "coach-newcomers" ? newcomerPrefill : undefined))}>
                             Erstellen
                           </Button>
                         )}
@@ -639,7 +646,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       <div className="p-4 border-b border-white/[0.04] space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
           action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
-        <JobToolContent key={toolsKey} jobKey={membership.jobKey} membership={membership} onDuplicate={p => openCreateForm(undefined, p)} />
+        <JobToolContent key={toolsKey} jobKey={membership.jobKey} membership={membership} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
       </div>
 
       {/* Warteliste */}
@@ -824,9 +831,19 @@ function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onD
   );
 }
 
-function JobToolContent({ jobKey, membership, onDuplicate }: { jobKey: string; membership: Membership; onDuplicate: (prefill: PostPrefill) => void }) {
-  if (jobKey === "journalist") return <ReportList />;
-  if (jobKey === "fotograf") return <AssetList />;
+function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
+  jobKey: string; membership: Membership; onDuplicate: (prefill: PostPrefill) => void;
+  onCompose: (eventId?: string, prefill?: PostPrefill) => void;
+}) {
+  if (jobKey === "journalist") return <ReportList onCompose={onCompose} />;
+  if (jobKey === "fotograf") {
+    return (
+      <div className="space-y-4">
+        <PhotoRequestList onFulfill={r => onCompose(r.eventId ?? undefined, { photoRequestId: r.id, title: r.description })} />
+        <AssetList />
+      </div>
+    );
+  }
   if (jobKey === "marketing_manager") return <MarketingPostList />;
   if (jobKey === "coach") return <CoachToolbox membership={membership} onDuplicate={onDuplicate} />;
   if (jobKey === "visionaer") return <IdeaList />;
@@ -926,11 +943,11 @@ function ImageEditControls({
 
 interface MyReport {
   id: string; title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
-  coverAssetId: string | null; referencedMarketingPostId: string | null; isDraft: boolean; publishedAt: string;
+  coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean; publishedAt: string;
   _count: { votes: number; contributions: number };
 }
 
-function ReportList() {
+function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: PostPrefill) => void }) {
   const [items, setItems] = useState<MyReport[] | null>(null);
   const [editing, setEditing] = useState<MyReport | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -973,6 +990,7 @@ function ReportList() {
   return (
     <div className="space-y-3">
       <JournalistStatsBlock refreshKey={statsKey} />
+      <JournalistExtras onCompose={recap => onCompose(undefined, { recap })} />
       {items.length === 0 ? (
         <p className="text-xs text-gray-600">Noch keine Berichte. Über „Neuer Beitrag“ schreibst du deinen ersten — mit „Aus Event vorbefüllen“ startest du direkt mit den Fakten.</p>
       ) : (
@@ -1456,7 +1474,7 @@ function IdeaList() {
 
 function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [coachKind, setCoachKind] = useState<"session" | "guide">("session");
-  if (jobKey === "journalist") return <ReportEditor eventId={eventId} prefill={prefill} onDone={onDone} />;
+  if (jobKey === "journalist") return <ReportEditor eventId={eventId} recap={prefill?.recap} prefill={prefill} onDone={onDone} />;
   if (jobKey === "coach") {
     return (
       <div className="space-y-3">
@@ -1470,7 +1488,7 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
       </div>
     );
   }
-  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} onDone={onDone} />;
+  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} onDone={onDone} />;
   if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
 }
@@ -1643,7 +1661,7 @@ const ASSET_TYPE_OPTIONS = [
 
 type AssetUploadMode = "design" | "clip";
 
-function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => void }) {
+function UploadAssetForm({ eventId, requestId, onDone }: { eventId?: string; requestId?: string; onDone: () => void }) {
   const [mode, setMode] = useState<AssetUploadMode>("design");
   const [url, setUrl] = useState("");
   const [isVideo, setIsVideo] = useState(false);
@@ -1654,7 +1672,7 @@ function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => 
   async function submit() {
     setBusy(true);
     try {
-      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId }) });
+      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId, requestId }) });
       toast.success("Hochgeladen");
       onDone();
     } catch (err) {
