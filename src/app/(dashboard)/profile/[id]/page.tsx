@@ -16,6 +16,7 @@ import PokalSection from "@/components/PokalSection";
 import { JournalistPortfolio } from "@/components/JournalistReportLists";
 import { FotografPortfolio } from "@/components/FotografGalleries";
 import { MarketingPortfolio } from "@/components/MarketingLists";
+import { IdeaPortfolio } from "@/components/IdeaLists";
 import FavoriteGamesSection from "../FavoriteGamesSection";
 import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
@@ -349,6 +350,7 @@ export default async function PublicProfilePage({
       <PokalSection pokale={pokale} ownerName={displayName} />
       <FotografPortfolio userId={id} />
       <MarketingPortfolio userId={id} />
+      <IdeaPortfolio userId={id} />
       <JournalistPortfolio userId={id} />
 
       {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}

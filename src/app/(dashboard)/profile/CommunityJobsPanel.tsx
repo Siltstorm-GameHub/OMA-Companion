@@ -16,6 +16,9 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { JournalistStatsBlock, JournalistExtras } from "@/components/community-jobs/JournalistTools";
+import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
+import IdeaForm from "@/components/community-jobs/IdeaForm";
+import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 import { MarketingStatsBlock, MarketingCampaignsBlock } from "@/components/community-jobs/MarketingTools";
 import {
   MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
@@ -872,7 +875,14 @@ function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
     );
   }
   if (jobKey === "coach") return <CoachToolbox membership={membership} onDuplicate={onDuplicate} />;
-  if (jobKey === "visionaer") return <IdeaList />;
+  if (jobKey === "visionaer") {
+    return (
+      <div className="space-y-4">
+        <VisionaerStatsBlock />
+        <IdeaList />
+      </div>
+    );
+  }
   return null;
 }
 
@@ -1465,10 +1475,11 @@ function CoachRatingsReceived() {
 }
 
 function IdeaList() {
-  const [items, setItems] = useState<{ id: string; title: string; description?: string; status: string; _count: { votes: number } }[]>([]);
+  const [items, setItems] = useState<{ id: string; title: string; description?: string; status: string; lifecycle?: string; category?: string | null; version?: number; _count: { votes: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   function reload() {
     api<{ ideas: typeof items }>("/api/community-jobs/ideas?mine=1").then(d => setItems(d.ideas)).catch(() => {});
@@ -1477,7 +1488,7 @@ function IdeaList() {
 
   async function save(id: string) {
     try {
-      await api(`/api/community-jobs/ideas/${id}`, { method: "PATCH", body: JSON.stringify({ title, description }) });
+      await api(`/api/community-jobs/ideas/${id}`, { method: "PATCH", body: JSON.stringify({ title, description, editNote }) });
       toast.success("Gespeichert"); setEditing(null); reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
@@ -1504,6 +1515,10 @@ function IdeaList() {
             className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
             className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
+          {i._count.votes > 0 && (
+            <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200} placeholder="Was hast du geändert? (alle Bewerter werden informiert und dürfen neu bewerten)"
+              className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600" />
+          )}
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
             <Button size="sm" onClick={() => save(i.id)}>Speichern</Button>
@@ -1511,13 +1526,21 @@ function IdeaList() {
         </div>
       ) : (
         <div key={i.id} className="flex items-center justify-between text-xs">
-          <span className="text-gray-300 truncate">{i.title}</span>
+          <span className="min-w-0">
+            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-teal-300 transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-[10px] text-gray-600">v{i.version}</span>}</Link>
+            {(i.category || (i.lifecycle && i.lifecycle !== "OPEN")) && (
+              <span className="block text-[10px] text-gray-600 truncate">
+                {ideaCategoryLabel(i.category)}
+                {i.lifecycle && i.lifecycle !== "OPEN" && <span className={`${i.category ? "ml-1.5 " : ""}${i.lifecycle === "DONE" ? "text-emerald-400" : "text-amber-400/90"}`}>{ideaLifecycleMeta(i.lifecycle).label}</span>}
+              </span>
+            )}
+          </span>
           <span className="flex items-center gap-2 shrink-0 ml-2">
             {i.status === "CLOSED"
               ? <Badge tone="neutral">Beendet</Badge>
               : <button onClick={() => close(i.id)} className="text-[10px] text-gray-600 hover:text-amber-400 transition-colors">Beenden</button>}
             <VoteRow upvotes={i._count.votes} votedByMe={false} />
-            <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); }} onDelete={() => remove(i.id)} />
+            <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); setEditNote(""); }} onDelete={() => remove(i.id)} />
           </span>
         </div>
       ))}
@@ -1544,6 +1567,9 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
     );
   }
   if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} startCollage={prefill?.collage} onDone={onDone} />;
+  if (jobKey === "visionaer") {
+    return <IdeaForm prefill={{ title: prefill?.title, body: prefill?.body, link: prefill?.link, linkLabel: prefill?.linkLabel, eventId }} onDone={onDone} />;
+  }
   if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
 }

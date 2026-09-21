@@ -359,17 +359,70 @@ async function coachRecommendationsFor(userId: string): Promise<EventRecommendat
 }
 
 /** Visionär hat diese Woche noch keine Idee eingereicht — analog zum Coach-Hinweis oben. */
+/**
+ * Visionär-Empfehlungen: diese Woche noch keine Idee, eigene Ideen ohne Stimmen, sehr gut bewertete Ideen
+ * ohne Status, beendete Events als Anlass für neue Ideen und noch nicht bewertete Ideen anderer.
+ */
 async function visionaerRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
-  const { weekStart, weekEnd } = getWeekBounds(new Date());
-  const submittedThisWeek = await prisma.communityIdea.count({
-    where: { authorId: userId, createdAt: { gte: weekStart, lt: weekEnd } },
-  });
-  if (submittedThisWeek > 0) return [];
-  return [{
-    eventId: "visionaer-no-idea-this-week", title: "Diese Woche noch keine Idee eingereicht",
-    startAt: new Date(), reason: "Reiche eine neue Idee ein, damit die Community sie bewerten kann",
-    url: "/profile",
-  }];
+  const now = new Date();
+  const { weekStart, weekEnd } = getWeekBounds(now);
+  const day = 86_400_000;
+
+  const [submittedThisWeek, noVotes, openIdeas, finished, unvoted] = await Promise.all([
+    prisma.communityIdea.count({ where: { authorId: userId, createdAt: { gte: weekStart, lt: weekEnd } } }),
+    prisma.communityIdea.findMany({
+      where: { authorId: userId, hiddenByAdminAt: null, status: "OPEN", createdAt: { lt: new Date(now.getTime() - 3 * day) }, votes: { none: {} } },
+      orderBy: { createdAt: "asc" }, take: 3, select: { id: true, title: true, createdAt: true },
+    }),
+    prisma.communityIdea.findMany({
+      where: { authorId: userId, hiddenByAdminAt: null, lifecycle: "OPEN" },
+      select: { id: true, title: true, createdAt: true, votes: { select: { stars: true } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, status: "finished", startAt: { gte: new Date(now.getTime() - 7 * day) } },
+      orderBy: { startAt: "desc" }, take: 2, select: { id: true, title: true, startAt: true },
+    }),
+    prisma.communityIdea.count({
+      where: { hiddenByAdminAt: null, authorId: { not: userId }, createdAt: { gte: new Date(now.getTime() - 30 * day) }, votes: { none: { voterId: userId } } },
+    }),
+  ]);
+
+  const recs: EventRecommendation[] = [];
+  if (submittedThisWeek === 0) {
+    recs.push({
+      eventId: "visionaer-no-idea-this-week", title: "Diese Woche noch keine Idee eingereicht",
+      startAt: now, reason: "Reiche eine neue Idee ein, damit die Community sie bewerten kann", url: "/profile",
+    });
+  }
+  for (const i of noVotes) {
+    const age = daysBetween(now, i.createdAt);
+    recs.push({
+      eventId: `visionaer-novotes-${i.id}`, title: i.title, startAt: i.createdAt, url: `/community-board/idea/${i.id}`, noCreate: true,
+      reason: `Seit ${age} Tagen noch keine Bewertung — Link teilen oder Idee überarbeiten`, urgency: `vor ${age}d`, urgent: false,
+    });
+  }
+  for (const i of openIdeas) {
+    if (i.votes.length < 5) continue;
+    const avg = i.votes.reduce((sum, v) => sum + v.stars, 0) / i.votes.length;
+    if (avg < 4) continue;
+    recs.push({
+      eventId: `visionaer-good-${i.id}`, title: i.title, startAt: i.createdAt, url: `/community-board/idea/${i.id}`, noCreate: true,
+      reason: `Sehr gut bewertet (Ø ${avg.toFixed(1)} ★, ${i.votes.length} Stimmen) — noch ohne Status. Schlage sie dem Team vor.`,
+    });
+  }
+  for (const e of finished) {
+    recs.push({
+      eventId: `visionaer-event-${e.id}`, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: "Event vorbei — was wünschst du dir als Nächstes?", scopeEventId: e.id, ...pastEventUrgency(e.startAt),
+    });
+  }
+  if (unvoted > 0) {
+    recs.push({
+      eventId: `visionaer-vote-others-${unvoted}`, title: `${unvoted} ${unvoted === 1 ? "Idee wartet" : "Ideen warten"} auf deine Bewertung`, startAt: now,
+      reason: "Bewerten zählt für deinen Bonus und hilft anderen Visionären", url: "/community-board", noCreate: true,
+    });
+  }
+  return recs;
 }
 
 const FEW_REGISTRATIONS = 5;

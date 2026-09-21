@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "prisma/migrations/pending_schema_changes.sql": {
-    "mtime": 1789968717.0775926,
-    "ast_hash": "98d96396401aa15a15bab5172852a0c4",
+    "mtime": 1789970382.2344878,
+    "ast_hash": "f026a99811ad18476c79901d86685ce7",
     "semantic_hash": ""
   },
   "public/.well-known/assetlinks.json": {
@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "scripts/seed-notification-rules.ts": {
-    "mtime": 1789968717.07811,
-    "ast_hash": "9a20b8822ae05097664a68a8553fa8f7",
+    "mtime": 1789970215.3628893,
+    "ast_hash": "ba0600da260f963310d1e7bc267f2bd4",
     "semantic_hash": ""
   },
   "scripts/update-notification-rules-2026-07.ts": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/page.tsx": {
-    "mtime": 1788713919.614061,
-    "ast_hash": "45f6d80b4132ca0b1ac12bc54924de7c",
+    "mtime": 1789970601.4106216,
+    "ast_hash": "9fed7f9c6551b05a846beb93ad24270b",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/daily-message/DailyMessagePanel.tsx": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/CommunityBoardClient.tsx": {
-    "mtime": 1789894470.4842484,
-    "ast_hash": "e8f828801db657fe54a6e0684882a2a6",
+    "mtime": 1789970619.3238113,
+    "ast_hash": "b477911564b2fef965da079b2f4b3524",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/album/[id]/page.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/CommunityJobsPanel.tsx": {
-    "mtime": 1789969041.2893763,
-    "ast_hash": "8a571afac714eb7d04f4deb3dea72817",
+    "mtime": 1789970601.4080565,
+    "ast_hash": "ebf6845c03205d281baeb2f776f137e9",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/DesktopProfileTabs.tsx": {
@@ -1010,8 +1010,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/[id]/page.tsx": {
-    "mtime": 1789969071.1327481,
-    "ast_hash": "61e5da4e9bd7d8a8e81149032804d0b3",
+    "mtime": 1789969852.1271663,
+    "ast_hash": "0e5f58d15167657f5af99cd203d6d372",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/compare/[id]/page.tsx": {
@@ -1025,8 +1025,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/page.tsx": {
-    "mtime": 1789969071.1421702,
-    "ast_hash": "d64b037b6b4836273b5721de8450fde6",
+    "mtime": 1789969852.1355982,
+    "ast_hash": "33491fadd6d13466c8690adc2237e5fb",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/rueckblick/page.tsx": {
@@ -1155,8 +1155,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/[id]/page.tsx": {
-    "mtime": 1789969071.122363,
-    "ast_hash": "0dc30a4072d0c0746bce7b22ea66054e",
+    "mtime": 1789969852.1175938,
+    "ast_hash": "42c36dd8a24c564e7719e4bb2746890e",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/page.tsx": {
@@ -1700,8 +1700,8 @@
     "semantic_hash": ""
   },
   "src/app/api/community-board/route.ts": {
-    "mtime": 1789894470.483121,
-    "ast_hash": "6b9b749e994567bd7078e5a9783cad83",
+    "mtime": 1789969599.815276,
+    "ast_hash": "3e6df45a5995272f247a7f189ec3637a",
     "semantic_hash": ""
   },
   "src/app/api/community-board/unvoted-count/route.ts": {
@@ -1850,8 +1850,8 @@
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/ideas/[id]/route.ts": {
-    "mtime": 1788703612.0640638,
-    "ast_hash": "0ac58c16c5a7c62ed30621843c1a7cfb",
+    "mtime": 1789970382.2370954,
+    "ast_hash": "17aee6b44bb57c7627aad1720e6e8169",
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/ideas/[id]/vote/route.ts": {
@@ -1865,8 +1865,8 @@
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/ideas/route.ts": {
-    "mtime": 1788703682.9300451,
-    "ast_hash": "760f5966d51a0685573330c31731cbd2",
+    "mtime": 1789970382.2365448,
+    "ast_hash": "d776eccbfdb704629826e0d9ab983cd0",
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/interviews/[id]/answer/route.ts": {
@@ -2115,8 +2115,8 @@
     "semantic_hash": ""
   },
   "src/app/api/cron/community-job-payout/route.ts": {
-    "mtime": 1789891460.2817395,
-    "ast_hash": "ca5a4085c59fd4ac0483a0da60325140",
+    "mtime": 1789970319.529394,
+    "ast_hash": "da3af689ba2f20a25003e11fded74dca",
     "semantic_hash": ""
   },
   "src/app/api/cron/discord-activity-summary/route.ts": {
@@ -3895,8 +3895,8 @@
     "semantic_hash": ""
   },
   "src/lib/community-board-comment-service.ts": {
-    "mtime": 1789893959.5174673,
-    "ast_hash": "4bd010e4c731313d74b124880b14f390",
+    "mtime": 1789969496.4652,
+    "ast_hash": "91cd6097b2c32b0bec7f356359946edb",
     "semantic_hash": ""
   },
   "src/lib/community-job-bootstrap.ts": {
@@ -4065,8 +4065,8 @@
     "semantic_hash": ""
   },
   "src/lib/job-recommendations.ts": {
-    "mtime": 1789968896.2738154,
-    "ast_hash": "e1c5f9fd5695370aa02e464e13ca031a",
+    "mtime": 1789969852.1028333,
+    "ast_hash": "f44dae6483e1a7fc232415c68505aca0",
     "semantic_hash": ""
   },
   "src/lib/journalist-service.ts": {
@@ -4345,8 +4345,8 @@
     "semantic_hash": ""
   },
   "src/lib/visionaer-service.ts": {
-    "mtime": 1789299520.2072055,
-    "ast_hash": "8a48351664d2139dbf8d2c623080d409",
+    "mtime": 1789970382.2344878,
+    "ast_hash": "09c8f05a94c8d5a2d1027c3eb4e9b73f",
     "semantic_hash": ""
   },
   "src/lib/wanderpocal.ts": {
@@ -6017,6 +6017,111 @@
   "src/lib/marketing-templates.ts": {
     "mtime": 1789968802.5436683,
     "ast_hash": "5b4919c651b546a381861c95c5946830",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/community-board/idea/[id]/IdeaPageClient.tsx": {
+    "mtime": 1789969778.6426344,
+    "ast_hash": "6210818175a565bcb94fc72b118e9906",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/community-board/idea/[id]/page.tsx": {
+    "mtime": 1789969775.4571893,
+    "ast_hash": "824950b19a7131cc812beafb53131b15",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/[id]/status/route.ts": {
+    "mtime": 1789969599.8162816,
+    "ast_hash": "118203bfbd695c625c1b2576856193ba",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/similar/route.ts": {
+    "mtime": 1789969599.8174555,
+    "ast_hash": "e16fa3d9e98c31b69974f756c0fbd9be",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/stats/route.ts": {
+    "mtime": 1789969599.8174555,
+    "ast_hash": "3a7ca2147619dce45064b2a6c7c13545",
+    "semantic_hash": ""
+  },
+  "src/components/IdeaLists.tsx": {
+    "mtime": 1789969818.2692945,
+    "ast_hash": "dbbfc1e26601feea45b687c32585bfb2",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/IdeaCard.tsx": {
+    "mtime": 1789970447.3772478,
+    "ast_hash": "f98ec5a3d27ddd71af97c042d342f4b3",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/IdeaForm.tsx": {
+    "mtime": 1789970530.7084248,
+    "ast_hash": "006c4f80876323e2a11f6c92cfd72a38",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/IdeaFromButton.tsx": {
+    "mtime": 1789969696.6410873,
+    "ast_hash": "86da9354e2cbba5d8cff3e87f30df57b",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/VisionaerTools.tsx": {
+    "mtime": 1789969811.3989441,
+    "ast_hash": "68cdae6e8fc47a4f522d8416ae8fdedb",
+    "semantic_hash": ""
+  },
+  "src/lib/idea-feed.ts": {
+    "mtime": 1789970382.2360144,
+    "ast_hash": "a5524e315f0c642c825474dc88852ccd",
+    "semantic_hash": ""
+  },
+  "src/lib/idea-lifecycle.ts": {
+    "mtime": 1789970215.3633995,
+    "ast_hash": "028f86dd334654f20c460040f460eab1",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/admin/community-jobs/ideas/IdeasBoardClient.tsx": {
+    "mtime": 1789970601.4100966,
+    "ast_hash": "d4fcb4bd51245e9b2d765359d510e1be",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/admin/community-jobs/ideas/page.tsx": {
+    "mtime": 1789970601.409564,
+    "ast_hash": "400512a56c7182557a301541e69e0593",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/community-board/roadmap/page.tsx": {
+    "mtime": 1789970601.4090605,
+    "ast_hash": "bc26d6dde5a0055f94a703f6d71a685e",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/[id]/event-draft/route.ts": {
+    "mtime": 1789970382.2396371,
+    "ast_hash": "9d474eb54835b4287610f0091a906e66",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/[id]/interest/route.ts": {
+    "mtime": 1789970382.2380993,
+    "ast_hash": "f0d5d8e9e03b6c605db8313817f3356f",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/[id]/revisions/route.ts": {
+    "mtime": 1789970382.239113,
+    "ast_hash": "2e2b1d020cf2d516f42daf5e27af6acb",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/board/route.ts": {
+    "mtime": 1789970382.2411532,
+    "ast_hash": "828e3f377afc8a49f3b757dd3b9f6229",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/ideas/game/route.ts": {
+    "mtime": 1789970382.2396371,
+    "ast_hash": "816f8c17ed44be89c689ab8287314d0a",
+    "semantic_hash": ""
+  },
+  "src/lib/steam-app.ts": {
+    "mtime": 1789970215.3644483,
+    "ast_hash": "ace981e4e45a8af3d2380c31d287fdaf",
     "semantic_hash": ""
   }
 }

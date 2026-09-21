@@ -27,14 +27,19 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { title, description, votingEndsAt } = await req.json().catch(() => ({}));
+  const { title, description, votingEndsAt, category, sourceEventId, sourceReportId, imageUrls, gameAppId } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof description !== "string") {
     return NextResponse.json({ error: "Titel und Beschreibung erforderlich" }, { status: 400 });
   }
 
   const result = await submitIdea(user.id, {
     title, description,
-    votingEndsAt: typeof votingEndsAt === "string" ? new Date(votingEndsAt) : undefined,
+    votingEndsAt: typeof votingEndsAt === "string" && votingEndsAt ? new Date(votingEndsAt) : undefined,
+    category: typeof category === "string" ? category : undefined,
+    sourceEventId: typeof sourceEventId === "string" ? sourceEventId : undefined,
+    sourceReportId: typeof sourceReportId === "string" ? sourceReportId : undefined,
+    imageUrls: Array.isArray(imageUrls) ? imageUrls.filter((u: unknown): u is string => typeof u === "string") : undefined,
+    gameAppId: Number.isInteger(gameAppId) ? gameAppId : undefined,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

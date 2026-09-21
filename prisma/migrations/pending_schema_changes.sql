@@ -599,3 +599,50 @@ ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "campaignId" TEXT REFERENCE
 ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "kind" TEXT;
 ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "confirmedNotified" BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS "MarketingPost_campaignId_idx" ON "MarketingPost"("campaignId");
+
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "category" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "lifecycle" TEXT NOT NULL DEFAULT 'OPEN';
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "lifecycleNote" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "lifecycleAt" TIMESTAMP(3);
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "lifecycleById" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "sourceEventId" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "sourceReportId" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "endNotified" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "imageUrls" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "version" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "editedAt" TIMESTAMP(3);
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "lastEditNote" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "gameAppId" INTEGER;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "gameName" TEXT;
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "notifiedMentions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "CommunityIdea" ADD COLUMN IF NOT EXISTS "draftEventId" TEXT;
+
+CREATE TABLE IF NOT EXISTS "IdeaInterest" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "ideaId"    TEXT         NOT NULL REFERENCES "CommunityIdea"("id") ON DELETE CASCADE,
+  "userId"    TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "kind"      TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IdeaInterest_ideaId_userId_kind_key" ON "IdeaInterest"("ideaId", "userId", "kind");
+CREATE INDEX IF NOT EXISTS "IdeaInterest_userId_idx" ON "IdeaInterest"("userId");
+
+CREATE TABLE IF NOT EXISTS "IdeaRevision" (
+  "id"          TEXT         NOT NULL PRIMARY KEY,
+  "ideaId"      TEXT         NOT NULL REFERENCES "CommunityIdea"("id") ON DELETE CASCADE,
+  "version"     INTEGER      NOT NULL,
+  "title"       TEXT         NOT NULL,
+  "description" TEXT         NOT NULL,
+  "note"        TEXT,
+  "savedAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "IdeaRevision_ideaId_idx" ON "IdeaRevision"("ideaId");
+
+CREATE TABLE IF NOT EXISTS "IdeaDigest" (
+  "id"       TEXT         NOT NULL PRIMARY KEY,
+  "period"   TEXT         NOT NULL,
+  "postedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IdeaDigest_period_key" ON "IdeaDigest"("period");
+ALTER TABLE "CommunityIdeaVote" ADD COLUMN IF NOT EXISTS "revotedAt" TIMESTAMP(3);

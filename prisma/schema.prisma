@@ -116,6 +116,7 @@ model User {
   jobMediaAssets                   JobMediaAsset[]
   jobMediaAlbums                   JobMediaAlbum[]
   marketingCampaigns               MarketingCampaign[]
+  ideaInterests                    IdeaInterest[]
   jobMediaAssetVotes               JobMediaAssetVote[]
   marketingPosts                   MarketingPost[]
   marketingPostVotes               MarketingPostVote[]
@@ -1746,11 +1747,66 @@ model CommunityIdea {
   hiddenByAdminAt  DateTime?
   hiddenReason     String?
   discordMessageId String?
+  category         String? // event | feature | app | server | other (siehe idea-lifecycle.ts)
+  lifecycle        String    @default("OPEN") // OPEN | REVIEW | PLANNED | DONE | REJECTED — vom Team gesetzt
+  lifecycleNote    String?
+  lifecycleAt      DateTime?
+  lifecycleById    String?
+  sourceEventId    String? // Idee entstand zu diesem Event
+  sourceReportId   String? // Idee entstand zu diesem Bericht
+  endNotified      Boolean   @default(false) // Zusammenfassung nach Ablauf der Abstimmungsfrist verschickt
+  imageUrls        String[]  @default([]) // bis zu 3 Bilder/Mockups (Vercel Blob)
+  version          Int       @default(1) // Überarbeitungen ("Version 2")
+  editedAt         DateTime? // Zeitpunkt der letzten inhaltlichen Überarbeitung
+  lastEditNote     String?
+  gameAppId        Int? // Steam-App-ID bei Spiele-Ideen
+  gameName         String?
+  notifiedMentions String[]  @default([]) // User-IDs, die für @-Erwähnungen schon benachrichtigt wurden
+  draftEventId     String? // vom Team angelegter Event-Entwurf zu dieser Idee
 
   author User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   votes  CommunityIdeaVote[]
+  interests IdeaInterest[]
+  revisions IdeaRevision[]
 
   @@index([authorId])
+}
+
+/// "Ich wäre dabei" (PARTICIPATE) bzw. "Ich helfe mit" (HELP) zu einer Idee.
+model IdeaInterest {
+  id        String   @id @default(cuid())
+  ideaId    String
+  userId    String
+  kind      String // PARTICIPATE | HELP
+  createdAt DateTime @default(now())
+
+  idea CommunityIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ideaId, userId, kind])
+  @@index([userId])
+}
+
+/// Frühere Fassung einer Idee (Snapshot vor einer Überarbeitung).
+model IdeaRevision {
+  id          String   @id @default(cuid())
+  ideaId      String
+  version     Int
+  title       String
+  description String
+  note        String?
+  savedAt     DateTime @default(now())
+
+  idea CommunityIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+/// Bereits verschickte Top-Ideen-Zusammenfassungen ("week-2026-09-14", "month-2026-08") — verhindert Doppel-Posts.
+model IdeaDigest {
+  id       String   @id @default(cuid())
+  period   String   @unique
+  postedAt DateTime @default(now())
 }
 
 model CommunityIdeaVote {
@@ -1764,6 +1820,7 @@ model CommunityIdeaVote {
   disputeReason       String?
   disputeResolution   String?
   disputeResolvedById String?
+  revotedAt           DateTime? // letzte Neu-Bewertung nach einer Überarbeitung der Idee
 
   idea  CommunityIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   voter User          @relation(fields: [voterId], references: [id], onDelete: Cascade)

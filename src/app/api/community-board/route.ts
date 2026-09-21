@@ -1,3 +1,4 @@
+import { ideaFeedInclude, toIdeaFeedEntry } from "@/lib/idea-feed";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
@@ -51,11 +52,7 @@ export async function GET(req: NextRequest) {
       where: { hiddenByAdminAt: null },
       orderBy: { createdAt: "desc" },
       take: limit,
-      include: {
-        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
-        votes: { where: { voterId: user.id }, select: { id: true, stars: true } },
-        _count: { select: { votes: true } },
-      },
+      include: ideaFeedInclude(),
     }),
     prisma.coachGuide.findMany({
       where: { hiddenByAdminAt: null },
@@ -96,17 +93,7 @@ export async function GET(req: NextRequest) {
       votedByMe: p.votes.length > 0,
       adminConfirmedPosted: p.adminConfirmedPosted,
     })),
-    ...ideas.map(i => ({
-      kind: "idea" as const,
-      id: i.id,
-      publishedAt: i.createdAt,
-      title: i.title,
-      description: i.description,
-      status: i.status, // rein kosmetisch — bleibt auch nach "CLOSED" bewertbar
-      author: i.author,
-      voteCount: i._count.votes,
-      votedByMe: i.votes.length > 0,
-    })),
+    ...ideas.map(i => toIdeaFeedEntry(i, user.id)),
     ...guides.map(g => ({
       kind: "guide" as const,
       id: g.id,

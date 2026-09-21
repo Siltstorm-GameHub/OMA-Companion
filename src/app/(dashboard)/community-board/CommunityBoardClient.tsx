@@ -13,6 +13,8 @@ import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLit
 import EmojiPanel from "@/components/community-jobs/EmojiPicker";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { Modal } from "@/components/ui/Modal";
+import IdeaBody from "@/components/community-jobs/IdeaCard";
+import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import { mentionToken } from "@/lib/report-mentions";
 import { REPORT_CATEGORIES, reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
@@ -47,6 +49,22 @@ export interface FeedEntry {
   referencedMarketingPost?: SubEntity | null;
   contributions?: { id: string; bodyMarkdown: string; author: Author; upvotes: number }[];
   adminConfirmedPosted?: boolean;
+  lifecycle?: string;
+  lifecycleNote?: string | null;
+  votingEndsAt?: string | null;
+  sourceEventId?: string | null;
+  sourceReportId?: string | null;
+  avgStars?: number;
+  distribution?: number[];
+  canRevote?: boolean;
+  imageUrls?: string[];
+  version?: number;
+  gameAppId?: number | null;
+  gameName?: string | null;
+  draftEventId?: string | null;
+  interestParticipate?: number;
+  interestHelp?: number;
+  myInterests?: string[];
   imageUrl?: string | null;
   asset?: { url: string } | null;
 }
@@ -120,6 +138,9 @@ export default function CommunityBoardClient() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <a href="/community-board/roadmap" className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">🚀 Roadmap &amp; Top-Ideen</a>
+      </div>
       {usedCategories.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Berichte nach Kategorie filtern">
           <button role="tab" aria-selected={category === null} onClick={() => setCategory(null)}
@@ -419,6 +440,7 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
       </div>
 
       {entry.kind === "report" && <ReportBody entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={onChanged} onReportPage={expandReport} />}
+      {entry.kind === "report" && <IdeaFromButton prefill={{ title: `Idee zu \u201e${entry.title ?? "Bericht"}\u201c`, reportId: entry.id }} />}
 
       {entry.kind === "asset" && (
         <>
@@ -477,16 +499,15 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
       )}
 
       {entry.kind === "idea" && (
-        <>
-          <p className="text-sm font-semibold text-white">{entry.title}</p>
-          <p className="text-xs text-gray-400 whitespace-pre-line"><Linkified text={entry.description ?? ""} /></p>
-          <div className="flex items-center gap-2">
-            <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
-            {entry.author.id === currentUserId && (
-              <DisputeTrigger kind="communityIdeaVote" fetchUrl={`/api/community-jobs/ideas/${entry.id}/votes`} listKey="votes" />
-            )}
-          </div>
-        </>
+        <IdeaBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onIdeaPage={expandReport}
+          actions={(
+            <>
+              <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} canRevote={entry.canRevote} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
+              {entry.author.id === currentUserId && (
+                <DisputeTrigger kind="communityIdeaVote" fetchUrl={`/api/community-jobs/ideas/${entry.id}/votes`} listKey="votes" />
+              )}
+            </>
+          )} />
       )}
 
       {entry.kind === "guide" && <GuideBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} />}
@@ -674,7 +695,7 @@ function UpvoteButton({
   );
 }
 
-function IdeaVoteButton({ ideaId, votedByMe, voteCount, onDone }: { ideaId: string; votedByMe: boolean; voteCount: number; onDone: () => void }) {
+function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { ideaId: string; votedByMe: boolean; canRevote?: boolean; voteCount: number; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(5);
   const [reason, setReason] = useState("");
@@ -694,11 +715,11 @@ function IdeaVoteButton({ ideaId, votedByMe, voteCount, onDone }: { ideaId: stri
     }
   }
 
-  if (votedByMe) {
+  if (votedByMe && !canRevote) {
     return <Badge tone="success"><Star className="w-2.5 h-2.5" /> Bewertet ({voteCount} Stimmen)</Badge>;
   }
   if (!open) {
-    return <Button size="sm" variant="outline" icon={<Star className="w-3.5 h-3.5" />} onClick={() => setOpen(true)}>Bewerten ({voteCount})</Button>;
+    return <Button size="sm" variant="outline" icon={<Star className="w-3.5 h-3.5" />} onClick={() => setOpen(true)}>{canRevote ? "Neu bewerten (überarbeitet)" : `Bewerten (${voteCount})`}</Button>;
   }
   return (
     <div className="space-y-2 bg-white/[0.03] rounded-lg p-3">

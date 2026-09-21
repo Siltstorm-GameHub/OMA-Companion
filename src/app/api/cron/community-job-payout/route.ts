@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
 import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck, runBadgeLevelUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
+import { closeExpiredIdeas, postIdeaDigests } from "@/lib/visionaer-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,8 +46,10 @@ export async function GET(req: NextRequest) {
   const inactivity = await step("inactivity", () => runInactivityCheck());
   const reminder = await step("reminder", () => runContractReminderCheck());
   const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
+  const ideas = await step("ideas", () => closeExpiredIdeas());
+  const ideaDigests = await step("ideaDigests", () => postIdeaDigests());
 
-  const hasError = [payout, badges, expiry, inactivity, reminder, coachReminders].some(r => "error" in r)
+  const hasError = [payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  return NextResponse.json({ payout, badges, expiry, inactivity, reminder, coachReminders }, { status: hasError ? 500 : 200 });
+  return NextResponse.json({ payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests }, { status: hasError ? 500 : 200 });
 }

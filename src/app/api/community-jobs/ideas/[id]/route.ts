@@ -7,12 +7,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { id } = await params;
-  const { title, description } = await req.json().catch(() => ({}));
+  const { title, description, category, editNote } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof description !== "string") {
     return NextResponse.json({ error: "Titel und Beschreibung erforderlich" }, { status: 400 });
   }
 
-  const result = await updateIdea(user.id, id, { title, description });
+  const result = await updateIdea(user.id, id, { title, description, category: typeof category === "string" ? category : undefined, editNote: typeof editNote === "string" ? editNote : undefined });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);
 }
