@@ -13,6 +13,7 @@ import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import BadgesSection from "../BadgesSection";
 import PokalSection from "@/components/PokalSection";
+import { JournalistPortfolio } from "@/components/JournalistReportLists";
 import FavoriteGamesSection from "../FavoriteGamesSection";
 import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
@@ -344,6 +345,7 @@ export default async function PublicProfilePage({
 
       {/* ── Pokale (read-only) ───────────────────────────────────────── */}
       <PokalSection pokale={pokale} ownerName={displayName} />
+      <JournalistPortfolio userId={id} />
 
       {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

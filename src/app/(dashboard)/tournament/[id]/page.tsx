@@ -21,6 +21,7 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
+import { EventReportsSection } from "@/components/JournalistReportLists";
 import RegisterButton from "@/app/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import ClipSubmitter from "./ClipSubmitter";
@@ -1019,6 +1020,8 @@ export default async function TournamentDetailPage({
           <EventSummarySection summary={event.summary} />
         </div>
       )}
+
+      <EventReportsSection eventId={event.id} />
 
       {/* ── Twitch-Clip (Admin-Highlight) ────────────────────────────── */}
       {event.twitchClipUrl && (
