@@ -491,7 +491,9 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                 <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
                 <li>Der Vertrag läuft 3 Monate, Verlängern ist ab dem 3. Monat möglich.</li>
-                <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung.</li>
+                <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung; sie hebt sich auf, sobald du wieder beiträgst.</li>
+                <li>Dein Ansehen (Stufe 1–4, aus deinen Wochenergebnissen) erscheint als Abzeichen hinter deinem Namen und kann auch sinken.</li>
+                <li>Beiträge, die das Team wegen eines Regelverstoßes ausblendet, zählen nicht fürs Gehalt.</li>
               </ul>
             </div>
           )}
