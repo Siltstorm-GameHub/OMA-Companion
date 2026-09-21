@@ -33,11 +33,7 @@ export interface WanderpokalHolderStatus {
 
 /**
  * Wanderpokal-Daten für den 3D-Pokal-Viewer + die "wer hält den Rest"-Anzeige
- * auf der Profilseite — extrahiert aus der früheren Mancave-Datenaggregation
- * (`mancave-data-loader.ts`, entfernt zusammen mit der /mancave-3D-Seite),
- * die genau dieselben zwei Felder lieferte, aber daneben noch jede Menge
- * inzwischen ebenfalls entfernte Mancave-Wirtschaft (Ausbau-Stufen, Gadgets,
- * Jobs) mitschleppte.
+ * auf der Profilseite.
  */
 export async function loadWanderpokalStatus(userId: string): Promise<{
   wanderpokale: OwnedWanderpokal[];

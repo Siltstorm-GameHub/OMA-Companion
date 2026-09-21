@@ -1,8 +1,7 @@
 /**
  * Community-Jobs: Katalog aktiver, community-bewerteter Jobs (Journalist,
- * Fotograf, Marketing Manager, Coach/Manager, Visionär) — die alten, passiv
- * Münzen generierenden Mancave-Idle-Jobs wurden abgeschafft. Reiner Code
- * ohne Prisma.
+ * Fotograf, Marketing Manager, Coach/Manager, Visionär). Reiner Code ohne
+ * Prisma.
  *
  * Bewusst OHNE Rang-Voraussetzung: Admin-Freigabe der Bewerbung ist der
  * einzige Qualitätsfilter, siehe Plan "Community-Jobs mit Büro/Werkstatt
