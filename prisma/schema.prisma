@@ -114,6 +114,8 @@ model User {
   jobReportContributions           JobReportContribution[]
   jobReportContributionVotes       JobReportContributionVote[]
   jobMediaAssets                   JobMediaAsset[]
+  jobMediaAlbums                   JobMediaAlbum[]
+  marketingCampaigns               MarketingCampaign[]
   jobMediaAssetVotes               JobMediaAssetVote[]
   marketingPosts                   MarketingPost[]
   marketingPostVotes               MarketingPostVote[]
@@ -347,6 +349,8 @@ model Event {
   gemsTournament     GemsTournament?
   jobReports         JobReport[]
   jobMediaAssets     JobMediaAsset[]
+  jobMediaAlbums     JobMediaAlbum[]
+  marketingCampaigns MarketingCampaign[]
   marketingPosts     MarketingPost[]
 }
 
@@ -1461,15 +1465,34 @@ model JobMediaAsset {
   hiddenByAdminAt  DateTime?
   hiddenReason     String?
   discordMessageId String?
+  albumId          String? // optionales Album ("Grand Final 2026")
 
   author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event         Event?              @relation(fields: [eventId], references: [id])
+  album         JobMediaAlbum?      @relation(fields: [albumId], references: [id], onDelete: SetNull)
   votes         JobMediaAssetVote[]
   usedAsCoverIn JobReport[]
   MarketingPost MarketingPost[]
 
   @@index([eventId])
   @@index([authorId])
+  @@index([albumId])
+}
+
+/// Fotografen-Album: Bilder/Clips zu einer Serie zusammengefasst, als Ganzes verlinkbar.
+model JobMediaAlbum {
+  id        String   @id @default(cuid())
+  authorId  String
+  eventId   String?
+  title     String
+  createdAt DateTime @default(now())
+
+  author User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event  Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  assets JobMediaAsset[]
+
+  @@index([authorId])
+  @@index([eventId])
 }
 
 model JobMediaAssetVote {
@@ -1502,15 +1525,36 @@ model MarketingPost {
   hiddenByAdminAt      DateTime?
   hiddenReason         String?
   discordMessageId     String?
+  campaignId           String? // optionale Kampagne (Ankündigung → Erinnerung → Heute)
+  kind                 String? // announce | reminder | lastspots | today — Baustein/Vorlage, aus der der Post entstand
+  confirmedNotified    Boolean   @default(false) // Autor wurde über die externe Bestätigung informiert
 
   author              User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   asset               JobMediaAsset?      @relation(fields: [assetId], references: [id])
+  campaign            MarketingCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   votes               MarketingPostVote[]
   referencedByReports JobReport[]         @relation("ReportReferencesMarketingPost")
 
   @@index([eventId])
   @@index([authorId])
+  @@index([campaignId])
+}
+
+/// Kampagne zu einem Event: mehrere Posts als Serie (Ankündigung, Erinnerung, "Heute").
+model MarketingCampaign {
+  id        String   @id @default(cuid())
+  authorId  String
+  eventId   String
+  title     String
+  createdAt DateTime @default(now())
+
+  author User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event  Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  posts  MarketingPost[]
+
+  @@index([authorId])
+  @@index([eventId])
 }
 
 model MarketingPostVote {

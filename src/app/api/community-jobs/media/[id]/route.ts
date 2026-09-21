@@ -8,12 +8,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { id } = await params;
-  const { caption, url } = await req.json().catch(() => ({}));
+  const { caption, url, albumId } = await req.json().catch(() => ({}));
   if (caption !== undefined && typeof caption !== "string") return NextResponse.json({ error: "caption muss ein String sein" }, { status: 400 });
   if (url !== undefined && typeof url !== "string") return NextResponse.json({ error: "url muss ein String sein" }, { status: 400 });
 
+  if (albumId !== undefined && albumId !== null && typeof albumId !== "string") return NextResponse.json({ error: "albumId ungültig" }, { status: 400 });
+
   const isAdmin = hasMinRole(user.role, "moderator");
-  const result = await updateAsset(user.id, id, { caption, url }, { isAdmin });
+  const result = await updateAsset(user.id, id, { caption, url, albumId }, { isAdmin });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);
 }

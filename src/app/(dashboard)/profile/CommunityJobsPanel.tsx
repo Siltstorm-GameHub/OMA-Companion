@@ -16,7 +16,11 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { JournalistStatsBlock, JournalistExtras } from "@/components/community-jobs/JournalistTools";
-import { PhotoRequestList } from "@/components/community-jobs/FotografTools";
+import { MarketingStatsBlock, MarketingCampaignsBlock } from "@/components/community-jobs/MarketingTools";
+import {
+  MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
+} from "@/lib/marketing-templates";
+import { PhotoRequestList, FotografStatsBlock, FotografExtras, BulkUploadForm, MonthCollageBuilder, AlbumSelect, useAlbums } from "@/components/community-jobs/FotografTools";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import {
   CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
@@ -212,6 +216,12 @@ interface PostPrefill {
   startAt?: string; capacity?: string; eventId?: string; meetingUrl?: string;
   /** Journalist: Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
   recap?: "week" | "month";
+  /** Marketing: Werbetext-Baustein (announce | reminder | lastspots | today) und Kampagne, zu der der Post gehört. */
+  template?: string; campaignId?: string;
+  /** Marketing "Als Vorlage": Bild und Titel des ursprünglichen Events (wird im Text ersetzt). */
+  assetId?: string; imageUrl?: string; fromEventTitle?: string;
+  /** Fotograf: Monats-Collage-Assistent direkt öffnen. */
+  collage?: boolean;
   /** Fotograf: Upload erfüllt diesen Bildwunsch. */
   photoRequestId?: string;
 }
@@ -240,7 +250,7 @@ const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month" }[];
+  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string }[];
   steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
   steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
 }
@@ -534,6 +544,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                           <Button size="sm" variant="outline"
                             onClick={() => (e.recap
                               ? openCreateForm(undefined, { recap: e.recap })
+                              : e.scopeEventId
+                              ? openCreateForm(e.scopeEventId, { template: e.postTemplate })
+                              : e.collage
+                              ? openCreateForm(undefined, { collage: true })
+                              : e.photoRequestId
+                              ? openCreateForm(undefined, { photoRequestId: e.photoRequestId, title: e.title })
                               : openCreateForm(isEventScopedJob || e.eventScoped ? e.eventId : undefined, e.eventId === "coach-newcomers" ? newcomerPrefill : undefined))}>
                             Erstellen
                           </Button>
@@ -839,12 +855,22 @@ function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
   if (jobKey === "fotograf") {
     return (
       <div className="space-y-4">
+        <FotografStatsBlock />
         <PhotoRequestList onFulfill={r => onCompose(r.eventId ?? undefined, { photoRequestId: r.id, title: r.description })} />
         <AssetList />
+        <FotografExtras />
       </div>
     );
   }
-  if (jobKey === "marketing_manager") return <MarketingPostList />;
+  if (jobKey === "marketing_manager") {
+    return (
+      <div className="space-y-4">
+        <MarketingStatsBlock />
+        <MarketingCampaignsBlock onCompose={(eventId, p) => onCompose(eventId, p)} />
+        <MarketingPostList onDuplicate={onDuplicate} />
+      </div>
+    );
+  }
   if (jobKey === "coach") return <CoachToolbox membership={membership} onDuplicate={onDuplicate} />;
   if (jobKey === "visionaer") return <IdeaList />;
   return null;
@@ -1024,9 +1050,11 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
 }
 
 function AssetList() {
-  const [items, setItems] = useState<{ id: string; caption: string | null; type: string; url: string; _count: { votes: number } }[]>([]);
+  const [items, setItems] = useState<{ id: string; caption: string | null; type: string; url: string; album?: { id: string; title: string } | null; _count: { votes: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
+  const [albumId, setAlbumId] = useState("");
+  const { albums } = useAlbums();
 
   function reload() {
     api<{ assets: typeof items }>("/api/community-jobs/media?mine=1").then(d => setItems(d.assets)).catch(() => {});
@@ -1035,7 +1063,7 @@ function AssetList() {
 
   async function save(id: string) {
     try {
-      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
+      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ caption, albumId: albumId || null }) });
       toast.success("Gespeichert"); setEditing(null); reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
@@ -1064,17 +1092,18 @@ function AssetList() {
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
             <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
           </div>
+          <AlbumSelect albums={albums} value={albumId} onChange={setAlbumId} />
           {!isVideoUrl(a.url) && <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />}
         </div>
       ) : (
         <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
           <span className="flex items-center gap-2 min-w-0">
             <Thumb url={a.url} />
-            <span className="text-gray-300 truncate">{a.caption ?? a.type}</span>
+            <span className="text-gray-300 truncate">{a.caption ?? a.type}{a.album && <span className="ml-1.5 text-[10px] text-teal-400/80">📁 {a.album.title}</span>}</span>
           </span>
           <span className="flex items-center gap-2 shrink-0">
             <VoteRow upvotes={a._count.votes} votedByMe={false} />
-            <EditDeleteBar onEdit={() => { setEditing(a.id); setCaption(a.caption ?? ""); }} onDelete={() => remove(a.id)} />
+            <EditDeleteBar onEdit={() => { setEditing(a.id); setCaption(a.caption ?? ""); setAlbumId(a.album?.id ?? ""); }} onDelete={() => remove(a.id)} />
           </span>
         </div>
       ))}
@@ -1082,8 +1111,14 @@ function AssetList() {
   );
 }
 
-function MarketingPostList() {
-  const [items, setItems] = useState<{ id: string; caption: string; imageUrl: string | null; assetId: string | null; asset?: { url: string } | null; _count: { votes: number } }[]>([]);
+interface MyMarketingPost {
+  id: string; caption: string; imageUrl: string | null; assetId: string | null; asset?: { url: string } | null;
+  adminConfirmedPosted: boolean; kind: string | null; event?: { id: string; title: string; startAt: string };
+  _count: { votes: number };
+}
+
+function MarketingPostList({ onDuplicate }: { onDuplicate?: (prefill: PostPrefill) => void }) {
+  const [items, setItems] = useState<MyMarketingPost[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
 
@@ -1112,6 +1147,13 @@ function MarketingPostList() {
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
 
+  async function copyText(p: MyMarketingPost) {
+    const link = p.event ? `${window.location.origin}/tournament/${p.event.id}` : "";
+    const text = link && !p.caption.includes(link) && !p.caption.includes("/tournament/") ? `${p.caption.trim()}\n\n\u{1F449} Jetzt anmelden: ${link}` : p.caption;
+    try { await navigator.clipboard.writeText(text); toast.success("Text kopiert — zum Einfügen z.B. in Instagram oder Discord"); }
+    catch { toast.error("Kopieren nicht möglich"); }
+  }
+
   if (!items.length) return <p className="text-xs text-gray-600">Noch keine Werbe-Posts erstellt.</p>;
   return (
     <div className="space-y-1.5">
@@ -1129,10 +1171,23 @@ function MarketingPostList() {
         <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
           <span className="flex items-center gap-2 min-w-0">
             <Thumb url={p.imageUrl ?? p.asset?.url ?? null} />
-            <span className="text-gray-300 truncate">{p.caption}</span>
+            <span className="min-w-0">
+              <span className="block text-gray-300 truncate">{p.caption}</span>
+              <span className="block text-[10px] text-gray-600 truncate">
+                {p.event?.title}
+                {p.adminConfirmedPosted
+                  ? <span className="ml-1.5 text-emerald-400" title="Ein Admin hat bestätigt, dass dieser Post extern veröffentlicht wurde">✓ extern gepostet</span>
+                  : <span className="ml-1.5" title="Noch nicht von einem Admin als extern gepostet bestätigt">· noch nicht extern bestätigt</span>}
+              </span>
+            </span>
           </span>
           <span className="flex items-center gap-2 shrink-0">
             <VoteRow upvotes={p._count.votes} votedByMe={false} />
+            <button onClick={() => copyText(p)} title="Text kopieren (inkl. Anmelde-Link)" aria-label="Text kopieren" className="p-1 text-gray-600 hover:text-teal-400 transition-colors"><Copy className="w-3.5 h-3.5" /></button>
+            {onDuplicate && (
+              <button onClick={() => onDuplicate({ body: p.caption, assetId: p.assetId ?? undefined, imageUrl: p.imageUrl ?? undefined, fromEventTitle: p.event?.title })}
+                title="Als Vorlage für ein anderes Event verwenden" className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Als Vorlage</button>
+            )}
             <EditDeleteBar onEdit={() => { setEditing(p.id); setCaption(p.caption); }} onDelete={() => remove(p.id)} />
           </span>
         </div>
@@ -1488,7 +1543,7 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
       </div>
     );
   }
-  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} onDone={onDone} />;
+  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} startCollage={prefill?.collage} onDone={onDone} />;
   if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
 }
@@ -1659,10 +1714,12 @@ const ASSET_TYPE_OPTIONS = [
   { value: "GRAPHIC", label: "Grafik" },
 ];
 
-type AssetUploadMode = "design" | "clip";
+type AssetUploadMode = "design" | "clip" | "bulk" | "collage";
 
-function UploadAssetForm({ eventId, requestId, onDone }: { eventId?: string; requestId?: string; onDone: () => void }) {
-  const [mode, setMode] = useState<AssetUploadMode>("design");
+function UploadAssetForm({ eventId, requestId, startCollage, onDone }: { eventId?: string; requestId?: string; startCollage?: boolean; onDone: () => void }) {
+  const [mode, setMode] = useState<AssetUploadMode>(startCollage ? "collage" : "design");
+  const [albumId, setAlbumId] = useState("");
+  const { albums } = useAlbums();
   const [url, setUrl] = useState("");
   const [isVideo, setIsVideo] = useState(false);
   const [type, setType] = useState("SCREENSHOT");
@@ -1672,7 +1729,7 @@ function UploadAssetForm({ eventId, requestId, onDone }: { eventId?: string; req
   async function submit() {
     setBusy(true);
     try {
-      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId, requestId }) });
+      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId, requestId, albumId: albumId || undefined }) });
       toast.success("Hochgeladen");
       onDone();
     } catch (err) {
@@ -1687,21 +1744,28 @@ function UploadAssetForm({ eventId, requestId, onDone }: { eventId?: string; req
     setIsVideo(false);
   }
 
+  if (mode === "bulk" && !url) {
+    return (
+      <div className="space-y-3">
+        <UploadModeTabs mode={mode} onChange={setMode} />
+        <BulkUploadForm eventId={eventId} onDone={onDone} />
+      </div>
+    );
+  }
+
   if (!url) {
     return (
       <div className="space-y-3">
-        <div className="flex gap-1.5">
-          <Button size="sm" variant={mode === "design" ? "primary" : "outline"} onClick={() => setMode("design")}>Bild gestalten</Button>
-          <Button size="sm" variant={mode === "clip" ? "primary" : "outline"} onClick={() => setMode("clip")}>Video-Clip hochladen</Button>
-        </div>
+        <UploadModeTabs mode={mode} onChange={setMode} />
         <p className="text-[10px] text-gray-600">
           {mode === "design"
-            ? "Screenshot/Foto mit Vorlage + Logo zu einer Grafik zusammenstellen (z.B. Collage, Banner oder Vorschaubild für einen Clip)."
-            : "Lädt eine echte Videodatei hoch (z.B. einen Highlight-Clip)."}
+            ? "Screenshot/Foto mit Vorlage + Logo zu einer Grafik zusammenstellen (z.B. Collage, Banner oder Vorschaubild für einen Clip). Format, Logo und Wasserzeichen sind wählbar."
+            : mode === "clip" ? "Lädt eine echte Videodatei hoch (z.B. einen Highlight-Clip)."
+            : "Stellt aus den beliebtesten Bildern der Community eine Monats-Collage zusammen."}
         </p>
-        {mode === "design"
-          ? <StudioEditor onExported={u => { setUrl(u); setIsVideo(false); }} />
-          : <ClipUploadField onUploaded={u => { setUrl(u); setIsVideo(true); setType("CLIP"); }} />}
+        {mode === "design" && <StudioEditor allowWatermark onExported={u => { setUrl(u); setIsVideo(false); }} />}
+        {mode === "clip" && <ClipUploadField onUploaded={u => { setUrl(u); setIsVideo(true); setType("CLIP"); }} />}
+        {mode === "collage" && <MonthCollageBuilder onExported={(u, cap) => { setUrl(u); setIsVideo(false); setType("COLLAGE"); setCaption(cap); }} />}
       </div>
     );
   }
@@ -1721,10 +1785,23 @@ function UploadAssetForm({ eventId, requestId, onDone }: { eventId?: string; req
       )}
       <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift (optional)"
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+      <AlbumSelect albums={albums} value={albumId} onChange={setAlbumId} />
       <div className="flex justify-between gap-2">
         <Button variant="ghost" onClick={reset}>{isVideo ? "Anderer Clip" : "Neu gestalten"}</Button>
         <Button loading={busy} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Hochladen</Button>
       </div>
+    </div>
+  );
+}
+
+function UploadModeTabs({ mode, onChange }: { mode: AssetUploadMode; onChange: (m: AssetUploadMode) => void }) {
+  const tabs: { id: AssetUploadMode; label: string }[] = [
+    { id: "design", label: "Bild gestalten" }, { id: "bulk", label: "Mehrere Bilder" },
+    { id: "clip", label: "Video-Clip" }, { id: "collage", label: "Monats-Collage" },
+  ];
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tabs.map(t => <Button key={t.id} size="sm" variant={mode === t.id ? "primary" : "outline"} onClick={() => onChange(t.id)}>{t.label}</Button>)}
     </div>
   );
 }
@@ -1791,11 +1868,20 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [eventId, setEventId] = useState(initialEventId ?? "");
   const [caption, setCaption] = useState(prefill?.body ?? "");
-  const [assetId, setAssetId] = useState("");
+  const [assetId, setAssetId] = useState(prefill?.assetId ?? "");
   const [studioImageUrl, setStudioImageUrl] = useState("");
-  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
-  const [imageMode, setImageMode] = useState<PostImageMode>("none");
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(prefill?.imageUrl ?? "");
+  const [imageMode, setImageMode] = useState<PostImageMode>(prefill?.assetId ? "library" : prefill?.imageUrl ? "upload" : "none");
   const [assets, setAssets] = useState<{ id: string; caption: string | null; url: string }[]>([]);
+  const [related, setRelated] = useState<{ id: string; caption: string | null; url: string }[]>([]);
+  const [assetQuery, setAssetQuery] = useState("");
+  const [facts, setFacts] = useState<MarketingEventFacts | null>(null);
+  const [templateId, setTemplateId] = useState<MarketingTemplateId>(isMarketingTemplate(prefill?.template) ? prefill.template : "announce");
+  const [usedTemplate, setUsedTemplate] = useState<MarketingTemplateId | undefined>(undefined);
+  const [includeLink, setIncludeLink] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const autoApplied = useRef(false);
+  const lastEventTitle = useRef(prefill?.fromEventTitle);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -1822,16 +1908,70 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
       setEvents(upcoming);
       if (!initialEventId && upcoming[0]) setEventId(upcoming[0].id);
     }).catch(() => {});
-    // Marketing-Post-Bild muss ein Standbild sein — Video-Clips aus der Mediathek ausschließen.
-    api<{ assets: typeof assets }>("/api/community-jobs/media").then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
   }, []);
+
+  // Marketing-Post-Bild muss ein Standbild sein — Video-Clips aus der Mediathek ausschließen. Mit Suche (leicht verzögert).
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (assetQuery.trim()) params.set("q", assetQuery.trim());
+      api<{ assets: typeof assets }>(`/api/community-jobs/media?${params}`).then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
+    }, assetQuery ? 250 : 0);
+    return () => clearTimeout(handle);
+  }, [assetQuery]);
+
+  // Event-Fakten laden (Datum, Spiel, Anmeldungen, Link) — Grundlage für die Vorlagen.
+  useEffect(() => {
+    if (!eventId) return;
+    let cancelled = false;
+    api<MarketingEventFacts>(`/api/community-jobs/marketing-posts/facts?eventId=${encodeURIComponent(eventId)}`)
+      .then(f => { if (!cancelled) setFacts(f); }).catch(() => { if (!cancelled) setFacts(null); });
+    return () => { cancelled = true; };
+  }, [eventId]);
+
+  // Passende Bilder zum Event (gleiches Event oder gleiches Spiel) — nur im Mediathek-Modus nötig.
+  useEffect(() => {
+    if (imageMode !== "library" || !eventId) return;
+    api<{ assets: typeof related }>(`/api/community-jobs/media?relatedEventId=${encodeURIComponent(eventId)}&take=8`)
+      .then(d => setRelated(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
+  }, [imageMode, eventId]);
+
+  useEffect(() => {
+    if (!facts) return;
+    // Leerer Text: einmalig mit dem gewählten Baustein vorbelegen.
+    if (!autoApplied.current && !caption.trim()) {
+      autoApplied.current = true;
+      setCaption(buildMarketingText(templateId, facts));
+      setUsedTemplate(templateId);
+    }
+    // "Als Vorlage": Event-Titel des Originals durch den neuen ersetzen.
+    const old = lastEventTitle.current;
+    if (old && old !== facts.title && caption.includes(old)) {
+      setCaption(caption.split(old).join(facts.title));
+      lastEventTitle.current = facts.title;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur auf neue Event-Fakten reagieren
+  }, [facts]);
+
+  function applyTemplate() {
+    if (!facts) return;
+    if (caption.trim() && !confirm("Den aktuellen Text durch die Vorlage ersetzen?")) return;
+    setCaption(buildMarketingText(templateId, facts));
+    setUsedTemplate(templateId);
+    lastEventTitle.current = undefined;
+  }
+
+  const finalText = facts && includeLink ? withEventLink(caption, facts, true) : caption;
+  const previewImage = imageMode === "library" ? [...related, ...assets].find(a => a.id === assetId)?.url
+    : imageMode === "studio" ? studioImageUrl : imageMode === "upload" ? uploadedImageUrl : "";
 
   async function submit() {
     setBusy(true);
     try {
       await api("/api/community-jobs/marketing-posts", {
         method: "POST", body: JSON.stringify({
-          eventId, caption: withLink(caption, prefill?.link),
+          eventId, caption: withLink(finalText, prefill?.link),
+          campaignId: prefill?.campaignId, kind: usedTemplate ?? (isMarketingTemplate(prefill?.template) ? prefill.template : undefined),
           assetId: imageMode === "library" ? (assetId || undefined) : undefined,
           imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
             : imageMode === "upload" ? (uploadedImageUrl || undefined) : undefined,
@@ -1852,13 +1992,13 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
 
   return (
     <div className="space-y-3">
-      <Select value={eventId} onChange={e => setEventId(e.target.value)} className="w-full">
+      <Select value={eventId} onChange={e => setEventId(e.target.value)} disabled={!!prefill?.campaignId} className="w-full">
         {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
       </Select>
 
       <div className="flex gap-1.5">
         <Button size="sm" variant={imageMode === "none" ? "primary" : "outline"} onClick={() => setImageMode("none")}>Kein Bild</Button>
-        {assets.length > 0 && (
+        {(assets.length > 0 || assetQuery) && (
           <Button size="sm" variant={imageMode === "library" ? "primary" : "outline"} onClick={() => setImageMode("library")}>Aus Mediathek</Button>
         )}
         <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
@@ -1866,10 +2006,28 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
       </div>
 
       {imageMode === "library" && (
-        <Select value={assetId} onChange={e => setAssetId(e.target.value)} className="w-full">
-          <option value="">Bild wählen…</option>
-          {assets.map(a => <option key={a.id} value={a.id}>{a.caption ?? a.id}</option>)}
-        </Select>
+        <div className="space-y-1.5">
+          {related.length > 0 && !assetQuery && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-gray-500">Passend zum Event (gleiches Event oder Spiel)</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {related.map(a => (
+                  <button key={a.id} onClick={() => setAssetId(a.id)} aria-pressed={assetId === a.id} title={a.caption ?? undefined}
+                    className={`shrink-0 rounded-lg overflow-hidden border-2 ${assetId === a.id ? "border-teal-400" : "border-transparent hover:border-white/20"}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau, beliebiger Blob-Host */}
+                    <img src={a.url} alt="" className="w-16 h-12 object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <input value={assetQuery} onChange={e => setAssetQuery(e.target.value)} placeholder="Mediathek durchsuchen (Unterschrift, Event, Fotograf)"
+            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          <Select value={assetId} onChange={e => setAssetId(e.target.value)} className="w-full">
+            <option value="">{assets.length === 0 ? "Nichts gefunden" : "Bild wählen…"}</option>
+            {assets.map(a => <option key={a.id} value={a.id}>{a.caption ?? a.id}</option>)}
+          </Select>
+        </div>
       )}
       {imageMode === "upload" && (
         uploadedImageUrl ? (
@@ -1899,8 +2057,29 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
         )
       )}
 
-      <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Werbetext" rows={4}
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Select size="sm" value={templateId} onChange={e => setTemplateId(e.target.value as MarketingTemplateId)} aria-label="Werbetext-Baustein">
+          {MARKETING_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </Select>
+        <Button size="sm" variant="outline" disabled={!facts} onClick={applyTemplate}>Text aus Vorlage</Button>
+        <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">
+          <input type="checkbox" checked={includeLink} onChange={e => setIncludeLink(e.target.checked)} />
+          Anmelde-Link
+        </label>
+        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setPreview(v => !v)}>{preview ? "Bearbeiten" : "Vorschau"}</Button>
+      </div>
+      {preview ? (
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+          {previewImage && (
+            // eslint-disable-next-line @next/next/no-img-element -- Vorschau, beliebiger Blob-Host
+            <img src={previewImage} alt="" className="w-full rounded-lg" />
+          )}
+          <p className="text-sm text-gray-200 whitespace-pre-line break-words">{withLink(finalText, prefill?.link) || "—"}</p>
+        </div>
+      ) : (
+        <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Werbetext" rows={6}
+          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+      )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
         <Button loading={busy} disabled={!eventId || !caption.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>

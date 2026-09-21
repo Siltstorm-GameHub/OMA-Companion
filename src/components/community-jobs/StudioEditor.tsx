@@ -4,12 +4,10 @@ import { toast } from "sonner";
 import { Upload, ImageDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { useSession } from "next-auth/react";
 import {
-  STUDIO_TEMPLATES, LOGO_URL, renderStudioCanvas, loadImage, type LogoPosition,
+  STUDIO_TEMPLATES, STUDIO_FORMATS, LOGO_URL, renderStudioCanvas, loadImage, type LogoPosition,
 } from "@/lib/studio-templates";
-
-const CANVAS_W = 960;
-const CANVAS_H = 540; // 16:9 — passt zu Event-Bannern/Screenshots
 
 const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
   { value: "bottom-right", label: "Unten rechts" },
@@ -24,7 +22,13 @@ const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
  * als PNG exportiert und über /api/upload hochgeladen; `onExported` liefert
  * die finale URL an den Aufrufer (Fotograf-Upload bzw. Marketing-Post-Formular).
  */
-export default function StudioEditor({ onExported }: { onExported: (url: string) => void }) {
+export default function StudioEditor({ onExported, allowWatermark = false }: { onExported: (url: string) => void; /** Fotografen: Urheber-Vermerk ("© Name · OMA") einblendbar. */ allowWatermark?: boolean }) {
+  const { data: session } = useSession();
+  const [formatId, setFormatId] = useState(STUDIO_FORMATS[0].id);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
+  const format = STUDIO_FORMATS.find(f => f.id === formatId) ?? STUDIO_FORMATS[0];
+  const authorName = session?.user?.name ?? "";
+  const watermark = allowWatermark && watermarkEnabled ? `© ${authorName || "OMA"} · OMA` : undefined;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
@@ -38,8 +42,8 @@ export default function StudioEditor({ onExported }: { onExported: (url: string)
 
   useEffect(() => {
     if (!image || !canvasRef.current) return;
-    renderStudioCanvas(canvasRef.current, image, templateId, values, logoEnabled ? logo : null, logoPosition);
-  }, [image, logo, templateId, values, logoEnabled, logoPosition]);
+    renderStudioCanvas(canvasRef.current, image, templateId, values, logoEnabled ? logo : null, logoPosition, watermark);
+  }, [image, logo, templateId, values, logoEnabled, logoPosition, watermark, format]);
 
   function handleFile(file: File) {
     if (!file.type.startsWith("image/")) { toast.error("Bitte ein Bild wählen"); return; }
@@ -84,10 +88,13 @@ export default function StudioEditor({ onExported }: { onExported: (url: string)
       ) : (
         <>
           <div className="rounded-xl overflow-hidden border border-white/10">
-            <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="w-full h-auto block" />
+            <canvas ref={canvasRef} width={format.width} height={format.height} className="w-full h-auto block" style={{ maxHeight: "70vh", objectFit: "contain" }} />
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Select size="sm" value={formatId} onChange={e => setFormatId(e.target.value)} aria-label="Format">
+              {STUDIO_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </Select>
             <Select size="sm" value={templateId} onChange={e => setTemplateId(e.target.value)}>
               {STUDIO_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </Select>
@@ -95,6 +102,12 @@ export default function StudioEditor({ onExported }: { onExported: (url: string)
               <input type="checkbox" checked={logoEnabled} onChange={e => setLogoEnabled(e.target.checked)} />
               OMA-Logo
             </label>
+            {allowWatermark && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Blendet „© dein Name · OMA“ dezent ein">
+                <input type="checkbox" checked={watermarkEnabled} onChange={e => setWatermarkEnabled(e.target.checked)} />
+                Wasserzeichen
+              </label>
+            )}
             {logoEnabled && (
               <Select size="sm" value={logoPosition} onChange={e => setLogoPosition(e.target.value as LogoPosition)}>
                 {LOGO_POSITIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}

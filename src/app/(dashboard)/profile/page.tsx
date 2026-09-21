@@ -12,6 +12,8 @@ import PointsInfoModal from "./PointsInfoModal";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import PokalSection from "@/components/PokalSection";
 import { JournalistPortfolio } from "@/components/JournalistReportLists";
+import { FotografPortfolio } from "@/components/FotografGalleries";
+import { MarketingPortfolio } from "@/components/MarketingLists";
 import { getAvailableReviewYears } from "@/lib/year-review";
 import { Crown, Gift, ChevronRight, Clock, MessageSquare } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -378,6 +380,8 @@ export default async function ProfilePage() {
 
         {/* ── Pokale ───────────────────────────────────────────────────── */}
         <PokalSection pokale={pokale} ownerName={displayName} />
+        <FotografPortfolio userId={userId} />
+        <MarketingPortfolio userId={userId} />
         <JournalistPortfolio userId={userId} />
 
         {/* ── Haupt-Inhalt (Übersicht/Community-Jobs als eigene Reiter) ─── */}

@@ -1,10 +1,14 @@
 import { prisma } from "./prisma";
+import { notifyAssetUsed } from "./fotograf-service";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
 import { countCommentVoteScore } from "./community-board-comment-service";
+import { dispatchNotification } from "./notify-dispatch";
+import { getWeekBounds } from "./community-job-service";
+import { isMarketingTemplate } from "./marketing-templates";
 
 /**
  * Marketing Manager: Werbe-Posts für kommende Events (Text + optionales Bild
@@ -26,16 +30,21 @@ export type CreatePostResult = { ok: true; postId: string } | { error: string };
 
 export async function createMarketingPost(
   authorId: string,
-  data: { eventId: string; caption: string; assetId?: string; imageUrl?: string },
+  data: { eventId: string; caption: string; assetId?: string; imageUrl?: string; campaignId?: string; kind?: string },
 ): Promise<CreatePostResult> {
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
   if (!data.eventId) return { error: "Event erforderlich" };
   if (!data.caption.trim()) return { error: "Text erforderlich" };
 
+  if (data.campaignId && !(await prisma.marketingCampaign.findFirst({ where: { id: data.campaignId, authorId, eventId: data.eventId }, select: { id: true } }))) {
+    return { error: "Kampagne nicht gefunden (oder gehört zu einem anderen Event)" };
+  }
+
   const post = await prisma.marketingPost.create({
     data: {
       authorId, eventId: data.eventId, caption: data.caption,
       assetId: data.assetId ?? null, imageUrl: data.imageUrl ?? null,
+      campaignId: data.campaignId ?? null, kind: isMarketingTemplate(data.kind) ? data.kind : null,
     },
   });
   await prisma.communityJobMember.updateMany({
@@ -44,6 +53,7 @@ export async function createMarketingPost(
   });
 
   announceAndStore(post.id, authorId, data.caption).catch(() => {});
+  if (data.assetId) notifyAssetUsed(data.assetId, authorId, "marketing", data.caption, "/community-board").catch(() => {});
   return { ok: true, postId: post.id };
 }
 
@@ -79,6 +89,7 @@ export async function updateMarketingPost(
   if (post.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Post zu bearbeiten" };
   if (data.caption !== undefined && !data.caption.trim()) return { error: "Text erforderlich" };
 
+  if (data.assetId && data.assetId !== post.assetId) notifyAssetUsed(data.assetId, post.authorId, "marketing", data.caption ?? post.caption, "/community-board").catch(() => {});
   const clearOther = data.imageUrl !== undefined ? { assetId: null } : data.assetId !== undefined ? { imageUrl: null } : {};
 
   await prisma.marketingPost.update({
@@ -116,7 +127,18 @@ export async function voteMarketingPost(voterId: string, postId: string): Promis
 
   await prisma.marketingPostVote.create({ data: { postId, voterId } });
   onCommunityJobVoteCast(voterId).catch(() => {});
+  notifyVoteMilestone(postId, post.authorId, post.caption).catch(() => {});
   return { ok: true };
+}
+
+const VOTE_MILESTONES = [5, 10, 25, 50, 100];
+
+async function notifyVoteMilestone(postId: string, authorId: string, caption: string): Promise<void> {
+  const count = await prisma.marketingPostVote.count({ where: { postId } });
+  if (!VOTE_MILESTONES.includes(count)) return;
+  await dispatchNotification("marketing_votes_milestone", {
+    users: [authorId], placeholders: { "{count}": String(count), "{title}": caption.replace(/\s+/g, " ").slice(0, 80), "{url}": "/community-board" },
+  });
 }
 
 export async function unvoteMarketingPost(voterId: string, postId: string): Promise<VoteResult> {
@@ -128,7 +150,110 @@ export async function setAdminConfirmedPosted(postId: string, confirmed: boolean
   const post = await prisma.marketingPost.findUnique({ where: { id: postId } });
   if (!post) return { error: "Post nicht gefunden" };
   await prisma.marketingPost.update({ where: { id: postId }, data: { adminConfirmedPosted: confirmed } });
+  // Einmalig: Autor erfährt, dass sein Post extern veröffentlicht wurde.
+  if (confirmed && !post.confirmedNotified) {
+    await prisma.marketingPost.update({ where: { id: postId }, data: { confirmedNotified: true } });
+    dispatchNotification("marketing_post_confirmed", {
+      users: [post.authorId], placeholders: { "{title}": post.caption.replace(/\s+/g, " ").slice(0, 80), "{url}": "/profile" },
+    }).catch(() => {});
+  }
   return { ok: true };
+}
+
+// ── Event-Fakten, Kampagnen, Auswertung ──────────────────────────────────────
+
+const BASE_URL = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
+
+export async function getMarketingEventFacts(eventId: string) {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, title: true, game: true, startAt: true, hidden: true, _count: { select: { registrations: true } } },
+  });
+  if (!event || event.hidden) return null;
+  return {
+    id: event.id, title: event.title, game: event.game, startAt: event.startAt.toISOString(),
+    registered: event._count.registrations, url: `${BASE_URL}/tournament/${event.id}`,
+  };
+}
+
+export async function createCampaign(authorId: string, data: { eventId: string; title?: string }): Promise<{ ok: true; campaignId: string } | { error: string }> {
+  if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
+  const event = await prisma.event.findUnique({ where: { id: data.eventId }, select: { title: true, startAt: true, hidden: true } });
+  if (!event || event.hidden) return { error: "Event nicht gefunden" };
+  if (event.startAt.getTime() < Date.now()) return { error: "Das Event hat schon begonnen" };
+  const existing = await prisma.marketingCampaign.findFirst({ where: { authorId, eventId: data.eventId }, select: { id: true } });
+  if (existing) return { error: "Für dieses Event hast du schon eine Kampagne" };
+  const campaign = await prisma.marketingCampaign.create({
+    data: { authorId, eventId: data.eventId, title: data.title?.trim().slice(0, 80) || `Kampagne: ${event.title}` },
+  });
+  return { ok: true, campaignId: campaign.id };
+}
+
+export async function listMyCampaigns(userId: string) {
+  return prisma.marketingCampaign.findMany({
+    where: { authorId: userId, event: { startAt: { gte: new Date(Date.now() - 86_400_000) } } },
+    orderBy: { event: { startAt: "asc" } },
+    select: {
+      id: true, title: true, eventId: true,
+      event: { select: { id: true, title: true, startAt: true } },
+      posts: { orderBy: { createdAt: "asc" }, select: { id: true, kind: true, createdAt: true } },
+    },
+  });
+}
+
+export async function deleteCampaign(authorId: string, campaignId: string, opts: { isAdmin?: boolean } = {}): Promise<MutationResult> {
+  const campaign = await prisma.marketingCampaign.findUnique({ where: { id: campaignId } });
+  if (!campaign) return { error: "Kampagne nicht gefunden" };
+  if (campaign.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diese Kampagne zu löschen" };
+  await prisma.marketingCampaign.delete({ where: { id: campaignId } }); // Posts bleiben erhalten (campaignId → null)
+  return { ok: true };
+}
+
+export async function getMarketingStats(userId: string) {
+  const { weekStart, weekEnd } = getWeekBounds(new Date());
+  const eightWeeksAgo = new Date(weekStart.getTime() - 7 * 7 * 86_400_000);
+  const since = new Date(Date.now() - 90 * 86_400_000);
+
+  const [posts, recentVotes, promoted, unpromoted] = await Promise.all([
+    prisma.marketingPost.findMany({
+      where: { authorId: userId, hiddenByAdminAt: null },
+      select: { id: true, caption: true, eventId: true, imageUrl: true, assetId: true, adminConfirmedPosted: true, _count: { select: { votes: true } } },
+    }),
+    prisma.marketingPostVote.findMany({
+      where: { post: { authorId: userId }, createdAt: { gte: eightWeeksAgo }, OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }] },
+      select: { createdAt: true },
+    }),
+    // Grobe Orientierung: Anmeldungen beendeter Events mit vs. ohne Werbe-Post (alle Marketing Manager, 90 Tage).
+    prisma.event.findMany({
+      where: { hidden: false, status: "finished", startAt: { gte: since }, marketingPosts: { some: { hiddenByAdminAt: null } } },
+      select: { _count: { select: { registrations: true } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, status: "finished", startAt: { gte: since }, marketingPosts: { none: { hiddenByAdminAt: null } } },
+      select: { _count: { select: { registrations: true } } },
+    }),
+  ]);
+
+  const totalVotes = posts.reduce((sum, p) => sum + p._count.votes, 0);
+  const top = [...posts].sort((a, b) => b._count.votes - a._count.votes)[0];
+  const byWeek = new Map<number, number>();
+  for (const v of recentVotes) {
+    const key = getWeekBounds(v.createdAt).weekStart.getTime();
+    byWeek.set(key, (byWeek.get(key) ?? 0) + 1);
+  }
+  const avg = (rows: { _count: { registrations: number } }[]) => (rows.length > 0 ? rows.reduce((s, r) => s + r._count.registrations, 0) / rows.length : null);
+
+  return {
+    total: posts.length, totalVotes,
+    averageVotes: posts.length > 0 ? totalVotes / posts.length : 0,
+    votesThisWeek: recentVotes.filter(v => v.createdAt >= weekStart && v.createdAt < weekEnd).length,
+    eventsPromoted: new Set(posts.map(p => p.eventId)).size,
+    withImage: posts.filter(p => p.imageUrl || p.assetId).length,
+    confirmed: posts.filter(p => p.adminConfirmedPosted).length,
+    top: top && top._count.votes > 0 ? { id: top.id, caption: top.caption.replace(/\s+/g, " ").slice(0, 90), votes: top._count.votes } : null,
+    weekly: [...byWeek.entries()].sort((a, b) => a[0] - b[0]).map(([ts, votes]) => ({ weekStart: new Date(ts).toISOString(), votes })),
+    reach: { promotedAvg: avg(promoted), promotedCount: promoted.length, unpromotedAvg: avg(unpromoted), unpromotedCount: unpromoted.length },
+  };
 }
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────

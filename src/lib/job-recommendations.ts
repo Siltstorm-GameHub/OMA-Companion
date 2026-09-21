@@ -26,6 +26,14 @@ export interface EventRecommendation {
   eventScoped?: boolean;
   /** Vorlage für einen Rückblick (Journalist): der Editor füllt Titel/Text aus den Community-Daten. */
   recap?: "week" | "month";
+  /** Fotograf: Upload erfüllt diesen Bildwunsch (Formular wird vorbelegt). */
+  photoRequestId?: string;
+  /** Marketing: echtes Event, auf das sich die Empfehlung bezieht (eventId ist dann nur der Ausblend-Schlüssel). */
+  scopeEventId?: string;
+  /** Marketing: Werbetext-Baustein, mit dem das Formular startet (announce | reminder | lastspots | today). */
+  postTemplate?: string;
+  /** Fotograf: Monats-Collage aus den beliebtesten Bildern erstellen. */
+  collage?: boolean;
   /** true = kein "Erstellen"-Button (z.B. "Anwesenheit eintragen" — dort gibt es nichts zu erstellen). */
   noCreate?: boolean;
 }
@@ -157,30 +165,106 @@ async function journalistRecommendationsFor(userId: string): Promise<EventRecomm
     });
   }
 
-  const { day, daysInMonth } = berlinDateParts(now);
+  const { year, month, day, daysInMonth } = berlinDateParts(now);
   if (day >= daysInMonth - 2) {
     recs.push({
-      eventId: "journalist-recap-month", title: "Monatsrückblick", startAt: now,
+      eventId: `journalist-recap-month-${year}-${month}`, title: "Monatsrückblick", startAt: now,
       reason: "Der Monat endet bald — die Vorlage füllt sich aus den Community-Daten", url: "/profile", recap: "month",
     });
   }
   return recs;
 }
 
-async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
-  const since = new Date(Date.now() - LOOKBACK_DAYS * 86_400_000);
-  const events = await prisma.event.findMany({
-    where: {
-      hidden: false, status: "finished", startAt: { gte: since },
-      jobMediaAssets: { none: { hiddenByAdminAt: null } },
-    },
-    orderBy: { startAt: "desc" },
-    take: 10,
-  });
-  return events.map(e => ({
-    eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Fotos/Clips", url: `/tournament/${e.id}`,
-    ...pastEventUrgency(e.startAt),
-  }));
+const MANY_PARTICIPANTS = 8;
+const FEW_ASSETS = 3;
+
+/**
+ * Fotograf-Empfehlungen: beendete Events ohne/mit wenigen Bildern (nach Teilnehmerzahl), Events heute,
+ * Bildwünsche, die seit über 3 Tagen offen sind, eigene Bilder ohne Bildunterschrift und
+ * zum Monatsende die Monats-Collage.
+ */
+async function fotografRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
+  const now = new Date();
+  const since = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000);
+  const visibleAssets = { where: { hiddenByAdminAt: null } };
+
+  const [finished, todayEvents, staleRequests, noCaption, recentCollage] = await Promise.all([
+    prisma.event.findMany({
+      where: { hidden: false, status: "finished", startAt: { gte: since } },
+      orderBy: { startAt: "desc" }, take: 15,
+      include: { _count: { select: { registrations: true, jobMediaAssets: visibleAssets } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, status: { not: "finished" }, startAt: { gte: new Date(now.getTime() - 6 * 3_600_000), lte: new Date(now.getTime() + 24 * 3_600_000) } },
+      orderBy: { startAt: "asc" }, take: 3,
+    }),
+    prisma.photoRequest.findMany({
+      where: { status: "OPEN", createdAt: { lt: new Date(now.getTime() - 3 * 86_400_000) } },
+      orderBy: { createdAt: "asc" }, take: 3,
+    }),
+    prisma.jobMediaAsset.count({ where: { authorId: userId, hiddenByAdminAt: null, caption: null, type: { not: "CLIP" } } }),
+    prisma.jobMediaAsset.count({
+      where: { authorId: userId, type: "COLLAGE", caption: { startsWith: "Bilder des Monats" }, createdAt: { gte: new Date(now.getTime() - 10 * 86_400_000) } },
+    }),
+  ]);
+
+  const recs: EventRecommendation[] = [];
+
+  // Beendete Events: ganz ohne Bilder, oder viele Teilnehmer und nur wenige Bilder — größte Events zuerst.
+  const lacking = finished
+    .filter(e => e._count.jobMediaAssets === 0 || (e._count.registrations >= MANY_PARTICIPANTS && e._count.jobMediaAssets < FEW_ASSETS))
+    .sort((a, b) => b._count.registrations - a._count.registrations)
+    .slice(0, 10);
+  for (const e of lacking) {
+    const n = e._count.jobMediaAssets;
+    const people = e._count.registrations;
+    recs.push({
+      eventId: e.id, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: n === 0
+        ? (people > 0 ? `Noch keine Fotos/Clips · ${people} Teilnehmer` : "Noch keine Fotos/Clips")
+        : `Nur ${n} ${n === 1 ? "Bild" : "Bilder"} bei ${people} Teilnehmern`,
+      ...pastEventUrgency(e.startAt),
+    });
+  }
+
+  for (const e of todayEvents) {
+    recs.push({
+      eventId: e.id, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`, eventScoped: true,
+      reason: "Heute — Screenshots und Clips festhalten", urgency: "Heute", urgent: true,
+    });
+  }
+
+  if (staleRequests.length > 0) {
+    const events = await prisma.event.findMany({
+      where: { id: { in: staleRequests.map(r => r.eventId).filter((x): x is string => !!x) } }, select: { id: true, title: true },
+    });
+    const titleById = new Map(events.map(e => [e.id, e.title]));
+    for (const r of staleRequests) {
+      const age = daysBetween(now, r.createdAt);
+      recs.push({
+        eventId: `fotograf-request-${r.id}`, title: r.description.slice(0, 80), startAt: r.createdAt,
+        reason: `Bildwunsch offen${r.eventId && titleById.get(r.eventId) ? ` · ${titleById.get(r.eventId)}` : ""}`,
+        photoRequestId: r.id, urgency: `seit ${age}d`, urgent: age >= 7,
+      });
+    }
+  }
+
+  if (noCaption > 0) {
+    recs.push({
+      eventId: `fotograf-nocaption-${noCaption}`, title: `${noCaption} ${noCaption === 1 ? "Bild" : "Bilder"} ohne Bildunterschrift`, startAt: now,
+      reason: "Mit Beschreibung werden Bilder besser gefunden und genutzt", url: "/profile", noCreate: true,
+    });
+  }
+
+  // Monatsende (letzte 3 Tage) bzw. Monatsanfang (erste 3 Tage → Vormonat): Monats-Collage.
+  const { year, month, day, daysInMonth } = berlinDateParts(now);
+  if ((day >= daysInMonth - 2 || day <= 3) && recentCollage === 0) {
+    recs.push({
+      eventId: `fotograf-collage-${year}-${month}-${day <= 3 ? "prev" : "cur"}`, title: "Bilder des Monats", startAt: now,
+      reason: "Collage aus den beliebtesten Bildern der Community erstellen", collage: true, url: "/profile",
+    });
+  }
+  return recs;
 }
 
 /**
@@ -288,20 +372,105 @@ async function visionaerRecommendationsFor(userId: string): Promise<EventRecomme
   }];
 }
 
-async function upcomingEventsWithoutMarketingPost(): Promise<EventRecommendation[]> {
-  const until = new Date(Date.now() + LOOKAHEAD_DAYS * 86_400_000);
-  const events = await prisma.event.findMany({
-    where: {
-      hidden: false, startAt: { gte: new Date(), lte: until },
-      marketingPosts: { none: { hiddenByAdminAt: null } },
-    },
-    orderBy: { startAt: "asc" },
-    take: 10,
+const FEW_REGISTRATIONS = 5;
+
+/**
+ * Marketing-Empfehlungen: Events ohne Werbe-Post (14 Tage), Erinnerung kurz vor dem Start, wenige
+ * Anmeldungen, eigene Posts ohne Bild und wiederkehrende Events, deren Vorgänger beworben wurde.
+ */
+async function marketingRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
+  const now = new Date();
+  const recs: EventRecommendation[] = [];
+  const seenEvents = new Set<string>();
+
+  const until = new Date(now.getTime() + LOOKAHEAD_DAYS * 86_400_000);
+  const noPost = await prisma.event.findMany({
+    where: { hidden: false, startAt: { gte: now, lte: until }, marketingPosts: { none: { hiddenByAdminAt: null } } },
+    orderBy: { startAt: "asc" }, take: 10,
   });
-  return events.map(e => ({
-    eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung", url: `/tournament/${e.id}`,
-    ...upcomingEventUrgency(e.startAt),
-  }));
+  for (const e of noPost) {
+    seenEvents.add(e.id);
+    recs.push({
+      eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung", url: `/tournament/${e.id}`,
+      ...upcomingEventUrgency(e.startAt),
+    });
+  }
+
+  const soon = new Date(now.getTime() + 48 * 3_600_000);
+  const [reminderCandidates, fewRegistrations, noImage, seriesCandidates, precedents] = await Promise.all([
+    prisma.event.findMany({
+      where: { hidden: false, startAt: { gte: now, lte: soon }, marketingPosts: { some: { hiddenByAdminAt: null } } },
+      orderBy: { startAt: "asc" }, take: 5,
+      select: { id: true, title: true, startAt: true, marketingPosts: { where: { hiddenByAdminAt: null }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, status: { not: "finished" }, startAt: { gte: now, lte: new Date(now.getTime() + 3 * 86_400_000) } },
+      orderBy: { startAt: "asc" }, take: 10,
+      select: { id: true, title: true, startAt: true, _count: { select: { registrations: true } } },
+    }),
+    prisma.marketingPost.findMany({
+      where: {
+        authorId: userId, hiddenByAdminAt: null, imageUrl: null, assetId: null,
+        createdAt: { gte: new Date(now.getTime() - 14 * 86_400_000) }, event: { startAt: { gte: now } },
+      },
+      orderBy: { createdAt: "desc" }, take: 3, select: { id: true, caption: true, event: { select: { title: true, startAt: true } } },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, startAt: { gt: until, lte: new Date(now.getTime() + 30 * 86_400_000) }, marketingPosts: { none: { hiddenByAdminAt: null } } },
+      orderBy: { startAt: "asc" }, take: 15, select: { id: true, title: true, startAt: true, game: true, seriesId: true },
+    }),
+    prisma.event.findMany({
+      where: { hidden: false, startAt: { lt: now, gte: new Date(now.getTime() - 90 * 86_400_000) }, marketingPosts: { some: { hiddenByAdminAt: null } } },
+      select: { game: true, seriesId: true },
+    }),
+  ]);
+
+  // Erinnerung: Event heute/morgen, der letzte Post ist älter als 3 Tage.
+  for (const e of reminderCandidates) {
+    const last = e.marketingPosts[0]?.createdAt;
+    if (!last || now.getTime() - last.getTime() < 3 * 86_400_000) continue;
+    const age = daysBetween(now, last);
+    seenEvents.add(e.id);
+    recs.push({
+      eventId: `marketing-remind-${e.id}`, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: `Letzter Post vor ${age} Tagen — Erinnerung schreiben`, scopeEventId: e.id,
+      postTemplate: e.startAt.getTime() - now.getTime() < 24 * 3_600_000 ? "today" : "reminder",
+      ...upcomingEventUrgency(e.startAt),
+    });
+  }
+
+  // Wenige Anmeldungen kurz vor dem Start (nur, wenn es nicht schon eine der Empfehlungen oben gibt).
+  for (const e of fewRegistrations) {
+    if (seenEvents.has(e.id) || e._count.registrations >= FEW_REGISTRATIONS) continue;
+    const n = e._count.registrations;
+    recs.push({
+      eventId: `marketing-few-${e.id}`, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: n === 0 ? "Noch keine Anmeldungen — kurz vor dem Start" : `Nur ${n} ${n === 1 ? "Anmeldung" : "Anmeldungen"} — kurz vor dem Start`,
+      scopeEventId: e.id, postTemplate: "lastspots", ...upcomingEventUrgency(e.startAt),
+    });
+  }
+
+  for (const p of noImage) {
+    recs.push({
+      eventId: `marketing-noimage-${p.id}`, title: p.event.title, startAt: p.event.startAt,
+      reason: "Dein Post hat noch kein Bild — Bilder bringen mehr Aufmerksamkeit", url: "/profile", noCreate: true,
+    });
+  }
+
+  // Wiederkehrende Events (gleiche Reihe bzw. gleiches Spiel), deren Vorgänger beworben wurde.
+  const seriesIds = new Set(precedents.map(p => p.seriesId).filter((x): x is string => !!x));
+  const games = new Set(precedents.map(p => p.game?.toLowerCase().trim()).filter((x): x is string => !!x));
+  for (const e of seriesCandidates) {
+    const match = (e.seriesId && seriesIds.has(e.seriesId)) || (e.game && games.has(e.game.toLowerCase().trim()));
+    if (!match) continue;
+    recs.push({
+      eventId: e.id, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
+      reason: `Wiederkehrendes Event${e.game ? ` (${e.game})` : ""} — das letzte Mal wurde geworben`,
+      ...upcomingEventUrgency(e.startAt),
+    });
+    if (recs.length > 20) break;
+  }
+  return recs;
 }
 
 /** Spiele, die in der Community zuletzt tatsächlich gespielt wurden (Event.game der letzten 120 Tage). */
@@ -352,8 +521,8 @@ export async function dismissRecommendation(userId: string, jobKey: string, item
 export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {
   let events: EventRecommendation[] = [];
   if (jobKey === "journalist") events = await journalistRecommendationsFor(userId);
-  else if (jobKey === "fotograf") events = await eventsWithoutAssets();
-  else if (jobKey === "marketing_manager") events = await upcomingEventsWithoutMarketingPost();
+  else if (jobKey === "fotograf") events = await fotografRecommendationsFor(userId);
+  else if (jobKey === "marketing_manager") events = await marketingRecommendationsFor(userId);
   else if (jobKey === "coach") events = await coachRecommendationsFor(userId);
   else if (jobKey === "visionaer") events = await visionaerRecommendationsFor(userId);
 

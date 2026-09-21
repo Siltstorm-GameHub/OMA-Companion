@@ -101,6 +101,7 @@ export default function ReportEditor({
   const [filling, setFilling] = useState(false);
   const [events, setEvents] = useState<EventOption[]>([]);
   const [assets, setAssets] = useState<AssetOption[]>([]);
+  const [assetQuery, setAssetQuery] = useState("");
   const [posts, setPosts] = useState<PostOption[]>([]);
   const [seriesList, setSeriesList] = useState<SeriesOption[]>([]);
   const [newSeries, setNewSeries] = useState("");
@@ -121,9 +122,18 @@ export default function ReportEditor({
   const isDraftEdit = !!reportId && initial?.isDraft === true;
   const isPublishedEdit = !!reportId && initial?.isDraft === false;
 
+  // Mediathek fürs Titelbild — mit Suche (Bildunterschrift, Event, Fotograf), leicht verzögert.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (assetQuery.trim()) params.set("q", assetQuery.trim());
+      api<{ assets: AssetOption[] }>(`/api/community-jobs/media?${params}`).then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
+    }, assetQuery ? 250 : 0);
+    return () => clearTimeout(handle);
+  }, [assetQuery]);
+
   useEffect(() => {
     api<EventOption[]>("/api/events").then(all => setEvents([...all].sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()).slice(0, 80))).catch(() => {});
-    api<{ assets: AssetOption[] }>("/api/community-jobs/media").then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
     api<{ feed: (PostOption & { kind: string })[] }>("/api/community-board?limit=50")
       .then(d => setPosts(d.feed.filter(e => e.kind === "marketing_post"))).catch(() => {});
     api<{ series: SeriesOption[] }>("/api/community-jobs/reports/series").then(d => setSeriesList(d.series)).catch(() => {});
@@ -386,8 +396,9 @@ export default function ReportEditor({
             </div>
           </div>
         )}
+        <input value={assetQuery} onChange={e => setAssetQuery(e.target.value)} placeholder="Mediathek durchsuchen (Unterschrift, Event, Fotograf)" className={`w-full ${SMALL_INPUT}`} />
         {assets.length === 0 ? (
-          <p className="text-[11px] text-gray-600">Noch keine Bilder in der Mediathek.</p>
+          <p className="text-[11px] text-gray-600">{assetQuery ? "Nichts gefunden." : "Noch keine Bilder in der Mediathek."}</p>
         ) : (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button onClick={() => setCoverAssetId("")} aria-pressed={coverAssetId === ""}

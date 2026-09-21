@@ -573,3 +573,29 @@ CREATE TABLE IF NOT EXISTS "InterviewRequest" (
 );
 CREATE INDEX IF NOT EXISTS "InterviewRequest_intervieweeId_status_idx" ON "InterviewRequest"("intervieweeId", "status");
 CREATE INDEX IF NOT EXISTS "InterviewRequest_journalistId_idx" ON "InterviewRequest"("journalistId");
+
+CREATE TABLE IF NOT EXISTS "JobMediaAlbum" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "authorId"  TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "eventId"   TEXT         REFERENCES "Event"("id") ON DELETE SET NULL,
+  "title"     TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "JobMediaAlbum_authorId_idx" ON "JobMediaAlbum"("authorId");
+CREATE INDEX IF NOT EXISTS "JobMediaAlbum_eventId_idx" ON "JobMediaAlbum"("eventId");
+ALTER TABLE "JobMediaAsset" ADD COLUMN IF NOT EXISTS "albumId" TEXT REFERENCES "JobMediaAlbum"("id") ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS "JobMediaAsset_albumId_idx" ON "JobMediaAsset"("albumId");
+
+CREATE TABLE IF NOT EXISTS "MarketingCampaign" (
+  "id"        TEXT         NOT NULL PRIMARY KEY,
+  "authorId"  TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "eventId"   TEXT         NOT NULL REFERENCES "Event"("id") ON DELETE CASCADE,
+  "title"     TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "MarketingCampaign_authorId_idx" ON "MarketingCampaign"("authorId");
+CREATE INDEX IF NOT EXISTS "MarketingCampaign_eventId_idx" ON "MarketingCampaign"("eventId");
+ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "campaignId" TEXT REFERENCES "MarketingCampaign"("id") ON DELETE SET NULL;
+ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "kind" TEXT;
+ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "confirmedNotified" BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS "MarketingPost_campaignId_idx" ON "MarketingPost"("campaignId");

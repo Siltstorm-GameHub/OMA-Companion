@@ -9,6 +9,7 @@ import { isVideoUrl } from "./upload-limits";
 import { isReportCategory, reportCategoryLabel, REPORT_TITLE_MAX, REPORT_BODY_MAX, CONTRIBUTION_MAX } from "./report-categories";
 import { plainExcerpt } from "./report-text";
 import { dispatchNotification } from "./notify-dispatch";
+import { notifyAssetUsed } from "./fotograf-service";
 import { extractMentionedUserIds } from "./report-mentions";
 
 export function appBaseUrl(): string { return process.env.NEXTAUTH_URL ?? "https://oma-app.de"; }
@@ -107,6 +108,7 @@ export async function createReport(
     },
   });
   if (!data.draft) await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
+  if (data.coverAssetId && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", data.title.trim(), reportPath(report.id)).catch(() => {});
   return { ok: true, reportId: report.id };
 }
 
@@ -235,6 +237,9 @@ export async function updateReport(
     },
   })]);
   if (!report.isDraft) notifyMentions(reportId, report.authorId, data.title.trim(), data.bodyMarkdown ?? report.bodyMarkdown).catch(() => {});
+  if (!report.isDraft && data.coverAssetId && data.coverAssetId !== report.coverAssetId) {
+    notifyAssetUsed(data.coverAssetId, report.authorId, "report", data.title.trim(), reportPath(reportId)).catch(() => {});
+  }
   return { ok: true };
 }
 
