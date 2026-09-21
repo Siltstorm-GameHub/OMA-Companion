@@ -19,6 +19,7 @@ import { JournalistStatsBlock, JournalistExtras, PhotoRequestsBlock } from "@/co
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
 import PhotoRequestButton from "@/components/community-jobs/PhotoRequestButton";
+import ScoreBreakdownBlock from "@/components/community-jobs/ScoreBreakdownBlock";
 import MediaPickerPanel from "@/components/community-jobs/MediaPickerPanel";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
@@ -498,6 +499,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                 <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung; sie hebt sich auf, sobald du wieder beiträgst.</li>
                 <li>Dein Ansehen (Stufe 1–4, aus deinen Wochenergebnissen) erscheint als Abzeichen hinter deinem Namen und kann auch sinken.</li>
                 <li>Beiträge, die das Team wegen eines Regelverstoßes ausblendet, zählen nicht fürs Gehalt.</li>
+                <li>Pro Woche zählen deine 6 besten Beiträge, und von derselben Person zählen höchstens 5 Stimmen. Unter „Gehalt“ siehst du, wie sich dein Score zusammensetzt.</li>
                 <li>Greifen andere Jobs deinen Beitrag auf (Titelbild, Werbe-Post, Anleitung, Bericht oder Idee), gibt es einen kleinen Zusammenarbeits-Bonus: höchstens 3× pro Woche, und nur, wenn du diese Woche schon Bewertungen bekommen hast.</li>
                 <li>Auf der Turnierseite zeigt „Community-Team zu diesem Event“, was schon erledigt ist und was noch fehlt.</li>
               </ul>
@@ -697,6 +699,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
 
       {tab === "pay" && (
       <>
+      <ScoreBreakdownBlock />
       {bonusTiers.length > 0 && (() => {
         const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
         const ownVotes = projected?.ownVotes ?? 0;

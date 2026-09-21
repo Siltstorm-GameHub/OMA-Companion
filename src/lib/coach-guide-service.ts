@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { VoteEvent } from "./score-engine";
 import { registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 
@@ -92,6 +93,18 @@ export async function voteGuide(voterId: string, guideId: string): Promise<VoteR
 export async function unvoteGuide(voterId: string, guideId: string): Promise<VoteResult> {
   await prisma.coachGuideVote.deleteMany({ where: { guideId, voterId } });
   return { ok: true };
+}
+
+/** Wie {@link countGuideVoteScore}, aber als einzelne Stimmen (für Deckel und Punkte-Aufschlüsselung). */
+export async function guideVoteEvents(userId: string, weekStart: Date, weekEnd: Date): Promise<VoteEvent[]> {
+  const votes = await prisma.coachGuideVote.findMany({
+    where: {
+      guide: { authorId: userId, hiddenByAdminAt: null }, createdAt: { gte: weekStart, lt: weekEnd },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+    },
+    select: { voterId: true, guideId: true, createdAt: true },
+  });
+  return votes.map(v => ({ voterId: v.voterId, itemKey: `guide:${v.guideId}`, points: 1, createdAt: v.createdAt }));
 }
 
 /** Gültige (nicht angefochten-überstimmte) Bewertungen auf die Anleitungen dieses Coaches in der Woche — fließt in den Coach-Score. */

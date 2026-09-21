@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "prisma/migrations/pending_schema_changes.sql": {
-    "mtime": 1789971373.5698235,
-    "ast_hash": "54dde850430715047026188b8747c9d4",
+    "mtime": 1789972498.385091,
+    "ast_hash": "275079d89f04c9669f3d200a118e1a65",
     "semantic_hash": ""
   },
   "public/.well-known/assetlinks.json": {
@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "scripts/seed-notification-rules.ts": {
-    "mtime": 1789971373.5713325,
-    "ast_hash": "442728351037856598b04c00c7db98ed",
+    "mtime": 1789972498.385091,
+    "ast_hash": "98cd3f6c95dacea3a9e75f6c2dd6b44a",
     "semantic_hash": ""
   },
   "scripts/update-notification-rules-2026-07.ts": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/CommunityBoardClient.tsx": {
-    "mtime": 1789970619.3238113,
-    "ast_hash": "b477911564b2fef965da079b2f4b3524",
+    "mtime": 1789972720.711496,
+    "ast_hash": "59f9c8222b55e14420f420dfd9634ca4",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/album/[id]/page.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/CommunityJobsPanel.tsx": {
-    "mtime": 1789971410.203436,
-    "ast_hash": "98c11921e7a3dc163207682fff1e9777",
+    "mtime": 1789972856.8691154,
+    "ast_hash": "21b44a64876bebd0329d049cdccd218c",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/DesktopProfileTabs.tsx": {
@@ -1155,8 +1155,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/[id]/page.tsx": {
-    "mtime": 1789969852.1175938,
-    "ast_hash": "42c36dd8a24c564e7719e4bb2746890e",
+    "mtime": 1789972818.492563,
+    "ast_hash": "05dffc6cff01b17f6797171b98eabb16",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/page.tsx": {
@@ -1900,8 +1900,8 @@
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/marketing-posts/route.ts": {
-    "mtime": 1789968828.552663,
-    "ast_hash": "6e8e3099961e53b8e260dec0e9c2c03d",
+    "mtime": 1789972584.3811557,
+    "ast_hash": "812e194fdb69f15f877631b608b2aa30",
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/media/[id]/route.ts": {
@@ -3455,8 +3455,8 @@
     "semantic_hash": ""
   },
   "src/components/community-jobs/JournalistTools.tsx": {
-    "mtime": 1789894551.9030395,
-    "ast_hash": "459ebdf12676fc33a31f785ceaef81b5",
+    "mtime": 1789972702.7718601,
+    "ast_hash": "c585b24003f1b27c2be0b2cf28eb3ee7",
     "semantic_hash": ""
   },
   "src/components/community-jobs/MarkdownLite.tsx": {
@@ -3890,8 +3890,8 @@
     "semantic_hash": ""
   },
   "src/lib/coach-service.ts": {
-    "mtime": 1789890338.4232924,
-    "ast_hash": "edd1ccbd616d6a15d7b016711486b47b",
+    "mtime": 1789972787.0177412,
+    "ast_hash": "c76b7a7762ac27ad4c46776206615cc5",
     "semantic_hash": ""
   },
   "src/lib/community-board-comment-service.ts": {
@@ -3925,8 +3925,8 @@
     "semantic_hash": ""
   },
   "src/lib/community-jobs.ts": {
-    "mtime": 1788715795.1331623,
-    "ast_hash": "bd094548f687475e9602bca4c7877e82",
+    "mtime": 1789972856.8675904,
+    "ast_hash": "164ad5d0f65981d31bf5e36ad70ebc6d",
     "semantic_hash": ""
   },
   "src/lib/config.ts": {
@@ -4015,8 +4015,8 @@
     "semantic_hash": ""
   },
   "src/lib/fotograf-service.ts": {
-    "mtime": 1789971618.4797182,
-    "ast_hash": "93dbc8f4636d886db86d7fbab6be2278",
+    "mtime": 1789972787.0162332,
+    "ast_hash": "4a8b360f7d4e418a97323c2398d5d5c3",
     "semantic_hash": ""
   },
   "src/lib/game-cover.ts": {
@@ -4065,13 +4065,13 @@
     "semantic_hash": ""
   },
   "src/lib/job-recommendations.ts": {
-    "mtime": 1789969852.1028333,
-    "ast_hash": "f44dae6483e1a7fc232415c68505aca0",
+    "mtime": 1789972584.3846762,
+    "ast_hash": "3853b626b3c822809cc4cf0180e7d7b2",
     "semantic_hash": ""
   },
   "src/lib/journalist-service.ts": {
-    "mtime": 1789971618.4797182,
-    "ast_hash": "16227bcd0df0b0f7979314ae5e68e273",
+    "mtime": 1789972787.0147035,
+    "ast_hash": "c1914e73df6a8093e9dffe60df8794f4",
     "semantic_hash": ""
   },
   "src/lib/link-preview-bots.ts": {
@@ -4080,8 +4080,8 @@
     "semantic_hash": ""
   },
   "src/lib/marketing-manager-service.ts": {
-    "mtime": 1789971618.4797182,
-    "ast_hash": "235e263c6d5ddb6861b06ddfb55c93e9",
+    "mtime": 1789972787.0162332,
+    "ast_hash": "5e07fa687879e916a02024fb79df829e",
     "semantic_hash": ""
   },
   "src/lib/minigames-config.ts": {
@@ -4125,8 +4125,8 @@
     "semantic_hash": ""
   },
   "src/lib/photo-request-service.ts": {
-    "mtime": 1789893904.0566258,
-    "ast_hash": "e563611b5d0c09c2589d288b427d34fb",
+    "mtime": 1789972498.3870585,
+    "ast_hash": "5890c78fe551e7d5f1fa4ba80a602151",
     "semantic_hash": ""
   },
   "src/lib/points.ts": {
@@ -4345,8 +4345,8 @@
     "semantic_hash": ""
   },
   "src/lib/visionaer-service.ts": {
-    "mtime": 1789971618.4812403,
-    "ast_hash": "00422c041e572bceb8416d6d7966d757",
+    "mtime": 1789972787.0172381,
+    "ast_hash": "4c524880c600e884286bb227697dbd01",
     "semantic_hash": ""
   },
   "src/lib/wanderpocal.ts": {
@@ -5995,8 +5995,8 @@
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/marketing-posts/facts/route.ts": {
-    "mtime": 1789968828.3880043,
-    "ast_hash": "d2535f36edb89f7a237b59fa726dad6b",
+    "mtime": 1789972584.383144,
+    "ast_hash": "60602d582fb8ee62daf97a57c2e8e70a",
     "semantic_hash": ""
   },
   "src/app/api/community-jobs/marketing-posts/stats/route.ts": {
@@ -6005,18 +6005,18 @@
     "semantic_hash": ""
   },
   "src/components/MarketingLists.tsx": {
-    "mtime": 1789969070.968331,
-    "ast_hash": "c0673339c741be550865dc42e504caee",
+    "mtime": 1789972528.2761686,
+    "ast_hash": "88a45fc698b6d2a12e4ab0fce2958b6f",
     "semantic_hash": ""
   },
   "src/components/community-jobs/MarketingTools.tsx": {
-    "mtime": 1789968964.4995766,
-    "ast_hash": "c4df2468d6c99b3ebc70e99aa2dfa8c9",
+    "mtime": 1789972640.9723246,
+    "ast_hash": "76f2a40bdbdfe296f6c6434d438e473c",
     "semantic_hash": ""
   },
   "src/lib/marketing-templates.ts": {
-    "mtime": 1789968802.5436683,
-    "ast_hash": "5b4919c651b546a381861c95c5946830",
+    "mtime": 1789972584.3811557,
+    "ast_hash": "28751d9c2ff4a72b754ae3098eb61955",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/idea/[id]/IdeaPageClient.tsx": {
@@ -6055,8 +6055,8 @@
     "semantic_hash": ""
   },
   "src/components/community-jobs/IdeaForm.tsx": {
-    "mtime": 1789970530.7084248,
-    "ast_hash": "006c4f80876323e2a11f6c92cfd72a38",
+    "mtime": 1789972702.7925189,
+    "ast_hash": "0d602ac0b87ce93af6987652f90176a3",
     "semantic_hash": ""
   },
   "src/components/community-jobs/IdeaFromButton.tsx": {
@@ -6232,6 +6232,36 @@
   "src/lib/community-moderation-service.ts": {
     "mtime": 1789971490.565316,
     "ast_hash": "e59271ddc1c2ddb8553f3861ca0ffdec",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/promotion-requests/route.ts": {
+    "mtime": 1789972584.383144,
+    "ast_hash": "969b343460ce8df15a21fb07b2cc54ff",
+    "semantic_hash": ""
+  },
+  "src/components/EventJobPackage.tsx": {
+    "mtime": 1789972814.0874946,
+    "ast_hash": "bcd99c9455a74fb878261b01f9af67a2",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/MediaPickerPanel.tsx": {
+    "mtime": 1789972677.0600402,
+    "ast_hash": "e769f51396b3f1e03239bcb9fcd1adee",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/PhotoRequestButton.tsx": {
+    "mtime": 1789972670.0888855,
+    "ast_hash": "a54f74d6b15454b3156ffb18c3b832b7",
+    "semantic_hash": ""
+  },
+  "src/lib/collab-bonus.ts": {
+    "mtime": 1789972787.0147035,
+    "ast_hash": "448267b97937097ccb25ed1d4270e71d",
+    "semantic_hash": ""
+  },
+  "src/lib/promotion-request-service.ts": {
+    "mtime": 1789972498.3870585,
+    "ast_hash": "02c3d755e6e8f5ead266bcaa3a23c058",
     "semantic_hash": ""
   }
 }

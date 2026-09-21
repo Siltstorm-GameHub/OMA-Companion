@@ -3,6 +3,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { registerOwnVoteCounter } from "./community-job-service";
 import { dispatchNotification } from "./notify-dispatch";
 import { plainExcerpt } from "./report-text";
+import type { VoteEvent } from "./score-engine";
 
 /**
  * Community-Board-Kommentare: generisches, job-übergreifendes Kommentar-Modell
@@ -124,6 +125,18 @@ export async function countCommentVoteScore(userId: string, weekStart: Date, wee
       OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
     },
   });
+}
+
+/** Wie {@link countCommentVoteScore}, aber als einzelne Stimmen (für Deckel und Punkte-Aufschlüsselung). */
+export async function commentVoteEvents(userId: string, weekStart: Date, weekEnd: Date): Promise<VoteEvent[]> {
+  const votes = await prisma.communityBoardCommentVote.findMany({
+    where: {
+      comment: { authorId: userId }, createdAt: { gte: weekStart, lt: weekEnd },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+    },
+    select: { voterId: true, commentId: true, createdAt: true },
+  });
+  return votes.map(v => ({ voterId: v.voterId, itemKey: `comment:${v.commentId}`, points: 1, createdAt: v.createdAt }));
 }
 
 /** Für den Aktivitäts-Bonus: Bewertungen, die dieser User diese Woche auf fremde Kommentare abgegeben hat. */

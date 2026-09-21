@@ -1,11 +1,13 @@
 import { prisma } from "./prisma";
-import { withCollabBonus } from "./collab-bonus";
+import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
+import { collabBonuses } from "./collab-bonus";
+import { commentVoteEvents } from "./community-board-comment-service";
+import { registerScoreBreakdown } from "./community-job-service";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
-import { countCommentVoteScore } from "./community-board-comment-service";
 import { isVideoUrl } from "./upload-limits";
 import { isReportCategory, reportCategoryLabel, REPORT_TITLE_MAX, REPORT_BODY_MAX, CONTRIBUTION_MAX } from "./report-categories";
 import { plainExcerpt } from "./report-text";
@@ -376,28 +378,32 @@ export async function getJournalistStats(userId: string) {
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const [reportVotes, contributionVotes, commentVotes] = await Promise.all([
-    prisma.jobReportVote.count({
-      where: {
-        report: { authorId: userId, hiddenByAdminAt: null },
-        createdAt: { gte: weekStart, lt: weekEnd },
-        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-      },
+async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+  const week = { gte: weekStart, lt: weekEnd };
+  const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
+  const [reportVotes, contributionVotes, comments] = await Promise.all([
+    prisma.jobReportVote.findMany({
+      where: { report: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
+      select: { voterId: true, reportId: true, createdAt: true },
     }),
-    prisma.jobReportContributionVote.count({
-      where: {
-        contribution: { authorId: userId, report: { hiddenByAdminAt: null } },
-        createdAt: { gte: weekStart, lt: weekEnd },
-        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-      },
+    prisma.jobReportContributionVote.findMany({
+      where: { contribution: { authorId: userId, report: { hiddenByAdminAt: null } }, createdAt: week, ...valid },
+      select: { voterId: true, contributionId: true, createdAt: true },
     }),
-    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend,
-    // siehe community-board-comment-service.ts.
-    countCommentVoteScore(userId, weekStart, weekEnd),
+    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend, siehe community-board-comment-service.ts.
+    commentVoteEvents(userId, weekStart, weekEnd),
   ]);
-  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, reportVotes + contributionVotes + commentVotes);
-});
+  const scored = scoreStreams([
+    { key: "reports", label: "Daumen auf Berichte", unit: "thumb", events: reportVotes.map(v => ({ voterId: v.voterId, itemKey: `report:${v.reportId}`, points: 1, createdAt: v.createdAt })) },
+    { key: "contributions", label: "Daumen auf Ergänzungen", unit: "thumb", events: contributionVotes.map(v => ({ voterId: v.voterId, itemKey: `contribution:${v.contributionId}`, points: 1, createdAt: v.createdAt })) },
+    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
+  ]);
+  const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
+  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+}
+
+registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
+registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   const [reportVotes, contributionVotes] = await Promise.all([

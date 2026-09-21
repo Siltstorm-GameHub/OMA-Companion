@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/CommunityBoardClient.tsx": {
-    "mtime": 1789972720.711496,
-    "ast_hash": "59f9c8222b55e14420f420dfd9634ca4",
+    "mtime": 1789973758.4252884,
+    "ast_hash": "68a6da7fbd44fefb1bc3306c11caf43a",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/community-board/album/[id]/page.tsx": {
@@ -795,8 +795,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/dashboard/CommunityBoardWidget.tsx": {
-    "mtime": 1789891690.9043758,
-    "ast_hash": "d01d3de39bb3334cbe75055b091bea28",
+    "mtime": 1789973758.42735,
+    "ast_hash": "08a16add9646b6531ec345bbdd47a841",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/dashboard/GameserverWidget.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/CommunityJobsPanel.tsx": {
-    "mtime": 1789972856.8691154,
-    "ast_hash": "21b44a64876bebd0329d049cdccd218c",
+    "mtime": 1789973784.415571,
+    "ast_hash": "93e715ba0ba2bfed9e3c14718136cf35",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/DesktopProfileTabs.tsx": {
@@ -3885,18 +3885,18 @@
     "semantic_hash": ""
   },
   "src/lib/coach-guide-service.ts": {
-    "mtime": 1789971618.4812403,
-    "ast_hash": "e355416aa7296d4b7d3b11476fdb3fe1",
+    "mtime": 1789973574.0283315,
+    "ast_hash": "103fcb54c04431586287d763cebb7c0c",
     "semantic_hash": ""
   },
   "src/lib/coach-service.ts": {
-    "mtime": 1789972787.0177412,
-    "ast_hash": "c76b7a7762ac27ad4c46776206615cc5",
+    "mtime": 1789973574.0332024,
+    "ast_hash": "c97d7a6e02adbfc9affead455a4ccbf9",
     "semantic_hash": ""
   },
   "src/lib/community-board-comment-service.ts": {
-    "mtime": 1789969496.4652,
-    "ast_hash": "91cd6097b2c32b0bec7f356359946edb",
+    "mtime": 1789973574.027326,
+    "ast_hash": "070df1304c653fa659841cb1a768fcb7",
     "semantic_hash": ""
   },
   "src/lib/community-job-bootstrap.ts": {
@@ -3915,8 +3915,8 @@
     "semantic_hash": ""
   },
   "src/lib/community-job-service.ts": {
-    "mtime": 1789971373.5743513,
-    "ast_hash": "320830c74bd16ee3d8aad1bdad24b31d",
+    "mtime": 1789973574.0288365,
+    "ast_hash": "8f4b0c096fca8f3b8d6313e04d66d4bb",
     "semantic_hash": ""
   },
   "src/lib/community-job-vote-incentives.ts": {
@@ -3925,8 +3925,8 @@
     "semantic_hash": ""
   },
   "src/lib/community-jobs.ts": {
-    "mtime": 1789972856.8675904,
-    "ast_hash": "164ad5d0f65981d31bf5e36ad70ebc6d",
+    "mtime": 1789973784.4130785,
+    "ast_hash": "2f191c471d15872e8c33f65f06712456",
     "semantic_hash": ""
   },
   "src/lib/config.ts": {
@@ -4015,8 +4015,8 @@
     "semantic_hash": ""
   },
   "src/lib/fotograf-service.ts": {
-    "mtime": 1789972787.0162332,
-    "ast_hash": "4a8b360f7d4e418a97323c2398d5d5c3",
+    "mtime": 1789973610.1343176,
+    "ast_hash": "aa314fbde4364aa9fcbb53e40763e288",
     "semantic_hash": ""
   },
   "src/lib/game-cover.ts": {
@@ -4070,8 +4070,8 @@
     "semantic_hash": ""
   },
   "src/lib/journalist-service.ts": {
-    "mtime": 1789972787.0147035,
-    "ast_hash": "c1914e73df6a8093e9dffe60df8794f4",
+    "mtime": 1789973610.0974746,
+    "ast_hash": "b7dd0bceb56ed008a065a4cb48add732",
     "semantic_hash": ""
   },
   "src/lib/link-preview-bots.ts": {
@@ -4080,8 +4080,8 @@
     "semantic_hash": ""
   },
   "src/lib/marketing-manager-service.ts": {
-    "mtime": 1789972787.0162332,
-    "ast_hash": "5e07fa687879e916a02024fb79df829e",
+    "mtime": 1789973610.1661391,
+    "ast_hash": "be43c3eca03652890d5ed008e7b6c9d0",
     "semantic_hash": ""
   },
   "src/lib/minigames-config.ts": {
@@ -4345,8 +4345,8 @@
     "semantic_hash": ""
   },
   "src/lib/visionaer-service.ts": {
-    "mtime": 1789972787.0172381,
-    "ast_hash": "4c524880c600e884286bb227697dbd01",
+    "mtime": 1789973610.2010643,
+    "ast_hash": "5649bd0fb78b8b09d6b0c90011e956bc",
     "semantic_hash": ""
   },
   "src/lib/wanderpocal.ts": {
@@ -6255,13 +6255,28 @@
     "semantic_hash": ""
   },
   "src/lib/collab-bonus.ts": {
-    "mtime": 1789972787.0147035,
-    "ast_hash": "448267b97937097ccb25ed1d4270e71d",
+    "mtime": 1789973574.027326,
+    "ast_hash": "24861c28e198526ec59e7166bc0860f2",
     "semantic_hash": ""
   },
   "src/lib/promotion-request-service.ts": {
     "mtime": 1789972498.3870585,
     "ast_hash": "02c3d755e6e8f5ead266bcaa3a23c058",
+    "semantic_hash": ""
+  },
+  "src/app/api/community-jobs/score-breakdown/route.ts": {
+    "mtime": 1789973667.6076043,
+    "ast_hash": "5226a8e6589030340f8580cfe0eb6fcb",
+    "semantic_hash": ""
+  },
+  "src/components/community-jobs/ScoreBreakdownBlock.tsx": {
+    "mtime": 1789973683.0714157,
+    "ast_hash": "2e981e0e0963628908cd3835550cea3a",
+    "semantic_hash": ""
+  },
+  "src/lib/score-engine.ts": {
+    "mtime": 1789973508.6561654,
+    "ast_hash": "0222c785f2d5f92199c26345e50d33ff",
     "semantic_hash": ""
   }
 }

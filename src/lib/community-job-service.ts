@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { ScoreBreakdown } from "./score-engine";
 import { COIN_PREFIX } from "./points";
 import { getCommunityJob } from "./community-jobs";
 import { syncCommunityJobDiscordRole } from "./discord-roles";
@@ -65,6 +66,19 @@ const scoreResolvers = new Map<string, ScoreResolver>();
 /** Spätere Phasen registrieren hier ihre echte Score-Berechnung pro Job. */
 export function registerScoreResolver(jobKey: string, resolver: ScoreResolver): void {
   scoreResolvers.set(jobKey, resolver);
+}
+
+type ScoreBreakdownFn = (userId: string, weekStart: Date, weekEnd: Date) => Promise<ScoreBreakdown>;
+const scoreBreakdowns = new Map<string, ScoreBreakdownFn>();
+
+/** Jeder Job registriert zusätzlich zur Zahl auch die Aufschlüsselung (Streams, Deckel, Boni) — für "Wie kommt mein Score zustande?". */
+export function registerScoreBreakdown(jobKey: string, fn: ScoreBreakdownFn): void {
+  scoreBreakdowns.set(jobKey, fn);
+}
+
+export async function getScoreBreakdown(jobKey: string, userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown | null> {
+  const fn = scoreBreakdowns.get(jobKey);
+  return fn ? fn(userId, weekStart, weekEnd) : null;
 }
 
 async function computeRawScore(jobKey: string, userId: string, weekStart: Date, weekEnd: Date): Promise<number> {

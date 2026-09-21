@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import type { Bonus } from "./score-engine";
 
 /**
  * Zusammenarbeits-Bonus: Wird der Beitrag eines Jobs von einem ANDEREN Job aufgegriffen, gibt es Wochenpunkte.
@@ -92,4 +93,11 @@ async function countFulfilledPromotions(who: { postAuthorId?: string; requesterI
   if (postIds.length === 0) return 0;
   if (!who.postAuthorId) return postIds.length;
   return prisma.marketingPost.count({ where: { id: { in: postIds }, authorId: who.postAuthorId, hiddenByAdminAt: null } });
+}
+
+/** Zusammenarbeits-Bonus als Zeile fürs Score-Protokoll — leer, solange noch keine Bewertungen der Community vorliegen. */
+export async function collabBonuses(jobKey: string, userId: string, weekStart: Date, weekEnd: Date, base: number): Promise<Bonus[]> {
+  if (base <= 0) return [];
+  const points = await collabBonusScore(jobKey, userId, weekStart, weekEnd);
+  return points > 0 ? [{ key: "collab", label: jobKey === "visionaer" ? "Ideen in Umsetzung/umgesetzt" : "Zusammenarbeit mit anderen Jobs", points }] : [];
 }

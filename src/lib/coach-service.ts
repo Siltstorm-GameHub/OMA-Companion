@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
-import { withCollabBonus } from "./collab-bonus";
 import { prisma } from "./prisma";
-import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
+import { registerScoreResolver, registerScoreBreakdown, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
+import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown, type Bonus } from "./score-engine";
+import { collabBonuses } from "./collab-bonus";
 import { dispatchNotification } from "./notify-dispatch";
-import { countGuideVoteScore } from "./coach-guide-service";
+import { guideVoteEvents } from "./coach-guide-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { sendDiscordMessage } from "./discord-rest";
 import { DISCORD_COLORS } from "./discord-colors";
@@ -406,22 +407,34 @@ function validateRatingInput(raterId: string, coachId: string, stars: number, re
 const ATTENDANCE_POINTS_PER_PERSON = 0.5;
 const ATTENDANCE_COUNTED_MAX = 10;
 
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const [agg, attended, guideVotes] = await Promise.all([
-    prisma.coachRating.aggregate({
+async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+  const [ratings, attended, guideVotes] = await Promise.all([
+    prisma.coachRating.findMany({
       where: {
         coachId: userId, createdAt: { gte: weekStart, lt: weekEnd },
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },
-      _avg: { stars: true }, _count: { _all: true },
+      select: { raterId: true, trainingSessionId: true, stars: true, createdAt: true },
     }),
     prisma.coachTrainingSignup.count({
       where: { attended: true, session: { coachId: userId, startAt: { gte: weekStart, lt: weekEnd } } },
     }),
-    countGuideVoteScore(userId, weekStart, weekEnd),
+    guideVoteEvents(userId, weekStart, weekEnd),
   ]);
-  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, (agg._avg.stars ?? 0) * agg._count._all + Math.min(attended, ATTENDANCE_COUNTED_MAX) * ATTENDANCE_POINTS_PER_PERSON + guideVotes);
-});
+  // Sterne werden umgerechnet (4–5 = +1, 3 = 0, 1–2 = −1). Ein "Beitrag" ist hier ein Trainings-Termin bzw. die Ad-hoc-Hilfe.
+  const scored = scoreStreams([
+    { key: "ratings", label: "Bewertungen als Coach", unit: "stars", events: ratings.map(r => ({ voterId: r.raterId, itemKey: `session:${r.trainingSessionId ?? "adhoc"}`, points: starsToPoints(r.stars), createdAt: r.createdAt })) },
+    { key: "guides", label: "Daumen auf Anleitungen", unit: "thumb", events: guideVotes },
+  ]);
+  const bonuses: Bonus[] = [];
+  const attendancePoints = Math.min(attended, ATTENDANCE_COUNTED_MAX) * ATTENDANCE_POINTS_PER_PERSON;
+  if (attendancePoints > 0) bonuses.push({ key: "attendance", label: `Anwesenheit bei deinen Terminen (${Math.min(attended, ATTENDANCE_COUNTED_MAX)} Personen)`, points: attendancePoints });
+  bonuses.push(...await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base));
+  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+}
+
+registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
+registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.coachRating.count({

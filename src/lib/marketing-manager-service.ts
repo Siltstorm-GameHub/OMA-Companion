@@ -1,12 +1,14 @@
 import { prisma } from "./prisma";
-import { withCollabBonus } from "./collab-bonus";
+import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
+import { collabBonuses } from "./collab-bonus";
+import { commentVoteEvents } from "./community-board-comment-service";
+import { registerScoreBreakdown } from "./community-job-service";
 import { notifyAssetUsed } from "./fotograf-service";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
-import { countCommentVoteScore } from "./community-board-comment-service";
 import { dispatchNotification } from "./notify-dispatch";
 import { getWeekBounds } from "./community-job-service";
 import { isMarketingTemplate } from "./marketing-templates";
@@ -278,21 +280,26 @@ export async function getMarketingStats(userId: string) {
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const [postVotes, commentVotes] = await Promise.all([
-    prisma.marketingPostVote.count({
-      where: {
-        post: { authorId: userId, hiddenByAdminAt: null },
-        createdAt: { gte: weekStart, lt: weekEnd },
-        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-      },
+async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+  const week = { gte: weekStart, lt: weekEnd };
+  const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
+  const [postVotes, comments] = await Promise.all([
+    prisma.marketingPostVote.findMany({
+      where: { post: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
+      select: { voterId: true, postId: true, createdAt: true },
     }),
-    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend,
-    // siehe community-board-comment-service.ts.
-    countCommentVoteScore(userId, weekStart, weekEnd),
+    commentVoteEvents(userId, weekStart, weekEnd),
   ]);
-  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, postVotes + commentVotes);
-});
+  const scored = scoreStreams([
+    { key: "posts", label: "Daumen auf Werbe-Posts", unit: "thumb", events: postVotes.map(v => ({ voterId: v.voterId, itemKey: `post:${v.postId}`, points: 1, createdAt: v.createdAt })) },
+    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
+  ]);
+  const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
+  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+}
+
+registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
+registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.marketingPostVote.count({

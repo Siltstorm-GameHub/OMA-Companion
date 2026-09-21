@@ -1,6 +1,8 @@
 "use client";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2, BookOpen } from "lucide-react";
 import { acc, type AccentName } from "@/lib/accentColors";
@@ -27,6 +29,7 @@ interface FeedEntry {
   author: { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
   upvotes?: number;
   voteCount?: number;
+  votedByMe?: boolean;
   coverAsset?: { url: string } | null;
   imageUrl?: string | null;
   asset?: { url: string } | null;
@@ -39,6 +42,62 @@ const KIND_ICON: Record<FeedEntry["kind"], typeof Newspaper> = {
 const KIND_ACCENT: Record<FeedEntry["kind"], AccentName> = {
   report: "teal", asset: "violet", marketing_post: "amber", idea: "rose", guide: "teal",
 };
+
+/** Endpunkt zum Daumen-Geben je Beitragsart. Ideen brauchen Sterne + Begründung, dort geht es über die Karte im Board. */
+function voteUrl(e: FeedEntry): string | null {
+  switch (e.kind) {
+    case "report": return `/api/community-jobs/reports/${e.id}/vote`;
+    case "asset": return `/api/community-jobs/media/${e.id}/vote`;
+    case "marketing_post": return `/api/community-jobs/marketing-posts/${e.id}/vote`;
+    case "guide": return `/api/community-jobs/coach/guides/${e.id}/vote`;
+    default: return null;
+  }
+}
+
+const THUMB_ON = "bg-teal-500 border-teal-500 text-black";
+const THUMB_OFF = "bg-black/55 border-teal-500/50 text-teal-300 hover:bg-teal-500/20";
+
+/** Daumen direkt auf der Karte (über dem Karten-Link). Eigene Beiträge und Ideen zeigen nur die Zahl bzw. den Weg ins Board. */
+function ThumbVote({ entry, meId, onChange }: { entry: FeedEntry; meId?: string; onChange: (voted: boolean, delta: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const count = entry.upvotes ?? entry.voteCount ?? 0;
+  const url = voteUrl(entry);
+  const own = !!meId && entry.author.id === meId;
+
+  if (!url || own) {
+    return (
+      <span className="relative z-20 flex items-center gap-1 text-[10px] text-gray-400">
+        <ThumbsUp className="w-3 h-3" /> {count}{entry.kind === "idea" ? " · bewerten im Board" : ""}
+      </span>
+    );
+  }
+  const voted = !!entry.votedByMe;
+
+  async function toggle() {
+    if (busy || !url) return;
+    setBusy(true);
+    onChange(!voted, voted ? -1 : 1); // optimistisch
+    try {
+      const res = await fetch(url, { method: voted ? "DELETE" : "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Bewertung fehlgeschlagen");
+      }
+    } catch (err) {
+      onChange(voted, voted ? 1 : -1); // zurückrollen
+      toast.error(err instanceof Error ? err.message : "Bewertung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button onClick={toggle} disabled={busy} aria-pressed={voted} aria-label={voted ? "Daumen zurücknehmen" : "Daumen hoch"}
+      className={`relative z-20 self-start inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 backdrop-blur-sm ${voted ? THUMB_ON : THUMB_OFF}`}>
+      <ThumbsUp className={`w-3.5 h-3.5 ${voted ? "fill-current" : ""}`} /> <span className="tabular-nums">{count}</span>
+    </button>
+  );
+}
 
 function entryLabel(e: FeedEntry): string {
   return e.title ?? e.caption ?? "Neuer Beitrag";
@@ -53,6 +112,14 @@ function entryImage(e: FeedEntry): string | null {
 
 export default function CommunityBoardWidget() {
   const [feed, setFeed] = useState<FeedEntry[] | null>(null);
+  const { data: session } = useSession();
+  const meId = (session?.user as { id?: string } | undefined)?.id;
+
+  function applyVote(entry: FeedEntry, voted: boolean, delta: number) {
+    setFeed(cur => cur && cur.map(e => (e.kind === entry.kind && e.id === entry.id
+      ? { ...e, votedByMe: voted, ...(e.upvotes !== undefined ? { upvotes: Math.max(0, (e.upvotes ?? 0) + delta) } : { voteCount: Math.max(0, (e.voteCount ?? 0) + delta) }) }
+      : e)));
+  }
 
   useEffect(() => {
     fetch("/api/community-board?limit=8")
@@ -87,7 +154,7 @@ export default function CommunityBoardWidget() {
             const accentName = KIND_ACCENT[entry.kind];
             const image = entryImage(entry);
             return (
-              <Link key={`${entry.kind}-${entry.id}`} href="/community-board"
+              <div key={`${entry.kind}-${entry.id}`}
                 className="group relative shrink-0 snap-start h-56 sm:h-64 w-fit rounded-2xl overflow-hidden transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]"
                 style={{
                   border: `1px solid ${acc(accentName, 0.22)}`,
@@ -95,6 +162,8 @@ export default function CommunityBoardWidget() {
                   minWidth: image ? "120px" : "150px",
                   maxWidth: image ? "300px" : "230px",
                 }}>
+                {/* Ganze Karte führt ins Board — der Daumen liegt darüber (z-20) und klickt für sich. */}
+                <Link href="/community-board" aria-label={entryLabel(entry)} className="absolute inset-0 z-10" />
                 {image ? (
                   // Bild/Video ist das einzige nicht-absolute Kind → bestimmt die Kartenbreite
                   // anhand des echten Seitenverhältnisses bei fester Kartenhöhe.
@@ -120,9 +189,7 @@ export default function CommunityBoardWidget() {
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-6 group-hover:text-teal-200 transition-colors whitespace-normal">
                         {entryLabel(entry)}
                       </p>
-                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                        <ThumbsUp className="w-2.5 h-2.5" /> {entry.upvotes ?? entry.voteCount ?? 0}
-                      </span>
+                      <ThumbVote entry={entry} meId={meId} onChange={(voted, delta) => applyVote(entry, voted, delta)} />
                     </div>
                   </>
                 )}
@@ -151,13 +218,11 @@ export default function CommunityBoardWidget() {
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 group-hover:text-teal-200 transition-colors">
                         {entryLabel(entry)}
                       </p>
-                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                        <ThumbsUp className="w-2.5 h-2.5" /> {entry.upvotes ?? entry.voteCount ?? 0}
-                      </span>
+                      <ThumbVote entry={entry} meId={meId} onChange={(voted, delta) => applyVote(entry, voted, delta)} />
                     </div>
                   </>
                 )}
-              </Link>
+              </div>
             );
           })}
         </div>

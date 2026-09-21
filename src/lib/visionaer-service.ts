@@ -1,8 +1,10 @@
 import { prisma } from "./prisma";
-import { withCollabBonus } from "./collab-bonus";
+import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
+import { collabBonuses } from "./collab-bonus";
+import { commentVoteEvents } from "./community-board-comment-service";
+import { registerScoreBreakdown } from "./community-job-service";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
-import { countCommentVoteScore } from "./community-board-comment-service";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
@@ -472,20 +474,27 @@ export async function postIdeaDigests(): Promise<{ posted: string[] }> {
  * Woche erhalten haben, PLUS Bewertungen auf eigene Community-Board-
  * Kommentare (job-übergreifend, siehe community-board-comment-service.ts).
  */
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const [agg, commentVotes] = await Promise.all([
-    prisma.communityIdeaVote.aggregate({
-      where: {
-        idea: { authorId: userId, hiddenByAdminAt: null },
-        createdAt: { gte: weekStart, lt: weekEnd },
-        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-      },
-      _sum: { stars: true },
+async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+  const week = { gte: weekStart, lt: weekEnd };
+  const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
+  const [ideaVotes, comments] = await Promise.all([
+    prisma.communityIdeaVote.findMany({
+      where: { idea: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
+      select: { voterId: true, ideaId: true, stars: true, createdAt: true },
     }),
-    countCommentVoteScore(userId, weekStart, weekEnd),
+    commentVoteEvents(userId, weekStart, weekEnd),
   ]);
-  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, (agg._sum.stars ?? 0) + commentVotes);
-});
+  // Sterne werden umgerechnet: 4–5 Sterne = +1, 3 = 0, 1–2 = −1.
+  const scored = scoreStreams([
+    { key: "ideas", label: "Bewertungen deiner Ideen", unit: "stars", events: ideaVotes.map(v => ({ voterId: v.voterId, itemKey: `idea:${v.ideaId}`, points: starsToPoints(v.stars), createdAt: v.createdAt })) },
+    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
+  ]);
+  const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
+  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+}
+
+registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
+registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.communityIdeaVote.count({
