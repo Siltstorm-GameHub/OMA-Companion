@@ -18,6 +18,7 @@ import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { JournalistStatsBlock, JournalistExtras } from "@/components/community-jobs/JournalistTools";
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
+import MarkdownLite from "@/components/community-jobs/MarkdownLite";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 import { MarketingStatsBlock, MarketingCampaignsBlock } from "@/components/community-jobs/MarketingTools";
 import {
@@ -51,7 +52,7 @@ const JOB_ICONS: Record<string, typeof Newspaper> = {
 
 interface CatalogHolder { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil?: string | null }
 interface CatalogEntry {
-  key: string; label: string; emoji: string; description: string;
+  key: string; label: string; emoji: string; description: string; officeGuideMarkdown?: string;
   maxSlots: number; filledSlots: number; holders: CatalogHolder[]; waitlistCount: number;
 }
 interface Membership {
@@ -133,7 +134,7 @@ export default function CommunityJobsPanel() {
         <Briefcase className="w-3 h-3" /> Community-Jobs
       </h2>
       {overview.activeMembership ? (
-        <OfficeView membership={overview.activeMembership} onChanged={reload} />
+        <OfficeView membership={overview.activeMembership} guide={overview.catalog.find(j => j.key === overview.activeMembership?.jobKey)?.officeGuideMarkdown} onChanged={reload} />
       ) : (
         <CatalogView
           catalog={overview.catalog}
@@ -262,7 +263,7 @@ interface WaitlistEntry { id: string; user: { id: string; username: string | nul
 interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
 interface ServerSummary { id: string; name: string; game: string }
 
-function OfficeView({ membership, onChanged }: { membership: Membership; onChanged: () => void }) {
+function OfficeView({ membership, guide, onChanged }: { membership: Membership; guide?: string; onChanged: () => void }) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
@@ -401,7 +402,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     }
   }
 
-  const jobGuide = COMMUNITY_JOBS.find(j => j.key === membership.jobKey)?.officeGuideMarkdown;
+  const jobGuide = guide ?? COMMUNITY_JOBS.find(j => j.key === membership.jobKey)?.officeGuideMarkdown;
   const lastActivity = new Date(membership.lastContributionAt ?? membership.assignedAt ?? membership.contractStartAt);
   const daysSinceContribution = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
   const recCount = recs ? recs.events.length : 0;
@@ -485,7 +486,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
           </button>
           {guideOpen && (
             <div className="px-4 pb-4 space-y-2 text-xs text-gray-400 leading-relaxed">
-              <p>{jobGuide}</p>
+              <MarkdownLite text={jobGuide} className="text-xs text-gray-400" />
               <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500">
                 <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>

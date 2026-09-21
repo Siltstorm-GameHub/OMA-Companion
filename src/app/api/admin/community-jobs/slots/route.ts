@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { setSlotOverride } from "@/lib/community-job-config";
 
 /** PATCH { jobKey, maxSlots: number | null } — Slot-Zahl überschreiben oder auf Katalog-Default zurücksetzen. */
@@ -15,5 +16,6 @@ export async function PATCH(req: NextRequest) {
   }
 
   await setSlotOverride(jobKey, maxSlots);
+  await logAdminAction(user, { action: "slots_change", targetType: "job", jobKey, detail: { maxSlots } });
   return NextResponse.json({ ok: true });
 }

@@ -74,6 +74,18 @@ export default function AdminContentSection() {
     }
   }
 
+  async function hideEntry(entry: FeedEntry) {
+    const reason = prompt("Grund fürs Ausblenden (der Autor wird benachrichtigt):");
+    if (!reason?.trim()) return;
+    try {
+      await api("/api/admin/community-jobs/moderation", { method: "POST", body: JSON.stringify({ type: entry.kind, id: entry.id, action: "hide", reason }) });
+      toast.success("Ausgeblendet");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+
   async function downloadEntry(entry: FeedEntry) {
     const image = entryImage(entry);
     try {
@@ -122,6 +134,7 @@ export default function AdminContentSection() {
                 )}
                 <Button size="sm" variant="outline" icon={<Pencil className="w-3.5 h-3.5" />} onClick={() => setEditing(entry)}>Bearbeiten</Button>
                 <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />} onClick={() => downloadEntry(entry)}>Download</Button>
+                <Button size="sm" variant="ghost" onClick={() => hideEntry(entry)}>Ausblenden</Button>
               </div>
             </div>
           );
@@ -198,7 +211,7 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
           className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       )}
       {entry.kind === "report" && (
-        <p className="text-[11px] text-gray-600">Der Fließtext des Berichts lässt sich hier bewusst nicht ändern (nur Titel + Bild) — größere inhaltliche Korrekturen bitte mit dem Autor klären oder den Beitrag verbergen.</p>
+        <p className="text-[11px] text-gray-600">Der Fließtext des Berichts lässt sich hier bewusst nicht ändern (nur Titel + Bild) — größere inhaltliche Korrekturen bitte mit dem Autor klären oder den Beitrag ausblenden (Button „Ausblenden“ in der Liste bzw. unter Moderation).</p>
       )}
       {image && (
         <div className="space-y-2">

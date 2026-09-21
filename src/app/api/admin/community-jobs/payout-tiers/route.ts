@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { getPayoutTiers, setPayoutTiers, type PayoutTier } from "@/lib/community-job-config";
 
 export async function GET(req: NextRequest) {
@@ -29,5 +30,6 @@ export async function PATCH(req: NextRequest) {
   if (!valid) return NextResponse.json({ error: "Ungültige Stufen" }, { status: 400 });
 
   await setPayoutTiers(jobKey, tiers);
+  await logAdminAction(user, { action: "tiers_change", targetType: "job", jobKey, detail: tiers });
   return NextResponse.json({ ok: true });
 }

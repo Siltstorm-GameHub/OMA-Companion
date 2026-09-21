@@ -11,6 +11,7 @@ const TIERS_KEY = "community_job_payout_tiers";
 const BONUS_KEY = "community_job_vote_bonus_config";
 const CHANNELS_KEY = "community_job_announcement_channels";
 const TEST_MODE_KEY = "community_job_admin_test_mode";
+const TEXTS_KEY = "community_job_text_overrides";
 
 export interface PayoutTier {
   label: string; // z.B. "Herausragend"
@@ -93,11 +94,36 @@ export async function setSlotOverride(jobKey: string, maxSlots: number | null): 
   await writeJson(SLOTS_KEY, next);
 }
 
+// ── Job-Texte (Beschreibung + Büro-Anleitung) ───────────────────────────────
+
+export interface JobTextOverride { description?: string; officeGuideMarkdown?: string }
+
+export async function getJobTextOverrides(): Promise<Record<string, JobTextOverride>> {
+  return readJson<Record<string, JobTextOverride>>(TEXTS_KEY, {});
+}
+
+/** `null` für ein Feld = auf den Standardtext zurücksetzen. */
+export async function setJobTextOverride(jobKey: string, patch: { description?: string | null; officeGuideMarkdown?: string | null }): Promise<void> {
+  const all = await getJobTextOverrides();
+  const cur = { ...(all[jobKey] ?? {}) };
+  for (const key of ["description", "officeGuideMarkdown"] as const) {
+    if (patch[key] === undefined) continue;
+    if (patch[key] === null || !patch[key]!.trim()) delete cur[key];
+    else cur[key] = patch[key]!;
+  }
+  const next = { ...all };
+  if (Object.keys(cur).length === 0) delete next[jobKey];
+  else next[jobKey] = cur;
+  await writeJson(TEXTS_KEY, next);
+}
+
 export async function getEffectiveCommunityJobs(): Promise<CommunityJobDef[]> {
-  const overrides = await getSlotOverrides();
+  const [overrides, texts] = await Promise.all([getSlotOverrides(), getJobTextOverrides()]);
   return COMMUNITY_JOBS.map(job => ({
     ...job,
     maxSlots: overrides[job.key] ?? job.maxSlots,
+    description: texts[job.key]?.description ?? job.description,
+    officeGuideMarkdown: texts[job.key]?.officeGuideMarkdown ?? job.officeGuideMarkdown,
   }));
 }
 

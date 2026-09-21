@@ -262,7 +262,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
   const [postVotes, commentVotes] = await Promise.all([
     prisma.marketingPostVote.count({
       where: {
-        post: { authorId: userId },
+        post: { authorId: userId, hiddenByAdminAt: null },
         createdAt: { gte: weekStart, lt: weekEnd },
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },

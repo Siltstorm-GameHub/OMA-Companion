@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { getTestModeEnabled, setTestModeEnabled } from "@/lib/community-job-config";
 
 export async function GET() {
@@ -20,5 +21,6 @@ export async function PATCH(req: NextRequest) {
   if (typeof enabled !== "boolean") return NextResponse.json({ error: "enabled (boolean) erforderlich" }, { status: 400 });
 
   await setTestModeEnabled(enabled);
+  await logAdminAction(user, { action: "testmode_change", detail: { enabled } });
   return NextResponse.json({ ok: true });
 }

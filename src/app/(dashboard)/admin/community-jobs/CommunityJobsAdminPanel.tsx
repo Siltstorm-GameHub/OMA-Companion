@@ -11,7 +11,10 @@ import { formatBerlinDate } from "@/lib/time";
 
 interface JobRef { key: string; label: string; emoji: string }
 interface AdminApplication { id: string; jobKey: string; status: string; message: string | null; appliedAt: string; user: { id: string; username: string | null; name: string | null } }
-interface AdminMember { id: string; jobKey: string; status: string; contractEndAt: string; user: { id: string; username: string | null; name: string | null } }
+interface AdminMember {
+  id: string; jobKey: string; status: string; contractEndAt: string; badgeLevel?: number; lastContributionAt?: string | null; assignedAt?: string; warningReason?: string | null;
+  user: { id: string; username: string | null; name: string | null };
+}
 interface AdminDispute { kind: string; id: string; reason: string | null; voter: { username: string | null; name: string | null }; context: string; ownerId: string }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -86,6 +89,35 @@ export default function CommunityJobsAdminPanel({
     }
   }
 
+  /** WARN / CONTRACT / BADGE: Werte per Eingabedialog abfragen und an die Members-Route schicken. */
+  async function memberAction(id: string, action: "WARN" | "CONTRACT" | "BADGE") {
+    const body: Record<string, unknown> = { action };
+    if (action === "WARN") {
+      const reason = prompt("Grund der Verwarnung (geht an das Mitglied):");
+      if (!reason?.trim()) return;
+      body.reason = reason;
+    } else if (action === "CONTRACT") {
+      const days = prompt("Vertrag um wie viele Tage verschieben? (z.B. 30 = verlängern, -14 = kürzen)");
+      if (!days) return;
+      const reason = prompt("Grund (geht an das Mitglied):");
+      if (!reason?.trim()) return;
+      body.days = Number(days); body.reason = reason;
+    } else {
+      const level = prompt("Neue Ansehens-Stufe (1–4). Sie bleibt 28 Tage unverändert:");
+      if (!level) return;
+      const reason = prompt("Grund (nur fürs Protokoll):");
+      if (!reason?.trim()) return;
+      body.level = Number(level); body.reason = reason;
+    }
+    try {
+      await api(`/api/admin/community-jobs/members/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+      toast.success(action === "WARN" ? "Verwarnung ausgesprochen" : action === "CONTRACT" ? "Vertrag angepasst" : "Stufe gesetzt");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+
   async function resolveDispute(kind: string, id: string, resolution: "UPHELD" | "OVERTURNED") {
     try {
       await api("/api/admin/community-jobs/disputes", { method: "PATCH", body: JSON.stringify({ kind, voteId: id, resolution }) });
@@ -145,7 +177,8 @@ export default function CommunityJobsAdminPanel({
           {members.map(m => (
             <MemberRow key={m.id} member={m} jobLabel={jobLabel(m.jobKey)}
               waitlistForJob={waitlisted.filter(a => a.jobKey === m.jobKey)}
-              onRevoke={() => revoke(m.id)} onReassign={targetApplicationId => reassign(m.id, targetApplicationId)} />
+              onRevoke={() => revoke(m.id)} onReassign={targetApplicationId => reassign(m.id, targetApplicationId)}
+              onAction={action => memberAction(m.id, action)} />
           ))}
         </div>
       </section>
@@ -346,11 +379,14 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
 }
 
 function MemberRow({
-  member, jobLabel, waitlistForJob, onRevoke, onReassign,
+  member, jobLabel, waitlistForJob, onRevoke, onReassign, onAction,
 }: {
   member: AdminMember; jobLabel: string; waitlistForJob: AdminApplication[];
   onRevoke: () => void; onReassign: (targetApplicationId: string) => void;
+  onAction: (action: "WARN" | "CONTRACT" | "BADGE") => void;
 }) {
+  const lastActivity = new Date(member.lastContributionAt ?? member.assignedAt ?? member.contractEndAt);
+  const idleDays = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
   const [reassigning, setReassigning] = useState(false);
   const [target, setTarget] = useState(waitlistForJob[0]?.id ?? "");
 
@@ -362,9 +398,15 @@ function MemberRow({
           <p className="text-[11px] text-gray-500">
             {member.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
             Vertrag bis {formatBerlinDate(member.contractEndAt)}
+            {member.badgeLevel ? ` · Stufe ${member.badgeLevel}` : ""}
+            {` · letzter Beitrag vor ${idleDays} Tagen`}
           </p>
+          {member.status === "WARNED" && member.warningReason && <p className="text-[11px] text-amber-400/90">Grund: {member.warningReason}</p>}
         </div>
         <div className="flex gap-1.5 shrink-0">
+          <Button size="sm" variant="ghost" onClick={() => onAction("WARN")}>Verwarnen</Button>
+          <Button size="sm" variant="ghost" onClick={() => onAction("CONTRACT")}>Vertrag</Button>
+          <Button size="sm" variant="ghost" onClick={() => onAction("BADGE")}>Stufe</Button>
           {waitlistForJob.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => setReassigning(v => !v)}>Übergeben</Button>
           )}

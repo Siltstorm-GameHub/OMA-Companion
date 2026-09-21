@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { getVoteBonusTiers, setVoteBonusTiers, type VoteBonusTier } from "@/lib/community-job-config";
 
 /** Bewusst für jeden angemeldeten User lesbar (nicht nur Admins) — die Büro-Erklärung im Profil-Reiter zeigt die aktuellen Stufen an. */
@@ -24,5 +25,6 @@ export async function PATCH(req: NextRequest) {
   if (!valid) return NextResponse.json({ error: "Ungültige Stufen" }, { status: 400 });
 
   await setVoteBonusTiers(tiers);
+  await logAdminAction(user, { action: "bonus_change", targetType: "job", detail: tiers });
   return NextResponse.json({ ok: true });
 }

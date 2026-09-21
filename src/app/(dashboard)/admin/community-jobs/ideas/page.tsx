@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/roles";
+import AdminJobsNav from "../AdminJobsNav";
 import IdeasBoardClient from "./IdeasBoardClient";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +9,10 @@ export default async function AdminIdeasPage() {
   return (
     <div className="space-y-4">
       <div>
-        <Link href="/admin/community-jobs" className="text-xs text-gray-500 hover:text-teal-400 transition-colors">← Community-Jobs</Link>
-        <h1 className="text-lg font-bold text-white mt-1">Ideen — Team-Ansicht</h1>
+        <h1 className="text-lg font-bold text-white">Community-Jobs — Ideen</h1>
         <p className="text-xs text-gray-500 mt-0.5">Ideen per Drag &amp; Drop (oder Auswahl) in die passende Spalte schieben. Der Autor wird bei jedem Statuswechsel benachrichtigt.</p>
       </div>
+      <AdminJobsNav />
       <IdeasBoardClient />
     </div>
   );

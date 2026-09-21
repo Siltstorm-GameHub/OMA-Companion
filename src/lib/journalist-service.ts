@@ -379,14 +379,14 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
   const [reportVotes, contributionVotes, commentVotes] = await Promise.all([
     prisma.jobReportVote.count({
       where: {
-        report: { authorId: userId },
+        report: { authorId: userId, hiddenByAdminAt: null },
         createdAt: { gte: weekStart, lt: weekEnd },
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },
     }),
     prisma.jobReportContributionVote.count({
       where: {
-        contribution: { authorId: userId },
+        contribution: { authorId: userId, report: { hiddenByAdminAt: null } },
         createdAt: { gte: weekStart, lt: weekEnd },
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },

@@ -98,7 +98,7 @@ export async function unvoteGuide(voterId: string, guideId: string): Promise<Vot
 export async function countGuideVoteScore(userId: string, weekStart: Date, weekEnd: Date): Promise<number> {
   return prisma.coachGuideVote.count({
     where: {
-      guide: { authorId: userId }, createdAt: { gte: weekStart, lt: weekEnd },
+      guide: { authorId: userId, hiddenByAdminAt: null }, createdAt: { gte: weekStart, lt: weekEnd },
       OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
     },
   });

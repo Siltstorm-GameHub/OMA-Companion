@@ -119,7 +119,7 @@ export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadg
 }
 
 export interface CommunityJobCatalogEntry {
-  key: string; label: string; emoji: string; description: string;
+  key: string; label: string; emoji: string; description: string; officeGuideMarkdown: string;
   maxSlots: number; filledSlots: number;
   holders: { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil: string | null; specialties: string[] }[];
   waitlistCount: number;
@@ -156,7 +156,7 @@ export async function getCommunityJobCatalog(): Promise<CommunityJobCatalogEntry
     }));
 
     entries.push({
-      key: job.key, label: job.label, emoji: job.emoji, description: job.description,
+      key: job.key, label: job.label, emoji: job.emoji, description: job.description, officeGuideMarkdown: job.officeGuideMarkdown,
       maxSlots: job.maxSlots, filledSlots: members.length, holders, waitlistCount,
     });
   }
@@ -593,6 +593,47 @@ export async function revokeMembership(memberId: string, reason: string): Promis
   return { ok: true };
 }
 
+/** Von Hand verwarnen (z.B. nach Regelverstoß). Die Verwarnung hebt sich wie die automatische auf, sobald wieder beigetragen wird. */
+export async function adminWarnMember(memberId: string, reason: string): Promise<{ ok: true } | { error: string }> {
+  const member = await prisma.communityJobMember.findUnique({ where: { id: memberId } });
+  if (!member || !["ACTIVE", "WARNED"].includes(member.status)) return { error: "Aktive Mitgliedschaft nicht gefunden" };
+  const clean = reason.trim().slice(0, 300);
+  if (!clean) return { error: "Grund erforderlich" };
+  await prisma.communityJobMember.update({
+    where: { id: memberId }, data: { status: "WARNED", warnedAt: new Date(), warningReason: clean },
+  });
+  notifyJob("community_job_warned", member.userId, member.jobKey, { "{reason}": clean });
+  return { ok: true };
+}
+
+/** Vertragsende verschieben (`days` positiv = verlängern, negativ = kürzen). Ein sofortiges Ende ist der Job-Entzug. */
+export async function adminAdjustContract(memberId: string, days: number, reason: string): Promise<{ ok: true; contractEndAt: Date } | { error: string }> {
+  if (!Number.isInteger(days) || days === 0 || days < -90 || days > 180) return { error: "Tage müssen zwischen -90 und 180 liegen (nicht 0)" };
+  const member = await prisma.communityJobMember.findUnique({ where: { id: memberId } });
+  if (!member || !["ACTIVE", "WARNED"].includes(member.status)) return { error: "Aktive Mitgliedschaft nicht gefunden" };
+  const next = addDays(member.contractEndAt, days);
+  if (next.getTime() < Date.now() + 86_400_000) return { error: "Der Vertrag würde sofort enden — bitte stattdessen den Job entziehen" };
+  await prisma.communityJobMember.update({ where: { id: memberId }, data: { contractEndAt: next } });
+  const label = getCommunityJob(member.jobKey)?.label ?? member.jobKey;
+  dispatchNotification("community_job_contract_adjusted", {
+    users: [member.userId],
+    placeholders: { "{jobLabel}": label, "{date}": next.toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" }), "{reason}": reason.trim().slice(0, 200) },
+  }).catch(() => {});
+  return { ok: true, contractEndAt: next };
+}
+
+/** Ansehens-Stufe (1–4) von Hand setzen; der Wochen-Cron lässt sie danach 28 Tage unverändert. */
+export async function adminSetBadgeLevel(memberId: string, level: number): Promise<{ ok: true } | { error: string }> {
+  if (!Number.isInteger(level) || level < 1 || level > 4) return { error: "Stufe muss zwischen 1 und 4 liegen" };
+  const member = await prisma.communityJobMember.findUnique({ where: { id: memberId } });
+  if (!member || !["ACTIVE", "WARNED"].includes(member.status)) return { error: "Aktive Mitgliedschaft nicht gefunden" };
+  await prisma.communityJobMember.update({
+    where: { id: memberId },
+    data: { badgeLevel: level, peakBadgeLevel: Math.max(member.peakBadgeLevel, level), badgeOverrideUntil: addDays(new Date(), 28) },
+  });
+  return { ok: true };
+}
+
 /**
  * Erinnerung, wenn der Vertrag in den nächsten CONTRACT_REMINDER_DAYS abläuft und
  * noch nicht verlängert wurde. Läuft täglich, sendet aber nur einmal (nutzt
@@ -629,6 +670,7 @@ export async function runBadgeLevelUpdate(referenceDate: Date = new Date()): Pro
 
   let updated = 0;
   for (const m of members) {
+    if (m.badgeOverrideUntil && m.badgeOverrideUntil > referenceDate) continue; // vom Team von Hand gesetzt
     if (!tiersByJob.has(m.jobKey)) tiersByJob.set(m.jobKey, await getPayoutTiers(m.jobKey));
     const tiers = [...(tiersByJob.get(m.jobKey) ?? [])].sort((a, b) => a.minScore - b.minScore);
 

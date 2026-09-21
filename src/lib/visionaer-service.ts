@@ -475,7 +475,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
   const [agg, commentVotes] = await Promise.all([
     prisma.communityIdeaVote.aggregate({
       where: {
-        idea: { authorId: userId },
+        idea: { authorId: userId, hiddenByAdminAt: null },
         createdAt: { gte: weekStart, lt: weekEnd },
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },

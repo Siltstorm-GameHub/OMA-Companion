@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/roles";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import {
@@ -6,6 +5,8 @@ import {
 } from "@/lib/community-job-config";
 import CommunityJobsAdminPanel from "./CommunityJobsAdminPanel";
 import AdminContentSection from "./AdminContentSection";
+import AdminJobsNav from "./AdminJobsNav";
+import JobHealthBlock from "./JobHealthBlock";
 
 export default async function AdminCommunityJobsPage() {
   await requireRole("moderator");
@@ -19,8 +20,9 @@ export default async function AdminCommunityJobsPage() {
       <div>
         <h1 className="text-lg font-bold text-white">Community-Jobs</h1>
         <p className="text-xs text-gray-500 mt-0.5">Bewerbungen, Mitglieder, Anfechtungen und Einstellungen für Journalist, Fotograf, Marketing Manager, Coach und Visionär.</p>
-        <Link href="/admin/community-jobs/ideas" className="inline-block mt-2 text-xs text-teal-400 hover:text-teal-300 transition-colors">💡 Ideen-Team-Ansicht (Spalten nach Status) →</Link>
       </div>
+      <AdminJobsNav />
+      <JobHealthBlock />
       <CommunityJobsAdminPanel
         jobs={COMMUNITY_JOBS.map(j => ({ key: j.key, label: j.label, emoji: j.emoji }))}
         effectiveSlots={Object.fromEntries(effectiveJobs.map(j => [j.key, j.maxSlots]))}

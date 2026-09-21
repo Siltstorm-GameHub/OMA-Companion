@@ -646,3 +646,32 @@ CREATE TABLE IF NOT EXISTS "IdeaDigest" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "IdeaDigest_period_key" ON "IdeaDigest"("period");
 ALTER TABLE "CommunityIdeaVote" ADD COLUMN IF NOT EXISTS "revotedAt" TIMESTAMP(3);
+
+ALTER TABLE "CommunityJobMember" ADD COLUMN IF NOT EXISTS "badgeOverrideUntil" TIMESTAMP(3);
+
+CREATE TABLE IF NOT EXISTS "CommunityJobAuditLog" (
+  "id"           TEXT         NOT NULL PRIMARY KEY,
+  "actorId"      TEXT         NOT NULL,
+  "actorName"    TEXT,
+  "action"       TEXT         NOT NULL,
+  "targetType"   TEXT,
+  "targetId"     TEXT,
+  "targetUserId" TEXT,
+  "targetLabel"  TEXT,
+  "jobKey"       TEXT,
+  "reason"       TEXT,
+  "detail"       TEXT,
+  "createdAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "CommunityJobAuditLog_createdAt_idx" ON "CommunityJobAuditLog"("createdAt");
+CREATE INDEX IF NOT EXISTS "CommunityJobAuditLog_action_idx" ON "CommunityJobAuditLog"("action");
+CREATE INDEX IF NOT EXISTS "CommunityJobAuditLog_targetUserId_idx" ON "CommunityJobAuditLog"("targetUserId");
+
+CREATE TABLE IF NOT EXISTS "CommunityJobCronRun" (
+  "id"         TEXT         NOT NULL PRIMARY KEY,
+  "ranAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "durationMs" INTEGER      NOT NULL,
+  "hadError"   BOOLEAN      NOT NULL DEFAULT false,
+  "resultJson" TEXT         NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "CommunityJobCronRun_ranAt_idx" ON "CommunityJobCronRun"("ranAt");

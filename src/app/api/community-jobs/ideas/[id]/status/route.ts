@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { setIdeaLifecycle } from "@/lib/visionaer-service";
+import { logAdminAction } from "@/lib/community-admin-audit";
 
 /** Team (Moderator/Admin): Status einer Idee setzen (Offen / In Prüfung / Wird umgesetzt / Umgesetzt / Abgelehnt). */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,5 +14,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof lifecycle !== "string") return NextResponse.json({ error: "Status erforderlich" }, { status: 400 });
   const result = await setIdeaLifecycle(user.id, id, lifecycle, typeof note === "string" ? note : undefined);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+  await logAdminAction(user, { action: "idea_status", targetType: "idea", targetId: id, reason: typeof note === "string" ? note : undefined, detail: { lifecycle } });
   return NextResponse.json(result);
 }

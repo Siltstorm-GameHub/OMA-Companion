@@ -3,6 +3,7 @@ import "@/lib/community-job-bootstrap";
 import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck, runBadgeLevelUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
 import { closeExpiredIdeas, postIdeaDigests } from "@/lib/visionaer-service";
+import { recordCronRun } from "@/lib/community-admin-overview";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const startedAt = Date.now();
   const payout = await step("payout", () => runWeeklyPayout());
   // Direkt nach dem Payout, damit die neue Woche schon in die Stufe einfließt — und vor dem Vertragsablauf,
   // damit auslaufende Verträge ihre letzte Stufe (fürs "Ehem."-Zeichen) festhalten.
@@ -51,5 +53,7 @@ export async function GET(req: NextRequest) {
 
   const hasError = [payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  return NextResponse.json({ payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests }, { status: hasError ? 500 : 200 });
+  const result = { payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests };
+  await recordCronRun(Date.now() - startedAt, hasError, result);
+  return NextResponse.json(result, { status: hasError ? 500 : 200 });
 }

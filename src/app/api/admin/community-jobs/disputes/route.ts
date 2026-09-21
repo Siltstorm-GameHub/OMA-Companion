@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { resolveDispute, type VoteKind } from "@/lib/job-dispute-service";
 import { prisma } from "@/lib/prisma";
 
@@ -79,5 +80,6 @@ export async function PATCH(req: NextRequest) {
 
   const result = await resolveDispute(kind, voteId, user.id, resolution);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+  await logAdminAction(user, { action: resolution === "UPHELD" ? "dispute_upheld" : "dispute_overturned", targetType: kind, targetId: voteId });
   return NextResponse.json(result);
 }

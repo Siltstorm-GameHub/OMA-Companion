@@ -1254,6 +1254,7 @@ model CommunityJobMember {
   badgeLevel          Int       @default(1) // Ansehens-Stufe 1–4 (Badge hinter dem Usernamen), wöchentlich neu berechnet
   peakBadgeLevel      Int       @default(1) // höchste je erreichte Stufe dieser Amtszeit — bestimmt das "Ehem."-Zeichen
   handedOffFromUserId String? // Snapshot-Info für Transparenz-Historie, kein FK
+  badgeOverrideUntil  DateTime? // Admin hat die Stufe von Hand gesetzt — der Wochen-Cron lässt sie bis dahin unverändert
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -2242,3 +2243,33 @@ model BattleQueueEntry {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+/// Protokoll aller Admin-/Moderator-Aktionen in den Community-Jobs (Wer, Was, Wann, Grund).
+model CommunityJobAuditLog {
+  id          String   @id @default(cuid())
+  actorId     String
+  actorName   String?
+  action      String
+  targetType  String? // member | application | report | asset | marketing_post | idea | guide | comment | album | campaign | photo_request | job | payout
+  targetId    String?
+  targetUserId String?
+  targetLabel String? // Name/Titel zum Zeitpunkt der Aktion (Snapshot)
+  jobKey      String?
+  reason      String?
+  detail      String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetUserId])
+}
+
+/// Ergebnis jedes Laufs des täglichen Community-Job-Crons — damit der Admin sieht, ob und was gelaufen ist.
+model CommunityJobCronRun {
+  id         String   @id @default(cuid())
+  ranAt      DateTime @default(now())
+  durationMs Int
+  hadError   Boolean  @default(false)
+  resultJson String
+
+  @@index([ranAt])
+}

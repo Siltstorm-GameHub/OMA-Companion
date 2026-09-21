@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { logAdminAction } from "@/lib/community-admin-audit";
 import { getAnnouncementChannelOverrides, setAnnouncementChannel } from "@/lib/community-job-config";
 
 export const dynamic = "force-dynamic";
@@ -29,5 +30,6 @@ export async function PATCH(req: NextRequest) {
   }
 
   await setAnnouncementChannel(jobKey, channelId);
+  await logAdminAction(user, { action: "channel_change", targetType: "job", jobKey, detail: { channelId } });
   return NextResponse.json({ ok: true });
 }
