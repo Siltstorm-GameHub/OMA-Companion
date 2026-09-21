@@ -15,12 +15,14 @@ import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
-import { JournalistStatsBlock, JournalistExtras } from "@/components/community-jobs/JournalistTools";
+import { JournalistStatsBlock, JournalistExtras, PhotoRequestsBlock } from "@/components/community-jobs/JournalistTools";
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
+import PhotoRequestButton from "@/components/community-jobs/PhotoRequestButton";
+import MediaPickerPanel from "@/components/community-jobs/MediaPickerPanel";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
-import { MarketingStatsBlock, MarketingCampaignsBlock } from "@/components/community-jobs/MarketingTools";
+import { MarketingStatsBlock, MarketingCampaignsBlock, PromotionRequestList } from "@/components/community-jobs/MarketingTools";
 import {
   MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
 } from "@/lib/marketing-templates";
@@ -222,6 +224,8 @@ interface PostPrefill {
   recap?: "week" | "month";
   /** Marketing: Werbetext-Baustein (announce | reminder | lastspots | today) und Kampagne, zu der der Post gehört. */
   template?: string; campaignId?: string;
+  /** Marketing: Post zu einem Coach-Trainings-Termin. */
+  trainingSessionId?: string;
   /** Marketing "Als Vorlage": Bild und Titel des ursprünglichen Events (wird im Text ersetzt). */
   assetId?: string; imageUrl?: string; fromEventTitle?: string;
   /** Fotograf: Monats-Collage-Assistent direkt öffnen. */
@@ -254,7 +258,7 @@ const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string }[];
+  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string; trainingSessionId?: string }[];
   steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
   steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
 }
@@ -494,6 +498,8 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                 <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung; sie hebt sich auf, sobald du wieder beiträgst.</li>
                 <li>Dein Ansehen (Stufe 1–4, aus deinen Wochenergebnissen) erscheint als Abzeichen hinter deinem Namen und kann auch sinken.</li>
                 <li>Beiträge, die das Team wegen eines Regelverstoßes ausblendet, zählen nicht fürs Gehalt.</li>
+                <li>Greifen andere Jobs deinen Beitrag auf (Titelbild, Werbe-Post, Anleitung, Bericht oder Idee), gibt es einen kleinen Zusammenarbeits-Bonus: höchstens 3× pro Woche, und nur, wenn du diese Woche schon Bewertungen bekommen hast.</li>
+                <li>Auf der Turnierseite zeigt „Community-Team zu diesem Event“, was schon erledigt ist und was noch fehlt.</li>
               </ul>
             </div>
           )}
@@ -550,6 +556,8 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                           <Button size="sm" variant="outline"
                             onClick={() => (e.recap
                               ? openCreateForm(undefined, { recap: e.recap })
+                              : e.trainingSessionId
+                              ? openCreateForm(undefined, { trainingSessionId: e.trainingSessionId, template: "training" })
                               : e.scopeEventId
                               ? openCreateForm(e.scopeEventId, { template: e.postTemplate })
                               : e.collage
@@ -847,6 +855,7 @@ function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onD
       <CoachAttendance onMenteeAdded={() => setMenteeKey(k => k + 1)} />
       <CoachNewcomers onMenteeAdded={() => setMenteeKey(k => k + 1)} />
       <CoachMentees refreshKey={menteeKey} />
+      <PhotoRequestsBlock />
       <CoachGuideList />
       <CoachRatingsReceived />
     </div>
@@ -872,6 +881,8 @@ function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
     return (
       <div className="space-y-4">
         <MarketingStatsBlock />
+        <PhotoRequestsBlock />
+        <PromotionRequestList onWrite={r => onCompose(r.session.eventId ?? undefined, { trainingSessionId: r.session.id, template: "training" })} />
         <MarketingCampaignsBlock onCompose={(eventId, p) => onCompose(eventId, p)} />
         <MarketingPostList onDuplicate={onDuplicate} />
       </div>
@@ -882,6 +893,7 @@ function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
     return (
       <div className="space-y-4">
         <VisionaerStatsBlock />
+        <PhotoRequestsBlock />
         <IdeaList />
       </div>
     );
@@ -1241,6 +1253,19 @@ function MeetingLink({ url }: { url?: string | null }) {
 }
 
 function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPrefill) => void }) {
+  const [promo, setPromo] = useState<{ requested: string[]; promoted: string[] }>({ requested: [], promoted: [] });
+  function loadPromo() {
+    api<{ requested: string[]; promoted: string[] }>("/api/community-jobs/promotion-requests?scope=mine").then(setPromo).catch(() => {});
+  }
+  useEffect(loadPromo, []);
+  async function requestPromo(sessionId: string) {
+    const note = prompt("Kurze Notiz für die Marketing Manager (optional, z.B. Zielgruppe):") ?? undefined;
+    try {
+      await api("/api/community-jobs/promotion-requests", { method: "POST", body: JSON.stringify({ trainingSessionId: sessionId, note }) });
+      toast.success("Werbe-Anfrage an die Marketing Manager geschickt");
+      loadPromo();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
   const [items, setItems] = useState<TrainingSession[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -1375,6 +1400,11 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  {promo.promoted.includes(s.id)
+                    ? <span className="text-[10px] text-emerald-400">✓ beworben</span>
+                    : promo.requested.includes(s.id)
+                      ? <span className="text-[10px] text-amber-400">Werbung angefragt</span>
+                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Werbung anfragen</button>}
                   <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
                 </span>
               </div>
@@ -1586,6 +1616,13 @@ function GuideForm({ onDone }: { onDone: () => void }) {
   const [game, setGame] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [picker, setPicker] = useState(false);
+
+  function insertImage(asset: { url: string; caption: string | null }) {
+    const alt = (asset.caption ?? "Bild").replace(/[\[\]]/g, "");
+    setBody(b => `${b.trimEnd()}${b.trim() ? "\n\n" : ""}![${alt}](${asset.url})\n\n`);
+    setPicker(false);
+  }
 
   async function submit() {
     setBusy(true);
@@ -1606,8 +1643,15 @@ function GuideForm({ onDone }: { onDone: () => void }) {
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <input value={game} onChange={e => setGame(e.target.value)} maxLength={40} placeholder="Spiel (optional)"
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
-      <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar."
+      <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+          <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
+        </button>
+        <PhotoRequestButton defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
+      </div>
+      {picker && <MediaPickerPanel onPick={insertImage} onClose={() => setPicker(false)} />}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
         <Button loading={busy} disabled={!title.trim() || !body.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
@@ -1905,7 +1949,8 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
   const [related, setRelated] = useState<{ id: string; caption: string | null; url: string }[]>([]);
   const [assetQuery, setAssetQuery] = useState("");
   const [facts, setFacts] = useState<MarketingEventFacts | null>(null);
-  const [templateId, setTemplateId] = useState<MarketingTemplateId>(isMarketingTemplate(prefill?.template) ? prefill.template : "announce");
+  const trainingSessionId = prefill?.trainingSessionId;
+  const [templateId, setTemplateId] = useState<MarketingTemplateId>(isMarketingTemplate(prefill?.template) ? prefill.template : trainingSessionId ? "training" : "announce");
   const [usedTemplate, setUsedTemplate] = useState<MarketingTemplateId | undefined>(undefined);
   const [includeLink, setIncludeLink] = useState(true);
   const [preview, setPreview] = useState(false);
@@ -1935,7 +1980,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
     api<EventOption[]>("/api/events").then(all => {
       const upcoming = all.filter(e => new Date(e.startAt).getTime() > Date.now());
       setEvents(upcoming);
-      if (!initialEventId && upcoming[0]) setEventId(upcoming[0].id);
+      if (!initialEventId && !prefill?.trainingSessionId && upcoming[0]) setEventId(upcoming[0].id);
     }).catch(() => {});
   }, []);
 
@@ -1951,12 +1996,13 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
 
   // Event-Fakten laden (Datum, Spiel, Anmeldungen, Link) — Grundlage für die Vorlagen.
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId && !trainingSessionId) return;
     let cancelled = false;
-    api<MarketingEventFacts>(`/api/community-jobs/marketing-posts/facts?eventId=${encodeURIComponent(eventId)}`)
+    const query = trainingSessionId ? `trainingSessionId=${encodeURIComponent(trainingSessionId)}` : `eventId=${encodeURIComponent(eventId)}`;
+    api<MarketingEventFacts>(`/api/community-jobs/marketing-posts/facts?${query}`)
       .then(f => { if (!cancelled) setFacts(f); }).catch(() => { if (!cancelled) setFacts(null); });
     return () => { cancelled = true; };
-  }, [eventId]);
+  }, [eventId, trainingSessionId]);
 
   // Passende Bilder zum Event (gleiches Event oder gleiches Spiel) — nur im Mediathek-Modus nötig.
   useEffect(() => {
@@ -1999,7 +2045,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
     try {
       await api("/api/community-jobs/marketing-posts", {
         method: "POST", body: JSON.stringify({
-          eventId, caption: withLink(finalText, prefill?.link),
+          eventId: eventId || undefined, trainingSessionId, caption: withLink(finalText, prefill?.link),
           campaignId: prefill?.campaignId, kind: usedTemplate ?? (isMarketingTemplate(prefill?.template) ? prefill.template : undefined),
           assetId: imageMode === "library" ? (assetId || undefined) : undefined,
           imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
@@ -2015,15 +2061,19 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
     }
   }
 
-  if (events.length === 0) {
+  if (events.length === 0 && !trainingSessionId) {
     return <p className="text-xs text-gray-500">Keine bevorstehenden Events gefunden — ohne Event ist kein Werbe-Post möglich.</p>;
   }
 
   return (
     <div className="space-y-3">
-      <Select value={eventId} onChange={e => setEventId(e.target.value)} disabled={!!prefill?.campaignId} className="w-full">
-        {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
-      </Select>
+      {trainingSessionId ? (
+        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
+      ) : (
+        <Select value={eventId} onChange={e => setEventId(e.target.value)} disabled={!!prefill?.campaignId} className="w-full">
+          {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
+        </Select>
+      )}
 
       <div className="flex gap-1.5">
         <Button size="sm" variant={imageMode === "none" ? "primary" : "outline"} onClick={() => setImageMode("none")}>Kein Bild</Button>
@@ -2033,6 +2083,8 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
         <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
         <Button size="sm" variant={imageMode === "upload" ? "primary" : "outline"} onClick={() => setImageMode("upload")}>Eigenes Bild hochladen</Button>
       </div>
+
+      <PhotoRequestButton eventId={eventId || undefined} defaultText={facts ? `Bild für: ${facts.title}` : ""} />
 
       {imageMode === "library" && (
         <div className="space-y-1.5">
@@ -2088,7 +2140,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
 
       <div className="flex flex-wrap items-center gap-1.5">
         <Select size="sm" value={templateId} onChange={e => setTemplateId(e.target.value as MarketingTemplateId)} aria-label="Werbetext-Baustein">
-          {MARKETING_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          {MARKETING_TEMPLATES.filter(t => (t.id === "training") === !!trainingSessionId).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
         </Select>
         <Button size="sm" variant="outline" disabled={!facts} onClick={applyTemplate}>Text aus Vorlage</Button>
         <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">

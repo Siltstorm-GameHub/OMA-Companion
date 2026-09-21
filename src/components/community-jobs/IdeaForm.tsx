@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import MarkdownLite from "./MarkdownLite";
 import EmojiPanel from "./EmojiPicker";
+import PhotoRequestButton from "./PhotoRequestButton";
 import { mentionToken } from "@/lib/report-mentions";
 import { isVideoUrl } from "@/lib/upload-limits";
 import {
@@ -265,6 +266,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
             </>
           )}
         </div>
+        <PhotoRequestButton eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
         {panel === "library" && (
           <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">

@@ -11,8 +11,14 @@ const DESCRIPTION_MAX = 300;
 const MAX_OPEN_PER_REQUESTER = 3;
 const MAX_PER_DAY = 5;
 
-async function isActiveMember(userId: string, jobKey: string): Promise<boolean> {
-  return !!(await prisma.communityJobMember.findFirst({ where: { userId, jobKey, status: { in: ["ACTIVE", "WARNED"] } } }));
+/** Jobs, die Bildwünsche an die Fotografen stellen dürfen (der Fotograf selbst lädt ja hoch). */
+const REQUESTER_JOBS = ["journalist", "marketing_manager", "coach", "visionaer"];
+
+async function activeRequesterJob(userId: string): Promise<string | null> {
+  const member = await prisma.communityJobMember.findFirst({
+    where: { userId, jobKey: { in: REQUESTER_JOBS }, status: { in: ["ACTIVE", "WARNED"] } }, select: { jobKey: true },
+  });
+  return member?.jobKey ?? null;
 }
 async function nameOf(userId: string): Promise<string> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { username: true, name: true } }).catch(() => null);
@@ -22,7 +28,8 @@ async function nameOf(userId: string): Promise<string> {
 export type PhotoRequestResult = { ok: true } | { error: string };
 
 export async function createPhotoRequest(requesterId: string, data: { eventId?: string; description: string }): Promise<PhotoRequestResult> {
-  if (!(await isActiveMember(requesterId, "journalist"))) return { error: "Nur aktive Journalisten können Bilder anfragen" };
+  const requesterJob = await activeRequesterJob(requesterId);
+  if (!requesterJob) return { error: "Bilder anfragen können aktive Journalisten, Marketing Manager, Coaches und Visionäre" };
   const description = data.description.trim();
   if (!description) return { error: "Bitte beschreibe kurz, welches Bild du brauchst" };
   if (description.length > DESCRIPTION_MAX) return { error: `Beschreibung ist zu lang (max. ${DESCRIPTION_MAX} Zeichen)` };
@@ -41,7 +48,7 @@ export async function createPhotoRequest(requesterId: string, data: { eventId?: 
   if (open >= MAX_OPEN_PER_REQUESTER) return { error: `Du hast schon ${MAX_OPEN_PER_REQUESTER} offene Bildwünsche` };
   if (today >= MAX_PER_DAY) return { error: `Höchstens ${MAX_PER_DAY} Bildwünsche pro Tag` };
 
-  await prisma.photoRequest.create({ data: { requesterId, eventId: data.eventId || null, description } });
+  await prisma.photoRequest.create({ data: { requesterId, eventId: data.eventId || null, description, requesterJob } });
 
   const fotografen = await prisma.communityJobMember.findMany({
     where: { jobKey: "fotograf", status: { in: ["ACTIVE", "WARNED"] } }, select: { userId: true },

@@ -10,7 +10,7 @@ interface PostRow {
   id: string; caption: string; imageUrl: string | null; createdAt: Date; adminConfirmedPosted: boolean;
   asset: { url: string } | null; _count: { votes: number };
   author?: { username: string | null; name: string | null };
-  event?: { title: string };
+  event?: { title: string } | null;
 }
 
 const SELECT = {

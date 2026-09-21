@@ -24,6 +24,7 @@ import EventSummarySection from "@/components/EventSummarySection";
 import { EventReportsSection } from "@/components/JournalistReportLists";
 import { EventGallerySection } from "@/components/FotografGalleries";
 import { EventMarketingSection } from "@/components/MarketingLists";
+import EventJobPackage from "@/components/EventJobPackage";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import RegisterButton from "@/app/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
@@ -1024,6 +1025,7 @@ export default async function TournamentDetailPage({
         </div>
       )}
 
+      <EventJobPackage eventId={event.id} />
       <EventMarketingSection eventId={event.id} />
       <div className="mb-5"><IdeaFromButton label="Idee zu diesem Event" prefill={{ title: `Idee zu \u201e${event.title}\u201c`, eventId: event.id }} /></div>
       <EventGallerySection eventId={event.id} />

@@ -675,3 +675,21 @@ CREATE TABLE IF NOT EXISTS "CommunityJobCronRun" (
   "resultJson" TEXT         NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "CommunityJobCronRun_ranAt_idx" ON "CommunityJobCronRun"("ranAt");
+
+ALTER TABLE "MarketingPost" ALTER COLUMN "eventId" DROP NOT NULL;
+ALTER TABLE "MarketingPost" ADD COLUMN IF NOT EXISTS "trainingSessionId" TEXT;
+ALTER TABLE "PhotoRequest" ADD COLUMN IF NOT EXISTS "requesterJob" TEXT;
+
+CREATE TABLE IF NOT EXISTS "PromotionRequest" (
+  "id"                TEXT         NOT NULL PRIMARY KEY,
+  "requesterId"       TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+  "trainingSessionId" TEXT         NOT NULL,
+  "note"              TEXT,
+  "status"            TEXT         NOT NULL DEFAULT 'OPEN',
+  "postId"            TEXT,
+  "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "fulfilledAt"       TIMESTAMP(3)
+);
+CREATE INDEX IF NOT EXISTS "PromotionRequest_status_createdAt_idx" ON "PromotionRequest"("status", "createdAt");
+CREATE INDEX IF NOT EXISTS "PromotionRequest_trainingSessionId_idx" ON "PromotionRequest"("trainingSessionId");
+CREATE INDEX IF NOT EXISTS "PromotionRequest_requesterId_idx" ON "PromotionRequest"("requesterId");

@@ -21,13 +21,15 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { eventId, caption, assetId, imageUrl, campaignId, kind } = await req.json().catch(() => ({}));
-  if (typeof eventId !== "string" || typeof caption !== "string") {
-    return NextResponse.json({ error: "Event und Text erforderlich" }, { status: 400 });
+  const { eventId, trainingSessionId, caption, assetId, imageUrl, campaignId, kind } = await req.json().catch(() => ({}));
+  const hasEvent = typeof eventId === "string" && eventId;
+  const hasTraining = typeof trainingSessionId === "string" && trainingSessionId;
+  if ((!hasEvent && !hasTraining) || typeof caption !== "string") {
+    return NextResponse.json({ error: "Event (oder Trainings-Termin) und Text erforderlich" }, { status: 400 });
   }
 
   const result = await createMarketingPost(user.id, {
-    eventId, caption,
+    eventId: hasEvent ? eventId : undefined, trainingSessionId: hasTraining ? trainingSessionId : undefined, caption,
     assetId: typeof assetId === "string" ? assetId : undefined,
     imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
     campaignId: typeof campaignId === "string" && campaignId ? campaignId : undefined,

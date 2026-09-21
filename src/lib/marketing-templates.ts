@@ -7,6 +7,7 @@ export const MARKETING_TEMPLATES = [
   { id: "reminder", label: "Erinnerung" },
   { id: "lastspots", label: "Letzte Plätze" },
   { id: "today", label: "Heute geht\u2019s los" },
+  { id: "training", label: "Trainings-Termin" },
 ] as const;
 
 export type MarketingTemplateId = (typeof MARKETING_TEMPLATES)[number]["id"];
@@ -17,6 +18,8 @@ export function isMarketingTemplate(id: unknown): id is MarketingTemplateId {
 
 export interface MarketingEventFacts {
   id: string; title: string; game: string | null; startAt: string; registered: number; url: string;
+  /** true = Coach-Trainings-Termin statt Event (Anmeldezahl = Trainings-Anmeldungen). */
+  training?: boolean;
 }
 
 const LINK_PREFIX = "\u{1F449} Jetzt anmelden: ";
@@ -42,6 +45,8 @@ export function buildMarketingText(templateId: MarketingTemplateId, f: Marketing
   const people = f.registered > 0 ? `${f.registered} ${f.registered === 1 ? "Anmeldung" : "Anmeldungen"} bisher.` : "Sei von Anfang an dabei!";
 
   switch (templateId) {
+    case "training":
+      return `\u{1F393} Training: ${f.title}\n${when}${game}\n\nOffen für alle Spieler \u2014 ideal für Einsteiger. ${f.registered > 0 ? `${f.registered} ${f.registered === 1 ? "Anmeldung" : "Anmeldungen"} bisher.` : "Sei dabei!"}\nAnmelden kannst du dich im Profil unter Community-Jobs.`;
     case "reminder":
       return `\u23F0 Nicht vergessen: ${f.title}!\n${when}${game}\n\nMelde dich an, solange noch Platz ist. ${people}`;
     case "lastspots":

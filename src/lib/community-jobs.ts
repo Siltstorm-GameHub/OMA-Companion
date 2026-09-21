@@ -39,7 +39,8 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "**Im Büro**\n" +
       "- **Empfehlungen** zeigen dir Events ohne Bericht (große zuerst), Events von heute, alte Entwürfe, Berichte ohne Titelbild, neue Ergänzungen und mehr.\n" +
       "- **Auswertung** zeigt Daumen pro Woche, Top-Bericht und Kategorien. Du bekommst Benachrichtigungen bei Ergänzungen, Kommentaren und Daumen-Meilensteinen.\n" +
-      "- **Interviews:** Frage Spieler an, ihre Antworten fließen als Vorlage in deinen Bericht.",
+      "- **Interviews:** Frage Spieler an, ihre Antworten fließen als Vorlage in deinen Bericht.\n" +
+      "- **Zusammenarbeit:** Bildwünsche kannst du an die Fotografen richten. Entsteht aus deinem Bericht eine Idee eines Visionärs, gibt es einen kleinen Bonus.",
   },
   {
     key: "fotograf",
@@ -58,10 +59,11 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Monats-Collage:** baut sich aus den beliebtesten Bildern der letzten 30 Tage.\n" +
       "- **Alben** fassen Bilder einer Serie zusammen und lassen sich als Ganzes verlinken.\n\n" +
       "**Im Büro**\n" +
-      "- **Bildwünsche** von Journalisten: Ein Klick auf „Bild hochladen“ erfüllt den Wunsch.\n" +
+      "- **Bildwünsche** von Journalisten, Marketing Managern, Coaches und Visionären: Ein Klick auf „Bild hochladen“ erfüllt den Wunsch.\n" +
       "- **Empfehlungen:** Events ohne oder mit wenigen Bildern, Events von heute, lange offene Bildwünsche, Bilder ohne Unterschrift und die Monats-Collage.\n" +
       "- **Auswertung:** Daumen, Nutzungen durch andere Jobs und beliebteste Bilder. Du wirst benachrichtigt, wenn dein Bild verwendet wird oder Daumen-Meilensteine erreicht.\n" +
-      "- **Mediathek durchsuchen:** nach Unterschrift, Event, Fotograf und Typ. Deine Bilder erscheinen im Profil und auf der Turnierseite.",
+      "- **Mediathek durchsuchen:** nach Unterschrift, Event, Fotograf und Typ. Deine Bilder erscheinen im Profil und auf der Turnierseite.\n" +
+      "- **Zusammenarbeit:** Nutzen andere dein Bild als Titelbild, im Werbe-Post oder in einer Anleitung, gibt es einen kleinen Bonus.",
   },
   {
     key: "marketing_manager",
@@ -83,7 +85,11 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "**Im Büro**\n" +
       "- **Empfehlungen:** Events ohne Werbung, Erinnerung kurz vor dem Start, wenige Anmeldungen, Posts ohne Bild und wiederkehrende Events.\n" +
       "- **Auswertung:** Daumen pro Woche, bester Post, Anteil mit Bild und extern bestätigt. Du wirst bei Daumen-Meilensteinen und bei der externen Bestätigung benachrichtigt.\n" +
-      "- Deine Posts stehen im Profil und auf der Turnierseite des Events.",
+      "- Deine Posts stehen im Profil und auf der Turnierseite des Events.\n\n" +
+      "**Zusammenarbeit**\n" +
+      "- **Werbe-Anfragen von Coaches:** Ein Coach bittet dich, einen Trainings-Termin zu bewerben. „Post schreiben“ öffnet den Baustein „Trainings-Termin“.\n" +
+      "- **Bild fehlt?** Frage es bei den Fotografen an.\n" +
+      "- Wird dein Post von einem Journalisten in einem Bericht aufgegriffen oder erfüllt er eine Werbe-Anfrage, gibt es einen kleinen Bonus.",
   },
   {
     key: "coach",
@@ -98,11 +104,12 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Termine:** Trainings mit Datum, Plätzen, Event-Bezug und Meeting-Link, auf Wunsch wöchentlich wiederholt. Es gibt eine Warteliste, Erinnerungen und Duplizieren mit einer Woche Abstand.\n" +
       "- **Anwesenheit** trägst du nach dem Termin ein. Teilnehmer, die du weiter begleiten möchtest, nimmst du als **Mentees** auf.\n" +
       "- **Verfügbarkeit:** „Ich helfe gerade“ zeigt, dass du für Ad-hoc-Hilfe erreichbar bist.\n" +
-      "- **Spezialgebiete:** bis zu 6 Tags (Spiele, Sprachen), damit man dich findet.\n\n" +
+      "- **Spezialgebiete:** bis zu 6 Tags (Spiele, Sprachen), damit man dich findet.\n" +
+      "- **Werbung anfragen:** Bei einem eigenen Termin bittest du die Marketing Manager, ihn zu bewerben. Sobald der Post steht, wirst du benachrichtigt (und bekommst einen kleinen Bonus).\n\n" +
       "**Hilfe finden und geben**\n" +
       "- **Hilfe anfragen:** Spieler können dich jederzeit um Hilfe bitten, auch wenn du gerade nicht verfügbar bist. Offene Anfragen siehst du im Büro.\n" +
       "- **Neue Spieler:** Die Liste „ohne Training“ zeigt dir, wen du ansprechen kannst.\n" +
-      "- **Anleitungen:** Schreibe Anleitungen zu Spielen, sie erscheinen im Community-Board und werden bewertet.\n\n" +
+      "- **Anleitungen:** Schreibe Anleitungen zu Spielen, sie erscheinen im Community-Board und werden bewertet. Du kannst Bilder aus der Mediathek einfügen oder bei den Fotografen einen Screenshot anfragen.\n\n" +
       "**Im Büro**\n" +
       "- **Empfehlungen** zeigen offene Hilfe-Anfragen, fehlende Termine, neue Spieler ohne Training und Events ohne Vorbereitungs-Training.\n" +
       "- **Auswertung:** Ø Bewertung pro Woche und letzte Termine.",
@@ -129,7 +136,10 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- Läuft die Frist ab, bekommst du eine Zusammenfassung. Top-Ideen der Woche und des Monats werden im Discord gepostet.\n\n" +
       "**Im Büro**\n" +
       "- **Empfehlungen:** neue Idee einreichen, Ideen ohne Bewertung, sehr gut bewertete Ideen ohne Status, Anlässe nach beendeten Events und Ideen anderer, die auf deine Bewertung warten.\n" +
-      "- **Auswertung:** Sterne pro Woche, Verteilung, beste Idee und Anteil umgesetzter Ideen.",
+      "- **Auswertung:** Sterne pro Woche, Verteilung, beste Idee und Anteil umgesetzter Ideen.\n\n" +
+      "**Zusammenarbeit**\n" +
+      "- Für Bilder oder Mockups kannst du die Fotografen um ein Bild bitten.\n" +
+      "- Wird eine Idee „Wird umgesetzt“ oder „Umgesetzt“, gibt es einen Bonus. Auch aus einem Bericht heraus entstandene Ideen bringen dem Journalisten etwas.",
   },
 ];
 

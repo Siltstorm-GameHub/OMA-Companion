@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { withCollabBonus } from "./collab-bonus";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { countCommentVoteScore } from "./community-board-comment-service";
@@ -483,7 +484,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
     }),
     countCommentVoteScore(userId, weekStart, weekEnd),
   ]);
-  return (agg._sum.stars ?? 0) + commentVotes;
+  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, (agg._sum.stars ?? 0) + commentVotes);
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

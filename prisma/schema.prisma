@@ -117,6 +117,7 @@ model User {
   jobMediaAlbums                   JobMediaAlbum[]
   marketingCampaigns               MarketingCampaign[]
   ideaInterests                    IdeaInterest[]
+  promotionRequests                PromotionRequest[] @relation("PromotionRequester")
   jobMediaAssetVotes               JobMediaAssetVote[]
   marketingPosts                   MarketingPost[]
   marketingPostVotes               MarketingPostVote[]
@@ -1373,6 +1374,7 @@ model PhotoRequest {
   status           String    @default("OPEN") // OPEN | FULFILLED | CLOSED
   fulfilledAssetId String?
   fulfilledById    String?
+  requesterJob     String? // Job des Anfragenden (journalist | marketing_manager | coach | visionaer)
   createdAt        DateTime  @default(now())
   fulfilledAt      DateTime?
 
@@ -1518,7 +1520,8 @@ model JobMediaAssetVote {
 model MarketingPost {
   id                   String    @id @default(cuid())
   authorId             String
-  eventId              String // Pflicht — Marketing-Posts werben immer für ein konkretes Event
+  eventId              String? // Event, für das geworben wird — leer nur bei Posts zu einem Coach-Training (trainingSessionId)
+  trainingSessionId    String? // Post bewirbt einen Coach-Trainings-Termin (bewusst kein FK, wie bei CoachTrainingSession.eventId)
   assetId              String? // → JobMediaAsset (wiederverwendetes Fotograf-Bild aus der Mediathek)
   imageUrl             String? // eigene, im Studio erstellte Grafik (nicht aus der Fotograf-Mediathek — zählt zur eigenen Post-Bewertung, keine separate Attribution)
   caption              String
@@ -1532,7 +1535,7 @@ model MarketingPost {
   confirmedNotified    Boolean   @default(false) // Autor wurde über die externe Bestätigung informiert
 
   author              User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event               Event?              @relation(fields: [eventId], references: [id], onDelete: Cascade)
   asset               JobMediaAsset?      @relation(fields: [assetId], references: [id])
   campaign            MarketingCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   votes               MarketingPostVote[]
@@ -2272,4 +2275,22 @@ model CommunityJobCronRun {
   resultJson String
 
   @@index([ranAt])
+}
+
+/// Werbe-Anfrage: ein Coach bittet die Marketing Manager, einen Trainings-Termin zu bewerben.
+model PromotionRequest {
+  id                String    @id @default(cuid())
+  requesterId       String
+  trainingSessionId String
+  note              String?
+  status            String    @default("OPEN") // OPEN | FULFILLED | CLOSED
+  postId            String? // Werbe-Post, der die Anfrage erfüllt hat
+  createdAt         DateTime  @default(now())
+  fulfilledAt       DateTime?
+
+  requester User @relation("PromotionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([trainingSessionId])
+  @@index([requesterId])
 }

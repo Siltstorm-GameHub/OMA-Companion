@@ -126,7 +126,7 @@ interface PhotoRequestItem {
 }
 
 /** Eigene Bildwünsche an die Fotografen (anlegen geht im Editor, "Bild beim Fotografen anfragen"). */
-function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
+export function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
   const [items, setItems] = useState<PhotoRequestItem[] | null>(null);
 
   function reload() {
@@ -143,7 +143,7 @@ function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
   const open = items.filter(i => i.status === "OPEN").length;
   return (
     <Section title="Meine Bildwünsche" count={open}>
-      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine. Im Bericht-Editor kannst du unter „Titelbild“ ein Bild beim Fotografen anfragen.</p>}
+      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine. Bildwünsche stellst du im Editor (Titelbild) bzw. bei Bildern in Werbe-Posts, Anleitungen und Ideen.</p>}
       {items.map(i => (
         <div key={i.id} className="flex items-center justify-between gap-2 text-xs">
           <span className="min-w-0 flex items-center gap-2">

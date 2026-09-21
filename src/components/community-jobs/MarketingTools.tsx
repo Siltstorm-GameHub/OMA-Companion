@@ -219,3 +219,37 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
     </div>
   );
 }
+
+// ── Werbe-Anfragen von Coaches ───────────────────────────────────────────────
+
+interface PromotionRequestItem {
+  id: string; note: string | null; createdAt: string;
+  requester: { id: string; username: string | null; name: string | null };
+  session: { id: string; title: string; startAt: string; eventId: string | null };
+}
+
+/** Coaches bitten um Werbung für ihre Trainings-Termine — "Post schreiben" öffnet das Formular mit dem Trainings-Baustein. */
+export function PromotionRequestList({ onWrite }: { onWrite: (r: PromotionRequestItem) => void }) {
+  const [items, setItems] = useState<PromotionRequestItem[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/community-jobs/promotion-requests?scope=open").then(r => (r.ok ? r.json() : { requests: [] }))
+      .then((d: { requests: PromotionRequestItem[] }) => setItems(d.requests)).catch(() => setItems([]));
+  }, []);
+
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className={LABEL}>Werbe-Anfragen von Coaches ({items.length})</p>
+      {items.map(r => (
+        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-xs text-gray-200">{r.session.title} <span className="text-gray-500">· {formatBerlinDate(r.session.startAt, { day: "2-digit", month: "2-digit" })}</span></p>
+            <p className="text-[10px] text-gray-600">von {r.requester.username ?? r.requester.name}{r.note ? ` · ${r.note}` : ""}</p>
+          </div>
+          <Button size="sm" variant="outline" className="shrink-0" onClick={() => onWrite(r)}>Post schreiben</Button>
+        </div>
+      ))}
+    </div>
+  );
+}

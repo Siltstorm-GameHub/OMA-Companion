@@ -30,6 +30,8 @@ export interface EventRecommendation {
   photoRequestId?: string;
   /** Marketing: echtes Event, auf das sich die Empfehlung bezieht (eventId ist dann nur der Ausblend-Schlüssel). */
   scopeEventId?: string;
+  /** Marketing: Werbe-Post zu diesem Coach-Trainings-Termin schreiben. */
+  trainingSessionId?: string;
   /** Marketing: Werbetext-Baustein, mit dem das Formular startet (announce | reminder | lastspots | today). */
   postTemplate?: string;
   /** Fotograf: Monats-Collage aus den beliebtesten Bildern erstellen. */
@@ -449,6 +451,24 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
     });
   }
 
+  // Werbe-Anfragen von Coaches (Trainings-Termine) — zuerst, weil jemand darauf wartet.
+  const promoRequests = await prisma.promotionRequest.findMany({ where: { status: "OPEN" }, orderBy: { createdAt: "asc" }, take: 5 });
+  if (promoRequests.length > 0) {
+    const sessions = await prisma.coachTrainingSession.findMany({
+      where: { id: { in: promoRequests.map(r => r.trainingSessionId) }, startAt: { gt: now } }, select: { id: true, title: true, startAt: true },
+    });
+    const byId = new Map(sessions.map(x => [x.id, x]));
+    for (const r of promoRequests) {
+      const sess = byId.get(r.trainingSessionId);
+      if (!sess) continue;
+      recs.unshift({
+        eventId: `marketing-promo-${r.id}`, title: sess.title, startAt: sess.startAt,
+        reason: "Ein Coach bittet um Werbung für dieses Training", trainingSessionId: sess.id, postTemplate: "training",
+        ...upcomingEventUrgency(sess.startAt),
+      });
+    }
+  }
+
   const soon = new Date(now.getTime() + 48 * 3_600_000);
   const [reminderCandidates, fewRegistrations, noImage, seriesCandidates, precedents] = await Promise.all([
     prisma.event.findMany({
@@ -464,7 +484,7 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
     prisma.marketingPost.findMany({
       where: {
         authorId: userId, hiddenByAdminAt: null, imageUrl: null, assetId: null,
-        createdAt: { gte: new Date(now.getTime() - 14 * 86_400_000) }, event: { startAt: { gte: now } },
+        createdAt: { gte: new Date(now.getTime() - 14 * 86_400_000) }, OR: [{ event: { startAt: { gte: now } } }, { trainingSessionId: { not: null } }],
       },
       orderBy: { createdAt: "desc" }, take: 3, select: { id: true, caption: true, event: { select: { title: true, startAt: true } } },
     }),
@@ -505,7 +525,7 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
 
   for (const p of noImage) {
     recs.push({
-      eventId: `marketing-noimage-${p.id}`, title: p.event.title, startAt: p.event.startAt,
+      eventId: `marketing-noimage-${p.id}`, title: p.event?.title ?? "Trainings-Termin", startAt: p.event?.startAt ?? now,
       reason: "Dein Post hat noch kein Bild — Bilder bringen mehr Aufmerksamkeit", url: "/profile", noCreate: true,
     });
   }

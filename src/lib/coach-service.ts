@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { withCollabBonus } from "./collab-bonus";
 import { prisma } from "./prisma";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { dispatchNotification } from "./notify-dispatch";
@@ -419,7 +420,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
     }),
     countGuideVoteScore(userId, weekStart, weekEnd),
   ]);
-  return (agg._avg.stars ?? 0) * agg._count._all + Math.min(attended, ATTENDANCE_COUNTED_MAX) * ATTENDANCE_POINTS_PER_PERSON + guideVotes;
+  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, (agg._avg.stars ?? 0) * agg._count._all + Math.min(attended, ATTENDANCE_COUNTED_MAX) * ATTENDANCE_POINTS_PER_PERSON + guideVotes);
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

@@ -10,6 +10,7 @@ import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs
 import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
 import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLite";
+import { plainExcerpt } from "@/lib/report-text";
 import EmojiPanel from "@/components/community-jobs/EmojiPicker";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { Modal } from "@/components/ui/Modal";
@@ -634,9 +635,9 @@ function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; curr
   return (
     <>
       <p className="text-sm font-semibold text-white">{entry.title}</p>
-      <p className="text-xs text-gray-400 whitespace-pre-line">
-        <Linkified text={long && !expanded ? `${text.slice(0, GUIDE_PREVIEW_CHARS).trimEnd()}…` : text} />
-      </p>
+      {long && !expanded
+        ? <p className="text-xs text-gray-400 whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>
+        : <MarkdownLite text={text} className="text-xs text-gray-400" />}
       {long && (
         <button onClick={() => setExpanded(v => !v)} className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
           {expanded ? "Weniger anzeigen" : "Ganze Anleitung lesen"}

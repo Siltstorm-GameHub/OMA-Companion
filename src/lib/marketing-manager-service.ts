@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { withCollabBonus } from "./collab-bonus";
 import { notifyAssetUsed } from "./fotograf-service";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
@@ -9,6 +10,7 @@ import { countCommentVoteScore } from "./community-board-comment-service";
 import { dispatchNotification } from "./notify-dispatch";
 import { getWeekBounds } from "./community-job-service";
 import { isMarketingTemplate } from "./marketing-templates";
+import { fulfillPromotionRequests } from "./promotion-request-service";
 
 /**
  * Marketing Manager: Werbe-Posts für kommende Events (Text + optionales Bild
@@ -30,19 +32,24 @@ export type CreatePostResult = { ok: true; postId: string } | { error: string };
 
 export async function createMarketingPost(
   authorId: string,
-  data: { eventId: string; caption: string; assetId?: string; imageUrl?: string; campaignId?: string; kind?: string },
+  data: { eventId?: string; trainingSessionId?: string; caption: string; assetId?: string; imageUrl?: string; campaignId?: string; kind?: string },
 ): Promise<CreatePostResult> {
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
-  if (!data.eventId) return { error: "Event erforderlich" };
+  if (!data.eventId && !data.trainingSessionId) return { error: "Event oder Trainings-Termin erforderlich" };
+  if (data.trainingSessionId) {
+    const session = await prisma.coachTrainingSession.findUnique({ where: { id: data.trainingSessionId }, select: { startAt: true } });
+    if (!session) return { error: "Trainings-Termin nicht gefunden" };
+    if (session.startAt.getTime() < Date.now()) return { error: "Der Trainings-Termin liegt in der Vergangenheit" };
+  }
   if (!data.caption.trim()) return { error: "Text erforderlich" };
 
-  if (data.campaignId && !(await prisma.marketingCampaign.findFirst({ where: { id: data.campaignId, authorId, eventId: data.eventId }, select: { id: true } }))) {
+  if (data.campaignId && !(await prisma.marketingCampaign.findFirst({ where: { id: data.campaignId, authorId, eventId: data.eventId ?? "" }, select: { id: true } }))) {
     return { error: "Kampagne nicht gefunden (oder gehört zu einem anderen Event)" };
   }
 
   const post = await prisma.marketingPost.create({
     data: {
-      authorId, eventId: data.eventId, caption: data.caption,
+      authorId, eventId: data.eventId ?? null, trainingSessionId: data.trainingSessionId ?? null, caption: data.caption,
       assetId: data.assetId ?? null, imageUrl: data.imageUrl ?? null,
       campaignId: data.campaignId ?? null, kind: isMarketingTemplate(data.kind) ? data.kind : null,
     },
@@ -53,6 +60,7 @@ export async function createMarketingPost(
   });
 
   announceAndStore(post.id, authorId, data.caption).catch(() => {});
+  if (data.trainingSessionId) fulfillPromotionRequests(data.trainingSessionId, post.id).catch(() => {});
   if (data.assetId) notifyAssetUsed(data.assetId, authorId, "marketing", data.caption, "/community-board").catch(() => {});
   return { ok: true, postId: post.id };
 }
@@ -176,6 +184,18 @@ export async function getMarketingEventFacts(eventId: string) {
   };
 }
 
+/** Fakten zu einem Coach-Trainings-Termin für den Werbetext-Baukasten. */
+export async function getMarketingTrainingFacts(sessionId: string) {
+  const session = await prisma.coachTrainingSession.findUnique({
+    where: { id: sessionId }, select: { id: true, title: true, startAt: true, _count: { select: { signups: true } } },
+  });
+  if (!session) return null;
+  return {
+    id: session.id, title: session.title, game: null as string | null, startAt: session.startAt.toISOString(),
+    registered: session._count.signups, url: `${BASE_URL}/profile`, training: true,
+  };
+}
+
 export async function createCampaign(authorId: string, data: { eventId: string; title?: string }): Promise<{ ok: true; campaignId: string } | { error: string }> {
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
   const event = await prisma.event.findUnique({ where: { id: data.eventId }, select: { title: true, startAt: true, hidden: true } });
@@ -217,7 +237,7 @@ export async function getMarketingStats(userId: string) {
   const [posts, recentVotes, promoted, unpromoted] = await Promise.all([
     prisma.marketingPost.findMany({
       where: { authorId: userId, hiddenByAdminAt: null },
-      select: { id: true, caption: true, eventId: true, imageUrl: true, assetId: true, adminConfirmedPosted: true, _count: { select: { votes: true } } },
+      select: { id: true, caption: true, eventId: true, trainingSessionId: true, imageUrl: true, assetId: true, adminConfirmedPosted: true, _count: { select: { votes: true } } },
     }),
     prisma.marketingPostVote.findMany({
       where: { post: { authorId: userId }, createdAt: { gte: eightWeeksAgo }, OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }] },
@@ -247,7 +267,7 @@ export async function getMarketingStats(userId: string) {
     total: posts.length, totalVotes,
     averageVotes: posts.length > 0 ? totalVotes / posts.length : 0,
     votesThisWeek: recentVotes.filter(v => v.createdAt >= weekStart && v.createdAt < weekEnd).length,
-    eventsPromoted: new Set(posts.map(p => p.eventId)).size,
+    eventsPromoted: new Set(posts.map(p => p.eventId ?? p.trainingSessionId ?? p.id)).size,
     withImage: posts.filter(p => p.imageUrl || p.assetId).length,
     confirmed: posts.filter(p => p.adminConfirmedPosted).length,
     top: top && top._count.votes > 0 ? { id: top.id, caption: top.caption.replace(/\s+/g, " ").slice(0, 90), votes: top._count.votes } : null,
@@ -271,7 +291,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
     // siehe community-board-comment-service.ts.
     countCommentVoteScore(userId, weekStart, weekEnd),
   ]);
-  return postVotes + commentVotes;
+  return withCollabBonus(JOB_KEY, userId, weekStart, weekEnd, postVotes + commentVotes);
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
