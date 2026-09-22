@@ -9,7 +9,11 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { CharacterConfig } from "@/lib/character-kit/types";
+
+/** Card.characterConfig (Json) — welchen fertigen Skin (siehe src/lib/skins) der User für seine Karte gewählt hat. */
+export interface CardCharacterSelection {
+  skinId: string;
+}
 
 export const CARD_TITLE_MAX_LENGTH = 25;
 export const CARD_FLAVOR_TEXT_MAX_LENGTH = 100;
@@ -23,10 +27,9 @@ export interface CardContentPatch {
    *  Ein String setzt einen fixen Override, `null` löscht ihn wieder — die Karte zeigt
    *  dann wieder automatisch das live aufgelöste Discord-Profilbild (resolve-image.ts). */
   imageUrl?: string | null;
-  /** 3D-Charakter-Baukasten (Körper/Outfit/Farben), siehe src/components/battle-cards/
-   *  character-builder. `null` löscht die Auswahl wieder (Karte zeigt wieder das
-   *  Klassen-Icon/Discord-Profilbild statt eines Charakters). */
-  characterConfig?: CharacterConfig | null;
+  /** Gewählter 3D-Skin, siehe src/lib/skins. `null` löscht die Auswahl wieder (Karte
+   *  zeigt wieder das Klassen-Icon/Discord-Profilbild statt eines Charakters). */
+  characterConfig?: CardCharacterSelection | null;
 }
 
 export async function updateCardContent(cardId: string, patch: CardContentPatch): Promise<void> {

@@ -12,20 +12,10 @@ import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
 import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
 
-// Locker typisiert (kein 1:1-Zod-Schema von CharacterConfig) — das Manifest, gegen das
-// partId/Farb-Indizes gültig sein müssen, liegt nur im Client (public/characters), der
-// Server kann es hier nicht sinnvoll gegenprüfen. Ungültige/veraltete IDs zeigen im
-// Character-Builder beim nächsten Laden einfach nichts an, statt einen Serverfehler
-// auszulösen — deshalb reicht Form-Validierung statt Inhalts-Validierung.
-const characterConfigSchema = z
-  .object({
-    gender: z.enum(["male", "female"]),
-    body: z.string().min(1),
-    parts: z.record(z.string(), z.string().nullable()),
-    tints: z.record(z.string(), z.number()),
-    skinBlock: z.number().nullable(),
-  })
-  .nullable();
+// Die Liste gültiger Skin-IDs (src/lib/skins) prüft der Server hier nicht gegen —
+// eine veraltete/ungültige ID zeigt im Viewer beim nächsten Laden einfach nichts an,
+// statt einen Serverfehler auszulösen.
+const characterConfigSchema = z.object({ skinId: z.string().min(1) }).nullable();
 
 const requestSchema = z.object({
   title: z.string().max(CARD_TITLE_MAX_LENGTH).optional(),

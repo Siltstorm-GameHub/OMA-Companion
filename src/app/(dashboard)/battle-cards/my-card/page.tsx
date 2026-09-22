@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import MyCardEditor from "@/components/battle-cards/MyCardEditor";
-import type { CharacterConfig } from "@/lib/character-kit/types";
+import type { CardCharacterSelection } from "@/lib/battle-cards/card-content";
 
 export const metadata = {
   title: "Meine Community-Karte | OMA Battle Cards",
@@ -45,7 +45,7 @@ export default async function MyCardPage() {
       </div>
       <MyCardEditor
         card={toCardData(card, avatarByDiscordId)}
-        initialCharacterConfig={(card.characterConfig as CharacterConfig | null) ?? null}
+        initialCharacterConfig={(card.characterConfig as CardCharacterSelection | null) ?? null}
       />
     </div>
   );

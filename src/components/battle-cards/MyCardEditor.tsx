@@ -7,8 +7,8 @@ import { Save, Loader2 } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
-import CharacterBuilder from "./character-builder/CharacterBuilder";
-import type { CharacterConfig } from "@/lib/character-kit/types";
+import SkinPicker from "../skins/SkinPicker";
+import type { CardCharacterSelection } from "@/lib/battle-cards/card-content";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
@@ -18,8 +18,8 @@ export default function MyCardEditor({
   initialCharacterConfig,
 }: {
   card: BattleCardData & { id: string };
-  /** Bisherige Charakter-Auswahl (Card.characterConfig aus der DB), null = noch keine gewählt. */
-  initialCharacterConfig: CharacterConfig | null;
+  /** Bisherige Skin-Auswahl (Card.characterConfig aus der DB), null = noch keine gewählt. */
+  initialCharacterConfig: CardCharacterSelection | null;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
@@ -119,11 +119,14 @@ export default function MyCardEditor({
       </div>
 
       <div className="sm:col-span-2 pt-2 border-t border-white/10">
-        <h2 className="text-sm font-bold text-white">Charakter anpassen</h2>
+        <h2 className="text-sm font-bold text-white">Skin auswählen</h2>
         <p className="text-xs text-gray-500 mt-0.5 mb-3">
-          Statur, Outfit, Farben und Haare für deinen 3D-Charakter wählen — die Auswahl wird beim Speichern übernommen.
+          Fertigen 3D-Charakter für deine Karte wählen — die Auswahl wird beim Speichern übernommen.
         </p>
-        <CharacterBuilder initialConfig={characterConfig} onChange={setCharacterConfig} />
+        <SkinPicker
+          skinId={characterConfig?.skinId ?? null}
+          onChange={(skinId) => setCharacterConfig({ skinId })}
+        />
       </div>
     </div>
   );
