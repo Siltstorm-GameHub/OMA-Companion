@@ -213,6 +213,22 @@ interface CardRevealEffect {
 const START_LP = 4000;
 const TURN_SECONDS = Math.round(DUEL_TURN_TIMEOUT_MS / 1000);
 
+/** Feld-Karten skalieren jetzt über die tatsächlich verfügbare Bildschirmhöhe
+ *  (svh) statt einer festen Pixel-Breite (früher `max-w-[128px]`) — auf
+ *  kurzen Mobil-Viewports (z.B. Hauptphase 1 mit ausgeklapptem Handfächer,
+ *  siehe HAND_FAN_MIN_HEIGHT) schrumpfen beide Feld-Reihen automatisch mit,
+ *  statt die mittlere Scroll-Zone zum Scrollen zu zwingen. `aspect-[3/4]` +
+ *  `w-auto max-w-full` auf dem Slot selbst sorgen dafür, dass die per Höhe
+ *  berechnete Breite nie die Grid-Spalte sprengt (Sicherheitsnetz für sehr
+ *  schmale Bildschirme). Obergrenze 124px entspricht ungefähr der alten
+ *  festen Größe -- auf großen/Tablet-Screens ändert sich also nichts. */
+const FIELD_CARD_HEIGHT = "clamp(64px, 14svh, 124px)";
+/** Analog für die Handkarten-Fächer-Zone: schrumpft auf kurzen Viewports statt
+ *  eine feste Mindesthöhe von immer 168px zu erzwingen. Die Untergrenze
+ *  (130px) bleibt knapp über der tatsächlichen Kartenhöhe (HAND_CARD_WIDTH
+ *  92px * 4/3 ≈ 123px), damit unfokussierte Karten nicht abgeschnitten werden. */
+const HAND_FAN_MIN_HEIGHT = "clamp(130px, 20svh, 168px)";
+
 // ---------- Hand-Fächer (Hover/Tap zum Fokussieren, Ziehen zum Spielen) ----------
 const HAND_ANGLE_STEP = 7; // Grad pro Karten-Abstand von der Mitte
 const HAND_MAX_ANGLE = 18; // Deckelt die Drehung bei großen Händen
@@ -497,7 +513,8 @@ function UnitSlot({
           type="button"
           disabled={!selectable}
           onClick={onClick}
-          className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
+          style={{ height: FIELD_CARD_HEIGHT }}
+          className={`relative w-auto max-w-full mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
             dragOver
               ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
               : selectable
@@ -523,7 +540,7 @@ function UnitSlot({
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
+      className={`relative w-auto max-w-full mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
         isDefense
           ? "border-[3px] border-sky-400 duel-defense-glow"
           : selected
@@ -533,6 +550,7 @@ function UnitSlot({
               : "border border-[color:var(--moba-accent-line)]"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
+        height: FIELD_CARD_HEIGHT,
         backgroundImage: unit.imageUrl
           ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
           : undefined,
@@ -1353,7 +1371,7 @@ export default function DuelLiveView({
           gescrollt werden, um "Zug beenden"/"Weiter zur Phase" überhaupt zu
           sehen — leicht zu übersehen. Jetzt sind diese Buttons als fixer
           Fuß nie Teil der Scroll-Berechnung und daher immer sichtbar. */}
-      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3">
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-3 gap-2">
         <div className="shrink-0 flex items-center justify-between">
           <button
             onClick={() => (finished ? handleExit() : setShowLeaveConfirm(true))}
@@ -1472,12 +1490,12 @@ export default function DuelLiveView({
         {/* Einzige scrollbare Zone: Spielfeld + Hand + Fehleranzeigen. Wächst
             zwischen dem festen Header oben und den festen Phasen-/Zug-Buttons
             unten (siehe Kommentar am Content-Rahmen). */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
         {/* Spielfeld (Gegner + eigenes Feld) — gemeinsame Ablagezone fürs Ziehen
             einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen"). */}
         <div
           ref={boardRef}
-          className={`space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+          className={`space-y-2 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
         >
         {/* Gegner */}
         <div className="space-y-2">
@@ -1703,7 +1721,7 @@ export default function DuelLiveView({
                 Karte hebt sich gerade, vergrößert und voll lesbar aus dem Fächer.
                 Ziehen (Pointer-Events, siehe handleCardPointerDown) funktioniert
                 unabhängig vom Fokus-Zustand. */}
-            <div className="relative pt-9" style={{ minHeight: 168 }}>
+            <div className="relative pt-9" style={{ minHeight: HAND_FAN_MIN_HEIGHT }}>
               <div className="flex justify-center items-end">
                 {(snapshot.self.hand ?? []).map((card, i, arr) => {
                   const isSelectedSummon = pendingSummon?.handCardId === card.cardId;
