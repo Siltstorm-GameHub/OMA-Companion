@@ -185,7 +185,7 @@
         "Mask_Pants"
        ],
        "tris": 1652,
-       "kb": 100.1
+       "kb": 100.2
       },
       {
        "id": "bottom_denim_short",
@@ -225,7 +225,7 @@
         "Mask_Pants"
        ],
        "tris": 1692,
-       "kb": 103.4
+       "kb": 103.5
       },
       {
        "id": "bottom_loose_pants",
@@ -244,7 +244,7 @@
         "Mask_Pants"
        ],
        "tris": 1412,
-       "kb": 94.4
+       "kb": 94.6
       },
       {
        "id": "bottom_shorts",
@@ -264,7 +264,7 @@
         "Mask_Short"
        ],
        "tris": 832,
-       "kb": 75.6
+       "kb": 75.8
       },
       {
        "id": "bottom_skinny",
@@ -284,7 +284,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 95.6
+       "kb": 95.8
       },
       {
        "id": "bottom_sport",
@@ -304,7 +304,7 @@
         "Mask_Pants"
        ],
        "tris": 1508,
-       "kb": 95.2
+       "kb": 95.3
       },
       {
        "id": "bottom_trousers_slim",
@@ -323,7 +323,7 @@
         "Mask_Pants"
        ],
        "tris": 1424,
-       "kb": 92.4
+       "kb": 92.5
       },
       {
        "id": "bottom_trousers_suit",
@@ -342,7 +342,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.2
+       "kb": 93.3
       },
       {
        "id": "bottom_vintage",
@@ -380,7 +380,7 @@
         "Mask_Short"
        ],
        "tris": 1072,
-       "kb": 80.7
+       "kb": 80.9
       },
       {
        "id": "bottom_cargo",
@@ -400,7 +400,7 @@
         "Mask_Pants"
        ],
        "tris": 1748,
-       "kb": 101.3
+       "kb": 101.4
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -1006,7 +1006,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1798,
-       "kb": 111.2
+       "kb": 111.3
       },
       {
        "id": "top_construction_vest",
@@ -1047,7 +1047,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2472,
-       "kb": 132.0
+       "kb": 132.1
       },
       {
        "id": "top_hoodie",
@@ -1066,7 +1066,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1428,
-       "kb": 95.1
+       "kb": 95.2
       },
       {
        "id": "top_jumper",
@@ -1107,7 +1107,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2376,
-       "kb": 130.2
+       "kb": 130.4
       },
       {
        "id": "top_superhero",
@@ -1128,7 +1128,7 @@
         "Mask_Full_Body"
        ],
        "tris": 7176,
-       "kb": 281.5
+       "kb": 281.7
       },
       {
        "id": "top_tanktop",
@@ -1187,7 +1187,7 @@
         "Mask_Short_Sleeve"
        ],
        "tris": 1468,
-       "kb": 96.3
+       "kb": 96.4
       },
       {
        "id": "top_white_t_shirt",
@@ -5402,7 +5402,7 @@
         "Mask_Pants"
        ],
        "tris": 1652,
-       "kb": 100.4
+       "kb": 100.6
       },
       {
        "id": "bottom_denim_short",
@@ -5461,7 +5461,7 @@
         "Mask_Pants"
        ],
        "tris": 1692,
-       "kb": 104.0
+       "kb": 104.1
       },
       {
        "id": "bottom_loose_pants",
@@ -5480,7 +5480,7 @@
         "Mask_Pants"
        ],
        "tris": 1412,
-       "kb": 94.7
+       "kb": 94.9
       },
       {
        "id": "bottom_shorts",
@@ -5500,7 +5500,7 @@
         "Mask_Short"
        ],
        "tris": 832,
-       "kb": 75.7
+       "kb": 75.8
       },
       {
        "id": "bottom_skinny",
@@ -5520,7 +5520,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 95.4
+       "kb": 95.6
       },
       {
        "id": "bottom_sport",
@@ -5540,7 +5540,7 @@
         "Mask_Pants"
        ],
        "tris": 1508,
-       "kb": 95.9
+       "kb": 96.1
       },
       {
        "id": "bottom_trousers_slim",
@@ -5559,7 +5559,7 @@
         "Mask_Pants"
        ],
        "tris": 1424,
-       "kb": 92.4
+       "kb": 92.5
       },
       {
        "id": "bottom_trousers_suit",
@@ -5578,7 +5578,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.3
+       "kb": 93.5
       },
       {
        "id": "bottom_vintage",
@@ -5616,7 +5616,7 @@
         "Mask_Short"
        ],
        "tris": 1072,
-       "kb": 81.0
+       "kb": 81.1
       },
       {
        "id": "bottom_cargo",
@@ -5636,7 +5636,7 @@
         "Mask_Pants"
        ],
        "tris": 1748,
-       "kb": 101.5
+       "kb": 101.6
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -6311,7 +6311,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1798,
-       "kb": 111.3
+       "kb": 111.4
       },
       {
        "id": "top_construction_vest",
@@ -6332,7 +6332,7 @@
         "Mask_Sleeveless"
        ],
        "tris": 664,
-       "kb": 77.2
+       "kb": 77.3
       },
       {
        "id": "top_doctor",
@@ -6352,7 +6352,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2472,
-       "kb": 133.3
+       "kb": 133.4
       },
       {
        "id": "top_hoodie",
@@ -6371,7 +6371,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1428,
-       "kb": 95.1
+       "kb": 95.2
       },
       {
        "id": "top_jumper",
@@ -6431,7 +6431,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2376,
-       "kb": 131.5
+       "kb": 131.6
       },
       {
        "id": "top_superhero",
@@ -6452,7 +6452,7 @@
         "Mask_Full_Body"
        ],
        "tris": 7176,
-       "kb": 282.3
+       "kb": 282.6
       },
       {
        "id": "top_tanktop",
@@ -6471,7 +6471,7 @@
         "Mask_Sleeveless"
        ],
        "tris": 1024,
-       "kb": 86.2
+       "kb": 86.1
       },
       {
        "id": "top_vest",
@@ -6713,7 +6713,7 @@
        "tintable": true,
        "masks": [],
        "tris": 1357,
-       "kb": 64.7
+       "kb": 64.8
       },
       {
        "id": "bottom_denim",
@@ -6733,7 +6733,7 @@
         "Mask_Pants"
        ],
        "tris": 1652,
-       "kb": 99.4
+       "kb": 99.5
       },
       {
        "id": "bottom_denim_short",
@@ -6811,7 +6811,7 @@
         "Mask_Pants"
        ],
        "tris": 1412,
-       "kb": 93.5
+       "kb": 93.7
       },
       {
        "id": "bottom_shorts",
@@ -6851,7 +6851,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 94.7
+       "kb": 94.9
       },
       {
        "id": "bottom_sport",
@@ -6871,7 +6871,7 @@
         "Mask_Pants"
        ],
        "tris": 1508,
-       "kb": 94.6
+       "kb": 94.7
       },
       {
        "id": "bottom_trousers_slim",
@@ -6890,7 +6890,7 @@
         "Mask_Pants"
        ],
        "tris": 1424,
-       "kb": 91.0
+       "kb": 91.2
       },
       {
        "id": "bottom_trousers_suit",
@@ -6909,7 +6909,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 91.9
+       "kb": 92.1
       },
       {
        "id": "bottom_vintage",
@@ -6947,7 +6947,7 @@
         "Mask_Short"
        ],
        "tris": 1072,
-       "kb": 80.2
+       "kb": 80.3
       },
       {
        "id": "bottom_cargo",
@@ -6967,7 +6967,7 @@
         "Mask_Pants"
        ],
        "tris": 1748,
-       "kb": 100.3
+       "kb": 100.4
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -7642,7 +7642,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1798,
-       "kb": 111.9
+       "kb": 112.0
       },
       {
        "id": "top_construction_vest",
@@ -7683,7 +7683,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2472,
-       "kb": 133.2
+       "kb": 133.3
       },
       {
        "id": "top_hoodie",
@@ -7723,7 +7723,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1600,
-       "kb": 104.6
+       "kb": 104.7
       },
       {
        "id": "top_long_shirt",
@@ -7742,7 +7742,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1734,
-       "kb": 72.6
+       "kb": 72.7
       },
       {
        "id": "top_suit",
@@ -7783,7 +7783,7 @@
         "Mask_Full_Body"
        ],
        "tris": 7176,
-       "kb": 283.1
+       "kb": 283.7
       },
       {
        "id": "top_tanktop",
@@ -8064,7 +8064,7 @@
         "Mask_Pants"
        ],
        "tris": 1652,
-       "kb": 100.7
+       "kb": 100.9
       },
       {
        "id": "bottom_denim_short",
@@ -8084,7 +8084,7 @@
         "Mask_Short"
        ],
        "tris": 1112,
-       "kb": 85.8
+       "kb": 85.9
       },
       {
        "id": "bottom_dungarees",
@@ -8123,7 +8123,7 @@
         "Mask_Pants"
        ],
        "tris": 1692,
-       "kb": 104.1
+       "kb": 104.3
       },
       {
        "id": "bottom_loose_pants",
@@ -8162,7 +8162,7 @@
         "Mask_Short"
        ],
        "tris": 832,
-       "kb": 76.1
+       "kb": 76.2
       },
       {
        "id": "bottom_skinny",
@@ -8182,7 +8182,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 96.2
+       "kb": 96.4
       },
       {
        "id": "bottom_sport",
@@ -8202,7 +8202,7 @@
         "Mask_Pants"
        ],
        "tris": 1508,
-       "kb": 96.2
+       "kb": 96.3
       },
       {
        "id": "bottom_trousers_slim",
@@ -8221,7 +8221,7 @@
         "Mask_Pants"
        ],
        "tris": 1424,
-       "kb": 92.7
+       "kb": 92.8
       },
       {
        "id": "bottom_trousers_suit",
@@ -8240,7 +8240,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.8
+       "kb": 94.0
       },
       {
        "id": "bottom_vintage",
@@ -8259,7 +8259,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.3
+       "kb": 93.5
       },
       {
        "id": "bottom_wide_shorts",
@@ -8278,7 +8278,7 @@
         "Mask_Short"
        ],
        "tris": 1072,
-       "kb": 81.1
+       "kb": 81.3
       },
       {
        "id": "bottom_cargo",
@@ -8298,7 +8298,7 @@
         "Mask_Pants"
        ],
        "tris": 1748,
-       "kb": 102.2
+       "kb": 102.3
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -8973,7 +8973,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1798,
-       "kb": 113.3
+       "kb": 113.4
       },
       {
        "id": "top_construction_vest",
@@ -8994,7 +8994,7 @@
         "Mask_Sleeveless"
        ],
        "tris": 664,
-       "kb": 77.7
+       "kb": 77.6
       },
       {
        "id": "top_doctor",
@@ -9033,7 +9033,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1428,
-       "kb": 97.0
+       "kb": 97.1
       },
       {
        "id": "top_jumper",
@@ -9054,7 +9054,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1600,
-       "kb": 106.3
+       "kb": 106.4
       },
       {
        "id": "top_long_shirt",
@@ -9093,7 +9093,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2376,
-       "kb": 133.4
+       "kb": 133.6
       },
       {
        "id": "top_superhero",
@@ -9114,7 +9114,7 @@
         "Mask_Full_Body"
        ],
        "tris": 7176,
-       "kb": 287.5
+       "kb": 287.9
       },
       {
        "id": "top_tanktop",
@@ -9395,7 +9395,7 @@
         "Mask_Pants"
        ],
        "tris": 1652,
-       "kb": 100.7
+       "kb": 100.9
       },
       {
        "id": "bottom_denim_short",
@@ -9415,7 +9415,7 @@
         "Mask_Short"
        ],
        "tris": 1112,
-       "kb": 85.7
+       "kb": 85.8
       },
       {
        "id": "bottom_dungarees",
@@ -9454,7 +9454,7 @@
         "Mask_Pants"
        ],
        "tris": 1692,
-       "kb": 104.2
+       "kb": 104.3
       },
       {
        "id": "bottom_loose_pants",
@@ -9473,7 +9473,7 @@
         "Mask_Pants"
        ],
        "tris": 1412,
-       "kb": 94.8
+       "kb": 94.9
       },
       {
        "id": "bottom_shorts",
@@ -9493,7 +9493,7 @@
         "Mask_Short"
        ],
        "tris": 832,
-       "kb": 75.8
+       "kb": 75.9
       },
       {
        "id": "bottom_skinny",
@@ -9513,7 +9513,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 95.6
+       "kb": 95.9
       },
       {
        "id": "bottom_sport",
@@ -9533,7 +9533,7 @@
         "Mask_Pants"
        ],
        "tris": 1508,
-       "kb": 95.9
+       "kb": 96.1
       },
       {
        "id": "bottom_trousers_slim",
@@ -9552,7 +9552,7 @@
         "Mask_Pants"
        ],
        "tris": 1424,
-       "kb": 92.5
+       "kb": 92.8
       },
       {
        "id": "bottom_trousers_suit",
@@ -9571,7 +9571,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.5
+       "kb": 93.6
       },
       {
        "id": "bottom_vintage",
@@ -9590,7 +9590,7 @@
         "Mask_Pants"
        ],
        "tris": 1484,
-       "kb": 93.2
+       "kb": 93.5
       },
       {
        "id": "bottom_wide_shorts",
@@ -9609,7 +9609,7 @@
         "Mask_Short"
        ],
        "tris": 1072,
-       "kb": 81.0
+       "kb": 81.3
       },
       {
        "id": "bottom_cargo",
@@ -9629,7 +9629,7 @@
         "Mask_Pants"
        ],
        "tris": 1748,
-       "kb": 101.6
+       "kb": 101.8
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -10304,7 +10304,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1798,
-       "kb": 111.2
+       "kb": 111.3
       },
       {
        "id": "top_construction_vest",
@@ -10325,7 +10325,7 @@
         "Mask_Sleeveless"
        ],
        "tris": 664,
-       "kb": 77.2
+       "kb": 77.3
       },
       {
        "id": "top_doctor",
@@ -10345,7 +10345,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2472,
-       "kb": 133.3
+       "kb": 133.4
       },
       {
        "id": "top_hoodie",
@@ -10364,7 +10364,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1428,
-       "kb": 95.2
+       "kb": 95.3
       },
       {
        "id": "top_jumper",
@@ -10424,7 +10424,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2376,
-       "kb": 131.4
+       "kb": 131.5
       },
       {
        "id": "top_superhero",
@@ -10445,7 +10445,7 @@
         "Mask_Full_Body"
        ],
        "tris": 7176,
-       "kb": 282.5
+       "kb": 282.8
       },
       {
        "id": "top_tanktop",
@@ -10504,7 +10504,7 @@
         "Mask_Short_Sleeve"
        ],
        "tris": 1468,
-       "kb": 97.1
+       "kb": 97.2
       },
       {
        "id": "top_white_t_shirt",
@@ -17148,7 +17148,7 @@
         "Mask_Pants_34"
        ],
        "tris": 804,
-       "kb": 82.0
+       "kb": 82.1
       },
       {
        "id": "bottom_denim",
@@ -17187,7 +17187,7 @@
         "Mask_Pants"
        ],
        "tris": 896,
-       "kb": 83.4
+       "kb": 83.6
       },
       {
        "id": "bottom_long_skirt",
@@ -17226,7 +17226,7 @@
         "Mask_Pants"
        ],
        "tris": 936,
-       "kb": 89.7
+       "kb": 89.9
       },
       {
        "id": "bottom_short_skirt",
@@ -17303,7 +17303,7 @@
         "Mask_Pants_34"
        ],
        "tris": 936,
-       "kb": 86.1
+       "kb": 86.3
       },
       {
        "id": "bottom_trousers",
@@ -17322,7 +17322,7 @@
         "Mask_Pants"
        ],
        "tris": 1168,
-       "kb": 90.6
+       "kb": 90.7
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -17950,7 +17950,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2140,
-       "kb": 121.1
+       "kb": 121.2
       },
       {
        "id": "top_business_shirt",
@@ -18051,7 +18051,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2112,
-       "kb": 126.9
+       "kb": 127.0
       },
       {
        "id": "top_superhero",
@@ -18111,7 +18111,7 @@
         "Mask_Short_Sleeve"
        ],
        "tris": 1222,
-       "kb": 100.0
+       "kb": 100.1
       }
      ]
     },
@@ -19426,7 +19426,7 @@
         "Mask_Pants_34"
        ],
        "tris": 804,
-       "kb": 81.9
+       "kb": 82.2
       },
       {
        "id": "bottom_denim",
@@ -19446,7 +19446,7 @@
         "Mask_Pants"
        ],
        "tris": 1168,
-       "kb": 90.4
+       "kb": 90.6
       },
       {
        "id": "bottom_legins",
@@ -19465,7 +19465,7 @@
         "Mask_Pants"
        ],
        "tris": 896,
-       "kb": 83.7
+       "kb": 84.0
       },
       {
        "id": "bottom_long_skirt",
@@ -19484,7 +19484,7 @@
         "Mask_Pants"
        ],
        "tris": 640,
-       "kb": 79.3
+       "kb": 79.4
       },
       {
        "id": "bottom_loose_pants",
@@ -19504,7 +19504,7 @@
         "Mask_Pants"
        ],
        "tris": 936,
-       "kb": 89.6
+       "kb": 90.0
       },
       {
        "id": "bottom_short_skirt",
@@ -19542,7 +19542,7 @@
         "Mask_Short"
        ],
        "tris": 560,
-       "kb": 75.4
+       "kb": 75.6
       },
       {
        "id": "bottom_shorts",
@@ -19581,7 +19581,7 @@
         "Mask_Pants"
        ],
        "tris": 936,
-       "kb": 86.3
+       "kb": 86.6
       },
       {
        "id": "bottom_trousers",
@@ -19600,7 +19600,7 @@
         "Mask_Pants"
        ],
        "tris": 1168,
-       "kb": 90.5
+       "kb": 90.7
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -20228,7 +20228,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2140,
-       "kb": 122.4
+       "kb": 122.6
       },
       {
        "id": "top_business_shirt",
@@ -20248,7 +20248,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2002,
-       "kb": 124.5
+       "kb": 124.7
       },
       {
        "id": "top_doctor",
@@ -20308,7 +20308,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 1584,
-       "kb": 108.5
+       "kb": 108.7
       },
       {
        "id": "top_suit",
@@ -20329,7 +20329,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2112,
-       "kb": 128.8
+       "kb": 128.9
       },
       {
        "id": "top_superhero",
@@ -20585,7 +20585,7 @@
         "Mask_Pants"
        ],
        "tris": 1168,
-       "kb": 90.9
+       "kb": 91.1
       },
       {
        "id": "bottom_legins",
@@ -20604,7 +20604,7 @@
         "Mask_Pants"
        ],
        "tris": 896,
-       "kb": 84.0
+       "kb": 84.3
       },
       {
        "id": "bottom_long_skirt",
@@ -20643,7 +20643,7 @@
         "Mask_Pants"
        ],
        "tris": 936,
-       "kb": 90.2
+       "kb": 90.3
       },
       {
        "id": "bottom_short_skirt",
@@ -20720,7 +20720,7 @@
         "Mask_Pants_34"
        ],
        "tris": 936,
-       "kb": 86.6
+       "kb": 86.8
       },
       {
        "id": "bottom_trousers",
@@ -20739,7 +20739,7 @@
         "Mask_Pants"
        ],
        "tris": 1168,
-       "kb": 91.1
+       "kb": 91.3
       },
       {
        "id": "accessories_eyeglasses_oval",
@@ -21367,7 +21367,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2140,
-       "kb": 122.0
+       "kb": 122.1
       },
       {
        "id": "top_business_shirt",
@@ -21407,7 +21407,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2136,
-       "kb": 128.9
+       "kb": 128.8
       },
       {
        "id": "top_dress",
@@ -21468,7 +21468,7 @@
         "Mask_Long_Sleeve"
        ],
        "tris": 2112,
-       "kb": 127.6
+       "kb": 127.7
       },
       {
        "id": "top_superhero",

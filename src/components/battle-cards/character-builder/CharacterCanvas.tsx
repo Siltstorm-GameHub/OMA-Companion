@@ -39,7 +39,16 @@ export default function CharacterCanvas({
           <CharacterRig key={`${config.gender}-${config.body}`} genderData={genderData} config={config} animationClipName={animationClipName} />
         </Bounds>
       </Suspense>
-      <OrbitControls makeDefault enablePan={false} />
+      {/* Nur Drehen erlaubt — kein Zoom/Pan, sonst kann der Charakter aus dem Bild
+          herausgezoomt/-geschoben werden. minPolarAngle/maxPolarAngle verhindert
+          zusätzlich, dass man von oben/unten durch den Boden schaut. */}
+      <OrbitControls
+        makeDefault
+        enablePan={false}
+        enableZoom={false}
+        minPolarAngle={Math.PI / 2.6}
+        maxPolarAngle={Math.PI / 1.7}
+      />
     </Canvas>
   );
 }
