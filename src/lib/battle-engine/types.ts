@@ -181,7 +181,6 @@ export interface BattleUnitState {
    *  zurückgesetzt (siehe resetTurnFlags in duels-live.ts). */
   summonedThisTurn?: boolean;
   attackedThisTurn?: boolean;
-  stanceLockedThisTurn?: boolean;
 }
 
 export type Team = BattleUnitDefinition[];

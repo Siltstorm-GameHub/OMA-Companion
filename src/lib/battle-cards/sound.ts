@@ -207,3 +207,21 @@ export function playCardRevealSound(): void {
 export function playRarePullSound(): void {
   [440, 554, 659, 880].forEach((freq, i) => beep(freq, 180, "sine", 0.09, i * 80));
 }
+
+/** Kurzer, dringlicher Tick für die letzten Sekunden der Zug-Schachuhr (OMA
+ *  Duels, siehe RadialTimer in DuelLiveView.tsx) — bewusst höher/kürzer als
+ *  alle anderen Sounds hier, damit er auch beiläufig (während man z.B. gerade
+ *  die Hand-Karten anschaut) als Warnung aus dem übrigen Kampfgeschehen
+ *  heraussticht. */
+export function playTimerWarningSound(): void {
+  beep(880, 90, "square", 0.08);
+}
+
+/** Dezenter Zwei-Ton-Chime für den Moment, in dem eine Einheit genug Rage für
+ *  ihr Ultimate erreicht (siehe processNewLogEntries in DuelLiveView.tsx) —
+ *  klingt bewusst nicht so martialisch wie playUltimateSoundFor (das ist der
+ *  Einsatz selbst), sondern eher wie eine "bereit"-Benachrichtigung. */
+export function playUltimateReadySound(): void {
+  beep(660, 90, "sine", 0.06);
+  beep(880, 140, "sine", 0.06, 70);
+}

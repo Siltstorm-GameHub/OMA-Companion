@@ -115,7 +115,6 @@ export interface LiveDuelUnitSnapshot {
    *  eine gerade beschworene Einheit kann diesen Zug nicht angreifen). */
   summonedThisTurn: boolean;
   attackedThisTurn: boolean;
-  stanceLockedThisTurn: boolean;
 }
 
 export interface LiveDuelHandCard {
@@ -210,7 +209,6 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     ultimateSkillDescription: unit.def.ultimateSkill.description,
     summonedThisTurn: unit.summonedThisTurn ?? false,
     attackedThisTurn: unit.attackedThisTurn ?? false,
-    stanceLockedThisTurn: unit.stanceLockedThisTurn ?? false,
   };
 }
 

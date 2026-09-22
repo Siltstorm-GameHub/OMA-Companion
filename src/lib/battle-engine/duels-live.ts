@@ -338,14 +338,12 @@ function asBattleLog(log: DuelLogEntry[]): BattleLogEntry[] {
 
 /** Zu Beginn jedes eigenen Zugs zurückgesetzt (siehe endTurnInternal) —
  *  Buchhaltung für die Phasenregeln (kein Angriff/keine zweite Stellungswahl
- *  im Beschwörungszug, kein zweiter Stellungswechsel, keine Stellungsänderung
- *  nach einem Angriff). */
+ *  im Beschwörungszug, keine Stellungsänderung nach einem Angriff). */
 function resetTurnFlags(player: DuelPlayerState): void {
   for (const slot of player.field) {
     if (!slot.unit) continue;
     slot.unit.summonedThisTurn = false;
     slot.unit.attackedThisTurn = false;
-    slot.unit.stanceLockedThisTurn = false;
   }
 }
 
@@ -981,14 +979,17 @@ function applyAction(state: LiveDuelState, team: TeamId, action: DuelAction): Li
       if (unit.summonedThisTurn) {
         throw new DuelLiveError("Eine gerade erst beschworene Einheit kann ihre Stellung diesen Zug nicht mehr ändern.");
       }
-      if (unit.stanceLockedThisTurn) {
-        throw new DuelLiveError("Diese Einheit hat ihre Stellung in diesem Zug bereits gewechselt.");
-      }
       if (unit.attackedThisTurn) {
         throw new DuelLiveError("Eine Einheit, die bereits angegriffen hat, kann ihre Stellung nicht mehr ändern.");
       }
+      // Bewusst kein "nur einmal pro Zug"-Lock mehr (früher stanceLockedThisTurn):
+      // ein Stellungswechsel darf beliebig oft rückgängig gemacht/korrigiert
+      // werden, solange man sich noch in DERSELBEN Hauptphase befindet (siehe
+      // Phasen-Gate oben) -- verlässt man main1 Richtung Kampfphase, greift
+      // dieses Gate ohnehin nicht mehr und die zuletzt gewählte Stellung ist
+      // endgültig für den Rest des Zugs, bis ggf. main2 wieder eine eigene
+      // Gelegenheit dafür öffnet.
       unit.stance = action.stance;
-      unit.stanceLockedThisTurn = true;
       log.push({ type: "stanceChanged", round, team, slotIndex: action.slotIndex, stance: action.stance });
 
       beginTrapCheck(opponentTeamId, state, action, []);
