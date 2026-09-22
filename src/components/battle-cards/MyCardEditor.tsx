@@ -7,14 +7,24 @@ import { Save, Loader2 } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
+import CharacterBuilder from "./character-builder/CharacterBuilder";
+import type { CharacterConfig } from "@/lib/character-kit/types";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
 
-export default function MyCardEditor({ card }: { card: BattleCardData & { id: string } }) {
+export default function MyCardEditor({
+  card,
+  initialCharacterConfig,
+}: {
+  card: BattleCardData & { id: string };
+  /** Bisherige Charakter-Auswahl (Card.characterConfig aus der DB), null = noch keine gewählt. */
+  initialCharacterConfig: CharacterConfig | null;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
   const [flavorText, setFlavorText] = useState(card.flavorText);
+  const [characterConfig, setCharacterConfig] = useState(initialCharacterConfig);
   const [saving, setSaving] = useState(false);
   const [flavorFocused, setFlavorFocused] = useState(false);
 
@@ -24,7 +34,7 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
       const res = await fetch("/api/battle-cards/my-card", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, flavorText }),
+        body: JSON.stringify({ title, flavorText, characterConfig }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -106,6 +116,14 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
             {saving ? "Speichert…" : "Speichern"}
           </span>
         </button>
+      </div>
+
+      <div className="sm:col-span-2 pt-2 border-t border-white/10">
+        <h2 className="text-sm font-bold text-white">Charakter anpassen</h2>
+        <p className="text-xs text-gray-500 mt-0.5 mb-3">
+          Statur, Outfit, Farben und Haare für deinen 3D-Charakter wählen — die Auswahl wird beim Speichern übernommen.
+        </p>
+        <CharacterBuilder initialConfig={characterConfig} onChange={setCharacterConfig} />
       </div>
     </div>
   );

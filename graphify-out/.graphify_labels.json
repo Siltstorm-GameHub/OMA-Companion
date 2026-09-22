@@ -198,10 +198,7 @@
   "196": "react-dom",
   "197": "sharp",
   "198": "sonner",
-  "199": "three",
   "200": "@vercel/blob",
-  "201": "@types/canvas-confetti",
-  "202": "@types/three",
   "203": "postcss.config.mjs",
   "204": "ResetHistoryButton.tsx",
   "205": "series/page.tsx",
@@ -226,7 +223,5 @@
   "224": "sw.js",
   "225": "{ GET, POST }",
   "226": "size",
-  "227": "MIN_MATCHES_FOR_RANKING",
-  "228": "web-push",
-  "229": "zod"
+  "227": "MIN_MATCHES_FOR_RANKING"
 }

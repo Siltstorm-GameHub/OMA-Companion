@@ -7,7 +7,9 @@
 // überschreibt (auch wenn apply-season-results.ts aktuell title/flavorText
 // noch gar nicht anfasst — schadet nicht, ist aber zukunftssicher).
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { CharacterConfig } from "@/lib/character-kit/types";
 
 export const CARD_TITLE_MAX_LENGTH = 25;
 export const CARD_FLAVOR_TEXT_MAX_LENGTH = 100;
@@ -21,6 +23,10 @@ export interface CardContentPatch {
    *  Ein String setzt einen fixen Override, `null` löscht ihn wieder — die Karte zeigt
    *  dann wieder automatisch das live aufgelöste Discord-Profilbild (resolve-image.ts). */
   imageUrl?: string | null;
+  /** 3D-Charakter-Baukasten (Körper/Outfit/Farben), siehe src/components/battle-cards/
+   *  character-builder. `null` löscht die Auswahl wieder (Karte zeigt wieder das
+   *  Klassen-Icon/Discord-Profilbild statt eines Charakters). */
+  characterConfig?: CharacterConfig | null;
 }
 
 export async function updateCardContent(cardId: string, patch: CardContentPatch): Promise<void> {
@@ -38,7 +44,16 @@ export async function updateCardContent(cardId: string, patch: CardContentPatch)
   }
 
   const overridden = new Set(card.overriddenFields);
-  const data: { title?: string; flavorText?: string; imageUrl?: string | null; overriddenFields?: string[] } = {};
+  const data: {
+    title?: string;
+    flavorText?: string;
+    imageUrl?: string | null;
+    // Prisma verlangt für "auf SQL NULL setzen" bei Json-Feldern den Sentinel-Wert
+    // Prisma.JsonNull statt einem literalen `null` (sonst wäre "Feld weglassen" vs.
+    // "Feld auf NULL setzen" nicht unterscheidbar).
+    characterConfig?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+    overriddenFields?: string[];
+  } = {};
 
   if (patch.title !== undefined) {
     data.title = patch.title.trim();
@@ -55,6 +70,17 @@ export async function updateCardContent(cardId: string, patch: CardContentPatch)
     } else {
       data.imageUrl = patch.imageUrl;
       overridden.add("imageUrl");
+    }
+  }
+  if (patch.characterConfig !== undefined) {
+    if (patch.characterConfig === null) {
+      data.characterConfig = Prisma.JsonNull;
+      overridden.delete("characterConfig");
+    } else {
+      // CharacterConfig ist eine reine Daten-Shape (Strings/Zahlen/Records) — strukturell
+      // immer JSON-kompatibel, nur ohne die von Prisma verlangte Index-Signatur.
+      data.characterConfig = patch.characterConfig as unknown as Prisma.InputJsonValue;
+      overridden.add("characterConfig");
     }
   }
   data.overriddenFields = Array.from(overridden);

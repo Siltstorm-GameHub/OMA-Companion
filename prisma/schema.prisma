@@ -1946,6 +1946,11 @@ model Card {
   lastGeneratedAt  DateTime?
 
   imageUrl  String?
+  // Self-Service-Charakter-Baukasten (3D, siehe src/lib/character-kit): Körper/Outfit/
+  // Farben/Hautton-Auswahl des Users für seine Community-Karte. Shape: CharacterConfig
+  // (src/lib/character-kit/types.ts). null = noch nicht angepasst (Karte zeigt Klassen-Icon
+  // bzw. Discord-Avatar statt eines 3D-Charakters).
+  characterConfig Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

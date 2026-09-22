@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/my-card/page.tsx": {
-    "mtime": 1787980914.7486634,
-    "ast_hash": "4fd0d06e3422add480fceeeacc7c57b7",
+    "mtime": 1790056842.5992775,
+    "ast_hash": "28d87af93dc734f8653e777bb69cca30",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/page.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/CommunityJobsPanel.tsx": {
-    "mtime": 1789973784.415571,
-    "ast_hash": "93e715ba0ba2bfed9e3c14718136cf35",
+    "mtime": 1790000380.5135033,
+    "ast_hash": "677d95991f4fbe89faa5c268cca449f2",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/DesktopProfileTabs.tsx": {
@@ -1615,8 +1615,8 @@
     "semantic_hash": ""
   },
   "src/app/api/battle-cards/my-card/route.ts": {
-    "mtime": 1788369098.6121235,
-    "ast_hash": "389bbcc9774902e4295d1ad420bd6508",
+    "mtime": 1790056815.0311334,
+    "ast_hash": "4ab874efa80fd7926a7eca63b8fb7bfa",
     "semantic_hash": ""
   },
   "src/app/api/battle-cards/npc-battle/route.ts": {
@@ -3365,8 +3365,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/MyCardEditor.tsx": {
-    "mtime": 1789669121.7033067,
-    "ast_hash": "16953ae6c91b4bf32513d21800037510",
+    "mtime": 1790056832.4201992,
+    "ast_hash": "30cd41e383a1bad243a50548092a8359",
     "semantic_hash": ""
   },
   "src/components/battle-cards/NpcBattleLauncher.tsx": {
@@ -3565,8 +3565,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/card-content.ts": {
-    "mtime": 1787987943.1810818,
-    "ast_hash": "ae806ddc736391e0f0fe388fdbd3b947",
+    "mtime": 1790056928.8308704,
+    "ast_hash": "231131c1b0a5f4dfc46687195ffbfdbb",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/card-view.ts": {
@@ -3925,8 +3925,8 @@
     "semantic_hash": ""
   },
   "src/lib/community-jobs.ts": {
-    "mtime": 1789973784.4130785,
-    "ast_hash": "2f191c471d15872e8c33f65f06712456",
+    "mtime": 1790000376.4502687,
+    "ast_hash": "2ffdebdedfc8d2faee1d4c4b754450f9",
     "semantic_hash": ""
   },
   "src/lib/config.ts": {
@@ -4355,8 +4355,8 @@
     "semantic_hash": ""
   },
   "src/lib/wanderpokal-status.ts": {
-    "mtime": 1789281836.1439114,
-    "ast_hash": "919bd194cd9f64eb89c273a40e92d77d",
+    "mtime": 1790000378.60446,
+    "ast_hash": "2549c38134a680f94381165086c31519",
     "semantic_hash": ""
   },
   "src/lib/widgetAuth.ts": {
@@ -6277,6 +6277,86 @@
   "src/lib/score-engine.ts": {
     "mtime": 1789973508.6561654,
     "ast_hash": "0222c785f2d5f92199c26345e50d33ff",
+    "semantic_hash": ""
+  },
+  "public/characters/manifest.json": {
+    "mtime": 1790056494.8865595,
+    "ast_hash": "bb5199a4d3451a7c3e4a4afa52b75546",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/character-builder/BodyModel.tsx": {
+    "mtime": 1790056649.7103238,
+    "ast_hash": "e974e5306aa2f8eae396849adc3b73ed",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/character-builder/CharacterBuilder.tsx": {
+    "mtime": 1790056751.0929787,
+    "ast_hash": "32cdc05780b1d4f5bf592253665b8830",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/character-builder/CharacterCanvas.tsx": {
+    "mtime": 1790057071.5543838,
+    "ast_hash": "4593f930aec305b31454ca8788da1788",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/character-builder/CharacterRig.tsx": {
+    "mtime": 1790056689.2569137,
+    "ast_hash": "f20277bae12e56f21e922d662ed49801",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/character-builder/PartModel.tsx": {
+    "mtime": 1790057231.2340147,
+    "ast_hash": "6337955925b54d1d4aa5dea646f110d9",
+    "semantic_hash": ""
+  },
+  "src/lib/character-kit/manifest.ts": {
+    "mtime": 1790056538.1464016,
+    "ast_hash": "a55c3964a87a1af269196a83e63498f3",
+    "semantic_hash": ""
+  },
+  "src/lib/character-kit/types.ts": {
+    "mtime": 1790056524.7744586,
+    "ast_hash": "32c0abb423f7604a4a7a76b35f7f789b",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/female_body_female_png.png": {
+    "mtime": 1790056494.8991034,
+    "ast_hash": "175b1da20b2de9c4e3b101d5401719ba",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/female_human_psd.png": {
+    "mtime": 1790056494.9151847,
+    "ast_hash": "36ab53da9908d2661835e9e91c9dd418",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/female_outfit_png.png": {
+    "mtime": 1790056494.9051678,
+    "ast_hash": "9cb2a150ce0db3fe6340c07561becc1c",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/female_shoesh_png.png": {
+    "mtime": 1790056494.9046638,
+    "ast_hash": "58dff104718c9c18aa2017b71023c1f7",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/male_body_png.png": {
+    "mtime": 1790056494.9254525,
+    "ast_hash": "f4f47bcfb553d3d4b5b35d6ee19657c4",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/male_outfit_png.png": {
+    "mtime": 1790056494.9213219,
+    "ast_hash": "857e1695907bc6ad56cd755adc651478",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/male_outfit_png_001.png": {
+    "mtime": 1790056494.9321508,
+    "ast_hash": "9cb2a150ce0db3fe6340c07561becc1c",
+    "semantic_hash": ""
+  },
+  "public/characters/textures/male_shoesh_png.png": {
+    "mtime": 1790056494.9107702,
+    "ast_hash": "58dff104718c9c18aa2017b71023c1f7",
     "semantic_hash": ""
   }
 }
