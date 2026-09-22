@@ -32,16 +32,19 @@ import {
   DUEL_TURN_TIMEOUT_MS,
   DUEL_ULTIMATE_DAMAGE_DEALER_MULTIPLIER,
   DUEL_ULTIMATE_DAMAGE_DEALER_OVERKILL_FACTOR,
-  DUEL_ULTIMATE_SUPPORT_HEAL_MULTIPLIER,
+  DUEL_ULTIMATE_SUPPORT_ALLY_BUFF_PERCENT,
+  DUEL_ULTIMATE_SUPPORT_ENEMY_DEBUFF_PERCENT,
+  DUEL_ULTIMATE_SUPPORT_MODIFIER_DURATION_ROUNDS,
   DUEL_ULTIMATE_SUPPORT_RAGE_BONUS,
-  DUEL_ULTIMATE_TANK_SHIELD_FACTOR,
+  DUEL_ULTIMATE_TANK_BUFF_DURATION_ROUNDS,
+  DUEL_ULTIMATE_TANK_SELF_DEFENSE_BUFF_PERCENT,
 } from "./duel-constants";
 import { applyShieldAbsorption } from "./damage";
 import { executeEffect, getLevelValue, tickStatModifierDurations } from "./effects";
 import { grantRage } from "./engine";
 import { createRng, randomSeed, type Rng } from "./rng";
-import { createBattleUnitState } from "./stats";
-import type { BattleLogEntry, BattleUnitDefinition, BattleUnitState, TacticCardDefinition, TeamId } from "./types";
+import { createBattleUnitState, recomputeDerivedStats } from "./stats";
+import type { ActiveStatModifier, BattleLogEntry, BattleUnitDefinition, BattleUnitState, TacticCardDefinition, TeamId } from "./types";
 
 export class DuelLiveError extends Error {}
 
@@ -560,6 +563,41 @@ function applyRawDamageToUnit(target: BattleUnitState, rawAmount: number, source
   }
 }
 
+/** Wendet einen befristeten Stat-Modifikator direkt auf eine Einheit an und
+ *  loggt ihn — analog zum "statModifier"-Effect-Branch in effects.ts, aber
+ *  ohne den vollen EffectContext/Targeting-Umweg, da applyClassUltimate seine
+ *  Ziele bereits selbst kennt (eigenes Team bzw. das gewählte Gegner-Ziel). */
+function applyStatModifier(
+  target: BattleUnitState,
+  stat: ActiveStatModifier["stat"],
+  percentAmount: number,
+  durationRounds: number,
+  sourceName: string,
+  sourceId: string,
+  log: DuelLogEntry[],
+  round: number
+): void {
+  const modifier: ActiveStatModifier = {
+    stat,
+    mode: "percent",
+    amount: percentAmount,
+    remainingRounds: durationRounds,
+    sourceName,
+  };
+  target.statModifiers.push(modifier);
+  recomputeDerivedStats(target);
+  log.push({
+    type: "statModifierApplied",
+    round,
+    sourceId,
+    targetId: target.instanceId,
+    stat,
+    mode: "percent",
+    amount: percentAmount,
+    duration: durationRounds,
+  });
+}
+
 /** Ultimate ignoriert die Stellung des Ziels bewusst (wirkt wie ein mächtiger
  *  Spruch statt eines normalen Kampf-Schlagabtauschs) UND wird nicht mehr aus
  *  den frei am Karten-Content hängenden ultimateSkill.effects gespeist,
@@ -567,9 +605,16 @@ function applyRawDamageToUnit(target: BattleUnitState, rawAmount: number, source
  *  DAMAGE_DEALER/SUPPORT im Ultimate spürbar unterschiedlich anfühlen, egal
  *  welche konkrete Karte gespielt wird (Name/Beschreibung/Kosten bleiben
  *  weiterhin pro Karte individuell, siehe ultimateSkillName/-cost).
- *  - TANK: Schaden aus der eigenen DEF statt ATK, danach Team-Schild.
+ *  - TANK: Schaden aus der eigenen DEF statt ATK, danach stärkt der Tank
+ *    seine EIGENE DEF befristet (statt wie zuvor einen Schild aufs Team zu
+ *    verteilen — macht ihn direkt widerstandsfähiger für den nächsten Konter).
  *  - DAMAGE_DEALER: reiner ATK-Burst mit Durchschlag (Überschuss trifft LP).
- *  - SUPPORT: kein Angriff — heilt und pusht Rage fürs ganze eigene Team. */
+ *  - SUPPORT: kein Schaden, keine Heilung — verstärkt stance-abhängig (ATK in
+ *    Angriffs-, DEF in Verteidigungsstellung) das ganze eigene Team und
+ *    schwächt das gewählte gegnerische Ziel um denselben Mechanismus, da
+ *    Normalangriffe in OMA Duels strikt über ATK/DEF entscheiden (siehe
+ *    resolveDeclaredAttack) und dort kaum HP abgebaut wird — ein reiner Heal
+ *    würde also am eigentlichen Kampfmechanismus vorbeiwirken. */
 function applyClassUltimate(
   team: TeamId,
   state: LiveDuelState,
@@ -603,12 +648,16 @@ function applyClassUltimate(
     case "TANK": {
       const amount = attacker.defense;
       dealDamageOrFace(amount);
-      const shieldAmount = Math.round(amount * DUEL_ULTIMATE_TANK_SHIELD_FACTOR);
-      for (const slot of selfPlayer.field) {
-        if (!slot.unit?.isAlive) continue;
-        slot.unit.shield += shieldAmount;
-        log.push({ type: "shieldApplied", round, sourceId: attacker.instanceId, targetId: slot.unit.instanceId, amount: shieldAmount });
-      }
+      applyStatModifier(
+        attacker,
+        "defense",
+        DUEL_ULTIMATE_TANK_SELF_DEFENSE_BUFF_PERCENT,
+        DUEL_ULTIMATE_TANK_BUFF_DURATION_ROUNDS,
+        "Tank-Ultimate",
+        attacker.instanceId,
+        log,
+        round
+      );
       break;
     }
 
@@ -636,12 +685,33 @@ function applyClassUltimate(
     }
 
     case "SUPPORT": {
-      const healAmount = Math.round(attacker.defense * DUEL_ULTIMATE_SUPPORT_HEAL_MULTIPLIER);
       for (const slot of selfPlayer.field) {
         if (!slot.unit?.isAlive) continue;
-        slot.unit.currentHp = Math.min(slot.unit.maxHp, slot.unit.currentHp + healAmount);
-        log.push({ type: "heal", round, sourceId: attacker.instanceId, targetId: slot.unit.instanceId, amount: healAmount, newHp: slot.unit.currentHp });
+        const stat = slot.unit.stance === "defense" ? "defense" : "attack";
+        applyStatModifier(
+          slot.unit,
+          stat,
+          DUEL_ULTIMATE_SUPPORT_ALLY_BUFF_PERCENT,
+          DUEL_ULTIMATE_SUPPORT_MODIFIER_DURATION_ROUNDS,
+          "Support-Ultimate",
+          attacker.instanceId,
+          log,
+          round
+        );
         grantRage(slot.unit, DUEL_ULTIMATE_SUPPORT_RAGE_BONUS, round, asBattleLog(log), "action");
+      }
+      if (defenderUnit && defenderUnit.isAlive) {
+        const enemyStat = defenderUnit.stance === "defense" ? "defense" : "attack";
+        applyStatModifier(
+          defenderUnit,
+          enemyStat,
+          -DUEL_ULTIMATE_SUPPORT_ENEMY_DEBUFF_PERCENT,
+          DUEL_ULTIMATE_SUPPORT_MODIFIER_DURATION_ROUNDS,
+          "Support-Ultimate",
+          attacker.instanceId,
+          log,
+          round
+        );
       }
       break;
     }
