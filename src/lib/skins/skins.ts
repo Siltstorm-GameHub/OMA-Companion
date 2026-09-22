@@ -19,4 +19,10 @@ export const SKINS: SkinDef[] = [
     file: "superhero_male.glb",
     clips: { idle: "Idle", attack: "Attack", hit: "Hit", death: "Death" },
   },
+  {
+    id: "adventurer",
+    name: "Abenteurer",
+    file: "adventurer.glb",
+    clips: { idle: "Idle", attack: "Attack", hit: "Hit", death: "Death" },
+  },
 ];
