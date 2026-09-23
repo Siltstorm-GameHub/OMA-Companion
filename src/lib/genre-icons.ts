@@ -37,8 +37,8 @@ const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   // vorhandenen Icons zugeordnet — sichtbar etwas ist besser als sichtbar
   // nichts. Kommt ein eigenes Motiv dazu, hier einfach die src austauschen.
   {
-    keywords: ["strategie", "strategy", "rts", "aufbau", "tycoon", "simulation", "sim", "management", "puzzle", "rätsel", "denkspiel"],
-    icon: { src: "/icons/genres/strategy.png", alt: "Strategie & Denkspiele" },
+    keywords: ["strategie", "strategy", "rts", "aufbau", "tycoon", "management"],
+    icon: { src: "/icons/genres/strategy.png", alt: "Strategie" },
   },
   {
     keywords: ["brettspiel", "board", "würfel", "dice"],
