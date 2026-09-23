@@ -18,7 +18,7 @@
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Children, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,7 +30,8 @@ import MobaConfirmDialog from "./MobaConfirmDialog";
 import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
-import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
+import { enemySlotForColumn, pickEnemyForColumn, type BoardGrid, type SpecialGrid, type SwapMove } from "@/lib/battle-engine/board-match3";
+import { BOARD_COLS } from "@/lib/battle-engine/constants";
 import type { ActionType, ActiveStatModifier, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import {
   isSoundMuted,
@@ -284,6 +285,33 @@ function formatModifierValue(m: ActiveStatModifier): string {
 function formatModifierDuration(m: ActiveStatModifier): string {
   if (m.remainingRounds === "battle") return "bis Kampfende";
   return `noch ${m.remainingRounds} ${m.remainingRounds === 1 ? "Runde" : "Runden"}`;
+}
+
+/** Reihe von Heldenkarten. Klassisch: zentriert umbrechend. OMA Gems (boardMode):
+ *  auf dasselbe 7-Spalten-Raster wie das Brett gelegt — jede Karte steht über/
+ *  unter den Spalten ihres Slots (siehe enemySlotForColumn), damit sichtbar ist,
+ *  welcher Gegner von welcher Spalte getroffen wird. */
+function SlotRow({ boardMode, children }: { boardMode: boolean; children: ReactNode }) {
+  if (!boardMode) return <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">{children}</div>;
+  const kids = Children.toArray(children);
+  return (
+    <div className="px-2.5">
+      <div
+        className="grid w-full max-w-[400px] lg:max-w-[480px] mx-auto px-1"
+        style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))` }}
+      >
+        {kids.map((kid, slot) => {
+          const cols = Array.from({ length: BOARD_COLS }, (_, c) => c).filter((c) => enemySlotForColumn(c, kids.length) === slot);
+          const start = cols.length > 0 ? cols[0] : 0;
+          return (
+            <div key={slot} className="flex justify-center" style={{ gridColumn: `${start + 1} / span ${Math.max(1, cols.length)}` }}>
+              {kid}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function UnitCard({
@@ -1097,30 +1125,32 @@ function LiveBattleBody({
   const beamIdRef = useRef(0);
   const [beams, setBeams] = useState<GemBeam[]>([]);
 
-  /** OMA Gems: fliegt einen Lichtstrahl von den gerade zerstörten Steinen zu
-   *  JEDEM lebenden eigenen Helden der entsprechenden Klasse — macht sichtbar,
-   *  welches Match welchen Helden gleich angreifen lässt, statt dass der
-   *  Angriff (nach dem Server-Roundtrip) optisch aus dem Nichts kommt. */
-  function handleGemsDestroyed(groups: { cls: UnitClass; rects: DOMRect[] }[]) {
+  /** OMA Gems (Empires-&-Puzzles-Stil): jeder zerstörte Stein fährt in seiner
+   *  Spalte senkrecht nach oben und trifft den Gegner, der über dieser Spalte
+   *  steht (dieselbe Regel wie der Server, siehe pickEnemyForColumn/
+   *  applyBoardRage — nur wird hier der Lebend-Zustand VOR dem Zug benutzt). */
+  function handleGemsDestroyed(tiles: { cls: UnitClass; rect: DOMRect; column: number }[]) {
     if (!myTeam) return;
+    const enemies = unitsByTeam(opponentTeam);
+    const alive = enemies.map((u) => u.isAlive);
     const newBeams: GemBeam[] = [];
-    for (const group of groups) {
-      const fromX = group.rects.reduce((sum, r) => sum + r.left + r.width / 2, 0) / group.rects.length;
-      const fromY = group.rects.reduce((sum, r) => sum + r.top + r.height / 2, 0) / group.rects.length;
-      const targets = unitsByTeam(myTeam).filter((u) => u.class === group.cls && u.isAlive);
-      for (const target of targets) {
-        const el = cardElementsRef.current.get(target.instanceId);
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        newBeams.push({
-          id: `beam-${beamIdRef.current++}`,
-          cls: group.cls,
-          fromX,
-          fromY,
-          toX: rect.left + rect.width / 2,
-          toY: rect.top + rect.height / 2,
-        });
-      }
+    for (const tile of tiles) {
+      const slot = pickEnemyForColumn(tile.column, alive);
+      if (slot < 0) continue;
+      const el = cardElementsRef.current.get(enemies[slot].instanceId);
+      if (!el) continue;
+      const target = el.getBoundingClientRect();
+      const fromX = tile.rect.left + tile.rect.width / 2;
+      newBeams.push({
+        id: `beam-${beamIdRef.current++}`,
+        cls: tile.cls,
+        fromX,
+        fromY: tile.rect.top + tile.rect.height / 2,
+        // Senkrecht nach oben; nur innerhalb der Kartenbreite halten, falls die
+        // Spalte am Rand des Slots liegt.
+        toX: Math.min(Math.max(fromX, target.left + 8), target.right - 8),
+        toY: target.top + target.height / 2,
+      });
     }
     if (newBeams.length === 0) return;
     setBeams((prev) => [...prev, ...newBeams]);
@@ -1351,7 +1381,7 @@ function LiveBattleBody({
           Puzzles-Layout): Gegner oben, das Brett in der Mitte (siehe
           Entscheidungs-Panel), die eigenen Helden UNTER dem Brett. */}
       <div className={`flex-1 flex flex-col gap-3 min-h-0 py-2 ${snapshot.boardMode ? "justify-center" : "justify-end"}`}>
-        <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
+        <SlotRow boardMode={snapshot.boardMode}>
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard
               key={u.instanceId}
@@ -1362,13 +1392,17 @@ function LiveBattleBody({
               isAttacking={attackingUnitIds.has(u.instanceId)}
               isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
               onClick={() => handleUnitClick(u)}
+              cardRef={(el) => {
+                if (el) cardElementsRef.current.set(u.instanceId, el);
+                else cardElementsRef.current.delete(u.instanceId);
+              }}
             />
           ))}
-        </div>
+        </SlotRow>
         {!snapshot.boardMode && (
           <>
             <div className="border-t border-white/10 mx-6" />
-            <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
+            <SlotRow boardMode={snapshot.boardMode}>
               {unitsByTeam(myTeam ?? "A").map((u) => (
                 <UnitCard
                   key={u.instanceId}
@@ -1391,7 +1425,7 @@ function LiveBattleBody({
                   }}
                 />
               ))}
-            </div>
+            </SlotRow>
           </>
         )}
       </div>
@@ -1603,7 +1637,7 @@ function LiveBattleBody({
 
       {snapshot.boardMode && (
         <div className="shrink-0 pt-2">
-          <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
+          <SlotRow boardMode={snapshot.boardMode}>
           {unitsByTeam(myTeam ?? "A").map((u) => (
             <UnitCard
               key={u.instanceId}
@@ -1626,7 +1660,7 @@ function LiveBattleBody({
               }}
             />
           ))}
-        </div>
+        </SlotRow>
         </div>
       )}
 

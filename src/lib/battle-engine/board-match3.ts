@@ -69,6 +69,11 @@ export interface RageGrant {
    *  applyBoardRage in interactive.ts: je mehr Steine zerstört wurden, desto
    *  stärker der Angriff). */
   tileCount?: number;
+  /** Zellen, die in diesem einzelnen Ereignis zerstört wurden (Match-Gruppe bzw.
+   *  eine einzelne durch einen Sonder-Stein mitgeräumte Zelle) — bestimmt, WELCHEN
+   *  Gegner die Steine treffen: jede Spalte gehört zu einem Gegner-Slot (siehe
+   *  enemySlotForColumn/pickEnemyForColumn). Nicht gesetzt beim "ALL"-Bonus. */
+  cells?: number[];
 }
 
 /** Ein einzelner Auflösungsschritt (ein Match + die dadurch entfernten Zellen,
@@ -197,6 +202,30 @@ export function findHintMove(grid: BoardGrid, specials: SpecialGrid): SwapMove |
   if (best) return best;
   const specialCell = specials.findIndex((s) => s !== null);
   return specialCell >= 0 ? { fromCell: specialCell, toCell: specialCell } : null;
+}
+
+/** Spalten-Positionsregel (Empires-&-Puzzles-Stil): die BOARD_COLS Spalten sind
+ *  gleichmäßig auf die `slotCount` Gegner-Slots verteilt (Slot = Position des
+ *  Gegners in seinem Team, tote eingeschlossen — die Plätze bleiben fest). Die
+ *  UI richtet die Gegnerkarten mit exakt derselben Funktion über dem Brett aus,
+ *  Server und Client bleiben dadurch deckungsgleich. */
+export function enemySlotForColumn(column: number, slotCount: number): number {
+  if (slotCount <= 1) return 0;
+  return Math.min(slotCount - 1, Math.floor(((column + 0.5) * slotCount) / BOARD_COLS));
+}
+
+/** Der tatsächlich getroffene Slot einer Spalte: der Gegner an dieser Position,
+ *  ist er bereits tot, der nächstgelegene lebende Slot (bei Gleichstand der
+ *  linke). -1, wenn niemand mehr lebt. */
+export function pickEnemyForColumn(column: number, alive: boolean[]): number {
+  if (alive.length === 0) return -1;
+  const slot = enemySlotForColumn(column, alive.length);
+  if (alive[slot]) return slot;
+  for (let d = 1; d < alive.length; d++) {
+    if (slot - d >= 0 && alive[slot - d]) return slot - d;
+    if (slot + d < alive.length && alive[slot + d]) return slot + d;
+  }
+  return -1;
 }
 
 function randomRegularSymbol(rng: Rng): TileClassSymbol {
@@ -382,7 +411,7 @@ function resolveCascades(
     for (const group of groups) {
       const symbol = grid[group[0]];
       const amount = rageForGroupSize(group.length) + cascadeIndex * RAGE_PER_CASCADE_BONUS;
-      grants.push({ targetClass: symbol, amount, tileCount: group.length });
+      grants.push({ targetClass: symbol, amount, tileCount: group.length, cells: [...group] });
       roundRawSum += group.length;
       if (group.length > largestGroup.length) largestGroup = group;
       if (group.length >= 5) {
@@ -422,7 +451,7 @@ function resolveCascades(
       for (const extra of activationCellsFor(kind, cell, grid)) {
         if (!matchedCells.has(extra)) {
           matchedCells.add(extra);
-          grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1 });
+          grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1, cells: [extra] });
         }
         if (!queued.has(extra)) {
           queued.add(extra);
@@ -498,7 +527,7 @@ function resolveTapActivation(
     for (const extra of activationCellsFor(kind, current, grid)) {
       if (!destroyedCells.has(extra)) {
         destroyedCells.add(extra);
-        grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1 });
+        grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1, cells: [extra] });
       }
       if (!queued.has(extra)) {
         queued.add(extra);

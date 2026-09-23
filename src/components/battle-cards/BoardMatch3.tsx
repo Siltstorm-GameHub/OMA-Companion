@@ -184,11 +184,11 @@ export default function BoardMatch3({
    *  serverseitig, ohne auf eine Antwort zu warten (siehe saveBoardProgress). */
   onProgress?: (swaps: SwapMove[]) => void;
   /** Feuert für jeden Animations-Schritt (siehe playSteps), sobald die
-   *  getroffenen Steine sichtbar zerstört werden — gruppiert nach Klasse, mit
-   *  den Bildschirm-Positionen der zerstörten Zellen. LiveBattleView nutzt das,
-   *  um einen Lichtstrahl von den zerstörten Steinen zu den Helden der
-   *  entsprechenden Klasse zu animieren (siehe dortiges handleGemsDestroyed). */
-  onGemsDestroyed?: (groups: { cls: UnitClass; rects: DOMRect[] }[]) => void;
+   *  getroffenen Steine sichtbar zerstört werden — ein Eintrag pro zerstörtem
+   *  Stein mit Klasse, Bildschirm-Position und Brett-Spalte. LiveBattleView
+   *  schickt daraus je Stein ein Geschoss senkrecht nach oben zum Gegner, der
+   *  über dieser Spalte steht (siehe pickEnemyForColumn, handleGemsDestroyed). */
+  onGemsDestroyed?: (tiles: { cls: UnitClass; rect: DOMRect; column: number }[]) => void;
 }) {
   // Rein lokaler Vorschau-Seed — muss NICHT mit dem serverseitigen rngState
   // übereinstimmen (der ist dem Client bewusst nicht bekannt, siehe Anti-Cheat-
@@ -307,18 +307,13 @@ export default function BoardMatch3({
 
       if (onGemsDestroyed) {
         // Klasse pro zerstörter Zelle kommt aus dem Grid VOR dieser Runde.
-        const rectsByClass = new Map<UnitClass, DOMRect[]>();
+        const tiles: { cls: UnitClass; rect: DOMRect; column: number }[] = [];
         step.matchedCells.forEach((cell, idx) => {
           const el = tileElementsRef.current.get(matchedIds[idx]);
           if (!el) return;
-          const cls = curGrid[cell];
-          const list = rectsByClass.get(cls) ?? [];
-          list.push(el.getBoundingClientRect());
-          rectsByClass.set(cls, list);
+          tiles.push({ cls: curGrid[cell], rect: el.getBoundingClientRect(), column: cell % BOARD_COLS });
         });
-        if (rectsByClass.size > 0) {
-          onGemsDestroyed([...rectsByClass.entries()].map(([cls, rects]) => ({ cls, rects })));
-        }
+        if (tiles.length > 0) onGemsDestroyed(tiles);
       }
 
       await sleep(DESTROY_ANIM_MS);

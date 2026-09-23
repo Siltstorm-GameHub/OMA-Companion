@@ -9,7 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { generateBoard, resolveBoardSession, type BoardGrid, type SpecialGrid, type TileClassSymbol } from "./board-match3";
+import { enemySlotForColumn, findHintMove, generateBoard, pickEnemyForColumn, resolveBoardSession, type BoardGrid, type SpecialGrid, type TileClassSymbol } from "./board-match3";
 import { BOARD_COLS, BOARD_ROWS, COMMUNITY_MATCH_TEAM_RAGE_BONUS, RAGE_PER_MATCH3 } from "./constants";
 
 const REGULAR_SYMBOLS: TileClassSymbol[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
@@ -323,5 +323,36 @@ describe("resolveBoardSession", () => {
     const capped = resolveBoardSession(grid, emptySpecials(), 3, swaps, 1);
     const empty = resolveBoardSession(grid, emptySpecials(), 3, [], 1);
     assert.deepEqual(capped, empty);
+  });
+});
+
+describe("Gegner-Slots je Spalte (Position zählt)", () => {
+  test("Spalten verteilen sich symmetrisch auf 3 Gegner (2/3/2)", () => {
+    const slots = Array.from({ length: BOARD_COLS }, (_, c) => enemySlotForColumn(c, 3));
+    assert.deepEqual(slots, [0, 0, 1, 1, 1, 2, 2]);
+  });
+
+  test("ein einzelner Gegner bekommt alle Spalten", () => {
+    for (let c = 0; c < BOARD_COLS; c++) assert.equal(enemySlotForColumn(c, 1), 0);
+  });
+
+  test("toter Gegner: nächster lebender Slot (Gleichstand: links)", () => {
+    assert.equal(pickEnemyForColumn(3, [true, false, true]), 0);
+    assert.equal(pickEnemyForColumn(6, [true, true, false]), 1);
+    assert.equal(pickEnemyForColumn(0, [false, false, false]), -1);
+  });
+
+  test("Match-Grants tragen ihre zerstörten Zellen", () => {
+    const grid: BoardGrid = new Array(BOARD_ROWS * BOARD_COLS).fill(null);
+    for (let row = 0; row < BOARD_ROWS; row++) {
+      for (let col = 0; col < BOARD_COLS; col++) grid[row * BOARD_COLS + col] = REGULAR_SYMBOLS[(row + col * 2) % 3];
+    }
+    const hint = findHintMove(grid, emptySpecials());
+    if (!hint) return;
+    const result = resolveBoardSession(grid, emptySpecials(), 5, [hint], 1);
+    for (const grant of result.rawGrants) {
+      if (grant.targetClass === "ALL") continue;
+      assert.ok(grant.cells && grant.cells.length === grant.tileCount);
+    }
   });
 });

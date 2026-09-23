@@ -14,6 +14,7 @@
 
 import {
   generateBoard,
+  pickEnemyForColumn,
   hasAnyValidMove,
   resolveBoardSession,
   type BoardGrid,
@@ -21,6 +22,7 @@ import {
   type SwapMove,
 } from "./board-match3";
 import {
+  BOARD_COLS,
   BOARD_MOVE_BUDGET_PER_TURN,
   MAX_BOARD_RAGE_PER_TURN,
   RAGE_PER_ACTION,
@@ -270,30 +272,52 @@ function applyBoardRage(
   // (mehr zerstörte Steine in einem Match = stärkerer Angriff). Der "ALL"-
   // Community-Bonus (5er-Match) ist kein klassenspezifisches Match und löst
   // daher selbst keinen Angriff aus.
+  // Position zählt (Empires-&-Puzzles-Stil): jede zerstörte Zelle trifft den
+  // Gegner, der über ihrer Spalte steht (siehe pickEnemyForColumn — die Slots
+  // sind die Team-Positionen inkl. Toter, die UI richtet die Gegnerkarten mit
+  // derselben Regel über dem Brett aus). Ein Match über mehrere Gegner-Slots
+  // verteilt den Gesamtschaden anteilig nach Steinen je Gegner (Summe = wie
+  // bisher max(1, tileCount/3)), pro getroffenem Gegner läuft ein eigener
+  // Normalangriff — `forcedTargetId` lenkt Einzelziel-Angriffe auf ihn (AoE-
+  // Normalangriffe/Heilungen bleiben unberührt).
+  const enemyUnits = allUnits.filter((u) => u.teamId !== teamId);
   for (const grant of result.rawGrants) {
-    if (grant.targetClass === "ALL" || !grant.tileCount) continue;
+    if (grant.targetClass === "ALL" || !grant.tileCount || !grant.cells) continue;
     const attackers = teamUnits.filter((u) => u.def.class === grant.targetClass && u.isAlive);
     if (attackers.length === 0) continue;
-    const matchScale = Math.max(1, grant.tileCount / 3);
-    // Nur echte Match-Boni (>3 zerstörte Steine) werden der UI als solche
-    // gemeldet — ein exaktes 3er-Match (Skalierung genau 1) ist der Normalfall
-    // und bekommt keinen "Bonus"-Hinweis.
-    const matchBonusPercent = matchScale > 1 ? Math.round((matchScale - 1) * 100) : undefined;
-    for (const unit of attackers) {
-      if (!unit.isAlive) continue;
-      const before = log.length;
-      performAction(unit, "normalAttack", allUnits, rng, state.round, log, matchScale, undefined, matchBonusPercent);
 
-      const dealtDamageTo = new Set<string>();
-      for (let i = before; i < log.length; i++) {
-        const entry = log[i];
-        if (entry.type === "damage" && entry.sourceId === unit.instanceId) dealtDamageTo.add(entry.targetId);
-      }
-      if (dealtDamageTo.size > 0) {
-        triggerPassiveForUnit("onDealDamage", unit, allUnits, rng, state.round, log);
-        for (const targetId of dealtDamageTo) {
-          const target = allUnits.find((u) => u.instanceId === targetId);
-          if (target) triggerPassiveForUnit("onTakeDamage", target, allUnits, rng, state.round, log);
+    const tilesPerEnemy = new Map<number, number>();
+    const alive = enemyUnits.map((u) => u.isAlive);
+    for (const cell of grant.cells) {
+      const slot = pickEnemyForColumn(cell % BOARD_COLS, alive);
+      if (slot >= 0) tilesPerEnemy.set(slot, (tilesPerEnemy.get(slot) ?? 0) + 1);
+    }
+    if (tilesPerEnemy.size === 0) continue;
+
+    const totalScale = Math.max(1, grant.tileCount / 3);
+    for (const [slot, tiles] of [...tilesPerEnemy].sort((a, b) => a[0] - b[0])) {
+      const matchScale = (totalScale * tiles) / grant.tileCount;
+      // Nur echte Match-Boni (>3 zerstörte Steine) werden der UI als solche
+      // gemeldet — ein exaktes 3er-Match (Skalierung genau 1) ist der Normalfall
+      // und bekommt keinen "Bonus"-Hinweis.
+      const matchBonusPercent = matchScale > 1 ? Math.round((matchScale - 1) * 100) : undefined;
+      const forcedTargetId = enemyUnits[slot].instanceId;
+      for (const unit of attackers) {
+        if (!unit.isAlive) continue;
+        const before = log.length;
+        performAction(unit, "normalAttack", allUnits, rng, state.round, log, matchScale, forcedTargetId, matchBonusPercent);
+
+        const dealtDamageTo = new Set<string>();
+        for (let i = before; i < log.length; i++) {
+          const entry = log[i];
+          if (entry.type === "damage" && entry.sourceId === unit.instanceId) dealtDamageTo.add(entry.targetId);
+        }
+        if (dealtDamageTo.size > 0) {
+          triggerPassiveForUnit("onDealDamage", unit, allUnits, rng, state.round, log);
+          for (const targetId of dealtDamageTo) {
+            const target = allUnits.find((u) => u.instanceId === targetId);
+            if (target) triggerPassiveForUnit("onTakeDamage", target, allUnits, rng, state.round, log);
+          }
         }
       }
     }
