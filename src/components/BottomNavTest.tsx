@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { GateLink } from "@/components/GuestGate";
-import { usePathname } from "next/navigation";
+
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -25,8 +25,8 @@ const maskStyle = (src: string) => ({
   WebkitMaskPosition: "center", maskPosition: "center",
 });
 
-export default function BottomNav() {
-  const pathname = usePathname();
+export default function BottomNavTest() {
+  const [pathname, setPathname] = useState("/donations"); if (typeof window !== "undefined") (window as unknown as { __go: (p: string) => void }).__go = setPathname;
 
   const items = NAV.map(({ label, href, glyph }) => ({
     label, href, glyph,
