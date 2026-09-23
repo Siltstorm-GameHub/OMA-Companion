@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { getWeekBounds } from "./community-job-service";
 import { getCurrentSteamSales, getRecentSteamReleases, type SteamFeedItem } from "./steam-feed";
+import { getXboxFeed, type XboxFeedItem } from "./xbox-feed";
 
 /**
  * Handlungsempfehlungen fürs Büro: interne Vorschläge (Events ohne Beitrag)
@@ -44,6 +45,10 @@ export interface JobRecommendations {
   events: EventRecommendation[];
   steamSales: SteamFeedItem[];
   steamReleases: SteamFeedItem[];
+  /** Xbox: reduzierte Spiele aus dem Game-Pass-Umfeld, neu im Game Pass, bald nicht mehr im Game Pass. */
+  xboxDeals: XboxFeedItem[];
+  gamePassNew: XboxFeedItem[];
+  gamePassLeaving: XboxFeedItem[];
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -606,17 +611,23 @@ export async function getRecommendationsForJob(jobKey: string, userId: string): 
   const wantsSteam = ["journalist", "visionaer", "marketing_manager"].includes(jobKey);
   let steamSales: SteamFeedItem[] = [];
   let steamReleases: SteamFeedItem[] = [];
+  let xboxDeals: XboxFeedItem[] = [];
+  let gamePassNew: XboxFeedItem[] = [];
+  let gamePassLeaving: XboxFeedItem[] = [];
   if (wantsSteam) {
-    const [rawSales, rawReleases, communityGames] = await Promise.all([
-      getCurrentSteamSales(15), getRecentSteamReleases(10), getCommunityPlayedGameNames(),
+    const [rawSales, rawReleases, communityGames, xbox] = await Promise.all([
+      getCurrentSteamSales(15), getRecentSteamReleases(10), getCommunityPlayedGameNames(), getXboxFeed(),
     ]);
+    xboxDeals = prioritizeByCommunityGames(xbox.deals, communityGames, 5);
+    gamePassNew = prioritizeByCommunityGames(xbox.gamePassNew, communityGames, 5);
+    gamePassLeaving = prioritizeByCommunityGames(xbox.gamePassLeaving, communityGames, 5);
     steamSales = prioritizeByCommunityGames(rawSales, communityGames, 5);
     // Absichtlich weniger Neuveröffentlichungen als Sales: die Liste rutscht sonst schnell in
     // kleine Nischentitel ab, die in Steams "New & Trending" auch ohne Community-Bezug auftauchen.
     steamReleases = prioritizeByCommunityGames(rawReleases, communityGames, 3);
   }
 
-  return { events, steamSales, steamReleases };
+  return { events, steamSales, steamReleases, xboxDeals, gamePassNew, gamePassLeaving };
 }
 
 export async function getRecommendationCount(jobKey: string, userId: string): Promise<number> {

@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   const { eventId, trainingSessionId, caption, assetId, imageUrl, campaignId, kind } = await req.json().catch(() => ({}));
   const hasEvent = typeof eventId === "string" && eventId;
   const hasTraining = typeof trainingSessionId === "string" && trainingSessionId;
-  if ((!hasEvent && !hasTraining) || typeof caption !== "string") {
-    return NextResponse.json({ error: "Event (oder Trainings-Termin) und Text erforderlich" }, { status: 400 });
+  if (typeof caption !== "string") {
+    return NextResponse.json({ error: "Text erforderlich" }, { status: 400 });
   }
 
   const result = await createMarketingPost(user.id, {

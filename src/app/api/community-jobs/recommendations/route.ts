@@ -10,7 +10,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const membership = await getActiveMembership(user.id);
-  if (!membership) return NextResponse.json({ events: [], steamSales: [], steamReleases: [] });
+  if (!membership) return NextResponse.json({ events: [], steamSales: [], steamReleases: [], xboxDeals: [], gamePassNew: [], gamePassLeaving: [] });
 
   return NextResponse.json(await getRecommendationsForJob(membership.jobKey, user.id));
 }

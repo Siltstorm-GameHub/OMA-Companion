@@ -1,16 +1,16 @@
-# Graph Report - OMA-Companion  (2026-09-23)
+# Graph Report - OMA-Companion  (2026-09-22)
 
 ## Corpus Check
-- 960 files · ~3,075,571 words
+- 953 files · ~3,073,822 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4831 nodes · 12491 edges · 217 communities (196 shown, 21 thin omitted)
+- 4797 nodes · 12441 edges · 225 communities (202 shown, 23 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 30 edges (avg confidence: 0.64)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `19f47600`
+- Built from commit: `760344a7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -147,6 +147,7 @@
 - applyForJob
 - updateQuestProgress
 - SeriesCompleteClient.tsx
+- clip-des-monats/page.tsx
 - overlay/[id]/page.tsx
 - requireModeratorOrSquadCaptain
 - Product
@@ -156,11 +157,13 @@
 - starter-pick.ts
 - DailySpin.tsx
 - StarterPickFlow.tsx
+- GameCover.tsx
 - process-rank-art.ts
 - run-season.ts
 - requireModeratorOrSquadCaptain
 - notifications.ts
 - DailyMessagePanel.tsx
+- OverlayClient
 - middleware.ts
 - BadgesAdminClient.tsx
 - new-season/page.tsx
@@ -172,6 +175,7 @@
 - GameCover.tsx
 - SeasonConfigPanel.tsx
 - requireModeratorOrAnySquadCaptain
+- recharts
 - lineup/route.ts
 - battle-cards-challenge-cleanup/route.ts
 - HeroStatValue.tsx
@@ -186,6 +190,7 @@
 - Kapitel-Hintergründe — Kampagne
 - roadmap/page.tsx
 - setIdeaInterest
+- seed-notification-rules.ts
 - UserRoleManager.tsx
 - genre-icons.ts
 - chroma-key.js
@@ -198,13 +203,16 @@
 - lobby-cleanup/route.ts
 - bot-runner.mjs
 - eslint.config.mjs
+- grant-tactic-cards-to-all/route.ts
 - @auth/prisma-adapter
 - next.config.ts
 - canvas-confetti
 - lucide-react
 - next-auth
+- postprocessing
 - react
 - react-dom
+- sharp
 - sonner
 - @vercel/blob
 - postcss.config.mjs
@@ -241,75 +249,75 @@
 ## Import Cycles
 - None detected.
 
-## Communities (217 total, 21 thin omitted)
+## Communities (225 total, 23 thin omitted)
 
 ### Community 0 - "roles.ts"
 Cohesion: 0.03
-Nodes (60): POST(), POST(), POST(), DELETE(), GET(), PATCH(), DELETE(), PUT() (+52 more)
+Nodes (66): POST(), POST(), DELETE(), GET(), PATCH(), DELETE(), PUT(), GET() (+58 more)
 
 ### Community 1 - "prisma.ts"
-Cohesion: 0.09
-Nodes (30): GET(), POST(), DELETE(), displayNameOf(), PATCH(), UserLite, userSummary(), displayNameOf() (+22 more)
+Cohesion: 0.06
+Nodes (27): DEFAULTS, GET(), POST(), displayNameOf(), POST(), UserLite, userSummary(), DELETE() (+19 more)
 
 ### Community 2 - "ranked-season.ts"
-Cohesion: 0.11
-Nodes (26): GET(), PATCH(), patchSchema, rowSchema, tableSchema, POST(), RARITIES, STEP_LABELS (+18 more)
+Cohesion: 0.17
+Nodes (17): GET(), PATCH(), patchSchema, rowSchema, tableSchema, POST(), getUpgradeEconomyConfig(), parseTable() (+9 more)
 
 ### Community 3 - "live-battle.ts"
-Cohesion: 0.07
-Nodes (57): POST(), GET(), PUT(), requestSchema, POST(), GET(), POST(), requestSchema (+49 more)
+Cohesion: 0.06
+Nodes (62): GET(), PUT(), requestSchema, POST(), GET(), POST(), requestSchema, toDbResult() (+54 more)
 
 ### Community 4 - "fotograf-service.ts"
-Cohesion: 0.07
-Nodes (47): PATCH(), GET(), POST(), GET(), DELETE(), PATCH(), GET(), POST() (+39 more)
+Cohesion: 0.04
+Nodes (89): DELETE(), POST(), POST(), GET(), DELETE(), PATCH(), DELETE(), POST() (+81 more)
 
 ### Community 5 - "journalist-service.ts"
-Cohesion: 0.07
-Nodes (50): actionSchema, DUEL_STANCES, POST(), GET(), average(), GET(), POST(), VALID_DIFFICULTIES (+42 more)
+Cohesion: 0.10
+Nodes (25): POST(), POST(), DELETE(), GET(), PATCH(), GET(), POST(), GET() (+17 more)
 
 ### Community 6 - "app/layout.tsx"
-Cohesion: 0.05
-Nodes (38): GET(), Params, POST(), GET(), GET(), OverlayControl, parseControl(), PATCH() (+30 more)
+Cohesion: 0.07
+Nodes (20): RULES, metadata, russoOne, spaceGrotesk, viewport, FEATURES, AnimatedBackground(), Cell (+12 more)
 
 ### Community 7 - "GuestGate.tsx"
-Cohesion: 0.07
-Nodes (30): EventCardLink(), CATEGORY_STRIP, EVENT_STATUS, SyncButton(), BackToTop(), NAV, FloatingPill(), NAV (+22 more)
+Cohesion: 0.14
+Nodes (12): AdminEventsPage(), CATEGORY_STRIP, EVENT_STATUS, SyncButton(), MyPrediction, MyPredictionsList(), uname(), UserLite (+4 more)
 
 ### Community 8 - "interactive.ts"
-Cohesion: 0.11
-Nodes (48): generateBoard(), hasAnyValidMove(), LEVEL_STAT_MULTIPLIER, applyShieldAbsorption(), DamageRoll, rollDamage(), ActionEstimate, DecisionTargetKind (+40 more)
+Cohesion: 0.10
+Nodes (57): hasAnyValidMove(), LEVEL_STAT_MULTIPLIER, applyShieldAbsorption(), DamageRoll, rollDamage(), ActionEstimate, candidateTargetIds(), DecisionTargetKind (+49 more)
 
 ### Community 9 - "coach-service.ts"
-Cohesion: 0.04
-Nodes (74): POST(), DELETE(), PATCH(), DELETE(), POST(), GET(), POST(), PATCH() (+66 more)
+Cohesion: 0.08
+Nodes (33): POST(), GET(), POST(), GET(), POST(), GET(), POST(), DELETE() (+25 more)
 
 ### Community 10 - "time.ts"
-Cohesion: 0.19
-Nodes (15): POST(), requestSchema, grantGuaranteedPack(), grantStarterPick(), REQUIRED_CLASSES, StarterPickError, findOwnCommunityCardId(), getTutorialProgress() (+7 more)
+Cohesion: 0.16
+Nodes (17): GET(), isAuthorized(), GET(), POST(), MONTH_NAMES, QuestsPage(), QuestRegenerateButton(), sendDiscordDM() (+9 more)
 
 ### Community 11 - "getSessionUser"
-Cohesion: 0.05
-Nodes (46): GET(), GET(), POST(), GET(), GET(), DELETE(), PATCH(), POST() (+38 more)
+Cohesion: 0.03
+Nodes (75): GET(), GET(), GET(), GET(), GET(), POST(), GET(), GET() (+67 more)
 
 ### Community 12 - "series-event-points.ts"
-Cohesion: 0.18
-Nodes (15): GET(), UserLite, AdminEventCompletePage(), DEFAULT_POLL, DEFAULT_REWARDS, MultiPollConfig, parsePoll(), parseRewards() (+7 more)
+Cohesion: 0.11
+Nodes (25): GET(), UserLite, AdminEventCompletePage(), DEFAULT_POLL, DEFAULT_REWARDS, MultiPollConfig, parsePoll(), parseRewards() (+17 more)
 
 ### Community 13 - "CommunityJobsPanel.tsx"
 Cohesion: 0.04
-Nodes (57): api(), Application, ASSET_TYPE_OPTIONS, AssetUploadMode, CatalogEntry, CatalogHolder, ClipUploadField(), CoachRatingsReceived() (+49 more)
+Nodes (54): api(), Application, ASSET_TYPE_OPTIONS, AssetUploadMode, CatalogEntry, CatalogHolder, ClipUploadField(), CoachRatingsReceived() (+46 more)
 
 ### Community 14 - "duels-live.ts"
-Cohesion: 0.11
-Nodes (41): allFieldUnits(), applyAction(), applyClassUltimate(), applyRawDamageToUnit(), applyTacticEffects(), asBattleLog(), beginTrapCheck(), checkDuelTimeout() (+33 more)
+Cohesion: 0.06
+Nodes (77): actionSchema, DUEL_STANCES, POST(), GET(), POST(), VALID_DIFFICULTIES, DuelDeckError, buildNpcDuelDeckInput() (+69 more)
 
 ### Community 15 - "RankedAvatar.tsx"
-Cohesion: 0.09
-Nodes (20): DonationsPage(), fmt(), MONTH_NAMES, streakBadge(), LeaderboardPage(), MEDALS, metadata, PODIUM_CONFIG (+12 more)
+Cohesion: 0.10
+Nodes (17): DonationsPage(), fmt(), MONTH_NAMES, streakBadge(), LeaderboardPage(), MEDALS, metadata, PODIUM_CONFIG (+9 more)
 
 ### Community 16 - "ranks.ts"
 Cohesion: 0.07
-Nodes (45): GET(), POST(), PATCH(), loadProfileOverlayState(), PointsPage(), generateMetadata(), COIN_SOURCES, PointsInfoModal() (+37 more)
+Nodes (44): GET(), POST(), PATCH(), loadProfileOverlayState(), generateMetadata(), COIN_SOURCES, PointsInfoModal(), RANK_LADDER (+36 more)
 
 ### Community 17 - "duel-live-battle.ts"
 Cohesion: 0.25
@@ -320,276 +328,276 @@ Cohesion: 0.05
 Nodes (37): VfxEvent, ATTACK_LABEL, CardRevealEffect, CLASS_ULTIMATE_DESCRIPTION, DEATH_FX, DeathBurst, describeLogEntry(), DuelAction (+29 more)
 
 ### Community 19 - "CommunityJobsAdminPanel.tsx"
-Cohesion: 0.09
-Nodes (27): Anomalies, AnomaliesClient(), Person, AuditClient(), Entry, api(), CoachAttendance(), CoachAvailability() (+19 more)
+Cohesion: 0.06
+Nodes (43): Anomalies, AnomaliesClient(), Person, PayoutsClient(), Preview, Run, Week, MODERATION_TYPE_OPTIONS (+35 more)
 
 ### Community 20 - "MobaIcon.tsx"
-Cohesion: 0.08
-Nodes (23): BattleCardsTabsInner(), isTabKey(), TabKey, TABS, DuelDeckEditor(), DuelDeckTacticCard, DuelDeckUnitCard, MobaIcon() (+15 more)
+Cohesion: 0.09
+Nodes (17): BattleCardsTabsInner(), isTabKey(), TabKey, TABS, DuelDeckEditor(), DuelDeckTacticCard, DuelDeckUnitCard, CardWithId (+9 more)
 
 ### Community 21 - "(dashboard)/leaderboard/page.tsx"
-Cohesion: 0.12
-Nodes (26): BracketView(), Match, Participant, roundLabel(), uname(), User, Props, WanderpocalBadge() (+18 more)
+Cohesion: 0.13
+Nodes (25): BracketView(), Match, Participant, roundLabel(), uname(), User, Props, WanderpocalBadge() (+17 more)
 
 ### Community 22 - "BattleCardView.tsx"
-Cohesion: 0.09
-Nodes (25): ACTIVITY_TIER_ICON, BattleCardData, BattleCardSkill, BattleCardView(), LEVEL_BORDER, CardClassFilter, FILTERS, OwnedCardEntry (+17 more)
+Cohesion: 0.08
+Nodes (31): ACTIVITY_TIER_ICON, BattleCardData, BattleCardSkill, BattleCardView(), LEVEL_BORDER, CardClassFilter, FILTERS, OwnedCardEntry (+23 more)
 
 ### Community 23 - "ProfileMobileView.tsx"
 Cohesion: 0.08
-Nodes (18): Props, EventLiveBadge(), FORMAT_LABELS, GENRE_MAP, STATUS_STYLES, Props, SpectatorRegisterButton(), BotPreviewShell() (+10 more)
+Nodes (17): Props, EventLiveBadge(), Avatar(), EventTippsList(), Tipp, uname(), UserLite, EventWinnerPredictionWidget() (+9 more)
 
 ### Community 24 - "notify-dispatch.ts"
-Cohesion: 0.20
-Nodes (14): GET(), GET(), findEventByDiscordId(), notifyTournamentStarted(), syncAttendee(), updateEventStatus(), authHeader(), DiscordEmbed (+6 more)
+Cohesion: 0.23
+Nodes (12): POST(), GET(), OPEN_EVENT_STATUS_FILTER, PATCH(), POST(), DISCORD_COLORS, createPollsForEvent(), parsePollsConfigJson() (+4 more)
 
 ### Community 25 - "LiveBattleView.tsx"
-Cohesion: 0.12
-Nodes (33): AvailableAction, computeGemsReward(), describeLogEntry(), EFFECT_COLOR, formatModifierDuration(), formatModifierValue(), getArenaBackgroundStyle(), hpBarColor() (+25 more)
+Cohesion: 0.10
+Nodes (38): LiveBattlePage(), metadata, GemsResultScreen(), GemsReward, AvailableAction, computeGemsReward(), describeLogEntry(), EFFECT_COLOR (+30 more)
 
 ### Community 26 - "EventCompleteClient.tsx"
-Cohesion: 0.07
-Nodes (34): Avatar(), computeGroups(), computePlacementMap(), DominionChange, EventCompleteClient(), MEDALS, MultiPollConfig, PlacementReward (+26 more)
+Cohesion: 0.12
+Nodes (20): AddVoteForm(), AdminPoll, answerOptionsFor(), candidatePoolFor(), eligibleVoters(), LivePollsPanel(), Props, PublicPoll (+12 more)
 
 ### Community 27 - "board-match3.ts"
-Cohesion: 0.09
-Nodes (41): BoardMatch3(), hasSeenBoardLegend(), markBoardLegendSeen(), SPECIAL_ICON, SwapAnim, swapTranslateFor(), TILE_ICON, LiveSnapshot (+33 more)
+Cohesion: 0.08
+Nodes (42): BoardMatch3(), hasSeenBoardLegend(), markBoardLegendSeen(), SPECIAL_ICON, SwapAnim, swapTranslateFor(), TILE_ICON, LiveSnapshot (+34 more)
 
 ### Community 28 - "gems-tournament.ts"
-Cohesion: 0.09
-Nodes (37): GET(), GET(), GET(), isAuthorized(), GEMS_DIFFICULTIES, buildCampaignEnemyTeam(), CampaignBoardLevel, getCampaignBoard() (+29 more)
+Cohesion: 0.26
+Nodes (16): CampaignLevelDef, AFK_FARMER, GRIEFER_IMP, LAG_SPIKE, LOOT_GOBLIN, PAY2WIN_TRUHE, RAGE_QUIT_CONTROLLER, SEASON_PASS_DRACHE (+8 more)
 
 ### Community 29 - "requireModeratorOrEventSquadCaptain"
 Cohesion: 0.08
-Nodes (22): formatBirthday(), ProfileEditor(), Props, Badge, ProfileJobBadge(), CustomBadgeDisplay, Props, Tab (+14 more)
+Nodes (21): formatBirthday(), ProfileEditor(), Props, Badge, ProfileJobBadge(), CustomBadgeDisplay, Props, Tab (+13 more)
 
 ### Community 30 - "community-job-service.ts"
 Cohesion: 0.05
-Nodes (76): APPLY, main(), GET(), POST(), POST(), POST(), GET(), GET() (+68 more)
+Nodes (76): APPLY, main(), PATCH(), GET(), POST(), GET(), GET(), POST() (+68 more)
 
 ### Community 31 - "shop-config.ts"
 Cohesion: 0.11
-Nodes (23): GET(), PATCH(), PACK_LABEL, POST(), VALID_KINDS, AdminShopPage(), PACK_KIND_INFO, PACK_KIND_ORDER (+15 more)
+Nodes (20): GET(), PATCH(), AdminShopPage(), PACK_KIND_INFO, PACK_KIND_ORDER, ShopConfigPanel(), TYPE_LABEL, ACCENT_CLASSES (+12 more)
 
 ### Community 32 - "OverlayClient.tsx"
-Cohesion: 0.07
-Nodes (21): buildFfaRanking(), buildMatchRanking(), displayName(), ElementSlot, formatEntryStats(), IdentityFlipTile(), LayoutEntry, MatchTicker() (+13 more)
+Cohesion: 0.06
+Nodes (30): buildFfaRanking(), buildMatchRanking(), cornerStyle(), displayName(), ElementContent(), elementPositionStyle(), ElementSlot, formatEntryStats() (+22 more)
 
 ### Community 33 - "clip-contest.ts"
 Cohesion: 0.11
-Nodes (26): POST(), POST(), GET(), PATCH(), POST(), GET(), GET(), GET() (+18 more)
+Nodes (24): POST(), POST(), GET(), PATCH(), POST(), GET(), GET(), GET() (+16 more)
 
 ### Community 34 - "coach-guide-service.ts"
-Cohesion: 0.20
-Nodes (12): BattleReplayPage(), metadata, BattleOutcome, BattleResultBanner(), OUTCOME_CONFIG, isStoredBattleLog(), finalizePvpChallengeSideEffects(), notifyPvpBattleResolved() (+4 more)
+Cohesion: 0.24
+Nodes (9): DELETE(), PATCH(), GET(), POST(), createGuide(), deleteGuide(), requireActiveCoach(), updateGuide() (+1 more)
 
 ### Community 35 - "gameservers.ts"
-Cohesion: 0.09
-Nodes (30): PUT(), DELETE(), GET(), POST(), GET(), POST(), POST(), GET() (+22 more)
+Cohesion: 0.12
+Nodes (21): POST(), PUT(), DELETE(), PUT(), GET(), GET(), POST(), POST() (+13 more)
 
 ### Community 36 - "packs.ts"
-Cohesion: 0.05
-Nodes (69): POST(), DELETE(), PATCH(), POST(), GET(), POST(), POST(), POST() (+61 more)
+Cohesion: 0.06
+Nodes (52): POST(), POST(), POST(), GET(), DELETE(), PATCH(), POST(), GET() (+44 more)
 
 ### Community 37 - "MobaIcon"
-Cohesion: 0.06
-Nodes (40): GET(), api(), Idea, IdeasBoardClient(), IdeaList(), api(), GameCard(), GameInfo (+32 more)
+Cohesion: 0.08
+Nodes (25): GET(), api(), Idea, IdeasBoardClient(), IdeaList(), api(), GameCard(), GameInfo (+17 more)
 
 ### Community 38 - "types.ts"
-Cohesion: 0.09
-Nodes (33): TACTIC_CARDS, TacticCardSeed, BattleStatsPanel(), StoredBattleLog, computeBattleStats(), findMvpId(), score(), UnitBattleStats (+25 more)
+Cohesion: 0.07
+Nodes (41): TACTIC_CARDS, TacticCardSeed, isAuthorized(), POST(), toJson(), BattleReplayPage(), metadata, BattleOutcome (+33 more)
 
 ### Community 39 - "tournament/[id]/page.tsx"
-Cohesion: 0.09
-Nodes (46): POST(), parseBoardSwaps(), POST(), VALID_ACTIONS, POST(), parseSwaps(), POST(), GET() (+38 more)
+Cohesion: 0.07
+Nodes (52): POST(), GET(), POST(), parseBoardSwaps(), POST(), VALID_ACTIONS, POST(), parseSwaps() (+44 more)
 
 ### Community 40 - "resolveAvatarsForCards"
-Cohesion: 0.16
-Nodes (20): POST(), serializeDrawResult(), asCardResult(), asTacticResult(), awardDrawnCard(), awardDrawnTacticCard(), COMMUNITY_CHANCE, drawCard() (+12 more)
+Cohesion: 0.12
+Nodes (28): POST(), serializeDrawResult(), PACK_LABEL, POST(), VALID_KINDS, ShopPage(), asCardResult(), asTacticResult() (+20 more)
 
 ### Community 41 - "formatBerlinDate"
-Cohesion: 0.11
-Nodes (24): BattleCardsPage(), metadata, userSelect, BattleCardsLogo(), RANK_STYLE, LeaderboardTabs(), Tab, TABS (+16 more)
+Cohesion: 0.08
+Nodes (32): POST(), requestSchema, BattleCardsPage(), metadata, userSelect, BattleCardsLogo(), BattleLauncher(), RANK_STYLE (+24 more)
 
 ### Community 42 - "community-job-config.ts"
-Cohesion: 0.07
-Nodes (49): GET(), PATCH(), PATCH(), PATCH(), GET(), PATCH(), PATCH(), GET() (+41 more)
+Cohesion: 0.08
+Nodes (51): GET(), PATCH(), PATCH(), GET(), PATCH(), PATCH(), POST(), GET() (+43 more)
 
 ### Community 43 - "job-recommendations.ts"
-Cohesion: 0.11
-Nodes (34): berlinDateParts(), coachRecommendationsFor(), daysBetween(), EventRecommendation, eventsWithoutReports(), fotografRecommendationsFor(), getCommunityPlayedGameNames(), getDismissedItemKeys() (+26 more)
+Cohesion: 0.20
+Nodes (22): berlinDateParts(), coachRecommendationsFor(), daysBetween(), EventRecommendation, eventsWithoutReports(), fotografRecommendationsFor(), getCommunityPlayedGameNames(), getDismissedItemKeys() (+14 more)
 
 ### Community 44 - "JobBadge.tsx"
 Cohesion: 0.09
 Nodes (27): Application, ApplicationsManager(), formatDate(), STATUS_LABEL, User, cache, flush(), inflight (+19 more)
 
 ### Community 45 - "auth.ts"
-Cohesion: 0.16
-Nodes (19): BodyModel(), CharacterBuilder(), GENDER_LABEL, CharacterRig(), PartModel(), bodyOf(), carryConfigOver(), defaultConfigFor() (+11 more)
+Cohesion: 0.10
+Nodes (27): PATCH(), patchSchema, characterConfigSchema, PATCH(), requestSchema, BodyModel(), CharacterBuilder(), GENDER_LABEL (+19 more)
 
 ### Community 46 - "discord-rest.ts"
-Cohesion: 0.15
-Nodes (23): GET(), POST(), GET(), OptionInput, POST(), POST(), sendDiscordDM(), createNotificationForUsers() (+15 more)
+Cohesion: 0.14
+Nodes (26): GET(), POST(), GET(), OptionInput, POST(), POST(), findEventByDiscordId(), notifyTournamentStarted() (+18 more)
 
 ### Community 47 - "podium/[id]/route.tsx"
 Cohesion: 0.21
 Nodes (19): CONFETTI, confettiOverlaySvg(), GET(), PLACE_COLORS, PODIUM_HEIGHTS, PodiumEntry, staticFallback(), STATUS_TEXT (+11 more)
 
 ### Community 48 - "FotografTools.tsx"
-Cohesion: 0.08
-Nodes (37): AssetList(), UploadAssetForm(), AlbumOption, AlbumsBlock(), AlbumSelect(), api(), BulkFile, BulkUploadForm() (+29 more)
+Cohesion: 0.07
+Nodes (38): AssetList(), UploadAssetForm(), AlbumOption, AlbumsBlock(), AlbumSelect(), api(), BulkFile, BulkUploadForm() (+30 more)
 
 ### Community 49 - "amp.ts"
-Cohesion: 0.10
-Nodes (18): EventsPage(), FullStandingsToggle(), Props, StandingRow, StandingUser, ArchivedSeason, FORMAT_LABELS, LegacyRow (+10 more)
+Cohesion: 0.13
+Nodes (11): FullStandingsToggle(), Props, StandingRow, StandingUser, Avatar(), DeltaInfo, MEDALS, Props (+3 more)
 
 ### Community 50 - "dispatchNotification"
-Cohesion: 0.22
-Nodes (9): DevSkinTestPage(), SkinCanvas, SkinModel(), SkinCanvas, SkinPicker(), SKINS, skinAssetUrl(), SkinClips (+1 more)
+Cohesion: 0.23
+Nodes (13): DELETE(), GET(), POST(), activeRequesterJob(), closePhotoRequest(), createPhotoRequest(), fulfillPhotoRequest(), listMyPhotoRequests() (+5 more)
 
 ### Community 51 - "BattleScreen.tsx"
 Cohesion: 0.16
 Nodes (26): BattleScreen(), delayForEntry(), DerivedState, deriveState(), describeEntry(), hpBarColor(), UnitRuntime, UnitTile() (+18 more)
 
 ### Community 52 - "DailyPollBanner.tsx"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (18): Props, WinnerClip, DailyMessageBanner(), Message, coverUrl(), DailyPollBanner(), GameSuggestion, GameSuggestionCount (+10 more)
 
 ### Community 53 - "CoinIcon.tsx"
-Cohesion: 0.09
-Nodes (34): AlbumPage(), Interview, InterviewClient(), name(), DesktopProfileTabs(), Tab, PublicProfilePage(), ProfilePage() (+26 more)
+Cohesion: 0.10
+Nodes (30): AlbumPage(), DesktopProfileTabs(), Tab, PublicProfilePage(), ProfilePage(), ProfileRecentEvents(), Props, AssetGrid() (+22 more)
 
 ### Community 54 - "TournamentManager.tsx"
-Cohesion: 0.13
-Nodes (22): CreationForm(), Event, fmtDate(), Match, MatchEntry, nowForDatetimeLocal(), Participant, readViewMode() (+14 more)
+Cohesion: 0.11
+Nodes (23): FORMATS, CreationForm(), Event, fmtDate(), Match, MatchEntry, nowForDatetimeLocal(), Participant (+15 more)
 
 ### Community 55 - "BattleLogEntry"
-Cohesion: 0.08
-Nodes (32): EventCard(), calcEntryAvg(), Entry, FfaView(), fmtUpTo2(), Match, MEDAL, Participant (+24 more)
+Cohesion: 0.10
+Nodes (25): EventCard(), calcEntryAvg(), Entry, FfaView(), fmtUpTo2(), Match, MEDAL, Participant (+17 more)
 
 ### Community 56 - "EventEditClient.tsx"
 Cohesion: 0.10
-Nodes (25): CATEGORIES, DEFAULT_REWARDS, derivePointsConfigFromSeries(), deriveStatFieldsFromSeries(), EMPTY_EVENT_STAT_CONFIG, EventEditClient(), EventStatConfigForm, GENRES (+17 more)
+Nodes (24): CATEGORIES, DEFAULT_REWARDS, derivePointsConfigFromSeries(), deriveStatFieldsFromSeries(), EMPTY_EVENT_STAT_CONFIG, EventEditClient(), EventStatConfigForm, GENRES (+16 more)
 
 ### Community 57 - "SeriesDetailClient.tsx"
-Cohesion: 0.07
-Nodes (29): DEFAULT_POLL_ITEM, DEFAULT_REWARDS, GENRES, needsAttention(), NOT_ACTIVE_STATUSES, parsePollConfigs(), parseRewards(), PlacementReward (+21 more)
+Cohesion: 0.09
+Nodes (19): DEFAULT_POLL_ITEM, DEFAULT_REWARDS, GENRES, needsAttention(), NOT_ACTIVE_STATUSES, parsePollConfigs(), parseRewards(), PlacementReward (+11 more)
 
 ### Community 58 - "revert-event-completion.ts"
-Cohesion: 0.10
-Nodes (25): DELETE(), GEMS_DIFFICULTIES, PATCH(), DELETE(), DeleteEventOptions, deleteEventRecord(), deleteDiscordScheduledEvent(), deleteDiscordMessage() (+17 more)
+Cohesion: 0.09
+Nodes (27): DELETE(), GEMS_DIFFICULTIES, PATCH(), DELETE(), GET(), GET(), DeleteEventOptions, deleteEventRecord() (+19 more)
 
 ### Community 59 - "devDependencies"
 Cohesion: 0.08
 Nodes (25): eslint, eslint-config-next, devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, ts-node (+17 more)
 
 ### Community 60 - "skill-pool.ts"
-Cohesion: 0.13
-Nodes (22): curve(), curvePercent(), STANDARD_CARDS, StandardCardSeed, ACTIVE_POOL, DD_ACTIVE_SKILLS, DD_PASSIVE_KITS, DD_ULTIMATE_SKILLS (+14 more)
+Cohesion: 0.14
+Nodes (21): curve(), curvePercent(), StandardCardSeed, ACTIVE_POOL, DD_ACTIVE_SKILLS, DD_PASSIVE_KITS, DD_ULTIMATE_SKILLS, PASSIVE_POOL (+13 more)
 
 ### Community 61 - "community-board-comment-service.ts"
 Cohesion: 0.12
 Nodes (20): DELETE(), DELETE(), POST(), GET(), POST(), addComment(), AddCommentResult, COMMENT_ENTITY_TYPES (+12 more)
 
 ### Community 62 - "EmptyState.tsx"
-Cohesion: 0.10
-Nodes (23): clips, file, base, bodyMaterial, label, parts, regions, skin (+15 more)
+Cohesion: 0.08
+Nodes (28): clips, file, base, bodyMaterial, label, parts, regions, athlete (+20 more)
 
 ### Community 63 - "Skeleton.tsx"
 Cohesion: 0.14
 Nodes (7): Skeleton(), SkeletonCard(), SkeletonHero(), SkeletonLeaderboardRow(), SkeletonList(), SkeletonStatCards(), cn()
 
 ### Community 64 - "dashboard/page.tsx"
-Cohesion: 0.22
-Nodes (9): PATCH(), patchSchema, characterConfigSchema, PATCH(), requestSchema, CardCharacterSelection, CardContentError, CardContentPatch (+1 more)
+Cohesion: 0.18
+Nodes (15): GET(), GET(), isAuthorized(), findGemsMonsterTemplate(), GEMS_MONSTER_CATALOG, finalizeDueGemsTournaments(), GemsTournamentSummary, generateGemsTournamentBossTeam() (+7 more)
 
 ### Community 65 - "dependencies"
 Cohesion: 0.04
 Nodes (47): @auth/prisma-adapter, canvas-confetti, discord.js, @google/generative-ai, lucide-react, motion, next, next-auth (+39 more)
 
 ### Community 66 - "awardProfileCompletionIfNeeded"
-Cohesion: 0.24
-Nodes (9): DELETE(), PUT(), GET(), GET(), POST(), AdminServersPage(), countPendingApplications(), getServersWithAdminCounts() (+1 more)
+Cohesion: 0.17
+Nodes (14): Avatar(), computeGroups(), computePlacementMap(), DominionChange, EventCompleteClient(), MEDALS, MultiPollConfig, PlacementReward (+6 more)
 
 ### Community 67 - "hasMinRole"
 Cohesion: 0.14
 Nodes (22): GET(), POST(), DELETE(), DELETE(), AuditActor, AUTHOR, AuthorRow, authorSearch() (+14 more)
 
 ### Community 68 - "admin/events/[id]/complete/route.ts"
-Cohesion: 0.12
-Nodes (26): POST(), GET(), OPEN_EVENT_STATUS_FILTER, PATCH(), completeEvent(), DEFAULT_REWARDS, isSystemCall(), parseRewards() (+18 more)
+Cohesion: 0.09
+Nodes (30): completeEvent(), DEFAULT_REWARDS, isSystemCall(), parseRewards(), PlacementReward, POST(), RewardsConfig, SeriesStandings (+22 more)
 
 ### Community 69 - "challenge.ts"
 Cohesion: 0.16
 Nodes (17): POST(), POST(), requestSchema, userSelect, DELETE(), GET(), POST(), ChallengeError (+9 more)
 
 ### Community 70 - "ReportEditor.tsx"
-Cohesion: 0.19
-Nodes (16): EmojiPanel(), Props, UNICODE_GROUPS, Block, EmojiImg(), EmojiText(), INLINE, MarkdownLite() (+8 more)
+Cohesion: 0.14
+Nodes (17): JobTexts, EmojiPanel(), Props, UNICODE_GROUPS, Block, EmojiImg(), EmojiText(), INLINE (+9 more)
 
 ### Community 71 - "GameNameInput.tsx"
 Cohesion: 0.19
 Nodes (15): GET(), NextEventTile(), GameCover(), coverCache, GameNameInput(), GameNameInputProps, highlightMatch(), escapeRegExp() (+7 more)
 
 ### Community 72 - "events/series/[id]/page.tsx"
-Cohesion: 0.29
-Nodes (7): POST(), POST(), POST(), PATCH(), POST(), sanitizeFavoriteGames(), awardProfileCompletionIfNeeded()
+Cohesion: 0.16
+Nodes (8): BackToTop(), GuestBanner(), GuestGateProvider(), ACCENT_COLOR, ICON_MAP, NewsItem, Props, TopNewsFeed()
 
 ### Community 73 - "visionaer-service.ts"
 Cohesion: 0.21
 Nodes (11): ActivityFeed(), cleanReason(), Filter, Tx, txType(), AdminPage(), formatCountdown(), NOT_ACTIVE_STATUSES (+3 more)
 
 ### Community 74 - "formatBerlinTime"
-Cohesion: 0.19
-Nodes (8): MonthlyContests, Props, YearlyContests, EventsTabs(), TabItem, TabPanel(), Tabs(), TabsProps
+Cohesion: 0.12
+Nodes (15): MonthlyContests, Props, YearlyContests, EventsTabs(), TabItem, TabPanel(), Tabs(), TabsProps (+7 more)
 
 ### Community 75 - "SeriesIcon.tsx"
-Cohesion: 0.09
-Nodes (29): POST(), GET(), loadOverlayState(), loadStreamer(), parseOverlayControl(), GET(), computeKeptSeriesRankPoints(), PlacementReward (+21 more)
+Cohesion: 0.16
+Nodes (19): GET(), loadOverlayState(), loadStreamer(), parseOverlayControl(), GET(), EventsPage(), ArchivedSeason, FORMAT_LABELS (+11 more)
 
 ### Community 76 - "[id]/settings/SettingsClient.tsx"
 Cohesion: 0.13
 Nodes (14): ELEMENT_SIZE, STACKABLE_ELEMENTS, DEFAULT_POSITIONS, ELEMENT_OPTIONS, ElementOption, SettingsClient(), CanvasElementOption, Pos (+6 more)
 
 ### Community 77 - "tutorial.ts"
-Cohesion: 0.16
-Nodes (19): GET(), IdeaPageClient(), IdeaPage(), ReportPage(), ReportPageClient(), AUTHOR, ideaFeedInclude(), IdeaWithFeedData (+11 more)
+Cohesion: 0.17
+Nodes (16): GET(), FeedEntry, IdeaPageClient(), IdeaPage(), ReportPage(), ReportPageClient(), AUTHOR, ideaFeedInclude() (+8 more)
 
 ### Community 78 - "ProfileOverlayClient.tsx"
-Cohesion: 0.12
-Nodes (18): combinedElementStyle(), Corner, ElementCycle, FavoriteGame, FavoritesPanel(), MotionStyles(), OverlayStreamer, panelMotionStyle() (+10 more)
+Cohesion: 0.10
+Nodes (23): combinedElementStyle(), Corner, ElementCycle, FavoriteGame, FavoritesPanel(), MotionStyles(), OverlayStreamer, panelMotionStyle() (+15 more)
 
 ### Community 79 - "community-job-payout/route.ts"
-Cohesion: 0.19
-Nodes (14): GET(), PATCH(), patchSchema, placementSchema, AdminBattleCardsPage(), PLACES, SeasonRewardsPanel(), DEFAULT_SEASON_REWARD_CONFIG (+6 more)
+Cohesion: 0.14
+Nodes (17): GET(), PATCH(), patchSchema, placementSchema, AdminBattleCardsPage(), PLACES, SeasonRewardsPanel(), RARITIES (+9 more)
 
 ### Community 80 - "AdminEventsClient.tsx"
 Cohesion: 0.18
 Nodes (10): AdminDonationsClient(), Donation, Expense, fmt(), Idea, inputStyle, MONTH_NAMES, now (+2 more)
 
 ### Community 81 - "ConfirmDialog.tsx"
-Cohesion: 0.16
-Nodes (15): SeriesOption, ConfirmDialog(), ConfirmDialogProps, ConfirmOptions, ConfirmState, EMPTY_STATE, Modal(), PANEL_WIDTH (+7 more)
+Cohesion: 0.09
+Nodes (27): SeriesOption, ConfirmDialog(), ConfirmDialogProps, ConfirmOptions, ConfirmState, EMPTY_STATE, DisputeKind, DisputeVotesModal() (+19 more)
 
 ### Community 82 - "ClipVotingClient.tsx"
-Cohesion: 0.09
-Nodes (20): ClipVotingClient(), Nomination, Props, ClipDesMonatsPage(), MONTH_NAMES, GalleryEntry, MONTH_NAMES, Nomination (+12 more)
+Cohesion: 0.10
+Nodes (19): ClipVotingClient(), Nomination, Props, ClipDesMonatsPage(), MONTH_NAMES, GalleryEntry, MONTH_NAMES, Nomination (+11 more)
 
 ### Community 83 - "(dashboard)/events/page.tsx"
-Cohesion: 0.20
-Nodes (15): GET(), isAuthorized(), formatStart(), GET(), announceEventResults(), announceNewEvent(), fmtDateDE(), eventParticipationCoins() (+7 more)
+Cohesion: 0.22
+Nodes (14): GET(), isAuthorized(), formatStart(), GET(), announceEventResults(), announceNewEvent(), fmtDateDE(), eventParticipationCoins() (+6 more)
 
 ### Community 84 - "bot/index.ts"
-Cohesion: 0.18
-Nodes (15): awardPoints(), parsePlacementPts(), PATCH(), BracketMatch, generateBracket(), generateRoundRobin(), POST(), shuffle() (+7 more)
+Cohesion: 0.31
+Nodes (8): awardPoints(), parsePlacementPts(), PATCH(), BracketMatch, generateBracket(), generateRoundRobin(), POST(), shuffle()
 
 ### Community 85 - "CoachTools.tsx"
 Cohesion: 0.22
 Nodes (13): POST(), GET(), GET(), POST(), InterviewPage(), answerInterview(), createInterview(), declineInterview() (+5 more)
 
 ### Community 86 - "MarkdownLite.tsx"
-Cohesion: 0.03
-Nodes (11): DEFAULTS, RULES, RuleSeed, GameSuggestion, GameSuggestion, isAuthorized(), POST(), DEFAULT_PREFS (+3 more)
+Cohesion: 0.04
+Nodes (11): GameSuggestion, GameSuggestion, DEFAULT_PREFS, POST(), POST(), POST(), PATCH(), POST() (+3 more)
 
 ### Community 87 - "compilerOptions"
 Cohesion: 0.07
@@ -604,7 +612,7 @@ Cohesion: 0.12
 Nodes (15): Event, EventAdminRow(), Match, MatchEntry, parseTmtConfig(), Participant, Registration, Series (+7 more)
 
 ### Community 90 - "useConfirm"
-Cohesion: 0.23
+Cohesion: 0.22
 Nodes (11): CustomBadgeDisplay, Props, checkAndAwardBadges(), loadStats(), Badge, BADGE_CATEGORY_LABELS, BADGE_DEFS, BadgeDef (+3 more)
 
 ### Community 91 - "CommunityBoardClient.tsx"
@@ -620,84 +628,84 @@ Cohesion: 0.08
 Nodes (26): blocks, texture, blocks, texture, blocks, materials, texture, blocks (+18 more)
 
 ### Community 94 - "JournalistTools.tsx"
-Cohesion: 0.20
-Nodes (6): ApplyButton(), Light, LIGHT_COLOR, LIGHT_LABEL, Server, ServerCredentials()
+Cohesion: 0.19
+Nodes (7): NAV, FloatingPill(), NAV, NavLink, useTheme(), GateLink(), PollBadge()
 
 ### Community 95 - "apply-season-results.ts"
-Cohesion: 0.36
-Nodes (9): applyTierJumpLimit(), computePercentiles(), computeSeasonResults(), hashSeed(), MemberSeasonResult, resolveClass(), TIER_ORDER, TIER_PERCENTILE_CEILING (+1 more)
+Cohesion: 0.19
+Nodes (16): ACTIVITY_TIER_RANK, ACTIVITY_TIER_LABEL, CLASS_BASE_STATS, isOverridden(), runSeasonUpdate(), toJson(), applyTierJumpLimit(), computePercentiles() (+8 more)
 
 ### Community 96 - "EventSetupWizard.tsx"
-Cohesion: 0.07
-Nodes (34): POST(), CATEGORIES, EventSetupWizard(), FORMATS, GENRES, inputStyle, PlacementReward, PLATFORMS (+26 more)
+Cohesion: 0.08
+Nodes (33): POST(), CATEGORIES, EventSetupWizard(), GENRES, inputStyle, PlacementReward, PLATFORMS, PollConfig (+25 more)
 
 ### Community 97 - "NotificationRulesPanel.tsx"
-Cohesion: 0.13
-Nodes (16): BroadcastPanel(), SendResult, UserResult, CATEGORY_LABELS, CATEGORY_ORDER, DiscordEmoji, fillSample(), NotificationRuleRow (+8 more)
+Cohesion: 0.15
+Nodes (13): BroadcastPanel(), SendResult, UserResult, CATEGORY_LABELS, CATEGORY_ORDER, DiscordEmoji, fillSample(), NotificationRuleRow (+5 more)
 
 ### Community 98 - "(dashboard)/battle-cards/page.tsx"
 Cohesion: 0.14
 Nodes (21): DailyMessagePanel(), defaultForm(), formatDate(), FormState, isCurrentlyActive(), Message, toLocalInputValue(), DailyPollPanel() (+13 more)
 
 ### Community 99 - "PackOpener.tsx"
-Cohesion: 0.11
-Nodes (14): ACCENT_CLASSES, PACK_INFO, PACK_ORDER, PACK_ACCENT, PACK_ART, PACK_CLIP_PATH, PACK_COVER_LABEL, PACK_TEXTURE (+6 more)
+Cohesion: 0.15
+Nodes (11): PACK_ACCENT, PACK_ART, PACK_CLIP_PATH, PACK_COVER_LABEL, PACK_TEXTURE, PackCoverArt(), PackVisualKind, OpenPackResponse (+3 more)
 
 ### Community 100 - "adapters.ts"
-Cohesion: 0.09
-Nodes (14): LinkedUser, Partner, PartnerManager(), TwitchPreview, AmpSuggestion, EMPTY_FORM, FormState, Light (+6 more)
+Cohesion: 0.11
+Nodes (11): AmpSuggestion, EMPTY_FORM, FormState, Light, LIGHT_COLOR, Server, ServerManager(), ServersPage() (+3 more)
 
 ### Community 101 - "admin/community-jobs/disputes/route.ts"
-Cohesion: 0.19
-Nodes (10): GET(), PATCH(), POST(), VALID_KINDS, DisputeResult, fileDispute(), lookups, resolveDispute() (+2 more)
+Cohesion: 0.24
+Nodes (7): POST(), VALID_KINDS, DisputeResult, fileDispute(), lookups, VoteKind, VoteOwnerLookup
 
 ### Community 102 - "recurrence.ts"
-Cohesion: 0.07
-Nodes (31): GET(), AdminContentSection(), AdminEditForm(), Author, entryImage(), FeedEntry, KIND_ICON, KIND_LABEL (+23 more)
+Cohesion: 0.13
+Nodes (18): GET(), api(), AssetOption, buildEventTemplate(), EventOption, FoundUser, InterviewOption, PostOption (+10 more)
 
 ### Community 103 - "isVideoUrl"
-Cohesion: 0.33
-Nodes (5): centeredRect(), Handle, ImageCropTool(), PRESETS, Rect
+Cohesion: 0.11
+Nodes (19): AdminContentSection(), AdminEditForm(), Author, entryImage(), FeedEntry, KIND_ICON, KIND_LABEL, Thumb() (+11 more)
 
 ### Community 104 - "studio-templates.ts"
 Cohesion: 0.31
 Nodes (25): defaults, defaults, slim, defaults, Bottom, Eyewear, FacialHair, Gloves (+17 more)
 
 ### Community 105 - "minigames-config.ts"
-Cohesion: 0.14
-Nodes (20): GET(), PATCH(), POST(), POST(), POST(), userSelect, MinigamesConfigPanel(), AdminMinigamesPage() (+12 more)
+Cohesion: 0.28
+Nodes (11): POST(), POST(), POST(), userSelect, getDailyDuelCount(), getDailyWageredTotal(), isExpired(), isPairOnCooldown() (+3 more)
 
 ### Community 106 - "photo-request-service.ts"
-Cohesion: 0.47
-Nodes (3): POST(), POST(), updateQuestProgress()
+Cohesion: 0.36
+Nodes (5): POST(), POST(), notifyPvpBattleResolved(), dispatchNotification(), updateQuestProgress()
 
 ### Community 107 - "card-provisioning.ts"
-Cohesion: 0.20
-Nodes (12): isAuthorized(), POST(), isAuthorized(), POST(), userRecordSchema, webhookPayloadSchema, CLASS_SPEED_MIDPOINT, ensureCommunityCard() (+4 more)
+Cohesion: 0.15
+Nodes (17): isAuthorized(), isOverridden(), POST(), toJson(), isAuthorized(), POST(), isAuthorized(), POST() (+9 more)
 
 ### Community 108 - "DailyPollPanel.tsx"
-Cohesion: 0.18
-Nodes (9): DashboardLayout(), PartnerFooter(), Partner, ACCENT_COLOR, ICON_MAP, NewsItem, Props, TopNewsFeed() (+1 more)
+Cohesion: 0.26
+Nodes (6): DashboardLayout(), PartnerFooter(), Partner, GUEST_ALLOWED_PATHS, isGuestAllowedPath(), isLinkPreviewBot()
 
 ### Community 109 - "useServerLiveStatus.ts"
-Cohesion: 0.19
-Nodes (13): GameserverWidget(), Server, ServerRow(), ServersPage(), ServerCard(), Server, ServerList(), latestStatus (+5 more)
+Cohesion: 0.11
+Nodes (18): GameserverWidget(), Server, ServerRow(), ApplyButton(), Light, LIGHT_COLOR, LIGHT_LABEL, Server (+10 more)
 
 ### Community 110 - "points.ts"
-Cohesion: 0.22
-Nodes (9): cornerStyle(), ElementContent(), elementPositionStyle(), OverlayClient(), panelWidthFor(), pickTickerMatch(), usePanelRotator(), useStackedElements() (+1 more)
+Cohesion: 0.25
+Nodes (10): Avatar(), computeGroups(), computePlacementMap(), MEDALS, PlacementReward, Props, RewardsConfig, SeriesCompleteClient() (+2 more)
 
 ### Community 111 - "FfaView.tsx"
-Cohesion: 0.48
-Nodes (4): CoverBrandBadge(), EventCoverDefault(), dynamicCache, GameCoverProps
+Cohesion: 0.17
+Nodes (18): GET(), Params, POST(), GET(), GET(), OverlayControl, parseControl(), PATCH() (+10 more)
 
 ### Community 112 - "EventPokalWinners.tsx"
-Cohesion: 0.60
-Nodes (5): isAuthorized(), isOverridden(), POST(), toJson(), getSkillTemplate()
+Cohesion: 0.22
+Nodes (11): CATEGORY_BADGE_CLASS, EventPokalWinners(), PokalWithOwner, Props, PokalPreview(), Props, CATEGORY_BADGE_CLASS, PokalSection() (+3 more)
 
 ### Community 113 - "GamePlayersModal.tsx"
-Cohesion: 0.19
-Nodes (10): Event, EventRow(), needsAttention(), NOT_ACTIVE_STATUSES, Series, SeriesRow(), STATUS_LABELS, STATUS_STYLES (+2 more)
+Cohesion: 0.10
+Nodes (19): Event, EventRow(), needsAttention(), NOT_ACTIVE_STATUSES, Series, SeriesRow(), STATUS_LABELS, STATUS_STYLES (+11 more)
 
 ### Community 114 - "scripts"
 Cohesion: 0.15
@@ -708,12 +716,12 @@ Cohesion: 0.40
 Nodes (3): CardRow, CommunityCardsAdmin(), AdminCommunityCardsPage()
 
 ### Community 116 - "report/[id]/page.tsx"
-Cohesion: 0.33
-Nodes (7): revokePointsByReason(), applyMatchResult(), ApplyMatchResultError, ApplyMatchResultInput, finalFinalistReason(), finalWinReason(), loserOf()
+Cohesion: 0.22
+Nodes (12): DELETE(), displayNameOf(), PATCH(), UserLite, userSummary(), revokePointsByReason(), applyMatchResult(), ApplyMatchResultError (+4 more)
 
 ### Community 117 - "getActiveMembership"
-Cohesion: 0.09
-Nodes (29): AdminEventsPage(), CommunityBoardWidget(), entryImage(), entryLabel(), FeedEntry, KIND_ACCENT, KIND_ICON, ThumbVote() (+21 more)
+Cohesion: 0.08
+Nodes (31): CommunityBoardWidget(), entryImage(), entryLabel(), FeedEntry, KIND_ACCENT, KIND_ICON, ThumbVote(), voteUrl() (+23 more)
 
 ### Community 118 - "AdminNav.tsx"
 Cohesion: 0.22
@@ -732,52 +740,56 @@ Cohesion: 0.21
 Nodes (16): GET(), POST(), backgroundGradientSvg(), coverCache, fetchCoverFitBuffer(), frameOverlaySvg(), generateBrandedCoverBuffer(), generateBrandedCoverDataUri() (+8 more)
 
 ### Community 122 - "duels/[id]/respond/route.ts"
-Cohesion: 0.14
-Nodes (15): Contest, ContestManager(), MONTH_NAMES, Nomination, UserSearchResult, Contest, Nomination, YearlyContestManager() (+7 more)
+Cohesion: 0.11
+Nodes (19): Contest, ContestManager(), MONTH_NAMES, Nomination, UserSearchResult, Contest, Nomination, YearlyContestManager() (+11 more)
 
 ### Community 123 - "AdminDonationsClient.tsx"
-Cohesion: 0.40
-Nodes (3): AdminTacticCardsPage(), TacticCardRow, TacticCardsAdmin()
+Cohesion: 0.27
+Nodes (10): applyEloResult(), applyOneSidedEloResult(), EloResult, EloUpdateInput, EloUpdateOutput, expectedScore(), kFactor(), OneSidedEloUpdateInput (+2 more)
 
 ### Community 124 - "SeriesAdminRow.tsx"
 Cohesion: 0.24
 Nodes (4): SteamGameResult, PollOptionGameInputProps, GameSuggestion, PollGameSuggestInputProps
 
 ### Community 125 - "CommunityBoardWidget.tsx"
-Cohesion: 0.08
-Nodes (24): Avatar(), computeGroups(), computePlacementMap(), MEDALS, PlacementReward, Props, RewardsConfig, SeriesCompleteClient() (+16 more)
+Cohesion: 0.11
+Nodes (14): EventUser, GENRE_MAP, Props, SeriesEventItem, STATUS_CFG, StreamingPartner, CompareProfilePage(), fetchUserData() (+6 more)
 
 ### Community 126 - "ServerCard.tsx"
 Cohesion: 0.31
 Nodes (10): GamePlayer, GET(), FavoriteGamesSection(), Props, GamePlayersModal(), LoadState, Props, FavoriteGame (+2 more)
 
 ### Community 127 - "include"
-Cohesion: 0.40
-Nodes (5): ELEMENT_KEYS, parseLayout(), ProfileOverlayPage(), ProfileElementKey, ProfileLayoutPositions
+Cohesion: 0.14
+Nodes (16): Interview, InterviewClient(), name(), api(), AreaKey, FoundUser, GameInfo, IdeaForm() (+8 more)
 
 ### Community 128 - "process-badge-art.ts"
 Cohesion: 0.24
 Nodes (10): BADGES, BG, isolateSymbol(), main(), maskSvg(), OUT_DIR, RAW_DIR, ringSvg() (+2 more)
 
 ### Community 129 - "applyForJob"
-Cohesion: 0.09
-Nodes (27): base, bodyMaterial, label, parts, regions, skin, bear, giant (+19 more)
+Cohesion: 0.16
+Nodes (19): skin, skin, giant, skin, base, bodyMaterial, label, parts (+11 more)
 
 ### Community 130 - "updateQuestProgress"
-Cohesion: 0.83
-Nodes (3): isAuthorized(), POST(), toJson()
+Cohesion: 0.42
+Nodes (7): GET(), PATCH(), patchSchema, getSeasonConfig(), KEYS, setEloHardResetAt(), setSeason1StartAt()
 
 ### Community 131 - "SeriesCompleteClient.tsx"
 Cohesion: 0.47
 Nodes (6): POST(), GET(), collectYearlyNominations(), finalizeYearlyContest(), notifyYearlyContestFinished(), notifyYearlyContestStarted()
+
+### Community 132 - "clip-des-monats/page.tsx"
+Cohesion: 0.16
+Nodes (15): GET(), POST(), GET(), POST(), GET(), POST(), createCampaign(), createMarketingPost() (+7 more)
 
 ### Community 133 - "overlay/[id]/page.tsx"
 Cohesion: 0.20
 Nodes (10): ElementKey, formatStatLabel(), LayoutPositions, SeriesTablePanel(), CORNERS, ELEMENT_KEYS, OverlayPage(), PANEL_KEYS (+2 more)
 
 ### Community 134 - "requireModeratorOrSquadCaptain"
-Cohesion: 0.06
-Nodes (48): GET(), GET(), GET(), PATCH(), DELETE(), PATCH(), POST(), PATCH() (+40 more)
+Cohesion: 0.12
+Nodes (19): DELETE(), PATCH(), POST(), POST(), DELETE(), PATCH(), POST(), DELETE() (+11 more)
 
 ### Community 135 - "Product"
 Cohesion: 0.20
@@ -788,32 +800,36 @@ Cohesion: 0.20
 Nodes (9): 1. Discord App erstellen, 2. Umgebungsvariablen setzen, 3. Datenbank aufsetzen, 4. Entwicklungsserver starten, GuildHub – Discord Companion, Nächste Schritte, Projektstruktur, Schnellstart (+1 more)
 
 ### Community 137 - "DailyMessagePanel.tsx"
-Cohesion: 0.15
-Nodes (25): GET(), PATCH(), patchSchema, GET(), isAuthorized(), softResetRating(), addMonthsUTC(), getCurrentSeasonNumber() (+17 more)
+Cohesion: 0.22
+Nodes (17): GET(), isAuthorized(), softResetRating(), addMonthsUTC(), getCurrentSeasonNumber(), getSeasonWindow(), grantDueSeasonRewards(), grantPlacementReward() (+9 more)
 
 ### Community 138 - "series/[id]/complete/page.tsx"
-Cohesion: 0.10
-Nodes (20): openSection(), ProfileCompletion(), Props, Avatar(), EventTippsList(), Tipp, uname(), UserLite (+12 more)
+Cohesion: 0.16
+Nodes (10): CampaignBoardLevel, LevelNode(), offsetFor(), ZIGZAG_OFFSETS, ErrorNotice(), DIFFICULTY_CONFIG, DIFFICULTY_ORDER, NpcBattleLauncher() (+2 more)
 
 ### Community 139 - "starter-pick.ts"
-Cohesion: 0.24
-Nodes (9): GET(), isAuthorized(), CATEGORY_ACCENT, CATEGORY_ICONS, CATEGORY_LABELS, DAILY_CAPS, POINT_RULES, PointCategory (+1 more)
+Cohesion: 0.16
+Nodes (14): CATEGORY_ACCENT, CATEGORY_ICONS, PointsPage(), openSection(), ProfileCompletion(), Props, CATEGORY_LABELS, DAILY_CAPS (+6 more)
 
 ### Community 140 - "DailySpin.tsx"
 Cohesion: 0.38
 Nodes (5): DELETE(), GET(), PATCH(), RuleUpdate, invalidateNotificationRuleCache()
 
 ### Community 141 - "StarterPickFlow.tsx"
-Cohesion: 0.11
-Nodes (23): BattleChallengeWidget(), ChallengeItem, ChallengesList(), ChallengeUser, displayName(), PlayerBadge(), ChallengeUserPicker(), uname() (+15 more)
+Cohesion: 0.10
+Nodes (25): average(), GET(), BattleChallengeWidget(), ChallengeItem, ChallengesList(), ChallengeUser, displayName(), PlayerBadge() (+17 more)
+
+### Community 142 - "GameCover.tsx"
+Cohesion: 0.24
+Nodes (8): POST(), computeKeptSeriesRankPoints(), PlacementReward, resetAllExceptSeries(), RewardsConfig, SelectiveResetSummary, LegacyStandingRow, SeriesEventForStandings
 
 ### Community 143 - "process-rank-art.ts"
 Cohesion: 0.31
 Nodes (8): BG, isolateSymbol(), main(), maskSvg(), OUT_DIR, RANKS, RAW_DIR, ringSvg()
 
 ### Community 144 - "run-season.ts"
-Cohesion: 0.20
-Nodes (13): POST(), ACTIVITY_TIER_RANK, ACTIVITY_TIER_LABEL, CLASS_BASE_STATS, isOverridden(), runSeasonUpdate(), toJson(), buildSeasonInputs() (+5 more)
+Cohesion: 0.39
+Nodes (6): POST(), buildSeasonInputs(), countBy(), runFullSeasonUpdate(), RunSeasonResult, markPreSeasonRan()
 
 ### Community 145 - "requireModeratorOrSquadCaptain"
 Cohesion: 0.31
@@ -824,8 +840,12 @@ Cohesion: 0.22
 Nodes (17): checkpointVoice(), findUser(), handleMemberJoin(), trackInvite(), trackMessage(), trackReaction(), trackVoice(), client (+9 more)
 
 ### Community 147 - "DailyMessagePanel.tsx"
-Cohesion: 0.07
-Nodes (42): DELETE(), POST(), GET(), POST(), POST(), POST(), DELETE(), PATCH() (+34 more)
+Cohesion: 0.20
+Nodes (13): GET(), POST(), POST(), POST(), GET(), POST(), ASSET_TYPES, createAlbum() (+5 more)
+
+### Community 148 - "OverlayClient"
+Cohesion: 0.20
+Nodes (10): EventCardLink(), GateButton(), GateOptions, GuestGateContext, GuestGateValue, GuestMoreCta(), useGuestGate(), MobileTopBar() (+2 more)
 
 ### Community 149 - "middleware.ts"
 Cohesion: 0.36
@@ -861,15 +881,19 @@ Nodes (5): PATCH(), patchSchema, TacticCardContentError, TacticCardContentPatch,
 
 ### Community 157 - "GameCover.tsx"
 Cohesion: 0.25
-Nodes (10): BattleLauncher(), Mode, RankRow(), BattleRankBadge(), MatchmakingWidget(), BATTLE_RANKS, BattleRankEntry, getBattleRank() (+2 more)
+Nodes (10): Mode, RankRow(), BattleRankBadge(), MatchmakingWidget(), NpcPuzzleBattleLauncher(), BATTLE_RANKS, BattleRankEntry, getBattleRank() (+2 more)
 
 ### Community 158 - "SeasonConfigPanel.tsx"
-Cohesion: 0.10
-Nodes (33): GET(), GET(), isAuthorized(), GET(), isAuthorized(), calcStreak(), GET(), GET() (+25 more)
+Cohesion: 0.14
+Nodes (23): GET(), GET(), isAuthorized(), GET(), GET(), isAuthorized(), calcStreak(), GET() (+15 more)
 
 ### Community 159 - "requireModeratorOrAnySquadCaptain"
 Cohesion: 0.23
 Nodes (11): gamedig, gamedig, GET(), GET(), StatusEntry, getInstances(), getInstancesRaw(), toInstanceStatus() (+3 more)
+
+### Community 160 - "recharts"
+Cohesion: 0.20
+Nodes (9): GET(), PATCH(), MinigamesConfigPanel(), AdminMinigamesPage(), DEFAULTS, KEYS, MinigameKey, MinigamesConfig (+1 more)
 
 ### Community 161 - "lineup/route.ts"
 Cohesion: 0.53
@@ -880,7 +904,7 @@ Cohesion: 0.53
 Nodes (4): GET(), isAuthorized(), expireStaleChallenges(), ExpireStaleChallengesResult
 
 ### Community 163 - "HeroStatValue.tsx"
-Cohesion: 0.48
+Cohesion: 0.43
 Nodes (4): CountUp(), HeroStatValue(), useValueDelta(), ValueDeltaBadge()
 
 ### Community 165 - "MyPredictionsList.tsx"
@@ -900,12 +924,12 @@ Cohesion: 0.29
 Nodes (11): categories, categories, Bottom, Eyewear, FacialHair, Gloves, Hair, Headwear (+3 more)
 
 ### Community 169 - "seed-standard-cards/route.ts"
-Cohesion: 0.70
-Nodes (4): GET(), isAuthorized(), POST(), toJson()
+Cohesion: 0.53
+Nodes (5): STANDARD_CARDS, GET(), isAuthorized(), POST(), toJson()
 
 ### Community 170 - "synergy.ts"
-Cohesion: 0.21
-Nodes (11): main(), DISCORD_REASONS, GET(), isAuthorized(), createNotification(), isTypeEnabled(), NotificationType, PREF_KEY (+3 more)
+Cohesion: 0.29
+Nodes (8): main(), DISCORD_REASONS, GET(), isAuthorized(), createNotification(), isTypeEnabled(), NotificationType, PREF_KEY
 
 ### Community 172 - "Kapitel-Hintergründe — Kampagne"
 Cohesion: 0.50
@@ -916,8 +940,8 @@ Cohesion: 0.31
 Nodes (9): GET(), POST(), rollPrize(), todayStr(), CHEST_TABLE, ChestPrize, grantGemsPvpVictoryChest(), rollChestPrize() (+1 more)
 
 ### Community 174 - "setIdeaInterest"
-Cohesion: 0.06
-Nodes (35): PayoutsClient(), Preview, Run, Week, AdminApplication, AdminDispute, AdminMember, api() (+27 more)
+Cohesion: 0.20
+Nodes (8): AdminApplication, AdminDispute, AdminMember, api(), CommunityJobsAdminPanel(), JobRef, JobSettingsSection(), MemberRow()
 
 ### Community 179 - "preferences/route.ts"
 Cohesion: 0.27
@@ -932,8 +956,8 @@ Cohesion: 0.25
 Nodes (8): tall, alwaysOn, base, bodyMaterial, defaults, label, parts, regions
 
 ### Community 191 - "canvas-confetti"
-Cohesion: 0.25
-Nodes (8): curvy, alwaysOn, base, bodyMaterial, label, parts, regions, skin
+Cohesion: 0.29
+Nodes (7): curvy, alwaysOn, base, bodyMaterial, label, parts, regions
 
 ### Community 192 - "lucide-react"
 Cohesion: 0.29
@@ -943,33 +967,41 @@ Nodes (7): strong, alwaysOn, base, bodyMaterial, label, parts, regions
 Cohesion: 0.43
 Nodes (6): Breakdown, fmt(), ScoreBreakdownBlock(), signed(), StreamResult, Week
 
+### Community 194 - "postprocessing"
+Cohesion: 0.33
+Nodes (6): base, bodyMaterial, label, parts, regions, bear
+
 ### Community 195 - "react"
-Cohesion: 0.29
-Nodes (7): guardian, base, bodyMaterial, label, parts, regions, skin
+Cohesion: 0.33
+Nodes (6): guardian, base, bodyMaterial, label, parts, regions
 
 ### Community 196 - "react-dom"
-Cohesion: 0.29
-Nodes (7): tank, base, bodyMaterial, label, parts, regions, skin
+Cohesion: 0.33
+Nodes (6): tank, base, bodyMaterial, label, parts, regions
+
+### Community 197 - "sharp"
+Cohesion: 0.60
+Nodes (4): DELETE(), PATCH(), deleteAsset(), updateAsset()
 
 ## Knowledge Gaps
-- **1147 isolated node(s):** `proc`, `eslintConfig`, `requestLog`, `WIDGET_CORS_HEADERS`, `config` (+1142 more)
+- **1135 isolated node(s):** `proc`, `eslintConfig`, `requestLog`, `WIDGET_CORS_HEADERS`, `config` (+1130 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `getSessionUser()` connect `getSessionUser` to `roles.ts`, `fotograf-service.ts`, `requireModeratorOrSquadCaptain`, `GuestGate.tsx`, `coach-service.ts`, `starter-pick.ts`, `series-event-points.ts`, `RankedAvatar.tsx`, `ranks.ts`, `DailyMessagePanel.tsx`, `ProfileMobileView.tsx`, `notify-dispatch.ts`, `gems-tournament.ts`, `SeasonConfigPanel.tsx`, `community-job-service.ts`, `shop-config.ts`, `gameservers.ts`, `packs.ts`, `MobaIcon`, `community-job-config.ts`, `amp.ts`, `CoinIcon.tsx`, `community-board-comment-service.ts`, `hasMinRole`, `events/series/[id]/page.tsx`, `tutorial.ts`, `ClipVotingClient.tsx`, `CoachTools.tsx`, `admin/community-jobs/disputes/route.ts`, `recurrence.ts`, `getActiveMembership`, `upload/route.ts`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
-- **Why does `formatBerlinDate()` connect `CoinIcon.tsx` to `roles.ts`, `requireModeratorOrSquadCaptain`, `GuestGate.tsx`, `series-event-points.ts`, `CommunityJobsPanel.tsx`, `RankedAvatar.tsx`, `CommunityJobsAdminPanel.tsx`, `ProfileMobileView.tsx`, `requireModeratorOrEventSquadCaptain`, `SeasonConfigPanel.tsx`, `community-job-service.ts`, `packs.ts`, `MobaIcon`, `formatBerlinDate`, `JobBadge.tsx`, `setIdeaInterest`, `FotografTools.tsx`, `amp.ts`, `BattleLogEntry`, `SeriesDetailClient.tsx`, `next-auth`, `GameNameInput.tsx`, `visionaer-service.ts`, `ProfileOverlayClient.tsx`, `AdminEventsClient.tsx`, `ConfirmDialog.tsx`, `EventAdminRow.tsx`, `CommunityBoardClient.tsx`, `EventSetupWizard.tsx`, `(dashboard)/battle-cards/page.tsx`, `recurrence.ts`, `GamePlayersModal.tsx`, `getActiveMembership`, `duels/[id]/respond/route.ts`, `CommunityBoardWidget.tsx`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
-- **Why does `requireRole()` connect `roles.ts` to `ranked-season.ts`, `SeriesCompleteClient.tsx`, `requireModeratorOrSquadCaptain`, `DailyMessagePanel.tsx`, `getSessionUser`, `DailySpin.tsx`, `run-season.ts`, `requireModeratorOrSquadCaptain`, `ranks.ts`, `new-season/page.tsx`, `[tacticCardId]/route.ts`, `requireModeratorOrAnySquadCaptain`, `shop-config.ts`, `clip-contest.ts`, `gameservers.ts`, `community-job-config.ts`, `discord-rest.ts`, `preferences/route.ts`, `revert-event-completion.ts`, `dashboard/page.tsx`, `awardProfileCompletionIfNeeded`, `admin/events/[id]/complete/route.ts`, `SeriesIcon.tsx`, `community-job-payout/route.ts`, `MarkdownLite.tsx`, `send/route.ts`, `EventSetupWizard.tsx`, `NotificationRulesPanel.tsx`, `(dashboard)/battle-cards/page.tsx`, `minigames-config.ts`, `duel-deck.ts`, `branded-cover.ts`, `AdminDonationsClient.tsx`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `getSessionUser()` connect `getSessionUser` to `roles.ts`, `fotograf-service.ts`, `clip-des-monats/page.tsx`, `journalist-service.ts`, `GuestGate.tsx`, `requireModeratorOrSquadCaptain`, `coach-service.ts`, `time.ts`, `starter-pick.ts`, `series-event-points.ts`, `RankedAvatar.tsx`, `ranks.ts`, `DailyMessagePanel.tsx`, `ProfileMobileView.tsx`, `community-job-service.ts`, `coach-guide-service.ts`, `HeroStatValue.tsx`, `packs.ts`, `MobaIcon`, `resolveAvatarsForCards`, `community-job-config.ts`, `dispatchNotification`, `CoinIcon.tsx`, `revert-event-completion.ts`, `community-board-comment-service.ts`, `hasMinRole`, `sharp`, `SeriesIcon.tsx`, `tutorial.ts`, `ClipVotingClient.tsx`, `CoachTools.tsx`, `MarkdownLite.tsx`, `admin/community-jobs/disputes/route.ts`, `recurrence.ts`, `getActiveMembership`, `upload/route.ts`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `formatBerlinDate()` connect `CoinIcon.tsx` to `roles.ts`, `GuestGate.tsx`, `getSessionUser`, `series-event-points.ts`, `CommunityJobsPanel.tsx`, `RankedAvatar.tsx`, `CommunityJobsAdminPanel.tsx`, `ProfileMobileView.tsx`, `SeasonConfigPanel.tsx`, `community-job-service.ts`, `packs.ts`, `MobaIcon`, `formatBerlinDate`, `community-job-config.ts`, `JobBadge.tsx`, `setIdeaInterest`, `FotografTools.tsx`, `BattleLogEntry`, `SeriesDetailClient.tsx`, `next-auth`, `GameNameInput.tsx`, `visionaer-service.ts`, `SeriesIcon.tsx`, `ProfileOverlayClient.tsx`, `AdminEventsClient.tsx`, `ConfirmDialog.tsx`, `EventAdminRow.tsx`, `CommunityBoardClient.tsx`, `EventSetupWizard.tsx`, `(dashboard)/battle-cards/page.tsx`, `recurrence.ts`, `GamePlayersModal.tsx`, `getActiveMembership`, `duels/[id]/respond/route.ts`, `CommunityBoardWidget.tsx`, `include`?**
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `@vercel/blob`, `scripts`, `sonner`, `requireModeratorOrAnySquadCaptain`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **What connects `proc`, `eslintConfig`, `requestLog` to the rest of the system?**
-  _1147 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1135 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `roles.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.029853479853479855 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02668665667166417 - nodes in this community are weakly interconnected._
 - **Should `prisma.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.08527131782945736 - nodes in this community are weakly interconnected._
-- **Should `ranked-season.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.11092436974789915 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05868118572292801 - nodes in this community are weakly interconnected._
+- **Should `live-battle.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.06160506160506161 - nodes in this community are weakly interconnected._

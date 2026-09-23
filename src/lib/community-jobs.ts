@@ -36,7 +36,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- Jeder Bericht hat eine **eigene Seite mit Link**. Änderungen an veröffentlichten Berichten erscheinen als „Korrigiert am“ mit Verlauf.\n" +
       "- Zu Fotos und Werbe-Posts im Community-Board schreibst du direkt mit „Bericht dazu schreiben“.\n\n" +
       "**Im Büro**\n" +
-      "- **Empfehlungen** zeigen dir Events ohne Bericht (große zuerst), Events von heute, alte Entwürfe, Berichte ohne Titelbild, neue Ergänzungen und mehr.\n" +
+      "- **Empfehlungen** zeigen dir Events ohne Bericht (große zuerst), Events von heute, alte Entwürfe, Berichte ohne Titelbild, neue Ergänzungen und mehr. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass): „Beitrag dazu“ legt einen Bericht ohne Event an.\n" +
       "- **Auswertung** zeigt Daumen pro Woche, Top-Bericht und Kategorien. Du bekommst Benachrichtigungen bei Ergänzungen, Kommentaren und Daumen-Meilensteinen.\n" +
       "- **Interviews:** Frage Spieler an, ihre Antworten fließen als Vorlage in deinen Bericht.\n" +
       "- **Zusammenarbeit:** Bildwünsche kannst du an die Fotografen richten. Entsteht aus deinem Bericht eine Idee eines Visionärs, gibt es einen kleinen Bonus.",
@@ -82,7 +82,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Kampagne:** plant zu einem Event Ankündigung, Erinnerung (3 Tage vorher) und „Heute“. Erledigte Schritte bekommen einen Haken.\n" +
       "- **Als Vorlage:** Ein guter Post lässt sich für ein anderes Event übernehmen, prüfe danach Datum und Uhrzeit.\n\n" +
       "**Im Büro**\n" +
-      "- **Empfehlungen:** Events ohne Werbung, Erinnerung kurz vor dem Start, wenige Anmeldungen, Posts ohne Bild und wiederkehrende Events.\n" +
+      "- **Empfehlungen:** Events ohne Werbung, Erinnerung kurz vor dem Start, wenige Anmeldungen, Posts ohne Bild und wiederkehrende Events. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass): „Beitrag dazu“ legt einen Post ohne Event an. Ein Werbe-Post braucht überhaupt kein Event, du kannst ihn auch allgemein veröffentlichen.\n" +
       "- **Auswertung:** Daumen pro Woche, bester Post, Anteil mit Bild und extern bestätigt. Du wirst bei Daumen-Meilensteinen und bei der externen Bestätigung benachrichtigt.\n" +
       "- Deine Posts stehen im Profil und auf der Turnierseite des Events.\n\n" +
       "**Zusammenarbeit**\n" +
@@ -134,7 +134,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- Das Team setzt den **Status**: In Prüfung, Wird umgesetzt, Umgesetzt oder Abgelehnt. Umgesetztes erscheint auf der **Roadmap**.\n" +
       "- Läuft die Frist ab, bekommst du eine Zusammenfassung. Top-Ideen der Woche und des Monats werden im Discord gepostet.\n\n" +
       "**Im Büro**\n" +
-      "- **Empfehlungen:** neue Idee einreichen, Ideen ohne Bewertung, sehr gut bewertete Ideen ohne Status, Anlässe nach beendeten Events und Ideen anderer, die auf deine Bewertung warten.\n" +
+      "- **Empfehlungen:** neue Idee einreichen, Ideen ohne Bewertung, sehr gut bewertete Ideen ohne Status, Anlässe nach beendeten Events und Ideen anderer, die auf deine Bewertung warten. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass) als Vorlage für „Gemeinsam spielen?“.\n" +
       "- **Auswertung:** Sterne pro Woche, Verteilung, beste Idee und Anteil umgesetzter Ideen.\n\n" +
       "**Zusammenarbeit**\n" +
       "- Für Bilder oder Mockups kannst du die Fotografen um ein Bild bitten.\n" +

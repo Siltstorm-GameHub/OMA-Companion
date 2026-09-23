@@ -37,7 +37,8 @@ export async function createMarketingPost(
   data: { eventId?: string; trainingSessionId?: string; caption: string; assetId?: string; imageUrl?: string; campaignId?: string; kind?: string },
 ): Promise<CreatePostResult> {
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
-  if (!data.eventId && !data.trainingSessionId) return { error: "Event oder Trainings-Termin erforderlich" };
+  // Event bzw. Trainings-Termin sind optional: allgemeine Posts (z.B. zu Steam-/Xbox-Angeboten) haben keinen Bezug.
+  if (data.eventId && !(await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } }))) return { error: "Event nicht gefunden" };
   if (data.trainingSessionId) {
     const session = await prisma.coachTrainingSession.findUnique({ where: { id: data.trainingSessionId }, select: { startAt: true } });
     if (!session) return { error: "Trainings-Termin nicht gefunden" };

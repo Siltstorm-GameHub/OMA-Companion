@@ -238,12 +238,31 @@ function withLink(text: string, link?: string): string {
   return `${text.trim()}\n\n${link}`;
 }
 
-function steamPrefill(kind: "sales" | "new", jobKey: string, s: { name: string; discountPercent?: number; url: string }): PostPrefill {
+type FeedTab = "steam-sales" | "steam-new" | "xbox-deals" | "gp-new" | "gp-leaving";
+
+interface FeedItem { id: string | number; name: string; discountPercent?: number; price?: string; headerImage?: string; url: string }
+
+const FEED_TABS: { key: FeedTab; label: string; title: string }[] = [
+  { key: "steam-sales", label: "Steam-Sales", title: "Aktuelle Steam-Sales" },
+  { key: "steam-new", label: "Steam neu", title: "Neu auf Steam" },
+  { key: "xbox-deals", label: "Xbox-Angebote", title: "Xbox-Angebote (Game-Pass-Umfeld)" },
+  { key: "gp-new", label: "Game Pass neu", title: "Neu im Xbox Game Pass" },
+  { key: "gp-leaving", label: "Game Pass bald weg", title: "Bald nicht mehr im Xbox Game Pass" },
+];
+
+/** Vorbelegung für einen Beitrag zu einem Spiel (Steam/Xbox). Ohne Event-Bezug — der Link wird beim Absenden angehängt. */
+function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountPercent?: number; price?: string; url: string }): PostPrefill {
   const discount = s.discountPercent ? ` (-${s.discountPercent}%)` : "";
-  const headline = kind === "sales" ? `${s.name} im Steam-Sale${discount}` : `Neu auf Steam: ${s.name}`;
-  const line = kind === "sales"
-    ? `${s.name} ist gerade im Steam-Sale${s.discountPercent ? ` mit -${s.discountPercent}%` : ""}.`
-    : `${s.name} ist neu auf Steam erschienen.`;
+  const off = s.discountPercent ? ` mit -${s.discountPercent}%${s.price ? ` für ${s.price}` : ""}` : "";
+  let headline: string;
+  let line: string;
+  switch (tab) {
+    case "steam-sales": headline = `${s.name} im Steam-Sale${discount}`; line = `${s.name} ist gerade im Steam-Sale${off}.`; break;
+    case "steam-new": headline = `Neu auf Steam: ${s.name}`; line = `${s.name} ist neu auf Steam erschienen.`; break;
+    case "xbox-deals": headline = `${s.name} im Xbox-Angebot${discount}`; line = `${s.name} ist gerade im Xbox Store reduziert${off}.`; break;
+    case "gp-new": headline = `Neu im Game Pass: ${s.name}`; line = `${s.name} ist jetzt im Xbox Game Pass verfügbar.`; break;
+    default: headline = `Bald weg aus dem Game Pass: ${s.name}`; line = `${s.name} verlässt bald den Xbox Game Pass — jetzt noch spielen!`; break;
+  }
   return {
     title: jobKey === "visionaer" ? `Gemeinsam spielen: ${s.name}?` : headline,
     body: jobKey === "visionaer" ? `${line} Wäre das etwas für die Community?\n\n${s.url}` : `${line}\n\n${s.url}`,
@@ -258,8 +277,11 @@ const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
 
 interface Recommendations {
   events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string; trainingSessionId?: string }[];
-  steamSales: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
-  steamReleases: { id: number; name: string; discountPercent?: number; headerImage?: string; url: string }[];
+  steamSales: FeedItem[];
+  steamReleases: FeedItem[];
+  xboxDeals?: FeedItem[];
+  gamePassNew?: FeedItem[];
+  gamePassLeaving?: FeedItem[];
 }
 interface Payout { id: string; weekStart: string; weekEnd: string; rawScore: number; tierLabel: string | null; baseCoins: number; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
@@ -280,7 +302,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
   const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
   const [toolsKey, setToolsKey] = useState(0);
   const [showAllEvents, setShowAllEvents] = useState(false);
-  const [steamTab, setSteamTab] = useState<"sales" | "new">("sales");
+  const [feedTab, setFeedTab] = useState<FeedTab>("steam-sales");
   const [tab, setTab] = useState<"work" | "pay">("work");
   const [guideOpen, setGuideOpen] = useState(false);
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -521,7 +543,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
       {tab === "work" && (
       <>
       {/* Empfehlungen */}
-      {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
+      {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0 || (recs.xboxDeals?.length ?? 0) > 0 || (recs.gamePassNew?.length ?? 0) > 0 || (recs.gamePassLeaving?.length ?? 0) > 0) && (
         <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-4">
           <SectionHeader tone="blue" icon={<Lightbulb className="w-3.5 h-3.5" />} title="Empfehlungen für deine Beiträge" />
 
@@ -585,27 +607,30 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
             );
           })()}
 
-          {(recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (() => {
-            const activeSteamTab = steamTab === "sales" && recs.steamSales.length === 0 ? "new"
-              : steamTab === "new" && recs.steamReleases.length === 0 ? "sales" : steamTab;
-            const items = activeSteamTab === "sales" ? recs.steamSales : recs.steamReleases;
-            const both = recs.steamSales.length > 0 && recs.steamReleases.length > 0;
+          {(() => {
+            const lists: Record<FeedTab, FeedItem[]> = {
+              "steam-sales": recs.steamSales, "steam-new": recs.steamReleases,
+              "xbox-deals": recs.xboxDeals ?? [], "gp-new": recs.gamePassNew ?? [], "gp-leaving": recs.gamePassLeaving ?? [],
+            };
+            const available = FEED_TABS.filter(t => lists[t.key].length > 0);
+            if (available.length === 0) return null;
+            const activeTab = available.find(t => t.key === feedTab)?.key ?? available[0].key;
+            const activeDef = available.find(t => t.key === activeTab)!;
+            const items = lists[activeTab];
             return (
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="space-y-2">
                   <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5">
-                    {activeSteamTab === "sales"
-                      ? <><Tag className="w-3.5 h-3.5 text-emerald-400" /> Aktuelle Steam-Sales</>
-                      : <><Rocket className="w-3.5 h-3.5 text-blue-400" /> Neuveröffentlichungen</>}
+                    {activeTab === "steam-sales" || activeTab === "xbox-deals"
+                      ? <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                      : <Rocket className="w-3.5 h-3.5 text-blue-400" />} {activeDef.title}
                   </p>
-                  {both && (
-                    <div className="flex rounded-full bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold" role="tablist">
-                      {([["sales", "Sales"], ["new", "Neu"]] as const).map(([key, label]) => (
-                        <button key={key} role="tab" aria-selected={activeSteamTab === key} onClick={() => setSteamTab(key)}
-                          className={`px-4 py-1.5 rounded-full transition-colors ${
-                            activeSteamTab === key ? SWITCH_ON : SWITCH_OFF
-                          }`}>
-                          {label}
+                  {available.length > 1 && (
+                    <div className="flex flex-wrap rounded-2xl bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold gap-0.5" role="tablist">
+                      {available.map(t => (
+                        <button key={t.key} role="tab" aria-selected={activeTab === t.key} onClick={() => setFeedTab(t.key)}
+                          className={`px-3.5 py-1.5 rounded-full transition-colors ${activeTab === t.key ? SWITCH_ON : SWITCH_OFF}`}>
+                          {t.label}
                         </button>
                       ))}
                     </div>
@@ -613,12 +638,12 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                 </div>
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                   {items.map(s => (
-                    <div key={`${activeSteamTab}-${s.id}`}
+                    <div key={`${activeTab}-${s.id}`}
                       className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/30 transition-colors flex flex-col">
                       <a href={s.url} target="_blank" rel="noopener noreferrer" className="block">
                         <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
                           {s.headerImage && (
-                            // eslint-disable-next-line @next/next/no-img-element -- Steam-CDN-Cover, beliebiger Host
+                            // eslint-disable-next-line @next/next/no-img-element -- Store-CDN-Cover (Steam/Microsoft), beliebiger Host
                             <img src={s.headerImage} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                           )}
                           {s.discountPercent ? (
@@ -628,11 +653,12 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                           ) : null}
                         </div>
                         <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
+                        {s.price && <p className="px-2.5 text-[11px] text-gray-500">{s.price}</p>}
                       </a>
                       {canPostAboutSteam && (
                         <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
                           <Button size="sm" variant="outline" className="w-full justify-center"
-                            onClick={() => openCreateForm(undefined, steamPrefill(activeSteamTab, membership.jobKey, s))}>
+                            onClick={() => openCreateForm(undefined, storePrefill(activeTab, membership.jobKey, s))}>
                             Beitrag dazu
                           </Button>
                         </div>
@@ -1981,7 +2007,8 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
     api<EventOption[]>("/api/events").then(all => {
       const upcoming = all.filter(e => new Date(e.startAt).getTime() > Date.now());
       setEvents(upcoming);
-      if (!initialEventId && !prefill?.trainingSessionId && upcoming[0]) setEventId(upcoming[0].id);
+      // Beiträge zu Spiele-Angeboten (Steam/Xbox) starten ohne Event, alle anderen mit dem nächsten Event.
+      if (!initialEventId && !prefill?.trainingSessionId && !prefill?.link && upcoming[0]) setEventId(upcoming[0].id);
     }).catch(() => {});
   }, []);
 
@@ -2062,16 +2089,13 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
     }
   }
 
-  if (events.length === 0 && !trainingSessionId) {
-    return <p className="text-xs text-gray-500">Keine bevorstehenden Events gefunden — ohne Event ist kein Werbe-Post möglich.</p>;
-  }
-
   return (
     <div className="space-y-3">
       {trainingSessionId ? (
         <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
       ) : (
         <Select value={eventId} onChange={e => setEventId(e.target.value)} disabled={!!prefill?.campaignId} className="w-full">
+          <option value="">Ohne Event (allgemeiner Post)</option>
           {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
         </Select>
       )}
@@ -2164,7 +2188,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
       )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
-        <Button loading={busy} disabled={!eventId || !caption.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
+        <Button loading={busy} disabled={!caption.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
       </div>
     </div>
   );
