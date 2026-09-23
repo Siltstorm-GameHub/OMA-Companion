@@ -2755,8 +2755,8 @@
     "semantic_hash": ""
   },
   "src/components/BottomNav.tsx": {
-    "mtime": 1789889939.2244563,
-    "ast_hash": "436a85d2a5dab6b57d5399aa3caa224e",
+    "mtime": 1790195278.738263,
+    "ast_hash": "aa73b348ded36ee31e1f9c115c7f683f",
     "semantic_hash": ""
   },
   "src/components/ClientTime.tsx": {
@@ -6487,6 +6487,51 @@
   "src/lib/app-icons.ts": {
     "mtime": 1790191821.2109418,
     "ast_hash": "52f9ab39baa7b541f7b00fcf727c3ee6",
+    "semantic_hash": ""
+  },
+  "public/Win Icon.Png": {
+    "mtime": 1789368152.5731437,
+    "ast_hash": "f681b99276cc990d6a6276a9ac5eea00",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/donations.png": {
+    "mtime": 1790194998.1576521,
+    "ast_hash": "f4f1f2ba1573f5be5f9adb82f664f1e7",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/events.png": {
+    "mtime": 1790194998.0113614,
+    "ast_hash": "85340d1061bce1d8260cf1ba76d94ff4",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/home.png": {
+    "mtime": 1790194997.9354777,
+    "ast_hash": "6d6b302ca634f90e9385095a2d060de9",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/leaderboard.png": {
+    "mtime": 1790194998.2456686,
+    "ast_hash": "a8c5dbe0df25a7dfa6cbc0ea221b993f",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/profile.png": {
+    "mtime": 1790194998.3300722,
+    "ast_hash": "bc105eb1e226f941fb23ab4618790ebd",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/shop.png": {
+    "mtime": 1790194998.080764,
+    "ast_hash": "e33ef140b4771f0e3793a41166098eab",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/stroke-red.png": {
+    "mtime": 1790194998.3433049,
+    "ast_hash": "dc0e4adf8852cc034d02b8b7077fdf56",
+    "semantic_hash": ""
+  },
+  "public/icons/nav/stroke-teal.png": {
+    "mtime": 1790194998.3371992,
+    "ast_hash": "ba84218508cb4e978cd32ca58dd6be5a",
     "semantic_hash": ""
   }
 }

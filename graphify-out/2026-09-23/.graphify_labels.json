@@ -195,8 +195,13 @@
   "193": "next-auth",
   "194": "MyPredictionsList.tsx",
   "195": "react",
+  "196": "@react-three/drei",
   "197": "react",
+  "198": "@react-three/postprocessing",
+  "199": "sonner",
   "200": "@vercel/blob",
+  "201": "@types/three",
+  "202": "web-push",
   "203": "postcss.config.mjs",
   "204": "ResetHistoryButton.tsx",
   "205": "series/page.tsx",
@@ -222,7 +227,6 @@
   "225": "{ GET, POST }",
   "226": "size",
   "227": "MIN_MATCHES_FOR_RANKING",
-  "232": "small",
-  "233": "tank",
-  "236": "[contribId]/vote/route.ts"
+  "228": "zod",
+  "233": "tank"
 }
