@@ -1346,9 +1346,11 @@ function LiveBattleBody({
         )}
       </div>
 
-      {/* Kampffeld — füllt den Freiraum, Helden werden ans untere Ende gesetzt
-          (direkt über der Entscheidung), statt in der Mitte zu schweben. */}
-      <div className="flex-1 flex flex-col justify-end gap-3 min-h-0 py-2">
+      {/* Kampffeld — füllt den Freiraum. Klassisch: Gegner oben, eigene Helden
+          unten direkt über der Entscheidung. OMA Gems (boardMode, Empires-&-
+          Puzzles-Layout): Gegner oben, das Brett in der Mitte (siehe
+          Entscheidungs-Panel), die eigenen Helden UNTER dem Brett. */}
+      <div className={`flex-1 flex flex-col gap-3 min-h-0 py-2 ${snapshot.boardMode ? "justify-center" : "justify-end"}`}>
         <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard
@@ -1363,31 +1365,35 @@ function LiveBattleBody({
             />
           ))}
         </div>
-        <div className="border-t border-white/10 mx-6" />
-        <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
-          {unitsByTeam(myTeam ?? "A").map((u) => (
-            <UnitCard
-              key={u.instanceId}
-              unit={u}
-              // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
-              // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
-              // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
-              // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
-              isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
-              glow={glowFor(u)}
-              ultimateReady={ultimateReadyFor(u)}
-              effects={effectsFor(u)}
-              isAttacking={attackingUnitIds.has(u.instanceId)}
-              isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
-              onClick={() => handleUnitClick(u)}
-              onUltimateClick={() => handleUnitClick(u)}
-              cardRef={(el) => {
-                if (el) cardElementsRef.current.set(u.instanceId, el);
-                else cardElementsRef.current.delete(u.instanceId);
-              }}
-            />
-          ))}
-        </div>
+        {!snapshot.boardMode && (
+          <>
+            <div className="border-t border-white/10 mx-6" />
+            <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
+              {unitsByTeam(myTeam ?? "A").map((u) => (
+                <UnitCard
+                  key={u.instanceId}
+                  unit={u}
+                  // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
+                  // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
+                  // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
+                  // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
+                  isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
+                  glow={glowFor(u)}
+                  ultimateReady={ultimateReadyFor(u)}
+                  effects={effectsFor(u)}
+                  isAttacking={attackingUnitIds.has(u.instanceId)}
+                  isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
+                  onClick={() => handleUnitClick(u)}
+                  onUltimateClick={() => handleUnitClick(u)}
+                  cardRef={(el) => {
+                    if (el) cardElementsRef.current.set(u.instanceId, el);
+                    else cardElementsRef.current.delete(u.instanceId);
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Entscheidung — direkt unter den Helden */}
@@ -1480,7 +1486,7 @@ function LiveBattleBody({
           // Feste Höhe (unabhängig von 1-3 verfügbaren Aktionen bzw. Ziel-Auswahl-
           // Ansicht) — sonst verschieben sich die Helden darüber je nach Rage-Stand
           // von Zug zu Zug, weil dieses Panel mal höher, mal niedriger wäre.
-          <div className="moba-panel rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
+          <div className={`moba-panel rounded-xl p-2.5 flex flex-col ${snapshot.boardMode ? "" : "h-[212px] lg:h-[300px] overflow-y-auto"}`}>
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
                 // Rundennummer mit in den Turn-Key aufnehmen: bleibt nur noch EINE
@@ -1569,7 +1575,7 @@ function LiveBattleBody({
         ) : snapshot.boardMode && lastBoard ? (
           // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
           // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
-          <div className="moba-panel rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col gap-1.5">
+          <div className="moba-panel rounded-xl p-2.5 flex flex-col gap-1.5">
             <BoardMatch3
               grid={lastBoard.grid}
               specials={lastBoard.specials}
@@ -1594,6 +1600,35 @@ function LiveBattleBody({
           </p>
         )}
       </div>
+
+      {snapshot.boardMode && (
+        <div className="shrink-0 pt-2">
+          <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
+          {unitsByTeam(myTeam ?? "A").map((u) => (
+            <UnitCard
+              key={u.instanceId}
+              unit={u}
+              // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
+              // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
+              // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
+              // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
+              isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
+              glow={glowFor(u)}
+              ultimateReady={ultimateReadyFor(u)}
+              effects={effectsFor(u)}
+              isAttacking={attackingUnitIds.has(u.instanceId)}
+              isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
+              onClick={() => handleUnitClick(u)}
+              onUltimateClick={() => handleUnitClick(u)}
+              cardRef={(el) => {
+                if (el) cardElementsRef.current.set(u.instanceId, el);
+                else cardElementsRef.current.delete(u.instanceId);
+              }}
+            />
+          ))}
+        </div>
+        </div>
+      )}
 
       {/* Text, was passiert — unterhalb der Entscheidung */}
       <div className="shrink-0 rounded-md border border-[color:var(--moba-accent-line)] px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">

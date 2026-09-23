@@ -19,6 +19,15 @@
 // vorhandenen Spielgenre-Icons (Arcade=Support, Shooter=Damage Dealer,
 // Racing=Tank).
 //
+// Steuerung + Feeling (Empires-&-Puzzles-Stil): Steine lassen sich per Wischen/
+// Ziehen in Richtung eines Nachbarn tauschen (Tippen-Tippen geht weiterhin).
+// Jeder Stein hat eine stabile ID und wird absolut positioniert — dadurch
+// tauschen Steine sichtbar die Plätze, rutschen bei der Schwerkraft echt nach
+// unten und neue Steine fallen von oberhalb des Bretts herein (siehe advanceIds,
+// das die Schwerkraft aus removeAndCascade in board-match3.ts 1:1 nachbildet).
+// Nach einigen Sekunden Leerlauf zeigt ein pulsierender Hinweis einen gültigen
+// Zug (findHintMove), ab der 2. Kaskade zählt ein Kombo-Label mit.
+//
 // Animation: resolveBoardSession liefert nicht nur das Endergebnis, sondern
 // auch `steps` — einen Eintrag pro Match-Runde (direkter Match + jede weitere
 // Kaskade). Das Brett spielt diese Schritte einzeln durch: erst kurz die
@@ -32,6 +41,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { UnitClass } from "@/lib/battle-engine/types";
 import {
+  findHintMove,
   resolveBoardSession,
   type BoardAnimationStep,
   type BoardGrid,
@@ -40,7 +50,7 @@ import {
   type SwapMove,
   type TileClassSymbol,
 } from "@/lib/battle-engine/board-match3";
-import { BOARD_COLS } from "@/lib/battle-engine/constants";
+import { BOARD_COLS, BOARD_ROWS } from "@/lib/battle-engine/constants";
 import { randomSeed } from "@/lib/battle-engine/rng";
 import { playCommunityBonusSound, playInvalidSwapSound, playMatchSound, playSwapSound } from "@/lib/battle-cards/sound";
 
@@ -82,9 +92,12 @@ function markBoardLegendSeen(): void {
   }
 }
 
-const DESTROY_ANIM_MS = 220;
-const FALL_ANIM_MS = 260;
-const SWAP_ANIM_MS = 150;
+const DESTROY_ANIM_MS = 240;
+const FALL_ANIM_MS = 340;
+const SWAP_ANIM_MS = 200;
+/** Leerlauf, nach dem ein Zug-Hinweis erscheint. */
+const HINT_DELAY_MS = 6000;
+const CELL_COUNT = BOARD_ROWS * BOARD_COLS;
 
 function areAdjacent(a: number, b: number): boolean {
   const ra = Math.floor(a / BOARD_COLS);
@@ -94,54 +107,43 @@ function areAdjacent(a: number, b: number): boolean {
   return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1);
 }
 
-/** Laufender Swap-Vertausch (siehe performSwap) — "toward" animiert beide
- *  Zellen sichtbar aufeinander zu (in Prozent der eigenen Kachel-Größe, ohne
- *  Grid-Gap zu berücksichtigen — bei den paar Pixeln Abstand nicht spürbar),
- *  "back" nur bei einem ungültigen Swap: beide Zellen federn sichtbar wieder
- *  zurück (siehe Datei-Kommentar oben: "springt er sichtbar zurück"), statt
- *  wie bisher kommentarlos an Ort und Stelle zu bleiben. */
-interface SwapAnim {
-  fromCell: number;
-  toCell: number;
-  phase: "toward" | "back";
-}
-
-/** Verschiebung EINER der beiden beteiligten Zellen in % der eigenen Größe —
- *  {0,0} für jede andere Zelle bzw. sobald phase "back" ist (dann federn
- *  beide sichtbar auf ihre Ursprungsposition zurück). */
-function swapTranslateFor(anim: SwapAnim | null, cell: number): { x: number; y: number } {
-  if (!anim || anim.phase === "back") return { x: 0, y: 0 };
-  const { fromCell, toCell } = anim;
-  if (cell !== fromCell && cell !== toCell) return { x: 0, y: 0 };
-  const horizontal = Math.abs(toCell - fromCell) === 1;
-  const forward = toCell > fromCell; // Ziel liegt rechts bzw. unterhalb von fromCell
-  const towardTarget = cell === fromCell ? forward : !forward;
-  const amount = towardTarget ? 100 : -100;
-  return horizontal ? { x: amount, y: 0 } : { x: 0, y: amount };
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Für einen Animations-Schritt: alle Zellen der betroffenen Spalten von Reihe
- *  0 bis zur am tiefsten getroffenen Reihe — grob, aber visuell korrekt genug,
- *  um sowohl neu aufgefüllte als auch nachgerutschte Kacheln als "fallend" zu
- *  markieren, ohne einzelne Kachel-Identität durch die Kaskade zu verfolgen. */
-function computeFallingCells(matchedCells: number[]): Set<number> {
-  const maxRowByCol = new Map<number, number>();
-  for (const cell of matchedCells) {
-    const col = cell % BOARD_COLS;
-    const row = Math.floor(cell / BOARD_COLS);
-    maxRowByCol.set(col, Math.max(maxRowByCol.get(col) ?? -1, row));
-  }
-  const falling = new Set<number>();
-  for (const [col, maxRow] of maxRowByCol) {
-    for (let row = 0; row <= maxRow; row++) {
-      falling.add(row * BOARD_COLS + col);
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+/** Schwerkraft auf Stein-IDs: entfernte Zellen verschwinden, die Überlebenden
+ *  je Spalte rutschen nach unten (Reihenfolge bleibt), oben kommen neue IDs
+ *  hinzu — exakt dieselbe Logik wie removeAndCascade in board-match3.ts.
+ *  `entering` liefert je neuer ID, wie viele Reihen sie oberhalb ihrer Zielzelle
+ *  starten muss (= Anzahl neuer Steine in der Spalte). */
+function advanceIds(
+  ids: number[],
+  matched: Set<number>,
+  newId: () => number
+): { ids: number[]; entering: Map<number, number> } {
+  const next: number[] = new Array(CELL_COUNT);
+  const entering = new Map<number, number>();
+  for (let col = 0; col < BOARD_COLS; col++) {
+    const survivors: number[] = [];
+    for (let row = 0; row < BOARD_ROWS; row++) {
+      const cell = row * BOARD_COLS + col;
+      if (!matched.has(cell)) survivors.push(ids[cell]);
     }
+    const missing = BOARD_ROWS - survivors.length;
+    const column: number[] = [];
+    for (let i = 0; i < missing; i++) {
+      const id = newId();
+      entering.set(id, missing);
+      column.push(id);
+    }
+    column.push(...survivors);
+    for (let row = 0; row < BOARD_ROWS; row++) next[row * BOARD_COLS + col] = column[row];
   }
-  return falling;
+  return { ids: next, entering };
 }
 
 export default function BoardMatch3({
@@ -194,35 +196,38 @@ export default function BoardMatch3({
   // der späteren Server-Berechnung abweichen, die tatsächliche Rage-Vergabe
   // ist davon unabhängig korrekt.
   const rngStateRef = useRef(randomSeed());
-  // Bildschirm-Positionen der Zell-Buttons — für den Lichtstrahl-Effekt
-  // (onGemsDestroyed) gebraucht, um zu wissen, WOHER die zerstörten Steine
-  // optisch starten. Reine DOM-Refs, keine Neu-Renders.
-  const cellElementsRef = useRef<Map<number, HTMLButtonElement>>(new Map());
+  const idCounterRef = useRef(CELL_COUNT); // 0..CELL_COUNT-1 sind die Start-IDs
+  const newId = () => idCounterRef.current++;
+  const freshIds = () => Array.from({ length: CELL_COUNT }, () => newId());
+  // Bildschirm-Positionen der Steine (nach Stein-ID) — für den Lichtstrahl-Effekt
+  // (onGemsDestroyed) gebraucht. Reine DOM-Refs, keine Neu-Renders.
+  const tileElementsRef = useRef<Map<number, HTMLElement>>(new Map());
+  const boardElRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ cell: number; x: number; y: number; done: boolean } | null>(null);
   const [board, setBoard] = useState<BoardGrid>(initialGrid);
   const [specials, setSpecials] = useState<SpecialGrid>(initialSpecials);
+  const [ids, setIds] = useState<number[]>(() => Array.from({ length: CELL_COUNT }, (_, i) => i));
+  // Neu hereinfallende Steine: ID -> Start-Versatz in Reihen oberhalb der Zielzelle.
+  const [entering, setEntering] = useState<Map<number, number>>(new Map());
   const [swaps, setSwaps] = useState<SwapMove[]>(initialSwaps ?? []);
   const [selected, setSelected] = useState<number | null>(null);
   const [invalidCell, setInvalidCell] = useState<number | null>(null);
-  const [swapAnim, setSwapAnim] = useState<SwapAnim | null>(null);
-  const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
+  const [destroyingIds, setDestroyingIds] = useState<Set<number>>(new Set());
   // Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) ODER das Auslösen eines
   // bereits vorhandenen Sonder-Steins bekommt einen sichtbar größeren
   // Zerstören-Effekt + eigenen Sound statt optisch genauso auszusehen wie ein
   // normaler 3er-Match — vorher kaum zu unterscheiden.
-  const [bigMatchCells, setBigMatchCells] = useState<Set<number>>(new Set());
+  const [bigMatchIds, setBigMatchIds] = useState<Set<number>>(new Set());
   const [comboLabel, setComboLabel] = useState<{ text: string; key: number } | null>(null);
-  // Zellen, auf denen GERADE ein neuer Sonder-Stein entstanden ist — kurzes
+  // Steine, auf denen GERADE ein neuer Sonder-Stein entstanden ist — kurzes
   // "Aufladen" (gem-special-spawn, globals.css) statt kommentarlosem Erscheinen.
-  const [spawningCells, setSpawningCells] = useState<Set<number>>(new Set());
-  const [fallingCells, setFallingCells] = useState<Set<number>>(new Set());
+  const [spawningIds, setSpawningIds] = useState<Set<number>>(new Set());
   const [animating, setAnimating] = useState(false);
+  const [hint, setHint] = useState<SwapMove | null>(null);
   // Legende (Symbol→Klasse + Community-Bonus) ist beim allerersten Brett eines
   // Users automatisch offen, danach per Klick auf das Info-Icon jederzeit
   // wieder aufrufbar — reines Komfort-/Onboarding-Feature, kein Blocker.
   const [legendOpen, setLegendOpen] = useState(() => !hasSeenBoardLegend());
-  // Nur das ERSTE Brett eines Users poppt automatisch auf — merken, damit
-  // spätere Bretter (auch nach einem Reload) nicht jedes Mal erneut aufklappen.
-  // Weiterhin jederzeit per Info-Icon manuell erneut aufrufbar.
   useEffect(() => {
     markBoardLegendSeen();
   }, []);
@@ -244,59 +249,73 @@ export default function BoardMatch3({
       setBoard(initialGrid);
       setSpecials(initialSpecials);
     }
+    setIds(freshIds());
+    setEntering(new Map());
     setSwaps(initialSwaps ?? []);
     setSelected(null);
     setInvalidCell(null);
-    setDestroyingCells(new Set());
-    setFallingCells(new Set());
+    setDestroyingIds(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnId]);
 
   const remaining = moveBudget - swaps.length;
   const interactionLocked = disabled || remaining <= 0 || animating;
 
-  async function playSteps(steps: BoardAnimationStep[]) {
+  // Idle-Hinweis: nur am eigenen, entsperrten Brett; jede Brett-Änderung,
+  // Auswahl oder Sperre setzt den Timer zurück und blendet den Hinweis aus.
+  useEffect(() => {
+    if (interactionLocked) return;
+    const timer = window.setTimeout(() => setHint(findHintMove(board, specials)), HINT_DELAY_MS);
+    return () => {
+      window.clearTimeout(timer);
+      setHint(null);
+    };
+  }, [board, specials, interactionLocked, selected]);
+
+  async function playSteps(steps: BoardAnimationStep[], startGrid: BoardGrid, startIds: number[]) {
+    let curGrid = startGrid;
+    let curIds = startIds;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
-      // Das Kombo-Label zeigt NUR noch echte Sonder-Stein-Ereignisse an (welche
-      // Reihen-/Spaltenlänge WIRKLICH ein einzelnes Match hatte) statt der
-      // Summe aller gleichzeitig getroffenen Zellen dieser Runde — Letzteres
-      // täuschte zuvor "6er"/"10er"-Kombos vor, obwohl z.B. zwei getrennte
-      // 3er-Matches gleichzeitig aufgelöst wurden (siehe SPECIAL_GEM_*-
-      // Konstanten in constants.ts). Ein bereits vorhandener, jetzt
-      // ausgelöster Sonder-Stein zählt ebenfalls als "groß", auch wenn er für
-      // sich nur eine einzelne Zelle war.
+      // Das Kombo-Label zeigt bei Sonder-Stein-Ereignissen (welche Reihen-/
+      // Spaltenlänge WIRKLICH ein einzelnes Match hatte) den Sonder-Stein-Text,
+      // sonst ab der 2. Kaskaden-Runde einen mitzählenden Kombo-Zähler. Ein
+      // bereits vorhandener, jetzt ausgelöster Sonder-Stein zählt als "groß".
       const createdKinds = new Set(step.specialsCreated.map((s) => s.kind));
       const isBig = createdKinds.size > 0 || step.specialsActivated.length > 0;
-      setDestroyingCells(new Set(step.matchedCells));
+      const matchedIds = step.matchedCells.map((cell) => curIds[cell]);
+      setDestroyingIds(new Set(matchedIds));
+      let labelText: string | null = null;
       if (isBig) {
-        setBigMatchCells(new Set([...step.matchedCells, ...step.specialsActivated]));
-        const text = createdKinds.has("COLOR_BOMB")
+        setBigMatchIds(new Set([...matchedIds, ...step.specialsActivated.map((cell) => curIds[cell])]));
+        labelText = createdKinds.has("COLOR_BOMB")
           ? "FARBBOMBE!"
           : createdKinds.has("AREA")
             ? "5ER-KOMBO!"
             : createdKinds.has("LINE_H") || createdKinds.has("LINE_V")
               ? "4ER-KOMBO!"
               : "SONDER-STEIN AUSGELÖST!";
-        setComboLabel({ text, key: Date.now() });
         playCommunityBonusSound();
-        window.setTimeout(() => setComboLabel(null), DESTROY_ANIM_MS + 350);
       } else {
         playMatchSound(i);
       }
+      if (i >= 1) labelText = labelText ? `${labelText} · x${i + 1}` : `KOMBO x${i + 1}`;
+      if (labelText) {
+        setComboLabel({ text: labelText, key: Date.now() });
+        window.setTimeout(() => setComboLabel(null), DESTROY_ANIM_MS + 450);
+      }
 
       if (onGemsDestroyed) {
-        // Klasse pro zerstörter Zelle kommt aus `board` (dem Zustand VOR dieser
-        // Runde) — step.gridAfter enthält bereits die nachgerückten/neuen Steine.
+        // Klasse pro zerstörter Zelle kommt aus dem Grid VOR dieser Runde.
         const rectsByClass = new Map<UnitClass, DOMRect[]>();
-        for (const cell of step.matchedCells) {
-          const cls = board[cell];
-          const el = cellElementsRef.current.get(cell);
-          if (!el) continue;
+        step.matchedCells.forEach((cell, idx) => {
+          const el = tileElementsRef.current.get(matchedIds[idx]);
+          if (!el) return;
+          const cls = curGrid[cell];
           const list = rectsByClass.get(cls) ?? [];
           list.push(el.getBoundingClientRect());
           rectsByClass.set(cls, list);
-        }
+        });
         if (rectsByClass.size > 0) {
           onGemsDestroyed([...rectsByClass.entries()].map(([cls, rects]) => ({ cls, rects })));
         }
@@ -304,28 +323,38 @@ export default function BoardMatch3({
 
       await sleep(DESTROY_ANIM_MS);
 
+      const advanced = advanceIds(curIds, new Set(step.matchedCells), newId);
+      curIds = advanced.ids;
+      curGrid = step.gridAfter;
+      // Neue Steine starten oberhalb des Bretts, überlebende behalten ihre ID und
+      // gleiten per CSS-Transition auf ihre neue (tiefere) Zelle.
+      setEntering(advanced.entering);
+      setIds(curIds);
       setBoard(step.gridAfter);
       setSpecials(step.specialsAfter);
-      setFallingCells(computeFallingCells(step.matchedCells));
-      setDestroyingCells(new Set());
-      setBigMatchCells(new Set());
+      setDestroyingIds(new Set());
+      setBigMatchIds(new Set());
       if (step.specialsCreated.length > 0) {
-        const spawnCells = new Set(step.specialsCreated.map((s) => s.cell));
-        setSpawningCells(spawnCells);
-        window.setTimeout(() => setSpawningCells(new Set()), 400);
+        setSpawningIds(new Set(step.specialsCreated.map((s) => curIds[s.cell])));
+        window.setTimeout(() => setSpawningIds(new Set()), 400);
       }
-      // Ein Frame mit der "angehobenen" Startposition rendern lassen, bevor die
-      // Ziel-Position gesetzt wird — sonst läuft die CSS-Transition ins Leere,
-      // weil Start- und Endzustand im selben Render landen.
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      setFallingCells(new Set());
+      // Zwei Frames mit der "angehobenen" Startposition rendern lassen, bevor
+      // die Ziel-Position gesetzt wird — sonst läuft die CSS-Transition ins Leere.
+      await nextFrame();
+      await nextFrame();
+      setEntering(new Map());
       await sleep(FALL_ANIM_MS);
     }
   }
 
   /** Gemeinsamer Abschluss für Swap UND Tap-Aktivierung: Zug-Budget fortschreiben,
    *  Fortschritt sichern, Animations-Schritte abspielen, ggf. Zug beenden. */
-  async function commitMove(move: SwapMove, result: ReturnType<typeof resolveBoardSession>) {
+  async function commitMove(
+    move: SwapMove,
+    result: ReturnType<typeof resolveBoardSession>,
+    startGrid: BoardGrid,
+    startIds: number[]
+  ) {
     playSwapSound();
     if (result.rageGrants.some((g) => g.targetClass === "ALL")) {
       playCommunityBonusSound();
@@ -337,7 +366,7 @@ export default function BoardMatch3({
     setSwaps(newSwaps);
     onProgress?.(newSwaps);
 
-    await playSteps(result.steps);
+    await playSteps(result.steps, startGrid, startIds);
     setAnimating(false);
 
     // Kein "Zug bestätigen"-Button mehr — sobald das Zug-Budget aufgebraucht
@@ -356,37 +385,36 @@ export default function BoardMatch3({
     // Bewegung einen weiteren Swap auslösen.
     setAnimating(true);
 
-    // Beide Kacheln sichtbar aufeinander zu bewegen, bevor feststeht, ob der
-    // Swap überhaupt ein Match ergibt — noch rein optisch, die Board-Daten
-    // selbst bleiben bis zur Auflösung unangetastet.
-    setSwapAnim({ fromCell, toCell, phase: "toward" });
+    // Steine tauschen sichtbar die Plätze (stabile IDs, Transition auf transform),
+    // noch bevor feststeht, ob der Swap ein Match ergibt.
+    const swappedBoard = [...board];
+    swappedBoard[fromCell] = board[toCell];
+    swappedBoard[toCell] = board[fromCell];
+    const swappedSpecials = [...specials];
+    swappedSpecials[fromCell] = specials[toCell];
+    swappedSpecials[toCell] = specials[fromCell];
+    const swappedIds = [...ids];
+    swappedIds[fromCell] = ids[toCell];
+    swappedIds[toCell] = ids[fromCell];
+    setBoard(swappedBoard);
+    setSpecials(swappedSpecials);
+    setIds(swappedIds);
     await sleep(SWAP_ANIM_MS);
 
     if (result.matchedSwaps === 0) {
+      // Kein Match: beide Steine federn sichtbar zurück, kein Zug verbraucht.
       playInvalidSwapSound();
-      setSwapAnim({ fromCell, toCell, phase: "back" });
+      setBoard(board);
+      setSpecials(specials);
+      setIds(ids);
       setInvalidCell(toCell);
       await sleep(SWAP_ANIM_MS);
-      setSwapAnim(null);
       setAnimating(false);
       window.setTimeout(() => setInvalidCell(null), 300);
       return;
     }
 
-    // Board-Daten jetzt auf die bereits erreichte visuelle Position anziehen
-    // UND die Transform-Animation im selben Tick beenden — beide Kacheln
-    // stehen dadurch nahtlos an ihrem neuen Platz, statt sichtbar zurückzuspringen.
-    const swappedBoard = [...board];
-    swappedBoard[fromCell] = board[toCell];
-    swappedBoard[toCell] = board[fromCell];
-    setBoard(swappedBoard);
-    const swappedSpecials = [...specials];
-    swappedSpecials[fromCell] = specials[toCell];
-    swappedSpecials[toCell] = specials[fromCell];
-    setSpecials(swappedSpecials);
-    setSwapAnim(null);
-
-    await commitMove(swap, result);
+    await commitMove(swap, result, swappedBoard, swappedIds);
   }
 
   /** Tap-Aktivierung: ein Sonder-Stein wird direkt ausgelöst (kein Swap nötig,
@@ -400,7 +428,7 @@ export default function BoardMatch3({
 
     if (result.matchedSwaps === 0) return; // sollte durch die specials[cell]-Prüfung im Aufrufer nie passieren
 
-    await commitMove(tap, result);
+    await commitMove(tap, result, board, ids);
   }
 
   async function handleTap(cell: number) {
@@ -425,6 +453,42 @@ export default function BoardMatch3({
     setSelected(cell);
   }
 
+  // Wischen/Ziehen: ab ~35 % Kachelgröße Bewegung wird die dominante Richtung
+  // zum Nachbarn getauscht; ohne nennenswerte Bewegung gilt es als Tippen.
+  function handlePointerDown(e: React.PointerEvent, cell: number) {
+    if (interactionLocked) return;
+    dragRef.current = { cell, x: e.clientX, y: e.clientY, done: false };
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer-Capture ist nur Komfort.
+    }
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    const drag = dragRef.current;
+    if (!drag || drag.done || interactionLocked) return;
+    const boardWidth = boardElRef.current?.getBoundingClientRect().width ?? 300;
+    const threshold = (boardWidth / BOARD_COLS) * 0.35;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return;
+    drag.done = true;
+    const row = Math.floor(drag.cell / BOARD_COLS);
+    const col = drag.cell % BOARD_COLS;
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const targetRow = horizontal ? row : row + (dy > 0 ? 1 : -1);
+    const targetCol = horizontal ? col + (dx > 0 ? 1 : -1) : col;
+    if (targetRow < 0 || targetRow >= BOARD_ROWS || targetCol < 0 || targetCol >= BOARD_COLS) return;
+    void performSwap(drag.cell, targetRow * BOARD_COLS + targetCol);
+  }
+
+  function handlePointerUp(cell: number) {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (drag && !drag.done && drag.cell === cell) void handleTap(cell);
+  }
+
   function toggleLegend() {
     setLegendOpen((prev) => {
       const next = !prev;
@@ -432,6 +496,12 @@ export default function BoardMatch3({
       return next;
     });
   }
+
+  // Stabile DOM-Reihenfolge nach ID (nicht nach Zelle) — sonst würde React beim
+  // Umsortieren Knoten verschieben und laufende CSS-Transitions/Animationen
+  // abbrechen.
+  const renderOrder = Array.from({ length: CELL_COUNT }, (_, cell) => cell).sort((a, b) => ids[a] - ids[b]);
+  const hintCells = new Set(hint ? [hint.fromCell, hint.toCell] : []);
 
   return (
     <div className="space-y-2 relative">
@@ -457,8 +527,7 @@ export default function BoardMatch3({
           {/* Unsichtbarer Klick-außerhalb-Bereich schliesst die Legende, statt
               versehentlich einen Swap auf dem darunterliegenden Brett auszulösen —
               die Legende schwebt bewusst ALS OVERLAY über dem Brett (position
-              absolute), statt es nach unten zu verdrängen (das ließ das feste
-              212px-Panel in LiveBattleView zuvor intern scrollen). */}
+              absolute), statt es nach unten zu verdrängen. */}
           <div className="fixed inset-0 z-10" onClick={toggleLegend} />
           <div className="absolute top-5 left-0 right-0 z-20 rounded-lg bg-[#04061a] border border-[color:var(--moba-accent-line)] px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
             {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
@@ -489,14 +558,13 @@ export default function BoardMatch3({
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SPECIAL_ICON.AREA.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
-              <span>Sonder-Stein direkt antippen = löst ihn sofort aus. Angrenzende Sonder-Steine zünden automatisch mit.</span>
+              <span>Steine zum Tauschen ziehen oder nacheinander antippen. Sonder-Stein antippen = sofort auslösen, angrenzende zünden mit.</span>
             </div>
           </div>
         </>
       )}
-      {/* Match-4/5-Kombo-Label — macht den Größenunterschied zum normalen 3er-
-          Match auch sprachlich sichtbar, nicht nur über den größeren
-          Zerstören-Effekt (gem-destroy-big) und den Bonus-Sound. */}
+      {/* Kombo-Label — macht Größenunterschiede zum normalen 3er-Match und
+          Kaskaden-Ketten auch sprachlich sichtbar. */}
       <AnimatePresence>
         {comboLabel && (
           <motion.div
@@ -505,7 +573,7 @@ export default function BoardMatch3({
             initial={{ opacity: 0, scale: 0.5, x: "-50%", y: "-50%" }}
             animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.15, 1, 0.9] }}
             exit={{ opacity: 0 }}
-            transition={{ duration: (DESTROY_ANIM_MS + 350) / 1000, times: [0, 0.25, 0.75, 1] }}
+            transition={{ duration: (DESTROY_ANIM_MS + 450) / 1000, times: [0, 0.25, 0.75, 1] }}
           >
             <p
               className="font-battle text-2xl uppercase tracking-wide whitespace-nowrap"
@@ -519,88 +587,131 @@ export default function BoardMatch3({
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Brett-Rahmen im Stil von Empires & Puzzles: dunkle Holz-Platte mit
+          leicht abgesetzten Feldern; Steine sitzen absolut darüber und werden
+          oben abgeschnitten, damit sie "von außerhalb" hereinfallen. */}
       <div
-        className="grid gap-1 lg:gap-1.5 mx-auto w-full max-w-[320px] lg:max-w-[420px]"
-        style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))` }}
+        className="mx-auto w-full max-w-[400px] lg:max-w-[480px] rounded-xl p-1"
+        style={{
+          background: "linear-gradient(180deg, #2a1a12 0%, #1a100b 100%)",
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08), inset 0 2px 8px rgba(0,0,0,0.6)",
+        }}
       >
-        {board.map((symbol, cell) => {
-          const classIcon = TILE_ICON[symbol];
-          const special = specials[cell];
-          // COLOR_BOMB behält bewusst das Klassen-Icon (siehe SPECIAL_ICON-Kommentar
-          // oben) — LINE_H/LINE_V/AREA zeigen stattdessen ihr eigenes Sonder-Icon.
-          const icon = special && special !== "COLOR_BOMB" ? SPECIAL_ICON[special] : classIcon;
-          const isSelected = selected === cell;
-          const isInvalid = invalidCell === cell;
-          const isDestroying = destroyingCells.has(cell);
-          const isBigMatch = bigMatchCells.has(cell);
-          const isFalling = fallingCells.has(cell);
-          const isSpawning = spawningCells.has(cell);
-          const swapTranslate = swapTranslateFor(swapAnim, cell);
-          return (
-            <button
-              key={cell}
-              ref={(el) => {
-                if (el) cellElementsRef.current.set(cell, el);
-                else cellElementsRef.current.delete(cell);
-              }}
-              type="button"
-              disabled={interactionLocked}
-              onClick={() => handleTap(cell)}
-              className={`relative aspect-square rounded-lg flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
-                isDestroying ? (isBigMatch ? "gem-destroy-big" : "gem-destroy") : ""
-              } ${isInvalid ? "hit-shake" : ""} ${
-                special === "COLOR_BOMB" ? "gem-bomb" : special ? "gem-special" : ""
-              } ${isSpawning ? "gem-special-spawn" : ""}`}
-              style={
-                {
-                  // "Gem"-Look statt flacher Fläche: heller Glanzpunkt oben links,
-                  // dunklerer Rand unten (Bevel) — ersetzt eine spätere PNG-Bake
-                  // (Canva o.ä.), solange dafür kein Zugriff besteht, rein über CSS.
-                  background: `radial-gradient(circle at 32% 26%, ${classIcon.color}66 0%, ${classIcon.color}30 45%, ${classIcon.color}14 100%)`,
-                  transform: `translate(${swapTranslate.x}%, ${swapTranslate.y}%) scale(${isSelected ? 1.08 : 1})`,
-                  transition: `transform ${SWAP_ANIM_MS}ms ease-in-out, box-shadow 150ms ease-out`,
-                  zIndex: swapTranslate.x !== 0 || swapTranslate.y !== 0 ? 5 : undefined,
-                  boxShadow: [
-                    isInvalid
-                      ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
-                      : isSelected
-                        ? `0 0 0 2px ${classIcon.color}, 0 0 14px ${classIcon.color}99`
-                        : "0 0 0 1px rgba(255,255,255,0.06)",
-                    "inset 0 1.5px 0 rgba(255,255,255,0.3)",
-                    "inset 0 -3px 4px rgba(0,0,0,0.4)",
-                  ].join(", "),
-                  ...(special && special !== "COLOR_BOMB" ? { "--special-color": icon.color } : {}),
-                } as CSSProperties
-              }
-            >
-              {/* Glanzpunkt — statischer Bevel-Look reicht nicht als "Glas"-Eindruck,
-                  ein weicher heller Fleck oben links verkauft das Highlight erst
-                  wirklich. Rein dekorativ, pointer-events aus. */}
+        <div
+          ref={boardElRef}
+          className="relative w-full overflow-hidden rounded-lg select-none"
+          style={{ aspectRatio: `${BOARD_COLS} / ${BOARD_ROWS}`, touchAction: "none" }}
+        >
+          <div
+            className="absolute inset-0 grid pointer-events-none"
+            style={{
+              gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${BOARD_ROWS}, minmax(0, 1fr))`,
+            }}
+          >
+            {Array.from({ length: CELL_COUNT }, (_, cell) => (
+              <div key={cell} className="p-[2px]">
+                <div className="w-full h-full rounded-md bg-black/25" />
+              </div>
+            ))}
+          </div>
+          {renderOrder.map((cell) => {
+            const id = ids[cell];
+            const symbol = board[cell];
+            const classIcon = TILE_ICON[symbol];
+            const special = specials[cell];
+            // COLOR_BOMB behält bewusst das Klassen-Icon (siehe SPECIAL_ICON-Kommentar
+            // oben) — LINE_H/LINE_V/AREA zeigen stattdessen ihr eigenes Sonder-Icon.
+            const icon = special && special !== "COLOR_BOMB" ? SPECIAL_ICON[special] : classIcon;
+            const isSelected = selected === cell;
+            const isInvalid = invalidCell === cell;
+            const isDestroying = destroyingIds.has(id);
+            const isBigMatch = bigMatchIds.has(id);
+            const isSpawning = spawningIds.has(id);
+            const isHint = hintCells.has(cell);
+            const row = Math.floor(cell / BOARD_COLS);
+            const col = cell % BOARD_COLS;
+            const rowOffset = entering.get(id) ?? 0;
+            return (
               <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: "radial-gradient(ellipse 55% 35% at 30% 18%, rgba(255,255,255,0.35), transparent 70%)",
+                key={id}
+                ref={(el) => {
+                  if (el) tileElementsRef.current.set(id, el);
+                  else tileElementsRef.current.delete(id);
                 }}
-              />
-              <div
-                className="w-3/4 h-3/4 flex items-center justify-center"
+                className="absolute top-0 left-0 p-[2px]"
                 style={{
-                  transform: isFalling ? "translateY(-14px)" : "translateY(0)",
-                  opacity: isFalling ? 0.55 : 1,
-                  transition: `transform ${FALL_ANIM_MS}ms ease-out, opacity ${FALL_ANIM_MS}ms ease-out`,
+                  width: `${100 / BOARD_COLS}%`,
+                  height: `${100 / BOARD_ROWS}%`,
+                  transform: `translate(${col * 100}%, ${(row - rowOffset) * 100}%)`,
+                  // Kein Übergang beim Spawnen oberhalb des Bretts — nur bei der
+                  // Bewegung auf die Zielzelle (leichter Überschwinger = "Landen").
+                  transition:
+                    rowOffset > 0 ? "none" : `transform ${FALL_ANIM_MS}ms cubic-bezier(0.34, 1.2, 0.64, 1)`,
+                  zIndex: isSelected || isDestroying ? 5 : 1,
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={icon.src}
-                  alt={icon.alt}
-                  className="w-full h-full object-contain"
-                  style={{ filter: "drop-shadow(0 1.5px 2px rgba(0,0,0,0.55))" }}
-                />
+                <button
+                  type="button"
+                  disabled={interactionLocked}
+                  onPointerDown={(e) => handlePointerDown(e, cell)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={() => handlePointerUp(cell)}
+                  onPointerCancel={() => {
+                    dragRef.current = null;
+                  }}
+                  onClick={(e) => {
+                    // Maus/Touch laufen über die Pointer-Events (Tippen + Ziehen);
+                    // click mit detail 0 ist die Tastatur-Aktivierung.
+                    if (e.detail === 0) void handleTap(cell);
+                  }}
+                  className={`relative w-full h-full rounded-lg flex items-center justify-center transition-[transform,box-shadow] duration-150 active:scale-95 disabled:opacity-60 ${
+                    isDestroying ? (isBigMatch ? "gem-destroy-big" : "gem-destroy") : ""
+                  } ${isInvalid ? "hit-shake" : ""} ${
+                    special === "COLOR_BOMB" ? "gem-bomb" : special ? "gem-special" : ""
+                  } ${isSpawning ? "gem-special-spawn" : ""} ${isHint && !isDestroying ? "gem-hint" : ""}`}
+                  style={
+                    {
+                      // "Gem"-Look statt flacher Fläche: heller Glanzpunkt oben links,
+                      // dunklerer Rand unten (Bevel) — rein über CSS.
+                      background: `radial-gradient(circle at 32% 26%, ${classIcon.color}66 0%, ${classIcon.color}30 45%, ${classIcon.color}14 100%)`,
+                      transform: `scale(${isSelected ? 1.1 : 1})`,
+                      boxShadow: [
+                        isInvalid
+                          ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
+                          : isSelected
+                            ? `0 0 0 2px ${classIcon.color}, 0 0 14px ${classIcon.color}99`
+                            : "0 0 0 1px rgba(255,255,255,0.06)",
+                        "inset 0 1.5px 0 rgba(255,255,255,0.3)",
+                        "inset 0 -3px 4px rgba(0,0,0,0.4)",
+                      ].join(", "),
+                      ...(special && special !== "COLOR_BOMB" ? { "--special-color": icon.color } : {}),
+                    } as CSSProperties
+                  }
+                >
+                  {/* Glanzpunkt — ein weicher heller Fleck oben links verkauft das
+                      Glas-Highlight. Rein dekorativ, pointer-events aus. */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: "radial-gradient(ellipse 55% 35% at 30% 18%, rgba(255,255,255,0.35), transparent 70%)",
+                    }}
+                  />
+                  <div className="w-3/4 h-3/4 flex items-center justify-center pointer-events-none">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={icon.src}
+                      alt={icon.alt}
+                      draggable={false}
+                      className="w-full h-full object-contain"
+                      style={{ filter: "drop-shadow(0 1.5px 2px rgba(0,0,0,0.55))" }}
+                    />
+                  </div>
+                </button>
               </div>
-            </button>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

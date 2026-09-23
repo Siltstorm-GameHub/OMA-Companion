@@ -45,7 +45,8 @@ export const LEVEL_STAT_MULTIPLIER: Record<number, number> = {
 // ausbalanciert werden — insbesondere im Verhältnis zu RAGE_PER_ACTION/
 // RAGE_PER_ROUND_END, da ein Mensch pro Zug potenziell mehrere Matches macht.
 
-export const BOARD_ROWS = 4;
+/** 7x5 wie Empires & Puzzles — vorher 4x7, zu flach für planbare Züge. */
+export const BOARD_ROWS = 5;
 export const BOARD_COLS = 7;
 
 /** Max. Anzahl Swaps, die EINE Zug-Pause zulässt, bevor sie autoritativ aufgelöst

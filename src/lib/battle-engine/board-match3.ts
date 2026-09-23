@@ -164,6 +164,41 @@ export function hasAnyValidMove(grid: BoardGrid): boolean {
   return false;
 }
 
+/** Ein gültiger Hinweis-Zug für die UI (Idle-Hinweis nach ein paar Sekunden):
+ *  bevorzugt einen Swap, der ein Match ergibt (wählt den mit der größten
+ *  Gruppe), sonst — falls vorhanden — das Antippen eines Sonder-Steins
+ *  (`fromCell === toCell`). Mutiert `grid` nicht dauerhaft. */
+export function findHintMove(grid: BoardGrid, specials: SpecialGrid): SwapMove | null {
+  const work = [...grid];
+  let best: SwapMove | null = null;
+  let bestSize = 0;
+  for (let row = 0; row < BOARD_ROWS; row++) {
+    for (let col = 0; col < BOARD_COLS; col++) {
+      const cell = row * BOARD_COLS + col;
+      const neighbors: number[] = [];
+      if (col + 1 < BOARD_COLS) neighbors.push(cell + 1);
+      if (row + 1 < BOARD_ROWS) neighbors.push(cell + BOARD_COLS);
+      for (const neighbor of neighbors) {
+        const a = work[cell];
+        const b = work[neighbor];
+        if (a === b) continue;
+        work[cell] = b;
+        work[neighbor] = a;
+        const size = findMatchGroups(work).reduce((sum, g) => sum + g.length, 0);
+        work[cell] = a;
+        work[neighbor] = b;
+        if (size > bestSize) {
+          bestSize = size;
+          best = { fromCell: cell, toCell: neighbor };
+        }
+      }
+    }
+  }
+  if (best) return best;
+  const specialCell = specials.findIndex((s) => s !== null);
+  return specialCell >= 0 ? { fromCell: specialCell, toCell: specialCell } : null;
+}
+
 function randomRegularSymbol(rng: Rng): TileClassSymbol {
   return REGULAR_SYMBOLS[Math.floor(rng() * REGULAR_SYMBOLS.length)];
 }
