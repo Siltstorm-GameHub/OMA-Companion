@@ -6,19 +6,20 @@
 // Einheitliche Quelle für Farbe/Icon/Label — die Klassenfarben selbst
 // ändern sich nicht durchs MOBA-Reskin, nur der Rahmen drumherum.
 //
-// `icon` ist ein Bildpfad (MOBA-Style-Kit-Asset) statt eines Lucide-
-// Komponenten — jede Klasse bekommt ein eigenes Icon (Schild/Schwert/Magie)
-// statt eines einzigen, per `color` eingefärbten Universal-Icons, da die
-// Kit-Icons ihren Glow bereits eingebrannt haben und nicht umfärbbar sind.
-
-import { MOBA_ICON } from "./moba-icons";
+// `icon` ist ein Bildpfad statt eines Lucide-Komponenten — jede Klasse bekommt
+// ein eigenes, bereits in der Klassenfarbe eingefärbtes Icon (Schild/Schwert/Stab).
 
 export type UnitClassKey = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
+/** Avatar-RPG-Klassen-Icons (Paladin/Krieger-Schwert/Magier-Stab), auf die jeweilige
+ *  Klassenfarbe umgefärbt — die Karten-Icons; die Gems auf dem Brett nutzen weiter
+ *  die Genre-Icons (siehe TILE_ICON in BoardMatch3.tsx). */
+const CLASS_ICON_BASE = "/battle-cards/class-icons";
+
 export const CLASS_CONFIG: Record<UnitClassKey, { label: string; color: string; icon: string }> = {
-  TANK: { label: "Tank", color: "#14b8a6", icon: MOBA_ICON.shield },
-  DAMAGE_DEALER: { label: "Damage Dealer", color: "#ef4444", icon: MOBA_ICON.sword },
-  SUPPORT: { label: "Support", color: "#8b5cf6", icon: MOBA_ICON.magic },
+  TANK: { label: "Tank", color: "#14b8a6", icon: `${CLASS_ICON_BASE}/tank.png` },
+  DAMAGE_DEALER: { label: "Damage Dealer", color: "#ef4444", icon: `${CLASS_ICON_BASE}/damage-dealer.png` },
+  SUPPORT: { label: "Support", color: "#8b5cf6", icon: `${CLASS_ICON_BASE}/support.png` },
 };
 
 /** Fällt auf die Tank-Konfiguration zurück, falls `cls` unerwartet keiner der

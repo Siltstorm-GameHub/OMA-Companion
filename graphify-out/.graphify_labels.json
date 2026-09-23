@@ -236,5 +236,6 @@
   "234": "(dashboard)/servers/page.tsx",
   "235": "[contribId]/route.ts",
   "236": "[contribId]/vote/route.ts",
-  "237": "@auth/prisma-adapter"
+  "237": "@auth/prisma-adapter",
+  "238": "sonner"
 }

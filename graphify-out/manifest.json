@@ -3330,8 +3330,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/LiveBattleView.tsx": {
-    "mtime": 1790187600.3716657,
-    "ast_hash": "87155ce0871175b2cce5350bc15fcdc7",
+    "mtime": 1790188138.4504104,
+    "ast_hash": "38d7868a258a014bd1d1b173f9b8a55b",
     "semantic_hash": ""
   },
   "src/components/battle-cards/MatchmakingWidget.tsx": {

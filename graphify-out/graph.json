@@ -329,8 +329,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "package_dependencies_auth_prisma_adapter",
-      "community": 237,
-      "community_name": "@auth/prisma-adapter",
+      "community": 65,
+      "community_name": "dependencies",
       "norm_label": "@auth/prisma-adapter"
     },
     {
@@ -340,8 +340,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "auth_prisma_adapter",
-      "community": 237,
-      "community_name": "@auth/prisma-adapter",
+      "community": 65,
+      "community_name": "dependencies",
       "norm_label": "@auth/prisma-adapter"
     },
     {
@@ -813,8 +813,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "package_dependencies_sonner",
-      "community": 65,
-      "community_name": "dependencies",
+      "community": 238,
+      "community_name": "sonner",
       "norm_label": "sonner"
     },
     {
@@ -824,8 +824,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "sonner",
-      "community": 65,
-      "community_name": "dependencies",
+      "community": 238,
+      "community_name": "sonner",
       "norm_label": "sonner"
     },
     {
@@ -2309,8 +2309,8 @@
       "source_location": "L1213",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_athlete",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "athlete"
     },
     {
@@ -2320,8 +2320,8 @@
       "source_location": "L1214",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_label",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "label"
     },
     {
@@ -2331,8 +2331,8 @@
       "source_location": "L1215",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_base",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "base"
     },
     {
@@ -2342,8 +2342,8 @@
       "source_location": "L1216",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_regions",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "regions"
     },
     {
@@ -2364,8 +2364,8 @@
       "source_location": "L1294",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_bodymaterial",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "bodymaterial"
     },
     {
@@ -2408,8 +2408,8 @@
       "source_location": "L1376",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_parts",
-      "community": 132,
-      "community_name": "giant",
+      "community": 236,
+      "community_name": "[contribId]/vote/route.ts",
       "norm_label": "parts"
     },
     {
@@ -2419,8 +2419,8 @@
       "source_location": "L2544",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_normal",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "normal"
     },
     {
@@ -2430,8 +2430,8 @@
       "source_location": "L2545",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_label",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "label"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L2546",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_base",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "base"
     },
     {
@@ -2452,8 +2452,8 @@
       "source_location": "L2547",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_regions",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "regions"
     },
     {
@@ -2474,8 +2474,8 @@
       "source_location": "L2625",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_bodymaterial",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2518,8 +2518,8 @@
       "source_location": "L2707",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_parts",
-      "community": 201,
-      "community_name": "sonner",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "parts"
     },
     {
@@ -2639,8 +2639,8 @@
       "source_location": "L5206",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_bear",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "bear"
     },
     {
@@ -2650,8 +2650,8 @@
       "source_location": "L5207",
       "_origin": "ast",
       "id": "public_characters_manifest_bear_label",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "label"
     },
     {
@@ -2661,8 +2661,8 @@
       "source_location": "L5208",
       "_origin": "ast",
       "id": "public_characters_manifest_bear_base",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "base"
     },
     {
@@ -2672,8 +2672,8 @@
       "source_location": "L5209",
       "_origin": "ast",
       "id": "public_characters_manifest_bear_regions",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "regions"
     },
     {
@@ -2694,8 +2694,8 @@
       "source_location": "L5287",
       "_origin": "ast",
       "id": "public_characters_manifest_bear_bodymaterial",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "bodymaterial"
     },
     {
@@ -2738,8 +2738,8 @@
       "source_location": "L5369",
       "_origin": "ast",
       "id": "public_characters_manifest_bear_parts",
-      "community": 195,
-      "community_name": "react",
+      "community": 132,
+      "community_name": "giant",
       "norm_label": "parts"
     },
     {
@@ -3574,8 +3574,8 @@
       "source_location": "L18118",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_tall",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "tall"
     },
     {
@@ -3585,8 +3585,8 @@
       "source_location": "L18119",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_label",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "label"
     },
     {
@@ -3596,8 +3596,8 @@
       "source_location": "L18120",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_base",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "base"
     },
     {
@@ -3607,8 +3607,8 @@
       "source_location": "L18121",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_regions",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "regions"
     },
     {
@@ -3618,8 +3618,8 @@
       "source_location": "L18190",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_alwayson",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "alwayson"
     },
     {
@@ -3629,8 +3629,8 @@
       "source_location": "L18191",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_bodymaterial",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "bodymaterial"
     },
     {
@@ -3662,8 +3662,8 @@
       "source_location": "L18263",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_defaults",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "defaults"
     },
     {
@@ -3673,8 +3673,8 @@
       "source_location": "L18272",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_parts",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 195,
+      "community_name": "react",
       "norm_label": "parts"
     },
     {
@@ -10856,8 +10856,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_community_board_roadmap_page",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "roadmap/page.tsx"
     },
     {
@@ -10867,8 +10867,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_community_board_roadmap_page_item",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "item"
     },
     {
@@ -10878,8 +10878,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_community_board_roadmap_page_idearow",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "idearow()"
     },
     {
@@ -10889,8 +10889,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_app_dashboard_community_board_roadmap_page_section",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "section()"
     },
     {
@@ -10900,8 +10900,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "src_app_dashboard_community_board_roadmap_page_roadmappage",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "roadmappage()"
     },
     {
@@ -11285,8 +11285,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform",
-      "community": 71,
-      "community_name": "GameNameInput.tsx",
+      "community": 237,
+      "community_name": "@auth/prisma-adapter",
       "norm_label": "eventcreateform.tsx"
     },
     {
@@ -11296,8 +11296,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_inputstyle",
-      "community": 71,
-      "community_name": "GameNameInput.tsx",
+      "community": 237,
+      "community_name": "@auth/prisma-adapter",
       "norm_label": "inputstyle"
     },
     {
@@ -11307,8 +11307,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_series",
-      "community": 71,
-      "community_name": "GameNameInput.tsx",
+      "community": 237,
+      "community_name": "@auth/prisma-adapter",
       "norm_label": "series"
     },
     {
@@ -11318,8 +11318,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_eventcreateform",
-      "community": 71,
-      "community_name": "GameNameInput.tsx",
+      "community": 237,
+      "community_name": "@auth/prisma-adapter",
       "norm_label": "eventcreateform()"
     },
     {
@@ -20173,8 +20173,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_contributions_contribid_vote_route",
-      "community": 236,
-      "community_name": "[contribId]/vote/route.ts",
+      "community": 10,
+      "community_name": "time.ts",
       "norm_label": "[contribid]/vote/route.ts"
     },
     {
@@ -20184,8 +20184,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_contributions_contribid_vote_route_post",
-      "community": 236,
-      "community_name": "[contribId]/vote/route.ts",
+      "community": 10,
+      "community_name": "time.ts",
       "norm_label": "post()"
     },
     {
@@ -20195,8 +20195,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_contributions_contribid_vote_route_delete",
-      "community": 236,
-      "community_name": "[contribId]/vote/route.ts",
+      "community": 10,
+      "community_name": "time.ts",
       "norm_label": "delete()"
     },
     {
@@ -31764,7 +31764,7 @@
       "label": "GemBeamOverlay()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L248",
+      "source_location": "L250",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_gembeamoverlay",
       "community": 22,
@@ -31775,7 +31775,7 @@
       "label": "STAT_LABEL",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L274",
+      "source_location": "L295",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_stat_label",
       "community": 25,
@@ -31786,7 +31786,7 @@
       "label": "formatModifierValue()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L280",
+      "source_location": "L301",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_formatmodifiervalue",
       "community": 25,
@@ -31797,7 +31797,7 @@
       "label": "formatModifierDuration()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L285",
+      "source_location": "L306",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_formatmodifierduration",
       "community": 25,
@@ -31808,7 +31808,7 @@
       "label": "SlotRow()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L294",
+      "source_location": "L315",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_slotrow",
       "community": 27,
@@ -31819,7 +31819,7 @@
       "label": "UnitCard()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L317",
+      "source_location": "L338",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_unitcard",
       "community": 25,
@@ -31830,7 +31830,7 @@
       "label": "LiveBattleView()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L629",
+      "source_location": "L678",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_livebattleview",
       "community": 25,
@@ -31841,7 +31841,7 @@
       "label": "LiveBattleBody()",
       "file_type": "code",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1071",
+      "source_location": "L1120",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_livebattlebody",
       "community": 25,
@@ -43614,8 +43614,8 @@
       "source_location": "L200",
       "_origin": "ast",
       "id": "src_lib_community_job_config_getannouncementchannel",
-      "community": 4,
-      "community_name": "fotograf-service.ts",
+      "community": 147,
+      "community_name": "DailyMessagePanel.tsx",
       "norm_label": "getannouncementchannel()"
     },
     {
@@ -44296,8 +44296,8 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "src_lib_community_jobs_getcommunityjob",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 147,
+      "community_name": "DailyMessagePanel.tsx",
       "norm_label": "getcommunityjob()"
     },
     {
@@ -47112,8 +47112,8 @@
       "source_location": "L311",
       "_origin": "ast",
       "id": "src_lib_journalist_service_votecontribution",
-      "community": 236,
-      "community_name": "[contribId]/vote/route.ts",
+      "community": 10,
+      "community_name": "time.ts",
       "norm_label": "votecontribution()"
     },
     {
@@ -47123,8 +47123,8 @@
       "source_location": "L326",
       "_origin": "ast",
       "id": "src_lib_journalist_service_unvotecontribution",
-      "community": 236,
-      "community_name": "[contribId]/vote/route.ts",
+      "community": 10,
+      "community_name": "time.ts",
       "norm_label": "unvotecontribution()"
     },
     {
@@ -47299,8 +47299,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "src_lib_marketing_manager_service_announceandstore",
-      "community": 4,
-      "community_name": "fotograf-service.ts",
+      "community": 147,
+      "community_name": "DailyMessagePanel.tsx",
       "norm_label": "announceandstore()"
     },
     {
@@ -51996,8 +51996,8 @@
       "source_location": "L376",
       "_origin": "ast",
       "id": "src_lib_visionaer_service_topideasbetween",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "topideasbetween()"
     },
     {
@@ -52007,8 +52007,8 @@
       "source_location": "L398",
       "_origin": "ast",
       "id": "src_lib_visionaer_service_getroadmap",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 201,
+      "community_name": "sonner",
       "norm_label": "getroadmap()"
     },
     {
@@ -52018,8 +52018,8 @@
       "source_location": "L442",
       "_origin": "ast",
       "id": "src_lib_visionaer_service_postideadigests",
-      "community": 36,
-      "community_name": "packs.ts",
+      "community": 147,
+      "community_name": "DailyMessagePanel.tsx",
       "norm_label": "postideadigests()"
     },
     {
@@ -149871,7 +149871,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L285",
+      "source_location": "L306",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149882,7 +149882,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L280",
+      "source_location": "L301",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149904,7 +149904,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L248",
+      "source_location": "L250",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149937,7 +149937,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1071",
+      "source_location": "L1120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149948,7 +149948,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L629",
+      "source_location": "L678",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149981,7 +149981,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L294",
+      "source_location": "L315",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -149992,7 +149992,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L274",
+      "source_location": "L295",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -150003,7 +150003,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L317",
+      "source_location": "L338",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview",
@@ -150471,7 +150471,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L969",
+      "source_location": "L1018",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150615,7 +150615,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L611",
+      "source_location": "L660",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_unitcard",
@@ -150639,7 +150639,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1293",
+      "source_location": "L1367",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattlebody",
@@ -150651,7 +150651,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1670",
+      "source_location": "L1746",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattlebody",
@@ -150676,7 +150676,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L253",
+      "source_location": "L255",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_gembeamoverlay",
@@ -150687,7 +150687,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L593",
+      "source_location": "L642",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_unitcard",
@@ -150699,7 +150699,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L596",
+      "source_location": "L645",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_unitcard",
@@ -150712,7 +150712,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L304",
+      "source_location": "L325",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_slotrow",
@@ -150724,7 +150724,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L352",
+      "source_location": "L382",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_unitcard",
@@ -150736,7 +150736,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L821",
+      "source_location": "L870",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150748,7 +150748,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L830",
+      "source_location": "L879",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150760,7 +150760,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L838",
+      "source_location": "L887",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150772,7 +150772,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L799",
+      "source_location": "L848",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150784,7 +150784,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L666",
+      "source_location": "L715",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattleview",
@@ -150796,7 +150796,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1346",
+      "source_location": "L1420",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattlebody",
@@ -150808,7 +150808,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1249",
+      "source_location": "L1323",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattlebody",
@@ -150820,7 +150820,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/LiveBattleView.tsx",
-      "source_location": "L1248",
+      "source_location": "L1322",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_livebattleview_livebattlebody",
@@ -199626,5 +199626,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a4e26b814975e6989ced9599b09bd60466cdc975"
+  "built_at_commit": "1725820626bbfe4815be01cc47278fbf1457800b"
 }

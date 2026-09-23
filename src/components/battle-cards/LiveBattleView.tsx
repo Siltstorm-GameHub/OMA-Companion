@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, Skull, Handshake, Star } from "lucide-react";
+import { Loader2, Skull, Handshake, Star, Swords } from "lucide-react";
 import MobaIcon from "./MobaIcon";
 import MobaConfirmDialog from "./MobaConfirmDialog";
 import CoinIcon from "@/components/CoinIcon";
@@ -244,6 +244,8 @@ interface GemBeam {
 }
 
 const GEM_BEAM_DURATION_MS = 420;
+/** Dauer des Einschlag-Effekts (Ring + Funken) nach der Ankunft des Geschosses. */
+const GEM_IMPACT_MS = 380;
 
 function GemBeamOverlay({ beams }: { beams: GemBeam[] }) {
   return (
@@ -251,19 +253,38 @@ function GemBeamOverlay({ beams }: { beams: GemBeam[] }) {
       <AnimatePresence>
         {beams.map((beam) => {
           const color = getClassConfig(beam.cls).color;
+          const flight = GEM_BEAM_DURATION_MS / 1000;
           return (
-            <motion.div
-              key={beam.id}
-              initial={{ left: beam.fromX, top: beam.fromY, opacity: 0, scale: 0.4 }}
-              animate={{ left: beam.toX, top: beam.toY, opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.6] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: GEM_BEAM_DURATION_MS / 1000, ease: "easeIn" }}
-              className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full"
-              style={{
-                background: color,
-                boxShadow: `0 0 12px 4px ${color}, 0 0 24px 8px ${color}88`,
-              }}
-            />
+            <motion.div key={beam.id} exit={{ opacity: 0 }}>
+              {/* Geschoss mit Schweif — fährt senkrecht nach oben. */}
+              <motion.div
+                initial={{ left: beam.fromX, top: beam.fromY, opacity: 0, scale: 0.4 }}
+                animate={{ left: beam.toX, top: beam.toY, opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.7] }}
+                transition={{ duration: flight, ease: "easeIn", times: [0, 0.15, 0.85, 1] }}
+                className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full"
+                style={{ background: color, boxShadow: `0 0 12px 4px ${color}, 0 0 24px 8px ${color}88` }}
+              >
+                <span
+                  className="absolute left-1/2 top-full -translate-x-1/2 w-1.5 h-8 rounded-full"
+                  style={{ background: `linear-gradient(to bottom, ${color}, transparent)`, opacity: 0.85 }}
+                />
+              </motion.div>
+              {/* Einschlag: Lichtblitz + expandierender Ring an der Ankunftsstelle. */}
+              <motion.div
+                className="absolute w-10 h-10 -ml-5 -mt-5 rounded-full"
+                style={{ left: beam.toX, top: beam.toY, background: `radial-gradient(circle, #fff 0%, ${color} 40%, transparent 70%)` }}
+                initial={{ opacity: 0, scale: 0.2 }}
+                animate={{ opacity: [0, 1, 0], scale: [0.2, 1.1, 1.5] }}
+                transition={{ delay: flight, duration: GEM_IMPACT_MS / 1000, ease: "easeOut" }}
+              />
+              <motion.div
+                className="absolute w-10 h-10 -ml-5 -mt-5 rounded-full"
+                style={{ left: beam.toX, top: beam.toY, border: `2px solid ${color}`, boxShadow: `0 0 10px 2px ${color}` }}
+                initial={{ opacity: 0, scale: 0.3 }}
+                animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1.2, 2.2] }}
+                transition={{ delay: flight, duration: GEM_IMPACT_MS / 1000, ease: "easeOut" }}
+              />
+            </motion.div>
           );
         })}
       </AnimatePresence>
@@ -321,6 +342,8 @@ function UnitCard({
   ultimateReady,
   effects,
   isAttacking,
+  countdown,
+  impactFlash,
   isVictory,
   onClick,
   onUltimateClick,
@@ -340,6 +363,13 @@ function UnitCard({
    *  — macht auch Angriffe sichtbar, die ohne eigene Zug-Handlung passieren
    *  (match-ausgelöste Angriffe bei OMA Gems, siehe applyBoardRage). */
   isAttacking?: boolean;
+  /** OMA Gems (nur Gegner): Anzahl deiner Züge, bis dieser Gegner angreift
+   *  (1 = nach deinem nächsten Zug) — Empires-&-Puzzles-Countdown, abgeleitet
+   *  aus der Zugreihenfolge (snapshot.upcoming). */
+  countdown?: number;
+  /** Ein Gem-Geschoss ist GERADE bei dieser Karte eingeschlagen — sofortiger
+   *  Treffer-Flash, noch bevor der Server-Schaden im Log ankommt. */
+  impactFlash?: boolean;
   /** Kampf ist beendet UND diese Einheit steht im Gewinner-Team (siehe snapshot.winner
    *  in LiveBattleBody) — spielt die Victory-Animation statt Idle, falls vorhanden. */
   isVictory?: boolean;
@@ -383,9 +413,28 @@ function UnitCard({
       ref={cardRef}
       type="button"
       onClick={handleClick}
-      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
-      style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
+      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit || impactFlash ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
+      style={{
+        opacity: unit.isAlive ? 1 : 0.35,
+        filter: unit.isAlive ? (impactFlash ? "brightness(1.7) saturate(1.3)" : "none") : "grayscale(1)",
+        transition: "filter 120ms ease-out",
+        cursor: clickable ? "pointer" : "default",
+      }}
     >
+      {countdown !== undefined && unit.isAlive && (
+        <span
+          className={`absolute -top-1.5 -left-1.5 z-30 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums shadow-lg ${countdown === 1 ? "animate-pulse" : ""}`}
+          style={{
+            background: countdown === 1 ? "#f97316" : "#27272a",
+            color: countdown === 1 ? "#000" : "#e4e4e7",
+            boxShadow: "0 0 0 1.5px rgba(0,0,0,0.6)",
+          }}
+          title={countdown === 1 ? "Greift nach deinem nächsten Zug an" : `Greift in ${countdown} Zügen an`}
+        >
+          <Swords className="w-3 h-3" strokeWidth={2.5} />
+          {countdown}
+        </span>
+      )}
       {/* Archetyp-Treffer-Ring: farbiger Ring-Flash in der Farbe der Klasse des
           AUSFÜHRENDEN Helden (nicht des getroffenen Ziels) — macht sichtbar, WER
           zuschlägt, nicht nur dass etwas passiert. Gleiche Archetyp-Matrix wie
@@ -1124,6 +1173,7 @@ function LiveBattleBody({
   const cardElementsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const beamIdRef = useRef(0);
   const [beams, setBeams] = useState<GemBeam[]>([]);
+  const [impactIds, setImpactIds] = useState<Set<string>>(new Set());
 
   /** OMA Gems (Empires-&-Puzzles-Stil): jeder zerstörte Stein fährt in seiner
    *  Spalte senkrecht nach oben und trifft den Gegner, der über dieser Spalte
@@ -1134,11 +1184,14 @@ function LiveBattleBody({
     const enemies = unitsByTeam(opponentTeam);
     const alive = enemies.map((u) => u.isAlive);
     const newBeams: GemBeam[] = [];
+    const impactedIds = new Set<string>();
     for (const tile of tiles) {
       const slot = pickEnemyForColumn(tile.column, alive);
       if (slot < 0) continue;
-      const el = cardElementsRef.current.get(enemies[slot].instanceId);
+      const enemyId = enemies[slot].instanceId;
+      const el = cardElementsRef.current.get(enemyId);
       if (!el) continue;
+      impactedIds.add(enemyId);
       const target = el.getBoundingClientRect();
       const fromX = tile.rect.left + tile.rect.width / 2;
       newBeams.push({
@@ -1154,8 +1207,14 @@ function LiveBattleBody({
     }
     if (newBeams.length === 0) return;
     setBeams((prev) => [...prev, ...newBeams]);
+    // Treffer-Flash auf den getroffenen Gegnerkarten im Moment des Einschlags.
+    window.setTimeout(() => setImpactIds((prev) => new Set([...prev, ...impactedIds])), GEM_BEAM_DURATION_MS);
+    window.setTimeout(
+      () => setImpactIds((prev) => new Set([...prev].filter((id) => !impactedIds.has(id)))),
+      GEM_BEAM_DURATION_MS + 260
+    );
     newBeams.forEach((b) => {
-      window.setTimeout(() => setBeams((prev) => prev.filter((x) => x.id !== b.id)), GEM_BEAM_DURATION_MS + 80);
+      window.setTimeout(() => setBeams((prev) => prev.filter((x) => x.id !== b.id)), GEM_BEAM_DURATION_MS + GEM_IMPACT_MS + 80);
     });
   }
   // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
@@ -1179,6 +1238,21 @@ function LiveBattleBody({
         return result;
       })()
     : snapshot.upcoming.map((id) => ({ id, ownTurnsBefore: 0 }));
+
+  // Empires-&-Puzzles-Countdown je Gegner: Anzahl DEINER Züge bis zu seinem
+  // nächsten Angriff (1 = nach deinem nächsten Zug) — erste Nennung je Gegner in
+  // der Zugreihenfolge, eigene Zug-Slots davor zählen mit.
+  const enemyCountdown = new Map<string, number>();
+  if (snapshot.boardMode) {
+    let ownCount = 0;
+    for (const id of snapshot.upcoming) {
+      const u = unitById(id);
+      if (!u) continue;
+      if (u.teamId === opponentTeam) {
+        if (!enemyCountdown.has(id)) enemyCountdown.set(id, ownCount + 1);
+      } else ownCount++;
+    }
+  }
 
   const candidates = selectedAction ? (snapshot.awaiting?.candidateTargetsByAction[selectedAction.actionType] ?? []) : [];
   function glowFor(unit: LiveUnit): "enemy" | "ally" | null {
@@ -1392,6 +1466,8 @@ function LiveBattleBody({
               isAttacking={attackingUnitIds.has(u.instanceId)}
               isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
               onClick={() => handleUnitClick(u)}
+              countdown={enemyCountdown.get(u.instanceId)}
+              impactFlash={impactIds.has(u.instanceId)}
               cardRef={(el) => {
                 if (el) cardElementsRef.current.set(u.instanceId, el);
                 else cardElementsRef.current.delete(u.instanceId);

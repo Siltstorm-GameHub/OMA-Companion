@@ -14,8 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import MobaIcon from "./MobaIcon";
-import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
+import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import CoinIcon from "@/components/CoinIcon";
 import CardTile from "./CardTile";
 import CardDetailModal, { type CardDetailSelection } from "./CardDetailModal";
@@ -28,11 +27,11 @@ const PAGE_SIZE = 12;
 
 type CardClassFilter = "ALL" | "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
-const FILTERS: { key: CardClassFilter; label: string; icon?: MobaIconName }[] = [
+const FILTERS: { key: CardClassFilter; label: string; icon?: string }[] = [
   { key: "ALL", label: "Alle" },
-  { key: "TANK", label: "Tank", icon: "shield" },
-  { key: "DAMAGE_DEALER", label: "Damage Dealer", icon: "sword" },
-  { key: "SUPPORT", label: "Support", icon: "magic" },
+  { key: "TANK", label: "Tank", icon: CLASS_CONFIG.TANK.icon },
+  { key: "DAMAGE_DEALER", label: "Damage Dealer", icon: CLASS_CONFIG.DAMAGE_DEALER.icon },
+  { key: "SUPPORT", label: "Support", icon: CLASS_CONFIG.SUPPORT.icon },
 ];
 
 export interface OwnedCardEntry {
@@ -200,7 +199,8 @@ export default function CardCollectionBrowser({
                 filter === key ? "moba-tab-active" : "hover:bg-white/[0.06]"
               }`}
             >
-              {icon && <MobaIcon name={icon} className="w-3.5 h-3.5" />}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {icon && <img src={icon} alt="" aria-hidden className="w-3.5 h-3.5 object-contain" />}
               {label}
             </button>
           ))}
