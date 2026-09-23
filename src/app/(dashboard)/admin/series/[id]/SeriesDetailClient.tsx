@@ -1,4 +1,6 @@
 "use client";
+import { GENRES } from "@/lib/app-icons";
+import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -21,15 +23,6 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
-
-const GENRES: { value: string; label: string; icon: string }[] = [
-  { value: "arcade",     label: "Arcade",     icon: "/icons/genres/arcade.png" },
-  { value: "beat_em_up", label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
-  { value: "sport",      label: "Sport",      icon: "/icons/genres/sport.png" },
-  { value: "racing",     label: "Racing",     icon: "/icons/genres/racing.png" },
-  { value: "shooter",    label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  { value: "community",  label: "Community",  icon: "/icons/genres/community.png" },
-];
 
 const PLATFORMS: { value: string; label: string; icon: string }[] = [
   { value: "PC",     label: "PC",     icon: "🖥️" },
@@ -686,7 +679,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                     className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
                       genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
                     }`}>
-                    <Image src={g.icon} alt={g.label} width={32} height={32} className="object-contain" />
+                    <AppIcon kind="genre" name={g.value} size={32} />
                     <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
                   </button>
                 ))}

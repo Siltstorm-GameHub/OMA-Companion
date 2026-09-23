@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/EventEditClient.tsx": {
-    "mtime": 1790191214.7108657,
-    "ast_hash": "36b0f8a8bdf511dfd8f9ac5ee125d844",
+    "mtime": 1790191821.4407833,
+    "ast_hash": "6706860601cfc9840e249f23d36606af",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/bracket/page.tsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/EventSetupWizard.tsx": {
-    "mtime": 1790191214.6706462,
-    "ast_hash": "5703be13b2b63b1fa35ea28c8da93fe3",
+    "mtime": 1790191821.4381998,
+    "ast_hash": "5143c1c2e8b488ac9c9a7228224fa3f4",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/page.tsx": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx": {
-    "mtime": 1790191214.7521482,
-    "ast_hash": "d319347b38033352225bce2d39072f42",
+    "mtime": 1790191821.4422982,
+    "ast_hash": "707fe993d05b05c07b4503328dcf60c0",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/SeriesCompleteClient.tsx": {
@@ -875,8 +875,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesEventList.tsx": {
-    "mtime": 1790191214.7879467,
-    "ast_hash": "a120fa08f2743dfbfddf415ca065465f",
+    "mtime": 1790191821.4438434,
+    "ast_hash": "de25a78223fa98629ff6103ed66cd3c8",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesStandingsTable.tsx": {
@@ -1155,8 +1155,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/[id]/page.tsx": {
-    "mtime": 1790191214.8190088,
-    "ast_hash": "5800415b6b9fedee710d4dab04267d3b",
+    "mtime": 1790191821.4438434,
+    "ast_hash": "e88f77ce7d95229d2f73acb3f69eb661",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/page.tsx": {
@@ -2835,8 +2835,8 @@
     "semantic_hash": ""
   },
   "src/components/EventCategoryBadge.tsx": {
-    "mtime": 1790190444.9575815,
-    "ast_hash": "feb4bcebf10cabde7aa816266cc084d0",
+    "mtime": 1790191821.4366775,
+    "ast_hash": "659074ec6a926345c2db4d7f702eb480",
     "semantic_hash": ""
   },
   "src/components/EventCoverDefault.tsx": {
@@ -3995,8 +3995,8 @@
     "semantic_hash": ""
   },
   "src/lib/event-placeholders.ts": {
-    "mtime": 1788765734.356645,
-    "ast_hash": "0a52f80c17ec84b4ca0b82d215d5b5b5",
+    "mtime": 1790191836.2651784,
+    "ast_hash": "7578d68f29c36f4beeb59cff3d0139f1",
     "semantic_hash": ""
   },
   "src/lib/event-polls.ts": {
@@ -4032,11 +4032,6 @@
   "src/lib/gameservers.ts": {
     "mtime": 1789764442.482674,
     "ast_hash": "dcaad25fcc8c442149b127d3e961c2fa",
-    "semantic_hash": ""
-  },
-  "src/lib/genre-icons.ts": {
-    "mtime": 1790191435.957375,
-    "ast_hash": "43211ac11f34d0fdee33aa8c663708fb",
     "semantic_hash": ""
   },
   "src/lib/get-wanderpocal-holders.ts": {
@@ -4350,8 +4345,8 @@
     "semantic_hash": ""
   },
   "src/lib/wanderpocal.ts": {
-    "mtime": 1782569439.4329205,
-    "ast_hash": "49c00b5966698437ee530975dc53e1c0",
+    "mtime": 1790191836.2651784,
+    "ast_hash": "5ef8c23fbb6243b727305764401a6ce4",
     "semantic_hash": ""
   },
   "src/lib/wanderpokal-status.ts": {
@@ -6394,11 +6389,6 @@
     "ast_hash": "82416e3e2158eb192eb57aa587ec4a72",
     "semantic_hash": ""
   },
-  "src/components/CategoryIcon.tsx": {
-    "mtime": 1790190990.4296675,
-    "ast_hash": "70719a346f7de6c4647d428f1b73a98a",
-    "semantic_hash": ""
-  },
   "public/battle-cards/class-icons/damage-dealer.png": {
     "mtime": 1790188562.1937447,
     "ast_hash": "302e72f923635b00c408f3f1689af711",
@@ -6482,6 +6472,21 @@
   "public/icons/genres/strategy.png": {
     "mtime": 1790191277.8554218,
     "ast_hash": "4b76b905cdca7c2185d35ce3fd856f42",
+    "semantic_hash": ""
+  },
+  "prisma/manual-sql/add_event_genres_strategy_cards_board.sql": {
+    "mtime": 1790191836.3522365,
+    "ast_hash": "055c7b8de75152c26f19ef64f1450541",
+    "semantic_hash": ""
+  },
+  "src/components/AppIcon.tsx": {
+    "mtime": 1790191821.2333329,
+    "ast_hash": "2178e4984bc65c570a4f5b13bcdb7703",
+    "semantic_hash": ""
+  },
+  "src/lib/app-icons.ts": {
+    "mtime": 1790191821.2109418,
+    "ast_hash": "52f9ab39baa7b541f7b00fcf727c3ee6",
     "semantic_hash": ""
   }
 }

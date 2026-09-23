@@ -1,5 +1,6 @@
 "use client";
-import CategoryIcon from "@/components/CategoryIcon";
+import { GENRES } from "@/lib/app-icons";
+import AppIcon from "@/components/AppIcon";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -57,15 +58,6 @@ const DEFAULT_REWARDS: RewardsConfig = {
 // Punkt 3: zentrale Format-Liste (siehe @/lib/tournament-formats) statt eigener Kopie —
 // verhindert, dass dieser Reiter, TournamentManager.tsx und der Erstellungs-Wizard auseinanderlaufen.
 const TMT_FORMATS = TOURNAMENT_FORMATS;
-
-const GENRES: { value: EventGenre; label: string; icon: string }[] = [
-  { value: "arcade",    label: "Arcade",     icon: "/icons/genres/arcade.png" },
-  { value: "beat_em_up",label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
-  { value: "sport",     label: "Sport",      icon: "/icons/genres/sport.png" },
-  { value: "racing",    label: "Racing",     icon: "/icons/genres/racing.png" },
-  { value: "shooter",   label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  { value: "community", label: "Community",  icon: "/icons/genres/community.png" },
-];
 
 const CATEGORIES: { value: EventCategory; label: string; emoji: string }[] = [
   { value: "competitive",     label: "Kompetitiv", emoji: "🏆" },
@@ -1088,7 +1080,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     className={`flex flex-col items-center gap-1.5 rounded-xl p2 border transition-all ${
                       genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
                     }`}>
-                    <Image src={g.icon} alt={g.label} width={28} height={28} className="object-contain" />
+                    <AppIcon kind="genre" name={g.value} size={28} />
                     <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
                   </button>
                 ))}
@@ -1104,7 +1096,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                     category === cat.value ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-white/10 text-gray-500 hover:border-white/20"
                   }`}>
-                  <CategoryIcon category={cat.value} emoji={cat.emoji} size={16} className="mr-1 align-text-bottom" />{cat.label}
+                  <AppIcon kind="category" name={cat.value} size={16} className="mr-1 align-text-bottom" />{cat.label}
                 </button>
               ))}
             </div>

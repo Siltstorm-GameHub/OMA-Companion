@@ -4102,8 +4102,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_backfill_event_notification_flags",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 194,
+      "community_name": "MyPredictionsList.tsx",
       "norm_label": "backfill-event-notification-flags.ts"
     },
     {
@@ -4113,8 +4113,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_backfill_event_notification_flags_defaults",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 194,
+      "community_name": "MyPredictionsList.tsx",
       "norm_label": "defaults"
     },
     {
@@ -4124,8 +4124,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_backfill_event_notification_flags_main",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 194,
+      "community_name": "MyPredictionsList.tsx",
       "norm_label": "main()"
     },
     {
@@ -4135,8 +4135,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_backfill_gems_event_endat",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "backfill-gems-event-endat.ts"
     },
     {
@@ -4146,8 +4146,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "scripts_backfill_gems_event_endat_main",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "main()"
     },
     {
@@ -4245,8 +4245,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_fix_tournament_quest",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "fix-tournament-quest.ts"
     },
     {
@@ -4256,8 +4256,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_fix_tournament_quest_main",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "main()"
     },
     {
@@ -4586,8 +4586,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_update_notification_rules_2026_07",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "update-notification-rules-2026-07.ts"
     },
     {
@@ -4597,8 +4597,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "scripts_update_notification_rules_2026_07_main",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "main()"
     },
     {
@@ -5070,8 +5070,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "communitycardsadmin.tsx"
     },
     {
@@ -5081,8 +5081,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardrow",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "cardrow"
     },
     {
@@ -5092,8 +5092,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardeditrow",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "cardeditrow()"
     },
     {
@@ -5103,8 +5103,8 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_communitycardsadmin",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "communitycardsadmin()"
     },
     {
@@ -5114,8 +5114,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_page",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "cards/page.tsx"
     },
     {
@@ -5125,8 +5125,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_page_admincommunitycardspage",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "admincommunitycardspage()"
     },
     {
@@ -7655,8 +7655,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "events/[id]/complete/page.tsx"
     },
     {
@@ -7666,8 +7666,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_placementreward",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "placementreward"
     },
     {
@@ -7677,8 +7677,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_rewardsconfig",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "rewardsconfig"
     },
     {
@@ -7688,8 +7688,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_pollconfig",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "pollconfig"
     },
     {
@@ -7699,8 +7699,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_multipollconfig",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "multipollconfig"
     },
     {
@@ -7710,8 +7710,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_seriesstatconfig",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "seriesstatconfig"
     },
     {
@@ -7721,8 +7721,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_default_rewards",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "default_rewards"
     },
     {
@@ -7732,8 +7732,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_default_poll",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "default_poll"
     },
     {
@@ -7743,8 +7743,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_parserewards",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "parserewards()"
     },
     {
@@ -7754,8 +7754,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_parsepoll",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "parsepoll()"
     },
     {
@@ -7765,8 +7765,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_page_admineventcompletepage",
-      "community": 34,
-      "community_name": "coach-guide-service.ts",
+      "community": 75,
+      "community_name": "SeriesIcon.tsx",
       "norm_label": "admineventcompletepage()"
     },
     {
@@ -8502,8 +8502,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_notifications_page",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "notifications/page.tsx"
     },
     {
@@ -8513,8 +8513,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_notifications_page_discordemoji",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "discordemoji"
     },
     {
@@ -8524,8 +8524,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_notifications_page_fetchguildemojis",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "fetchguildemojis()"
     },
     {
@@ -8535,8 +8535,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_notifications_page_adminnotificationspage",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "adminnotificationspage()"
     },
     {
@@ -9679,8 +9679,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_squads_id_page",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "admin/squads/[id]/page.tsx"
     },
     {
@@ -9690,8 +9690,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_squads_id_page_adminsquaddetailpage",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "adminsquaddetailpage()"
     },
     {
@@ -9833,8 +9833,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_syncmembersbutton",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "syncmembersbutton.tsx"
     },
     {
@@ -9844,8 +9844,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_syncmembersbutton_syncmembersbutton",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "syncmembersbutton()"
     },
     {
@@ -9899,8 +9899,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_page",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "users/page.tsx"
     },
     {
@@ -9910,8 +9910,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_page_adminuserspage",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "adminuserspage()"
     },
     {
@@ -11285,8 +11285,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform",
-      "community": 73,
-      "community_name": "visionaer-service.ts",
+      "community": 71,
+      "community_name": "GameNameInput.tsx",
       "norm_label": "eventcreateform.tsx"
     },
     {
@@ -11296,8 +11296,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_inputstyle",
-      "community": 73,
-      "community_name": "visionaer-service.ts",
+      "community": 71,
+      "community_name": "GameNameInput.tsx",
       "norm_label": "inputstyle"
     },
     {
@@ -11307,8 +11307,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_series",
-      "community": 73,
-      "community_name": "visionaer-service.ts",
+      "community": 71,
+      "community_name": "GameNameInput.tsx",
       "norm_label": "series"
     },
     {
@@ -11318,8 +11318,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_eventcreateform",
-      "community": 73,
-      "community_name": "visionaer-service.ts",
+      "community": 71,
+      "community_name": "GameNameInput.tsx",
       "norm_label": "eventcreateform()"
     },
     {
@@ -11329,8 +11329,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventpredictionspanel",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventpredictionspanel.tsx"
     },
     {
@@ -11340,8 +11340,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventpredictionspanel_eventpredictionspanel",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventpredictionspanel()"
     },
     {
@@ -14024,8 +14024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_squads_id_page",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 150,
+      "community_name": "tutorial.ts",
       "norm_label": "(dashboard)/squads/[id]/page.tsx"
     },
     {
@@ -14035,8 +14035,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_squads_id_page_event_status_label",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 150,
+      "community_name": "tutorial.ts",
       "norm_label": "event_status_label"
     },
     {
@@ -14046,8 +14046,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_squads_id_page_username",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 150,
+      "community_name": "tutorial.ts",
       "norm_label": "username()"
     },
     {
@@ -14057,8 +14057,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_squads_id_page_avatar",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 150,
+      "community_name": "tutorial.ts",
       "norm_label": "avatar()"
     },
     {
@@ -14068,8 +14068,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_app_dashboard_squads_id_page_squadpublicpage",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 150,
+      "community_name": "tutorial.ts",
       "norm_label": "squadpublicpage()"
     },
     {
@@ -14233,8 +14233,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventtippslist.tsx"
     },
     {
@@ -14244,8 +14244,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist_userlite",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "userlite"
     },
     {
@@ -14255,8 +14255,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist_tipp",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "tipp"
     },
     {
@@ -14266,8 +14266,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist_uname",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "uname()"
     },
     {
@@ -14277,8 +14277,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist_avatar",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "avatar()"
     },
     {
@@ -14288,8 +14288,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventtippslist_eventtippslist",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventtippslist()"
     },
     {
@@ -14299,8 +14299,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventwinnerpredictionwidget.tsx"
     },
     {
@@ -14310,8 +14310,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_userlite",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "userlite"
     },
     {
@@ -14321,8 +14321,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_prediction",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "prediction"
     },
     {
@@ -14332,8 +14332,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_uname",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "uname()"
     },
     {
@@ -14343,8 +14343,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_eventwinnerpredictionwidget",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "eventwinnerpredictionwidget()"
     },
     {
@@ -14981,8 +14981,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_battle_cards_run_preseason_route",
-      "community": 112,
-      "community_name": "EventPokalWinners.tsx",
+      "community": 107,
+      "community_name": "card-provisioning.ts",
       "norm_label": "run-preseason/route.ts"
     },
     {
@@ -14992,8 +14992,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_api_admin_battle_cards_run_preseason_route_post",
-      "community": 112,
-      "community_name": "EventPokalWinners.tsx",
+      "community": 107,
+      "community_name": "card-provisioning.ts",
       "norm_label": "post()"
     },
     {
@@ -15465,8 +15465,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_community_jobs_disputes_route",
-      "community": 101,
-      "community_name": "admin/community-jobs/disputes/route.ts",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "admin/community-jobs/disputes/route.ts"
     },
     {
@@ -15476,8 +15476,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_api_admin_community_jobs_disputes_route_get",
-      "community": 101,
-      "community_name": "admin/community-jobs/disputes/route.ts",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "get()"
     },
     {
@@ -15487,8 +15487,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_app_api_admin_community_jobs_disputes_route_patch",
-      "community": 101,
-      "community_name": "admin/community-jobs/disputes/route.ts",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "patch()"
     },
     {
@@ -16620,8 +16620,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_polls_id_route",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "polls/[id]/route.ts"
     },
     {
@@ -16631,8 +16631,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_api_admin_polls_id_route_patch",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "patch()"
     },
     {
@@ -17973,8 +17973,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_battle_cards_starter_pick_route",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "starter-pick/route.ts"
     },
     {
@@ -17984,8 +17984,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_api_battle_cards_starter_pick_route_requestschema",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "requestschema"
     },
     {
@@ -17995,8 +17995,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_api_battle_cards_starter_pick_route_post",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "post()"
     },
     {
@@ -18754,8 +18754,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_coach_training_sessions_id_attendance_route",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "attendance/route.ts"
     },
     {
@@ -18765,8 +18765,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_coach_training_sessions_id_attendance_route_patch",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "patch()"
     },
     {
@@ -18776,8 +18776,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_coach_training_sessions_id_route",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "training-sessions/[id]/route.ts"
     },
     {
@@ -18787,8 +18787,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_coach_training_sessions_id_route_patch",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "patch()"
     },
     {
@@ -18798,8 +18798,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_coach_training_sessions_id_route_delete",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "delete()"
     },
     {
@@ -19634,8 +19634,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_media_id_route",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "media/[id]/route.ts"
     },
     {
@@ -19645,8 +19645,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_media_id_route_patch",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "patch()"
     },
     {
@@ -19656,8 +19656,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_media_id_route_delete",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "delete()"
     },
     {
@@ -20250,8 +20250,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_publish_route",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "publish/route.ts"
     },
     {
@@ -20261,8 +20261,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_publish_route_post",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "post()"
     },
     {
@@ -20294,8 +20294,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_route",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "reports/[id]/route.ts"
     },
     {
@@ -20305,8 +20305,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_route_get",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "get()"
     },
     {
@@ -20316,8 +20316,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_route_patch",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "patch()"
     },
     {
@@ -20327,8 +20327,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_app_api_community_jobs_reports_id_route_delete",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "delete()"
     },
     {
@@ -21086,8 +21086,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_daily_message_route",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "api/daily-message/route.ts"
     },
     {
@@ -21097,8 +21097,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_app_api_daily_message_route_get",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -21548,8 +21548,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_events_id_route",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "api/events/[id]/route.ts"
     },
     {
@@ -21559,8 +21559,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_app_api_events_id_route_get",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -21702,8 +21702,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_feed_route",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "feed/route.ts"
     },
     {
@@ -21713,8 +21713,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_app_api_feed_route_get",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -21779,8 +21779,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_internal_backfill_card_skills_route",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "backfill-card-skills/route.ts"
     },
     {
@@ -21790,8 +21790,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_app_api_internal_backfill_card_skills_route_isauthorized",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "isauthorized()"
     },
     {
@@ -21801,8 +21801,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_app_api_internal_backfill_card_skills_route_tojson",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "tojson()"
     },
     {
@@ -21812,8 +21812,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_app_api_internal_backfill_card_skills_route_isoverridden",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "isoverridden()"
     },
     {
@@ -21823,8 +21823,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_app_api_internal_backfill_card_skills_route_post",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "post()"
     },
     {
@@ -22054,8 +22054,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_leaderboard_route",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "leaderboard/route.ts"
     },
     {
@@ -22065,8 +22065,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_app_api_leaderboard_route_get",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -23484,8 +23484,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_wanderpocal_holders_route",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "holders/route.ts"
     },
     {
@@ -23495,8 +23495,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_api_wanderpocal_holders_route_get",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -26300,8 +26300,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_coinicon",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "coinicon.tsx"
     },
     {
@@ -26311,8 +26311,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_components_coinicon_coinicon",
-      "community": 23,
-      "community_name": "ProfileMobileView.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "coinicon()"
     },
     {
@@ -27895,8 +27895,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_mypredictionslist",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "mypredictionslist.tsx"
     },
     {
@@ -27906,8 +27906,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_components_mypredictionslist_userlite",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "userlite"
     },
     {
@@ -27917,8 +27917,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_mypredictionslist_myprediction",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "myprediction"
     },
     {
@@ -27928,8 +27928,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_components_mypredictionslist_uname",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "uname()"
     },
     {
@@ -27939,8 +27939,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_components_mypredictionslist_mypredictionslist",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "mypredictionslist()"
     },
     {
@@ -28357,8 +28357,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_predictionstreakcard",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "predictionstreakcard.tsx"
     },
     {
@@ -28368,8 +28368,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_predictionstreakcard_predictionstreakcard",
-      "community": 194,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 34,
+      "community_name": "coach-guide-service.ts",
       "norm_label": "predictionstreakcard()"
     },
     {
@@ -30887,8 +30887,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_dueldeckeditor",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "dueldeckeditor.tsx"
     },
     {
@@ -30898,8 +30898,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_components_battle_cards_dueldeckeditor_dueldeckunitcard",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "dueldeckunitcard"
     },
     {
@@ -30909,8 +30909,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_components_battle_cards_dueldeckeditor_dueldecktacticcard",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "dueldecktacticcard"
     },
     {
@@ -30920,8 +30920,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_components_battle_cards_dueldeckeditor_dueldeckeditor",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "dueldeckeditor()"
     },
     {
@@ -32284,8 +32284,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "starterpickflow.tsx"
     },
     {
@@ -32295,8 +32295,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_classkey",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "classkey"
     },
     {
@@ -32306,8 +32306,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_cardwithid",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "cardwithid"
     },
     {
@@ -32317,8 +32317,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_class_config",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "class_config"
     },
     {
@@ -32328,8 +32328,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_class_order",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "class_order"
     },
     {
@@ -32339,8 +32339,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_stepdef",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "stepdef"
     },
     {
@@ -32350,8 +32350,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_steps",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "steps"
     },
     {
@@ -32361,8 +32361,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_stepprogress",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "stepprogress()"
     },
     {
@@ -32372,8 +32372,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_cardchoice",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "cardchoice()"
     },
     {
@@ -32383,8 +32383,8 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_starterpickflow",
-      "community": 22,
-      "community_name": "BattleCardView.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "starterpickflow()"
     },
     {
@@ -32394,8 +32394,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_statbadges",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "statbadges.tsx"
     },
     {
@@ -32405,8 +32405,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_battle_cards_statbadges_statbadges",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "statbadges()"
     },
     {
@@ -36574,8 +36574,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "elo.ts"
     },
     {
@@ -36585,8 +36585,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_kfactor",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "kfactor()"
     },
     {
@@ -36596,8 +36596,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_expectedscore",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "expectedscore()"
     },
     {
@@ -36607,8 +36607,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_eloresult",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "eloresult"
     },
     {
@@ -36618,8 +36618,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_eloupdateinput",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "eloupdateinput"
     },
     {
@@ -36629,8 +36629,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_eloupdateoutput",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "eloupdateoutput"
     },
     {
@@ -36640,8 +36640,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_applyeloresult",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "applyeloresult()"
     },
     {
@@ -36651,8 +36651,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_onesidedeloupdateinput",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "onesidedeloupdateinput"
     },
     {
@@ -36662,8 +36662,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_onesidedeloupdateoutput",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "onesidedeloupdateoutput"
     },
     {
@@ -36673,8 +36673,8 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_applyonesidedeloresult",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "applyonesidedeloresult()"
     },
     {
@@ -36684,8 +36684,8 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_lib_battle_cards_elo_softresetrating",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "softresetrating()"
     },
     {
@@ -37157,8 +37157,8 @@
       "source_location": "L345",
       "_origin": "ast",
       "id": "src_lib_battle_cards_live_battle_applyeloforchallenge",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 73,
+      "community_name": "visionaer-service.ts",
       "norm_label": "applyeloforchallenge()"
     },
     {
@@ -37993,8 +37993,8 @@
       "source_location": "L274",
       "_origin": "ast",
       "id": "src_lib_battle_cards_packs_grantguaranteedpack",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "grantguaranteedpack()"
     },
     {
@@ -38037,8 +38037,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "ranked-season.ts"
     },
     {
@@ -38048,8 +38048,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_seasonwindow",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "seasonwindow"
     },
     {
@@ -38059,8 +38059,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_addmonthsutc",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "addmonthsutc()"
     },
     {
@@ -38070,8 +38070,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_getcurrentseasonnumber",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "getcurrentseasonnumber()"
     },
     {
@@ -38081,8 +38081,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_getseasonwindow",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "getseasonwindow()"
     },
     {
@@ -38114,8 +38114,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_grantplacementreward",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "grantplacementreward()"
     },
     {
@@ -38125,8 +38125,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_grantseasonendrewards",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "grantseasonendrewards()"
     },
     {
@@ -38136,8 +38136,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_softresetallelo",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "softresetallelo()"
     },
     {
@@ -38158,8 +38158,8 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "src_lib_battle_cards_ranked_season_grantdueseasonrewards",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "grantdueseasonrewards()"
     },
     {
@@ -38675,8 +38675,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "src_lib_battle_cards_skill_templates_getskilltemplate",
-      "community": 107,
-      "community_name": "card-provisioning.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "getskilltemplate()"
     },
     {
@@ -38708,8 +38708,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_lib_battle_cards_sound_prefs_setsoundmuted",
-      "community": 51,
-      "community_name": "BattleScreen.tsx",
+      "community": 25,
+      "community_name": "LiveBattleView.tsx",
       "norm_label": "setsoundmuted()"
     },
     {
@@ -38961,8 +38961,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_starter_pick",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "starter-pick.ts"
     },
     {
@@ -38972,8 +38972,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_lib_battle_cards_starter_pick_required_classes",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "required_classes"
     },
     {
@@ -38983,8 +38983,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_lib_battle_cards_starter_pick_starterpickerror",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "starterpickerror"
     },
     {
@@ -39005,8 +39005,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_lib_battle_cards_starter_pick_grantstarterpick",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "grantstarterpick()"
     },
     {
@@ -39126,8 +39126,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "tutorial.ts"
     },
     {
@@ -39137,8 +39137,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_tutorialstepkey",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "tutorialstepkey"
     },
     {
@@ -39148,8 +39148,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_tutorialprogress",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "tutorialprogress"
     },
     {
@@ -39159,8 +39159,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_gettutorialprogress",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "gettutorialprogress()"
     },
     {
@@ -39170,8 +39170,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_startorresettutorial",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "startorresettutorial()"
     },
     {
@@ -39181,8 +39181,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_grantcoins",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "grantcoins()"
     },
     {
@@ -39192,8 +39192,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_findowncommunitycardid",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "findowncommunitycardid()"
     },
     {
@@ -39203,8 +39203,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_hasowncommunitycard",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "hasowncommunitycard()"
     },
     {
@@ -39214,8 +39214,8 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_marktutorialnpcbattledone",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "marktutorialnpcbattledone()"
     },
     {
@@ -39225,8 +39225,8 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_marktutorialcommunitycardcustomized",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "marktutorialcommunitycardcustomized()"
     },
     {
@@ -39236,8 +39236,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "src_lib_battle_cards_tutorial_marktutorialcampaignlevel1done",
-      "community": 150,
-      "community_name": "tutorial.ts",
+      "community": 3,
+      "community_name": "live-battle.ts",
       "norm_label": "marktutorialcampaignlevel1done()"
     },
     {
@@ -40094,8 +40094,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duel_constants",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 22,
+      "community_name": "BattleCardView.tsx",
       "norm_label": "duel-constants.ts"
     },
     {
@@ -42745,8 +42745,8 @@
       "source_location": "L475",
       "_origin": "ast",
       "id": "src_lib_coach_service_markattendance",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "markattendance()"
     },
     {
@@ -45627,8 +45627,8 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "src_lib_fotograf_service_updateasset",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "updateasset()"
     },
     {
@@ -45638,8 +45638,8 @@
       "source_location": "L277",
       "_origin": "ast",
       "id": "src_lib_fotograf_service_deleteasset",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "deleteasset()"
     },
     {
@@ -46053,7 +46053,7 @@
       "label": "getGenreIcon()",
       "file_type": "code",
       "source_file": "src/lib/genre-icons.ts",
-      "source_location": "L60",
+      "source_location": "L69",
       "_origin": "ast",
       "id": "src_lib_genre_icons_getgenreicon",
       "community": 177,
@@ -46639,8 +46639,8 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "src_lib_job_dispute_service_resolvedispute",
-      "community": 101,
-      "community_name": "admin/community-jobs/disputes/route.ts",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "resolvedispute()"
     },
     {
@@ -47002,8 +47002,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_lib_journalist_service_publishreport",
-      "community": 15,
-      "community_name": "RankedAvatar.tsx",
+      "community": 11,
+      "community_name": "getSessionUser",
       "norm_label": "publishreport()"
     },
     {
@@ -47013,8 +47013,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_lib_journalist_service_getreportforviewer",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "getreportforviewer()"
     },
     {
@@ -47068,8 +47068,8 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "src_lib_journalist_service_deletereport",
-      "community": 11,
-      "community_name": "getSessionUser",
+      "community": 15,
+      "community_name": "RankedAvatar.tsx",
       "norm_label": "deletereport()"
     },
     {
@@ -48531,8 +48531,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_prisma",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "prisma.ts"
     },
     {
@@ -48542,8 +48542,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_lib_prisma_globalforprisma",
-      "community": 148,
-      "community_name": "seed-notification-rules.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "globalforprisma"
     },
     {
@@ -50115,8 +50115,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_lib_season_run_season_runfullseasonupdate",
-      "community": 112,
-      "community_name": "EventPokalWinners.tsx",
+      "community": 107,
+      "community_name": "card-provisioning.ts",
       "norm_label": "runfullseasonupdate()"
     },
     {
@@ -50181,8 +50181,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_lib_season_season_config_markpreseasonran",
-      "community": 112,
-      "community_name": "EventPokalWinners.tsx",
+      "community": 107,
+      "community_name": "card-provisioning.ts",
       "norm_label": "markpreseasonran()"
     },
     {
@@ -50203,8 +50203,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_lib_season_season_config_setlastrewardedrankedseason",
-      "community": 3,
-      "community_name": "live-battle.ts",
+      "community": 112,
+      "community_name": "EventPokalWinners.tsx",
       "norm_label": "setlastrewardedrankedseason()"
     },
     {
@@ -187755,7 +187755,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/genre-icons.ts",
-      "source_location": "L60",
+      "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_genre_icons",

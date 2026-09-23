@@ -1054,6 +1054,9 @@ enum EventGenre {
   racing
   shooter
   community
+  strategy
+  card_game
+  board_game
 }
 
 // ── Tägliche Mitteilungen ────────────────────────────────────────────────────

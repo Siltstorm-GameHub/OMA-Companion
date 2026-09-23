@@ -1,3 +1,5 @@
+import { genreMeta } from "@/lib/app-icons";
+import AppIcon from "@/components/AppIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
@@ -36,14 +38,6 @@ import EventPokalWinners from "@/components/EventPokalWinners";
 import PokalPreview from "@/components/PokalPreview";
 import { EventCategory } from "@prisma/client";
 
-const GENRE_MAP: Record<string, { label: string; icon: string }> = {
-  arcade:    { label: "Arcade",     icon: "/icons/genres/arcade.png" },
-  beat_em_up:{ label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
-  sport:     { label: "Sport",      icon: "/icons/genres/sport.png" },
-  racing:    { label: "Racing",     icon: "/icons/genres/racing.png" },
-  shooter:   { label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  community: { label: "Community",  icon: "/icons/genres/community.png" },
-};
 import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
@@ -538,7 +532,7 @@ export default async function TournamentDetailPage({
 
   // Genre + Streaming-Partner + Community-Streamer + 1st-place reward
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
-  const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
+  const genreInfo = genreMeta(genre);
   type PartnerEntry = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string; user?: { id: string } | null } };
   type CommunityStreamerEntry = { user: { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null; rankPoints: number } };
   const streamingPartners = (event as unknown as { streamingPartners?: PartnerEntry[] }).streamingPartners ?? [];
@@ -672,7 +666,7 @@ export default async function TournamentDetailPage({
                   {event.game && <span>{event.game}</span>}
                   {genreInfo && (
                     <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <Image src={genreInfo.icon} alt={genreInfo.label} width={12} height={12} className="object-contain" />
+                      <AppIcon kind="genre" name={genreInfo.value} size={12} />
                       {genreInfo.label}
                     </span>
                   )}

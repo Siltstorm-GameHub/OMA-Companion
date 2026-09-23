@@ -18,6 +18,9 @@ export const GENRE_LABELS: Record<string, string> = {
   racing:      "Racing",
   shooter:     "Shooter",
   community:   "Community",
+  strategy:    "Strategie",
+  card_game:   "Kartenspiel",
+  board_game:  "Brettspiel",
 };
 
 export function formatLabel(format: string | null | undefined): string {

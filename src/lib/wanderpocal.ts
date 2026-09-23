@@ -38,6 +38,9 @@ export const GENRE_CONFIG: Record<string, { icon: string; title: string }> = {
   racing:    { icon: "/Racing Icon.png",     title: "Rennlegende" },
   shooter:   { icon: "/Shooter Icon.png",    title: "Scharfschütze" },
   community: { icon: "/Community Icon.png",  title: "Communitystar" },
+  strategy:  { icon: "/icons/genres/strategy.png",   title: "Meisterstratege" },
+  card_game: { icon: "/icons/genres/card-game.png",  title: "Kartenhai" },
+  board_game:{ icon: "/icons/genres/board-game.png", title: "Brettspielheld" },
 };
 
 /** Display title for any scope value */

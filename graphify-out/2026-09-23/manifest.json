@@ -4035,8 +4035,8 @@
     "semantic_hash": ""
   },
   "src/lib/genre-icons.ts": {
-    "mtime": 1790191214.851843,
-    "ast_hash": "641469502ed20c48e6a4ced1b7e08339",
+    "mtime": 1790191435.957375,
+    "ast_hash": "43211ac11f34d0fdee33aa8c663708fb",
     "semantic_hash": ""
   },
   "src/lib/get-wanderpocal-holders.ts": {
@@ -6454,11 +6454,6 @@
     "ast_hash": "0ad5b85615b923ffb008ba8853e1e725",
     "semantic_hash": ""
   },
-  "public/icons/genres/arcade-ghost-alt.png": {
-    "mtime": 1790191214.6453862,
-    "ast_hash": "b87229af21ab485f4935459af2d97c34",
-    "semantic_hash": ""
-  },
   "public/icons/genres/arcade.png": {
     "mtime": 1790191214.5802245,
     "ast_hash": "08f6ddc12caabc6b53e5fd9bbcb328eb",
@@ -6472,6 +6467,21 @@
   "public/icons/genres/racing.png": {
     "mtime": 1790191214.6021042,
     "ast_hash": "7dd208567e78b3519377d71cf2794cc6",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/board-game.png": {
+    "mtime": 1790191277.9038005,
+    "ast_hash": "b3cf68f4958d7fa2166e621867d2a9e0",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/card-game.png": {
+    "mtime": 1790191277.8800836,
+    "ast_hash": "86fb6c62f6e1626a7c700710d22f458c",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/strategy.png": {
+    "mtime": 1790191277.8554218,
+    "ast_hash": "4b76b905cdca7c2185d35ce3fd856f42",
     "semantic_hash": ""
   }
 }

@@ -1,4 +1,6 @@
 "use client";
+import { genreMeta } from "@/lib/app-icons";
+import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,15 +10,6 @@ import { AvatarStack } from "@/components/AvatarStack";
 import ClientTime from "@/components/ClientTime";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
-
-const GENRE_MAP: Record<string, { label: string; icon: string }> = {
-  arcade:    { label: "Arcade",     icon: "/icons/genres/arcade.png" },
-  beat_em_up:{ label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
-  sport:     { label: "Sport",      icon: "/icons/genres/sport.png" },
-  racing:    { label: "Racing",     icon: "/icons/genres/racing.png" },
-  shooter:   { label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  community: { label: "Community",  icon: "/icons/genres/community.png" },
-};
 
 const STATUS_CFG: Record<string, { label: string; badge: string; dot: string; stripe: string }> = {
   open:     { label: "Offen",      badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",           dot: "bg-blue-400",                  stripe: "bg-blue-500/40"    },
@@ -50,7 +43,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
   const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
 
   const genre = ev.genre as string | null | undefined;
-  const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
+  const genreInfo = genreMeta(genre);
 
   const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
     const raw = ev.placementRewardsJson;
@@ -90,7 +83,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
             )}
             {genreInfo && (
               <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                <Image src={genreInfo.icon} alt={genreInfo.label} width={10} height={10} className="object-contain" />
+                <AppIcon kind="genre" name={genreInfo.value} size={10} />
                 {genreInfo.label}
               </span>
             )}
