@@ -1,4 +1,5 @@
 "use client";
+import CategoryIcon from "@/components/CategoryIcon";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -59,10 +60,10 @@ const TMT_FORMATS = TOURNAMENT_FORMATS;
 
 const GENRES: { value: EventGenre; label: string; icon: string }[] = [
   { value: "arcade",    label: "Arcade",     icon: "/Arcade Icon.png" },
-  { value: "beat_em_up",label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
-  { value: "sport",     label: "Sport",      icon: "/Sport Icon.png" },
+  { value: "beat_em_up",label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
+  { value: "sport",     label: "Sport",      icon: "/icons/genres/sport.png" },
   { value: "racing",    label: "Racing",     icon: "/Racing Icon.png" },
-  { value: "shooter",   label: "Shooter",    icon: "/Shooter Icon.png" },
+  { value: "shooter",   label: "Shooter",    icon: "/icons/genres/shooter.png" },
   { value: "community", label: "Community",  icon: "/Community Icon.png" },
 ];
 
@@ -1103,7 +1104,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                     category === cat.value ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-white/10 text-gray-500 hover:border-white/20"
                   }`}>
-                  {cat.emoji} {cat.label}
+                  <CategoryIcon category={cat.value} emoji={cat.emoji} size={16} className="mr-1 align-text-bottom" />{cat.label}
                 </button>
               ))}
             </div>

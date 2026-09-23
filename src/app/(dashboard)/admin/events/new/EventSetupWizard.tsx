@@ -1,4 +1,5 @@
 "use client";
+import CategoryIcon from "@/components/CategoryIcon";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -105,10 +106,10 @@ const CATEGORIES: { value: EventCategory; label: string; emoji: string; color: s
 
 const GENRES: { value: EventGenre; label: string; icon: string }[] = [
   { value: "arcade",    label: "Arcade",     icon: "/Arcade Icon.png" },
-  { value: "beat_em_up",label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
-  { value: "sport",     label: "Sport",      icon: "/Sport Icon.png" },
+  { value: "beat_em_up",label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
+  { value: "sport",     label: "Sport",      icon: "/icons/genres/sport.png" },
   { value: "racing",    label: "Racing",     icon: "/Racing Icon.png" },
-  { value: "shooter",   label: "Shooter",    icon: "/Shooter Icon.png" },
+  { value: "shooter",   label: "Shooter",    icon: "/icons/genres/shooter.png" },
   { value: "community", label: "Community",  icon: "/Community Icon.png" },
 ];
 
@@ -575,7 +576,7 @@ export default function EventSetupWizard({
                 className={`flex flex-col items-center gap-2 rounded-2xl p-4 border-2 transition-all ${
                   category === cat.value ? `${cat.border} ${cat.bg}` : "border-white/8 bg-white/3 hover:border-white/15"
                 }`}>
-                <span className="text-2xl">{cat.emoji}</span>
+                <CategoryIcon category={cat.value} emoji={cat.emoji} size={32} className="text-2xl" />
                 <span className={`text-sm font-semibold ${category === cat.value ? cat.color : "text-gray-400"}`}>{cat.label}</span>
               </button>
             ))}
@@ -1642,7 +1643,7 @@ export default function EventSetupWizard({
       <div className="space-y-4">
         <div className={`rounded-2xl p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">{catCfg?.emoji}</span>
+            {catCfg && <CategoryIcon category={catCfg.value} emoji={catCfg.emoji} size={40} className="text-3xl" />}
             <div>
               <p className={`text-lg font-bold ${catCfg?.color}`}>{title}</p>
               <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Turnier" : "Community-Event"}</p>
@@ -1691,7 +1692,7 @@ export default function EventSetupWizard({
         <div className={`rounded-2xl p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
           <div className="flex items-center gap-3 mb-3">
             <span className="text-2xl">🔁</span>
-            <span className="text-3xl">{catCfg?.emoji}</span>
+            {catCfg && <CategoryIcon category={catCfg.value} emoji={catCfg.emoji} size={40} className="text-3xl" />}
             <div>
               <p className={`text-lg font-bold ${catCfg?.color}`}>{seriesName || "Eventreihe"}</p>
               <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Turnier-Reihe" : "Community-Reihe"}</p>

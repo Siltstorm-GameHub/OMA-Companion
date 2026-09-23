@@ -24,10 +24,10 @@ const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-g
 
 const GENRES: { value: string; label: string; icon: string }[] = [
   { value: "arcade",     label: "Arcade",     icon: "/Arcade Icon.png" },
-  { value: "beat_em_up", label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
-  { value: "sport",      label: "Sport",      icon: "/Sport Icon.png" },
+  { value: "beat_em_up", label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
+  { value: "sport",      label: "Sport",      icon: "/icons/genres/sport.png" },
   { value: "racing",     label: "Racing",     icon: "/Racing Icon.png" },
-  { value: "shooter",    label: "Shooter",    icon: "/Shooter Icon.png" },
+  { value: "shooter",    label: "Shooter",    icon: "/icons/genres/shooter.png" },
   { value: "community",  label: "Community",  icon: "/Community Icon.png" },
 ];
 

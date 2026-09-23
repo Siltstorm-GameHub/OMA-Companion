@@ -38,10 +38,10 @@ import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
-  beat_em_up:{ label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
-  sport:     { label: "Sport",      icon: "/Sport Icon.png" },
+  beat_em_up:{ label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
+  sport:     { label: "Sport",      icon: "/icons/genres/sport.png" },
   racing:    { label: "Racing",     icon: "/Racing Icon.png" },
-  shooter:   { label: "Shooter",    icon: "/Shooter Icon.png" },
+  shooter:   { label: "Shooter",    icon: "/icons/genres/shooter.png" },
   community: { label: "Community",  icon: "/Community Icon.png" },
 };
 import StreamRegisterButton from "@/components/StreamRegisterButton";

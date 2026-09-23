@@ -1,3 +1,4 @@
+import CategoryIcon from "./CategoryIcon";
 import { EventCategory } from "@prisma/client";
 
 const CATEGORY_CONFIG: Record<EventCategory, { label: string; emoji: string; className: string }> = {
@@ -38,7 +39,7 @@ export default function EventCategoryBadge({ category, size = "sm", className = 
   const sizeClass = size === "md" ? "px-2.5 py-1 text-sm gap-1.5" : "px-2 py-0.5 text-xs gap-1";
   return (
     <span className={`inline-flex items-center rounded-full border font-medium ${sizeClass} ${cfg.className} ${className}`}>
-      <span>{cfg.emoji}</span>
+      <CategoryIcon category={category} emoji={cfg.emoji} size={size === "md" ? 18 : 14} />
       <span>{cfg.label}</span>
     </span>
   );

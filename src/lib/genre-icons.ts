@@ -3,7 +3,7 @@ export type GenreIcon = { src: string; alt: string };
 const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   {
     keywords: ["beat-em up", "beat em up", "beat-em-up", "fighting", "fight", "prügler", "kampfspiel", "fighter"],
-    icon: { src: "/Beat-em-Up%20Icon.png", alt: "Beat-em-Up" },
+    icon: { src: "/icons/genres/beat-em-up.png", alt: "Beat-em-Up" },
   },
   {
     keywords: ["racing", "rennen", "rennspiel", "rennspiele", "kart"],
@@ -15,11 +15,11 @@ const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   },
   {
     keywords: ["sport", "sports", "sportspiel", "sportspiele", "fußball", "basketball", "tennis"],
-    icon: { src: "/Sport%20Icon.png", alt: "Sport" },
+    icon: { src: "/icons/genres/sport.png", alt: "Sport" },
   },
   {
     keywords: ["shooter", "fps", "ego-shooter", "ego shooter", "first person", "taktik shooter", "taktisch", "tactical", "battle royale"],
-    icon: { src: "/Shooter%20Icon.png", alt: "Shooter" },
+    icon: { src: "/icons/genres/shooter.png", alt: "Shooter" },
   },
   {
     keywords: ["community", "party", "quiz", "coop", "co-op", "casual"],
