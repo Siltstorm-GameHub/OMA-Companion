@@ -28,7 +28,7 @@ const GENRES: { value: string; label: string; icon: string }[] = [
   { value: "sport",      label: "Sport",      icon: "/icons/genres/sport.png" },
   { value: "racing",     label: "Racing",     icon: "/Racing Icon.png" },
   { value: "shooter",    label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  { value: "community",  label: "Community",  icon: "/Community Icon.png" },
+  { value: "community",  label: "Community",  icon: "/icons/genres/community.png" },
 ];
 
 const PLATFORMS: { value: string; label: string; icon: string }[] = [

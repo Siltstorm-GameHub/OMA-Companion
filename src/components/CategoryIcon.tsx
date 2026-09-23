@@ -4,6 +4,8 @@ import type { EventCategory } from "@prisma/client";
 const CATEGORY_ICON_SRC: Partial<Record<EventCategory, string>> = {
   competitive: "/icons/categories/competitive.png",
   fun: "/icons/categories/fun.png",
+  training: "/icons/categories/training.png",
+  community_event: "/icons/categories/community.png",
   special: "/icons/categories/special.png",
 };
 

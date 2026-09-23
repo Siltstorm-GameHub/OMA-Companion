@@ -15,7 +15,7 @@ const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   sport:     { label: "Sport",      icon: "/icons/genres/sport.png" },
   racing:    { label: "Racing",     icon: "/Racing Icon.png" },
   shooter:   { label: "Shooter",    icon: "/icons/genres/shooter.png" },
-  community: { label: "Community",  icon: "/Community Icon.png" },
+  community: { label: "Community",  icon: "/icons/genres/community.png" },
 };
 
 const STATUS_CFG: Record<string, { label: string; badge: string; dot: string; stripe: string }> = {

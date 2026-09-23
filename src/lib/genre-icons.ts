@@ -23,7 +23,7 @@ const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   },
   {
     keywords: ["community", "party", "quiz", "coop", "co-op", "casual"],
-    icon: { src: "/Community%20Icon.png", alt: "Community" },
+    icon: { src: "/icons/genres/community.png", alt: "Community" },
   },
 
   // ── Erweiterte Zuordnungen ────────────────────────────────────────────────

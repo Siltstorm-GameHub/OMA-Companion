@@ -344,6 +344,7 @@ function UnitCard({
   isAttacking,
   countdown,
   impactFlash,
+  displayHp,
   isVictory,
   onClick,
   onUltimateClick,
@@ -370,6 +371,9 @@ function UnitCard({
   /** Ein Gem-Geschoss ist GERADE bei dieser Karte eingeschlagen — sofortiger
    *  Treffer-Flash, noch bevor der Server-Schaden im Log ankommt. */
   impactFlash?: boolean;
+  /** Angezeigte HP statt `unit.currentHp` — lässt die Lebensanzeige Treffer für
+   *  Treffer sinken, solange der Server-Stand (OMA Gems) noch zurückgehalten wird. */
+  displayHp?: number;
   /** Kampf ist beendet UND diese Einheit steht im Gewinner-Team (siehe snapshot.winner
    *  in LiveBattleBody) — spielt die Victory-Animation statt Idle, falls vorhanden. */
   isVictory?: boolean;
@@ -380,7 +384,8 @@ function UnitCard({
   cardRef?: (el: HTMLButtonElement | null) => void;
 }) {
   const config = getClassConfig(unit.class);
-  const hpPct = unit.maxHp > 0 ? Math.max(0, unit.currentHp / unit.maxHp) : 0;
+  const shownHp = displayHp ?? unit.currentHp;
+  const hpPct = unit.maxHp > 0 ? Math.max(0, shownHp / unit.maxHp) : 0;
   const borderColor = LEVEL_BORDER[unit.level] ?? LEVEL_BORDER[1];
   const canPickTarget = !!glow && !!onClick && unit.isAlive;
   const canFireUltimate = !glow && !!ultimateReady && !!onUltimateClick && unit.isAlive;
@@ -663,7 +668,7 @@ function UnitCard({
         className="hidden sm:block text-[9px] text-gray-400 text-center tabular-nums mt-0.5"
         style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
       >
-        {Math.max(0, unit.currentHp)}/{unit.maxHp}
+        {Math.max(0, Math.round(shownHp))}/{unit.maxHp}
       </p>
       <div className="flex items-center gap-1 mt-0.5" title={`Rage: ${Math.round(unit.rage)}/100`}>
         <MobaIcon name="attack" className="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" />
@@ -712,6 +717,14 @@ export default function LiveBattleView({
   // statt dass ein Ultimate dort nur am Sound erkennbar ist.
   const [ultimateCutscene, setUltimateCutscene] = useState<{ name: string; class: UnitClass; skillName: string } | null>(null);
   const lastLogLengthRef = useRef<number | null>(null);
+  // OMA Gems: der Zug geht schon zu Animationsbeginn an den Server, die Antwort
+  // wird aber bis zum Animationsende zurückgehalten (sonst würde das Brett/die
+  // Ansicht mitten in der Animation umspringen). `pendingHp` liefert der Ansicht
+  // in der Zwischenzeit die Ziel-HP, damit die Lebensanzeige Treffer für Treffer
+  // sinkt (siehe hpDisplayFor in LiveBattleBody).
+  const gemsHoldRef = useRef(false);
+  const pendingSnapshotRef = useRef<LiveSnapshot | null>(null);
+  const [pendingHp, setPendingHp] = useState<Map<string, number> | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
   // fehlt die Datei (noch nicht hochgeladen), fällt die Ansicht einfach auf
@@ -928,6 +941,31 @@ export default function LiveBattleView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.logLength]);
 
+  /** Setzt einen Server-Snapshot — während einer laufenden Gems-Animation nur
+   *  vorgemerkt (siehe gemsHoldRef), sonst direkt übernommen. */
+  function applySnapshot(data: LiveSnapshot) {
+    if (gemsHoldRef.current) {
+      pendingSnapshotRef.current = data;
+      setPendingHp(new Map(data.units.map((u) => [u.instanceId, u.currentHp])));
+    } else {
+      setSnapshot(data);
+    }
+  }
+
+  function beginGemsHold() {
+    gemsHoldRef.current = true;
+    pendingSnapshotRef.current = null;
+    setPendingHp(null);
+  }
+
+  function endGemsHold() {
+    gemsHoldRef.current = false;
+    const pending = pendingSnapshotRef.current;
+    pendingSnapshotRef.current = null;
+    setPendingHp(null);
+    if (pending) setSnapshot(pending);
+  }
+
   async function submitAction(actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) {
     if (busy) return;
     setBusy(true);
@@ -942,7 +980,7 @@ export default function LiveBattleView({
         toast.error(data.error ?? "Aktion fehlgeschlagen.");
         return;
       }
-      setSnapshot(data);
+      applySnapshot(data);
       setSelectedAction(null);
     } catch {
       toast.error("Netzwerkfehler");
@@ -1093,6 +1131,9 @@ export default function LiveBattleView({
             effects={effects}
             attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
+            beginGemsHold={beginGemsHold}
+            endGemsHold={endGemsHold}
+            pendingHp={pendingHp}
             ultimateCutscene={ultimateCutscene}
             ultimateBusy={ultimateBusy}
             onExit={handleExit}
@@ -1129,6 +1170,9 @@ function LiveBattleBody({
   effects,
   attackingUnitIds,
   saveBoardProgress,
+  beginGemsHold,
+  endGemsHold,
+  pendingHp,
   ultimateCutscene,
   ultimateBusy,
   onExit,
@@ -1144,6 +1188,9 @@ function LiveBattleBody({
   effects: FloatingEffect[];
   attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
+  beginGemsHold: () => void;
+  endGemsHold: () => void;
+  pendingHp: Map<string, number> | null;
   ultimateCutscene: { name: string; class: UnitClass; skillName: string } | null;
   ultimateBusy: boolean;
   onExit: () => void;
@@ -1174,17 +1221,52 @@ function LiveBattleBody({
   const beamIdRef = useRef(0);
   const [beams, setBeams] = useState<GemBeam[]>([]);
   const [impactIds, setImpactIds] = useState<Set<string>>(new Set());
+  // Treffer-Verfolgung je Gegner für die Lebensanzeige: `total` = Steine dieses
+  // Zugs, die ihn treffen (aus den Spalten, vorab bekannt), `hits` = bereits
+  // eingeschlagene Geschosse. Angezeigte HP = Start-HP minus Schaden × hits/total,
+  // wobei der Gesamtschaden aus dem (zurückgehaltenen) Server-Stand kommt.
+  const [hitTrack, setHitTrack] = useState<Map<string, { hits: number; total: number }>>(new Map());
 
   /** OMA Gems (Empires-&-Puzzles-Stil): jeder zerstörte Stein fährt in seiner
    *  Spalte senkrecht nach oben und trifft den Gegner, der über dieser Spalte
    *  steht (dieselbe Regel wie der Server, siehe pickEnemyForColumn/
    *  applyBoardRage — nur wird hier der Lebend-Zustand VOR dem Zug benutzt). */
+  /** Zugbeginn: Server-Antwort zurückhalten und je Gegner zählen, wie viele
+   *  Steine dieses Zuges ihn treffen werden (gleiche Spalten-Regel wie der Server). */
+  function handleMoveStart(columns: number[]) {
+    beginGemsHold();
+    const enemies = unitsByTeam(opponentTeam);
+    const alive = enemies.map((u) => u.isAlive);
+    const next = new Map<string, { hits: number; total: number }>();
+    for (const column of columns) {
+      const slot = pickEnemyForColumn(column, alive);
+      if (slot < 0) continue;
+      const id = enemies[slot].instanceId;
+      next.set(id, { hits: 0, total: (next.get(id)?.total ?? 0) + 1 });
+    }
+    setHitTrack(next);
+  }
+
+  function handleAnimationEnd() {
+    setHitTrack(new Map());
+    endGemsHold();
+  }
+
+  /** Angezeigte HP eines Gegners während einer Gems-Animation (sonst undefined). */
+  function hpDisplayFor(unit: LiveUnit): number | undefined {
+    const track = hitTrack.get(unit.instanceId);
+    if (!track || track.total === 0) return undefined;
+    const target = pendingHp?.get(unit.instanceId) ?? unit.currentHp;
+    return unit.currentHp - (unit.currentHp - target) * Math.min(1, track.hits / track.total);
+  }
+
   function handleGemsDestroyed(tiles: { cls: UnitClass; rect: DOMRect; column: number }[]) {
     if (!myTeam) return;
     const enemies = unitsByTeam(opponentTeam);
     const alive = enemies.map((u) => u.isAlive);
     const newBeams: GemBeam[] = [];
     const impactedIds = new Set<string>();
+    const hitEnemyIds: string[] = [];
     for (const tile of tiles) {
       const slot = pickEnemyForColumn(tile.column, alive);
       if (slot < 0) continue;
@@ -1192,6 +1274,7 @@ function LiveBattleBody({
       const el = cardElementsRef.current.get(enemyId);
       if (!el) continue;
       impactedIds.add(enemyId);
+      hitEnemyIds.push(enemyId);
       const target = el.getBoundingClientRect();
       const fromX = tile.rect.left + tile.rect.width / 2;
       newBeams.push({
@@ -1208,7 +1291,18 @@ function LiveBattleBody({
     if (newBeams.length === 0) return;
     setBeams((prev) => [...prev, ...newBeams]);
     // Treffer-Flash auf den getroffenen Gegnerkarten im Moment des Einschlags.
-    window.setTimeout(() => setImpactIds((prev) => new Set([...prev, ...impactedIds])), GEM_BEAM_DURATION_MS);
+    window.setTimeout(() => {
+      setImpactIds((prev) => new Set([...prev, ...impactedIds]));
+      // Jeder eingeschlagene Stein zählt als Treffer → Lebensanzeige sinkt.
+      setHitTrack((prev) => {
+        const next = new Map(prev);
+        for (const id of hitEnemyIds) {
+          const t = next.get(id);
+          if (t) next.set(id, { ...t, hits: t.hits + 1 });
+        }
+        return next;
+      });
+    }, GEM_BEAM_DURATION_MS);
     window.setTimeout(
       () => setImpactIds((prev) => new Set([...prev].filter((id) => !impactedIds.has(id)))),
       GEM_BEAM_DURATION_MS + 260
@@ -1385,6 +1479,7 @@ function LiveBattleBody({
           als Nächstes ein Gegner angreift, daher gefiltert auf reine
           Gegner-Slots und umbenannt (siehe upcoming-Puffergröße in
           live-battle.ts). */}
+      {!snapshot.boardMode && (
       <div className="shrink-0 pt-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           {upcomingDisplay.length > 0 ? (
@@ -1450,6 +1545,8 @@ function LiveBattleBody({
         )}
       </div>
 
+      )}
+
       {/* Kampffeld — füllt den Freiraum. Klassisch: Gegner oben, eigene Helden
           unten direkt über der Entscheidung. OMA Gems (boardMode, Empires-&-
           Puzzles-Layout): Gegner oben, das Brett in der Mitte (siehe
@@ -1468,6 +1565,7 @@ function LiveBattleBody({
               onClick={() => handleUnitClick(u)}
               countdown={enemyCountdown.get(u.instanceId)}
               impactFlash={impactIds.has(u.instanceId)}
+              displayHp={hpDisplayFor(u)}
               cardRef={(el) => {
                 if (el) cardElementsRef.current.set(u.instanceId, el);
                 else cardElementsRef.current.delete(u.instanceId);
@@ -1619,7 +1717,11 @@ function LiveBattleBody({
                 // per Ultimate-Klick auf eine voll aufgeladene Heldenkarte an. Der
                 // hier übergebene actionType wird serverseitig für boardMode-Züge
                 // ignoriert (Platzhalter).
-                onConfirm={(swaps) => submitAction("normalAttack", undefined, swaps)}
+                onConfirm={(swaps, meta) => {
+                  handleMoveStart(meta.columns);
+                  submitAction("normalAttack", undefined, swaps);
+                }}
+                onAnimationEnd={handleAnimationEnd}
                 onProgress={saveBoardProgress}
                 onGemsDestroyed={handleGemsDestroyed}
               />

@@ -156,6 +156,7 @@ export default function BoardMatch3({
   onConfirm,
   onProgress,
   onGemsDestroyed,
+  onAnimationEnd,
 }: {
   grid: BoardGrid;
   /** Sonder-Steine (siehe SpecialGemKind) — parallel zu `grid`. */
@@ -179,7 +180,14 @@ export default function BoardMatch3({
    *  einzeln pro eigenem Helden, nicht einmal pro Team-Runde, das Brett soll
    *  aber über den gesamten Kampf optisch durchgängig bestehen bleiben. */
   turnId?: string;
-  onConfirm: (swaps: SwapMove[]) => void;
+  /** Feuert, sobald der Zug feststeht (Zug-Budget aufgebraucht) — BEVOR die
+   *  Zerstören-/Fall-Animation läuft, damit der Aufrufer die Server-Auswertung
+   *  parallel zur Animation starten kann (der Schaden lässt sich so Treffer für
+   *  Treffer anzeigen). `columns` sind die Spalten ALLER in diesem Zug zerstörten
+   *  Steine (über alle Kaskaden-Runden). */
+  onConfirm: (swaps: SwapMove[], meta: { columns: number[] }) => void;
+  /** Feuert, wenn die Animation des Zugs vollständig durchgelaufen ist. */
+  onAnimationEnd?: () => void;
   /** Fire-and-forget nach jedem bestätigten Swap — sichert den Fortschritt
    *  serverseitig, ohne auf eine Antwort zu warten (siehe saveBoardProgress). */
   onProgress?: (swaps: SwapMove[]) => void;
@@ -359,16 +367,21 @@ export default function BoardMatch3({
     rngStateRef.current = result.finalRngState;
     const newSwaps = [...swaps, move];
     setSwaps(newSwaps);
-    onProgress?.(newSwaps);
+
+    // Kein "Zug bestätigen"-Button — sobald das Zug-Budget aufgebraucht ist,
+    // geht der Zug SOFORT an den Server (die Antwort wird vom Aufrufer bis zum
+    // Animationsende zurückgehalten, siehe onAnimationEnd). Nur bei einem
+    // Zwischenstand (Budget > 1) wird der Fortschritt separat gesichert — sonst
+    // könnte dieser Fire-and-forget-Request NACH der Zug-Auswertung landen.
+    if (newSwaps.length >= moveBudget) {
+      onConfirm(newSwaps, { columns: result.steps.flatMap((step) => step.matchedCells.map((cell) => cell % BOARD_COLS)) });
+    } else {
+      onProgress?.(newSwaps);
+    }
 
     await playSteps(result.steps, startGrid, startIds);
     setAnimating(false);
-
-    // Kein "Zug bestätigen"-Button mehr — sobald das Zug-Budget aufgebraucht
-    // ist, geht es automatisch weiter zur Aktions-Auswahl.
-    if (newSwaps.length >= moveBudget) {
-      onConfirm(newSwaps);
-    }
+    onAnimationEnd?.();
   }
 
   async function performSwap(fromCell: number, toCell: number) {

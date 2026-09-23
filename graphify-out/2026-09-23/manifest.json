@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/EventEditClient.tsx": {
-    "mtime": 1789750217.9573345,
-    "ast_hash": "960805dbaef80f395c3e343270856708",
+    "mtime": 1790190444.959189,
+    "ast_hash": "6f4813d267971cbb639784642578af0f",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/bracket/page.tsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/EventSetupWizard.tsx": {
-    "mtime": 1789750217.9629116,
-    "ast_hash": "c4c69319886734ef0876a634d43b8408",
+    "mtime": 1790190444.9601927,
+    "ast_hash": "4dd8bd963275abb87abdea58c90be89f",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/page.tsx": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx": {
-    "mtime": 1789747854.2118173,
-    "ast_hash": "b0aa03ff411e276b06aabbcda34bc00d",
+    "mtime": 1790190432.6010628,
+    "ast_hash": "77deecba9b9ec841db41e15bb502348a",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/SeriesCompleteClient.tsx": {
@@ -875,8 +875,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesEventList.tsx": {
-    "mtime": 1789747854.220582,
-    "ast_hash": "4009e3c28ff188637db6b2192f9c0a8e",
+    "mtime": 1790190432.644013,
+    "ast_hash": "2cb9b3b664e9dc74dc9b986c15609881",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesStandingsTable.tsx": {
@@ -1155,8 +1155,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/[id]/page.tsx": {
-    "mtime": 1789972818.492563,
-    "ast_hash": "05dffc6cff01b17f6797171b98eabb16",
+    "mtime": 1790190432.678549,
+    "ast_hash": "0b5eda47853c4e6093543d662f2ed422",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/page.tsx": {
@@ -2835,8 +2835,8 @@
     "semantic_hash": ""
   },
   "src/components/EventCategoryBadge.tsx": {
-    "mtime": 1782547798.834785,
-    "ast_hash": "d015e3d4c6e5526f79bb93e80f99a63a",
+    "mtime": 1790190444.9575815,
+    "ast_hash": "feb4bcebf10cabde7aa816266cc084d0",
     "semantic_hash": ""
   },
   "src/components/EventCoverDefault.tsx": {
@@ -3245,8 +3245,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/CardCollectionBrowser.tsx": {
-    "mtime": 1789372493.7329237,
-    "ast_hash": "fdb49fd239d57979d60ef481e4cbc736",
+    "mtime": 1790188681.4684303,
+    "ast_hash": "b6f129ff1b34fb929c56ef4abc82ce91",
     "semantic_hash": ""
   },
   "src/components/battle-cards/CardDetailModal.tsx": {
@@ -3330,8 +3330,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/LiveBattleView.tsx": {
-    "mtime": 1790187600.3716657,
-    "ast_hash": "87155ce0871175b2cce5350bc15fcdc7",
+    "mtime": 1790188677.2463524,
+    "ast_hash": "38d7868a258a014bd1d1b173f9b8a55b",
     "semantic_hash": ""
   },
   "src/components/battle-cards/MatchmakingWidget.tsx": {
@@ -3390,8 +3390,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/StarterPickFlow.tsx": {
-    "mtime": 1789375718.3587801,
-    "ast_hash": "a16669d91b927426aee8ff944eff0e2b",
+    "mtime": 1790188677.2468572,
+    "ast_hash": "dd9c802f49e555dfeada0ecd724af74d",
     "semantic_hash": ""
   },
   "src/components/battle-cards/StatBadges.tsx": {
@@ -3585,8 +3585,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/class-config.ts": {
-    "mtime": 1789372142.2598493,
-    "ast_hash": "4fcbe73e23607a8b6f2ed6ffe2132968",
+    "mtime": 1790188677.2468572,
+    "ast_hash": "2ba27a8b7e25f65a884e184f0a9d2783",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/duel-deck.ts": {
@@ -4035,8 +4035,8 @@
     "semantic_hash": ""
   },
   "src/lib/genre-icons.ts": {
-    "mtime": 1785910152.0731103,
-    "ast_hash": "48263645345034ea4a1526a809a2b633",
+    "mtime": 1790190432.714133,
+    "ast_hash": "e5b177beb44a467bc79a45fd3841a594",
     "semantic_hash": ""
   },
   "src/lib/get-wanderpocal-holders.ts": {
@@ -4450,8 +4450,8 @@
     "semantic_hash": ""
   },
   "public/Muenze Icon.png": {
-    "mtime": 1735647987.0,
-    "ast_hash": "b436111ca725cc0990d04e5cce6899d7",
+    "mtime": 1790188715.0188577,
+    "ast_hash": "2f806538e2bb756ab8996dd5179fc0ba",
     "semantic_hash": ""
   },
   "public/OMALogo512.png": {
@@ -6392,6 +6392,56 @@
   "src/lib/xbox-feed.ts": {
     "mtime": 1790185378.13269,
     "ast_hash": "82416e3e2158eb192eb57aa587ec4a72",
+    "semantic_hash": ""
+  },
+  "src/components/CategoryIcon.tsx": {
+    "mtime": 1790190444.830861,
+    "ast_hash": "4d66910949d268785db6795b86e0d729",
+    "semantic_hash": ""
+  },
+  "public/battle-cards/class-icons/damage-dealer.png": {
+    "mtime": 1790188562.1937447,
+    "ast_hash": "302e72f923635b00c408f3f1689af711",
+    "semantic_hash": ""
+  },
+  "public/battle-cards/class-icons/support.png": {
+    "mtime": 1790188562.1971195,
+    "ast_hash": "39c24f0470df86f66efed89f170bcdee",
+    "semantic_hash": ""
+  },
+  "public/battle-cards/class-icons/tank.png": {
+    "mtime": 1790188562.1904383,
+    "ast_hash": "c4e1427abe24856cda3fe9459c6b97da",
+    "semantic_hash": ""
+  },
+  "public/icons/categories/competitive.png": {
+    "mtime": 1790190423.2037945,
+    "ast_hash": "00b2d307b921f1042ada07c1e673ef4f",
+    "semantic_hash": ""
+  },
+  "public/icons/categories/fun.png": {
+    "mtime": 1790190423.2263896,
+    "ast_hash": "f026665acd47303acaab3316d290bb0f",
+    "semantic_hash": ""
+  },
+  "public/icons/categories/special.png": {
+    "mtime": 1790190423.2508304,
+    "ast_hash": "765141eb30c51839a3c46e1604753c7f",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/beat-em-up.png": {
+    "mtime": 1790190423.1579037,
+    "ast_hash": "56e24de3f84928e506c09d57f4710885",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/shooter.png": {
+    "mtime": 1790190423.1345327,
+    "ast_hash": "dbc1727029159dc8c89371b51726007f",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/sport.png": {
+    "mtime": 1790190423.1817741,
+    "ast_hash": "8deb832f1d2bacfbdb1e2e17cb9c99c9",
     "semantic_hash": ""
   }
 }
