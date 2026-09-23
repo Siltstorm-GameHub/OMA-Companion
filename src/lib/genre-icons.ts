@@ -5,13 +5,18 @@ const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
     keywords: ["beat-em up", "beat em up", "beat-em-up", "fighting", "fight", "prügler", "kampfspiel", "fighter"],
     icon: { src: "/icons/genres/beat-em-up.png", alt: "Beat-em-Up" },
   },
+  // Muss vor Racing stehen: "kart" (Mario Kart) steckt sonst auch in "karten".
+  {
+    keywords: ["kartenspiel", "karten", "cards", "card game", "tcg", "ccg"],
+    icon: { src: "/icons/genres/card-game.png", alt: "Kartenspiel" },
+  },
   {
     keywords: ["racing", "rennen", "rennspiel", "rennspiele", "kart"],
-    icon: { src: "/Racing%20Icon.png", alt: "Racing" },
+    icon: { src: "/icons/genres/racing.png", alt: "Racing" },
   },
   {
     keywords: ["arcade"],
-    icon: { src: "/Arcade%20Icon.png", alt: "Arcade" },
+    icon: { src: "/icons/genres/arcade.png", alt: "Arcade" },
   },
   {
     keywords: ["sport", "sports", "sportspiel", "sportspiele", "fußball", "basketball", "tennis"],
@@ -32,8 +37,12 @@ const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   // vorhandenen Icons zugeordnet — sichtbar etwas ist besser als sichtbar
   // nichts. Kommt ein eigenes Motiv dazu, hier einfach die src austauschen.
   {
-    keywords: ["strategie", "strategy", "rts", "aufbau", "tycoon", "simulation", "sim", "management", "puzzle", "rätsel", "denkspiel", "brettspiel", "board", "karten", "cards"],
-    icon: { src: "/Community%20Icon.png", alt: "Strategie & Denkspiele" },
+    keywords: ["strategie", "strategy", "rts", "aufbau", "tycoon", "simulation", "sim", "management", "puzzle", "rätsel", "denkspiel"],
+    icon: { src: "/icons/genres/strategy.png", alt: "Strategie & Denkspiele" },
+  },
+  {
+    keywords: ["brettspiel", "board", "würfel", "dice"],
+    icon: { src: "/icons/genres/board-game.png", alt: "Brettspiel" },
   },
   {
     keywords: ["horror", "survival", "zombie", "grusel", "escape"],

@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/EventEditClient.tsx": {
-    "mtime": 1790190444.959189,
-    "ast_hash": "6f4813d267971cbb639784642578af0f",
+    "mtime": 1790191214.7108657,
+    "ast_hash": "36b0f8a8bdf511dfd8f9ac5ee125d844",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/bracket/page.tsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/EventSetupWizard.tsx": {
-    "mtime": 1790190444.9601927,
-    "ast_hash": "4dd8bd963275abb87abdea58c90be89f",
+    "mtime": 1790191214.6706462,
+    "ast_hash": "5703be13b2b63b1fa35ea28c8da93fe3",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/page.tsx": {
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx": {
-    "mtime": 1790190432.6010628,
-    "ast_hash": "77deecba9b9ec841db41e15bb502348a",
+    "mtime": 1790191214.7521482,
+    "ast_hash": "d319347b38033352225bce2d39072f42",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/SeriesCompleteClient.tsx": {
@@ -875,8 +875,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesEventList.tsx": {
-    "mtime": 1790190432.644013,
-    "ast_hash": "2cb9b3b664e9dc74dc9b986c15609881",
+    "mtime": 1790191214.7879467,
+    "ast_hash": "a120fa08f2743dfbfddf415ca065465f",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/SeriesStandingsTable.tsx": {
@@ -1155,8 +1155,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/[id]/page.tsx": {
-    "mtime": 1790190432.678549,
-    "ast_hash": "0b5eda47853c4e6093543d662f2ed422",
+    "mtime": 1790191214.8190088,
+    "ast_hash": "5800415b6b9fedee710d4dab04267d3b",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/tournament/page.tsx": {
@@ -4035,8 +4035,8 @@
     "semantic_hash": ""
   },
   "src/lib/genre-icons.ts": {
-    "mtime": 1790190432.714133,
-    "ast_hash": "e5b177beb44a467bc79a45fd3841a594",
+    "mtime": 1790191278.0204606,
+    "ast_hash": "5d8827d59b2712c70c7225f04804f4d5",
     "semantic_hash": ""
   },
   "src/lib/get-wanderpocal-holders.ts": {
@@ -6395,8 +6395,8 @@
     "semantic_hash": ""
   },
   "src/components/CategoryIcon.tsx": {
-    "mtime": 1790190444.830861,
-    "ast_hash": "4d66910949d268785db6795b86e0d729",
+    "mtime": 1790190990.4296675,
+    "ast_hash": "70719a346f7de6c4647d428f1b73a98a",
     "semantic_hash": ""
   },
   "public/battle-cards/class-icons/damage-dealer.png": {
@@ -6442,6 +6442,51 @@
   "public/icons/genres/sport.png": {
     "mtime": 1790190423.1817741,
     "ast_hash": "8deb832f1d2bacfbdb1e2e17cb9c99c9",
+    "semantic_hash": ""
+  },
+  "public/icons/categories/community.png": {
+    "mtime": 1790190990.1597414,
+    "ast_hash": "35b5abc8f4b496eaad2754b088a951a2",
+    "semantic_hash": ""
+  },
+  "public/icons/categories/training.png": {
+    "mtime": 1790190990.132253,
+    "ast_hash": "0ad5b85615b923ffb008ba8853e1e725",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/arcade-ghost-alt.png": {
+    "mtime": 1790191214.6453862,
+    "ast_hash": "b87229af21ab485f4935459af2d97c34",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/arcade.png": {
+    "mtime": 1790191214.5802245,
+    "ast_hash": "08f6ddc12caabc6b53e5fd9bbcb328eb",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/community.png": {
+    "mtime": 1790190990.1832333,
+    "ast_hash": "ec6ee40435990526c8d9455e24367edc",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/racing.png": {
+    "mtime": 1790191214.6021042,
+    "ast_hash": "7dd208567e78b3519377d71cf2794cc6",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/board-game.png": {
+    "mtime": 1790191277.9038005,
+    "ast_hash": "b3cf68f4958d7fa2166e621867d2a9e0",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/card-game.png": {
+    "mtime": 1790191277.8800836,
+    "ast_hash": "86fb6c62f6e1626a7c700710d22f458c",
+    "semantic_hash": ""
+  },
+  "public/icons/genres/strategy.png": {
+    "mtime": 1790191277.8554218,
+    "ast_hash": "4b76b905cdca7c2185d35ce3fd856f42",
     "semantic_hash": ""
   }
 }

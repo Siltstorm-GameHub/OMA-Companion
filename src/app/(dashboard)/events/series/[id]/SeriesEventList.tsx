@@ -10,10 +10,10 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
-  arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
+  arcade:    { label: "Arcade",     icon: "/icons/genres/arcade.png" },
   beat_em_up:{ label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
   sport:     { label: "Sport",      icon: "/icons/genres/sport.png" },
-  racing:    { label: "Racing",     icon: "/Racing Icon.png" },
+  racing:    { label: "Racing",     icon: "/icons/genres/racing.png" },
   shooter:   { label: "Shooter",    icon: "/icons/genres/shooter.png" },
   community: { label: "Community",  icon: "/icons/genres/community.png" },
 };

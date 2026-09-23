@@ -23,10 +23,10 @@ const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 
 const GENRES: { value: string; label: string; icon: string }[] = [
-  { value: "arcade",     label: "Arcade",     icon: "/Arcade Icon.png" },
+  { value: "arcade",     label: "Arcade",     icon: "/icons/genres/arcade.png" },
   { value: "beat_em_up", label: "Beat-em-Up", icon: "/icons/genres/beat-em-up.png" },
   { value: "sport",      label: "Sport",      icon: "/icons/genres/sport.png" },
-  { value: "racing",     label: "Racing",     icon: "/Racing Icon.png" },
+  { value: "racing",     label: "Racing",     icon: "/icons/genres/racing.png" },
   { value: "shooter",    label: "Shooter",    icon: "/icons/genres/shooter.png" },
   { value: "community",  label: "Community",  icon: "/icons/genres/community.png" },
 ];
