@@ -34,18 +34,40 @@ export const DUEL_COMEBACK_RAGE_FACTOR = 0.3;
 // Formel (siehe applyClassUltimate in duels-live.ts) — damit sich TANK/
 // DAMAGE_DEALER/SUPPORT im Ultimate spürbar unterschiedlich anfühlen, egal
 // welche Karte konkret gespielt wird.
+//
+// Balancing-Pass (siehe PROJECT_CONTEXT.md-Notiz zu "Platzhalter-Werten"):
+// Normalangriffe in OMA Duels lösen strikt über ATK/DEF-Vergleich auf und
+// zerstören Einheiten SOFORT statt sie graduell über HP abzunutzen (echte
+// Yu-Gi-Oh-Regel, siehe resolveDeclaredAttack) — reine Heilung wirkt daher
+// kaum auf den Hauptkampfmechanismus. SUPPORT wurde deshalb von Heilung auf
+// stance-abhängige Stat-Modifikatoren umgestellt (siehe applyClassUltimate),
+// die direkt auf genau die Werte wirken, die den ATK/DEF-Vergleich entscheiden.
 
-/** TANK: Schaden aus der eigenen DEF (nicht ATK) — danach Schild fürs ganze
- *  eigene Team in Höhe dieses Anteils des Schadens. */
-export const DUEL_ULTIMATE_TANK_SHIELD_FACTOR = 0.5;
+/** TANK: Schaden aus der eigenen DEF (nicht ATK) — danach stärkt sich der
+ *  Tank SELBST, indem seine eigene DEF um diesen Anteil erhöht wird (statt
+ *  wie zuvor einen Schild aufs ganze Team zu verteilen — macht den Tank
+ *  direkt nach dem Ultimate widerstandsfähiger für den nächsten Konter). */
+export const DUEL_ULTIMATE_TANK_SELF_DEFENSE_BUFF_PERCENT = 0.5;
+/** Dauer des Selbst-DEF-Buffs in eigenen Zügen (siehe tickPlayerStatModifiers). */
+export const DUEL_ULTIMATE_TANK_BUFF_DURATION_ROUNDS = 2;
 
-/** DAMAGE_DEALER: reiner Burst-Schaden = eigener ATK * dieser Multiplikator. */
-export const DUEL_ULTIMATE_DAMAGE_DEALER_MULTIPLIER = 2.5;
+/** DAMAGE_DEALER: reiner Burst-Schaden = eigener ATK * dieser Multiplikator.
+ *  Von 2.5 auf 1.8 gesenkt — bei einem ATK-Vorsprung von im Schnitt gut dem
+ *  Doppelten gegenüber der Tank-DEF war der DD-Ultimate ca. 3-4x wirkungs-
+ *  voller als der von Tank/Support, siehe Balancing-Analyse. */
+export const DUEL_ULTIMATE_DAMAGE_DEALER_MULTIPLIER = 1.8;
 /** Anteil des überschüssigen Schadens (über die Ziel-HP hinaus), der als
- *  direkter LP-Schaden durchschlägt ("Trample"). */
-export const DUEL_ULTIMATE_DAMAGE_DEALER_OVERKILL_FACTOR = 0.5;
+ *  direkter LP-Schaden durchschlägt ("Trample"). Von 0.5 auf 0.4 gesenkt,
+ *  passend zum niedrigeren Basis-Multiplikator. */
+export const DUEL_ULTIMATE_DAMAGE_DEALER_OVERKILL_FACTOR = 0.4;
 
-/** SUPPORT: kein Schaden — heilt das ganze eigene Team um die eigene DEF *
- *  diesen Multiplikator und gibt jeder eigenen Einheit zusätzlich Rage. */
-export const DUEL_ULTIMATE_SUPPORT_HEAL_MULTIPLIER = 0.8;
+/** SUPPORT: kein Schaden, keine Heilung mehr — stärkt stattdessen das ganze
+ *  eigene Team stance-abhängig (Angriffsstellung -> ATK, Verteidigungs-
+ *  stellung -> DEF) und schwächt das gewählte gegnerische Ziel um denselben
+ *  Mechanismus (ebenfalls stance-abhängig). Wirkt dadurch direkt auf die
+ *  Werte, die den ATK/DEF-Vergleich im Normalangriff entscheiden, statt auf
+ *  HP, die im Normalangriff kaum eine Rolle spielt. */
+export const DUEL_ULTIMATE_SUPPORT_ALLY_BUFF_PERCENT = 0.3;
+export const DUEL_ULTIMATE_SUPPORT_ENEMY_DEBUFF_PERCENT = 0.25;
+export const DUEL_ULTIMATE_SUPPORT_MODIFIER_DURATION_ROUNDS = 2;
 export const DUEL_ULTIMATE_SUPPORT_RAGE_BONUS = 30;

@@ -41,6 +41,8 @@ import {
   playDefeatSound,
   playHealSound,
   playShieldSound,
+  playTimerWarningSound,
+  playUltimateReadySound,
   playUltimateSoundFor,
   playVictorySound,
   setSoundMuted,
@@ -71,7 +73,6 @@ interface LiveDuelUnit {
   ultimateSkillDescription: string;
   summonedThisTurn: boolean;
   attackedThisTurn: boolean;
-  stanceLockedThisTurn: boolean;
 }
 
 interface LiveDuelHandCard {
@@ -153,7 +154,7 @@ interface FloatingEffect {
   side: "self" | "opponent";
   anchor: { kind: "slot"; slotIndex: number } | { kind: "lp" };
   text: string;
-  tone: "damage" | "crit" | "heal" | "shield" | "info" | "comeback";
+  tone: "damage" | "crit" | "heal" | "shield" | "info" | "comeback" | "ultimateReady";
 }
 
 /** Kurzer Sprite-Flipbook-Effekt (Pixel Fight FX) genau auf der getroffenen
@@ -212,6 +213,22 @@ interface CardRevealEffect {
 
 const START_LP = 4000;
 const TURN_SECONDS = Math.round(DUEL_TURN_TIMEOUT_MS / 1000);
+
+/** Feld-Karten skalieren jetzt über die tatsächlich verfügbare Bildschirmhöhe
+ *  (svh) statt einer festen Pixel-Breite (früher `max-w-[128px]`) — auf
+ *  kurzen Mobil-Viewports (z.B. Hauptphase 1 mit ausgeklapptem Handfächer,
+ *  siehe HAND_FAN_MIN_HEIGHT) schrumpfen beide Feld-Reihen automatisch mit,
+ *  statt die mittlere Scroll-Zone zum Scrollen zu zwingen. `aspect-[3/4]` +
+ *  `w-auto max-w-full` auf dem Slot selbst sorgen dafür, dass die per Höhe
+ *  berechnete Breite nie die Grid-Spalte sprengt (Sicherheitsnetz für sehr
+ *  schmale Bildschirme). Obergrenze 124px entspricht ungefähr der alten
+ *  festen Größe -- auf großen/Tablet-Screens ändert sich also nichts. */
+const FIELD_CARD_HEIGHT = "clamp(64px, 14svh, 124px)";
+/** Analog für die Handkarten-Fächer-Zone: schrumpft auf kurzen Viewports statt
+ *  eine feste Mindesthöhe von immer 168px zu erzwingen. Die Untergrenze
+ *  (130px) bleibt knapp über der tatsächlichen Kartenhöhe (HAND_CARD_WIDTH
+ *  92px * 4/3 ≈ 123px), damit unfokussierte Karten nicht abgeschnitten werden. */
+const HAND_FAN_MIN_HEIGHT = "clamp(130px, 20svh, 168px)";
 
 // ---------- Hand-Fächer (Hover/Tap zum Fokussieren, Ziehen zum Spielen) ----------
 const HAND_ANGLE_STEP = 7; // Grad pro Karten-Abstand von der Mitte
@@ -293,6 +310,7 @@ const TONE_COLOR: Record<FloatingEffect["tone"], string> = {
   shield: "#60a5fa",
   info: "#e5e7eb",
   comeback: "#fbbf24",
+  ultimateReady: "#fbbf24",
 };
 
 function HpBar({ current, max }: { current: number; max: number }) {
@@ -411,6 +429,8 @@ function UnitSlot({
   ultimateBurst,
   deathBurst,
   onClick,
+  onDragHandlePointerDown,
+  beingDragged,
 }: {
   unit: LiveDuelUnit | null;
   floating: FloatingEffect[];
@@ -431,6 +451,14 @@ function UnitSlot({
   ultimateBurst?: UltimateBurst | null;
   deathBurst?: DeathBurst | null;
   onClick?: () => void;
+  /** Nur fürs eigene Feld, nur wenn diese Einheit gerade angreifen darf --
+   *  startet einen Zieh-Angriff auf ein gegnerisches Feld als Shortcut neben
+   *  dem bestehenden Tippen-Flow (Einheit -> "Angriff"-Knopf -> Ziel antippen,
+   *  bleibt unverändert nutzbar). */
+  onDragHandlePointerDown?: (e: React.PointerEvent) => void;
+  /** Diese Einheit wird gerade als Zieh-Angriff über den Bildschirm gezogen --
+   *  dimmt die Quell-Karte, während eine "Geist"-Karte dem Finger folgt. */
+  beingDragged?: boolean;
 }) {
   // Effekt-Ebenen (fliegende Zahlen, Treffer-/Ultimate-Burst) müssen auch
   // dann noch rendern, wenn der Slot HIER schon leer ist: eine soeben
@@ -497,7 +525,8 @@ function UnitSlot({
           type="button"
           disabled={!selectable}
           onClick={onClick}
-          className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
+          style={{ height: FIELD_CARD_HEIGHT }}
+          className={`relative w-auto max-w-full mx-auto aspect-[3/4] rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
             dragOver
               ? "border-teal-300 bg-teal-400/30 text-teal-100 scale-105"
               : selectable
@@ -523,7 +552,8 @@ function UnitSlot({
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative w-full max-w-[128px] mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
+      onPointerDown={onDragHandlePointerDown}
+      className={`relative w-auto max-w-full mx-auto aspect-[3/4] rounded-lg overflow-hidden text-left transition-transform ${
         isDefense
           ? "border-[3px] border-sky-400 duel-defense-glow"
           : selected
@@ -531,8 +561,10 @@ function UnitSlot({
             : ultimateReady
               ? "border border-amber-400 duel-ultimate-glow"
               : "border border-[color:var(--moba-accent-line)]"
-      } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
+      } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""} ${beingDragged ? "opacity-25" : ""}`}
       style={{
+        height: FIELD_CARD_HEIGHT,
+        touchAction: onDragHandlePointerDown ? "none" : undefined,
         backgroundImage: unit.imageUrl
           ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
           : undefined,
@@ -612,6 +644,17 @@ export default function DuelLiveView({
   const hasLoadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  // Ultimate ist teuer (100 Rage) und wirkt sofort/unwiderruflich -- anders als
+  // Summon/Normalangriff/Taktikkarte (die feuern bewusst sofort beim Tap, für
+  // Tempo) verdient ein Fehltap hier eine winzige Sicherheitsabfrage, siehe
+  // pickAttackTarget/confirmUltimate.
+  const [pendingUltimateConfirm, setPendingUltimateConfirm] = useState<{
+    slotIndex: number;
+    targetSlotIndex: number;
+    unitName: string;
+    ultimateSkillName: string;
+    description: string;
+  } | null>(null);
   const [, setTick] = useState(0);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   const [floatingEffects, setFloatingEffects] = useState<FloatingEffect[]>([]);
@@ -673,6 +716,11 @@ export default function DuelLiveView({
   const [unreadLogCount, setUnreadLogCount] = useState(0);
   const [activeSelfSlot, setActiveSelfSlot] = useState<number | null>(null);
   const [hintOpen, setHintOpen] = useState(false);
+  // `title`-Tooltips (Normalangriff-/Ultimate-Regeltext) lösen nur bei Maus-
+  // Hover aus -- auf Touch-Geräten (praktisch alle Spieler hier) unsichtbar.
+  // Dieses Flag steuert stattdessen einen antippbaren Info-Block im
+  // Aktions-Panel der aktiven Einheit (siehe activeSelfSlot-Panel unten).
+  const [actionInfoOpen, setActionInfoOpen] = useState(false);
 
   // Beschwörung: Karte auswählen -> Stellung wählen -> Ziel-Slot antippen (löst sofort aus).
   const [pendingSummon, setPendingSummon] = useState<{ handCardId: string; stance: DuelStance } | null>(null);
@@ -689,6 +737,15 @@ export default function DuelLiveView({
   const prevSnapshotsRef = useRef<LiveDuelSnapshot[]>([]);
   const lastLogLengthRef = useRef<number>(0);
 
+  // Immer aktueller Snapshot für den 1s-Tick-Callback unten (dessen eigener
+  // Effekt nur bei Statuswechsel/liveBattleId neu läuft, siehe deps dort --
+  // ohne diesen Ref würde er einen veralteten turnDeadline-Wert sehen).
+  const snapshotRef = useRef<LiveDuelSnapshot | null>(null);
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+  const lastTimerWarnSecondRef = useRef<number | null>(null);
+
   // Gefächerte Hand: Hover (Maus) bzw. Tippen (Finger) hebt eine Karte fokussiert
   // hervor; Ziehen (Maus oder Finger, per Pointer-Events — funktioniert für
   // beides gleich) legt Helden-/Taktikkarten direkt aufs Spielfeld.
@@ -700,7 +757,21 @@ export default function DuelLiveView({
     null
   );
   const selfSlotRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const opponentSlotRefs = useRef<(HTMLDivElement | null)[]>([]);
   const boardRef = useRef<HTMLDivElement | null>(null);
+
+  // Ziehen einer EIGENEN, angriffsbereiten Feld-Einheit direkt auf ein
+  // gegnerisches Feld = Angriff erklären -- schneller Shortcut neben dem
+  // bestehenden Tippen-Flow (Einheit -> "Angriff"-Knopf im Aktions-Panel ->
+  // Ziel antippen), der unverändert weiter funktioniert. Eigene Pointer-
+  // Zustände statt Wiederverwendung von dragCard/dragStartRef, damit diese
+  // bereits sorgfältig austarierte Hand-Karten-Logik unangetastet bleibt.
+  const [fieldDragUnit, setFieldDragUnit] = useState<{ unit: LiveDuelUnit; x: number; y: number } | null>(null);
+  const [fieldDragHoverSlot, setFieldDragHoverSlot] = useState<number | null>(null);
+  const fieldDragStartRef = useRef<{ pointerId: number; startX: number; startY: number; unit: LiveDuelUnit; moved: boolean } | null>(
+    null
+  );
+
   // Hält die jeweils aktuellen Handler-Closures für den unten EINMALIG (leeres
   // Deps-Array) registrierten Pointer-Listener — der Listener selbst darf sich
   // während eines laufenden Zugs nicht neu registrieren (würde Events mitten im
@@ -708,13 +779,16 @@ export default function DuelLiveView({
   const latestRef = useRef<{
     handleDrop: (card: LiveDuelHandCard, x: number, y: number) => void;
     selectHandCard: (card: LiveDuelHandCard) => void;
-  }>({ handleDrop: () => {}, selectHandCard: () => {} });
+    declareDragAttack: (unit: LiveDuelUnit, x: number, y: number) => void;
+  }>({ handleDrop: () => {}, selectHandCard: () => {}, declareDragAttack: () => {} });
 
   function resetSelection() {
     setPendingSummon(null);
     setPendingAttack(null);
     setPendingTactic(null);
     setActiveSelfSlot(null);
+    setActionInfoOpen(false);
+    setPendingUltimateConfirm(null);
   }
 
   function toggleSoundMuted() {
@@ -754,11 +828,42 @@ export default function DuelLiveView({
     }, ms);
   }
 
+  /** Erkennt, welche Feld-Einheiten seit dem letzten Snapshot NEU genug Rage
+   *  fürs Ultimate erreicht haben (kein eigener Log-Eintrag dafür server-
+   *  seitig -- reine Client-Ableitung aus dem Rage-Sprung zwischen zwei
+   *  Snapshots) und gibt dafür einen deutlichen Moment (Text + Sound) statt
+   *  nur den ohnehin dauerhaft pulsierenden Ladering (siehe UnitSlot). */
+  function detectUltimateReadyTransitions(newSnapshot: LiveDuelSnapshot): FloatingEffect[] {
+    const prev = prevSnapshotsRef.current[0];
+    if (!prev) return [];
+    const spawned: FloatingEffect[] = [];
+    for (const side of ["self", "opponent"] as const) {
+      for (const unit of newSnapshot[side].field) {
+        if (!unit || !unit.isAlive) continue;
+        const prevUnit = prev[side].field.find((u) => u?.instanceId === unit.instanceId);
+        if (!prevUnit) continue;
+        const wasReady = prevUnit.rage >= prevUnit.ultimateCost;
+        const isReady = unit.rage >= unit.ultimateCost;
+        if (!wasReady && isReady) {
+          spawned.push({
+            id: `ultimate-ready-${unit.instanceId}-${newSnapshot.round}`,
+            side,
+            anchor: { kind: "slot", slotIndex: unit.slotIndex },
+            text: "Ultimate bereit!",
+            tone: "ultimateReady",
+          });
+          if (side === "self") playUltimateReadySound();
+        }
+      }
+    }
+    return spawned;
+  }
+
   function processNewLogEntries(newSnapshot: LiveDuelSnapshot) {
     const candidates = [newSnapshot, ...prevSnapshotsRef.current];
     const from = lastLogLengthRef.current;
     const entries = newSnapshot.log.slice(from);
-    const spawned: FloatingEffect[] = [];
+    const spawned: FloatingEffect[] = detectUltimateReadyTransitions(newSnapshot);
 
     for (const entry of entries) {
       switch (entry.type) {
@@ -1028,6 +1133,21 @@ export default function DuelLiveView({
     const interval = setInterval(() => {
       setTick((t) => t + 1);
       fetchSnapshot();
+
+      // Countdown-Warnung (Sound + Vibration) für die letzten 5 Sekunden der
+      // eigenen Zug-Schachuhr -- die Ringfarbe allein (siehe RadialTimer) ist
+      // leicht zu übersehen, während man gerade z.B. die Handkarten anschaut.
+      const snap = snapshotRef.current;
+      if (snap && snap.status !== "finished" && snap.activeTeam === snap.viewerTeam && !snap.pendingTrapDecision) {
+        const secs = Math.max(0, Math.ceil((snap.turnDeadline - Date.now()) / 1000));
+        if (secs > 0 && secs <= 5 && lastTimerWarnSecondRef.current !== secs) {
+          lastTimerWarnSecondRef.current = secs;
+          playTimerWarningSound();
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(60);
+        } else if (secs > 5) {
+          lastTimerWarnSecondRef.current = null;
+        }
+      }
     }, 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1057,6 +1177,19 @@ export default function DuelLiveView({
       return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     }
     function onMove(e: PointerEvent) {
+      const fieldStart = fieldDragStartRef.current;
+      if (fieldStart && fieldStart.pointerId === e.pointerId) {
+        const dx = e.clientX - fieldStart.startX;
+        const dy = e.clientY - fieldStart.startY;
+        if (!fieldStart.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) fieldStart.moved = true;
+        if (fieldStart.moved) {
+          setFieldDragUnit({ unit: fieldStart.unit, x: e.clientX, y: e.clientY });
+          const idx = opponentSlotRefs.current.findIndex((el) => pointInside(el, e.clientX, e.clientY));
+          setFieldDragHoverSlot(idx >= 0 ? idx : null);
+        }
+        return;
+      }
+
       const start = dragStartRef.current;
       if (!start || start.pointerId !== e.pointerId) return;
       const dx = e.clientX - start.startX;
@@ -1076,6 +1209,21 @@ export default function DuelLiveView({
       }
     }
     function endDrag(e: PointerEvent) {
+      const fieldStart = fieldDragStartRef.current;
+      if (fieldStart && fieldStart.pointerId === e.pointerId) {
+        if (fieldStart.moved) {
+          latestRef.current.declareDragAttack(fieldStart.unit, e.clientX, e.clientY);
+        }
+        fieldDragStartRef.current = null;
+        setFieldDragUnit(null);
+        setFieldDragHoverSlot(null);
+        // Kein "sonst tippen"-Zweig wie bei der Handkarte nötig: ohne
+        // nennenswerte Bewegung feuert der Browser ganz normal den
+        // ursprünglichen Button-Click (Aktions-Panel öffnen/schließen), da
+        // hier nie preventDefault() aufgerufen wird.
+        return;
+      }
+
       const start = dragStartRef.current;
       if (!start || start.pointerId !== e.pointerId) return;
       if (start.moved) {
@@ -1173,10 +1321,45 @@ export default function DuelLiveView({
     dragStartRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, card, moved: false };
   }
 
+  /** Nur während der Kampfphase, nur für eine EIGENE Einheit, die diesen Zug
+   *  noch nicht angegriffen/wurde nicht gerade erst beschworen und in
+   *  Angriffsstellung steht (identische Bedingungen wie canDeclareAttack im
+   *  Feld-Rendering unten). */
+  function isDragAttackEligible(unit: LiveDuelUnit): boolean {
+    return (
+      canAct && !!snapshot && snapshot.phase === "battle" && unit.isAlive && !unit.summonedThisTurn && !unit.attackedThisTurn && unit.stance === "attack"
+    );
+  }
+
+  function handleFieldUnitPointerDown(e: React.PointerEvent, unit: LiveDuelUnit) {
+    if (!isDragAttackEligible(unit)) return;
+    fieldDragStartRef.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, unit, moved: false };
+  }
+
+  /** Zieh-Ende auf ein gegnerisches Feld = Normalangriff erklären (Ultimate
+   *  bleibt bewusst dem Tippen-Flow vorbehalten, da der zusätzliche
+   *  Bestätigen-Dialog -- siehe pendingUltimateConfirm -- bei einem Drop
+   *  mitten im Ziehen unpassend wäre). Ohne lebende gegnerische Einheiten
+   *  zählt (wie beim Tippen) jedes Feld als Direktangriff. */
+  function declareDragAttack(unit: LiveDuelUnit, x: number, y: number) {
+    if (!snapshot || !isDragAttackEligible(unit)) return;
+    const pointInside = (el: HTMLElement | null) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    };
+    const opponentHasUnits = snapshot.opponent.field.some((u) => u?.isAlive);
+    const targetSlotIndex = opponentSlotRefs.current.findIndex(
+      (el, i) => pointInside(el) && (opponentHasUnits ? !!snapshot.opponent.field[i]?.isAlive : true)
+    );
+    if (targetSlotIndex < 0) return;
+    void postAction({ type: "declareAttack", slotIndex: unit.slotIndex, attackType: "normalAttack", targetSlotIndex });
+  }
+
   // Hält latestRef aktuell, ohne während des Renderns direkt in die Ref zu
   // schreiben (siehe Kommentar oben) — läuft nach jedem Commit.
   useEffect(() => {
-    latestRef.current = { handleDrop, selectHandCard };
+    latestRef.current = { handleDrop, selectHandCard, declareDragAttack };
   });
 
   async function postAction(action: DuelAction) {
@@ -1255,7 +1438,7 @@ export default function DuelLiveView({
 
   function toggleFieldStance(unit: LiveDuelUnit) {
     if (!canAct || !isMainPhase) return;
-    if (unit.summonedThisTurn || unit.stanceLockedThisTurn || unit.attackedThisTurn) return;
+    if (unit.summonedThisTurn || unit.attackedThisTurn) return;
     void postAction({ type: "changeStance", slotIndex: unit.slotIndex, stance: unit.stance === "attack" ? "defense" : "attack" });
   }
 
@@ -1270,7 +1453,31 @@ export default function DuelLiveView({
 
   function pickAttackTarget(targetSlotIndex: number) {
     if (!pendingAttack) return;
+    if (pendingAttack.attackType === "ultimate") {
+      const unit = snapshot?.self.field[pendingAttack.slotIndex];
+      if (unit) {
+        setPendingUltimateConfirm({
+          slotIndex: pendingAttack.slotIndex,
+          targetSlotIndex,
+          unitName: unit.name,
+          ultimateSkillName: unit.ultimateSkillName,
+          description: CLASS_ULTIMATE_DESCRIPTION[unit.class],
+        });
+        return;
+      }
+    }
     void postAction({ type: "declareAttack", ...pendingAttack, targetSlotIndex });
+  }
+
+  function confirmUltimate() {
+    if (!pendingUltimateConfirm) return;
+    void postAction({
+      type: "declareAttack",
+      slotIndex: pendingUltimateConfirm.slotIndex,
+      attackType: "ultimate",
+      targetSlotIndex: pendingUltimateConfirm.targetSlotIndex,
+    });
+    setPendingUltimateConfirm(null);
   }
 
   function pickTacticTarget(targetSlotIndex: number) {
@@ -1353,7 +1560,7 @@ export default function DuelLiveView({
           gescrollt werden, um "Zug beenden"/"Weiter zur Phase" überhaupt zu
           sehen — leicht zu übersehen. Jetzt sind diese Buttons als fixer
           Fuß nie Teil der Scroll-Berechnung und daher immer sichtbar. */}
-      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-4 gap-3">
+      <div className="flex-1 min-h-0 flex flex-col max-w-2xl w-full mx-auto px-4 py-3 gap-2">
         <div className="shrink-0 flex items-center justify-between">
           <button
             onClick={() => (finished ? handleExit() : setShowLeaveConfirm(true))}
@@ -1472,12 +1679,12 @@ export default function DuelLiveView({
         {/* Einzige scrollbare Zone: Spielfeld + Hand + Fehleranzeigen. Wächst
             zwischen dem festen Header oben und den festen Phasen-/Zug-Buttons
             unten (siehe Kommentar am Content-Rahmen). */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
         {/* Spielfeld (Gegner + eigenes Feld) — gemeinsame Ablagezone fürs Ziehen
             einer Taktik-Karte aus der Hand ("irgendwo aufs Spielfeld ziehen"). */}
         <div
           ref={boardRef}
-          className={`space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+          className={`space-y-2 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
         >
         {/* Gegner */}
         <div className="space-y-2">
@@ -1524,20 +1731,22 @@ export default function DuelLiveView({
               const statHighlight: "attack" | "defense" | null =
                 snapshot.phase === "battle" && slot?.isAlive ? (slot.stance === "defense" ? "defense" : "attack") : null;
               return (
-                <UnitSlot
-                  key={i}
-                  unit={slot}
-                  floating={effectsFor("opponent", i)}
-                  flashing={flashKeys.has(`opponent-${i}`)}
-                  lunging={lungeKeys.has(`opponent-${i}`)}
-                  burst={burstFor("opponent", i)}
-                  ultimateBurst={ultimateBurstFor("opponent", i)}
-                  deathBurst={deathBurstFor("opponent", i)}
-                  selectable={selectable}
-                  selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
-                  statHighlight={statHighlight}
-                  onClick={onClick}
-                />
+                <div key={i} ref={(el) => { opponentSlotRefs.current[i] = el; }}>
+                  <UnitSlot
+                    unit={slot}
+                    floating={effectsFor("opponent", i)}
+                    flashing={flashKeys.has(`opponent-${i}`)}
+                    lunging={lungeKeys.has(`opponent-${i}`)}
+                    burst={burstFor("opponent", i)}
+                    ultimateBurst={ultimateBurstFor("opponent", i)}
+                    deathBurst={deathBurstFor("opponent", i)}
+                    selectable={selectable}
+                    selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
+                    dragOver={fieldDragHoverSlot === i}
+                    statHighlight={statHighlight}
+                    onClick={onClick}
+                  />
+                </div>
               );
             })}
           </div>
@@ -1568,7 +1777,7 @@ export default function DuelLiveView({
                 !slot &&
                 (pendingSummon !== null || (dragCard?.card.kind === "unit" && !snapshot.normalSummonUsed));
               const canChangeStance =
-                canAct && isMainPhase && slot?.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
+                canAct && isMainPhase && slot?.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn;
               const canDeclareAttack =
                 canAct && snapshot.phase === "battle" && slot?.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
               const isSelectedAttacker = pendingAttack?.slotIndex === i;
@@ -1606,6 +1815,8 @@ export default function DuelLiveView({
                     ultimateBurst={ultimateBurstFor("self", i)}
                     deathBurst={deathBurstFor("self", i)}
                     onClick={slotOnClick}
+                    onDragHandlePointerDown={canDeclareAttack && slot ? (e) => handleFieldUnitPointerDown(e, slot) : undefined}
+                    beingDragged={fieldDragUnit?.unit.slotIndex === i}
                   />
                 </div>
               );
@@ -1614,56 +1825,87 @@ export default function DuelLiveView({
           {pendingTactic?.requiresTarget === "ally" && (
             <p className="text-[10px] text-teal-300 text-center">Eigenes Ziel für die Taktikkarte wählen …</p>
           )}
+          {snapshot.phase === "battle" && canAct && !pendingAttack && !fieldDragUnit && (
+            <p className="text-[10px] text-slate-500 text-center">
+              Tipp: angriffsbereite Karte direkt auf ein gegnerisches Feld ziehen = Angriff erklären.
+            </p>
+          )}
           {activeSelfSlot !== null &&
             snapshot.self.field[activeSelfSlot] &&
             (() => {
               const slot = snapshot.self.field[activeSelfSlot]!;
               const canChangeStance =
-                canAct && isMainPhase && slot.isAlive && !slot.summonedThisTurn && !slot.stanceLockedThisTurn && !slot.attackedThisTurn;
+                canAct && isMainPhase && slot.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn;
               const canDeclareAttack =
                 canAct && snapshot.phase === "battle" && slot.isAlive && !slot.summonedThisTurn && !slot.attackedThisTurn && slot.stance === "attack";
               const ultimateReady = slot.isAlive && slot.rage >= slot.ultimateCost;
               const isSelectedAttacker = pendingAttack?.slotIndex === activeSelfSlot;
               if (!canChangeStance && !canDeclareAttack) return null;
               return (
-                <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/[0.06] p-1.5">
-                  <span className="text-[10px] font-semibold text-teal-300 px-0.5 truncate">{slot.name}</span>
-                  {canChangeStance && (
-                    <button
-                      onClick={() => toggleFieldStance(slot)}
-                      title={STANCE_HINT[slot.stance === "attack" ? "defense" : "attack"]}
-                      className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
-                    >
-                      → {STANCE_LABEL[slot.stance === "attack" ? "defense" : "attack"]}
-                    </button>
-                  )}
-                  {canDeclareAttack && (
-                    <>
+                <div className="rounded-lg border border-teal-500/30 bg-teal-500/[0.06] p-1.5 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-teal-300 px-0.5 truncate">{slot.name}</span>
+                    {canChangeStance && (
                       <button
-                        onClick={() => selectAttack(slot, "normalAttack")}
-                        title={NORMAL_ATTACK_DESCRIPTION}
-                        className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                          isSelectedAttacker && pendingAttack?.attackType === "normalAttack"
-                            ? "border-teal-400 bg-teal-500/20 text-teal-200"
-                            : "border-slate-700 text-slate-400 hover:border-slate-500"
-                        }`}
+                        onClick={() => toggleFieldStance(slot)}
+                        title={STANCE_HINT[slot.stance === "attack" ? "defense" : "attack"]}
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:border-slate-500"
                       >
-                        {ATTACK_LABEL.normalAttack}
+                        → {STANCE_LABEL[slot.stance === "attack" ? "defense" : "attack"]}
                       </button>
-                      {ultimateReady && (
+                    )}
+                    {canDeclareAttack && (
+                      <>
                         <button
-                          onClick={() => selectAttack(slot, "ultimate")}
-                          title={`${slot.ultimateSkillName}: ${CLASS_ULTIMATE_DESCRIPTION[slot.class]}`}
+                          onClick={() => selectAttack(slot, "normalAttack")}
+                          title={NORMAL_ATTACK_DESCRIPTION}
                           className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                            isSelectedAttacker && pendingAttack?.attackType === "ultimate"
-                              ? "border-amber-400 bg-amber-500/20 text-amber-200"
-                              : "border-amber-600/60 text-amber-300 hover:border-amber-400"
+                            isSelectedAttacker && pendingAttack?.attackType === "normalAttack"
+                              ? "border-teal-400 bg-teal-500/20 text-teal-200"
+                              : "border-slate-700 text-slate-400 hover:border-slate-500"
                           }`}
                         >
-                          {ATTACK_LABEL.ultimate}
+                          {ATTACK_LABEL.normalAttack}
                         </button>
+                        {ultimateReady && (
+                          <button
+                            onClick={() => selectAttack(slot, "ultimate")}
+                            title={`${slot.ultimateSkillName}: ${CLASS_ULTIMATE_DESCRIPTION[slot.class]}`}
+                            className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                              isSelectedAttacker && pendingAttack?.attackType === "ultimate"
+                                ? "border-amber-400 bg-amber-500/20 text-amber-200"
+                                : "border-amber-600/60 text-amber-300 hover:border-amber-400"
+                            }`}
+                          >
+                            {ATTACK_LABEL.ultimate}
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActionInfoOpen((prev) => !prev)}
+                      aria-label="Regeln anzeigen"
+                      className={`ml-auto shrink-0 w-4 h-4 rounded-full border text-[10px] font-bold flex items-center justify-center ${
+                        actionInfoOpen ? "border-teal-400 text-teal-300" : "border-slate-600 text-slate-500"
+                      }`}
+                    >
+                      ?
+                    </button>
+                  </div>
+                  {/* Ersatz für die auf Touch-Geräten unsichtbaren title-Tooltips
+                      der Buttons oben (siehe actionInfoOpen-Kommentar) -- gleiche
+                      Texte, nur antippbar statt hover-only. */}
+                  {actionInfoOpen && (
+                    <div className="text-[10px] text-slate-400 leading-snug space-y-1 border-t border-slate-700/60 pt-1.5">
+                      {canChangeStance && <p>{STANCE_HINT[slot.stance === "attack" ? "defense" : "attack"]}</p>}
+                      {canDeclareAttack && <p>{NORMAL_ATTACK_DESCRIPTION}</p>}
+                      {canDeclareAttack && ultimateReady && (
+                        <p className="text-amber-300/90">
+                          <span className="font-semibold">{slot.ultimateSkillName}:</span> {CLASS_ULTIMATE_DESCRIPTION[slot.class]}
+                        </p>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               );
@@ -1703,7 +1945,7 @@ export default function DuelLiveView({
                 Karte hebt sich gerade, vergrößert und voll lesbar aus dem Fächer.
                 Ziehen (Pointer-Events, siehe handleCardPointerDown) funktioniert
                 unabhängig vom Fokus-Zustand. */}
-            <div className="relative pt-9" style={{ minHeight: 168 }}>
+            <div className="relative pt-9" style={{ minHeight: HAND_FAN_MIN_HEIGHT }}>
               <div className="flex justify-center items-end">
                 {(snapshot.self.hand ?? []).map((card, i, arr) => {
                   const isSelectedSummon = pendingSummon?.handCardId === card.cardId;
@@ -1836,6 +2078,22 @@ export default function DuelLiveView({
           </div>
         )}
 
+        {!finished && !pendingTrapForSelf && pendingTrapForOpponent && (
+          <button disabled className="w-full rounded-lg bg-black/30 border border-amber-500/30 text-amber-300 text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+            <Wind className="w-4 h-4" /> Gegner überlegt (Falle) …
+          </button>
+        )}
+        {!finished && !pendingTrapForSelf && !pendingTrapForOpponent && !isMyTurn && (
+          <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+            <Wind className="w-4 h-4" /> Gegner ist am Zug …
+          </button>
+        )}
+        </div>
+
+        {/* Fehlermeldung außerhalb der Scroll-Zone (analog zum Fuß unten) —
+            vorher konnte eine fehlgeschlagene Aktion aus dem sichtbaren
+            Bereich scrollen, ohne dass der Spieler je erfährt, warum sie
+            fehlgeschlagen ist. */}
         {actionError && (
           <div className="shrink-0 flex items-center gap-2">
             <div className="flex-1">
@@ -1850,18 +2108,6 @@ export default function DuelLiveView({
             </button>
           </div>
         )}
-
-        {!finished && !pendingTrapForSelf && pendingTrapForOpponent && (
-          <button disabled className="w-full rounded-lg bg-black/30 border border-amber-500/30 text-amber-300 text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
-            <Wind className="w-4 h-4" /> Gegner überlegt (Falle) …
-          </button>
-        )}
-        {!finished && !pendingTrapForSelf && !pendingTrapForOpponent && !isMyTurn && (
-          <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
-            <Wind className="w-4 h-4" /> Gegner ist am Zug …
-          </button>
-        )}
-        </div>
 
         {/* Fester Fuß außerhalb der Scroll-Zone — siehe Kommentar am
             Content-Rahmen: dadurch immer sichtbar, egal wie viel Platz
@@ -1909,7 +2155,9 @@ export default function DuelLiveView({
             </div>
             <div className="overflow-y-auto text-[11px] text-[color:var(--moba-ink-dim)] space-y-0.5" style={{ maxHeight: "calc(60vh - 40px)" }}>
               {snapshot.log.slice(-40).map((entry, i) => (
-                <div key={i}>{describeLogEntry(entry)}</div>
+                <div key={i} className={LOG_TONE_CLASS[logEntryTone(entry)]}>
+                  {describeLogEntry(entry)}
+                </div>
               ))}
             </div>
           </div>
@@ -1945,6 +2193,36 @@ export default function DuelLiveView({
               onClick={() => {}}
             />
           )}
+        </div>
+      )}
+
+      {/* "Geist"-Karte fürs Ziehen einer eigenen Feld-Einheit auf ein
+          gegnerisches Feld (Angriff), analog zur Handkarten-Geist-Karte
+          oben — separater Block, da LiveDuelUnit keine volle BattleCardData
+          trägt (kein CardTile-Rendering möglich, daher ein simples
+          Bild+Badge). */}
+      {fieldDragUnit && (
+        <div
+          className="pointer-events-none fixed z-[500] w-20 aspect-[3/4] rounded-lg overflow-hidden border-2 border-teal-400"
+          style={{
+            left: fieldDragUnit.x - 40,
+            top: fieldDragUnit.y - 70,
+            transform: "rotate(-4deg) scale(1.08)",
+            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
+            backgroundImage: fieldDragUnit.unit.imageUrl
+              ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${fieldDragUnit.unit.imageUrl})`
+              : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundColor: fieldDragUnit.unit.imageUrl ? undefined : "#0a0e2e",
+          }}
+        >
+          <span className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm bg-rose-500/30 text-rose-200">
+            <img src={MOBA_ICON.sword} alt="" aria-hidden className="w-3 h-3 object-contain" />
+          </span>
+          <span className="absolute inset-x-0 bottom-0 p-1 text-[10px] font-semibold text-white truncate drop-shadow bg-black/40">
+            {fieldDragUnit.unit.name}
+          </span>
         </div>
       )}
 
@@ -1994,9 +2272,46 @@ export default function DuelLiveView({
         }}
         onCancel={() => setShowLeaveConfirm(false)}
       />
+
+      <MobaConfirmDialog
+        open={!!pendingUltimateConfirm}
+        tone="info"
+        title="Ultimate einsetzen?"
+        message={pendingUltimateConfirm ? `${pendingUltimateConfirm.unitName} · ${pendingUltimateConfirm.ultimateSkillName}: ${pendingUltimateConfirm.description}` : ""}
+        confirmLabel="Einsetzen"
+        onConfirm={confirmUltimate}
+        onCancel={() => setPendingUltimateConfirm(null)}
+      />
     </div>,
     document.body
   );
+}
+
+/** Hervorhebung fürs Kampf-Log — Ultimates/Kills/Crits sahen bisher optisch
+ *  identisch zu jedem anderen Eintrag aus, was ein schnelles Überfliegen des
+ *  Verlaufs erschwerte. */
+type LogTone = "ultimate" | "kill" | "critical" | "normal";
+const LOG_TONE_CLASS: Record<LogTone, string> = {
+  ultimate: "text-amber-300 font-semibold",
+  kill: "text-rose-300 font-semibold",
+  critical: "text-rose-200",
+  normal: "",
+};
+function logEntryTone(entry: DuelLogEntry): LogTone {
+  switch (entry.type) {
+    case "ultimateUsed":
+      return "ultimate";
+    case "death":
+      return "kill";
+    case "damage":
+      return entry.isCrit ? "critical" : "normal";
+    case "defenseDestroyed":
+    case "attackClash":
+    case "attackClashDraw":
+      return "critical";
+    default:
+      return "normal";
+  }
 }
 
 function describeLogEntry(entry: DuelLogEntry): string {
