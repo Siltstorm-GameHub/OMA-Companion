@@ -53,6 +53,7 @@ html {
   --nav-divider:         rgba(255,255,255,0.07);
   --nav-hover-bg:        rgba(255,255,255,0.05);
   --nav-icon-inactive:   #6b7280;
+  --nav-glyph:           #ffffff;
   --nav-text-hover:      #d1d5db;
   --nav-text-primary:    #ffffff;
   --nav-text-secondary:  #d1d5db;
@@ -897,6 +898,7 @@ select.input-glass option { background: #0f1117; }
   --nav-divider:         rgba(13,31,28,0.10);
   --nav-hover-bg:        rgba(13,31,28,0.05);
   --nav-icon-inactive:   #5b6b68;
+  --nav-glyph:           #0d1f1c;
   --nav-text-hover:      #0d1f1c;
   --nav-text-primary:    #0d1f1c;
   --nav-text-secondary:  #33413e;
