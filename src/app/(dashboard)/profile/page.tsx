@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import RankedAvatar from "@/components/RankedAvatar";
-import RankUpFlare from "@/components/RankUpFlare";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -16,7 +15,7 @@ import { MarketingPortfolio } from "@/components/MarketingLists";
 import { IdeaPortfolio } from "@/components/IdeaLists";
 import { getAvailableReviewYears } from "@/lib/year-review";
 import { ChevronRight } from "@/components/icons";
-import { Crown, Clock, MessageSquare } from "@/components/icons";
+import { Clock, MessageSquare } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import FavoriteGamesSection from "./FavoriteGamesSection";
@@ -258,15 +257,13 @@ export default async function ProfilePage() {
           <div className="relative flex items-center gap-5 flex-wrap">
             {/* Avatar */}
             <div className="relative shrink-0">
-              <RankUpFlare userId={user.id} rankPoints={rankPoints}>
-                <RankedAvatar
-                  userId={userId}
-                  src={user.image}
-                  alt={displayName}
-                  size={80}
-                  rounded="2xl"
-                />
-              </RankUpFlare>
+              <RankedAvatar
+                userId={userId}
+                src={user.image}
+                alt={displayName}
+                size={80}
+                rounded="2xl"
+              />
               <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
                 style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
             </div>

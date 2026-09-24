@@ -7,7 +7,6 @@ import { Building2 } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
 import { User, Settings, Clock, MessageSquare } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
-import RankUpFlare from "@/components/RankUpFlare";
 import CoinIcon from "@/components/CoinIcon";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
 import WanderpocalSection, { type WanderpocalHolderInfo } from "@/components/WanderpocalSection";
@@ -137,9 +136,7 @@ export default function ProfileMobileView(props: Props) {
 
         <div className="relative flex items-center gap-3.5">
           <div className="relative shrink-0">
-            <RankUpFlare userId={userId} rankPoints={rankPoints}>
-              <RankedAvatar userId={userId} src={avatarUrl} alt={displayName} size={64} rounded="2xl" />
-            </RankUpFlare>
+            <RankedAvatar userId={userId} src={avatarUrl} alt={displayName} size={64} rounded="2xl" />
             <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>

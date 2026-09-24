@@ -555,8 +555,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/notifications/NotificationRulesPanel.tsx": {
-    "mtime": 1790234784.004405,
-    "ast_hash": "522c376f95b71f2ee98d92b3834409de",
+    "mtime": 1790239923.9773753,
+    "ast_hash": "7ea0fad26e5ef64e9514160413889ba9",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/notifications/page.tsx": {
@@ -675,8 +675,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/users/SyncDiscordRolesButton.tsx": {
-    "mtime": 1790231913.89069,
-    "ast_hash": "1ecbb6ec1eb31d02e0023ac284fc1b49",
+    "mtime": 1790239900.1436446,
+    "ast_hash": "66318979e05d12268cd00614b1e36e9a",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/users/SyncMembersButton.tsx": {
@@ -1495,8 +1495,8 @@
     "semantic_hash": ""
   },
   "src/app/api/admin/sync-discord-roles/route.ts": {
-    "mtime": 1782755167.9172034,
-    "ast_hash": "2c11ae3cda8299ef68e944bf55158390",
+    "mtime": 1790239900.1426406,
+    "ast_hash": "716fcabdbdb9843e9cdc3d6eaf6d863b",
     "semantic_hash": ""
   },
   "src/app/api/admin/sync-members/route.ts": {
@@ -1505,8 +1505,8 @@
     "semantic_hash": ""
   },
   "src/app/api/admin/users/[id]/adjust/route.ts": {
-    "mtime": 1783838922.343701,
-    "ast_hash": "2c2c8819b55d018735985475a6285d8a",
+    "mtime": 1790239900.1426406,
+    "ast_hash": "5d5a405abeb544639cbbe97cb1d02d6d",
     "semantic_hash": ""
   },
   "src/app/api/admin/users/[id]/transactions/route.ts": {
@@ -3965,8 +3965,8 @@
     "semantic_hash": ""
   },
   "src/lib/discord-roles.ts": {
-    "mtime": 1788701215.3228621,
-    "ast_hash": "e91615cba780d1d9d96d006fe950404f",
+    "mtime": 1790239900.1403842,
+    "ast_hash": "388afdf8ce314a518cec1eb3abdc84fc",
     "semantic_hash": ""
   },
   "src/lib/dominion-bonus.ts": {
@@ -4090,8 +4090,8 @@
     "semantic_hash": ""
   },
   "src/lib/notify-dispatch.ts": {
-    "mtime": 1789298603.8752491,
-    "ast_hash": "e2754441a582bf9d614276e7c06a51cf",
+    "mtime": 1790239923.9784472,
+    "ast_hash": "bbab87ef8833bcfb7cb3c4ec3abe7ada",
     "semantic_hash": ""
   },
   "src/lib/notify-sound.ts": {
@@ -4125,8 +4125,8 @@
     "semantic_hash": ""
   },
   "src/lib/points.ts": {
-    "mtime": 1789063043.066934,
-    "ast_hash": "cbcd0507c683a89a543b06d53e536137",
+    "mtime": 1790239900.1408877,
+    "ast_hash": "c5594444b82ced60ff38542d6c164c46",
     "semantic_hash": ""
   },
   "src/lib/pokal.ts": {

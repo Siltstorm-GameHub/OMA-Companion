@@ -299,11 +299,6 @@
     "ast_hash": "4a7736e65c07df0a178c4d7f7764605d",
     "semantic_hash": ""
   },
-  "scripts/process-rank-art.ts": {
-    "mtime": 1786031378.8930655,
-    "ast_hash": "b93c7042b9ef6ef909c65f947c06ba6c",
-    "semantic_hash": ""
-  },
   "scripts/seed-notification-rules.ts": {
     "mtime": 1789972498.385091,
     "ast_hash": "98cd3f6c95dacea3a9e75f6c2dd6b44a",
@@ -810,8 +805,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/dashboard/page.tsx": {
-    "mtime": 1790238794.4223895,
-    "ast_hash": "bf205d1eec8fb46983a7d9dbd773cba2",
+    "mtime": 1790240491.648564,
+    "ast_hash": "913ae58831cce6de6c71eefe00ff691b",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/donations/loading.tsx": {
@@ -930,8 +925,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/points/loading.tsx": {
-    "mtime": 1780937904.881947,
-    "ast_hash": "8e4514c12e6b71b443eef0eccc6ea7bb",
+    "mtime": 1790240897.340171,
+    "ast_hash": "20e222bf701b8e0791cc2fa9fa0ae8be",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/points/page.tsx": {
@@ -985,8 +980,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/ProfileMobileView.tsx": {
-    "mtime": 1790238794.4178607,
-    "ast_hash": "58190a58f18ecb05c0131f1019a585a7",
+    "mtime": 1790240491.650604,
+    "ast_hash": "20ada26a1d8b21685f12586e0f28150d",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/ProfileQuestsAndTournaments.tsx": {
@@ -1025,8 +1020,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/page.tsx": {
-    "mtime": 1790238794.415757,
-    "ast_hash": "88b6f58cfbeea428d8793199cede0ffc",
+    "mtime": 1790240544.0747323,
+    "ast_hash": "ffc1c726fc37009ea74fc14ef08d1a7b",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/rueckblick/page.tsx": {
@@ -2620,8 +2615,8 @@
     "semantic_hash": ""
   },
   "src/app/login/page.tsx": {
-    "mtime": 1790231296.9838152,
-    "ast_hash": "1cdb5f9e6dbbb8337e21d2f35497b390",
+    "mtime": 1790240897.3391664,
+    "ast_hash": "aca8ca0763a89bd12bffc8ad790498e3",
     "semantic_hash": ""
   },
   "src/app/not-found.tsx": {
@@ -3024,11 +3019,6 @@
     "ast_hash": "d938a11b40862fd9ce03260ded0252d2",
     "semantic_hash": ""
   },
-  "src/components/RankIcon.tsx": {
-    "mtime": 1786031457.394673,
-    "ast_hash": "7ac2fd60d93b2d481fdfb174dcc3402f",
-    "semantic_hash": ""
-  },
   "src/components/RankPointsIcon.tsx": {
     "mtime": 1790234352.6136546,
     "ast_hash": "88dede4758f788dcb16c41b512ece8cf",
@@ -3037,11 +3027,6 @@
   "src/components/RankRing.tsx": {
     "mtime": 1790239307.8626509,
     "ast_hash": "611642c2de915b51d7459bd037f8329e",
-    "semantic_hash": ""
-  },
-  "src/components/RankUpFlare.tsx": {
-    "mtime": 1790238398.057544,
-    "ast_hash": "60b6b5a721b0ea15f6ba070c9d0dfe40",
     "semantic_hash": ""
   },
   "src/components/RankedAvatar.tsx": {
@@ -3940,8 +3925,8 @@
     "semantic_hash": ""
   },
   "src/lib/discord-colors.ts": {
-    "mtime": 1789298594.0956004,
-    "ast_hash": "4f5f08a3afa2ae949538b9f06222b560",
+    "mtime": 1790240491.6511095,
+    "ast_hash": "b7572abf129bd99b5dbc841604c9f80b",
     "semantic_hash": ""
   },
   "src/lib/discord-community-jobs.ts": {
@@ -4167,16 +4152,6 @@
   "src/lib/quests.ts": {
     "mtime": 1789747854.2501361,
     "ast_hash": "4f3685d852cd50c1b01a1b29a2b49e5d",
-    "semantic_hash": ""
-  },
-  "src/lib/rank-art.ts": {
-    "mtime": 1786031427.9372537,
-    "ast_hash": "28ebed5be0efce78d6160f0a23a1a8cf",
-    "semantic_hash": ""
-  },
-  "src/lib/ranks.ts": {
-    "mtime": 1785944972.28676,
-    "ast_hash": "69bc441d4e040a891dc506ad2cc5a2e5",
     "semantic_hash": ""
   },
   "src/lib/recompute-wanderpocal.ts": {
@@ -5572,66 +5547,6 @@
   "public/next.svg": {
     "mtime": 1780228211.1027856,
     "ast_hash": "8e061864f388b47f33a1c3780831193e",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/cane.png": {
-    "mtime": 1786031353.0972044,
-    "ast_hash": "74154e9a70deb960603574894dd739bd",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/clipboard.png": {
-    "mtime": 1786031353.0728333,
-    "ast_hash": "61e52d08fe653b609e4fd55cdb235801",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/column.png": {
-    "mtime": 1786031353.151284,
-    "ast_hash": "36f4d534cd887280abeeb7e15ea9b1b0",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/crown.png": {
-    "mtime": 1786031353.206418,
-    "ast_hash": "ba23e081f27acd376c220b43444c59d2",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/fist.png": {
-    "mtime": 1786031353.1216557,
-    "ast_hash": "8413eaf711056f3e2de715aa4f820c6c",
-    "semantic_hash": ""
-  },
-  "public/ranks/_raw/house.png": {
-    "mtime": 1786031353.1810396,
-    "ast_hash": "38898ae11b1ecd70408bfc9b93420905",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-1.png": {
-    "mtime": 1786031389.891,
-    "ast_hash": "036900f7d8cecaf04ff567569f082b6c",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-2.png": {
-    "mtime": 1786031389.912,
-    "ast_hash": "c6f51f95b5093bd1d75b01aa5a182689",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-3.png": {
-    "mtime": 1786031389.934,
-    "ast_hash": "93b16d4659c66a1da7f64b516c770cf7",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-4.png": {
-    "mtime": 1786031389.955,
-    "ast_hash": "96cba5b38a951eb349ff5d1eecdbdeed",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-5.png": {
-    "mtime": 1786031389.975,
-    "ast_hash": "9b24cad81ea49099a82c949dc90bc9bb",
-    "semantic_hash": ""
-  },
-  "public/ranks/rank-6.png": {
-    "mtime": 1786031389.997,
-    "ast_hash": "2ac10c61209e19b00e22c27faf6f8062",
     "semantic_hash": ""
   },
   "public/room-items/bett.png": {
@@ -7925,8 +7840,8 @@
     "semantic_hash": ""
   },
   "src/lib/job-ring.ts": {
-    "mtime": 1790239596.3039043,
-    "ast_hash": "2429154806b22f541e1ff230f64bdfef",
+    "mtime": 1790240491.65262,
+    "ast_hash": "d7b47b7176ab62f1b6c3a1fe65707018",
     "semantic_hash": ""
   },
   "public/icons/ui/poo.png": {

@@ -1,5 +1,4 @@
 import { BRAND } from "@/lib/brand";
-import { RANK_RING } from "@/lib/ranks";
 
 /**
  * Feste Farbwerte für Discord-Embeds — ein Ort für alle Farbentscheidungen,
@@ -24,11 +23,3 @@ export const DISCORD_COLORS = {
   /** Standard-Broadcasts ohne spezifischeren Typ (DM wie Kanal). */
   default: hexToInt(BRAND.teal),
 } as const;
-
-/** Farbe für die Rang-Aufstiegs-Nachricht — die echte Tier-Farbe des neuen
- *  Rangs (dieselbe Palette wie der Rahmen um Profilbilder und die
- *  Rang-Medaille in der App), statt eines generischen Werts. */
-export function rankUpColor(tier: number): number {
-  const ring = RANK_RING[tier] ?? RANK_RING[1];
-  return hexToInt(ring.c3);
-}

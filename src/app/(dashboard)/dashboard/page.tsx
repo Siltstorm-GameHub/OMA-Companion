@@ -21,7 +21,6 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import RankRing from "@/components/RankRing";
-import RankUpFlare from "@/components/RankUpFlare";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
@@ -438,23 +437,21 @@ export default async function DashboardPage() {
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
-            <RankUpFlare userId={userId ?? ""} rankPoints={myRankPoints}>
-              <RankRing
-                userId={userId}
-                width={4}
-                rounded="rounded-lg"
-                faceClassName="card-cut w-16 h-16 sm:w-20 sm:h-20"
-              >
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
-                    style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
-                    {firstName[0]?.toUpperCase()}
-                  </div>
-                )}
-              </RankRing>
-            </RankUpFlare>
+            <RankRing
+              userId={userId}
+              width={4}
+              rounded="rounded-lg"
+              faceClassName="card-cut w-16 h-16 sm:w-20 sm:h-20"
+            >
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
+                  style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
+                  {firstName[0]?.toUpperCase()}
+                </div>
+              )}
+            </RankRing>
             {/* Online-Dot */}
             <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
               style={{ borderColor: "var(--bg-base)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />

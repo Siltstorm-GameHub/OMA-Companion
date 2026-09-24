@@ -9,7 +9,7 @@ import { AnimatedBackground } from "@/components/AnimatedBackground";
 const FEATURES = [
   { icon: CalendarDays, color: "text-blue-400",   bg: "bg-blue-500/10   border-blue-500/20",   title: "Events",          desc: "Alle Discord-Events synchronisiert, mit Anmeldung und Punkten." },
   { icon: Scroll,       color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20", title: "Quests",          desc: "Monatliche Challenges für Voice, Chat und Events." },
-  { icon: Star,         color: "text-amber-400",   bg: "bg-amber-500/10  border-amber-500/20",  title: "Punkte & Ränge",  desc: "Von Neuling bis Grandmaster — Aktivität zahlt sich aus." },
+  { icon: Star,         color: "text-amber-400",   bg: "bg-amber-500/10  border-amber-500/20",  title: "Punkte & Jobs",   desc: "Sammle Punkte und übernimm einen Job in der Community." },
   { icon: Trophy,       color: "text-rose-400",    bg: "bg-rose-500/10   border-rose-500/20",   title: "Rangliste",       desc: "Tritt gegen die Community an und kämpfe um die Spitze." },
 ];
 

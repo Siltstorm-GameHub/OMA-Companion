@@ -47,15 +47,6 @@ export default function PointsLoading() {
         </div>
       </div>
 
-      {/* Ränge */}
-      <div>
-        <Skeleton className="h-3 w-28 mb-3" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-2xl" />
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

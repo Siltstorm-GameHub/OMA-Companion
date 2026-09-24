@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { RANK_RING } from "@/lib/ranks";
 import type { JobBadgeData } from "@/lib/job-badges";
 
 /**
@@ -37,11 +36,17 @@ export function isEmployed(badge: JobBadgeData | null | undefined): badge is Job
 }
 
 /** Stufe 4: Gold im Verlauf und (bei genug Platz) ein zusätzlicher goldener Innenring. */
+/** Arbeitslos: schlichter grauer Ring (Werte des früheren untersten Rangs). */
+const JOBLESS_RING = {
+  c1: "#3f3f46", c2: "#a1a1aa", c3: "#52525b", speed: "12s", glow: "0px", glowColor: "transparent",
+  light: { c1: "#a1a1aa", c2: "#3f3f46", c3: "#71717a", glow: "0px", glowColor: "transparent" },
+};
+
 export const GOLD = "#fbbf24";
 
 export function getJobRing(badge: JobBadgeData | null | undefined): { className: string; style: CSSProperties; level: number } {
   if (!isEmployed(badge)) {
-    const r = RANK_RING[1];
+    const r = JOBLESS_RING;
     return {
       level: 0,
       className: "rank-ring rr-t1",
