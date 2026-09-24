@@ -9,10 +9,14 @@
 // bestehenden Skin-Auswahl-Flow (/battle-cards/my-card), der schon heute die
 // einzige aktiv verdrahtete Aussehens-Anpassung für Community-Karten ist.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Loader2, Dices, ArrowRight } from "@/components/icons";
+import { RollingReveal, SettledRow } from "./DiceRoll";
+import { DND_RACES } from "@/lib/dnd/races";
+import { DND_CLASSES } from "@/lib/dnd/classes";
 
 interface RolledCard {
   id: string;
@@ -33,11 +37,42 @@ const ABILITY_LABEL: Record<string, string> = {
   str: "STR", dex: "DEX", con: "CON", int: "INT", wis: "WIS", cha: "CHA",
 };
 
+// Reihenfolge der Aufdeckung: erst Rasse, dann Klasse, dann die 6 Attribute
+// einzeln — jeder Schritt bekommt seine eigene RollingReveal-Animation.
+const REVEAL_STEPS = [
+  { key: "race", label: "Rasse" },
+  { key: "class", label: "Klasse" },
+  { key: "str", label: "STR" },
+  { key: "dex", label: "DEX" },
+  { key: "con", label: "CON" },
+  { key: "int", label: "INT" },
+  { key: "wis", label: "WIS" },
+  { key: "cha", label: "CHA" },
+] as const;
+
+const RACE_NAMES = DND_RACES.map((r) => r.name);
+const CLASS_NAMES = DND_CLASSES.map((c) => c.name);
+const ABILITY_SCORE_CANDIDATES = Array.from({ length: 16 }, (_, i) => i + 3); // 3–18
+
+function stepValue(result: RolledCard, key: (typeof REVEAL_STEPS)[number]["key"]): string | number {
+  if (key === "race") return result.dndRace;
+  if (key === "class") return result.dndClass;
+  return result.abilityScores[key] ?? "?";
+}
+
+function stepCandidates(key: (typeof REVEAL_STEPS)[number]["key"]): (string | number)[] {
+  if (key === "race") return RACE_NAMES;
+  if (key === "class") return CLASS_NAMES;
+  return ABILITY_SCORE_CANDIDATES;
+}
+
 export default function CharacterCreation({ mode }: { mode: "create" | "reroll" }) {
   const router = useRouter();
   const [rolling, setRolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RolledCard | null>(null);
+  const [revealCount, setRevealCount] = useState(0);
+  const allRevealed = result != null && revealCount >= REVEAL_STEPS.length;
 
   async function roll() {
     setRolling(true);
@@ -50,6 +85,7 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Auswürfeln fehlgeschlagen.");
+      setRevealCount(0);
       setResult(data.card);
       router.refresh();
     } catch (e) {
@@ -58,6 +94,11 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
       setRolling(false);
     }
   }
+
+  const visibleSteps = useMemo(
+    () => (result ? REVEAL_STEPS.slice(0, Math.min(revealCount + 1, REVEAL_STEPS.length)) : []),
+    [result, revealCount]
+  );
 
   if (!result) {
     return (
@@ -82,8 +123,45 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
     );
   }
 
+  if (!allRevealed) {
+    return (
+      <div className="moba-panel rounded-2xl p-6 space-y-3">
+        <div className="text-center space-y-1 pb-1">
+          <p className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold">Es wird gewürfelt …</p>
+        </div>
+        <div className="space-y-2">
+          {visibleSteps.map((step, i) => {
+            const isCurrent = i === visibleSteps.length - 1 && revealCount < REVEAL_STEPS.length;
+            return isCurrent ? (
+              <RollingReveal
+                key={step.key}
+                label={step.label}
+                finalValue={stepValue(result, step.key)}
+                candidates={stepCandidates(step.key)}
+                onSettled={() => setRevealCount((c) => c + 1)}
+              />
+            ) : (
+              <SettledRow key={step.key} label={step.label} value={stepValue(result, step.key)} />
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={() => setRevealCount(REVEAL_STEPS.length)}
+          className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors underline underline-offset-2"
+        >
+          Überspringen
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="moba-panel rounded-2xl p-6 space-y-5">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="moba-panel rounded-2xl p-6 space-y-5"
+    >
       <div className="text-center space-y-1">
         <p className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold">Ausgewürfelt</p>
         <h3 className="font-battle text-lg text-white">
@@ -133,6 +211,6 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
           Zur Weltkarte <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }
