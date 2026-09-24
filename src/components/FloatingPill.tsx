@@ -12,7 +12,7 @@ import { ShieldCheck, LogOut, Sun, Moon, MessageCircleMore } from "@/components/
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
 import { GateLink, useGuestGate } from "@/components/GuestGate";
-import { InkStrokes, NAV_GLYPHS, NavGlyph, useInkSlot } from "@/components/nav/ink-nav";
+import { InkStrokes, NAV_GLYPHS, NavGlyph, getActiveNavIndex, useInkSlot } from "@/components/nav/ink-nav";
 
 const NAV = [
   { label: "Home",    href: "/dashboard",   glyph: NAV_GLYPHS.home },
@@ -119,12 +119,11 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
 
   const inkItems = NAV.map(({ label, href, glyph }) => ({
     label, href, glyph,
-    active: pathname === href || (href !== "/dashboard" && pathname.startsWith(href)),
     showPollBadge: href === "/events",
   }));
-  const activeIndex = inkItems.findIndex(n => n.active);
-  const { shown, phase } = useInkSlot(activeIndex);
+  const activeIndex = getActiveNavIndex(pathname, NAV.map(n => n.href));
   const adminActive = isStaff && pathname.startsWith("/admin");
+  const { shown, phase } = useInkSlot(activeIndex, adminActive);
 
   /* Pinselstrich-Paar mittig hinter das Icon des Slots setzen, an dem es gerade sitzt */
   useLayoutEffect(() => {
@@ -193,12 +192,12 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
             </div>
           )}
         </div>
-        {inkItems.map(({ label, href, glyph, active, showPollBadge }, i) => (
+        {inkItems.map(({ label, href, glyph, showPollBadge }, i) => (
           <div key={href} style={{ position: "relative" }}>
             <NavLink
               ref={el => { glyphRefs.current[i] = el; }}
               label={label} href={href} glyph={glyph}
-              active={active} filled={active && shown === i && phase === "rest"}
+              active={shown === i && phase === "rest"} filled={shown === i && phase === "rest"}
             />
             {showPollBadge && <PollBadge />}
           </div>

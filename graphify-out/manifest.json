@@ -2750,8 +2750,8 @@
     "semantic_hash": ""
   },
   "src/components/BottomNav.tsx": {
-    "mtime": 1790230177.7907064,
-    "ast_hash": "3057ce5a006a5258275636cc46849b1a",
+    "mtime": 1790243889.73262,
+    "ast_hash": "cf880c4d10c92902a4470aaf4f7f7575",
     "semantic_hash": ""
   },
   "src/components/ClientTime.tsx": {
@@ -2870,8 +2870,8 @@
     "semantic_hash": ""
   },
   "src/components/FloatingPill.tsx": {
-    "mtime": 1790238794.4193702,
-    "ast_hash": "f8d78a8802cb22b4c0062cc3c9b2cd0f",
+    "mtime": 1790243889.73262,
+    "ast_hash": "73ab1c69c4fcb3ccaa4ab705ae93122b",
     "semantic_hash": ""
   },
   "src/components/FotografGalleries.tsx": {
@@ -6450,8 +6450,8 @@
     "semantic_hash": ""
   },
   "src/components/nav/ink-nav.tsx": {
-    "mtime": 1790230177.6710687,
-    "ast_hash": "272d0a5d9337f693cd968a5fc8028bc6",
+    "mtime": 1790243922.6596477,
+    "ast_hash": "c034074371563869d61aabe2f4e42c85",
     "semantic_hash": ""
   },
   "src/components/IconPicker.tsx": {

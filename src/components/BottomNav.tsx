@@ -2,7 +2,7 @@
 import { GateLink } from "@/components/GuestGate";
 import { usePathname } from "next/navigation";
 import PollBadge from "@/components/PollBadge";
-import { InkStrokes, NAV_GLYPHS, NavGlyph, useInkSlot } from "@/components/nav/ink-nav";
+import { InkStrokes, NAV_GLYPHS, NavGlyph, getActiveNavIndex, useInkSlot } from "@/components/nav/ink-nav";
 
 const NAV = [
   { label: "Home",    href: "/dashboard",   glyph: NAV_GLYPHS.home },
@@ -20,10 +20,9 @@ export default function BottomNav() {
 
   const items = NAV.map(({ label, href, glyph }) => ({
     label, href, glyph,
-    active: pathname === href || pathname.startsWith(href + "/"),
     showPollBadge: href === "/events",
   }));
-  const activeIndex = items.findIndex(n => n.active);
+  const activeIndex = getActiveNavIndex(pathname, NAV.map(n => n.href));
   const { shown, phase } = useInkSlot(activeIndex);
 
   return (
@@ -56,8 +55,8 @@ export default function BottomNav() {
           </div>
         )}
 
-        {items.map(({ label, href, glyph, active, showPollBadge }, i) => {
-          const filled = active && shown === i && phase === "rest";
+        {items.map(({ label, href, glyph, showPollBadge }, i) => {
+          const filled = shown === i && phase === "rest";
           return (
             <GateLink
               key={href}

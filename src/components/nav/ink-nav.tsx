@@ -24,12 +24,33 @@ const IN_MS = 300;          // Dauer des Hereinfahrens
 type Phase = "rest" | "out" | "pre";
 
 /**
+ * Unterseiten, die zu einem Nav-Punkt gehören, obwohl ihr Pfad nicht mit dessen href beginnt
+ * (z. B. Turnierseiten zu "Events"). Damit bleibt der Punkt dort aktiv.
+ */
+const SECTION_PREFIXES: Record<string, string[]> = {
+  "/dashboard":   ["/quests", "/servers", "/squads", "/battle-cards", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
+  "/events":      ["/tournament"],
+  "/leaderboard": ["/points"],
+};
+
+function matches(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(prefix + "/");
+}
+
+/** Index des Nav-Punkts, zu dem der Pfad gehört (auch Unterseiten), sonst -1. */
+export function getActiveNavIndex(pathname: string, hrefs: string[]): number {
+  const own = hrefs.findIndex(h => matches(pathname, h));
+  if (own >= 0) return own;
+  return hrefs.findIndex(h => (SECTION_PREFIXES[h] ?? []).some(p => matches(pathname, p)));
+}
+
+/**
  * Ablauf beim Tabwechsel: "out" = alter Strich fährt entlang der Diagonale
  * hinaus, "pre" = am neuen Slot außerhalb positioniert (ohne Übergang),
  * "rest" = fährt entlang der Diagonale an seinen Platz. `shown` ist der Slot,
  * an dem die Striche gerade sitzen.
  */
-export function useInkSlot(activeIndex: number) {
+export function useInkSlot(activeIndex: number, hideWhenNone = false) {
   const [shown, setShown] = useState(activeIndex);
   const [phase, setPhase] = useState<Phase>("rest");
   const shownRef = useRef(activeIndex);
@@ -37,10 +58,10 @@ export function useInkSlot(activeIndex: number) {
   const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
 
   useEffect(() => {
-    if (activeIndex === shownRef.current) return;
+    // Seite gehört zu keinem Nav-Punkt: Striche bleiben, wo sie waren
+    if (activeIndex < 0 || activeIndex === shownRef.current) return;
     clearTimers();
     setPhase("out");
-    if (activeIndex < 0) return;                 // Seite gehört nicht zur Nav: Striche bleiben weg
     timers.current.push(window.setTimeout(() => {
       shownRef.current = activeIndex;
       setShown(activeIndex);
@@ -51,7 +72,9 @@ export function useInkSlot(activeIndex: number) {
 
   useEffect(() => clearTimers, []);
 
-  return { shown, phase };
+  // Im Admin (hideWhenNone) fahren die Striche raus, sonst bleiben sie auf Unterseiten stehen
+  const hidden = hideWhenNone && activeIndex < 0;
+  return { shown, phase: hidden ? ("out" as Phase) : phase };
 }
 
 const maskStyle = (src: string): CSSProperties => ({
