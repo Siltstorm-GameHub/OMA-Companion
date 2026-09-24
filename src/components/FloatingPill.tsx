@@ -7,22 +7,25 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useLayoutEffect, forwardRef } from "react";
 import {
-  LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, MessageCircleMore,
+  ShieldCheck, LogOut, ChevronDown, Sun, Moon, MessageCircleMore,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
 import { GateLink, useGuestGate } from "@/components/GuestGate";
+import { InkStrokes, NAV_GLYPHS, NavGlyph, useInkSlot } from "@/components/nav/ink-nav";
 
 const NAV = [
-  { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
-  { label: "Events",         href: "/events",       icon: CalendarDays    },
-  { label: "Rangliste",      href: "/leaderboard",  icon: Trophy          },
-  { label: "Shop",           href: "/shop",         icon: ShoppingBag     },
-  { label: "Spendenpool",    href: "/donations",    icon: Heart           },
-  { label: "Profil",         href: "/profile",      icon: User            },
+  { label: "Home",    href: "/dashboard",   glyph: NAV_GLYPHS.home },
+  { label: "Events",  href: "/events",      glyph: NAV_GLYPHS.events },
+  { label: "Rang",    href: "/leaderboard", glyph: NAV_GLYPHS.leaderboard },
+  { label: "Shop",    href: "/shop",        glyph: NAV_GLYPHS.shop },
+  { label: "Spenden", href: "/donations",   glyph: NAV_GLYPHS.donations },
+  { label: "Profil",  href: "/profile",     glyph: NAV_GLYPHS.profile },
 ];
+
+const GLYPH = 22;           // Icon-Größe in der Pille
+const STROKE = 46;          // Kantenlänge des Pinselstrich-Paars
 
 function useTheme() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -45,31 +48,29 @@ function useTheme() {
 
 /*
  * ── NavLink ──────────────────────────────────────────────────────────────
- * Icon + label are always visible (no more hover-only tooltip). The active
- * item's icon and label are duplicated into a floating "bump" capsule
- * rendered by the parent (see `bump` state in FloatingPill) — the real
- * icon/label here just fade out (opacity 0) but keep their layout box so
- * the bump can measure the whole link and slide onto it.
+ * Icon + Label sind immer sichtbar. Das Pinselstrich-Paar (siehe FloatingPill)
+ * sitzt hinter dem Icon des aktiven Links; das Label wird beim aktiven Link
+ * weiß hervorgehoben. `glyph` = eigenes Icon, sonst Lucide (nur Admin).
  */
-const NavLink = forwardRef<HTMLAnchorElement, {
-  label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean;
-}>(function NavLink({ label, href, icon: Icon, active, danger = false }, ref) {
+const NavLink = forwardRef<HTMLSpanElement, {
+  label: string; href: string; active: boolean; filled: boolean;
+  glyph?: string; icon?: LucideIcon; danger?: boolean;
+}>(function NavLink({ label, href, active, filled, glyph, icon: Icon, danger = false }, glyphRef) {
   const [hov, setHov] = useState(false);
-  const activeColor   = danger ? "#f87171" : "#2dd4bf";
-  const inactiveColor = "var(--nav-icon-inactive)";
-  const color = active ? activeColor : hov ? "var(--nav-text-hover)" : inactiveColor;
+  const color = danger
+    ? (active ? "#f87171" : hov ? "#f87171" : "var(--nav-icon-inactive)")
+    : (filled ? "#fff" : "var(--nav-glyph)");
 
   return (
     <GateLink
-      ref={ref}
       href={href}
       title={label}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
         display: "flex", alignItems: "center", gap: 6,
-        padding: "6px 10px", borderRadius: 9, whiteSpace: "nowrap",
-        position: "relative",
+        padding: "3px 10px 3px 8px", borderRadius: 9, whiteSpace: "nowrap",
+        position: "relative", zIndex: 2,
         transition: "background 150ms ease, box-shadow 150ms ease",
         background: !active && hov
           ? (danger ? "rgba(153,27,27,0.08)" : "var(--nav-hover-bg)")
@@ -78,22 +79,20 @@ const NavLink = forwardRef<HTMLAnchorElement, {
       }}
     >
       <span
-        data-navicon
+        ref={glyphRef}
         style={{
           display: "inline-flex", alignItems: "center", justifyContent: "center",
-          width: 17, height: 17, flexShrink: 0,
-          opacity: active ? 0 : 1,
-          transition: "opacity 150ms ease",
+          width: GLYPH, height: GLYPH, flexShrink: 0,
         }}
       >
-        <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.4 : 1.8, color, transition: "color 150ms" }} />
+        {glyph
+          ? <NavGlyph src={glyph} size={GLYPH} filled={filled} />
+          : Icon && <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.4 : 1.8, color, transition: "color 150ms" }} />}
       </span>
       <span
-        data-navlabel
         style={{
           fontSize: 12.5, fontWeight: active ? 650 : 500, color,
-          transition: "color 150ms ease, opacity 150ms ease", lineHeight: 1, letterSpacing: "-0.01em",
-          opacity: active ? 0 : 1,
+          transition: "color 150ms ease", lineHeight: 1, letterSpacing: "-0.01em",
         }}
       >
         {label}
@@ -109,51 +108,39 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
   const { theme, toggle } = useTheme();
   const { isGuest, openGate } = useGuestGate();
   const [avatarOpen, setAvatarOpen]     = useState(false);
-  const [bump, setBump] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [strokePos, setStrokePos] = useState<{ x: number; y: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
-  const navRef        = useRef<HTMLDivElement>(null);
-  const activeLinkRef = useRef<HTMLAnchorElement>(null);
+  const clipRef       = useRef<HTMLDivElement>(null);
+  const glyphRefs     = useRef<(HTMLSpanElement | null)[]>([]);
 
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "moderator"
     || (session?.user as { role?: string } | undefined)?.role === "admin";
   const userName = session?.user?.name ?? session?.user?.email ?? "?";
   const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
 
-  /*
-   * Resolve nav items once: admin gets appended for staff, and each item
-   * carries its own active flag (see original NavIcon logic this replaces).
-   */
-  const NAV_ITEMS: { label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean; showPollBadge?: boolean }[] =
-    NAV.map(({ label, href, icon }) => ({
-      label, href, icon,
-      active: pathname === href || (href !== "/dashboard" && pathname.startsWith(href)),
-      showPollBadge: href === "/events",
-    }));
-  if (isStaff) {
-    NAV_ITEMS.push({ label: "Admin", href: "/admin", icon: ShieldCheck, active: pathname.startsWith("/admin"), danger: true });
-  }
-  const activeItem     = NAV_ITEMS.find(n => n.active);
-  const activeIsDanger = !!activeItem?.danger;
-  const ActiveIcon     = activeItem?.icon;
+  const inkItems = NAV.map(({ label, href, glyph }) => ({
+    label, href, glyph,
+    active: pathname === href || (href !== "/dashboard" && pathname.startsWith(href)),
+    showPollBadge: href === "/events",
+  }));
+  const activeIndex = inkItems.findIndex(n => n.active);
+  const { shown, phase } = useInkSlot(activeIndex);
+  const adminActive = isStaff && pathname.startsWith("/admin");
 
-  /* Slide the bump capsule onto whichever item is active — covers the whole link (icon + label), not just the icon */
+  /* Pinselstrich-Paar mittig hinter das Icon des Slots setzen, an dem es gerade sitzt */
   useLayoutEffect(() => {
     const measure = () => {
-      const nav  = navRef.current;
-      const link = activeLinkRef.current;
-      if (!nav || !link) { setBump(null); return; }
-      const navBox  = nav.getBoundingClientRect();
-      const linkBox = link.getBoundingClientRect();
-      setBump({
-        left:  linkBox.left - navBox.left,
-        top:   linkBox.top  - navBox.top,
-        width: linkBox.width,
-      });
+      const clip = clipRef.current;
+      const g = shown >= 0 ? glyphRefs.current[shown] : null;
+      if (!clip || !g) { setStrokePos(null); return; }
+      const c = clip.getBoundingClientRect();
+      const r = g.getBoundingClientRect();
+      setStrokePos({ x: r.left - c.left + r.width / 2, y: r.top - c.top + r.height / 2 });
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [pathname, isStaff]);
+  }, [shown, pathname, isStaff]);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -192,46 +179,34 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
         </>
       )}
 
-      {/* Nav links, always visible, with a bump capsule over the active icon + label */}
-      <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
-        {bump && ActiveIcon && activeItem && (
-          /*
-           * Position/size come from the measured link box, so `left`/`width`
-           * do change here (unlike the old icon-only circle, whose fixed
-           * diameter let it stay transform-only) — but this is a single,
-           * absolutely positioned, non-reflowing decorative element with no
-           * siblings to disturb, so the layout cost is negligible; that
-           * trade-off buys a correctly proportioned pill (a scaleX trick
-           * would squash the border-radius into sharp corners as it stretches).
-           */
-          <div style={{
-            position: "absolute", top: 0, left: bump.left, width: bump.width,
-            height: 30, marginTop: -7,
-            borderRadius: 15,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "0 10px",
-            background: activeIsDanger ? "#f87171" : "#2dd4bf",
-            boxShadow: activeIsDanger
-              ? "0 4px 12px rgba(248,113,113,0.45), 0 0 0 4px var(--nav-glass-bg)"
-              : "0 4px 12px rgba(45,212,191,0.45), 0 0 0 4px var(--nav-glass-bg)",
-            transition: "left 400ms cubic-bezier(0.16, 1, 0.3, 1), width 400ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease",
-            pointerEvents: "none", zIndex: 2, whiteSpace: "nowrap",
-          }}>
-            <ActiveIcon style={{ width: 15, height: 15, strokeWidth: 2.4, color: activeIsDanger ? "#450a0a" : "#04342c", flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, fontWeight: 650, color: activeIsDanger ? "#450a0a" : "#04342c", lineHeight: 1, letterSpacing: "-0.01em" }}>
-              {activeItem.label}
-            </span>
-          </div>
-        )}
-        {NAV_ITEMS.map(({ label, href, icon, active, danger, showPollBadge }) => (
+      {/* Nav-Links; das Pinselstrich-Paar liegt hinter dem Icon des aktiven Links */}
+      <div style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
+        <div ref={clipRef} style={{
+          position: "absolute", top: -5, bottom: -5, left: -4, right: -4,
+          overflow: "hidden", borderRadius: 999, pointerEvents: "none", zIndex: 1,
+        }}>
+          {strokePos && (
+            <div style={{
+              position: "absolute", left: strokePos.x - STROKE / 2, top: strokePos.y - STROKE / 2,
+              transition: "none",
+            }}>
+              <InkStrokes phase={phase} size={STROKE} />
+            </div>
+          )}
+        </div>
+        {inkItems.map(({ label, href, glyph, active, showPollBadge }, i) => (
           <div key={href} style={{ position: "relative" }}>
             <NavLink
-              ref={active ? activeLinkRef : undefined}
-              label={label} href={href} icon={icon} active={active} danger={danger}
+              ref={el => { glyphRefs.current[i] = el; }}
+              label={label} href={href} glyph={glyph}
+              active={active} filled={active && shown === i && phase === "rest"}
             />
             {showPollBadge && <PollBadge />}
           </div>
         ))}
+        {isStaff && (
+          <NavLink label="Admin" href="/admin" icon={ShieldCheck} active={adminActive} filled={false} danger />
+        )}
       </div>
 
       {/* Avatar + Dropdown — auf Battle Cards ausgeblendet (siehe DashboardChrome) */}
