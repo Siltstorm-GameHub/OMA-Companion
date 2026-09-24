@@ -1,4 +1,4 @@
-import { CheckCircle2, Swords } from "lucide-react";
+import { CheckCircle2, Swords } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests-meta";

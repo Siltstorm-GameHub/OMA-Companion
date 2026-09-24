@@ -1,7 +1,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Crown, Users, EyeOff, CalendarDays, Plus, Pencil } from "lucide-react";
+import { ChevronLeft, Users } from "lucide-react";
+import { Crown, EyeOff, CalendarDays, Plus, Pencil } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import SeriesIcon from "@/components/SeriesIcon";

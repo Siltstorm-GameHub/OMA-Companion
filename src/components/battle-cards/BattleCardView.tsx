@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { ThumbsDown, Flame, RotateCcw } from "lucide-react";
+import { ThumbsDown, Flame, RotateCcw } from "@/components/icons";
 import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";

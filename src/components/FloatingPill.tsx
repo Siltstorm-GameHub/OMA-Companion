@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useLayoutEffect, forwardRef } from "react";
-import {
-  ShieldCheck, LogOut, ChevronDown, Sun, Moon, MessageCircleMore,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
+import { ShieldCheck, LogOut, Sun, Moon, MessageCircleMore } from "@/components/icons";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
 import { GateLink, useGuestGate } from "@/components/GuestGate";

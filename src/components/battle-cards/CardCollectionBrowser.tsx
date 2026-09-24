@@ -13,7 +13,7 @@
 // sich erst im Detail-Modal beim Antippen.
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import CoinIcon from "@/components/CoinIcon";
 import CardTile from "./CardTile";

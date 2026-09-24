@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronDown, Scale } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Scale } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 /** "Wie setzt sich dein Score zusammen?" — Stimmen je Quelle, Deckel, Boni, Stufe (laufende + letzte Wochen). */

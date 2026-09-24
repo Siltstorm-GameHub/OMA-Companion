@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Check, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { Check } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getActiveMembership } from "@/lib/community-job-service";

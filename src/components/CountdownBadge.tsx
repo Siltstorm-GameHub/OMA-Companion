@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock } from "@/components/icons";
 
 function useCountdown(targetDate: string | Date) {
   const [timeLeft, setTimeLeft] = useState("");

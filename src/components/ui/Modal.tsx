@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 
 export interface ModalProps {
   open: boolean;

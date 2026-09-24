@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Clapperboard, Check } from "lucide-react";
+import { Clapperboard, Check } from "@/components/icons";
 import CountdownBadge from "@/components/CountdownBadge";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];

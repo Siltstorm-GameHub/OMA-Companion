@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Target, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { Target } from "@/components/icons";
 
 export default function PredictionStreakCard({
   current,

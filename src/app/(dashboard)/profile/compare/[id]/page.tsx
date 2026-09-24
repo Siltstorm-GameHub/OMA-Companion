@@ -2,7 +2,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Swords } from "lucide-react";
+import { ArrowLeft, CalendarDays, Swords } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";

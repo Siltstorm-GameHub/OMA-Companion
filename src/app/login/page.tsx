@@ -3,7 +3,7 @@ import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Trophy, CalendarDays, Scroll, Star, Swords, Zap, AlertTriangle } from "lucide-react";
+import { Trophy, CalendarDays, Scroll, Star, Swords, Zap, AlertTriangle } from "@/components/icons";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const FEATURES = [

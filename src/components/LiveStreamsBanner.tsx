@@ -2,7 +2,8 @@
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Radio, Eye, ExternalLink } from "lucide-react";
+import { Radio } from "lucide-react";
+import { Eye, ExternalLink } from "@/components/icons";
 import TwitchEmbedPlayer from "./TwitchEmbedPlayer";
 
 type PartnerStream = {

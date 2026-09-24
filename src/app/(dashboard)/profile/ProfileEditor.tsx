@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Check, X, Cake, MessageSquare, Loader2, Tv2 } from "lucide-react";
+import { Cake } from "lucide-react";
+import { Pencil, Check, X, MessageSquare, Loader2, Tv2 } from "@/components/icons";
 import ImageUploadField from "@/components/ImageUploadField";
 
 interface Props {

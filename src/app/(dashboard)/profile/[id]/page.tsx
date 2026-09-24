@@ -8,7 +8,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { computeBadges } from "@/lib/badges";
-import { Clock, MessageSquare, ArrowLeft, Crown } from "lucide-react";
+import { Clock, MessageSquare, ArrowLeft, Crown } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import BadgesSection from "../BadgesSection";

@@ -9,7 +9,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Clock, Swords, Mail } from "lucide-react";
+import { Check, X, Clock, Swords, Mail } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import MatchupBadge from "./MatchupBadge";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";

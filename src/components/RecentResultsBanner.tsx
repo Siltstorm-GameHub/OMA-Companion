@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trophy, X, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { Trophy, X } from "@/components/icons";
 import { NewContentPing } from "@/components/NewContentPing";
 
 export type RecentResultEvent = {

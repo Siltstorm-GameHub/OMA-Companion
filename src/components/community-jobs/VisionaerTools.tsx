@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Star, TrendingUp } from "lucide-react";
+import { ChevronDown, TrendingUp } from "lucide-react";
+import { Star } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 /** Visionär-Büro: Auswertung (Sterne, Stimmen, Wochenverlauf, Status der Ideen). */

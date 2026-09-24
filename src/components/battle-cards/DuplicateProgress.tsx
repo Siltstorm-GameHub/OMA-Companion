@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";
 import { tableValueForLevel, type CardRarity, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";

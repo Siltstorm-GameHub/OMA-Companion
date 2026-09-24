@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Tv2, Loader2, Link2 } from "lucide-react";
+import { Tv2, Loader2, Link2 } from "@/components/icons";
 import { toast } from "sonner";
 
 export default function StreamRegisterButton({

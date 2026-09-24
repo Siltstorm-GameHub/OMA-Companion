@@ -1,6 +1,6 @@
 "use client";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 
 export type ButtonVariant = "primary" | "danger" | "accent" | "outline" | "ghost";
 export type ButtonSize = "sm" | "md";

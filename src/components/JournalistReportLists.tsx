@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";

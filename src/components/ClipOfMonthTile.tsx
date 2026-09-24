@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Clapperboard, Play } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { Clapperboard, Play } from "@/components/icons";
 import { NewContentPing } from "@/components/NewContentPing";
 
 export type WinnerClip = {

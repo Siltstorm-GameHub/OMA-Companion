@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 
 const STORAGE_KEY = "wa_banner_dismissed";

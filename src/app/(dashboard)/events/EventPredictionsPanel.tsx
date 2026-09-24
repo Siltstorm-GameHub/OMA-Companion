@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Target, HelpCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Target, HelpCircle } from "@/components/icons";
 import PredictionStreakCard from "@/components/PredictionStreakCard";
 import MyPredictionsList, { type MyPrediction } from "@/components/MyPredictionsList";
 

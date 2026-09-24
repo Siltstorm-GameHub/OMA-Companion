@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, Search, X } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import { PICTO_CATEGORIES, PICTO_COLORS, PICTO_DEFAULT_COLOR, pictoSrc } from "@/lib/picto-icons";
 import { decodeSeriesIcon, encodeSeriesIcon } from "@/lib/series-icons";

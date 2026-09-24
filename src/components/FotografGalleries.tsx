@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Images } from "lucide-react";
+import { Images } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { isVideoUrl } from "@/lib/upload-limits";
 

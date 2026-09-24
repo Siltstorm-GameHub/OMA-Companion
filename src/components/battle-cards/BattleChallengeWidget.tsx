@@ -10,7 +10,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Swords } from "lucide-react";
+import { Swords } from "@/components/icons";
 import MatchupBadge from "./MatchupBadge";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 

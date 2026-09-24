@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@/components/icons";
 import { toast } from "sonner";
 
 export default function QuestRegenerateButton() {

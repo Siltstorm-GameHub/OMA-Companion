@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Upload, ImageDown } from "lucide-react";
+import { ImageDown } from "lucide-react";
+import { Upload } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { useSession } from "next-auth/react";

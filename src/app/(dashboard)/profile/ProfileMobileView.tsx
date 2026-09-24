@@ -2,10 +2,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
-import {
-  User, Settings, ChevronRight, Gift,
-  Clock, MessageSquare, Building2,
-} from "lucide-react";
+import { ChevronRight, Building2 } from "lucide-react";
+import { User, Settings, Gift, Clock, MessageSquare } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import RankUpFlare from "@/components/RankUpFlare";

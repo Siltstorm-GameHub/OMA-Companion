@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Megaphone, X } from "lucide-react";
+import { Megaphone, X } from "@/components/icons";
 
 type Message = {
   id:      string;

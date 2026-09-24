@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb } from "@/components/icons";
 import { Modal } from "@/components/ui/Modal";
 import IdeaForm, { type IdeaPrefill } from "./IdeaForm";
 

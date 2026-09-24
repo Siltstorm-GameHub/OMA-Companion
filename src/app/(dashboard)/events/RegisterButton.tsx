@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, ExternalLink, X } from "lucide-react";
+import { Check, Loader2, ExternalLink, X } from "@/components/icons";
 import { toast } from "sonner";
 
 export default function RegisterButton({

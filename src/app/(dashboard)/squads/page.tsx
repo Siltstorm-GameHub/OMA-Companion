@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Users, Crown } from "lucide-react";
+import { Users } from "lucide-react";
+import { Crown } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import SeriesIcon from "@/components/SeriesIcon";
 import { EmptyState } from "@/components/EmptyState";

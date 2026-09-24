@@ -1,7 +1,7 @@
 "use client";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
-import { Trophy } from "lucide-react";
+import { Trophy } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";

@@ -4,7 +4,8 @@ import Link from "next/link";
 import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
-import { ChevronLeft, ChevronRight, Trophy, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Maximize2 } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Modal } from "@/components/ui/Modal";
 

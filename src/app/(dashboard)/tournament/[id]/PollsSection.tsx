@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useNow } from "@/lib/useNow";
-import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Vote, Clock, Trophy, Check } from "@/components/icons";
 import { usePollCountdown } from "@/components/PollCountdown";
 import RankedAvatar from "@/components/RankedAvatar";
 

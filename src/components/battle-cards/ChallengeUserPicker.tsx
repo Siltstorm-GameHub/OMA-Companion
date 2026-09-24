@@ -11,7 +11,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import MobaIcon from "./MobaIcon";
 import MobaInputBox from "./MobaInputBox";

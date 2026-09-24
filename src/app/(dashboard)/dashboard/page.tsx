@@ -2,12 +2,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
-import {
-  CalendarDays, Users, ChevronRight,
-  Clock, Scroll, CheckCircle2,
-  Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown,
-} from "lucide-react";
+import { Users, ChevronRight, Circle, Repeat, Server } from "lucide-react";
+import { CalendarDays, Clock, Scroll, CheckCircle2, Newspaper, Gamepad2, ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import Link from "next/link";

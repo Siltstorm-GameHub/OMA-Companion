@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, X, Check, Plus, Loader2, Gamepad2, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { Pencil, X, Check, Plus, Loader2, Gamepad2 } from "@/components/icons";
 import GameCover from "@/components/GameCover";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
 import GamePlayersModal from "./GamePlayersModal";

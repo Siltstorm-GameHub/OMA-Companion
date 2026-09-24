@@ -2,7 +2,8 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, Scroll, Zap, Users, Trophy, Clapperboard, Vote, Crown } from "lucide-react";
+import { Users } from "lucide-react";
+import { CalendarDays, Scroll, Zap, Trophy, Clapperboard, Vote, Crown } from "@/components/icons";
 
 export type NewsItem = {
   id:    string;

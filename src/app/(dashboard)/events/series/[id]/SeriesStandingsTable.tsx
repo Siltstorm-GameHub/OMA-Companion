@@ -2,7 +2,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
-import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Ban, Flame } from "lucide-react";
+import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Ban } from "lucide-react";
+import { Medal, Minus, Flame } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 
 type StandingRow = {

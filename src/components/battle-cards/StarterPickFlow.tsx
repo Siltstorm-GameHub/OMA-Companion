@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import { CLASS_CONFIG as GLOBAL_CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import type { MobaIconName } from "@/lib/battle-cards/moba-icons";

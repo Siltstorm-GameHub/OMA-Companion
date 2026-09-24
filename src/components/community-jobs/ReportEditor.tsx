@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  Bold, Italic, Heading2, List, Quote, Link2, ImagePlus, Wand2, Eye, Pencil, X, Smile, AtSign, LayoutTemplate, History, Camera,
-} from "lucide-react";
+import { Bold, Italic, Heading2, Quote, ImagePlus, Wand2 } from "lucide-react";
+import { List, Link2, Eye, Pencil, X, Smile, AtSign, LayoutTemplate, History, Camera } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Clapperboard, Trash2, Loader2 } from "lucide-react";
+import { Clapperboard, Trash2, Loader2 } from "@/components/icons";
 
 interface Props {
   eventId: string;

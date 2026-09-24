@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { calcStreak } from "@/lib/streak";
 import RankedAvatar from "@/components/RankedAvatar";
-import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet, Lightbulb } from "lucide-react";
+import { Users, Euro, TrendingDown } from "lucide-react";
+import { Heart, Flame, CalendarDays, ShoppingCart, Wallet, Lightbulb } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];

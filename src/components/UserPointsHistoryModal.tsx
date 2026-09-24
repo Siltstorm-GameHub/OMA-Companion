@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { X, TrendingUp, Star, Loader2, Settings2, Trash2, Save, RotateCcw } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { X, Star, Loader2, Settings2, Trash2, Save, RotateCcw } from "@/components/icons";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/admin/Tabs";

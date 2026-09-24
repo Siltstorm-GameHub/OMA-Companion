@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2 } from "@/components/icons";
 
 interface ImageUploadFieldProps {
   /** Aktuelle Bild-URL (oder leer). */

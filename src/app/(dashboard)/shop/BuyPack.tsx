@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Package } from "lucide-react";
+import { Package } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { PackKind, PackPrices } from "@/lib/shop-config";
 import { PackCoverArt } from "@/components/battle-cards/pack-visuals";

@@ -1,5 +1,5 @@
 ﻿import { getSessionUser } from "@/lib/roles";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import DailySpin from "./DailySpin";

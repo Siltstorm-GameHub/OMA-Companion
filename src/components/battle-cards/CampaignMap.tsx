@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Star, Crown, Loader2 } from "lucide-react";
+import { Star, Crown, Loader2 } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";

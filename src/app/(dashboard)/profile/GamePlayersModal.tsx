@@ -3,7 +3,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { Modal } from "@/components/ui/Modal";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";

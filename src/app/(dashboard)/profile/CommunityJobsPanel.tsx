@@ -3,11 +3,8 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
-  ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon, BookOpen, AlertTriangle, ChevronDown, Star, Copy,
-} from "lucide-react";
+import { Users, TrendingUp, ChevronRight, Sparkles, ImagePlus, Crop, Server as ServerIcon, ChevronDown } from "lucide-react";
+import { Briefcase, Coins, Clock, ThumbsUp, Send, LogOut, RefreshCw, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, X, Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, BookOpen, AlertTriangle, Star, Copy } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";

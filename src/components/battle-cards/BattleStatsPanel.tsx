@@ -7,7 +7,7 @@
 // Team-Akzent je Zeile (Blau eigen/Rot gegnerisch, sofern der Betrachter
 // Teilnehmer war — sonst neutral, siehe viewerTeamId) plus Legende oben.
 
-import { Crown } from "lucide-react";
+import { Crown } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import { computeBattleStats, findMvpId } from "@/lib/battle-cards/battle-stats";
 import type { BattleLogEntry, RosterEntry, TeamId } from "@/lib/battle-engine/types";

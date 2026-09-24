@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Play, Clapperboard } from "lucide-react";
+import { Play, Clapperboard } from "@/components/icons";
 import { extractTwitchClipSlug } from "@/lib/clip-display";
 
 interface Props {

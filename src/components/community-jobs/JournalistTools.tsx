@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronDown, TrendingUp, X } from "lucide-react";
+import { ChevronDown, TrendingUp } from "lucide-react";
+import { X } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { reportCategoryLabel } from "@/lib/report-categories";

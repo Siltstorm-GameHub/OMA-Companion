@@ -8,7 +8,7 @@
 // Komponente nichts, der Aufrufer kann sie also bedenkenlos immer einbinden.
 
 import Link from "next/link";
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 import type { TutorialStepKey } from "@/lib/battle-cards/tutorial";

@@ -1,6 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import { LayoutGrid, Briefcase } from "lucide-react";
+import { LayoutGrid, Briefcase } from "@/components/icons";
 
 type Tab = "overview" | "community_jobs";
 

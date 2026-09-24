@@ -3,11 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft, Trophy, Crown, Flame, Users,
-  Swords, Gamepad2, Zap, Star, TrendingUp,
-  Archive, ChevronRight, CheckCircle2, EyeOff,
-} from "lucide-react";
+import { Users, TrendingUp, ChevronRight } from "lucide-react";
+import { ArrowLeft, Trophy, Crown, Flame, Swords, Gamepad2, Zap, Star, Archive, CheckCircle2, EyeOff } from "@/components/icons";
 import RulesSection from "@/components/RulesSection";
 import { CountUp } from "@/components/CountUp";
 import SeriesIcon from "@/components/SeriesIcon";

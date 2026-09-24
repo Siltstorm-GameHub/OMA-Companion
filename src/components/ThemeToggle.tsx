@@ -1,5 +1,5 @@
 "use client";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon } from "@/components/icons";
 import { useTheme } from "@/components/ThemeProvider";
 
 /** Passend für Dropdown-Menüs (FloatingPill, MobileTopBar) */

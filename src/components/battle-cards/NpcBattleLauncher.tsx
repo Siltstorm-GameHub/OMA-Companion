@@ -18,7 +18,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { motion } from "motion/react";
 import DuelLiveView from "./DuelLiveView";
 import ErrorNotice from "./ErrorNotice";

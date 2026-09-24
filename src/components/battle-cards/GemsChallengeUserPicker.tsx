@@ -12,7 +12,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import LiveBattleView from "./LiveBattleView";
 import MobaIcon from "./MobaIcon";

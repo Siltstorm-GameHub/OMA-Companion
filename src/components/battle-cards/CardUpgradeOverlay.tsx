@@ -12,7 +12,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
 import BattleCardView, { LEVEL_BORDER } from "./BattleCardView";
 import MobaIcon from "./MobaIcon";

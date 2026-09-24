@@ -5,7 +5,7 @@
 // (mal mit, mal ohne Icon, unterschiedliche Größen) durch ein gemeinsames
 // Muster: Icon + Text auf rose-getöntem Grund.
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle } from "@/components/icons";
 
 export default function ErrorNotice({ message, size = "sm" }: { message: string; size?: "sm" | "lg" }) {
   const isLarge = size === "lg";

@@ -11,10 +11,8 @@ import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
-import {
-  Gift, CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal,
-  ArrowRight, Award, Sparkles, Dices, Target, Heart, TrendingUp,
-} from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
+import { Gift, CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Award, Dices, Target, Heart } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [

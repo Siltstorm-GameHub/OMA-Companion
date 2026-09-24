@@ -1,6 +1,6 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
-import { Coins, Target, Check, X } from "lucide-react";
+import { Coins, Target, Check, X } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 

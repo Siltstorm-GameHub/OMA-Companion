@@ -3,7 +3,8 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { UserPlus, UserMinus, Crown, Shield } from "lucide-react";
+import { UserMinus } from "lucide-react";
+import { UserPlus, Crown, Shield } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };

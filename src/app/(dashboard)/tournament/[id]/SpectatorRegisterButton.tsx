@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Check, Loader2 } from "lucide-react";
+import { Eye, Check, Loader2 } from "@/components/icons";
 
 interface Props {
   eventId: string;

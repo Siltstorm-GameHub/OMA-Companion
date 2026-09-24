@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { isVideoUrl } from "@/lib/upload-limits";
 
 /** Kleines Auswahlfeld für Mediathek-Bilder (durchsuchbar) — z.B. um Bilder in eine Anleitung einzufügen. */

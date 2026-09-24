@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home } from "@/components/icons";
 import Link from "next/link";
 
 export default function Error({

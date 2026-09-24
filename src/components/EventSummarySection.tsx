@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Newspaper, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Newspaper } from "@/components/icons";
 
 export default function EventSummarySection({ summary }: { summary: string }) {
   const [open, setOpen] = useState(true);

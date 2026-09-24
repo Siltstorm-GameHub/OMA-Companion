@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { getGameCoverUrl, getGameFallbackGradient, KNOWN_GAMES, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import type { SteamGameResult } from "@/app/api/game-search/route";
-import { Gamepad2, X, Loader2 } from "lucide-react";
+import { Gamepad2, X, Loader2 } from "@/components/icons";
 
 interface GameNameInputProps {
   value: string;

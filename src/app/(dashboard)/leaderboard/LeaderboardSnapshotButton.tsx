@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera } from "@/components/icons";
 
 export default function LeaderboardSnapshotButton({
   snapshotTakenAt,

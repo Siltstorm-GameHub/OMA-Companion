@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx": {
-    "mtime": 1790191821.4422982,
-    "ast_hash": "707fe993d05b05c07b4503328dcf60c0",
+    "mtime": 1790230665.7408795,
+    "ast_hash": "73b0610337b88f1867735d503c95ec93",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/SeriesCompleteClient.tsx": {
@@ -645,13 +645,13 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/squads/SquadsListClient.tsx": {
-    "mtime": 1787770605.5429454,
-    "ast_hash": "9a58c17cfdfaa84e382b89ce07a74f8c",
+    "mtime": 1790230665.7408795,
+    "ast_hash": "1086592231dc7546f846571d39b72402",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/squads/[id]/SquadDetailClient.tsx": {
-    "mtime": 1787930665.7656424,
-    "ast_hash": "a4e98a689eedd2aecda17e04d5466727",
+    "mtime": 1790230665.7427611,
+    "ast_hash": "48450e9909b6f9c4633f143b65b4f27b",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/squads/[id]/page.tsx": {
@@ -3070,8 +3070,8 @@
     "semantic_hash": ""
   },
   "src/components/SeriesIcon.tsx": {
-    "mtime": 1783343550.9821818,
-    "ast_hash": "83745439bd6c6c1b7dbba936f0e420ae",
+    "mtime": 1790230642.4713993,
+    "ast_hash": "672ffd1dae0cb1913ee02431f1f46d53",
     "semantic_hash": ""
   },
   "src/components/ServerApplicationBadge.tsx": {
@@ -4265,8 +4265,8 @@
     "semantic_hash": ""
   },
   "src/lib/series-icons.ts": {
-    "mtime": 1783343534.1829202,
-    "ast_hash": "fff76e7650058cf3b18cdab58c224175",
+    "mtime": 1790230665.7360227,
+    "ast_hash": "b6ed4d128fc3e9471cb3c2fe133f6e8b",
     "semantic_hash": ""
   },
   "src/lib/seriesRanking.ts": {
@@ -6537,6 +6537,731 @@
   "src/components/nav/ink-nav.tsx": {
     "mtime": 1790230177.6710687,
     "ast_hash": "272d0a5d9337f693cd968a5fc8028bc6",
+    "semantic_hash": ""
+  },
+  "src/components/IconPicker.tsx": {
+    "mtime": 1790230685.3013558,
+    "ast_hash": "0d7dbf76f8ac63cd19dbfee14c7c74ea",
+    "semantic_hash": ""
+  },
+  "src/lib/picto-icons.ts": {
+    "mtime": 1790230584.3255837,
+    "ast_hash": "52912503681e67a91c4b7f973abdd6c0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/achieve.png": {
+    "mtime": 1790230577.075877,
+    "ast_hash": "5ea12178b358b8e57524c6fa3474d61e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/airplane.png": {
+    "mtime": 1790230576.891095,
+    "ast_hash": "524f0ed682666d8ca9be1d37c7f29c56",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/angel.png": {
+    "mtime": 1790230577.492717,
+    "ast_hash": "c2d6fdb71ca8f949c35565526859e549",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/ankh.png": {
+    "mtime": 1790230577.4153426,
+    "ast_hash": "eb1c85d0d571494d97864096001abf92",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/anvil.png": {
+    "mtime": 1790230576.8586001,
+    "ast_hash": "13401a4f2fb2cff69be5cf6ddca2797f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/armor.png": {
+    "mtime": 1790230576.7658367,
+    "ast_hash": "d238391ea97483b9f4c7d820e9be9645",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/assassin.png": {
+    "mtime": 1790230576.8335326,
+    "ast_hash": "9e27bbb56938e487dc0c2bdbedcad07a",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/attack.png": {
+    "mtime": 1790230576.800407,
+    "ast_hash": "cbc68e28eb24409c5f62a8a2e6054674",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/award.png": {
+    "mtime": 1790230577.068727,
+    "ast_hash": "e12e066c1847318f1fd0bf34b52434b3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/axe.png": {
+    "mtime": 1790230576.7119887,
+    "ast_hash": "94e37e3978fbc14fb6c3858b902f906e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/ball-attack.png": {
+    "mtime": 1790230576.8853366,
+    "ast_hash": "6c530781949107ad9e30a09cd0e0afb1",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/ball.png": {
+    "mtime": 1790230576.8777544,
+    "ast_hash": "9f20373bb87c6937e0215a3bd8cd1b97",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/bat.png": {
+    "mtime": 1790230577.335691,
+    "ast_hash": "96a38fc7038ad09b266e6cc27605bbb9",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/battle.png": {
+    "mtime": 1790230576.6991518,
+    "ast_hash": "a902f71dcbcd8463f08de60f005be7bf",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/bell.png": {
+    "mtime": 1790230577.6789763,
+    "ast_hash": "6bea48817b947662531a593678fb7c2e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/blackhole.png": {
+    "mtime": 1790230577.3273861,
+    "ast_hash": "387713fa2b2e798cc33dbc15f66e7af0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/bone.png": {
+    "mtime": 1790230577.276498,
+    "ast_hash": "c664688f600d3dfacf066f47666dbb89",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/book-0.png": {
+    "mtime": 1790230577.4537733,
+    "ast_hash": "f8cdfdc6456ce5729f19bb6b6fd52478",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/boom.png": {
+    "mtime": 1790230576.743438,
+    "ast_hash": "7da396df6fe26a80b705401118e9fbe5",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/boot-fly.png": {
+    "mtime": 1790230576.9054317,
+    "ast_hash": "86696e73a61ef12f8ebcd7ddc9d619b8",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/boss.png": {
+    "mtime": 1790230576.8404303,
+    "ast_hash": "1e854e879bc12cd475bcd94bb332ee4b",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/buff.png": {
+    "mtime": 1790230577.6919978,
+    "ast_hash": "a1b4a3ca7a0b24c1e4c075f639f40c5e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/bulb.png": {
+    "mtime": 1790230577.6359534,
+    "ast_hash": "d871557d16dcf66269f70cff9d8fcb0f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/cactus.png": {
+    "mtime": 1790230577.250531,
+    "ast_hash": "26f10eb3466d83b0ee921edc46db938e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/camera.png": {
+    "mtime": 1790230577.6009057,
+    "ast_hash": "d0689137369b9fe387c8f2e915be8c30",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/candle.png": {
+    "mtime": 1790230577.460476,
+    "ast_hash": "1e7baf90e91a9da2ab53b4b728a90661",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/card.png": {
+    "mtime": 1790230577.5314517,
+    "ast_hash": "a2e420a0955e394a1b2d18a6d4d0b978",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/castle.png": {
+    "mtime": 1790230577.4306252,
+    "ast_hash": "190cea62e13dbb659a2c3f859f77fb60",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chat.png": {
+    "mtime": 1790230577.6211908,
+    "ast_hash": "6e4a04945ec76865598c3a6d11e57f2c",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chess-king.png": {
+    "mtime": 1790230577.5527787,
+    "ast_hash": "3baaf9be73a59655232dd0fc1323b759",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chess-knight.png": {
+    "mtime": 1790230577.559026,
+    "ast_hash": "b3ae528460b1cd7cd1e8143e08b1ec7f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chess-pawn.png": {
+    "mtime": 1790230577.5658596,
+    "ast_hash": "aa50e72881808bedfe2ca573066816ff",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chess-queen.png": {
+    "mtime": 1790230577.573614,
+    "ast_hash": "560c915858d4fd9bfc1d2c567c83e413",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chess-rock.png": {
+    "mtime": 1790230577.5788229,
+    "ast_hash": "26ad8b2d0c4ed9320529d07908980281",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chest-0.png": {
+    "mtime": 1790230577.1426265,
+    "ast_hash": "1789fa8cff1e76265e6fca64f4a28b52",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/chest-1.png": {
+    "mtime": 1790230577.1502938,
+    "ast_hash": "898b14873bdfcaa7d99c98165e7c8c3d",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/clover.png": {
+    "mtime": 1790230577.264322,
+    "ast_hash": "28fe2cf60a1c52e1cba351b128d9bb5f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/coin-crown.png": {
+    "mtime": 1790230577.037654,
+    "ast_hash": "7ae1f3d365aa4d17d865bcebff603a9b",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/coin-star.png": {
+    "mtime": 1790230577.0473666,
+    "ast_hash": "005c9ec1ed2d37ed3ec4d4b93ddc2b42",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/compass.png": {
+    "mtime": 1790230576.977391,
+    "ast_hash": "1f29ca25608e15cda0c2aa3cc94f1d50",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/critical.png": {
+    "mtime": 1790230576.8126624,
+    "ast_hash": "bf9e2fb1575ee266e33505a392758088",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/crown.png": {
+    "mtime": 1790230577.0288525,
+    "ast_hash": "d247860aa028f9ecdc2f2ad05b860b0e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/crystal.png": {
+    "mtime": 1790230577.1858497,
+    "ast_hash": "8459ce163f9dd7c08ec845277bb4155a",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/damage.png": {
+    "mtime": 1790230576.8058372,
+    "ast_hash": "afcf260d857f3ed12963b8c2335bbc7e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/defense.png": {
+    "mtime": 1790230576.8187563,
+    "ast_hash": "78ffd4f2b4a9444eb7182a7aaddd57f8",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/dice.png": {
+    "mtime": 1790230577.5227642,
+    "ast_hash": "7089a1e2e15a800ebee95203aacda3d0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/emoji-smile.png": {
+    "mtime": 1790230577.6436107,
+    "ast_hash": "36caefdfb18f29586f4a549efaf3a5c0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/emoji-wow.png": {
+    "mtime": 1790230577.6523607,
+    "ast_hash": "4bee4aaf2ace8b557d58c738151822a3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/energy.png": {
+    "mtime": 1790230577.683702,
+    "ast_hash": "1c59a45ab3f91fa62631a6136a3b40d8",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/eyeball.png": {
+    "mtime": 1790230577.5014782,
+    "ast_hash": "2b21b2f9ea383b33cb9b73e72447dc11",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/feather.png": {
+    "mtime": 1790230577.270411,
+    "ast_hash": "527b850f58eaef999155401d4b1534a3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/fight.png": {
+    "mtime": 1790230576.7073934,
+    "ast_hash": "96f555eecdba9293a1a79b6eeba7ecde",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/fire.png": {
+    "mtime": 1790230577.1935275,
+    "ast_hash": "30f0f636451e3e5b7ac66e0f95e15687",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/fish-bone.png": {
+    "mtime": 1790230577.2892168,
+    "ast_hash": "a169698a0bdb14c78f073a812c36729f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/fish.png": {
+    "mtime": 1790230577.28254,
+    "ast_hash": "e1b73cfa525fe443faacac9927640f32",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/fist.png": {
+    "mtime": 1790230576.7943254,
+    "ast_hash": "277706046a71a0e10ef8a2e32061b78f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/flag-0.png": {
+    "mtime": 1790230576.9375787,
+    "ast_hash": "d4519f8f62e9af959a3c537e571257db",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/flag-1.png": {
+    "mtime": 1790230576.9437182,
+    "ast_hash": "8ae08b27f804963c6f99c8a59d0c0690",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/flower.png": {
+    "mtime": 1790230577.2428422,
+    "ast_hash": "a15416587a6cb06dc6a6c32c5058bfaa",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/friend-add.png": {
+    "mtime": 1790230577.615485,
+    "ast_hash": "c5683f8e30cc6178894aade1a675906b",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gacha-ball.png": {
+    "mtime": 1790230577.5458336,
+    "ast_hash": "75a263f60c7d5f4ec0ea4b2612a2b137",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/game.png": {
+    "mtime": 1790230577.508925,
+    "ast_hash": "3f4459ae310b44a37b50613c9e317453",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gem-diamond.png": {
+    "mtime": 1790230577.1087668,
+    "ast_hash": "49a58ccfc5b37f064fa3e470fdc20875",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gem-hexagon.png": {
+    "mtime": 1790230577.1154225,
+    "ast_hash": "5da0aad5052fe94325a4fd4e8259cad0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gem-rhombus.png": {
+    "mtime": 1790230577.1228445,
+    "ast_hash": "d76dc8923ca2d1c97f396f3636dc1063",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gem-triangle.png": {
+    "mtime": 1790230577.1304567,
+    "ast_hash": "aca2c0d6fb160e0623d3e1d859b3d286",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gift.png": {
+    "mtime": 1790230577.1353612,
+    "ast_hash": "85646d59c750b38e610eb3670417a9aa",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/glove.png": {
+    "mtime": 1790230576.7871656,
+    "ast_hash": "fa2d4eaba7e5674afac7234c0c7efb2d",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/goal.png": {
+    "mtime": 1790230576.9513135,
+    "ast_hash": "1f0dc72ec6da2a83cbfebf1b83ca2eb3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/guild.png": {
+    "mtime": 1790230577.6074722,
+    "ast_hash": "a2c0d2973686c8f0a2ea12c459e22dab",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/gun.png": {
+    "mtime": 1790230576.7311778,
+    "ast_hash": "506b1a708950fa1c8a2fbb91e4c37a91",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/hammer.png": {
+    "mtime": 1790230576.8638642,
+    "ast_hash": "35a2f629464cb428795ec9f2b3d8a226",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/hatchet.png": {
+    "mtime": 1790230576.7190113,
+    "ast_hash": "61879e40608df352d8b368e22a36fb9a",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/health.png": {
+    "mtime": 1790230576.9591486,
+    "ast_hash": "a6b39629a911ae46cd7c6edc9c4b31c4",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/helmet.png": {
+    "mtime": 1790230576.7735107,
+    "ast_hash": "1aa4ce31002c633d3cc2338e5e5adbe0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/horseshoes.png": {
+    "mtime": 1790230576.971295,
+    "ast_hash": "3a50be038d190b3da4618e16cd11c7a6",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/joystick.png": {
+    "mtime": 1790230577.5140684,
+    "ast_hash": "1e6bc2e77721d1459e0ef2f5fc96b100",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/key-crown.png": {
+    "mtime": 1790230577.1789503,
+    "ast_hash": "b1c380b22f24b445683dc01659b52c30",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/kinght.png": {
+    "mtime": 1790230576.8704422,
+    "ast_hash": "7b85578b212129fb49e39fdb4f849fc2",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/laurel.png": {
+    "mtime": 1790230577.084069,
+    "ast_hash": "8728e5c85ad5c23c0535e44f44554157",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/leaderboard.png": {
+    "mtime": 1790230577.0958982,
+    "ast_hash": "08284a8c57934595ca4277dbd5f43245",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/leaf.png": {
+    "mtime": 1790230577.221284,
+    "ast_hash": "72ca6068c9fc57fa7b1e309b39e53884",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/life.png": {
+    "mtime": 1790230577.6577308,
+    "ast_hash": "46fe21664593b3e7af5f67d6c86e6e25",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/like.png": {
+    "mtime": 1790230577.6652465,
+    "ast_hash": "6c12b6a0916311684721155e9d51510c",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/magic-ball.png": {
+    "mtime": 1790230577.362477,
+    "ast_hash": "ae11e17995addf2a702539f8254c9bd1",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/magic-bomb.png": {
+    "mtime": 1790230576.7508686,
+    "ast_hash": "c8037357fc138c7b63e489d33091cbd5",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/magic-drop.png": {
+    "mtime": 1790230577.3689897,
+    "ast_hash": "dd13aff03873d61c265095ae48227ee2",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/magic-square.png": {
+    "mtime": 1790230577.3761482,
+    "ast_hash": "f1d9f78b25daf32c4cdfa4485ad38cf7",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/magic.png": {
+    "mtime": 1790230577.3553128,
+    "ast_hash": "5d1d003db8cd69bfe22f4964b3d5a0d0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/mana.png": {
+    "mtime": 1790230577.467801,
+    "ast_hash": "6091b51a5b08e7808548b8691278b4ea",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/map-0.png": {
+    "mtime": 1790230576.9841566,
+    "ast_hash": "08de49b10dfa6fe095f5717d957ff4db",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/mask.png": {
+    "mtime": 1790230577.4851625,
+    "ast_hash": "9e96738f7d458777db8a36252561d736",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/meat.png": {
+    "mtime": 1790230577.3429234,
+    "ast_hash": "af074650a37e5e94b83316615cf3b6e4",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/medal-0.png": {
+    "mtime": 1790230577.0545113,
+    "ast_hash": "872b7b7444ab7a08fe02d4b9630afa68",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/medal-1.png": {
+    "mtime": 1790230577.06262,
+    "ast_hash": "4b90e8b4a79652af8bad51f3b6525d39",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/megaphone.png": {
+    "mtime": 1790230577.6288002,
+    "ast_hash": "fe06cbe1121c7c41a038c77b729ebc9f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/missile.png": {
+    "mtime": 1790230576.7372992,
+    "ast_hash": "316ee0eeaac4d0c8ccaac60a8cb4a049",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/moneybag.png": {
+    "mtime": 1790230577.157592,
+    "ast_hash": "589c1b553d9f9fd11287e23f49298b39",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/moon.png": {
+    "mtime": 1790230577.2153838,
+    "ast_hash": "78aa1e777ac60df015d6fa83a278363c",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/movie.png": {
+    "mtime": 1790230577.5859642,
+    "ast_hash": "33d3117b62d6c31c863996a1ca2ef059",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/mushroom.png": {
+    "mtime": 1790230577.2569726,
+    "ast_hash": "3121392abbbfa82883b209a7a11e350f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/music.png": {
+    "mtime": 1790230577.5921328,
+    "ast_hash": "ee2ce9d297f418ab71cc99945eeb77e8",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/paw.png": {
+    "mtime": 1790230577.2973568,
+    "ast_hash": "e01abebb98a0eacf75b2b683422c00ba",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/pet.png": {
+    "mtime": 1790230577.3053086,
+    "ast_hash": "7081a43f9daa6f114214df91c1d81962",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/piggy.png": {
+    "mtime": 1790230577.1661098,
+    "ast_hash": "f83aa61002922bd2353d14ff24e89248",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/planet.png": {
+    "mtime": 1790230577.3212035,
+    "ast_hash": "b1beee64fb9b482f2f8af7f3118d3643",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/posion.png": {
+    "mtime": 1790230577.3978848,
+    "ast_hash": "762de3063d7997eafc0fddef6b24f53f",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/potion.png": {
+    "mtime": 1790230577.3905218,
+    "ast_hash": "cf2e9055dbabe71baff6e717124fa518",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/priest.png": {
+    "mtime": 1790230577.4763968,
+    "ast_hash": "e1d4e619fb584eb4305e72ca3b12b9d1",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/pumkin.png": {
+    "mtime": 1790230577.3121426,
+    "ast_hash": "660aedbb1418a2c95699b5e8a5562066",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/puzzle.png": {
+    "mtime": 1790230577.537541,
+    "ast_hash": "870cc9e4f76d06b12e5c121f95efacdf",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/ranking.png": {
+    "mtime": 1790230577.1020012,
+    "ast_hash": "bdb3873a7e04cb29f4ce0713a8c25ba3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/rocket.png": {
+    "mtime": 1790230576.8972185,
+    "ast_hash": "803ba862aa84e691bb8a9da7d22520a5",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/rune.png": {
+    "mtime": 1790230577.38282,
+    "ast_hash": "3ba1e72b79c82347b16d5f4596a8ee93",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/scroll.png": {
+    "mtime": 1790230577.4460764,
+    "ast_hash": "537acb59ebaa9f70681b4a7a4988068a",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/shield.png": {
+    "mtime": 1790230576.7577198,
+    "ast_hash": "2d2d09d2f9861b484ddb89a5cbf8f364",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/shoes.png": {
+    "mtime": 1790230576.9127474,
+    "ast_hash": "c6e05a689ebc1059845ca1deb2d8fc49",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/shuriken.png": {
+    "mtime": 1790230576.723607,
+    "ast_hash": "6e97284265af3d58b0649e81beed2338",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/siren.png": {
+    "mtime": 1790230577.0073166,
+    "ast_hash": "9f2e5b4ec5b289928c93d8fec89ef0ce",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/skull.png": {
+    "mtime": 1790230576.8274207,
+    "ast_hash": "14807b5a47220dcd6c11d1ab0e8fca7b",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/speed.png": {
+    "mtime": 1790230576.9188275,
+    "ast_hash": "d93eaa6c51230e79c906b09d2692a15d",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/star.png": {
+    "mtime": 1790230577.090206,
+    "ast_hash": "f0c7a5bed45523049b663372d0650602",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/stopwatch.png": {
+    "mtime": 1790230576.92457,
+    "ast_hash": "12c3c5685fa7fdefc8ed2c0d622db24e",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/sun.png": {
+    "mtime": 1790230577.207587,
+    "ast_hash": "1d3f2834337df9d94fc498d580118856",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/sword.png": {
+    "mtime": 1790230576.6935658,
+    "ast_hash": "aa838c8950d88b5edfd5051c206ffd6d",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/tank.png": {
+    "mtime": 1790230576.853475,
+    "ast_hash": "7c3c03bf6fa902c81f8f69be8234f1c9",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/target.png": {
+    "mtime": 1790230576.847375,
+    "ast_hash": "f7aa1b5c2f2a389a328e3223bbb5bbf0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/thunder.png": {
+    "mtime": 1790230576.9993563,
+    "ast_hash": "fef027dbfe7b86574373acc1a275a7e5",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/ticket.png": {
+    "mtime": 1790230577.1707988,
+    "ast_hash": "2ef52e3f253cf8219ebd1bd2d06a47dc",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/timer.png": {
+    "mtime": 1790230576.9306483,
+    "ast_hash": "4adbd5d766e3d5b9def824b265f13b94",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/tower.png": {
+    "mtime": 1790230577.4389136,
+    "ast_hash": "c2d5453c9d10112aa5ce36e3297a0d19",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/training.png": {
+    "mtime": 1790230576.9637241,
+    "ast_hash": "56d30174037e1f3534cc887a62314374",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/tree-pine.png": {
+    "mtime": 1790230577.2362335,
+    "ast_hash": "db59279ec0562e4322dcc6f31cc4b6e2",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/tree.png": {
+    "mtime": 1790230577.2284436,
+    "ast_hash": "e150af1a3d85aed513469ea824394ff7",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/trophy-0.png": {
+    "mtime": 1790230577.0134583,
+    "ast_hash": "3cf5089faa6b89307a8cac6cfa3b8fe9",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/trophy-1.png": {
+    "mtime": 1790230577.021249,
+    "ast_hash": "d323b033f16b2e6ffa30ce76ae54e0f3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/tv.png": {
+    "mtime": 1790230577.671371,
+    "ast_hash": "ff0fbe013d0a8dfcdab688e7cac74dd7",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/viking-helmet.png": {
+    "mtime": 1790230576.781071,
+    "ast_hash": "7a12e83a92ae858e72e55f3a0c2cc54d",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/wand-1.png": {
+    "mtime": 1790230577.3490007,
+    "ast_hash": "ed0be444bf583e3987b10234ed8a46c3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/water.png": {
+    "mtime": 1790230577.1993306,
+    "ast_hash": "e8e4e338d76737ea1220b8d68b7b98c6",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/wing.png": {
+    "mtime": 1790230576.9913664,
+    "ast_hash": "50d760e5e006637921bdc9829853fea0",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/witchhat.png": {
+    "mtime": 1790230577.4089255,
+    "ast_hash": "29710d4f2b597bfc70986f016fc576b3",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/yinyang.png": {
+    "mtime": 1790230577.4240625,
+    "ast_hash": "6eb0a0699fa8c2b155800a52e60de2ec",
     "semantic_hash": ""
   }
 }

@@ -9,7 +9,8 @@
 import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Crown, Skull, Handshake, Flame } from "lucide-react";
+import { Handshake } from "lucide-react";
+import { Crown, Skull, Flame } from "@/components/icons";
 import { winStreakBonusFor } from "@/lib/battle-cards/win-streak-constants";
 
 export type BattleOutcome = "win" | "loss" | "draw";

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Clapperboard } from "lucide-react";
+import { Trophy, Clapperboard } from "@/components/icons";
 import ClipVotingClient from "../clip-des-monats/ClipVotingClient";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
 import CountdownBadge from "@/components/CountdownBadge";

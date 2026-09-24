@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { Images } from "lucide-react";
+import { Images } from "@/components/icons";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];

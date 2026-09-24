@@ -3,7 +3,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, X, Send, Bell, Settings } from "lucide-react";
+import { MessageCircle, X, Send, Bell, Settings } from "@/components/icons";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Tabs } from "@/components/admin/Tabs";

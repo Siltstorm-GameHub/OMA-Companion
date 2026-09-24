@@ -11,7 +11,7 @@
 // gespeicherten Config) — sie steuert nur, welche Bewegung man beim Anpassen sieht.
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { Select } from "@/components/ui/Select";
 import { loadCharacterManifest, defaultConfigFor, carryConfigOver, bodyOf } from "@/lib/character-kit/manifest";
 import type { CharacterConfig, CharacterManifest, Gender } from "@/lib/character-kit/types";

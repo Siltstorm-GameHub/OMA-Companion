@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 
 const POLL_INTERVAL_MS = 2500;

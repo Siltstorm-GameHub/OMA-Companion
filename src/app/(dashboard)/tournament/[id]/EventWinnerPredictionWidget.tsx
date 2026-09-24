@@ -3,7 +3,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Target, Search, X } from "lucide-react";
+import { Target, Search, X } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 

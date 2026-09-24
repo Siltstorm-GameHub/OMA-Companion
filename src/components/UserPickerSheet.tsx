@@ -1,7 +1,8 @@
 "use client";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
-import { Search, X, ChevronDown, Users } from "lucide-react";
+import { ChevronDown, Users } from "lucide-react";
+import { Search, X } from "@/components/icons";
 
 // Reines Admin-Werkzeug — bewusst ohne Rang-Ring, siehe RankedAvatar.
 type User = { id: string; name: string | null; username: string | null; image: string | null };

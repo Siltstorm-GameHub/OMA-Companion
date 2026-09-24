@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import MatchupBadge from "./MatchupBadge";

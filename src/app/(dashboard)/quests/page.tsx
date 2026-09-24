@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "lucide-react";
+import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 import QuestRegenerateButton from "./QuestRegenerateButton";
 import { getBerlinDateParts } from "@/lib/time";

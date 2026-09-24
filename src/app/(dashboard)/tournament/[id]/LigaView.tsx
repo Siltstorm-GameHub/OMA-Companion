@@ -1,7 +1,7 @@
 "use client";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
-import { Trophy, Clock, StickyNote } from "lucide-react";
+import { Trophy, Clock, StickyNote } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";

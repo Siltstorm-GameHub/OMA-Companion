@@ -1,4 +1,4 @@
-import { ScrollText } from "lucide-react";
+import { ScrollText } from "@/components/icons";
 
 export default function RulesSection({ rules, className = "" }: { rules: string | null | undefined; className?: string }) {
   if (!rules) return null;

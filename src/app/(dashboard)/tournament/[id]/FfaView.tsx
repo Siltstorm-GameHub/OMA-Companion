@@ -2,7 +2,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";

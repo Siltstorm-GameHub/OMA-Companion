@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pencil, X, Check, Plus } from "lucide-react";
+import { Eye, EyeOff, Pencil, X, Check, Plus } from "@/components/icons";
 import { BADGE_CATEGORY_LABELS, type Badge } from "@/lib/badges";
 import BadgeIcon from "@/components/BadgeIcon";
 

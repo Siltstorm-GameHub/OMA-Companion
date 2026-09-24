@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "@/components/icons";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";
 import TacticCardTile from "./TacticCardTile";

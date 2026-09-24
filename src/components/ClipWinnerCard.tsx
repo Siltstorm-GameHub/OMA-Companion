@@ -1,4 +1,4 @@
-import { Trophy } from "lucide-react";
+import { Trophy } from "@/components/icons";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
 import { clipCredit } from "@/lib/clip-display";
 

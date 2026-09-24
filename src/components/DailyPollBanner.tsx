@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Vote as VoteIcon, X, ExternalLink, Loader2, Undo2 } from "lucide-react";
+import { Vote as VoteIcon, X, ExternalLink, Loader2, Undo2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
 import { NewContentPing } from "@/components/NewContentPing";

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { SteamGameResult } from "@/app/api/game-search/route";
-import { Gamepad2, Loader2, Plus, X } from "lucide-react";
+import { Gamepad2, Loader2, Plus, X } from "@/components/icons";
 
 type GameSuggestion = { name: string; appId: number | null };
 

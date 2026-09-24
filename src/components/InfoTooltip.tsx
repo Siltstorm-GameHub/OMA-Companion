@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle } from "@/components/icons";
 
 // Kleines Info-Icon mit Klartext-Erklärung für komplexere Admin-Bereiche (Bracket, Punkte-Konfiguration, ...).
 export default function InfoTooltip({ text }: { text: string }) {

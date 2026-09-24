@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lightbulb, Star } from "lucide-react";
+import { Lightbulb, Star } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { formatBerlinDate } from "@/lib/time";
 import { ideaLifecycleMeta, summarizeStars } from "@/lib/idea-lifecycle";

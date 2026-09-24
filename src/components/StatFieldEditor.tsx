@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X } from "@/components/icons";
 
 export default function StatFieldEditor({
   fields,

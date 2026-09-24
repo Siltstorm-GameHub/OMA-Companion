@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Briefcase } from "lucide-react";
+import { Briefcase } from "@/components/icons";
 
 type Badge =
   | { employed: true; jobKey: string; jobLabel: string; jobEmoji: string; status: string; tierLabel: string | null }

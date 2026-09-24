@@ -1,4 +1,4 @@
-import { Megaphone } from "lucide-react";
+import { Megaphone } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { formatBerlinDate } from "@/lib/time";
 

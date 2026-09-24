@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { customEmojiToken, customEmojiUrl, type CustomEmoji } from "@/lib/discord-emoji";
 
 /**

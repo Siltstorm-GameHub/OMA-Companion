@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Tv2 } from "lucide-react";
+import { Loader2, Tv2 } from "@/components/icons";
 import { toast } from "sonner";
 
 /** Einstiegspunkt fürs persönliche OBS-Overlay — nur nutzbar, wenn im Profil ein Twitch-Konto

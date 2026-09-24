@@ -5,7 +5,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Check, Loader2 } from "@/components/icons";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";
 import { computeSynergies } from "@/lib/battle-cards/synergy";

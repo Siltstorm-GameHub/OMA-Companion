@@ -4,7 +4,8 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Lock, Users, X } from "lucide-react";
+import { Users } from "lucide-react";
+import { Lock, X } from "@/components/icons";
 import DiscordLoginButton from "@/components/DiscordLoginButton";
 import { isGuestAllowedPath } from "@/lib/guest-access";
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check } from "@/components/icons";
 
 function CopyField({ label, value, onCopy }: { label: string; value: string; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);

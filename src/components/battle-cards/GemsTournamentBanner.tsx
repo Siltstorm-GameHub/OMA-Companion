@@ -11,7 +11,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import CountdownBadge from "@/components/CountdownBadge";
 import RankedAvatar from "@/components/RankedAvatar";
 import LiveBattleView from "./LiveBattleView";

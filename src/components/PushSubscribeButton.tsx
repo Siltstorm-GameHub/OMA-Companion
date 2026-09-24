@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Loader2 } from "@/components/icons";
 import { toast } from "sonner";
 
 function urlBase64ToUint8Array(base64: string) {

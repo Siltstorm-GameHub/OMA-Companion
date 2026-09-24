@@ -1,4 +1,4 @@
-import { Trophy, CalendarDays, Medal, Gamepad2 } from "lucide-react";
+import { Trophy, CalendarDays, Medal, Gamepad2 } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
 /**

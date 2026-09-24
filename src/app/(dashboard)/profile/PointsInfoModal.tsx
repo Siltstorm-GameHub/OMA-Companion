@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Info, Trophy } from "lucide-react";
+import { Info, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import RankIcon from "@/components/RankIcon";
 import { Modal } from "@/components/ui/Modal";

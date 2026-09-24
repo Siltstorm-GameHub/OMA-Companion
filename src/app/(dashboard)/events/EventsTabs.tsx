@@ -2,7 +2,7 @@
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
-import { CalendarDays, Target } from "lucide-react";
+import { CalendarDays, Target } from "@/components/icons";
 
 function EventsTabsInner({
   eventsPanel,

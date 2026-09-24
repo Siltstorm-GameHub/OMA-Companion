@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { getSessionUser } from "@/lib/roles";
-import { Trophy, Clapperboard, Images } from "lucide-react";
+import { Trophy, Clapperboard, Images } from "@/components/icons";
 import ClipVotingClient from "./ClipVotingClient";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
 import CountdownBadge from "@/components/CountdownBadge";

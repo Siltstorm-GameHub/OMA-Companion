@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield, Crown } from "lucide-react";
+import { Shield, Crown } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 
 export type ProfileSquad = { id: string; name: string; icon: string | null; role: string };

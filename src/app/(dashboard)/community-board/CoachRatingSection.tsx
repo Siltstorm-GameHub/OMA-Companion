@@ -2,7 +2,8 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Star, GraduationCap, Search, LifeBuoy } from "lucide-react";
+import { LifeBuoy } from "lucide-react";
+import { Star, GraduationCap, Search } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 
 /**

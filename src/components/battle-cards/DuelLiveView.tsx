@@ -22,7 +22,8 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Loader2, Wind, X, Handshake, Skull } from "lucide-react";
+import { Wind, Handshake } from "lucide-react";
+import { Loader2, X, Skull } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import MobaConfirmDialog from "./MobaConfirmDialog";

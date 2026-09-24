@@ -19,7 +19,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import confetti from "canvas-confetti";
-import { Gift, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Gift } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 
 export type ChestPrize = { kind: "coins"; amount: number } | { kind: "pack"; packKind: string };

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, Send, X } from "@/components/icons";
 
 export default function ApplyButton({
   serverId, status, isFull, waitlistPosition,

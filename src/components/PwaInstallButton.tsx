@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Download, Share, X, Menu } from "lucide-react";
+import { Download, Share, X, Menu } from "@/components/icons";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff } from "@/components/icons";
 
 type Prefs = {
   badge:     boolean;

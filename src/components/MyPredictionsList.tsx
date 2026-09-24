@@ -3,7 +3,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Target, Trash2 } from "lucide-react";
+import { Target, Trash2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import { formatBerlinDate } from "@/lib/time";
 

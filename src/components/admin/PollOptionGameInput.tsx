@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { SteamGameResult } from "@/app/api/game-search/route";
-import { Gamepad2, Loader2 } from "lucide-react";
+import { Gamepad2, Loader2 } from "@/components/icons";
 
 interface PollOptionGameInputProps {
   value: string;
