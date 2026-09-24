@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { ShieldAlert, ExternalLink, LogIn, CheckSquare, Square } from "lucide-react";
+import { ShieldAlert, LogIn, Square } from "lucide-react";
+import { ExternalLink, CheckSquare } from "@/components/icons";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const RULES = [

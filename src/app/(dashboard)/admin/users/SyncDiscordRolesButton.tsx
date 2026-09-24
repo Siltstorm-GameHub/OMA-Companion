@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Shield } from "lucide-react";
+import { Shield } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 export default function SyncDiscordRolesButton() {

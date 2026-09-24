@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Users, EyeOff } from "lucide-react";
+import { Users } from "lucide-react";
+import { Plus, EyeOff } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 
 import IconPicker from "@/components/IconPicker";

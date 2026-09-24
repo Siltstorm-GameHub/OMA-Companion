@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "@/components/icons";
 import type { CardRarity, UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 
 const STEP_LABELS = ["Stufe 1→2", "Stufe 2→3", "Stufe 3→4", "Stufe 4→5"];

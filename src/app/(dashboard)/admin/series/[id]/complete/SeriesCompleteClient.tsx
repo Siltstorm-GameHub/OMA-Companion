@@ -6,10 +6,8 @@ import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
-import {
-  ChevronLeft, CheckCircle2, Trophy, Vote, ListOrdered,
-  GripVertical, AlertTriangle, RotateCcw, Equal, Repeat, Plus,
-} from "lucide-react";
+import { ChevronLeft, GripVertical, Repeat } from "lucide-react";
+import { CheckCircle2, Trophy, Vote, ListOrdered, AlertTriangle, RotateCcw, Equal, Plus } from "@/components/icons";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type PlacementReward = { place: number; coins: number; rankPoints: number };

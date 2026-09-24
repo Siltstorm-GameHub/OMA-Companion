@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Minus, Check, X, Loader2 } from "lucide-react";
+import { Plus, Minus, Check, X, Loader2 } from "@/components/icons";
 import { toast } from "sonner";
 
 export default function PointsManager({ userId, userName }: { userId: string; userName: string }) {

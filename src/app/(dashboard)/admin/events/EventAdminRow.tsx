@@ -3,10 +3,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import {
-  ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, BarChart2, Plus, CheckCircle2,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Users, UserMinus, Repeat, GitBranch, Hash, CalendarPlus } from "lucide-react";
+import { Trophy, Settings, UserPlus, Search, Trash2, AlertTriangle, X, Gamepad2, Swords, ExternalLink, RefreshCw, BarChart2, Plus, CheckCircle2 } from "@/components/icons";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import { formatBerlinDate } from "@/lib/time";
 import Link from "next/link";

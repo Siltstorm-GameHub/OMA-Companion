@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/icons";
 import { requireRole } from "@/lib/roles";
 import { getSeasonConfig } from "@/lib/season/season-config";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";

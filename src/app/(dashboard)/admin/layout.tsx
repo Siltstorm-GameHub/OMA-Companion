@@ -1,5 +1,5 @@
 import { requireModeratorOrAnySquadCaptain } from "@/lib/roles";
-import { Shield } from "lucide-react";
+import { Shield } from "@/components/icons";
 import AdminNav from "./AdminNav";
 
 // Der blanket Gate hier lässt zusätzlich zu Moderatoren/Admins auch reine Squad-Captains durch (globale

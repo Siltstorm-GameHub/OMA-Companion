@@ -4,7 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Ban, Loader2 } from "lucide-react";
+import { Ban } from "lucide-react";
+import { Check, X, Loader2 } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };

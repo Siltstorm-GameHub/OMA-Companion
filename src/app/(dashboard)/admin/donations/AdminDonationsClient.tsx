@@ -3,7 +3,8 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Trash2, Plus, Euro, Heart, ShoppingCart, TrendingDown, Wallet, Lightbulb, Pencil, Check, X } from "lucide-react";
+import { Euro, TrendingDown } from "lucide-react";
+import { Trash2, Plus, Heart, ShoppingCart, Wallet, Lightbulb, Pencil, Check, X } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
 

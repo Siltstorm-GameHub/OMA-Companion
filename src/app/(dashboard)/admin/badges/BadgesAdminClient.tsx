@@ -1,7 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Plus, Award, Search, X, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Plus, Award, Search, X } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 import BadgeIcon from "@/components/BadgeIcon";
 import WanderpocalRecomputeButton from "../WanderpocalRecomputeButton";

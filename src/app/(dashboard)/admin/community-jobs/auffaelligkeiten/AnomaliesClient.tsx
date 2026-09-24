@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { Badge } from "@/components/ui/Badge";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 

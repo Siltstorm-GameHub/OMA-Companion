@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save } from "@/components/icons";
 import type { MinigamesConfig } from "@/lib/minigames-config";
 
 export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) {

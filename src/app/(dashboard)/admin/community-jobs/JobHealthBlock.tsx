@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Info, Loader2 } from "lucide-react";
+import { AlertTriangle, Info, Loader2 } from "@/components/icons";
 
 interface Health {
   key: string; label: string; emoji: string; maxSlots: number; filled: number; free: number;

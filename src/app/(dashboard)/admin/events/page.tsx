@@ -1,7 +1,7 @@
 import { requireModeratorOrAnySquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import AdminEventsClient from "./AdminEventsClient";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 

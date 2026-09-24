@@ -2,7 +2,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNow } from "@/lib/useNow";
 import { toast } from "sonner";
-import { Vote, Trophy, Clock, CheckCircle2, Trash2, UserX } from "lucide-react";
+import { UserX } from "lucide-react";
+import { Vote, Trophy, Clock, CheckCircle2, Trash2 } from "@/components/icons";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "@/components/icons";
 import type { SeasonRewardConfig, SeasonPlacementReward } from "@/lib/battle-cards/season-reward-config";
 
 const PLACES: { key: keyof SeasonRewardConfig; label: string }[] = [

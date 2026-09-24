@@ -2,10 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ChevronDown, ChevronUp, Repeat, Gamepad2, Swords, Hash, RefreshCw,
-  CalendarPlus, BarChart2, X, Trophy, ExternalLink, Settings,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Repeat, Hash, CalendarPlus } from "lucide-react";
+import { Gamepad2, Swords, RefreshCw, BarChart2, X, Trophy, ExternalLink, Settings } from "@/components/icons";
 import Link from "next/link";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import GameNameInput from "@/components/GameNameInput";

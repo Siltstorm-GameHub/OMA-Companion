@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Loader2, Plus, X } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 
 function toDateInputValue(d: Date) {

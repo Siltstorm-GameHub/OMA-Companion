@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ComponentProps } from "react";
-import { Clapperboard, Trophy } from "lucide-react";
+import { Clapperboard, Trophy } from "@/components/icons";
 import { Tabs } from "@/components/admin/Tabs";
 import ContestManager from "./ContestManager";
 import CreateContestForm from "./CreateContestForm";

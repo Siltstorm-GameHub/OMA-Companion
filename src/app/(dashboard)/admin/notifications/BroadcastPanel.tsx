@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Users, X, ChevronDown, Check, Smartphone, Bell, MessageSquare, Hash } from "lucide-react";
+import { Users, ChevronDown, Smartphone, Hash } from "lucide-react";
+import { Send, X, Check, Bell, MessageSquare } from "@/components/icons";
 import Image from "next/image";
 import { PAGE_LINKS } from "@/lib/page-links";
 

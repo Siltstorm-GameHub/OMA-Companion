@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus, Pencil, Check, X, Ban } from "lucide-react";
+import { Square, Ban } from "lucide-react";
+import { Trophy, Clapperboard, ExternalLink, Loader2, Link2, Plus, Pencil, Check, X } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { formatBerlinDate } from "@/lib/time";
 

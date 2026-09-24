@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { RefreshCw, Loader2, Trophy } from "lucide-react";
+import { RefreshCw, Loader2, Trophy } from "@/components/icons";
 
 export default function WanderpocalRecomputeButton() {
   const [loading, setLoading] = useState(false);

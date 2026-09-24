@@ -7,11 +7,8 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
-import {
-  ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
-  Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard,
-  Eye, EyeOff, Lock, Unlock,
-} from "lucide-react";
+import { ChevronLeft, UserMinus, Repeat } from "lucide-react";
+import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
 import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";

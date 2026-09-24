@@ -6,12 +6,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
-  Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
-  MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
-  Monitor, Flame, Repeat, Clock, Lock, Unlock,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus, Hash, Repeat } from "lucide-react";
+import { RefreshCw, Gamepad2, Swords, BarChart2, Plus, X, Trophy, Save, Coins, MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff, Monitor, Flame, Clock, Lock, Unlock } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";

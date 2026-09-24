@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Star } from "lucide-react";
+import { Star } from "@/components/icons";
 import { Select } from "@/components/ui/Select";
 import { IDEA_LIFECYCLES, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 

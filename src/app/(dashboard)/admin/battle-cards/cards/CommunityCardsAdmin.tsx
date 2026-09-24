@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, Save, Loader2, ChevronDown, Upload, RotateCcw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Search, Save, Loader2, Upload, RotateCcw } from "@/components/icons";
 
 interface CardRow {
   id: string;

@@ -7,10 +7,8 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import LivePollsPanel from "./LivePollsPanel";
-import {
-  ChevronLeft, CheckCircle2, Trophy, Vote,
-  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock, Ban, Flame,
-} from "lucide-react";
+import { ChevronLeft, GripVertical, Ban } from "lucide-react";
+import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };

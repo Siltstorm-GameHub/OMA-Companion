@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Trophy, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Maximize2, Timer,
-} from "lucide-react";
+import { Table2, Users, Repeat, Sparkles, Move } from "lucide-react";
+import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Trophy, Swords, Gamepad2, Maximize2, Timer } from "@/components/icons";
 import { toast } from "sonner";
 import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "../../PositionCanvas";

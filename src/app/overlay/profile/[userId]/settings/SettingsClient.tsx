@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, ExternalLink, Tv2, Check, Repeat, Move, Sparkles, TrendingUp, CalendarClock, Gamepad2, Maximize2, Timer } from "lucide-react";
+import { Repeat, Move, Sparkles, TrendingUp, CalendarClock } from "lucide-react";
+import { Copy, ExternalLink, Tv2, Check, Gamepad2, Maximize2, Timer } from "@/components/icons";
 import { toast } from "sonner";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "@/app/overlay/PositionCanvas";
 import {

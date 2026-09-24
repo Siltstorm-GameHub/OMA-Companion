@@ -15,7 +15,7 @@ import GameCover from "@/components/GameCover";
 import EventCardLink from "./EventCardLink";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
-import { EyeOff } from "lucide-react";
+import { EyeOff } from "@/components/icons";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import { formatBerlinDate, formatBerlinRange, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";

@@ -3,12 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import {
-  Users, LayoutDashboard, Bell,
-  CalendarDays, Heart, Medal, Shield,
-  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, ShoppingBag, Swords,
-  Briefcase,
-} from "lucide-react";
+import { Users, Users2, Handshake, Server } from "lucide-react";
+import { LayoutDashboard, Bell, CalendarDays, Heart, Medal, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
 import DailyPollActionBadge from "@/components/DailyPollActionBadge";

@@ -4,10 +4,8 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Trophy, Plus, Trash2, Clock, ChevronDown, ChevronUp,
-  Save, X, RotateCcw, RefreshCw,
-} from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw } from "@/components/icons";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";

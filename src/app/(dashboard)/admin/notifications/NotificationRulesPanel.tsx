@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X, Link2, Calendar, Users, UserCheck } from "lucide-react";
+import { Smartphone, Hash, ChevronDown, Users, UserCheck } from "lucide-react";
+import { Bell, Save, MessageSquare, Send, Trash2, Check, Smile, X, Link2, Calendar } from "@/components/icons";
 import { PAGE_LINKS } from "@/lib/page-links";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 

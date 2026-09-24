@@ -2,7 +2,7 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "lucide-react";
+import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";

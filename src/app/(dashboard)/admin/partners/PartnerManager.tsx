@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Plus, Trash2, ExternalLink, ToggleLeft, ToggleRight, Loader2, Search, Link2, Unlink } from "lucide-react";
+import { ToggleLeft, ToggleRight, Unlink } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Loader2, Search, Link2 } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 

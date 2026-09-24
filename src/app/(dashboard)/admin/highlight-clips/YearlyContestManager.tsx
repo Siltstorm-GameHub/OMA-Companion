@@ -3,7 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Clapperboard, ExternalLink, Loader2, Square } from "lucide-react";
+import { Square } from "lucide-react";
+import { Trophy, Clapperboard, ExternalLink, Loader2 } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { formatBerlinDate } from "@/lib/time";
 

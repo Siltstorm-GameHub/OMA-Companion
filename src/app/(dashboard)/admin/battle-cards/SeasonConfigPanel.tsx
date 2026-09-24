@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Play, Loader2, RotateCcw } from "lucide-react";
+import { Save, Play, Loader2, RotateCcw } from "@/components/icons";
 import type { SeasonConfig } from "@/lib/season/season-config";
 import { formatBerlinDateTime, getBerlinDateParts, fromDatetimeLocalBerlin } from "@/lib/time";
 

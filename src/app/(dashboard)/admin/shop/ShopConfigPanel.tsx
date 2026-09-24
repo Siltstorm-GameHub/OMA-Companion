@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Plus, Trash2 } from "lucide-react";
+import { Save, Plus, Trash2 } from "@/components/icons";
 import type { PackKind, PackPrices, ShopConfig, WheelPrize } from "@/lib/shop-config";
 
 function newId() {

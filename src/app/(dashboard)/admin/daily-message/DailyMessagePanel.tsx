@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";

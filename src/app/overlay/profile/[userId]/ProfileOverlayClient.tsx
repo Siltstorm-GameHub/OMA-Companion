@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Calendar, Clock, Gamepad2 } from "lucide-react";
+import { Calendar, Clock, Gamepad2 } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import { getGameFallbackGradient } from "@/lib/game-cover";
 import { BRAND_LOGO } from "@/lib/brand";
