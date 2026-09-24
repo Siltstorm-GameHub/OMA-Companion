@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
@@ -735,7 +736,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               {placementRewards.map(r => (
                 <div key={r.place} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
                   <span className="text-sm text-gray-300 flex items-center gap-1.5">
-                    {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
+                    <PlaceMedal place={r.place} /> {r.place}. Platz
                   </span>
                   <div className="flex items-center gap-1">
                     <RankPointsIcon size={12} />
@@ -803,7 +804,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               {eventPlacementCoins.map(r => (
                 <div key={r.place} className="flex items-center gap-2">
                   <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
-                    {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
+                    <PlaceMedal place={r.place} /> {r.place}. Platz
                   </span>
                   <div className="flex items-center gap-1">
                     <Coins className="w-3 h-3 text-amber-400 shrink-0" />

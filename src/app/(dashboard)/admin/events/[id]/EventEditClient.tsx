@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { useState, useMemo } from "react";
@@ -1238,7 +1239,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 </div>
                 {placements.map((p, i) => (
                   <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
-                    <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
+                    <span className="text-base"><PlaceMedal place={p.place} /></span>
                     <span className="text-sm text-gray-300">{p.place}. Platz</span>
                     <input type="number" min={0} value={p.rankPoints}
                       onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}

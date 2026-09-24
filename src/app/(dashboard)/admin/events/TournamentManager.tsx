@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { useState, useSyncExternalStore } from "react";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -223,12 +224,12 @@ function CreationForm({
               <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
             </div>
             {([
-              ["🥇 1. Platz", coins1, setCoins1, pts1, setPts1],
-              ["🥈 2. Platz", coins2, setCoins2, pts2, setPts2],
-              ["🥉 3. Platz", coins3, setCoins3, pts3, setPts3],
+              ["1. Platz", coins1, setCoins1, pts1, setPts1],
+              ["2. Platz", coins2, setCoins2, pts2, setPts2],
+              ["3. Platz", coins3, setCoins3, pts3, setPts3],
             ] as const).map(([label, cVal, cSet, pVal, pSet]) => (
               <div key={label} className="grid grid-cols-3 gap-2 items-center">
-                <span className="text-xs text-gray-300 font-medium">{label}</span>
+                <span className="text-xs text-gray-300 font-medium flex items-center gap-1"><PlaceMedal place={parseInt(label)} /> {label}</span>
                 <input type="number" value={cVal} min={0}
                   onChange={e => (cSet as (v: number) => void)(Number(e.target.value))}
                   className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"
@@ -878,7 +879,7 @@ export default function TournamentManager({
           {Object.keys(pointsConfigRaw).length > 0 && (
             tournament.format === "liga"
               ? <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /></span>
-              : <span className="text-xs text-gray-500">🥇{getConfigVal("1")} 🥈{getConfigVal("2")} 🥉{getConfigVal("3")} Pts</span>
+              : <span className="text-xs text-gray-500"><PlaceMedal place={1} />{getConfigVal("1")} <PlaceMedal place={2} />{getConfigVal("2")} <PlaceMedal place={3} />{getConfigVal("3")} Pts</span>
           )}
           {visibleStatFields.length > 0 && (
             <span className="text-xs text-gray-600">Stats: {visibleStatFields.join(", ")}</span>

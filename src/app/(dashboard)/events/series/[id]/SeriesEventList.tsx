@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
@@ -125,7 +126,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
         {firstPlace && (
           <div className="flex items-center gap-1 mt-1">
             <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
-              🥇
+              <PlaceMedal place={1} />
               {firstPlace.coins > 0 && (
                 <>
                   <Image src="/Muenze Icon.png" alt="Münzen" width={10} height={10} className="object-contain" />

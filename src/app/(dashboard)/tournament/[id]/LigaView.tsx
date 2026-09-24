@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Trophy, Clock, StickyNote } from "@/components/icons";
@@ -17,7 +18,7 @@ type Match = {
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "Unbekannt";
-const MEDAL = ["🥇", "🥈", "🥉"];
+const MEDAL = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
 
 type Standing = {
   userId: string;

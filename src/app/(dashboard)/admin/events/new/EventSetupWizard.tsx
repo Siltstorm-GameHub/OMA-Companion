@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { useState, useMemo } from "react";
@@ -1188,7 +1189,7 @@ export default function EventSetupWizard({
           <div className="space-y-2">
             {placements.map((p, i) => (
               <div key={p.place} className="flex items-center gap-3">
-                <span className="text-sm w-5 shrink-0">{["🥇","🥈","🥉"][i]}</span>
+                <span className="text-sm w-5 shrink-0"><PlaceMedal place={i + 1} /></span>
                 <div className={eventType === "community" ? "flex-1 grid grid-cols-1 gap-2" : "flex-1 grid grid-cols-2 gap-2"}>
                   <div>
                     <label className={labelCls}>Münzen</label>
@@ -1211,7 +1212,7 @@ export default function EventSetupWizard({
               <div className="grid grid-cols-3 gap-3 pt-1">
                 {gemsPlacementPacks.map((pack, i) => (
                   <div key={i}>
-                    <label className={labelCls}>{["🥇","🥈","🥉"][i]} Karten-Pack <span className="text-gray-500 font-normal">(optional)</span></label>
+                    <label className={labelCls}><PlaceMedal place={i + 1} /> Karten-Pack <span className="text-gray-500 font-normal">(optional)</span></label>
                     <select value={pack}
                       onChange={e => setGemsPlacementPacks(prev => prev.map((pp, ii) => ii === i ? e.target.value as typeof pp : pp))}
                       className={inputCls} style={inputStyle}>

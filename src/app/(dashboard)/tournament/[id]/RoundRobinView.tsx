@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Clock, Trophy, StickyNote } from "@/components/icons";
@@ -74,7 +75,7 @@ export default function RoundRobinView({
   const findUser = (id: string | null) =>
     id ? participants.find(p => p.userId === id)?.user : null;
 
-  const MEDAL = ["🥇", "🥈", "🥉"];
+  const MEDAL = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
 
   return (
     <div className="space-y-5">

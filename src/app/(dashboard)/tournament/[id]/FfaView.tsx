@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
@@ -27,7 +28,7 @@ type Match = {
 };
 
 const uname  = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
-const MEDAL  = ["🥇", "🥈", "🥉"];
+const MEDAL  = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
 
 /** Durchschnitt aller Stat-Werte eines Eintrags (für avg_stats) */
 function calcEntryAvg(statsJson: string | null, statFields: string[]): number | null {

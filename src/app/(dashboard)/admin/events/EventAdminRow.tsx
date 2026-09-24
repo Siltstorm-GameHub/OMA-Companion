@@ -1,4 +1,5 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -1191,12 +1192,12 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                 <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
                               </div>
                               {([
-                                ["🥇 1.", "coins1", "pts1"],
-                                ["🥈 2.", "coins2", "pts2"],
-                                ["🥉 3.", "coins3", "pts3"],
+                                ["1.", "coins1", "pts1"],
+                                ["2.", "coins2", "pts2"],
+                                ["3.", "coins3", "pts3"],
                               ] as const).map(([label, ck, pk]) => (
                                 <div key={label} className="grid grid-cols-3 gap-2 items-center">
-                                  <span className="text-xs text-gray-300 font-medium">{label}</span>
+                                  <span className="text-xs text-gray-300 font-medium flex items-center gap-1"><PlaceMedal place={parseInt(label)} /> {label}</span>
                                   <input type="number" min={0} value={tmtPoints[ck]}
                                     onChange={e => setTmtPoints(p => ({ ...p, [ck]: Number(e.target.value) }))}
                                     className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"

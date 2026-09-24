@@ -1,3 +1,4 @@
+import PlaceMedal from "@/components/PlaceMedal";
 import { HeartColor as Heart } from "@/components/icons-color";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
@@ -18,7 +19,7 @@ import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
 import { headers } from "next/headers";
 import { isLinkPreviewBot } from "@/lib/link-preview-bots";
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+const MEDALS = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
 
 const PODIUM_CONFIG = [
   {

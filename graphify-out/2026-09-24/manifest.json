@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "src/app/api/overlay/profile/[userId]/stream/route.ts": {
-    "mtime": 1790238379.1480806,
-    "ast_hash": "ea263f3a6a399e473586f27ddf2c6f54",
+    "mtime": 1790241124.0570817,
+    "ast_hash": "44d750f6e3ba18479f0a18655058c7ec",
     "semantic_hash": ""
   },
   "src/app/api/partners/[id]/route.ts": {
@@ -2635,8 +2635,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/OverlayClient.tsx": {
-    "mtime": 1790238822.9348903,
-    "ast_hash": "674f25132b5e6726eabbebd57565b06d",
+    "mtime": 1790241124.0560775,
+    "ast_hash": "b03c2b2654f7ecd895f1a5279ee11245",
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/page.tsx": {
@@ -2655,8 +2655,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/ProfileOverlayClient.tsx": {
-    "mtime": 1790238794.4178607,
-    "ast_hash": "c8d7e3d41b9906502a12c6cafc1a7191",
+    "mtime": 1790241124.0575871,
+    "ast_hash": "f34af39d4bbc4e3fac7b85d853c7d691",
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/page.tsx": {
@@ -3030,8 +3030,8 @@
     "semantic_hash": ""
   },
   "src/components/RankedAvatar.tsx": {
-    "mtime": 1790239307.863655,
-    "ast_hash": "dc12ea8a054de0dd12dfa8fb12b36ea6",
+    "mtime": 1790241124.0590954,
+    "ast_hash": "c36f78edc77bd611f7a6c2cf148f6880",
     "semantic_hash": ""
   },
   "src/components/RecentResultsBanner.tsx": {
@@ -3435,8 +3435,8 @@
     "semantic_hash": ""
   },
   "src/components/community-jobs/JobBadge.tsx": {
-    "mtime": 1790239596.3044095,
-    "ast_hash": "c8e2f11456c8f92ec82ce3ae4163b25b",
+    "mtime": 1790241095.4699054,
+    "ast_hash": "83598679df3d694900d0a20bcd24c5bb",
     "semantic_hash": ""
   },
   "src/components/community-jobs/JournalistTools.tsx": {
@@ -7847,6 +7847,11 @@
   "public/icons/ui/poo.png": {
     "mtime": 1790238692.3819406,
     "ast_hash": "12a53bd2e0b1fde96becc2cc2c7513d1",
+    "semantic_hash": ""
+  },
+  "src/app/api/overlay/badges/route.ts": {
+    "mtime": 1790241101.476253,
+    "ast_hash": "677fb9d3b42aa5ae289c93470bb63b77",
     "semantic_hash": ""
   }
 }

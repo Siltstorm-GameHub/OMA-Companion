@@ -1,3 +1,4 @@
+import PlaceMedal from "@/components/PlaceMedal";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
@@ -698,7 +699,7 @@ export default async function TournamentDetailPage({
           <div className="glass-heavy rounded-xl p-3 text-center">
             {hasHeroFirstPlace ? (
               <div className="flex items-center justify-center gap-1 flex-wrap">
-                <span className="text-sm">🥇</span>
+                <PlaceMedal place={1} className="text-sm" />
                 {heroFirstPlaceCoins > 0 && (
                   <span className="flex items-center gap-0.5 text-sm font-semibold text-amber-400">
                     <Image src="/Muenze Icon.png" alt="Münzen" width={14} height={14} className="object-contain" />

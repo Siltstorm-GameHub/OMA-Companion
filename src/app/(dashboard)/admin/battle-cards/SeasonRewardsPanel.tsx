@@ -1,13 +1,14 @@
 "use client";
+import PlaceMedal from "@/components/PlaceMedal";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Loader2 } from "@/components/icons";
 import type { SeasonRewardConfig, SeasonPlacementReward } from "@/lib/battle-cards/season-reward-config";
 
 const PLACES: { key: keyof SeasonRewardConfig; label: string }[] = [
-  { key: "place1", label: "🥇 Platz 1" },
-  { key: "place2", label: "🥈 Platz 2" },
-  { key: "place3", label: "🥉 Platz 3" },
+  { key: "place1", label: "Platz 1" },
+  { key: "place2", label: "Platz 2" },
+  { key: "place3", label: "Platz 3" },
 ];
 
 export function SeasonRewardsPanel({ initial }: { initial: SeasonRewardConfig }) {
@@ -48,7 +49,7 @@ export function SeasonRewardsPanel({ initial }: { initial: SeasonRewardConfig })
       <div className="space-y-3">
         {PLACES.map(({ key, label }) => (
           <div key={key} className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-white w-20 shrink-0">{label}</span>
+            <span className="text-sm text-white w-24 shrink-0 flex items-center gap-1.5"><PlaceMedal place={Number(key.replace("place", ""))} />{label}</span>
             <label className="flex items-center gap-1.5 text-xs text-gray-400">
               Münzen
               <input
