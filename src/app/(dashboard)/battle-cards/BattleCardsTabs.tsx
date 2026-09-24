@@ -1,6 +1,7 @@
 "use client";
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { TabPanel } from "@/components/admin/Tabs";
 import { AnimatePresence, motion } from "motion/react";
 import MobaIcon from "@/components/battle-cards/MobaIcon";
@@ -33,6 +34,19 @@ const TABS: {
   { key: "karten", label: "Karten", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
   { key: "community", label: "Community", icon: "navRank", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
 ];
+
+// D&D-Welt ist kein Tab-Panel (WorldMap/CharacterCreation leben unter /dnd mit
+// eigener Server-Logik für Charaktererstellungs-Gate), sondern ein echter
+// Link im selben Nav-Look — deshalb außerhalb von TABS, als eigenes Element
+// gerendert statt über setActive.
+const DND_LINK_TAB = {
+  label: "D&D-Welt",
+  icon: "map" as MobaIconName,
+  accent: "#38bdf8",
+  accentDark: "#0369a1",
+  accentLight: "#7dd3fc",
+  glow: "rgba(56,189,248,0.6)",
+};
 
 function BattleCardsTabsInner({
   kampfPanel,
@@ -104,6 +118,21 @@ function BattleCardsTabsInner({
             </button>
           );
         })}
+        <Link
+          href="/dnd"
+          className="moba-nav-item"
+          style={{
+            ["--accent" as string]: DND_LINK_TAB.accent,
+            ["--accent-dark" as string]: DND_LINK_TAB.accentDark,
+            ["--accent-light" as string]: DND_LINK_TAB.accentLight,
+            ["--glow" as string]: DND_LINK_TAB.glow,
+          }}
+        >
+          <span className="moba-nav-icon">
+            <MobaIcon name={DND_LINK_TAB.icon} className="w-9 h-9" />
+          </span>
+          <span className="moba-nav-label">{DND_LINK_TAB.label}</span>
+        </Link>
       </div>
 
       <TabPanel tabKey="kampf" active={active}>{kampfPanel}</TabPanel>
