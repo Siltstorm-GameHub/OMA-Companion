@@ -72,6 +72,11 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RolledCard | null>(null);
   const [revealCount, setRevealCount] = useState(0);
+  // Ob DIESER Wurf ein Re-Roll ist — startet beim mode-Prop, wird aber auch
+  // client-seitig auf true gesetzt, sobald "Nicht zufrieden?" nach einer
+  // Erst-Erstellung geklickt wird (mode bleibt sonst fest auf "create", da
+  // die Elternseite dndCreatedAt erst nach router.refresh() neu abfragt).
+  const [isReroll, setIsReroll] = useState(mode === "reroll");
   const allRevealed = result != null && revealCount >= REVEAL_STEPS.length;
 
   async function roll() {
@@ -81,7 +86,7 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
       const res = await fetch("/api/dnd/character/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reroll: mode === "reroll" }),
+        body: JSON.stringify({ reroll: isReroll }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Auswürfeln fehlgeschlagen.");
@@ -108,7 +113,7 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
       <div className="moba-panel rounded-2xl p-6 text-center space-y-4">
         <Dices className="w-10 h-10 mx-auto text-violet-400" />
         <p className="text-sm text-gray-300">
-          {mode === "reroll"
+          {isReroll
             ? "Würfle Rasse, Klasse und Attribute EINMALIG komplett neu — danach ist das Ergebnis endgültig."
             : "Würfle deinen D&D-Charakter aus: Rasse, Klasse und Attribute per klassischem 4W6-Wurf."}
         </p>
@@ -120,7 +125,7 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
           className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-5 py-2.5 text-sm font-bold text-white transition-colors"
         >
           {rolling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Dices className="w-4 h-4" />}
-          {mode === "reroll" ? "Neu auswürfeln" : "Würfeln!"}
+          {isReroll ? "Neu auswürfeln" : "Würfeln!"}
         </button>
       </div>
     );
@@ -190,10 +195,10 @@ export default function CharacterCreation({ mode }: { mode: "create" | "reroll" 
 
       <p className="text-xs text-gray-400 leading-relaxed italic">{result.backstory}</p>
 
-      {!result.dndRerollUsed && mode !== "reroll" && (
+      {!result.dndRerollUsed && !isReroll && (
         <button
           type="button"
-          onClick={() => { setResult(null); }}
+          onClick={() => { setIsReroll(true); setResult(null); }}
           className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors underline underline-offset-2"
         >
           Nicht zufrieden? Einmaliger Re-Roll verfügbar.
