@@ -28,7 +28,7 @@ type Phase = "rest" | "out" | "pre";
  * (z. B. Turnierseiten zu "Events"). Damit bleibt der Punkt dort aktiv.
  */
 const SECTION_PREFIXES: Record<string, string[]> = {
-  "/dashboard":   ["/quests", "/servers", "/squads", "/battle-cards", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
+  "/dashboard":   ["/quests", "/servers", "/squads", "/battle-cards", "/dnd", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
   "/events":      ["/tournament"],
   "/leaderboard": ["/points"],
 };
