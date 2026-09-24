@@ -1,11 +1,13 @@
 // ============================================
 // Charaktererstellung: Auswürfel-Flow (reine Funktion, kein DB-Zugriff)
 // ============================================
-// Rasse → Klasse → Attribute (4d6-drop-lowest) → abgeleitete Basiswerte
-// (geclamped) → Backstory. Wird sowohl bei der Erst-Erstellung
-// (ensureCommunityCard) als auch beim einmaligen Re-Roll verwendet — beide
-// rufen dieselbe Funktion, unterscheiden sich nur darin, WAS mit dem
-// Ergebnis in der DB passiert.
+// Rasse & Klasse werden bewusst gewählt (wie im echten D&D), nur die
+// Attribute werden gewürfelt (4d6-drop-lowest) → abgeleitete Basiswerte
+// (geclamped) → Backstory. `buildCharacterSheet` ist der Kern (nimmt
+// Rasse+Klasse entgegen), `rollNewCharacterSheet` würfelt zusätzlich Rasse+
+// Klasse selbst — nur noch für die nicht-interaktiven Pfade (Cold-Start
+// ensureCommunityCard, Auto-Migration nach Fristablauf), wo niemand eine
+// Wahl treffen kann.
 
 import { rollRace, type DndRaceDef } from "./races";
 import { rollClass, type DndClassDef } from "./classes";
@@ -23,19 +25,27 @@ export interface RolledCharacterSheet {
   backstory: string;
 }
 
-export function rollNewCharacterSheet(
+export function buildCharacterSheet(
   name: string,
+  race: DndRaceDef,
+  dndClass: DndClassDef,
   gender: "male" | "female" = "male",
   rng: () => number = Math.random
 ): RolledCharacterSheet {
-  const race = rollRace(rng);
-  const dndClass = rollClass(rng);
   const cardClass = mapDndClassToCardClass(dndClass.id);
   const abilityScores = rollAbilityScores(race.abilityBonuses, rng);
   const derivedStats = deriveBaseStats(cardClass, dndClass.primaryAbility, abilityScores);
   const backstory = generateBackstory(name, gender, rng);
 
   return { race, dndClass, cardClass, abilityScores, derivedStats, backstory };
+}
+
+export function rollNewCharacterSheet(
+  name: string,
+  gender: "male" | "female" = "male",
+  rng: () => number = Math.random
+): RolledCharacterSheet {
+  return buildCharacterSheet(name, rollRace(rng), rollClass(rng), gender, rng);
 }
 
 /** Felder, die nach der D&D-Erstellung vor der Saison-Neuberechnung geschützt

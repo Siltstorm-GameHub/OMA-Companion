@@ -8,7 +8,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { roll4d6DropLowest, rollAbilityScores, deriveBaseStats, ABILITY_KEYS } from "./ability-scores";
 import { resolveCharacterLocation } from "./travel";
-import { rollNewCharacterSheet } from "./character-creation";
+import { rollNewCharacterSheet, buildCharacterSheet } from "./character-creation";
+import { getRace } from "./races";
+import { getDndClass } from "./classes";
 import { weightedPick } from "./story-content";
 
 describe("roll4d6DropLowest", () => {
@@ -72,6 +74,20 @@ describe("rollNewCharacterSheet", () => {
     const sheet = rollNewCharacterSheet("Testheld");
     assert.ok(["TANK", "DAMAGE_DEALER", "SUPPORT"].includes(sheet.cardClass));
     assert.ok(sheet.backstory.length > 0);
+  });
+});
+
+describe("buildCharacterSheet", () => {
+  test("übernimmt gewählte Rasse/Klasse unverändert, würfelt nur Attribute", () => {
+    const race = getRace("zwerg")!;
+    const dndClass = getDndClass("krieger")!;
+    const sheet = buildCharacterSheet("Testheld", race, dndClass);
+    assert.equal(sheet.race.id, "zwerg");
+    assert.equal(sheet.dndClass.id, "krieger");
+    assert.equal(sheet.cardClass, "TANK");
+    for (const key of ABILITY_KEYS) {
+      assert.ok(typeof sheet.abilityScores[key] === "number");
+    }
   });
 });
 

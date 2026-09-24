@@ -3,8 +3,10 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getSkillTemplate } from "@/lib/battle-cards/skill-templates";
-import { rollNewCharacterSheet, withDndOverriddenFields } from "@/lib/dnd/character-creation";
+import { buildCharacterSheet, withDndOverriddenFields } from "@/lib/dnd/character-creation";
 import { ensureDndWorldSeeded, START_LOCATION_SLUG } from "@/lib/dnd/locations";
+import { getRace } from "@/lib/dnd/races";
+import { getDndClass } from "@/lib/dnd/classes";
 
 function toJson<T>(value: T): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value));
@@ -24,6 +26,12 @@ export async function POST(req: NextRequest) {
   const reroll = body?.reroll === true;
   const gender: "male" | "female" = body?.gender === "female" ? "female" : "male";
 
+  const race = typeof body?.raceId === "string" ? getRace(body.raceId) : undefined;
+  const dndClass = typeof body?.classId === "string" ? getDndClass(body.classId) : undefined;
+  if (!race || !dndClass) {
+    return NextResponse.json({ error: "Ungültige Rasse oder Klasse" }, { status: 400 });
+  }
+
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { discordId: true } });
   if (!user?.discordId) return NextResponse.json({ error: "Kein verknüpfter Discord-Account" }, { status: 400 });
 
@@ -38,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   await ensureDndWorldSeeded();
-  const sheet = rollNewCharacterSheet(card.name, gender);
+  const sheet = buildCharacterSheet(card.name, race, dndClass, gender);
   const template = getSkillTemplate(sheet.cardClass, user.discordId);
 
   const startLocation = card.currentLocationId
