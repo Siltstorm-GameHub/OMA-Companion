@@ -1198,8 +1198,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "prisma_battle_cards_seed_data",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "battle-cards-seed-data.ts"
     },
     {
@@ -1231,8 +1231,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "prisma_battle_cards_seed_data_standardcardseed",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "standardcardseed"
     },
     {
@@ -1319,8 +1319,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "public_characters_manifest_genders_male",
-      "community": 132,
-      "community_name": "giant",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "male"
     },
     {
@@ -1330,8 +1330,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "public_characters_manifest_male_bodies",
-      "community": 132,
-      "community_name": "giant",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "bodies"
     },
     {
@@ -1341,8 +1341,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_tank",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "tank"
     },
     {
@@ -1352,8 +1352,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "public_characters_manifest_tank_label",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "label"
     },
     {
@@ -1363,8 +1363,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "public_characters_manifest_tank_base",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "base"
     },
     {
@@ -1374,8 +1374,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "public_characters_manifest_tank_regions",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "regions"
     },
     {
@@ -1429,8 +1429,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "public_characters_manifest_tank_bodymaterial",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2298,8 +2298,8 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "public_characters_manifest_tank_parts",
-      "community": 164,
-      "community_name": "EventCreateForm.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "parts"
     },
     {
@@ -2309,8 +2309,8 @@
       "source_location": "L1213",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_athlete",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "athlete"
     },
     {
@@ -2320,8 +2320,8 @@
       "source_location": "L1214",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_label",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "label"
     },
     {
@@ -2331,8 +2331,8 @@
       "source_location": "L1215",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_base",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "base"
     },
     {
@@ -2342,8 +2342,8 @@
       "source_location": "L1216",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_regions",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "regions"
     },
     {
@@ -2364,8 +2364,8 @@
       "source_location": "L1294",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_bodymaterial",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2408,8 +2408,8 @@
       "source_location": "L1376",
       "_origin": "ast",
       "id": "public_characters_manifest_athlete_parts",
-      "community": 157,
-      "community_name": "GameCover.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "parts"
     },
     {
@@ -2419,8 +2419,8 @@
       "source_location": "L2544",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_normal",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "normal"
     },
     {
@@ -2430,8 +2430,8 @@
       "source_location": "L2545",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_label",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "label"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L2546",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_base",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "base"
     },
     {
@@ -2452,8 +2452,8 @@
       "source_location": "L2547",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_regions",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "regions"
     },
     {
@@ -2474,8 +2474,8 @@
       "source_location": "L2625",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_bodymaterial",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2518,8 +2518,8 @@
       "source_location": "L2707",
       "_origin": "ast",
       "id": "public_characters_manifest_normal_parts",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 164,
+      "community_name": "EventCreateForm.tsx",
       "norm_label": "parts"
     },
     {
@@ -2749,8 +2749,8 @@
       "source_location": "L6537",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_giant",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "giant"
     },
     {
@@ -2760,8 +2760,8 @@
       "source_location": "L6538",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_label",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "label"
     },
     {
@@ -2771,8 +2771,8 @@
       "source_location": "L6539",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_base",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "base"
     },
     {
@@ -2782,8 +2782,8 @@
       "source_location": "L6540",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_regions",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "regions"
     },
     {
@@ -2804,8 +2804,8 @@
       "source_location": "L6618",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_bodymaterial",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2848,8 +2848,8 @@
       "source_location": "L6700",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_parts",
-      "community": 132,
-      "community_name": "giant",
+      "community": 160,
+      "community_name": "InterviewClient.tsx",
       "norm_label": "parts"
     },
     {
@@ -2859,8 +2859,8 @@
       "source_location": "L7868",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_small",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "small"
     },
     {
@@ -2870,8 +2870,8 @@
       "source_location": "L7869",
       "_origin": "ast",
       "id": "public_characters_manifest_small_label",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "label"
     },
     {
@@ -2881,8 +2881,8 @@
       "source_location": "L7870",
       "_origin": "ast",
       "id": "public_characters_manifest_small_base",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "base"
     },
     {
@@ -2892,8 +2892,8 @@
       "source_location": "L7871",
       "_origin": "ast",
       "id": "public_characters_manifest_small_regions",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "regions"
     },
     {
@@ -2914,8 +2914,8 @@
       "source_location": "L7949",
       "_origin": "ast",
       "id": "public_characters_manifest_small_bodymaterial",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -2958,8 +2958,8 @@
       "source_location": "L8031",
       "_origin": "ast",
       "id": "public_characters_manifest_small_parts",
-      "community": 160,
-      "community_name": "InterviewClient.tsx",
+      "community": 62,
+      "community_name": "EmptyState.tsx",
       "norm_label": "parts"
     },
     {
@@ -2969,8 +2969,8 @@
       "source_location": "L9199",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_guardian",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "guardian"
     },
     {
@@ -2980,8 +2980,8 @@
       "source_location": "L9200",
       "_origin": "ast",
       "id": "public_characters_manifest_guardian_label",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "label"
     },
     {
@@ -2991,8 +2991,8 @@
       "source_location": "L9201",
       "_origin": "ast",
       "id": "public_characters_manifest_guardian_base",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "base"
     },
     {
@@ -3002,8 +3002,8 @@
       "source_location": "L9202",
       "_origin": "ast",
       "id": "public_characters_manifest_guardian_regions",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "regions"
     },
     {
@@ -3024,8 +3024,8 @@
       "source_location": "L9280",
       "_origin": "ast",
       "id": "public_characters_manifest_guardian_bodymaterial",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "bodymaterial"
     },
     {
@@ -3068,8 +3068,8 @@
       "source_location": "L9362",
       "_origin": "ast",
       "id": "public_characters_manifest_guardian_parts",
-      "community": 132,
-      "community_name": "giant",
+      "community": 157,
+      "community_name": "GameCover.tsx",
       "norm_label": "parts"
     },
     {
@@ -4157,8 +4157,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_backfill_profile_completion_rewards",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "backfill-profile-completion-rewards.ts"
     },
     {
@@ -4168,8 +4168,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_backfill_profile_completion_rewards_main",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "main()"
     },
     {
@@ -5070,8 +5070,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "communitycardsadmin.tsx"
     },
     {
@@ -5081,8 +5081,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardrow",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "cardrow"
     },
     {
@@ -5092,8 +5092,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardeditrow",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "cardeditrow()"
     },
     {
@@ -5103,8 +5103,8 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_communitycardsadmin",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "communitycardsadmin()"
     },
     {
@@ -5114,8 +5114,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_page",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "cards/page.tsx"
     },
     {
@@ -5125,8 +5125,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_page_admincommunitycardspage",
-      "community": 174,
-      "community_name": "setIdeaInterest",
+      "community": 151,
+      "community_name": "new-season/page.tsx",
       "norm_label": "admincommunitycardspage()"
     },
     {
@@ -5158,8 +5158,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "tacticcardsadmin.tsx"
     },
     {
@@ -5169,8 +5169,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin_tacticcardrow",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "tacticcardrow"
     },
     {
@@ -5180,8 +5180,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin_tacticcardeditrow",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "tacticcardeditrow()"
     },
     {
@@ -5191,8 +5191,8 @@
       "source_location": "L210",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin_tacticcardsadmin",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "tacticcardsadmin()"
     },
     {
@@ -5202,8 +5202,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_page",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "tactic-cards/page.tsx"
     },
     {
@@ -5213,8 +5213,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_page_admintacticcardspage",
-      "community": 0,
-      "community_name": "roles.ts",
+      "community": 185,
+      "community_name": "lobby-cleanup/route.ts",
       "norm_label": "admintacticcardspage()"
     },
     {
@@ -12121,8 +12121,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badgessection.tsx"
     },
     {
@@ -12132,8 +12132,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection_custombadgedisplay",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "custombadgedisplay"
     },
     {
@@ -12143,8 +12143,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection_props",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "props"
     },
     {
@@ -12154,8 +12154,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection_badgessection",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badgessection()"
     },
     {
@@ -13441,8 +13441,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_rueckblick_page",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "rueckblick/page.tsx"
     },
     {
@@ -13452,8 +13452,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_rueckblick_page_month_names",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "month_names"
     },
     {
@@ -13463,8 +13463,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_rueckblick_page_yearreviewpage",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "yearreviewpage()"
     },
     {
@@ -14255,8 +14255,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget",
-      "community": 12,
-      "community_name": "series-event-points.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "eventwinnerpredictionwidget.tsx"
     },
     {
@@ -14266,8 +14266,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_userlite",
-      "community": 12,
-      "community_name": "series-event-points.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "userlite"
     },
     {
@@ -14277,8 +14277,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_prediction",
-      "community": 12,
-      "community_name": "series-event-points.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "prediction"
     },
     {
@@ -14288,8 +14288,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_uname",
-      "community": 12,
-      "community_name": "series-event-points.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "uname()"
     },
     {
@@ -14299,8 +14299,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_eventwinnerpredictionwidget_eventwinnerpredictionwidget",
-      "community": 12,
-      "community_name": "series-event-points.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "eventwinnerpredictionwidget()"
     },
     {
@@ -14310,8 +14310,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "ffaview.tsx"
     },
     {
@@ -14321,8 +14321,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_fmtupto2",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "fmtupto2()"
     },
     {
@@ -14332,8 +14332,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_user",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "user"
     },
     {
@@ -14343,8 +14343,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_participant",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "participant"
     },
     {
@@ -14354,8 +14354,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_entry",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "entry"
     },
     {
@@ -14365,8 +14365,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_match",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "match"
     },
     {
@@ -14376,8 +14376,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_uname",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "uname()"
     },
     {
@@ -14387,8 +14387,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_medal",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "medal"
     },
     {
@@ -14398,8 +14398,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_calcentryavg",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "calcentryavg()"
     },
     {
@@ -14409,8 +14409,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_ffaview_ffaview",
-      "community": 139,
-      "community_name": "starter-pick.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "ffaview()"
     },
     {
@@ -14827,8 +14827,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_amp_sync_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "amp/sync/route.ts"
     },
     {
@@ -14838,8 +14838,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_api_admin_amp_sync_route_post",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "post()"
     },
     {
@@ -16741,8 +16741,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_id_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "servers/[id]/route.ts"
     },
     {
@@ -16752,8 +16752,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_id_route_put",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "put()"
     },
     {
@@ -16763,8 +16763,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_id_route_delete",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "delete()"
     },
     {
@@ -16774,8 +16774,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_applications_id_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "servers/applications/[id]/route.ts"
     },
     {
@@ -16785,8 +16785,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_applications_id_route_put",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "put()"
     },
     {
@@ -16796,8 +16796,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_pending_count_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "servers/pending-count/route.ts"
     },
     {
@@ -16807,8 +16807,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_api_admin_servers_pending_count_route_get",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -20811,8 +20811,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_cron_discord_activity_summary_route",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "discord-activity-summary/route.ts"
     },
     {
@@ -20822,8 +20822,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_app_api_cron_discord_activity_summary_route_isauthorized",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "isauthorized()"
     },
     {
@@ -20833,8 +20833,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_api_cron_discord_activity_summary_route_discord_reasons",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "discord_reasons"
     },
     {
@@ -20844,8 +20844,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_api_cron_discord_activity_summary_route_get",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "get()"
     },
     {
@@ -20855,8 +20855,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_cron_event_reminders_route",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "event-reminders/route.ts"
     },
     {
@@ -20866,8 +20866,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_api_cron_event_reminders_route_isauthorized",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "isauthorized()"
     },
     {
@@ -20877,8 +20877,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_api_cron_event_reminders_route_get",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "get()"
     },
     {
@@ -20888,8 +20888,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_cron_lobby_cleanup_route",
-      "community": 177,
-      "community_name": "lobby-cleanup/route.ts",
+      "community": 86,
+      "community_name": "MarkdownLite.tsx",
       "norm_label": "lobby-cleanup/route.ts"
     },
     {
@@ -20899,8 +20899,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_api_cron_lobby_cleanup_route_isauthorized",
-      "community": 177,
-      "community_name": "lobby-cleanup/route.ts",
+      "community": 86,
+      "community_name": "MarkdownLite.tsx",
       "norm_label": "isauthorized()"
     },
     {
@@ -20910,8 +20910,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_api_cron_lobby_cleanup_route_get",
-      "community": 177,
-      "community_name": "lobby-cleanup/route.ts",
+      "community": 86,
+      "community_name": "MarkdownLite.tsx",
       "norm_label": "get()"
     },
     {
@@ -21053,8 +21053,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_daily_poll_id_vote_route",
-      "community": 86,
-      "community_name": "MarkdownLite.tsx",
+      "community": 174,
+      "community_name": "setIdeaInterest",
       "norm_label": "daily-poll/[id]/vote/route.ts"
     },
     {
@@ -21064,8 +21064,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_api_daily_poll_id_vote_route_gamesuggestion",
-      "community": 86,
-      "community_name": "MarkdownLite.tsx",
+      "community": 174,
+      "community_name": "setIdeaInterest",
       "norm_label": "gamesuggestion"
     },
     {
@@ -21075,8 +21075,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_api_daily_poll_id_vote_route_post",
-      "community": 86,
-      "community_name": "MarkdownLite.tsx",
+      "community": 174,
+      "community_name": "setIdeaInterest",
       "norm_label": "post()"
     },
     {
@@ -21086,8 +21086,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "src_app_api_daily_poll_id_vote_route_delete",
-      "community": 86,
-      "community_name": "MarkdownLite.tsx",
+      "community": 174,
+      "community_name": "setIdeaInterest",
       "norm_label": "delete()"
     },
     {
@@ -22780,8 +22780,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_servers_id_apply_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "[id]/apply/route.ts"
     },
     {
@@ -22791,8 +22791,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_api_servers_id_apply_route_post",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "post()"
     },
     {
@@ -22802,8 +22802,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_app_api_servers_id_apply_route_delete",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "delete()"
     },
     {
@@ -22835,8 +22835,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_servers_route",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "api/servers/route.ts"
     },
     {
@@ -22846,8 +22846,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_app_api_servers_route_get",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "get()"
     },
     {
@@ -25915,8 +25915,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_avatarstack",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "avatarstack.tsx"
     },
     {
@@ -25926,8 +25926,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_avatarstack_avataruser",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "avataruser"
     },
     {
@@ -26066,7 +26066,7 @@
       "label": "maskStyle()",
       "file_type": "code",
       "source_file": "src/components/BottomNav.tsx",
-      "source_location": "L24",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "src_components_bottomnav_maskstyle",
       "community": 7,
@@ -26077,7 +26077,7 @@
       "label": "BottomNav()",
       "file_type": "code",
       "source_file": "src/components/BottomNav.tsx",
-      "source_location": "L31",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "src_components_bottomnav_bottomnav",
       "community": 7,
@@ -26289,8 +26289,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_countup",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "countup.tsx"
     },
     {
@@ -26300,8 +26300,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_countup_countup",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "countup()"
     },
     {
@@ -28676,8 +28676,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_rankedavatar",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "rankedavatar.tsx"
     },
     {
@@ -28687,8 +28687,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_rankedavatar_rankedavatarprops",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "rankedavatarprops"
     },
     {
@@ -28698,8 +28698,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_components_rankedavatar_rounded",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "rounded"
     },
     {
@@ -28709,8 +28709,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_components_rankedavatar_getringwidth",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "getringwidth()"
     },
     {
@@ -28720,8 +28720,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_components_rankedavatar_getinitials",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "getinitials()"
     },
     {
@@ -28731,8 +28731,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "src_components_rankedavatar_rankedavatar",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "rankedavatar()"
     },
     {
@@ -29259,8 +29259,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "trophy3dviewer.tsx"
     },
     {
@@ -29281,8 +29281,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer_props",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "props"
     },
     {
@@ -29292,8 +29292,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer_centeredmodel",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "centeredmodel()"
     },
     {
@@ -29303,8 +29303,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer_autospin",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "autospin()"
     },
     {
@@ -29314,8 +29314,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer_trophycanvas",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "trophycanvas()"
     },
     {
@@ -29325,8 +29325,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "src_components_trophy3dviewer_trophy3dviewer",
-      "community": 95,
-      "community_name": "apply-season-results.ts",
+      "community": 55,
+      "community_name": "BattleLogEntry",
       "norm_label": "trophy3dviewer()"
     },
     {
@@ -30326,8 +30326,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlestatspanel",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battlestatspanel.tsx"
     },
     {
@@ -30337,8 +30337,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlestatspanel_battlestatspanel",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battlestatspanel()"
     },
     {
@@ -35309,8 +35309,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_award_badges",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "award-badges.ts"
     },
     {
@@ -35320,8 +35320,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_lib_award_badges_loadstats",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "loadstats()"
     },
     {
@@ -35331,8 +35331,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "src_lib_award_badges_checkandawardbadges",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "checkandawardbadges()"
     },
     {
@@ -35430,8 +35430,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_badges",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badges.ts"
     },
     {
@@ -35441,8 +35441,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_badges_badge",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badge"
     },
     {
@@ -35452,8 +35452,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_lib_badges_badge_category_labels",
-      "community": 29,
-      "community_name": "requireModeratorOrEventSquadCaptain",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badge_category_labels"
     },
     {
@@ -35463,8 +35463,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_lib_badges_badgestats",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badgestats"
     },
     {
@@ -35474,8 +35474,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_lib_badges_badgedef",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badgedef"
     },
     {
@@ -35485,8 +35485,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "src_lib_badges_badge_defs",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "badge_defs"
     },
     {
@@ -35507,8 +35507,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_lib_badges_findnewlyearnedbadges",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "findnewlyearnedbadges()"
     },
     {
@@ -35518,8 +35518,8 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "src_lib_badges_getbadgedef",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 106,
+      "community_name": "photo-request-service.ts",
       "norm_label": "getbadgedef()"
     },
     {
@@ -35529,8 +35529,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_log",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battle-log.ts"
     },
     {
@@ -35540,8 +35540,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_log_storedbattlelog",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "storedbattlelog"
     },
     {
@@ -35628,8 +35628,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battle-stats.ts"
     },
     {
@@ -35639,8 +35639,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_unitbattlestats",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "unitbattlestats"
     },
     {
@@ -35650,8 +35650,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_computebattlestats",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "computebattlestats()"
     },
     {
@@ -35661,8 +35661,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_score",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "score()"
     },
     {
@@ -35672,8 +35672,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_findmvpid",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "findmvpid()"
     },
     {
@@ -37696,8 +37696,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "src_lib_battle_cards_npc_battle_types_tournamentmodefor",
-      "community": 39,
-      "community_name": "tournament/[id]/page.tsx",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "tournamentmodefor()"
     },
     {
@@ -38631,8 +38631,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_lib_battle_cards_skill_templates_skilltemplate",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "skilltemplate"
     },
     {
@@ -39808,8 +39808,8 @@
       "source_location": "L240",
       "_origin": "ast",
       "id": "src_lib_battle_engine_board_match3_generateboard",
-      "community": 27,
-      "community_name": "board-match3.ts",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "generateboard()"
     },
     {
@@ -39929,8 +39929,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_constants",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "constants.ts"
     },
     {
@@ -39940,8 +39940,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_lib_battle_engine_constants_level_stat_multiplier",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "level_stat_multiplier"
     },
     {
@@ -39951,8 +39951,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_damage",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "damage.ts"
     },
     {
@@ -39962,8 +39962,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_lib_battle_engine_damage_damageroll",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "damageroll"
     },
     {
@@ -39973,8 +39973,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_lib_battle_engine_damage_rolldamage",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "rolldamage()"
     },
     {
@@ -39984,8 +39984,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_lib_battle_engine_damage_applyshieldabsorption",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "applyshieldabsorption()"
     },
     {
@@ -40138,8 +40138,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_duelfieldslot",
-      "community": 8,
-      "community_name": "interactive.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "duelfieldslot"
     },
     {
@@ -40226,8 +40226,8 @@
       "source_location": "L235",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_shuffle",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 24,
+      "community_name": "notify-dispatch.ts",
       "norm_label": "shuffle()"
     },
     {
@@ -40237,8 +40237,8 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_createemptyfieldslots",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 24,
+      "community_name": "notify-dispatch.ts",
       "norm_label": "createemptyfieldslots()"
     },
     {
@@ -40259,8 +40259,8 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_createduelstate",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 24,
+      "community_name": "notify-dispatch.ts",
       "norm_label": "createduelstate()"
     },
     {
@@ -40622,8 +40622,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "effects.ts"
     },
     {
@@ -40633,8 +40633,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects_effectcontext",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "effectcontext"
     },
     {
@@ -40644,8 +40644,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects_getlevelvalue",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "getlevelvalue()"
     },
     {
@@ -40655,8 +40655,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects_applydamagetounit",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "applydamagetounit()"
     },
     {
@@ -40666,8 +40666,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects_executeeffect",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "executeeffect()"
     },
     {
@@ -40677,8 +40677,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "src_lib_battle_engine_effects_tickstatmodifierdurations",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "tickstatmodifierdurations()"
     },
     {
@@ -40721,8 +40721,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_lib_battle_engine_engine_grantrage",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "grantrage()"
     },
     {
@@ -40974,8 +40974,8 @@
       "source_location": "L609",
       "_origin": "ast",
       "id": "src_lib_battle_engine_interactive_previewupcomingturns",
-      "community": 39,
-      "community_name": "tournament/[id]/page.tsx",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "previewupcomingturns()"
     },
     {
@@ -41007,8 +41007,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_passives",
-      "community": 8,
-      "community_name": "interactive.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "passives.ts"
     },
     {
@@ -41018,8 +41018,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_battle_engine_passives_runpassive",
-      "community": 8,
-      "community_name": "interactive.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "runpassive()"
     },
     {
@@ -41051,8 +41051,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_engine_rng",
-      "community": 8,
-      "community_name": "interactive.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "rng.ts"
     },
     {
@@ -41062,8 +41062,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_lib_battle_engine_rng_rng",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "rng"
     },
     {
@@ -41073,8 +41073,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_battle_engine_rng_rng_getstate",
-      "community": 27,
-      "community_name": "board-match3.ts",
+      "community": 24,
+      "community_name": "notify-dispatch.ts",
       "norm_label": ".getstate()"
     },
     {
@@ -41337,8 +41337,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "src_lib_battle_engine_stats_recomputederivedstats",
-      "community": 24,
-      "community_name": "notify-dispatch.ts",
+      "community": 8,
+      "community_name": "interactive.ts",
       "norm_label": "recomputederivedstats()"
     },
     {
@@ -41557,8 +41557,8 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_activeskilldata",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "activeskilldata"
     },
     {
@@ -41579,8 +41579,8 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_passiveskilldata",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 27,
+      "community_name": "board-match3.ts",
       "norm_label": "passiveskilldata"
     },
     {
@@ -41612,8 +41612,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_battleunitstate",
-      "community": 8,
-      "community_name": "interactive.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battleunitstate"
     },
     {
@@ -41678,8 +41678,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_battlelogentry",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "battlelogentry"
     },
     {
@@ -41700,8 +41700,8 @@
       "source_location": "L286",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_rosterentry",
-      "community": 91,
-      "community_name": "CommunityBoardClient.tsx",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "rosterentry"
     },
     {
@@ -44824,8 +44824,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_lib_discord_rest_deletediscordmessage",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 58,
+      "community_name": "revert-event-completion.ts",
       "norm_label": "deletediscordmessage()"
     },
     {
@@ -44890,8 +44890,8 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "src_lib_discord_rest_fmtdatede",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "fmtdatede()"
     },
     {
@@ -45209,8 +45209,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_event_placeholders",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "event-placeholders.ts"
     },
     {
@@ -45231,8 +45231,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_lib_event_placeholders_genre_labels",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "genre_labels"
     },
     {
@@ -45253,8 +45253,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_lib_event_placeholders_genrelabel",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "genrelabel()"
     },
     {
@@ -45264,8 +45264,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_lib_event_placeholders_eventparticipationcoins",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "eventparticipationcoins()"
     },
     {
@@ -45869,8 +45869,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_gameservers",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "gameservers.ts"
     },
     {
@@ -45880,8 +45880,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_lib_gameservers_trafficlight",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "trafficlight"
     },
     {
@@ -45891,8 +45891,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_gameservers_occupiedwhere",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "occupiedwhere()"
     },
     {
@@ -45902,8 +45902,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_lib_gameservers_countoccupiedslots",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "countoccupiedslots()"
     },
     {
@@ -45913,8 +45913,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_lib_gameservers_countpendingapplications",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "countpendingapplications()"
     },
     {
@@ -45924,8 +45924,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_lib_gameservers_countwaitlistedapplications",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "countwaitlistedapplications()"
     },
     {
@@ -45935,8 +45935,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_lib_gameservers_promotenextwaitlisted",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "promotenextwaitlisted()"
     },
     {
@@ -45957,8 +45957,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_lib_gameservers_ampsyncsuggestion",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "ampsyncsuggestion"
     },
     {
@@ -45968,8 +45968,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_lib_gameservers_ampsyncresult",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "ampsyncresult"
     },
     {
@@ -45979,8 +45979,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_lib_gameservers_syncgameserverswithamp",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "syncgameserverswithamp()"
     },
     {
@@ -45990,8 +45990,8 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "src_lib_gameservers_visibleserver",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "visibleserver"
     },
     {
@@ -46001,8 +46001,8 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "src_lib_gameservers_getvisibleservers",
-      "community": 106,
-      "community_name": "photo-request-service.ts",
+      "community": 0,
+      "community_name": "roles.ts",
       "norm_label": "getvisibleservers()"
     },
     {
@@ -47651,8 +47651,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_notifications",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "notifications.ts"
     },
     {
@@ -47662,8 +47662,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_lib_notifications_notificationtype",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "notificationtype"
     },
     {
@@ -47673,8 +47673,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_lib_notifications_pref_key",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "pref_key"
     },
     {
@@ -47684,8 +47684,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_lib_notifications_istypeenabled",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "istypeenabled()"
     },
     {
@@ -47695,8 +47695,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_lib_notifications_createnotification",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "createnotification()"
     },
     {
@@ -47761,8 +47761,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "src_lib_notify_dispatch_loadrules",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "loadrules()"
     },
     {
@@ -47772,8 +47772,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "src_lib_notify_dispatch_getnotificationrule",
-      "community": 83,
-      "community_name": "(dashboard)/events/page.tsx",
+      "community": 46,
+      "community_name": "discord-rest.ts",
       "norm_label": "getnotificationrule()"
     },
     {
@@ -48245,8 +48245,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_lib_points_point_rules",
-      "community": 46,
-      "community_name": "discord-rest.ts",
+      "community": 139,
+      "community_name": "starter-pick.ts",
       "norm_label": "point_rules"
     },
     {
@@ -48938,8 +48938,8 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "src_lib_ranks_rankentry",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "rankentry"
     },
     {
@@ -52359,8 +52359,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_year_review",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "year-review.ts"
     },
     {
@@ -52370,8 +52370,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_lib_year_review_getavailablereviewyears",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "getavailablereviewyears()"
     },
     {
@@ -52381,8 +52381,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_lib_year_review_yearreview",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "yearreview"
     },
     {
@@ -52392,8 +52392,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_lib_year_review_buildyearreview",
-      "community": 90,
-      "community_name": "useConfirm",
+      "community": 16,
+      "community_name": "ranks.ts",
       "norm_label": "buildyearreview()"
     },
     {
@@ -138293,7 +138293,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/BottomNav.tsx",
-      "source_location": "L31",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_bottomnav",
@@ -138304,7 +138304,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/components/BottomNav.tsx",
-      "source_location": "L24",
+      "source_location": "L21",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_bottomnav",
@@ -138375,7 +138375,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/components/BottomNav.tsx",
-      "source_location": "L140",
+      "source_location": "L125",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_bottomnav_bottomnav",
@@ -199857,5 +199857,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9927d3fc0249c74b5a8a49f3579411b5a0429ff2"
+  "built_at_commit": "743be44deebc58464ca1b052695772722819f7a5"
 }

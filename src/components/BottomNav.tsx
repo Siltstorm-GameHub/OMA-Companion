@@ -14,9 +14,12 @@ const NAV = [
 ];
 
 const STROKE = 64;          // Kantenlänge des Pinselstrich-Paars in px
-const APART_MS = 260;       // Dauer des Auseinanderfahrens
-const APART_DX = 34;        // Weg der Striche beim Auseinanderfahren
-const APART_DY = 26;
+const OUT_MS = 240;         // Dauer des Hinausfahrens
+const IN_MS = 300;          // Dauer des Hereinfahrens
+// Die Striche zeigen von links unten nach rechts oben. Genau entlang dieser
+// Diagonale fahren sie ein und aus: Teal kommt von rechts oben und wird nach
+// links unten weitergezogen, Rot kommt von links unten und geht nach rechts oben.
+const TRAVEL = 76;
 
 const maskStyle = (src: string) => ({
   WebkitMaskImage: `url(${src})`, maskImage: `url(${src})`,
@@ -35,12 +38,11 @@ export default function BottomNav() {
   }));
   const activeIndex = items.findIndex(n => n.active);
 
-  // Die zwei Pinselstriche fahren beim Wechsel in entgegengesetzte Richtungen
-  // weg und setzen sich am neuen Icon wieder zusammen. `shown` = an welchem
-  // Slot sie gerade sitzen, `apart` = auseinandergefahren (unsichtbar).
+  // Ablauf beim Tabwechsel: "out" = alter Strich fährt entlang der Diagonale
+  // hinaus, "pre" = am neuen Slot unsichtbar außerhalb positioniert (ohne
+  // Übergang), "rest" = fährt entlang der Diagonale an seinen Platz.
   const [shown, setShown] = useState(activeIndex);
-  const [apart, setApart] = useState(false);
-  const [snap, setSnap] = useState(false);       // Positionswechsel ohne Übergang
+  const [phase, setPhase] = useState<"rest" | "out" | "pre">("rest");
   const shownRef = useRef(activeIndex);
   const timers = useRef<number[]>([]);
   const clearTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
@@ -48,29 +50,39 @@ export default function BottomNav() {
   useEffect(() => {
     if (activeIndex === shownRef.current) return;
     clearTimers();
-    setApart(true);
+    setPhase("out");
     if (activeIndex < 0) return;                 // Seite gehört nicht zur Nav: Striche bleiben weg
     timers.current.push(window.setTimeout(() => {
       shownRef.current = activeIndex;
-      setSnap(true);
       setShown(activeIndex);
-      timers.current.push(window.setTimeout(() => { setSnap(false); setApart(false); }, 40));
-    }, APART_MS));
+      setPhase("pre");
+      timers.current.push(window.setTimeout(() => setPhase("rest"), 40));
+    }, OUT_MS));
   }, [activeIndex]);
 
   useEffect(() => clearTimers, []);
 
-  const strokeImg = (src: string, dx: number, dy: number) => (
-    <img
-      src={src} alt="" draggable={false}
-      style={{
-        position: "absolute", inset: 0, width: "100%", height: "100%",
-        transform: apart ? `translate(${dx}px, ${dy}px)` : "translate(0,0)",
-        opacity: apart ? 0 : 1,
-        transition: snap ? "none" : `transform ${APART_MS + 60}ms cubic-bezier(0.5,0,0.3,1), opacity ${APART_MS}ms`,
-      }}
-    />
-  );
+  // dir = +1: Strich kommt von rechts oben und geht nach links unten (Teal),
+  // dir = -1: Strich kommt von links unten und geht nach rechts oben (Rot).
+  const strokeImg = (src: string, dir: 1 | -1) => {
+    const off = dir * TRAVEL;
+    const transform =
+      phase === "out" ? `translate(${-off}px, ${off}px)`
+      : phase === "pre" ? `translate(${off}px, ${-off}px)`
+      : "translate(0, 0)";
+    return (
+      <img
+        src={src} alt="" draggable={false}
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          transform,
+          transition: phase === "pre" ? "none"
+            : phase === "out" ? `transform ${OUT_MS}ms cubic-bezier(0.5,0,0.9,0.5)`
+            : `transform ${IN_MS}ms cubic-bezier(0.1,0.6,0.2,1)`,
+        }}
+      />
+    );
+  };
 
   return (
     <nav
@@ -86,8 +98,10 @@ export default function BottomNav() {
       className="backdrop-blur-2xl safe-area-pb"
     >
       <div className="flex items-stretch h-16 relative">
-        {/* Pinselstrich-Paar hinter dem aktiven Icon (Slots sind gleich breit). */}
+        {/* Pinselstrich-Paar hinter dem aktiven Icon (Slots sind gleich breit).
+            Der Clip-Container schneidet die Striche an der Leistenkante ab. */}
         {shown >= 0 && (
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 1 }}>
           <div style={{
             position: "absolute", top: 0, bottom: 0, left: 0,
             width: `${100 / items.length}%`,
@@ -96,14 +110,15 @@ export default function BottomNav() {
             pointerEvents: "none", zIndex: 1,
           }}>
             <div style={{ position: "relative", width: STROKE, height: STROKE }}>
-              {strokeImg("/icons/nav/stroke-teal.png", -APART_DX, -APART_DY)}
-              {strokeImg("/icons/nav/stroke-red.png", APART_DX, APART_DY)}
+              {strokeImg("/icons/nav/stroke-teal.png", 1)}
+              {strokeImg("/icons/nav/stroke-red.png", -1)}
             </div>
+          </div>
           </div>
         )}
 
         {items.map(({ label, href, glyph, active, showPollBadge }, i) => {
-          const filled = active && shown === i && !apart;
+          const filled = active && shown === i && phase === "rest";
           return (
             <GateLink
               key={href}
