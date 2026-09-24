@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Search, Save, Loader2, Upload, RotateCcw } from "@/components/icons";
 
 interface CardRow {

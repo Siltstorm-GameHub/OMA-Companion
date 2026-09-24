@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { RotateCcw, Trash2, Check, Minus, Plus as PlusIcon, RefreshCw, Swords, X } from "@/components/icons";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { userName, fmtDate, nowForDatetimeLocal, type User, type Match, type MatchEntry, type Tournament } from "./TournamentManager";

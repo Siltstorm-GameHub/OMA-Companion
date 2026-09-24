@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { X, ScissorsLineDashed } from "@/components/icons";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import BattleCardView from "./BattleCardView";

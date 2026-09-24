@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "@/components/icons";
 import { Edit2, Eye, EyeOff } from "@/components/icons";
 import ActionCountBadge from "@/components/ActionCountBadge";
 import EventCategoryBadge from "@/components/EventCategoryBadge";

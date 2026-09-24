@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@/components/icons";
 import { Trophy, X } from "@/components/icons";
 import { NewContentPing } from "@/components/NewContentPing";
 

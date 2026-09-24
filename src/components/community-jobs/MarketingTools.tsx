@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronDown, TrendingUp } from "lucide-react";
+import { TrendingUp } from "@/components/icons";
+import { ChevronDown } from "@/components/icons";
 import { Check, Megaphone, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";

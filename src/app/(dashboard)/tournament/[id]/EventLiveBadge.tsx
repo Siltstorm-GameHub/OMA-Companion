@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/icons";
 
 export default function EventLiveBadge({ twitchLogins }: { twitchLogins: string[] }) {
   const [livePartner, setLivePartner] = useState<{ twitchLogin: string; partnerName: string } | null>(null);

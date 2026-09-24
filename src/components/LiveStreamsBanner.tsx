@@ -2,7 +2,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/icons";
 import { Eye, ExternalLink } from "@/components/icons";
 import TwitchEmbedPlayer from "./TwitchEmbedPlayer";
 

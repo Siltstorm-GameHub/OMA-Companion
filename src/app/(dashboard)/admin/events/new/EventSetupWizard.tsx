@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Check, Plus, Trash2, CalendarDays } from "@/components/icons";
 import { EventCategory, EventGenre } from "@prisma/client";

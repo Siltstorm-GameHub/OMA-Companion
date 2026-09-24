@@ -7,7 +7,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Search, Save, Loader2, Upload, RotateCcw, Shield, Zap } from "@/components/icons";
 
 interface TacticCardRow {

@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Hash, CalendarPlus } from "lucide-react";
+import { Hash, CalendarPlus } from "@/components/icons";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Gamepad2, Swords, RefreshCw, BarChart2, X, Trophy, ExternalLink, Settings } from "@/components/icons";
 import Link from "next/link";

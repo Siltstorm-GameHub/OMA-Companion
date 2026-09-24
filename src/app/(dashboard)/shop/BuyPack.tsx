@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Package } from "lucide-react";
+import { Package } from "@/components/icons";
 import { Loader2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { PackKind, PackPrices } from "@/lib/shop-config";

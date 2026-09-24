@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "@/components/icons";
 import { Rocket, Star, Trophy } from "@/components/icons";
 import { getSessionUser } from "@/lib/roles";
 import { getRoadmap } from "@/lib/visionaer-service";

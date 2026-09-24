@@ -1,3 +1,4 @@
+import { HeartColor as Heart } from "@/components/icons-color";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,8 @@ import { getSessionUser } from "@/lib/roles";
 import { getRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import { calcStreak } from "@/lib/streak";
-import { TrendingUp, TrendingDown } from "lucide-react";
-import { Trophy, Swords, Heart, Minus } from "@/components/icons";
+import { TrendingUp, TrendingDown } from "@/components/icons";
+import { Trophy, Swords, Minus } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";

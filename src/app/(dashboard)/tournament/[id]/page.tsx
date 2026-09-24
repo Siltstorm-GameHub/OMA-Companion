@@ -8,7 +8,7 @@ import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "@/components/icons";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";

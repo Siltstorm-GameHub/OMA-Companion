@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "@/components/icons";
 import { Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import RankIcon from "@/components/RankIcon";

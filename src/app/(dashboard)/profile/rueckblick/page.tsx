@@ -1,3 +1,5 @@
+import { HeartColor as Heart } from "@/components/icons-color";
+import GiftIcon from "@/components/GiftIcon";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
@@ -11,8 +13,9 @@ import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
-import { Sparkles, TrendingUp } from "lucide-react";
-import { Gift, CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Award, Dices, Target, Heart } from "@/components/icons";
+import { TrendingUp } from "@/components/icons";
+import { Sparkles } from "@/components/icons";
+import { CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Award, Dices, Target } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [
@@ -78,7 +81,7 @@ export default async function YearReviewPage({
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Gift className="w-5 h-5 text-violet-400" />
+              <GiftIcon size={20} />
             </div>
             <div>
               <h1 className="font-display text-xl font-black text-white tracking-tight">Jahresrückblick {year}</h1>

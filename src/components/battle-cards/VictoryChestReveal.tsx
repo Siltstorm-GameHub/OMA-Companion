@@ -19,7 +19,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import confetti from "canvas-confetti";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { Gift } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 

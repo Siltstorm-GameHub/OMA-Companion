@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { Check, Loader2 } from "@/components/icons";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";

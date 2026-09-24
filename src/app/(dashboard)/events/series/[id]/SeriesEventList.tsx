@@ -4,7 +4,7 @@ import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight } from "@/components/icons";
 import { CalendarDays, Check, Tv2 } from "@/components/icons";
 import GameCover from "@/components/GameCover";
 import { AvatarStack } from "@/components/AvatarStack";

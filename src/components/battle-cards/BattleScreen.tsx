@@ -14,7 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { Play, Pause, RotateCcw } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";

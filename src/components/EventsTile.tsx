@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Users } from "lucide-react";
+import { Users } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
 import { Scroll, Timer, CheckCircle2 } from "@/components/icons";
 import type { EventCategory } from "@prisma/client";
 import GameCover from "@/components/GameCover";

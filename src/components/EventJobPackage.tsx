@@ -1,6 +1,6 @@
 import JobIcon from "@/components/JobIcon";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { Check } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";

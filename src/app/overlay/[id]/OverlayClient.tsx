@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import type { SeriesRankingRow } from "@/lib/seriesRanking";
 import RankedAvatar from "@/components/RankedAvatar";
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "@/components/icons";
 
 type OverlayEntry = {
   id: string;

@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ChevronRight, ImagePlus } from "lucide-react";
+import { ImagePlus } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
 import { AtSign, Lightbulb, Loader2, Smile, Upload, X } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";

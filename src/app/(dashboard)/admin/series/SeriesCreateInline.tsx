@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Plus } from "@/components/icons";
 
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-gray-900 border border-white/[0.08] focus:border-teal-500/40 transition-colors";

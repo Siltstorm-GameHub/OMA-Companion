@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "@/components/icons";
 import { FeedCard, type FeedEntry } from "../../CommunityBoardClient";
 
 export default function ReportPageClient({ entry, isDraft }: { entry: FeedEntry; isDraft: boolean }) {

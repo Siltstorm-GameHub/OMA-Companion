@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { ShieldAlert, LogIn, Square } from "lucide-react";
+import { Square } from "lucide-react";
+import { ShieldAlert, LogIn } from "@/components/icons";
 import { ExternalLink, CheckSquare } from "@/components/icons";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 

@@ -2,7 +2,7 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Check, X, Trash2, Target, UserPlus, Search, Loader2 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";

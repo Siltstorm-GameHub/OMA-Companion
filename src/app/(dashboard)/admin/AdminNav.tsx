@@ -1,11 +1,13 @@
 "use client";
+import { HeartColor as Heart } from "@/components/icons-color";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { Users, Users2, Handshake } from "lucide-react";
+import { Handshake } from "lucide-react";
+import { Users, Users2 } from "@/components/icons";
 import { Server } from "@/components/icons";
-import { LayoutDashboard, Bell, CalendarDays, Heart, Medal, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
+import { LayoutDashboard, Bell, CalendarDays, Medal, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
 import DailyPollActionBadge from "@/components/DailyPollActionBadge";

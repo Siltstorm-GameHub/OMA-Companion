@@ -1,3 +1,4 @@
+import GiftIcon from "@/components/GiftIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -16,8 +17,8 @@ import { FotografPortfolio } from "@/components/FotografGalleries";
 import { MarketingPortfolio } from "@/components/MarketingLists";
 import { IdeaPortfolio } from "@/components/IdeaLists";
 import { getAvailableReviewYears } from "@/lib/year-review";
-import { ChevronRight } from "lucide-react";
-import { Crown, Gift, Clock, MessageSquare } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
+import { Crown, Clock, MessageSquare } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import FavoriteGamesSection from "./FavoriteGamesSection";
@@ -363,7 +364,7 @@ export default async function ProfilePage() {
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-rose-500/8 pointer-events-none" />
             <div className="relative flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                <Gift className="w-5 h-5 text-violet-400" />
+                <GiftIcon size={20} />
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">Dein Jahresrückblick {reviewYears[0]}</p>

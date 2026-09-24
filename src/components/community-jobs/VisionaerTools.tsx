@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, TrendingUp } from "lucide-react";
+import { TrendingUp } from "@/components/icons";
+import { ChevronDown } from "@/components/icons";
 import { Star } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 

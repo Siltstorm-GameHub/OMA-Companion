@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { Plus, EyeOff } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 

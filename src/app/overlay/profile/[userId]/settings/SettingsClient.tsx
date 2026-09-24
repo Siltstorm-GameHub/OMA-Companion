@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Move, Sparkles, TrendingUp, CalendarClock } from "lucide-react";
+import { TrendingUp } from "@/components/icons";
+import { Move, Sparkles, CalendarClock } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Copy, ExternalLink, Tv2, Check, Gamepad2, Maximize2, Timer } from "@/components/icons";
 import { toast } from "sonner";

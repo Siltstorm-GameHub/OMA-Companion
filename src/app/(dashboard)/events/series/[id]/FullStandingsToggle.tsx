@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { BarChart2 } from "@/components/icons";
 import SeriesStandingsTable, { type DeltaInfo } from "./SeriesStandingsTable";
 

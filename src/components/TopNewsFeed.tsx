@@ -2,7 +2,7 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { CalendarDays, Scroll, Zap, Trophy, Clapperboard, Vote, Crown } from "@/components/icons";
 
 export type NewsItem = {

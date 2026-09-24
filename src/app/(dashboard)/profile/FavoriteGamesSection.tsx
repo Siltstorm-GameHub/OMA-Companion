@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { Pencil, X, Check, Plus, Loader2, Gamepad2 } from "@/components/icons";
 import GameCover from "@/components/GameCover";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";

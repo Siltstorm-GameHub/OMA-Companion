@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "@/components/icons";
 import { Save, Trash2, Eye, EyeOff } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 

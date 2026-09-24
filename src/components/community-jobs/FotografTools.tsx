@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { ChevronDown, TrendingUp } from "lucide-react";
+import { TrendingUp } from "@/components/icons";
+import { ChevronDown } from "@/components/icons";
 import { Camera, Copy, Images, Loader2, Search, Trash2, Upload, X } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";

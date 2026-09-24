@@ -2,7 +2,7 @@ import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import TournamentManager from "../../TournamentManager";
 

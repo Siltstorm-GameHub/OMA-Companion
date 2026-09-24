@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Newspaper } from "@/components/icons";
 
 export default function EventSummarySection({ summary }: { summary: string }) {

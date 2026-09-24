@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus } from "@/components/icons";
 import { Pencil, Download, Loader2, Newspaper, Megaphone, CheckCircle2 } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";

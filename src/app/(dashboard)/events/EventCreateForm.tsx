@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Euro } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Plus, CalendarDays } from "@/components/icons";
 import GameNameInput from "@/components/GameNameInput";
@@ -133,7 +134,7 @@ export default function EventCreateForm() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Euro className="w-3 h-3" /> Münzen-Belohnung (Teilnahme)</label>
+              <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={12} /> Münzen-Belohnung (Teilnahme)</label>
               <input type="number" min="0" value={pointReward} onChange={e => setPointReward(e.target.value)}
                 className={inputCls} style={inputStyle} />
             </div>

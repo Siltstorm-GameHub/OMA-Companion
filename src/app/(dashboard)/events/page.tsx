@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { Users, ChevronRight } from "lucide-react";
+import { Users } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
 import { CalendarDays, ExternalLink, Trophy, Check, Clapperboard } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";

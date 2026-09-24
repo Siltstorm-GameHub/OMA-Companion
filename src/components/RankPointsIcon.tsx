@@ -9,7 +9,7 @@ export default function RankPointsIcon({
 }) {
   return (
     <Image
-      src="/Community Icon.png"
+      src="/icons/currency/rank-points.png"
       alt="Punkte"
       width={size}
       height={size}

@@ -1,10 +1,12 @@
+import { HeartColor as Heart, GoldColor as Euro } from "@/components/icons-color";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { calcStreak } from "@/lib/streak";
 import RankedAvatar from "@/components/RankedAvatar";
-import { Users, Euro, TrendingDown } from "lucide-react";
-import { Heart, Flame, CalendarDays, ShoppingCart, Wallet, Lightbulb } from "@/components/icons";
+import { TrendingDown } from "@/components/icons";
+import { Users } from "@/components/icons";
+import { Flame, CalendarDays, ShoppingCart, Wallet, Lightbulb } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];

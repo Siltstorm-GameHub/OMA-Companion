@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock } from "@/components/icons";
 import { Trophy, Clock, Vote, Clapperboard, ArrowRight, Zap } from "@/components/icons";
 import ActivityFeed from "./ActivityFeed";
 import ResetSelectiveButton from "./ResetSelectiveButton";

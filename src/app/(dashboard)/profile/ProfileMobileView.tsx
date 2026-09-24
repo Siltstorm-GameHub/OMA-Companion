@@ -1,9 +1,11 @@
 "use client";
+import GiftIcon from "@/components/GiftIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Building2 } from "lucide-react";
-import { User, Settings, Gift, Clock, MessageSquare } from "@/components/icons";
+import { Building2 } from "@/components/icons";
+import { ChevronRight } from "@/components/icons";
+import { User, Settings, Clock, MessageSquare } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import RankUpFlare from "@/components/RankUpFlare";
@@ -210,7 +212,7 @@ export default function ProfileMobileView(props: Props) {
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-rose-500/8 pointer-events-none" />
                 <div className="relative flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                    <Gift className="w-4 h-4 text-violet-400" />
+                    <GiftIcon size={16} />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">Dein Jahresrückblick {reviewYears[0]}</p>

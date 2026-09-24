@@ -2,7 +2,9 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Ban } from "lucide-react";
+import { TrendingUp, TrendingDown } from "@/components/icons";
+import { Ban } from "@/components/icons";
+import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Medal, Minus, Flame } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 

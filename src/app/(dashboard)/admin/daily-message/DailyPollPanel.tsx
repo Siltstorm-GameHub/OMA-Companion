@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { GripVertical, ChevronDown, Users } from "lucide-react";
+import { GripVertical } from "lucide-react";
+import { Users } from "@/components/icons";
+import { ChevronDown } from "@/components/icons";
 import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";

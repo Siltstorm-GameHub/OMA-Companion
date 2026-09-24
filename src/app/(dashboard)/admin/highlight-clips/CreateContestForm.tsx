@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { Loader2, Plus, X } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { Crown } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import SeriesIcon from "@/components/SeriesIcon";

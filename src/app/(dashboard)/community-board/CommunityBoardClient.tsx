@@ -3,7 +3,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus } from "@/components/icons";
 import { ThumbsUp, Loader2, Star, Megaphone, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";

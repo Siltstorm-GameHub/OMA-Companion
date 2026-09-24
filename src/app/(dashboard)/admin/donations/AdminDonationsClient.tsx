@@ -1,10 +1,11 @@
 "use client";
+import { HeartColor as Heart, GoldColor as Euro } from "@/components/icons-color";
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Euro, TrendingDown } from "lucide-react";
-import { Trash2, Plus, Heart, ShoppingCart, Wallet, Lightbulb, Pencil, Check, X } from "@/components/icons";
+import { TrendingDown } from "@/components/icons";
+import { Trash2, Plus, ShoppingCart, Wallet, Lightbulb, Pencil, Check, X } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
 

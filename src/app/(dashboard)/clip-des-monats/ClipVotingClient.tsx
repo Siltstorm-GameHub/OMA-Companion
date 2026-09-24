@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Ban } from "lucide-react";
+import { Ban } from "@/components/icons";
 import { Check, Loader2 } from "@/components/icons";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
 import RankedAvatar from "@/components/RankedAvatar";

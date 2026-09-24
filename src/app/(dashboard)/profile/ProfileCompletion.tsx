@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Circle, ChevronDown } from "lucide-react";
+import { Circle } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { CheckCircle2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import { PROFILE_COMPLETION_ITEMS } from "@/lib/profile-completion";

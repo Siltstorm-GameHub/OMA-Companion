@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Crop } from "lucide-react";
+import { Crop } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 
 /**

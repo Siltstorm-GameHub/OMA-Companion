@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Plus, Award, Search, X } from "@/components/icons";
 import { EmptyState } from "@/components/EmptyState";
 import BadgeIcon from "@/components/BadgeIcon";

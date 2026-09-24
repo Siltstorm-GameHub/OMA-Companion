@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronUp } from "lucide-react";
+import { ChevronUp } from "@/components/icons";
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);

@@ -3,7 +3,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "@/components/icons";
 import { LogOut, Sun, Moon } from "@/components/icons";
 import { useGuestGate } from "@/components/GuestGate";
 import PwaInstallButton from "@/components/PwaInstallButton";

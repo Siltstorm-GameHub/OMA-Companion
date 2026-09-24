@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ToggleLeft, ToggleRight, Users, Circle, Sparkles } from "lucide-react";
+import { ToggleLeft, ToggleRight, Circle } from "lucide-react";
+import { Users, Sparkles } from "@/components/icons";
 import { Plus, Trash2, Loader2, Pencil, Eye, EyeOff, Download, RefreshCw, Globe } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";

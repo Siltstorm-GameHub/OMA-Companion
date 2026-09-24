@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SearchX } from "lucide-react";
+import { SearchX } from "@/components/icons";
 import { Home } from "@/components/icons";
 
 export default function GlobalNotFound() {

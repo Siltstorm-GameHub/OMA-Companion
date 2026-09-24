@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import { Scale } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 

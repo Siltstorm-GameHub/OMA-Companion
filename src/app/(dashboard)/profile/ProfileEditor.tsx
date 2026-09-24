@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Cake } from "lucide-react";
+import { Cake } from "@/components/icons";
 import { Pencil, Check, X, MessageSquare, Loader2, Tv2 } from "@/components/icons";
 import ImageUploadField from "@/components/ImageUploadField";
 
