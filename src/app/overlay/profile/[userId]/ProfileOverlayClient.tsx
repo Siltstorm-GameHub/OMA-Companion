@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Calendar, Clock, Gamepad2 } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
+import JobIcon from "@/components/JobIcon";
+import { configureJobBadgeSource } from "@/components/community-jobs/JobBadge";
+import { JOB_BADGE_META, levelTitle, type JobBadgeData } from "@/lib/job-badges";
+import { jobColor } from "@/lib/job-ring";
 import { getGameFallbackGradient } from "@/lib/game-cover";
 import { BRAND_LOGO } from "@/lib/brand";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
@@ -20,6 +24,7 @@ type ProfileState = {
   twitchLogin: string | null;
   rankPoints: number;
   rankLabel: string;
+  badge: JobBadgeData | null;
   favoriteGames: FavoriteGame[];
   upcomingEvents: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[];
 };
@@ -106,6 +111,8 @@ function useStackedProfileElements(buckets: Record<string, { pos: { x: number; y
 export default function ProfileOverlayClient({
   userId, token, layout, rotateSeconds,
 }: { userId: string; token: string; layout: ProfileLayoutPositions | null; rotateSeconds: number }) {
+  // Overlays laufen ohne Login: Job-Ringe der Avatare über den Token-Endpunkt laden
+  configureJobBadgeSource(`/api/overlay/badges?user=${encodeURIComponent(userId)}&token=${encodeURIComponent(token)}&ids=`);
   const [state, setState] = useState<ProfileState | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
@@ -224,7 +231,7 @@ export default function ProfileOverlayClient({
 function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, hasCycle }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number; isVisible: boolean; hasCycle: boolean }) {
   if (!state) return null;
   switch (elementKey) {
-    case "rank":      return <RankTile rankLabel={state.rankLabel} userId={state.id} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
+    case "rank":      return <RankTile rankLabel={state.rankLabel} userId={state.id} badge={state.badge} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
     case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} isVisible={isVisible} hasCycle={hasCycle} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
     default:          return null;
@@ -232,7 +239,7 @@ function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, ha
 }
 
 /** Rang-Kachel: Avatar mit Rang-Ring, Rangbezeichnung und Fortschrittsbalken zum nächsten Rang. */
-function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userId: string; image: string | null; name: string }) {
+function RankTile({ rankLabel, userId, badge, image, name }: { rankLabel: string; userId: string; badge: JobBadgeData | null; image: string | null; name: string }) {
   return (
     <div
       style={{
@@ -258,11 +265,19 @@ function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userI
         }}
       />
       <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
-        <RankedAvatar userId={userId} src={image} alt={name} size={48} />
+        <RankedAvatar userId={userId} badge={badge} src={image} alt={name} size={48} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {rankLabel}
+          <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {badge && JOB_BADGE_META[badge.jobKey] ? (
+              <>
+                <JobIcon jobKey={badge.jobKey} className="w-4 h-4" />
+                <span style={{ color: jobColor(badge.jobKey) ?? "#fff" }}>{JOB_BADGE_META[badge.jobKey].label} · {levelTitle(badge.jobKey, badge.level)}</span>
+              </>
+            ) : (
+              <span style={{ color: "#a1a1aa" }}>Arbeitslos</span>
+            )}
           </span>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>{rankLabel}</span>
         </div>
       </div>
     </div>

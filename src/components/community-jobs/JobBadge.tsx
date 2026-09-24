@@ -18,6 +18,16 @@ import {
 
 const TTL_MS = 5 * 60_000;
 const CHUNK = 100;
+// Standard: eingeloggte App. Overlays (OBS, ohne Login) stellen per configureJobBadgeSource auf den Token-Endpunkt um.
+let sourcePrefix = "/api/community-jobs/badges?ids=";
+
+/** Stellt die Abruf-URL um (Präfix, an das die kommaseparierten IDs angehängt werden). */
+export function configureJobBadgeSource(prefix: string) {
+  if (prefix === sourcePrefix) return;
+  sourcePrefix = prefix;
+  cache.clear();
+}
+
 const cache = new Map<string, { data: JobBadgeData | null; at: number }>();
 const pending = new Set<string>();
 const inflight = new Set<string>();
@@ -37,7 +47,7 @@ async function flush() {
     const chunk = ids.slice(i, i + CHUNK);
     chunk.forEach(id => inflight.add(id));
     try {
-      const res = await fetch(`/api/community-jobs/badges?ids=${encodeURIComponent(chunk.join(","))}`);
+      const res = await fetch(`${sourcePrefix}${encodeURIComponent(chunk.join(","))}`);
       const data: Record<string, JobBadgeData> = res.ok ? await res.json() : {};
       const now = Date.now();
       chunk.forEach(id => cache.set(id, { data: data[id] ?? null, at: now }));

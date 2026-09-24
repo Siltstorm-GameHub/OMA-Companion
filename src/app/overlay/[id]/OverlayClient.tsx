@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import type { SeriesRankingRow } from "@/lib/seriesRanking";
 import RankedAvatar from "@/components/RankedAvatar";
+import { configureJobBadgeSource } from "@/components/community-jobs/JobBadge";
 import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "@/components/icons";
 
 type OverlayEntry = {
@@ -397,6 +398,8 @@ export default function OverlayClient({
    *  sowie Lieblingsspiele mit echten Profildaten. Null bei älteren Links. */
   streamerId: string | null;
 }) {
+  // Overlays laufen ohne Login: Job-Ringe der Avatare über den Token-Endpunkt laden
+  configureJobBadgeSource(`/api/overlay/badges?event=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}&ids=`);
   const [state, setState] = useState<OverlayState | null>(null);
   const esRef = useRef<EventSource | null>(null);
 

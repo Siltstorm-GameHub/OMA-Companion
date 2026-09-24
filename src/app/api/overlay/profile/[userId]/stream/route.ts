@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { getGameCoverUrl } from "@/lib/game-cover";
+import { getJobBadges } from "@/lib/community-job-service";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,12 @@ async function loadProfileOverlayState(userId: string) {
     select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true },
   });
 
+  const badge = (await getJobBadges([user.id]))[user.id] ?? null;
+
   return {
     id: user.id, name: user.name, username: user.username, image: user.image, twitchLogin: user.twitchLogin,
     rankPoints: user.rankPoints,
+    badge,
     rankLabel: `${user.rankPoints.toLocaleString("de-DE")} Punkte`,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
     upcomingEvents: upcomingEvents.map(e => ({

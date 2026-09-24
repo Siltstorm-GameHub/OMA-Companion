@@ -1,9 +1,12 @@
 import Image from "next/image";
 import RankRing from "@/components/RankRing";
+import type { JobBadgeData } from "@/lib/job-badges";
 
 interface RankedAvatarProps {
   /** User, dessen Beruf Ringfarbe und -effekt bestimmt. Ohne ID: schlichter Ring wie bei Arbeitslosen. */
   userId?: string | null;
+  /** Schon bekannte Badge-Daten (spart den Abruf); `null` = arbeitslos. */
+  badge?: JobBadgeData | null;
   /** Veraltet, wird nicht mehr gebraucht. */
   rankPoints?: number;
   src: string | null | undefined;
@@ -58,6 +61,7 @@ function getInitials(name: string): string {
 
 export default function RankedAvatar({
   userId,
+  badge,
   src,
   alt,
   size = 40,
@@ -74,6 +78,7 @@ export default function RankedAvatar({
   return (
     <RankRing
       userId={userId}
+      badge={badge}
       width={pad}
       rounded={r}
       flat={flat}
