@@ -20,7 +20,6 @@ type ProfileState = {
   twitchLogin: string | null;
   rankPoints: number;
   rankLabel: string;
-  rankPct: number;
   favoriteGames: FavoriteGame[];
   upcomingEvents: { id: string; title: string; startAt: string; game: string | null; coverUrl: string | null }[];
 };
@@ -225,7 +224,7 @@ export default function ProfileOverlayClient({
 function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, hasCycle }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number; isVisible: boolean; hasCycle: boolean }) {
   if (!state) return null;
   switch (elementKey) {
-    case "rank":      return <RankTile rankLabel={state.rankLabel} rankPct={state.rankPct} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
+    case "rank":      return <RankTile rankLabel={state.rankLabel} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
     case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} isVisible={isVisible} hasCycle={hasCycle} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
     default:          return null;
@@ -233,7 +232,7 @@ function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, ha
 }
 
 /** Rang-Kachel: Avatar mit Rang-Ring, Rangbezeichnung und Fortschrittsbalken zum nächsten Rang. */
-function RankTile({ rankLabel, rankPct, rankPoints, image, name }: { rankLabel: string; rankPct: number; rankPoints: number; image: string | null; name: string }) {
+function RankTile({ rankLabel, rankPoints, image, name }: { rankLabel: string; rankPoints: number; image: string | null; name: string }) {
   return (
     <div
       style={{
@@ -264,9 +263,6 @@ function RankTile({ rankLabel, rankPct, rankPoints, image, name }: { rankLabel: 
           <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {rankLabel}
           </span>
-          <div style={{ height: 5, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${rankPct}%`, borderRadius: 999, background: "linear-gradient(90deg, #14b8a6, #5eead4)" }} />
-          </div>
         </div>
       </div>
     </div>

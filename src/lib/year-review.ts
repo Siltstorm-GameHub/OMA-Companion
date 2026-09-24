@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import { getRank, type RankEntry } from "./ranks";
 import { getBadgeDef } from "./badges";
 import { getBerlinDateParts } from "./time";
 
@@ -19,9 +18,8 @@ export type YearReview = {
   coinsSpent: number;
 
   rankPointsEarned: number;
-  rankStart: RankEntry;
-  rankEnd:   RankEntry;
-  rankedUp:  boolean;
+  rankPointsStart: number;
+  rankPointsEnd: number;
 
   eventsAttended: number;
   eventWins:      number;
@@ -125,8 +123,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
 
   const rankPointsBefore = rankPointsBeforeAgg._sum.amount ?? 0;
   const rankPointsThrough = rankPointsThroughAgg._sum.amount ?? 0;
-  const rankStart = getRank(rankPointsBefore);
-  const rankEnd   = getRank(rankPointsThrough);
 
   const eventWins = eventRegs.filter(r => {
     try {
@@ -180,9 +176,8 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     coinsEarned,
     coinsSpent,
     rankPointsEarned: rankPointsThrough - rankPointsBefore,
-    rankStart,
-    rankEnd,
-    rankedUp: rankEnd.min > rankStart.min,
+    rankPointsStart: rankPointsBefore,
+    rankPointsEnd: rankPointsThrough,
     eventsAttended: eventRegs.length,
     eventWins,
     topGames,

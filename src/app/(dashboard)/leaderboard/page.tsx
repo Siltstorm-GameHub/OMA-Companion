@@ -3,13 +3,11 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import { calcStreak } from "@/lib/streak";
 import { TrendingUp, TrendingDown } from "@/components/icons";
 import { Trophy, Swords, Minus } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
-import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { CountUp } from "@/components/CountUp";
 import { GateLink, GuestMoreCta } from "@/components/GuestGate";
@@ -256,9 +254,6 @@ export default async function LeaderboardPage() {
                   className={`${cfg.avatarSize} mb-3`}
                 />
 
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <RankIcon rankPoints={u.rankPoints} size="sm" />
-                </div>
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
                   {displayName}
                   <JobBadge userId={u.id} variant="compact" className="ml-1" />
@@ -365,16 +360,12 @@ export default async function LeaderboardPage() {
 
                 {/* Name + Rang */}
                 <div className="min-w-0 flex items-center gap-2">
-                  <RankIcon rankPoints={u.rankPoints} size="sm" />
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
                       {displayName}
                       <JobBadge userId={u.id} variant="compact" className="ml-1" />
                       <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                       {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
-                    </p>
-                    <p className="text-[10px] text-gray-600 mt-0.5 truncate">
-                      {getRankFullLabel(getRank(u.rankPoints))}
                     </p>
                   </div>
                 </div>

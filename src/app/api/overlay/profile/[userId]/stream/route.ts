@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
-import { getRankProgress, getRankFullLabel } from "@/lib/ranks";
 import { getGameCoverUrl } from "@/lib/game-cover";
 
 export const dynamic = "force-dynamic";
@@ -30,13 +29,10 @@ async function loadProfileOverlayState(userId: string) {
     select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true },
   });
 
-  const { rank, pct } = getRankProgress(user.rankPoints);
-
   return {
     id: user.id, name: user.name, username: user.username, image: user.image, twitchLogin: user.twitchLogin,
     rankPoints: user.rankPoints,
-    rankLabel: getRankFullLabel(rank),
-    rankPct: pct,
+    rankLabel: `${user.rankPoints.toLocaleString("de-DE")} Punkte`,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
     upcomingEvents: upcomingEvents.map(e => ({
       id: e.id, title: e.title, startAt: e.startAt, game: e.game,

@@ -2,7 +2,6 @@ import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 import { BRAND, OG_SIZE } from "@/lib/brand";
 import { OgFrame, OgBrandRow, OgPill, loadLogoDataUri } from "@/lib/og";
-import { RANKS } from "@/lib/ranks";
 
 /**
  * Share-Karte für die Rangliste.
@@ -26,9 +25,6 @@ export async function GET() {
   const [memberCount, pointSum] = stats;
   const totalRankPoints = pointSum?._sum.rankPoints ?? null;
 
-  // Höchster Rang, den überhaupt jemand halten kann — als Aufhänger der Karte.
-  const topRank = RANKS[RANKS.length - 1];
-
   return new ImageResponse(
     (
       <OgFrame footer="RANGLISTE">
@@ -38,7 +34,7 @@ export async function GET() {
           Wer ist der
         </div>
         <div style={{ display: "flex", fontSize: 62, fontWeight: 800, color: BRAND.tealLight, lineHeight: 1.1, marginBottom: 26 }}>
-          {topRank.label}?
+          Punktekönig?
         </div>
 
         <div style={{ display: "flex", fontSize: 26, color: BRAND.textDim, marginBottom: 32, maxWidth: 820 }}>
@@ -48,7 +44,6 @@ export async function GET() {
         <div style={{ display: "flex", gap: 13 }}>
           {memberCount != null ? <OgPill text={`${memberCount} Mitglieder`} /> : null}
           {totalRankPoints != null ? <OgPill text={`${totalRankPoints.toLocaleString("de-DE")} Punkte vergeben`} tone="neutral" /> : null}
-          <OgPill text={`${RANKS.length} Ränge`} tone="red" />
         </div>
       </OgFrame>
     ),

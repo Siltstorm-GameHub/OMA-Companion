@@ -1,11 +1,10 @@
 ﻿import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import { TrendingUp, TrendingDown } from "@/components/icons";
 import { Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
-import RankIcon from "@/components/RankIcon";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
 
@@ -41,11 +40,6 @@ export default async function PointsPage() {
 
   const myPoints  = me?.points ?? 0;
   const myRankPts = me?.rankPoints ?? 0;
-  const rankRow   = getRank(myRankPts);
-  const nextRank  = getNextRank(myRankPts);
-  const rankPct   = nextRank
-    ? Math.min(100, Math.round(((myRankPts - rankRow.min) / (nextRank.min - rankRow.min)) * 100))
-    : 100;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -80,33 +74,13 @@ export default async function PointsPage() {
             {/* Divider */}
             <div className="w-px h-12 bg-white/[0.06] hidden sm:block" />
 
-            {/* Rang */}
+            {/* Rangpunkte */}
             <div className="flex-1 min-w-[140px]">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rang</p>
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rangpunkte</p>
               <div className="flex items-center gap-2">
-                <RankIcon rankPoints={myRankPts} size="sm" showPips={false} />
-                <span className={`text-sm font-bold ${rankRow.color}`}>{getRankFullLabel(rankRow)}</span>
+                <RankPointsIcon size={16} />
+                <span className="text-sm font-bold text-teal-300 tabular-nums">{myRankPts.toLocaleString("de-DE")}</span>
               </div>
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-12 bg-white/[0.06] hidden sm:block" />
-
-            {/* Rang-Fortschritt */}
-            <div className="flex-1 min-w-[160px]">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Rangpunkte</p>
-                <span className="text-[10px] text-gray-600 tabular-nums">{myRankPts}{nextRank ? ` / ${nextRank.min}` : ""}</span>
-              </div>
-              <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${rankRow.color.replace("text-", "bg-")}`}
-                  style={{ width: `${rankPct}%` }}
-                />
-              </div>
-              {nextRank && (
-                <p className="text-[10px] text-gray-700 mt-1">Nächster Rang in {nextRank.min - myRankPts} Punkten</p>
-              )}
             </div>
           </div>
         </div>

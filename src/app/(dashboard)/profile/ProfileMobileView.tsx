@@ -7,7 +7,6 @@ import { Building2 } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
 import { User, Settings, Clock, MessageSquare } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
-import RankIcon from "@/components/RankIcon";
 import RankUpFlare from "@/components/RankUpFlare";
 import CoinIcon from "@/components/CoinIcon";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
@@ -147,7 +146,7 @@ export default function ProfileMobileView(props: Props) {
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold text-white truncate">{displayName}<JobBadge userId={userId} className="ml-1.5" /></p>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${rankColor} mt-0.5`}>
-              <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {rankLabel}
+              {rankLabel}
             </span>
             <p className="text-[11px] text-gray-500 mt-1">Mitglied seit {memberSince}</p>
             <div className="mt-1"><ProfileJobBadge userId={userId} /></div>

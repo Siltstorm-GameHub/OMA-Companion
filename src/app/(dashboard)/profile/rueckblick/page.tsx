@@ -3,13 +3,11 @@ import GiftIcon from "@/components/GiftIcon";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
-import { getRankFullLabel } from "@/lib/ranks";
 import { getAvailableReviewYears, buildYearReview } from "@/lib/year-review";
 import { POKAL_CATEGORY_IMAGE, getPokalCategoryLabel } from "@/lib/pokal";
 import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
 import BadgeIcon from "@/components/BadgeIcon";
-import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
@@ -111,21 +109,16 @@ export default async function YearReviewPage({
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
           <div className="absolute inset-0 bg-gradient-to-br from-teal-500/8 to-transparent pointer-events-none" />
           <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5" /> Rang-Reise
+            <TrendingUp className="w-3.5 h-3.5" /> Punkte-Reise
           </p>
           <div className="relative flex items-center gap-2 flex-wrap">
-            <span className={`flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankStart.color} ${review.rankStart.bg} ${review.rankStart.border}`}>
-              <RankIcon rankPoints={review.rankStart.min} size="xs" showPips={false} /> {getRankFullLabel(review.rankStart)}
+            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-white/10 bg-white/[0.04] text-gray-200 tabular-nums">
+              <RankPointsIcon size={14} /> {review.rankPointsStart.toLocaleString("de-DE")}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-600 shrink-0" />
-            <span className={`flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankEnd.color} ${review.rankEnd.bg} ${review.rankEnd.border}`}>
-              <RankIcon rankPoints={review.rankEnd.min} size="xs" showPips={false} /> {getRankFullLabel(review.rankEnd)}
+            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-teal-500/30 bg-teal-500/10 text-teal-300 tabular-nums">
+              <RankPointsIcon size={14} /> {review.rankPointsEnd.toLocaleString("de-DE")}
             </span>
-            {review.rankedUp && (
-              <span className="text-[10px] font-semibold text-amber-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Aufgestiegen!
-              </span>
-            )}
           </div>
           <p className="relative text-xs text-gray-500 mt-3 flex items-center gap-1.5">
             <RankPointsIcon size={12} />

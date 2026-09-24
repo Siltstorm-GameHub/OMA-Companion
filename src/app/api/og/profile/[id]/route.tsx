@@ -2,7 +2,6 @@ import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 import { BRAND, OG_SIZE } from "@/lib/brand";
 import { OgFrame, OgBrandRow, OgPill, loadLogoDataUri, loadRemoteImageDataUri } from "@/lib/og";
-import { getRank, getRankFullLabel, getNextRank } from "@/lib/ranks";
 
 /**
  * Share-Karte für ein Mitgliedsprofil — mit Anzeigename und Avatar.
@@ -43,8 +42,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const avatar = await loadRemoteImageDataUri(user.image);
-  const rank = getRank(user.rankPoints);
-  const next = getNextRank(user.rankPoints);
   const displayName = user.name ?? user.username ?? "Mitglied";
 
   return new ImageResponse(
@@ -80,19 +77,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               {displayName.length > 22 ? displayName.slice(0, 21).trimEnd() + "…" : displayName}
             </div>
             <div style={{ display: "flex", fontSize: 32, fontWeight: 600, color: BRAND.tealLight, marginTop: 8 }}>
-              {getRankFullLabel(rank)}
+              {user.rankPoints.toLocaleString("de-DE")} Rangpunkte
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 13 }}>
-          <OgPill text={`${user.rankPoints.toLocaleString("de-DE")} Rangpunkte`} />
           <OgPill text={`${user.points.toLocaleString("de-DE")} Münzen`} tone="neutral" />
-          {next ? (
-            <OgPill text={`Noch ${(next.min - user.rankPoints).toLocaleString("de-DE")} bis ${next.label}`} tone="red" />
-          ) : (
-            <OgPill text="Höchster Rang erreicht" tone="red" />
-          )}
         </div>
       </OgFrame>
     ),

@@ -3,10 +3,8 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankUpFlare from "@/components/RankUpFlare";
-import RankIcon from "@/components/RankIcon";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -138,11 +136,6 @@ export default async function ProfilePage() {
 
   const totalPoints = user.points;
   const rankPoints  = user.rankPoints;
-  const currentRank = getRank(rankPoints);
-  const nextRank    = getNextRank(rankPoints);
-  const rankPct     = nextRank
-    ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100))
-    : 100;
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user?.messagesTotal ?? 0;
@@ -283,9 +276,6 @@ export default async function ProfilePage() {
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
                 <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
                 <JobBadge userId={userId} />
-                <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-                  <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(currentRank)}
-                </span>
               </div>
               <p className="text-xs text-gray-500 mb-1">
                 Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
@@ -296,29 +286,6 @@ export default async function ProfilePage() {
                 <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
               </div>
               <p className="text-sm font-bold text-teal-400">{rankPoints.toLocaleString("de-DE")} Punkte</p>
-
-              {/* Rang-Fortschrittsbalken */}
-              <div className="mt-3 max-w-xs">
-                {nextRank ? (
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
-                      <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(currentRank)}
-                    </span>
-                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full transition-all duration-1000"
-                        style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }} />
-                    </div>
-                    <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
-                      <RankIcon rankPoints={nextRank.min} size="xs" showPips={false} /> {getRankFullLabel(nextRank)}
-                    </span>
-                    <span className="text-[9px] text-teal-400 tabular-nums">{rankPct}%</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold">
-                    <Crown className="w-3 h-3" /> Maximalen Rang erreicht
-                  </div>
-                )}
-              </div>
 
               {/* Gruß/Bio, Geburtstag, Twitch-Kanal + "Profil bearbeiten" —
                   alles in einer Anzeige (ProfileEditor), damit es hier im
@@ -475,8 +442,8 @@ export default async function ProfilePage() {
           displayName={displayName}
           avatarUrl={user.image}
           rankPoints={rankPoints}
-          rankLabel={getRankFullLabel(currentRank)}
-          rankColor={currentRank.color}
+          rankLabel={`${rankPoints.toLocaleString("de-DE")} Punkte`}
+          rankColor="text-teal-400"
           memberSince={memberSince}
           totalPoints={totalPoints}
           editorBirthday={editorBirthday}

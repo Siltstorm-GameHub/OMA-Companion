@@ -3,12 +3,10 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
-import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { computeBadges } from "@/lib/badges";
-import { Clock, MessageSquare, ArrowLeft, Crown } from "@/components/icons";
+import { Clock, MessageSquare, ArrowLeft } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import BadgesSection from "../BadgesSection";
@@ -43,7 +41,7 @@ export async function generateMetadata({
   const name = user?.name ?? user?.username ?? "Mitglied";
   const title = `${name} – Old Masters Ally`;
   const description = user
-    ? `${getRankFullLabel(getRank(user.rankPoints))} · ${user.rankPoints.toLocaleString("de-DE")} Rangpunkte`
+    ? `${user.rankPoints.toLocaleString("de-DE")} Rangpunkte`
     : "Profil bei Old Masters Ally";
 
   return {
@@ -186,11 +184,6 @@ export default async function PublicProfilePage({
 
   const rankPoints   = user.rankPoints ?? 0;
   const totalPoints  = user.points;
-  const rankRow      = getRank(rankPoints);
-  const nextRankRow  = getNextRank(rankPoints);
-  const rankPct      = nextRankRow
-    ? Math.min(100, Math.round(((rankPoints - rankRow.min) / (nextRankRow.min - rankRow.min)) * 100))
-    : 100;
 
   const voiceHours   = Math.floor((user.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user.messagesTotal ?? 0;
@@ -278,9 +271,6 @@ export default async function PublicProfilePage({
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
               <JobBadge userId={id} />
-              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${rankRow.color} ${rankRow.bg} ${rankRow.border}`}>
-                <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(rankRow)}
-              </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
               Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
@@ -290,29 +280,6 @@ export default async function PublicProfilePage({
               <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
             </div>
             <p className="text-sm font-bold text-rose-400">{rankPoints.toLocaleString("de-DE")} Punkte</p>
-
-            {/* Rang-Fortschrittsbalken */}
-            <div className="mt-3 max-w-xs">
-              {nextRankRow ? (
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
-                    <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(rankRow)}
-                  </span>
-                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #f43f5e, #fb7185)", boxShadow: "0 0 6px rgba(244,63,94,0.6)" }} />
-                  </div>
-                  <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
-                    <RankIcon rankPoints={nextRankRow.min} size="xs" showPips={false} /> {getRankFullLabel(nextRankRow)}
-                  </span>
-                  <span className="text-[9px] text-rose-400 tabular-nums">{rankPct}%</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold">
-                  <Crown className="w-3 h-3" /> Maximalen Rang erreicht
-                </div>
-              )}
-            </div>
 
             {/* Bio */}
             {user.bio && (

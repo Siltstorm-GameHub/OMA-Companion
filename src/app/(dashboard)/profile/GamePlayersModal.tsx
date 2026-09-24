@@ -7,9 +7,7 @@ import { Users } from "@/components/icons";
 import { Loader2 } from "@/components/icons";
 import { Modal } from "@/components/ui/Modal";
 import RankedAvatar from "@/components/RankedAvatar";
-import RankIcon from "@/components/RankIcon";
 import GameCover from "@/components/GameCover";
-import { getRank, getRankFullLabel } from "@/lib/ranks";
 import { steamCoverUrl, type FavoriteGame } from "@/lib/favorite-games";
 import type { GamePlayer } from "@/app/api/users/by-game/route";
 
@@ -82,7 +80,6 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04] overflow-hidden">
               {players.map(p => {
                 const isSelf = p.id === viewerId;
-                const rank   = getRank(p.rankPoints);
                 return (
                   <Link
                     key={p.id}
@@ -103,9 +100,7 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
                         {p.name}<JobBadge userId={p.id} variant="compact" className="ml-1" />
                         {isSelf && <span className="ml-1.5 text-[10px] text-teal-500">(du)</span>}
                       </p>
-                      <p className={`text-[10px] ${rank.color} flex items-center gap-1`}>
-                        <RankIcon rankPoints={p.rankPoints} size="xs" showPips={false} /> {getRankFullLabel(rank)}
-                      </p>
+                      <p className="text-[10px] text-teal-400 tabular-nums">{p.rankPoints.toLocaleString("de-DE")} Punkte</p>
                     </div>
                     <span className="text-xs text-gray-500 tabular-nums shrink-0">
                       {p.rankPoints.toLocaleString("de-DE")}

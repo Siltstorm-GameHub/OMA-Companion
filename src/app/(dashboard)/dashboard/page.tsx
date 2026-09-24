@@ -18,7 +18,6 @@ import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
-import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import RankRing from "@/components/RankRing";
@@ -472,7 +471,6 @@ export default async function DashboardPage() {
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                 {ROLE_LABEL[userRole] ?? "Mitglied"}
               </span>
-              <RankIcon rankPoints={myRankPoints} size="sm" />
               <span className="text-xs font-bold tabular-nums text-teal-300">
                 <HeroStatValue value={myRankPoints} storageKey={`hero-rp-${userId ?? "anon"}`}> Pts</HeroStatValue>
               </span>
