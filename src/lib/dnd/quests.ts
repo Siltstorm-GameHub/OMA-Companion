@@ -129,6 +129,8 @@ export async function advanceDndQuestObjective(
   objectiveType: string,
   increment: number
 ): Promise<void> {
+  await ensureDndQuestsSeeded();
+
   const quests = await prisma.dndQuest.findMany({ where: { objectiveType } });
   if (!quests.length) return;
 
