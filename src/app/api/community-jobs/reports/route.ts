@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { title, bodyMarkdown, eventId, coverAssetId, referencedMarketingPostId, category, draft, seriesId } = await req.json().catch(() => ({}));
+  const { title, bodyMarkdown, eventId, coverAssetId, referencedMarketingPostId, category, draft, seriesId, gameCoverUrl, gameCoverName } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof bodyMarkdown !== "string") {
     return NextResponse.json({ error: "Titel und Text erforderlich" }, { status: 400 });
   }
@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
     title, bodyMarkdown,
     eventId: typeof eventId === "string" ? eventId : undefined,
     coverAssetId: typeof coverAssetId === "string" ? coverAssetId : undefined,
+    gameCoverUrl: typeof gameCoverUrl === "string" ? gameCoverUrl : undefined,
+    gameCoverName: typeof gameCoverName === "string" ? gameCoverName : undefined,
     referencedMarketingPostId: typeof referencedMarketingPostId === "string" ? referencedMarketingPostId : undefined,
     category: typeof category === "string" && category ? category : undefined,
     draft: draft === true,

@@ -10,6 +10,8 @@ import { Select } from "@/components/ui/Select";
 import MarkdownLite from "./MarkdownLite";
 import EmojiPanel from "./EmojiPicker";
 import PhotoRequestButton from "./PhotoRequestButton";
+import GameCoverPicker, { type PickedGameCover } from "./GameCoverPicker";
+import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { mentionToken } from "@/lib/report-mentions";
 import { isVideoUrl } from "@/lib/upload-limits";
 import {
@@ -22,7 +24,7 @@ import {
  */
 
 export interface IdeaPrefill {
-  title?: string; body?: string; link?: string; linkLabel?: string; eventId?: string; reportId?: string;
+  title?: string; body?: string; link?: string; linkLabel?: string; eventId?: string; reportId?: string; imageUrl?: string;
 }
 
 const FIELD = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
@@ -53,10 +55,11 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
   const [similar, setSimilar] = useState<Similar[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const [panel, setPanel] = useState<null | "emoji" | "mention" | "library">(null);
+  const [panel, setPanel] = useState<null | "emoji" | "mention" | "library" | "cover">(null);
+  const [pickedCover, setPickedCover] = useState<PickedGameCover | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionResults, setMentionResults] = useState<FoundUser[]>([]);
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(prefill?.imageUrl && isGameCoverUrl(prefill.imageUrl) ? [prefill.imageUrl] : []);
   const [uploading, setUploading] = useState(false);
   const [library, setLibrary] = useState<MediaAsset[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -166,7 +169,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
     );
   }
 
-  const togglePanel = (p: "emoji" | "mention" | "library") => setPanel(cur => (cur === p ? null : p));
+  const togglePanel = (p: "emoji" | "mention" | "library" | "cover") => setPanel(cur => (cur === p ? null : p));
 
   return (
     <div className="space-y-3">
@@ -265,10 +268,23 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ""; }} />
               </label>
               <Button size="sm" variant="outline" icon={<ImagePlus className="w-3.5 h-3.5" />} onClick={() => togglePanel("library")}>Aus Mediathek</Button>
+              <Button size="sm" variant="outline" onClick={() => togglePanel("cover")}>Spiel-Cover</Button>
             </>
           )}
         </div>
         <PhotoRequestButton eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
+        {panel === "cover" && (
+          <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-2">
+            <GameCoverPicker value={pickedCover} onChange={setPickedCover} />
+            <div className="flex justify-end gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => setPanel(null)}>Abbrechen</Button>
+              <Button size="sm" disabled={!pickedCover} onClick={() => {
+                if (pickedCover) setImages(cur => (cur.includes(pickedCover.url) ? cur : [...cur, pickedCover.url].slice(0, IDEA_MAX_IMAGES)));
+                setPickedCover(null); setPanel(null);
+              }}>Übernehmen</Button>
+            </div>
+          </div>
+        )}
         {panel === "library" && (
           <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">

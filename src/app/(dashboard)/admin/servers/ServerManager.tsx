@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ToggleLeft, ToggleRight, Circle } from "lucide-react";
+import {  } from "@/components/icons";
+import { ToggleLeft, ToggleRight } from "@/components/icons";
 import { Users, Sparkles } from "@/components/icons";
 import { Plus, Trash2, Loader2, Pencil, Eye, EyeOff, Download, RefreshCw, Globe } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
@@ -361,7 +362,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                 <GameCover game={server.game} className="w-9 h-9" rounded="rounded-lg" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
-                    <Circle className="w-2 h-2 shrink-0" style={{ color: LIGHT_COLOR[server.light], fill: LIGHT_COLOR[server.light] }} />
+                    <span className="w-2 h-2 shrink-0 rounded-full" style={{ backgroundColor: LIGHT_COLOR[server.light] }} />
                     {server.name}
                     {server.openAccess && (
                       <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">

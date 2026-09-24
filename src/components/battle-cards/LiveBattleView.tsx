@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Handshake } from "lucide-react";
+import { Handshake } from "@/components/icons";
 import { Loader2, Skull, Star, Swords } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import MobaConfirmDialog from "./MobaConfirmDialog";

@@ -60,7 +60,8 @@ function needsAttention(ev: Event): { label: string; href: string } | null {
     return { label: "Umfragephase läuft", href: `/admin/events/${ev.id}/complete` };
   }
   if (!ev.tournamentStatus && new Date(ev.startAt) < new Date()) {
-    return { label: "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
+    const running = ev.endAt && new Date(ev.endAt) > new Date();
+    return { label: running ? "Läuft gerade" : "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
   }
   return null;
 }

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { isGameCoverUrl } from "./game-cover-url";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
 import { collabBonuses } from "./collab-bonus";
 import { commentVoteEvents } from "./community-board-comment-service";
@@ -57,7 +58,7 @@ function validateIdea(data: { title?: string; description?: string; category?: s
   if (data.category && !isIdeaCategory(data.category)) return "Ungültige Kategorie";
   if (data.imageUrls) {
     if (data.imageUrls.length > IDEA_MAX_IMAGES) return `Höchstens ${IDEA_MAX_IMAGES} Bilder pro Idee`;
-    if (!data.imageUrls.every(isIdeaImageUrl)) return "Ungültiges Bild";
+    if (!data.imageUrls.every(u => isIdeaImageUrl(u) || isGameCoverUrl(u))) return "Ungültiges Bild";
   }
   if (data.votingEndsAt) {
     const t = data.votingEndsAt.getTime();

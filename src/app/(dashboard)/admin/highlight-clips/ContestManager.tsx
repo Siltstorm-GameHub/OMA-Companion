@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Square } from "lucide-react";
+import { Square } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { Trophy, Clapperboard, ExternalLink, Loader2, Link2, Plus, Pencil, Check, X } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";

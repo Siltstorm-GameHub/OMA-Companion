@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Circle } from "lucide-react";
+import { Circle } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
 import { CheckCircle2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";

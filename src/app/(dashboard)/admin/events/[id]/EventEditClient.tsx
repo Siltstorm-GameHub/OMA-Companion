@@ -8,7 +8,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { UserMinus } from "lucide-react";
+import { UserMinus } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";

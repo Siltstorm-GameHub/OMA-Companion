@@ -16,7 +16,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         events: {
           orderBy: { startAt: "desc" },
           select: {
-            id: true, title: true, startAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true,
+            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true,
             _count: { select: { registrations: true } },
           },
         },

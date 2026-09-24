@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import SyncMembersButton from "./SyncMembersButton";
 import SyncDiscordRolesButton from "./SyncDiscordRolesButton";
 import AdminUsersClient from "./AdminUsersClient";
-import { UserX } from "lucide-react";
+import { UserX } from "@/components/icons";
 import { LogIn } from "@/components/icons";
 
 export default async function AdminUsersPage() {

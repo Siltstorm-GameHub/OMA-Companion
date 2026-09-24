@@ -23,6 +23,9 @@ import PhotoRequestButton from "@/components/community-jobs/PhotoRequestButton";
 import ScoreBreakdownBlock from "@/components/community-jobs/ScoreBreakdownBlock";
 import MediaPickerPanel from "@/components/community-jobs/MediaPickerPanel";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
+import GameCoverPicker, { type PickedGameCover } from "@/components/community-jobs/GameCoverPicker";
+import GameNameInput from "@/components/GameNameInput";
+import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 import { MarketingStatsBlock, MarketingCampaignsBlock, PromotionRequestList } from "@/components/community-jobs/MarketingTools";
 import {
@@ -252,7 +255,7 @@ const FEED_TABS: { key: FeedTab; label: string; title: string }[] = [
 ];
 
 /** Vorbelegung für einen Beitrag zu einem Spiel (Steam/Xbox). Ohne Event-Bezug — der Link wird beim Absenden angehängt. */
-function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountPercent?: number; price?: string; url: string }): PostPrefill {
+function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountPercent?: number; price?: string; url: string; headerImage?: string }): PostPrefill {
   const discount = s.discountPercent ? ` (-${s.discountPercent}%)` : "";
   const off = s.discountPercent ? ` mit -${s.discountPercent}%${s.price ? ` für ${s.price}` : ""}` : "";
   let headline: string;
@@ -268,6 +271,8 @@ function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountP
     title: jobKey === "visionaer" ? `Gemeinsam spielen: ${s.name}?` : headline,
     body: jobKey === "visionaer" ? `${line} Wäre das etwas für die Community?\n\n${s.url}` : `${line}\n\n${s.url}`,
     link: s.url, linkLabel: s.name,
+    // Das Cover des Spiels als Bild vorschlagen (nur bekannte Cover-Hosts).
+    imageUrl: isGameCoverUrl(s.headerImage) ? s.headerImage : undefined,
   };
 }
 
@@ -1629,7 +1634,7 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
   }
   if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} startCollage={prefill?.collage} onDone={onDone} />;
   if (jobKey === "visionaer") {
-    return <IdeaForm prefill={{ title: prefill?.title, body: prefill?.body, link: prefill?.link, linkLabel: prefill?.linkLabel, eventId }} onDone={onDone} />;
+    return <IdeaForm prefill={{ title: prefill?.title, body: prefill?.body, link: prefill?.link, linkLabel: prefill?.linkLabel, imageUrl: prefill?.imageUrl, eventId }} onDone={onDone} />;
   }
   if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
@@ -1669,8 +1674,10 @@ function GuideForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-3">
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Titel, z.B. „Erste Schritte in R6 Siege“"
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
-      <input value={game} onChange={e => setGame(e.target.value)} maxLength={40} placeholder="Spiel (optional)"
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+      <div className="space-y-1">
+        <GameNameInput value={game} onChange={v => setGame(v.slice(0, 40))} placeholder="Spiel (optional) — sein Cover erscheint bei deiner Anleitung"
+          className="w-full bg-white/[0.04] border border-white/10 rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+      </div>
       <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       <div className="flex flex-wrap items-center gap-3">
@@ -1963,7 +1970,7 @@ function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) 
 
 interface EventOption { id: string; title: string; startAt: string }
 
-type PostImageMode = "none" | "library" | "studio" | "upload";
+type PostImageMode = "none" | "library" | "studio" | "upload" | "game";
 
 function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: { eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [events, setEvents] = useState<EventOption[]>([]);
@@ -1971,8 +1978,10 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
   const [caption, setCaption] = useState(prefill?.body ?? "");
   const [assetId, setAssetId] = useState(prefill?.assetId ?? "");
   const [studioImageUrl, setStudioImageUrl] = useState("");
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(prefill?.imageUrl ?? "");
-  const [imageMode, setImageMode] = useState<PostImageMode>(prefill?.assetId ? "library" : prefill?.imageUrl ? "upload" : "none");
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(prefill?.imageUrl && !isGameCoverUrl(prefill.imageUrl) ? prefill.imageUrl : "");
+  const prefillCover = prefill?.imageUrl && isGameCoverUrl(prefill.imageUrl) ? prefill.imageUrl : null;
+  const [gameCover, setGameCover] = useState<PickedGameCover | null>(prefillCover ? { name: prefill?.linkLabel ?? "", url: prefillCover } : null);
+  const [imageMode, setImageMode] = useState<PostImageMode>(prefill?.assetId ? "library" : prefillCover ? "game" : prefill?.imageUrl ? "upload" : "none");
   const [assets, setAssets] = useState<{ id: string; caption: string | null; url: string }[]>([]);
   const [related, setRelated] = useState<{ id: string; caption: string | null; url: string }[]>([]);
   const [assetQuery, setAssetQuery] = useState("");
@@ -2067,7 +2076,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
 
   const finalText = facts && includeLink ? withEventLink(caption, facts, true) : caption;
   const previewImage = imageMode === "library" ? [...related, ...assets].find(a => a.id === assetId)?.url
-    : imageMode === "studio" ? studioImageUrl : imageMode === "upload" ? uploadedImageUrl : "";
+    : imageMode === "studio" ? studioImageUrl : imageMode === "upload" ? uploadedImageUrl : imageMode === "game" ? gameCover?.url : "";
 
   async function submit() {
     setBusy(true);
@@ -2078,7 +2087,8 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
           campaignId: prefill?.campaignId, kind: usedTemplate ?? (isMarketingTemplate(prefill?.template) ? prefill.template : undefined),
           assetId: imageMode === "library" ? (assetId || undefined) : undefined,
           imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
-            : imageMode === "upload" ? (uploadedImageUrl || undefined) : undefined,
+            : imageMode === "upload" ? (uploadedImageUrl || undefined)
+            : imageMode === "game" ? (gameCover?.url || undefined) : undefined,
         }),
       });
       toast.success("Veröffentlicht");
@@ -2108,6 +2118,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
         )}
         <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
         <Button size="sm" variant={imageMode === "upload" ? "primary" : "outline"} onClick={() => setImageMode("upload")}>Eigenes Bild hochladen</Button>
+        <Button size="sm" variant={imageMode === "game" ? "primary" : "outline"} onClick={() => setImageMode("game")}>Spiel-Cover</Button>
       </div>
 
       <PhotoRequestButton eventId={eventId || undefined} defaultText={facts ? `Bild für: ${facts.title}` : ""} />
@@ -2152,6 +2163,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
           </label>
         )
       )}
+      {imageMode === "game" && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
       {imageMode === "studio" && (
         studioImageUrl ? (
           <div className="space-y-2">

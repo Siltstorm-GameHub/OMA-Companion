@@ -8,7 +8,7 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import LivePollsPanel from "./LivePollsPanel";
-import { GripVertical } from "lucide-react";
+import { GripVertical } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";

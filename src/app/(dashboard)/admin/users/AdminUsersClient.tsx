@@ -4,7 +4,7 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { UserX, UserMinus } from "lucide-react";
+import { UserX, UserMinus } from "@/components/icons";
 import { LogIn } from "@/components/icons";
 import { History } from "@/components/icons";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";

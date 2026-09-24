@@ -12,14 +12,14 @@ import { decodeSeriesIcon, encodeSeriesIcon } from "@/lib/series-icons";
  */
 export default function IconPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const decoded = decodeSeriesIcon(value);
-  const currentId = decoded?.kind === "picto" ? decoded.id : "";
+  const currentId = decoded?.id ?? "";
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState(PICTO_CATEGORIES[0].name);
   // Farbe, solange noch kein Icon gewählt ist: sie wird beim ersten Icon übernommen
   const [pendingColor, setPendingColor] = useState(PICTO_DEFAULT_COLOR);
-  const color = decoded?.kind === "picto" ? decoded.color : pendingColor;
+  const color = decoded?.color ?? pendingColor;
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
 import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLite";
 import { plainExcerpt } from "@/lib/report-text";
+import GameCover from "@/components/GameCover";
 import EmojiPanel from "@/components/community-jobs/EmojiPicker";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { Modal } from "@/components/ui/Modal";
@@ -48,6 +49,7 @@ export interface FeedEntry {
   voteCount?: number;
   votedByMe: boolean;
   coverAsset?: SubEntity | null;
+  gameCover?: { url: string; name: string | null } | null;
   referencedMarketingPost?: SubEntity | null;
   contributions?: { id: string; bodyMarkdown: string; author: Author; upvotes: number }[];
   adminConfirmedPosted?: boolean;
@@ -230,6 +232,10 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
       {entry.coverAsset && (
         // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
         <img src={entry.coverAsset.url} alt="" className="w-full h-auto rounded-lg" />
+      )}
+      {!entry.coverAsset && entry.gameCover && (
+        // eslint-disable-next-line @next/next/no-img-element -- Spiel-Cover (bekannte Cover-Hosts)
+        <img src={entry.gameCover.url} alt={entry.gameCover.name ? `Cover: ${entry.gameCover.name}` : ""} className="w-full h-auto rounded-lg" />
       )}
 
       {open && full !== null
@@ -635,6 +641,7 @@ function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; curr
   const long = text.length > GUIDE_PREVIEW_CHARS;
   return (
     <>
+      {entry.game && <GameCover game={entry.game} className="w-full h-32" rounded="rounded-lg" fallbackVariant="plain" />}
       <p className="text-sm font-semibold text-white">{entry.title}</p>
       {long && !expanded
         ? <p className="text-xs text-gray-400 whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>

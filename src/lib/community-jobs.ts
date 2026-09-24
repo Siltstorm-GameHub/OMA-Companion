@@ -32,7 +32,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Erstellen** öffnet den Editor mit Vorschau. Entwürfe speicherst du privat und veröffentlichst sie später.\n" +
       "- **Bausteine:** Ergebnistabelle, Teilnehmerliste, Top 10, Wochen- und Monatsrückblick und Interview-Vorlage füllen sich aus Community-Daten.\n" +
       "- **Formatierung, Emojis (auch Discord-Emojis) und @-Erwähnungen** helfen dir beim Ausformulieren. Erwähnte Spieler werden benachrichtigt.\n" +
-      "- **Kategorie, Berichtsreihe und Titelbild** gibst du im Editor an. Ein Bild kannst du bei den Fotografen anfragen.\n" +
+      "- **Kategorie, Berichtsreihe und Titelbild** gibst du im Editor an. Ein Bild kannst du bei den Fotografen anfragen, oder du nimmst statt eines Fotos das **Cover eines Spiels** als Titelbild.\n" +
       "- Jeder Bericht hat eine **eigene Seite mit Link**. Änderungen an veröffentlichten Berichten erscheinen als „Korrigiert am“ mit Verlauf.\n" +
       "- Zu Fotos und Werbe-Posts im Community-Board schreibst du direkt mit „Bericht dazu schreiben“.\n\n" +
       "**Im Büro**\n" +
@@ -76,7 +76,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "**Posts schreiben**\n" +
       "- **Text aus Vorlage:** Ankündigung, Erinnerung, „Letzte Plätze“ und „Heute geht’s los“ setzen Titel, Datum, Uhrzeit, Spiel und Anmeldezahl automatisch ein.\n" +
       "- **Anmelde-Link:** Ein Häkchen hängt „Jetzt anmelden“ mit Link zur Event-Seite an. Die **Vorschau** zeigt den fertigen Post.\n" +
-      "- **Bild:** aus der Mediathek (oben stehen Bilder passend zu Event oder Spiel), im Studio gestaltet oder selbst hochgeladen.\n" +
+      "- **Bild:** aus der Mediathek (oben stehen Bilder passend zu Event oder Spiel), im Studio gestaltet, selbst hochgeladen oder einfach das **Cover eines Spiels**.\n" +
       "- **Kopieren:** Text inklusive Link mit einem Klick für Instagram oder Discord. Ein Admin bestätigt später, dass der Post extern veröffentlicht wurde.\n\n" +
       "**Kampagnen und Vorlagen**\n" +
       "- **Kampagne:** plant zu einem Event Ankündigung, Erinnerung (3 Tage vorher) und „Heute“. Erledigte Schritte bekommen einen Haken.\n" +
@@ -108,7 +108,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "**Hilfe finden und geben**\n" +
       "- **Hilfe anfragen:** Spieler können dich jederzeit um Hilfe bitten, auch wenn du gerade nicht verfügbar bist. Offene Anfragen siehst du im Büro.\n" +
       "- **Neue Spieler:** Die Liste „ohne Training“ zeigt dir, wen du ansprechen kannst.\n" +
-      "- **Anleitungen:** Schreibe Anleitungen zu Spielen, sie erscheinen im Community-Board und werden bewertet. Du kannst Bilder aus der Mediathek einfügen oder bei den Fotografen einen Screenshot anfragen.\n\n" +
+      "- **Anleitungen:** Schreibe Anleitungen zu Spielen, sie erscheinen im Community-Board und werden bewertet. Du kannst Bilder aus der Mediathek einfügen oder bei den Fotografen einen Screenshot anfragen. Wählst du ein Spiel, erscheint dessen Cover bei deiner Anleitung.\n\n" +
       "**Im Büro**\n" +
       "- **Empfehlungen** zeigen offene Hilfe-Anfragen, fehlende Termine, neue Spieler ohne Training und Events ohne Vorbereitungs-Training.\n" +
       "- **Auswertung:** Ø Bewertung pro Woche und letzte Termine.",
@@ -125,7 +125,7 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "**Idee einreichen**\n" +
       "- **Vorlage:** Problem → Vorschlag → Nutzen, oder Freitext mit Formatierung, Emojis und @-Erwähnungen. Wähle eine **Kategorie** und optional eine **Abstimmungsfrist**.\n" +
       "- **Schon vorhanden?** Beim Tippen des Titels zeigt dir das Formular ähnliche Ideen.\n" +
-      "- **Bilder und Mockups** (bis zu 3) und ein **Steam-Spiel** mit Preis und Spielerzahl machen deine Idee anschaulicher.\n" +
+      "- **Bilder, Mockups oder ein Spiel-Cover** (bis zu 3) und ein **Steam-Spiel** mit Preis und Spielerzahl machen deine Idee anschaulicher.\n" +
       "- **Idee dazu:** Auf der Turnierseite und unter Berichten startest du eine Idee direkt zu einem Event oder Bericht.\n\n" +
       "**Was danach passiert**\n" +
       "- Deine Idee hat eine **eigene Seite mit Link**, das Ergebnis zeigt Durchschnitt und Verteilung, die Begründungen siehst nur du.\n" +

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { isGameCoverUrl } from "./game-cover-url";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
 import { collabBonuses } from "./collab-bonus";
 import { commentVoteEvents } from "./community-board-comment-service";
@@ -65,6 +66,8 @@ async function requireActiveJournalist(userId: string): Promise<boolean> {
 interface ReportInput {
   title: string; bodyMarkdown: string; category?: string | null; eventId?: string | null;
   coverAssetId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null;
+  /** Spiel-Cover statt Fotograf-Bild als Titelbild (schließt coverAssetId aus). */
+  gameCoverUrl?: string | null; gameCoverName?: string | null;
 }
 
 /** Prüft Länge/Kategorie und dass verknüpfte Datensätze existieren (Cover nur Standbilder, kein Video). */
@@ -79,6 +82,8 @@ async function validateReportRefs(data: Partial<ReportInput>): Promise<string | 
   }
   if (data.category && !isReportCategory(data.category)) return "Ungültige Kategorie";
   if (data.eventId && !(await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } }))) return "Event nicht gefunden";
+  if (data.gameCoverUrl && !isGameCoverUrl(data.gameCoverUrl)) return "Ungültiges Spiel-Cover";
+  if (data.gameCoverName && data.gameCoverName.length > 100) return "Spielname ist zu lang";
   if (data.coverAssetId) {
     const asset = await prisma.jobMediaAsset.findUnique({ where: { id: data.coverAssetId }, select: { url: true, hiddenByAdminAt: true } });
     if (!asset || asset.hiddenByAdminAt) return "Titelbild nicht gefunden";
@@ -105,13 +110,15 @@ export async function createReport(
   const report = await prisma.jobReport.create({
     data: {
       authorId, title: data.title.trim(), bodyMarkdown: data.bodyMarkdown,
-      eventId: data.eventId || null, coverAssetId: data.coverAssetId || null,
+      eventId: data.eventId || null,
+      coverAssetId: data.gameCoverUrl ? null : data.coverAssetId || null,
+      gameCoverUrl: data.gameCoverUrl || null, gameCoverName: data.gameCoverUrl ? data.gameCoverName?.trim() || null : null,
       referencedMarketingPostId: data.referencedMarketingPostId || null,
       category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true,
     },
   });
   if (!data.draft) await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
-  if (data.coverAssetId && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", data.title.trim(), reportPath(report.id)).catch(() => {});
+  if (data.coverAssetId && !data.gameCoverUrl && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", data.title.trim(), reportPath(report.id)).catch(() => {});
   return { ok: true, reportId: report.id };
 }
 
@@ -208,6 +215,7 @@ export async function updateReport(
   authorId: string, reportId: string,
   data: {
     title: string; bodyMarkdown?: string; coverAssetId?: string | null; category?: string | null;
+    gameCoverUrl?: string | null; gameCoverName?: string | null;
     eventId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null; editNote?: string;
   },
   opts: { isAdmin?: boolean } = {},
@@ -234,13 +242,16 @@ export async function updateReport(
       title: data.title.trim(),
       ...(data.bodyMarkdown !== undefined ? { bodyMarkdown: data.bodyMarkdown } : {}),
       ...(data.coverAssetId !== undefined ? { coverAssetId: data.coverAssetId } : {}),
+      // Titelbild ist entweder ein Fotograf-Bild oder ein Spiel-Cover — das eine löscht das andere.
+      ...(data.gameCoverUrl ? { coverAssetId: null, gameCoverUrl: data.gameCoverUrl, gameCoverName: data.gameCoverName?.trim() || null }
+        : data.gameCoverUrl === null || data.coverAssetId ? { gameCoverUrl: null, gameCoverName: null } : {}),
       ...(data.category !== undefined ? { category: data.category || null } : {}),
       ...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
       ...(data.referencedMarketingPostId !== undefined ? { referencedMarketingPostId: data.referencedMarketingPostId } : {}),
     },
   })]);
   if (!report.isDraft) notifyMentions(reportId, report.authorId, data.title.trim(), data.bodyMarkdown ?? report.bodyMarkdown).catch(() => {});
-  if (!report.isDraft && data.coverAssetId && data.coverAssetId !== report.coverAssetId) {
+  if (!report.isDraft && data.coverAssetId && !data.gameCoverUrl && data.coverAssetId !== report.coverAssetId) {
     notifyAssetUsed(data.coverAssetId, report.authorId, "report", data.title.trim(), reportPath(reportId)).catch(() => {});
   }
   return { ok: true };

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import type { SeriesRankingRow } from "@/lib/seriesRanking";
 import RankedAvatar from "@/components/RankedAvatar";
+import JobBadge from "@/components/community-jobs/JobBadge";
 import { configureJobBadgeSource } from "@/components/community-jobs/JobBadge";
 import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "@/components/icons";
 
@@ -1088,7 +1089,7 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
           <RankedAvatar userId={streamer.id} src={streamer.image} alt={name} size={36} />
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {name}
+              {name}<JobBadge userId={streamer.id} variant="compact" className="ml-1" />
             </span>
             {streamer.twitchLogin && (
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500, color: "#c4a3ff" }}>
@@ -1258,7 +1259,7 @@ function MatchTicker({
                   >
                     <RankedAvatar userId={u?.id} src={u?.image} alt={displayName(u)} size={30} />
                     <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
-                      {displayName(u)}{statsLabel ? ` · ${statsLabel}` : ""}
+                      {displayName(u)}<JobBadge userId={u?.id} variant="compact" className="ml-1" />{statsLabel ? ` · ${statsLabel}` : ""}
                     </span>
                   </div>
                 );
@@ -1331,7 +1332,7 @@ function PlayerName({
           textShadow: winner ? "0 0 18px rgba(45,212,191,0.5)" : "none",
         }}
       >
-        {name}
+        {name}<JobBadge userId={user?.id} variant="compact" className="ml-1.5" />
       </span>
     </>
   );
@@ -1435,7 +1436,7 @@ function Row({ user, score, winner }: { user: OverlayUser | undefined; score: nu
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
       <RankedAvatar userId={user?.id} src={user?.image} alt={displayName(user)} size={26} />
-      <span style={{ flex: 1 }}>{displayName(user)}</span>
+      <span style={{ flex: 1 }}>{displayName(user)}<JobBadge userId={user?.id} variant="compact" className="ml-1" /></span>
       {score != null && <span>{score}</span>}
     </div>
   );
@@ -1487,7 +1488,7 @@ function TablePanel({
             <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
             <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={30} />
             <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
-              {displayName(p.user)}
+              {displayName(p.user)}<JobBadge userId={p.user.id} variant="compact" className="ml-1" />
             </span>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, minWidth: 84, flexShrink: 0 }}>
               {p.primary && (
@@ -1549,7 +1550,7 @@ function SeriesTablePanel({
                 <span style={{ width: 22, fontSize: 15, opacity: 0.45, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
                 <RankedAvatar userId={r.userId} src={r.image} alt={r.displayName} size={30} />
                 <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {r.displayName}
+                  {r.displayName}<JobBadge userId={r.userId} variant="compact" className="ml-1" />
                 </span>
                 <span style={{ fontSize: 17, fontWeight: 800, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {Math.round(r.totalPoints)} Pkt.
@@ -1729,7 +1730,7 @@ function ParticipantsPanel({ participants }: { participants: OverlayParticipant[
             <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
               <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={28} />
               <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {displayName(p.user)}
+                {displayName(p.user)}<JobBadge userId={p.user.id} variant="compact" className="ml-1" />
               </span>
             </div>
           ))}

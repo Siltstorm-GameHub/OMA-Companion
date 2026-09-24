@@ -51,7 +51,7 @@ export default async function AdminPage() {
         startAt: { lt: now },
       },
       orderBy: { startAt: "asc" },
-      select: { id: true, title: true, game: true, startAt: true },
+      select: { id: true, title: true, game: true, startAt: true, endAt: true },
     }),
     prisma.monthlyClipContest.findMany({
       where: { status: "voting" },
@@ -172,7 +172,9 @@ export default async function AdminPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{event.title}</p>
-                    <p className="text-xs text-gray-400">Vorbei, noch nicht abgeschlossen</p>
+                    <p className="text-xs text-gray-400">
+                      {event.endAt && event.endAt > now ? "Läuft gerade" : "Vorbei, noch nicht abgeschlossen"}
+                    </p>
                   </div>
                 </div>
                 <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />

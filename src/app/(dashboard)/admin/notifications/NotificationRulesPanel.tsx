@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Smartphone, UserCheck } from "lucide-react";
+import { Smartphone } from "@/components/icons";
+import { UserCheck } from "@/components/icons";
 import { Hash, Users } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
 import { Bell, Save, MessageSquare, Send, Trash2, Check, Smile, X, Link2, Calendar } from "@/components/icons";

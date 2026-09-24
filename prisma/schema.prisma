@@ -1325,6 +1325,8 @@ model JobReport {
   editedAt                  DateTime? // "Korrigiert am" — gesetzt, wenn ein veröffentlichter Bericht inhaltlich geändert wurde
   lastEditNote              String? // kurzer Korrekturhinweis zur letzten Änderung (öffentlich)
   notifiedMentions          String[]  @default([]) // User-IDs, die für @-Erwähnungen schon benachrichtigt wurden
+  gameCoverUrl              String? // Spiel-Cover als Titelbild (statt Fotograf-Bild) — nur bekannte Cover-Hosts, siehe game-cover-url.ts
+  gameCoverName             String?
   updatedAt                 DateTime  @default(now()) @updatedAt
 
   author                  User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)

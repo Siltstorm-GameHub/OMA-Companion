@@ -42,6 +42,7 @@ export function toReportFeedEntry(r: ReportWithFeedData) {
     votedByMe: r.votes.length > 0,
     // Zusammengesetzte Ansicht: Cover-Bild (Fotograf) und referenzierter Marketing-Post
     // sind eigenständige, unabhängig bewertbare Komponenten mit eigenem Autor.
+    gameCover: r.gameCoverUrl ? { url: r.gameCoverUrl, name: r.gameCoverName } : null,
     coverAsset: r.coverAsset && {
       id: r.coverAsset.id, url: r.coverAsset.url, author: r.coverAsset.author, upvotes: r.coverAsset._count.votes,
     },

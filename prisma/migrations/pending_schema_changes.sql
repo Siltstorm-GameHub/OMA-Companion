@@ -693,3 +693,6 @@ CREATE TABLE IF NOT EXISTS "PromotionRequest" (
 CREATE INDEX IF NOT EXISTS "PromotionRequest_status_createdAt_idx" ON "PromotionRequest"("status", "createdAt");
 CREATE INDEX IF NOT EXISTS "PromotionRequest_trainingSessionId_idx" ON "PromotionRequest"("trainingSessionId");
 CREATE INDEX IF NOT EXISTS "PromotionRequest_requesterId_idx" ON "PromotionRequest"("requesterId");
+
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "gameCoverUrl" TEXT;
+ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "gameCoverName" TEXT;

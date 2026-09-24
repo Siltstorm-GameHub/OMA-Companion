@@ -17,7 +17,8 @@ export async function GET() {
       where: {
         tournamentStatus: null,
         status: { notIn: [...NOT_ACTIVE_STATUSES, "umfrage"] },
-        startAt: { lt: now },
+        // Events mit Zeitraum gelten erst nach ihrem Ende als "vorbei" — davor laufen sie nur.
+        OR: [{ endAt: null, startAt: { lt: now } }, { endAt: { lt: now } }],
       },
     }),
   ]);

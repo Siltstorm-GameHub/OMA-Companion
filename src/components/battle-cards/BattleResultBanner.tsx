@@ -9,7 +9,7 @@
 import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Handshake } from "lucide-react";
+import { Handshake } from "@/components/icons";
 import { Crown, Skull, Flame } from "@/components/icons";
 import { winStreakBonusFor } from "@/lib/battle-cards/win-streak-constants";
 

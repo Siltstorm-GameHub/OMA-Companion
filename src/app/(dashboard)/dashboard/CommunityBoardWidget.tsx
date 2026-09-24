@@ -33,6 +33,7 @@ interface FeedEntry {
   voteCount?: number;
   votedByMe?: boolean;
   coverAsset?: { url: string } | null;
+  gameCover?: { url: string } | null;
   imageUrl?: string | null;
   asset?: { url: string } | null;
 }
@@ -107,7 +108,7 @@ function entryLabel(e: FeedEntry): string {
 
 function entryImage(e: FeedEntry): string | null {
   if (e.kind === "asset") return e.url ?? null;
-  if (e.kind === "report") return e.coverAsset?.url ?? null;
+  if (e.kind === "report") return e.coverAsset?.url ?? e.gameCover?.url ?? null;
   if (e.kind === "marketing_post") return e.imageUrl ?? e.asset?.url ?? null;
   return null;
 }

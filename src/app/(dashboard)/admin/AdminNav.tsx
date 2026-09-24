@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { Handshake } from "lucide-react";
+import { Handshake } from "@/components/icons";
 import { Users, Users2 } from "@/components/icons";
 import { Server } from "@/components/icons";
 import { LayoutDashboard, Bell, CalendarDays, Medal, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Smartphone } from "lucide-react";
+import { Smartphone } from "@/components/icons";
 import { Users, Hash } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
 import { Send, X, Check, Bell, MessageSquare } from "@/components/icons";

@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Handshake } from "lucide-react";
+import { Handshake } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";

@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import GameCoverPicker, { type PickedGameCover } from "./GameCoverPicker";
+import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { toast } from "sonner";
-import { Bold, Italic, Heading2, Quote } from "lucide-react";
+import { Bold, Italic, Heading2, Quote } from "@/components/icons";
 import { ImagePlus, Wand2 } from "@/components/icons";
 import { List, Link2, Eye, Pencil, X, Smile, AtSign, LayoutTemplate, History, Camera } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +34,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export interface ReportEditorInitial {
   title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
   coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean;
+  gameCoverUrl?: string | null; gameCoverName?: string | null;
 }
 
 interface EventOption { id: string; title: string; startAt: string }
@@ -85,14 +88,22 @@ export default function ReportEditor({
   presetPostId?: string;
   /** Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
   recap?: "week" | "month";
-  prefill?: { title?: string; body?: string; link?: string; linkLabel?: string };
+  prefill?: { title?: string; body?: string; link?: string; linkLabel?: string; imageUrl?: string };
   onDone: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? "");
   const [body, setBody] = useState(initial?.bodyMarkdown ?? prefill?.body ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [eventId, setEventId] = useState(initial?.eventId ?? presetEventId ?? "");
-  const [coverAssetId, setCoverAssetId] = useState(initial?.coverAssetId ?? presetCoverAssetId ?? "");
+  const [coverAssetId, setCoverAssetIdRaw] = useState(initial?.coverAssetId ?? presetCoverAssetId ?? "");
+  // Titelbild: Fotograf-Bild ODER Spiel-Cover — das eine ersetzt das andere.
+  const [gameCover, setGameCoverRaw] = useState<PickedGameCover | null>(
+    initial?.gameCoverUrl ? { name: initial.gameCoverName ?? "", url: initial.gameCoverUrl }
+      : prefill?.imageUrl && isGameCoverUrl(prefill.imageUrl) ? { name: prefill.linkLabel ?? "", url: prefill.imageUrl } : null,
+  );
+  const [coverPickerOpen, setCoverPickerOpen] = useState(!!gameCover);
+  const setCoverAssetId = (id: string) => { setCoverAssetIdRaw(id); if (id) { setGameCoverRaw(null); setCoverPickerOpen(false); } };
+  const setGameCover = (v: PickedGameCover | null) => { setGameCoverRaw(v); if (v) setCoverAssetIdRaw(""); };
   const [refPostId, setRefPostId] = useState(initial?.referencedMarketingPostId ?? presetPostId ?? "");
   const [seriesId, setSeriesId] = useState(initial?.seriesId ?? "");
   const [editNote, setEditNote] = useState("");
@@ -297,7 +308,8 @@ export default function ReportEditor({
       const payload = {
         title, bodyMarkdown: appendLink(body, prefill?.link),
         category: category || null, eventId: eventId || null, seriesId: seriesId || null,
-        coverAssetId: coverAssetId || null, referencedMarketingPostId: refPostId || null,
+        coverAssetId: gameCover ? null : coverAssetId || null, referencedMarketingPostId: refPostId || null,
+        gameCoverUrl: gameCover?.url ?? null, gameCoverName: gameCover?.name ?? null,
       };
       if (reportId) {
         await api(`/api/community-jobs/reports/${reportId}`, { method: "PATCH", body: JSON.stringify({ ...payload, editNote: isPublishedEdit ? editNote : undefined }) });
@@ -415,6 +427,11 @@ export default function ReportEditor({
           </div>
         )}
         {coverAssetId && <p className="text-[10px] text-gray-600">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
+        <button type="button" onClick={() => setCoverPickerOpen(v => !v)} aria-expanded={coverPickerOpen}
+          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+          {coverPickerOpen ? "Spiel-Cover ausblenden" : "Oder ein Spiel-Cover als Titelbild wählen"}
+        </button>
+        {coverPickerOpen && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
       </div>
 
       {/* Editor / Vorschau */}

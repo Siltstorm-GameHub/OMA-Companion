@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Square } from "lucide-react";
+import { Square } from "@/components/icons";
 import { Trophy, Clapperboard, ExternalLink, Loader2 } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { formatBerlinDate } from "@/lib/time";

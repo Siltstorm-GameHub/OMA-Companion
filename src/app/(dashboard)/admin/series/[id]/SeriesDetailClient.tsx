@@ -32,7 +32,7 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
 ];
 
 type SeriesEvent = {
-  id: string; title: string; startAt: Date | string; status: string;
+  id: string; title: string; startAt: Date | string; endAt?: Date | string | null; status: string;
   maxPlayers: number | null; hidden: boolean; tournamentStatus: string | null;
   _count: { registrations: number };
 };
@@ -63,7 +63,8 @@ function needsAttention(ev: SeriesEvent): { label: string; href: string } | null
     return { label: "Umfragephase läuft", href: `/admin/events/${ev.id}/complete` };
   }
   if (!ev.tournamentStatus && new Date(ev.startAt) < new Date()) {
-    return { label: "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
+    const running = ev.endAt && new Date(ev.endAt) > new Date();
+    return { label: running ? "Läuft gerade" : "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
   }
   return null;
 }

@@ -12,6 +12,7 @@ import { getAnnouncementChannel } from "./community-job-config";
 import { dispatchNotification } from "./notify-dispatch";
 import { getWeekBounds } from "./community-job-service";
 import { isMarketingTemplate } from "./marketing-templates";
+import { isAllowedPostImageUrl } from "./game-cover-url";
 import { fulfillPromotionRequests } from "./promotion-request-service";
 
 /**
@@ -39,6 +40,7 @@ export async function createMarketingPost(
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
   // Event bzw. Trainings-Termin sind optional: allgemeine Posts (z.B. zu Steam-/Xbox-Angeboten) haben keinen Bezug.
   if (data.eventId && !(await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } }))) return { error: "Event nicht gefunden" };
+  if (data.imageUrl && !isAllowedPostImageUrl(data.imageUrl)) return { error: "Ungültiges Bild (erlaubt: eigener Upload oder Spiel-Cover)" };
   if (data.trainingSessionId) {
     const session = await prisma.coachTrainingSession.findUnique({ where: { id: data.trainingSessionId }, select: { startAt: true } });
     if (!session) return { error: "Trainings-Termin nicht gefunden" };
@@ -99,6 +101,7 @@ export async function updateMarketingPost(
   if (!post) return { error: "Post nicht gefunden" };
   if (post.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Post zu bearbeiten" };
   if (data.caption !== undefined && !data.caption.trim()) return { error: "Text erforderlich" };
+  if (typeof data.imageUrl === "string" && data.imageUrl && !isAllowedPostImageUrl(data.imageUrl)) return { error: "Ungültiges Bild (erlaubt: eigener Upload oder Spiel-Cover)" };
 
   if (data.assetId && data.assetId !== post.assetId) notifyAssetUsed(data.assetId, post.authorId, "marketing", data.caption ?? post.caption, "/community-board").catch(() => {});
   const clearOther = data.imageUrl !== undefined ? { assetId: null } : data.assetId !== undefined ? { imageUrl: null } : {};

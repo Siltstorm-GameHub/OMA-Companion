@@ -2,7 +2,7 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
-import { Circle } from "lucide-react";
+import { Circle } from "@/components/icons";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
 import { Repeat, Server } from "@/components/icons";

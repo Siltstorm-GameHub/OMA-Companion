@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { UserMinus } from "lucide-react";
+import { UserMinus } from "@/components/icons";
 import { Users, GitBranch, Hash, CalendarPlus } from "@/components/icons";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Repeat } from "@/components/icons";
