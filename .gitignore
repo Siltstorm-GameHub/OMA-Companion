@@ -1,5 +1,6 @@
 # Claude Code / AI tools
 .claude/skills/
+.claude/worktrees/
 .agents/
 
 # Promo/marketing scratch assets (Higgsfield + Blender working files) — not app content
