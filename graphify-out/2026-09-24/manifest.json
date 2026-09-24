@@ -865,8 +865,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/page.tsx": {
-    "mtime": 1790231296.9029887,
-    "ast_hash": "ead48b3a9ad611a1360e0c6ab75bdc36",
+    "mtime": 1790232054.3746388,
+    "ast_hash": "926b49d27dcee64816fcbccfba5ab026",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/series/[id]/FullStandingsToggle.tsx": {
@@ -2605,8 +2605,8 @@
     "semantic_hash": ""
   },
   "src/app/auth/not-member/NotMemberClient.tsx": {
-    "mtime": 1785925746.630955,
-    "ast_hash": "046862be8e220fbd5bc08fcc8dcc1054",
+    "mtime": 1790232040.8694217,
+    "ast_hash": "104ca816220615a77d286a142e768272",
     "semantic_hash": ""
   },
   "src/app/auth/not-member/page.tsx": {
@@ -2625,8 +2625,8 @@
     "semantic_hash": ""
   },
   "src/app/not-found.tsx": {
-    "mtime": 1780591697.284836,
-    "ast_hash": "4b1a5db35ac48ac9c4b6b034e56ce8a3",
+    "mtime": 1790232040.7764847,
+    "ast_hash": "e94c2ef69909a56fbf02114b278ed5bb",
     "semantic_hash": ""
   },
   "src/app/opengraph-image.tsx": {
@@ -2650,8 +2650,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/settings/SettingsClient.tsx": {
-    "mtime": 1789581338.3372622,
-    "ast_hash": "401ec26c90e3dccbaa7c5e135dc57f4f",
+    "mtime": 1790232040.8764582,
+    "ast_hash": "ee4256ab627c2573db4693eb25be47e8",
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/settings/page.tsx": {
@@ -2660,8 +2660,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/ProfileOverlayClient.tsx": {
-    "mtime": 1789747854.242498,
-    "ast_hash": "6571cda9d454ceb8e1fdd3ace2c96c35",
+    "mtime": 1790232040.8729427,
+    "ast_hash": "bdb902e2bfef89b289dc49cc3dabe8b9",
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/page.tsx": {
@@ -2670,8 +2670,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/settings/SettingsClient.tsx": {
-    "mtime": 1789581393.3515506,
-    "ast_hash": "23085754ff9ea380d5e24c477a28446a",
+    "mtime": 1790232040.8744438,
+    "ast_hash": "bb86dc6072ba6cfc872844eb8946be54",
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/settings/page.tsx": {
@@ -6545,8 +6545,8 @@
     "semantic_hash": ""
   },
   "src/lib/picto-icons.ts": {
-    "mtime": 1790230584.3255837,
-    "ast_hash": "52912503681e67a91c4b7f973abdd6c0",
+    "mtime": 1790232651.9740465,
+    "ast_hash": "945977cdd9116a045527402f97bb0071",
     "semantic_hash": ""
   },
   "public/icons/picto/achieve.png": {
@@ -7802,6 +7802,11 @@
   "public/icons/ui/warning.png": {
     "mtime": 1790231328.2573628,
     "ast_hash": "4feaf81e69c8777adb611f0697d2a915",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/oma-logo.png": {
+    "mtime": 1790232651.8372889,
+    "ast_hash": "a3c789a805265a4151f7b4622752d82b",
     "semantic_hash": ""
   }
 }

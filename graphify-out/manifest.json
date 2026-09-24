@@ -6545,8 +6545,8 @@
     "semantic_hash": ""
   },
   "src/lib/picto-icons.ts": {
-    "mtime": 1790230584.3255837,
-    "ast_hash": "52912503681e67a91c4b7f973abdd6c0",
+    "mtime": 1790232745.6611593,
+    "ast_hash": "5c9a3514b46383ec5be1975dc49103a5",
     "semantic_hash": ""
   },
   "public/icons/picto/achieve.png": {
@@ -7802,6 +7802,16 @@
   "public/icons/ui/warning.png": {
     "mtime": 1790231328.2573628,
     "ast_hash": "4feaf81e69c8777adb611f0697d2a915",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/oma-logo.png": {
+    "mtime": 1790232651.8372889,
+    "ast_hash": "a3c789a805265a4151f7b4622752d82b",
+    "semantic_hash": ""
+  },
+  "public/icons/picto/oma-hirsch.png": {
+    "mtime": 1790232745.5144475,
+    "ast_hash": "2191cbf73f37728aaef70cfb67760db4",
     "semantic_hash": ""
   }
 }

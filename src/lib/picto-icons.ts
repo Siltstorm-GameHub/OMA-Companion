@@ -177,6 +177,13 @@ export const PICTO_CATEGORIES: PictoCategory[] = [
       { id: "buff", label: "Stärkung", keywords: "buff" },
     ],
   },
+  {
+    name: "Special",
+    icons: [
+      { id: "oma-logo", label: "OMA-Logo", keywords: "oma logo old masters ally kstv community" },
+      { id: "oma-hirsch", label: "OMA-Hirsch", keywords: "oma hirsch geweih stag deer antlers old masters" },
+    ],
+  },
 ];
 
 export const PICTO_LIST = PICTO_CATEGORIES.flatMap(c => c.icons);
