@@ -2755,8 +2755,8 @@
     "semantic_hash": ""
   },
   "src/components/BottomNav.tsx": {
-    "mtime": 1790229421.9387176,
-    "ast_hash": "7cf21341f0ed2abde5513a638c8d4d77",
+    "mtime": 1790230177.7907064,
+    "ast_hash": "3057ce5a006a5258275636cc46849b1a",
     "semantic_hash": ""
   },
   "src/components/ClientTime.tsx": {
@@ -2875,8 +2875,8 @@
     "semantic_hash": ""
   },
   "src/components/FloatingPill.tsx": {
-    "mtime": 1789891773.1478443,
-    "ast_hash": "d2510ffd81d33fbde50e0d7c56cfb32f",
+    "mtime": 1790230211.1823368,
+    "ast_hash": "0d0bae8e5b9f6708d7b6e1f2ab26121a",
     "semantic_hash": ""
   },
   "src/components/FotografGalleries.tsx": {
@@ -6495,13 +6495,13 @@
     "semantic_hash": ""
   },
   "public/icons/nav/donations.png": {
-    "mtime": 1790194998.1576521,
-    "ast_hash": "f4f1f2ba1573f5be5f9adb82f664f1e7",
+    "mtime": 1790229999.1741104,
+    "ast_hash": "5bc267c18512f85fdeaeeb9f58658bb1",
     "semantic_hash": ""
   },
   "public/icons/nav/events.png": {
-    "mtime": 1790194998.0113614,
-    "ast_hash": "85340d1061bce1d8260cf1ba76d94ff4",
+    "mtime": 1790229946.0043695,
+    "ast_hash": "e73a809f354dea9dd2d48a38dcc692b6",
     "semantic_hash": ""
   },
   "public/icons/nav/home.png": {
@@ -6515,8 +6515,8 @@
     "semantic_hash": ""
   },
   "public/icons/nav/profile.png": {
-    "mtime": 1790194998.3300722,
-    "ast_hash": "bc105eb1e226f941fb23ab4618790ebd",
+    "mtime": 1790229697.5615697,
+    "ast_hash": "c72c98fb1a5d3fe7884fe38e701794b2",
     "semantic_hash": ""
   },
   "public/icons/nav/shop.png": {
@@ -6532,6 +6532,11 @@
   "public/icons/nav/stroke-teal.png": {
     "mtime": 1790194998.3371992,
     "ast_hash": "ba84218508cb4e978cd32ca58dd6be5a",
+    "semantic_hash": ""
+  },
+  "src/components/nav/ink-nav.tsx": {
+    "mtime": 1790230177.6710687,
+    "ast_hash": "272d0a5d9337f693cd968a5fc8028bc6",
     "semantic_hash": ""
   }
 }

@@ -1,7 +1,26 @@
-import { resolveSeriesIcon, resolveSeriesColor } from "@/lib/series-icons";
+import { decodeSeriesIcon, resolveSeriesIcon, resolveSeriesColor } from "@/lib/series-icons";
+import { pictoSrc } from "@/lib/picto-icons";
 
+/** Zeigt das Icon einer Reihe/eines Squads. Größe über className (z. B. "w-4 h-4"), Farbe steckt im Wert. */
 export default function SeriesIcon({ name, className }: { name?: string | null; className?: string }) {
-  const Icon = resolveSeriesIcon(name);
+  const d = decodeSeriesIcon(name);
+  if (d?.kind === "picto") {
+    const src = `url(${pictoSrc(d.id)})`;
+    return (
+      <span
+        className={`inline-block ${className ?? ""}`}
+        style={{
+          backgroundColor: d.color,
+          WebkitMaskImage: src, maskImage: src,
+          WebkitMaskSize: "contain", maskSize: "contain",
+          WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+          WebkitMaskPosition: "center", maskPosition: "center",
+        }}
+        aria-hidden
+      />
+    );
+  }
+  const Icon = resolveSeriesIcon(d?.kind === "legacy" ? d.name : null);
   // eslint-disable-next-line react-hooks/static-components -- Icon kommt aus einer stabilen, modulweiten Map (kein Re-Create pro Render)
   return <Icon className={className} style={{ color: resolveSeriesColor(name) }} />;
 }

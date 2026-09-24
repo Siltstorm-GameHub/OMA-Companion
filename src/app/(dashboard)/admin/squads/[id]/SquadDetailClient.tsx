@@ -5,7 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronLeft, Save, Trash2, Eye, EyeOff } from "lucide-react";
 import SeriesIcon from "@/components/SeriesIcon";
-import { SERIES_ICONS } from "@/lib/series-icons";
+
+import IconPicker from "@/components/IconPicker";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import SquadRosterManager from "@/components/squads/SquadRosterManager";
 import ImageUploadField from "@/components/ImageUploadField";
@@ -116,22 +117,7 @@ export default function SquadDetailClient({
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">Icon</label>
-            <div className="grid grid-cols-8 sm:grid-cols-12 gap-2">
-              {SERIES_ICONS.map(i => {
-                const Icon = i.icon;
-                const selected = icon === i.value;
-                return (
-                  <button key={i.value} type="button" title={i.label}
-                    onClick={() => setIcon(selected ? "" : i.value)}
-                    className="flex items-center justify-center rounded-xl p-2 border transition-all"
-                    style={selected
-                      ? { borderColor: `${i.color}99`, background: `${i.color}1a` }
-                      : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-                    <Icon className="w-4 h-4" style={{ color: selected ? i.color : "#9ca3af" }} />
-                  </button>
-                );
-              })}
-            </div>
+            <IconPicker value={icon} onChange={setIcon} />
           </div>
           <ImageUploadField
             value={coverImageUrl}

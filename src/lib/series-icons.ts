@@ -1,3 +1,4 @@
+import { isPictoId, PICTO_DEFAULT_COLOR } from "@/lib/picto-icons";
 import {
   Repeat, Trophy, Swords, Gamepad2, Crown, Flame, Star, Zap, Target, Shield,
   Rocket, Medal, Dice5, Puzzle, Heart, Skull, Ghost, Sparkles, Award, Gem,
@@ -7,7 +8,7 @@ import {
 
 const DEFAULT_COLOR = "#2dd4bf"; // teal-400 — Fallback-Icon (Repeat)
 
-export const SERIES_ICONS: { value: string; label: string; icon: LucideIcon; color: string }[] = [
+const LEGACY_SERIES_ICONS: { value: string; label: string; icon: LucideIcon; color: string }[] = [
   { value: "Trophy",       label: "Pokal",       icon: Trophy,       color: "#f59e0b" },
   { value: "Swords",       label: "Schwerter",   icon: Swords,       color: "#ef4444" },
   { value: "Gamepad2",     label: "Controller",  icon: Gamepad2,     color: "#8b5cf6" },
@@ -35,17 +36,44 @@ export const SERIES_ICONS: { value: string; label: string; icon: LucideIcon; col
 ];
 
 const SERIES_ICON_MAP: Record<string, { icon: LucideIcon; color: string }> = Object.fromEntries(
-  SERIES_ICONS.map(i => [i.value, { icon: i.icon, color: i.color }])
+  LEGACY_SERIES_ICONS.map(i => [i.value, { icon: i.icon, color: i.color }])
 );
 
-/** Liefert die Icon-Komponente für einen gespeicherten Icon-Namen, Fallback: Repeat (Reihe wiederholt sich). */
+/*
+ * Gespeichertes Format: "pi:<icon-id>:<#hex>" (Icon aus src/lib/picto-icons.ts
+ * plus Farbe in einem Feld, daher keine eigene DB-Spalte). Ältere Werte wie
+ * "Trophy" sind Lucide-Namen: sie werden weiter angezeigt, aber nicht mehr
+ * zur Auswahl angeboten.
+ */
+export type SeriesIconValue =
+  | { kind: "picto"; id: string; color: string }
+  | { kind: "legacy"; name: string };
+
+export function encodeSeriesIcon(id: string, color: string): string {
+  return `pi:${id}:${color}`;
+}
+
+/** Zerlegt einen gespeicherten Wert; null = kein (gültiges) Icon. */
+export function decodeSeriesIcon(value: string | null | undefined): SeriesIconValue | null {
+  if (!value) return null;
+  if (value.startsWith("pi:")) {
+    const [, id, color] = value.split(":");
+    if (!id || !isPictoId(id)) return null;
+    return { kind: "picto", id, color: /^#[0-9a-fA-F]{6}$/.test(color ?? "") ? color : PICTO_DEFAULT_COLOR };
+  }
+  return { kind: "legacy", name: value };
+}
+
+/** Liefert die Icon-Komponente für einen alten Lucide-Namen, Fallback: Repeat (Reihe wiederholt sich). */
 export function resolveSeriesIcon(name: string | null | undefined): LucideIcon {
   if (!name) return Repeat;
   return SERIES_ICON_MAP[name]?.icon ?? Repeat;
 }
 
-/** Liefert die zum Icon gehörende Farbe (Hex), Fallback: Teal (wie das Repeat-Icon). */
-export function resolveSeriesColor(name: string | null | undefined): string {
-  if (!name) return DEFAULT_COLOR;
-  return SERIES_ICON_MAP[name]?.color ?? DEFAULT_COLOR;
+/** Farbe (Hex) eines gespeicherten Icon-Werts, Fallback: Teal. */
+export function resolveSeriesColor(value: string | null | undefined): string {
+  const d = decodeSeriesIcon(value);
+  if (d?.kind === "picto") return d.color;
+  if (d?.kind === "legacy") return SERIES_ICON_MAP[d.name]?.color ?? DEFAULT_COLOR;
+  return DEFAULT_COLOR;
 }

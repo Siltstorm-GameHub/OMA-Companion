@@ -18,7 +18,8 @@ import ImageUploadField from "@/components/ImageUploadField";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
-import { SERIES_ICONS, resolveSeriesColor } from "@/lib/series-icons";
+import { resolveSeriesColor } from "@/lib/series-icons";
+import IconPicker from "@/components/IconPicker";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -626,22 +627,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               </select>
             </Field>
             <Field label="Icon">
-              <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                {SERIES_ICONS.map(i => {
-                  const Icon = i.icon;
-                  const selected = icon === i.value;
-                  return (
-                    <button key={i.value} type="button" title={i.label}
-                      onClick={() => setIcon(selected ? "" : i.value)}
-                      className="flex items-center justify-center rounded-xl p-2 border transition-all"
-                      style={selected
-                        ? { borderColor: `${i.color}99`, background: `${i.color}1a` }
-                        : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-                      <Icon className="w-4 h-4" style={{ color: selected ? i.color : "#9ca3af" }} />
-                    </button>
-                  );
-                })}
-              </div>
+              <IconPicker value={icon} onChange={setIcon} />
             </Field>
           </Section>
 

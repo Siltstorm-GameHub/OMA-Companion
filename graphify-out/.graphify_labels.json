@@ -192,16 +192,8 @@
   "190": "next.config.ts",
   "191": "canvas-confetti",
   "192": "lucide-react",
-  "193": "next-auth",
-  "194": "prisma",
-  "195": "react",
-  "196": "react",
   "197": "react",
-  "198": "react-dom",
-  "199": "@react-three/drei",
   "200": "@vercel/blob",
-  "201": "@react-three/postprocessing",
-  "202": "sonner",
   "203": "postcss.config.mjs",
   "204": "ResetHistoryButton.tsx",
   "205": "series/page.tsx",
@@ -226,8 +218,5 @@
   "224": "sw.js",
   "225": "{ GET, POST }",
   "226": "size",
-  "227": "MIN_MATCHES_FOR_RANKING",
-  "228": "@types/three",
-  "229": "web-push",
-  "230": "zod"
+  "227": "MIN_MATCHES_FOR_RANKING"
 }
