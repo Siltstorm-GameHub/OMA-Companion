@@ -1,11 +1,11 @@
 # Graph Report - OMA-Companion  (2026-09-24)
 
 ## Corpus Check
-- 966 files · ~3,140,621 words
+- 966 files · ~3,141,125 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4982 nodes · 13691 edges · 228 communities (192 shown, 36 thin omitted)
+- 4982 nodes · 13691 edges · 226 communities (190 shown, 36 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 30 edges (avg confidence: 0.64)
 - Token cost: 0 input · 0 output
 
@@ -162,7 +162,6 @@
 - run-season.ts
 - requireModeratorOrSquadCaptain
 - notifications.ts
-- DailyMessagePanel.tsx
 - seed-notification-rules.ts
 - middleware.ts
 - tutorial.ts
@@ -179,7 +178,6 @@
 - lineup/route.ts
 - battle-cards-challenge-cleanup/route.ts
 - HeroStatValue.tsx
-- MyPredictionsList.tsx
 - FloatingLobbyChat.tsx
 - generate-brand-assets.ts
 - widget/events/route.ts
@@ -256,7 +254,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (228 total, 36 thin omitted)
+## Communities (226 total, 36 thin omitted)
 
 ### Community 0 - "roles.ts"
 Cohesion: 0.03
@@ -499,8 +497,8 @@ Cohesion: 0.08
 Nodes (25): eslint, eslint-config-next, devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, ts-node (+17 more)
 
 ### Community 60 - "skill-pool.ts"
-Cohesion: 0.19
-Nodes (16): ACTIVITY_TIER_RANK, ACTIVITY_TIER_LABEL, CLASS_BASE_STATS, isOverridden(), runSeasonUpdate(), toJson(), applyTierJumpLimit(), computePercentiles() (+8 more)
+Cohesion: 0.36
+Nodes (9): applyTierJumpLimit(), computePercentiles(), computeSeasonResults(), hashSeed(), MemberSeasonResult, resolveClass(), TIER_ORDER, TIER_PERCENTILE_CEILING (+1 more)
 
 ### Community 61 - "community-board-comment-service.ts"
 Cohesion: 0.18
@@ -675,8 +673,8 @@ Cohesion: 0.11
 Nodes (18): ReportList(), api(), FoundUser, InterviewItem, InterviewsBlock(), JournalistExtras(), JournalistStatsBlock(), PhotoRequestItem (+10 more)
 
 ### Community 104 - "studio-templates.ts"
-Cohesion: 0.31
-Nodes (25): defaults, defaults, slim, defaults, Bottom, Eyewear, FacialHair, Gloves (+17 more)
+Cohesion: 0.21
+Nodes (32): defaults, defaults, slim, small, defaults, Bottom, Eyewear, FacialHair (+24 more)
 
 ### Community 105 - "minigames-config.ts"
 Cohesion: 0.14
@@ -759,8 +757,8 @@ Cohesion: 0.05
 Nodes (35): Health, AlertTriangle, Dice5, Download, Dumbbell, Gem, HelpCircle, Home (+27 more)
 
 ### Community 125 - "CommunityBoardWidget.tsx"
-Cohesion: 0.39
-Nodes (6): POST(), buildSeasonInputs(), countBy(), runFullSeasonUpdate(), RunSeasonResult, markPreSeasonRan()
+Cohesion: 0.20
+Nodes (13): POST(), ACTIVITY_TIER_RANK, ACTIVITY_TIER_LABEL, CLASS_BASE_STATS, isOverridden(), runSeasonUpdate(), toJson(), buildSeasonInputs() (+5 more)
 
 ### Community 126 - "ServerCard.tsx"
 Cohesion: 0.22
@@ -839,16 +837,12 @@ Cohesion: 0.29
 Nodes (6): Megaphone, EventMarketingSection(), PostList(), PostRow, SELECT, VISIBLE
 
 ### Community 145 - "requireModeratorOrSquadCaptain"
-Cohesion: 0.28
-Nodes (13): skin, skin, skin, skin, skin, skin, block, row (+5 more)
+Cohesion: 0.16
+Nodes (19): skin, skin, giant, skin, base, bodyMaterial, label, parts (+11 more)
 
 ### Community 146 - "notifications.ts"
 Cohesion: 0.07
 Nodes (48): DELETE(), PATCH(), DELETE(), POST(), POST(), POST(), GET(), DELETE() (+40 more)
-
-### Community 147 - "DailyMessagePanel.tsx"
-Cohesion: 0.33
-Nodes (6): small, base, bodyMaterial, label, parts, regions
 
 ### Community 148 - "seed-notification-rules.ts"
 Cohesion: 0.31
@@ -902,10 +896,6 @@ Nodes (4): GET(), isAuthorized(), expireStaleChallenges(), ExpireStaleChallenges
 Cohesion: 0.13
 Nodes (22): curve(), curvePercent(), STANDARD_CARDS, StandardCardSeed, ACTIVE_POOL, DD_ACTIVE_SKILLS, DD_PASSIVE_KITS, DD_ULTIMATE_SKILLS (+14 more)
 
-### Community 165 - "MyPredictionsList.tsx"
-Cohesion: 0.33
-Nodes (6): giant, base, bodyMaterial, label, parts, regions
-
 ### Community 166 - "FloatingLobbyChat.tsx"
 Cohesion: 0.44
 Nodes (11): alwaysOn, alwaysOn, alwaysOn, alwaysOn, alwaysOn, alwaysOn, alwaysOn, alwaysOn (+3 more)
@@ -919,8 +909,8 @@ Cohesion: 0.29
 Nodes (11): categories, categories, Bottom, Eyewear, FacialHair, Gloves, Hair, Headwear (+3 more)
 
 ### Community 170 - "synergy.ts"
-Cohesion: 0.25
-Nodes (8): tall, alwaysOn, base, bodyMaterial, defaults, label, parts, regions
+Cohesion: 0.29
+Nodes (7): tall, alwaysOn, base, bodyMaterial, label, parts, regions
 
 ### Community 172 - "Kapitel-Hintergründe — Kampagne"
 Cohesion: 0.50

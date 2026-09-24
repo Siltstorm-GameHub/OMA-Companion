@@ -2749,8 +2749,8 @@
       "source_location": "L6537",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_giant",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "giant"
     },
     {
@@ -2760,8 +2760,8 @@
       "source_location": "L6538",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_label",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "label"
     },
     {
@@ -2771,8 +2771,8 @@
       "source_location": "L6539",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_base",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "base"
     },
     {
@@ -2782,8 +2782,8 @@
       "source_location": "L6540",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_regions",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "regions"
     },
     {
@@ -2804,8 +2804,8 @@
       "source_location": "L6618",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_bodymaterial",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "bodymaterial"
     },
     {
@@ -2848,8 +2848,8 @@
       "source_location": "L6700",
       "_origin": "ast",
       "id": "public_characters_manifest_giant_parts",
-      "community": 165,
-      "community_name": "MyPredictionsList.tsx",
+      "community": 145,
+      "community_name": "requireModeratorOrSquadCaptain",
       "norm_label": "parts"
     },
     {
@@ -2859,8 +2859,8 @@
       "source_location": "L7868",
       "_origin": "ast",
       "id": "public_characters_manifest_bodies_small",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "small"
     },
     {
@@ -2870,8 +2870,8 @@
       "source_location": "L7869",
       "_origin": "ast",
       "id": "public_characters_manifest_small_label",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "label"
     },
     {
@@ -2881,8 +2881,8 @@
       "source_location": "L7870",
       "_origin": "ast",
       "id": "public_characters_manifest_small_base",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "base"
     },
     {
@@ -2892,8 +2892,8 @@
       "source_location": "L7871",
       "_origin": "ast",
       "id": "public_characters_manifest_small_regions",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "regions"
     },
     {
@@ -2914,8 +2914,8 @@
       "source_location": "L7949",
       "_origin": "ast",
       "id": "public_characters_manifest_small_bodymaterial",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "bodymaterial"
     },
     {
@@ -2958,8 +2958,8 @@
       "source_location": "L8031",
       "_origin": "ast",
       "id": "public_characters_manifest_small_parts",
-      "community": 147,
-      "community_name": "DailyMessagePanel.tsx",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "parts"
     },
     {
@@ -3662,8 +3662,8 @@
       "source_location": "L18263",
       "_origin": "ast",
       "id": "public_characters_manifest_tall_defaults",
-      "community": 170,
-      "community_name": "synergy.ts",
+      "community": 104,
+      "community_name": "studio-templates.ts",
       "norm_label": "defaults"
     },
     {
@@ -37443,8 +37443,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_lib_battle_cards_card_view_activity_tier_rank",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "activity_tier_rank"
     },
     {
@@ -49716,7 +49716,7 @@
       "label": "PICTO_LIST",
       "file_type": "code",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L188",
+      "source_location": "L189",
       "_origin": "ast",
       "id": "src_lib_picto_icons_picto_list",
       "community": 24,
@@ -49727,7 +49727,7 @@
       "label": "PICTO_IDS",
       "file_type": "code",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L189",
+      "source_location": "L190",
       "_origin": "ast",
       "id": "src_lib_picto_icons_picto_ids",
       "community": 24,
@@ -49738,7 +49738,7 @@
       "label": "isPictoId()",
       "file_type": "code",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L191",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "src_lib_picto_icons_ispictoid",
       "community": 24,
@@ -49749,7 +49749,7 @@
       "label": "pictoSrc()",
       "file_type": "code",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L195",
+      "source_location": "L196",
       "_origin": "ast",
       "id": "src_lib_picto_icons_pictosrc",
       "community": 24,
@@ -49760,7 +49760,7 @@
       "label": "PICTO_COLORS",
       "file_type": "code",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L200",
+      "source_location": "L201",
       "_origin": "ast",
       "id": "src_lib_picto_icons_picto_colors",
       "community": 24,
@@ -51413,8 +51413,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "apply-season-results.ts"
     },
     {
@@ -51424,8 +51424,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results_activity_tier_label",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "activity_tier_label"
     },
     {
@@ -51435,8 +51435,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results_tojson",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "tojson()"
     },
     {
@@ -51446,8 +51446,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results_class_base_stats",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "class_base_stats"
     },
     {
@@ -51457,8 +51457,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results_isoverridden",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "isoverridden()"
     },
     {
@@ -51468,8 +51468,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_lib_season_apply_season_results_runseasonupdate",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "runseasonupdate()"
     },
     {
@@ -51732,8 +51732,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_lib_season_season_engine_memberseasoninput",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 125,
+      "community_name": "CommunityBoardWidget.tsx",
       "norm_label": "memberseasoninput"
     },
     {
@@ -207677,7 +207677,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L191",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons",
@@ -207699,7 +207699,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L200",
+      "source_location": "L201",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons",
@@ -207710,7 +207710,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L189",
+      "source_location": "L190",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons",
@@ -207721,7 +207721,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L188",
+      "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons",
@@ -207743,7 +207743,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L195",
+      "source_location": "L196",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons",
@@ -207768,7 +207768,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/lib/picto-icons.ts",
-      "source_location": "L192",
+      "source_location": "L193",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_lib_picto_icons_ispictoid",

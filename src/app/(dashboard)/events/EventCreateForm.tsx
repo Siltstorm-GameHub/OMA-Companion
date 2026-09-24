@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Euro, Repeat } from "lucide-react";
+import { ChevronDown, ChevronUp, Euro } from "lucide-react";
+import { Repeat } from "@/components/icons";
 import { Plus, CalendarDays } from "@/components/icons";
 import GameNameInput from "@/components/GameNameInput";
 

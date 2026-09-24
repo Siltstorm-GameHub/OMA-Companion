@@ -1,4 +1,5 @@
 "use client";
+import JobIcon from "@/components/JobIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -264,7 +265,7 @@ function JobSettingsSection({
       <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
         {jobs.map(job => (
           <div key={job.key} className="p-3 flex items-center gap-3 flex-wrap">
-            <span className="text-xs text-white w-40 shrink-0">{job.emoji} {job.label}</span>
+            <span className="text-xs text-white w-40 shrink-0"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</span>
             <label className="flex items-center gap-1.5 text-[11px] text-gray-500">
               Slots
               <input type="number" min={0} value={slots[job.key] ?? 0}

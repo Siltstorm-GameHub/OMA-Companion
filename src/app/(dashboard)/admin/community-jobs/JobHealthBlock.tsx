@@ -1,4 +1,5 @@
 "use client";
+import JobIcon from "@/components/JobIcon";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Info, Loader2 } from "@/components/icons";
 
@@ -28,7 +29,7 @@ export default function JobHealthBlock() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {jobs.map(j => (
           <div key={j.key} className="glass rounded-xl p-3 space-y-2">
-            <p className="text-xs text-white font-semibold">{j.emoji} {j.label}</p>
+            <p className="text-xs text-white font-semibold"><JobIcon jobKey={j.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{j.label}</p>
             <div className="grid grid-cols-3 gap-1.5 text-center">
               <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.filled}/{j.maxSlots}</p><p className="text-[10px] text-gray-500">Plätze</p></div>
               <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.active7}/{j.filled}</p><p className="text-[10px] text-gray-500">aktiv (7 T.)</p></div>

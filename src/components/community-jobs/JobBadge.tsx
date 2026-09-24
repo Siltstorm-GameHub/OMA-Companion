@@ -1,4 +1,5 @@
 "use client";
+import JobIcon from "@/components/JobIcon";
 import { useEffect, useState } from "react";
 import {
   JOB_BADGE_META, LEVEL_RING_COLORS, BADGE_MAX_LEVEL, BADGE_MIN_LEVEL, levelTitle, type JobBadgeData,
@@ -99,7 +100,7 @@ export default function JobBadge({ userId, variant = "full", data, className = "
       className={`relative inline-flex items-center justify-center rounded-full shrink-0 w-5 h-5 text-[11px] leading-none bg-black/40 ${badge.former ? "opacity-70" : ""}`}
       style={{ border: `2px ${badge.former ? "dashed" : "solid"} ${ring}`, boxShadow: glow }}
     >
-      <span aria-hidden="true">{meta.emoji}</span>
+      <JobIcon jobKey={badge.jobKey} className="w-3 h-3" />
       {badge.warned && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
     </span>
   );

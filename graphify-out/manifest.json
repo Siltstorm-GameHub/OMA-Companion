@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/AdminNav.tsx": {
-    "mtime": 1790231913.8393404,
-    "ast_hash": "b5fada20f2839d2f670eb391c968bd60",
+    "mtime": 1790233451.7279491,
+    "ast_hash": "662ca7d1e1dcf0995879a3591a4bc3e8",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/ResetHistoryButton.tsx": {
@@ -405,8 +405,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/CommunityJobsAdminPanel.tsx": {
-    "mtime": 1790231913.8525977,
-    "ast_hash": "7eae42fdd6ed5d1cff3dd9adc6c8b94d",
+    "mtime": 1790233425.8235128,
+    "ast_hash": "77fd31d50a59dcf419bfaba33262f2c5",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/page.tsx": {
@@ -445,13 +445,13 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/EventAdminRow.tsx": {
-    "mtime": 1790231913.8628032,
-    "ast_hash": "3cfcf3d700052fccf16fcafd9cbb355b",
+    "mtime": 1790233451.7657285,
+    "ast_hash": "0d7fa8693f914423f4146443e6bee0f8",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/SeriesAdminRow.tsx": {
-    "mtime": 1790231913.8661244,
-    "ast_hash": "95ccf80d39d7662d0aa7fd7ba26b2880",
+    "mtime": 1790233451.7662387,
+    "ast_hash": "6bc087f54367cbb861b54761f2f5b088",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/TournamentManager.tsx": {
@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/EventEditClient.tsx": {
-    "mtime": 1790231913.8706849,
-    "ast_hash": "274830046fd596a16b18b9ab727b3a47",
+    "mtime": 1790233451.7704604,
+    "ast_hash": "2af6e3e032b309b855305aca414968a4",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/[id]/bracket/page.tsx": {
@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/EventSetupWizard.tsx": {
-    "mtime": 1790231913.8681521,
-    "ast_hash": "0fff924266796c39920e2a63a78ea34a",
+    "mtime": 1790233451.7688267,
+    "ast_hash": "6a89f04092573e910d3becf695613967",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/events/new/page.tsx": {
@@ -585,13 +585,13 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx": {
-    "mtime": 1790231913.8809023,
-    "ast_hash": "01e2ddecbc634e56dddd7f4de127a63c",
+    "mtime": 1790233451.7756355,
+    "ast_hash": "06ce236bae7997856dae70cf3b5eb0ec",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/SeriesCompleteClient.tsx": {
-    "mtime": 1790231913.8830616,
-    "ast_hash": "50c56b692d67c07011abf167c637c47f",
+    "mtime": 1790233451.776786,
+    "ast_hash": "9fe9dc773a315a3f1bf7c020324cde2c",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/series/[id]/complete/page.tsx": {
@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/dashboard/page.tsx": {
-    "mtime": 1790231296.898804,
-    "ast_hash": "a9b772e7f9fe9be50aae62f705b6f55a",
+    "mtime": 1790233451.7866504,
+    "ast_hash": "8546c6a3c3c65ae52a3f38df75be4ff3",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/donations/loading.tsx": {
@@ -835,8 +835,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/EventCreateForm.tsx": {
-    "mtime": 1790231296.898804,
-    "ast_hash": "1cce3c71d6eb587fcee7b548b86a77fa",
+    "mtime": 1790233451.788175,
+    "ast_hash": "dfa290590a8dad71eb045fa8542dc8ff",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/events/EventPredictionsPanel.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/CommunityJobsPanel.tsx": {
-    "mtime": 1790231296.913683,
-    "ast_hash": "5c2117c8b1dc0e989ff95c56c6b2aefe",
+    "mtime": 1790233451.8123984,
+    "ast_hash": "5f81211a474b72dade53c2298ac03a16",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/DesktopProfileTabs.tsx": {
@@ -2650,8 +2650,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/settings/SettingsClient.tsx": {
-    "mtime": 1790232040.8764582,
-    "ast_hash": "ee4256ab627c2573db4693eb25be47e8",
+    "mtime": 1790233451.9030268,
+    "ast_hash": "6d18957e1010ec93ee7215b9258882d6",
     "semantic_hash": ""
   },
   "src/app/overlay/[id]/settings/page.tsx": {
@@ -2670,8 +2670,8 @@
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/settings/SettingsClient.tsx": {
-    "mtime": 1790232040.8744438,
-    "ast_hash": "bb86dc6072ba6cfc872844eb8946be54",
+    "mtime": 1790233451.9010174,
+    "ast_hash": "c732bac6534fafb1e50352f93c79fb1e",
     "semantic_hash": ""
   },
   "src/app/overlay/profile/[userId]/settings/page.tsx": {
@@ -3070,8 +3070,8 @@
     "semantic_hash": ""
   },
   "src/components/SeriesIcon.tsx": {
-    "mtime": 1790230642.4713993,
-    "ast_hash": "672ffd1dae0cb1913ee02431f1f46d53",
+    "mtime": 1790233482.2646441,
+    "ast_hash": "f47f09df20077ee70e8274ec7d776319",
     "semantic_hash": ""
   },
   "src/components/ServerApplicationBadge.tsx": {
@@ -3450,8 +3450,8 @@
     "semantic_hash": ""
   },
   "src/components/community-jobs/JobBadge.tsx": {
-    "mtime": 1789891857.7846565,
-    "ast_hash": "be2852049e4b6e89ace440205af4ad9b",
+    "mtime": 1790233425.8264158,
+    "ast_hash": "728379ac3240d708cec031f3ba0dbbbc",
     "semantic_hash": ""
   },
   "src/components/community-jobs/JournalistTools.tsx": {
@@ -6125,8 +6125,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/JobHealthBlock.tsx": {
-    "mtime": 1790231913.8536417,
-    "ast_hash": "442f89212889383cd7044b9ce3f6c77b",
+    "mtime": 1790233425.8235128,
+    "ast_hash": "a28173a1da1ad7b0f933b1fda6b7efc8",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/auffaelligkeiten/AnomaliesClient.tsx": {
@@ -6175,8 +6175,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/texte/TextsClient.tsx": {
-    "mtime": 1790231913.8594823,
-    "ast_hash": "b693e4f105c1ee42c4c590469a9a168f",
+    "mtime": 1790233425.8235128,
+    "ast_hash": "25b9252be742a908554406cce051b3fd",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/community-jobs/texte/page.tsx": {
@@ -6235,8 +6235,8 @@
     "semantic_hash": ""
   },
   "src/components/EventJobPackage.tsx": {
-    "mtime": 1790231296.9936707,
-    "ast_hash": "c1014b24191c67be329501a6e1e697e0",
+    "mtime": 1790233425.8279471,
+    "ast_hash": "9aaf562c31b2aefb2fee8e79914a3d2a",
     "semantic_hash": ""
   },
   "src/components/community-jobs/MediaPickerPanel.tsx": {
@@ -7265,553 +7265,573 @@
     "semantic_hash": ""
   },
   "src/components/icons.tsx": {
-    "mtime": 1790231328.3738897,
-    "ast_hash": "4bd38a850d846513167e4a76ecd73f7f",
+    "mtime": 1790233451.5655768,
+    "ast_hash": "f44ecb74844231092bca4102a99aa620",
     "semantic_hash": ""
   },
   "public/icons/ui/account.png": {
-    "mtime": 1790231328.302186,
+    "mtime": 1790233451.5598903,
     "ast_hash": "a0066827a4274e6bf1fd7c8601bbd4ae",
     "semantic_hash": ""
   },
   "public/icons/ui/alert.png": {
-    "mtime": 1790231328.348841,
+    "mtime": 1790233451.260869,
     "ast_hash": "f558fb09550fe7302d3777f2d2b6a555",
     "semantic_hash": ""
   },
   "public/icons/ui/arrow-backward.png": {
-    "mtime": 1790231328.1186852,
+    "mtime": 1790233451.3392513,
     "ast_hash": "25a6748b62af51cd5e4dc4d12a20b847",
     "semantic_hash": ""
   },
   "public/icons/ui/arrow-down.png": {
-    "mtime": 1790231328.078456,
+    "mtime": 1790233451.1610737,
     "ast_hash": "51d94ff9193f1b0f767056fbe32ba04a",
     "semantic_hash": ""
   },
   "public/icons/ui/arrow-forward.png": {
-    "mtime": 1790231328.0659316,
+    "mtime": 1790233451.1761038,
     "ast_hash": "1440628c4418722332f1e1d51f8d039c",
     "semantic_hash": ""
   },
   "public/icons/ui/arrow-up.png": {
-    "mtime": 1790231327.7808552,
+    "mtime": 1790233451.0167031,
     "ast_hash": "a2de9d73f3622077e6c93e97d4bf3529",
     "semantic_hash": ""
   },
   "public/icons/ui/award.png": {
-    "mtime": 1790231328.2239704,
+    "mtime": 1790233451.3346586,
     "ast_hash": "609f142a3e782106f13aff5b06abdd88",
     "semantic_hash": ""
   },
   "public/icons/ui/bag.png": {
-    "mtime": 1790231328.0967574,
+    "mtime": 1790233451.3291001,
     "ast_hash": "d0ba4dba9544ae7e89837fb262be9da0",
     "semantic_hash": ""
   },
   "public/icons/ui/battle.png": {
-    "mtime": 1790231327.837154,
+    "mtime": 1790233451.2509038,
     "ast_hash": "3fd8a79738c60a9222c1145ef9a34c60",
     "semantic_hash": ""
   },
   "public/icons/ui/bell-mute.png": {
-    "mtime": 1790231327.8868995,
+    "mtime": 1790233451.2724457,
     "ast_hash": "6fba2634c7b3a0ea0f9f7c715ab2f7d8",
     "semantic_hash": ""
   },
   "public/icons/ui/bell.png": {
-    "mtime": 1790231327.9254696,
+    "mtime": 1790233451.5025847,
     "ast_hash": "812bd99880591cb2c976abe2664054f7",
     "semantic_hash": ""
   },
   "public/icons/ui/bin.png": {
-    "mtime": 1790231328.326922,
+    "mtime": 1790233451.5650482,
     "ast_hash": "0995fd913f8e6c236acffde4ebbf0c5a",
     "semantic_hash": ""
   },
   "public/icons/ui/book-0.png": {
-    "mtime": 1790231328.331462,
+    "mtime": 1790233451.0290608,
     "ast_hash": "66a16da9a215db34eb88c3d1f485dbc8",
     "semantic_hash": ""
   },
   "public/icons/ui/bulb.png": {
-    "mtime": 1790231327.8086932,
+    "mtime": 1790233451.3075354,
     "ast_hash": "c188747a7d64983d64373e4ffae0bcc7",
     "semantic_hash": ""
   },
   "public/icons/ui/calendar.png": {
-    "mtime": 1790231328.1406617,
+    "mtime": 1790233451.156948,
     "ast_hash": "e4c6c84501ac89335e77477b8d68e98d",
     "semantic_hash": ""
   },
   "public/icons/ui/camera.png": {
-    "mtime": 1790231327.8206785,
+    "mtime": 1790233451.0384014,
     "ast_hash": "37517a022196a6f3402fd2e2d9c26682",
     "semantic_hash": ""
   },
   "public/icons/ui/cart.png": {
-    "mtime": 1790231327.8970053,
+    "mtime": 1790233451.0502474,
     "ast_hash": "92d502dd42a8a22e6efc7d4d01c3ccb6",
     "semantic_hash": ""
   },
   "public/icons/ui/chat.png": {
-    "mtime": 1790231328.2785423,
+    "mtime": 1790233451.4054797,
     "ast_hash": "c81892b49024f5a53871cb8e0ae6cda2",
     "semantic_hash": ""
   },
   "public/icons/ui/check.png": {
-    "mtime": 1790231327.9509912,
+    "mtime": 1790233451.1817522,
     "ast_hash": "ce29e56e8151bd9d8fa3909145e936f3",
     "semantic_hash": ""
   },
   "public/icons/ui/close.png": {
-    "mtime": 1790231327.993941,
+    "mtime": 1790233451.229092,
     "ast_hash": "527caed6c31bd5f218771da46db84376",
     "semantic_hash": ""
   },
   "public/icons/ui/coin-star.png": {
-    "mtime": 1790231328.1237361,
+    "mtime": 1790233451.4809208,
     "ast_hash": "953909ed176b309c451eae4099503869",
     "semantic_hash": ""
   },
   "public/icons/ui/confirm.png": {
-    "mtime": 1790231328.247818,
+    "mtime": 1790233451.3223374,
     "ast_hash": "357495509d86dad221ba4b9698e729f9",
     "semantic_hash": ""
   },
   "public/icons/ui/control-pause.png": {
-    "mtime": 1790231328.1356127,
+    "mtime": 1790233451.1227293,
     "ast_hash": "816d3c9209ad6c3d6db82a93c9242806",
     "semantic_hash": ""
   },
   "public/icons/ui/control-play.png": {
-    "mtime": 1790231328.1627047,
+    "mtime": 1790233450.966098,
     "ast_hash": "cd0972fb75f624656f21738a6cac6cc3",
     "semantic_hash": ""
   },
   "public/icons/ui/copy.png": {
-    "mtime": 1790231328.3529744,
+    "mtime": 1790233451.397793,
     "ast_hash": "afb910321b43299fedcc83069de7fb04",
     "semantic_hash": ""
   },
   "public/icons/ui/crown.png": {
-    "mtime": 1790231328.262999,
+    "mtime": 1790233451.455547,
     "ast_hash": "bfe6a6c21d3b2165889a969cc0275405",
     "semantic_hash": ""
   },
   "public/icons/ui/dice.png": {
-    "mtime": 1790231327.874216,
+    "mtime": 1790233451.467931,
     "ast_hash": "befec36c6993e9f3da77d90234d82f89",
     "semantic_hash": ""
   },
   "public/icons/ui/dislike.png": {
-    "mtime": 1790231328.01343,
+    "mtime": 1790233451.386987,
     "ast_hash": "6808aa977ebf3c67e717638bb9649f30",
     "semantic_hash": ""
   },
   "public/icons/ui/display.png": {
-    "mtime": 1790231327.8422017,
+    "mtime": 1790233451.3626835,
     "ast_hash": "e836c55f214b6dbb752b8888ec22330c",
     "semantic_hash": ""
   },
   "public/icons/ui/documnet.png": {
-    "mtime": 1790231327.940866,
+    "mtime": 1790233451.2067826,
     "ast_hash": "43d32b0d498ea607293cf6df487829d1",
     "semantic_hash": ""
   },
   "public/icons/ui/download.png": {
-    "mtime": 1790231328.3426385,
+    "mtime": 1790233451.243826,
     "ast_hash": "cf0e8571b001b88ef5a80eda7dfba794",
     "semantic_hash": ""
   },
   "public/icons/ui/emoji-smile.png": {
-    "mtime": 1790231328.0484967,
+    "mtime": 1790233451.5221105,
     "ast_hash": "a33bc4ae4e825fe0e75351dc0edde4ca",
     "semantic_hash": ""
   },
   "public/icons/ui/equal.png": {
-    "mtime": 1790231328.28855,
+    "mtime": 1790233451.3680613,
     "ast_hash": "fd7986ce8392a9aec75c91bfc3424979",
     "semantic_hash": ""
   },
   "public/icons/ui/expand.png": {
-    "mtime": 1790231327.7910538,
+    "mtime": 1790233451.4408352,
     "ast_hash": "714faaf50bdb08f0bdbaed0dd7a4f9b7",
     "semantic_hash": ""
   },
   "public/icons/ui/export.png": {
-    "mtime": 1790231327.7956326,
+    "mtime": 1790233451.357028,
     "ast_hash": "11b2eb91d67bc66650593e78b986b426",
     "semantic_hash": ""
   },
   "public/icons/ui/fire.png": {
-    "mtime": 1790231327.9769013,
+    "mtime": 1790233451.5159714,
     "ast_hash": "2db4fb86eb334e9ac32648b2959a51bb",
     "semantic_hash": ""
   },
   "public/icons/ui/fix.png": {
-    "mtime": 1790231328.0009775,
+    "mtime": 1790233451.312178,
     "ast_hash": "2f95580b481451f2d74cb79e6cd770e3",
     "semantic_hash": ""
   },
   "public/icons/ui/flag-0.png": {
-    "mtime": 1790231328.0598671,
+    "mtime": 1790233451.4608114,
     "ast_hash": "18819f58d0a101a523276a3b228c5004",
     "semantic_hash": ""
   },
   "public/icons/ui/folder.png": {
-    "mtime": 1790231328.1069973,
+    "mtime": 1790233451.0908022,
     "ast_hash": "0359078bbf7821e9baa6987f2115803c",
     "semantic_hash": ""
   },
   "public/icons/ui/friend-add.png": {
-    "mtime": 1790231327.9313173,
+    "mtime": 1790233450.9609616,
     "ast_hash": "eb80f72adafaa7bb6edf27a12b35b9c1",
     "semantic_hash": ""
   },
   "public/icons/ui/game.png": {
-    "mtime": 1790231327.8521495,
+    "mtime": 1790233451.0440738,
     "ast_hash": "68b8df74db68dcf8471dcbce7b8f4489",
     "semantic_hash": ""
   },
   "public/icons/ui/gem-diamond.png": {
-    "mtime": 1790231327.9824786,
+    "mtime": 1790233451.170952,
     "ast_hash": "e9ac1642048e17fa4141ddef6318d1e2",
     "semantic_hash": ""
   },
   "public/icons/ui/gift.png": {
-    "mtime": 1790231327.9669986,
+    "mtime": 1790233451.1013062,
     "ast_hash": "10a3bff168920fe538982699e1dcec8a",
     "semantic_hash": ""
   },
   "public/icons/ui/globe.png": {
-    "mtime": 1790231328.3119059,
+    "mtime": 1790233451.3927567,
     "ast_hash": "4162d1f3dbae8ef45039595881ca106e",
     "semantic_hash": ""
   },
   "public/icons/ui/help.png": {
-    "mtime": 1790231327.9084897,
+    "mtime": 1790233451.1462915,
     "ast_hash": "eae503c2b4732df8cd57f11d400ff322",
     "semantic_hash": ""
   },
   "public/icons/ui/hide.png": {
-    "mtime": 1790231327.8319957,
+    "mtime": 1790233451.2167068,
     "ast_hash": "f8eb3c1f51f936b4600555412a02668e",
     "semantic_hash": ""
   },
   "public/icons/ui/history.png": {
-    "mtime": 1790231327.8146148,
+    "mtime": 1790233451.1355133,
     "ast_hash": "0c5bb261cd23034d90c313c65f50aa4c",
     "semantic_hash": ""
   },
   "public/icons/ui/home-1.png": {
-    "mtime": 1790231327.9722502,
+    "mtime": 1790233451.1408055,
     "ast_hash": "ddf22a9c9901bf4b32562e9237e687ca",
     "semantic_hash": ""
   },
   "public/icons/ui/info.png": {
-    "mtime": 1790231328.101358,
+    "mtime": 1790233451.054027,
     "ast_hash": "d2bd9503cb61666ca94dc2911e6ca795",
     "semantic_hash": ""
   },
   "public/icons/ui/joystick.png": {
-    "mtime": 1790231328.2007518,
+    "mtime": 1790233451.4311156,
     "ast_hash": "75506700533ec25de12004a71e64f6d9",
     "semantic_hash": ""
   },
   "public/icons/ui/layout.png": {
-    "mtime": 1790231327.9614017,
+    "mtime": 1790233450.9942064,
     "ast_hash": "3309296630d33ccc9803df359c826960",
     "semantic_hash": ""
   },
   "public/icons/ui/learn.png": {
-    "mtime": 1790231327.8023968,
+    "mtime": 1790233451.0606575,
     "ast_hash": "94a5f838d7c26ff306499d89efbba90a",
     "semantic_hash": ""
   },
   "public/icons/ui/life.png": {
-    "mtime": 1790231328.2288625,
+    "mtime": 1790233451.2346783,
     "ast_hash": "3c374bbf0c87d5ac64d975a7b31317c7",
     "semantic_hash": ""
   },
   "public/icons/ui/like.png": {
-    "mtime": 1790231328.1903582,
+    "mtime": 1790233451.0785115,
     "ast_hash": "764b3040b5ea03e3c93e752c92520b1f",
     "semantic_hash": ""
   },
   "public/icons/ui/link.png": {
-    "mtime": 1790231328.0428593,
+    "mtime": 1790233451.5411453,
     "ast_hash": "efd057ebc1f81d4595651438a8303156",
     "semantic_hash": ""
   },
   "public/icons/ui/list-0.png": {
-    "mtime": 1790231328.068487,
+    "mtime": 1790233450.9863956,
     "ast_hash": "a4f7806d55ff437c030343d2badc2288",
     "semantic_hash": ""
   },
   "public/icons/ui/list-1.png": {
-    "mtime": 1790231328.0536697,
+    "mtime": 1790233451.3162634,
     "ast_hash": "0a6364a2d5b25aa37fdb6446dccc34dc",
     "semantic_hash": ""
   },
   "public/icons/ui/lock.png": {
-    "mtime": 1790231328.1304655,
+    "mtime": 1790233451.5343144,
     "ast_hash": "aa0eb6dfc767073340baaa60e668469e",
     "semantic_hash": ""
   },
   "public/icons/ui/mail.png": {
-    "mtime": 1790231327.846916,
+    "mtime": 1790233451.291023,
     "ast_hash": "f801af1c1cdaf1fa4060505d86c66bc9",
     "semantic_hash": ""
   },
   "public/icons/ui/medal-0.png": {
-    "mtime": 1790231328.1683471,
+    "mtime": 1790233451.351343,
     "ast_hash": "8caef83558d97cb861afabe5b2e6a81a",
     "semantic_hash": ""
   },
   "public/icons/ui/megaphone.png": {
-    "mtime": 1790231328.1965685,
+    "mtime": 1790233451.1278827,
     "ast_hash": "a54a55e1919f94c06196b576f03c0ebe",
     "semantic_hash": ""
   },
   "public/icons/ui/menu-0.png": {
-    "mtime": 1790231328.1571307,
+    "mtime": 1790233450.9911368,
     "ast_hash": "4d836c02f8fcfaa4b5b8f4b1745f250b",
     "semantic_hash": ""
   },
   "public/icons/ui/menu-1.png": {
-    "mtime": 1790231327.8670983,
+    "mtime": 1790233451.4362185,
     "ast_hash": "304e8bde174eed03ae53fb519260476a",
     "semantic_hash": ""
   },
   "public/icons/ui/minus.png": {
-    "mtime": 1790231327.7865026,
+    "mtime": 1790233451.190876,
     "ast_hash": "c911b973e3aae5d2c79fba0e3df2c472",
     "semantic_hash": ""
   },
   "public/icons/ui/moon.png": {
-    "mtime": 1790231327.8584335,
+    "mtime": 1790233451.4739869,
     "ast_hash": "0efffb7aef4230d1efb1da180c31de81",
     "semantic_hash": ""
   },
   "public/icons/ui/movie.png": {
-    "mtime": 1790231328.3070974,
+    "mtime": 1790233451.4464247,
     "ast_hash": "91f95fcbe953eb39f917f110c5050287",
     "semantic_hash": ""
   },
   "public/icons/ui/music.png": {
-    "mtime": 1790231328.316687,
+    "mtime": 1790233450.976294,
     "ast_hash": "4e0dd9cc8c478cf102c42fedb986807a",
     "semantic_hash": ""
   },
   "public/icons/ui/paper-0.png": {
-    "mtime": 1790231328.1784768,
+    "mtime": 1790233451.301736,
     "ast_hash": "aca0cfa0d6052a5751c2d026ac9c07e8",
     "semantic_hash": ""
   },
   "public/icons/ui/pen.png": {
-    "mtime": 1790231327.8908584,
+    "mtime": 1790233451.285761,
     "ast_hash": "a1cb87436c116d186d06dc885bcd956e",
     "semantic_hash": ""
   },
   "public/icons/ui/photo.png": {
-    "mtime": 1790231328.2729435,
+    "mtime": 1790233450.9556046,
     "ast_hash": "c9ba7d8a49d0d6b6c3c1cbb59d95d2e8",
     "semantic_hash": ""
   },
   "public/icons/ui/plus.png": {
-    "mtime": 1790231328.240674,
+    "mtime": 1790233451.106426,
     "ast_hash": "867b1d6304ca948497f7cc44a4973ceb",
     "semantic_hash": ""
   },
   "public/icons/ui/post.png": {
-    "mtime": 1790231328.3638425,
+    "mtime": 1790233451.266842,
     "ast_hash": "c065e6657f8ecd316b52f79cac99209b",
     "semantic_hash": ""
   },
   "public/icons/ui/potion.png": {
-    "mtime": 1790231327.9141254,
+    "mtime": 1790233451.552464,
     "ast_hash": "28a89663db23d6da56c69735205b7a17",
     "semantic_hash": ""
   },
   "public/icons/ui/pouch.png": {
-    "mtime": 1790231328.0308635,
+    "mtime": 1790233451.2011228,
     "ast_hash": "89404e9f58c72301a55567f8e6bea233",
     "semantic_hash": ""
   },
   "public/icons/ui/puzzle.png": {
-    "mtime": 1790231328.0886452,
+    "mtime": 1790233451.5278242,
     "ast_hash": "0266157857d2e0e51fb3b3dcac95ad70",
     "semantic_hash": ""
   },
   "public/icons/ui/quit.png": {
-    "mtime": 1790231328.0736244,
+    "mtime": 1790233451.006528,
     "ast_hash": "75014627886fd0c48333629e6f9691c7",
     "semantic_hash": ""
   },
   "public/icons/ui/ranking.png": {
-    "mtime": 1790231328.2129774,
+    "mtime": 1790233451.0336897,
     "ast_hash": "852e77f8a320c3c6659feceaef90400a",
     "semantic_hash": ""
   },
   "public/icons/ui/refresh.png": {
-    "mtime": 1790231328.358575,
+    "mtime": 1790233451.5468314,
     "ast_hash": "c3eed609b8f6fee095d63918265a75d2",
     "semantic_hash": ""
   },
   "public/icons/ui/reload.png": {
-    "mtime": 1790231328.218583,
+    "mtime": 1790233451.4869726,
     "ast_hash": "73d7cec8af7ceb2d53c436d1e4c61493",
     "semantic_hash": ""
   },
   "public/icons/ui/rocket.png": {
-    "mtime": 1790231328.1535406,
+    "mtime": 1790233451.3742445,
     "ast_hash": "9b8f1d785b20a6c7be4768d656081de3",
     "semantic_hash": ""
   },
   "public/icons/ui/save.png": {
-    "mtime": 1790231327.8635046,
+    "mtime": 1790233450.9808764,
     "ast_hash": "a915e50b99982310a70f1d10f1e95aef",
     "semantic_hash": ""
   },
   "public/icons/ui/scale.png": {
-    "mtime": 1790231328.2073743,
+    "mtime": 1790233451.0675533,
     "ast_hash": "de9384af598d25024f84a33330e4834c",
     "semantic_hash": ""
   },
   "public/icons/ui/scissors.png": {
-    "mtime": 1790231327.9023337,
+    "mtime": 1790233451.1878407,
     "ast_hash": "d50d710f5ba4d576811059e3f64bf143",
     "semantic_hash": ""
   },
   "public/icons/ui/scroll.png": {
-    "mtime": 1790231327.9207635,
+    "mtime": 1790233451.41713,
     "ast_hash": "f3c7da0a752d4e52cfc5902bebb3db2b",
     "semantic_hash": ""
   },
   "public/icons/ui/search.png": {
-    "mtime": 1790231327.956936,
+    "mtime": 1790233451.022448,
     "ast_hash": "790fb12a782656b9b20e4125664534b0",
     "semantic_hash": ""
   },
   "public/icons/ui/security.png": {
-    "mtime": 1790231328.3370476,
+    "mtime": 1790233451.0009267,
     "ast_hash": "d5211459a524bd837c15d31a3fea9b25",
     "semantic_hash": ""
   },
   "public/icons/ui/send.png": {
-    "mtime": 1790231328.2844791,
+    "mtime": 1790233451.296157,
     "ast_hash": "302471f8f0d1d6f3e9fa9a7b9dd85b64",
     "semantic_hash": ""
   },
   "public/icons/ui/setting.png": {
-    "mtime": 1790231328.0845737,
+    "mtime": 1790233451.0856967,
     "ast_hash": "8bec779e5b2dda6da00157d5647c9bb8",
     "semantic_hash": ""
   },
   "public/icons/ui/share.png": {
-    "mtime": 1790231328.0067706,
+    "mtime": 1790233451.508681,
     "ast_hash": "25eea55791fb9a882cf8ab874f7fcd58",
     "semantic_hash": ""
   },
   "public/icons/ui/shield.png": {
-    "mtime": 1790231328.0207925,
+    "mtime": 1790233451.4253898,
     "ast_hash": "2e6c5953acdfd3a0407bf125a978e546",
     "semantic_hash": ""
   },
   "public/icons/ui/skull.png": {
-    "mtime": 1790231328.26886,
+    "mtime": 1790233451.2223296,
     "ast_hash": "f37a8bf0345e64e6dda25e3be8ba9d7d",
     "semantic_hash": ""
   },
   "public/icons/ui/star.png": {
-    "mtime": 1790231328.1136208,
+    "mtime": 1790233451.012599,
     "ast_hash": "30b964d56f2c53c1bf588127905104f9",
     "semantic_hash": ""
   },
   "public/icons/ui/sun.png": {
-    "mtime": 1790231327.8808577,
+    "mtime": 1790233451.073781,
     "ast_hash": "b09baac753367e1fe8446d4faa67cf69",
     "semantic_hash": ""
   },
   "public/icons/ui/tag.png": {
-    "mtime": 1790231328.1728895,
+    "mtime": 1790233450.972226,
     "ast_hash": "ea66d87fce1d599b2df1d379a0a009a3",
     "semantic_hash": ""
   },
   "public/icons/ui/talk-0.png": {
-    "mtime": 1790231328.1844628,
+    "mtime": 1790233451.2560992,
     "ast_hash": "912f25bbce04db91e8b6380555f82405",
     "semantic_hash": ""
   },
   "public/icons/ui/target.png": {
-    "mtime": 1790231328.0258613,
+    "mtime": 1790233451.211048,
     "ast_hash": "b9b8a8d25ba33ed5062ed54f0d5e2055",
     "semantic_hash": ""
   },
   "public/icons/ui/thunder.png": {
-    "mtime": 1790231327.946956,
+    "mtime": 1790233451.2791994,
     "ast_hash": "95f91de7bd0cb2bbf2c1144e83fe6ae9",
     "semantic_hash": ""
   },
   "public/icons/ui/time.png": {
-    "mtime": 1790231328.2955134,
+    "mtime": 1790233451.4984434,
     "ast_hash": "0784353191c83153c8b8e422d158627c",
     "semantic_hash": ""
   },
   "public/icons/ui/timer.png": {
-    "mtime": 1790231328.0370338,
+    "mtime": 1790233451.1186068,
     "ast_hash": "1c70867bd55f2035513c8728fd19e921",
     "semantic_hash": ""
   },
   "public/icons/ui/training.png": {
-    "mtime": 1790231327.9364316,
+    "mtime": 1790233451.4912684,
     "ast_hash": "e191caf9fad75b5a87a25ed504016aa2",
     "semantic_hash": ""
   },
   "public/icons/ui/trophy-0.png": {
-    "mtime": 1790231327.9887779,
+    "mtime": 1790233451.4111416,
     "ast_hash": "520c3496dfb2f238d008c32d3f310411",
     "semantic_hash": ""
   },
   "public/icons/ui/tv.png": {
-    "mtime": 1790231327.8263972,
+    "mtime": 1790233451.240297,
     "ast_hash": "ecd5cd085ae5023dccb98f90588043f1",
     "semantic_hash": ""
   },
   "public/icons/ui/undo.png": {
-    "mtime": 1790231328.1469173,
+    "mtime": 1790233451.1668859,
     "ast_hash": "e6ca9d4d266ab40c4cb9fe798461fd63",
     "semantic_hash": ""
   },
   "public/icons/ui/unlock.png": {
-    "mtime": 1790231328.3213203,
+    "mtime": 1790233451.3805506,
     "ast_hash": "3a64f6ac73543e8aefb78fe85c523a22",
     "semantic_hash": ""
   },
   "public/icons/ui/user.png": {
-    "mtime": 1790231328.2524211,
+    "mtime": 1790233451.1110115,
     "ast_hash": "f73ed5440c3f73e8fba288dd230013ac",
     "semantic_hash": ""
   },
   "public/icons/ui/view.png": {
-    "mtime": 1790231328.2366545,
+    "mtime": 1790233451.1508372,
     "ast_hash": "f98cb3ac2cf6a03bbee6c0b5bac70245",
     "semantic_hash": ""
   },
   "public/icons/ui/warning.png": {
-    "mtime": 1790231328.2573628,
+    "mtime": 1790233451.1960335,
     "ast_hash": "4feaf81e69c8777adb611f0697d2a915",
     "semantic_hash": ""
   },
   "public/icons/picto/oma-logo.png": {
-    "mtime": 1790232651.8372889,
-    "ast_hash": "a3c789a805265a4151f7b4622752d82b",
+    "mtime": 1790233170.6606705,
+    "ast_hash": "c3fd105b3bcd05b5e8cf308c2e7d7390",
     "semantic_hash": ""
   },
   "public/icons/picto/oma-hirsch.png": {
-    "mtime": 1790232745.5144475,
-    "ast_hash": "2191cbf73f37728aaef70cfb67760db4",
+    "mtime": 1790232799.1207068,
+    "ast_hash": "2ce20c65725d25451f2864b61ba9957b",
+    "semantic_hash": ""
+  },
+  "src/components/JobIcon.tsx": {
+    "mtime": 1790233425.6258378,
+    "ast_hash": "34af805bcf196c394991dec5bf0f0243",
+    "semantic_hash": ""
+  },
+  "src/lib/job-icons.ts": {
+    "mtime": 1790233425.6462226,
+    "ast_hash": "e87e9ff72bf1b238758f02ab3d0f221f",
+    "semantic_hash": ""
+  },
+  "public/icons/ui/connect.png": {
+    "mtime": 1790233451.0959306,
+    "ast_hash": "a3e09f757c3ec56d36e6382a9dfa4c02",
+    "semantic_hash": ""
+  },
+  "public/icons/ui/stack.png": {
+    "mtime": 1790233451.3457935,
+    "ast_hash": "6636c86b59a8bbed381be94c0e472b16",
     "semantic_hash": ""
   }
 }

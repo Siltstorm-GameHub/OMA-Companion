@@ -1,4 +1,5 @@
 "use client";
+import JobIcon from "@/components/JobIcon";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
@@ -37,7 +38,7 @@ function JobTextEditor({ job, onSaved }: { job: JobTexts; onSaved: () => void })
 
   return (
     <div className="glass rounded-xl p-3 space-y-2.5">
-      <p className="text-sm text-white font-semibold">{job.emoji} {job.label}</p>
+      <p className="text-sm text-white font-semibold"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</p>
       <label className="block space-y-1">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Beschreibung</span>
         <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} maxLength={4000} placeholder={job.defaults.description} className={`${FIELD} resize-y`} />

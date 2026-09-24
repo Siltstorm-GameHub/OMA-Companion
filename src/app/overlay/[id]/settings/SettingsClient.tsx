@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Table2, Users, Repeat, Sparkles, Move } from "lucide-react";
+import { Table2, Users, Sparkles, Move } from "lucide-react";
+import { Repeat } from "@/components/icons";
 import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Trophy, Swords, Gamepad2, Maximize2, Timer } from "@/components/icons";
 import { toast } from "sonner";
 import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";

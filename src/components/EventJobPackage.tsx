@@ -1,3 +1,4 @@
+import JobIcon from "@/components/JobIcon";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { Check } from "@/components/icons";
@@ -61,7 +62,7 @@ export default async function EventJobPackage({ eventId }: { eventId: string }) 
           return (
             <li key={r.jobKey} className="flex items-center justify-between gap-3 text-sm">
               <span className="flex items-center gap-2 min-w-0">
-                <span aria-hidden="true">{job?.emoji}</span>
+                <JobIcon jobKey={job?.key} className="w-4 h-4" />
                 <span className="text-gray-200 truncate">{r.what}</span>
                 {mine && <span className="shrink-0 text-[10px] text-teal-300 border border-teal-500/30 rounded-full px-1.5">dein Job</span>}
               </span>

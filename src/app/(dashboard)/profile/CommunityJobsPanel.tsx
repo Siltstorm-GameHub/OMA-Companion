@@ -1,9 +1,11 @@
 "use client";
+import JobIcon from "@/components/JobIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Users, TrendingUp, ChevronRight, Sparkles, ImagePlus, Crop, Server as ServerIcon, ChevronDown } from "lucide-react";
+import { Users, TrendingUp, ChevronRight, Sparkles, ImagePlus, Crop, ChevronDown } from "lucide-react";
+import { Server as ServerIcon } from "@/components/icons";
 import { Briefcase, Coins, Clock, ThumbsUp, Send, LogOut, RefreshCw, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, X, Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, BookOpen, AlertTriangle, Star, Copy } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -168,7 +170,7 @@ function CatalogView({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-white">{job.emoji} {job.label}</p>
+                  <p className="text-sm font-semibold text-white"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</p>
                   <Badge tone={full ? "warning" : "success"}>
                     <Users className="w-2.5 h-2.5" /> {job.filledSlots}/{job.maxSlots}
                   </Badge>

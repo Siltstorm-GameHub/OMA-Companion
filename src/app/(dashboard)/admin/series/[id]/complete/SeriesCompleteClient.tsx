@@ -6,7 +6,8 @@ import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
-import { ChevronLeft, GripVertical, Repeat } from "lucide-react";
+import { ChevronLeft, GripVertical } from "lucide-react";
+import { Repeat } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, AlertTriangle, RotateCcw, Equal, Plus } from "@/components/icons";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
