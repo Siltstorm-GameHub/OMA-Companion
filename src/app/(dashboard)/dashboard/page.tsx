@@ -440,10 +440,9 @@ export default async function DashboardPage() {
           <div className="relative shrink-0">
             <RankUpFlare userId={userId ?? ""} rankPoints={myRankPoints}>
               <RankRing
-                rankPoints={myRankPoints}
+                userId={userId}
                 width={4}
                 rounded="rounded-lg"
-                showTier
                 faceClassName="card-cut w-16 h-16 sm:w-20 sm:h-20"
               >
                 {avatarUrl ? (

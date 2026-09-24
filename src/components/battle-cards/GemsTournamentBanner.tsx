@@ -133,7 +133,7 @@ export default function GemsTournamentBanner() {
               {tournament.topRows.map((row, i) => (
                 <div key={row.userId} className="flex items-center gap-2.5 text-xs">
                   <span className="w-4 text-center text-gray-500 font-bold shrink-0">{i + 1}</span>
-                  <RankedAvatar rankPoints={0} src={row.image} alt={row.name} size={20} className="w-5 h-5 shrink-0" />
+                  <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={20} className="w-5 h-5 shrink-0" />
                   <span className="flex-1 text-gray-300 truncate">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></span>
                   <span className="text-white font-semibold shrink-0">{row.bestScore}</span>
                 </div>

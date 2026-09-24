@@ -260,7 +260,7 @@ export default async function ProfilePage() {
             <div className="relative shrink-0">
               <RankUpFlare userId={user.id} rankPoints={rankPoints}>
                 <RankedAvatar
-                  rankPoints={rankPoints}
+                  userId={userId}
                   src={user.image}
                   alt={displayName}
                   size={80}

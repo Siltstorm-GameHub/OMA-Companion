@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { syncDiscordRole } from "@/lib/discord-roles";
 
 /**
  * PATCH /api/admin/users/[id]/adjust
@@ -83,11 +82,6 @@ export async function PATCH(
     where:  { id: userId },
     select: { id: true, points: true, rankPoints: true },
   });
-
-  // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
-  if (body.rankPoints !== undefined) {
-    syncDiscordRole(userId, user.discordId, user.rankPoints, updated?.rankPoints ?? user.rankPoints).catch(() => {});
-  }
 
   return NextResponse.json({ ok: true, user: updated });
 }

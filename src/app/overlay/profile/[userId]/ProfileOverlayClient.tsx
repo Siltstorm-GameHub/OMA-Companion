@@ -224,7 +224,7 @@ export default function ProfileOverlayClient({
 function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, hasCycle }: { elementKey: ProfileElementKey; state: ProfileState | null; rotateSeconds: number; isVisible: boolean; hasCycle: boolean }) {
   if (!state) return null;
   switch (elementKey) {
-    case "rank":      return <RankTile rankLabel={state.rankLabel} rankPoints={state.rankPoints} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
+    case "rank":      return <RankTile rankLabel={state.rankLabel} userId={state.id} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
     case "nextEvent": return state.upcomingEvents.length ? <NextEventTile events={state.upcomingEvents} rotateSeconds={rotateSeconds} isVisible={isVisible} hasCycle={hasCycle} /> : null;
     case "favorites": return <FavoritesPanel games={state.favoriteGames} />;
     default:          return null;
@@ -232,7 +232,7 @@ function ProfileElementContent({ elementKey, state, rotateSeconds, isVisible, ha
 }
 
 /** Rang-Kachel: Avatar mit Rang-Ring, Rangbezeichnung und Fortschrittsbalken zum nächsten Rang. */
-function RankTile({ rankLabel, rankPoints, image, name }: { rankLabel: string; rankPoints: number; image: string | null; name: string }) {
+function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userId: string; image: string | null; name: string }) {
   return (
     <div
       style={{
@@ -258,7 +258,7 @@ function RankTile({ rankLabel, rankPoints, image, name }: { rankLabel: string; r
         }}
       />
       <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
-        <RankedAvatar rankPoints={rankPoints} src={image} alt={name} size={48} />
+        <RankedAvatar userId={userId} src={image} alt={name} size={48} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {rankLabel}

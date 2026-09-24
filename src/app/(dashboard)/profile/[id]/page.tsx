@@ -257,7 +257,7 @@ export default async function PublicProfilePage({
           {/* Avatar */}
           <div className="relative shrink-0">
             <RankedAvatar
-              rankPoints={rankPoints}
+              userId={id}
               src={user.image}
               alt={displayName}
               size={80}

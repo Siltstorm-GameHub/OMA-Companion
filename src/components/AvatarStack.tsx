@@ -37,7 +37,7 @@ export function AvatarStack({
         >
           {/* Im Stack immer flach — überlappende animierte Ringe wären reines Flimmern. */}
           <RankedAvatar
-            rankPoints={u.rankPoints}
+            userId={u.id}
             src={u.image}
             alt={u.username ?? u.name ?? "?"}
             size={px}

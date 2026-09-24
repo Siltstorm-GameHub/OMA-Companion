@@ -10,7 +10,7 @@ export default function SyncDiscordRolesButton() {
   const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function handleSync() {
-    if (!(await confirm({ title: "Discord-Rollen synchronisieren", description: "Rang-Rollen für alle User auf Discord synchronisieren?" }))) return;
+    if (!(await confirm({ title: "Job-Rollen synchronisieren", description: "Discord-Rollen für alle aktuellen Job-Inhaber abgleichen?" }))) return;
     setLoading(true);
     setResult(null);
 
@@ -22,7 +22,7 @@ export default function SyncDiscordRolesButton() {
 
     try {
       while (true) {
-        setProgress(`Verarbeite User ${offset + 1}–${offset + 15}…`);
+        setProgress(`Verarbeite Job-Inhaber ${offset + 1}–${offset + 10}…`);
 
         const res  = await fetch(`/api/admin/sync-discord-roles?offset=${offset}`, { method: "POST" });
         const data = await res.json() as {

@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import { syncDiscordRole } from "./discord-roles";
 
 // ─── Punkt-Regeln ──────────────────────────────────────────────────────────
 export const POINT_RULES = {
@@ -92,7 +91,6 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
     select: { points: true, rankPoints: true, birthdayBoostUntil: true, discordId: true },
   });
   const pointsBefore   = before?.points     ?? 0;
-  const rankPointsBefore = before?.rankPoints ?? 0;
 
   // Geburtstags-Boost: 2x Punkte wenn aktiv
   const hasBirthdayBoost = before?.birthdayBoostUntil && before.birthdayBoostUntil > new Date();
@@ -121,13 +119,6 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
 
   const transaction = results[0] as { id: string; userId: string; amount: number; reason: string; createdAt: Date };
   const updated     = results[results.length - 1] as { id: string; points: number; rankPoints: number };
-
-  // syncDiscordRole setzt seit der Community-Job-Umstellung keine Discord-Rolle
-  // mehr (siehe discord-roles.ts), löst aber weiterhin die Rang-Aufstiegs-
-  // Benachrichtigung aus.
-  if (givesRankPoints) {
-    syncDiscordRole(userId, before?.discordId, rankPointsBefore, updated.rankPoints).catch(() => {});
-  }
 
   return { transaction, user: updated, pointsBefore };
 }

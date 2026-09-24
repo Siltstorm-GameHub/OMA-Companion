@@ -120,11 +120,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{resultHeadline}", description: "Kurzer Ergebnis-Titel (z.B. \"Gewinner steht fest!\")" },
     { key: "{resultText}", description: "Ausführlicher Ergebnistext" },
   ],
-  rank_up: [
-    { key: "{username}", description: "Discord-Erwähnung des Users" },
-    { key: "{rank}", description: "Name des neuen Rangs" },
-    { key: "{rankEmoji}", description: "Emoji des neuen Rangs" },
-  ],
   leaderboard: [
     { key: "{month}", description: "Monatsname des Vormonats" },
     { key: "{lines}", description: "Fertig formatierte Ranglisten-Zeilen" },
@@ -155,7 +150,6 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
   clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },
   clip_of_year_finished: { "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
-  rank_up:         { "{username}": "@MaxMustermann", "{rank}": "Gold", "{rankEmoji}": "🥇" },
   leaderboard:     { "{month}": "November", "{lines}": "🥇 MaxMustermann – 1.240 Punkte\n🥈 ErikaBeispiel – 980 Punkte\n🥉 JohnDoe – 750 Punkte" },
   birthday:        { "{username}": "@MaxMustermann" },
   server_approved: { "{serverName}": "Survival #1" },

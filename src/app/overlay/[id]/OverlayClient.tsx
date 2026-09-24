@@ -1082,7 +1082,7 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
       >
         {omaFace}
         <FlipFace back>
-          <RankedAvatar rankPoints={streamer.rankPoints} src={streamer.image} alt={name} size={36} />
+          <RankedAvatar userId={streamer.id} src={streamer.image} alt={name} size={36} />
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {name}
@@ -1253,7 +1253,7 @@ function MatchTicker({
                     key={e.id}
                     style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: i === 0 ? 0 : 16, flexShrink: 0 }}
                   >
-                    <RankedAvatar rankPoints={u?.rankPoints ?? 0} src={u?.image} alt={displayName(u)} size={30} />
+                    <RankedAvatar userId={u?.id} src={u?.image} alt={displayName(u)} size={30} />
                     <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
                       {displayName(u)}{statsLabel ? ` · ${statsLabel}` : ""}
                     </span>
@@ -1319,7 +1319,7 @@ function PlayerName({
       {/* key=winnerKey lässt den Glow einmal aufflackern, sobald ein Sieger feststeht,
          statt ihn dauerhaft leuchten zu lassen. */}
       <div key={winner ? winnerKey : "pending"} className={winner ? "oma-anim-flare" : undefined} style={{ borderRadius: 999 }}>
-        <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={40} />
+        <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={40} />
       </div>
       <span
         style={{
@@ -1431,7 +1431,7 @@ function BracketRow({ match, userOf }: { match: OverlayMatch; userOf: (id: strin
 function Row({ user, score, winner }: { user: OverlayUser | undefined; score: number | null; winner: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
-      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={26} />
+      <RankedAvatar userId={user?.id} src={user?.image} alt={displayName(user)} size={26} />
       <span style={{ flex: 1 }}>{displayName(user)}</span>
       {score != null && <span>{score}</span>}
     </div>
@@ -1482,7 +1482,7 @@ function TablePanel({
             }}
           >
             <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
-            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={30} />
+            <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={30} />
             <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
               {displayName(p.user)}
             </span>
@@ -1544,7 +1544,7 @@ function SeriesTablePanel({
             >
               <div style={{ display: "flex", alignItems: "center", gap: 13, width: "100%" }}>
                 <span style={{ width: 22, fontSize: 15, opacity: 0.45, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
-                <RankedAvatar rankPoints={r.rankPoints} src={r.image} alt={r.displayName} size={30} />
+                <RankedAvatar userId={r.userId} src={r.image} alt={r.displayName} size={30} />
                 <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {r.displayName}
                 </span>
@@ -1724,7 +1724,7 @@ function ParticipantsPanel({ participants }: { participants: OverlayParticipant[
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px", width: "100%" }}>
           {participants.map(p => (
             <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-              <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={28} />
+              <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={28} />
               <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {displayName(p.user)}
               </span>

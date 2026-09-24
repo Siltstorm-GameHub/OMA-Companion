@@ -121,7 +121,7 @@ export default function BracketView({
                             <>
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <RankedAvatar
-                                  rankPoints={user?.rankPoints ?? 0}
+                                  userId={user?.id}
                                   src={user?.image}
                                   alt={user ? uname(user) : "?"}
                                   size={20}

@@ -10,7 +10,7 @@ import {
 } from "./community-job-config";
 import { formatBerlinDate } from "./time";
 import {
-  BADGE_WINDOW_WEEKS, FORMER_BADGE_MIN_LEVEL, levelFromPoints, weeklyBadgePoints, type JobBadgeData,
+  BADGE_WINDOW_WEEKS, levelFromPoints, weeklyBadgePoints, type JobBadgeData,
 } from "./job-badges";
 
 /** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
@@ -708,9 +708,8 @@ export async function runBadgeLevelUpdate(referenceDate: Date = new Date()): Pro
 }
 
 /**
- * Badge-Daten für viele Nutzer auf einmal: aktueller Job (mit Stufe, ggf. verwarnt) — oder, wenn kein
- * Job, das "Ehem."-Zeichen mit der höchsten je erreichten Stufe (mindestens FORMER_BADGE_MIN_LEVEL).
- * Nutzer ohne beides fehlen im Ergebnis.
+ * Badge-Daten für viele Nutzer auf einmal: aktueller Job (mit Stufe, ggf. verwarnt).
+ * Nutzer ohne Job fehlen im Ergebnis (= arbeitslos).
  */
 export async function getJobBadges(userIds: string[]): Promise<Record<string, JobBadgeData>> {
   const ids = [...new Set(userIds)].slice(0, 200);
@@ -726,14 +725,5 @@ export async function getJobBadges(userIds: string[]): Promise<Record<string, Jo
     result[m.userId] = { jobKey: m.jobKey, level: m.badgeLevel, ...(m.status === "WARNED" ? { warned: true } : {}) };
   }
 
-  const rest = ids.filter(id => !result[id]);
-  if (rest.length > 0) {
-    const former = await prisma.communityJobMember.findMany({
-      where: { userId: { in: rest }, status: { in: ["REVOKED", "QUIT", "EXPIRED"] }, peakBadgeLevel: { gte: FORMER_BADGE_MIN_LEVEL } },
-      orderBy: [{ peakBadgeLevel: "asc" }, { assignedAt: "asc" }], // beste/jüngste überschreibt
-      select: { userId: true, jobKey: true, peakBadgeLevel: true },
-    });
-    for (const m of former) result[m.userId] = { jobKey: m.jobKey, level: m.peakBadgeLevel, former: true };
-  }
   return result;
 }

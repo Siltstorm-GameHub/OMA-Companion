@@ -1,5 +1,6 @@
 "use client";
 import JobIcon from "@/components/JobIcon";
+import { jobColor, GOLD } from "@/lib/job-ring";
 import { useEffect, useState } from "react";
 import {
   JOB_BADGE_META, LEVEL_RING_COLORS, BADGE_MAX_LEVEL, BADGE_MIN_LEVEL, levelTitle, type JobBadgeData,
@@ -56,7 +57,8 @@ function request(id: string) {
   if (!timer) timer = setTimeout(flush, 30);
 }
 
-function useJobBadge(userId: string | null | undefined, prefetched?: JobBadgeData | null): JobBadgeData | null {
+/** undefined = lädt noch (oder keine userId), null = geladen, kein Job (arbeitslos). */
+export function useJobBadge(userId: string | null | undefined, prefetched?: JobBadgeData | null): JobBadgeData | null | undefined {
   const [, setVersion] = useState(0);
   useEffect(() => {
     if (!userId || prefetched !== undefined) return;
@@ -67,7 +69,9 @@ function useJobBadge(userId: string | null | undefined, prefetched?: JobBadgeDat
   }, [userId, prefetched]);
 
   if (prefetched !== undefined) return prefetched;
-  return userId ? cache.get(userId)?.data ?? null : null;
+  if (!userId) return undefined;
+  const hit = cache.get(userId);
+  return hit ? hit.data : undefined;
 }
 
 // ── Darstellung ──────────────────────────────────────────────────────────────
@@ -82,23 +86,52 @@ interface JobBadgeProps {
 
 export default function JobBadge({ userId, variant = "full", data, className = "" }: JobBadgeProps) {
   const badge = useJobBadge(userId, data);
-  if (!badge) return null;
+  if (badge === undefined) return null;
+
+  // Kein Job: Arbeitslos-Zeichen
+  if (badge === null) {
+    const jobless = (
+      <span
+        className="relative inline-flex items-center justify-center rounded-full shrink-0 w-5 h-5 bg-black/40"
+        style={{ border: "2px solid #52525b" }}
+      >
+        <span
+          aria-hidden
+          className="inline-block w-3 h-3"
+          style={{
+            backgroundColor: "#a16207",
+            WebkitMaskImage: "url(/icons/ui/poo.png)", maskImage: "url(/icons/ui/poo.png)",
+            WebkitMaskSize: "contain", maskSize: "contain", WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center", maskPosition: "center",
+          }}
+        />
+      </span>
+    );
+    if (variant === "compact") {
+      return <span role="img" aria-label="Arbeitslos" title="Arbeitslos" className={`inline-flex align-middle ${className}`}>{jobless}</span>;
+    }
+    return (
+      <span role="img" aria-label="Arbeitslos" title="Arbeitslos" className={`inline-flex items-center gap-1 align-middle text-[10px] font-semibold ${className}`}>
+        {jobless}
+        <span className="text-zinc-500">Arbeitslos</span>
+      </span>
+    );
+  }
 
   const meta = JOB_BADGE_META[badge.jobKey];
   if (!meta) return null;
 
   const level = Math.min(BADGE_MAX_LEVEL, Math.max(BADGE_MIN_LEVEL, badge.level));
-  const ring = LEVEL_RING_COLORS[level - 1];
+  // Ringfarbe = Farbe des Job-Icons (wie beim Avatar-Ring); höchste Stufe in Gold
+  const ring = level === BADGE_MAX_LEVEL ? GOLD : (jobColor(badge.jobKey) ?? LEVEL_RING_COLORS[level - 1]);
   const title = levelTitle(badge.jobKey, level);
-  const tooltip = badge.former
-    ? `Ehemaliger ${meta.label} · höchste Stufe: ${title} (${level}/${BADGE_MAX_LEVEL})`
-    : `${meta.label} · ${title} (Stufe ${level}/${BADGE_MAX_LEVEL})${badge.warned ? " · verwarnt" : ""}`;
+  const tooltip = `${meta.label} · ${title} (Stufe ${level}/${BADGE_MAX_LEVEL})${badge.warned ? " · verwarnt" : ""}`;
 
-  const glow = level === BADGE_MAX_LEVEL && !badge.former ? `0 0 7px ${ring}` : undefined;
+  const glow = level === BADGE_MAX_LEVEL ? `0 0 7px ${ring}` : undefined;
   const circle = (
     <span
-      className={`relative inline-flex items-center justify-center rounded-full shrink-0 w-5 h-5 text-[11px] leading-none bg-black/40 ${badge.former ? "opacity-70" : ""}`}
-      style={{ border: `2px ${badge.former ? "dashed" : "solid"} ${ring}`, boxShadow: glow }}
+      className="relative inline-flex items-center justify-center rounded-full shrink-0 w-5 h-5 text-[11px] leading-none bg-black/40"
+      style={{ border: `2px solid ${ring}`, boxShadow: glow }}
     >
       <JobIcon jobKey={badge.jobKey} className="w-3 h-3" />
       {badge.warned && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
@@ -112,9 +145,7 @@ export default function JobBadge({ userId, variant = "full", data, className = "
   return (
     <span role="img" aria-label={tooltip} title={tooltip} className={`inline-flex items-center gap-1 align-middle text-[10px] font-semibold ${className}`}>
       {circle}
-      <span style={{ color: ring }} className={badge.former ? "opacity-80" : ""}>
-        {badge.former ? `Ehem. ${meta.label}` : title}
-      </span>
+      <span style={{ color: jobColor(badge.jobKey) ?? ring }}>{title}</span>
     </span>
   );
 }

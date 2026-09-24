@@ -48,7 +48,7 @@ function useTheme() {
 export default function MobileTopBar() {
   const pathname          = usePathname();
   const { data: session } = useSession();
-  const myRankPoints      = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
+  const myUserId          = (session?.user as { id?: string } | undefined)?.id;
   const { theme, toggle } = useTheme();
   const { isGuest, openGate } = useGuestGate();
   const [open, setOpen]   = useState(false);
@@ -100,7 +100,7 @@ export default function MobileTopBar() {
       {/* Header: Avatar + Username + Theme + Abmelden */}
       <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
         <RankedAvatar
-          rankPoints={myRankPoints}
+          userId={myUserId}
           src={session?.user?.image}
           alt={session?.user?.name ?? "Gast"}
           size={28}
@@ -193,7 +193,7 @@ export default function MobileTopBar() {
           {/* Die Teal-Outline signalisiert weiterhin "Menü offen" und sitzt per Offset
               außerhalb des Rang-Rings, damit sich beide nicht überlagern. */}
           <RankedAvatar
-            rankPoints={myRankPoints}
+            userId={myUserId}
             src={session?.user?.image}
             alt={session?.user?.name ?? "Gast"}
             size={32}

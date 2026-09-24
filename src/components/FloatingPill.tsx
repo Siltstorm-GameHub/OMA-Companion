@@ -115,7 +115,7 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "moderator"
     || (session?.user as { role?: string } | undefined)?.role === "admin";
   const userName = session?.user?.name ?? session?.user?.email ?? "?";
-  const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
+  const myUserId = (session?.user as { id?: string } | undefined)?.id;
 
   const inkItems = NAV.map(({ label, href, glyph }) => ({
     label, href, glyph,
@@ -243,7 +243,7 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
             borderRadius: 8,
             transition: "outline 150ms",
           }}>
-            <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={26} rounded="lg" />
+            <RankedAvatar userId={myUserId} src={session?.user?.image} alt={userName} size={26} rounded="lg" />
           </div>
           <ChevronDown style={{
             width: 12, height: 12, color: "var(--nav-icon-inactive)",
@@ -265,7 +265,7 @@ export default function FloatingPill({ hideBrandAndProfile = false }: { hideBran
               display: "flex", alignItems: "center", gap: 8,
               padding: "10px 12px", borderBottom: "1px solid var(--nav-divider)",
             }}>
-              <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={28} rounded="lg" />
+              <RankedAvatar userId={myUserId} src={session?.user?.image} alt={userName} size={28} rounded="lg" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, color: "var(--nav-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}<JobBadge userId={(session?.user as { id?: string } | undefined)?.id} variant="compact" className="ml-1" /></p>
                 <p style={{ fontSize: 10, color: "rgba(20,184,166,0.6)", margin: "1px 0 0" }}>OMA-Mitglied</p>

@@ -49,7 +49,7 @@ function PlayerBadge({ user, accent }: { user?: ChallengeUser; accent: string })
         className="rounded-full p-0.5"
         style={{ boxShadow: `0 0 0 1.5px ${accent}88, 0 0 10px ${accent}44` }}
       >
-        <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={40} className="w-10 h-10" />
+        <RankedAvatar userId={user?.id} src={user?.image} alt={displayName(user)} size={40} className="w-10 h-10" />
       </span>
       <span className="flex items-center justify-center gap-1 max-w-full">
         <span className="font-battle text-xs text-white truncate max-w-[92px]">{displayName(user)}</span>

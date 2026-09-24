@@ -315,7 +315,7 @@ export default async function DonationsPage() {
                   }}
                 >
                   <RankedAvatar
-                    rankPoints={user.rankPoints}
+                    userId={user.id}
                     src={user.image}
                     alt={user.name ?? "Unbekannt"}
                     size={36}

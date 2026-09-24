@@ -15,7 +15,7 @@ type Tipp = {
 const uname = (u: UserLite) => u.username ?? u.name ?? "?";
 
 function Avatar({ u }: { u: UserLite }) {
-  return <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />;
+  return <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />;
 }
 
 export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tipp[] }) {

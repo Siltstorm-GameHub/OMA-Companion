@@ -426,7 +426,7 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
     <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
       <div className="flex items-center justify-between">
         <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
-          <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
+          <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
           <div className="min-w-0">
             <span className="flex items-center gap-1.5 min-w-0"><span className="text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span><JobBadge userId={entry.author.id} /></span>
             <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
@@ -590,7 +590,7 @@ function CommentSection({
               <div key={c.id} className="bg-white/[0.03] rounded-lg p-2 space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
-                    <RankedAvatar rankPoints={c.author.rankPoints} src={c.author.image} alt={authorLabel(c.author)} size={16} />
+                    <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={16} />
                     <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span><JobBadge userId={c.author.id} variant="compact" />
                   </a>
                   <span className="text-[10px] text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>

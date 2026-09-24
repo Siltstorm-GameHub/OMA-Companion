@@ -52,12 +52,11 @@ function Avatar({ user, accent }: { user: UserData; accent: string }) {
       {/* Der Akzent-Ring trennt weiterhin "ich" von "Gegner" und sitzt nach außen versetzt,
           damit er nicht mit dem Rang-Ring verschmilzt. */}
       <RankedAvatar
-        rankPoints={user.rankPoints ?? 0}
+        userId={user.id}
         src={user.image}
         alt={user.username ?? user.name ?? "?"}
         size={80}
         rounded="2xl"
-        showTier
         className={`ring-2 ring-offset-2 ring-offset-[#0d0d0f] ${accent}`}
       />
       <div className="text-center">

@@ -770,7 +770,7 @@ export default async function TournamentDetailPage({
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
                     style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}
                   >
-                    <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
+                    <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
                     {u.name ?? u.username}
                     <span className="opacity-50 text-[10px]">↗</span>
                   </a>
@@ -780,7 +780,7 @@ export default async function TournamentDetailPage({
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}
                   >
-                    <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
+                    <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
                     {u.name ?? u.username}
                   </span>
                 )
@@ -887,7 +887,7 @@ export default async function TournamentDetailPage({
               return (
                 <div key={user.id}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
-                  <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={name} size={24} className="w-6 h-6" />
+                  <RankedAvatar userId={user.id} src={user.image} alt={name} size={24} className="w-6 h-6" />
                   <span className={`text-sm ${isMe ? "text-teal-300 font-medium" : "text-gray-200"}`}>
                     {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                   </span>
@@ -915,7 +915,7 @@ export default async function TournamentDetailPage({
                 return (
                   <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
                     <span className="text-base shrink-0">🏆</span>
-                    <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={28} className="w-7 h-7" />
+                    <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                     <div className="flex-1 min-w-0">
                       <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
                         {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
@@ -964,7 +964,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
                         <span className="text-base shrink-0">🏆</span>
-                        <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={28} className="w-7 h-7" />
+                        <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                         <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
                           {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                         </span>
@@ -1079,7 +1079,7 @@ export default async function TournamentDetailPage({
                     )}
                     <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                       <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                      <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
+                      <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                           <span className="truncate">{userName(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" />{isMe && " (du)"}</span>
@@ -1121,7 +1121,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                         <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                        <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
+                        <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                             <span className="truncate">{userName(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" />{isMe && " (du)"}</span>

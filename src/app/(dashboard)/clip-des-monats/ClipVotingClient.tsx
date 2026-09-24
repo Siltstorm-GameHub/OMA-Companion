@@ -149,7 +149,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                 <div className="text-xs text-gray-500 flex items-center gap-1.5 min-w-0 flex-wrap">
                   {nom.submittedBy && (
                     <RankedAvatar
-                      rankPoints={nom.submittedBy.rankPoints}
+                      userId={nom.submittedBy.id}
                       src={nom.submittedBy.image}
                       alt={nom.submittedBy.username ?? nom.submittedBy.name ?? "?"}
                       size={16}

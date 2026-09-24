@@ -182,7 +182,7 @@ export default function CommunityBoardWidget() {
                     {/* Nicht-absoluter Textblock → bestimmt die Kartenbreite anhand der Caption-Länge */}
                     <div className="relative h-full flex flex-col justify-end p-2.5 gap-1">
                       <div className="flex items-center gap-1.5">
-                        <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
+                        <RankedAvatar userId={entry.author.id} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
                           {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />
@@ -211,7 +211,7 @@ export default function CommunityBoardWidget() {
                     {/* Content unten: Avatar + Titel + Upvotes */}
                     <div className="absolute inset-x-0 bottom-0 p-2.5 flex flex-col gap-1">
                       <div className="flex items-center gap-1.5">
-                        <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
+                        <RankedAvatar userId={entry.author.id} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
                           {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />

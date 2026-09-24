@@ -145,7 +145,7 @@ export default function LigaView({
                     </td>
                     <td className="px-4 py-3">
                       <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <RankedAvatar rankPoints={s.user.rankPoints} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
+                        <RankedAvatar userId={s.user.id} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
                         <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                           {uname(s.user)}<JobBadge userId={s.user.id} variant="compact" className="ml-1" />{isMe && " (du)"}
                         </span>
@@ -256,7 +256,7 @@ export default function LigaView({
                                                                  "text-white"
                           }`}>
                             <span className="text-sm font-medium truncate">{p1 ? <>{uname(p1)}<JobBadge userId={p1.id} variant="compact" className="ml-1" /></> : "TBD"}</span>
-                            {p1 && <RankedAvatar rankPoints={p1.rankPoints} src={p1.image} alt={uname(p1)} size={24} className="w-6 h-6" />}
+                            {p1 && <RankedAvatar userId={p1.id} src={p1.image} alt={uname(p1)} size={24} className="w-6 h-6" />}
                           </div>
 
                           {/* Score / Status */}
@@ -287,7 +287,7 @@ export default function LigaView({
                             p2 && p2.id === userId             ? "text-rose-300"    :
                                                                  "text-white"
                           }`}>
-                            {p2 && <RankedAvatar rankPoints={p2.rankPoints} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}
+                            {p2 && <RankedAvatar userId={p2.id} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}
                             <span className="text-sm font-medium truncate">{p2 ? <>{uname(p2)}<JobBadge userId={p2.id} variant="compact" className="ml-1" /></> : "TBD"}</span>
                           </div>
                         </div>

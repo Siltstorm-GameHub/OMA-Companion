@@ -68,7 +68,7 @@ function uname(u: StandingUser) { return u.username ?? u.name ?? "?"; }
 function Avatar({ u, size = 7 }: { u: StandingUser | undefined; size?: number }) {
   return (
     <RankedAvatar
-      rankPoints={u?.rankPoints ?? 0}
+      userId={u?.id}
       src={u?.image}
       alt={u ? uname(u) : "?"}
       size={size * 4}

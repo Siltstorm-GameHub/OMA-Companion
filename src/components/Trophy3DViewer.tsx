@@ -149,7 +149,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
           {/* Aktueller Halter (Wanderpokal) — deutlich sichtbar mit echtem Profilbild + Rangrahmen */}
           {current.holderUserId && (
             <Link href={`/profile/${current.holderUserId}`} className="inline-flex items-center gap-2 mt-2 group/holder">
-              <RankedAvatar rankPoints={current.holderRankPoints ?? 0} src={current.holderAvatarUrl ?? null}
+              <RankedAvatar userId={current.holderUserId} src={current.holderAvatarUrl ?? null}
                 alt={current.holderName ?? "Halter"} size={40} rounded="full" />
               <span className="text-left min-w-0">
                 <span className="block text-[9px] text-amber-400/80 uppercase tracking-wider font-semibold">Aktueller Halter</span>
@@ -186,7 +186,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
         {current.meta && <p className="text-xs text-gray-500 text-center mt-3">{current.meta}</p>}
         {current.holderUserId && (
           <Link href={`/profile/${current.holderUserId}`} className="flex items-center justify-center gap-2 mt-3 group/holder">
-            <RankedAvatar rankPoints={current.holderRankPoints ?? 0} src={current.holderAvatarUrl ?? null}
+            <RankedAvatar userId={current.holderUserId} src={current.holderAvatarUrl ?? null}
               alt={current.holderName ?? "Halter"} size={40} rounded="full" />
             <span className="text-left">
               <span className="block text-[9px] text-amber-400/80 uppercase tracking-wider font-semibold">Aktueller Halter</span>

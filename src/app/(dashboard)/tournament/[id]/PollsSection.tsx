@@ -225,7 +225,7 @@ function PollCard({
                     <div className="flex items-center gap-2 min-w-0">
                       {answer.rankPoints !== undefined && (
                         <RankedAvatar
-                          rankPoints={answer.rankPoints}
+                          userId={answer.id}
                           src={answer.image}
                           alt={answer.label}
                           size={20}

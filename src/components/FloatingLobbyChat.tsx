@@ -506,7 +506,7 @@ export function FloatingLobbyChat() {
                         className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
                         title={displayName(u)}
                       >
-                        <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={displayName(u)} size={24} />
+                        <RankedAvatar userId={u.id} src={u.image} alt={displayName(u)} size={24} />
                         <span
                           className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
                           style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
@@ -534,7 +534,7 @@ export function FloatingLobbyChat() {
                         className="flex-shrink-0 self-end rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
                         title={displayName(msg.user)}
                       >
-                        <RankedAvatar rankPoints={msg.user.rankPoints} src={msg.user.image} alt={displayName(msg.user)} size={28} />
+                        <RankedAvatar userId={msg.user.id} src={msg.user.image} alt={displayName(msg.user)} size={28} />
                       </Link>
                       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
                         <span className="text-[10px] text-gray-500">{displayName(msg.user)}<JobBadge userId={msg.user.id} variant="compact" className="ml-1" /></span>

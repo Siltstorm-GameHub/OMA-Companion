@@ -88,7 +88,7 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
                     className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.04] transition-colors group"
                   >
                     <RankedAvatar
-                      rankPoints={p.rankPoints}
+                      userId={p.id}
                       src={p.image}
                       alt={p.name}
                       size={32}

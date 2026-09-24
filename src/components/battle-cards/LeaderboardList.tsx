@@ -76,7 +76,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
             } ${!row.isRanked ? "opacity-70" : ""}`}
           >
             <RankBadge place={i + 1} isRanked={row.isRanked} />
-            <RankedAvatar rankPoints={row.rankPoints} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
+            <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white truncate font-semibold">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></p>
               <p className="text-[11px] text-gray-500">

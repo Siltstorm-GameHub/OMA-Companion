@@ -2,7 +2,10 @@ import Image from "next/image";
 import RankRing from "@/components/RankRing";
 
 interface RankedAvatarProps {
-  rankPoints: number;
+  /** User, dessen Beruf Ringfarbe und -effekt bestimmt. Ohne ID: schlichter Ring wie bei Arbeitslosen. */
+  userId?: string | null;
+  /** Veraltet, wird nicht mehr gebraucht. */
+  rankPoints?: number;
   src: string | null | undefined;
   alt: string;
   /**
@@ -13,12 +16,12 @@ interface RankedAvatarProps {
   size?: number;
   rounded?: "full" | "2xl" | "xl" | "lg";
   /**
-   * "full" = animierter Ring mit Stufenform, "flat" = einfarbiger Rangring ohne Animation.
+   * "full" = animierter Ring mit Stufenform, "flat" = einfarbiger Ring ohne Animation.
    * "auto" (Default) wählt anhand der Größe: unter 24px ist der Verlauf nicht mehr auflösbar.
    */
   variant?: "auto" | "full" | "flat";
-  /** Stufenanzeige (1–3 Punkte). Default: ab 48px, darunter zu klein zum Ablesen. */
-  showTier?: boolean;
+  /** Stufenpunkte (1–4) unter dem Bild. Default: ab 48px, darunter zu klein zum Ablesen. */
+  showLevel?: boolean;
   className?: string;
   title?: string;
 }
@@ -54,13 +57,13 @@ function getInitials(name: string): string {
 }
 
 export default function RankedAvatar({
-  rankPoints,
+  userId,
   src,
   alt,
   size = 40,
   rounded = "full",
   variant = "auto",
-  showTier,
+  showLevel,
   className = "",
   title,
 }: RankedAvatarProps) {
@@ -70,11 +73,11 @@ export default function RankedAvatar({
 
   return (
     <RankRing
-      rankPoints={rankPoints}
+      userId={userId}
       width={pad}
       rounded={r}
       flat={flat}
-      showTier={showTier ?? size >= 48}
+      showLevel={showLevel ?? size >= 48}
       faceClassName="w-full h-full"
       className={`shrink-0 ${className}`}
       style={{ width: size, height: size, boxSizing: "border-box" }}

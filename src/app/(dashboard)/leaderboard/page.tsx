@@ -245,12 +245,11 @@ export default async function LeaderboardPage() {
                 </span>
 
                 <RankedAvatar
-                  rankPoints={u.rankPoints}
+                  userId={u.id}
                   src={u.image}
                   alt={displayName}
                   size={cfg.rank === 0 ? 80 : 56}
                   rounded="full"
-                  showTier={false}
                   className={`${cfg.avatarSize} mb-3`}
                 />
 
@@ -350,7 +349,7 @@ export default async function LeaderboardPage() {
 
                 {/* Avatar */}
                 <RankedAvatar
-                  rankPoints={u.rankPoints}
+                  userId={u.id}
                   src={u.image}
                   alt={displayName}
                   size={36}

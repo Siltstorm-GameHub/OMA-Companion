@@ -161,7 +161,7 @@ export default function EventWinnerPredictionWidget({
       {selected ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
-            <RankedAvatar rankPoints={selected.rankPoints} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
+            <RankedAvatar userId={selected.id} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
             <span className="flex-1 text-sm text-white">{uname(selected)}<JobBadge userId={selected.id} variant="compact" className="ml-1" /></span>
             <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
               <X className="w-3.5 h-3.5" />
@@ -202,7 +202,7 @@ export default function EventWinnerPredictionWidget({
               {results.map(u => (
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
-                  <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
+                  <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
                   <span className="text-sm text-white">{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span>
                 </button>
               ))}

@@ -138,7 +138,7 @@ export default function ProfileMobileView(props: Props) {
         <div className="relative flex items-center gap-3.5">
           <div className="relative shrink-0">
             <RankUpFlare userId={userId} rankPoints={rankPoints}>
-              <RankedAvatar rankPoints={rankPoints} src={avatarUrl} alt={displayName} size={64} rounded="2xl" />
+              <RankedAvatar userId={userId} src={avatarUrl} alt={displayName} size={64} rounded="2xl" />
             </RankUpFlare>
             <span className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
