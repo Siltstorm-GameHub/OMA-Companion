@@ -44,6 +44,40 @@ const TYPE_LABEL: Record<string, string> = {
   LANDMARK: "Wahrzeichen",
 };
 
+/** Kleine Location-Illustration als Marker (/dnd/locations/<slug>.jpg, gleicher
+ *  Pfad wie die Szenen-Hintergründe in location-scenes.ts) — fällt bei
+ *  Ladefehler auf den ursprünglichen Flaggen-Kreis zurück. */
+function LocationMarker({ slug, isMine }: { slug: string; isMine: boolean }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <motion.div
+        whileHover={{ scale: 1.1 }}
+        className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${isMine ? "border-amber-400" : "border-white/30"}`}
+        style={{ background: "radial-gradient(circle at 35% 28%, #8b5cf6, #6d28d9)" }}
+      >
+        <Flag className="w-4 h-4 text-white" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      className={`w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg ${isMine ? "border-amber-400" : "border-white/40"}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/dnd/locations/${slug}.jpg`}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    </motion.div>
+  );
+}
+
 export default function WorldMap({ myCardId }: { myCardId: string | null }) {
   const [locations, setLocations] = useState<DndLocationRow[] | null>(null);
   const [characters, setCharacters] = useState<DndCharacterRow[]>([]);
@@ -121,13 +155,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
               className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group"
               style={{ left: `${loc.mapX}%`, top: `${loc.mapY}%` }}
             >
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${isMine ? "border-amber-400" : "border-white/30"}`}
-                style={{ background: "radial-gradient(circle at 35% 28%, #8b5cf6, #6d28d9)" }}
-              >
-                <Flag className="w-4 h-4 text-white" />
-              </motion.div>
+              <LocationMarker slug={loc.slug} isMine={isMine} />
               <span className="text-[10px] font-bold text-white bg-black/60 rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                 {loc.name}
               </span>
