@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints, awardedToday, everAwarded } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
+import { advanceDndQuestObjectiveForDiscordId } from "@/lib/dnd/quests";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
@@ -30,6 +31,7 @@ export async function trackMessage(discordId: string) {
 
   // Quest-Fortschritt: 1 Nachricht
   await updateQuestProgress(user.id, "MESSAGES", 1);
+  await advanceDndQuestObjectiveForDiscordId(discordId, "MESSAGE_SENT", 1).catch(() => {});
 
   // Täglicher Chat-Bonus (einmal pro Tag) — gegen die Transaktionen geprüft, nicht gegen
   // einen In-Memory-Merker, der einen Bot-Neustart nicht überlebt.
@@ -57,6 +59,7 @@ export async function checkpointVoice(discordId: string, minutes: number) {
   });
 
   await updateQuestProgress(user.id, "VOICE_MINUTES", floored);
+  await advanceDndQuestObjectiveForDiscordId(discordId, "VOICE_MINUTES", floored).catch(() => {});
   console.log(`  ⏱ Checkpoint ${user.name ?? user.username}: +${floored}min Voice`);
 }
 
@@ -90,6 +93,7 @@ export async function trackVoice(
       data:  { voiceMinutesTotal: { increment: remainingFloored } },
     });
     await updateQuestProgress(user.id, "VOICE_MINUTES", remainingFloored);
+    await advanceDndQuestObjectiveForDiscordId(discordId, "VOICE_MINUTES", remainingFloored).catch(() => {});
   }
 
   // Punkte basieren auf GESAMTER Session (volle Stunden)

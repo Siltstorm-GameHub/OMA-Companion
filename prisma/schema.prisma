@@ -1961,6 +1961,153 @@ model Card {
   updatedAt DateTime @updatedAt
 
   userCards UserCard[]
+
+  // --- D&D-Charakterbogen (nur relevant/befüllt für rarity = COMMUNITY) ---
+  dndRace       String? // z.B. "Mensch", "Elf", "Zwerg", "Halbling", "Halbork" — ausgewürfelt
+  dndClass      String? // volle D&D-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
+  // NICHT dasselbe wie class: CardClass — siehe DND_CLASS_TO_CARD_CLASS in src/lib/dnd/class-mapping.ts
+  abilityScores Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
+  backstory     String? @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
+  dndCreatedAt  DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
+  dndRerollUsed Boolean @default(false) // einmaliger Re-Roll (Rasse+Klasse+Stats zusammen) — danach endgültig
+  dndXp         Int     @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
+
+  // --- Standort & Reise ---
+  currentLocationId String?
+  currentLocation    DndLocation? @relation(fields: [currentLocationId], references: [id])
+  travelRouteId      String?
+  travelRoute        DndRoute?    @relation(fields: [travelRouteId], references: [id])
+  travelDepartedAt   DateTime?
+  travelArrivesAt    DateTime?
+  travelFromLocationId String? // Rückkehrpunkt bei Reiseabbruch (== currentLocationId zum Zeitpunkt des Aufbruchs)
+
+  eventLogs     DndEventLog[]
+  questProgress DndQuestProgress[]
+
+  @@index([currentLocationId])
+}
+
+// ============================================
+// D&D-Weltkarte, Reisen, Story & Quests
+// ============================================
+// Story-Content selbst (Ereignis-/Backstory-Texte) ist prozedural aus
+// hartcodierten gewichteten Tabellen gezogen (src/lib/dnd/*), NIE per LLM-Call
+// — kostenfrei, wie in der Planung festgelegt. DndStoryNode ist die
+// Ereignis-DEFINITION (Pool-Eintrag je Location-Typ), DndEventLog ist der
+// tatsächlich gewürfelte, resolvierte Verlaufseintrag je Charakter.
+
+enum DndLocationType {
+  SETTLEMENT // Stadt/Dorf — Handel, NPC-Dialoge, sichere Zone, Quest-Geber
+  DUNGEON // Ruine/Verlies — Kämpfe, Loot, klassische D&D-Encounter
+  WILDERNESS // Wald/Sumpf/Berge — Erkundung, Sammeln, Zufallsbegegnungen
+  LANDMARK // besonderer Ort — Story-/Lore-lastige Einzelereignisse
+}
+
+model DndLocation {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  name            String
+  description     String?         @db.Text
+  locationType    DndLocationType
+  mapX            Float
+  mapY            Float
+  mapIcon         String?
+  backgroundImage String?
+  order           Int             @default(0)
+
+  routesFrom DndRoute[]     @relation("RouteFrom")
+  routesTo   DndRoute[]     @relation("RouteTo")
+  storyNodes DndStoryNode[]
+  quests     DndQuest[]
+  cards      Card[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DndRoute {
+  id            String      @id @default(cuid())
+  fromId        String
+  toId          String
+  from          DndLocation @relation("RouteFrom", fields: [fromId], references: [id])
+  to            DndLocation @relation("RouteTo", fields: [toId], references: [id])
+  travelMinutes Int
+  label         String?
+  cards         Card[]
+
+  @@unique([fromId, toId])
+}
+
+// Ereignis-DEFINITION (Vorlage) — kein Charakterbezug, sondern ein Pool-Eintrag,
+// aus dem beim Story-Tick pro Location(-Typ) gewichtet gezogen wird. Die
+// tatsächlich einem Charakter widerfahrene Instanz landet in DndEventLog.
+model DndStoryNode {
+  id           String           @id @default(cuid())
+  slug         String           @unique
+  locationId   String?
+  location     DndLocation?     @relation(fields: [locationId], references: [id])
+  locationType DndLocationType? // falls locationId leer: Pool gilt für ALLE Locations dieses Typs
+  weight       Int              @default(10)
+  title        String
+  text         String           @db.Text
+  xpReward     Int              @default(0)
+  createdAt    DateTime         @default(now())
+
+  eventLogs DndEventLog[]
+}
+
+// Resolvierter Verlaufseintrag je Charakter ("was ist wann passiert") — das,
+// was im Story-Panel der Location-Szene gerendert wird (nach locationId
+// gefiltert). Deckt auch "zwei Charaktere trafen sich hier" ab (kein
+// separates DndEncounter-Modell nötig für v1).
+model DndEventLog {
+  id          String        @id @default(cuid())
+  cardId      String
+  card        Card          @relation(fields: [cardId], references: [id])
+  locationId  String
+  storyNodeId String?
+  storyNode   DndStoryNode? @relation(fields: [storyNodeId], references: [id])
+  title       String
+  text        String        @db.Text
+  xpGained    Int           @default(0)
+  occurredAt  DateTime      @default(now())
+
+  @@index([cardId, occurredAt])
+  @@index([locationId, occurredAt])
+}
+
+model DndQuest {
+  id              String       @id @default(cuid())
+  slug            String       @unique
+  title           String
+  description     String       @db.Text
+  objectiveType   String // z.B. "MONSTER_SLAIN", "LOCATION_VISITED", "MESSAGE_SENT", "VOICE_MINUTES",
+  // "EVENT_ATTEND", "POLL_VOTE", "BATTLE_CARD_DUEL", "STORY_NODE_COMPLETED"
+  targetCount     Int
+  targetRef       String? // optionale Entitäts-Referenz, z.B. locationSlug
+  xpReward        Int          @default(0)
+  itemReward      Json?
+  coinReward      Int          @default(0) // > 0: zusätzlich über den bestehenden Coins-Pfad vergeben
+  linkedQuestType String? // optionaler QuestType (quests-meta.ts) — löst zusätzlich die normale Monats-Quest aus
+  locationId      String?
+  location        DndLocation? @relation(fields: [locationId], references: [id])
+  createdAt       DateTime     @default(now())
+
+  progress DndQuestProgress[]
+}
+
+model DndQuestProgress {
+  id          String    @id @default(cuid())
+  cardId      String
+  card        Card      @relation(fields: [cardId], references: [id])
+  questId     String
+  quest       DndQuest  @relation(fields: [questId], references: [id])
+  current     Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  rewarded    Boolean   @default(false)
+
+  @@unique([cardId, questId])
 }
 
 model UserCard {

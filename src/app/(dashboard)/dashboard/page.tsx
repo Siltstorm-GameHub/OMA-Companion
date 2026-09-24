@@ -772,6 +772,17 @@ export default async function DashboardPage() {
               <p className="font-display text-base font-black text-white leading-tight truncate">OMA Battle Cards</p>
             </div>
           </Link>
+
+          {/* D&D-Welt */}
+          <Link href="/dnd"
+            className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+            style={{ borderRadius: "6px", border: `1px solid ${acc("violet", 0.16)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            <div className="relative overflow-hidden shrink-0 aspect-[16/10]" style={{ background: "linear-gradient(135deg, #1e1b2e 0%, #2a1830 100%)" }} />
+            <div className="px-4 pb-4 pt-2.5 flex-1 min-h-0">
+              <p className="text-[9px] text-violet-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Weltkarte & Story</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">D&D-Welt</p>
+            </div>
+          </Link>
         </div>
 
         {/* ── 3-Spalten: Eventreihen | Gameserver | Quests ──────────── */}

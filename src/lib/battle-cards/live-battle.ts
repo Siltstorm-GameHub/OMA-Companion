@@ -68,6 +68,7 @@ import { grantGemsPvpVictoryChest } from "@/lib/battle-cards/gems-pvp";
 import type { LiveBattle, Prisma } from "@prisma/client";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { updateQuestProgress } from "@/lib/quests";
+import { advanceDndQuestObjectiveForUser } from "@/lib/dnd/quests";
 
 export class LiveBattleError extends Error {}
 
@@ -568,6 +569,8 @@ async function notifyPvpBattleResolved(
 ) {
   updateQuestProgress(playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
   updateQuestProgress(playerBId, "BATTLE_CARD_DUEL", 1).catch(() => {});
+  advanceDndQuestObjectiveForUser(playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
+  advanceDndQuestObjectiveForUser(playerBId, "BATTLE_CARD_DUEL", 1).catch(() => {});
 
   const [playerA, playerB] = await Promise.all([
     prisma.user.findUnique({ where: { id: playerAId }, select: { username: true, name: true } }),

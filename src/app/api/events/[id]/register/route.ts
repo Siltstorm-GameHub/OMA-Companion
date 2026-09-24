@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
+import { advanceDndQuestObjectiveForUser } from "@/lib/dnd/quests";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const registration = await prisma.eventRegistration.create({ data: { userId, eventId, role } });
 
   await updateQuestProgress(userId, "EVENT_ATTEND", 1);
+  advanceDndQuestObjectiveForUser(userId, "EVENT_ATTEND", 1).catch(() => {});
   return NextResponse.json(registration, { status: 201 });
 }
 
