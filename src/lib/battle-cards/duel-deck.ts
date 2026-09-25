@@ -40,6 +40,17 @@ function validateSelection(selection: DuelDeckSelection): DuelDeckSelection {
   return { unitCardIds, tacticCardIds };
 }
 
+/** Der Held (Community-Karte des Users) gehört in jedes Duell-Deck. */
+async function assertHeroIncluded(userId: string, selection: DuelDeckSelection): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } });
+  const hero = user?.discordId
+    ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { id: true } })
+    : null;
+  if (hero && !selection.unitCardIds.includes(hero.id)) {
+    throw new DuelDeckError("Dein Held ist immer Teil deines Duell-Decks.");
+  }
+}
+
 async function assertOwnership(userId: string, selection: DuelDeckSelection): Promise<void> {
   const [ownedUnits, ownedTactics] = await Promise.all([
     selection.unitCardIds.length > 0
@@ -60,6 +71,7 @@ async function assertOwnership(userId: string, selection: DuelDeckSelection): Pr
  *  Eigentümerschaft, analog zu setLineup(). */
 export async function setActiveDuelDeck(userId: string, selection: DuelDeckSelection): Promise<void> {
   const validated = validateSelection(selection);
+  await assertHeroIncluded(userId, validated);
   await assertOwnership(userId, validated);
 
   const existing = await prisma.duelDeck.findFirst({ where: { userId, isActive: true } });

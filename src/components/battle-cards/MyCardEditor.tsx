@@ -17,18 +17,21 @@ export default function MyCardEditor({
   card,
   initialTeCharacter,
   hasTeCharacter,
+  setup = false,
 }: {
   card: BattleCardData & { id: string };
   /** Bisheriger Charakter (Card.teCharacter) bzw. die Standard-Figur zum Losgehen. */
   initialTeCharacter: TeCharacterConfig;
   /** false = noch nie gespeichert: die Karte zeigt weiter das Profilbild, bis der User den Charakter anfasst. */
   hasTeCharacter: boolean;
+  /** Teil der Helden-Einrichtung: der Charakter ist Pflicht, gespeichert wird mit "Weiter". */
+  setup?: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
   const [flavorText, setFlavorText] = useState(card.flavorText);
   const [teCharacter, setTeCharacter] = useState(initialTeCharacter);
-  const [useCharacter, setUseCharacter] = useState(hasTeCharacter);
+  const [useCharacter, setUseCharacter] = useState(hasTeCharacter || setup);
   const [saving, setSaving] = useState(false);
   const [flavorFocused, setFlavorFocused] = useState(false);
 
@@ -45,7 +48,7 @@ export default function MyCardEditor({
         toast.error(data.error ?? "Speichern fehlgeschlagen");
         return;
       }
-      toast.success("Gespeichert!");
+      toast.success(setup ? "Aussehen gespeichert!" : "Gespeichert!");
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
@@ -54,9 +57,110 @@ export default function MyCardEditor({
     }
   }
 
+  const cardPreview = <BattleCardView card={{ ...card, title, flavorText, teCharacter: useCharacter ? teCharacter : null }} />;
+
+  if (setup) {
+    // Einrichtung: die Karte bleibt beim Gestalten sichtbar (klebt links), der Charakter erscheint direkt darin.
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
+        <div className="sm:sticky sm:top-4 self-start">{cardPreview}</div>
+        <div className="space-y-5 min-w-0">
+          <label className="block">
+            <span className="text-xs text-gray-500">Untertitel ({title.length}/{TITLE_MAX})</span>
+            <MobaInputBox
+              type="text"
+              value={title}
+              maxLength={TITLE_MAX}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="z.B. Die Wächterin"
+              className="mt-1 w-full px-3 py-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs text-gray-500">Beschreibung ({flavorText.length}/{FLAVOR_MAX})</span>
+            {/* MobaInputBox ist auf <input> zugeschnitten -- hier dieselben zwei
+                Ebenen (box1-normal/-highlighted) direkt um das <textarea>, da es
+                die einzige mehrzeilige Stelle im Projekt ist (kein eigenes
+                Bauteil nötig). */}
+            <div className="relative mt-1">
+              <img
+                src="/battle-cards/moba/input-box/box1-normal.png"
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full transition-opacity"
+                style={{ objectFit: "fill", opacity: flavorFocused ? 0 : 1 }}
+              />
+              <img
+                src="/battle-cards/moba/input-box/box1-highlighted.png"
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full transition-opacity"
+                style={{ objectFit: "fill", opacity: flavorFocused ? 1 : 0 }}
+              />
+              <textarea
+                value={flavorText}
+                maxLength={FLAVOR_MAX}
+                onChange={(e) => setFlavorText(e.target.value)}
+                onFocus={() => setFlavorFocused(true)}
+                onBlur={() => setFlavorFocused(false)}
+                rows={4}
+                placeholder="Kurzer Flavor-Text für deine Karte…"
+                className="relative z-10 w-full px-3 py-2 bg-transparent text-white text-sm placeholder:text-slate-500 focus:outline-none resize-none"
+              />
+            </div>
+          </label>
+
+
+      <div>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 className="text-sm font-bold text-white">Dein Charakter</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Gestalte deine Figur — sie ist das Motiv deiner Karte und deine Spielfigur in OMA Quest.
+              Die Auswahl wird beim Speichern übernommen.
+            </p>
+          </div>
+          {useCharacter && !setup && (
+            <button
+              type="button"
+              onClick={() => setUseCharacter(false)}
+              className="shrink-0 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Zurück zum Profilbild
+            </button>
+          )}
+        </div>
+        <TeCharacterEditor
+          compact
+          value={teCharacter}
+          onChange={(next) => { setTeCharacter(next); setUseCharacter(true); }}
+        />
+      </div>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="moba-button flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn8_normal.png" alt="" aria-hidden className="moba-img-fill" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn8_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
+            <span className="moba-button-label relative flex items-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? "Speichert…" : setup ? "Weiter: Klasse & Werte" : "Speichern"}
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
-      <BattleCardView card={{ ...card, title, flavorText, teCharacter: useCharacter ? teCharacter : null }} />
+      {cardPreview}
 
       <div className="space-y-4">
         <label className="block">
@@ -117,7 +221,7 @@ export default function MyCardEditor({
           <img src="/battle-cards/moba/buttons/btn8_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
           <span className="moba-button-label relative flex items-center gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saving ? "Speichert…" : "Speichern"}
+            {saving ? "Speichert…" : setup ? "Weiter: Klasse & Werte" : "Speichern"}
           </span>
         </button>
       </div>
@@ -131,7 +235,7 @@ export default function MyCardEditor({
               Die Auswahl wird beim Speichern übernommen.
             </p>
           </div>
-          {useCharacter && (
+          {useCharacter && !setup && (
             <button
               type="button"
               onClick={() => setUseCharacter(false)}

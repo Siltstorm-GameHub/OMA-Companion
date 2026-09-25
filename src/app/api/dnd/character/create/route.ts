@@ -38,10 +38,13 @@ export async function POST(req: NextRequest) {
   const card = await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId } });
   if (!card) return NextResponse.json({ error: "Keine Community-Karte gefunden" }, { status: 404 });
 
-  if (card.dndCreatedAt && !reroll) {
+  // Erster Wurf der Helden-Einrichtung (Card.heroRolledAt noch leer): gilt für alle Mitglieder, auch für die mit
+  // automatisch erzeugter Karte (dndCreatedAt schon gesetzt), und kostet keinen Re-Roll-Credit.
+  const firstRoll = !card.heroRolledAt;
+  if (!firstRoll && !reroll) {
     return NextResponse.json({ error: "Charakter wurde bereits erstellt" }, { status: 400 });
   }
-  if (card.dndCreatedAt && reroll && card.dndRerollCredits <= 0) {
+  if (!firstRoll && reroll && card.dndRerollCredits <= 0) {
     return NextResponse.json({ error: "Keine Re-Roll-Credits verfügbar" }, { status: 400 });
   }
 
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
   // Erst-Erstellung: 1 Gratis-Credit (bisheriges "einmaliger Re-Roll"-Recht,
   // jetzt als Credit statt Boolean, damit im Shop nachkaufbare Re-Rolls
   // (buy-dnd-reroll) dieselbe Zählung nutzen). Reroll: verbraucht 1 Credit.
-  const dndRerollCredits = reroll ? { decrement: 1 } : 1;
+  const dndRerollCredits = firstRoll ? Math.max(1, card.dndRerollCredits) : { decrement: 1 };
 
   const updated = await prisma.card.update({
     where: { id: card.id },
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
       abilityScores: toJson(sheet.abilityScores),
       backstory: sheet.backstory,
       dndCreatedAt: card.dndCreatedAt ?? new Date(),
+      ...(firstRoll ? { heroRolledAt: new Date() } : {}),
       dndRerollCredits,
       currentLocationId: startLocation ? startLocation.id : undefined,
       overriddenFields: withDndOverriddenFields(card.overriddenFields ?? []),

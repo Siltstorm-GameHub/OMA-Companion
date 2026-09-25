@@ -1,13 +1,13 @@
 "use client";
 
 // ============================================
-// Start-Pack — Auswahl-Flow (4-Schritte-Wizard)
+// Start-Pack — Auswahl-Flow (3-Schritte-Wizard um den Helden herum)
 // ============================================
-// Schritt 1-3: je 1 Karte aus Tank/Damage Dealer/Support wählen (Pflicht,
-// nacheinander, mit "Zurück"-Möglichkeit). Schritt 4: aus allen verbliebenen
-// Standard-Karten 2 weitere frei wählen — auch eine bereits gewählte Klasse
-// ein zweites Mal ist erlaubt (zählt dann als Duplikat). Community-Karten
-// tauchen hier nie auf: die Seite reicht nur rarity=STANDARD-Karten herein.
+// Der Held (Community-Karte) deckt eine Kampfrolle ab. Schritt 1-2: je 1 Karte aus den beiden anderen
+// Rollen wählen (Pflicht, nacheinander, mit "Zurück"-Möglichkeit). Schritt 3: aus allen Standard-Karten
+// 2 weitere frei wählen — auch eine bereits gewählte Rolle ein zweites Mal ist erlaubt (zählt dann als
+// Duplikat). Held + 4 Picks = Lineup. Community-Karten tauchen hier nie auf: die Seite reicht nur
+// rarity=STANDARD-Karten herein.
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,12 +31,16 @@ const CLASS_ORDER: ClassKey[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
 
 /** `icon`: Bildpfad (Klassen-Icon) ODER MobaIcon-Name (Bonus-Schritt). */
 type StepDef = { key: ClassKey | "bonus"; label: string; color: string; icon: string };
-const STEPS: StepDef[] = [
-  ...CLASS_ORDER.map((cls) => ({ key: cls, label: CLASS_CONFIG[cls].label, color: CLASS_CONFIG[cls].color, icon: CLASS_CONFIG[cls].icon })),
-  { key: "bonus" as const, label: "Bonus-Karten", color: "#f59e0b", icon: "chest" },
-];
 
-function StepProgress({ current }: { current: number }) {
+/** Schritte: die zwei Rollen, die der Held nicht abdeckt, dann die Bonus-Karten. */
+function buildSteps(heroRole: ClassKey): StepDef[] {
+  return [
+    ...CLASS_ORDER.filter((cls) => cls !== heroRole).map((cls) => ({ key: cls, label: CLASS_CONFIG[cls].label, color: CLASS_CONFIG[cls].color, icon: CLASS_CONFIG[cls].icon })),
+    { key: "bonus" as const, label: "Bonus-Karten", color: "#f59e0b", icon: "chest" },
+  ];
+}
+
+function StepProgress({ current, steps: STEPS }: { current: number; steps: StepDef[] }) {
   return (
     <div className="flex items-center">
       {STEPS.map((s, i) => {
@@ -139,7 +143,9 @@ function CardChoice({
   );
 }
 
-export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
+export default function StarterPickFlow({ cards, heroRole, onDone }: { cards: CardWithId[]; heroRole: ClassKey; onDone?: () => void }) {
+  const STEPS = useMemo(() => buildSteps(heroRole), [heroRole]);
+  const requiredRoles = useMemo(() => CLASS_ORDER.filter((c) => c !== heroRole), [heroRole]);
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -186,7 +192,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
   async function submit() {
     setSubmitting(true);
     try {
-      const cardIds = [...CLASS_ORDER.map((cls) => classPicks[cls]!), ...bonusPicks];
+      const cardIds = [...requiredRoles.map((cls) => classPicks[cls]!), ...bonusPicks];
       const res = await fetch("/api/battle-cards/starter-pick", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -198,8 +204,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
         return;
       }
       toast.success("Start-Pack gewählt!");
-      router.push("/battle-cards");
-      router.refresh();
+      onDone?.();
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -212,7 +217,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
 
   return (
     <div className="space-y-6">
-      <StepProgress current={step} />
+      <StepProgress current={step} steps={STEPS} />
 
       <AnimatePresence mode="wait">
         <motion.div

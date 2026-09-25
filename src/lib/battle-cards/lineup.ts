@@ -1,9 +1,9 @@
 // ============================================
 // Startaufstellung — welche eigenen Karten aktuell aktiv sind
 // ============================================
-// Max. 5 Karten (siehe Kampf-Format). Wird beim Start-Pack automatisch mit
-// den ersten gewählten Karten befüllt, danach über /battle-cards/lineup
-// änderbar.
+// Max. 5 Karten (siehe Kampf-Format). Wird beim Start-Pack automatisch mit dem Helden
+// und den 4 gewählten Karten befüllt, danach über /battle-cards/lineup änderbar. Der Held
+// (Community-Karte des Users) ist immer Teil des Lineups.
 
 import { prisma } from "@/lib/prisma";
 
@@ -16,6 +16,14 @@ export async function setLineup(userId: string, cardIds: string[]): Promise<void
     throw new LineupError(`Bitte 1 bis ${LINEUP_SIZE} Karten wählen.`);
   }
   const uniqueIds = Array.from(new Set(cardIds));
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } });
+  const hero = user?.discordId
+    ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { id: true } })
+    : null;
+  if (hero && !uniqueIds.includes(hero.id)) {
+    throw new LineupError("Dein Held ist immer Teil des Lineups.");
+  }
 
   const owned = await prisma.userCard.findMany({
     where: { userId, cardId: { in: uniqueIds } },

@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/layout.tsx": {
-    "mtime": 1789374021.409923,
-    "ast_hash": "2d38f6d13389251f525c8ee31488b713",
+    "mtime": 1790325177.4808128,
+    "ast_hash": "698e7a061fc0dd0b272d5a50b68166d7",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/leaderboard/page.tsx": {
@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/page.tsx": {
-    "mtime": 1789747854.2144341,
-    "ast_hash": "8d9383cf762985e7dc98bbcd46b90828",
+    "mtime": 1790325177.2638032,
+    "ast_hash": "8638985b793bafa408731f1d016709c5",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/clip-des-jahres/page.tsx": {
@@ -1645,7 +1645,7 @@
     "semantic_hash": ""
   },
   "src/app/api/battle-cards/starter-pick/route.ts": {
-    "mtime": 1787932937.841972,
+    "mtime": 1790324933.0546799,
     "ast_hash": "5818f2f08c5aab537630a448edceada8",
     "semantic_hash": ""
   },
@@ -3350,8 +3350,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/MyCardEditor.tsx": {
-    "mtime": 1790323207.0205538,
-    "ast_hash": "b9378b5eeba118f65ddeef142380c8e5",
+    "mtime": 1790325045.1858668,
+    "ast_hash": "a48b77d971dd58f949df8afc176bac7a",
     "semantic_hash": ""
   },
   "src/components/battle-cards/NpcBattleLauncher.tsx": {
@@ -3375,8 +3375,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/StarterPickFlow.tsx": {
-    "mtime": 1790231297.045992,
-    "ast_hash": "de9083d7be29323e3657062bee43bc9b",
+    "mtime": 1790325096.504092,
+    "ast_hash": "c2123987acf103c938d6a502d1d1333f",
     "semantic_hash": ""
   },
   "src/components/battle-cards/StatBadges.tsx": {
@@ -3575,8 +3575,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/duel-deck.ts": {
-    "mtime": 1789304072.3112326,
-    "ast_hash": "2f29de1ab9e7657e28ff492b21bdf578",
+    "mtime": 1790324967.5003304,
+    "ast_hash": "144b3858bdde178820a83d45377e8519",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/duel-live-battle.ts": {
@@ -3610,8 +3610,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/lineup.ts": {
-    "mtime": 1787938882.144205,
-    "ast_hash": "41a44cd62159f5dd23fb27fb8054212c",
+    "mtime": 1790324932.971358,
+    "ast_hash": "c9f6d8305d07a5c52334cdd42acc32aa",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/live-battle.ts": {
@@ -3695,8 +3695,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/starter-pick.ts": {
-    "mtime": 1788369098.9202242,
-    "ast_hash": "58c604cc77403d29998b9d276d225d6f",
+    "mtime": 1790324932.8261805,
+    "ast_hash": "e4da6557d6748275fec4f832cb51f7d4",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/synergy.ts": {
@@ -7870,8 +7870,8 @@
     "semantic_hash": ""
   },
   "src/app/api/dnd/character/create/route.ts": {
-    "mtime": 1790317703.0166848,
-    "ast_hash": "1896fc829030412e87212e184b9d9106",
+    "mtime": 1790324967.5003304,
+    "ast_hash": "dd4f96051902361ca7adb284ac9c3e2d",
     "semantic_hash": ""
   },
   "src/app/api/dnd/character/story-tick/route.ts": {
@@ -7905,8 +7905,8 @@
     "semantic_hash": ""
   },
   "src/components/dnd/CharacterCreation.tsx": {
-    "mtime": 1790320377.0982106,
-    "ast_hash": "f1a532ca2dd44fc9a3573d150a768cf1",
+    "mtime": 1790325151.0503955,
+    "ast_hash": "222992a96aed3f063571c33ac3cb06c6",
     "semantic_hash": ""
   },
   "src/components/dnd/DiceRoll.tsx": {
@@ -7917,11 +7917,6 @@
   "src/components/dnd/DndHome.tsx": {
     "mtime": 1790320377.106282,
     "ast_hash": "116f9bb33a7cbe06f5bfac01137beda8",
-    "semantic_hash": ""
-  },
-  "src/components/dnd/DndMigrationBanner.tsx": {
-    "mtime": 1790320377.113964,
-    "ast_hash": "eaf80211855ff31bd5c4047c70829896",
     "semantic_hash": ""
   },
   "src/components/dnd/WorldMap.tsx": {
@@ -7945,13 +7940,13 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/class-mapping.ts": {
-    "mtime": 1790320377.1740115,
-    "ast_hash": "c8f66f3ac26f427aec8471b763475361",
+    "mtime": 1790324908.317617,
+    "ast_hash": "64f4642aba2d12813db1217a753874ab",
     "semantic_hash": ""
   },
   "src/lib/dnd/classes.ts": {
-    "mtime": 1790320377.1745152,
-    "ast_hash": "95218a906f622df32c6f8cf61b5ac5c0",
+    "mtime": 1790324908.317617,
+    "ast_hash": "53dec4ee089710f8aaf23f0252045ec1",
     "semantic_hash": ""
   },
   "src/lib/dnd/dnd.test.ts": {
@@ -8100,8 +8095,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/oma-quest/page.tsx": {
-    "mtime": 1790320376.9579673,
-    "ast_hash": "f636656e0b948ed193e9dd130cc82668",
+    "mtime": 1790325207.1856682,
+    "ast_hash": "c04c8fb7f79af651313c3deed6543c3f",
     "semantic_hash": ""
   },
   "scripts/build-te-assets.ts": {
@@ -8115,8 +8110,8 @@
     "semantic_hash": ""
   },
   "src/components/te-character/TeCharacterEditor.tsx": {
-    "mtime": 1790323200.1914852,
-    "ast_hash": "1ece03cebdf0149383829081bc012aa4",
+    "mtime": 1790325068.4258974,
+    "ast_hash": "482b1f0eb08c185962a4227dd61a5ff7",
     "semantic_hash": ""
   },
   "src/lib/te-character/catalog.json": {
@@ -16655,8 +16650,8 @@
     "semantic_hash": ""
   },
   "src/components/te-map/TeWorld.tsx": {
-    "mtime": 1790324006.8035088,
-    "ast_hash": "3d9ea110b4f3309a8527b7f225962859",
+    "mtime": 1790324175.314652,
+    "ast_hash": "a002c2e701769c4302f3078e7582c5dd",
     "semantic_hash": ""
   },
   "src/lib/te-map/generate.ts": {
@@ -16692,6 +16687,21 @@
   "public/te/tiles/tileB_cave1.png": {
     "mtime": 1790316465.2599318,
     "ast_hash": "bf88bab7e5ca3c1d65399152b72161ca",
+    "semantic_hash": ""
+  },
+  "src/components/battle-cards/HeroSetup.tsx": {
+    "mtime": 1790325136.25486,
+    "ast_hash": "71dc859d8b7c14cb6e38e9896a59e69d",
+    "semantic_hash": ""
+  },
+  "src/lib/battle-cards/hero-setup.test.ts": {
+    "mtime": 1790325222.6216257,
+    "ast_hash": "2691fd649bd255b8368117f598e92adb",
+    "semantic_hash": ""
+  },
+  "src/lib/battle-cards/hero-setup.ts": {
+    "mtime": 1790324908.354839,
+    "ast_hash": "8c0ffac895c9071fbe5f5c1dcad62771",
     "semantic_hash": ""
   }
 }

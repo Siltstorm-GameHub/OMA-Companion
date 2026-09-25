@@ -25,6 +25,12 @@ export const DND_CLASSES: DndClassDef[] = [
     primaryAbility: "str",
   },
   {
+    id: "paladin",
+    name: "Paladin",
+    description: "Steht vorne, hält durch und segnet nebenbei die Verbündeten — meistens ungefragt.",
+    primaryAbility: "con",
+  },
+  {
     id: "magier",
     name: "Magier",
     description: "Hat für jedes Problem einen Zauberspruch — und für jeden Zauberspruch eine Fußnote.",

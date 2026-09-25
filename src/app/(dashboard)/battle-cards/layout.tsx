@@ -20,6 +20,12 @@
 
 import { Metamorphous } from "next/font/google";
 import "@/app/battle-cards-moba.css";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { getHeroSetup } from "@/lib/battle-cards/hero-setup";
+import { resolveAvatarsForCards, toCardData } from "@/lib/battle-cards/card-view";
+import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
+import HeroSetup from "@/components/battle-cards/HeroSetup";
 
 const metamorphous = Metamorphous({
   subsets: ["latin"],
@@ -28,6 +34,28 @@ const metamorphous = Metamorphous({
   display: "swap",
 });
 
-export default function BattleCardsLayout({ children }: { children: React.ReactNode }) {
+// Solange die Helden-Einrichtung (Aussehen → Klasse & Werte → Start-Pack) offen ist, ersetzt sie ALLE
+// Seiten dieses Bereichs — wer Battle Cards öffnet, erstellt zuerst seinen Charakter.
+export default async function BattleCardsLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  const setup = session?.user?.id ? await getHeroSetup(session.user.id) : null;
+
+  if (setup && setup.step !== "done") {
+    const avatars = await resolveAvatarsForCards([setup.card]);
+    const character = sanitizeTeConfig(setup.card.teCharacter);
+    const standardCards = setup.step === "pack" ? await prisma.card.findMany({ where: { rarity: "STANDARD" }, orderBy: { name: "asc" } }) : [];
+    return (
+      <div className={`moba-skin ${metamorphous.variable}`}>
+        <HeroSetup
+          step={setup.step}
+          hero={toCardData(setup.card, avatars)}
+          character={character ?? defaultTeConfig()}
+          hasCharacter={!!character}
+          standardCards={standardCards.map((c) => toCardData(c))}
+        />
+      </div>
+    );
+  }
+
   return <div className={`moba-skin ${metamorphous.variable}`}>{children}</div>;
 }

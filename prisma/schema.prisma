@@ -1968,6 +1968,11 @@ model Card {
   abilityScores Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
   backstory     String? @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
   dndCreatedAt  DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
+  // Helden-Einrichtung (OMA Battle Cards, siehe lib/battle-cards/hero-setup.ts): heroRolledAt = Rasse/Klasse
+  // gewählt und Werte gewürfelt, heroPackAt = Start-Pack gewählt. null = Schritt offen. Bewusst getrennt von
+  // dndCreatedAt (das schon die automatisch erzeugte Karte hat): alle Mitglieder durchlaufen den Ablauf.
+  heroRolledAt  DateTime?
+  heroPackAt    DateTime?
   dndRerollCredits Int @default(0) // verfügbare Re-Rolls (Rasse+Klasse+Stats zusammen) — 1 gratis bei Erst-Erstellung
   // ODER Auto-Migration (kein eigener Wurf), danach im Shop nachkaufbar (buy-dnd-reroll), pro Nutzung -1
   dndXp         Int     @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor

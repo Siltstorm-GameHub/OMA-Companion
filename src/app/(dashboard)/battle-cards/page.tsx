@@ -2,9 +2,8 @@
 // /battle-cards — Hub (3 Reiter: Kampf, Karten, Community)
 // ============================================
 // Kein öffentlicher Karten-Katalog mehr. Verzweigt direkt:
-//  - Noch kein Start-Pack gewählt → Picker (StarterPickFlow), Standard-Karten
-//    sind hier NUR als Auswahlgrundlage sichtbar, nicht als Katalog.
-//  - Start-Pack vorhanden → drei Reiter:
+//  - Helden-Einrichtung noch offen → zeigt das Layout (HeroSetup) statt dieser Seite.
+//  - Einrichtung abgeschlossen → drei Reiter:
 //    "Kampf" (Startbildschirm: Startaufstellung, Packs, "Kampf starten"-Button
 //    öffnet Zufallsgegner/Direkt-Herausforderung/NPC in 3 Stufen — siehe
 //    BattleLauncher),
@@ -27,7 +26,6 @@ import { getCurrentSeasonNumber, getSeasonWindow } from "@/lib/battle-cards/rank
 import { getTutorialProgress, getTutorialStep, hasOwnCommunityCard } from "@/lib/battle-cards/tutorial";
 import { getActiveDuelDeck } from "@/lib/battle-cards/duel-deck";
 import { DUEL_DECK_TOTAL_SIZE } from "@/lib/battle-engine/duel-constants";
-import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
 import BattleCardsTabs from "./BattleCardsTabs";
@@ -56,22 +54,17 @@ export default async function BattleCardsPage() {
 
   const ownsStarterDeck = await hasStarterDeck(userId);
 
+  // Die Helden-Einrichtung (Aussehen, Klasse, Start-Pack) zeigt das Layout dieses Bereichs, solange sie
+  // offen ist — hier landet nur, wer keinen verknüpften Discord-Account und damit keinen Helden hat.
   if (!ownsStarterDeck) {
-    const standardCards = await prisma.card.findMany({
-      where: { rarity: "STANDARD" },
-      orderBy: { name: "asc" },
-    });
-
     return (
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-xl mx-auto px-4 py-6 space-y-3">
         <BattleCardsLogo />
-        <div>
-          <h1 className="text-lg font-black text-white">Wähle dein Start-Pack</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            In 4 Schritten: Tank, Damage Dealer, Support — danach 2 weitere Karten nach Wahl.
-          </p>
-        </div>
-        <StarterPickFlow cards={standardCards.map((c) => toCardData(c))} />
+        <h1 className="text-lg font-black text-white">Dein Held fehlt noch</h1>
+        <p className="text-sm text-gray-500">
+          Dein Charakter ist die Grundlage von OMA Battle Cards und hängt an deinem verknüpften Discord-Account.
+          Melde dich mit Discord an, damit er angelegt werden kann.
+        </p>
       </div>
     );
   }

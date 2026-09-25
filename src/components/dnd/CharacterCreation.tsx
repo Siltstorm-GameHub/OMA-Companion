@@ -18,8 +18,9 @@ import { Loader2, Dices, ArrowRight } from "@/components/icons";
 import { RollingReveal, SettledRow } from "./DiceRoll";
 import { DND_RACES, type DndRaceDef } from "@/lib/dnd/races";
 import { DND_CLASSES, type DndClassDef } from "@/lib/dnd/classes";
+import { mapDndClassToCardClass } from "@/lib/dnd/class-mapping";
 
-interface RolledCard {
+export interface RolledCard {
   id: string;
   name: string;
   dndRace: string;
@@ -44,14 +45,23 @@ const ABILITY_SCORE_CANDIDATES = Array.from({ length: 16 }, (_, i) => i + 3); //
 
 type Phase = "choose" | "rolling" | "done";
 
+const ROLE_BADGE = {
+  TANK: { label: "Tank", color: "#14b8a6" },
+  DAMAGE_DEALER: { label: "Damage Dealer", color: "#ef4444" },
+  SUPPORT: { label: "Support", color: "#8b5cf6" },
+} as const;
+
 function SelectGrid<T extends { id: string; name: string; description: string }>({
   options,
   selectedId,
   onSelect,
+  badge,
 }: {
   options: T[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Kampfrolle, die diese Auswahl bestimmt (nur bei Klassen) */
+  badge?: (id: string) => { label: string; color: string };
 }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -69,6 +79,11 @@ function SelectGrid<T extends { id: string; name: string; description: string }>
             }`}
           >
             <p className="text-xs font-bold">{opt.name}</p>
+            {badge && (
+              <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5" style={{ background: `${badge(opt.id).color}26`, color: badge(opt.id).color }}>
+                {badge(opt.id).label}
+              </span>
+            )}
             <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">{opt.description}</p>
           </button>
         );
@@ -80,12 +95,18 @@ function SelectGrid<T extends { id: string; name: string; description: string }>
 export default function CharacterCreation({
   mode,
   onDone,
+  setup = false,
+  onRolled,
 }: {
   mode: "create" | "reroll";
+  /** Teil der Helden-Einrichtung (OMA Battle Cards): danach geht es zum Start-Pack statt zur Weltkarte. */
+  setup?: boolean;
   /** Optional: wird zusätzlich zu router.refresh() aufgerufen, wenn der Nutzer
    *  auf "Zur Weltkarte" klickt — für einbettende Komponenten (z.B. DndHome),
    *  die selbst zwischen Reroll-Ansicht und Weltkarte umschalten. */
   onDone?: () => void;
+  /** Nach jedem Wurf mit dem Ergebnis aufgerufen (z.B. um eine danebenstehende Karte zu aktualisieren). */
+  onRolled?: (card: RolledCard) => void;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("choose");
@@ -126,6 +147,7 @@ export default function CharacterCreation({
       if (!res.ok) throw new Error(data.error ?? "Auswürfeln fehlgeschlagen.");
       setRevealCount(0);
       setResult(data.card);
+      onRolled?.(data.card);
       setPhase("done");
       // Bewusst KEIN router.refresh() hier: die Server-Komponente (/oma-quest/page.tsx)
       // würde sonst sofort neu rendern und, da dndCreatedAt jetzt gesetzt ist,
@@ -162,7 +184,10 @@ export default function CharacterCreation({
 
         <div className="space-y-2">
           <h4 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">Klasse</h4>
-          <SelectGrid options={DND_CLASSES} selectedId={classId} onSelect={setClassId} />
+          <p className="text-[11px] text-gray-500 leading-snug">
+            Die Klasse legt deine Kampfrolle fest — in allen Spielmodi (Gems, Duels, Battle Cards).
+          </p>
+          <SelectGrid options={DND_CLASSES} selectedId={classId} onSelect={setClassId} badge={(id) => ROLE_BADGE[mapDndClassToCardClass(id)]} />
         </div>
 
         {error && <p className="text-xs text-red-400 text-center">{error}</p>}
@@ -273,18 +298,20 @@ export default function CharacterCreation({
         </p>
       )}
       <div className="flex flex-col sm:flex-row gap-2 pt-2">
-        <Link
-          href="/battle-cards/my-card"
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/5 transition-colors"
-        >
-          Aussehen anpassen <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        {!setup && (
+          <Link
+            href="/battle-cards/my-card"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/5 transition-colors"
+          >
+            Aussehen anpassen <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
         <button
           type="button"
           onClick={() => { router.refresh(); onDone?.(); }}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2.5 text-xs font-semibold text-white transition-colors"
         >
-          Zur Weltkarte <ArrowRight className="w-3.5 h-3.5" />
+          {setup ? "Weiter zum Start-Pack" : "Zur Weltkarte"} <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </motion.div>

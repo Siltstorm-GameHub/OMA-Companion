@@ -16,6 +16,8 @@ import {
 interface Props {
   value: TeCharacterConfig;
   onChange: (next: TeCharacterConfig) => void;
+  /** Ohne eigene Vorschau (die Figur wird woanders gezeigt, z.B. in der Karte): nur Hautton, Zufall und Teile. */
+  compact?: boolean;
 }
 
 const ANIM_OPTIONS: { id: TeAnim; label: string }[] = [
@@ -65,7 +67,7 @@ function sheetSrc(cat: TeCategory, variant: string, item: TeItem, skin: number) 
   return `/te/char/${cat.id}/${variant}${item.skin && skin > 0 ? `.t${skin}` : ""}.png`;
 }
 
-export default function TeCharacterEditor({ value, onChange }: Props) {
+export default function TeCharacterEditor({ value, onChange, compact = false }: Props) {
   const [catId, setCatId] = useState(TE_CATALOG.categories.find((c) => c.id === "hair")?.id ?? TE_CATALOG.categories[0].id);
   const [anim, setAnim] = useState<TeAnim>("walk");
   const [dir, setDir] = useState<TeDir>("down");
@@ -83,9 +85,10 @@ export default function TeCharacterEditor({ value, onChange }: Props) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+    <div className={compact ? "space-y-4" : "grid gap-4 md:grid-cols-[260px_1fr]"}>
       {/* ── Vorschau ─────────────────────────────────────────────── */}
-      <div className="space-y-3 md:sticky md:top-4 self-start">
+      <div className={compact ? "flex flex-wrap items-end justify-between gap-4" : "space-y-3 md:sticky md:top-4 self-start"}>
+        {!compact && (<>
         <div className="flex justify-center rounded-xl bg-[#141a28] py-2">
           <TeCharacter config={value} anim={anim} dir={dir} scale={5} replayKey={replay} title="Vorschau" />
         </div>
@@ -120,6 +123,8 @@ export default function TeCharacterEditor({ value, onChange }: Props) {
           </div>
         </div>
 
+        </>)}
+
         <div>
           <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1.5">Hautton</p>
           <div className="flex gap-1.5" role="group" aria-label="Hautton">
@@ -140,7 +145,7 @@ export default function TeCharacterEditor({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => onChange(randomTeConfig())}
-          className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white text-xs font-semibold py-2 transition-colors"
+          className={`${compact ? "" : "w-full "}flex items-center justify-center gap-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white text-xs font-semibold px-3 py-2 transition-colors`}
         >
           <Dices className="w-4 h-4" /> Zufällige Figur
         </button>

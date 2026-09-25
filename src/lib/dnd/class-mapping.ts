@@ -8,6 +8,7 @@ import type { CardClass } from "@prisma/client";
 
 export const DND_CLASS_TO_CARD_CLASS: Record<string, CardClass> = {
   krieger: "TANK",
+  paladin: "TANK",
   magier: "DAMAGE_DEALER",
   kleriker: "SUPPORT",
   schurke: "DAMAGE_DEALER",
