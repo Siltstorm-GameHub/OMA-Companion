@@ -9,6 +9,7 @@ import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { Gold } from "@/components/te-map/play/Currency";
 import { AP_PER_ROUND, abilitiesOf, getMonster, type CombatAction, type CombatState, type Fighter, type Monster } from "@/lib/dnd/combat";
 import { getItem } from "@/lib/dnd/items";
+import GroupFightPanel, { type FightCall, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 
 interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter }
 
@@ -22,7 +23,7 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
   );
 }
 
-export default function CombatPanel({ refreshKey = 0, onChanged, notify }: { refreshKey?: number; onChanged: () => void; notify?: Notify }) {
+export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, groupCall, groupBusy = false, myCardId }: { refreshKey?: number; onChanged: () => void; notify?: Notify; gf?: GroupSnapshot | null; groupCall?: FightCall; groupBusy?: boolean; myCardId?: string | null }) {
   const { notify: say, node } = useNotice(notify);
   const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,8 +49,18 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify }: { ref
   };
   const act = (a: CombatAction) => void send({ action: "act", act: a });
 
+  // Gruppenkampf (Vorraum, laufend oder Ergebnis) hat Vorrang
+  if (gf?.fight && groupCall && myCardId && (gf.fight.myStatus === "joined" || (gf.fight.myStatus === "invited" && gf.fight.status === "LOBBY"))) {
+    return (
+      <>
+        {node}
+        <GroupFightPanel view={gf.fight} myId={myCardId} call={groupCall} busy={groupBusy} />
+      </>
+    );
+  }
   if (!view) return null;
   const s = view.state;
+  const canGroup = !!gf?.group.inParty && gf.group.here >= 2 && !!groupCall;
 
   // ── Begegnung wählen ──
   if (!s) {
@@ -70,12 +81,33 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify }: { ref
                 <span className="min-w-0"><b>{m.name}</b> <span className="text-gray-500">Stufe {m.level} · {m.hp} LP · RK {m.ac}</span><br />
                   <span className="text-gray-400">{m.blurb}</span> <span className={diff >= 2 ? "text-red-300" : diff <= -2 ? "text-gray-500" : "text-amber-200"}>{diff >= 2 ? "gefährlich" : diff <= -2 ? "leicht" : "ebenbürtig"}</span>
                 </span>
-                <button type="button" disabled={busy} onClick={() => void send({ action: "start", monster: m.id })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5 ml-auto shrink-0">⚔️ Kämpfen</button>
+                <span className="ml-auto shrink-0 flex flex-col gap-1">
+                  <button type="button" disabled={busy} onClick={() => void send({ action: "start", monster: m.id })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5">⚔️ Allein</button>
+                  {canGroup && <button type="button" disabled={busy || groupBusy} onClick={() => void groupCall!({ action: "start", monster: m.id })} className="oq-btn text-xs px-3 py-1.5">👥 Mit Gruppe</button>}
+                </span>
               </li>
             );
           })}
           {view.encounters.length === 0 && <li className="text-xs text-gray-500">Hier lauert gerade nichts, das zu deiner Stufe passt.</li>}
         </ul>
+        {gf?.group.inParty && (
+          <div className="space-y-1.5 pt-2 border-t border-white/10">
+            <p className="oq-title">Raid-Bosse</p>
+            {!gf.group.raid ? (
+              <p className="text-[11px] text-gray-400">Raid-Bosse brauchen den Raid-Modus deiner Gruppe (bis zu 8 Helden). Der Gruppenleiter schaltet ihn im Gruppen-Tab ein.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {gf.raidBosses.map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 text-xs text-white">
+                    <span className="oq-slot w-10 h-10 grid place-items-center text-2xl">{m.emoji}</span>
+                    <span className="min-w-0"><b>{m.name}</b> <span className="text-gray-500">Stufe {m.level} · mind. {m.raid?.min} Helden</span><br /><span className="text-gray-400">{m.blurb}</span></span>
+                    <button type="button" disabled={busy || groupBusy || !canGroup} onClick={() => void groupCall!({ action: "start", monster: m.id })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5 ml-auto shrink-0">👥 Raid starten</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     );
   }

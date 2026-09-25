@@ -386,7 +386,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
             {selActor.kind === "monster" && (
               <label className="block text-[11px] text-gray-400">Art des Monsters
                 <select value={selActor.monster ?? "ratte"} disabled={readOnly} onFocus={onBeginEdit} onChange={(e) => { const m = getMonster(e.target.value); if (m) commit(updateActor(doc, selActor.id, { monster: m.id, name: m.name, talk: [{ step: "*", lines: [m.blurb] }] })); }} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white">
-                  {MONSTERS.map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name} (Stufe {m.level})</option>)}
+                  {MONSTERS.filter((m) => !m.raid).map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name} (Stufe {m.level})</option>)}
                 </select>
                 <span className="block text-[10px] text-gray-500 mt-1">Spieler kämpfen beim Ansprechen. Nach einem Sieg verschwindet die Figur für 15 Minuten. Achte auf die Stufe — zu starke Monster frustrieren.</span>
               </label>

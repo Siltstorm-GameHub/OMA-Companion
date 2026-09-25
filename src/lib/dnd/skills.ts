@@ -1,13 +1,13 @@
 // ============================================
 // OMA Quest — Fähigkeitsbaum der Klassen (rein)
 // ============================================
-// Jede Klasse hat einen Baum mit drei Ästen zu je vier Stufen: Offensive (trifft und verletzt besser), Standhaftigkeit (hält mehr aus) und
-// die Klassen-Kunst (verbessert die Klassenfähigkeit und schaltet eine zweite frei). Ab Stufe 2 gibt es je Stufe einen Talentpunkt;
+// Jede Klasse hat einen Baum mit vier Ästen zu je vier Stufen: Offensive (trifft und verletzt besser), Standhaftigkeit (hält mehr aus),
+// die Klassen-Kunst (verbessert die Klassenfähigkeit und schaltet eine zweite frei) und die Gruppe (Auren, die im Gruppenkampf allen helfen). Ab Stufe 2 gibt es je Stufe einen Talentpunkt;
 // die Knoten kosten 1, 1, 2 und 2 Punkte, und ein Knoten setzt den davor im selben Ast voraus. Wirkung nur im Kampf von OMA Quest.
 
-export type Branch = "offense" | "defense" | "art";
-export const BRANCHES: Branch[] = ["offense", "defense", "art"];
-export const BRANCH_LABEL: Record<Branch, string> = { offense: "Offensive", defense: "Standhaftigkeit", art: "Klassen-Kunst" };
+export type Branch = "offense" | "defense" | "art" | "group";
+export const BRANCHES: Branch[] = ["offense", "defense", "art", "group"];
+export const BRANCH_LABEL: Record<Branch, string> = { offense: "Offensive", defense: "Standhaftigkeit", art: "Klassen-Kunst", group: "Gruppe (Aura)" };
 export const TIER_COST = [1, 1, 2, 2] as const;
 
 export interface SkillFx {
@@ -31,8 +31,13 @@ export interface SkillFx {
   apMinus: number;
   /** Zweite Klassenfähigkeit freigeschaltet */
   second: boolean;
+  /** Aura: gilt in Gruppenkämpfen für alle Mitstreiter (auch für dich selbst) */
+  auraHit: number;
+  auraAc: number;
+  /** Heilt zu Rundenbeginn jeden lebenden Mitstreiter */
+  auraRegen: number;
 }
-export const NO_FX: SkillFx = { hit: 0, dmg: 0, hp: 0, ac: 0, critMinus: 0, regen: 0, cooldownMinus: 0, power: 0, apMinus: 0, second: false };
+export const NO_FX: SkillFx = { hit: 0, dmg: 0, hp: 0, ac: 0, critMinus: 0, regen: 0, cooldownMinus: 0, power: 0, apMinus: 0, second: false, auraHit: 0, auraAc: 0, auraRegen: 0 };
 
 export interface SkillNode {
   id: string;
@@ -51,12 +56,16 @@ const TIER_FX: Record<Branch, Partial<SkillFx>[]> = {
   offense: [{ hit: 1 }, { dmg: 2 }, { hit: 1, dmg: 1 }, { critMinus: 1 }],
   defense: [{ hp: 8 }, { ac: 1 }, { hp: 12 }, { regen: 3 }],
   art: [{ cooldownMinus: 1 }, { power: 3 }, { second: true }, { apMinus: 1 }],
+  group: [{ auraHit: 1 }, { auraAc: 1 }, { auraRegen: 2 }, { auraHit: 1, auraAc: 1 }],
 };
 const TIER_DESC: Record<Branch, string[]> = {
   offense: ["+1 aufs Treffen.", "+2 Schaden bei jedem Treffer.", "+1 aufs Treffen und +1 Schaden.", "Kritische Treffer schon ab 19."],
   defense: ["+8 Lebenspunkte.", "+1 Rüstung.", "+12 Lebenspunkte.", "Du heilst dich zu Rundenbeginn um 3."],
   art: ["Klassenfähigkeit: 1 Runde weniger Abklingzeit.", "Klassenfähigkeit: +3 Schaden bzw. Heilung.", "Schaltet die zweite Klassenfähigkeit frei.", "Klassenfähigkeiten kosten 1 AP weniger (mindestens 1)."],
+  group: ["Aura: alle in deiner Gruppe treffen +1 besser.", "Aura: alle in deiner Gruppe haben +1 Rüstung.", "Aura: zu Rundenbeginn heilst du jeden Mitstreiter um 2.", "Aura: +1 aufs Treffen und +1 Rüstung für alle."],
 };
+
+const GROUP_NAMES: [string, string, string, string] = ["Aufmunterung", "Schildwall", "Feldscher", "Kommandoruf"];
 
 const FLAVOR: Record<string, Flavor> = {
   krieger: { icons: ["⚔️", "🛡️", "💥"], off: ["Geübter Schlag", "Wucht", "Kampfrausch", "Vernichtender Streich"], def: ["Zäher Hund", "Schildarm", "Eisenwille", "Zweite Luft"], art: ["Kurze Erholung", "Bärenkraft", "Wirbelschlag", "Blitzreflex"] },
@@ -68,12 +77,12 @@ const FLAVOR: Record<string, Flavor> = {
   barde: { icons: ["🎶", "🎭", "🎵"], off: ["Guter Takt", "Scharfe Zunge", "Zugabe", "Fulminantes Finale"], def: ["Dickes Fell", "Ausweichtanz", "Ausdauer eines Wandergesellen", "Trostlied"], art: ["Kurze Pause", "Lauter Refrain", "Schallwelle", "Improvisation"] },
 };
 
-const BRANCH_FLAVOR_KEY: Record<Branch, "off" | "def" | "art"> = { offense: "off", defense: "def", art: "art" };
+const BRANCH_FLAVOR_KEY: Record<Exclude<Branch, "group">, "off" | "def" | "art"> = { offense: "off", defense: "def", art: "art" };
 
 function buildTree(classId: string): SkillNode[] {
   const f = FLAVOR[classId] ?? FLAVOR.krieger;
   return BRANCHES.flatMap((branch, bi) => [0, 1, 2, 3].map((t): SkillNode => ({
-    id: `${branch}${t + 1}`, branch, tier: t + 1, name: f[BRANCH_FLAVOR_KEY[branch]][t], icon: f.icons[bi], desc: TIER_DESC[branch][t], fx: TIER_FX[branch][t],
+    id: `${branch}${t + 1}`, branch, tier: t + 1, name: branch === "group" ? GROUP_NAMES[t] : f[BRANCH_FLAVOR_KEY[branch as Exclude<Branch, "group">]][t], icon: branch === "group" ? "🤝" : f.icons[bi], desc: TIER_DESC[branch][t], fx: TIER_FX[branch][t],
   })));
 }
 

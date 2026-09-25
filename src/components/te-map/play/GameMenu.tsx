@@ -9,6 +9,7 @@ import QuestLog from "@/components/dnd/QuestLog";
 import type { ChatMessage } from "@/components/te-map/TeWorld";
 import type { Notify } from "@/components/te-map/play/GameFeed";
 import CombatPanel from "@/components/te-map/play/CombatPanel";
+import type { FightCall, GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 import SkillTreePanel from "@/components/te-map/play/SkillTreePanel";
 import CoinShopPanel from "@/components/te-map/play/CoinShopPanel";
 import { CharacterPanel, GmPanel, InventoryPanel, PartyPanel, ProgressPanel, SocialPanel } from "@/components/te-map/play/PlayPanels";
@@ -42,15 +43,18 @@ interface Props {
   notify: Notify;
   refreshKey: number;
   onChanged: () => void;
+  gf: GroupSnapshot | null;
+  groupCall: FightCall;
+  groupBusy: boolean;
 }
 
-export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, isMod, isGm, onEmote, onChatRemoved, notify, refreshKey, onChanged }: Props) {
+export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, isMod, isGm, onEmote, onChatRemoved, notify, refreshKey, onChanged, gf, groupCall, groupBusy }: Props) {
   let body: ReactNode = null;
   if (tab === "character") body = <CharacterPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "progress") body = <ProgressPanel refreshKey={refreshKey} />;
   else if (tab === "inventory") body = <InventoryPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "quests") body = <QuestLog notify={notify} />;
-  else if (tab === "combat") body = <CombatPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
+  else if (tab === "combat") body = <CombatPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} gf={gf} groupCall={groupCall} groupBusy={groupBusy} myCardId={myCardId} />;
   else if (tab === "skills") body = <SkillTreePanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "coins") body = <CoinShopPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "party") body = <PartyPanel present={present} myCardId={myCardId} notify={notify} />;

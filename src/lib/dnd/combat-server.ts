@@ -39,7 +39,7 @@ export function slainOf(card: Pick<Card, "dndFlags">, now = Date.now()): string[
   return flagList(card).flatMap((f) => { const m = SLAIN_RE.exec(f); return m && now - Number(m[3]) < RESPAWN_MS ? [`${m[1]}:${m[2]}`] : []; });
 }
 
-async function markSlain(cardId: string, source: { slug: string; actor: string }) {
+export async function markSlain(cardId: string, source: { slug: string; actor: string }) {
   const fresh = await prisma.card.findUnique({ where: { id: cardId }, select: { dndFlags: true } });
   if (!fresh) return;
   const now = Date.now();
@@ -88,12 +88,12 @@ async function save(card: Card, next: CombatState | null): Promise<boolean> {
 }
 const RACE = { error: "Zu schnell — versuch es noch einmal." } as const;
 
-export async function beginCombat(card: Card, monsterId: string, source?: { slug: string; actor: string }): Promise<{ ok: true } | { error: string }> {
-  const cur = stateOf(card);
-  if (cur?.status === "active") return { error: "Du steckst schon in einem Kampf." };
+/** Darf dieser Held diese Begegnung starten? Liefert das Monster oder einen Fehlertext. Raid-Bosse gehen nur im Gruppenkampf (`group`). */
+export async function checkEncounter(card: Card, monsterId: string, source: { slug: string; actor: string } | undefined, group = false): Promise<{ m: Monster; view: CombatView } | { error: string }> {
   const m = getMonster(monsterId);
   const view = await getCombatView(card);
   if (!m) return { error: "Unbekanntes Monster." };
+  if (m.raid) return group ? { m, view } : { error: "Dieser Boss lässt sich nur mit einer Gruppe im Raid-Modus bekämpfen." };
   if (source) {
     // Monster-Figur auf der Karte: sie muss in dieser Location stehen, der Held muss dort sein, und sie darf nicht gerade besiegt sein
     const world = await resolveWorld(source.slug);
@@ -103,7 +103,15 @@ export async function beginCombat(card: Card, monsterId: string, source?: { slug
     if (loc?.slug !== source.slug) return { error: "Du bist nicht in dieser Location." };
     if (view.slain.includes(`${source.slug}:${source.actor}`)) return { error: "Das Monster ist gerade besiegt — es kommt später wieder." };
   } else if (!view.encounters.some((e) => e.id === m.id)) return { error: "Diese Begegnung gibt es hier nicht." };
-  return (await save(card, startCombat(m, view.hero, source))) ? { ok: true } : RACE;
+  return { m, view };
+}
+
+export async function beginCombat(card: Card, monsterId: string, source?: { slug: string; actor: string }): Promise<{ ok: true } | { error: string }> {
+  const cur = stateOf(card);
+  if (cur?.status === "active") return { error: "Du steckst schon in einem Kampf." };
+  const chk = await checkEncounter(card, monsterId, source);
+  if ("error" in chk) return chk;
+  return (await save(card, startCombat(chk.m, chk.view.hero, source))) ? { ok: true } : RACE;
 }
 
 export async function actInCombat(card: Card, action: CombatAction): Promise<{ ok: true } | { error: string }> {

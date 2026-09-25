@@ -102,6 +102,8 @@ export interface Monster {
   loot: { key: string; chance: number }[];
   biomes: Biome[] | "any";
   blurb: string;
+  /** Raid-Boss: nur im Gruppenkampf, mit mindestens so vielen Teilnehmern */
+  raid?: { min: number };
 }
 
 export const MONSTERS: Monster[] = [
@@ -118,11 +120,18 @@ export const MONSTERS: Monster[] = [
   { id: "drache", name: "Junger Drache", emoji: "🐉", level: 9, hp: 120, ac: 17, attack: 9, dmg: [2, 10, 3], attacks: 1, xp: 320, gold: [80, 160], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.3 }], biomes: "any", blurb: "Noch jung, behauptet er. Die Zähne sagen etwas anderes." },
 ];
 
+/** Raid-Bosse (nur für Gruppen im Raid-Modus, bis zu 8 Helden). Werte gelten für einen Helden und werden mit der Gruppengröße hochskaliert. */
+export const RAID_BOSSES: Monster[] = [
+  { id: "hydra", name: "Sumpf-Hydra", emoji: "🐍", level: 10, hp: 140, ac: 16, attack: 9, dmg: [2, 8, 3], attacks: 2, xp: 420, gold: [120, 220], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.4 }, { key: "kettenhemd", chance: 0.3 }], biomes: "any", blurb: "Schlägst du einen Kopf ab, schauen die anderen sehr beleidigt.", raid: { min: 5 } },
+  { id: "drachenfuerst", name: "Drachenfürst", emoji: "🐲", level: 14, hp: 220, ac: 18, attack: 11, dmg: [3, 8, 4], attacks: 2, xp: 800, gold: [250, 450], loot: [{ key: "edelstein", chance: 1 }, { key: "glueckstaler", chance: 0.6 }, { key: "stahlschwert", chance: 0.5 }], biomes: "any", blurb: "Sein Hort ist größer als dein Kontostand. Sein Ego auch.", raid: { min: 6 } },
+];
+MONSTERS.push(...RAID_BOSSES);
+
 export const getMonster = (id: string): Monster | undefined => MONSTERS.find((m) => m.id === id);
 
 /** Begegnungen, die im Gelände für diese Stufe passen (nicht zu leicht, nicht zu tödlich). */
 export function encountersFor(level: number, biome: Biome): Monster[] {
-  return MONSTERS.filter((m) => (m.biomes === "any" || m.biomes.includes(biome)) && m.level <= level + 3 && m.level >= level - 4);
+  return MONSTERS.filter((m) => !m.raid && (m.biomes === "any" || m.biomes.includes(biome)) && m.level <= level + 3 && m.level >= level - 4);
 }
 
 /** Belohnung: schwächere Gegner geben weniger Erfahrung (kein Dauer-Farmen). */
@@ -160,8 +169,8 @@ export type CombatAction = "attack" | "ability" | "ability2" | "defend" | "flee"
 export const isCombatAction = (v: unknown): v is CombatAction => v === "attack" || v === "ability" || v === "ability2" || v === "defend" || v === "flee" || v === "end";
 
 const LOG_MAX = 40;
-const die = (sides: number, rng: Rng) => 1 + Math.floor(rng() * sides);
-const dice = (n: number, sides: number, rng: Rng) => { let t = 0; for (let i = 0; i < n; i++) t += die(sides, rng); return t; };
+export const die = (sides: number, rng: Rng) => 1 + Math.floor(rng() * sides);
+export const dice = (n: number, sides: number, rng: Rng) => { let t = 0; for (let i = 0; i < n; i++) t += die(sides, rng); return t; };
 
 export function startCombat(monster: Monster, fighter: Fighter, source?: { slug: string; actor: string }): CombatState {
   return {
@@ -170,9 +179,9 @@ export function startCombat(monster: Monster, fighter: Fighter, source?: { slug:
   };
 }
 
-interface Swing { roll: number; total: number; hit: boolean; crit: boolean }
+export interface Swing { roll: number; total: number; hit: boolean; crit: boolean }
 /** d20 + Bonus gegen RK; natürliche 1 verfehlt immer, ab critMin (Adlerauge) trifft es immer (kritisch). */
-function swing(bonus: number, ac: number, critMin: number, rerollFumble: boolean, rng: Rng): Swing {
+export function swing(bonus: number, ac: number, critMin: number, rerollFumble: boolean, rng: Rng): Swing {
   let roll = die(20, rng);
   if (rerollFumble && roll === 1) roll = die(20, rng);
   const crit = roll >= critMin;

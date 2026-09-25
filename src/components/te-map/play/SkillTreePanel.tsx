@@ -55,7 +55,7 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
         Klassenfähigkeit: <b className="text-white">{main.icon} {main.name}</b> — {main.desc} Mit „Klassen-Kunst 3“ kommt <b className="text-white">{second.icon} {second.name}</b> dazu. Talente wirken im Kampf; zurücksetzen kannst du sie im Münzen-Laden.
       </p>
       {node}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {BRANCHES.map((b) => (
           <div key={b} className="space-y-1.5">
             <p className="text-[10px] font-black uppercase tracking-widest text-violet-300">{BRANCH_LABEL[b]}</p>

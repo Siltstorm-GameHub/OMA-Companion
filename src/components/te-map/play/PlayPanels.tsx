@@ -468,14 +468,32 @@ export function PartyPanel({ present, myCardId, notify }: { present: { id: strin
   const { notify: say, node } = useNotice(notify);
   const [party, setParty] = useState<PartyView | null>(null);
   const [invites, setInvites] = useState<InviteView[]>([]);
+  const [board, setBoard] = useState<{ position: number; name: string; wins: number; size: number; mine: boolean }[]>([]);
   const [reload, setReload] = useState(0);
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [msgs, setMsgs] = useState<{ id: string; cardId: string; name: string; text: string }[]>([]);
+  const [draft, setDraft] = useState("");
+  const chatEnd = useRef<HTMLDivElement>(null);
+  const inParty = !!party;
+
   useEffect(() => {
     let cancelled = false;
-    const load = () => fetch("/api/dnd/party").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j) { setParty(j.party); setInvites(j.invites); } }).catch(() => {});
+    const load = () => fetch("/api/dnd/party").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j) { setParty(j.party); setInvites(j.invites); setBoard(j.leaderboard ?? []); } }).catch(() => {});
     void load();
     const t = setInterval(load, 15_000);
     return () => { cancelled = true; clearInterval(t); };
   }, [reload]);
+
+  // Gruppen-Chat (nur solange man in einer Gruppe ist)
+  useEffect(() => {
+    if (!inParty) return;
+    let cancelled = false;
+    const load = () => fetch("/api/dnd/party/chat").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j) setMsgs(j.messages); }).catch(() => {});
+    void load();
+    const t = setInterval(load, 4000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [inParty, reload]);
+  useEffect(() => { chatEnd.current?.scrollIntoView({ block: "nearest" }); }, [msgs.length]);
 
   const act = async (body: Record<string, unknown>, ok?: string) => {
     const r = await post("/api/dnd/party", body);
@@ -483,12 +501,21 @@ export function PartyPanel({ present, myCardId, notify }: { present: { id: strin
     if (ok) say("info", ok);
     setReload((n) => n + 1);
   };
+  const sendChat = async () => {
+    const text = draft.trim();
+    if (!text) return;
+    const r = await post("/api/dnd/party/chat", { text });
+    if (!r.ok) { say("error", r.error); return; }
+    setDraft("");
+    setReload((n) => n + 1);
+  };
   const memberIds = new Set(party?.members.map((m) => m.cardId));
   const candidates = present.filter((p) => p.id !== myCardId && !memberIds.has(p.id));
+  const isLeader = !!party && party.leaderCardId === myCardId;
 
   return (
     <div className={panel}>
-      <p className={label}>Gruppe</p>
+      <p className={label}>Gruppe{party?.name ? ` · ${party.name}` : ""}{party?.raid ? " · Raid-Modus" : ""}</p>
       {node}
       {invites.map((i) => (
         <div key={i.id} className="flex items-center gap-2 text-xs text-white rounded-md border-2 border-violet-400/50 bg-violet-500/10 px-3 py-2">
@@ -499,20 +526,58 @@ export function PartyPanel({ present, myCardId, notify }: { present: { id: strin
       ))}
       {party ? (
         <>
-          <ul className="flex flex-wrap gap-2 text-xs">
+          <ul className="space-y-1 text-xs">
             {party.members.map((m) => (
-              <li key={m.cardId} className={`rounded-full border px-2.5 py-1 ${m.here ? "border-emerald-400/40 text-emerald-200" : "border-white/10 text-gray-400"}`}>
-                {m.cardId === party.leaderCardId ? "👑 " : ""}{m.name}{m.here ? "" : " (woanders)"}
+              <li key={m.cardId} className={`flex items-center gap-2 rounded-md border px-2.5 py-1 ${m.here ? "border-emerald-400/40 text-emerald-200" : "border-white/10 text-gray-400"}`}>
+                <span>{m.cardId === party.leaderCardId ? "👑 " : ""}{m.name}{m.cardId === myCardId ? " (du)" : ""}{m.here ? "" : " (woanders)"}</span>
+                {isLeader && m.cardId !== myCardId && (
+                  <span className="ml-auto flex gap-1">
+                    <button type="button" onClick={() => void act({ action: "lead", cardId: m.cardId }, `${m.name} führt jetzt die Gruppe`)} className={`${btn} !px-2 !py-0.5`} title="Führung abgeben" aria-label={`Führung an ${m.name} abgeben`}>👑</button>
+                    <button type="button" onClick={() => { if (window.confirm(`${m.name} aus der Gruppe entfernen?`)) void act({ action: "kick", cardId: m.cardId }, `${m.name} entfernt`); }} className={`${btn} !px-2 !py-0.5`} title="Aus der Gruppe entfernen" aria-label={`${m.name} entfernen`}>✕</button>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
-          <p className="text-[10px] text-gray-500">Schließt jemand eine Location-Quest ab, bekommen Gruppenmitglieder am selben Ort die Hälfte der XP.</p>
-          <button type="button" onClick={() => void act({ action: "leave" })} className={btn}>Gruppe verlassen</button>
+          <p className="text-[10px] text-gray-500">{party.members.length} von {party.max} Mitgliedern · {party.wins} gewonnene Gruppenkämpfe. Gruppenmitglieder am selben Ort bekommen die Hälfte der XP einer Location-Quest und kämpfen gemeinsam (Tab Kampf).</p>
+          {isLeader && (
+            <div className="space-y-1.5 rounded-md border border-white/10 p-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-violet-300">Anführer</p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <input value={nameDraft ?? party.name ?? ""} onChange={(e) => setNameDraft(e.target.value)} maxLength={24} placeholder="Gruppenname" className="rounded bg-zinc-900 border border-white/10 px-2 py-1 text-xs text-white" aria-label="Gruppenname" />
+                <button type="button" onClick={() => { void act({ action: "rename", name: nameDraft ?? party.name ?? "" }, "Name gespeichert"); setNameDraft(null); }} className={btn}>Speichern</button>
+                <button type="button" onClick={() => void act({ action: "raid", on: !party.raid }, party.raid ? "Raid-Modus aus" : "Raid-Modus an: bis zu 8 Mitglieder")} className={`${btn} ${party.raid ? "oq-btn-gold" : ""}`}>{party.raid ? "Raid-Modus: an (8)" : "Raid-Modus aktivieren (bis 8)"}</button>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {!isLeader && <button type="button" onClick={() => void act({ action: "follow" }, "Du folgst dem Anführer")} className={btn}>🧭 Dem Anführer folgen</button>}
+            <button type="button" onClick={() => { if (window.confirm("Gruppe wirklich verlassen?")) void act({ action: "leave" }); }} className={btn}>Gruppe verlassen</button>
+          </div>
+
+          <p className={label}>Gruppen-Chat</p>
+          <div className="oq-slot p-2 h-28 overflow-y-auto space-y-0.5 text-[11px] text-gray-200">
+            {msgs.length === 0 && <p className="text-gray-500">Noch nichts geschrieben.</p>}
+            {msgs.map((m) => <p key={m.id}><b className={m.cardId === myCardId ? "text-amber-200" : "text-violet-200"}>{m.name}:</b> {m.text}</p>)}
+            <div ref={chatEnd} />
+          </div>
+          <form className="flex gap-1.5" onSubmit={(e) => { e.preventDefault(); void sendChat(); }}>
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={200} placeholder="Nachricht an die Gruppe …" className="flex-1 rounded bg-zinc-900 border border-white/10 px-2 py-1 text-xs text-white" aria-label="Nachricht an die Gruppe" />
+            <button type="submit" className={btn}>Senden</button>
+          </form>
         </>
-      ) : <p className="text-xs text-gray-500">Du bist in keiner Gruppe. Lade Spieler ein, die mit dir am selben Ort sind (bis zu 4 Mitglieder).</p>}
-      {(!party || party.members.length < 4) && candidates.length > 0 && (
+      ) : <p className="text-xs text-gray-500">Du bist in keiner Gruppe. Lade Spieler ein, die mit dir am selben Ort sind (bis zu 4 Mitglieder, mit Raid-Modus bis 8).</p>}
+      {(!party || party.members.length < party.max) && candidates.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {candidates.map((c) => <button key={c.id} type="button" onClick={() => void act({ action: "invite", cardId: c.id }, `${c.name} eingeladen`)} className={btn}>+ {c.name}</button>)}
+        </div>
+      )}
+      {board.length > 0 && (
+        <div className="space-y-1 pt-2 border-t border-white/10">
+          <p className={label}>Gruppen-Rangliste</p>
+          <ol className="text-[11px] text-gray-200 space-y-0.5">
+            {board.map((b) => <li key={b.position} className={b.mine ? "text-amber-200 font-bold" : ""}>{b.position}. {b.name} — {b.wins} Sieg{b.wins === 1 ? "" : "e"} ({b.size} Mitglieder)</li>)}
+          </ol>
         </div>
       )}
     </div>

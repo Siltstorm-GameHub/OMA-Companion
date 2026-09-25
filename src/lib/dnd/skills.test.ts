@@ -8,10 +8,10 @@ const mods = { str: 3, dex: 2, con: 2, int: 0, wis: 0, cha: 0 };
 const seq = (...v: number[]) => { let i = 0; return () => v[Math.min(i++, v.length - 1)]; };
 
 describe("skills", () => {
-  test("jede Klasse hat 3 Äste mit je 4 Stufen", () => {
+  test("jede Klasse hat 4 Äste mit je 4 Stufen", () => {
     for (const c of DND_CLASSES) {
       const tree = treeOf(c.id);
-      assert.equal(tree.length, 12, c.id);
+      assert.equal(tree.length, 16, c.id);
       for (const b of BRANCHES) assert.deepEqual(tree.filter((n) => n.branch === b).map((n) => n.tier), [1, 2, 3, 4]);
     }
   });

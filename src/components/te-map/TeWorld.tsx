@@ -347,7 +347,11 @@ interface Props {
   /** Händler-Gespräch beendet: Handelsfenster öffnen */
   onTrade?: (actorId: string) => void;
   /** Monster-Figur angesprochen und „Kämpfen“ gewählt */
-  onFight?: (actorId: string, monsterId: string) => void;
+  onFight?: (actorId: string, monsterId: string, group?: boolean) => void;
+  /** Gruppenmitglieder (Karten-Ids): ihr Name wird hervorgehoben */
+  partyIds?: string[];
+  /** Mit Gruppe kämpfen möglich (Gruppenmitglieder am selben Ort) */
+  canGroupFight?: boolean;
   /** Ids besiegter Monster-Figuren (werden ausgeblendet) */
   slain?: string[];
   /** Meldet einen abgeschlossenen Quest-Schritt; liefert den gespeicherten Stand (oder null bei Fehler). */
@@ -357,7 +361,7 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, onAdvance, viewCols, viewRows }: Props) {
+export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
   // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
   const wrapRef = useRef<HTMLDivElement>(null);
   const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
@@ -402,6 +406,8 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   useEffect(() => { coarse.current = window.matchMedia?.("(pointer: coarse)").matches ?? false; }, []);
   const gameRef = useRef<Game | null>(null);
   const slainRef = useRef<string[]>([]);
+  const partyRef = useRef<Set<string>>(new Set());
+  useEffect(() => { partyRef.current = new Set(partyIds ?? []); }, [partyIds]);
   useEffect(() => { slainRef.current = slain ?? []; }, [slain]);
   const heldRef = useRef<Dir[]>([]);
   /** Kurzer Tastendruck, der zwischen zwei Frames beginnt und endet, soll trotzdem einen Schritt auslösen. */
@@ -739,7 +745,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           // Wer live da ist, wird nicht zusätzlich als stehende Figur gezeichnet
           if (!spot || !sets || liveRef.current.has(o.id)) return;
           sprites.push({ base: (spot.y + 1) * T, draw: () => drawTeFrame(ctx, sets.front, 1, "down", spot.x * T - camX + T / 2 - 24, spot.y * T - camY - 16, 1) });
-          labels.push({ key: `c${o.id}`, x: spot.x * T + T / 2 - camX, y: spot.y * T - camY - 13, name: o.level ? `${o.name} · Lv ${o.level}` : o.name });
+          labels.push({ key: `c${o.id}`, x: spot.x * T + T / 2 - camX, y: spot.y * T - camY - 13, name: `${partyRef.current.has(o.id) ? "⭐ " : ""}${o.level ? `${o.name} · Lv ${o.level}` : o.name}` });
         });
         const walkFrames = TE_ANIMS.walk.frames;
         for (const [liveId, e] of liveRef.current) {
@@ -755,7 +761,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           const sets = e.sets;
           const bub = bubblesRef.current.get(liveId);
           labels.push({
-            key: `o${liveId}`, x: e.cx * T + T / 2 - camX, y: e.cy * T - camY - 13, name: e.level ? `${e.name} · Lv ${e.level}` : e.name,
+            key: `o${liveId}`, x: e.cx * T + T / 2 - camX, y: e.cy * T - camY - 13, name: `${partyRef.current.has(liveId) ? "⭐ " : ""}${e.level ? `${e.name} · Lv ${e.level}` : e.name}`,
             bubble: bub && bub.until > Date.now() ? bub.text : undefined, emote: e.emote && e.emote.until > Date.now() ? e.emote.icon : undefined,
           });
           sprites.push({
@@ -1022,7 +1028,10 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
                 </p>
               </button>
               {dialog.fight && dialog.index >= dialog.lines.length - 1 && onFight && (
-                <button type="button" onClick={() => { const g = gameRef.current; if (g) { const f = dialog.fight!; pressAction(g); handleEvents(g); onFight(f.actor, f.monster); } }} className="mt-2 w-full rounded-lg bg-red-500/90 hover:bg-red-400 text-white text-xs font-bold py-2">⚔️ Kämpfen</button>
+                <button type="button" onClick={() => { const g = gameRef.current; if (g) { const f = dialog.fight!; pressAction(g); handleEvents(g); onFight(f.actor, f.monster); } }} className="mt-2 w-full rounded-lg bg-red-500/90 hover:bg-red-400 text-white text-xs font-bold py-2">⚔️ Allein kämpfen</button>
+              )}
+              {dialog.fight && dialog.index >= dialog.lines.length - 1 && onFight && canGroupFight && (
+                <button type="button" onClick={() => { const g = gameRef.current; if (g) { const f = dialog.fight!; pressAction(g); handleEvents(g); onFight(f.actor, f.monster, true); } }} className="mt-1.5 w-full rounded-lg bg-violet-500/90 hover:bg-violet-400 text-white text-xs font-bold py-2">👥 Mit Gruppe kämpfen</button>
               )}
               {dialog.merchant && dialog.index >= dialog.lines.length - 1 && onTrade && (
                 <button type="button" onClick={() => { const g = gameRef.current; if (g) { const id = dialog.merchant!; pressAction(g); handleEvents(g); onTrade(id); } }} className="mt-2 w-full rounded-lg bg-amber-500/90 hover:bg-amber-400 text-black text-xs font-bold py-2">🛒 Handeln</button>

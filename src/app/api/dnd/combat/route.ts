@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getMyDndCard } from "@/lib/dnd/quest-log";
 import { prisma } from "@/lib/prisma";
 import { actInCombat, beginCombat, closeCombat, getCombatView } from "@/lib/dnd/combat-server";
+import { hasOpenGroupFight } from "@/lib/dnd/group-fight-server";
 import { isCombatAction } from "@/lib/dnd/combat";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
   const m = await me();
   if ("error" in m) return m.error;
   const body = await req.json().catch(() => ({}));
+  if (body?.action === "start" && (await hasOpenGroupFight(m.card.id))) return NextResponse.json({ error: "Du steckst schon in einem Gruppenkampf." }, { status: 400 });
   const source = typeof body?.slug === "string" && typeof body?.actor === "string" ? { slug: body.slug, actor: body.actor } : undefined;
   const r = body?.action === "start" && typeof body.monster === "string" ? await beginCombat(m.card, body.monster, source)
     : body?.action === "act" && isCombatAction(body.act) ? await actInCombat(m.card, body.act)

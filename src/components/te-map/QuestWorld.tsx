@@ -6,7 +6,8 @@
 // Holt den Zustand vom Server (darf ich hier sein? wer ist noch da? Quest-Stand?) und zeigt dann die
 // Spielwelt. Wer nicht an dieser Location angekommen ist, wird zur Weltkarte geschickt.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FightInvite, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 import Link from "next/link";
 import { Loader2 } from "@/components/icons";
 import TeWorld, { type ChatMessage, type LiveData, type OtherPlayer } from "./TeWorld";
@@ -53,6 +54,32 @@ export default function QuestWorld({ slug }: { slug: string }) {
   const [sheetKey, setSheetKey] = useState(0);
   const [menu, setMenu] = useState<MenuTab | null>(null);
   const [slain, setSlain] = useState<string[]>([]);
+  const [gf, setGf] = useState<GroupSnapshot | null>(null);
+  const [gfBusy, setGfBusy] = useState(false);
+  const gfOpened = useRef("");
+  const gfFinished = useRef("");
+
+  // Gruppenkampf/Einladungen: alle paar Sekunden abfragen (solange die Seite sichtbar ist)
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      if (document.visibilityState === "hidden") return;
+      fetch("/api/dnd/group-fight").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j) setGf(j); }).catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 2500);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  // Beteiligte landen automatisch im Kampf-Fenster; nach einem Kampfende Charakterbogen (XP, Gold, Rucksack) neu laden
+  useEffect(() => {
+    const f = gf?.fight;
+    if (!f) return;
+    const key = `${f.id}:${f.status}`;
+    if (f.myStatus === "joined" && gfOpened.current !== key) { gfOpened.current = key; setMenu("combat"); }
+    if (["WON", "LOST", "FLED"].includes(f.status) && gfFinished.current !== f.id) { gfFinished.current = f.id; setSheetKey((k) => k + 1); }
+  }, [gf]);
+
 
   // Besiegte Monster-Figuren dieser Location (kommen nach 15 Minuten wieder)
   useEffect(() => {
@@ -65,6 +92,18 @@ export default function QuestWorld({ slug }: { slug: string }) {
     return () => { cancelled = true; };
   }, [slug, sheetKey]);
   const { items: feed, push: notify } = useGameFeed();
+
+  const groupCall = useCallback(async (body: Record<string, unknown>) => {
+    setGfBusy(true);
+    try {
+      const res = await fetch("/api/dnd/group-fight", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { notify("error", json.error ?? "Fehlgeschlagen."); return; }
+      setGf(json);
+    } catch {
+      notify("error", "Netzwerkfehler.");
+    } finally { setGfBusy(false); }
+  }, [notify]);
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
   const world = data?.customWorld ?? staticWorld ?? undefined;
 
@@ -116,7 +155,8 @@ export default function QuestWorld({ slug }: { slug: string }) {
   }, []);
 
   // Monster-Figur auf der Karte: Kampf starten und das Kampf-Fenster öffnen
-  const onFight = useCallback(async (actor: string, monster: string) => {
+  const onFight = useCallback(async (actor: string, monster: string, group?: boolean) => {
+    if (group) { await groupCall({ action: "start", monster, slug, actor }); return; }
     try {
       const res = await fetch("/api/dnd/combat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", monster, slug, actor }) });
       const json = await res.json().catch(() => ({}));
@@ -125,7 +165,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
     } catch {
       notify("error", "Netzwerkfehler.");
     }
-  }, [slug, notify]);
+  }, [slug, notify, groupCall]);
 
   const onChoose = useCallback(async (req: { actor: string; talk: number; choice: number }) => {
     try {
@@ -211,7 +251,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
       <TeWorld
         world={world} character={data.myCharacter} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
-        onChoose={onChoose} onTrade={setShopActor} onFight={onFight} slain={slain} onAdvance={onAdvance}
+        onChoose={onChoose} onTrade={setShopActor} onFight={onFight} slain={slain} partyIds={gf?.group.memberIds} canGroupFight={!!gf?.group.inParty && gf.group.here >= 2} onAdvance={onAdvance}
         feed={feed} notify={notify} paused={!!menu || !!shopActor}
         hud={<HudBar refreshKey={sheetKey} onOpen={() => setMenu("character")} notify={notify} />}
         extraControls={(
@@ -252,10 +292,11 @@ export default function QuestWorld({ slug }: { slug: string }) {
             {menu && (
               <GameMenu
                 tab={menu} onClose={() => setMenu(null)} slug={slug} present={data.present.map((p) => ({ id: p.id, name: p.name }))}
-                myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)}
+                myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)} gf={gf} groupCall={groupCall} groupBusy={gfBusy}
                 onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} onChatRemoved={(id) => setChat((c) => c.filter((m) => m.id !== id))}
               />
             )}
+            {gf?.fight && gf.fight.status === "LOBBY" && gf.fight.myStatus === "invited" && <FightInvite view={gf.fight} call={groupCall} busy={gfBusy} />}
             {shopActor && (() => {
               const m = allActorsOf(world.map).find((a) => a.id === shopActor && a.kind === "merchant");
               return m ? <ShopPanel slug={slug} actorId={m.id} merchantName={m.name} shop={m.shop ?? []} onClose={() => setShopActor(null)} onSheetChanged={() => setSheetKey((k) => k + 1)} notify={notify} /> : null;
@@ -276,7 +317,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
                 ) : (
                   <span className="w-6 h-6 rounded-full bg-zinc-800 grid place-items-center text-[10px] font-bold text-white">{p.name.charAt(0).toUpperCase()}</span>
                 )}
-                {p.name}
+                {gf?.group.memberIds.includes(p.id) ? "⭐ " : ""}{p.name}
               </li>
             ))}
           </ul>

@@ -2149,8 +2149,41 @@ model DndChatReport {
 model DndParty {
   id           String           @id @default(cuid())
   leaderCardId String
+  name         String?
+  // Raid-Modus: erlaubt bis zu 8 statt 4 Mitglieder (für Raid-Bosse)
+  raid         Boolean          @default(false)
+  // Gewonnene Gruppenkämpfe (Gruppen-Rangliste)
+  wins         Int              @default(0)
   createdAt    DateTime         @default(now())
   members      DndPartyMember[]
+}
+
+// Gruppenkampf: Vorraum (Zustimmung der Mitglieder), dann rundenweiser Kampf; der Zustand liegt als JSON an der Zeile
+model DndGroupFight {
+  id              String                 @id @default(cuid())
+  status          String // LOBBY | ACTIVE | WON | LOST | FLED | CANCELLED
+  initiatorCardId String
+  monsterId       String
+  source          Json?
+  state           Json?
+  v               Int                    @default(0)
+  lobbyEndsAt     DateTime
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  members         DndGroupFightMember[]
+
+  @@index([status, updatedAt])
+}
+
+model DndGroupFightMember {
+  fightId String
+  cardId  String
+  status  String // invited | joined | declined
+  seen    Boolean       @default(false) // Ergebnis bestätigt
+  fight   DndGroupFight @relation(fields: [fightId], references: [id], onDelete: Cascade)
+
+  @@id([fightId, cardId])
+  @@index([cardId])
 }
 
 model DndPartyMember {
