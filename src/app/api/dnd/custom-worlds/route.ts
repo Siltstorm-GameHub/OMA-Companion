@@ -6,8 +6,8 @@ import { defaultCustomWorldDoc } from "@/lib/te-map/custom-world";
 
 export const dynamic = "force-dynamic";
 
-/** Eigene Welten; Admins sehen mit ?scope=review zusätzlich alle eingereichten. */
-export async function GET(req: NextRequest) {
+/** Eigene Welten (Admins sehen alle Locations im Admin-Bereich der Übersicht). */
+export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const access = await getBuilderAccess(session.user.id);
@@ -15,10 +15,7 @@ export async function GET(req: NextRequest) {
 
   const select = { id: true, slug: true, title: true, status: true, reviewNote: true, updatedAt: true, submittedAt: true, author: { select: { name: true, username: true } } } as const;
   const mine = await prisma.dndCustomWorld.findMany({ where: { authorId: session.user.id }, select, orderBy: { updatedAt: "desc" } });
-  const review = access.isAdmin && req.nextUrl.searchParams.get("scope") === "review"
-    ? await prisma.dndCustomWorld.findMany({ where: { status: "PENDING" }, select, orderBy: { submittedAt: "asc" } })
-    : [];
-  return NextResponse.json({ isAdmin: access.isAdmin, max: MAX_WORLDS_PER_AUTHOR, mine, review });
+  return NextResponse.json({ isAdmin: access.isAdmin, max: MAX_WORLDS_PER_AUTHOR, mine });
 }
 
 export async function POST(req: NextRequest) {

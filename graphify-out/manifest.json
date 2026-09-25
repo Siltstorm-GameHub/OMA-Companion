@@ -7890,8 +7890,8 @@
     "semantic_hash": ""
   },
   "src/app/api/dnd/location/[slug]/route.ts": {
-    "mtime": 1790328889.1100862,
-    "ast_hash": "2053b0c14dff77cea0680598b0414727",
+    "mtime": 1790329933.3682847,
+    "ast_hash": "c1e6810fb7335184bd82c9e7ac6d31f7",
     "semantic_hash": ""
   },
   "src/app/api/dnd/world-map/route.ts": {
@@ -7955,8 +7955,8 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/locations.ts": {
-    "mtime": 1790320377.1760297,
-    "ast_hash": "2d2c14b05df052b7981de06a53021c9c",
+    "mtime": 1790329887.1024623,
+    "ast_hash": "ed16ac476ecdcc9a460e6f8ff01e0351",
     "semantic_hash": ""
   },
   "src/lib/dnd/migration.ts": {
@@ -7965,8 +7965,8 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/quests.ts": {
-    "mtime": 1790328889.1090796,
-    "ast_hash": "a1b76f8b458b2c0c8b46e7387a0858f9",
+    "mtime": 1790329887.1019568,
+    "ast_hash": "41fbd71a7772ed3242c31e88280c5f93",
     "semantic_hash": ""
   },
   "src/lib/dnd/races.ts": {
@@ -16645,8 +16645,8 @@
     "semantic_hash": ""
   },
   "src/components/te-map/QuestWorld.tsx": {
-    "mtime": 1790328889.1121318,
-    "ast_hash": "a86f7229256582665fdec566678bf471",
+    "mtime": 1790329933.3692892,
+    "ast_hash": "9e37bc2ef4d03c55215a9e0c97f653cf",
     "semantic_hash": ""
   },
   "src/components/te-map/TeWorld.tsx": {
@@ -20030,13 +20030,13 @@
     "semantic_hash": ""
   },
   "src/app/api/dnd/custom-worlds/[id]/route.ts": {
-    "mtime": 1790328942.1738272,
-    "ast_hash": "09f944416155454dc852ba53591de9bc",
+    "mtime": 1790329933.3697958,
+    "ast_hash": "143539d918fd7cebebf83c78b25c108a",
     "semantic_hash": ""
   },
   "src/app/api/dnd/custom-worlds/[id]/submit/route.ts": {
-    "mtime": 1790328946.1292431,
-    "ast_hash": "acb5483241f86ab5046e18c7ee1a5bb6",
+    "mtime": 1790329933.3713043,
+    "ast_hash": "c9021d5408e4595ba50b502f6264a354",
     "semantic_hash": ""
   },
   "src/app/api/dnd/custom-worlds/route.ts": {
@@ -20045,8 +20045,8 @@
     "semantic_hash": ""
   },
   "src/components/te-map/editor/MapEditor.tsx": {
-    "mtime": 1790329182.6660604,
-    "ast_hash": "5288f89ceacb2f92fba65153cd309e4f",
+    "mtime": 1790329998.1684887,
+    "ast_hash": "4c1f38098479935fdd169f3038da4298",
     "semantic_hash": ""
   },
   "src/components/te-map/editor/QuestEditor.tsx": {
@@ -20055,18 +20055,18 @@
     "semantic_hash": ""
   },
   "src/components/te-map/editor/WorldEditor.tsx": {
-    "mtime": 1790329335.3182542,
-    "ast_hash": "9f7f72d1a92c2730484398012223d08d",
+    "mtime": 1790329998.1684887,
+    "ast_hash": "9bebe6397cb2973e6e469004b175a1cd",
     "semantic_hash": ""
   },
   "src/components/te-map/editor/WorldList.tsx": {
-    "mtime": 1790329335.3182542,
-    "ast_hash": "1c72153fa97f42d8dac91738a953da76",
+    "mtime": 1790330076.3824131,
+    "ast_hash": "1f0809aaa80f63c80b51dc06dd4a63fd",
     "semantic_hash": ""
   },
   "src/lib/dnd/custom-worlds.ts": {
-    "mtime": 1790328877.497013,
-    "ast_hash": "fd9b006400f3d2b8c55fc31c22d70d22",
+    "mtime": 1790329872.162537,
+    "ast_hash": "55c3659d3d9b90636f3bc64543667ea7",
     "semantic_hash": ""
   },
   "src/lib/te-map/custom-world-edit.ts": {
@@ -20075,13 +20075,53 @@
     "semantic_hash": ""
   },
   "src/lib/te-map/custom-world.test.ts": {
-    "mtime": 1790329018.951073,
-    "ast_hash": "3687bfd6d2e974e43bd8795eeac22c20",
+    "mtime": 1790329792.771004,
+    "ast_hash": "07058bf01ef9e4196fbad5ee125c7452",
     "semantic_hash": ""
   },
   "src/lib/te-map/custom-world.ts": {
-    "mtime": 1790328856.0657191,
-    "ast_hash": "d930f667108fe80cf04cddd27836d064",
+    "mtime": 1790329792.7570665,
+    "ast_hash": "75c10d1e7bbd85dba655f18c28de1459",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/admin/content/route.ts": {
+    "mtime": 1790329945.7007816,
+    "ast_hash": "902d3bf79cc5f6b567efe274de93ac31",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/admin/locations/[slug]/route.ts": {
+    "mtime": 1790329950.0005984,
+    "ast_hash": "06f9f541cd5d09461f24d4e9f2726b05",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/admin/quests/[id]/route.ts": {
+    "mtime": 1790329953.7142572,
+    "ast_hash": "ab46e786f79896d603a05d394a64a5b6",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/admin/restore/route.ts": {
+    "mtime": 1790329957.2457662,
+    "ast_hash": "15010ee3eb5a77a3fe6cb7cd53406afb",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/custom-worlds/hexes/route.ts": {
+    "mtime": 1790329938.9633849,
+    "ast_hash": "2f859ad8af0696d84280040c0cb13e03",
+    "semantic_hash": ""
+  },
+  "src/components/te-map/editor/AdminContent.tsx": {
+    "mtime": 1790330072.2061605,
+    "ast_hash": "319cb1cf7e3d517ed26f688d0955cff6",
+    "semantic_hash": ""
+  },
+  "src/components/te-map/editor/HexPicker.tsx": {
+    "mtime": 1790330039.7928152,
+    "ast_hash": "2783f2c207f9b28dd1b1035596b8be35",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/quests-catalog.ts": {
+    "mtime": 1790329872.1607738,
+    "ast_hash": "0b320eb20299b038b2905ab5cc41587f",
     "semantic_hash": ""
   }
 }

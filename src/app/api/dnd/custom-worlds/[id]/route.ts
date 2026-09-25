@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { checkHex, getBuilderAccess, resyncPublishedWorld } from "@/lib/dnd/custom-worlds";
-import { sanitizeCustomWorldDoc } from "@/lib/te-map/custom-world";
+import { checkHex, getBuilderAccess, notifyAdmins, resyncPublishedWorld } from "@/lib/dnd/custom-worlds";
+import { sanitizeCustomWorldDoc, validateForSubmit } from "@/lib/te-map/custom-world";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,8 @@ async function load(id: string, userId: string) {
   return { row, isAdmin: access.isAdmin } as const;
 }
 
-/** Autoren dürfen nur Entwürfe/abgelehnte Welten ändern; Admins alles (auch Veröffentlichtes). */
-const editable = (status: string, isAdmin: boolean) => isAdmin || status === "DRAFT" || status === "REJECTED";
+/** Autoren bearbeiten ihre eigenen Welten jederzeit (auch nach der Veröffentlichung), Admins alle. */
+const editable = () => true;
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({
     id: r.row.id, slug: r.row.slug, status: r.row.status, reviewNote: r.row.reviewNote, doc: s.doc,
     hex: r.row.hexCol != null && r.row.hexRow != null ? { col: r.row.hexCol, row: r.row.hexRow } : null,
-    canEdit: editable(r.row.status, r.isAdmin), isAdmin: r.isAdmin,
+    canEdit: editable(), isAdmin: r.isAdmin,
   });
 }
 
@@ -36,13 +36,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const r = await load((await params).id, session.user.id);
   if ("error" in r) return r.error;
-  if (!editable(r.row.status, r.isAdmin)) return NextResponse.json({ error: "Diese Welt ist eingereicht oder veröffentlicht und kann nicht mehr bearbeitet werden." }, { status: 400 });
 
   const body = await req.json().catch(() => null);
   const s = sanitizeCustomWorldDoc(body?.doc);
   if (!s.ok) return NextResponse.json({ error: s.errors[0] }, { status: 400 });
   const json = JSON.parse(JSON.stringify(s.doc));
   if (JSON.stringify(json).length > 400_000) return NextResponse.json({ error: "Die Welt ist zu groß." }, { status: 400 });
+
+  // Eine veröffentlichte Welt muss spielbar bleiben, sonst stünden Charaktere in einer kaputten Location
+  if (r.row.status === "PUBLISHED") {
+    const v = validateForSubmit(json);
+    if (!v.ok) return NextResponse.json({ error: `Änderung nicht gespeichert — die veröffentlichte Location muss spielbar bleiben: ${v.errors[0]}` }, { status: 400 });
+  }
 
   // Feld auf der Weltkarte: nur vor der Veröffentlichung änderbar (danach stehen Charaktere dort)
   let hexData: { hexCol: number | null; hexRow: number | null } | undefined;
@@ -58,6 +63,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   await prisma.dndCustomWorld.update({ where: { id: r.row.id }, data: { doc: json, title: s.doc.title || "Ohne Namen", ...hexData } });
   const syncError = r.row.status === "PUBLISHED" ? await resyncPublishedWorld(r.row.id) : null;
+  if (r.row.status === "PUBLISHED") {
+    const who = r.isAdmin && r.row.authorId !== session.user.id ? "Ein Admin" : (session.user.name ?? "Ein Mitglied");
+    await notifyAdmins(session.user.id, "OMA-Quest-Location geändert", `${who} hat „${s.doc.title}“ bearbeitet.`, `/oma-quest/editor/${r.row.id}`, 30);
+  }
   return NextResponse.json({ ok: true, warnings: s.warnings, syncError });
 }
 

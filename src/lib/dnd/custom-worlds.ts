@@ -3,13 +3,15 @@
 // ============================================
 // Wer einen aktiven Community-Job hat (oder Admin ist), darf im Editor Locations bauen und sich dafür ein
 // leeres Landfeld der Hex-Weltkarte aussuchen. Fertige Welten gehen zur Prüfung an einen Admin; mit der
-// Freigabe entsteht die DndLocation samt DndQuest. Admins dürfen ALLES bearbeiten und löschen — auch die
+// Veröffentlichen entsteht die DndLocation samt DndQuest — ohne Prüfung; Admins werden per In-App-Nachricht
+// informiert (neue Location, Änderungen, Löschungen). Admins dürfen ALLES bearbeiten und löschen — auch die
 // im Code vordefinierten Locations: Beim ersten Bearbeiten wird die feste Welt als Dokument in die Datenbank
 // übernommen (Zeile mit ihrem Slug) und ersetzt ab dann die Code-Fassung. Gelöschte Code-Inhalte merkt sich
 // DndRemovedContent, damit die Seed-Funktionen sie nicht wieder anlegen.
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { createNotificationForUsers } from "@/lib/notifications";
 import { hasMinRole } from "@/lib/roles";
 import { docToWorld, sanitizeCustomWorldDoc, validateForSubmit, worldToDoc, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import { getWorld, WORLD_SLUGS } from "@/lib/te-map/worlds";
@@ -125,7 +127,26 @@ async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: {
   return null;
 }
 
-/** Admin gibt eine eingereichte Welt frei. */
+/** In-App-Nachricht an alle Admins außer dem Auslöser. Wiederholte Änderungen an derselben Welt innerhalb von
+ *  `throttleMinutes` erzeugen nur eine Nachricht (der Editor speichert oft). */
+export async function notifyAdmins(actorId: string, title: string, body: string, url: string, throttleMinutes = 0): Promise<void> {
+  try {
+    const admins = await prisma.user.findMany({ where: { role: "admin", id: { not: actorId } }, select: { id: true } });
+    if (!admins.length) return;
+    if (throttleMinutes > 0) {
+      const recent = await prisma.inAppNotification.findFirst({
+        where: { type: "admin", url, title, createdAt: { gte: new Date(Date.now() - throttleMinutes * 60_000) } },
+        select: { id: true },
+      });
+      if (recent) return;
+    }
+    await createNotificationForUsers(admins.map((a) => a.id), { type: "admin", title, body, url });
+  } catch {
+    // Benachrichtigungen dürfen das Speichern/Veröffentlichen nie scheitern lassen
+  }
+}
+
+/** Veröffentlicht eine Welt sofort (kein Freigabe-Schritt). */
 export async function publishCustomWorld(id: string, reviewerId: string): Promise<{ ok: true } | { error: string }> {
   const row = await prisma.dndCustomWorld.findUnique({ where: { id } });
   if (!row) return { error: "Welt nicht gefunden" };

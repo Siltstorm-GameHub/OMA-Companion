@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { deleteLocation, ensureEditableWorld, getBuilderAccess } from "@/lib/dnd/custom-worlds";
+import { prisma } from "@/lib/prisma";
+import { deleteLocation, ensureEditableWorld, getBuilderAccess, notifyAdmins } from "@/lib/dnd/custom-worlds";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ sl
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const a = await requireAdmin();
   if ("error" in a) return a.error;
-  const r = await deleteLocation((await params).slug);
+  const { slug } = await params;
+  const loc = await prisma.dndLocation.findUnique({ where: { slug }, select: { name: true } });
+  const r = await deleteLocation(slug);
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
+  await notifyAdmins(a.userId, "OMA-Quest-Location gelöscht", `Ein Admin hat „${loc?.name ?? slug}“ gelöscht.`, "/oma-quest/editor");
   return NextResponse.json({ ok: true });
 }

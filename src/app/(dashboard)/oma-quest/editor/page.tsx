@@ -14,7 +14,7 @@ export default async function EditorHomePage() {
     <div className="space-y-4 max-w-3xl mx-auto">
       <div>
         <h1 className="font-battle text-lg text-white">Locations bauen</h1>
-        <p className="text-xs text-gray-500">Gestalte eigene Orte für OMA Quest — mit Karte, NPCs und Quest. Nach der Prüfung durch einen Admin erscheint deine Location auf der Weltkarte.</p>
+        <p className="text-xs text-gray-500">Gestalte eigene Orte für OMA Quest — mit Karte, NPCs und Quest. Sobald du veröffentlichst, erscheint sie auf dem Feld, das du auf der Weltkarte gewählt hast.</p>
       </div>
       {access.allowed ? (
         <WorldList />

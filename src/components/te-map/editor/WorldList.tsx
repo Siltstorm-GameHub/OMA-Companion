@@ -16,22 +16,18 @@ interface Row {
   slug: string;
   title: string;
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
-  reviewNote: string | null;
   updatedAt: string;
   author: { name: string | null; username: string | null };
 }
 
-const STATUS: Record<Row["status"], { text: string; cls: string }> = {
-  DRAFT: { text: "Entwurf", cls: "bg-zinc-700/60 text-gray-200" },
-  PENDING: { text: "In Prüfung", cls: "bg-amber-400/20 text-amber-200" },
-  PUBLISHED: { text: "Veröffentlicht", cls: "bg-emerald-500/20 text-emerald-300" },
-  REJECTED: { text: "Zurückgegeben", cls: "bg-red-500/20 text-red-300" },
+const STATUS = {
+  draft: { text: "Entwurf", cls: "bg-zinc-700/60 text-gray-200" },
+  published: { text: "Veröffentlicht", cls: "bg-emerald-500/20 text-emerald-300" },
 };
 
 export default function WorldList() {
   const router = useRouter();
   const [mine, setMine] = useState<Row[] | null>(null);
-  const [review, setReview] = useState<Row[]>([]);
   const [max, setMax] = useState(3);
   const [isAdmin, setIsAdmin] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -41,13 +37,12 @@ export default function WorldList() {
   const load = () => setReloadKey((k) => k + 1);
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/dnd/custom-worlds?scope=review")
+    fetch("/api/dnd/custom-worlds")
       .then(async (res) => {
         const json = await res.json();
         if (cancelled) return;
         if (!res.ok) { setError(json.error ?? "Konnte nicht geladen werden."); return; }
         setMine(json.mine);
-        setReview(json.review);
         setMax(json.max);
         setIsAdmin(json.isAdmin);
       })
@@ -82,21 +77,6 @@ export default function WorldList() {
 
   return (
     <div className="space-y-5">
-      {isAdmin && review.length > 0 && (
-        <section className="moba-panel rounded-2xl p-4 space-y-2">
-          <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Zur Prüfung ({review.length})</p>
-          <ul className="space-y-1.5">
-            {review.map((r) => (
-              <li key={r.id} className="flex items-center gap-3 text-xs">
-                <span className="font-bold text-white">{r.title}</span>
-                <span className="text-gray-500">von {r.author.username ?? r.author.name ?? "?"}</span>
-                <Link href={`/oma-quest/editor/${r.id}`} className="ml-auto rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold px-3 py-1.5">Ansehen &amp; prüfen</Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Meine Locations{!isAdmin && ` (${mine.length}/${max})`}</p>
@@ -113,12 +93,11 @@ export default function WorldList() {
               <li key={r.id} className="moba-panel rounded-2xl p-3 flex flex-wrap items-center gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white truncate">{r.title}</p>
-                  {r.status === "REJECTED" && r.reviewNote && <p className="text-[11px] text-red-300">Rückmeldung: {r.reviewNote}</p>}
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${STATUS[r.status].cls}`}>{STATUS[r.status].text}</span>
+                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${STATUS[r.status === "PUBLISHED" ? "published" : "draft"].cls}`}>{STATUS[r.status === "PUBLISHED" ? "published" : "draft"].text}</span>
                 <div className="ml-auto flex gap-2">
                   <Link href={`/oma-quest/editor/${r.id}`} className="rounded-lg border border-white/15 text-gray-200 text-xs font-semibold px-3 py-1.5 hover:border-white/30">
-                    {r.status === "DRAFT" || r.status === "REJECTED" ? "Bearbeiten" : "Ansehen"}
+                    Bearbeiten
                   </Link>
                   {r.status === "PUBLISHED" && <Link href="/oma-quest" className="rounded-lg border border-emerald-400/30 text-emerald-300 text-xs font-semibold px-3 py-1.5">Zur Weltkarte</Link>}
                   {r.status !== "PUBLISHED" && (

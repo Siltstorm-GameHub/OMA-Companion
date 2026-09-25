@@ -6,7 +6,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
 import TeWorld from "@/components/te-map/TeWorld";
@@ -21,7 +20,6 @@ interface Loaded {
   id: string;
   slug: string;
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
-  reviewNote: string | null;
   doc: CustomWorldDoc;
   hex: Hex | null;
   canEdit: boolean;
@@ -30,25 +28,21 @@ interface Loaded {
 
 type Tab = "map" | "quest" | "test";
 
-const STATUS_LABEL: Record<Loaded["status"], { text: string; cls: string }> = {
-  DRAFT: { text: "Entwurf", cls: "bg-zinc-700/60 text-gray-200" },
-  PENDING: { text: "In Prüfung", cls: "bg-amber-400/20 text-amber-200" },
-  PUBLISHED: { text: "Veröffentlicht", cls: "bg-emerald-500/20 text-emerald-300" },
-  REJECTED: { text: "Zurückgegeben", cls: "bg-red-500/20 text-red-300" },
+const STATUS_LABEL = {
+  draft: { text: "Entwurf", cls: "bg-zinc-700/60 text-gray-200" },
+  published: { text: "Veröffentlicht", cls: "bg-emerald-500/20 text-emerald-300" },
 };
 
 const HISTORY_MAX = 60;
 
 export default function WorldEditor({ id }: { id: string }) {
-  const router = useRouter();
   const [data, setData] = useState<Loaded | null>(null);
   const [doc, setDoc] = useState<CustomWorldDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("map");
   const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState<"save" | "submit" | "review" | null>(null);
+  const [busy, setBusy] = useState<"save" | "publish" | null>(null);
   const [focusActor, setFocusActor] = useState<string | null>(null);
-  const [rejectNote, setRejectNote] = useState("");
   const history = useRef<CustomWorldDoc[]>([]);
   const future = useRef<CustomWorldDoc[]>([]);
   const docRef = useRef<CustomWorldDoc | null>(null);
@@ -145,32 +139,19 @@ export default function WorldEditor({ id }: { id: string }) {
     return v.ok ? [] : v.errors;
   }, [doc]);
   // Autoren ohne Admin-Recht müssen sich ihr Feld selbst aussuchen; Admins dürfen es offen lassen (Automatik)
-  const needsHex = !!data && !data.isAdmin && (data.status === "DRAFT" || data.status === "REJECTED") && !hex;
+  const needsHex = !!data && !data.isAdmin && data.status !== "PUBLISHED" && !hex;
   const problems = needsHex ? ["Wähle ein leeres Feld auf der Weltkarte für deine Location.", ...docProblems] : docProblems;
   const testWorld = useMemo(() => (tab === "test" && doc ? docToWorld(doc) : null), [tab, doc]);
 
-  const submit = async () => {
+  const publish = async () => {
     if (dirty && !(await save())) return;
-    setBusy("submit");
+    setBusy("publish");
     try {
-      const res = await fetch(`/api/dnd/custom-worlds/${id}/submit`, { method: "POST" });
+      const res = await fetch(`/api/dnd/custom-worlds/${id}/publish`, { method: "POST" });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(json.problems?.[0] ?? json.error ?? "Einreichen fehlgeschlagen."); return; }
-      toast.success("Eingereicht — ein Admin schaut es sich an.");
-      router.push("/oma-quest/editor");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const review = async (action: "approve" | "reject") => {
-    setBusy("review");
-    try {
-      const res = await fetch(`/api/dnd/custom-worlds/${id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, note: rejectNote }) });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(json.error ?? "Fehlgeschlagen."); return; }
-      toast.success(action === "approve" ? "Freigegeben — die Location ist auf der Weltkarte." : "Zurückgegeben.");
-      router.push("/oma-quest/editor");
+      if (!res.ok) { toast.error(json.problems?.[0] ?? json.error ?? "Veröffentlichen fehlgeschlagen."); return; }
+      toast.success("Veröffentlicht — die Location ist jetzt auf der Weltkarte.");
+      setData((d) => (d ? { ...d, status: "PUBLISHED" } : d));
     } finally {
       setBusy(null);
     }
@@ -180,9 +161,8 @@ export default function WorldEditor({ id }: { id: string }) {
   if (!data || !doc) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-gray-500 animate-spin" /></div>;
 
   const readOnly = !data.canEdit;
-  const status = STATUS_LABEL[data.status];
-  const canSubmit = !data.isAdmin || data.status === "DRAFT" || data.status === "REJECTED";
-  const isAuthorFlow = data.status === "DRAFT" || data.status === "REJECTED";
+  const published = data.status === "PUBLISHED";
+  const status = published ? STATUS_LABEL.published : STATUS_LABEL.draft;
 
   return (
     <div className="space-y-3">
@@ -200,32 +180,20 @@ export default function WorldEditor({ id }: { id: string }) {
               </button>
             </>
           )}
-          {isAuthorFlow && canSubmit && (
-            <button type="button" onClick={() => void submit()} disabled={busy !== null || problems.length > 0} title={problems.length ? "Erst die offenen Punkte beheben" : undefined} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 px-3 py-1.5 text-[11px] font-bold text-white">
-              Zur Prüfung einreichen
+          {!published && (
+            <button type="button" onClick={() => void publish()} disabled={busy !== null || problems.length > 0} title={problems.length ? "Erst die offenen Punkte beheben" : undefined} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 px-3 py-1.5 text-[11px] font-bold text-white">
+              {busy === "publish" ? "Veröffentlicht …" : "Veröffentlichen"}
             </button>
           )}
         </div>
       </div>
 
-      {data.reviewNote && data.status === "REJECTED" && (
-        <p className="text-xs text-red-200 rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2">Rückmeldung vom Admin: {data.reviewNote}</p>
-      )}
-      {readOnly && <p className="text-xs text-gray-400 rounded-lg border border-white/10 px-3 py-2">Diese Location ist eingereicht oder veröffentlicht und kann nicht mehr bearbeitet werden.</p>}
-
-      {data.isAdmin && data.status === "PENDING" && (
-        <div className="moba-panel rounded-2xl p-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-amber-300">Prüfung</span>
-          <button type="button" onClick={() => void review("approve")} disabled={busy !== null || problems.length > 0} className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 px-3 py-1.5 text-[11px] font-bold text-white">Freigeben</button>
-          <input value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} maxLength={500} placeholder="Hinweis für den Autor (bei Rückgabe)" className="flex-1 min-w-[200px] rounded bg-zinc-900 border border-white/10 px-2 py-1 text-xs text-white" />
-          <button type="button" onClick={() => void review("reject")} disabled={busy !== null} className="rounded-lg border border-red-400/40 text-red-300 px-3 py-1.5 text-[11px] font-bold hover:bg-red-500/10">Zurückgeben</button>
-        </div>
-      )}
+      {published && <p className="text-xs text-emerald-300/90 rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2">Diese Location ist live. Änderungen wirken sofort — sie muss dafür spielbar bleiben, sonst wird nicht gespeichert. Admins werden über Änderungen informiert.</p>}
 
       <HexPicker
         value={hex}
         ownSlug={data.slug}
-        readOnly={readOnly || data.status === "PUBLISHED"}
+        readOnly={readOnly || published}
         onChange={(h) => { hexRef.current = h; setHexState(h); setDirty(true); }}
       />
 
@@ -266,10 +234,10 @@ export default function WorldEditor({ id }: { id: string }) {
       {/* Prüfung */}
       <div className={`rounded-2xl border px-4 py-3 text-xs ${problems.length ? "border-amber-400/30 bg-amber-400/5" : "border-emerald-400/30 bg-emerald-400/5"}`}>
         {problems.length === 0 ? (
-          <p className="text-emerald-300 font-semibold">Alles in Ordnung — die Location ist spielbar und kann eingereicht werden.</p>
+          <p className="text-emerald-300 font-semibold">Alles in Ordnung — die Location ist spielbar${published ? "" : " und kann veröffentlicht werden"}.</p>
         ) : (
           <>
-            <p className="text-amber-300 font-semibold mb-1">Vor dem Einreichen noch zu erledigen:</p>
+            <p className="text-amber-300 font-semibold mb-1">Vor dem Veröffentlichen noch zu erledigen:</p>
             <ul className="list-disc pl-5 space-y-0.5 text-gray-300">{problems.map((p, i) => <li key={i}>{p}</li>)}</ul>
           </>
         )}
