@@ -17,6 +17,7 @@
 import type { NormalAttackTargetRule, CardClass } from "@prisma/client";
 import { LEVEL_STAT_MULTIPLIER } from "../src/lib/battle-engine/constants";
 import type { ActiveSkillData, PassiveSkillData } from "../src/lib/battle-engine/types";
+import type { TeCharacterConfig } from "../src/lib/te-character";
 
 export function curve(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
@@ -40,6 +41,8 @@ export interface StandardCardSeed {
   normalAttackTargetRule: NormalAttackTargetRule | null;
   flavorText: string;
   imageUrl: string | null;
+  /** Pixel-Figur (neues Avatar-System, Time Elements) — hat als Hauptmotiv Vorrang vor imageUrl */
+  teCharacter: TeCharacterConfig | null;
   passivePositive: PassiveSkillData;
   passiveNegative: PassiveSkillData;
   activeSkill: ActiveSkillData;
@@ -59,6 +62,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
     imageUrl: "/battle-cards/bastionella.png",
+    teCharacter: {"v": 1, "skin": 3, "layers": {"head": "head5", "hair": "hair10_c1", "top": "top15_c3", "bottom": "bottom13_c3", "weapon": "sword1"}},
     passivePositive: {
       name: "Schildwall",
       description:
@@ -141,6 +145,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Manche Mauern hält man für unüberwindbar. Betonbert ist eine davon.",
     imageUrl: "/battle-cards/betonbert.png",
+    teCharacter: {"v": 1, "skin": 0, "layers": {"head": "head9", "hat": "hat3", "top": "top17_c8", "bottom": "bottom12_c8", "weapon": "shield2L_c2"}},
     passivePositive: {
       name: "Steinhaut",
       description: "Seine Haut ist so hart wie Fels — dauerhaft erhöhte Verteidigung.",
@@ -209,6 +214,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Scharf genug, jede Rüstung zu durchtrennen. Zerbrechlich genug, beim ersten Gegenschlag zu splittern.",
     imageUrl: "/battle-cards/scherbe.png",
+    teCharacter: {"v": 1, "skin": 1, "layers": {"head": "head2", "hat": "hat4_c2", "top": "top13", "bottom": "bottom9", "weapon": "sword2_c3"}},
     passivePositive: {
       name: "Scharfe Kante",
       description: "Jeder Treffer sitzt — dauerhaft erhöhter Angriff.",
@@ -277,6 +283,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: "HIGHEST_HP",
     flavorText: "Ein Ziel zu verfehlen, kommt für Fernrohr nicht infrage. Deckung zu suchen allerdings auch nicht.",
     imageUrl: "/battle-cards/fernrohr.png",
+    teCharacter: {"v": 1, "skin": 5, "layers": {"head": "head1", "hair": "hair3_c1", "top": "top19_c5", "bottom": "bottom10_c7", "weapon": "gun1"}},
     passivePositive: {
       name: "Weitsicht",
       description: "Der geübte Blick durchs Visier — dauerhaft erhöhter Angriff.",
@@ -345,6 +352,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Keine Schramme im Team ist zu klein, um sie zu übersehen. Die eigene Verletzlichkeit dagegen schon.",
     imageUrl: "/battle-cards/pflaesterchen.png",
+    teCharacter: {"v": 1, "skin": 2, "layers": {"head": "head6", "hair": "hair13_c8", "top": "top17_c8", "bottom": "bottom14_c6", "weapon": "wand1_c8"}},
     passivePositive: {
       name: "Sanfte Hand",
       description: "Am Rundenende heilt der Verbündete mit dem niedrigsten HP-Anteil leicht.",
@@ -421,6 +429,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Für jede Lage hat Kato_09 einen Plan. Nur nicht immer die Zeit, ihn rechtzeitig umzusetzen.",
     imageUrl: "/battle-cards/kato-09.png",
+    teCharacter: {"v": 1, "skin": 1, "layers": {"head": "head4", "hair": "hair16_c5", "top": "top22_c9", "bottom": "bottom11_c6"}},
     passivePositive: {
       name: "Kühle Analyse",
       description:
@@ -501,6 +510,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Jeder Treffer, der auf ihm landet, lädt ihn nur weiter auf.",
     imageUrl: "/battle-cards/kupferkurt.png",
+    teCharacter: {"v": 1, "skin": 3, "layers": {"head": "head8", "hat": "hat3_c1", "top": "top14_c7", "bottom": "bottom8_c4", "weapon": "shield2L_c3"}},
     passivePositive: {
       name: "Erdung",
       description: "Jeder erlittene Treffer lädt ihn mit zusätzlicher Rage auf.",
@@ -579,6 +589,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: "LOWEST_HP",
     flavorText: "Sie sucht sich nie den stärksten Gegner. Sie sucht sich den, der es zuerst nicht mehr überlebt.",
     imageUrl: "/battle-cards/nachtklinge.png",
+    teCharacter: {"v": 1, "skin": 1, "layers": {"head": "head3", "hat": "hat5_c2", "top": "top18_c8", "bottom": "bottom5_c3", "weapon": "sword2"}},
     passivePositive: {
       name: "Blutzoll",
       description: "Jeder ausgeteilte Treffer heilt sie ein wenig.",
@@ -654,6 +665,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Sie muss ihr Team nicht stärker machen. Es reicht ihr, den Gegner schwächer zu machen.",
     imageUrl: "/battle-cards/truebsal.png",
+    teCharacter: {"v": 1, "skin": 0, "layers": {"head": "head7", "hat": "hat6_c2", "top": "top22_c9", "bottom": "bottom6_c4", "weapon": "wand1_c2"}},
     passivePositive: {
       name: "Zehrender Nebel",
       description: "Am Rundenende schwächt sie den gefährlichsten Gegner.",

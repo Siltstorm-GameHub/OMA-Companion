@@ -5,6 +5,9 @@
 // ============================================
 
 import { useEffect, useRef, useState } from "react";
+import { playSfx } from "@/lib/dnd/oq-sfx";
+import { ClassIcon, FxLayer, useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
+import type { FxEvent } from "@/lib/dnd/oq-fx";
 import { Gold } from "@/components/te-map/play/Currency";
 import { AP_PER_ROUND, abilitiesOf, getMonster, type Monster } from "@/lib/dnd/combat";
 import { alive, TURN_MS, type GroupHero } from "@/lib/dnd/group-combat";
@@ -80,10 +83,11 @@ function Lobby({ view, myId, call, busy }: { view: GroupFightView; myId: string;
   );
 }
 
-function HeroCard({ h, active, mine }: { h: GroupHero; active: boolean; mine: boolean }) {
+function HeroCard({ h, active, mine, fx }: { h: GroupHero; active: boolean; mine: boolean; fx: FxEvent[] }) {
   return (
-    <div className={`oq-slot p-2 space-y-1 ${active ? "ring-2 ring-amber-300" : ""} ${!alive(h) ? "opacity-60" : ""}`}>
-      <p className="text-[11px] font-black text-white truncate">{mine ? "🧙 " : ""}{h.name}{active ? " ◀" : ""}{h.left ? " (geflohen)" : h.hp <= 0 ? " (am Boden)" : ""}</p>
+    <div className={`oq-slot p-2 space-y-1 relative ${active ? "ring-2 ring-amber-300" : ""} ${!alive(h) ? "opacity-60" : ""}`}>
+      <FxLayer events={fx} />
+      <p className="text-[11px] font-black text-white truncate flex items-center gap-1"><ClassIcon classId={h.fighter.classId} size={18} />{mine ? "★ " : ""}{h.name}{active ? " ◀" : ""}{h.left ? " (geflohen)" : h.hp <= 0 ? " (am Boden)" : ""}</p>
       <Bar value={h.hp} max={h.fighter.maxHp} color="bg-emerald-500" />
       <p className="text-[10px] text-gray-300">{h.hp}/{h.fighter.maxHp} LP · RK {h.fighter.ac}{h.guard > 0 ? " + Schild" : ""}</p>
     </div>
@@ -96,6 +100,8 @@ function Fight({ view, myId, call, busy }: { view: GroupFightView; myId: string;
   const logEnd = useRef<HTMLDivElement>(null);
   useEffect(() => { logEnd.current?.scrollIntoView({ block: "nearest" }); }, [s.log.length]);
   const me = s.heroes.find((h) => h.cardId === myId);
+  const fx = useFxEvents(s.log, s.heroes.map((h) => h.name));
+  useFightSounds(s.monsterId, s.status);
   const turnHero = s.heroes[s.turn];
   const myTurn = s.status === "active" && turnHero?.cardId === myId && !!me && alive(me);
   const secLeft = useCountdown(s.turnStartedAt + TURN_MS, view.serverNow);
@@ -107,13 +113,14 @@ function Fight({ view, myId, call, busy }: { view: GroupFightView; myId: string;
 
   return (
     <div className="space-y-3">
-      <div className="oq-slot p-3 space-y-1">
+      <div className="oq-slot p-3 space-y-1 relative">
+        <FxLayer events={fx.filter((e) => e.side === "monster")} />
         <p className="text-xs font-black text-white">{m?.emoji} {m?.name} <span className="text-gray-500 font-normal">RK {m?.ac}{s.taunt > 0 ? " · verspottet" : ""}{s.inspire > 0 ? " · Gruppe inspiriert" : ""}{s.provoke ? " · Angriffe auf den Schildträger" : ""}</span></p>
         <Bar value={s.monsterHp} max={s.monsterMaxHp} color="bg-red-500" />
         <p className="text-[11px] text-gray-300">{s.monsterHp} / {s.monsterMaxHp} LP · Runde {s.round}</p>
       </div>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-        {s.heroes.map((h) => <HeroCard key={h.cardId} h={h} active={s.status === "active" && h.cardId === turnHero?.cardId} mine={h.cardId === myId} />)}
+        {s.heroes.map((h) => <HeroCard key={h.cardId} h={h} active={s.status === "active" && h.cardId === turnHero?.cardId} mine={h.cardId === myId} fx={fx.filter((e) => e.side === "hero" && (e.hero ? e.hero === h.name : h.cardId === myId))} />)}
       </div>
       <div className="oq-slot p-2 h-40 overflow-y-auto space-y-0.5 text-[11px] text-gray-200" aria-live="polite">
         {s.log.map((l, i) => <p key={i} className={i === s.log.length - 1 ? "text-white font-semibold" : ""}>{l}</p>)}
@@ -178,6 +185,7 @@ export function FightInvite({ view, call, busy }: { view: GroupFightView; call: 
   const m = getMonster(view.monsterId);
   const left = useCountdown(view.lobbyEndsAt, view.serverNow);
   const who = view.members.find((x) => x.cardId === view.initiatorCardId)?.name ?? "Jemand";
+  useEffect(() => { playSfx("ping"); }, []);
   return (
     <div className="absolute inset-x-2 top-2 z-50 mx-auto max-w-md rounded-md border-2 border-violet-300/80 bg-[#0b1220]/95 p-3 shadow-[0_3px_0_rgba(0,0,0,0.6)] space-y-2" role="alertdialog" aria-label="Kampf-Einladung">
       <p className="text-xs font-black text-violet-200">⚔️ {who} will mit euch gegen {m?.emoji} {m?.name} kämpfen!</p>

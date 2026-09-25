@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       speed: seed.speed,
       normalAttackTargetRule: seed.normalAttackTargetRule,
       imageUrl: seed.imageUrl,
+      teCharacter: seed.teCharacter ? toJson(seed.teCharacter) : Prisma.JsonNull,
       passivePositive: toJson(seed.passivePositive),
       passiveNegative: toJson(seed.passiveNegative),
       activeSkill: toJson(seed.activeSkill),

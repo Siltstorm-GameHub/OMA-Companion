@@ -7,6 +7,8 @@
 import { useEffect, useState } from "react";
 import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { abilityOfClass, secondAbilityOfClass } from "@/lib/dnd/combat";
+import { ClassIcon } from "@/components/te-map/play/Fx";
+import { BRANCH_ICON } from "@/lib/dnd/oq-fx";
 import { BRANCHES, BRANCH_LABEL, skillCost, type SkillNode } from "@/lib/dnd/skills";
 import type { SkillView } from "@/lib/dnd/skills-server";
 
@@ -47,7 +49,7 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
   return (
     <div className="oq-panel p-4 space-y-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <p className="oq-title">Talente · {view.className}</p>
+        <p className="oq-title flex items-center gap-1.5"><ClassIcon classId={view.classId} size={24} />Talente · {view.className}</p>
         <span className="text-xs font-black text-amber-200">{view.points.left} Talentpunkt{view.points.left === 1 ? "" : "e"} frei</span>
         <span className="text-[11px] text-gray-400">{view.points.spent} von {view.points.total} ausgegeben · ein Punkt je Stufe ab 2</span>
       </div>
@@ -58,7 +60,10 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {BRANCHES.map((b) => (
           <div key={b} className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-violet-300">{BRANCH_LABEL[b]}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-violet-300 flex items-center gap-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BRANCH_ICON(b)} alt="" width={22} height={22} className="object-contain" style={{ width: 22, height: 22 }} />{BRANCH_LABEL[b]}
+            </p>
             {view.tree.filter((n) => n.branch === b).map((n) => {
               const st = state(n);
               return (
@@ -66,7 +71,7 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
                   key={n.id} type="button" disabled={busy || st !== "available"} onClick={() => void learn(n)} aria-label={`${n.name}, ${n.desc}`}
                   className={`w-full text-left rounded-md border-2 px-2 py-1.5 text-xs transition ${st === "owned" ? "border-emerald-400/70 bg-emerald-500/15 text-white" : st === "available" ? "border-amber-300/80 bg-amber-400/10 text-white hover:bg-amber-400/20" : "border-white/10 bg-black/30 text-gray-400"}`}
                 >
-                  <span className="flex items-center gap-1.5 font-black"><span>{n.icon}</span>{n.name}<span className="ml-auto text-[10px] font-semibold opacity-80">{st === "owned" ? "✓" : `${skillCost(n)} P`}</span></span>
+                  <span className="flex items-center gap-1.5 font-black">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={BRANCH_ICON(n.branch)} alt="" width={16} height={16} className={`object-contain ${st === "owned" ? "" : st === "available" ? "" : "opacity-50"}`} style={{ width: 16, height: 16 }} />{n.name}<span className="ml-auto text-[10px] font-semibold opacity-80">{st === "owned" ? "✓" : `${skillCost(n)} P`}</span></span>
                   <span className="block text-[11px] leading-snug opacity-90">{n.desc}</span>
                   {st === "locked" && <span className="block text-[10px] text-gray-500">Setzt das Talent davor voraus.</span>}
                 </button>

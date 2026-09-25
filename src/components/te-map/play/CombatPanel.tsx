@@ -9,6 +9,7 @@ import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { Gold } from "@/components/te-map/play/Currency";
 import { AP_PER_ROUND, abilitiesOf, getMonster, type CombatAction, type CombatState, type Fighter, type Monster } from "@/lib/dnd/combat";
 import { getItem } from "@/lib/dnd/items";
+import { ClassIcon, FxLayer, useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
 import GroupFightPanel, { type FightCall, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 
 interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter }
@@ -28,6 +29,8 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
   const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
+  const fx = useFxEvents(view?.state?.log ?? []);
+  useFightSounds(view?.state?.monsterId, view?.state?.status);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,12 +123,14 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
   return (
     <div className="oq-panel p-4 space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="oq-slot p-3 space-y-1">
-          <p className="text-xs font-black text-white">🧙 {s.fighter.name} <span className="text-gray-500 font-normal">RK {s.fighter.ac + (s.guard > 0 ? 3 : 0)}{s.guard > 0 ? " (Schild)" : ""}</span></p>
+        <div className="oq-slot p-3 space-y-1 relative">
+          <FxLayer events={fx.filter((e) => e.side === "hero")} />
+          <p className="text-xs font-black text-white flex items-center gap-1.5"><ClassIcon classId={s.fighter.classId} size={22} /> {s.fighter.name} <span className="text-gray-500 font-normal">RK {s.fighter.ac + (s.guard > 0 ? 3 : 0)}{s.guard > 0 ? " (Schild)" : ""}</span></p>
           <Bar value={s.hp} max={s.fighter.maxHp} color="bg-emerald-500" />
           <p className="text-[11px] text-gray-300">{s.hp} / {s.fighter.maxHp} LP</p>
         </div>
-        <div className="oq-slot p-3 space-y-1">
+        <div className="oq-slot p-3 space-y-1 relative">
+          <FxLayer events={fx.filter((e) => e.side === "monster")} />
           <p className="text-xs font-black text-white">{m?.emoji} {m?.name} <span className="text-gray-500 font-normal">RK {m?.ac}{s.taunt > 0 ? " · verspottet" : ""}</span></p>
           <Bar value={s.monsterHp} max={m?.hp ?? 1} color="bg-red-500" />
           <p className="text-[11px] text-gray-300">{s.monsterHp} / {m?.hp} LP</p>

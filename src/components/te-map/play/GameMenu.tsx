@@ -4,7 +4,9 @@
 // OMA Quest — Spielmenü in der Spielfläche: Charakter, Inventar, Quests, Gruppe, Chat, Spielleiter
 // ============================================
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import SoundControl from "@/components/te-map/play/SoundControl";
+import { playSfx } from "@/lib/dnd/oq-sfx";
 import QuestLog from "@/components/dnd/QuestLog";
 import type { ChatMessage } from "@/components/te-map/TeWorld";
 import type { Notify } from "@/components/te-map/play/GameFeed";
@@ -49,6 +51,7 @@ interface Props {
 }
 
 export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, isMod, isGm, onEmote, onChatRemoved, notify, refreshKey, onChanged, gf, groupCall, groupBusy }: Props) {
+  useEffect(() => { playSfx("menu"); return () => playSfx("menu"); }, []);
   let body: ReactNode = null;
   if (tab === "character") body = <CharacterPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "progress") body = <ProgressPanel refreshKey={refreshKey} />;
@@ -69,7 +72,8 @@ export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, 
       <div className="oq-panel w-full max-w-4xl mx-auto flex flex-col min-h-0 max-h-full">
         <div className="flex items-center gap-2 p-2 border-b-2 border-[#4a3b1c]">
           <p className="text-xs font-bold text-amber-300 uppercase tracking-widest px-1">{TAB_LABEL[tab]}</p>
-          <button type="button" onClick={onClose} className="oq-btn text-xs px-3 py-1.5 ml-auto" aria-label="Menü schließen" title="Esc">✕ Schließen</button>
+          <span className="ml-auto"><SoundControl /></span>
+          <button type="button" onClick={onClose} className="oq-btn text-xs px-3 py-1.5" aria-label="Menü schließen" title="Esc">✕ Schließen</button>
         </div>
         <div className="p-3 overflow-y-auto min-h-0">{body}</div>
       </div>

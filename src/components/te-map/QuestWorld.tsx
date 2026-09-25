@@ -7,6 +7,7 @@
 // Spielwelt. Wer nicht an dieser Location angekommen ist, wird zur Weltkarte geschickt.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MuteButton } from "@/components/te-map/play/SoundControl";
 import { FightInvite, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 import Link from "next/link";
 import { Loader2 } from "@/components/icons";
@@ -280,6 +281,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
                 {icon}
               </button>
             ))}
+            <MuteButton className="oq-btn h-11 w-11 text-xl grid place-items-center" />
           </div>
         )}
         overlay={(

@@ -12,6 +12,8 @@ import { getClassConfig, LEVEL_BORDER, MOBA_CARD_FRAME_IMAGE, type BattleCardDat
 import { tableValueForLevel, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";
+import TeCharacter from "@/components/te-character/TeCharacter";
+import { TE_CROP_FIGURE } from "@/lib/te-character";
 
 /** Clash-Royale-artiges Upgrade-Badge — ragt über den unteren Rand des
  *  Kartenbilds statt als separate Textzeile unter der Kachel zu stehen (siehe
@@ -155,7 +157,9 @@ export default function CardTile({
         }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          {card.imageUrl ? (
+          {card.rarity === "STANDARD" && card.teCharacter ? (
+            <TeCharacter config={card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={3} className="max-h-full w-auto" title={card.name} />
+          ) : card.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
           ) : locked ? (

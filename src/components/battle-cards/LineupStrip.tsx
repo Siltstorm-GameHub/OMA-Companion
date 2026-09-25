@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import MobaIcon from "./MobaIcon";
+import TeCharacter from "@/components/te-character/TeCharacter";
+import { TE_CROP_FIGURE } from "@/lib/te-character";
 
 const LINEUP_SIZE = 5;
 
@@ -37,7 +39,9 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
               }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
-                {entry.card.imageUrl ? (
+                {entry.card.rarity === "STANDARD" && entry.card.teCharacter ? (
+                  <TeCharacter config={entry.card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={2} className="max-h-full w-auto" title={entry.card.name} />
+                ) : entry.card.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={entry.card.imageUrl} alt={entry.card.name} className="w-full h-full object-cover" />
                 ) : (

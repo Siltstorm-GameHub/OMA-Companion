@@ -7,6 +7,7 @@
 // als Banner am Kopf (useNotice). Beides im Look des Spiels — keine schwebenden Benachrichtigungen der App.
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { playSfx, sfxForFeed } from "@/lib/dnd/oq-sfx";
 
 export type FeedKind = "quest" | "info" | "reward" | "level" | "error";
 export type Notify = (kind: FeedKind, title: string, text?: string) => void;
@@ -30,6 +31,8 @@ export function useGameFeed(): { items: FeedItem[]; push: Notify } {
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const push = useCallback<Notify>((kind, title, text) => {
     const id = ++seq.current;
+    const snd = sfxForFeed(kind);
+    if (snd) playSfx(snd);
     setItems((cur) => [...cur.slice(-3), { id, kind, title, text }]);
     timers.current.push(setTimeout(() => setItems((cur) => cur.filter((i) => i.id !== id)), SHOW_MS));
   }, []);

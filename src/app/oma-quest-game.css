@@ -78,3 +78,9 @@
 @media (prefers-reduced-motion: reduce) {
   .oq-skin .oq-feed, .oq-skin .oq-dice-shake, .oq-skin .oq-dice-tumble, .oq-skin .oq-dice-pop { animation: none; }
 }
+
+/* Kampf-Effekte: Spritesheet-Streifen, Bild für Bild (steps), am Ende ausblenden */
+.oq-fx { image-rendering: pixelated; background-repeat: no-repeat; z-index: 5; }
+@keyframes oq-fx-play { from { background-position-x: 0; } to { background-position-x: calc(var(--fx-w) * -1); } }
+@keyframes oq-fx-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .oq-fx { display: none; } }
