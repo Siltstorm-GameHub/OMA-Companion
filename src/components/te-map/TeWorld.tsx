@@ -19,7 +19,7 @@ import { STAMPS, type StampDef, type StampId, type TileSheet } from "@/lib/te-ma
 import { CAVE_WALL_TILES, THEMES } from "@/lib/te-map/themes";
 import { type WorldDef } from "@/lib/te-map/types";
 
-const T = 16;
+export const T = 16;
 /** Sichtfenster in Kacheln (Standard); die Karte darf größer sein, die Kamera folgt der Figur. */
 const DEFAULT_VIEW_W = 13;
 const DEFAULT_VIEW_H = 9;
@@ -35,11 +35,11 @@ const SHEET_FILES = {
   chests: "/te/tiles/chests.png",
 } as const;
 type SheetKey = keyof typeof SHEET_FILES;
-type Sheets = Record<SheetKey, HTMLImageElement>;
+export type Sheets = Record<SheetKey, HTMLImageElement>;
 
 let sheetsPromise: Promise<Sheets> | null = null;
 /** Kachelbilder einmal laden und für alle Welten wiederverwenden. */
-function loadSheets(): Promise<Sheets> {
+export function loadSheets(): Promise<Sheets> {
   sheetsPromise ??= Promise.all(
     Object.entries(SHEET_FILES).map(
       ([k, src]) =>
@@ -61,13 +61,13 @@ function drawQuarters(ctx: CanvasRenderingContext2D, img: HTMLImageElement, bx: 
 }
 
 /** Stempel an Pixelposition (x, y) — obere linke Ecke — zeichnen. */
-function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number) {
+export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number) {
   const s = STAMPS[id] as StampDef;
   ctx.drawImage(sheets[s.sheet as TileSheet], s.sx * T, s.sy * T, s.w * T, s.h * T, x, y, s.w * T, s.h * T);
 }
 
 /** Boden, Wege, Wände und Häuser einmal in eine große Zeichenfläche vorzeichnen. */
-function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
+export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
   const m = world.map;
   const theme = THEMES[m.theme];
   const groundImg = sheets[theme.sheet];

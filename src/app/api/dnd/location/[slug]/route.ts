@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getLocationEventLog, runStoryTick } from "@/lib/dnd/story";
 import { commitArrivalIfDue } from "@/lib/dnd/travel";
 import { getWorldQuestStep } from "@/lib/dnd/quests";
+import { getPublishedCustomWorld } from "@/lib/dnd/custom-worlds";
 import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
 
 /**
@@ -48,7 +49,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   const eventLog = await getLocationEventLog(location.id);
 
+  // Feste Welten kennt der Client selbst; Editor-Welten (auch bearbeitete feste) kommen als Daten mit und haben Vorrang.
+  const customWorld = await getPublishedCustomWorld(slug);
+
   return NextResponse.json({
+    customWorld,
     location: { id: location.id, slug: location.slug, name: location.name, description: location.description, locationType: location.locationType },
     canEnter,
     inTransit,

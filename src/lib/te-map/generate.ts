@@ -133,6 +133,11 @@ export class MapBuilder {
   npc(id: string, name: string, x: number, y: number, dir: Dir, seed: number, talk: Talk[]) {
     this.actor({ id, kind: "npc", name, x, y, dir, config: npcLook(seed), talk });
   }
+  /** Fertigen Akteur übernehmen (Editor-Welten: Aussehen kommt aus der Konfiguration, nicht aus einem Seed). */
+  addActor(a: Actor) {
+    if (a.kind === "sign") this.actors.push(a);
+    else this.actor(a);
+  }
   chest(id: string, name: string, x: number, y: number, talk: Talk[]) {
     this.actor({ id, kind: "chest", name, x, y, dir: "down", talk });
   }
@@ -165,6 +170,14 @@ export class MapBuilder {
       this.stamps.push({ id: "rockBig", x: 0, y });
       this.stamps.push({ id: "rockGrey", x: this.cols - 2, y });
     }
+  }
+
+  /** Höhlenwand-Kachel (gezeichnet als Wand und gesperrt). */
+  wall(x: number, y: number) {
+    if (!this.inMap(x, y)) return;
+    this.wallRects.push([x, y, 1, 1]);
+    this.blocked.push([x, y, 1, 1]);
+    this.mark(this.solidCells, [x, y, 1, 1]);
   }
 
   block(x: number, y: number, w: number, h: number) { this.blocked.push([x, y, w, h]); this.mark(this.solidCells, [x, y, w, h]); }

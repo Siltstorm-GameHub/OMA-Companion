@@ -13,8 +13,10 @@ import { Loader2 } from "@/components/icons";
 import TeWorld, { type OtherPlayer } from "./TeWorld";
 import { getWorld } from "@/lib/te-map/worlds";
 import type { TeCharacterConfig } from "@/lib/te-character";
+import type { WorldDef } from "@/lib/te-map/types";
 
 interface LocationState {
+  customWorld: WorldDef | null;
   location: { id: string; slug: string; name: string; description: string | null; locationType: string };
   canEnter: boolean;
   inTransit: boolean;
@@ -30,7 +32,8 @@ interface LocationState {
 export default function QuestWorld({ slug }: { slug: string }) {
   const [data, setData] = useState<LocationState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const world = useMemo(() => getWorld(slug), [slug]);
+  const staticWorld = useMemo(() => getWorld(slug), [slug]);
+  const world = data?.customWorld ?? staticWorld ?? undefined;
 
   useEffect(() => {
     let cancelled = false;

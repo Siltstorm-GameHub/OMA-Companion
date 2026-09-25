@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { commitArrivalIfDue } from "@/lib/dnd/travel";
 import { advanceWorldQuestStep } from "@/lib/dnd/quests";
-import { getWorld } from "@/lib/te-map/worlds";
+import { resolveWorld } from "@/lib/dnd/custom-worlds";
 
 /**
  * Quest-Schritt in der begehbaren Welt einer Location melden. Input: { from } = der Schritt, der
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { slug } = await params;
-  if (!getWorld(slug)) return NextResponse.json({ error: "Unbekannte Welt" }, { status: 404 });
+  if (!(await resolveWorld(slug))) return NextResponse.json({ error: "Unbekannte Welt" }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const from = Number(body?.from);

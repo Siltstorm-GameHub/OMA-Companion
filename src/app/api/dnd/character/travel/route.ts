@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
   const from = await positionOfCard(fresh);
   if (!from) return NextResponse.json({ error: "Keine Startposition — bitte Seite neu laden" }, { status: 400 });
 
-  if (!Object.values(LOCATION_HEXES).some((h) => h.col === target.col && h.row === target.row)) {
+  const isLocation = Object.values(LOCATION_HEXES).some((h) => h.col === target.col && h.row === target.row)
+    || !!(await prisma.dndLocation.findFirst({ where: { hexCol: target.col, hexRow: target.row }, select: { id: true } }));
+  if (!isLocation) {
     return NextResponse.json({ error: "Reiseziele sind nur die festen Locations" }, { status: 400 });
   }
   const t = terrainAt(target);

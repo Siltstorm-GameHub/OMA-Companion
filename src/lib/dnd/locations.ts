@@ -102,7 +102,16 @@ export function getLocationHex(slug: string) {
  * Aufruf aufgerufen (kein separates Seed-Skript nötig, kein Ticking-Prozess).
  */
 export async function ensureDndWorldSeeded(): Promise<void> {
+  // Admin-Änderungen respektieren: gelöschte Orte nicht neu anlegen, im Editor bearbeitete (DndCustomWorld mit
+  // demselben Slug) nicht mit den Code-Texten überschreiben.
+  const [removed, overridden] = await Promise.all([
+    prisma.dndRemovedContent.findMany({ where: { kind: "LOCATION" }, select: { slug: true } }),
+    prisma.dndCustomWorld.findMany({ where: { slug: { in: DND_LOCATIONS.map((l) => l.slug) } }, select: { slug: true } }),
+  ]);
+  const skip = new Set(removed.map((r) => r.slug));
+  const edited = new Set(overridden.map((r) => r.slug));
   for (const [order, loc] of DND_LOCATIONS.entries()) {
+    if (skip.has(loc.slug)) continue;
     const hex = getLocationHex(loc.slug);
     const data = {
       name: loc.name,
@@ -115,7 +124,7 @@ export async function ensureDndWorldSeeded(): Promise<void> {
     await prisma.dndLocation.upsert({
       where: { slug: loc.slug },
       create: { slug: loc.slug, ...data },
-      update: data,
+      update: edited.has(loc.slug) ? {} : data,
     });
   }
 }

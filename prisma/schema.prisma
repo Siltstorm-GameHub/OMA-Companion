@@ -91,21 +91,21 @@ model User {
   dailyMessages                    DailyMessage[]
   dailyPolls                       DailyPoll[]
   dailyPollVotes                   DailyPollVote[]
-  eventPredictionsMade             EventWinnerPrediction[]     @relation("EventPredictionAuthor")
-  eventPredictionsReceived         EventWinnerPrediction[]     @relation("EventPredictionTarget")
+  eventPredictionsMade             EventWinnerPrediction[]      @relation("EventPredictionAuthor")
+  eventPredictionsReceived         EventWinnerPrediction[]      @relation("EventPredictionTarget")
   predictionStreak                 PredictionStreak?
-  duelChallengesSent               DuelChallenge[]             @relation("DuelChallenger")
-  duelChallengesReceived           DuelChallenge[]             @relation("DuelOpponent")
+  duelChallengesSent               DuelChallenge[]              @relation("DuelChallenger")
+  duelChallengesReceived           DuelChallenge[]              @relation("DuelOpponent")
   wanderpocalHoldings              WanderpocalHolder[]
   wanderpocalStats                 WanderpocalStat[]
   communityStreams                 EventCommunityStreamer[]
   linkedPartner                    Partner?
   notifications                    InAppNotification[]
-  lulPollVotesGiven                LulPollVote[]               @relation("LulPollVoter")
-  lulPollVotesReceived             LulPollVote[]               @relation("LulPollTarget")
+  lulPollVotesGiven                LulPollVote[]                @relation("LulPollVoter")
+  lulPollVotesReceived             LulPollVote[]                @relation("LulPollTarget")
   serverApplications               ServerApplication[]
   communityJobApplications         CommunityJobApplication[]
-  communityJobApplicationsReviewed CommunityJobApplication[]   @relation("CommunityJobApplicationReviewer")
+  communityJobApplicationsReviewed CommunityJobApplication[]    @relation("CommunityJobApplicationReviewer")
   communityJobMemberships          CommunityJobMember[]
   communityJobWeeklyPayouts        CommunityJobWeeklyPayout[]
   jobRecommendationDismissals      JobRecommendationDismissal[]
@@ -117,45 +117,46 @@ model User {
   jobMediaAlbums                   JobMediaAlbum[]
   marketingCampaigns               MarketingCampaign[]
   ideaInterests                    IdeaInterest[]
-  promotionRequests                PromotionRequest[] @relation("PromotionRequester")
+  promotionRequests                PromotionRequest[]           @relation("PromotionRequester")
   jobMediaAssetVotes               JobMediaAssetVote[]
   marketingPosts                   MarketingPost[]
   marketingPostVotes               MarketingPostVote[]
   coachTrainingSessions            CoachTrainingSession[]
   coachTrainingSignups             CoachTrainingSignup[]
-  coachRatingsReceived             CoachRating[]               @relation("CoachRatingTarget")
-  coachRatingsGiven                CoachRating[]               @relation("CoachRatingRater")
-  coachMenteesAsCoach              CoachMentee[]               @relation("CoachMenteeCoach")
-  coachMenteesAsMentee             CoachMentee[]               @relation("CoachMenteeMentee")
-  coachHelpReceived                CoachHelpRequest[]          @relation("CoachHelpReceived")
-  coachHelpSent                    CoachHelpRequest[]          @relation("CoachHelpSent")
-  coachOutreachSent                CoachOutreach[]             @relation("CoachOutreachSent")
-  coachOutreachReceived            CoachOutreach[]             @relation("CoachOutreachReceived")
+  coachRatingsReceived             CoachRating[]                @relation("CoachRatingTarget")
+  coachRatingsGiven                CoachRating[]                @relation("CoachRatingRater")
+  coachMenteesAsCoach              CoachMentee[]                @relation("CoachMenteeCoach")
+  coachMenteesAsMentee             CoachMentee[]                @relation("CoachMenteeMentee")
+  coachHelpReceived                CoachHelpRequest[]           @relation("CoachHelpReceived")
+  coachHelpSent                    CoachHelpRequest[]           @relation("CoachHelpSent")
+  coachOutreachSent                CoachOutreach[]              @relation("CoachOutreachSent")
+  coachOutreachReceived            CoachOutreach[]              @relation("CoachOutreachReceived")
   coachGuides                      CoachGuide[]
   coachGuideVotes                  CoachGuideVote[]
   coachWaitlistEntries             CoachTrainingWaitlistEntry[]
   reportSeries                     ReportSeries[]
-  photoRequests                    PhotoRequest[]              @relation("PhotoRequester")
-  interviewsAsJournalist           InterviewRequest[]          @relation("InterviewJournalist")
-  interviewsAsInterviewee          InterviewRequest[]          @relation("InterviewInterviewee")
+  photoRequests                    PhotoRequest[]               @relation("PhotoRequester")
+  interviewsAsJournalist           InterviewRequest[]           @relation("InterviewJournalist")
+  interviewsAsInterviewee          InterviewRequest[]           @relation("InterviewInterviewee")
   communityIdeas                   CommunityIdea[]
   communityIdeaVotes               CommunityIdeaVote[]
   communityBoardComments           CommunityBoardComment[]
   communityBoardCommentVotes       CommunityBoardCommentVote[]
   pokale                           Pokal[]
   battleCardUserCards              UserCard[]
-  battleCardBattles                Battle[]                    @relation("BattleCardPlayer")
+  battleCardBattles                Battle[]                     @relation("BattleCardPlayer")
   battleCardPacks                  CardPack[]
-  battleChallengesSent             BattleChallenge[]           @relation("BattleChallengeChallenger")
-  battleChallengesReceived         BattleChallenge[]           @relation("BattleChallengeOpponent")
+  battleChallengesSent             BattleChallenge[]            @relation("BattleChallengeChallenger")
+  battleChallengesReceived         BattleChallenge[]            @relation("BattleChallengeOpponent")
   battleQueueEntry                 BattleQueueEntry?
-  liveBattlesAsA                   LiveBattle[]                @relation("LiveBattlePlayerA")
-  liveBattlesAsB                   LiveBattle[]                @relation("LiveBattlePlayerB")
+  liveBattlesAsA                   LiveBattle[]                 @relation("LiveBattlePlayerA")
+  liveBattlesAsB                   LiveBattle[]                 @relation("LiveBattlePlayerB")
   campaignProgress                 UserCampaignProgress[]
   tutorialProgress                 UserTutorialProgress?
   gemsTournamentAttempts           GemsTournamentAttempt[]
   duelDecks                        DuelDeck[]
   userTacticCards                  UserTacticCard[]
+  dndCustomWorlds                  DndCustomWorld[]             @relation("DndCustomWorldAuthor")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1166,25 +1167,25 @@ model PushSubscription {
 // ── Community-Gameserver ─────────────────────────────────────────────────────
 
 model GameServer {
-  id            String   @id @default(cuid())
-  name          String
-  game          String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
-  description   String?
-  host          String // IP/Domain – nur für genehmigte User sichtbar
-  port          String?
-  password      String? // Server-Passwort – nur für genehmigte User sichtbar
-  ampInstanceId String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
-  queryType     String? // "amp" | "gamedig" — welches Live-Status-Backend genutzt wird (null = kein Live-Status)
-  gamedigType   String? // GameDig "type"-Key für die direkte Abfrage, z.B. "enshrouded" oder "sdtd" (7 Days to Die)
-  queryPort     String? // Query-Port für die direkte Abfrage, falls abweichend vom Connect-Port (`port`)
+  id                  String   @id @default(cuid())
+  name                String
+  game                String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
+  description         String?
+  host                String // IP/Domain – nur für genehmigte User sichtbar
+  port                String?
+  password            String? // Server-Passwort – nur für genehmigte User sichtbar
+  ampInstanceId       String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
+  queryType           String? // "amp" | "gamedig" — welches Live-Status-Backend genutzt wird (null = kein Live-Status)
+  gamedigType         String? // GameDig "type"-Key für die direkte Abfrage, z.B. "enshrouded" oder "sdtd" (7 Days to Die)
+  queryPort           String? // Query-Port für die direkte Abfrage, falls abweichend vom Connect-Port (`port`)
   queryTelnetPort     String? // Optional: Telnet-Port für Spielernamen (z.B. 7 Days to Die liefert Namen nur via Telnet)
   queryTelnetPassword String? // Optional: Telnet-Passwort, passend zu queryTelnetPort
-  maxSlots      Int
-  isActive      Boolean  @default(true)
-  openAccess    Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
-  createdBy     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  maxSlots            Int
+  isActive            Boolean  @default(true)
+  openAccess          Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   applications ServerApplication[]
 
@@ -1400,7 +1401,7 @@ model InterviewRequest {
   createdAt     DateTime  @default(now())
   answeredAt    DateTime?
 
-  journalist User @relation("InterviewJournalist", fields: [journalistId], references: [id], onDelete: Cascade)
+  journalist  User @relation("InterviewJournalist", fields: [journalistId], references: [id], onDelete: Cascade)
   interviewee User @relation("InterviewInterviewee", fields: [intervieweeId], references: [id], onDelete: Cascade)
 
   @@index([intervieweeId, status])
@@ -1590,20 +1591,20 @@ model MarketingPostVote {
 // ist bewusst unabhängig von Squads.
 
 model CoachTrainingSession {
-  id          String   @id @default(cuid())
-  coachId     String
-  title       String
-  description String?
-  startAt     DateTime
-  capacity    Int?
-  createdAt   DateTime @default(now())
+  id             String    @id @default(cuid())
+  coachId        String
+  title          String
+  description    String?
+  startAt        DateTime
+  capacity       Int?
+  createdAt      DateTime  @default(now())
   eventId        String? // optional: Vorbereitungs-Training für ein Event (bewusst kein FK, wie handedOffFromUserId)
   seriesId       String? // gleiche ID für alle Termine einer Terminserie
   reminderSentAt DateTime? // Tages-Erinnerung an die Teilnehmer schon verschickt
   meetingUrl     String? // Treffpunkt (z.B. Discord-Voice-Kanal-Link)
   summary        String? // Nachbereitung: Zusammenfassung/Tipps des Coaches nach dem Termin
 
-  coach   User                  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach    User                         @relation(fields: [coachId], references: [id], onDelete: Cascade)
   signups  CoachTrainingSignup[]
   ratings  CoachRating[]
   waitlist CoachTrainingWaitlistEntry[]
@@ -1773,8 +1774,8 @@ model CommunityIdea {
   notifiedMentions String[]  @default([]) // User-IDs, die für @-Erwähnungen schon benachrichtigt wurden
   draftEventId     String? // vom Team angelegter Event-Entwurf zu dieser Idee
 
-  author User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  votes  CommunityIdeaVote[]
+  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes     CommunityIdeaVote[]
   interests IdeaInterest[]
   revisions IdeaRevision[]
 
@@ -1819,13 +1820,13 @@ model IdeaDigest {
 }
 
 model CommunityIdeaVote {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   ideaId              String
   voterId             String
   stars               Int // 1-5
   reason              String // Pflichttext — bleibt privat, nur Autor + Admin sehen ihn
-  createdAt           DateTime @default(now())
-  disputed            Boolean  @default(false)
+  createdAt           DateTime  @default(now())
+  disputed            Boolean   @default(false)
   disputeReason       String?
   disputeResolution   String?
   disputeResolvedById String?
@@ -1950,7 +1951,7 @@ model Card {
   isAutoGenerated  Boolean   @default(false) // true = durch Pipeline erzeugt/zuletzt aktualisiert
   lastGeneratedAt  DateTime?
 
-  imageUrl  String?
+  imageUrl    String?
   // Charakter (Time-Elements-Baukasten, siehe src/lib/te-character): Ebenen-Auswahl des Users
   // für seine Community-Karte, zugleich seine Spielfigur in OMA Quest. Shape: TeCharacterConfig.
   // null = noch nicht angepasst (Karte zeigt das Discord-Profilbild bzw. Klassen-Icon).
@@ -1962,35 +1963,35 @@ model Card {
   userCards UserCard[]
 
   // --- OMA-Quest-Charakterbogen (nur relevant/befüllt für rarity = COMMUNITY) ---
-  dndRace       String? // z.B. "Mensch", "Elf", "Zwerg", "Halbling", "Halbork" — ausgewürfelt
-  dndClass      String? // volle OMA-Quest-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
+  dndRace          String? // z.B. "Mensch", "Elf", "Zwerg", "Halbling", "Halbork" — ausgewürfelt
+  dndClass         String? // volle OMA-Quest-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
   // NICHT dasselbe wie class: CardClass — siehe DND_CLASS_TO_CARD_CLASS in src/lib/dnd/class-mapping.ts
-  abilityScores Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
-  backstory     String? @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
-  dndCreatedAt  DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
+  abilityScores    Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
+  backstory        String?   @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
+  dndCreatedAt     DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
   // Helden-Einrichtung (OMA Battle Cards, siehe lib/battle-cards/hero-setup.ts): heroRolledAt = Rasse/Klasse
   // gewählt und Werte gewürfelt, heroPackAt = Start-Pack gewählt. null = Schritt offen. Bewusst getrennt von
   // dndCreatedAt (das schon die automatisch erzeugte Karte hat): alle Mitglieder durchlaufen den Ablauf.
-  heroRolledAt  DateTime?
-  heroPackAt    DateTime?
-  dndRerollCredits Int @default(0) // verfügbare Re-Rolls (Rasse+Klasse+Stats zusammen) — 1 gratis bei Erst-Erstellung
+  heroRolledAt     DateTime?
+  heroPackAt       DateTime?
+  dndRerollCredits Int       @default(0) // verfügbare Re-Rolls (Rasse+Klasse+Stats zusammen) — 1 gratis bei Erst-Erstellung
   // ODER Auto-Migration (kein eigener Wurf), danach im Shop nachkaufbar (buy-dnd-reroll), pro Nutzung -1
-  dndXp         Int     @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
+  dndXp            Int       @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
 
   // --- Standort & Reise (Hex-Weltkarte, siehe src/lib/dnd/hex) ---
   // Position = Hex-Feld (odd-r-Offset). currentLocationId ist die feste Location auf diesem Feld
   // (null = freies Feld ohne Location). Alte Charaktere ohne Hex-Position stehen implizit auf dem
   // Feld ihrer currentLocation (Backfill beim Lesen, siehe travel.ts positionOf).
   currentLocationId String?
-  currentLocation    DndLocation? @relation(fields: [currentLocationId], references: [id])
-  currentHexCol      Int?
-  currentHexRow      Int?
+  currentLocation   DndLocation? @relation(fields: [currentLocationId], references: [id])
+  currentHexCol     Int?
+  currentHexRow     Int?
   // Aktive Reise: Zielfeld + geplanter Pfad ([[col,row], …] inkl. Start) + Zeiten. travelToCol != null = unterwegs.
-  travelToCol        Int?
-  travelToRow        Int?
-  travelPath         Json?
-  travelDepartedAt   DateTime?
-  travelArrivesAt    DateTime?
+  travelToCol       Int?
+  travelToRow       Int?
+  travelPath        Json?
+  travelDepartedAt  DateTime?
+  travelArrivesAt   DateTime?
 
   eventLogs     DndEventLog[]
   questProgress DndQuestProgress[]
@@ -2032,6 +2033,43 @@ model DndLocation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Von Community-Job-Mitgliedern/Admins gebaute begehbare Welt (Editor unter /oma-quest/editor).
+// `doc` = CustomWorldDoc (src/lib/te-map/custom-world.ts). Erst mit Status PUBLISHED gibt es dazu eine
+// DndLocation (Hex-Feld auf der Weltkarte) und eine DndQuest.
+model DndCustomWorld {
+  id           String    @id @default(cuid())
+  slug         String    @unique // "cw-<id-Ende>", = Slug der DndLocation
+  authorId     String
+  title        String
+  status       String    @default("DRAFT") // DRAFT | PENDING | PUBLISHED | REJECTED
+  doc          Json
+  reviewNote   String?   @db.Text
+  reviewedById String?
+  // Gewünschtes/festes Feld auf der Hex-Weltkarte (leer = beim Freigeben automatisch ein freies Landfeld)
+  hexCol       Int?
+  hexRow       Int?
+  submittedAt  DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  author User @relation("DndCustomWorldAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([status])
+}
+
+// Von Admins gelöschte, im Code vordefinierte Inhalte (feste Locations/Quests): verhindert, dass die
+// idempotenten Seed-Funktionen sie beim nächsten Aufruf wieder anlegen. kind = LOCATION | QUEST.
+model DndRemovedContent {
+  id        String   @id @default(cuid())
+  kind      String
+  slug      String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, slug])
 }
 
 // Ereignis-DEFINITION (Vorlage) — kein Charakterbezug, sondern ein Pool-Eintrag,
@@ -2083,6 +2121,7 @@ model DndQuest {
   targetRef       String? // optionale Entitäts-Referenz, z.B. locationSlug
   xpReward        Int          @default(0)
   itemReward      Json?
+  adminEdited     Boolean      @default(false) // von einem Admin geändert: der Code-Seed überschreibt sie nicht mehr
   coinReward      Int          @default(0) // > 0: zusätzlich über den bestehenden Coins-Pfad vergeben
   linkedQuestType String? // optionaler QuestType (quests-meta.ts) — löst zusätzlich die normale Monats-Quest aus
   locationId      String?
@@ -2401,18 +2440,18 @@ model BattleQueueEntry {
 
 /// Protokoll aller Admin-/Moderator-Aktionen in den Community-Jobs (Wer, Was, Wann, Grund).
 model CommunityJobAuditLog {
-  id          String   @id @default(cuid())
-  actorId     String
-  actorName   String?
-  action      String
-  targetType  String? // member | application | report | asset | marketing_post | idea | guide | comment | album | campaign | photo_request | job | payout
-  targetId    String?
+  id           String   @id @default(cuid())
+  actorId      String
+  actorName    String?
+  action       String
+  targetType   String? // member | application | report | asset | marketing_post | idea | guide | comment | album | campaign | photo_request | job | payout
+  targetId     String?
   targetUserId String?
-  targetLabel String? // Name/Titel zum Zeitpunkt der Aktion (Snapshot)
-  jobKey      String?
-  reason      String?
-  detail      String?
-  createdAt   DateTime @default(now())
+  targetLabel  String? // Name/Titel zum Zeitpunkt der Aktion (Snapshot)
+  jobKey       String?
+  reason       String?
+  detail       String?
+  createdAt    DateTime @default(now())
 
   @@index([createdAt])
   @@index([action])

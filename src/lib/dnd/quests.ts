@@ -8,86 +8,13 @@
 
 import { prisma } from "../prisma";
 import { dispatchNotification } from "../notify-dispatch";
-import { updateQuestProgress, type QuestType } from "../quests";
+import { updateQuestProgress } from "../quests";
 import { getWorld, WORLD_SLUGS } from "../te-map/worlds";
 import { questLength } from "../te-map/engine";
+import { resolveWorld } from "./custom-worlds";
 
-export interface DndQuestDef {
-  slug: string;
-  title: string;
-  description: string;
-  objectiveType: string;
-  targetCount: number;
-  targetRef?: string;
-  xpReward: number;
-  coinReward?: number;
-  linkedQuestType?: QuestType;
-  locationSlug?: string;
-}
-
-// Hartcodierte Quest-Definitionen (v1) — Discord-/App-Aktivität + ein paar
-// standortgebundene. Weitere Quests sind reine Content-Arbeit (neuer Eintrag).
-export const DND_QUESTS: DndQuestDef[] = [
-  {
-    slug: "dnd-plaudertasche",
-    title: "Die Plaudertasche",
-    description: "Schreibe 30 Nachrichten im Discord — dein Charakter hört überall mit.",
-    objectiveType: "MESSAGE_SENT",
-    targetCount: 30,
-    xpReward: 50,
-  },
-  {
-    slug: "dnd-stammgast",
-    title: "Stammgast im Sprachkanal",
-    description: "Verbringe 60 Minuten im Voice-Chat.",
-    objectiveType: "VOICE_MINUTES",
-    targetCount: 60,
-    xpReward: 60,
-  },
-  {
-    slug: "dnd-event-teilnehmer",
-    title: "Auf zum nächsten Event",
-    description: "Melde dich bei einem Community-Event an.",
-    objectiveType: "EVENT_ATTEND",
-    targetCount: 1,
-    xpReward: 40,
-    coinReward: 50,
-  },
-  {
-    slug: "dnd-demokrat",
-    title: "Demokratisches Prinzip",
-    description: "Stimme bei einer Event-Umfrage ab.",
-    objectiveType: "POLL_VOTE",
-    targetCount: 1,
-    xpReward: 20,
-  },
-  {
-    slug: "dnd-arena-kaempfer",
-    title: "Arena-Kämpfer",
-    description: "Bestreite 3 Battle-Cards-Duelle.",
-    objectiveType: "BATTLE_CARD_DUEL",
-    targetCount: 3,
-    xpReward: 80,
-    coinReward: 100,
-  },
-  {
-    slug: "dnd-weltenbummler",
-    title: "Weltenbummler",
-    description: "Besuche 3 verschiedene Locations.",
-    objectiveType: "LOCATION_VISITED",
-    targetCount: 3,
-    xpReward: 70,
-  },
-  {
-    slug: "dnd-geschichtenerzaehler",
-    title: "Geschichtensammler",
-    description: "Erlebe 5 Story-Ereignisse an deinen Reisezielen.",
-    objectiveType: "STORY_NODE_COMPLETED",
-    targetCount: 5,
-    xpReward: 90,
-    coinReward: 75,
-  },
-];
+export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
+import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 
 /** Quests der begehbaren Welten (eine je Location, siehe lib/te-map/worlds.ts). Fortschritt = erledigte
  *  Schritte; bewusst nur XP als Belohnung, weil der Client die Schritte meldet (keine Coins). */
@@ -107,36 +34,35 @@ export function worldQuestDefs(): DndQuestDef[] {
   });
 }
 
-/** Idempotent, analog ensureDndWorldSeeded/ensureDndStoryContentSeeded. */
+/** Idempotent, analog ensureDndWorldSeeded/ensureDndStoryContentSeeded. Von Admins gelöschte Quests werden nicht
+ *  neu angelegt, von Admins geänderte (adminEdited, Editor-Welten) nicht überschrieben. */
 export async function ensureDndQuestsSeeded(): Promise<void> {
+  const [removed, overridden] = await Promise.all([
+    prisma.dndRemovedContent.findMany({ where: { kind: "QUEST" }, select: { slug: true } }),
+    prisma.dndCustomWorld.findMany({ where: { slug: { in: WORLD_SLUGS } }, select: { slug: true } }),
+  ]);
+  const skipQuest = new Set(removed.map((r) => r.slug));
+  const skipLocation = new Set(overridden.map((r) => r.slug));
   for (const q of [...DND_QUESTS, ...worldQuestDefs()]) {
+    if (skipQuest.has(q.slug) || (q.locationSlug && skipLocation.has(q.locationSlug))) continue;
     let locationId: string | undefined;
     if (q.locationSlug) {
       const loc = await prisma.dndLocation.findUnique({ where: { slug: q.locationSlug }, select: { id: true } });
-      locationId = loc?.id;
+      if (!loc) continue; // Location gelöscht (oder noch nicht angelegt)
+      locationId = loc.id;
     }
-    await prisma.dndQuest.upsert({
-      where: { slug: q.slug },
-      create: {
-        slug: q.slug,
-        title: q.title,
-        description: q.description,
-        objectiveType: q.objectiveType,
-        targetCount: q.targetCount,
-        targetRef: q.targetRef,
-        xpReward: q.xpReward,
-        coinReward: q.coinReward ?? 0,
-        linkedQuestType: q.linkedQuestType,
-        locationId,
-      },
-      update: {
-        title: q.title,
-        description: q.description,
-        targetCount: q.targetCount,
-        xpReward: q.xpReward,
-        coinReward: q.coinReward ?? 0,
-      },
-    });
+    const existing = await prisma.dndQuest.findUnique({ where: { slug: q.slug }, select: { id: true, adminEdited: true } });
+    if (existing?.adminEdited) continue;
+    const fields = {
+      title: q.title, description: q.description, targetCount: q.targetCount, xpReward: q.xpReward, coinReward: q.coinReward ?? 0,
+    };
+    if (existing) {
+      await prisma.dndQuest.update({ where: { id: existing.id }, data: fields });
+    } else {
+      await prisma.dndQuest.create({
+        data: { slug: q.slug, ...fields, objectiveType: q.objectiveType, targetRef: q.targetRef, linkedQuestType: q.linkedQuestType, locationId },
+      });
+    }
   }
 }
 
@@ -191,7 +117,7 @@ export async function advanceWorldQuestStep(
   locationSlug: string,
   fromStep: number,
 ): Promise<{ step: number; completed: boolean } | null> {
-  const world = getWorld(locationSlug);
+  const world = await resolveWorld(locationSlug);
   if (!world) return null;
   await ensureDndQuestsSeeded();
   const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
@@ -223,7 +149,7 @@ export async function advanceWorldQuestStep(
 
 /** Bisher gespeicherter Schritt einer Welt-Quest (0 = noch nicht begonnen). */
 export async function getWorldQuestStep(cardId: string, locationSlug: string): Promise<number> {
-  const world = getWorld(locationSlug);
+  const world = await resolveWorld(locationSlug);
   if (!world) return 0;
   const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
   if (!quest) return 0;
