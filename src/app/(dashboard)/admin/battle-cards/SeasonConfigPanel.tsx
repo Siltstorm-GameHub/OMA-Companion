@@ -74,7 +74,7 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
   async function runPreSeason() {
     if (
       !confirm(
-        "PreSeason jetzt starten? Das klassifiziert ALLE Community-Mitglieder anhand ihrer bisherigen Aktivität neu (Klasse + Aktivitäts-Stufe). Manuell fixierte Felder (overriddenFields) bleiben unangetastet."
+        "PreSeason jetzt starten? Das legt fehlende Helden-Karten an und setzt für ALLE Community-Mitglieder die Aktivitäts-Stufe anhand ihrer bisherigen Aktivität neu. Klasse, Werte und Aussehen der Helden bleiben unverändert — die wählen und würfeln die Mitglieder selbst."
       )
     ) {
       return;
@@ -85,7 +85,7 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Fehler beim Ausführen"); return; }
       setLastRunSummary(
-        `${data.totalMembers} Mitglieder, ${data.cardsBackfilled} neue Karten angelegt, ${data.updatedCount} Karten neu eingestuft.`
+        `${data.totalMembers} Mitglieder, ${data.cardsBackfilled} neue Helden-Karten angelegt, ${data.updatedCount} Aktivitäts-Stufen aktualisiert.`
       );
       toast.success("PreSeason abgeschlossen");
       setConfig((c) => ({ ...c, preSeasonRanAt: new Date().toISOString() }));
@@ -101,9 +101,11 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       <div className="glass rounded-2xl p-4 space-y-3">
         <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Saison 1 — Startdatum</p>
         <p className="text-xs text-gray-500">
-          Ab diesem Datum läuft die automatische Klassen-/Stats-Anpassung UND ein kompletter Reset aller
-          Karten in Besitz sowie des Kampagnen-Fortschritts — jeder startet wieder bei 0 (Start-Pack erneut
-          wählen, Kampagne wieder ab Kapitel 1). Dieser Zeitpunkt ist zugleich
+          Ab diesem Datum werden die Aktivitäts-Stufen neu gesetzt UND alle Karten in Besitz sowie der
+          Kampagnen-Fortschritt komplett zurückgesetzt — jeder startet wieder bei 0 (Start-Pack aus Held + 4
+          Karten erneut wählen, Kampagne wieder ab Kapitel 1). Der Held selbst (Aussehen, Klasse, Werte,
+          Untertitel) bleibt erhalten. Nicht zurückgesetzt werden Elo, Kampfhistorie und Taktik-Karten.
+          Dieser Zeitpunkt ist zugleich
           der Startschuss der Ranglisten-Saison 1: danach läuft automatisch alle 3 Monate eine neue Saison,
           jeweils mit Platz-1-3-Belohnung (siehe unten) — ohne dass Kämpfe/Karten dabei nochmal zurückgesetzt werden.
           Aktuell: <span className="text-gray-300">{formatDate(config.season1StartAt)}</span>
@@ -132,8 +134,10 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       <div className="glass rounded-2xl p-4 space-y-3">
         <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">PreSeason</p>
         <p className="text-xs text-gray-500">
-          Einmaliger Sofort-Lauf: klassifiziert alle Mitglieder jetzt schon anhand der bisherigen Aktivität, statt
-          bis zum Saison-1-Start zu warten. Legt außerdem fehlende Karten für neue Mitglieder nach.
+          Einmaliger Sofort-Lauf: setzt die Aktivitäts-Stufe aller Mitglieder jetzt schon anhand der bisherigen
+          Aktivität (Events + Quests), statt bis zum Saison-1-Start zu warten, und legt fehlende Helden-Karten
+          für neue Mitglieder nach. Die Klasse kommt nicht mehr aus der Aktivität: jedes Mitglied wählt sie in
+          der Helden-Einrichtung selbst und würfelt seine Werte — die PreSeason ändert daran nichts.
         </p>
         {config.preSeasonRanAt && (
           <p className="text-[11px] text-emerald-400">Zuletzt ausgeführt: {formatDate(config.preSeasonRanAt)}</p>

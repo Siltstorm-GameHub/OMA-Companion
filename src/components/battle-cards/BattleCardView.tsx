@@ -17,7 +17,7 @@ import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import MobaIcon from "./MobaIcon";
 import TeCharacter from "@/components/te-character/TeCharacter";
-import { TE_CROP_FIGURE, type TeCharacterConfig } from "@/lib/te-character";
+import { TE_CROP_FIGURE, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
 
 export interface BattleCardSkill {
   name: string;
@@ -142,8 +142,11 @@ export default function BattleCardView({
   card,
   dimmed = false,
   hidePassives = false,
+  characterDir = "down",
 }: {
   card: BattleCardData;
+  /** Blickrichtung des Charakters im Kartenmotiv (Editor: zum Prüfen aller Details drehbar). */
+  characterDir?: TeDir;
   dimmed?: boolean;
   /** OMA Duels: Passiv-Fähigkeiten feuern dort nie (keine Initiative-Runden-
    *  Trigger wie battleStart/turnStart/roundEnd), ihre Anzeige wäre also
@@ -168,18 +171,26 @@ export default function BattleCardView({
   const cardFaceShadow = `var(--shadow-card), 0 0 ${isMaxLevel ? 22 : 12}px ${borderColor}66`;
 
   return (
-    <button
-      type="button"
+    // Äußerer Rahmen hält Größe und Position fest (Seitenverhältnis 1:2), nur der innere Block dreht
+    // sich. So bleibt die Karte an derselben Stelle, egal welche Seite gerade oben liegt — die Höhe
+    // hängt nicht am animierten Element, und es ist bewusst kein <button> (dessen Inhalt Browser
+    // vertikal zentrieren bzw. verschieben, sobald die Höhe von der des Inhalts abweicht).
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => setFlipped((f) => !f)}
-      className="block w-full max-w-[240px] text-left cursor-pointer"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFlipped((f) => !f); }
+      }}
+      className="relative block w-full max-w-[240px] aspect-[1/2] text-left cursor-pointer"
       style={{ perspective: 1200, opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
       aria-label={`${card.name} — Tippen zum Umdrehen`}
     >
       <motion.div
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 28 }}
-        className="relative w-full aspect-[1/2]"
-        style={{ transformStyle: "preserve-3d" }}
+        className="absolute inset-0"
+        style={{ transformStyle: "preserve-3d", transformOrigin: "50% 50%" }}
       >
         {/* ── Vorderseite ── */}
         <div
@@ -220,7 +231,7 @@ export default function BattleCardView({
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
             {card.teCharacter ? (
-              <TeCharacter config={card.teCharacter} anim="idle" crop={TE_CROP_FIGURE} scale={4} className="max-h-full w-auto" title={card.name} />
+              <TeCharacter config={card.teCharacter} anim="idle" dir={characterDir} crop={TE_CROP_FIGURE} scale={4} className="max-h-full w-auto" title={card.name} />
             ) : card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -332,6 +343,6 @@ export default function BattleCardView({
           </div>
         </div>
       </motion.div>
-    </button>
+    </div>
   );
 }

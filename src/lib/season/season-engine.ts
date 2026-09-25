@@ -1,63 +1,31 @@
 // ============================================
-// Saison-Engine — Community-Karten-Berechnung
+// Saison-Engine — Aktivitäts-Stufen der Community-Karten
 // ============================================
-// Berechnet für jedes Community-Mitglied:
-//  1. Aktivitäts-Stufe (Ghost...Old Master) → Stat-Multiplikator
-//  2. Klasse (Tank/DamageDealer/Support) → aus drei Perzentil-Säulen
-//
-// Respektiert Overrides: Felder in card.overriddenFields werden
-// NICHT verändert.
+// Berechnet für jedes Community-Mitglied die Aktivitäts-Stufe (Ghost … Old Master) aus seinen
+// Events und Quests. Die Klasse (Tank/Damage Dealer/Support) kommt NICHT mehr aus der Aktivität,
+// sondern aus der Helden-Einrichtung: das Mitglied wählt eine Klasse und würfelt die Werte selbst
+// (siehe lib/battle-cards/hero-setup.ts, lib/dnd/class-mapping.ts). Die Saison ändert daran nichts.
 
-import type { CardClass, ActivityTier } from "@prisma/client";
+import type { ActivityTier } from "@prisma/client";
 
 // ---------- Rohdaten, die pro Mitglied angeliefert werden müssen ----------
 
 export interface MemberSeasonInput {
   userId: string;
   discordId: string;
-  currentClass: CardClass | null; // bisherige Klasse, für Trägheitsregel
   currentTier: ActivityTier | null; // bisherige Stufe, für Sprungbegrenzung
-
-  // Aktivitäts-Rohdaten (für Stufe)
-  eventCount: number;
-  questCount: number;
-
-  // DD-Säule — bewusst NICHT nur Turniersiege (Platz 1 ist extrem selten und
-  // hätte fast alle Mitglieder auf 0 belassen, siehe Analyse vom 2026-09-03):
-  // tournamentParticipationCount ist die reine Teilnahme (analog zu Tanks
-  // eventCount — "wer tritt oft kompetitiv an"), tournamentPerformanceScore
-  // ein Platzierungs-Bonus (0..1 je Turnier, 1 = Sieg, 0 = letzter Platz).
-  tournamentParticipationCount: number;
-  tournamentPerformanceScore: number;
-  eventStatsScore: number; // z.B. normalisierte Kills/Tore/Scoring, vorab aggregiert
-
-  // Support-Säule
-  surveyParticipations: number;
-  donationAmount: number;
-  lobbyActivityScore: number; // z.B. Nachrichtenanzahl, vorab aggregiert
-
-  // Tank-Säule
-  // (eventCount wird hier wiederverwendet — Teilnahmen in der Saison)
+  eventCount: number; // besuchte Events
+  questCount: number; // abgeschlossene Quests
 }
 
 export interface MemberSeasonResult {
   userId: string;
   activityTier: ActivityTier;
-  statMultiplier: number;
-  cardClass: CardClass;
 }
 
 // ---------- Konstanten ----------
 
 const TIER_ORDER: ActivityTier[] = ["GHOST", "NPC", "GAMER", "LEGENDE", "OLD_MASTER"];
-
-export const TIER_MULTIPLIER: Record<ActivityTier, number> = {
-  GHOST: 0.85,
-  NPC: 1.0,
-  GAMER: 1.15,
-  LEGENDE: 1.3,
-  OLD_MASTER: 1.45,
-};
 
 // Perzentil-Obergrenzen (inklusive) je Stufe, in Prozent
 const TIER_PERCENTILE_CEILING: { tier: ActivityTier; ceiling: number }[] = [
@@ -69,12 +37,6 @@ const TIER_PERCENTILE_CEILING: { tier: ActivityTier; ceiling: number }[] = [
 ];
 
 const MAX_TIER_JUMP = 1; // max. Stufen-Sprung pro Saison
-// Am 2026-09-03 von 10 auf 5 gesenkt: bei 10 Punkten blieben zu viele Mitglieder
-// trotz klar niedrigerer DD-Säule (siehe tournamentParticipationCount-Fix oben)
-// in ihrer alten Tank/Support-Klasse hängen, weil der Vorsprung selten > 10
-// Perzentil-Punkte betrug.
-const CLASS_TIE_THRESHOLD = 5; // Perzentil-Punkte, unter denen die alte Klasse bleibt
-
 // ---------- Hilfsfunktionen ----------
 
 /** Einfacher, deterministischer String-Hash (djb2) — reicht für eine stabile Tiebreak-Reihenfolge. */
@@ -141,87 +103,26 @@ function applyTierJumpLimit(
   return TIER_ORDER[clampedIdx];
 }
 
-/** Bestimmt die Klasse aus drei Perzentil-Werten, mit Trägheitsregel bei knappem Vorsprung. */
-function resolveClass(
-  ddPercentile: number,
-  supportPercentile: number,
-  tankPercentile: number,
-  currentClass: CardClass | null
-): CardClass {
-  const scores: { cls: CardClass; value: number }[] = [
-    { cls: "DAMAGE_DEALER", value: ddPercentile },
-    { cls: "SUPPORT", value: supportPercentile },
-    { cls: "TANK", value: tankPercentile },
-  ];
-
-  scores.sort((a, b) => b.value - a.value);
-  const [highest, secondHighest] = scores;
-
-  if (
-    currentClass &&
-    highest.value - secondHighest.value < CLASS_TIE_THRESHOLD
-  ) {
-    return currentClass;
-  }
-
-  return highest.cls;
-}
-
 // ---------- Hauptfunktion ----------
 
 /**
- * Berechnet Aktivitäts-Stufe und Klasse für alle Community-Mitglieder einer Saison.
- * Gibt für jedes Mitglied ein Ergebnis zurück — das Anwenden auf die Card-Datensätze
- * (unter Berücksichtigung von overriddenFields) passiert im Aufrufer.
+ * Berechnet die Aktivitäts-Stufe für alle Community-Mitglieder einer Saison (Perzentil aus Events +
+ * Quests, max. ±1 Stufe pro Lauf, Ghost bei null Aktivität). Das Anwenden auf die Card-Datensätze
+ * passiert im Aufrufer.
  */
-export function computeSeasonResults(
-  members: MemberSeasonInput[]
-): MemberSeasonResult[] {
-  const n = members.length;
-  if (n === 0) return [];
+export function computeSeasonResults(members: MemberSeasonInput[]): MemberSeasonResult[] {
+  if (members.length === 0) return [];
 
   const tieBreakKeys = members.map((m) => m.userId);
-
-  // ---- 1. Aktivitäts-Perzentil (Events + Quests) ----
   const activityRaw = members.map((m) => m.eventCount + m.questCount);
   const activityPercentiles = computePercentiles(activityRaw, tieBreakKeys);
 
-  // ---- 2. Klassen-Säulen-Perzentile ----
-  const ddRaw = members.map(
-    (m) => m.tournamentParticipationCount + m.tournamentPerformanceScore + m.eventStatsScore
-  );
-  const supportRaw = members.map(
-    (m) => m.surveyParticipations + m.donationAmount + m.lobbyActivityScore
-  );
-  const tankRaw = members.map((m) => m.eventCount);
-
-  const ddPercentiles = computePercentiles(ddRaw, tieBreakKeys);
-  const supportPercentiles = computePercentiles(supportRaw, tieBreakKeys);
-  const tankPercentiles = computePercentiles(tankRaw, tieBreakKeys);
-
-  // ---- 3. Pro Mitglied zusammenführen ----
   return members.map((m, i) => {
     const hadZeroParticipation = activityRaw[i] === 0;
-
     const rawTier = tierFromPercentile(activityPercentiles[i], hadZeroParticipation);
-    const activityTier = applyTierJumpLimit(
-      m.currentTier,
-      rawTier,
-      hadZeroParticipation
-    );
-
-    const cardClass = resolveClass(
-      ddPercentiles[i],
-      supportPercentiles[i],
-      tankPercentiles[i],
-      m.currentClass
-    );
-
     return {
       userId: m.userId,
-      activityTier,
-      statMultiplier: TIER_MULTIPLIER[activityTier],
-      cardClass,
+      activityTier: applyTierJumpLimit(m.currentTier, rawTier, hadZeroParticipation),
     };
   });
 }

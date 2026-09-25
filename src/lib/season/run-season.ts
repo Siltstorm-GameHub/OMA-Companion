@@ -1,11 +1,11 @@
 // ============================================
-// Vollständiger Saison-Lauf — Backfill + echte Klassifizierung
+// Vollständiger Saison-Lauf — Helden-Karten nachlegen + Aktivitäts-Stufen
 // ============================================
-// 1. Stellt sicher, dass jedes Discord-verknüpfte Mitglied eine Karte hat
-//    (Cold-Start-Platzhalter für alle, die noch keine haben).
+// 1. Stellt sicher, dass jedes Discord-verknüpfte Mitglied eine Helden-Karte hat
+//    (Community-Karte, die das Mitglied in der Helden-Einrichtung gestaltet).
 // 2. Baut echte Aktivitätsdaten aus der OMA-DB (lib/season/oma-data.ts).
-// 3. Wendet computeSeasonResults() darauf an (lib/season/apply-season-results.ts) —
-//    respektiert overriddenFields, Trägheitsregel, max. ±1 Tier-Sprung.
+// 3. Wendet computeSeasonResults() darauf an (lib/season/apply-season-results.ts) — setzt nur die
+//    Aktivitäts-Stufe (max. ±1 Sprung). Klasse und Werte wählt/würfelt das Mitglied selbst.
 //
 // EINSCHRÄNKUNG: Die Aktivitätszahlen sind aktuell kumulativ über die
 // gesamte Historie, es gibt noch keine Saison-Fenster/Reset-Punkte. Für die

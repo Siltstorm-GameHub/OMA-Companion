@@ -81,16 +81,10 @@ async function main() {
         const { data, info } = await sharp(path.join(dir, f)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         await writePng(data, info.width, info.height, path.join(OUT, "char", cat.id, `${id}.png`));
         files++;
-        // Hautton-Varianten: nur wenn das Teil überhaupt Hautfarbe enthält (Gesicht, Körper, kurze Ärmel …)
-        const usesSkin = (() => {
-          const src = SKIN_SRC.map(hex);
-          for (let i = 0; i < data.length; i += 4) {
-            if (data[i + 3] === 0) continue;
-            if (src.some((c) => c[0] === data[i] && c[1] === data[i + 1] && c[2] === data[i + 2])) return true;
-          }
-          return false;
-        })();
-        if (usesSkin && ["head", "top", "bottom"].includes(cat.id)) {
+        // Hautton-Varianten für ALLE Gesichter, Oberteile und Hosen — auch für Teile ohne Hautanteil (dann
+        // identische Kopie). Der Editor verlangt für jede Kombination Teil × Hautton eine Datei; fehlt sie,
+        // verschwindet das Teil bei diesem Hautton (früher: nur Teile mit Hautpixeln hatten Varianten).
+        if (["head", "top", "bottom"].includes(cat.id)) {
           for (let t = 1; t < SKIN_TONES.length; t++) {
             const out = Buffer.from(data);
             for (let i = 0; i < out.length; i += 4) {

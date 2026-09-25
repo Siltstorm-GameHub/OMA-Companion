@@ -51,8 +51,12 @@ export function getSeasonWindow(anchor: Date, seasonNumber: number): SeasonWindo
 
 /**
  * "Jeder soll bei 0 starten": Standard-Karten (selbst gewähltes Start-Pack,
- * Shop-Packs) werden komplett entfernt — der Spieler durchläuft beim nächsten
- * Öffnen der Kampf-Seite wieder StarterPickFlow. Community-Karten (1 pro
+ * Shop-Packs) werden komplett entfernt — der Spieler wählt beim nächsten
+ * Öffnen der Kampf-Seite sein Start-Pack (Held + 4) erneut: dafür wird
+ * `Card.heroPackAt` zurückgesetzt, sonst würde die Helden-Einrichtung das Pack
+ * als erledigt ansehen. Der HELD selbst (Aussehen, Klasse, Werte, Untertitel)
+ * bleibt bestehen — er ist die Identität des Mitglieds, nicht sein Fortschritt.
+ * Community-Karten (1 pro
  * Mitglied, siehe card-provisioning.ts) bleiben als Karten-Datensatz
  * bestehen (sie repräsentieren die Person), aber Level/Duplikate werden auf
  * den Startwert zurückgesetzt und sie fliegt aus der Startaufstellung —
@@ -68,6 +72,7 @@ export async function resetAllCardOwnership(): Promise<void> {
       data: { level: 1, duplicates: 1, inLineup: false },
     }),
     prisma.cardPack.deleteMany({ where: { openedAt: null } }),
+    prisma.card.updateMany({ where: { rarity: "COMMUNITY", heroPackAt: { not: null } }, data: { heroPackAt: null } }),
   ]);
 }
 

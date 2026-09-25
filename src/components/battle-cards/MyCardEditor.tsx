@@ -8,7 +8,7 @@ import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
 import TeCharacterEditor from "@/components/te-character/TeCharacterEditor";
-import type { TeCharacterConfig } from "@/lib/te-character";
+import type { TeCharacterConfig, TeDir } from "@/lib/te-character";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
@@ -33,6 +33,7 @@ export default function MyCardEditor({
   const [teCharacter, setTeCharacter] = useState(initialTeCharacter);
   const [useCharacter, setUseCharacter] = useState(hasTeCharacter || setup);
   const [saving, setSaving] = useState(false);
+  const [dir, setDir] = useState<TeDir>("down");
   const [flavorFocused, setFlavorFocused] = useState(false);
 
   async function save() {
@@ -57,7 +58,29 @@ export default function MyCardEditor({
     }
   }
 
-  const cardPreview = <BattleCardView card={{ ...card, title, flavorText, teCharacter: useCharacter ? teCharacter : null }} />;
+  // Karte plus Drehregler: der Held lässt sich in alle vier Richtungen drehen, um jedes Detail zu prüfen.
+  const cardPreview = (
+    <div className="space-y-2 max-w-[240px]">
+      <BattleCardView card={{ ...card, title, flavorText, teCharacter: useCharacter ? teCharacter : null }} characterDir={dir} />
+      {useCharacter && (
+        <div className="flex items-center justify-center gap-1" role="group" aria-label="Held drehen">
+          <span className="text-[10px] uppercase tracking-widest text-gray-500 mr-1">Drehen</span>
+          {(["up", "left", "down", "right"] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDir(d)}
+              aria-pressed={dir === d}
+              aria-label={{ up: "Von hinten", left: "Nach links", down: "Von vorn", right: "Nach rechts" }[d]}
+              className={`w-8 h-8 rounded-lg text-sm transition-colors ${dir === d ? "bg-violet-600 text-white" : "bg-black/40 text-gray-300 hover:text-white"}`}
+            >
+              {{ up: "↑", left: "←", down: "↓", right: "→" }[d]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   if (setup) {
     // Einrichtung: die Karte bleibt beim Gestalten sichtbar (klebt links), der Charakter erscheint direkt darin.

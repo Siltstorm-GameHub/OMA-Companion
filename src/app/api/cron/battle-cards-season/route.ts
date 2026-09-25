@@ -4,9 +4,10 @@
 // ============================================
 // Läuft täglich (siehe vercel.json), zwei voneinander unabhängige Teile:
 //  1. Saison 1 (einmalig): sobald das Admin-Startdatum erreicht ist und Saison 1
-//     noch nicht lief (season1RanAt), Klassen-/Stats-Neuklassifizierung UND
+//     noch nicht lief (season1RanAt), Aktivitäts-Stufen neu setzen UND
 //     kompletter Karten- UND Kampagnen-Fortschritt-Reset ("jeder startet bei
-//     0", In Saison 1 wird wieder Kapitel 1 gespielt) — season1RanAt ist
+//     0": Start-Pack (Held + 4) wird neu gewählt, In Saison 1 wird wieder
+//     Kapitel 1 gespielt; der Held selbst bleibt) — season1RanAt ist
 //     danach zugleich der Anker für alle folgenden Ranglisten-Saisons.
 //  2. Ranglisten-Saisons (wiederkehrend, alle 3 Monate ab dem Anker): sobald
 //     eine Saison vorbei ist, Platz-1-3-Belohnungen vergeben. Die Rangliste
