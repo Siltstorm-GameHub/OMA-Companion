@@ -15,6 +15,8 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Loader2, Flag, Globe, List } from "@/components/icons";
 import ZoomPanMap from "./ZoomPanMap";
+import PixelCharacter from "@/components/pixel-character/PixelCharacter";
+import { dirFromDelta, type PixelCharacterConfig } from "@/lib/pixel-character";
 
 const POLL_INTERVAL_MS = 25_000;
 
@@ -37,6 +39,7 @@ interface DndCharacterRow {
   fromId: string | null;
   toId: string | null;
   progress: number | null;
+  pixel: PixelCharacterConfig | null;
 }
 
 /** Kleine Location-Illustration als Marker (/dnd/locations/<slug>.jpg, gleicher
@@ -220,6 +223,14 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
                   {here.length}
                 </span>
               )}
+              {/* Spielfiguren (nur Charaktere mit Pixel-Figur), max. 3 — der Rest steckt im Zähler. */}
+              {here.some((c) => c.pixel) && (
+                <div className="flex -space-x-5 -mt-1">
+                  {here.filter((c) => c.pixel).slice(0, 3).map((c) => (
+                    <PixelCharacter key={c.cardId} config={c.pixel!} anim="idle" scale={1} title={c.name} />
+                  ))}
+                </div>
+              )}
             </Link>
           );
         })}
@@ -233,6 +244,19 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             const progress = c.progress ?? 0.5;
             const x = from.mapX + (to.mapX - from.mapX) * progress;
             const y = from.mapY + (to.mapY - from.mapY) * progress;
+            if (c.pixel) {
+              // Laufende Spielfigur, Blickrichtung = Reiserichtung auf der Karte.
+              return (
+                <div
+                  key={c.cardId}
+                  className="absolute -translate-x-1/2 -translate-y-[70%]"
+                  style={{ left: `${x}%`, top: `${y}%` }}
+                  title={`${c.name} unterwegs`}
+                >
+                  <PixelCharacter config={c.pixel} anim="move" dir={dirFromDelta(to.mapX - from.mapX, to.mapY - from.mapY)} scale={1} title={c.name} />
+                </div>
+              );
+            }
             return (
               <div
                 key={c.cardId}

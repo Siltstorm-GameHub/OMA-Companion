@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import MyCardEditor from "@/components/battle-cards/MyCardEditor";
-import type { CardCharacterSelection } from "@/lib/battle-cards/card-content";
+import { defaultPixelConfig, sanitizePixelConfig } from "@/lib/pixel-character";
 
 export const metadata = {
   title: "Meine Community-Karte | OMA Battle Cards",
@@ -39,13 +39,14 @@ export default async function MyCardPage() {
       <div>
         <h1 className="text-lg font-black text-white">Meine Community-Karte</h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          Untertitel und Beschreibung deiner eigenen Karte anpassen — Stats/Klasse werden automatisch
-          aus deiner Aktivität berechnet.
+          Untertitel, Beschreibung und Pixel-Charakter deiner Karte anpassen — Stats/Klasse werden
+          automatisch aus deiner Aktivität berechnet. Dein Charakter ist auch deine Figur im D&D.
         </p>
       </div>
       <MyCardEditor
         card={toCardData(card, avatarByDiscordId)}
-        initialCharacterConfig={(card.characterConfig as CardCharacterSelection | null) ?? null}
+        initialPixelCharacter={sanitizePixelConfig(card.pixelCharacter) ?? defaultPixelConfig()}
+        hasPixelCharacter={!!sanitizePixelConfig(card.pixelCharacter)}
       />
     </div>
   );

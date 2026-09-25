@@ -10,17 +10,14 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
+import { sanitizePixelConfig } from "@/lib/pixel-character";
 import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
-
-// Die Liste gültiger Skin-IDs (src/lib/skins) prüft der Server hier nicht gegen —
-// eine veraltete/ungültige ID zeigt im Viewer beim nächsten Laden einfach nichts an,
-// statt einen Serverfehler auszulösen.
-const characterConfigSchema = z.object({ skinId: z.string().min(1) }).nullable();
 
 const requestSchema = z.object({
   title: z.string().max(CARD_TITLE_MAX_LENGTH).optional(),
   flavorText: z.string().max(CARD_FLAVOR_TEXT_MAX_LENGTH).optional(),
-  characterConfig: characterConfigSchema.optional(),
+  // Struktur wird unten gegen den Katalog geprüft (sanitizePixelConfig) — nicht vertrauenswürdig.
+  pixelCharacter: z.unknown().optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -44,8 +41,17 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "Keine eigene Community-Karte gefunden." }, { status: 404 });
   }
 
+  const { pixelCharacter, ...content } = parsed.data;
+  let pixel: ReturnType<typeof sanitizePixelConfig> | undefined;
+  if (pixelCharacter !== undefined) {
+    pixel = pixelCharacter === null ? null : sanitizePixelConfig(pixelCharacter);
+    if (pixel === null && pixelCharacter !== null) {
+      return Response.json({ error: "Ungültiger Charakter." }, { status: 400 });
+    }
+  }
+
   try {
-    await updateCardContent(card.id, parsed.data);
+    await updateCardContent(card.id, { ...content, ...(pixel !== undefined ? { pixelCharacter: pixel } : {}) });
     await markTutorialCommunityCardCustomized(userId);
     return Response.json({ ok: true });
   } catch (error) {

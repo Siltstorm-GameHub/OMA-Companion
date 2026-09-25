@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   ".impeccable/config.json": {
-    "mtime": 1789764442.2671726,
-    "ast_hash": "e37357fb9620c45c6380edb1515a773b",
+    "mtime": 1790318544.246875,
+    "ast_hash": "b69a139ec24e7a5d235e695d06dd6623",
     "semantic_hash": ""
   },
   "bot-runner.mjs": {
@@ -630,8 +630,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/shop/ShopConfigPanel.tsx": {
-    "mtime": 1790231913.8861005,
-    "ast_hash": "1ee7b6f343d55a9503290039042e847c",
+    "mtime": 1790317703.0084794,
+    "ast_hash": "5fad6d9f85818d5eac14d8a4b711f48f",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/admin/shop/page.tsx": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/BattleCardsTabs.tsx": {
-    "mtime": 1789376737.4431558,
-    "ast_hash": "9e6979a73250dc6804afde80f2bd8716",
+    "mtime": 1790317703.0095322,
+    "ast_hash": "d24889d2a5cfb6bf07691b5cb8f7f0ab",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/battles/[id]/page.tsx": {
@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/my-card/page.tsx": {
-    "mtime": 1790081161.573935,
-    "ast_hash": "6b26a381fda0e945c848afd39a3474e8",
+    "mtime": 1790318909.314567,
+    "ast_hash": "99837577d1ad20ec27a47b5a48d82d8c",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/battle-cards/page.tsx": {
@@ -970,7 +970,7 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/ProfileEditor.tsx": {
-    "mtime": 1790234831.6671093,
+    "mtime": 1790318654.9202464,
     "ast_hash": "d1f318bfde57c79d2b8f1465d12502af",
     "semantic_hash": ""
   },
@@ -1020,8 +1020,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/page.tsx": {
-    "mtime": 1790240544.0747323,
-    "ast_hash": "ffc1c726fc37009ea74fc14ef08d1a7b",
+    "mtime": 1790318654.9202464,
+    "ast_hash": "eadcf629357bba3210276508ee0d14b2",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/profile/rueckblick/page.tsx": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/shop/page.tsx": {
-    "mtime": 1790231296.9286196,
-    "ast_hash": "8f442ca7fd69ad7f2cd3495e27999e38",
+    "mtime": 1790317703.0136034,
+    "ast_hash": "c6c89b0ff5df34c3e00f0f9538190554",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/squads/[id]/page.tsx": {
@@ -1610,8 +1610,8 @@
     "semantic_hash": ""
   },
   "src/app/api/battle-cards/my-card/route.ts": {
-    "mtime": 1790081152.9656088,
-    "ast_hash": "db0ec10db7561151c7f389655bcf71d7",
+    "mtime": 1790318909.314567,
+    "ast_hash": "0bb4233b8521dde60b2128381ee2fd64",
     "semantic_hash": ""
   },
   "src/app/api/battle-cards/npc-battle/route.ts": {
@@ -2205,8 +2205,8 @@
     "semantic_hash": ""
   },
   "src/app/api/events/[id]/polls/[pollId]/vote/route.ts": {
-    "mtime": 1783790895.735637,
-    "ast_hash": "9288686d754e0fbbfb24e4cb93259039",
+    "mtime": 1790317703.0228775,
+    "ast_hash": "4cdde81caeb4d00bae4e37f567adafb6",
     "semantic_hash": ""
   },
   "src/app/api/events/[id]/polls/route.ts": {
@@ -2215,8 +2215,8 @@
     "semantic_hash": ""
   },
   "src/app/api/events/[id]/register/route.ts": {
-    "mtime": 1789750218.0090985,
-    "ast_hash": "9819cc10417ce6136b774885bb38d4c5",
+    "mtime": 1790317703.0234206,
+    "ast_hash": "624f409243a53cbafe82bac67efa9d66",
     "semantic_hash": ""
   },
   "src/app/api/events/[id]/route.ts": {
@@ -2495,7 +2495,7 @@
     "semantic_hash": ""
   },
   "src/app/api/upload/route.ts": {
-    "mtime": 1789318054.5844297,
+    "mtime": 1790318654.9217722,
     "ast_hash": "af00019dcae86589ed685d0b0b5fc387",
     "semantic_hash": ""
   },
@@ -2685,8 +2685,8 @@
     "semantic_hash": ""
   },
   "src/bot/activity.ts": {
-    "mtime": 1785866466.2163053,
-    "ast_hash": "ebebf54a0b561c4e341f3b028ce77c9c",
+    "mtime": 1790317703.025452,
+    "ast_hash": "fdfe7892dcb045c94b61d0844489f800",
     "semantic_hash": ""
   },
   "src/bot/index.ts": {
@@ -3180,8 +3180,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/BattleCardView.tsx": {
-    "mtime": 1790231297.0264747,
-    "ast_hash": "2174dded7e836e2eb2a4e72ab40176ab",
+    "mtime": 1790318918.2023,
+    "ast_hash": "27ef6e217bce2ab7432328df0324b62d",
     "semantic_hash": ""
   },
   "src/components/battle-cards/BattleCardsLogo.tsx": {
@@ -3350,8 +3350,8 @@
     "semantic_hash": ""
   },
   "src/components/battle-cards/MyCardEditor.tsx": {
-    "mtime": 1790231297.0440092,
-    "ast_hash": "8c76cc3f9259bcb78e060c0cae5ea018",
+    "mtime": 1790318965.5547788,
+    "ast_hash": "7c31c353a6ec2eba448283aa16bc9ea8",
     "semantic_hash": ""
   },
   "src/components/battle-cards/NpcBattleLauncher.tsx": {
@@ -3550,13 +3550,13 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/card-content.ts": {
-    "mtime": 1790081144.9610577,
-    "ast_hash": "e4290da36574655a49a8146b664b84da",
+    "mtime": 1790318909.314567,
+    "ast_hash": "ad88ee37776ea80a027694a1a9a36c91",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/card-view.ts": {
-    "mtime": 1788369098.912161,
-    "ast_hash": "60805b2cc7f860c55a856326311e5754",
+    "mtime": 1790318909.3160963,
+    "ast_hash": "027f5798ab519c9bdb7a581627fa31bb",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/challenge-expiry.ts": {
@@ -3615,8 +3615,8 @@
     "semantic_hash": ""
   },
   "src/lib/battle-cards/live-battle.ts": {
-    "mtime": 1789750218.0327485,
-    "ast_hash": "44f9149633c3f877821d5e1dace2692a",
+    "mtime": 1790317703.0336702,
+    "ast_hash": "638e387412cbf1224b62670a296ce962",
     "semantic_hash": ""
   },
   "src/lib/battle-cards/matchmaking.ts": {
@@ -4210,8 +4210,8 @@
     "semantic_hash": ""
   },
   "src/lib/season/card-provisioning.ts": {
-    "mtime": 1787983964.0758085,
-    "ast_hash": "759dd6deda75508b6ac1206f6279ca5e",
+    "mtime": 1790317703.0433886,
+    "ast_hash": "1bd936ae812e5e8f9336f24f49c6815a",
     "semantic_hash": ""
   },
   "src/lib/season/oma-data.ts": {
@@ -4250,8 +4250,8 @@
     "semantic_hash": ""
   },
   "src/lib/shop-config.ts": {
-    "mtime": 1789282358.3438096,
-    "ast_hash": "1d223b490714424664a56f8193300eff",
+    "mtime": 1790317703.0438924,
+    "ast_hash": "c423dc114493a1bfd7046c062fbe552f",
     "semantic_hash": ""
   },
   "src/lib/steam-feed.ts": {
@@ -4355,8 +4355,8 @@
     "semantic_hash": ""
   },
   "vercel.json": {
-    "mtime": 1789281024.1684058,
-    "ast_hash": "a05415f9b1837d2c1f004446c5f9e8d0",
+    "mtime": 1790317703.0454314,
+    "ast_hash": "80c39c9709d556b26369a2e6ca177897",
     "semantic_hash": ""
   },
   "AGENTS.md": {
@@ -6189,116 +6189,6 @@
     "ast_hash": "0222c785f2d5f92199c26345e50d33ff",
     "semantic_hash": ""
   },
-  "public/characters/manifest.json": {
-    "mtime": 1790059525.9523318,
-    "ast_hash": "fcae25d21dafa31eb14ccbb8fcbb47a5",
-    "semantic_hash": ""
-  },
-  "src/components/battle-cards/character-builder/BodyModel.tsx": {
-    "mtime": 1790056649.7103238,
-    "ast_hash": "e974e5306aa2f8eae396849adc3b73ed",
-    "semantic_hash": ""
-  },
-  "src/components/battle-cards/character-builder/CharacterBuilder.tsx": {
-    "mtime": 1790231297.0490499,
-    "ast_hash": "2a0cf17e66d2294f769bd344ca6b1730",
-    "semantic_hash": ""
-  },
-  "src/components/battle-cards/character-builder/CharacterCanvas.tsx": {
-    "mtime": 1790058489.4106762,
-    "ast_hash": "484b6a67e05dad880101661cf55bc6cb",
-    "semantic_hash": ""
-  },
-  "src/components/battle-cards/character-builder/CharacterRig.tsx": {
-    "mtime": 1790056689.2569137,
-    "ast_hash": "f20277bae12e56f21e922d662ed49801",
-    "semantic_hash": ""
-  },
-  "src/components/battle-cards/character-builder/PartModel.tsx": {
-    "mtime": 1790057231.2340147,
-    "ast_hash": "6337955925b54d1d4aa5dea646f110d9",
-    "semantic_hash": ""
-  },
-  "src/lib/character-kit/manifest.ts": {
-    "mtime": 1790056538.1464016,
-    "ast_hash": "a55c3964a87a1af269196a83e63498f3",
-    "semantic_hash": ""
-  },
-  "src/lib/character-kit/types.ts": {
-    "mtime": 1790056524.7744586,
-    "ast_hash": "32c0abb423f7604a4a7a76b35f7f789b",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/female_body_female_png.png": {
-    "mtime": 1790056494.8991034,
-    "ast_hash": "175b1da20b2de9c4e3b101d5401719ba",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/female_human_psd.png": {
-    "mtime": 1790056494.9151847,
-    "ast_hash": "36ab53da9908d2661835e9e91c9dd418",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/female_outfit_png.png": {
-    "mtime": 1790056494.9051678,
-    "ast_hash": "9cb2a150ce0db3fe6340c07561becc1c",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/female_shoesh_png.png": {
-    "mtime": 1790056494.9046638,
-    "ast_hash": "58dff104718c9c18aa2017b71023c1f7",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/male_body_png.png": {
-    "mtime": 1790056494.9254525,
-    "ast_hash": "f4f47bcfb553d3d4b5b35d6ee19657c4",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/male_outfit_png.png": {
-    "mtime": 1790056494.9213219,
-    "ast_hash": "857e1695907bc6ad56cd755adc651478",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/male_outfit_png_001.png": {
-    "mtime": 1790056494.9321508,
-    "ast_hash": "9cb2a150ce0db3fe6340c07561becc1c",
-    "semantic_hash": ""
-  },
-  "public/characters/textures/male_shoesh_png.png": {
-    "mtime": 1790056494.9107702,
-    "ast_hash": "58dff104718c9c18aa2017b71023c1f7",
-    "semantic_hash": ""
-  },
-  "src/app/dev-skin-test/page.tsx": {
-    "mtime": 1790079258.4169085,
-    "ast_hash": "b2eeec07ee7020375f76fbe055ec40d1",
-    "semantic_hash": ""
-  },
-  "src/components/skins/SkinCanvas.tsx": {
-    "mtime": 1790079244.9748082,
-    "ast_hash": "a4be07dc468f6b81d28701a2f2a75508",
-    "semantic_hash": ""
-  },
-  "src/components/skins/SkinModel.tsx": {
-    "mtime": 1790079237.1762576,
-    "ast_hash": "8c6e4ae463abd99543d9d060f8db612d",
-    "semantic_hash": ""
-  },
-  "src/components/skins/SkinPicker.tsx": {
-    "mtime": 1790081133.4522583,
-    "ast_hash": "58e3dbde3f288d26e95f6bb53948d749",
-    "semantic_hash": ""
-  },
-  "src/lib/skins/skins.ts": {
-    "mtime": 1790081958.6486394,
-    "ast_hash": "8146786b9857009d782ed32f6a16077d",
-    "semantic_hash": ""
-  },
-  "src/lib/skins/types.ts": {
-    "mtime": 1790079210.222651,
-    "ast_hash": "79c2b721dfa2df8d54d819f5921c7685",
-    "semantic_hash": ""
-  },
   "src/lib/xbox-feed.ts": {
     "mtime": 1790185378.13269,
     "ast_hash": "82416e3e2158eb192eb57aa587ec4a72",
@@ -6450,8 +6340,8 @@
     "semantic_hash": ""
   },
   "src/components/nav/ink-nav.tsx": {
-    "mtime": 1790243922.6596477,
-    "ast_hash": "c034074371563869d61aabe2f4e42c85",
+    "mtime": 1790317703.0311265,
+    "ast_hash": "c6a61e55807b1f3581ff28c909f9b78b",
     "semantic_hash": ""
   },
   "src/components/IconPicker.tsx": {
@@ -7967,6 +7857,3246 @@
   "public/icons/ui/unlink.png": {
     "mtime": 1790248107.4392989,
     "ast_hash": "c7c458c35423a8a1b0aa9231e689e808",
+    "semantic_hash": ""
+  },
+  "scripts/build-pixel-character-assets.ts": {
+    "mtime": 1790318153.9644454,
+    "ast_hash": "75680bac7f0bf978e5fc4199d2a2cb94",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/dnd/[slug]/page.tsx": {
+    "mtime": 1790317703.0110588,
+    "ast_hash": "5e16f5d82d5ec697ca9f9e8ffb949daa",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/dnd/page.tsx": {
+    "mtime": 1790317703.0110588,
+    "ast_hash": "fc6cdc4772391ea3e9ff15d0ddb266ad",
+    "semantic_hash": ""
+  },
+  "src/app/(dashboard)/shop/BuyDndReroll.tsx": {
+    "mtime": 1790317703.0125978,
+    "ast_hash": "b871a9fb909d405d13faa944377de680",
+    "semantic_hash": ""
+  },
+  "src/app/api/cron/dnd-travel-sweep/route.ts": {
+    "mtime": 1790317703.014108,
+    "ast_hash": "b9a98ec5093adef65d8112a2b61054b3",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/character/create/route.ts": {
+    "mtime": 1790317703.0166848,
+    "ast_hash": "1896fc829030412e87212e184b9d9106",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/character/story-tick/route.ts": {
+    "mtime": 1790317703.0166848,
+    "ast_hash": "7279ee0047db182da19c90fa544bf445",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/character/travel/cancel/route.ts": {
+    "mtime": 1790317703.0183256,
+    "ast_hash": "eae61105121d0fba5ae4d074db9c4162",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/character/travel/route.ts": {
+    "mtime": 1790317703.0198338,
+    "ast_hash": "fbfc3063cacc8d20d4400bfc8104601c",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/location/[slug]/route.ts": {
+    "mtime": 1790317703.0198338,
+    "ast_hash": "2972cca98d72f58abbf9e314e37df10c",
+    "semantic_hash": ""
+  },
+  "src/app/api/dnd/world-map/route.ts": {
+    "mtime": 1790318977.081058,
+    "ast_hash": "e69e2394a9dbe5e7ad009eaae0142d68",
+    "semantic_hash": ""
+  },
+  "src/app/api/shop/buy-dnd-reroll/route.ts": {
+    "mtime": 1790317703.0239284,
+    "ast_hash": "6e8c25bfd8d6584d0a4b2042c26f35cc",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/CharacterCreation.tsx": {
+    "mtime": 1790317703.025452,
+    "ast_hash": "5b7034693de3d9da37ae8625ca2104fa",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/DiceRoll.tsx": {
+    "mtime": 1790317703.026981,
+    "ast_hash": "f44f5163819a19174582328d4fe40b4b",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/DndHome.tsx": {
+    "mtime": 1790317703.026981,
+    "ast_hash": "3237c7a4e7cabfcc18725c1bcf3c2ab7",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/DndMigrationBanner.tsx": {
+    "mtime": 1790317703.0285132,
+    "ast_hash": "8944a553c3e941f01b3335c962185677",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/LocationScene.tsx": {
+    "mtime": 1790317703.0295968,
+    "ast_hash": "b916b6ff6973ed43cae706d82d1d8a88",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/WorldMap.tsx": {
+    "mtime": 1790318977.0828607,
+    "ast_hash": "8ee2d925f57aaa99ea4ce73adad2d795",
+    "semantic_hash": ""
+  },
+  "src/components/dnd/ZoomPanMap.tsx": {
+    "mtime": 1790317703.0295968,
+    "ast_hash": "b6d17a686245da7afde97eb10ad355fa",
+    "semantic_hash": ""
+  },
+  "src/components/pixel-character/PixelCharacter.tsx": {
+    "mtime": 1790318918.2023,
+    "ast_hash": "18566906565fcbb9a2a05ba0c1d46d4f",
+    "semantic_hash": ""
+  },
+  "src/components/pixel-character/PixelCharacterEditor.tsx": {
+    "mtime": 1790318953.342245,
+    "ast_hash": "a36a7668c9be186ba3079173c3fe9cd6",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/ability-scores.ts": {
+    "mtime": 1790317703.0341744,
+    "ast_hash": "8a50239d6b15567f0d1c2616c1bfb678",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/backstory.ts": {
+    "mtime": 1790317703.0341744,
+    "ast_hash": "bd932ae504f5e9da8abb688e0fa09183",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/character-creation.ts": {
+    "mtime": 1790317703.035697,
+    "ast_hash": "19289ed223b5e7b5b7c48283cd6a3b84",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/class-mapping.ts": {
+    "mtime": 1790317703.035697,
+    "ast_hash": "f31d1ee033f9fb501b2d6f830bc53600",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/classes.ts": {
+    "mtime": 1790317703.0372362,
+    "ast_hash": "773efd933383fd394f254044431280a4",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/dnd.test.ts": {
+    "mtime": 1790317703.037772,
+    "ast_hash": "d900fa873141ee411c58381f67caaec5",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/location-scenes.ts": {
+    "mtime": 1790317703.0382843,
+    "ast_hash": "bbf38b5de9729fe2242b14c334c32546",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/locations.ts": {
+    "mtime": 1790317703.0388129,
+    "ast_hash": "ec868dae452035e3e1313b6bc37ab03c",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/migration.ts": {
+    "mtime": 1790317703.0393174,
+    "ast_hash": "6cacc07eebbc967dabe11099158d3e30",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/quests.ts": {
+    "mtime": 1790317703.0393174,
+    "ast_hash": "240838033e76af4680115219980ca90e",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/races.ts": {
+    "mtime": 1790317703.0408497,
+    "ast_hash": "af83ed2f5c4253016017be5e08b9d1ac",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/story-content.ts": {
+    "mtime": 1790317703.0408497,
+    "ast_hash": "424908ffd20e4f020d4a4f856f9bddf6",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/story.ts": {
+    "mtime": 1790317703.0408497,
+    "ast_hash": "deff2691c6cfb3b3b87aaf2640b550dd",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/travel.ts": {
+    "mtime": 1790317703.0423813,
+    "ast_hash": "781e3812daac25db87aff7fbe2dcaf9c",
+    "semantic_hash": ""
+  },
+  "src/lib/pixel-character/catalog.json": {
+    "mtime": 1790318161.0560734,
+    "ast_hash": "d33093760999ab3cdf01d7986705efde",
+    "semantic_hash": ""
+  },
+  "src/lib/pixel-character/index.ts": {
+    "mtime": 1790318918.2040908,
+    "ast_hash": "9f48ac596b59b0f3f89b7c886a8ef286",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/bergpass.jpg": {
+    "mtime": 1790317702.9972742,
+    "ast_hash": "8ff0257fea4e6416105c22630d2b19c9",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/frostgipfel.jpg": {
+    "mtime": 1790317702.9982798,
+    "ast_hash": "986589c1de7f66a1599168bc26446a38",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/hafenstadt.jpg": {
+    "mtime": 1790317702.9992938,
+    "ast_hash": "2a23f116734e957bfda4312b4f5190cc",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/kuestenstrasse.jpg": {
+    "mtime": 1790317702.9998174,
+    "ast_hash": "0781572c366b4789e4f4b8568bd57160",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/ruinen.jpg": {
+    "mtime": 1790317703.00133,
+    "ast_hash": "9b92fcbbceae4594c21f1b28f26b1a46",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/schmugglerhoehle.jpg": {
+    "mtime": 1790317703.00133,
+    "ast_hash": "eeadf9650c5dec876fde46c0c6638e4b",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/sumpf.jpg": {
+    "mtime": 1790317703.0033584,
+    "ast_hash": "0be08b6ce1c56e2626d3bbb8e34a6613",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/verlassenes_dorf.jpg": {
+    "mtime": 1790317703.0038857,
+    "ast_hash": "b644c626aa18d6feb94667f9e7e05db5",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/waldpfad.jpg": {
+    "mtime": 1790317703.0038857,
+    "ast_hash": "f28173125384d5fe382b4822a58c0991",
+    "semantic_hash": ""
+  },
+  "public/dnd/locations/zwergenfeste.jpg": {
+    "mtime": 1790317703.0054069,
+    "ast_hash": "068962295b58be833579a584a7a39528",
+    "semantic_hash": ""
+  },
+  "public/dnd/world-map.jpg": {
+    "mtime": 1790317703.0069468,
+    "ast_hash": "f23b3af8cc903966b7512bd3a6f2c34f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/base/m-idle.png": {
+    "mtime": 1790318155.248,
+    "ast_hash": "1ea5637f7f0c2a53178f43aca7d83d7a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/base/m-move.png": {
+    "mtime": 1790318155.261,
+    "ast_hash": "41c1e5bb531c2c42b1a062826175d0e5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_1/m-idle.png": {
+    "mtime": 1790318155.914,
+    "ast_hash": "ab47510ce7593c7fcf7be4aacf0afa76",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_1/m-move.png": {
+    "mtime": 1790318155.926,
+    "ast_hash": "f42f94f64d869b6f78f670d1780cee98",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_2/m-idle.png": {
+    "mtime": 1790318155.936,
+    "ast_hash": "1618b0dd94ce8941cfcb510a12b6daed",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_2/m-move.png": {
+    "mtime": 1790318155.949,
+    "ast_hash": "9ea9f535af69914c65281a277829eff5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_3/m-idle.png": {
+    "mtime": 1790318155.959,
+    "ast_hash": "af4df912301c16a6a449f0e7179ca3da",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_3/m-move.png": {
+    "mtime": 1790318155.969,
+    "ast_hash": "c3235ec22b00a1f2c08d8b0a841222db",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_4/m-idle.png": {
+    "mtime": 1790318155.977,
+    "ast_hash": "884caf065036080c886b4d5792216495",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_4/m-move.png": {
+    "mtime": 1790318155.986,
+    "ast_hash": "e7ba26f1f4eb246801a560f2d6fa93b5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_5/m-idle.png": {
+    "mtime": 1790318155.995,
+    "ast_hash": "c39be7fe8775606ac1160338e5f1954e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/beard/Beard_Brown_5/m-move.png": {
+    "mtime": 1790318156.004,
+    "ast_hash": "14906fb8536827c74341542171acb59b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Ape/m-idle.png": {
+    "mtime": 1790318155.276,
+    "ast_hash": "2e7e015a377823215aea6ab4954964fe",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Ape/m-move.png": {
+    "mtime": 1790318155.286,
+    "ast_hash": "c720341d09088df6222f74abac1c9f21",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Demon/m-idle.png": {
+    "mtime": 1790318155.296,
+    "ast_hash": "0fef491732bf363b5a38ca7f13ce391c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Demon/m-move.png": {
+    "mtime": 1790318155.307,
+    "ast_hash": "aadeaf9f18dc9cd2dea51cb2eac85e12",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Lion/m-idle.png": {
+    "mtime": 1790318155.318,
+    "ast_hash": "deb4445113734e2e22199b3985f89ba9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Lion/m-move.png": {
+    "mtime": 1790318155.33,
+    "ast_hash": "d44e0fc94be2019fa276468bf7888b8c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Lizard/m-idle.png": {
+    "mtime": 1790318155.339,
+    "ast_hash": "d0d9c64ee959ec0472dba27b38696dab",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Lizard/m-move.png": {
+    "mtime": 1790318155.35,
+    "ast_hash": "3f0085191c5c8ba0219ab8282410b6e3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Retro/m-idle.png": {
+    "mtime": 1790318155.359,
+    "ast_hash": "436ed6247fce86dc7b08084933ae8090",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Retro/m-move.png": {
+    "mtime": 1790318155.369,
+    "ast_hash": "2a03197595eae1f1624dab22f668f613",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skeleton/m-idle.png": {
+    "mtime": 1790318155.378,
+    "ast_hash": "1a7299176b8ff7fb0e54834f33feffb6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skeleton/m-move.png": {
+    "mtime": 1790318155.388,
+    "ast_hash": "8f08eb081696fee2c851f2b53b3c2eab",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_2/m-idle.png": {
+    "mtime": 1790318155.398,
+    "ast_hash": "f04edd431496dc026644dbf62830cc01",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_2/m-move.png": {
+    "mtime": 1790318155.408,
+    "ast_hash": "d2daab6e91e4e359a81828d78695d126",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_3/m-idle.png": {
+    "mtime": 1790318155.416,
+    "ast_hash": "8675ea12a8a35ae0b145f8a93ee38bd9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_3/m-move.png": {
+    "mtime": 1790318155.427,
+    "ast_hash": "9b0d1625ea6160de1443359237b7da73",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_4/m-idle.png": {
+    "mtime": 1790318155.436,
+    "ast_hash": "8526f222aea2bf9b9dba332359da2e27",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_4/m-move.png": {
+    "mtime": 1790318155.448,
+    "ast_hash": "cc2364dfbf60d2421e9b73ed954ac277",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_5/m-idle.png": {
+    "mtime": 1790318155.457,
+    "ast_hash": "3a64d70b621df9ed13e8de7bab5d8995",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_5/m-move.png": {
+    "mtime": 1790318155.466,
+    "ast_hash": "73be592bba910c42291692e313479ff1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_6/m-idle.png": {
+    "mtime": 1790318155.476,
+    "ast_hash": "17e80e9ce27a635955e2ff8403cd26b2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_6/m-move.png": {
+    "mtime": 1790318155.488,
+    "ast_hash": "cfa2f0bc150b4059dbd1119c5bcd9f84",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_7/m-idle.png": {
+    "mtime": 1790318155.496,
+    "ast_hash": "2600cfac6cc4b16d71d360a1ba2f2a48",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_7/m-move.png": {
+    "mtime": 1790318155.508,
+    "ast_hash": "fe8497f45cd8958fc7e55dd79752cfa5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_8/m-idle.png": {
+    "mtime": 1790318155.519,
+    "ast_hash": "2da82eee26143e268b00b4cd2f98d6d3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_8/m-move.png": {
+    "mtime": 1790318155.53,
+    "ast_hash": "74b5df0080b30e019d25f695d0ca05c5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_9/m-idle.png": {
+    "mtime": 1790318155.541,
+    "ast_hash": "40a3c2de5a464e4ce6a3a30aeb4c5152",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Skin_9/m-move.png": {
+    "mtime": 1790318155.554,
+    "ast_hash": "3e4d26b10a7b96a6cca56a0d887d5d88",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Tiger/m-idle.png": {
+    "mtime": 1790318155.562,
+    "ast_hash": "4c51fb9e60d6aa77faa0eb981304a74e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/body/Body_Tiger/m-move.png": {
+    "mtime": 1790318155.575,
+    "ast_hash": "8d3258faede7b141a24f757a0441cf73",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Elite/b-idle.png": {
+    "mtime": 1790318160.833,
+    "ast_hash": "7bb1d8ca8059fb884067c26aab8a9fca",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Elite/b-move.png": {
+    "mtime": 1790318160.842,
+    "ast_hash": "4aa41efc6ac3560d49686451cfe15842",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Elite/f-idle.png": {
+    "mtime": 1790318160.851,
+    "ast_hash": "ecba0339fbfa4137847c9b6e23e414a0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Elite/f-move.png": {
+    "mtime": 1790318160.861,
+    "ast_hash": "ef054b046c5e0c2a5d06ec54f3670f81",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Iron/b-idle.png": {
+    "mtime": 1790318160.87,
+    "ast_hash": "8f5b2219cd252a9bd75747629bf9be88",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Iron/b-move.png": {
+    "mtime": 1790318160.879,
+    "ast_hash": "f812a62d0199be6654b4ef7848c6be15",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Iron/f-idle.png": {
+    "mtime": 1790318160.888,
+    "ast_hash": "03fcbfacca15c15e654724f0712d1e18",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Iron/f-move.png": {
+    "mtime": 1790318160.897,
+    "ast_hash": "7b819eaf435cbcfc358114e3524c577f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Simple/b-idle.png": {
+    "mtime": 1790318160.906,
+    "ast_hash": "35d660200e4e060c1d8c5f56ffce165f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Simple/b-move.png": {
+    "mtime": 1790318160.916,
+    "ast_hash": "ec3511e67883d9d1a31cec976b1b4751",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Simple/f-idle.png": {
+    "mtime": 1790318160.925,
+    "ast_hash": "c99a8b6f0f9087f1744da72a23de9bc7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/bow/Bow_Simple/f-move.png": {
+    "mtime": 1790318160.934,
+    "ast_hash": "3238fd102f12aa24f5834eac49611bb7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Balloon_Heart/b-idle.png": {
+    "mtime": 1790318158.96,
+    "ast_hash": "ba1c16507fbe4fd2d8298d7b56f0e40a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Balloon_Heart/b-move.png": {
+    "mtime": 1790318158.969,
+    "ast_hash": "6c70d0fffaf1b61c338a8e2f671c5980",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Balloon_Heart/f-idle.png": {
+    "mtime": 1790318158.979,
+    "ast_hash": "7654877b0dd4caef38dc3ebdc93e16ff",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Balloon_Heart/f-move.png": {
+    "mtime": 1790318158.989,
+    "ast_hash": "225d378545473eeda63141da1b11c7c2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Blue/b-idle.png": {
+    "mtime": 1790318158.999,
+    "ast_hash": "9bc0b531ab87c9f399c669195f88b149",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Blue/b-move.png": {
+    "mtime": 1790318159.009,
+    "ast_hash": "e4348cb9738055c1e5a465ae7724fdb8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Blue/f-idle.png": {
+    "mtime": 1790318159.019,
+    "ast_hash": "53a710b3bbe9a27a04dc287134ea667b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Blue/f-move.png": {
+    "mtime": 1790318159.03,
+    "ast_hash": "2dbac608a81a41d529469094e692af31",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Christmas/b-idle.png": {
+    "mtime": 1790318159.039,
+    "ast_hash": "a9361f09ac8def2446d8cf6e0d30a4ad",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Christmas/b-move.png": {
+    "mtime": 1790318159.049,
+    "ast_hash": "a55a616fd11d657cff5f85536cc638ea",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Christmas/f-idle.png": {
+    "mtime": 1790318159.057,
+    "ast_hash": "963d929a58dcb0f3956fb97f9e4f1d89",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Christmas/f-move.png": {
+    "mtime": 1790318159.066,
+    "ast_hash": "9e497c3608708e9692367b69ce19803d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Red/b-idle.png": {
+    "mtime": 1790318159.074,
+    "ast_hash": "fea4c6e1924c01aa28357d382b93b660",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Red/b-move.png": {
+    "mtime": 1790318159.084,
+    "ast_hash": "5def719908ef77e738e871ba7c0972a7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Red/f-idle.png": {
+    "mtime": 1790318159.092,
+    "ast_hash": "41adf6c40e1e5a259b5e6a898db74620",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Red/f-move.png": {
+    "mtime": 1790318159.101,
+    "ast_hash": "b212c704ac9a48099fb5bab2376aa3c1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Black/b-idle.png": {
+    "mtime": 1790318159.109,
+    "ast_hash": "0fe8854de450a1a44a29e155f9298fe4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Black/b-move.png": {
+    "mtime": 1790318159.117,
+    "ast_hash": "84a6062a9b2bf4961c3755f8e36f464d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Black/f-idle.png": {
+    "mtime": 1790318159.127,
+    "ast_hash": "10f58a111c71a99b3f49b18628b58ec5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Black/f-move.png": {
+    "mtime": 1790318159.138,
+    "ast_hash": "1605b5d4b0eef19c0cc7d8ba7e10a776",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Red/b-idle.png": {
+    "mtime": 1790318159.148,
+    "ast_hash": "ab45fddf897970282db0a16903e3e677",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Red/b-move.png": {
+    "mtime": 1790318159.158,
+    "ast_hash": "1c1ee110c823ad1c3122a8ecf6f86106",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Red/f-idle.png": {
+    "mtime": 1790318159.165,
+    "ast_hash": "b2e5dcea76fcb3ef93d4c4a20105d9aa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Ripped_Red/f-move.png": {
+    "mtime": 1790318159.174,
+    "ast_hash": "40575b5cbeed4d1cf700a6babeea2ad1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Demon/b-idle.png": {
+    "mtime": 1790318159.185,
+    "ast_hash": "05c12bc96988bc9839097b9b73931304",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Demon/b-move.png": {
+    "mtime": 1790318159.194,
+    "ast_hash": "14afd25ce69f909d3846a5cfa545758c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Demon/f-idle.png": {
+    "mtime": 1790318159.203,
+    "ast_hash": "84bb74f49d0e7a21095ce26e0848ce84",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Demon/f-move.png": {
+    "mtime": 1790318159.214,
+    "ast_hash": "3cf104e3c1a10b1e1c02a40577bab777",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lion/b-idle.png": {
+    "mtime": 1790318159.224,
+    "ast_hash": "96cf64dac96578e1a84ae3eaf956f3a4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lion/b-move.png": {
+    "mtime": 1790318159.236,
+    "ast_hash": "9d950e3d45ef2f2d991dd902a6920260",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lion/f-idle.png": {
+    "mtime": 1790318159.244,
+    "ast_hash": "9721dda0dd81c18ff097197ef5f444f3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lion/f-move.png": {
+    "mtime": 1790318159.255,
+    "ast_hash": "0e72aa2761f3ff7227fe8bb691f3e6f7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lizard/b-idle.png": {
+    "mtime": 1790318159.263,
+    "ast_hash": "dc09770758c0c35d1c128797ef1791e6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lizard/b-move.png": {
+    "mtime": 1790318159.275,
+    "ast_hash": "6d9cbe2b492914225dc9ea58e3ff2939",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lizard/f-idle.png": {
+    "mtime": 1790318159.284,
+    "ast_hash": "8cc42a252374bc93d1624a88851e2eee",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Lizard/f-move.png": {
+    "mtime": 1790318159.294,
+    "ast_hash": "2a1ae931492d4e068b7e85a658dcf511",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Tiger/b-idle.png": {
+    "mtime": 1790318159.302,
+    "ast_hash": "bdd4d9befaf394bad403a5c2c8f6d8e5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Tiger/b-move.png": {
+    "mtime": 1790318159.313,
+    "ast_hash": "eaac4df9a87a5a1757221a1e3c5de3ad",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Tiger/f-idle.png": {
+    "mtime": 1790318159.322,
+    "ast_hash": "0616b44595d19ade22a503f294a101f3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Tail_Tiger/f-move.png": {
+    "mtime": 1790318159.334,
+    "ast_hash": "94cb074c98be8ac9107d71568f8c4a66",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Torn_Black/f-idle.png": {
+    "mtime": 1790318159.346,
+    "ast_hash": "51bb1fba1bf82e803d2221dde6ac6673",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Torn_Black/f-move.png": {
+    "mtime": 1790318159.356,
+    "ast_hash": "a58537fdd696813e68f8ff1418ee4470",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Torn_Brown/f-idle.png": {
+    "mtime": 1790318159.37,
+    "ast_hash": "b76051766dad00a49aa184f4360671db",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/cape/Cape_Torn_Brown/f-move.png": {
+    "mtime": 1790318159.38,
+    "ast_hash": "fccfd5fa4a4f999c1a43ead9d55ea8cd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_1/m-idle.png": {
+    "mtime": 1790318157.717,
+    "ast_hash": "52bc15430df9225026f70daa69f1cba7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_1/m-move.png": {
+    "mtime": 1790318157.726,
+    "ast_hash": "929bd001cf941ce3cebfbd3bfdb5b1de",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_2/m-idle.png": {
+    "mtime": 1790318157.737,
+    "ast_hash": "f323175522fbef4cc72e95797aa8a6e7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_2/m-move.png": {
+    "mtime": 1790318157.748,
+    "ast_hash": "060a6e2863e200dc7a8199b05e0ba1f1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_3/m-idle.png": {
+    "mtime": 1790318157.756,
+    "ast_hash": "25d963ae97f5792a78cf43aa8a3f519b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_3/m-move.png": {
+    "mtime": 1790318157.766,
+    "ast_hash": "f1f60a59961ac0cdf2ec29d463bdc31d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_4/m-idle.png": {
+    "mtime": 1790318157.776,
+    "ast_hash": "3309ca67456937cc9fd924d94bf124a2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Armor_Iron_4/m-move.png": {
+    "mtime": 1790318157.786,
+    "ast_hash": "5cd308224bce50d3b5b3a6cf66be6e6e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Fancy/m-idle.png": {
+    "mtime": 1790318157.794,
+    "ast_hash": "ea9b029a81bf19ea1f4786a3047ac0c8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Fancy/m-move.png": {
+    "mtime": 1790318157.804,
+    "ast_hash": "35dd71e9e578de3339e06f13d9849ed1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Leather/m-idle.png": {
+    "mtime": 1790318157.811,
+    "ast_hash": "ff4ec0b62e2a3b1a5a37f5ff11ffa00e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Leather/m-move.png": {
+    "mtime": 1790318157.82,
+    "ast_hash": "91b789f0b4741184c6c4d1557bf69569",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Old/m-idle.png": {
+    "mtime": 1790318157.829,
+    "ast_hash": "45ae80a32e56ab1f316f9fe54de7d84f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/chest/Chest_Vest_Old/m-move.png": {
+    "mtime": 1790318157.838,
+    "ast_hash": "288e5a8f487d8b9e469e4a002fd493d5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Armor_Enchanted/m-idle.png": {
+    "mtime": 1790318158.581,
+    "ast_hash": "d8520be4295bd4add44a68e0bfe9f1fb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Armor_Enchanted/m-move.png": {
+    "mtime": 1790318158.592,
+    "ast_hash": "0f86386eaadec13865e635c82d7401b6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Armor_Iron/m-idle.png": {
+    "mtime": 1790318158.599,
+    "ast_hash": "25d973629f6afc5f51db2fd22980c60a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Armor_Iron/m-move.png": {
+    "mtime": 1790318158.609,
+    "ast_hash": "0c3f897bc6c8a6c1488336e149bc95e0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Black/m-idle.png": {
+    "mtime": 1790318158.619,
+    "ast_hash": "416773c668ede8cf5e6d7b3a1532a1f6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Black/m-move.png": {
+    "mtime": 1790318158.629,
+    "ast_hash": "12a5e39ba73c609aa37f8741a16fe795",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_1/m-idle.png": {
+    "mtime": 1790318158.639,
+    "ast_hash": "aa6cb772b0115296e8739207d454d32e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_1/m-move.png": {
+    "mtime": 1790318158.649,
+    "ast_hash": "492b209c1662b387008d861716113325",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_2/m-idle.png": {
+    "mtime": 1790318158.656,
+    "ast_hash": "d368e4e43c549d151897e0b9b95c1401",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_2/m-move.png": {
+    "mtime": 1790318158.666,
+    "ast_hash": "3338542922bc4f36aa1aa9e01aa693c5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_3/m-idle.png": {
+    "mtime": 1790318158.676,
+    "ast_hash": "f18a9de5980cc5a0987aaa5d1bff1347",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Elf_3/m-move.png": {
+    "mtime": 1790318158.684,
+    "ast_hash": "cefa1d98c48b69a6ab19d6977e65c440",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Santa/m-idle.png": {
+    "mtime": 1790318158.694,
+    "ast_hash": "d30cb8f796d62a43cb6c3ed00cd3e68e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Christmas_Santa/m-move.png": {
+    "mtime": 1790318158.704,
+    "ast_hash": "3be91db884947ea3f8052db5463d2491",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Leather_Simple/m-idle.png": {
+    "mtime": 1790318158.712,
+    "ast_hash": "7fec3f0e9c63b99280651e815cb2f60d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Leather_Simple/m-move.png": {
+    "mtime": 1790318158.723,
+    "ast_hash": "1088357bd25c7ea076f7056a2b1ac7fd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Leather_Spurs/m-idle.png": {
+    "mtime": 1790318158.733,
+    "ast_hash": "d1d5acb6ba87d5b163cdba8b6a4415c8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Leather_Spurs/m-move.png": {
+    "mtime": 1790318158.743,
+    "ast_hash": "b09f7679b385188eba33b5be94dca0d1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Lucky/m-idle.png": {
+    "mtime": 1790318158.758,
+    "ast_hash": "d8409b35ce3b486ad54d298ba5026811",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Lucky/m-move.png": {
+    "mtime": 1790318158.769,
+    "ast_hash": "f248acfe5c011bf8e8dc8153887c5de0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Starry/m-idle.png": {
+    "mtime": 1790318158.779,
+    "ast_hash": "730685dbd031ea57bd5c713b0c5abd8b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Starry/m-move.png": {
+    "mtime": 1790318158.79,
+    "ast_hash": "dddd80b280708e0e326259431aca9470",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Valentine/m-idle.png": {
+    "mtime": 1790318158.799,
+    "ast_hash": "f36cf84f14142f1e1cf8297d826e0319",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_Valentine/m-move.png": {
+    "mtime": 1790318158.809,
+    "ast_hash": "9a032765be3fb53330006fb4947030ce",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_White/m-idle.png": {
+    "mtime": 1790318158.817,
+    "ast_hash": "a6e63b49bc1d0d4e6fb8b63d8090afd8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/feet/Feet_White/m-move.png": {
+    "mtime": 1790318158.826,
+    "ast_hash": "d4c4758319a4962cc4d742b6c7cb770a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_10/m-idle.png": {
+    "mtime": 1790318155.607,
+    "ast_hash": "4c4997bd607a980d0a75c5b90f631119",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_10/m-move.png": {
+    "mtime": 1790318155.619,
+    "ast_hash": "0ce6b7b73f7cb2f86118a6c35e50b1fa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_11/m-idle.png": {
+    "mtime": 1790318155.629,
+    "ast_hash": "08b922b5f457d6672d1118769795ab90",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_11/m-move.png": {
+    "mtime": 1790318155.64,
+    "ast_hash": "6af49d546a2210ec16a61300b211e454",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_12/m-idle.png": {
+    "mtime": 1790318155.652,
+    "ast_hash": "96a8aef589d68fae4b877af341981a1d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_12/m-move.png": {
+    "mtime": 1790318155.665,
+    "ast_hash": "3fe530fe715ff81a035837070d57750f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_13/m-idle.png": {
+    "mtime": 1790318155.676,
+    "ast_hash": "7c02f1133d4675a0ef23304efee64d36",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_13/m-move.png": {
+    "mtime": 1790318155.686,
+    "ast_hash": "9e964163e1928333082c0cbd9b799d12",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_14/m-idle.png": {
+    "mtime": 1790318155.696,
+    "ast_hash": "cf2707e7581a9021af6b3596b5b633ca",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_14/m-move.png": {
+    "mtime": 1790318155.707,
+    "ast_hash": "47a230e9d05ffd2d9397a6d35b2b6c3b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_15/m-idle.png": {
+    "mtime": 1790318155.716,
+    "ast_hash": "e49debf77ff39a55b3750e37fe4bb94d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_15/m-move.png": {
+    "mtime": 1790318155.731,
+    "ast_hash": "44efce6cf51e067d90d0dececb36c384",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_1/m-idle.png": {
+    "mtime": 1790318155.586,
+    "ast_hash": "d56e8b3992278cd4f460df8ccedde45f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_1/m-move.png": {
+    "mtime": 1790318155.597,
+    "ast_hash": "3ea861b7ddf2aeada0d47b4a229e1889",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_2/m-idle.png": {
+    "mtime": 1790318155.739,
+    "ast_hash": "76abf2868627c1c1b0454047f23dfe88",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_2/m-move.png": {
+    "mtime": 1790318155.752,
+    "ast_hash": "f9c19a21b0095039b370176c53e24ce1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_3/m-idle.png": {
+    "mtime": 1790318155.761,
+    "ast_hash": "1354bc8f6a15908be49c79811424e12d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_3/m-move.png": {
+    "mtime": 1790318155.774,
+    "ast_hash": "e14b8a92289cda5be23be5779ad675e6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_4/m-idle.png": {
+    "mtime": 1790318155.784,
+    "ast_hash": "c32b7a34cce781b45a02a83b94390ec0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_4/m-move.png": {
+    "mtime": 1790318155.796,
+    "ast_hash": "85220c676c3aadc7317868d3487ff498",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_5/m-idle.png": {
+    "mtime": 1790318155.805,
+    "ast_hash": "163eb8c43c7b4f9fcaf13da456660583",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_5/m-move.png": {
+    "mtime": 1790318155.816,
+    "ast_hash": "de2c72cb054b1017dce439f495beaa46",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_6/m-idle.png": {
+    "mtime": 1790318155.827,
+    "ast_hash": "2e9e13f744ea795cb8de34156a0e8e78",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_6/m-move.png": {
+    "mtime": 1790318155.839,
+    "ast_hash": "10781516c5ee864ab681da97989e0177",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_7/m-idle.png": {
+    "mtime": 1790318155.848,
+    "ast_hash": "4a192dc22461c26734959fc77f5b4e55",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_7/m-move.png": {
+    "mtime": 1790318155.861,
+    "ast_hash": "c4c22edf4acd0f0efd7e44c995178e75",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_8/m-idle.png": {
+    "mtime": 1790318155.869,
+    "ast_hash": "09989be994c47700bf6e771c24d57978",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_8/m-move.png": {
+    "mtime": 1790318155.88,
+    "ast_hash": "a430943f0151b19f9e222e300d1ad605",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_9/m-idle.png": {
+    "mtime": 1790318155.889,
+    "ast_hash": "a9a9980cf148307d7fe064b703b527e3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hair/Hair_Brown_9/m-move.png": {
+    "mtime": 1790318155.899,
+    "ast_hash": "91f4fd7de57657001d384817b783db3e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Gauntlet_Light_Iron/m-idle.png": {
+    "mtime": 1790318158.839,
+    "ast_hash": "a7f21366e969ca1cc6dd25b3f97985d8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Gauntlet_Light_Iron/m-move.png": {
+    "mtime": 1790318158.851,
+    "ast_hash": "d4cfb47c72359f55d8d892a115f92344",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_Iron/m-idle.png": {
+    "mtime": 1790318158.861,
+    "ast_hash": "260809e13a82d32b3a4a0a80bd3bd8bb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_Iron/m-move.png": {
+    "mtime": 1790318158.872,
+    "ast_hash": "d9a12c5828b2a7245aa862661a51393d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_Valentine/m-idle.png": {
+    "mtime": 1790318158.879,
+    "ast_hash": "553710173c23e3d173def01d3d093db9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_Valentine/m-move.png": {
+    "mtime": 1790318158.891,
+    "ast_hash": "3ecf7da52eba81d26a02b908170d3582",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_White/m-idle.png": {
+    "mtime": 1790318158.899,
+    "ast_hash": "33766bc1892f08bf31936746ba754a3e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Glove_White/m-move.png": {
+    "mtime": 1790318158.911,
+    "ast_hash": "585ac758b9463ce97157e1d071c51e69",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Wristguard_Enchanted/m-idle.png": {
+    "mtime": 1790318158.92,
+    "ast_hash": "dd1512c95c279c05e0a61dde9e1cab8a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Wristguard_Enchanted/m-move.png": {
+    "mtime": 1790318158.932,
+    "ast_hash": "9b9c756e2c57011bce10504fb19dee73",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Wristguard_Iron/m-idle.png": {
+    "mtime": 1790318158.941,
+    "ast_hash": "92d357d2bd495a7195c6f8967e6970a4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/hands/Hands_Wristguard_Iron/m-move.png": {
+    "mtime": 1790318158.95,
+    "ast_hash": "939b12c99cac8a2068f90f2454fb7f2c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Enchanted/m-idle.png": {
+    "mtime": 1790318156.016,
+    "ast_hash": "bcfbd4b976eb8329d0c2b357e042cbf1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Enchanted/m-move.png": {
+    "mtime": 1790318156.025,
+    "ast_hash": "7c9135fbb10700e785de684157824fac",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Gatekeeper/m-idle.png": {
+    "mtime": 1790318156.034,
+    "ast_hash": "3045d89d26afdd7530a7b6df1ca9f92d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Gatekeeper/m-move.png": {
+    "mtime": 1790318156.042,
+    "ast_hash": "75568b2ea03e1b2671534211fffcbfdb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Blue/m-idle.png": {
+    "mtime": 1790318156.052,
+    "ast_hash": "d1b94301ea7e3cdb9ee3b6753b2bfc53",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Blue/m-move.png": {
+    "mtime": 1790318156.061,
+    "ast_hash": "5d757809250ce86cc9012223dc469275",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Green/m-idle.png": {
+    "mtime": 1790318156.068,
+    "ast_hash": "ab621b1ed4145a1fdedcef1388a6e952",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Green/m-move.png": {
+    "mtime": 1790318156.081,
+    "ast_hash": "20ea3aa43467b1c1508ccfc6775f1f59",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Red/m-idle.png": {
+    "mtime": 1790318156.089,
+    "ast_hash": "b7be55ec775620d88be3e72cbe66e98a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Guard_Red/m-move.png": {
+    "mtime": 1790318156.098,
+    "ast_hash": "53f5b9ad1dff2013a2a7717ad11f91a1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_1/m-idle.png": {
+    "mtime": 1790318156.104,
+    "ast_hash": "71becf773dc7db423cf2ec793ddc7110",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_1/m-move.png": {
+    "mtime": 1790318156.114,
+    "ast_hash": "12b16d1fa072291bd241ea19e190e12f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_2/m-idle.png": {
+    "mtime": 1790318156.122,
+    "ast_hash": "abec94c854d96549e5f6ce1a44d3eddf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_2/m-move.png": {
+    "mtime": 1790318156.132,
+    "ast_hash": "11557ac73583c731a697461767939960",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_3/m-idle.png": {
+    "mtime": 1790318156.139,
+    "ast_hash": "2dacec677c0643d4ae85a7fecd761c26",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_3/m-move.png": {
+    "mtime": 1790318156.147,
+    "ast_hash": "ed1416dd45bc4aaaae73df72af06e234",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_1/m-idle.png": {
+    "mtime": 1790318156.154,
+    "ast_hash": "ccf3dde94319c382cf41036e0aa23941",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_1/m-move.png": {
+    "mtime": 1790318156.164,
+    "ast_hash": "11f86cc08586f024ac6f3819ae99ba9c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_2/m-idle.png": {
+    "mtime": 1790318156.172,
+    "ast_hash": "b1e1bbdcfe3eb9b4430a7c810941c805",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_2/m-move.png": {
+    "mtime": 1790318156.181,
+    "ast_hash": "132edd7a2142a0bcab0bdb751b4b397e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_3/m-idle.png": {
+    "mtime": 1790318156.187,
+    "ast_hash": "fca5da2c7e4614001a486ed692c66ab5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_3/m-move.png": {
+    "mtime": 1790318156.197,
+    "ast_hash": "187f6f105291d21738ba21d378a0503f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_4/m-idle.png": {
+    "mtime": 1790318156.206,
+    "ast_hash": "579fdbe7d84b8d90da618aa78429e08b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_4/m-move.png": {
+    "mtime": 1790318156.215,
+    "ast_hash": "7b181081d3a24ed8c812f69c9c516d92",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_5/m-idle.png": {
+    "mtime": 1790318156.225,
+    "ast_hash": "a28e93bff3a56c200f77828e06b78acb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_5/m-move.png": {
+    "mtime": 1790318156.234,
+    "ast_hash": "7d2a549f2aa22c846b5e03301fef9953",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_6/m-idle.png": {
+    "mtime": 1790318156.244,
+    "ast_hash": "93623396eb9212fc8e10dcd78d313013",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_6/m-move.png": {
+    "mtime": 1790318156.255,
+    "ast_hash": "b5a25d647baa30e89bf8e5aaced67d08",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_7/m-idle.png": {
+    "mtime": 1790318156.264,
+    "ast_hash": "d281172e275def68c1882eedc4bf5f25",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_7/m-move.png": {
+    "mtime": 1790318156.275,
+    "ast_hash": "e18c8e849d57a83105e9a6f6ec20e0cd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_8/m-idle.png": {
+    "mtime": 1790318156.285,
+    "ast_hash": "fae4ac1a2c39ab58e5170f6d38f52c43",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_8/m-move.png": {
+    "mtime": 1790318156.296,
+    "ast_hash": "809bb34404231709fc46f8b8e0d079e8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_9/m-idle.png": {
+    "mtime": 1790318156.304,
+    "ast_hash": "647046268bb13ebccd6d1d81a66f8fee",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Iron_Polished_9/m-move.png": {
+    "mtime": 1790318156.316,
+    "ast_hash": "595534776c0c26822f0927e92aba1a41",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Leather/m-idle.png": {
+    "mtime": 1790318156.326,
+    "ast_hash": "ea180b5506eef58a0ec1fb7d7af7f32f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Armor_Leather/m-move.png": {
+    "mtime": 1790318156.335,
+    "ast_hash": "80971969862b60f2a43963bc517d69f8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Blue/m-idle.png": {
+    "mtime": 1790318156.342,
+    "ast_hash": "c47b3b988f4113f4987ba14a5562b8e5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Blue/m-move.png": {
+    "mtime": 1790318156.353,
+    "ast_hash": "4f09a2ac8ce68714a5fc4cefa2f9d7bb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Pirate/m-idle.png": {
+    "mtime": 1790318156.36,
+    "ast_hash": "c40138299bed1854c5f608c04d5dd3b7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Pirate/m-move.png": {
+    "mtime": 1790318156.369,
+    "ast_hash": "684125a17c187116b1169c26357e6459",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Red/m-idle.png": {
+    "mtime": 1790318156.377,
+    "ast_hash": "10b87ea63c95d63c98ce8a907e2b4ec0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Bandana_Red/m-move.png": {
+    "mtime": 1790318156.386,
+    "ast_hash": "f068fbd864a096b772bfe363d8801384",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Fancy_Crown_Prince/m-idle.png": {
+    "mtime": 1790318156.394,
+    "ast_hash": "e405946ebce6066da1ad8b0ffa44dd0d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Fancy_Crown_Prince/m-move.png": {
+    "mtime": 1790318156.403,
+    "ast_hash": "e75fa829b52329fb65473092859768a6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Fancy_Tiara/m-idle.png": {
+    "mtime": 1790318156.413,
+    "ast_hash": "6d766823493676291f1c60be92aa4a8d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Fancy_Tiara/m-move.png": {
+    "mtime": 1790318156.424,
+    "ast_hash": "03785c5b1dfcd9a365d4f5d3922d3ce5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Alchemist/m-idle.png": {
+    "mtime": 1790318156.431,
+    "ast_hash": "b66c20167d4e9d9c356e0e4b5ffc2e1f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Alchemist/m-move.png": {
+    "mtime": 1790318156.44,
+    "ast_hash": "c4e29806864b81aea704cc6ac1d281f6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Beret_Brown/m-idle.png": {
+    "mtime": 1790318156.448,
+    "ast_hash": "cee302421617228ca349346880cb2b33",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Beret_Brown/m-move.png": {
+    "mtime": 1790318156.457,
+    "ast_hash": "788638c3ca1faa642f8f81e86fc77d61",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Beret_Green/m-idle.png": {
+    "mtime": 1790318156.466,
+    "ast_hash": "42120f248c850236ed184a20f3416614",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Beret_Green/m-move.png": {
+    "mtime": 1790318156.475,
+    "ast_hash": "7e3f1200985110faee805f8d46af7b3e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Black/m-idle.png": {
+    "mtime": 1790318156.483,
+    "ast_hash": "39c31aaacfc79b1bbc9a862edf06aa0f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Black/m-move.png": {
+    "mtime": 1790318156.493,
+    "ast_hash": "50a9123508da1bfeb553dbbc4bff78fe",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Blue/m-idle.png": {
+    "mtime": 1790318156.502,
+    "ast_hash": "5439642c638901347a4ff20fb9e1e7ed",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Blue/m-move.png": {
+    "mtime": 1790318156.514,
+    "ast_hash": "35443464c559a70dc2bb5e131223dda0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Plume/m-idle.png": {
+    "mtime": 1790318156.524,
+    "ast_hash": "faefbe977d37b8dc6179a32d8bc57fac",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Captain_Plume/m-move.png": {
+    "mtime": 1790318156.534,
+    "ast_hash": "bb8e9b2b218faef133082b2008b9219f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cartographer/m-idle.png": {
+    "mtime": 1790318156.542,
+    "ast_hash": "62269b0bdd5e7dc84b21702985ed91f2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cartographer/m-move.png": {
+    "mtime": 1790318156.554,
+    "ast_hash": "95eb6382b2ac2c86674efc90326b8898",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Apprentice/m-idle.png": {
+    "mtime": 1790318156.564,
+    "ast_hash": "656854593a9b96024befecab3aa10f16",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Apprentice/m-move.png": {
+    "mtime": 1790318156.572,
+    "ast_hash": "80136a48de0624f9364d97009dbb7505",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Intermediate/m-idle.png": {
+    "mtime": 1790318156.614,
+    "ast_hash": "ecf0cc18ae431e77bbb950cf80b5438d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Intermediate/m-move.png": {
+    "mtime": 1790318156.622,
+    "ast_hash": "46d3c15751c979e83f32ea7efff45656",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Master/m-idle.png": {
+    "mtime": 1790318156.631,
+    "ast_hash": "b3698015cc5370030f71be0fed77897a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Master/m-move.png": {
+    "mtime": 1790318156.639,
+    "ast_hash": "638ab34120b37ee6345daaa6d6972ce2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Veteran/m-idle.png": {
+    "mtime": 1790318156.646,
+    "ast_hash": "d9b3287debca99089653dd1f95e6f1ef",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Chef_Veteran/m-move.png": {
+    "mtime": 1790318156.657,
+    "ast_hash": "d3607f5d8977ac5bef2f8d0d3e4d04b4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_1/m-idle.png": {
+    "mtime": 1790318156.666,
+    "ast_hash": "75cca86cd2f9df21e3d9861a60886fb7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_1/m-move.png": {
+    "mtime": 1790318156.674,
+    "ast_hash": "f6757492d2f16603249dadd1768578ea",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_2/m-idle.png": {
+    "mtime": 1790318156.682,
+    "ast_hash": "33b69a163ecf68e829571279f0ad66e3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_2/m-move.png": {
+    "mtime": 1790318156.691,
+    "ast_hash": "ac06fc4dc6b30bcdb5eca1475d5fb90c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_3/m-idle.png": {
+    "mtime": 1790318156.699,
+    "ast_hash": "ba5f4ebc3d8652e70e6258bc9192151f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Elf_3/m-move.png": {
+    "mtime": 1790318156.709,
+    "ast_hash": "b7e4bd694d2728fdc5bd5b7b93c8e16c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Reindeer/m-idle.png": {
+    "mtime": 1790318156.716,
+    "ast_hash": "1c85ee904027d66b6e381428b136bce8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Reindeer/m-move.png": {
+    "mtime": 1790318156.726,
+    "ast_hash": "1c19e85087533975f27f03787fd88bcc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Santa/m-idle.png": {
+    "mtime": 1790318156.736,
+    "ast_hash": "f0abc0303dec622fa171ae39433d6c9f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Santa/m-move.png": {
+    "mtime": 1790318156.744,
+    "ast_hash": "f8ac884c050e5489499fdf9463288056",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Tree/m-idle.png": {
+    "mtime": 1790318156.753,
+    "ast_hash": "9b11c3bdbde245d62122d4b7b33b2170",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Christmas_Tree/m-move.png": {
+    "mtime": 1790318156.761,
+    "ast_hash": "e98e4821bd46650a24560a50eb388c78",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cloth_Blue_Light/m-idle.png": {
+    "mtime": 1790318156.771,
+    "ast_hash": "de48f19f87e033d93d55030d1930853d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cloth_Blue_Light/m-move.png": {
+    "mtime": 1790318156.779,
+    "ast_hash": "fb2d89d2dbb169c72e0eb7c080843aee",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cloth_Orange/m-idle.png": {
+    "mtime": 1790318156.789,
+    "ast_hash": "d77ab3096ef35553402f6e6c6110235f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Cloth_Orange/m-move.png": {
+    "mtime": 1790318156.8,
+    "ast_hash": "bbbf9633447140b7702d1e5af66adff5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Farmer_Leather/m-idle.png": {
+    "mtime": 1790318156.807,
+    "ast_hash": "d35ec4c95cfc6bb9ef184d453e6c97bf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Farmer_Leather/m-move.png": {
+    "mtime": 1790318156.817,
+    "ast_hash": "fa8f5c603d7ac4b65a3b45a3f97c71ed",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Farmer_Straw/m-idle.png": {
+    "mtime": 1790318156.826,
+    "ast_hash": "12512a26f728d75bc936cafef5103d05",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Farmer_Straw/m-move.png": {
+    "mtime": 1790318156.837,
+    "ast_hash": "05bc4f16c35324a6b234ee91e315976a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Lucky/m-idle.png": {
+    "mtime": 1790318156.846,
+    "ast_hash": "ac31156bd68e1d5b6f43f2afa327fdcf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Lucky/m-move.png": {
+    "mtime": 1790318156.857,
+    "ast_hash": "80c54e9327c28bf5d90f861cd1ca5d40",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Miner_Off/m-idle.png": {
+    "mtime": 1790318156.866,
+    "ast_hash": "5394bb73ae0225777e69716ffdbb84c3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Miner_Off/m-move.png": {
+    "mtime": 1790318156.876,
+    "ast_hash": "555ce2f742561f56a9d6345eeaf71c40",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Miner_On/m-idle.png": {
+    "mtime": 1790318156.886,
+    "ast_hash": "1d926f78bd4d5dc6270b0bdd331fb007",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Miner_On/m-move.png": {
+    "mtime": 1790318156.896,
+    "ast_hash": "65020eae2fbdbf22ca0bbeb7083b9cd4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Retro/m-idle.png": {
+    "mtime": 1790318156.903,
+    "ast_hash": "cd0b7e9a1adaa804af5de41d337516d9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Retro/m-move.png": {
+    "mtime": 1790318156.914,
+    "ast_hash": "1972fd8b71e52a0a7b4b659b3ca669d2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Round/m-idle.png": {
+    "mtime": 1790318156.922,
+    "ast_hash": "aebfd35201e14c708599164d9f03e6f0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hat_Round/m-move.png": {
+    "mtime": 1790318156.931,
+    "ast_hash": "fd1b6cf040167360e429d447f54255e4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Doctor_M/m-idle.png": {
+    "mtime": 1790318156.939,
+    "ast_hash": "96157591bb1bee8eec84e8585f697dc0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Doctor_M/m-move.png": {
+    "mtime": 1790318156.949,
+    "ast_hash": "74ba359b236d063f9c2b0df88303a805",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Executioner/m-idle.png": {
+    "mtime": 1790318156.956,
+    "ast_hash": "80c169563bcc0a0d0b1347bf170f5047",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Executioner/m-move.png": {
+    "mtime": 1790318156.968,
+    "ast_hash": "a353975e84332ddb4aca98fb0590de0a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Long_Brown_M/m-idle.png": {
+    "mtime": 1790318156.979,
+    "ast_hash": "1f4fc7ec26d65fbadb72e2ec1aed3351",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Long_Brown_M/m-move.png": {
+    "mtime": 1790318156.991,
+    "ast_hash": "52478acfebefbc42f1a926bacb0cdc07",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Long_Dark_M/m-idle.png": {
+    "mtime": 1790318157.0,
+    "ast_hash": "505c5a364dc5905eac139e598fceada7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Long_Dark_M/m-move.png": {
+    "mtime": 1790318157.011,
+    "ast_hash": "783c2011f93d046240184c59040776d6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Monk/m-idle.png": {
+    "mtime": 1790318157.017,
+    "ast_hash": "5c14f3b978071cf1942f8b0e790d723a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Monk/m-move.png": {
+    "mtime": 1790318157.026,
+    "ast_hash": "ce3dd93c997811695b6647cc722e9f7e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Round/m-idle.png": {
+    "mtime": 1790318157.034,
+    "ast_hash": "dab64822fc80084e5d449c4fa60e39b7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Hood_Round/m-move.png": {
+    "mtime": 1790318157.044,
+    "ast_hash": "f1f666d8a6934f3f5788070e1bdb09b0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Dark/m-idle.png": {
+    "mtime": 1790318157.052,
+    "ast_hash": "fd11ee122afc5baf9b22fa10d8d228c8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Dark/m-move.png": {
+    "mtime": 1790318157.06,
+    "ast_hash": "841ed311eebf9aba27aac3e17dad65d3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Starry/m-idle.png": {
+    "mtime": 1790318157.069,
+    "ast_hash": "6bf91adbadaea3df29dbc91d0af43312",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Starry/m-move.png": {
+    "mtime": 1790318157.079,
+    "ast_hash": "4420806f39c242bff72855651c1d83d3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Wise/m-idle.png": {
+    "mtime": 1790318157.086,
+    "ast_hash": "6e083430cfb684551035459fdcad153d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Magical_Wise/m-move.png": {
+    "mtime": 1790318157.096,
+    "ast_hash": "d06e5499b70db6ebb8a558b32cdd2b15",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Ape/m-idle.png": {
+    "mtime": 1790318157.102,
+    "ast_hash": "5e57cf1eab378365fcb06bb281139898",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Ape/m-move.png": {
+    "mtime": 1790318157.111,
+    "ast_hash": "ae0811d3ea1308ce26c65538959bceaa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Demon/m-idle.png": {
+    "mtime": 1790318157.119,
+    "ast_hash": "4e72c49004468570a2c719ea31e87a63",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Demon/m-move.png": {
+    "mtime": 1790318157.129,
+    "ast_hash": "064287cb4e155ee1594aa4c2291c9ce7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lion_F/m-idle.png": {
+    "mtime": 1790318157.136,
+    "ast_hash": "b5033c8c0e0aead495f1e9198aa885b5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lion_F/m-move.png": {
+    "mtime": 1790318157.144,
+    "ast_hash": "e22b4629ce2eb91e36a3846995ea623d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lion_M/m-idle.png": {
+    "mtime": 1790318157.152,
+    "ast_hash": "147dde356f915e0859a10770bbba7d96",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lion_M/m-move.png": {
+    "mtime": 1790318157.159,
+    "ast_hash": "35583f2c48f19fa066fd1c8520b42c53",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lizard/m-idle.png": {
+    "mtime": 1790318157.167,
+    "ast_hash": "241861d7aa1f39ecb18d2433f6cc88c7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Lizard/m-move.png": {
+    "mtime": 1790318157.176,
+    "ast_hash": "894845718c1a515fa297163836902405",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Pumpkin/m-idle.png": {
+    "mtime": 1790318157.184,
+    "ast_hash": "ae685aa382193ac5507d3358c179f0f3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Pumpkin/m-move.png": {
+    "mtime": 1790318157.191,
+    "ast_hash": "87f9805c589e98e94b5e69612f5072c0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Skull/m-idle.png": {
+    "mtime": 1790318157.199,
+    "ast_hash": "e5c4e2dcb3ff360eacbf8ab3d9ced393",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Skull/m-move.png": {
+    "mtime": 1790318157.207,
+    "ast_hash": "436ae0bfe4b884ef65680a15c75c4f58",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Slave/m-idle.png": {
+    "mtime": 1790318157.214,
+    "ast_hash": "22dcdb097bd26e61bf79f946f90b861a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Slave/m-move.png": {
+    "mtime": 1790318157.223,
+    "ast_hash": "7b6446b30bb3182a3dda088e970abda1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Tiger/m-idle.png": {
+    "mtime": 1790318157.231,
+    "ast_hash": "897c3f47e9fa38bb9cd5cd92df9c3b67",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/head/Head_Mask_Tiger/m-move.png": {
+    "mtime": 1790318157.242,
+    "ast_hash": "6233cea6d39a6df30894f1f5d2343e11",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Adamantine/b-idle.png": {
+    "mtime": 1790318160.216,
+    "ast_hash": "da8f6867aa2bf7b490de4f2e96167772",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Adamantine/b-move.png": {
+    "mtime": 1790318160.226,
+    "ast_hash": "34f0564730fd23b5fc434d1bbe0ab20d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Adamantine/f-idle.png": {
+    "mtime": 1790318160.234,
+    "ast_hash": "4902cde758938644dd34ac3b0c18ebb0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Adamantine/f-move.png": {
+    "mtime": 1790318160.244,
+    "ast_hash": "e5d752358cba591b16ab43253bccf5b7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Angelic/b-idle.png": {
+    "mtime": 1790318160.253,
+    "ast_hash": "425ac6d654ace0b4f5851959abddf26b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Angelic/b-move.png": {
+    "mtime": 1790318160.265,
+    "ast_hash": "58c3349f5a5c90027cd585d4ca5803d0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Angelic/f-idle.png": {
+    "mtime": 1790318160.274,
+    "ast_hash": "2a5652c7a6a55992ed6c7ee1092bfee6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Angelic/f-move.png": {
+    "mtime": 1790318160.284,
+    "ast_hash": "27a3c07ed8802762eabbac75797706d3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Cobalt/b-idle.png": {
+    "mtime": 1790318160.293,
+    "ast_hash": "049314a47616b6fb3bbdf73a05d1002c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Cobalt/b-move.png": {
+    "mtime": 1790318160.303,
+    "ast_hash": "c5714ab00dcd65edcd5b7f8ca8eda958",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Cobalt/f-idle.png": {
+    "mtime": 1790318160.312,
+    "ast_hash": "18705ae0eb75d5cdac7d8aa8f047a564",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Cobalt/f-move.png": {
+    "mtime": 1790318160.321,
+    "ast_hash": "11215bb0a32277ce2e9ad660eba07d98",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_1/b-idle.png": {
+    "mtime": 1790318160.33,
+    "ast_hash": "2e7da09649696f5a525b35dfcdc61a54",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_1/b-move.png": {
+    "mtime": 1790318160.341,
+    "ast_hash": "9f64804e6f87c4c99e092d7a7be5a6c2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_1/f-idle.png": {
+    "mtime": 1790318160.349,
+    "ast_hash": "7d3aff9351f837bee1e8a39a24687d08",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_1/f-move.png": {
+    "mtime": 1790318160.359,
+    "ast_hash": "3a89d46e50c0dfe17b60151f200e4235",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_2/b-idle.png": {
+    "mtime": 1790318160.366,
+    "ast_hash": "2e7da09649696f5a525b35dfcdc61a54",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_2/b-move.png": {
+    "mtime": 1790318160.376,
+    "ast_hash": "9f64804e6f87c4c99e092d7a7be5a6c2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_2/f-idle.png": {
+    "mtime": 1790318160.384,
+    "ast_hash": "7d3aff9351f837bee1e8a39a24687d08",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Copper_2/f-move.png": {
+    "mtime": 1790318160.396,
+    "ast_hash": "142017d72023771b7a6fba904c101999",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Crimson/b-idle.png": {
+    "mtime": 1790318160.406,
+    "ast_hash": "b447277a6b6342c697128e74071264ae",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Crimson/b-move.png": {
+    "mtime": 1790318160.417,
+    "ast_hash": "c394bdb50f58ea0fdbe6c2c9ee007bce",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Crimson/f-idle.png": {
+    "mtime": 1790318160.426,
+    "ast_hash": "2376409ca07f51f6563fd384b776c373",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Crimson/f-move.png": {
+    "mtime": 1790318160.438,
+    "ast_hash": "d8ef004bb844c43afc6d319da9e8ecda",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Gold/b-idle.png": {
+    "mtime": 1790318160.446,
+    "ast_hash": "baa1a17e149494438a4f0afaffeda0a6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Gold/b-move.png": {
+    "mtime": 1790318160.459,
+    "ast_hash": "961b57ea3f9351a0e19df93e9de6fa47",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Gold/f-idle.png": {
+    "mtime": 1790318160.469,
+    "ast_hash": "d249197deeebba8932f04888afa9c4a5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Gold/f-move.png": {
+    "mtime": 1790318160.479,
+    "ast_hash": "b2d98cd8b0213a9c09c6668bee36a6ad",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_1/b-idle.png": {
+    "mtime": 1790318160.489,
+    "ast_hash": "38356ec070bdf374b66623d6a6de99cf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_1/b-move.png": {
+    "mtime": 1790318160.499,
+    "ast_hash": "e789da4d65af067bd44511f15f58938a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_1/f-idle.png": {
+    "mtime": 1790318160.509,
+    "ast_hash": "7260e26b45813c956871ef2aef8d9b3f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_1/f-move.png": {
+    "mtime": 1790318160.519,
+    "ast_hash": "0d027bc7a22a0e2a6536cc14edf26b90",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_2/b-idle.png": {
+    "mtime": 1790318160.527,
+    "ast_hash": "f6a35a2954b4cb7666d62acb63258e1b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_2/b-move.png": {
+    "mtime": 1790318160.539,
+    "ast_hash": "d069bb238f59a592e4cba144a79cff95",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_2/f-idle.png": {
+    "mtime": 1790318160.546,
+    "ast_hash": "ae6539cf28d445ab0adf8595176bf825",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Iron_2/f-move.png": {
+    "mtime": 1790318160.556,
+    "ast_hash": "dcabc70cf59cb0f67e6c4be221e86ce1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Platinum/b-idle.png": {
+    "mtime": 1790318160.566,
+    "ast_hash": "d72cded6b0fb0befdf537be1e90eafd1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Platinum/b-move.png": {
+    "mtime": 1790318160.576,
+    "ast_hash": "79148ac8dbc787a583a950687b6ff16f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Platinum/f-idle.png": {
+    "mtime": 1790318160.586,
+    "ast_hash": "7063ee02777e5578ae490d502a30d9a7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Platinum/f-move.png": {
+    "mtime": 1790318160.594,
+    "ast_hash": "0223a8ae8b91391a45705188b556550b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_1/b-idle.png": {
+    "mtime": 1790318160.604,
+    "ast_hash": "bc818162ce38c2191cd2fec783276aaf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_1/b-move.png": {
+    "mtime": 1790318160.616,
+    "ast_hash": "4cc5fbc48312bc5d026009495545f052",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_1/f-idle.png": {
+    "mtime": 1790318160.623,
+    "ast_hash": "e2f7b92b51aa551d2459eafd5c88fe30",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_1/f-move.png": {
+    "mtime": 1790318160.634,
+    "ast_hash": "0668d4be1a781b2ff761bd7fea04b606",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_2/b-idle.png": {
+    "mtime": 1790318160.642,
+    "ast_hash": "712dfa4c4c506d390a4e39d346ca11a4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_2/b-move.png": {
+    "mtime": 1790318160.655,
+    "ast_hash": "ea8ea8ccb1c53b9f2365374292f8f9b9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_2/f-idle.png": {
+    "mtime": 1790318160.662,
+    "ast_hash": "40a6b94e9f3709ba7142d3920349a6c5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Silver_2/f-move.png": {
+    "mtime": 1790318160.672,
+    "ast_hash": "f719f926486cb23ca97653d1d74dded6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_1/b-idle.png": {
+    "mtime": 1790318160.681,
+    "ast_hash": "fd40fb6d76e5167f301e02c830122faa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_1/b-move.png": {
+    "mtime": 1790318160.691,
+    "ast_hash": "666eda0bc9e333ff58afda8e6d7b9ca2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_1/f-idle.png": {
+    "mtime": 1790318160.699,
+    "ast_hash": "a94ae31fad31031d86a11a0873a1a9fb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_1/f-move.png": {
+    "mtime": 1790318160.709,
+    "ast_hash": "691fca0d197de26e1d34217f9380bee4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_2/b-idle.png": {
+    "mtime": 1790318160.716,
+    "ast_hash": "407cdfe08aab35b11a970f057681825c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_2/b-move.png": {
+    "mtime": 1790318160.726,
+    "ast_hash": "5615f4a056f450bfee8d1c117c6bddda",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_2/f-idle.png": {
+    "mtime": 1790318160.738,
+    "ast_hash": "8a6422fcc844c9d29d13dd8d742be5f5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Steel_2/f-move.png": {
+    "mtime": 1790318160.749,
+    "ast_hash": "5133b74b4606b98197034719e856b1c2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Tin/b-idle.png": {
+    "mtime": 1790318160.757,
+    "ast_hash": "cbf6a2c89dccfebd8ef3b50dbf0ffa2b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Tin/b-move.png": {
+    "mtime": 1790318160.769,
+    "ast_hash": "e2e4749c1754136fa343daec35a4aa87",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Tin/f-idle.png": {
+    "mtime": 1790318160.776,
+    "ast_hash": "5d07ee2f84351aa63487cb9eb2511dc9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Tin/f-move.png": {
+    "mtime": 1790318160.785,
+    "ast_hash": "b0ca6d47b450291b626029f227d0c21f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Wooden/b-idle.png": {
+    "mtime": 1790318160.794,
+    "ast_hash": "c497bb99c8314f7580ef04fdb04f9376",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Wooden/b-move.png": {
+    "mtime": 1790318160.802,
+    "ast_hash": "7e18275325a49f5641ec57e25fb15be9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Wooden/f-idle.png": {
+    "mtime": 1790318160.809,
+    "ast_hash": "c111ee296d11f4ab48e22e21286214b1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/offhand/Offhand_Wooden/f-move.png": {
+    "mtime": 1790318160.82,
+    "ast_hash": "f898113bb8df82b05c6f3f785ad407e2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/overall/Overall_Robe_Necromancer/m-idle.png": {
+    "mtime": 1790318157.846,
+    "ast_hash": "50c4b3bfe37ea71175d8246e2110ab67",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/overall/Overall_Robe_Necromancer/m-move.png": {
+    "mtime": 1790318157.856,
+    "ast_hash": "6889117e684df4d3ba3b469ee19c4792",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Alchemist/m-idle.png": {
+    "mtime": 1790318157.866,
+    "ast_hash": "f6e8e393dbb861a0664cc7bfdaf7466e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Alchemist/m-move.png": {
+    "mtime": 1790318157.876,
+    "ast_hash": "18415b30ee6b7ccf5b03dc9567cb461f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Advanced_Iron/m-idle.png": {
+    "mtime": 1790318157.884,
+    "ast_hash": "4dcd6e3cb2a600ad37230bce06a71559",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Advanced_Iron/m-move.png": {
+    "mtime": 1790318157.896,
+    "ast_hash": "b9c5a8ef506e64ca8f420e9484d528aa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Basic_Iron/m-idle.png": {
+    "mtime": 1790318157.906,
+    "ast_hash": "9494e57c10924ecbe3eb46e4d51d4476",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Basic_Iron/m-move.png": {
+    "mtime": 1790318157.917,
+    "ast_hash": "5151f6382c1f367281e207c68d702639",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Enchanted/m-idle.png": {
+    "mtime": 1790318157.926,
+    "ast_hash": "b9025af5385872b51302ab1d55fe6f49",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Enchanted/m-move.png": {
+    "mtime": 1790318157.936,
+    "ast_hash": "779508f6db708489c41a7c46389457af",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Standard_Iron/m-idle.png": {
+    "mtime": 1790318157.946,
+    "ast_hash": "949dfe07f687e629d8a2e15907667319",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Armor_Standard_Iron/m-move.png": {
+    "mtime": 1790318157.957,
+    "ast_hash": "cd435d67af676ab9a1def071be59e45c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_1/m-idle.png": {
+    "mtime": 1790318157.964,
+    "ast_hash": "0c31042d6265034fd44217e9ecaf966c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_1/m-move.png": {
+    "mtime": 1790318157.976,
+    "ast_hash": "c429c7766fa42014c0278b69957eac3d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_2/m-idle.png": {
+    "mtime": 1790318157.984,
+    "ast_hash": "803e275ac181cd394970431ce569e338",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_2/m-move.png": {
+    "mtime": 1790318157.994,
+    "ast_hash": "665ede4fb19ed20f6340c9ffade77ad7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_3/m-idle.png": {
+    "mtime": 1790318158.004,
+    "ast_hash": "67a0156a8eadd255251e97a3daa4c533",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Elf_3/m-move.png": {
+    "mtime": 1790318158.015,
+    "ast_hash": "10c2eaa618d6d6138237f29e560e8f8d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Santa/m-idle.png": {
+    "mtime": 1790318158.024,
+    "ast_hash": "d1e781d4d14f57d5fde1a55173e8c2e3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Christmas_Santa/m-move.png": {
+    "mtime": 1790318158.036,
+    "ast_hash": "e9dfb830a0938c5dc1fb52eef4064a7d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Fancy/m-idle.png": {
+    "mtime": 1790318158.046,
+    "ast_hash": "a48fccc2eb79227289ca0940bdaeb037",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Fancy/m-move.png": {
+    "mtime": 1790318158.056,
+    "ast_hash": "39a7675e771df682db0f23347b38c508",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Fisherman/m-idle.png": {
+    "mtime": 1790318158.064,
+    "ast_hash": "0121ace36fd0da5e99b81c21d544cc15",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Fisherman/m-move.png": {
+    "mtime": 1790318158.076,
+    "ast_hash": "3aeaa5b8896d5927eaefd8f70a911bcd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Blue/m-idle.png": {
+    "mtime": 1790318158.085,
+    "ast_hash": "9edff382da5a26b538678b527d830c74",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Blue/m-move.png": {
+    "mtime": 1790318158.094,
+    "ast_hash": "e37341cd79a2290a7d9f3b70f906b922",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Brown/m-idle.png": {
+    "mtime": 1790318158.103,
+    "ast_hash": "e510c0c6c2be1ce3920c921a7fa9063e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Brown/m-move.png": {
+    "mtime": 1790318158.113,
+    "ast_hash": "8a819789999b9649ebcf9f95fc3f79e9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Green/m-idle.png": {
+    "mtime": 1790318158.12,
+    "ast_hash": "6de4291fe84df3c946aff2db129e29cc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Green/m-move.png": {
+    "mtime": 1790318158.131,
+    "ast_hash": "65cef86fc27264bdf0b789e46d866f23",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Red/m-idle.png": {
+    "mtime": 1790318158.139,
+    "ast_hash": "c102adc0452ac27a34792d9a3ea7a8d0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Leather_Thickened_Red/m-move.png": {
+    "mtime": 1790318158.15,
+    "ast_hash": "60aa82ac611d5ffd08bbda7063f54b32",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Lucky/m-idle.png": {
+    "mtime": 1790318158.16,
+    "ast_hash": "862e8f3369b57c2274d297da03ebdd20",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Lucky/m-move.png": {
+    "mtime": 1790318158.172,
+    "ast_hash": "9c7c7079d9e86a374684db18893b71e1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Belt/m-idle.png": {
+    "mtime": 1790318158.181,
+    "ast_hash": "dce253232190ac79a1d129ccbbbd418f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Belt/m-move.png": {
+    "mtime": 1790318158.193,
+    "ast_hash": "718288d44a60782953eb36abead26038",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Black/m-idle.png": {
+    "mtime": 1790318158.204,
+    "ast_hash": "32111518432129f2cfb9ed9eb9573d44",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Black/m-move.png": {
+    "mtime": 1790318158.214,
+    "ast_hash": "e535ff0a2209818b1ead9ede185eb90a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Blue/m-idle.png": {
+    "mtime": 1790318158.222,
+    "ast_hash": "b530ffdccbe07d612650b3967d8c1ecd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Blue/m-move.png": {
+    "mtime": 1790318158.231,
+    "ast_hash": "52b54af5502b3c6270071d30270c0852",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Red/m-idle.png": {
+    "mtime": 1790318158.24,
+    "ast_hash": "2c0474307d8b9334f5fc28607ca1afbf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Shorts_Ripped_Red/m-move.png": {
+    "mtime": 1790318158.251,
+    "ast_hash": "07959214e6c7f4649333891857c4ef45",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Starry/m-idle.png": {
+    "mtime": 1790318158.259,
+    "ast_hash": "420739b8e442029181c22aed311fc121",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Starry/m-move.png": {
+    "mtime": 1790318158.269,
+    "ast_hash": "05815eeaf742b5440e68f00df1ba25a3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Commoner/m-idle.png": {
+    "mtime": 1790318158.278,
+    "ast_hash": "ec5904a470baab5eae1656113e35b4cd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Commoner/m-move.png": {
+    "mtime": 1790318158.289,
+    "ast_hash": "b8138a67c4ff03ee0bf572fc3f63e5ff",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Farmer/m-idle.png": {
+    "mtime": 1790318158.296,
+    "ast_hash": "b97b6a2cd8648b955d19011fbf19f3e8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Farmer/m-move.png": {
+    "mtime": 1790318158.306,
+    "ast_hash": "f91055bbb00480a082ddc5071a290301",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Lucky/m-idle.png": {
+    "mtime": 1790318158.316,
+    "ast_hash": "8859a3a0116a83c7c24a303caaa75b1a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Lucky/m-move.png": {
+    "mtime": 1790318158.325,
+    "ast_hash": "b18389bfb92d25f7f8df4b963cb1903f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Peasant/m-idle.png": {
+    "mtime": 1790318158.333,
+    "ast_hash": "f669e341ba33ad9a4d5466a63302186e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Peasant/m-move.png": {
+    "mtime": 1790318158.342,
+    "ast_hash": "7fbb720d0d0f3a22e502805c14bbd71f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Valentine/m-idle.png": {
+    "mtime": 1790318158.35,
+    "ast_hash": "463d8c00d0584a0fc33387414786e288",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Pants_Tunic_Valentine/m-move.png": {
+    "mtime": 1790318158.361,
+    "ast_hash": "46deb0ec0e05824167b7b211fa44e1bf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_Metal/m-idle.png": {
+    "mtime": 1790318158.369,
+    "ast_hash": "6b908abeca9b130fdea7e595b37c2a4c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_Metal/m-move.png": {
+    "mtime": 1790318158.379,
+    "ast_hash": "10b57f18a9791eec16cc190a163747f4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_White_Clean/m-idle.png": {
+    "mtime": 1790318158.388,
+    "ast_hash": "874789370d102318cfe61803db43bb05",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_White_Clean/m-move.png": {
+    "mtime": 1790318158.397,
+    "ast_hash": "37dc7378b803699346d52aa0de31bda0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_White_Dirty/m-idle.png": {
+    "mtime": 1790318158.405,
+    "ast_hash": "aaab22f517161094daaf3f48adefed52",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/pants/Bottom_Underwear_White_Dirty/m-move.png": {
+    "mtime": 1790318158.414,
+    "ast_hash": "a00990dd47aab3beb3dbd9875bee9e3b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Battle_Blue/m-idle.png": {
+    "mtime": 1790318158.426,
+    "ast_hash": "72444b327e92d83754c6f56c082e3cdb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Battle_Blue/m-move.png": {
+    "mtime": 1790318158.436,
+    "ast_hash": "6b1bc0157cf860d730c562519516a970",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Executioner/m-idle.png": {
+    "mtime": 1790318158.445,
+    "ast_hash": "43d43dac0fe3350dae045711043bdc1e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Executioner/m-move.png": {
+    "mtime": 1790318158.456,
+    "ast_hash": "350ec84b95f9ef04843f4e3907518838",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Blue/m-idle.png": {
+    "mtime": 1790318158.466,
+    "ast_hash": "722cfdd24da14301761c5cc9c3134d70",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Blue/m-move.png": {
+    "mtime": 1790318158.474,
+    "ast_hash": "63f01a739cb365a5e22bacd2eb660190",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Green/m-idle.png": {
+    "mtime": 1790318158.482,
+    "ast_hash": "d881c9d2b9b1fa71e29a183053af0ffe",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Green/m-move.png": {
+    "mtime": 1790318158.492,
+    "ast_hash": "d33f65a270cf69893b93882156f881d0",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Red/m-idle.png": {
+    "mtime": 1790318158.502,
+    "ast_hash": "b1b5536580713ff8f1252b9cc1a219ae",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Iron_Red/m-move.png": {
+    "mtime": 1790318158.512,
+    "ast_hash": "a14498f9ef3294a98626071d9db565db",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Long/m-idle.png": {
+    "mtime": 1790318158.522,
+    "ast_hash": "f8d1ab1b2dc19930306ba166538ddfbc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Long/m-move.png": {
+    "mtime": 1790318158.532,
+    "ast_hash": "9d9902b2b8f5a728d4aaeb5d59056811",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Peasant_1/m-idle.png": {
+    "mtime": 1790318158.542,
+    "ast_hash": "46e545d6e1981b5b5f22cec901da7808",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Peasant_1/m-move.png": {
+    "mtime": 1790318158.554,
+    "ast_hash": "453f0a0df44530bbae070c7ef48a6672",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Peasant_2/m-idle.png": {
+    "mtime": 1790318158.562,
+    "ast_hash": "31223c751fdeef6c6dcbc89db01a6878",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/skirt/Bottom_Skirt_Peasant_2/m-move.png": {
+    "mtime": 1790318158.572,
+    "ast_hash": "ed5c7573d0016429d2c50f84a806f5d8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Apprentice/b-idle.png": {
+    "mtime": 1790318160.944,
+    "ast_hash": "7ef6d52e46872c1f09c8451c7179f347",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Apprentice/b-move.png": {
+    "mtime": 1790318160.954,
+    "ast_hash": "63340de8c89517a79c2969470c7f956c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Apprentice/f-idle.png": {
+    "mtime": 1790318160.962,
+    "ast_hash": "ac107bf21f6b10ac460dcee17720ed93",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Apprentice/f-move.png": {
+    "mtime": 1790318160.976,
+    "ast_hash": "db4b5ef92122d7018172593c5419ba44",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Cane/b-idle.png": {
+    "mtime": 1790318160.986,
+    "ast_hash": "ec4292d1c16b9a31034b93641133dea8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Cane/b-move.png": {
+    "mtime": 1790318160.996,
+    "ast_hash": "56a40c3d62bf2aa0ee919e3f5c069ad3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Cane/f-idle.png": {
+    "mtime": 1790318161.006,
+    "ast_hash": "15715bd0ee436fb3e23d5b46c39c048a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Cane/f-move.png": {
+    "mtime": 1790318161.017,
+    "ast_hash": "635c10e29a62be92f552d9c1a3811846",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Iron/b-idle.png": {
+    "mtime": 1790318161.024,
+    "ast_hash": "bd3c02347ddaa4517d6a50e37d8c5a4a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Iron/b-move.png": {
+    "mtime": 1790318161.034,
+    "ast_hash": "8bb8edef30a85b43a194f7b793d22e9d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Iron/f-idle.png": {
+    "mtime": 1790318161.044,
+    "ast_hash": "301f484cf35304aec992b2582cd0570d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/staff/Staff_Iron/f-move.png": {
+    "mtime": 1790318161.054,
+    "ast_hash": "13f6494387470d7b221ee5f8f8246e1a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Buttoned/m-idle.png": {
+    "mtime": 1790318157.251,
+    "ast_hash": "3f8bc5d4aead47f30bce4a519eea2bb6",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Buttoned/m-move.png": {
+    "mtime": 1790318157.26,
+    "ast_hash": "882982ed6220a95c1ac42a485621ba5e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Double/m-idle.png": {
+    "mtime": 1790318157.268,
+    "ast_hash": "00535d753396977c94fbb7b42a0b33c8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Double/m-move.png": {
+    "mtime": 1790318157.276,
+    "ast_hash": "e98ce63609e911ed85f625817ed19893",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Dressing_Black/m-idle.png": {
+    "mtime": 1790318157.284,
+    "ast_hash": "7cc3766373d0452cf943794174d8af17",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Dressing_Black/m-move.png": {
+    "mtime": 1790318157.292,
+    "ast_hash": "55433c09b953be12a3fe212e158bcc20",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Dressing_White/m-idle.png": {
+    "mtime": 1790318157.299,
+    "ast_hash": "a9d8c9b9987d2d77e5f033c0248b1130",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Dressing_White/m-move.png": {
+    "mtime": 1790318157.309,
+    "ast_hash": "af8a56a58d8028546c8fdd5c6108169e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Lucky/m-idle.png": {
+    "mtime": 1790318157.316,
+    "ast_hash": "97b3ce8e836c9119c608ced9f662b43f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Lucky/m-move.png": {
+    "mtime": 1790318157.324,
+    "ast_hash": "ac58a058ad51a803bd2e1bd5f32c75b5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Stripped_Blue/m-idle.png": {
+    "mtime": 1790318157.331,
+    "ast_hash": "c6c7d4d5755f0807d5e54c6978bdab73",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Stripped_Blue/m-move.png": {
+    "mtime": 1790318157.34,
+    "ast_hash": "b7203dc2680f9ee6fbf0897875107d19",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Stripped_Red/m-idle.png": {
+    "mtime": 1790318157.346,
+    "ast_hash": "36d4d99208753a02f33da2350c5ac581",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_Stripped_Red/m-move.png": {
+    "mtime": 1790318157.354,
+    "ast_hash": "d3df5769c55e1fc296f47152fc5fa036",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_White/m-idle.png": {
+    "mtime": 1790318157.361,
+    "ast_hash": "c9e9fc4f1b56ccdd397af85a5cfd53b8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Shirt_White/m-move.png": {
+    "mtime": 1790318157.369,
+    "ast_hash": "2b33661eedc9d6a7b40ed6f91d6f4183",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Alchemist/m-idle.png": {
+    "mtime": 1790318157.377,
+    "ast_hash": "3afb85cb2d23a5e972c4be3b78540819",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Alchemist/m-move.png": {
+    "mtime": 1790318157.388,
+    "ast_hash": "a12a19a3c22b25221ae6efcc1f17d8bc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_1/m-idle.png": {
+    "mtime": 1790318157.395,
+    "ast_hash": "9e34b9cda0c2d25b1b940d599c1c8962",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_1/m-move.png": {
+    "mtime": 1790318157.406,
+    "ast_hash": "f70949c4c670685bd7f6d4d2515b44c1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_2/m-idle.png": {
+    "mtime": 1790318157.414,
+    "ast_hash": "ff0c196af78e3c63e27d5d7a76c2b22f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_2/m-move.png": {
+    "mtime": 1790318157.425,
+    "ast_hash": "bec6119460b4551193d5519469fc81cd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_3/m-idle.png": {
+    "mtime": 1790318157.434,
+    "ast_hash": "b3d5f75e23d84a4370e1323c8b649014",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Elf_3/m-move.png": {
+    "mtime": 1790318157.445,
+    "ast_hash": "ab7dcd1c5a1e3eda4791b283caa5e5c1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Santa/m-idle.png": {
+    "mtime": 1790318157.454,
+    "ast_hash": "9f124d5c3005b8d84fb592302c9d17ec",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Christmas_Santa/m-move.png": {
+    "mtime": 1790318157.464,
+    "ast_hash": "bd2192c8f8dd9c471accde9fe9ad8cae",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Elegant_Gray/m-idle.png": {
+    "mtime": 1790318157.474,
+    "ast_hash": "3332cecf8fc3cb8a92cfff022dc218c5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Elegant_Gray/m-move.png": {
+    "mtime": 1790318157.483,
+    "ast_hash": "3a9362bf90eb53637755ea3242dab392",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Elegant_White/m-idle.png": {
+    "mtime": 1790318157.491,
+    "ast_hash": "ea607b168690ad9ff0d563484ae2bc4d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Elegant_White/m-move.png": {
+    "mtime": 1790318157.501,
+    "ast_hash": "6787a0ea7e466253e4d20caef2979401",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Blue/m-idle.png": {
+    "mtime": 1790318157.51,
+    "ast_hash": "6e1c997fe75ec43b802552124d5b553d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Blue/m-move.png": {
+    "mtime": 1790318157.52,
+    "ast_hash": "24ba3f68ea316ca066963ff6ce74985c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Brown/m-idle.png": {
+    "mtime": 1790318157.527,
+    "ast_hash": "81359af25c3bed53c23dae5ba6574029",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Brown/m-move.png": {
+    "mtime": 1790318157.539,
+    "ast_hash": "176a06bda76456cd0544bc92cad38637",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Green/m-idle.png": {
+    "mtime": 1790318157.549,
+    "ast_hash": "8b22bb5b35a112d534b0682f2fac8d3e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Green/m-move.png": {
+    "mtime": 1790318157.56,
+    "ast_hash": "4fa4c8a7eb64e5a24f8c81ece0b765dd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Navy/m-idle.png": {
+    "mtime": 1790318157.569,
+    "ast_hash": "07637b11e402dd80f1d70c335a9fc719",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Navy/m-move.png": {
+    "mtime": 1790318157.585,
+    "ast_hash": "e76aeb774ae6bcee1edfb659c02c7459",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Red/m-idle.png": {
+    "mtime": 1790318157.592,
+    "ast_hash": "52818005f921ffaae808d96fea2e119c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Leather_Thickened_Red/m-move.png": {
+    "mtime": 1790318157.601,
+    "ast_hash": "a3e36f10eac1c9442afb87f1456391e7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Padded/m-idle.png": {
+    "mtime": 1790318157.61,
+    "ast_hash": "7d9cd42442fba82bf042934098038e5f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Padded/m-move.png": {
+    "mtime": 1790318157.622,
+    "ast_hash": "9ad2213e5bc173b6da041db45f3d6138",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Starry/m-idle.png": {
+    "mtime": 1790318157.629,
+    "ast_hash": "abe43d8d747b1b169d12dffaad68f33b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_Starry/m-move.png": {
+    "mtime": 1790318157.639,
+    "ast_hash": "5a46e4cad996e475bfe04195bb214805",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_White/m-idle.png": {
+    "mtime": 1790318157.646,
+    "ast_hash": "2ef15af9f5e5ff4f6cd87ca627db5838",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Sweater_White/m-move.png": {
+    "mtime": 1790318157.656,
+    "ast_hash": "eff1272ef36f86484037315669101860",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Lucky/m-idle.png": {
+    "mtime": 1790318157.663,
+    "ast_hash": "23e5dd911ab28e2910ce092eeaf890a3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Lucky/m-move.png": {
+    "mtime": 1790318157.674,
+    "ast_hash": "cf30cc48db4eeb3a842369994be465dc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Peasant/m-idle.png": {
+    "mtime": 1790318157.683,
+    "ast_hash": "31e6bf87707a6c06c6760aaad6af0148",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Peasant/m-move.png": {
+    "mtime": 1790318157.693,
+    "ast_hash": "fd2d5c0d34332b042956649a54681a22",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Valentine/m-idle.png": {
+    "mtime": 1790318157.7,
+    "ast_hash": "c0d41306908bb1061cc49a6281c15cbe",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/top/Top_Tunic_Valentine/m-move.png": {
+    "mtime": 1790318157.709,
+    "ast_hash": "f5edfa9a0690a3a798db40c823d933a1",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Adamantine/f-idle.png": {
+    "mtime": 1790318159.398,
+    "ast_hash": "92b25c0e6ade05f2ac5c1ebbec190b74",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Adamantine/f-move.png": {
+    "mtime": 1790318159.407,
+    "ast_hash": "161d2979edc164b5992dbfd50ccb52f3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Copper/f-idle.png": {
+    "mtime": 1790318159.419,
+    "ast_hash": "6abdd85cf0e14797533231e2c9cbb59e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Copper/f-move.png": {
+    "mtime": 1790318159.429,
+    "ast_hash": "e08d26d52297f555daf6fd60cd741ca4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Gold/f-idle.png": {
+    "mtime": 1790318159.442,
+    "ast_hash": "39f91c8a20d061706aed3805cfe44668",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Gold/f-move.png": {
+    "mtime": 1790318159.45,
+    "ast_hash": "b5379775ec925ded2869356b2608248f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Iron/f-idle.png": {
+    "mtime": 1790318159.464,
+    "ast_hash": "794d7460d7fee330e977a062de331bfa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Iron/f-move.png": {
+    "mtime": 1790318159.474,
+    "ast_hash": "1eb6c5ee072b06c7f6658c632be78fa4",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Silver/f-idle.png": {
+    "mtime": 1790318159.485,
+    "ast_hash": "012111d846f9340b940740d18e8bf596",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Silver/f-move.png": {
+    "mtime": 1790318159.494,
+    "ast_hash": "6cbfb261266f01f8f2332fd79a720e1e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Steel/f-idle.png": {
+    "mtime": 1790318159.507,
+    "ast_hash": "19801d604f995ab01f2e04bcae3da5be",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Steel/f-move.png": {
+    "mtime": 1790318159.516,
+    "ast_hash": "a6c3a6beb37e30aa4fdfd9ba3a08cb03",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Wood/f-idle.png": {
+    "mtime": 1790318159.526,
+    "ast_hash": "4abf7d6fbce4fe41ec7463b79ed6dd46",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Knife_Wood/f-move.png": {
+    "mtime": 1790318159.534,
+    "ast_hash": "b556fac9201ba1faebc2dfefa22ebb0a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Adamantine/b-idle.png": {
+    "mtime": 1790318159.542,
+    "ast_hash": "52981f94e2023071236538982b2be599",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Adamantine/b-move.png": {
+    "mtime": 1790318159.551,
+    "ast_hash": "6084cd70d44aa30ebea947f2f5da3342",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Adamantine/f-idle.png": {
+    "mtime": 1790318159.56,
+    "ast_hash": "ca53c688b2e69e3affea47227c9593d7",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Adamantine/f-move.png": {
+    "mtime": 1790318159.571,
+    "ast_hash": "d1dedb6a70c883e2e9cbb21e4a9bd96c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Angelic/b-idle.png": {
+    "mtime": 1790318159.579,
+    "ast_hash": "8fa115e2c8136acd5271a02e8c89aaaa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Angelic/b-move.png": {
+    "mtime": 1790318159.589,
+    "ast_hash": "9b27639bf2251beace6684a1415cc977",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Angelic/f-idle.png": {
+    "mtime": 1790318159.596,
+    "ast_hash": "43ab5baeca041b998b695e3cc4ac94f3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Angelic/f-move.png": {
+    "mtime": 1790318159.609,
+    "ast_hash": "2f7d84c44f366f7b4bd891562fd00400",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Basic/b-idle.png": {
+    "mtime": 1790318159.617,
+    "ast_hash": "afeafa8c47d4a60e1e97da1bfe870830",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Basic/b-move.png": {
+    "mtime": 1790318159.626,
+    "ast_hash": "8772a78788476ca2f553cf295df8c58b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Basic/f-idle.png": {
+    "mtime": 1790318159.636,
+    "ast_hash": "213c0484afa8424558c91c3ecfdf0172",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Basic/f-move.png": {
+    "mtime": 1790318159.646,
+    "ast_hash": "5b7e1982e58fc1751e05d80245098bdf",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_1/b-idle.png": {
+    "mtime": 1790318159.656,
+    "ast_hash": "53e90d1c45d0fdab6a35f57f618de8b8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_1/b-move.png": {
+    "mtime": 1790318159.667,
+    "ast_hash": "796ab0a7bf2740489150ce864eb7b9aa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_1/f-idle.png": {
+    "mtime": 1790318159.678,
+    "ast_hash": "74e513d06a076a9e13ab80a5a7caff4f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_1/f-move.png": {
+    "mtime": 1790318159.689,
+    "ast_hash": "057137cde3c2bbb6a68d5b99fc40fb5d",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_2/b-idle.png": {
+    "mtime": 1790318159.698,
+    "ast_hash": "f9e852e42e2682c8768219b1ab43f411",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_2/b-move.png": {
+    "mtime": 1790318159.709,
+    "ast_hash": "e2d53c8557962ddb30d111cc9b08b00c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_2/f-idle.png": {
+    "mtime": 1790318159.717,
+    "ast_hash": "67c8001c2e37a687325b4f730e1261fc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_2/f-move.png": {
+    "mtime": 1790318159.729,
+    "ast_hash": "72ae0b714fe608c926682a1c4925acd8",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_3/b-idle.png": {
+    "mtime": 1790318159.739,
+    "ast_hash": "2eb2b66f4eae405b622ff3e0352aa8d2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_3/b-move.png": {
+    "mtime": 1790318159.752,
+    "ast_hash": "7637f4daf686cda91b4cba33bbad05e2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_3/f-idle.png": {
+    "mtime": 1790318159.762,
+    "ast_hash": "e2faee96c3b78a3994d8ecb428917164",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Candy_Cane_3/f-move.png": {
+    "mtime": 1790318159.774,
+    "ast_hash": "fcdd2a9d2667a305dca8ac5cbd43a304",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Cobalt/b-idle.png": {
+    "mtime": 1790318159.781,
+    "ast_hash": "1fda9d69a643f3650975a0261aee3319",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Cobalt/b-move.png": {
+    "mtime": 1790318159.792,
+    "ast_hash": "262c7c79ab41584940f0b0a7e375daaa",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Cobalt/f-idle.png": {
+    "mtime": 1790318159.799,
+    "ast_hash": "1312c9518932d654b29f8a3b67932726",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Cobalt/f-move.png": {
+    "mtime": 1790318159.81,
+    "ast_hash": "522126840f6478f907c77526f11a5fdb",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Copper/b-idle.png": {
+    "mtime": 1790318159.819,
+    "ast_hash": "d8cc07b2f30d7a1b12fe909c2b584c40",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Copper/b-move.png": {
+    "mtime": 1790318159.829,
+    "ast_hash": "9a85bf89005ad2fcb5d02202d7be30e3",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Copper/f-idle.png": {
+    "mtime": 1790318159.839,
+    "ast_hash": "6a3f59c4a826864ff1f6725531728d2a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Copper/f-move.png": {
+    "mtime": 1790318159.852,
+    "ast_hash": "887dfd22fdb1d6f6a00a6b673ddec243",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Crimson/b-idle.png": {
+    "mtime": 1790318159.861,
+    "ast_hash": "7765f604de821767037a2ff198666e28",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Crimson/b-move.png": {
+    "mtime": 1790318159.872,
+    "ast_hash": "1c244312208ff5e5af89e1cedac6b790",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Crimson/f-idle.png": {
+    "mtime": 1790318159.881,
+    "ast_hash": "238f3bb503641dcb2545afcbab1ac794",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Crimson/f-move.png": {
+    "mtime": 1790318159.89,
+    "ast_hash": "4e0277ddbf512cdea9d0b72920980295",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Gold/b-idle.png": {
+    "mtime": 1790318159.898,
+    "ast_hash": "5bd2690df4a9c3951f4961f544dd6ef2",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Gold/b-move.png": {
+    "mtime": 1790318159.912,
+    "ast_hash": "1869f0aea860ebfa25e156fa764bae75",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Gold/f-idle.png": {
+    "mtime": 1790318159.921,
+    "ast_hash": "7ad899b86029903ec07f064546b19873",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Gold/f-move.png": {
+    "mtime": 1790318159.929,
+    "ast_hash": "809f673503d11b70c1fc22ea754d1a3c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Old/b-idle.png": {
+    "mtime": 1790318159.937,
+    "ast_hash": "2606ab127755f458b3e6996320dc39ff",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Old/b-move.png": {
+    "mtime": 1790318159.948,
+    "ast_hash": "5d10c5ba989be50146d62e1c62d863f9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Old/f-idle.png": {
+    "mtime": 1790318159.956,
+    "ast_hash": "90230045ca429ec6a4b9719453118031",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Old/f-move.png": {
+    "mtime": 1790318159.968,
+    "ast_hash": "bb7a149c356d7c81b38040444e1a6a18",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Polished/b-idle.png": {
+    "mtime": 1790318159.976,
+    "ast_hash": "453719dd2b340fcc49d705b7c32c1cf5",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Polished/b-move.png": {
+    "mtime": 1790318159.986,
+    "ast_hash": "4c76ecd0c5f66d8b36929eec44443cea",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Polished/f-idle.png": {
+    "mtime": 1790318159.995,
+    "ast_hash": "8603595dab03872269a70457bf73733a",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Iron_Polished/f-move.png": {
+    "mtime": 1790318160.004,
+    "ast_hash": "b4ac026aea057f4c950ab66007dfed06",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Platinum/b-idle.png": {
+    "mtime": 1790318160.015,
+    "ast_hash": "743b3fbc70deaee48859f19d541930ee",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Platinum/b-move.png": {
+    "mtime": 1790318160.027,
+    "ast_hash": "55a39af57f8afaf0f9c57906337675bd",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Platinum/f-idle.png": {
+    "mtime": 1790318160.036,
+    "ast_hash": "51d33f82c4e6189de2c330ecb00625c9",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Platinum/f-move.png": {
+    "mtime": 1790318160.047,
+    "ast_hash": "79f6238abd21a392021b38f6f4bacfed",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Silver/b-idle.png": {
+    "mtime": 1790318160.058,
+    "ast_hash": "3a4cdf5f277f8c1ddce31532ae682d23",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Silver/b-move.png": {
+    "mtime": 1790318160.069,
+    "ast_hash": "9e14653d571426180c247c629cff14cc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Silver/f-idle.png": {
+    "mtime": 1790318160.077,
+    "ast_hash": "7f31bd1177b1c49a304aae6b6841f694",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Silver/f-move.png": {
+    "mtime": 1790318160.089,
+    "ast_hash": "3a0c72d673ff4c85887883b745c5b56f",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Starting/b-idle.png": {
+    "mtime": 1790318160.098,
+    "ast_hash": "e11ae9f30f58875c7b34f60f5e48e145",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Starting/b-move.png": {
+    "mtime": 1790318160.107,
+    "ast_hash": "1993c39c0b82df59aa0bcbd36c1ef03e",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Starting/f-idle.png": {
+    "mtime": 1790318160.116,
+    "ast_hash": "59e309ccc5fe09dc0054d373cf798011",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Starting/f-move.png": {
+    "mtime": 1790318160.126,
+    "ast_hash": "c5b1f47de93f516e085f1622e56e1b4b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Steel/b-idle.png": {
+    "mtime": 1790318160.136,
+    "ast_hash": "a34213b23bf47e9d52582c81cadfc821",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Steel/b-move.png": {
+    "mtime": 1790318160.146,
+    "ast_hash": "47b50b4367dbcd73d408088de123e51c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Steel/f-idle.png": {
+    "mtime": 1790318160.153,
+    "ast_hash": "805f309a752b747e507c2b76c966a6bc",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Steel/f-move.png": {
+    "mtime": 1790318160.164,
+    "ast_hash": "84dd1978a9cfedb0c6380e2bcfcc468b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Training/b-idle.png": {
+    "mtime": 1790318160.172,
+    "ast_hash": "afeafa8c47d4a60e1e97da1bfe870830",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Training/b-move.png": {
+    "mtime": 1790318160.181,
+    "ast_hash": "8772a78788476ca2f553cf295df8c58b",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Training/f-idle.png": {
+    "mtime": 1790318160.192,
+    "ast_hash": "b5fad6566d6bd5b94e61f26aa22c580c",
+    "semantic_hash": ""
+  },
+  "public/pixel-character/weapon/1H_Sword_Training/f-move.png": {
+    "mtime": 1790318160.206,
+    "ast_hash": "526c76380ed35203a18ee0da4b6c611f",
     "semantic_hash": ""
   }
 }

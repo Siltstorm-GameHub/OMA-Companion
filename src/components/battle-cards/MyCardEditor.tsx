@@ -7,24 +7,28 @@ import { Save, Loader2 } from "@/components/icons";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
-import SkinPicker from "../skins/SkinPicker";
-import type { CardCharacterSelection } from "@/lib/battle-cards/card-content";
+import PixelCharacterEditor from "@/components/pixel-character/PixelCharacterEditor";
+import type { PixelCharacterConfig } from "@/lib/pixel-character";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
 
 export default function MyCardEditor({
   card,
-  initialCharacterConfig,
+  initialPixelCharacter,
+  hasPixelCharacter,
 }: {
   card: BattleCardData & { id: string };
-  /** Bisherige Skin-Auswahl (Card.characterConfig aus der DB), null = noch keine gewählt. */
-  initialCharacterConfig: CardCharacterSelection | null;
+  /** Bisheriger Pixel-Charakter (Card.pixelCharacter) bzw. die Standard-Figur zum Losgehen. */
+  initialPixelCharacter: PixelCharacterConfig;
+  /** false = noch nie gespeichert: die Karte zeigt weiter das Profilbild, bis der User den Charakter anfasst. */
+  hasPixelCharacter: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
   const [flavorText, setFlavorText] = useState(card.flavorText);
-  const [characterConfig, setCharacterConfig] = useState(initialCharacterConfig);
+  const [pixelCharacter, setPixelCharacter] = useState(initialPixelCharacter);
+  const [usePixel, setUsePixel] = useState(hasPixelCharacter);
   const [saving, setSaving] = useState(false);
   const [flavorFocused, setFlavorFocused] = useState(false);
 
@@ -34,7 +38,7 @@ export default function MyCardEditor({
       const res = await fetch("/api/battle-cards/my-card", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, flavorText, characterConfig }),
+        body: JSON.stringify({ title, flavorText, pixelCharacter: usePixel ? pixelCharacter : null }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -52,7 +56,7 @@ export default function MyCardEditor({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
-      <BattleCardView card={{ ...card, title, flavorText }} />
+      <BattleCardView card={{ ...card, title, flavorText, pixelCharacter: usePixel ? pixelCharacter : null }} />
 
       <div className="space-y-4">
         <label className="block">
@@ -119,13 +123,27 @@ export default function MyCardEditor({
       </div>
 
       <div className="sm:col-span-2 pt-2 border-t border-white/10">
-        <h2 className="text-sm font-bold text-white">Skin auswählen</h2>
-        <p className="text-xs text-gray-500 mt-0.5 mb-3">
-          Fertigen 3D-Charakter für deine Karte wählen — die Auswahl wird beim Speichern übernommen.
-        </p>
-        <SkinPicker
-          skinId={characterConfig?.skinId ?? null}
-          onChange={(skinId) => setCharacterConfig({ skinId })}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 className="text-sm font-bold text-white">Pixel-Charakter</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Gestalte deine Figur — sie ist das Motiv deiner Karte und deine Spielfigur im D&amp;D.
+              Die Auswahl wird beim Speichern übernommen.
+            </p>
+          </div>
+          {usePixel && (
+            <button
+              type="button"
+              onClick={() => setUsePixel(false)}
+              className="shrink-0 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Zurück zum Profilbild
+            </button>
+          )}
+        </div>
+        <PixelCharacterEditor
+          value={pixelCharacter}
+          onChange={(next) => { setPixelCharacter(next); setUsePixel(true); }}
         />
       </div>
     </div>

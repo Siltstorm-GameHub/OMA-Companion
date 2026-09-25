@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDndWorldSeeded } from "@/lib/dnd/locations";
 import { resolveCharacterLocation } from "@/lib/dnd/travel";
+import { sanitizePixelConfig } from "@/lib/pixel-character";
 
 /**
  * Weltkarte: alle Locations + aufgelöste Position jeder Charakter-Karte.
@@ -25,6 +26,7 @@ export async function GET() {
         id: true,
         name: true,
         linkedDiscordId: true,
+        pixelCharacter: true, // Spielfigur (Editor: /battle-cards/my-card)
         currentLocationId: true,
         travelRouteId: true,
         travelFromLocationId: true,
@@ -48,6 +50,7 @@ export async function GET() {
       departedAt: resolved.departedAt ?? null,
       arrivesAt: resolved.arrivesAt ?? null,
       progress: resolved.progress ?? null,
+      pixel: sanitizePixelConfig(c.pixelCharacter),
     };
   });
 

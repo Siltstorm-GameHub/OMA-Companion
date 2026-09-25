@@ -257,6 +257,15 @@
         ],
         "createdAt": "2026-09-18T20:43:52.819Z",
         "reason": "text-gray-500 hover:text-red-400 on a transparent button with hover:bg-red-500/10 - color changes together with the hover background, matches existing 'Zurueckziehen' pattern already used elsewhere in the codebase, not a static gray-on-color contrast issue"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/components/pixel-character/PixelCharacterEditor.tsx"
+        ],
+        "createdAt": "2026-09-25T06:42:24.243Z",
+        "reason": "Claude: false positive - text-gray-400/500 on bg-black/30 over dark panel (#141a28), no colored background; user not consulted"
       }
     ]
   }

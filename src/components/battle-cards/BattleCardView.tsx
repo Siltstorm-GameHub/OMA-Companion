@@ -16,6 +16,8 @@ import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import MobaIcon from "./MobaIcon";
+import PixelCharacter from "@/components/pixel-character/PixelCharacter";
+import type { PixelCharacterConfig } from "@/lib/pixel-character";
 
 export interface BattleCardSkill {
   name: string;
@@ -40,6 +42,8 @@ export interface BattleCardData {
   ultimateSkill: BattleCardSkill;
   level?: number;
   imageUrl?: string | null;
+  /** Pixel-Charakter des Mitglieds (Community-Karte) — hat als Hauptmotiv Vorrang vor imageUrl. */
+  pixelCharacter?: PixelCharacterConfig | null;
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork ist (siehe card-view.ts toCardData). */
   avatarBadgeUrl?: string | null;
@@ -215,7 +219,9 @@ export default function BattleCardView({
             className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
-            {card.imageUrl && !imgFailed ? (
+            {card.pixelCharacter ? (
+              <PixelCharacter config={card.pixelCharacter} anim="idle" mode="focus" scale={3} title={card.name} />
+            ) : card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={card.imageUrl}
