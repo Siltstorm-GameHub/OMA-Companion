@@ -10,14 +10,14 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
-import { sanitizePixelConfig } from "@/lib/pixel-character";
+import { sanitizeTeConfig } from "@/lib/te-character";
 import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
 
 const requestSchema = z.object({
   title: z.string().max(CARD_TITLE_MAX_LENGTH).optional(),
   flavorText: z.string().max(CARD_FLAVOR_TEXT_MAX_LENGTH).optional(),
-  // Struktur wird unten gegen den Katalog geprüft (sanitizePixelConfig) — nicht vertrauenswürdig.
-  pixelCharacter: z.unknown().optional(),
+  // Struktur wird unten gegen den Katalog geprüft (sanitizeTeConfig) — nicht vertrauenswürdig.
+  teCharacter: z.unknown().optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -41,17 +41,17 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "Keine eigene Community-Karte gefunden." }, { status: 404 });
   }
 
-  const { pixelCharacter, ...content } = parsed.data;
-  let pixel: ReturnType<typeof sanitizePixelConfig> | undefined;
-  if (pixelCharacter !== undefined) {
-    pixel = pixelCharacter === null ? null : sanitizePixelConfig(pixelCharacter);
-    if (pixel === null && pixelCharacter !== null) {
+  const { teCharacter, ...content } = parsed.data;
+  let character: ReturnType<typeof sanitizeTeConfig> | undefined;
+  if (teCharacter !== undefined) {
+    character = teCharacter === null ? null : sanitizeTeConfig(teCharacter);
+    if (character === null && teCharacter !== null) {
       return Response.json({ error: "Ungültiger Charakter." }, { status: 400 });
     }
   }
 
   try {
-    await updateCardContent(card.id, { ...content, ...(pixel !== undefined ? { pixelCharacter: pixel } : {}) });
+    await updateCardContent(card.id, { ...content, ...(character !== undefined ? { teCharacter: character } : {}) });
     await markTutorialCommunityCardCustomized(userId);
     return Response.json({ ok: true });
   } catch (error) {

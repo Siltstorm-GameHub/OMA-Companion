@@ -30,7 +30,7 @@ export interface TeCharacterConfig {
   layers: Record<string, string>;
 }
 
-export type TeAnim = "idle" | "walk" | "attack" | "cast" | "bow" | "crouch" | "jump" | "ko";
+export type TeAnim = "idle" | "walk" | "attack" | "cast" | "bow" | "crouch" | "block" | "jump" | "ko";
 
 /** Bildfolgen im 23er-Sheet: Gehen 0–2, Arme hoch 3–5, Ducken 6, Springen 7–9, Ausholen 10,
  *  Angriff 11–14, Bogen anlegen 15, Bogen 16–18, Klettern 19–21, K.O. 22. */
@@ -41,6 +41,8 @@ export const TE_ANIMS: Record<TeAnim, { frames: number[]; fps: number; loop: boo
   cast: { frames: [3, 4, 5, 4], fps: 6, loop: false },
   bow: { frames: [15, 16, 17, 18], fps: 8, loop: false },
   crouch: { frames: [6], fps: 1, loop: true },
+  /** Kurz ducken (Schild/Abwehr im Kampf) — läuft einmal ab und geht zurück nach idle. */
+  block: { frames: [6, 6, 6], fps: 5, loop: false },
   jump: { frames: [7, 8, 9], fps: 6, loop: false },
   ko: { frames: [22], fps: 1, loop: true },
 };
@@ -106,4 +108,14 @@ export function randomTeConfig(rand: () => number = Math.random): TeCharacterCon
     layers[cat.id] = item.variants[Math.floor(rand() * item.variants.length)];
   }
   return { v: 1, skin: Math.floor(rand() * TE_CATALOG.skinTones.length), layers };
+}
+
+/** Ausschnitte der 48×48-Bilder (Figur steht bei x 17–30, y 7–32): Karten-Motiv/Kampf = ganze Figur eng, Kopf = Porträt. */
+export const TE_CROP_FIGURE = { x: 8, y: 2, w: 32, h: 34 } as const;
+export const TE_CROP_HEAD = { x: 12, y: 2, w: 24, h: 24 } as const;
+
+/** Angriffs-Animation passend zur Ausrüstung: Bogen → Bogen, sonst Support → Zauber, sonst Nahkampf. */
+export function attackAnimFor(config: TeCharacterConfig, unitClass?: "TANK" | "DAMAGE_DEALER" | "SUPPORT"): TeAnim {
+  if (config.layers.weapon?.startsWith("bow")) return "bow";
+  return unitClass === "SUPPORT" ? "cast" : "attack";
 }

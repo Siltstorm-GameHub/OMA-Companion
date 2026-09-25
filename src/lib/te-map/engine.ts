@@ -1,40 +1,39 @@
 // ============================================
-// Spiel-Logik der Prototyp-Karte: Kachel-Bewegung, Kollision, Interaktion, Mini-Quest
+// Spiel-Logik der begehbaren Welten: Kachel-Bewegung, Kollision, Interaktion, Quest-Schritte
 // ============================================
 // Rein (kein DOM, kein Zeichnen), damit testbar. Die Komponente ruft `step` pro Frame,
-// `pressAction` bei Aktionstaste/Tippen und liest den Zustand zum Zeichnen.
+// `pressAction` bei Aktionstaste/Tippen und liest den Zustand zum Zeichnen. Fortschritte der Quest
+// gibt der Engine nur als Ereignis weiter (`advance`); gespeichert wird auf dem Server.
 
-import { STAMPS } from "./stamps";
-import { type QuestStep, type TeMap } from "./village";
+import { STAMPS, type StampDef } from "./stamps";
+import type { Actor, Dir, Talk, WorldDef } from "./types";
 
-export type Dir = "down" | "left" | "right" | "up";
+export type { Dir };
 export const DELTA: Record<Dir, [number, number]> = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
 
 /** Dauer, um eine Kachel zu durchqueren (ms). */
 export const TILE_MS = 170;
 
-export interface Dialog { speaker: string; lines: string[]; index: number; onEnd?: "startQuest" | "completeQuest" }
-export type GameEvent = "questStarted" | "gotJug" | "questComplete";
+export interface Dialog { speaker: string; lines: string[]; index: number; advanceFrom?: number }
+export type GameEvent = { type: "advance"; from: number } | { type: "complete" };
 
 export interface Game {
-  map: TeMap;
+  world: WorldDef;
   solid: boolean[][];
   px: number;
   py: number;
   dir: Dir;
   move: { fromX: number; fromY: number; toX: number; toY: number; elapsed: number } | null;
-  quest: QuestStep;
-  chestOpen: boolean;
+  /** Aktueller Quest-Schritt (0 … objectives.length − 1; letzter = abgeschlossen) */
+  questStep: number;
   dialog: Dialog | null;
   events: GameEvent[];
+  /** Ausrichtung der NPCs (drehen sich beim Ansprechen zur Figur) */
+  actorDir: Map<string, Dir>;
 }
 
-const SIGN_TEXT: Record<string, string> = {
-  sign: "Willkommen in Krähbach! Einwohnerzahl: unklar. Postleitzahl: existiert nicht.",
-  noticeBoard: "Aushang: Suche Helfer für einen verlorenen Krug. Melden bei der Ältesten. Bezahlung in Ruhm.",
-};
-
-export function buildSolid(map: TeMap): boolean[][] {
+export function buildSolid(world: WorldDef): boolean[][] {
+  const map = world.map;
   const solid = Array.from({ length: map.rows }, () => Array<boolean>(map.cols).fill(false));
   const mark = (x: number, y: number, w: number, h: number) => {
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) if (solid[yy]?.[xx] !== undefined) solid[yy][xx] = true;
@@ -42,24 +41,26 @@ export function buildSolid(map: TeMap): boolean[][] {
   for (const [x, y, w, h] of map.blocked) mark(x, y, w, h);
   for (const b of map.buildings) mark(b.x, b.y, b.w, b.roofRows + 2);
   for (const s of map.stamps) {
-    const def = STAMPS[s.id];
-    const f = "solid" in def ? def.solid : undefined;
+    const f = (STAMPS[s.id] as StampDef).solid;
     if (f) mark(s.x + f[0], s.y + f[1], f[2], f[3]);
   }
-  for (const n of map.npcs) mark(n.x, n.y, 1, 1);
-  mark(map.chest.x, map.chest.y, 1, 1);
+  for (const a of map.actors) if (a.kind !== "sign") mark(a.x, a.y, 1, 1);
   return solid;
 }
 
-export function createGame(map: TeMap): Game {
+export function questLength(world: WorldDef): number { return world.quest.objectives.length - 1; }
+
+export function createGame(world: WorldDef, questStep = 0): Game {
   return {
-    map, solid: buildSolid(map), px: map.spawn.x, py: map.spawn.y, dir: "up", move: null,
-    quest: 0, chestOpen: false, dialog: null, events: [],
+    world, solid: buildSolid(world), px: world.map.spawn.x, py: world.map.spawn.y, dir: "down", move: null,
+    questStep: Math.min(Math.max(0, questStep), questLength(world)), dialog: null, events: [],
+    actorDir: new Map(world.map.actors.map((a) => [a.id, a.dir])),
   };
 }
 
 export function isWalkable(game: Game, x: number, y: number): boolean {
-  if (x < 0 || y < 0 || x >= game.map.cols || y >= game.map.rows) return false;
+  const { cols, rows } = game.world.map;
+  if (x < 0 || y < 0 || x >= cols || y >= rows) return false;
   return !game.solid[y][x];
 }
 
@@ -96,79 +97,56 @@ export function facingCell(game: Game): [number, number] {
   return [game.px + dx, game.py + dy];
 }
 
-function say(game: Game, speaker: string, lines: string[], onEnd?: Dialog["onEnd"]) {
-  game.dialog = { speaker, lines, index: 0, onEnd };
+/** Dialog des Akteurs für den aktuellen Quest-Schritt (sonst der "*"-Dialog, sonst ein Platzhalter). */
+export function pickTalk(actor: Actor, questStep: number): Talk {
+  return actor.talk.find((t) => t.step === questStep) ?? actor.talk.find((t) => t.step === "*") ?? { step: "*", lines: ["…"] };
 }
 
-/** Aktionstaste: Dialog weiterblättern, sonst mit dem Objekt vor der Figur interagieren. */
+/** Ist die Truhe schon geöffnet? (= ihr Quest-Schritt wurde bereits abgeschlossen) */
+export function isChestOpen(actor: Actor, questStep: number): boolean {
+  return actor.talk.some((t) => t.advance && typeof t.step === "number" && questStep > t.step);
+}
+
+/** Aktionstaste: Dialog weiterblättern, sonst mit dem Akteur vor der Figur reden/etwas öffnen. */
 export function pressAction(game: Game): void {
   if (game.move) return;
   const d = game.dialog;
   if (d) {
     if (d.index < d.lines.length - 1) { d.index++; return; }
     game.dialog = null;
-    if (d.onEnd === "startQuest") { game.quest = 1; game.events.push("questStarted"); }
-    if (d.onEnd === "completeQuest") { game.quest = 3; game.events.push("questComplete"); }
+    // Nur weiterrücken, wenn der Schritt noch derselbe ist (doppeltes Auslösen verhindern)
+    if (d.advanceFrom !== undefined && game.questStep === d.advanceFrom) {
+      game.questStep++;
+      game.events.push({ type: "advance", from: d.advanceFrom });
+      if (game.questStep === questLength(game.world)) game.events.push({ type: "complete" });
+    }
     return;
   }
 
   const [fx, fy] = facingCell(game);
-  const npc = game.map.npcs.find((n) => n.x === fx && n.y === fy);
-  if (npc) {
+  const actor = game.world.map.actors.find((a) => a.x === fx && a.y === fy);
+  if (!actor) return;
+  if (actor.kind === "npc") {
     // Der NPC dreht sich zur Figur
-    npc.dir = ({ down: "up", up: "down", left: "right", right: "left" } as const)[game.dir];
-    return talk(game, npc.id, npc.name);
+    game.actorDir.set(actor.id, ({ down: "up", up: "down", left: "right", right: "left" } as const)[game.dir]);
   }
-  if (game.map.chest.x === fx && game.map.chest.y === fy) {
-    if (game.quest === 1) {
-      game.chestOpen = true;
-      game.quest = 2;
-      game.events.push("gotJug");
-      return say(game, "Truhe", ["Du öffnest die Truhe … und findest einen alten Krug!", "Am besten bringst du ihn gleich zur Dorfältesten."]);
-    }
-    if (game.quest === 0) return say(game, "Truhe", ["Die Truhe ist fest verschlossen. Vielleicht weiß jemand im Dorf mehr."]);
-    return say(game, "Truhe", [game.chestOpen ? "Die Truhe ist leer." : "Die Truhe rührt sich nicht."]);
-  }
-  for (const b of game.map.buildings) {
-    if (fx === b.x + b.doorDx && fy === b.y + b.roofRows + 1) {
-      return say(game, b.name, ["Die Tür ist verschlossen. (Innenräume gibt es im Prototyp noch nicht.)"]);
-    }
-  }
-  for (const s of game.map.stamps) {
-    const text = SIGN_TEXT[s.id];
-    if (!text) continue;
-    const def = STAMPS[s.id];
-    if (fx >= s.x && fx < s.x + def.w && fy >= s.y && fy < s.y + def.h) return say(game, "Schild", [text]);
-  }
-}
-
-function talk(game: Game, id: string, name: string) {
-  if (id === "elder") {
-    switch (game.quest) {
-      case 0:
-        return say(game, name, [
-          "Ach, ein neues Gesicht! Gut, dass du da bist.",
-          "Mein Lieblingskrug ist verschwunden. Ich glaube, er liegt in einer Truhe im Wald östlich des Dorfes.",
-          "Würdest du ihn für mich holen?",
-        ], "startQuest");
-      case 1:
-        return say(game, name, ["Hast du die Truhe im Osten schon gefunden? Folge dem Weg hinter dem Dorfplatz."]);
-      case 2:
-        return say(game, name, ["Mein Krug! Du hast ihn wirklich gefunden. Das Dorf steht in deiner Schuld."], "completeQuest");
-      default:
-        return say(game, name, ["Nochmals danke für den Krug. Der Tee schmeckt gleich viel besser."]);
-    }
-  }
-  if (id === "merchant") {
-    return say(game, name, [
-      game.quest >= 2 ? "Ein Krug aus der Waldtruhe? Den hätte ich dir auch abgekauft. Aber gut gemacht!" : "Schwerter, Schilde, Socken. Alles vorrätig, nichts davon gut.",
-    ]);
-  }
-  say(game, name, ["…"]);
+  const talk = pickTalk(actor, game.questStep);
+  game.dialog = {
+    speaker: actor.name,
+    lines: talk.lines,
+    index: 0,
+    advanceFrom: talk.advance && typeof talk.step === "number" ? talk.step : undefined,
+  };
 }
 
 export function drainEvents(game: Game): GameEvent[] {
   const e = game.events;
   game.events = [];
   return e;
+}
+
+/** Vom Server bestätigter Stand: übernimmt den Schritt, wenn er weiter ist als der lokale. */
+export function syncQuestStep(game: Game, serverStep: number): void {
+  const capped = Math.min(serverStep, questLength(game.world));
+  if (capped > game.questStep) game.questStep = capped;
 }

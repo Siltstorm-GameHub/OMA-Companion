@@ -133,6 +133,7 @@ async function main() {
   const tileFiles = [
     "tilesets/tileA2.png", "tilesets/tileA3.png", "tilesets/tileA4.png", "tilesets/tileA5_outside.png", "tilesets/tileA5_town.png",
     "tilesets/tileB_outside.png", "tilesets/tileB_town.png", "characters/!chests.png",
+    "tilesets/tileA2_caves.png", "tilesets/tileA5_cave1.png", "tilesets/tileB_cave1.png",
   ];
   for (const f of tileFiles) {
     const src = path.join(TILE_SRC, f);

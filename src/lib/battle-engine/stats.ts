@@ -71,7 +71,7 @@ export function buildRosterFromUnits(units: BattleUnitState[]): RosterEntry[] {
     ultimateSkillDescription: u.def.ultimateSkill.description,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
-    pixelCharacter: u.def.pixelCharacter ?? null,
+    teCharacter: u.def.teCharacter ?? null,
   }));
 }
 

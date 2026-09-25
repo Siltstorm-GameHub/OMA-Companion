@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { commitArrivalIfDue } from "@/lib/dnd/travel";
 import { positionOfCard } from "@/lib/dnd/position";
 import { planTravel } from "@/lib/dnd/hex/pathfinding";
-import { WORLD_COLS, WORLD_ROWS, terrainAt } from "@/lib/dnd/hex/world";
+import { LOCATION_HEXES, WORLD_COLS, WORLD_ROWS, terrainAt } from "@/lib/dnd/hex/world";
 import { inBounds } from "@/lib/dnd/hex/grid";
 
 /**
- * Reise antreten. Input: { col, row } — beliebiges betretbares Hex-Feld. Der Server
+ * Reise antreten. Input: { col, row } — Hex-Feld einer festen Location (die Weltkarte ist das
+ * Hauptmenü: gereist wird nur von Location zu Location). Der Server
  * plant den Weg selbst (Client-Vorschau ist nur Anzeige) und speichert Pfad + Ankunftszeit.
  */
 export async function POST(req: NextRequest) {
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
   const from = await positionOfCard(fresh);
   if (!from) return NextResponse.json({ error: "Keine Startposition — bitte Seite neu laden" }, { status: 400 });
 
+  if (!Object.values(LOCATION_HEXES).some((h) => h.col === target.col && h.row === target.row)) {
+    return NextResponse.json({ error: "Reiseziele sind nur die festen Locations" }, { status: 400 });
+  }
   const t = terrainAt(target);
   if (t === "o" || t === "l" || t === "v") {
     return NextResponse.json({ error: "Dieses Feld ist nicht betretbar (Wasser bzw. Lava)" }, { status: 400 });

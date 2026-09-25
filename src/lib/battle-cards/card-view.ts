@@ -6,7 +6,7 @@ import type { Card, CardClass } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "./resolve-image";
-import { sanitizePixelConfig } from "@/lib/pixel-character";
+import { sanitizeTeConfig } from "@/lib/te-character";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
 export const ACTIVITY_TIER_RANK: Record<string, number> = {
@@ -56,11 +56,11 @@ export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | 
     baseDefense: card.baseDefense,
     speed: card.speed,
     activityTier: card.activityTier,
-    pixelCharacter: sanitizePixelConfig(card.pixelCharacter),
+    teCharacter: sanitizeTeConfig(card.teCharacter),
     imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
-    // Mit Pixel-Charakter als Hauptmotiv wandert das echte Profilbild — wie bei einem Admin-Artwork — in das Badge.
+    // Mit Charakter als Hauptmotiv wandert das echte Profilbild — wie bei einem Admin-Artwork — in das Badge.
     avatarBadgeUrl: avatarByDiscordId
-      ? (sanitizePixelConfig(card.pixelCharacter) && card.linkedDiscordId
+      ? (sanitizeTeConfig(card.teCharacter) && card.linkedDiscordId
           ? avatarByDiscordId.get(card.linkedDiscordId) ?? null
           : resolveAvatarBadgeUrl(card, avatarByDiscordId))
       : null,

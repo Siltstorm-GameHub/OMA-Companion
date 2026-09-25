@@ -9,6 +9,8 @@
 import { prisma } from "../prisma";
 import { dispatchNotification } from "../notify-dispatch";
 import { updateQuestProgress, type QuestType } from "../quests";
+import { getWorld, WORLD_SLUGS } from "../te-map/worlds";
+import { questLength } from "../te-map/engine";
 
 export interface DndQuestDef {
   slug: string;
@@ -87,9 +89,27 @@ export const DND_QUESTS: DndQuestDef[] = [
   },
 ];
 
+/** Quests der begehbaren Welten (eine je Location, siehe lib/te-map/worlds.ts). Fortschritt = erledigte
+ *  Schritte; bewusst nur XP als Belohnung, weil der Client die Schritte meldet (keine Coins). */
+export function worldQuestDefs(): DndQuestDef[] {
+  return WORLD_SLUGS.flatMap((slug) => {
+    const w = getWorld(slug);
+    if (!w) return [];
+    return [{
+      slug: w.quest.slug,
+      title: w.quest.title,
+      description: w.quest.objectives.slice(0, -1).join(" → "),
+      objectiveType: "WORLD_STEP",
+      targetCount: questLength(w),
+      xpReward: w.quest.xpReward,
+      locationSlug: slug,
+    }];
+  });
+}
+
 /** Idempotent, analog ensureDndWorldSeeded/ensureDndStoryContentSeeded. */
 export async function ensureDndQuestsSeeded(): Promise<void> {
-  for (const q of DND_QUESTS) {
+  for (const q of [...DND_QUESTS, ...worldQuestDefs()]) {
     let locationId: string | undefined;
     if (q.locationSlug) {
       const loc = await prisma.dndLocation.findUnique({ where: { slug: q.locationSlug }, select: { id: true } });
@@ -159,6 +179,56 @@ export async function advanceDndQuestObjective(
       await rewardDndQuest(cardId, quest.id, quest.coinReward);
     }
   }
+}
+
+/**
+ * Quest-Schritt in einer begehbaren Welt melden. Nur der nächste Schritt zählt (`fromStep` muss dem
+ * gespeicherten Stand entsprechen); Wiederholungen und Überspringen werden ignoriert. Beim letzten
+ * Schritt gibt es einmalig die XP. Gibt den gespeicherten Stand zurück.
+ */
+export async function advanceWorldQuestStep(
+  cardId: string,
+  locationSlug: string,
+  fromStep: number,
+): Promise<{ step: number; completed: boolean } | null> {
+  const world = getWorld(locationSlug);
+  if (!world) return null;
+  await ensureDndQuestsSeeded();
+  const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
+  if (!quest) return null;
+
+  const existing = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: quest.id } } });
+  const current = existing?.current ?? 0;
+  if (existing?.completed || current !== fromStep || fromStep >= quest.targetCount) {
+    return { step: existing?.completed ? quest.targetCount : current, completed: !!existing?.completed };
+  }
+
+  const next = current + 1;
+  const completed = next >= quest.targetCount;
+  if (existing) {
+    await prisma.dndQuestProgress.update({
+      where: { id: existing.id },
+      data: { current: next, completed, completedAt: completed ? new Date() : undefined, rewarded: completed ? true : undefined },
+    });
+  } else {
+    await prisma.dndQuestProgress.create({
+      data: { cardId, questId: quest.id, current: next, completed, completedAt: completed ? new Date() : undefined, rewarded: completed },
+    });
+  }
+  if (completed && quest.xpReward > 0) {
+    await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: quest.xpReward } } });
+  }
+  return { step: next, completed };
+}
+
+/** Bisher gespeicherter Schritt einer Welt-Quest (0 = noch nicht begonnen). */
+export async function getWorldQuestStep(cardId: string, locationSlug: string): Promise<number> {
+  const world = getWorld(locationSlug);
+  if (!world) return 0;
+  const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
+  if (!quest) return 0;
+  const p = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: quest.id } } });
+  return p?.completed ? quest.targetCount : p?.current ?? 0;
 }
 
 /** Coins-Pfad: derselbe user.points + PointTransaction-Mechanismus wie updateQuestProgress

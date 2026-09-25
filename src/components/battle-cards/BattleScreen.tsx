@@ -22,7 +22,7 @@ import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
 import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
-import BattleFigure from "@/components/pixel-character/BattleFigure";
+import BattleFigure from "@/components/te-character/BattleFigure";
 
 // ---------- Skill-Effekt-Overlay ----------
 // Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
@@ -490,9 +490,9 @@ function UnitTile({
             }}
           />
         )}
-        {roster.pixelCharacter ? (
+        {roster.teCharacter ? (
           <BattleFigure
-            config={roster.pixelCharacter}
+            config={roster.teCharacter}
             unitClass={roster.class}
             team={roster.teamId}
             attackKey={attackKey}
@@ -605,7 +605,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   const lastEntry = step > 0 ? log[step - 1] : undefined;
   const classOf = (id: string) => rosterById.get(id)?.class;
   const currentVfx = useMemo(() => vfxForEntry(lastEntry, step, classOf), [lastEntry, step, rosterById]);
-  // Wer schlägt gerade zu / bekommt gerade einen Schild? (Pixel-Figuren spielen dazu Angriff bzw. Block.)
+  // Wer schlägt gerade zu / bekommt gerade einen Schild? (Figuren spielen dazu Angriff bzw. Abwehr.)
   const attackerId = lastEntry?.type === "action" ? lastEntry.actorId : null;
   const blockedId = lastEntry?.type === "shieldApplied" ? lastEntry.targetId : null;
   const cutsceneActor =

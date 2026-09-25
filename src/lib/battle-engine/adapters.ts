@@ -7,7 +7,7 @@
 
 import type { Card, NormalAttackTargetRule, TacticCard } from "@prisma/client";
 import { parseActiveSkill, parsePassiveSkill, parseTacticEffects, parseTacticTriggerCondition } from "./skill-schema";
-import { sanitizePixelConfig } from "@/lib/pixel-character";
+import { sanitizeTeConfig } from "@/lib/te-character";
 import type { BattleUnitDefinition, SingleEnemySelector, TacticCardDefinition } from "./types";
 
 const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemySelector> = {
@@ -24,7 +24,7 @@ export function cardToBattleUnitDefinition(
   imageUrl?: string | null,
   avatarBadgeUrl?: string | null
 ): BattleUnitDefinition {
-  const pixelCharacter = sanitizePixelConfig(card.pixelCharacter);
+  const teCharacter = sanitizeTeConfig(card.teCharacter);
   const resolvedImage = imageUrl !== undefined ? imageUrl : card.imageUrl;
   return {
     cardId: card.id,
@@ -43,10 +43,10 @@ export function cardToBattleUnitDefinition(
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
     imageUrl: resolvedImage,
-    // Mit Pixel-Charakter als Hauptmotiv wandert das echte Profilbild (bei Community-Karten
+    // Mit Charakter als Hauptmotiv wandert das echte Profilbild (bei Community-Karten
     // ist resolvedImage das Discord-Bild) in das kleine Badge — wie bei einem Admin-Artwork.
-    avatarBadgeUrl: avatarBadgeUrl ?? (pixelCharacter ? resolvedImage ?? null : null),
-    pixelCharacter,
+    avatarBadgeUrl: avatarBadgeUrl ?? (teCharacter ? resolvedImage ?? null : null),
+    teCharacter,
     title: card.title,
     rarity: card.rarity,
     flavorText: card.flavorText,

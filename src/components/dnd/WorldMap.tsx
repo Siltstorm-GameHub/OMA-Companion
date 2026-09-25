@@ -3,9 +3,11 @@
 // ============================================
 // OMA-Quest-Weltkarte — Hex-Karte (Hex-Map-Paket, Seed 21) mit Zoom/Pan
 // ============================================
-// Das Kartenbild ist vorgerendert (public/dnd/hex-world.webp), Gelände und Wege
-// kommen aus src/lib/dnd/hex. Jedes Feld ist anklickbar und betretbar (außer Wasser/
-// Lava); die 10 festen Locations sind golden umrandet und tragen ein Marker-Bild.
+// Die Weltkarte ist das Hauptmenü von OMA Quest: Das Kartenbild ist vorgerendert
+// (public/dnd/hex-world.webp), Gelände und Wege kommen aus src/lib/dnd/hex. Gereist wird nur
+// von Location zu Location (die 10 goldenen Felder mit Marker-Bild); Spieler erscheinen mit ihrem
+// Profilbild an ihrer Location bzw. unterwegs auf dem Pfad. Angekommen geht es über "Ort betreten"
+// in die begehbare Welt des Ortes (/oma-quest/<slug>).
 // Alle Positionen liegen in Bild-Pixeln des Kartenbilds; der Viewport skaliert das
 // Ganze per Transform. Marker/Beschriftungen werden gegengleich skaliert, damit sie
 // beim Herauszoomen lesbar bleiben.
@@ -16,8 +18,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, t
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, Minus, Plus } from "@/components/icons";
-import PixelCharacter from "@/components/pixel-character/PixelCharacter";
-import { dirFromDelta, type PixelCharacterConfig, type PixelDir } from "@/lib/pixel-character";
 import { hexCenter, hexCorners, pointToHex, sameHex, type Hex } from "@/lib/dnd/hex/grid";
 import { planTravel, positionAlongPath } from "@/lib/dnd/hex/pathfinding";
 import { TERRAIN } from "@/lib/dnd/hex/terrain";
@@ -49,7 +49,7 @@ interface DndCharacterRow {
   path: [number, number][] | null;
   departedAt: string | null;
   arrivesAt: string | null;
-  pixel: PixelCharacterConfig | null;
+  avatarUrl: string | null;
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -89,10 +89,32 @@ function PathLine({ points, color }: { points: { x: number; y: number }[]; color
 }
 
 /** Gegengleich zur Karte skaliert: bleibt auf dem Bildschirm gleich groß, sitzt aber am Bildpunkt (x, y). */
-function ScreenAnchor({ x, y, scale, children, zIndex = 20, below = false }: { x: number; y: number; scale: number; children: ReactNode; zIndex?: number; below?: boolean }) {
+function ScreenAnchor({ x, y, scale, children, zIndex = 20, below = false, dx = 0 }: { x: number; y: number; scale: number; children: ReactNode; zIndex?: number; below?: boolean; dx?: number }) {
   return (
-    <div className="absolute" style={{ left: x, top: y, transform: `scale(${1 / scale})`, transformOrigin: "0 0", zIndex }}>
+    <div className="absolute" style={{ left: x, top: y, transform: `scale(${1 / scale}) translate(${dx}px, 0)`, transformOrigin: "0 0", zIndex }}>
       <div style={{ transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)" }}>{children}</div>
+    </div>
+  );
+}
+
+/** Profilbild eines Spielers auf der Karte (Discord-Avatar), Initiale als Ersatz. Gold = du, Türkis = unterwegs. */
+function AvatarChip({ name, url, mine, travelling }: { name: string; url: string | null; mine: boolean; travelling: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const ring = mine ? "#fcd34d" : travelling ? "#5eead4" : "#ffffff";
+  return (
+    <div className="flex flex-col items-center pointer-events-none" title={name}>
+      <div
+        className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-[12px] font-bold text-white"
+        style={{ border: `2.5px solid ${ring}`, boxShadow: "0 2px 6px rgba(0,0,0,0.7)" }}
+      >
+        {url && !failed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="w-full h-full object-cover" onError={() => setFailed(true)} draggable={false} referrerPolicy="no-referrer" />
+        ) : (
+          name.trim().charAt(0).toUpperCase() || "?"
+        )}
+      </div>
+      {mine && <span className="text-[9px] font-black text-black bg-amber-300 rounded-full px-1.5 mt-0.5 shadow">Du</span>}
     </div>
   );
 }
@@ -314,23 +336,23 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
   const nowMs = clientNow + clockOffset;
 
   /** Bildpunkt + Blickrichtung eines Charakters — unterwegs entlang des Pfads interpoliert. */
-  function placeOf(c: DndCharacterRow): { x: number; y: number; dir: PixelDir } {
+  function placeOf(c: DndCharacterRow): { x: number; y: number } {
     if (c.inTransit && c.path && c.departedAt) {
       const path = c.path.map(([col, row]) => ({ col, row }));
       const elapsedMin = (nowMs - new Date(c.departedAt).getTime()) / 60000;
       const { index, t } = positionAlongPath(stepMinutesOf(path), elapsedMin);
       const a = hexCenter(path[index], WORLD_LAYOUT);
       const b = hexCenter(path[Math.min(index + 1, path.length - 1)], WORLD_LAYOUT);
-      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dir: dirFromDelta(b.x - a.x, b.y - a.y) };
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
     }
-    const p = hexCenter(c.hex, WORLD_LAYOUT);
-    return { ...p, dir: "down" };
+    return hexCenter(c.hex, WORLD_LAYOUT);
   }
 
+  // Reiseziele sind nur die festen Locations (Vorschau des Wegs nur dafür).
   const plan = useMemo(() => {
-    if (!selected || !me || me.inTransit) return null;
+    if (!selected || !me || me.inTransit || !locByHex.has(`${selected.col},${selected.row}`)) return null;
     return planTravel(me.hex, selected, WORLD_COLS, WORLD_ROWS, terrainAt);
-  }, [selected, me]);
+  }, [selected, me, locByHex]);
 
   async function travelTo(hex: Hex) {
     setBusy(true);
@@ -377,17 +399,17 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
 
   const selectedLocation = selected ? locByHex.get(`${selected.col},${selected.row}`) : undefined;
   const selectedTerrain = selected ? terrainAt(selected) : null;
-  const myPlace = me ? placeOf(me) : null;
+  const atLocation = me && !me.inTransit && me.locationId ? locations.find((l) => l.id === me.locationId) : undefined;
   const meArrives = me?.inTransit && me.arrivesAt ? new Date(me.arrivesAt).getTime() - nowMs : null;
 
   // Wer steht gemeinsam auf einem Feld? → seitlich versetzen.
   const slotByCard = new Map<string, number>();
-  const seen = new Map<string, number>();
+  const hexCounts = new Map<string, number>();
   for (const c of characters.filter((x) => !x.inTransit)) {
     const k = `${c.hex.col},${c.hex.row}`;
-    const n = seen.get(k) ?? 0;
+    const n = hexCounts.get(k) ?? 0;
     slotByCard.set(c.cardId, n);
-    seen.set(k, n + 1);
+    hexCounts.set(k, n + 1);
   }
 
   return (
@@ -433,22 +455,21 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             )}
           </svg>
 
-          {/* Spielfiguren (Pixel-Charakter) bzw. Punkt als Ersatz */}
-          {characters.map((c) => {
+          {/* Profilbilder der Spieler: an ihrer Location bzw. unterwegs auf dem Pfad */}
+          {characters.flatMap((c) => {
             const p = placeOf(c);
             const slot = slotByCard.get(c.cardId) ?? 0;
-            const dx = slot * 16;
-            if (c.pixel) {
-              // Füße des 64-px-Frames liegen bei (31, 52): auf dem Feldmittelpunkt (leicht darunter) absetzen.
-              return (
-                <div key={c.cardId} className="absolute pointer-events-none" style={{ left: p.x - 31 + dx, top: p.y - 38, zIndex: 10 }} title={c.name}>
-                  <PixelCharacter config={c.pixel} anim={c.inTransit ? "move" : "idle"} dir={p.dir} scale={1} title={c.name} />
-                </div>
-              );
-            }
-            return (
-              <div key={c.cardId} className="absolute pointer-events-none rounded-full bg-teal-400 border-2 border-white/70 shadow" style={{ left: p.x - 9 + dx, top: p.y - 9, width: 18, height: 18, zIndex: 10 }} title={c.name} />
-            );
+            if (slot > 4) return [];
+            const overflow = slot === 4 ? (hexCounts.get(`${c.hex.col},${c.hex.row}`) ?? 5) - 4 : 0;
+            return [(
+              <ScreenAnchor key={c.cardId} x={p.x} y={p.y + WORLD_LAYOUT.hexW * 0.06} scale={view.scale} zIndex={c.cardId === myCardId ? 30 : 12} below dx={(slot - (Math.min(c.inTransit ? 1 : hexCounts.get(`${c.hex.col},${c.hex.row}`) ?? 1, 5) - 1) / 2) * 24}>
+                {slot === 4 ? (
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 border-2 border-white/70 flex items-center justify-center text-[10px] font-bold text-white pointer-events-none" title={`${overflow} weitere`}>+{overflow}</div>
+                ) : (
+                  <AvatarChip name={c.name} url={c.avatarUrl} mine={c.cardId === myCardId} travelling={c.inTransit} />
+                )}
+              </ScreenAnchor>
+            )];
           })}
 
           {/* Location-Marker (klickbar, tragen ihr Feld) */}
@@ -464,15 +485,6 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             );
           })}
 
-          {/* "Du"-Marker */}
-          {myPlace && (
-            <ScreenAnchor x={myPlace.x} y={myPlace.y + WORLD_LAYOUT.hexW * 0.34} scale={view.scale} zIndex={30} below>
-              <div className="pointer-events-none flex flex-col items-center">
-                <span className="w-0 h-0" style={{ borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderBottom: "6px solid #fcd34d" }} />
-                <span className="text-[10px] font-black text-black bg-amber-300 rounded-full px-2 py-0.5 shadow">Du</span>
-              </div>
-            </ScreenAnchor>
-          )}
         </div>
 
         <div className="absolute bottom-2 right-2 z-40 flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
@@ -501,43 +513,50 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
         </div>
       </div>
 
+      {/* Angekommen: direkt in die Welt des Ortes */}
+      {me && !me.inTransit && atLocation && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3" style={{ borderColor: `${GOLD}66`, background: `${GOLD}14` }}>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>Du bist angekommen</p>
+            <p className="font-battle text-sm text-white truncate">{atLocation.name}</p>
+          </div>
+          <Link href={`/oma-quest/${atLocation.slug}`} className="shrink-0 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-4 py-2 transition-colors">
+            Ort betreten
+          </Link>
+        </div>
+      )}
+
       {/* Info-Panel zum gewählten Feld */}
       <div className="moba-panel rounded-2xl p-4 space-y-2 min-h-[92px]">
         {!selected || !selectedTerrain ? (
           <p className="text-xs text-gray-500">
-            Tippe ein Feld auf der Karte an — reisen kannst du zu jedem Landfeld. Goldene Felder sind feste Locations.
+            Reiseziele sind die goldenen Felder — tippe eine Location an, um die Reise zu planen.
           </p>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                {selectedLocation ? (
-                  <>
-                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
-                      Feste Location · {TYPE_LABEL[selectedLocation.locationType] ?? selectedLocation.locationType}
-                    </p>
-                    <p className="font-battle text-base text-white">{selectedLocation.name}</p>
-                    {selectedLocation.description && <p className="text-xs text-gray-400 mt-0.5">{selectedLocation.description}</p>}
-                  </>
-                ) : (
-                  <>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Freies Feld</p>
-                    <p className="font-battle text-base text-white">{TERRAIN[selectedTerrain].label}</p>
-                  </>
-                )}
-                <p className="text-[10px] text-gray-500 mt-1">
-                  {TERRAIN[selectedTerrain].label} · Feld {selected.col}/{selected.row}
-                  {TERRAIN[selectedTerrain].cost === null ? " · nicht betretbar" : ""}
-                </p>
-              </div>
-              {selectedLocation && (
-                <Link href={`/oma-quest/${selectedLocation.slug}`} className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">
-                  Ort ansehen
-                </Link>
+            <div className="min-w-0">
+              {selectedLocation ? (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
+                    Location · {TYPE_LABEL[selectedLocation.locationType] ?? selectedLocation.locationType}
+                  </p>
+                  <p className="font-battle text-base text-white">{selectedLocation.name}</p>
+                  {selectedLocation.description && <p className="text-xs text-gray-400 mt-0.5">{selectedLocation.description}</p>}
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Freies Feld</p>
+                  <p className="font-battle text-base text-white">{TERRAIN[selectedTerrain].label}</p>
+                </>
               )}
+              <p className="text-[10px] text-gray-500 mt-1">
+                {TERRAIN[selectedTerrain].label}{TERRAIN[selectedTerrain].cost === null ? " · nicht betretbar" : ""}
+              </p>
             </div>
 
-            {!me ? null : me.inTransit ? (
+            {!selectedLocation ? (
+              <p className="text-xs text-gray-500">Hier gibt es nichts zu tun — reise zu einer Location.</p>
+            ) : !me ? null : me.inTransit ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-xs text-amber-300">
                   Du bist unterwegs{meArrives != null ? ` — Ankunft in ${formatDuration(Math.max(0, meArrives / 60000))}` : ""}.
@@ -547,7 +566,9 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
                 </button>
               </div>
             ) : sameHex(me.hex, selected) ? (
-              <p className="text-xs text-emerald-300">Du bist hier.</p>
+              <Link href={`/oma-quest/${selectedLocation.slug}`} className="inline-flex rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-4 py-2 transition-colors">
+                Ort betreten
+              </Link>
             ) : plan ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <button
@@ -556,14 +577,12 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
                   onClick={() => travelTo(selected)}
                   className="rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 transition-colors"
                 >
-                  Hierher reisen
+                  Reise beginnen
                 </button>
                 <span className="text-xs text-gray-400">{formatDuration(plan.totalMinutes)} · {plan.path.length - 1} Felder</span>
               </div>
             ) : (
-              <p className="text-xs text-gray-500">
-                {TERRAIN[selectedTerrain].cost === null ? "Dieses Feld kannst du nicht betreten." : "Von deiner Position gibt es keinen Weg dorthin."}
-              </p>
+              <p className="text-xs text-gray-500">Von deiner Position gibt es keinen Weg dorthin.</p>
             )}
           </>
         )}

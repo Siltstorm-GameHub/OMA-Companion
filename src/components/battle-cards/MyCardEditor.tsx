@@ -7,28 +7,28 @@ import { Save, Loader2 } from "@/components/icons";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
-import PixelCharacterEditor from "@/components/pixel-character/PixelCharacterEditor";
-import type { PixelCharacterConfig } from "@/lib/pixel-character";
+import TeCharacterEditor from "@/components/te-character/TeCharacterEditor";
+import type { TeCharacterConfig } from "@/lib/te-character";
 
 const TITLE_MAX = 25;
 const FLAVOR_MAX = 100;
 
 export default function MyCardEditor({
   card,
-  initialPixelCharacter,
-  hasPixelCharacter,
+  initialTeCharacter,
+  hasTeCharacter,
 }: {
   card: BattleCardData & { id: string };
-  /** Bisheriger Pixel-Charakter (Card.pixelCharacter) bzw. die Standard-Figur zum Losgehen. */
-  initialPixelCharacter: PixelCharacterConfig;
+  /** Bisheriger Charakter (Card.teCharacter) bzw. die Standard-Figur zum Losgehen. */
+  initialTeCharacter: TeCharacterConfig;
   /** false = noch nie gespeichert: die Karte zeigt weiter das Profilbild, bis der User den Charakter anfasst. */
-  hasPixelCharacter: boolean;
+  hasTeCharacter: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
   const [flavorText, setFlavorText] = useState(card.flavorText);
-  const [pixelCharacter, setPixelCharacter] = useState(initialPixelCharacter);
-  const [usePixel, setUsePixel] = useState(hasPixelCharacter);
+  const [teCharacter, setTeCharacter] = useState(initialTeCharacter);
+  const [useCharacter, setUseCharacter] = useState(hasTeCharacter);
   const [saving, setSaving] = useState(false);
   const [flavorFocused, setFlavorFocused] = useState(false);
 
@@ -38,7 +38,7 @@ export default function MyCardEditor({
       const res = await fetch("/api/battle-cards/my-card", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, flavorText, pixelCharacter: usePixel ? pixelCharacter : null }),
+        body: JSON.stringify({ title, flavorText, teCharacter: useCharacter ? teCharacter : null }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -56,7 +56,7 @@ export default function MyCardEditor({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[240px_1fr] gap-6 items-start">
-      <BattleCardView card={{ ...card, title, flavorText, pixelCharacter: usePixel ? pixelCharacter : null }} />
+      <BattleCardView card={{ ...card, title, flavorText, teCharacter: useCharacter ? teCharacter : null }} />
 
       <div className="space-y-4">
         <label className="block">
@@ -125,25 +125,25 @@ export default function MyCardEditor({
       <div className="sm:col-span-2 pt-2 border-t border-white/10">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h2 className="text-sm font-bold text-white">Pixel-Charakter</h2>
+            <h2 className="text-sm font-bold text-white">Dein Charakter</h2>
             <p className="text-xs text-gray-500 mt-0.5">
               Gestalte deine Figur — sie ist das Motiv deiner Karte und deine Spielfigur in OMA Quest.
               Die Auswahl wird beim Speichern übernommen.
             </p>
           </div>
-          {usePixel && (
+          {useCharacter && (
             <button
               type="button"
-              onClick={() => setUsePixel(false)}
+              onClick={() => setUseCharacter(false)}
               className="shrink-0 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
             >
               Zurück zum Profilbild
             </button>
           )}
         </div>
-        <PixelCharacterEditor
-          value={pixelCharacter}
-          onChange={(next) => { setPixelCharacter(next); setUsePixel(true); }}
+        <TeCharacterEditor
+          value={teCharacter}
+          onChange={(next) => { setTeCharacter(next); setUseCharacter(true); }}
         />
       </div>
     </div>

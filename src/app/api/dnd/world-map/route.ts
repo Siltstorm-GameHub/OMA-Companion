@@ -3,7 +3,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDndWorldSeeded } from "@/lib/dnd/locations";
 import { resolveCharacterPosition } from "@/lib/dnd/travel";
-import { sanitizePixelConfig } from "@/lib/pixel-character";
 
 /**
  * Weltkarte: alle Locations (mit Hex-Feld) + aufgelöste Position jeder Charakter-Karte.
@@ -27,7 +26,6 @@ export async function GET() {
         id: true,
         name: true,
         linkedDiscordId: true,
-        pixelCharacter: true, // Spielfigur (Editor: /battle-cards/my-card)
         currentLocationId: true,
         currentHexCol: true,
         currentHexRow: true,
@@ -40,6 +38,13 @@ export async function GET() {
     }),
   ]);
   const locById = new Map(locations.map((l) => [l.id, l]));
+
+  // Profilbilder der Spieler (Discord-Avatar) — auf der Weltkarte stehen sie für die Charaktere.
+  const discordIds = cards.map((c) => c.linkedDiscordId).filter((d): d is string => !!d);
+  const avatarUsers = discordIds.length
+    ? await prisma.user.findMany({ where: { discordId: { in: discordIds } }, select: { discordId: true, image: true } })
+    : [];
+  const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId, u.image]));
 
   const characters = cards.flatMap((c) => {
     const resolved = resolveCharacterPosition(c);
@@ -57,7 +62,7 @@ export async function GET() {
       path: resolved.inTransit ? resolved.path!.map((h) => [h.col, h.row]) : null,
       departedAt: resolved.departedAt ?? null,
       arrivesAt: resolved.arrivesAt ?? null,
-      pixel: sanitizePixelConfig(c.pixelCharacter),
+      avatarUrl: (c.linkedDiscordId && avatarByDiscordId.get(c.linkedDiscordId)) || null,
     }];
   });
 

@@ -25,6 +25,7 @@ const ANIM_OPTIONS: { id: TeAnim; label: string }[] = [
   { id: "bow", label: "Bogen" },
   { id: "cast", label: "Zauber" },
   { id: "crouch", label: "Ducken" },
+  { id: "block", label: "Abwehr" },
   { id: "jump", label: "Springen" },
   { id: "ko", label: "K.O." },
 ];

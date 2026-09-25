@@ -1951,10 +1951,10 @@ model Card {
   lastGeneratedAt  DateTime?
 
   imageUrl  String?
-  // Pixel-Charakter (Paperdoll-Editor, siehe src/lib/pixel-character): Ebenen-Auswahl des Users
-  // für seine Community-Karte, zugleich seine Spielfigur in OMA Quest. Shape: PixelCharacterConfig.
+  // Charakter (Time-Elements-Baukasten, siehe src/lib/te-character): Ebenen-Auswahl des Users
+  // für seine Community-Karte, zugleich seine Spielfigur in OMA Quest. Shape: TeCharacterConfig.
   // null = noch nicht angepasst (Karte zeigt das Discord-Profilbild bzw. Klassen-Icon).
-  pixelCharacter Json?
+  teCharacter Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

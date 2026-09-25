@@ -18,8 +18,8 @@
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
-import BattleFigure from "@/components/pixel-character/BattleFigure";
-import type { PixelCharacterConfig } from "@/lib/pixel-character";
+import BattleFigure from "@/components/te-character/BattleFigure";
+import type { TeCharacterConfig } from "@/lib/te-character";
 import { Children, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -88,7 +88,7 @@ interface LiveUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
-  pixelCharacter?: PixelCharacterConfig | null;
+  teCharacter?: TeCharacterConfig | null;
   statModifiers: ActiveStatModifier[];
 }
 
@@ -575,9 +575,9 @@ function UnitCard({
             }}
           />
         )}
-        {unit.pixelCharacter ? (
+        {unit.teCharacter ? (
           <BattleFigure
-            config={unit.pixelCharacter}
+            config={unit.teCharacter}
             unitClass={unit.class}
             team={unit.teamId}
             attacking={!!isAttacking}
