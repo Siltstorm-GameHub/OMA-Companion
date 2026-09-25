@@ -24,6 +24,7 @@ import { TERRAIN } from "@/lib/dnd/hex/terrain";
 import {
   WORLD_COLS, WORLD_IMAGE, WORLD_LAYOUT, WORLD_ROWS, stepMinutesOf, terrainAt,
 } from "@/lib/dnd/hex/world";
+import { travelLogEntries } from "@/lib/dnd/travel-flavor";
 
 const POLL_INTERVAL_MS = 25_000;
 const MAX_SCALE = 1.6;
@@ -403,6 +404,21 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
   const atLocation = me && !me.inTransit && me.locationId ? locations.find((l) => l.id === me.locationId) : undefined;
   const meArrives = me?.inTransit && me.arrivesAt ? new Date(me.arrivesAt).getTime() - nowMs : null;
 
+  // Kleine Beobachtungen unterwegs, statt nur eines Countdowns (Spielerlebnis-
+  // Review, Vorschlag 3 — "tote Zeit" während der Reise). Bewusst kein
+  // useMemo: billige Berechnung (max. 4 Einträge), und nach den frühen
+  // returns oben wäre ein Hook hier ohnehin regelwidrig.
+  const myTravelLog =
+    me?.inTransit && me.path && me.departedAt && me.arrivesAt
+      ? travelLogEntries(
+          me.path.map(([col, row]) => ({ col, row })),
+          new Date(me.departedAt).getTime(),
+          new Date(me.arrivesAt).getTime(),
+          nowMs,
+          `${me.cardId}:${me.arrivesAt}`
+        )
+      : [];
+
   // Wer steht gemeinsam auf einem Feld? → seitlich versetzen.
   const slotByCard = new Map<string, number>();
   const hexCounts = new Map<string, number>();
@@ -528,6 +544,28 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
         </div>
       )}
 
+      {/* Unterwegs: Countdown + kleine Beobachtungen, statt nur toter Wartezeit (immer
+          sichtbar, unabhängig davon ob gerade ein Feld ausgewählt ist). */}
+      {me?.inTransit && (
+        <div className="oq-panel p-4 space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-xs text-amber-300">
+              Du bist unterwegs{meArrives != null ? ` — Ankunft in ${formatDuration(Math.max(0, meArrives / 60000))}` : ""}.
+            </p>
+            <button type="button" disabled={busy} onClick={cancelTravel} className="text-xs underline text-gray-400 hover:text-white transition-colors disabled:opacity-50">
+              Reise abbrechen
+            </button>
+          </div>
+          {myTravelLog.length > 0 && (
+            <ul className="space-y-1 border-t border-white/10 pt-2">
+              {myTravelLog.map((entry) => (
+                <li key={entry.key} className="text-[11px] text-gray-400 italic">— {entry.text}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Info-Panel zum gewählten Feld */}
       <div className="oq-panel p-4 space-y-2 min-h-[92px]">
         {!selected || !selectedTerrain ? (
@@ -559,14 +597,8 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             {!selectedLocation ? (
               <p className="text-xs text-gray-500">Hier gibt es nichts zu tun — reise zu einer Location.</p>
             ) : !me ? null : me.inTransit ? (
-              <div className="flex items-center gap-3 flex-wrap">
-                <p className="text-xs text-amber-300">
-                  Du bist unterwegs{meArrives != null ? ` — Ankunft in ${formatDuration(Math.max(0, meArrives / 60000))}` : ""}.
-                </p>
-                <button type="button" disabled={busy} onClick={cancelTravel} className="text-xs underline text-gray-400 hover:text-white transition-colors disabled:opacity-50">
-                  Reise abbrechen
-                </button>
-              </div>
+              // Countdown + Reise-Log stehen jetzt im immer sichtbaren Block oben.
+              <p className="text-xs text-gray-500">Du bist bereits unterwegs.</p>
             ) : sameHex(me.hex, selected) ? (
               <Link href={`/oma-quest/${selectedLocation.slug}`} className="inline-flex rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-4 py-2 transition-colors">
                 Ort betreten
