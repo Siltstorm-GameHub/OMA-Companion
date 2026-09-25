@@ -156,6 +156,9 @@ export default function BattleCardView({
   hidePassives?: boolean;
 }) {
   const [flipped, setFlipped] = useState(false);
+  // true = Karte schrumpft gerade auf Breite 0 (danach wird die Seite getauscht)
+  const [closing, setClosing] = useState(false);
+  const startFlip = () => { if (!closing) setClosing(true); };
   // Fällt auf das Klassen-Icon zurück, falls das Artwork nicht lädt (Netzwerk-
   // Hänger/Timeout), statt die Karte dauerhaft leer zu lassen.
   const [imgFailed, setImgFailed] = useState(false);
@@ -171,36 +174,48 @@ export default function BattleCardView({
   const cardFaceShadow = `var(--shadow-card), 0 0 ${isMaxLevel ? 22 : 12}px ${borderColor}66`;
 
   return (
-    // Äußerer Rahmen hält Größe und Position fest (Seitenverhältnis 1:2), nur der innere Block dreht
-    // sich. So bleibt die Karte an derselben Stelle, egal welche Seite gerade oben liegt — die Höhe
-    // hängt nicht am animierten Element, und es ist bewusst kein <button> (dessen Inhalt Browser
-    // vertikal zentrieren bzw. verschieben, sobald die Höhe von der des Inhalts abweicht).
+    // Umdrehen ohne 3D: die Karte schrumpft in der Breite auf 0, tauscht dann die Seite und wächst wieder.
+    // Die frühere 3D-Drehung (perspective + preserve-3d + backface-visibility) ließ die Rückseite je nach
+    // Browser/Umgebung neben ihren Platz springen — ohne 3D-Kontext kann nichts verrutschen. Größe und Position
+    // hängen am (nicht animierten) äußeren Block; es ist bewusst kein <button> (Browser zentrieren dessen Inhalt).
     <div
       role="button"
       tabIndex={0}
-      onClick={() => setFlipped((f) => !f)}
+      onClick={startFlip}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFlipped((f) => !f); }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startFlip(); }
       }}
-      className="relative block w-full max-w-[240px] aspect-[1/2] text-left cursor-pointer"
-      style={{ perspective: 1200, opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
+      className="block w-full max-w-[240px] text-left cursor-pointer"
+      style={{ opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
       aria-label={`${card.name} — Tippen zum Umdrehen`}
     >
-      {/* Grundbreite: beide Kartenseiten liegen absolut, ohne diesen Platzhalter hätte der Rahmen in Containern, die sich
-          nach dem Inhalt richten (Flex mit items-center, Grid mit auto), keine Breite und schrumpfte auf 0. Größer als
-          der Container wird er nie (max-w-full), dort greift dann die Breite des Containers. */}
-      <span aria-hidden className="block h-0 max-w-full" style={{ width: 240 }} />
+      {/* Grundbreite für Container, die sich nach dem Inhalt richten (Flex mit items-center, Grid mit auto): beide
+          Kartenseiten liegen absolut und geben dem Rahmen sonst keine Breite (früher lieferte das ein <button>). Ein
+          Bild (ersetztes Element) mit max-width:100% ist "komprimierbar" — es dehnt den Container nie über seine
+          Breite hinaus, gibt aber die 240 px als Wunschbreite vor. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        aria-hidden
+        draggable={false}
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        className="block pointer-events-none"
+        style={{ width: 240, maxWidth: "100%", height: 0 }}
+      />
       <motion.div
-        animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 28 }}
-        className="absolute inset-0"
-        style={{ transformStyle: "preserve-3d", transformOrigin: "50% 50%" }}
+        animate={{ scaleX: closing ? 0 : 1 }}
+        transition={{ duration: 0.14, ease: "easeInOut" }}
+        onAnimationComplete={() => {
+          if (closing) { setFlipped((f) => !f); setClosing(false); }
+        }}
+        className="relative w-full aspect-[1/2]"
+        style={{ transformOrigin: "50% 50%" }}
       >
         {/* ── Vorderseite ── */}
         <div
           className="card-cut moba-panel absolute inset-0 px-3.5 pt-9 pb-11 flex flex-col gap-2 overflow-hidden"
           style={{
-            backfaceVisibility: "hidden",
+            display: flipped ? "none" : undefined,
             boxShadow: cardFaceShadow,
           }}
         >
@@ -314,8 +329,7 @@ export default function BattleCardView({
         <div
           className="card-cut moba-panel absolute inset-0 px-4 pt-9 pb-6 flex flex-col gap-2 overflow-hidden"
           style={{
-            backfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
+            display: flipped ? undefined : "none",
             boxShadow: cardFaceShadow,
           }}
         >

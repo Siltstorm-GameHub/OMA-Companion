@@ -8105,8 +8105,8 @@
     "semantic_hash": ""
   },
   "src/components/te-character/TeCharacter.tsx": {
-    "mtime": 1790323177.8828847,
-    "ast_hash": "d6d888bdbbbb418d29b080d0890a4cef",
+    "mtime": 1790326699.8895962,
+    "ast_hash": "e9aba76a9eccba01dc8b60734415094f",
     "semantic_hash": ""
   },
   "src/components/te-character/TeCharacterEditor.tsx": {
@@ -8120,8 +8120,8 @@
     "semantic_hash": ""
   },
   "src/lib/te-character/index.ts": {
-    "mtime": 1790323168.7797801,
-    "ast_hash": "f0fb7c8ff9965104358e71d560656865",
+    "mtime": 1790326699.8890915,
+    "ast_hash": "e7cd6cc4eea4967b711c6848f84033b5",
     "semantic_hash": ""
   },
   "src/lib/te-map/autotile.ts": {
@@ -16650,8 +16650,8 @@
     "semantic_hash": ""
   },
   "src/components/te-map/TeWorld.tsx": {
-    "mtime": 1790324175.314652,
-    "ast_hash": "a002c2e701769c4302f3078e7582c5dd",
+    "mtime": 1790326699.8906012,
+    "ast_hash": "f49e54ed6368ae24c6da1519a006b150",
     "semantic_hash": ""
   },
   "src/lib/te-map/generate.ts": {
@@ -16710,8 +16710,8 @@
     "semantic_hash": ""
   },
   "src/lib/te-character/te-character.test.ts": {
-    "mtime": 1790325936.6525853,
-    "ast_hash": "12a181c0a2dbe0d2766de79d97ab407e",
+    "mtime": 1790326742.8924873,
+    "ast_hash": "01ae9fffccb6e066f2a8270b9395cf61",
     "semantic_hash": ""
   },
   "public/te/char/bottom/bottom1.t1.png": {

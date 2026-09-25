@@ -2265,8 +2265,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "adminnav.tsx"
     },
     {
@@ -2276,8 +2276,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_role",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "role"
     },
     {
@@ -2287,8 +2287,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_hierarchy",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "hierarchy"
     },
     {
@@ -2298,8 +2298,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_hasrole",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "hasrole()"
     },
     {
@@ -2309,8 +2309,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_tab",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "tab"
     },
     {
@@ -2320,8 +2320,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_categories",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "categories"
     },
     {
@@ -2331,8 +2331,8 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_adminnav_adminnav",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "adminnav()"
     },
     {
@@ -2342,8 +2342,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_resethistorybutton",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "resethistorybutton.tsx"
     },
     {
@@ -2353,8 +2353,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_resethistorybutton_resethistorybutton",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "resethistorybutton()"
     },
     {
@@ -2639,8 +2639,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "communitycardsadmin.tsx"
     },
     {
@@ -2650,8 +2650,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardrow",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "cardrow"
     },
     {
@@ -2661,8 +2661,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_cards_communitycardsadmin_cardeditrow",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "cardeditrow()"
     },
     {
@@ -2727,8 +2727,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "tacticcardsadmin.tsx"
     },
     {
@@ -2738,8 +2738,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin_tacticcardrow",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "tacticcardrow"
     },
     {
@@ -2749,8 +2749,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_battle_cards_tactic_cards_tacticcardsadmin_tacticcardeditrow",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "tacticcardeditrow()"
     },
     {
@@ -3805,8 +3805,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "admindonationsclient.tsx"
     },
     {
@@ -3816,8 +3816,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_month_names",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "month_names"
     },
     {
@@ -3827,8 +3827,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_donation",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "donation"
     },
     {
@@ -3838,8 +3838,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_expense",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "expense"
     },
     {
@@ -3849,8 +3849,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_idea",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "idea"
     },
     {
@@ -3860,8 +3860,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_user",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "user"
     },
     {
@@ -3871,8 +3871,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_now",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "now"
     },
     {
@@ -3882,8 +3882,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_nowberlin",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "nowberlin"
     },
     {
@@ -3893,8 +3893,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_fmt",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "fmt()"
     },
     {
@@ -3904,8 +3904,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_input",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "input()"
     },
     {
@@ -3915,8 +3915,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_inputstyle",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "inputstyle"
     },
     {
@@ -3926,8 +3926,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_donations_admindonationsclient_admindonationsclient",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "admindonationsclient()"
     },
     {
@@ -4080,8 +4080,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "eventadminrow.tsx"
     },
     {
@@ -4091,8 +4091,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_user",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "user"
     },
     {
@@ -4102,8 +4102,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_matchentry",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "matchentry"
     },
     {
@@ -4113,8 +4113,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_match",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "match"
     },
     {
@@ -4124,8 +4124,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_participant",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "participant"
     },
     {
@@ -4135,8 +4135,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_registration",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "registration"
     },
     {
@@ -4146,8 +4146,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_tournament",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tournament"
     },
     {
@@ -4157,8 +4157,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_series",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "series"
     },
     {
@@ -4168,8 +4168,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_event",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "event"
     },
     {
@@ -4179,8 +4179,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_status_options",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "status_options"
     },
     {
@@ -4190,8 +4190,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_tmt_formats",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tmt_formats"
     },
     {
@@ -4201,8 +4201,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_tmtformatlabel",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tmtformatlabel()"
     },
     {
@@ -4212,8 +4212,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_parsetmtconfig",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "parsetmtconfig()"
     },
     {
@@ -4223,8 +4223,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_status_styles",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "status_styles"
     },
     {
@@ -4234,8 +4234,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_tab",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tab"
     },
     {
@@ -4245,8 +4245,8 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_scopemodal",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "scopemodal()"
     },
     {
@@ -4256,8 +4256,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_eventadminrow_eventadminrow",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "eventadminrow()"
     },
     {
@@ -4267,8 +4267,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_seriesadminrow",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "seriesadminrow.tsx"
     },
     {
@@ -4278,8 +4278,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_seriesadminrow_user",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "user"
     },
     {
@@ -4289,8 +4289,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_seriesadminrow_seriesevent",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "seriesevent"
     },
     {
@@ -4300,8 +4300,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_seriesadminrow_legacyrow",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "legacyrow"
     },
     {
@@ -4311,8 +4311,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_seriesadminrow_seriesadminrow",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "seriesadminrow()"
     },
     {
@@ -4916,8 +4916,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "eventcompleteclient.tsx"
     },
     {
@@ -4927,8 +4927,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_user",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "user"
     },
     {
@@ -4938,8 +4938,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_placementreward",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "placementreward"
     },
     {
@@ -4949,8 +4949,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_rewardsconfig",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "rewardsconfig"
     },
     {
@@ -4960,8 +4960,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_pollconfig",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "pollconfig"
     },
     {
@@ -4971,8 +4971,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_multipollconfig",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "multipollconfig"
     },
     {
@@ -4982,8 +4982,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_seriesstatconfig",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "seriesstatconfig"
     },
     {
@@ -4993,8 +4993,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_dominionchange",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "dominionchange"
     },
     {
@@ -5004,8 +5004,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_props",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "props"
     },
     {
@@ -5015,8 +5015,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_medals",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "medals"
     },
     {
@@ -5026,8 +5026,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_username",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "username()"
     },
     {
@@ -5037,8 +5037,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_avatar",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "avatar()"
     },
     {
@@ -5048,8 +5048,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_computegroups",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "computegroups()"
     },
     {
@@ -5059,8 +5059,8 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_computeplacementmap",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "computeplacementmap()"
     },
     {
@@ -5070,8 +5070,8 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_id_complete_eventcompleteclient_eventcompleteclient",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "eventcompleteclient()"
     },
     {
@@ -5543,8 +5543,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_page",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "admin/events/page.tsx"
     },
     {
@@ -5554,8 +5554,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_events_page_admineventspage",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "admineventspage()"
     },
     {
@@ -5686,8 +5686,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_highlight_clips_highlightclipsclient",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "highlightclipsclient.tsx"
     },
     {
@@ -5697,8 +5697,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_highlight_clips_highlightclipsclient_monthlycontests",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "monthlycontests"
     },
     {
@@ -5708,8 +5708,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_highlight_clips_highlightclipsclient_yearlycontests",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "yearlycontests"
     },
     {
@@ -5719,8 +5719,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_highlight_clips_highlightclipsclient_props",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "props"
     },
     {
@@ -5730,8 +5730,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_highlight_clips_highlightclipsclient_highlightclipsclient",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "highlightclipsclient()"
     },
     {
@@ -5807,8 +5807,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_layout",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "admin/layout.tsx"
     },
     {
@@ -6093,8 +6093,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_page",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "admin/page.tsx"
     },
     {
@@ -6104,8 +6104,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_page_not_active_statuses",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "not_active_statuses"
     },
     {
@@ -6115,8 +6115,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_page_formatcountdown",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "formatcountdown()"
     },
     {
@@ -6126,8 +6126,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_page_adminpage",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "adminpage()"
     },
     {
@@ -6478,8 +6478,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "seriescompleteclient.tsx"
     },
     {
@@ -6489,8 +6489,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_user",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "user"
     },
     {
@@ -6500,8 +6500,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_placementreward",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "placementreward"
     },
     {
@@ -6511,8 +6511,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_rewardsconfig",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "rewardsconfig"
     },
     {
@@ -6522,8 +6522,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_props",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "props"
     },
     {
@@ -6533,8 +6533,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_medals",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "medals"
     },
     {
@@ -6544,8 +6544,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_username",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "username()"
     },
     {
@@ -6555,8 +6555,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_avatar",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "avatar()"
     },
     {
@@ -6566,8 +6566,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_computegroups",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "computegroups()"
     },
     {
@@ -6577,8 +6577,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_computeplacementmap",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "computeplacementmap()"
     },
     {
@@ -6588,8 +6588,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_series_id_complete_seriescompleteclient_seriescompleteclient",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "seriescompleteclient()"
     },
     {
@@ -7325,8 +7325,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_pointsmanager",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "pointsmanager.tsx"
     },
     {
@@ -7336,8 +7336,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_admin_users_pointsmanager_pointsmanager",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "pointsmanager()"
     },
     {
@@ -7534,8 +7534,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_battle_cards_battles_id_page",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battles/[id]/page.tsx"
     },
     {
@@ -7545,8 +7545,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_battle_cards_battles_id_page_metadata",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "metadata"
     },
     {
@@ -7556,8 +7556,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_battle_cards_battles_id_page_battlereplaypage",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battlereplaypage()"
     },
     {
@@ -8623,8 +8623,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "dashboard/page.tsx"
     },
     {
@@ -8634,8 +8634,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_month_names",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "month_names"
     },
     {
@@ -8645,8 +8645,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_role_style",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "role_style"
     },
     {
@@ -8656,8 +8656,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_role_label",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "role_label"
     },
     {
@@ -8667,8 +8667,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_getglobaldashboarddata",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "getglobaldashboarddata"
     },
     {
@@ -8678,8 +8678,8 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_formatfreshness",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "formatfreshness()"
     },
     {
@@ -8689,8 +8689,8 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_formatcountdown",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "formatcountdown()"
     },
     {
@@ -8700,8 +8700,8 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "src_app_dashboard_dashboard_page_dashboardpage",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "dashboardpage()"
     },
     {
@@ -8733,8 +8733,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_donations_page",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "(dashboard)/donations/page.tsx"
     },
     {
@@ -8744,8 +8744,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_donations_page_month_names",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "month_names"
     },
     {
@@ -8755,8 +8755,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_dashboard_donations_page_streakbadge",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "streakbadge()"
     },
     {
@@ -8766,8 +8766,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_app_dashboard_donations_page_fmt",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "fmt()"
     },
     {
@@ -8777,8 +8777,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_donations_page_donationspage",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "donationspage()"
     },
     {
@@ -8788,8 +8788,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_error",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "error.tsx"
     },
     {
@@ -8799,8 +8799,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_app_dashboard_error_error",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "error()"
     },
     {
@@ -8832,8 +8832,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "eventcreateform.tsx"
     },
     {
@@ -8843,8 +8843,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_inputstyle",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "inputstyle"
     },
     {
@@ -8854,8 +8854,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_series",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "series"
     },
     {
@@ -8865,8 +8865,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventcreateform_eventcreateform",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "eventcreateform()"
     },
     {
@@ -8898,8 +8898,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventstabs",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "eventstabs.tsx"
     },
     {
@@ -8909,8 +8909,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventstabs_eventstabsinner",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "eventstabsinner()"
     },
     {
@@ -8920,8 +8920,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_app_dashboard_events_eventstabs_eventstabs",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "eventstabs()"
     },
     {
@@ -8931,8 +8931,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_registerbutton",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "registerbutton.tsx"
     },
     {
@@ -8942,8 +8942,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_events_registerbutton_registerbutton",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "registerbutton()"
     },
     {
@@ -8953,8 +8953,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_syncbutton",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "syncbutton.tsx"
     },
     {
@@ -8964,8 +8964,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_dashboard_events_syncbutton_syncbutton",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "syncbutton()"
     },
     {
@@ -9030,8 +9030,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "src_app_dashboard_events_page_eventspage",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "eventspage()"
     },
     {
@@ -9327,8 +9327,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "events/series/[id]/page.tsx"
     },
     {
@@ -9338,8 +9338,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page_archivedseason",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "archivedseason"
     },
     {
@@ -9349,8 +9349,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page_saisonarchiv",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "saisonarchiv()"
     },
     {
@@ -9360,8 +9360,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page_format_labels",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "format_labels"
     },
     {
@@ -9371,8 +9371,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page_legacyrow",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "legacyrow"
     },
     {
@@ -9382,8 +9382,8 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "src_app_dashboard_events_series_id_page_seriesdetailpage",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "seriesdetailpage()"
     },
     {
@@ -9547,8 +9547,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "(dashboard)/leaderboard/page.tsx"
     },
     {
@@ -9558,8 +9558,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page_medals",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "medals"
     },
     {
@@ -9569,8 +9569,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page_podium_config",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "podium_config"
     },
     {
@@ -9580,8 +9580,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page_rankdeltabadge",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "rankdeltabadge()"
     },
     {
@@ -9591,8 +9591,8 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page_metadata",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "metadata"
     },
     {
@@ -9602,8 +9602,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "src_app_dashboard_leaderboard_page_leaderboardpage",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "leaderboardpage()"
     },
     {
@@ -9767,8 +9767,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "badgessection.tsx"
     },
     {
@@ -9778,8 +9778,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection_custombadgedisplay",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "custombadgedisplay"
     },
     {
@@ -9800,8 +9800,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_badgessection_badgessection",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "badgessection()"
     },
     {
@@ -10581,8 +10581,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilecompletion",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "profilecompletion.tsx"
     },
     {
@@ -10592,8 +10592,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilecompletion_props",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "props"
     },
     {
@@ -10603,8 +10603,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilecompletion_opensection",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "opensection()"
     },
     {
@@ -10614,8 +10614,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilecompletion_profilecompletion",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "profilecompletion()"
     },
     {
@@ -10867,8 +10867,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilestattiles",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "profilestattiles.tsx"
     },
     {
@@ -10878,8 +10878,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilestattiles_props",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "props"
     },
     {
@@ -10889,8 +10889,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_profilestattiles_profilestattiles",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "profilestattiles()"
     },
     {
@@ -10966,8 +10966,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "compare/[id]/page.tsx"
     },
     {
@@ -10977,8 +10977,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page_fetchuserdata",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "fetchuserdata()"
     },
     {
@@ -10988,8 +10988,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page_userdata",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "userdata"
     },
     {
@@ -10999,8 +10999,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page_statbar",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "statbar()"
     },
     {
@@ -11010,8 +11010,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page_avatar",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "avatar()"
     },
     {
@@ -11021,8 +11021,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_compare_id_page_compareprofilepage",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "compareprofilepage()"
     },
     {
@@ -11076,8 +11076,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_rueckblick_page",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "rueckblick/page.tsx"
     },
     {
@@ -11087,8 +11087,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_app_dashboard_profile_rueckblick_page_month_names",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "month_names"
     },
     {
@@ -11384,8 +11384,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_shop_buydndreroll",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "buydndreroll.tsx"
     },
     {
@@ -11395,8 +11395,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_app_dashboard_shop_buydndreroll_buydndreroll",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "buydndreroll()"
     },
     {
@@ -11615,8 +11615,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_dashboard_shop_page",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "(dashboard)/shop/page.tsx"
     },
     {
@@ -12407,8 +12407,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "src_app_dashboard_tournament_id_page_tournamentdetailpage",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "tournamentdetailpage()"
     },
     {
@@ -19535,8 +19535,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_api_game_search_route",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "game-search/route.ts"
     },
     {
@@ -19546,8 +19546,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_app_api_game_search_route_steamgameresult",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "steamgameresult"
     },
     {
@@ -19557,8 +19557,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_api_game_search_route_get",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "get()"
     },
     {
@@ -22076,8 +22076,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_login_page",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "login/page.tsx"
     },
     {
@@ -22087,8 +22087,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_app_login_page_features",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "features"
     },
     {
@@ -22098,8 +22098,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_app_login_page_errorbanner",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "errorbanner()"
     },
     {
@@ -22109,8 +22109,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_app_login_page_loginpage",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "loginpage()"
     },
     {
@@ -22164,8 +22164,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_overlay_positioncanvas",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "positioncanvas.tsx"
     },
     {
@@ -22175,8 +22175,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_app_overlay_positioncanvas_pos",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "pos"
     },
     {
@@ -22186,8 +22186,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_app_overlay_positioncanvas_canvaselementoption",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "canvaselementoption"
     },
     {
@@ -22197,8 +22197,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_app_overlay_positioncanvas_snaptogrid",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "snaptogrid()"
     },
     {
@@ -22208,8 +22208,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_app_overlay_positioncanvas_positioncanvas",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "positioncanvas()"
     },
     {
@@ -22989,8 +22989,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_overlay_id_settings_settingsclient",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "[id]/settings/settingsclient.tsx"
     },
     {
@@ -23000,8 +23000,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_app_overlay_id_settings_settingsclient_elementoption",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "elementoption"
     },
     {
@@ -23011,8 +23011,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_overlay_id_settings_settingsclient_element_options",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "element_options"
     },
     {
@@ -23022,8 +23022,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_app_overlay_id_settings_settingsclient_default_positions",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "default_positions"
     },
     {
@@ -23264,8 +23264,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_app_overlay_profile_userid_settings_settingsclient",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "[userid]/settings/settingsclient.tsx"
     },
     {
@@ -23275,8 +23275,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_app_overlay_profile_userid_settings_settingsclient_elementoption",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "elementoption"
     },
     {
@@ -23286,8 +23286,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_app_overlay_profile_userid_settings_settingsclient_default_positions",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "default_positions"
     },
     {
@@ -23693,8 +23693,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_animatedbar",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "animatedbar.tsx"
     },
     {
@@ -23704,8 +23704,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_animatedbar_animatedbar",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "animatedbar()"
     },
     {
@@ -23880,8 +23880,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_botpreviewshell",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "botpreviewshell.tsx"
     },
     {
@@ -23891,8 +23891,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_botpreviewshell_botpreviewshell",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "botpreviewshell()"
     },
     {
@@ -24133,8 +24133,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_countup",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "countup.tsx"
     },
     {
@@ -24144,8 +24144,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_countup_countup",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "countup()"
     },
     {
@@ -24265,8 +24265,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_dailypollactionbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "dailypollactionbadge.tsx"
     },
     {
@@ -24276,8 +24276,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_dailypollactionbadge_dailypollactionbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "dailypollactionbadge()"
     },
     {
@@ -24529,8 +24529,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "eventcategorybadge.tsx"
     },
     {
@@ -24540,8 +24540,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge_category_config",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "category_config"
     },
     {
@@ -24551,8 +24551,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge_category_border",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "category_border"
     },
     {
@@ -24562,8 +24562,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge_category_bg_tint",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "category_bg_tint"
     },
     {
@@ -24573,8 +24573,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge_props",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "props"
     },
     {
@@ -24584,8 +24584,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "src_components_eventcategorybadge_eventcategorybadge",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "eventcategorybadge()"
     },
     {
@@ -24749,8 +24749,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_eventsactionbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "eventsactionbadge.tsx"
     },
     {
@@ -24760,8 +24760,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_eventsactionbadge_eventsactionbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "eventsactionbadge()"
     },
     {
@@ -25112,8 +25112,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_gamenameinput",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "gamenameinput.tsx"
     },
     {
@@ -25123,8 +25123,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_components_gamenameinput_gamenameinputprops",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "gamenameinputprops"
     },
     {
@@ -25134,8 +25134,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_gamenameinput_covercache",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "covercache"
     },
     {
@@ -25288,8 +25288,8 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "src_components_guestgate_gatelink",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "gatelink()"
     },
     {
@@ -25310,8 +25310,8 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "src_components_guestgate_guestmorecta",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "guestmorecta()"
     },
     {
@@ -25321,8 +25321,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_guestlockoverlay",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "guestlockoverlay.tsx"
     },
     {
@@ -25332,8 +25332,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_guestlockoverlay_props",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "props"
     },
     {
@@ -25343,8 +25343,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_components_guestlockoverlay_guestlockoverlay",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "guestlockoverlay()"
     },
     {
@@ -25354,8 +25354,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_herostatvalue",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "herostatvalue.tsx"
     },
     {
@@ -25365,8 +25365,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_herostatvalue_herostatvalue",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "herostatvalue()"
     },
     {
@@ -25420,8 +25420,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_imageuploadfield",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "imageuploadfield.tsx"
     },
     {
@@ -25431,8 +25431,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_components_imageuploadfield_imageuploadfieldprops",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "imageuploadfieldprops"
     },
     {
@@ -25442,8 +25442,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_components_imageuploadfield_imageuploadfield",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "imageuploadfield()"
     },
     {
@@ -25563,8 +25563,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "livestreamsbanner.tsx"
     },
     {
@@ -25574,8 +25574,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner_partnerstream",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "partnerstream"
     },
     {
@@ -25585,8 +25585,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner_communitystream",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "communitystream"
     },
     {
@@ -25596,8 +25596,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner_unifiedstream",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "unifiedstream"
     },
     {
@@ -25607,8 +25607,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner_kind_style",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "kind_style"
     },
     {
@@ -25618,8 +25618,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "src_components_livestreamsbanner_livestreamsbanner",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "livestreamsbanner()"
     },
     {
@@ -25629,8 +25629,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_marketinglists",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "marketinglists.tsx"
     },
     {
@@ -25640,8 +25640,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_components_marketinglists_visible",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "visible"
     },
     {
@@ -25651,8 +25651,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_components_marketinglists_postrow",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "postrow"
     },
     {
@@ -25662,8 +25662,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_marketinglists_select",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "select"
     },
     {
@@ -25673,8 +25673,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_components_marketinglists_postlist",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "postlist()"
     },
     {
@@ -25684,8 +25684,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "src_components_marketinglists_eventmarketingsection",
-      "community": 79,
-      "community_name": "community-job-payout/route.ts",
+      "community": 38,
+      "community_name": "types.ts",
       "norm_label": "eventmarketingsection()"
     },
     {
@@ -26201,8 +26201,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_pollgamesuggestinput",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "pollgamesuggestinput.tsx"
     },
     {
@@ -26212,8 +26212,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_components_pollgamesuggestinput_gamesuggestion",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "gamesuggestion"
     },
     {
@@ -26223,8 +26223,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_components_pollgamesuggestinput_pollgamesuggestinputprops",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "pollgamesuggestinputprops"
     },
     {
@@ -26234,8 +26234,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_components_pollgamesuggestinput_pollgamesuggestinput",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "pollgamesuggestinput()"
     },
     {
@@ -26454,8 +26454,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_rankpointsicon",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "rankpointsicon.tsx"
     },
     {
@@ -26465,8 +26465,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_components_rankpointsicon_rankpointsicon",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "rankpointsicon()"
     },
     {
@@ -26718,8 +26718,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_serverapplicationbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "serverapplicationbadge.tsx"
     },
     {
@@ -26729,8 +26729,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_serverapplicationbadge_serverapplicationbadge",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "serverapplicationbadge()"
     },
     {
@@ -26839,8 +26839,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_statdelta",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "statdelta.tsx"
     },
     {
@@ -26850,8 +26850,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_statdelta_usevaluedelta",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "usevaluedelta()"
     },
     {
@@ -26861,8 +26861,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_statdelta_valuedeltabadge",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "valuedeltabadge()"
     },
     {
@@ -26872,8 +26872,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_statfieldeditor",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "statfieldeditor.tsx"
     },
     {
@@ -26883,8 +26883,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_statfieldeditor_statfieldeditor",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "statfieldeditor()"
     },
     {
@@ -27026,8 +27026,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_topnewsfeed",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "topnewsfeed.tsx"
     },
     {
@@ -27048,8 +27048,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_topnewsfeed_icon_map",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "icon_map"
     },
     {
@@ -27059,8 +27059,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_components_topnewsfeed_accent_color",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "accent_color"
     },
     {
@@ -27070,8 +27070,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_components_topnewsfeed_props",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "props"
     },
     {
@@ -27081,8 +27081,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_components_topnewsfeed_topnewsfeed",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "topnewsfeed()"
     },
     {
@@ -27202,8 +27202,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_twitchembedplayer",
-      "community": 27,
-      "community_name": "board-match3.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "twitchembedplayer.tsx"
     },
     {
@@ -27213,8 +27213,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_twitchembedplayer_twitchembedplayer",
-      "community": 27,
-      "community_name": "board-match3.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "twitchembedplayer()"
     },
     {
@@ -27631,8 +27631,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_admin_polloptiongameinput",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "polloptiongameinput.tsx"
     },
     {
@@ -27642,8 +27642,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "src_components_admin_polloptiongameinput_polloptiongameinputprops",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "polloptiongameinputprops"
     },
     {
@@ -27653,8 +27653,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_components_admin_polloptiongameinput_polloptiongameinput",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "polloptiongameinput()"
     },
     {
@@ -27664,8 +27664,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_admin_statrowseditor",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "statrowseditor.tsx"
     },
     {
@@ -27675,8 +27675,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "src_components_admin_statrowseditor_statrow",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "statrow"
     },
     {
@@ -27686,8 +27686,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_admin_statrowseditor_statrowseditor",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "statrowseditor()"
     },
     {
@@ -27697,8 +27697,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_admin_tabs",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "tabs.tsx"
     },
     {
@@ -27708,8 +27708,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_components_admin_tabs_tabitem",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "tabitem"
     },
     {
@@ -27719,8 +27719,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_components_admin_tabs_tabsprops",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "tabsprops"
     },
     {
@@ -27730,8 +27730,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_admin_tabs_tabs",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "tabs()"
     },
     {
@@ -27741,8 +27741,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "src_components_admin_tabs_tabpanel",
-      "community": 127,
-      "community_name": "promotion-request-service.ts",
+      "community": 74,
+      "community_name": "formatBerlinTime",
       "norm_label": "tabpanel()"
     },
     {
@@ -27840,8 +27840,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlecardview_battlecardview",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "battlecardview()"
     },
     {
@@ -27939,8 +27939,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlelauncher_battlelauncher",
-      "community": 35,
-      "community_name": "gameservers.ts",
+      "community": 41,
+      "community_name": "formatBerlinDate",
       "norm_label": "battlelauncher()"
     },
     {
@@ -27983,8 +27983,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_battle_cards_battleresultbanner_battleoutcome",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battleoutcome"
     },
     {
@@ -28005,8 +28005,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_components_battle_cards_battleresultbanner_battleresultbanner",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battleresultbanner()"
     },
     {
@@ -28159,8 +28159,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlestatspanel",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battlestatspanel.tsx"
     },
     {
@@ -28170,8 +28170,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_components_battle_cards_battlestatspanel_battlestatspanel",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battlestatspanel()"
     },
     {
@@ -28489,8 +28489,8 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "src_components_battle_cards_cardtile_cardtile",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "cardtile()"
     },
     {
@@ -29072,8 +29072,8 @@
       "source_location": "L421",
       "_origin": "ast",
       "id": "src_components_battle_cards_duelliveview_unitslot",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "unitslot()"
     },
     {
@@ -29248,8 +29248,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_components_battle_cards_gemsresultscreen_gemsreward",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "gemsreward"
     },
     {
@@ -29259,8 +29259,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_components_battle_cards_gemsresultscreen_gemsresultscreen",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "gemsresultscreen()"
     },
     {
@@ -29501,8 +29501,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "livebattleview.tsx"
     },
     {
@@ -29512,8 +29512,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_getarenabackgroundstyle",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "getarenabackgroundstyle()"
     },
     {
@@ -29523,8 +29523,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_liveunit",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "liveunit"
     },
     {
@@ -29534,8 +29534,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_availableaction",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "availableaction"
     },
     {
@@ -29545,8 +29545,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_estimatebadge",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "estimatebadge()"
     },
     {
@@ -29578,8 +29578,8 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_hpbarcolor",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "hpbarcolor()"
     },
     {
@@ -29589,8 +29589,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_computegemsreward",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "computegemsreward()"
     },
     {
@@ -29600,8 +29600,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_describelogentry",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "describelogentry()"
     },
     {
@@ -29611,8 +29611,8 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_actionicon",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "actionicon()"
     },
     {
@@ -29622,8 +29622,8 @@
       "source_location": "L230",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_effect_color",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "effect_color"
     },
     {
@@ -29644,8 +29644,8 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_gembeamoverlay",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "gembeamoverlay()"
     },
     {
@@ -29655,8 +29655,8 @@
       "source_location": "L299",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_stat_label",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "stat_label"
     },
     {
@@ -29666,8 +29666,8 @@
       "source_location": "L305",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_formatmodifiervalue",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "formatmodifiervalue()"
     },
     {
@@ -29677,8 +29677,8 @@
       "source_location": "L310",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_formatmodifierduration",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "formatmodifierduration()"
     },
     {
@@ -29688,8 +29688,8 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_slotrow",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "slotrow()"
     },
     {
@@ -29699,8 +29699,8 @@
       "source_location": "L342",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_unitcard",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "unitcard()"
     },
     {
@@ -29721,8 +29721,8 @@
       "source_location": "L1176",
       "_origin": "ast",
       "id": "src_components_battle_cards_livebattleview_livebattlebody",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "livebattlebody()"
     },
     {
@@ -29787,8 +29787,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_mobaconfirmdialog",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 18,
+      "community_name": "DuelLiveView.tsx",
       "norm_label": "mobaconfirmdialog.tsx"
     },
     {
@@ -29798,8 +29798,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_components_battle_cards_mobaconfirmdialog_tone_header",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 18,
+      "community_name": "DuelLiveView.tsx",
       "norm_label": "tone_header"
     },
     {
@@ -29809,8 +29809,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_components_battle_cards_mobaconfirmdialog_mobaconfirmdialog",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 18,
+      "community_name": "DuelLiveView.tsx",
       "norm_label": "mobaconfirmdialog()"
     },
     {
@@ -29886,8 +29886,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_mycardeditor",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "mycardeditor.tsx"
     },
     {
@@ -29897,8 +29897,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_battle_cards_mycardeditor_mycardeditor",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "mycardeditor()"
     },
     {
@@ -30084,8 +30084,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_rankupoverlay",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "rankupoverlay.tsx"
     },
     {
@@ -30095,8 +30095,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_battle_cards_rankupoverlay_rankupdata",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "rankupdata"
     },
     {
@@ -30106,8 +30106,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_components_battle_cards_rankupoverlay_rankupoverlay",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "rankupoverlay()"
     },
     {
@@ -30117,8 +30117,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "starterpickflow.tsx"
     },
     {
@@ -30128,8 +30128,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_classkey",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "classkey"
     },
     {
@@ -30139,8 +30139,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_cardwithid",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "cardwithid"
     },
     {
@@ -30150,8 +30150,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_class_config",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "class_config"
     },
     {
@@ -30161,8 +30161,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_class_order",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "class_order"
     },
     {
@@ -30172,8 +30172,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_stepdef",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "stepdef"
     },
     {
@@ -30183,8 +30183,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_buildsteps",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "buildsteps()"
     },
     {
@@ -30194,8 +30194,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_stepprogress",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "stepprogress()"
     },
     {
@@ -30205,8 +30205,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_cardchoice",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "cardchoice()"
     },
     {
@@ -30216,8 +30216,8 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "src_components_battle_cards_starterpickflow_starterpickflow",
-      "community": 142,
-      "community_name": "three",
+      "community": 138,
+      "community_name": "DuelDeckEditor.tsx",
       "norm_label": "starterpickflow()"
     },
     {
@@ -30326,8 +30326,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_battle_cards_ultimatecutsceneoverlay",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "ultimatecutsceneoverlay.tsx"
     },
     {
@@ -30337,8 +30337,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_components_battle_cards_ultimatecutsceneoverlay_ultimatecutsceneoverlay",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "ultimatecutsceneoverlay()"
     },
     {
@@ -32746,8 +32746,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_icons_color",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "icons-color.tsx"
     },
     {
@@ -32757,8 +32757,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_components_icons_color_makecolor",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "makecolor()"
     },
     {
@@ -32768,8 +32768,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_components_icons_color_heartcolor",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "heartcolor"
     },
     {
@@ -32779,8 +32779,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_components_icons_color_goldcolor",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "goldcolor"
     },
     {
@@ -32823,8 +32823,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_components_icons_alerttriangle",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "alerttriangle"
     },
     {
@@ -32845,8 +32845,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_components_icons_arrowdown",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "arrowdown"
     },
     {
@@ -32856,8 +32856,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_components_icons_arrowleft",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "arrowleft"
     },
     {
@@ -32867,8 +32867,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "src_components_icons_arrowright",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "arrowright"
     },
     {
@@ -32878,8 +32878,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_components_icons_arrowup",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "arrowup"
     },
     {
@@ -33021,8 +33021,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_components_icons_calendarclock",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "calendarclock"
     },
     {
@@ -33032,8 +33032,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "src_components_icons_calendardays",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "calendardays"
     },
     {
@@ -33043,8 +33043,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_components_icons_calendarplus",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "calendarplus"
     },
     {
@@ -33087,8 +33087,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_components_icons_checkcircle2",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "checkcircle2"
     },
     {
@@ -33164,8 +33164,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "src_components_icons_clock",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "clock"
     },
     {
@@ -33175,8 +33175,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_components_icons_coins",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "coins"
     },
     {
@@ -33186,8 +33186,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_components_icons_copy",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "copy"
     },
     {
@@ -33230,8 +33230,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_components_icons_dices",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "dices"
     },
     {
@@ -33274,8 +33274,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_components_icons_equal",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "equal"
     },
     {
@@ -33285,8 +33285,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "src_components_icons_externallink",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "externallink"
     },
     {
@@ -33362,8 +33362,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "src_components_icons_gamepad2",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "gamepad2"
     },
     {
@@ -33395,8 +33395,8 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_components_icons_gitbranch",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "gitbranch"
     },
     {
@@ -33538,8 +33538,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "src_components_icons_layoutdashboard",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "layoutdashboard"
     },
     {
@@ -33615,8 +33615,8 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "src_components_icons_listordered",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "listordered"
     },
     {
@@ -33637,8 +33637,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "src_components_icons_lock",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "lock"
     },
     {
@@ -33681,8 +33681,8 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "src_components_icons_maximize2",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "maximize2"
     },
     {
@@ -33692,8 +33692,8 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "src_components_icons_medal",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "medal"
     },
     {
@@ -33758,8 +33758,8 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "src_components_icons_minus",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "minus"
     },
     {
@@ -33791,8 +33791,8 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "src_components_icons_move",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "move"
     },
     {
@@ -33846,8 +33846,8 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "src_components_icons_pencil",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 60,
+      "community_name": "skill-pool.ts",
       "norm_label": "pencil"
     },
     {
@@ -33868,8 +33868,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "src_components_icons_plus",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "plus"
     },
     {
@@ -33901,8 +33901,8 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "src_components_icons_refreshcw",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "refreshcw"
     },
     {
@@ -33912,8 +33912,8 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "src_components_icons_repeat",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 5,
+      "community_name": "journalist-service.ts",
       "norm_label": "repeat"
     },
     {
@@ -33934,8 +33934,8 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "src_components_icons_rotateccw",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "rotateccw"
     },
     {
@@ -33945,8 +33945,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "src_components_icons_save",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "save"
     },
     {
@@ -33978,8 +33978,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "src_components_icons_scroll",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "scroll"
     },
     {
@@ -34000,8 +34000,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_components_icons_search",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "search"
     },
     {
@@ -34033,8 +34033,8 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_components_icons_server",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "server"
     },
     {
@@ -34077,8 +34077,8 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "src_components_icons_shield",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "shield"
     },
     {
@@ -34110,8 +34110,8 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "src_components_icons_shoppingbag",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "shoppingbag"
     },
     {
@@ -34121,8 +34121,8 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "src_components_icons_shoppingcart",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "shoppingcart"
     },
     {
@@ -34198,8 +34198,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "src_components_icons_swords",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "swords"
     },
     {
@@ -34209,8 +34209,8 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "src_components_icons_table2",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 147,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "table2"
     },
     {
@@ -34275,8 +34275,8 @@
       "source_location": "L165",
       "_origin": "ast",
       "id": "src_components_icons_trash2",
-      "community": 57,
-      "community_name": "SeriesDetailClient.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "trash2"
     },
     {
@@ -34286,8 +34286,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "src_components_icons_trendingdown",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "trendingdown"
     },
     {
@@ -34352,8 +34352,8 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "src_components_icons_upload",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "upload"
     },
     {
@@ -34374,8 +34374,8 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "src_components_icons_userplus",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "userplus"
     },
     {
@@ -34396,8 +34396,8 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_components_icons_users2",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "users2"
     },
     {
@@ -34407,8 +34407,8 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "src_components_icons_vote",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 76,
+      "community_name": "[id]/settings/SettingsClient.tsx",
       "norm_label": "vote"
     },
     {
@@ -34418,8 +34418,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "src_components_icons_wallet",
-      "community": 20,
-      "community_name": "MobaIcon.tsx",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "wallet"
     },
     {
@@ -34440,8 +34440,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "src_components_icons_wrench",
-      "community": 118,
-      "community_name": "report-event-facts.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "wrench"
     },
     {
@@ -34451,8 +34451,8 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "src_components_icons_x",
-      "community": 27,
-      "community_name": "board-match3.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "x"
     },
     {
@@ -34462,8 +34462,8 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "src_components_icons_zap",
-      "community": 5,
-      "community_name": "journalist-service.ts",
+      "community": 118,
+      "community_name": "report-event-facts.ts",
       "norm_label": "zap"
     },
     {
@@ -34484,8 +34484,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_components_icons_circle",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "circle"
     },
     {
@@ -34495,8 +34495,8 @@
       "source_location": "L185",
       "_origin": "ast",
       "id": "src_components_icons_gripvertical",
-      "community": 21,
-      "community_name": "(dashboard)/leaderboard/page.tsx",
+      "community": 20,
+      "community_name": "MobaIcon.tsx",
       "norm_label": "gripvertical"
     },
     {
@@ -34616,8 +34616,8 @@
       "source_location": "L196",
       "_origin": "ast",
       "id": "src_components_icons_userminus",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "userminus"
     },
     {
@@ -34770,8 +34770,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "squadrostermanager.tsx"
     },
     {
@@ -34781,8 +34781,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager_user",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "user"
     },
     {
@@ -34792,8 +34792,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager_membership",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "membership"
     },
     {
@@ -34803,8 +34803,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager_username",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "username()"
     },
     {
@@ -34814,8 +34814,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager_avatar",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "avatar()"
     },
     {
@@ -34825,8 +34825,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_components_squads_squadrostermanager_squadrostermanager",
-      "community": 60,
-      "community_name": "skill-pool.ts",
+      "community": 98,
+      "community_name": "(dashboard)/battle-cards/page.tsx",
       "norm_label": "squadrostermanager()"
     },
     {
@@ -35991,8 +35991,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_log",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battle-log.ts"
     },
     {
@@ -36002,8 +36002,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_log_storedbattlelog",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "storedbattlelog"
     },
     {
@@ -36024,8 +36024,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_log_isstoredbattlelog",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "isstoredbattlelog()"
     },
     {
@@ -36090,8 +36090,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "battle-stats.ts"
     },
     {
@@ -36101,8 +36101,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_unitbattlestats",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "unitbattlestats"
     },
     {
@@ -36112,8 +36112,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_computebattlestats",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "computebattlestats()"
     },
     {
@@ -36123,8 +36123,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_score",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "score()"
     },
     {
@@ -36134,8 +36134,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_lib_battle_cards_battle_stats_findmvpid",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "findmvpid()"
     },
     {
@@ -36640,8 +36640,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_lib_battle_cards_class_config_getclassconfig",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 142,
+      "community_name": "three",
       "norm_label": "getclassconfig()"
     },
     {
@@ -36882,8 +36882,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "src_lib_battle_cards_duel_live_battle_tohandcard",
-      "community": 4,
-      "community_name": "fotograf-service.ts",
+      "community": 7,
+      "community_name": "GuestGate.tsx",
       "norm_label": "tohandcard()"
     },
     {
@@ -37608,8 +37608,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_lib_battle_cards_live_battle_liveunitsnapshot",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "liveunitsnapshot"
     },
     {
@@ -39984,8 +39984,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak_constants",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "win-streak-constants.ts"
     },
     {
@@ -39995,8 +39995,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak_constants_winstreakbonusfor",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "winstreakbonusfor()"
     },
     {
@@ -40006,8 +40006,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "win-streak.ts"
     },
     {
@@ -40017,8 +40017,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak_winstreakupdate",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "winstreakupdate"
     },
     {
@@ -40028,8 +40028,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak_applywinstreak",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "applywinstreak()"
     },
     {
@@ -40039,8 +40039,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_lib_battle_cards_win_streak_applyattackeronlywinstreak",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "applyattackeronlywinstreak()"
     },
     {
@@ -40325,8 +40325,8 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "src_lib_battle_engine_board_match3_enemyslotforcolumn",
-      "community": 94,
-      "community_name": "JournalistTools.tsx",
+      "community": 49,
+      "community_name": "amp.ts",
       "norm_label": "enemyslotforcolumn()"
     },
     {
@@ -40710,8 +40710,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_duelplayerstate",
-      "community": 7,
-      "community_name": "GuestGate.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "duelplayerstate"
     },
     {
@@ -40765,8 +40765,8 @@
       "source_location": "L226",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_dueldeckinput",
-      "community": 7,
-      "community_name": "GuestGate.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "dueldeckinput"
     },
     {
@@ -40919,8 +40919,8 @@
       "source_location": "L415",
       "_origin": "ast",
       "id": "src_lib_battle_engine_duels_live_requirestactictarget",
-      "community": 4,
-      "community_name": "fotograf-service.ts",
+      "community": 7,
+      "community_name": "GuestGate.tsx",
       "norm_label": "requirestactictarget()"
     },
     {
@@ -42140,8 +42140,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_battleunitdefinition",
-      "community": 7,
-      "community_name": "GuestGate.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "battleunitdefinition"
     },
     {
@@ -42151,8 +42151,8 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_activestatmodifier",
-      "community": 62,
-      "community_name": "EmptyState.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "activestatmodifier"
     },
     {
@@ -42206,8 +42206,8 @@
       "source_location": "L206",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_tacticcarddefinition",
-      "community": 7,
-      "community_name": "GuestGate.tsx",
+      "community": 40,
+      "community_name": "resolveAvatarsForCards",
       "norm_label": "tacticcarddefinition"
     },
     {
@@ -42250,8 +42250,8 @@
       "source_location": "L291",
       "_origin": "ast",
       "id": "src_lib_battle_engine_types_rosterentry",
-      "community": 40,
-      "community_name": "resolveAvatarsForCards",
+      "community": 94,
+      "community_name": "JournalistTools.tsx",
       "norm_label": "rosterentry"
     },
     {
@@ -46672,8 +46672,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_event_completion",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "event-completion.ts"
     },
     {
@@ -46683,8 +46683,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_lib_event_completion_geteventendedat",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "geteventendedat()"
     },
     {
@@ -46694,8 +46694,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_lib_event_completion_isrecentlyfinished",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "isrecentlyfinished()"
     },
     {
@@ -46705,8 +46705,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_event_lifecycle",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "event-lifecycle.ts"
     },
     {
@@ -46716,8 +46716,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_lib_event_lifecycle_syncdueeventactivations",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "syncdueeventactivations()"
     },
     {
@@ -47585,8 +47585,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "src_lib_get_wanderpocal_holders_getwanderpocalholdersmap",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 21,
+      "community_name": "(dashboard)/leaderboard/page.tsx",
       "norm_label": "getwanderpocalholdersmap()"
     },
     {
@@ -51853,8 +51853,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_lib_series_event_points_statconfig",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "statconfig"
     },
     {
@@ -51919,8 +51919,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "src_lib_series_event_points_resolvewinnertargetkeys",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "resolvewinnertargetkeys()"
     },
     {
@@ -51941,8 +51941,8 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "src_lib_series_event_points_computeliveligapunkte",
-      "community": 38,
-      "community_name": "types.ts",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "computeliveligapunkte()"
     },
     {
@@ -52029,8 +52029,8 @@
       "source_location": "L342",
       "_origin": "ast",
       "id": "src_lib_series_event_points_computestatstandings",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "computestatstandings()"
     },
     {
@@ -52040,8 +52040,8 @@
       "source_location": "L421",
       "_origin": "ast",
       "id": "src_lib_series_event_points_computeeventpoints",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "computeeventpoints()"
     },
     {
@@ -52106,8 +52106,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "src_lib_series_icons_resolveseriescolor",
-      "community": 75,
-      "community_name": "SeriesIcon.tsx",
+      "community": 44,
+      "community_name": "JobBadge.tsx",
       "norm_label": "resolveseriescolor()"
     },
     {
@@ -53965,8 +53965,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lib_tournament_formats",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tournament-formats.ts"
     },
     {
@@ -53976,8 +53976,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_lib_tournament_formats_tournamentformatvalue",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tournamentformatvalue"
     },
     {
@@ -53987,8 +53987,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_lib_tournament_formats_tournament_formats",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "tournament_formats"
     },
     {
@@ -53998,8 +53998,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_lib_tournament_formats_legacy_liga_option",
-      "community": 14,
-      "community_name": "duels-live.ts",
+      "community": 127,
+      "community_name": "promotion-request-service.ts",
       "norm_label": "legacy_liga_option"
     },
     {
@@ -151503,7 +151503,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/battle-cards/BattleCardView.tsx",
-      "source_location": "L163",
+      "source_location": "L166",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_components_battle_cards_battlecardview_battlecardview",
@@ -219500,5 +219500,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "442ad1cd7e5281dbd714c00f4e2d1cacc4c9d952"
+  "built_at_commit": "10acbe1c414d5c4ba12b2d8790b9b06b935856b6"
 }
