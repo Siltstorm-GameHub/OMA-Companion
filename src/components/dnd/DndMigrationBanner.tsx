@@ -1,9 +1,9 @@
 "use client";
 
 // ============================================
-// D&D-Migrations-Banner (plan Abschnitt 6.1)
+// OMA-Quest-Migrations-Banner (plan Abschnitt 6.1)
 // ============================================
-// Sanfter Hinweis für Bestandsmitglieder ohne D&D-Charakter — kein Blocker
+// Sanfter Hinweis für Bestandsmitglieder ohne OMA-Quest-Charakter — kein Blocker
 // (analog TutorialProgressBanner: rendert nur, solange relevant). Nach der
 // Frist würfelt der dnd-travel-sweep-Cron automatisch aus.
 
@@ -24,14 +24,14 @@ export default function DndMigrationBanner({ hasCharacter }: { hasCharacter: boo
         <Dices className="w-4 h-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white">Neu: Deine Community-Karte wird zum D&D-Charakter</p>
+        <p className="text-sm font-semibold text-white">Neu: Deine Community-Karte wird zum OMA-Quest-Charakter</p>
         <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
           <Clock className="w-3 h-3 shrink-0" />
           Würfle freiwillig bis {formatDeadline(DND_MIGRATION_DEADLINE)} — danach übernehmen wir das automatisch für dich.
         </p>
       </div>
       <Link
-        href="/dnd"
+        href="/oma-quest"
         className="shrink-0 rounded-xl bg-violet-600 hover:bg-violet-500 px-3 py-2 text-xs font-bold text-white transition-colors"
       >
         Jetzt würfeln

@@ -275,6 +275,24 @@
         ],
         "createdAt": "2026-09-25T07:11:33.638Z",
         "reason": "Claude: false positive - borderLeft/Right transparent + borderTop/Bottom colored are CSS triangle pointers (map pin, 'Du' tag), not card side accents; user not consulted"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/components/te-character/TeCharacterEditor.tsx"
+        ],
+        "createdAt": "2026-09-25T07:46:43.910Z",
+        "reason": "Claude: false positive - gray text on bg-black/30 / #141a28 dark panels, same as the earlier pixel editor; user not consulted"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/components/te-map/TeQuestPrototype.tsx"
+        ],
+        "createdAt": "2026-09-25T07:48:26.287Z",
+        "reason": "Claude: false positive - inactive tab text on dark bg-black/30 pill, not a colored surface; user not consulted"
       }
     ]
   }

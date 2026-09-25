@@ -1,7 +1,7 @@
 // ============================================
-// D&D-Klassen — hartcodierte Auswürfel-Tabelle
+// OMA-Quest-Klassen — hartcodierte Auswürfel-Tabelle
 // ============================================
-// Volle D&D-Klasse (feingranularer als die 3 Battle-Engine-Rollen). Bestimmt
+// Volle OMA-Quest-Klasse (feingranularer als die 3 Battle-Engine-Rollen). Bestimmt
 // Story-/Quest-Content (z.B. Magier bekommt andere Ereignisse als Krieger),
 // wird zur Auswürfel-Zeit fix über DND_CLASS_TO_CARD_CLASS (class-mapping.ts)
 // auf class: CardClass abgebildet, damit die bestehende Kampf-Engine

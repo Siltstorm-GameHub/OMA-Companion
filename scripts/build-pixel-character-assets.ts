@@ -18,10 +18,14 @@ const SRC = process.argv[2] ?? DEFAULT_SRC;
 const OUT_DIR = path.join(process.cwd(), "public", "pixel-character");
 const CATALOG_PATH = path.join(process.cwd(), "src", "lib", "pixel-character", "catalog.json");
 
-// Zuschnitt: alle Figuren (inkl. Waffen) liegen in x 32..95, y 30..83 der 128er-Frames.
-const CROP = { x: 32, y: 24, size: 64 };
+// Zuschnitt: alle Figuren (inkl. Waffen, Kampfanimationen) liegen in x 32..95, y 30..90 der 128er-Frames.
+const CROP = { x: 32, y: 27, size: 64 };
 const SRC_FRAME = 128;
-const ANIMS = { idle: "Idl", move: "Mov" } as const;
+const ANIMS = { idle: "Idl", move: "Mov", melee: "Mel", magic: "Mag", ranged: "Ran", block: "Blo" } as const;
+type AnimName = keyof typeof ANIMS;
+/** Ohne diese beiden Animationen wird ein Teil gar nicht erst angeboten; alle übrigen sind optional
+ *  (z.B. hat ein Stab nur Magie, ein Bogen nur Fernkampf). */
+const REQUIRED: AnimName[] = ["idle", "move"];
 
 /** Kategorien in der Reihenfolge des Editors. `z` je Teil: m = einteilig, b = hinter dem Körper, f = davor.
  *  Reihenfolge laut "Read Me.txt" des Pakets (Base = 0). */
@@ -50,6 +54,13 @@ const CATEGORIES: CategoryDef[] = [
   { id: "offhand", label: "Schild",     folder: "Offhand",    optional: true,  z: { b: -2, f: 9 } },
   { id: "bow",    label: "Bogen",       folder: "Bow",        optional: true,  z: { b: -6, f: 12 } },
   { id: "staff",  label: "Stab",        folder: "Staff",      optional: true,  z: { b: -9, f: 14 } },
+  { id: "artifact", label: "Orb",        folder: "Artifact",   optional: true,  z: { b: -8, f: 15 } },
+  { id: "quiver", label: "Köcher",      folder: "Quiver",     optional: true,  z: { b: -7, f: 13 } },
+];
+
+/** Feste Effekt-Ebenen, die zu einer Animation automatisch mitlaufen (nicht wählbar). */
+const EFFECTS = [
+  { id: "sword_1", folder: "FX", base: "FX_Sword_1", anim: "melee" as AnimName, z: { b: -3, f: 16 } },
 ];
 
 interface Sheet { data: Buffer; w: number; h: number }
@@ -105,20 +116,22 @@ async function main() {
   fs.rmSync(OUT_DIR, { recursive: true, force: true });
 
   const catalog: {
-    frames: { idle: number; move: number };
+    frames: Record<string, number>;
     frameSize: number;
-    base: { id: string; sheets: string[] };
+    base: { id: string; anims: string[] };
+    effects: { id: string; anim: string; z: { b: number; f: number } }[];
     categories: {
       id: string; label: string; optional: boolean;
-      z: CategoryDef["z"]; items: { id: string; label: string; parts: string[] }[];
+      z: CategoryDef["z"]; items: { id: string; label: string; parts: string[]; anims: string[] }[];
     }[];
-  } = { frames: { idle: 4, move: 6 }, frameSize: CROP.size, base: { id: "base", sheets: [] }, categories: [] };
+  } = { frames: {}, frameSize: CROP.size, base: { id: "base", anims: [] }, effects: [], categories: [] };
 
   // Base (Männlich): Unterlage unter allen Ebenen
   for (const [anim, code] of Object.entries(ANIMS)) {
     const sheet = await readSheet(path.join(SRC, "Base", `M_${code}_Base.png`));
     if (sheet && (await cropSheet(sheet, path.join(OUT_DIR, "base", `m-${anim}.png`)))) {
-      catalog.base.sheets.push(anim);
+      catalog.base.anims.push(anim);
+      catalog.frames[anim] = Math.floor(sheet.w / SRC_FRAME);
     }
   }
 
@@ -144,26 +157,39 @@ async function main() {
       }
     }
 
-    const outItems: { id: string; label: string; parts: string[] }[] = [];
+    const outItems: { id: string; label: string; parts: string[]; anims: string[] }[] = [];
     for (const [id, parts] of [...items].sort(([a], [b]) => a.localeCompare(b))) {
-      const okParts: string[] = [];
+      // part → Animationen, für die ein nicht-leeres Sheet geschrieben wurde
+      const written = new Map<string, string[]>();
       for (const [partKey, anims] of parts) {
-        if (!anims.has("idle") || !anims.has("move")) continue;
-        let ok = true;
-        const written: string[] = [];
-        for (const anim of ["idle", "move"]) {
-          const sheet = await readSheet(anims.get(anim)!);
-          const outFile = path.join(OUT_DIR, cat.id, id, `${partKey}-${anim}.png`);
-          if (!sheet || !(await cropSheet(sheet, outFile))) { ok = false; break; }
-          written.push(outFile);
+        if (!REQUIRED.every((a) => anims.has(a))) continue;
+        const ok: string[] = [];
+        for (const [anim, file] of anims) {
+          const sheet = await readSheet(file);
+          if (sheet && (await cropSheet(sheet, path.join(OUT_DIR, cat.id, id, `${partKey}-${anim}.png`)))) {
+            ok.push(anim); files++;
+          }
         }
-        if (ok) { okParts.push(partKey); files += 2; }
-        else for (const f of written) fs.rmSync(f, { force: true });
+        if (REQUIRED.every((a) => ok.includes(a))) written.set(partKey, ok);
+        else for (const anim of ok) fs.rmSync(path.join(OUT_DIR, cat.id, id, `${partKey}-${anim}.png`), { force: true });
       }
-      if (okParts.length) outItems.push({ id, label: pretty(id, cat.folder), parts: okParts.sort() });
+      if (!written.size) continue;
+      // Animation gilt für das Teil, wenn ALLE seine Teile (z.B. Rück- und Vorderseite) sie haben.
+      const anims = (Object.keys(ANIMS) as AnimName[]).filter((a) => [...written.values()].every((list) => list.includes(a)));
+      outItems.push({ id, label: pretty(id, cat.folder), parts: [...written.keys()].sort(), anims });
     }
     catalog.categories.push({ id: cat.id, label: cat.label, optional: cat.optional, z: cat.z, items: outItems });
     console.log(`${cat.label.padEnd(14)} ${outItems.length} Teile`);
+  }
+
+  for (const fx of EFFECTS) {
+    let ok = true;
+    for (const [partKey, prefix] of [["b", "B"], ["f", "F"]] as const) {
+      const sheet = await readSheet(path.join(SRC, fx.folder, `${prefix}_${ANIMS[fx.anim]}_${fx.base}.png`));
+      if (!sheet || !(await cropSheet(sheet, path.join(OUT_DIR, "fx", fx.id, `${partKey}-${fx.anim}.png`)))) ok = false;
+      else files++;
+    }
+    if (ok) catalog.effects.push({ id: fx.id, anim: fx.anim, z: fx.z });
   }
 
   fs.mkdirSync(path.dirname(CATALOG_PATH), { recursive: true });

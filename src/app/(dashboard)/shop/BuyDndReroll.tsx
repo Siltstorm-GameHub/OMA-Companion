@@ -31,7 +31,7 @@ export default function BuyDndReroll({
         toast.error(data.error ?? "Fehler beim Kauf");
         return;
       }
-      toast.success("🎲 Re-Roll-Credit gekauft!", { description: "Nutzbar unter /dnd." });
+      toast.success("🎲 Re-Roll-Credit gekauft!", { description: "Nutzbar unter /oma-quest." });
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
@@ -47,7 +47,7 @@ export default function BuyDndReroll({
           <Dices className="w-4 h-4 text-violet-400" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">D&D-Charakter neu würfeln</p>
+          <p className="text-sm font-semibold text-white">OMA-Quest-Charakter neu würfeln</p>
           <p className="text-[11px] text-gray-500">Rasse, Klasse und Attribute zusammen neu auswürfeln.</p>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function BuyDndReroll({
         {cost} Münzen
       </button>
       {!hasCharacter && (
-        <p className="text-[10px] text-gray-600 text-center">Erst unter /dnd einen Charakter erstellen.</p>
+        <p className="text-[10px] text-gray-600 text-center">Erst unter /oma-quest einen Charakter erstellen.</p>
       )}
     </div>
   );

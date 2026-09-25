@@ -19,9 +19,18 @@ interface Props {
 }
 
 const HEAD_CATEGORIES = new Set(["head", "hair", "beard"]);
-const HEAD_THUMB_RECT = { x: 19, y: 20, w: 26, h: 26 };
+const HEAD_THUMB_RECT = { x: 19, y: 17, w: 26, h: 26 };
 /** Diese Ebenen bleiben beim Zufall meist leer, sonst trägt jede Figur Rüstung + Umhang + Bogen. */
 const RARE_CATEGORIES = new Set(["weapon", "offhand", "bow", "staff", "cape", "overall", "chest", "skirt", "beard", "hands"]);
+
+const ANIM_OPTIONS: { id: PixelAnim; label: string }[] = [
+  { id: "idle", label: "Stehen" },
+  { id: "move", label: "Laufen" },
+  { id: "melee", label: "Nahkampf" },
+  { id: "ranged", label: "Fernkampf" },
+  { id: "magic", label: "Magie" },
+  { id: "block", label: "Blocken" },
+];
 
 const DIRS: { id: PixelDir; label: string }[] = [
   { id: "up", label: "↑" },
@@ -87,19 +96,14 @@ export default function PixelCharacterEditor({ value, onChange }: Props) {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <div className="flex rounded-lg bg-black/30 p-0.5" role="group" aria-label="Animation">
-            {(["idle", "move"] as const).map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => setAnim(a)}
-                aria-pressed={anim === a}
-                className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors ${anim === a ? "bg-violet-600 text-white" : "text-gray-400 hover:text-white"}`}
-              >
-                {a === "idle" ? "Stehen" : "Laufen"}
-              </button>
-            ))}
-          </div>
+          <select
+            value={anim}
+            onChange={(e) => setAnim(e.target.value as PixelAnim)}
+            aria-label="Animation"
+            className="rounded-lg bg-black/30 text-[11px] font-semibold text-gray-200 px-2 py-1.5 outline-none border border-white/10 focus:border-violet-500"
+          >
+            {ANIM_OPTIONS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          </select>
           <div className="flex gap-1" role="group" aria-label="Blickrichtung">
             {DIRS.map((d) => (
               <button

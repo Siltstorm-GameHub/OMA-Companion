@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getShopConfig } from "@/lib/shop-config";
 
 /**
- * Shop-Item: 1 zusätzlicher D&D-Re-Roll-Credit (Rasse+Klasse+Attribute neu
+ * Shop-Item: 1 zusätzlicher OMA-Quest-Re-Roll-Credit (Rasse+Klasse+Attribute neu
  * würfeln, siehe /api/dnd/character/create). Nutzt dieselbe atomare
  * Guard-Konvention wie buy-pack (WHERE points >= cost im selben Update).
  */
@@ -18,7 +18,7 @@ export async function POST() {
 
   const card = await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { id: true, dndCreatedAt: true } });
   if (!card?.dndCreatedAt) {
-    return NextResponse.json({ error: "Noch kein D&D-Charakter erstellt" }, { status: 400 });
+    return NextResponse.json({ error: "Noch kein OMA-Quest-Charakter erstellt" }, { status: 400 });
   }
 
   const { dndRerollCost } = await getShopConfig();
@@ -31,7 +31,7 @@ export async function POST() {
     return NextResponse.json({ error: "Nicht genug Münzen" }, { status: 400 });
   }
   await prisma.pointTransaction.create({
-    data: { userId, amount: -dndRerollCost, reason: "D&D-Charakter-Re-Roll gekauft" },
+    data: { userId, amount: -dndRerollCost, reason: "OMA-Quest-Charakter-Re-Roll gekauft" },
   });
 
   const updated = await prisma.card.update({

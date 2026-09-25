@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["node_modules/sharp/**/*", "node_modules/@img/**/*"],
   },
+  // Umbenennung auf OMA Quest: alte Links unter /dnd und /dnd/<ort> leiten dauerhaft um.
+  async redirects() {
+    return [
+      { source: "/dnd", destination: "/oma-quest", permanent: true },
+      { source: "/dnd/:slug", destination: "/oma-quest/:slug", permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       // Discord CDN (avatars, server icons)

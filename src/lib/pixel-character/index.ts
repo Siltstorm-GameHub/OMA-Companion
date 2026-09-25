@@ -7,12 +7,20 @@
 
 import catalogJson from "./catalog.json";
 
-export type PixelAnim = "idle" | "move";
+export type PixelAnim = "idle" | "move" | "melee" | "magic" | "ranged" | "block";
+/** Dauerschleifen; alle anderen (Kampfanimationen) laufen einmal ab und gehen dann zurück nach idle. */
+export const LOOPING_ANIMS: readonly PixelAnim[] = ["idle", "move"];
 export type PixelDir = "down" | "left" | "right" | "up";
 /** Zeile im Spritesheet */
 export const DIR_ROW: Record<PixelDir, number> = { down: 0, left: 1, right: 2, up: 3 };
 
-export interface CatalogItem { id: string; label: string; parts: string[] }
+export interface CatalogItem {
+  id: string;
+  label: string;
+  parts: string[];
+  /** Animationen, für die dieses Teil ein Sheet hat (Stab z.B. nur Magie, Bogen nur Fernkampf). */
+  anims: PixelAnim[];
+}
 export interface CatalogCategory {
   id: string;
   label: string;
@@ -23,11 +31,13 @@ export interface CatalogCategory {
 export interface PixelCatalog {
   frames: Record<PixelAnim, number>;
   frameSize: number;
-  base: { id: string; sheets: string[] };
+  base: { id: string; anims: PixelAnim[] };
+  /** Feste Effekt-Ebenen, die automatisch zu einer Animation dazugehören (Schwertschwung). */
+  effects: { id: string; anim: PixelAnim; z: { b: number; f: number } }[];
   categories: CatalogCategory[];
 }
 
-export const CATALOG = catalogJson as PixelCatalog;
+export const CATALOG = catalogJson as unknown as PixelCatalog;
 export const FRAME = CATALOG.frameSize;
 
 /** Auswahl je Kategorie-ID → Item-ID. Fehlender Eintrag = nichts gewählt. */
@@ -36,10 +46,10 @@ export interface PixelCharacterConfig {
   layers: Record<string, string>;
 }
 
-export const PIXEL_ANIM_FPS: Record<PixelAnim, number> = { idle: 4, move: 10 };
+export const PIXEL_ANIM_FPS: Record<PixelAnim, number> = { idle: 4, move: 10, melee: 12, magic: 8, ranged: 10, block: 8 };
 
 /** Enger Ausschnitt um die Figur (Editor-Vorschau, Miniaturen) — der 64er-Frame hat viel leeren Rand. */
-export const FOCUS_RECT = { x: 8, y: 10, w: 48, h: 48 };
+export const FOCUS_RECT = { x: 8, y: 7, w: 48, h: 48 };
 
 const CATEGORY_BY_ID = new Map(CATALOG.categories.map((c) => [c.id, c]));
 
@@ -80,20 +90,36 @@ export interface ResolvedLayer { src: string; z: number; order: number }
 /** Alle Sheets, die für Config + Animation gebraucht werden, sortiert von hinten nach vorn. */
 export function resolveLayers(config: PixelCharacterConfig, anim: PixelAnim): ResolvedLayer[] {
   const out: ResolvedLayer[] = [];
-  if (CATALOG.base.sheets.includes(anim)) {
+  if (CATALOG.base.anims.includes(anim)) {
     out.push({ src: `/pixel-character/base/m-${anim}.png`, z: 0, order: 0 });
   }
   CATALOG.categories.forEach((cat, ci) => {
     const id = config.layers[cat.id];
     const item = id ? cat.items.find((i) => i.id === id) : undefined;
-    if (!item) return;
+    if (!item || !item.anims.includes(anim)) return; // Teil hat für diese Animation kein Sheet → in dieser Pose ausgeblendet
     for (const part of item.parts) {
       const z = cat.z[part as "m" | "b" | "f"];
       if (z === undefined) continue;
       out.push({ src: `/pixel-character/${cat.id}/${item.id}/${part}-${anim}.png`, z, order: ci + 1 });
     }
   });
+  // Schwertschwung-Effekt läuft mit, sobald eine Nahkampfwaffe getragen wird.
+  if (config.layers.weapon) {
+    for (const fx of CATALOG.effects.filter((e) => e.anim === anim)) {
+      out.push({ src: `/pixel-character/fx/${fx.id}/b-${anim}.png`, z: fx.z.b, order: 900 });
+      out.push({ src: `/pixel-character/fx/${fx.id}/f-${anim}.png`, z: fx.z.f, order: 901 });
+    }
+  }
   return out.sort((a, b) => a.z - b.z || a.order - b.order);
+}
+
+/** Angriffs-Animation passend zur Ausrüstung; ohne Waffe entscheidet die Kartenklasse. */
+export function attackAnimFor(config: PixelCharacterConfig, unitClass?: "TANK" | "DAMAGE_DEALER" | "SUPPORT"): PixelAnim {
+  const l = config.layers;
+  if (l.bow) return "ranged";
+  if (l.staff || l.artifact) return "magic";
+  if (l.weapon || l.offhand) return "melee";
+  return unitClass === "SUPPORT" ? "magic" : "melee";
 }
 
 /** Blickrichtung für eine Bewegung um (dx,dy) — Bildschirmkoordinaten. */

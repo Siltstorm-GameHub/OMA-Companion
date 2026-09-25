@@ -1,5 +1,5 @@
 // ============================================
-// D&D-Weltkarte: 10 feste Locations auf der Hex-Karte
+// OMA-Quest-Weltkarte: 10 feste Locations auf der Hex-Karte
 // ============================================
 // Hartcodierte Struktur (Namen, Typ, Beschreibung) — abgenickte Liste aus der
 // Planung, humoristischer Ton statt episch-ernstem High-Fantasy. Das Hex-Feld

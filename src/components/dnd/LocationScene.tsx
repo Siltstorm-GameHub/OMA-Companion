@@ -1,13 +1,13 @@
 "use client";
 
 // ============================================
-// D&D-Location-Szene — Vorlage: BoardMatch3.tsx (Positionierung) +
+// OMA-Quest-Location-Szene — Vorlage: BoardMatch3.tsx (Positionierung) +
 // CampaignMap.tsx (Hintergrund/Fallback)
 // ============================================
 // Lädt GET /api/dnd/location/[slug] (führt serverseitig den Story-Tick für
 // den eigenen Charakter aus, siehe route.ts) — zeigt anwesende Charaktere an
 // festen spawnPoints, Story-Panel am storyAnchor, Reise-Buttons zu Nachbar-
-// Locations. Reisen läuft über die Hex-Weltkarte (/dnd), nicht mehr von hier.
+// Locations. Reisen läuft über die Hex-Weltkarte (/oma-quest), nicht mehr von hier.
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -95,7 +95,7 @@ export default function LocationScene({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-4">
-      <Link href="/dnd" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
+      <Link href="/oma-quest" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
         <ArrowLeft className="w-3.5 h-3.5" /> Zur Weltkarte
       </Link>
 
@@ -161,7 +161,7 @@ export default function LocationScene({ slug }: { slug: string }) {
       )}
       {!data.myCardInTransit && (
         <Link
-          href="/dnd"
+          href="/oma-quest"
           className="inline-flex rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors"
         >
           Weiterreisen — Ziel auf der Weltkarte wählen

@@ -40,7 +40,7 @@ export default async function MyCardPage() {
         <h1 className="text-lg font-black text-white">Meine Community-Karte</h1>
         <p className="text-xs text-gray-500 mt-0.5">
           Untertitel, Beschreibung und Pixel-Charakter deiner Karte anpassen — Stats/Klasse werden
-          automatisch aus deiner Aktivität berechnet. Dein Charakter ist auch deine Figur im D&D.
+          automatisch aus deiner Aktivität berechnet. Dein Charakter ist auch deine Figur in OMA Quest.
         </p>
       </div>
       <MyCardEditor

@@ -1,9 +1,9 @@
 "use client";
 
 // ============================================
-// D&D-Charaktererstellung — Auswahl + Auswürfel-Ergebnis-Anzeige
+// OMA-Quest-Charaktererstellung — Auswahl + Auswürfel-Ergebnis-Anzeige
 // ============================================
-// Rasse & Klasse werden bewusst gewählt (wie im echten D&D), nur die 6
+// Rasse & Klasse werden bewusst gewählt (wie im klassischen Rollenspiel), nur die 6
 // Attribute werden gewürfelt. Löst POST /api/dnd/character/create aus
 // (Erst-Erstellung ODER Re-Roll, je nach isReroll), zeigt danach das
 // Ergebnis an. Aussehen bleibt bewusst getrennt — verlinkt auf den
@@ -127,7 +127,7 @@ export default function CharacterCreation({
       setRevealCount(0);
       setResult(data.card);
       setPhase("done");
-      // Bewusst KEIN router.refresh() hier: die Server-Komponente (/dnd/page.tsx)
+      // Bewusst KEIN router.refresh() hier: die Server-Komponente (/oma-quest/page.tsx)
       // würde sonst sofort neu rendern und, da dndCreatedAt jetzt gesetzt ist,
       // CharacterCreation mitten in der Reveal-Animation gegen WorldMap tauschen.
       // Der Refresh passiert erst, wenn der Nutzer bewusst weiterklickt (unten).
@@ -151,7 +151,7 @@ export default function CharacterCreation({
           <p className="text-sm text-gray-300">
             {isReroll
               ? "Wähle Rasse und Klasse EINMALIG neu — die Attribute werden danach neu gewürfelt."
-              : "Wähle Rasse und Klasse für deinen D&D-Charakter. Die Attribute werden per klassischem 4W6-Wurf bestimmt."}
+              : "Wähle Rasse und Klasse für deinen OMA-Quest-Charakter. Die Attribute werden per klassischem 4W6-Wurf bestimmt."}
           </p>
         </div>
 

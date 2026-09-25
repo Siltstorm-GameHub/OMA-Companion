@@ -1,5 +1,5 @@
 // ============================================
-// Unit-Tests — D&D-Würfellogik & Reise-Resolve (reine Funktionen)
+// Unit-Tests — OMA-Quest-Würfellogik & Reise-Resolve (reine Funktionen)
 // ============================================
 // Läuft über Node's eingebauten Test-Runner + tsx (siehe package.json
 // "test"-Script), gleiche Konvention wie board-match3.test.ts.

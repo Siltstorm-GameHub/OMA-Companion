@@ -1,5 +1,5 @@
 // ============================================
-// D&D-Quests: eigene Belohnungen (XP/Items) + optionaler Coins-Pfad
+// OMA Quest — Quests: eigene Belohnungen (XP/Items) + optionaler Coins-Pfad
 // ============================================
 // Läuft NEBEN der bestehenden updateQuestProgress()-Verdrahtung (src/lib/quests.ts),
 // nicht statt ihr — dieselben Call-Sites rufen beide Funktionen auf (plan
@@ -180,7 +180,7 @@ async function rewardDndQuest(cardId: string, questId: string, coinReward: numbe
   if (coinReward > 0) {
     await prisma.$transaction([
       prisma.user.update({ where: { id: user.id }, data: { points: { increment: coinReward } } }),
-      prisma.pointTransaction.create({ data: { userId: user.id, amount: coinReward, reason: `🎲 D&D-Quest: ${quest.title}` } }),
+      prisma.pointTransaction.create({ data: { userId: user.id, amount: coinReward, reason: `🎲 OMA Quest: ${quest.title}` } }),
     ]);
   }
 
@@ -193,7 +193,7 @@ async function rewardDndQuest(cardId: string, questId: string, coinReward: numbe
 /**
  * Bequemlichkeits-Wrapper für Call-Sites, die nur eine userId kennen (App-
  * Aktionen) — löst die zugehörige Community-Karte über den User-Discord-Link
- * auf. No-op, falls der User (noch) keinen D&D-Charakter hat.
+ * auf. No-op, falls der User (noch) keinen OMA-Quest-Charakter hat.
  */
 export async function advanceDndQuestObjectiveForUser(
   userId: string,
@@ -212,7 +212,7 @@ export async function advanceDndQuestObjectiveForDiscordId(
   increment: number
 ): Promise<void> {
   const card = await prisma.card.findUnique({ where: { linkedDiscordId: discordId }, select: { id: true, dndCreatedAt: true } });
-  if (!card?.dndCreatedAt) return; // kein fertiger D&D-Charakter → keine D&D-Quests
+  if (!card?.dndCreatedAt) return; // kein fertiger OMA-Quest-Charakter → keine Quests
   await advanceDndQuestObjective(card.id, objectiveType, increment);
 }
 

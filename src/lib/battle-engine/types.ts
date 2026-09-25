@@ -8,6 +8,8 @@
 // (Skill-Details siehe Offene Punkte in PROJECT_CONTEXT.md) später rein als
 // Daten ergänzt werden, ohne die Engine anzufassen.
 
+import type { PixelCharacterConfig } from "@/lib/pixel-character";
+
 export type UnitClass = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
 export type TeamId = "A" | "B";
@@ -135,6 +137,9 @@ export interface BattleUnitDefinition {
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork statt des Profilbilds selbst ist (siehe resolve-image.ts). */
   avatarBadgeUrl?: string | null;
+  /** Pixel-Charakter der Community-Karte (siehe lib/pixel-character) — die Kampf-Ansichten zeigen
+   *  ihn statt des Bildes und spielen Angriffs-/Block-Animationen. Rein Anzeige, keine Kampf-Logik. */
+  pixelCharacter?: PixelCharacterConfig | null;
   /** Nur für Anzeige-Zwecke (z.B. Handkarten-Kacheln im OMA-Duels-Spielbrett,
    *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik.
    *  Bei älteren, bereits als JSON serialisierten Definitionen (z.B.
@@ -297,6 +302,7 @@ export interface RosterEntry {
   ultimateSkillDescription: string;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  pixelCharacter?: PixelCharacterConfig | null;
 }
 
 export interface BattleResult {

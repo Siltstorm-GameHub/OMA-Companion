@@ -1,8 +1,8 @@
 // ============================================
-// D&D-Rassen — hartcodierte Auswürfel-Tabelle
+// OMA-Quest-Rassen — hartcodierte Auswürfel-Tabelle
 // ============================================
 // Wird bei der Charaktererstellung zufällig gezogen (src/lib/dnd/index.ts /
-// API-Route). Boni sind klassische D&D-Attributsboni (klein, additiv auf die
+// API-Route). Boni sind klassische Rollenspiel-Attributsboni (klein, additiv auf die
 // gewürfelten Ability Scores), gleiche Konvention wie campaign-levels.ts
 // (hartcodierte TS-Daten statt DB-Content).
 

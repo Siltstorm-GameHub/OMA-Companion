@@ -22,6 +22,7 @@ import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
 import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
+import BattleFigure from "@/components/pixel-character/BattleFigure";
 
 // ---------- Skill-Effekt-Overlay ----------
 // Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
@@ -437,6 +438,8 @@ function UnitTile({
   isTarget,
   isVictory,
   vfx,
+  attackKey,
+  blockKey,
 }: {
   roster: RosterEntry;
   runtime: UnitRuntime;
@@ -446,6 +449,10 @@ function UnitTile({
    *  in BattleScreen) — spielt die Victory-Animation statt Idle, falls vorhanden. */
   isVictory: boolean;
   vfx: VfxEvent | null;
+  /** Wechselt (= Log-Schritt), wenn diese Einheit gerade eine Handlung ausführt — startet die Angriffs-Animation. */
+  attackKey: number;
+  /** Wechselt, wenn diese Einheit gerade einen Schild erhält — startet die Block-Animation. */
+  blockKey: number;
 }) {
   const config = CLASS_CONFIG[roster.class];
   const hpPct = Math.max(0, runtime.currentHp / runtime.maxHp);
@@ -483,7 +490,18 @@ function UnitTile({
             }}
           />
         )}
-        {roster.imageUrl ? (
+        {roster.pixelCharacter ? (
+          <BattleFigure
+            config={roster.pixelCharacter}
+            unitClass={roster.class}
+            team={roster.teamId}
+            attackKey={attackKey}
+            blockKey={blockKey}
+            alive={runtime.alive}
+            victory={isVictory}
+            title={roster.name}
+          />
+        ) : roster.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={roster.imageUrl}
@@ -587,6 +605,9 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   const lastEntry = step > 0 ? log[step - 1] : undefined;
   const classOf = (id: string) => rosterById.get(id)?.class;
   const currentVfx = useMemo(() => vfxForEntry(lastEntry, step, classOf), [lastEntry, step, rosterById]);
+  // Wer schlägt gerade zu / bekommt gerade einen Schild? (Pixel-Figuren spielen dazu Angriff bzw. Block.)
+  const attackerId = lastEntry?.type === "action" ? lastEntry.actorId : null;
+  const blockedId = lastEntry?.type === "shieldApplied" ? lastEntry.targetId : null;
   const cutsceneActor =
     lastEntry?.type === "action" && lastEntry.actionType === "ultimate" ? rosterById.get(lastEntry.actorId) : null;
 
@@ -666,6 +687,8 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               isTarget={derived.targetIds.has(r.instanceId)}
               isVictory={winner === r.teamId && rt.alive}
               vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
+              attackKey={attackerId === r.instanceId ? step : 0}
+              blockKey={blockedId === r.instanceId ? step : 0}
             />
           );
         })}
@@ -687,6 +710,8 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               isTarget={derived.targetIds.has(r.instanceId)}
               isVictory={winner === r.teamId && rt.alive}
               vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
+              attackKey={attackerId === r.instanceId ? step : 0}
+              blockKey={blockedId === r.instanceId ? step : 0}
             />
           );
         })}

@@ -1952,7 +1952,7 @@ model Card {
 
   imageUrl  String?
   // Pixel-Charakter (Paperdoll-Editor, siehe src/lib/pixel-character): Ebenen-Auswahl des Users
-  // für seine Community-Karte, zugleich seine Spielfigur im D&D. Shape: PixelCharacterConfig.
+  // für seine Community-Karte, zugleich seine Spielfigur in OMA Quest. Shape: PixelCharacterConfig.
   // null = noch nicht angepasst (Karte zeigt das Discord-Profilbild bzw. Klassen-Icon).
   pixelCharacter Json?
 
@@ -1961,9 +1961,9 @@ model Card {
 
   userCards UserCard[]
 
-  // --- D&D-Charakterbogen (nur relevant/befüllt für rarity = COMMUNITY) ---
+  // --- OMA-Quest-Charakterbogen (nur relevant/befüllt für rarity = COMMUNITY) ---
   dndRace       String? // z.B. "Mensch", "Elf", "Zwerg", "Halbling", "Halbork" — ausgewürfelt
-  dndClass      String? // volle D&D-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
+  dndClass      String? // volle OMA-Quest-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
   // NICHT dasselbe wie class: CardClass — siehe DND_CLASS_TO_CARD_CLASS in src/lib/dnd/class-mapping.ts
   abilityScores Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
   backstory     String? @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
@@ -1994,7 +1994,7 @@ model Card {
 }
 
 // ============================================
-// D&D-Weltkarte, Reisen, Story & Quests
+// OMA-Quest-Weltkarte, Reisen, Story & Quests
 // ============================================
 // Story-Content selbst (Ereignis-/Backstory-Texte) ist prozedural aus
 // hartcodierten gewichteten Tabellen gezogen (src/lib/dnd/*), NIE per LLM-Call
@@ -2004,7 +2004,7 @@ model Card {
 
 enum DndLocationType {
   SETTLEMENT // Stadt/Dorf — Handel, NPC-Dialoge, sichere Zone, Quest-Geber
-  DUNGEON // Ruine/Verlies — Kämpfe, Loot, klassische D&D-Encounter
+  DUNGEON // Ruine/Verlies — Kämpfe, Loot, klassische Rollenspiel-Encounter
   WILDERNESS // Wald/Sumpf/Berge — Erkundung, Sammeln, Zufallsbegegnungen
   LANDMARK // besonderer Ort — Story-/Lore-lastige Einzelereignisse
 }

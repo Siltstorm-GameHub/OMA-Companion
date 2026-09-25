@@ -1,7 +1,7 @@
 // ============================================
-// D&D-Würfellogik: 4d6-drop-lowest + Stat-Ableitung
+// OMA-Quest-Würfellogik: 4d6-drop-lowest + Stat-Ableitung
 // ============================================
-// Reine, testbare Funktionen (kein DB-Zugriff) — klassische D&D-Methode für
+// Reine, testbare Funktionen (kein DB-Zugriff) — klassische Rollenspiel-Methode für
 // STR/DEX/CON/INT/WIS/CHA, plus Ableitung der Battle-Engine-Basiswerte
 // (baseHp/baseAttack/baseDefense/speed) daraus, geclamped auf einen Korridor
 // um die bisherige Perzentil-Bandbreite (siehe apply-season-results.ts /
@@ -15,7 +15,7 @@ export type AbilityScores = Record<AbilityKey, number>;
 
 export const ABILITY_KEYS: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
 
-/** Rollt 4 W6, verwirft den niedrigsten, summiert die restlichen 3 — der Standard-D&D-Wurf. */
+/** Rollt 4 W6, verwirft den niedrigsten, summiert die restlichen 3 — der Standard-Rollenspiel-Wurf. */
 export function roll4d6DropLowest(rng: () => number = Math.random): number {
   const rolls = [1, 2, 3, 4].map(() => Math.floor(rng() * 6) + 1);
   rolls.sort((a, b) => a - b);

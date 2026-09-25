@@ -127,7 +127,7 @@ export default function MyCardEditor({
           <div>
             <h2 className="text-sm font-bold text-white">Pixel-Charakter</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Gestalte deine Figur — sie ist das Motiv deiner Karte und deine Spielfigur im D&amp;D.
+              Gestalte deine Figur — sie ist das Motiv deiner Karte und deine Spielfigur in OMA Quest.
               Die Auswahl wird beim Speichern übernommen.
             </p>
           </div>

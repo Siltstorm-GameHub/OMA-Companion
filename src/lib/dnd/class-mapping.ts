@@ -1,5 +1,5 @@
 // ============================================
-// Zuordnung D&D-Klasse → Battle-Engine-Rolle (CardClass)
+// Zuordnung OMA-Quest-Klasse → Battle-Engine-Rolle (CardClass)
 // ============================================
 // Fix zur Auswürfel-Zeit (character/create), danach über overriddenFields
 // ("class") dauerhaft geschützt — siehe plan Abschnitt 1.2.

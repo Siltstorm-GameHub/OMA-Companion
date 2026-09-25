@@ -8,6 +8,7 @@
 // persistiert — die restliche App (Replay-Seite, Kampfhistorie, Rangliste,
 // Win-Streak) merkt vom neuen interaktiven Ablauf nichts.
 
+import type { PixelCharacterConfig } from "@/lib/pixel-character";
 import { prisma } from "@/lib/prisma";
 import {
   advance,
@@ -156,6 +157,7 @@ export interface LiveUnitSnapshot {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  pixelCharacter?: PixelCharacterConfig | null;
   /** Aktive Stat-Buffs/-Debuffs (Angriff/Verteidigung/Speed) — für die
    *  Buff/Debuff-Icons auf der Heldenkarte, siehe UnitCard in LiveBattleView.tsx. */
   statModifiers: ActiveStatModifier[];
@@ -249,6 +251,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     isAlive: u.isAlive,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
+    pixelCharacter: u.def.pixelCharacter ?? null,
     statModifiers: u.statModifiers,
   };
 }

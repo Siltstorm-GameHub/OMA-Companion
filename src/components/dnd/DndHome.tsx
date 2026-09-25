@@ -1,10 +1,10 @@
 "use client";
 
 // ============================================
-// D&D-Startseite (nach Erst-Erstellung) — schaltet zwischen Weltkarte und
+// OMA-Quest-Startseite (nach Erst-Erstellung) — schaltet zwischen Weltkarte und
 // Re-Roll-Ansicht um
 // ============================================
-// Sobald dndCreatedAt gesetzt ist, zeigt /dnd normalerweise nur noch die
+// Sobald dndCreatedAt gesetzt ist, zeigt /oma-quest normalerweise nur noch die
 // Weltkarte — aber gekaufte Re-Roll-Credits (Shop: buy-dnd-reroll) oder ein
 // übrig gebliebener Gratis-Credit (Erst-Erstellung/Auto-Migration) müssen
 // auch später noch einlösbar sein, nicht nur direkt nach der Erstellung.

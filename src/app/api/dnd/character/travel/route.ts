@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!user?.discordId) return NextResponse.json({ error: "Kein verknüpfter Discord-Account" }, { status: 400 });
 
   const card = await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId } });
-  if (!card?.dndCreatedAt) return NextResponse.json({ error: "Kein D&D-Charakter" }, { status: 400 });
+  if (!card?.dndCreatedAt) return NextResponse.json({ error: "Kein OMA-Quest-Charakter" }, { status: 400 });
 
   // Fällige Ankunft zuerst committen, sonst könnte eine neue Reise auf einer
   // veralteten Position starten.

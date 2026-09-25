@@ -112,9 +112,9 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
         </div>
       </div>
 
-      {/* ── D&D-Re-Roll-Preis ── */}
+      {/* ── OMA-Quest-Re-Roll-Preis ── */}
       <div className="glass rounded-2xl p-4 space-y-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">D&D-Charakter-Re-Roll</p>
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">OMA-Quest-Charakter-Re-Roll</p>
         <label className="block max-w-xs">
           <span className="text-xs text-gray-500">Preis (Münzen)</span>
           <input

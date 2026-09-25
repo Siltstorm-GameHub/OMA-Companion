@@ -1,7 +1,7 @@
 // ============================================
 // Charaktererstellung: Auswürfel-Flow (reine Funktion, kein DB-Zugriff)
 // ============================================
-// Rasse & Klasse werden bewusst gewählt (wie im echten D&D), nur die
+// Rasse & Klasse werden bewusst gewählt (wie im klassischen Rollenspiel), nur die
 // Attribute werden gewürfelt (4d6-drop-lowest) → abgeleitete Basiswerte
 // (geclamped) → Backstory. `buildCharacterSheet` ist der Kern (nimmt
 // Rasse+Klasse entgegen), `rollNewCharacterSheet` würfelt zusätzlich Rasse+
@@ -48,7 +48,7 @@ export function rollNewCharacterSheet(
   return buildCharacterSheet(name, rollRace(rng), rollClass(rng), gender, rng);
 }
 
-/** Felder, die nach der D&D-Erstellung vor der Saison-Neuberechnung geschützt
+/** Felder, die nach der OMA-Quest-Erstellung vor der Saison-Neuberechnung geschützt
  *  werden (plan Abschnitt 1.1) — backstory ist bewusst NICHT enthalten
  *  (bleibt frei editierbar, runSeasonUpdate fasst es ohnehin nie an). */
 export const DND_OVERRIDDEN_FIELDS = [

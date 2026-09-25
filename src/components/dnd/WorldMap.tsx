@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================
-// D&D-Weltkarte — Hex-Karte (Hex-Map-Paket, Seed 21) mit Zoom/Pan
+// OMA-Quest-Weltkarte — Hex-Karte (Hex-Map-Paket, Seed 21) mit Zoom/Pan
 // ============================================
 // Das Kartenbild ist vorgerendert (public/dnd/hex-world.webp), Gelände und Wege
 // kommen aus src/lib/dnd/hex. Jedes Feld ist anklickbar und betretbar (außer Wasser/
@@ -439,9 +439,9 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             const slot = slotByCard.get(c.cardId) ?? 0;
             const dx = slot * 16;
             if (c.pixel) {
-              // Füße des 64-px-Frames liegen bei (31, 55): auf dem Feldmittelpunkt (leicht darunter) absetzen.
+              // Füße des 64-px-Frames liegen bei (31, 52): auf dem Feldmittelpunkt (leicht darunter) absetzen.
               return (
-                <div key={c.cardId} className="absolute pointer-events-none" style={{ left: p.x - 31 + dx, top: p.y - 41, zIndex: 10 }} title={c.name}>
+                <div key={c.cardId} className="absolute pointer-events-none" style={{ left: p.x - 31 + dx, top: p.y - 38, zIndex: 10 }} title={c.name}>
                   <PixelCharacter config={c.pixel} anim={c.inTransit ? "move" : "idle"} dir={p.dir} scale={1} title={c.name} />
                 </div>
               );
@@ -531,7 +531,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
                 </p>
               </div>
               {selectedLocation && (
-                <Link href={`/dnd/${selectedLocation.slug}`} className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">
+                <Link href={`/oma-quest/${selectedLocation.slug}`} className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">
                   Ort ansehen
                 </Link>
               )}

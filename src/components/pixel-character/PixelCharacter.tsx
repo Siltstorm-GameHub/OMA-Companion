@@ -60,6 +60,12 @@ interface Props {
   config: PixelCharacterConfig;
   anim?: PixelAnim;
   dir?: PixelDir;
+  /** false = Animation läuft einmal ab und bleibt auf dem letzten Bild stehen (Kampfanimationen). */
+  loop?: boolean;
+  /** Ändert sich der Wert, startet die Animation neu (auch bei gleicher `anim`). */
+  replayKey?: number;
+  /** Nach dem letzten Bild einer Einmal-Animation (loop=false). */
+  onDone?: () => void;
   /** Ganzzahliger Vergrößerungsfaktor (1 Frame-Pixel = scale Bildschirm-Pixel) */
   scale?: number;
   mode?: "full" | "focus";
@@ -68,9 +74,11 @@ interface Props {
 }
 
 export default function PixelCharacter({
-  config, anim = "idle", dir = "down", scale = 4, mode = "full", className = "", title,
+  config, anim = "idle", dir = "down", scale = 4, mode = "full", className = "", title, loop = true, onDone, replayKey = 0,
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
   const rect: Rect = mode === "focus" ? FOCUS_RECT : { x: 0, y: 0, w: FRAME, h: FRAME };
   const configKey = JSON.stringify(config.layers);
 
@@ -89,6 +97,11 @@ export default function PixelCharacter({
       drawFrame(ctx, images, 0, dir, rect, scale);
       if (frames > 1) {
         timer = setInterval(() => {
+          if (!loop && frame >= frames - 1) {
+            if (timer) clearInterval(timer);
+            onDoneRef.current?.();
+            return;
+          }
           frame = (frame + 1) % frames;
           drawFrame(ctx, images, frame, dir, rect, scale);
         }, 1000 / PIXEL_ANIM_FPS[anim]);
@@ -97,7 +110,7 @@ export default function PixelCharacter({
     return () => { cancelled = true; if (timer) clearInterval(timer); };
     // config wird über configKey verfolgt (stabiler Vergleich statt Objekt-Identität)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configKey, anim, dir, scale, mode]);
+  }, [configKey, anim, dir, scale, mode, loop, replayKey]);
 
   return (
     <canvas

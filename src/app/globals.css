@@ -448,6 +448,17 @@ select.input-glass option { background: #0f1117; }
 }
 .attack-lunge { animation: attack-lunge 0.45s cubic-bezier(0.33,1,0.68,1) both; }
 
+/* ── Sieger-Hüpfer der Pixel-Figuren: schnell hoch, weich (ease-out-quart) zurück, kurze Pause,
+   kein federndes Nachschwingen. Bei reduzierter Bewegung steht die Figur still. ── */
+@keyframes victory-hop {
+  0%   { transform: translateY(0); animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1); }
+  30%  { transform: translateY(-8px); animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0); }
+  60%  { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+.victory-hop { animation: victory-hop 1.4s infinite; }
+@media (prefers-reduced-motion: reduce) { .victory-hop { animation: none; } }
+
 /* ── Archetyp-Treffer-Ring — Farbe kommt von der Klasse des ausführenden
    Helden (--ring-color, siehe LiveBattleView UnitCard) statt fix zu sein,
    damit sichtbar wird WER zuschlägt, nicht nur DASS etwas passiert. ── */

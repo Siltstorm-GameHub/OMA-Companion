@@ -15,7 +15,7 @@ export async function POST() {
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { discordId: true } });
   const card = user?.discordId ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId } }) : null;
-  if (!card?.dndCreatedAt) return NextResponse.json({ error: "Kein D&D-Charakter" }, { status: 400 });
+  if (!card?.dndCreatedAt) return NextResponse.json({ error: "Kein OMA-Quest-Charakter" }, { status: 400 });
 
   const result = await runStoryTick(card.id);
   return NextResponse.json(result);

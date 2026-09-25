@@ -35,12 +35,12 @@ const TABS: {
   { key: "community", label: "Community", icon: "navRank", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
 ];
 
-// D&D-Welt ist kein Tab-Panel (WorldMap/CharacterCreation leben unter /dnd mit
+// OMA Quest ist kein Tab-Panel (WorldMap/CharacterCreation leben unter /oma-quest mit
 // eigener Server-Logik für Charaktererstellungs-Gate), sondern ein echter
 // Link im selben Nav-Look — deshalb außerhalb von TABS, als eigenes Element
 // gerendert statt über setActive.
 const DND_LINK_TAB = {
-  label: "D&D-Welt",
+  label: "OMA Quest",
   icon: "map" as MobaIconName,
   accent: "#38bdf8",
   accentDark: "#0369a1",
@@ -119,7 +119,7 @@ function BattleCardsTabsInner({
           );
         })}
         <Link
-          href="/dnd"
+          href="/oma-quest"
           className="moba-nav-item"
           style={{
             ["--accent" as string]: DND_LINK_TAB.accent,

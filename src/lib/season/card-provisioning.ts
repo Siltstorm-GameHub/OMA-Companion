@@ -6,8 +6,8 @@
 // in apply-season-results.ts, weil dort explizit vorausgesetzt wird, dass
 // die Karte schon existiert ("Keine Karte für User X gefunden — überspringe").
 //
-// Seit dem D&D-Weltkarten-Feature ist die erste Karte eines Mitglieds direkt
-// ein vollständiger, ausgewürfelter D&D-Charakter (Rasse/Klasse/Attribute/
+// Seit dem OMA-Quest-Weltkarten-Feature ist die erste Karte eines Mitglieds direkt
+// ein vollständiger, ausgewürfelter OMA-Quest-Charakter (Rasse/Klasse/Attribute/
 // Backstory, siehe src/lib/dnd/character-creation.ts) statt eines TANK-
 // Platzhalters — der bisherige "Kalter Start"-Lückenschluss aus
 // PROJECT_CONTEXT.md Offene Punkte #6 bleibt (idempotent, Race-Condition-
