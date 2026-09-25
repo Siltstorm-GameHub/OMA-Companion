@@ -6,7 +6,7 @@ import { randomTeConfig } from "@/lib/te-character";
 import { LIMITS, type CustomWorldDoc } from "./custom-world";
 import { STAMPS, type StampDef, type StampId } from "./stamps";
 import { allActorsOf, getTemplate, INTERIOR_LIMITS } from "./interior";
-import type { Actor, Building, GroundType, Interior } from "./types";
+import type { Actor, Building, GroundType, Interior, Talk } from "./types";
 
 export type ActorKind = Actor["kind"];
 
@@ -43,6 +43,13 @@ export function placeStamp(d: CustomWorldDoc, id: StampId, x: number, y: number)
   if (!inMap(d, x, y) || d.stamps.length >= LIMITS.maxStamps) return d;
   if (d.stamps.some((s) => s.id === id && s.x === x && s.y === y)) return d;
   return { ...d, stamps: [...d.stamps, { id, x, y }] };
+}
+
+/** Objekt (Stempel) verschieben: `index` bleibt gleich, nur die Ecke oben links ändert sich. */
+export function moveStamp(d: CustomWorldDoc, index: number, x: number, y: number): CustomWorldDoc {
+  const s = d.stamps[index];
+  if (!s || !inMap(d, x, y) || (s.x === x && s.y === y)) return d;
+  return { ...d, stamps: d.stamps.map((o, i) => (i === index ? { ...o, x, y } : o)) };
 }
 
 export function placeBuilding(d: CustomWorldDoc, b: Building): CustomWorldDoc {
@@ -130,9 +137,47 @@ export function removeAt(d: CustomWorldDoc, x: number, y: number): CustomWorldDo
       stamps: a.kind === "sign" ? d.stamps.filter((s) => !(s.id === "sign" && s.x === a.x && s.y === a.y)) : d.stamps,
     };
   }
-  if (hit.type === "building") return { ...d, buildings: d.buildings.filter((_, i) => i !== hit.index) };
+  if (hit.type === "building") return removeBuilding(d, hit.index);
   if (hit.type === "stamp") return { ...d, stamps: d.stamps.filter((_, i) => i !== hit.index) };
   return setWall(d, x, y, false);
+}
+
+/** Gebäude behalten, die `keep` erfüllen; Quest-Schritte „Gebäude betreten“ zeigen danach auf die neuen Positionen (entfernte Gebäude → Schritt ohne Ziel, der Editor meldet das). */
+function dropBuildings(d: CustomWorldDoc, keep: (b: Building, i: number) => boolean): Pick<CustomWorldDoc, "buildings" | "quests"> {
+  const map = new Map<number, number>();
+  const buildings: Building[] = [];
+  d.buildings.forEach((b, i) => { if (keep(b, i)) { map.set(i, buildings.length); buildings.push(b); } });
+  const quests = d.quests.map((q) => ({
+    ...q,
+    steps: q.steps.map((s) => {
+      if (s.kind !== "enter" || s.building === undefined) return s;
+      const { building: _old, ...rest } = s;
+      void _old;
+      const now = map.get(s.building);
+      return now === undefined ? rest : { ...rest, building: now };
+    }),
+  }));
+  return { buildings, quests };
+}
+
+export function removeBuilding(d: CustomWorldDoc, index: number): CustomWorldDoc {
+  return { ...d, ...dropBuildings(d, (_, i) => i !== index) };
+}
+
+/** Der Akteur bekommt für diesen Quest-Schritt einen Dialog mit „Quest rückt weiter“ (vorhandenen einschalten, sonst neu anlegen). */
+export function bindTalkStep(d: CustomWorldDoc, questId: string, step: number, actorId: string): CustomWorldDoc {
+  const firstId = d.quests[0]?.id;
+  return mapAllActors(d, (a) => {
+    if (a.id !== actorId) return a;
+    const idx = a.talk.findIndex((t) => t.step === step && (t.quest ?? firstId) === questId);
+    if (idx >= 0) {
+      const t = a.talk[idx];
+      if (t.advance || t.choices?.some((c) => c.success.advance)) return a;
+      return { ...a, talk: a.talk.map((o, i) => (i === idx ? { ...o, advance: true } : o)) };
+    }
+    const fresh: Talk = { step, lines: [step === 0 ? "Ich hätte da eine Aufgabe für dich." : "Danke, das war's."], advance: true, ...(questId !== firstId ? { quest: questId } : {}) };
+    return { ...a, talk: [...a.talk, fresh] };
+  });
 }
 
 /** Kartengröße ändern: Boden wird beschnitten/aufgefüllt, Dinge außerhalb entfallen, der Start bleibt im Bild. */
@@ -144,7 +189,7 @@ export function resizeDoc(d: CustomWorldDoc, cols: number, rows: number): Custom
   return {
     ...d, cols, rows, ground,
     walls: d.walls.filter(([x, y]) => inside(x, y)),
-    buildings: d.buildings.filter((b) => b.x + b.w <= cols && b.y + b.roofRows + 2 <= rows),
+    ...dropBuildings(d, (b) => b.x + b.w <= cols && b.y + b.roofRows + 2 <= rows),
     stamps: d.stamps.filter((s) => inside(s.x, s.y)),
     actors: d.actors.filter((a) => inside(a.x, a.y)),
     spawn: { x: Math.min(d.spawn.x, cols - 1), y: Math.min(d.spawn.y, rows - 1) },
@@ -248,6 +293,25 @@ export function interiorMoveActor(d: CustomWorldDoc, bi: number, id: string, x: 
   const it = d.buildings[bi]?.interior;
   if (!it || !interiorInside(it, x, y) || (x === it.exitX && y === it.rows - 2) || it.actors.some((a) => a.id !== id && a.x === x && a.y === y)) return d;
   return updateInterior(d, bi, (i) => ({ ...i, actors: i.actors.map((a) => (a.id === id ? { ...a, x, y } : a)) }));
+}
+
+/** Oberstes Objekt auf der Kachel im Innenraum (Index) oder −1. */
+export function interiorStampAt(it: Interior, x: number, y: number): number {
+  for (let i = it.stamps.length - 1; i >= 0; i--) {
+    const st = it.stamps[i];
+    const def = STAMPS[st.id] as StampDef;
+    if (x >= st.x && x < st.x + def.w && y >= st.y && y < st.y + def.h) return i;
+  }
+  return -1;
+}
+
+/** Möbel im Innenraum verschieben (Ecke oben links, muss im Raum liegen). */
+export function interiorMoveStamp(d: CustomWorldDoc, bi: number, index: number, x: number, y: number): CustomWorldDoc {
+  return updateInterior(d, bi, (it) => {
+    const s = it.stamps[index];
+    if (!s || x < 0 || y < 0 || x >= it.cols || y >= it.rows || (s.x === x && s.y === y)) return it;
+    return { ...it, stamps: it.stamps.map((o, i) => (i === index ? { ...o, x, y } : o)) };
+  });
 }
 
 /** Radierer im Innenraum: Akteur, sonst oberstes Objekt auf der Kachel. */

@@ -355,7 +355,7 @@ interface Props {
   /** Ids besiegter Monster-Figuren (werden ausgeblendet) */
   slain?: string[];
   /** Meldet einen abgeschlossenen Quest-Schritt; liefert den gespeicherten Stand (oder null bei Fehler). */
-  onAdvance: (quest: string, from: number) => Promise<{ step: number; completed: boolean; tracker?: TrackerItem[] } | null>;
+  onAdvance: (quest: string, from: number, enter?: number) => Promise<{ step: number; completed: boolean; tracker?: TrackerItem[] } | null>;
   /** Sichtfenster in Kacheln (nur für Übersichten/Tests ändern). */
   viewCols?: number;
   viewRows?: number;
@@ -479,7 +479,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
       if (e.type === "advance") {
         const from = e.from;
         notify?.("quest", from === 0 ? `Quest angenommen: ${q.title}` : `Quest-Fortschritt: ${q.title}`, q.objectives[from + 1]);
-        onAdvance(e.quest, from).then((res) => {
+        onAdvance(e.quest, from, e.enter).then((res) => {
           const cur = gameRef.current;
           if (!res || !cur) return;
           syncQuestStep(cur, e.quest, res.step);

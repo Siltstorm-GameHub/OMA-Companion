@@ -13,7 +13,7 @@ import { STAMPS, type StampDef } from "./stamps";
 import { getMonster } from "@/lib/dnd/combat";
 import { weatherMatches, type RollResult, type Weather } from "./rpg";
 import { doorFront, doorTile, interiorSpawn, interiorToMap } from "./interior";
-import { worldQuestsOf, type Actor, type Dir, type Talk, type TeMap, type WorldDef, type WorldQuest } from "./types";
+import { stepsOf, worldQuestsOf, type Actor, type Dir, type Talk, type TeMap, type WorldDef, type WorldQuest } from "./types";
 
 export type { Dir };
 export const DELTA: Record<Dir, [number, number]> = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
@@ -44,7 +44,7 @@ export interface Dialog {
   fight?: { actor: string; monster: string };
 }
 export type Goal = { kind: "talk"; actor: string } | { kind: "enter" } | { kind: "exit" };
-export type GameEvent = { type: "advance"; quest: string; from: number } | { type: "complete"; quest: string };
+export type GameEvent = { type: "advance"; quest: string; from: number; /** bei „Gebäude betreten“: Index des Gebäudes */ enter?: number } | { type: "complete"; quest: string };
 
 /** Auswertung einer Antwort (vom Server bzw. im Testlauf lokal). */
 export interface ChoiceResult {
@@ -232,6 +232,19 @@ export function enterBuilding(game: Game, index: number): void {
   game.dialog = null; game.queue = [];
   for (const a of map.actors) if (!game.actorDir.has(a.id)) game.actorDir.set(a.id, a.dir);
   game.sceneChanges++;
+  completeEnterSteps(game, index);
+}
+
+/** Quests, deren aktueller Schritt „Gebäude betreten“ genau dieses Gebäude ist, rücken weiter (nur Schritt ≥ 1, die Quest muss angenommen sein). */
+function completeEnterSteps(game: Game, building: number): void {
+  for (const q of worldQuestsOf(game.world)) {
+    const cur = game.questSteps[q.slug] ?? 0;
+    const st = stepsOf(q)[cur];
+    if (cur < 1 || !st || st.kind !== "enter" || st.building !== building) continue;
+    game.questSteps[q.slug] = cur + 1;
+    game.events.push({ type: "advance", quest: q.slug, from: cur, enter: building });
+    if (game.questSteps[q.slug] === questLen(q)) game.events.push({ type: "complete", quest: q.slug });
+  }
 }
 
 /** Gebäude verlassen: zurück vor die Tür draußen. */

@@ -36,7 +36,7 @@ function Steps({ q }: { q: LogQuest }) {
             <span className={`mt-0.5 w-3.5 h-3.5 shrink-0 rounded-full border text-[8px] grid place-items-center ${state === "done" ? "bg-emerald-500/30 border-emerald-400/50 text-emerald-200" : state === "now" ? "border-amber-300 text-amber-300" : "border-white/20"}`}>{state === "done" ? "✓" : i + 1}</span>
             <span>
               {s.text}
-              {place && state !== "done" && <span className="text-sky-300"> — {s.kind === "visit" ? "besuche " : "bei "}{place}</span>}
+              {place && state !== "done" && <span className="text-sky-300"> — {s.kind === "visit" ? "besuche " : s.kind === "enter" ? "betritt ein Gebäude in " : "bei "}{place}</span>}
             </span>
           </li>
         );

@@ -46,7 +46,16 @@ export const LIMITS = {
 export type BorderStyle = "none" | "trees" | "cave" | "rocks";
 
 /** Schritt einer Quest im Editor: Gespräch in dieser Location oder Besuch einer anderen (Slug der Ziel-Location). */
-export interface DocQuestStep { kind: "talk" | "visit"; text: string; location?: string }
+export interface DocQuestStep {
+  kind: "talk" | "visit" | "enter";
+  text: string;
+  /** visit: Slug der Ziel-Location */
+  location?: string;
+  /** talk: NPC/Händler/Truhe dieser Location, mit dem gesprochen werden muss */
+  actor?: string;
+  /** enter: Index des Gebäudes (mit Innenraum), das betreten werden muss */
+  building?: number;
+}
 
 export interface CustomWorldQuest {
   /** Kurze Kennung innerhalb der Location ("main" = die erste, deren Slug sich nie ändert) */
@@ -243,13 +252,16 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     const qsteps: DocQuestStep[] = [];
     for (const [si, st] of stepsIn.slice(0, LIMITS.maxSteps).entries()) {
       const o: Record<string, unknown> = isObj(st) ? st : { text: st };
-      const kind = o.kind === "visit" ? "visit" : "talk";
+      const kind = o.kind === "visit" ? "visit" : o.kind === "enter" ? "enter" : "talk";
+      const actorRef = typeof o.actor === "string" && /^[a-z0-9_-]{1,24}$/.test(o.actor) ? o.actor : undefined;
+      const buildingRef = Number.isInteger(o.building) && (o.building as number) >= 0 && (o.building as number) < rawBuildings.length ? (o.building as number) : undefined;
       const location = typeof o.location === "string" && /^[a-z0-9_-]{1,40}$/.test(o.location) ? o.location : undefined;
       if (kind === "visit" && !location) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1}: Wähle die Location, die besucht werden soll.`);
-      if (kind === "visit" && si === 0) fail("Der erste Quest-Schritt muss ein Gespräch sein (dort nimmt man die Quest an).");
+      if (kind === "enter" && buildingRef === undefined) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1}: Wähle das Gebäude, das betreten werden soll.`);
+      if ((kind === "visit" || kind === "enter") && si === 0) fail("Der erste Quest-Schritt muss ein Gespräch sein (dort nimmt man die Quest an).");
       const t = text(o.text, LIMITS.objectiveLen);
       if (!t) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1} hat keinen Text.`);
-      qsteps.push({ kind, text: t, ...(kind === "visit" && location ? { location } : {}) });
+      qsteps.push({ kind, text: t, ...(kind === "visit" && location ? { location } : {}), ...(kind === "talk" && actorRef ? { actor: actorRef } : {}), ...(kind === "enter" && buildingRef !== undefined ? { building: buildingRef } : {}) });
     }
     while (qsteps.length < LIMITS.minSteps) qsteps.push({ kind: "talk", text: "" });
     const quest: CustomWorldQuest = {
@@ -286,7 +298,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
       const qs = stepsOfQuest.get(qid) ?? [];
       // Dialoge gelten nur für Gesprächs-Schritte (Besuche zählt der Server)
       const step = t.step === "*" ? "*" : int(t.step, 0, qs.length - 1);
-      if (typeof step === "number" && qs[step]?.kind === "visit") continue;
+      if (typeof step === "number" && (qs[step]?.kind === "visit" || qs[step]?.kind === "enter")) continue;
       const lines = (Array.isArray(t.lines) ? t.lines : []).map((l) => text(l, LIMITS.lineLen)).filter(Boolean).slice(0, LIMITS.maxLines);
       if (step === null || !lines.length) continue;
       const choices = sanitizeChoices(t.choices);
@@ -393,7 +405,7 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
   const worldQuests: WorldQuest[] = doc.quests.map((q) => ({
     slug: slugOf(q.id), title: q.title, xpReward: q.xpReward,
     objectives: [...q.steps.map((st) => st.text), q.done],
-    steps: q.steps.map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}) })),
+    steps: q.steps.map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}), ...(st.actor ? { actor: st.actor } : {}), ...(st.building !== undefined ? { building: st.building } : {}) })),
   }));
   return { slug, title: doc.title, map: m.build(doc.spawn, 6), quest: worldQuests[0], extraQuests: worldQuests.slice(1) };
 }
@@ -457,6 +469,19 @@ export function checkPlayable(doc: CustomWorldDoc): string[] {
   for (const q of doc.quests) {
     for (const [i, st] of q.steps.entries()) {
       if (st.kind === "visit") continue;
+      if (st.kind === "enter") {
+        const b = st.building !== undefined ? doc.buildings[st.building] : undefined;
+        if (!b) errors.push(`Quest „${q.title}“, Schritt ${i + 1}: Das Gebäude, das betreten werden soll, gibt es nicht mehr.`);
+        else if (!b.interior) errors.push(`Quest „${q.title}“, Schritt ${i + 1}: „${b.name || "Gebäude"}“ hat keinen Innenraum und lässt sich nicht betreten.`);
+        continue;
+      }
+      if (st.actor) {
+        const named = allActorsOf({ actors: doc.actors, buildings: doc.buildings }).find((a) => a.id === st.actor);
+        if (!named) { errors.push(`Quest „${q.title}“, Schritt ${i + 1}: Der gewählte NPC gibt es nicht mehr.`); continue; }
+        const done = named.talk.some((t) => t.step === i && (t.quest ?? firstId) === q.id && (t.advance || t.choices?.some((c) => c.success.advance)));
+        if (!done) errors.push(`Quest „${q.title}“, Schritt ${i + 1}: „${named.name}“ braucht einen Dialog für diesen Schritt mit „Quest rückt weiter“.`);
+        continue;
+      }
       const ok = allActorsOf({ actors: doc.actors, buildings: doc.buildings }).some((a) => a.talk.some((t) => t.step === i && (t.quest ?? firstId) === q.id && (t.advance || t.choices?.some((c) => c.success.advance))));
       if (!ok) errors.push(`Quest „${q.title}“, Schritt ${i + 1} lässt sich nicht abschließen: Ein Akteur braucht dafür einen Dialog für diese Quest und „Schritt ${i + 1}“ mit „Quest rückt weiter“.`);
     }
@@ -512,7 +537,7 @@ export function worldToDoc(world: WorldDef, description = ""): CustomWorldDoc {
     quests: worldQuestsOf(world).map((q, i) => ({
       id: i === 0 ? "main" : `q${i + 1}`,
       title: q.title,
-      steps: stepsOf(q).map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}) })),
+      steps: stepsOf(q).map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}), ...(st.actor ? { actor: st.actor } : {}), ...(st.building !== undefined ? { building: st.building } : {}) })),
       done: q.objectives[q.objectives.length - 1],
       xpReward: q.xpReward,
     })),

@@ -108,7 +108,14 @@ export interface Actor {
 
 /** Ein Schritt einer Quest: mit einem Akteur der Heimat-Location reden (`talk`) oder eine andere Location
  *  besuchen (`visit`, zählt automatisch beim Betreten der Location). */
-export interface QuestStep { kind: "talk" | "visit"; text: string; location?: string }
+export interface QuestStep {
+  /** talk = Gespräch (optional mit einem bestimmten NPC `actor`), enter = ein Gebäude dieser Location betreten (`building` = Index), visit = eine andere Location erreichen */
+  kind: "talk" | "visit" | "enter";
+  text: string;
+  location?: string;
+  actor?: string;
+  building?: number;
+}
 
 export interface WorldQuest {
   slug: string;

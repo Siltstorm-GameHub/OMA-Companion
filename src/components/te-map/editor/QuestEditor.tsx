@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LIMITS, type CustomWorldDoc, type CustomWorldQuest, type DocQuestStep } from "@/lib/te-map/custom-world";
-import { allActors, locateActor, mapAllActors, updateAnyActor } from "@/lib/te-map/custom-world-edit";
+import { allActors, bindTalkStep, locateActor, mapAllActors, updateAnyActor } from "@/lib/te-map/custom-world-edit";
 import TalkAdvanced from "./TalkAdvanced";
 import type { Actor, Talk } from "@/lib/te-map/types";
 
@@ -69,9 +69,16 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
     setQi(0);
   };
 
-  const addStep = (kind: "talk" | "visit") => {
+  const enterable = doc.buildings.flatMap((b, i) => (b.interior ? [{ index: i, name: b.name || `Gebäude ${i + 1}` }] : []));
+  const talkers = allActors(doc).filter((a) => a.kind === "npc" || a.kind === "merchant" || a.kind === "chest");
+  const addStep = (kind: "talk" | "visit" | "enter") => {
     if (quest.steps.length >= LIMITS.maxSteps) return;
-    patchQuest({ steps: [...quest.steps, { kind, text: "", ...(kind === "visit" ? { location: locations.find((l) => l.slug !== ownSlug)?.slug } : {}) }] });
+    patchQuest({ steps: [...quest.steps, { kind, text: "", ...(kind === "visit" ? { location: locations.find((l) => l.slug !== ownSlug)?.slug } : {}), ...(kind === "enter" && enterable[0] ? { building: enterable[0].index } : {}) }] });
+  };
+  /** Schritt „Gespräch“ an einen bestimmten NPC binden: der bekommt automatisch den passenden Dialog. */
+  const bindActor = (i: number, actorId: string) => {
+    const withDialog = actorId ? bindTalkStep(doc, quest.id, i, actorId) : doc;
+    onChange({ ...withDialog, quests: quests.map((q, k) => (k === cur ? { ...q, steps: q.steps.map((s, si) => { if (si !== i) return s; const { actor: _a, ...rest } = s; void _a; return actorId ? { ...rest, actor: actorId } : rest; }) } : q)) });
   };
   const removeStep = (i: number) => {
     if (quest.steps.length <= LIMITS.minSteps) return;
@@ -120,28 +127,59 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
                 {i === 0 ? (
                   <span className="text-[11px] text-gray-400">Gespräch — Quest-Angebot</span>
                 ) : (
-                  <select value={st.kind} disabled={readOnly} onChange={(e) => patchStep(i, e.target.value === "visit" ? { kind: "visit", location: locations.find((l) => l.slug !== ownSlug)?.slug } : { kind: "talk", location: undefined })} className="rounded bg-zinc-900 border border-white/10 px-1.5 py-0.5 text-white text-[11px]">
-                    <option value="talk">Gespräch hier</option>
-                    <option value="visit">Andere Location besuchen</option>
+                  <select
+                    value={st.kind} disabled={readOnly}
+                    onChange={(e) => {
+                      const k = e.target.value;
+                      const { actor: _a, building: _b, location: _l, ...rest } = st;
+                      void _a; void _b; void _l;
+                      patchQuest({ steps: quest.steps.map((s, si) => (si === i ? (k === "visit" ? { ...rest, kind: "visit", location: locations.find((l) => l.slug !== ownSlug)?.slug } : k === "enter" ? { ...rest, kind: "enter", ...(enterable[0] ? { building: enterable[0].index } : {}) } : { ...rest, kind: "talk" }) : s)) });
+                    }}
+                    className="rounded bg-zinc-900 border border-white/10 px-1.5 py-0.5 text-white text-[11px]"
+                  >
+                    <option value="talk">Gespräch mit einem NPC</option>
+                    <option value="enter">Gebäude betreten</option>
+                    <option value="visit">Location erreichen</option>
                   </select>
                 )}
                 {!readOnly && quest.steps.length > LIMITS.minSteps && (
                   <button type="button" onClick={() => removeStep(i)} aria-label={`Schritt ${i + 1} entfernen`} className="ml-auto text-gray-500 hover:text-red-400 text-sm px-1">✕</button>
                 )}
               </div>
+              {st.kind === "talk" && (
+                <label className="block text-[10px] text-gray-500">Mit wem? (der NPC bekommt den Dialog automatisch)
+                  <select value={st.actor ?? ""} disabled={readOnly} onChange={(e) => bindActor(i, e.target.value)} className={input}>
+                    <option value="">Beliebiger Akteur (Dialog selbst zuweisen)</option>
+                    {talkers.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.kind === "npc" ? "NPC" : a.kind === "merchant" ? "Händler" : "Truhe"})</option>)}
+                  </select>
+                </label>
+              )}
+              {st.kind === "enter" && (
+                enterable.length === 0 ? (
+                  <p className="text-[10px] text-amber-300">Kein Gebäude mit Innenraum vorhanden. Lege im Karten-Tab einen Innenraum an.</p>
+                ) : (
+                  <label className="block text-[10px] text-gray-500">Welches Gebäude?
+                    <select value={st.building ?? ""} disabled={readOnly} onChange={(e) => patchStep(i, { building: e.target.value === "" ? undefined : Number(e.target.value) })} className={input}>
+                      <option value="">Gebäude wählen …</option>
+                      {enterable.map((b) => <option key={b.index} value={b.index}>{b.name}</option>)}
+                    </select>
+                  </label>
+                )
+              )}
               {st.kind === "visit" && (
                 <select value={st.location ?? ""} disabled={readOnly} onChange={(e) => patchStep(i, { location: e.target.value })} className={input}>
                   <option value="">Location wählen …</option>
                   {locations.filter((l) => l.slug !== ownSlug).map((l) => <option key={l.slug} value={l.slug}>{l.name}</option>)}
                 </select>
               )}
-              <input value={st.text} maxLength={LIMITS.objectiveLen} disabled={readOnly} placeholder={st.kind === "visit" ? "z. B. Bring den Brief zum Bergpass." : "z. B. Sprich mit Olga."} onChange={(e) => patchStep(i, { text: e.target.value })} className={input} />
+              <input value={st.text} maxLength={LIMITS.objectiveLen} disabled={readOnly} placeholder={st.kind === "visit" ? "z. B. Erreiche den Bergpass." : st.kind === "enter" ? "z. B. Betritt die Taverne." : "z. B. Sprich mit Olga."} onChange={(e) => patchStep(i, { text: e.target.value })} className={input} />
             </div>
           ))}
           {!readOnly && quest.steps.length < LIMITS.maxSteps && (
             <div className="flex gap-2">
               <button type="button" onClick={() => addStep("talk")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Gespräch</button>
-              <button type="button" onClick={() => addStep("visit")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Besuch</button>
+              <button type="button" onClick={() => addStep("enter")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Gebäude betreten</button>
+              <button type="button" onClick={() => addStep("visit")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Location erreichen</button>
             </div>
           )}
           <label className="block text-[11px] text-gray-400">Abschlusstext

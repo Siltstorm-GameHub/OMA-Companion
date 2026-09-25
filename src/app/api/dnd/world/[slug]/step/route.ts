@@ -34,7 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: "Du bist nicht an diesem Ort" }, { status: 403 });
   }
 
-  const result = await advanceWorldQuestStep(card.id, slug, questSlug, from);
+  const enter = Number.isInteger(body?.enter) ? Number(body.enter) : undefined;
+  const result = await advanceWorldQuestStep(card.id, slug, questSlug, from, enter);
   if (!result) return NextResponse.json({ error: "Quest nicht gefunden" }, { status: 404 });
   return NextResponse.json({ ...result, tracker: await getTracker(card.id) });
 }

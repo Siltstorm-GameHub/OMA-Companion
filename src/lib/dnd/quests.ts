@@ -142,6 +142,8 @@ export async function advanceWorldQuestStep(
   locationSlug: string,
   questSlug: string,
   fromStep: number,
+  /** Bei einem Schritt „Gebäude betreten“: das vom Client gemeldete Gebäude (muss zum Schritt passen) */
+  enteredBuilding?: number,
 ): Promise<{ step: number; completed: boolean } | null> {
   const world = await resolveWorld(locationSlug);
   const def = world && worldQuestsOf(world).find((q) => q.slug === questSlug);
@@ -149,7 +151,11 @@ export async function advanceWorldQuestStep(
   await ensureDndQuestsSeeded();
   const quest = await prisma.dndQuest.findUnique({ where: { slug: questSlug } });
   if (!quest) return null;
-  if (stepsOf(def)[fromStep]?.kind === "visit") return { step: fromStep, completed: false };
+  const stepDef = stepsOf(def)[fromStep];
+  if (stepDef?.kind === "visit") return { step: fromStep, completed: false };
+  // „Gebäude betreten“ zählt nur mit dem passenden Gebäude; Gespräche dürfen nicht als Betreten gemeldet werden und umgekehrt
+  if (stepDef?.kind === "enter" && enteredBuilding !== stepDef.building) return { step: fromStep, completed: false };
+  if (stepDef?.kind !== "enter" && enteredBuilding !== undefined) return { step: fromStep, completed: false };
 
   const existing = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: quest.id } } });
   const current = existing?.current ?? 0;

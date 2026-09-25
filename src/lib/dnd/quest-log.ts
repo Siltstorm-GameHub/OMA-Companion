@@ -7,7 +7,7 @@
 
 import { prisma } from "../prisma";
 
-export interface LogStep { kind: "talk" | "visit"; text: string; location?: string; locationName?: string }
+export interface LogStep { kind: "talk" | "visit" | "enter"; text: string; location?: string; locationName?: string }
 export interface LogQuest {
   id: string;
   slug: string;
@@ -51,7 +51,7 @@ function toLogQuest(q: QuestRow, current: number, tracked: boolean, names: Map<s
     home: q.location,
     steps: raw
       ? raw.map((s) => ({
-          kind: s.kind === "visit" ? "visit" : "talk",
+          kind: s.kind === "visit" ? "visit" : s.kind === "enter" ? "enter" : "talk",
           text: String(s.text ?? ""),
           location: s.location,
           locationName: s.location ? names.get(s.location) : undefined,

@@ -13,7 +13,7 @@ import { drawTeFrame, loadTeLayerSets, type TeLayerSets } from "@/components/te-
 import { bakeStatic, drawStamp, loadSheets, T, type Sheets } from "@/components/te-map/TeWorld";
 import { docToWorld, LIMITS, type BorderStyle, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import {
-  hitTest, moveActor, paintGround, placeActor, placeBuilding, placeStamp, removeAt, removeInterior, resizeDoc, setInteriorFromTemplate, setSpawn, setTheme, setWall, updateActor,
+  hitTest, moveActor, moveStamp, paintGround, placeActor, placeBuilding, placeStamp, removeAt, removeBuilding, removeInterior, resizeDoc, setInteriorFromTemplate, setSpawn, setTheme, setWall, updateActor,
   type ActorKind,
 } from "@/lib/te-map/custom-world-edit";
 import { ITEMS } from "@/lib/dnd/items";
@@ -33,7 +33,7 @@ type Tool =
   | { kind: "actor"; actor: ActorKind }
   | { kind: "spawn" };
 
-type Selection = { type: "actor"; id: string } | { type: "building"; index: number } | null;
+type Selection = { type: "actor"; id: string } | { type: "building"; index: number } | { type: "stamp"; index: number } | null;
 
 const GROUND_LABEL: Record<GroundType, { outdoor: string; cave: string; color: string }> = {
   [GROUND.base]: { outdoor: "Gras", cave: "Höhlenboden", color: "#4d8a3c" },
@@ -126,7 +126,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const docRef = useRef(doc);
   useEffect(() => { docRef.current = doc; }, [doc]);
-  const stroke = useRef<{ dragActor?: string; painting: boolean } | null>(null);
+  const stroke = useRef<{ dragActor?: string; dragStamp?: { index: number; dx: number; dy: number }; painting: boolean } | null>(null);
   const [npcSets, setNpcSets] = useState<Map<string, TeLayerSets>>(new Map());
   const npcKeys = useRef(new Map<string, string>());
 
@@ -206,6 +206,9 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
     if (selected?.type === "actor") {
       const a = doc.actors.find((o) => o.id === selected.id);
       if (a) ctx.strokeRect(a.x * T + 0.5, a.y * T + 0.5, T - 1, T - 1);
+    } else if (selected?.type === "stamp") {
+      const st = doc.stamps[selected.index];
+      if (st) { const d = STAMPS[st.id] as StampDef; ctx.strokeRect(st.x * T + 0.5, st.y * T + 0.5, d.w * T - 1, d.h * T - 1); }
     } else if (selected?.type === "building") {
       const b = doc.buildings[selected.index];
       if (b) ctx.strokeRect(b.x * T + 0.5, b.y * T + 0.5, b.w * T - 1, (b.roofRows + 2) * T - 1);
@@ -257,6 +260,13 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
       const hit = hitTest(cur, x, y);
       if (hit?.type === "actor") { setSelected({ type: "actor", id: hit.id }); stroke.current = { dragActor: hit.id, painting: false }; onBeginEdit(); }
       else if (hit?.type === "building") setSelected({ type: "building", index: hit.index });
+      else if (hit?.type === "stamp") {
+        // Objekt aufheben: ziehen verschiebt es (Griff bleibt an der angefassten Kachel)
+        const st = cur.stamps[hit.index];
+        setSelected({ type: "stamp", index: hit.index });
+        stroke.current = { painting: false, dragStamp: { index: hit.index, dx: x - st.x, dy: y - st.y } };
+        onBeginEdit();
+      }
       else setSelected(null);
       return;
     }
@@ -269,6 +279,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
     if (!hover || hover.x !== t.x || hover.y !== t.y) setHover(t);
     const s = stroke.current;
     if (!s) return;
+    if (s.dragStamp) { const n = moveStamp(docRef.current, s.dragStamp.index, t.x - s.dragStamp.dx, t.y - s.dragStamp.dy); if (n !== docRef.current) commit(n); return; }
     if (s.dragActor) { const n = moveActor(docRef.current, s.dragActor, t.x, t.y); if (n !== docRef.current) commit(n); return; }
     if (s.painting && (tool.kind === "ground" || tool.kind === "wall" || tool.kind === "erase")) applyAt(t.x, t.y, false);
   };
@@ -375,6 +386,13 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
         )}
 
         {/* Auswahl */}
+        {selected?.type === "stamp" && doc.stamps[selected.index] && (
+          <div className="moba-panel rounded-2xl p-3 space-y-2">
+            <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Objekt</p>
+            <p className="text-xs text-white">{STAMP_LABELS[doc.stamps[selected.index].id] ?? doc.stamps[selected.index].id}</p>
+            <p className="text-[11px] text-gray-500">Ziehen verschiebt das Objekt. Löschen geht mit dem Radierer.</p>
+          </div>
+        )}
         {selActor && (
           <div className="moba-panel rounded-2xl p-3 space-y-2">
             <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">
@@ -476,7 +494,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
               ) : <p>Kein Innenraum.</p>}
             </div>
             {!readOnly && (
-              <button type="button" onClick={() => { onBeginEdit(); commit({ ...doc, buildings: doc.buildings.filter((_, i) => i !== selected.index) }); setSelected(null); }} className="w-full rounded-lg border border-red-400/30 text-red-300 font-semibold py-1.5 hover:bg-red-500/10">
+              <button type="button" onClick={() => { onBeginEdit(); commit(removeBuilding(doc, selected.index)); setSelected(null); }} className="w-full rounded-lg border border-red-400/30 text-red-300 font-semibold py-1.5 hover:bg-red-500/10">
                 Entfernen
               </button>
             )}

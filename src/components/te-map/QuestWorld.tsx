@@ -123,12 +123,12 @@ export default function QuestWorld({ slug }: { slug: string }) {
     return () => { cancelled = true; };
   }, [slug, notify]);
 
-  const onAdvance = useCallback(async (quest: string, from: number) => {
+  const onAdvance = useCallback(async (quest: string, from: number, enter?: number) => {
     try {
       const res = await fetch(`/api/dnd/world/${slug}/step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quest, from }),
+        body: JSON.stringify({ quest, from, ...(enter !== undefined ? { enter } : {}) }),
       });
       if (!res.ok) return null;
       return (await res.json()) as { step: number; completed: boolean; tracker?: TrackerItem[] };

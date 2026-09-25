@@ -84,3 +84,26 @@ describe("Monster in festen Locations", () => {
     }
   });
 });
+
+import { moveStamp, interiorMoveStamp, interiorStampAt } from "./custom-world-edit";
+import { getTemplate } from "./interior";
+
+describe("Objekte verschieben", () => {
+  test("Außen: Objekt wird verschoben, ungültige Ziele bleiben wirkungslos", () => {
+    let d = defaultCustomWorldDoc("outdoor");
+    d = { ...d, stamps: [{ id: "tree", x: 3, y: 3 }] };
+    const m = moveStamp(d, 0, 5, 6);
+    assert.deepEqual(m.stamps[0], { id: "tree", x: 5, y: 6 });
+    assert.equal(moveStamp(d, 0, -1, 2), d);
+    assert.equal(moveStamp(d, 5, 2, 2), d);
+  });
+  test("Innen: Möbel finden und verschieben", () => {
+    const t = getTemplate("wohnhaus")!.build();
+    let d = defaultCustomWorldDoc("outdoor");
+    d = { ...d, buildings: [{ x: 4, y: 4, w: 5, roofRows: 3, roof: { k: 0, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 2, windowDx: [], name: "H", interior: t }] };
+    const i = interiorStampAt(t, t.stamps[0].x, t.stamps[0].y);
+    assert.ok(i >= 0);
+    const moved = interiorMoveStamp(d, 0, i, 6, 5);
+    assert.deepEqual([moved.buildings[0].interior!.stamps[i].x, moved.buildings[0].interior!.stamps[i].y], [6, 5]);
+  });
+});

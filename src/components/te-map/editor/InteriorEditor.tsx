@@ -11,7 +11,7 @@ import { bakeInterior, drawStamp, loadSheets, T, type Sheets } from "@/component
 import { ITEMS } from "@/lib/dnd/items";
 import { LIMITS, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import {
-  interiorMoveActor, interiorPlaceActor, interiorPlaceStamp, interiorRemoveAt, resizeInterior, setInteriorFromTemplate, updateAnyActor, updateInterior,
+  interiorMoveActor, interiorMoveStamp, interiorStampAt, interiorPlaceActor, interiorPlaceStamp, interiorRemoveAt, resizeInterior, setInteriorFromTemplate, updateAnyActor, updateInterior,
 } from "@/lib/te-map/custom-world-edit";
 import { INTERIOR_FLOORS, INTERIOR_LIMITS, INTERIOR_TEMPLATES, INTERIOR_WALLS } from "@/lib/te-map/interior";
 import { INSIDE_STAMP_IDS, STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
@@ -66,6 +66,8 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
   const docRef = useRef(doc);
   useEffect(() => { docRef.current = doc; }, [doc]);
   const drag = useRef<string | null>(null);
+  const dragStamp = useRef<{ index: number; dx: number; dy: number } | null>(null);
+  const [selectedStamp, setSelectedStamp] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +128,8 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
     ctx.fillStyle = "rgba(52, 211, 153, 0.35)";
     ctx.fillRect(it.exitX * T, (it.rows - 2) * T, T, T);
 
+    const selSt = selectedStamp !== null ? it.stamps[selectedStamp] : undefined;
+    if (selSt) { const d = STAMPS[selSt.id] as StampDef; ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1.5; ctx.strokeRect(selSt.x * T + 0.5, selSt.y * T + 0.5, d.w * T - 1, d.h * T - 1); }
     const sel = it.actors.find((a) => a.id === selected);
     if (sel) { ctx.strokeStyle = "#fbbf24"; ctx.lineWidth = 1.5; ctx.strokeRect(sel.x * T + 0.5, sel.y * T + 0.5, T - 1, T - 1); }
     if (hover && !readOnly) {
@@ -134,7 +138,7 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
       const d = tool === "stamp" ? (STAMPS[stampId] as StampDef) : null;
       ctx.strokeRect(hover.x * T + 0.5, hover.y * T + 0.5, (d?.w ?? 1) * T - 1, (d?.h ?? 1) * T - 1);
     }
-  }, [sheets, baked, it, npcSets, hover, selected, tool, stampId, readOnly]);
+  }, [sheets, baked, it, npcSets, hover, selected, selectedStamp, tool, stampId, readOnly]);
 
   if (!building || !it) return null;
 
@@ -154,7 +158,11 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
     if (tool === "select") {
       const a = curIt.actors.find((o) => o.x === x && o.y === y);
       setSelected(a?.id ?? null);
-      if (a) { drag.current = a.id; onBeginEdit(); }
+      if (a) { drag.current = a.id; setSelectedStamp(null); onBeginEdit(); return; }
+      // Kein NPC: Möbel aufheben (ziehen verschiebt, Griff bleibt an der angefassten Kachel)
+      const si = interiorStampAt(curIt, x, y);
+      setSelectedStamp(si >= 0 ? si : null);
+      if (si >= 0) { dragStamp.current = { index: si, dx: x - curIt.stamps[si].x, dy: y - curIt.stamps[si].y }; onBeginEdit(); }
       return;
     }
     onBeginEdit();
@@ -168,9 +176,10 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
   const onPointerMove = (e: React.PointerEvent) => {
     const t = tileAt(e);
     if (!hover || hover.x !== t.x || hover.y !== t.y) setHover(t);
+    if (dragStamp.current) { const g = dragStamp.current; const n = interiorMoveStamp(docRef.current, bi, g.index, t.x - g.dx, t.y - g.dy); if (n !== docRef.current) commit(n); }
     if (drag.current) { const n = interiorMoveActor(docRef.current, bi, drag.current, t.x, t.y); if (n !== docRef.current) commit(n); }
   };
-  const endDrag = () => { drag.current = null; };
+  const endDrag = () => { drag.current = null; dragStamp.current = null; };
 
   const sel = it.actors.find((a) => a.id === selected);
   const setIt = (fn: (i: Interior) => Interior) => { onBeginEdit(); commit(updateInterior(docRef.current, bi, fn)); };
@@ -202,7 +211,7 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
                 </div>
               )}
               {(tool === "npc" || tool === "merchant" || tool === "chest") && <p className="text-[11px] text-gray-500">Klick setzt {tool === "npc" ? "einen NPC" : tool === "merchant" ? "einen Händler" : "eine Truhe"}. Dialoge unter „Quest & Dialoge“.</p>}
-              {tool === "select" && <p className="text-[11px] text-gray-500">Klick wählt NPCs, Händler und Truhen aus; sie lassen sich ziehen.</p>}
+              {tool === "select" && <p className="text-[11px] text-gray-500">Klick wählt NPCs, Händler, Truhen und Möbel aus; sie lassen sich ziehen. Löschen geht mit dem Radierer.</p>}
             </div>
           )}
 
