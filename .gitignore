@@ -49,3 +49,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# graphify (lokal generiert via `graphify update .`)
+graphify-out/
