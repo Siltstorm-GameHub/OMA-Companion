@@ -7,6 +7,8 @@
 
 import { MapBuilder, npcLook } from "./generate";
 import { getTemplate } from "./interior";
+import { solidOfMap } from "./engine";
+import { getMonster } from "@/lib/dnd/combat";
 import { GROUND, type Actor, type Building, type Interior, type Talk, type WorldDef, type WorldQuest } from "./types";
 
 // ── Dialog-Bausteine ────────────────────────────────────────
@@ -390,12 +392,67 @@ const cache = new Map<string, WorldDef>();
 
 export const WORLD_SLUGS = Object.keys(BUILDERS);
 
+// ── Monster-Figuren der festen Locations ────────────────────
+// Ort als Anteil der Kartengröße; der Platz wird zur nächsten freien, vom Startpunkt erreichbaren Kachel mit Luft drumherum verschoben.
+
+const MONSTER_SPOTS: Record<string, [string, number, number][]> = {
+  hafenstadt: [["ratte", 0.2, 0.7], ["ratte", 0.8, 0.75]],
+  waldpfad: [["wolf", 0.5, 0.4], ["wolf", 0.75, 0.7], ["wegelagerer", 0.4, 0.8]],
+  kuestenstrasse: [["wegelagerer", 0.5, 0.5], ["skelett", 0.8, 0.3]],
+  bergpass: [["baer", 0.6, 0.5], ["goblin", 0.35, 0.7]],
+  ruinen: [["skelett", 0.3, 0.4], ["skelett", 0.7, 0.6], ["golem", 0.5, 0.25]],
+  verlassenes_dorf: [["goblin", 0.5, 0.5], ["skelett", 0.75, 0.35]],
+  schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7]],
+  zwergenfeste: [["skelett", 0.3, 0.6], ["golem", 0.6, 0.4]],
+  frostgipfel: [["frostwolf", 0.5, 0.5], ["frostwolf", 0.3, 0.7], ["drache", 0.8, 0.3]],
+  sumpf: [["ratte", 0.3, 0.7], ["skelett", 0.5, 0.5], ["goblin", 0.75, 0.6]],
+};
+
+function addMonsters(w: WorldDef): WorldDef {
+  const spots = MONSTER_SPOTS[w.slug];
+  const m = w.map;
+  if (!spots) return w;
+  const solid = solidOfMap(m);
+  // Vom Startpunkt erreichbare Kacheln
+  const reach = Array.from({ length: m.rows }, () => Array<boolean>(m.cols).fill(false));
+  const queue: [number, number][] = [[m.spawn.x, m.spawn.y]];
+  reach[m.spawn.y][m.spawn.x] = true;
+  for (let i = 0; i < queue.length; i++) {
+    const [x, y] = queue[i];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < m.cols && ny < m.rows && !solid[ny][nx] && !reach[ny][nx]) { reach[ny][nx] = true; queue.push([nx, ny]); }
+    }
+  }
+  const open = (x: number, y: number) => x >= 0 && y >= 0 && x < m.cols && y < m.rows && !solid[y][x];
+  const openAround = (x: number, y: number) => [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].filter(([dx, dy]) => open(x + dx, y + dy)).length;
+  const actors = [...m.actors];
+  spots.forEach(([monsterId, fx, fy], i) => {
+    const mo = getMonster(monsterId);
+    if (!mo) return;
+    const hx = Math.round(fx * (m.cols - 1));
+    const hy = Math.round(fy * (m.rows - 1));
+    let best: [number, number] | null = null;
+    let bestD = Infinity;
+    for (let y = 0; y < m.rows; y++) for (let x = 0; x < m.cols; x++) {
+      if (!reach[y][x] || solid[y][x] || openAround(x, y) < 7) continue;
+      if (Math.abs(x - m.spawn.x) + Math.abs(y - m.spawn.y) < 6) continue;
+      const d = Math.abs(x - hx) + Math.abs(y - hy);
+      if (d < bestD) { best = [x, y]; bestD = d; }
+    }
+    if (!best) return;
+    solid[best[1]][best[0]] = true;
+    actors.push({ id: `mon${i + 1}`, kind: "monster", name: mo.name, x: best[0], y: best[1], dir: "down", monster: mo.id, talk: [{ step: "*", lines: [mo.blurb] }] });
+  });
+  return { ...w, map: { ...m, actors } };
+}
+
 /** Welt einer Location (oder undefined für unbekannte Slugs). Wird einmal erzeugt und dann gemerkt. */
 export function getWorld(slug: string): WorldDef | undefined {
   const build = BUILDERS[slug];
   if (!build) return undefined;
   let w = cache.get(slug);
-  if (!w) { w = build(); cache.set(slug, w); }
+  if (!w) { w = addMonsters(build()); cache.set(slug, w); }
   return w;
 }
 

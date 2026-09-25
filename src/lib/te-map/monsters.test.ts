@@ -62,3 +62,25 @@ describe("Monster-Figuren auf der Karte", () => {
     assert.deepEqual(slainOf(flags, now), ["cw-abc:wolf1"]);
   });
 });
+
+import { WORLD_SLUGS, getWorld } from "./worlds";
+
+describe("Monster in festen Locations", () => {
+  test("jede feste Location hat Monster, erreichbar und nicht im Weg", () => {
+    for (const slug of WORLD_SLUGS) {
+      const w = getWorld(slug)!;
+      const ms = w.map.actors.filter((a) => a.kind === "monster");
+      assert.ok(ms.length >= 2, slug);
+      assert.equal(new Set(w.map.actors.map((a) => a.id)).size, w.map.actors.length, slug);
+      const g = createGame(w);
+      // Alle anderen Akteure bleiben vom Start aus erreichbar (BFS über begehbare Kacheln)
+      const seen = new Set<string>([`${w.map.spawn.x},${w.map.spawn.y}`]);
+      const q: [number, number][] = [[w.map.spawn.x, w.map.spawn.y]];
+      for (let i = 0; i < q.length; i++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = q[i][0] + dx, y = q[i][1] + dy;
+        if (isWalkable(g, x, y) && !seen.has(`${x},${y}`)) { seen.add(`${x},${y}`); q.push([x, y]); }
+      }
+      for (const a of w.map.actors) assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has(`${a.x + dx},${a.y + dy}`)), `${slug}/${a.id}`);
+    }
+  });
+});

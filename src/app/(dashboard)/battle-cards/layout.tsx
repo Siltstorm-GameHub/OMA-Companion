@@ -20,6 +20,7 @@
 
 import { Metamorphous } from "next/font/google";
 import "@/app/battle-cards-moba.css";
+import "@/app/oma-quest-game.css";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getHeroSetup } from "@/lib/battle-cards/hero-setup";

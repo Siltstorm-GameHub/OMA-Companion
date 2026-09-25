@@ -41,6 +41,7 @@ import { formatBerlinDate } from "@/lib/time";
 import { getHeroSetup } from "@/lib/battle-cards/hero-setup";
 import { getShopConfig } from "@/lib/shop-config";
 import { getHeroCockpit } from "@/lib/battle-cards/hub-hero";
+import { HubCoinShop, HubProgress } from "@/components/battle-cards/HubQuestPanels";
 import HeldPanel from "@/components/battle-cards/HeldPanel";
 import CoinIcon from "@/components/CoinIcon";
 import DailySpin from "@/components/battle-cards/shop/DailySpin";
@@ -227,6 +228,7 @@ export default async function BattleCardsPage() {
         </span>
         <span className="text-xs font-semibold text-gray-400">Öffnen →</span>
       </Link>
+      {hero?.dndCreatedAt && <HubProgress />}
     </div>
   );
 
@@ -309,6 +311,8 @@ export default async function BattleCardsPage() {
       </div>
 
       <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
+
+      {hero?.dndCreatedAt && <HubCoinShop />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         <DailySpin

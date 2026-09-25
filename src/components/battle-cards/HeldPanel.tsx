@@ -11,6 +11,7 @@ import type { ComponentProps } from "react";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
 import type { TutorialStepKey } from "@/lib/battle-cards/tutorial";
+import { HubCharacterSheet } from "@/components/battle-cards/HubQuestPanels";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import { TE_CROP_FIGURE, defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
 import { MAX_LEVEL, levelOf, levelProgress, xpForLevel } from "@/lib/te-map/rpg";
@@ -55,8 +56,8 @@ export default function HeldPanel({
   const waiting: Waiting[] = [];
   if (unopenedPacks > 0) waiting.push({ icon: "chest", text: `${unopenedPacks} ungeöffnete${unopenedPacks === 1 ? "s Pack" : " Packs"}`, href: "/battle-cards?tab=laden" });
   if (pendingChallenges > 0) waiting.push({ icon: "crossedSwords", text: `${pendingChallenges} Herausforderung${pendingChallenges === 1 ? "" : "en"} von der Community`, href: "/battle-cards?tab=arena" });
-  if (card.dndAttrPoints > 0) waiting.push({ icon: "star", text: `${card.dndAttrPoints} Attributspunkt${card.dndAttrPoints === 1 ? "" : "e"} zu verteilen`, href: "/oma-quest" });
-  if (card.dndPerkPicks > 0) waiting.push({ icon: "star", text: `${card.dndPerkPicks} Fähigkeit${card.dndPerkPicks === 1 ? "" : "en"} zu wählen`, href: "/oma-quest" });
+  if (card.dndAttrPoints > 0) waiting.push({ icon: "star", text: `${card.dndAttrPoints} Attributspunkt${card.dndAttrPoints === 1 ? "" : "e"} zu verteilen`, href: "#charakterblatt" });
+  if (card.dndPerkPicks > 0) waiting.push({ icon: "star", text: `${card.dndPerkPicks} Fähigkeit${card.dndPerkPicks === 1 ? "" : "en"} zu wählen`, href: "#charakterblatt" });
   for (const inv of invites) waiting.push({ icon: "friends", text: `${inv.fromName} lädt dich in eine Gruppe ein`, href: "/oma-quest" });
   if (!spunToday) waiting.push({ icon: "coin", text: "Das tägliche Glücksrad ist bereit", href: "/battle-cards?tab=laden" });
 
@@ -140,6 +141,20 @@ export default function HeldPanel({
             </Link>
           ))}
         </div>
+      )}
+
+      {/* Charakterblatt: Attribute verteilen, Fähigkeiten wählen */}
+      {card.dndCreatedAt && (
+        <details id="charakterblatt" open={openPoints > 0} className="group scroll-mt-4">
+          <summary className="moba-panel rounded-2xl p-4 cursor-pointer list-none flex items-center justify-between gap-3">
+            <span className="text-sm font-bold text-white">Charakterblatt</span>
+            <span className="text-xs text-gray-400">
+              {openPoints > 0 ? `${openPoints} offen · ` : ""}Attribute &amp; Fähigkeiten
+              <span className="ml-2 inline-block transition-transform group-open:rotate-90" aria-hidden>›</span>
+            </span>
+          </summary>
+          <div className="mt-2"><HubCharacterSheet /></div>
+        </details>
       )}
 
       {/* Aktuelle Quests */}
