@@ -193,8 +193,25 @@ export default function QuestWorld({ slug }: { slug: string }) {
         hud={<HudBar refreshKey={sheetKey} />}
         extraControls={(
           <div className="flex flex-wrap items-center justify-center gap-1.5">
-            {([["character", "🧙", "Charakter (C)"], ["inventory", "🎒", "Inventar (I)"], ["quests", "📜", "Quests (Q)"], ["party", "👥", "Gruppe (G)"], ["chat", "💬", "Chat (T)"]] as [MenuTab, string, string][]).map(([tab, icon, title]) => (
-              <button key={tab} type="button" onClick={() => setMenu(tab)} title={title} aria-label={title} className="oq-btn h-11 w-11 text-xl grid place-items-center">{icon}</button>
+            {([
+              ["character", "🧙", "Charakter (C)"],
+              ["inventory", "🎒", "Inventar (I)"],
+              ["quests", "📜", "Quests (Q)"],
+              ["party", "👥", "Gruppe (G)"],
+              ["chat", "💬", "Chat (T)"],
+              ...(data.isGm ? [["gm", "🎭", "Spielleiter"]] : []),
+            ] as [MenuTab, string, string][]).map(([tab, icon, title]) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setMenu((m) => (m === tab ? null : tab))}
+                title={title}
+                aria-label={title}
+                aria-pressed={menu === tab}
+                className={`oq-btn h-11 w-11 text-xl grid place-items-center ${menu === tab ? "oq-btn-gold" : ""}`}
+              >
+                {icon}
+              </button>
             ))}
           </div>
         )}
@@ -207,7 +224,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
             )}
             {menu && (
               <GameMenu
-                tab={menu} onTab={setMenu} onClose={() => setMenu(null)} slug={slug} present={data.present.map((p) => ({ id: p.id, name: p.name }))}
+                tab={menu} onClose={() => setMenu(null)} slug={slug} present={data.present.map((p) => ({ id: p.id, name: p.name }))}
                 myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)}
                 onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} onChatRemoved={(id) => setChat((c) => c.filter((m) => m.id !== id))}
               />

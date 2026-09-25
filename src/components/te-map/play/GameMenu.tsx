@@ -12,18 +12,17 @@ import { CharacterPanel, GmPanel, InventoryPanel, PartyPanel, SocialPanel } from
 
 export type MenuTab = "character" | "inventory" | "quests" | "party" | "chat" | "gm";
 
-const TABS: { key: MenuTab; icon: string; label: string; hotkey?: string }[] = [
-  { key: "character", icon: "🧙", label: "Charakter", hotkey: "C" },
-  { key: "inventory", icon: "🎒", label: "Inventar", hotkey: "I" },
-  { key: "quests", icon: "📜", label: "Quests", hotkey: "Q" },
-  { key: "party", icon: "👥", label: "Gruppe", hotkey: "G" },
-  { key: "chat", icon: "💬", label: "Chat", hotkey: "T" },
-  { key: "gm", icon: "🎭", label: "Spielleiter" },
-];
+const TAB_LABEL: Record<MenuTab, string> = {
+  character: "Charakter",
+  inventory: "Inventar",
+  quests: "Quests",
+  party: "Gruppe",
+  chat: "Chat",
+  gm: "Spielleiter",
+};
 
 interface Props {
   tab: MenuTab;
-  onTab: (t: MenuTab) => void;
   onClose: () => void;
   slug: string;
   present: { id: string; name: string }[];
@@ -38,7 +37,7 @@ interface Props {
   onChanged: () => void;
 }
 
-export default function GameMenu({ tab, onTab, onClose, slug, present, myCardId, chat, isMod, isGm, onEmote, onChatRemoved, notify, refreshKey, onChanged }: Props) {
+export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, isMod, isGm, onEmote, onChatRemoved, notify, refreshKey, onChanged }: Props) {
   let body: ReactNode = null;
   if (tab === "character") body = <CharacterPanel refreshKey={refreshKey} />;
   else if (tab === "inventory") body = <InventoryPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
@@ -47,15 +46,14 @@ export default function GameMenu({ tab, onTab, onClose, slug, present, myCardId,
   else if (tab === "chat") body = <SocialPanel slug={slug} chat={chat} onEmote={onEmote} isMod={isMod} myCardId={myCardId} onRemoved={onChatRemoved} notify={notify} />;
   else if (tab === "gm" && isGm) body = <GmPanel slug={slug} notify={notify} />;
 
+  // Kein eigener Tab-Umschalter mehr hier — die Buttons unten in der Spielfläche
+  // (QuestWorld.tsx extraControls) reichen als Menü und schalten auch um, wenn
+  // dieses Panel schon offen ist. Nur noch ein schlanker Titel + Schließen-Button.
   return (
     <div className="absolute inset-0 z-40 bg-black/70 p-2 sm:p-4 flex" role="dialog" aria-label="Spielmenü">
       <div className="oq-panel w-full max-w-4xl mx-auto flex flex-col min-h-0 max-h-full">
-        <div className="flex items-center gap-1 p-2 border-b-2 border-[#4a3b1c] overflow-x-auto">
-          {TABS.filter((t) => t.key !== "gm" || isGm).map((t) => (
-            <button key={t.key} type="button" onClick={() => onTab(t.key)} className={`oq-btn text-xs px-3 py-1.5 whitespace-nowrap ${tab === t.key ? "oq-btn-gold" : ""}`} title={t.hotkey ? `Taste ${t.hotkey}` : undefined}>
-              {t.icon} {t.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 p-2 border-b-2 border-[#4a3b1c]">
+          <p className="text-xs font-bold text-amber-300 uppercase tracking-widest px-1">{TAB_LABEL[tab]}</p>
           <button type="button" onClick={onClose} className="oq-btn text-xs px-3 py-1.5 ml-auto" aria-label="Menü schließen" title="Esc">✕ Schließen</button>
         </div>
         <div className="p-3 overflow-y-auto min-h-0">{body}</div>
