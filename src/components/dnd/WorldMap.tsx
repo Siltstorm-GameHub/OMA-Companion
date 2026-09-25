@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Loader2, Flag } from "@/components/icons";
+import { Loader2, Flag, Globe, List } from "@/components/icons";
 import ZoomPanMap from "./ZoomPanMap";
 
 const POLL_INTERVAL_MS = 25_000;
@@ -73,11 +73,22 @@ function LocationMarker({ slug, isMine }: { slug: string; isMine: boolean }) {
   );
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  SETTLEMENT: "Siedlung",
+  DUNGEON: "Verlies",
+  WILDERNESS: "Wildnis",
+  LANDMARK: "Wahrzeichen",
+};
+
 export default function WorldMap({ myCardId }: { myCardId: string | null }) {
   const [locations, setLocations] = useState<DndLocationRow[] | null>(null);
   const [characters, setCharacters] = useState<DndCharacterRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [backgroundFailed, setBackgroundFailed] = useState(false);
+  // Standardansicht ist immer die Karte (auch mobil) — die Liste ist ein
+  // manuell wählbarer Umschalter für mobile Nutzer, kein automatischer
+  // Breakpoint-Fallback mehr.
+  const [view, setView] = useState<"map" | "list">("map");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -124,6 +135,56 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
 
   return (
     <div className="space-y-4">
+      {/* Umschalter Karte/Liste — nur auf schmalen Screens sichtbar, Desktop hat immer die Karte. */}
+      <div className="sm:hidden flex justify-end">
+        <div className="inline-flex rounded-full bg-black/30 p-0.5 gap-0.5">
+          <button
+            type="button"
+            onClick={() => setView("map")}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+              view === "map" ? "bg-violet-600 text-white" : "text-gray-400"
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" /> Karte
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("list")}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+              view === "list" ? "bg-violet-600 text-white" : "text-gray-400"
+            }`}
+          >
+            <List className="w-3.5 h-3.5" /> Liste
+          </button>
+        </div>
+      </div>
+
+      {view === "list" && (
+        <div className="sm:hidden space-y-2">
+          {locations.map((loc) => {
+            const here = charactersAt(loc.id);
+            return (
+              <Link
+                key={loc.id}
+                href={`/dnd/${loc.slug}`}
+                className="moba-panel rounded-xl p-3 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{loc.name}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide">{TYPE_LABEL[loc.locationType] ?? loc.locationType}</p>
+                </div>
+                {here.length > 0 && (
+                  <span className="shrink-0 text-[10px] font-bold text-amber-300 bg-black/30 rounded-full px-2 py-0.5">
+                    {here.length} hier
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={view === "list" ? "hidden sm:block" : ""}>
       <ZoomPanMap>
         {!backgroundFailed && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -182,6 +243,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             );
           })}
       </ZoomPanMap>
+      </div>
 
       {characters.some((c) => c.inTransit) && (
         <p className="text-[11px] text-gray-500 text-center">
