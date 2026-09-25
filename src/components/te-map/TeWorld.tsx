@@ -18,7 +18,7 @@ import type { TrackerItem } from "@/lib/dnd/quest-log";
 import { DiceOverlay } from "@/components/te-map/play/Dice";
 import { GameFeed, type FeedItem, type Notify } from "@/components/te-map/play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
-import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, WEATHER_ICON, WEATHER_LABEL, type Biome, type RollResult, type Weather } from "@/lib/te-map/rpg";
+import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, windAt, WEATHER_ICON, WEATHER_LABEL, type Biome, type RollResult, type Weather } from "@/lib/te-map/rpg";
 import { STAMPS, type StampDef, type StampId, type TileSheet } from "@/lib/te-map/stamps";
 import { allActorsOf, doorFront, INTERIOR_FLOORS, INTERIOR_WALLS, wallTilesAt } from "@/lib/te-map/interior";
 import { CAVE_WALL_TILES, THEMES } from "@/lib/te-map/themes";
@@ -70,7 +70,7 @@ function drawQuarters(ctx: CanvasRenderingContext2D, img: HTMLImageElement, bx: 
 }
 
 /** Stempel an Pixelposition (x, y) — obere linke Ecke — zeichnen. */
-export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number, tMs = 0) {
+export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number, tMs = 0, wind = 0, phase = 0) {
   const s = STAMPS[id] as StampDef;
   if (s.anim) {
     const f = Math.floor((tMs / 1000) * s.anim.fps) % 4;
@@ -81,7 +81,19 @@ export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: Sta
     for (const p of s.parts) ctx.drawImage(sheets[s.sheet as TileSheet], p.sx * T, p.sy * T, p.w * T, p.h * T, x + p.dx * T, y + p.dy * T, p.w * T, p.h * T);
     return;
   }
-  ctx.drawImage(sheets[s.sheet as TileSheet], s.sx * T, s.sy * T, s.w * T, s.h * T, x, y, s.w * T, s.h * T);
+  if (s.sway && wind > 0.02) {
+    // Wiegen: waagerechte 2-px-Streifen, oben am stärksten seitlich versetzt (Ausschlag fällt nach unten hin ab)
+    const img = sheets[s.sheet as TileSheet];
+    const H = s.h * T;
+    const swing = Math.sin(tMs / 620 + phase) + 0.35 * Math.sin(tMs / 233 + phase * 2.3);
+    for (let sy = 0; sy < H; sy += 2) {
+      const f = 1 - sy / H;
+      const off = Math.round(s.sway * wind * swing * f * f);
+      ctx.drawImage(img, s.sx * T, s.sy * T + sy, s.w * T, 2, x + off, y + sy, s.w * T, 2);
+    }
+  } else {
+    ctx.drawImage(sheets[s.sheet as TileSheet], s.sx * T, s.sy * T, s.w * T, s.h * T, x, y, s.w * T, s.h * T);
+  }
   for (const o of s.overlays ?? []) {
     const f = Math.floor((tMs / 1000) * o.fps) % 4;
     ctx.drawImage(sheets[o.sheet], o.gx * 48 + 16, o.gy * 128 + f * 32, 16, 32, x + o.dx, y + o.dy, 16, 32);
@@ -545,6 +557,8 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   const liveRef = useRef<Map<string, LiveEntry>>(new Map());
   const fxRef = useRef<WeatherFx | null>(null);
   const labelLayerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useRef(false);
+  useEffect(() => { reduceMotion.current = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false; }, []);
   const labelCache = useRef(new Map<string, HTMLDivElement>());
   const livePresenceRef = useRef(livePresence);
   useEffect(() => { livePresenceRef.current = livePresence; });
@@ -681,12 +695,14 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         }
 
         // Sortierte Sprites (Fußlinie = Unterkante)
+        // Wind nur draußen und ohne "Bewegung reduzieren"
+        const windNow = map.theme === "outdoor" && !reduceMotion.current ? windAt(weatherRef.current, clock) : 0;
         type Sprite = { base: number; draw: () => void };
         const sprites: Sprite[] = [];
         for (const s of map.stamps) {
           const d = STAMPS[s.id] as StampDef;
           if (s.x * T + d.w * T < camX || s.x * T > camX + VIEW_W * T || s.y * T + d.h * T < camY || s.y * T > camY + VIEW_H * T) continue;
-          sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock) });
+          sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock, windNow, s.x * 0.9 + s.y * 0.55) });
         }
         for (const a of map.actors) {
           if (a.kind === "chest") {

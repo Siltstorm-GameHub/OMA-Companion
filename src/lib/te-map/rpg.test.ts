@@ -130,3 +130,18 @@ describe("Wetter", () => {
     assert.equal(biomeOfTerrain("f"), "temperate");
   });
 });
+
+describe("Wind", () => {
+  test("Stärke hängt am Wetter (Sturm am stärksten, Nebel am schwächsten) und bleibt begrenzt", async () => {
+    const { windAt, WIND_BASE } = await import("./rpg");
+    const max = (w: Parameters<typeof windAt>[0]) => Math.max(...Array.from({ length: 400 }, (_, i) => windAt(w, i * 137)));
+    assert.ok(max("storm") > max("rain") && max("rain") > max("clear") && max("clear") > max("fog"));
+    for (const w of Object.keys(WIND_BASE) as (keyof typeof WIND_BASE)[]) { const m = max(w); assert.ok(m >= 0 && m <= 1.25, `${w}: ${m}`); }
+  });
+  test("Bäume sind windbeweglich, Laternenpfosten und Innenraum-Möbel nicht", async () => {
+    const { STAMPS } = await import("./stamps");
+    assert.ok(STAMPS.tree.sway > 0);
+    for (const id of ["armPostL", "armPostR"] as const) assert.ok(!("sway" in STAMPS[id]) && !("hang" in STAMPS[id]), id);
+    for (const id of ["hangCloth", "hangSausage", "candle", "clock"] as const) assert.ok(!("sway" in STAMPS[id]) && !("hang" in STAMPS[id]), id);
+  });
+});

@@ -123,3 +123,17 @@ export function weatherModifier(weather: Weather, ability: Ability): number {
   if (weather === "snow" && ability === "dex") return -1;
   return 0;
 }
+
+// ── Wind ────────────────────────────────────────────────────
+// Reine Optik: Bäume, Büsche und Pflanzen wiegen sich (siehe TeWorld). Die Stärke hängt am Wetter; Höhlen und Innenräume haben keinen Wind.
+
+/** Grundstärke des Winds 0 (Windstille) … 1 (Sturm). */
+export const WIND_BASE: Record<Weather, number> = { clear: 0.3, cloudy: 0.45, rain: 0.65, storm: 1, fog: 0.15, snow: 0.4 };
+
+/** Windstärke zum Zeitpunkt `tMs` (ms): Grundstärke mit langsamem Auf und Ab, bei Sturm zusätzlich Böen. */
+export function windAt(weather: Weather, tMs: number): number {
+  const base = WIND_BASE[weather];
+  const drift = 0.8 + 0.2 * Math.sin(tMs / 2300);
+  const gust = weather === "storm" ? 1 + 0.35 * Math.max(0, Math.sin(tMs / 1700)) : 1;
+  return Math.min(1.25, base * drift * gust);
+}

@@ -20,25 +20,27 @@ export interface StampDef {
   anim?: { gx: number; gy: number; fps: number };
   /** Animation über einem normalen Objekt (z. B. Flammen im Kamin); Versatz in Pixeln */
   overlays?: readonly { sheet: "fires" | "lights"; gx: number; gy: number; fps: number; dx: number; dy: number }[];
+  /** Wiegt sich im Wind: Ausschlag oben in Pixeln bei voller Windstärke (unten am Boden bleibt es ruhig) */
+  sway?: number;
   /** Lichtschein (Radius in Pixeln, Versatz vom Objektmittelpunkt) — flackert leicht, drinnen und nachts sichtbar */
   glow?: { r: number; dx?: number; dy?: number };
 }
 
 export const STAMPS = {
   // Bäume & Grün
-  tree: { sheet: "out", sx: 8, sy: 7, w: 3, h: 5, solid: [1, 4, 1, 1] },
-  darkTree: { sheet: "out", sx: 11, sy: 7, w: 3, h: 5, solid: [1, 4, 1, 1] },
-  hedge4: { sheet: "town", sx: 0, sy: 14, w: 4, h: 1, solid: [0, 0, 4, 1] },
-  hedgeFlowers: { sheet: "town", sx: 5, sy: 14, w: 3, h: 1, solid: [0, 0, 3, 1] },
-  fruitBush: { sheet: "out", sx: 8, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1] },
-  flowerBed: { sheet: "out", sx: 6, sy: 6, w: 2, h: 1 },
+  tree: { sheet: "out", sx: 8, sy: 7, w: 3, h: 5, solid: [1, 4, 1, 1], sway: 3.2 },
+  darkTree: { sheet: "out", sx: 11, sy: 7, w: 3, h: 5, solid: [1, 4, 1, 1], sway: 3.2 },
+  hedge4: { sheet: "town", sx: 0, sy: 14, w: 4, h: 1, solid: [0, 0, 4, 1], sway: 0.9 },
+  hedgeFlowers: { sheet: "town", sx: 5, sy: 14, w: 3, h: 1, solid: [0, 0, 3, 1], sway: 1.0 },
+  fruitBush: { sheet: "out", sx: 8, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], sway: 1.8 },
+  flowerBed: { sheet: "out", sx: 6, sy: 6, w: 2, h: 1, sway: 1.4 },
   flowerTub: { sheet: "town", sx: 4, sy: 9, w: 2, h: 2, solid: [0, 1, 2, 1] },
-  flowerTubYellow: { sheet: "town", sx: 6, sy: 9, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  flowerTubYellow: { sheet: "town", sx: 6, sy: 9, w: 1, h: 2, solid: [0, 1, 1, 1], sway: 0.8 },
   planter: { sheet: "town", sx: 1, sy: 11, w: 2, h: 1, solid: [0, 0, 2, 1] },
-  reeds: { sheet: "out", sx: 14, sy: 2, w: 1, h: 2 },
-  reedsTuft: { sheet: "out", sx: 14, sy: 4, w: 2, h: 1 },
-  lily: { sheet: "out", sx: 8, sy: 5, w: 2, h: 1 },
-  lilyPink: { sheet: "out", sx: 8, sy: 6, w: 2, h: 1 },
+  reeds: { sheet: "out", sx: 14, sy: 2, w: 1, h: 2, sway: 2.4 },
+  reedsTuft: { sheet: "out", sx: 14, sy: 4, w: 2, h: 1, sway: 1.8 },
+  lily: { sheet: "out", sx: 8, sy: 5, w: 2, h: 1, sway: 0.8 },
+  lilyPink: { sheet: "out", sx: 8, sy: 6, w: 2, h: 1, sway: 0.8 },
   stump: { sheet: "out", sx: 6, sy: 15, w: 1, h: 1, solid: [0, 0, 1, 1] },
   // Dorfmöbel
   fountain: { sheet: "town", sx: 8, sy: 8, w: 3, h: 3, solid: [0, 1, 3, 2] },
@@ -54,7 +56,7 @@ export const STAMPS = {
   hay: { sheet: "out", sx: 2, sy: 12, w: 2, h: 1, solid: [0, 0, 2, 1] },
   log: { sheet: "out", sx: 9, sy: 12, w: 2, h: 1, solid: [0, 0, 2, 1] },
   rocks: { sheet: "out", sx: 5, sy: 8, w: 2, h: 1, solid: [0, 0, 2, 1] },
-  scarecrow: { sheet: "out", sx: 2, sy: 13, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  scarecrow: { sheet: "out", sx: 2, sy: 13, w: 1, h: 2, solid: [0, 1, 1, 1], sway: 1.2 },
   // Ruinen & Friedhof
   ruinWall: { sheet: "out", sx: 0, sy: 8, w: 4, h: 1, solid: [0, 0, 4, 1] },
   ruinWall2: { sheet: "out", sx: 4, sy: 7, w: 2, h: 1, solid: [0, 0, 2, 1] },
@@ -177,6 +179,9 @@ export const STAMPS = {
   wallTorch: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, anim: { gx: 3, gy: 1, fps: 7 }, glow: { r: 36, dy: 0 } },
   hearthFire: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 1, gy: 0, fps: 6 }, glow: { r: 40, dy: 8 } },
   stoveFire: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 3, gy: 0, fps: 5 }, glow: { r: 28, dy: 8 } },
+  // Pfosten mit hängender Laterne (oben) und hängendem Schild (unten), unbewegt
+  armPostL: { sheet: "town", sx: 3, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  armPostR: { sheet: "town", sx: 4, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1] },
   // Fenster/Tür-Kacheln und Schilder für Hausfassaden (1×1)
   window: { sheet: "town", sx: 14, sy: 6, w: 1, h: 1 },
   door: { sheet: "town", sx: 14, sy: 7, w: 1, h: 1 },

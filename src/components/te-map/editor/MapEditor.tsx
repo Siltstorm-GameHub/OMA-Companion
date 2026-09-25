@@ -42,7 +42,8 @@ const GROUND_LABEL: Record<GroundType, { outdoor: string; cave: string; color: s
   [GROUND.sand]: { outdoor: "Sand", cave: "Sand", color: "#cbb46a" },
 };
 
-const STAMP_IDS = (Object.keys(STAMPS) as StampId[]).filter((id) => !["window", "door", "shopSword", "shopInn", "shopMug", "sign"].includes(id));
+// Außen-Palette: ohne Türen/Fenster/Schilder-Kacheln und ohne Innenraum-Möbel (die gibt es im Innenraum-Editor)
+const STAMP_IDS = (Object.keys(STAMPS) as StampId[]).filter((id) => (STAMPS[id] as StampDef).sheet !== "inside" && !["window", "door", "shopSword", "shopInn", "shopMug", "sign"].includes(id));
 
 const TOOL_BUTTONS: { key: string; label: string; tool: Tool; caveOnly?: boolean }[] = [
   { key: "select", label: "Auswählen / Verschieben", tool: { kind: "select" } },
@@ -95,7 +96,7 @@ const STAMP_LABELS: Partial<Record<StampId, string>> = {
   ruinWall: "Ruinenmauer", ruinWall2: "Mauerstück", ruinPillar: "Ruinensäule", obelisk: "Obelisk", grave: "Grab", graveCross: "Grabkreuz",
   bonesPile: "Knochenhaufen", pillar: "Säule", brokenPillar: "Kaputte Säule", stoneBlocks: "Steinblöcke", skull: "Schädel", bones: "Knochen",
   skullPile: "Schädelhaufen", mushrooms: "Pilze", rockBig: "Großer Fels", rockGrey: "Grauer Fels", rockSmall: "Kleiner Fels",
-  stalagmite: "Stalagmit", crateBlue: "Blaue Kiste", waterBarrel: "Wasserfass", jar: "Krug", jarGrey: "Grauer Krug",
+  stalagmite: "Stalagmit", armPostL: "Laternenpfosten links", armPostR: "Laternenpfosten rechts", campfire: "Lagerfeuer", campfireSmall: "Kleines Lagerfeuer", torchStand: "Fackelständer", wallTorch: "Wandfackel", hearthFire: "Herdfeuer", stoveFire: "Ofenfeuer", crateBlue: "Blaue Kiste", waterBarrel: "Wasserfass", jar: "Krug", jarGrey: "Grauer Krug",
 };
 
 interface Props {
