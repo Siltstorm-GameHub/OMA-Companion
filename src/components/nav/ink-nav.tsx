@@ -11,6 +11,7 @@ export const NAV_GLYPHS = {
   home:        "/icons/nav/home.png",
   events:      "/icons/nav/events.png",
   shop:        "/icons/nav/shop.png",
+  battleCards: "/icons/nav/battle-cards.png",
   donations:   "/icons/nav/donations.png",
   leaderboard: "/icons/nav/leaderboard.png",
   profile:     "/icons/nav/profile.png",
@@ -28,8 +29,9 @@ type Phase = "rest" | "out" | "pre";
  * (z. B. Turnierseiten zu "Events"). Damit bleibt der Punkt dort aktiv.
  */
 const SECTION_PREFIXES: Record<string, string[]> = {
-  "/dashboard":   ["/quests", "/servers", "/squads", "/battle-cards", "/oma-quest", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
+  "/dashboard":   ["/quests", "/servers", "/squads", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
   "/events":      ["/tournament"],
+  "/battle-cards": ["/oma-quest", "/shop"],
   "/leaderboard": ["/points"],
 };
 

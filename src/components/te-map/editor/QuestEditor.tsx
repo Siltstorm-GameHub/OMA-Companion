@@ -157,7 +157,7 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
       </div>
 
       <div className="space-y-3">
-        {allActors(doc).map((a) => (
+        {allActors(doc).filter((a) => a.kind !== "monster").map((a) => (
           <div key={a.id} ref={a.id === focusActorId ? focusRef : undefined} className={`moba-panel rounded-2xl p-4 space-y-2 ${a.id === focusActorId ? "ring-1 ring-amber-400/60" : ""}`}>
             <p className="text-xs font-bold text-white">
               {a.name} <span className="text-[10px] font-normal text-gray-500">— {a.kind === "npc" ? "NPC" : a.kind === "merchant" ? "Händler" : a.kind === "chest" ? "Truhe" : "Schild"} {(() => { const loc = locateActor(doc, a.id); return loc?.building != null ? `in „${doc.buildings[loc.building].name || "Gebäude"}“` : `bei ${a.x}, ${a.y}`; })()}</span>

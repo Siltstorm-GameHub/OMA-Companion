@@ -14,7 +14,7 @@ export interface FeedItem { id: number; kind: FeedKind; title: string; text?: st
 
 const KIND: Record<FeedKind, { icon: string; border: string; title: string }> = {
   quest: { icon: "📜", border: "border-amber-300/70", title: "text-amber-200" },
-  reward: { icon: "🪙", border: "border-yellow-300/70", title: "text-yellow-200" },
+  reward: { icon: "🎁", border: "border-yellow-300/70", title: "text-yellow-200" },
   level: { icon: "⭐", border: "border-violet-300/80", title: "text-violet-200" },
   info: { icon: "💬", border: "border-sky-300/60", title: "text-sky-200" },
   error: { icon: "⚠️", border: "border-red-400/70", title: "text-red-200" },

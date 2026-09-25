@@ -15,7 +15,7 @@ import WorldMap from "./WorldMap";
 import CharacterCreation from "./CharacterCreation";
 import QuestLog from "./QuestLog";
 import Chronicle from "./Chronicle";
-import { CharacterPanel } from "@/components/te-map/play/PlayPanels";
+import { CharacterPanel, ProgressPanel } from "@/components/te-map/play/PlayPanels";
 
 export default function DndHome({
   myCardId,
@@ -55,6 +55,7 @@ export default function DndHome({
       <WorldMap myCardId={myCardId} />
       <Chronicle />
       <CharacterPanel />
+      <ProgressPanel />
       <QuestLog />
     </div>
   );

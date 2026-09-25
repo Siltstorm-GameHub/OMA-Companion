@@ -16,6 +16,8 @@ import { resolveWorld } from "./custom-worlds";
 import { logChronicle } from "./chronicle";
 import { shareXpWithParty } from "./party";
 import { levelOf } from "../te-map/rpg";
+import { effectsOf } from "./perks";
+import { perksOf } from "./progression";
 
 export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
@@ -79,11 +81,13 @@ export async function ensureDndQuestsSeeded(): Promise<void> {
 export async function advanceDndQuestObjective(
   cardId: string,
   objectiveType: string,
-  increment: number
+  increment: number,
+  /** Optionaler Bezug (z. B. Monster-Id): zählt für Quests ohne Bezug und für Quests mit genau diesem */
+  ref?: string
 ): Promise<void> {
   await ensureDndQuestsSeeded();
 
-  const quests = await prisma.dndQuest.findMany({ where: { objectiveType } });
+  const quests = await prisma.dndQuest.findMany({ where: { objectiveType, ...(ref ? { OR: [{ targetRef: null }, { targetRef: ref }] } : {}) } });
   if (!quests.length) return;
 
   for (const quest of quests) {
@@ -117,11 +121,13 @@ export async function advanceDndQuestObjective(
 /** Belohnung für eine abgeschlossene Welt-Quest: XP (der Client meldet Schritte, deshalb keine Coins), Stufenaufstieg und
  *  Quest in der Chronik, halbe XP für Gruppenmitglieder am selben Ort. */
 async function grantWorldQuestReward(cardId: string, quest: { title: string; xpReward: number }, locationSlug: string) {
-  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndXp: true } });
+  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndXp: true, dndPerks: true } });
   if (!card) return;
-  if (quest.xpReward > 0) await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: quest.xpReward } } });
+  // Fähigkeit „Lernbegierig“: +10 % Erfahrung
+  const xp = Math.round(quest.xpReward * effectsOf(perksOf(card)).xpMultiplier);
+  if (xp > 0) await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: xp } } });
   await logChronicle("quest", `${card.name} hat die Quest „${quest.title}“ abgeschlossen.`, locationSlug);
-  const after = levelOf(card.dndXp + quest.xpReward);
+  const after = levelOf(card.dndXp + xp);
   if (after > levelOf(card.dndXp)) await logChronicle("level", `${card.name} hat Stufe ${after} erreicht.`, locationSlug);
   await shareXpWithParty(cardId, quest.xpReward, locationSlug);
 }

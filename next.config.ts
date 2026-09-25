@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   // Umbenennung auf OMA Quest: alte Links unter /dnd und /dnd/<ort> leiten dauerhaft um.
   async redirects() {
     return [
+      // Der Shop ist in den Battle-Cards-Hub gezogen (Reiter "Laden").
+      { source: "/shop", destination: "/battle-cards?tab=laden", permanent: true },
       { source: "/dnd", destination: "/oma-quest", permanent: true },
       { source: "/dnd/:slug([^.]+)", destination: "/oma-quest/:slug", permanent: true },
     ];

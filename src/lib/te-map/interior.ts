@@ -21,12 +21,13 @@ export const INTERIOR_FLOORS: { label: string; tile: [number, number] }[] = [
   { label: "Dunkles Holz", tile: [0, 2] },
 ];
 
-/** Wandstile: oberes/unteres Kachelpaar der Wand (2 Reihen hoch); `windows` = breites Fenster (2 Kacheln) im Wechsel. */
-export const INTERIOR_WALLS: { label: string; top: [number, number]; bottom: [number, number]; windows: boolean }[] = [
-  { label: "Holz mit Fenstern", top: [5, 7], bottom: [5, 8], windows: true },
-  { label: "Putz mit Fenstern", top: [1, 7], bottom: [1, 8], windows: true },
-  { label: "Stein", top: [1, 9], bottom: [1, 10], windows: false },
-  { label: "Backstein", top: [5, 9], bottom: [5, 10], windows: false },
+/** Wandstile: oberes/unteres Kachelpaar der Wand (2 Reihen hoch), `side` = senkrechte Wandkachel für links/rechts (das Tileset hat keine eigenen
+ *  Seitenwand-Kacheln; die senkrechten Wandfelder aus den Reihen 11–13 dienen dafür), `windows` = breites Fenster (2 Kacheln) im Wechsel. */
+export const INTERIOR_WALLS: { label: string; top: [number, number]; bottom: [number, number]; side: [number, number]; windows: boolean }[] = [
+  { label: "Holz mit Fenstern", top: [5, 7], bottom: [5, 8], side: [3, 12], windows: true },
+  { label: "Putz mit Fenstern", top: [1, 7], bottom: [1, 8], side: [1, 12], windows: true },
+  { label: "Stein", top: [1, 9], bottom: [1, 10], side: [7, 12], windows: false },
+  { label: "Backstein", top: [5, 9], bottom: [5, 10], side: [3, 12], windows: false },
 ];
 /** Fenster-Kacheln (links/rechts) in der Wand, oben und unten. */
 export const WINDOW_TILES = { top: [[1, 3], [2, 3]], bottom: [[1, 4], [2, 4]] } as const;

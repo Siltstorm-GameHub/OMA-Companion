@@ -92,7 +92,7 @@ export interface Talk {
 
 export interface Actor {
   id: string;
-  kind: "npc" | "chest" | "sign" | "merchant";
+  kind: "npc" | "chest" | "sign" | "merchant" | "monster";
   name: string;
   x: number;
   y: number;
@@ -101,6 +101,8 @@ export interface Actor {
   config?: TeCharacterConfig;
   /** Händler: Gegenstände im Angebot (Schlüssel aus lib/dnd/items.ts) */
   shop?: string[];
+  /** Monster: Id aus lib/dnd/combat.ts — die Figur steht auf der Karte und startet beim Ansprechen einen Kampf */
+  monster?: string;
   talk: Talk[];
 }
 

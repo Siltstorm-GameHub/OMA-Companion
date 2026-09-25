@@ -81,4 +81,11 @@ export const DND_QUESTS: DndQuestDef[] = [
     xpReward: 90,
     coinReward: 75,
   },
+  // Kampf-Quests: zählen Siege über Monster (targetRef = Monster-Id, ohne Angabe jedes Monster)
+  { slug: "dnd-rattenplage", title: "Rattenplage", description: "Besiege 5 Riesenratten.", objectiveType: "MONSTER_SLAIN", targetRef: "ratte", targetCount: 5, xpReward: 60 },
+  { slug: "dnd-wolfsjagd", title: "Wolfsjagd", description: "Besiege 3 Wölfe.", objectiveType: "MONSTER_SLAIN", targetRef: "wolf", targetCount: 3, xpReward: 80, coinReward: 40 },
+  { slug: "dnd-goblinplage", title: "Goblin-Plage", description: "Vertreibe 3 Goblin-Plünderer.", objectiveType: "MONSTER_SLAIN", targetRef: "goblin", targetCount: 3, xpReward: 100, coinReward: 50 },
+  { slug: "dnd-knochenjaeger", title: "Knochenjäger", description: "Zerlege 3 rastlose Skelette.", objectiveType: "MONSTER_SLAIN", targetRef: "skelett", targetCount: 3, xpReward: 100 },
+  { slug: "dnd-banditenschreck", title: "Banditenschreck", description: "Besiege einen Banditenhauptmann.", objectiveType: "MONSTER_SLAIN", targetRef: "hauptmann", targetCount: 1, xpReward: 160, coinReward: 80 },
+  { slug: "dnd-monsterjaeger", title: "Monsterjäger", description: "Besiege 10 beliebige Monster.", objectiveType: "MONSTER_SLAIN", targetCount: 10, xpReward: 220, coinReward: 100 },
 ];

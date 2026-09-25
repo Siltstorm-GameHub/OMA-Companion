@@ -13,8 +13,9 @@ import Link from "next/link";
 import { drawTeFrame, layersFor, loadTeLayerSets, type TeLayerSets } from "@/components/te-character/TeCharacter";
 import { TE_ANIMS, type TeCharacterConfig } from "@/lib/te-character";
 import { groundQuarters, wallQuarters, type Quarters } from "@/lib/te-map/autotile";
-import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
+import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, setHidden, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
 import type { TrackerItem } from "@/lib/dnd/quest-log";
+import { getMonster } from "@/lib/dnd/combat";
 import { DiceOverlay } from "@/components/te-map/play/Dice";
 import { GameFeed, type FeedItem, type Notify } from "@/components/te-map/play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
@@ -154,14 +155,14 @@ export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
 }
 
 /** Live anwesender Spieler (Position in Kacheln, vom Server) */
-export interface LiveOther { id: string; name: string; x: number; y: number; dir: string; character: TeCharacterConfig; avatarUrl: string | null; emote?: string | null; scene?: number }
+export interface LiveOther { id: string; name: string; x: number; y: number; dir: string; character: TeCharacterConfig; avatarUrl: string | null; emote?: string | null; scene?: number; level?: number }
 export interface ChatMessage { id: string; cardId: string; name: string; text: string; createdAt: string; reports?: number }
 /** Antwort des Live-Abgleichs: anwesende Spieler, neue Chat-Nachrichten, neue Spielleiter-Ereignisse */
 export interface LiveData { others: LiveOther[]; chat: ChatMessage[]; hiddenChat?: string[]; events: WorldEventView[] }
 
 export const EMOTE_ICONS: Record<string, string> = { wave: "👋", laugh: "😂", cheer: "🎉", think: "🤔", heart: "❤️", sad: "😢" };
 
-interface LiveEntry { name: string; tx: number; ty: number; cx: number; cy: number; dir: TeDirLite; key: string; sets?: TeLayerSets; emote?: { icon: string; until: number }; scene: number }
+interface LiveEntry { name: string; level?: number; tx: number; ty: number; cx: number; cy: number; dir: TeDirLite; key: string; sets?: TeLayerSets; emote?: { icon: string; until: number }; scene: number }
 type TeDirLite = "down" | "left" | "right" | "up";
 
 /** Innenraum vorzeichnen: Boden, Wand oben (2 Reihen, mit Fenstern), Seitenpfosten, untere Wand mit Tür. */
@@ -182,10 +183,10 @@ export function bakeInterior(sheets: Sheets, it: Interior): HTMLCanvasElement {
     a5(t.top[0], t.top[1], x, 0);
     a5(t.bottom[0], t.bottom[1], x, 1);
   }
-  for (let y = 2; y < it.rows; y++) { a5(wall.bottom[0], wall.bottom[1], 0, y); a5(wall.bottom[0], wall.bottom[1], it.cols - 1, y); }
+  for (let y = 2; y < it.rows; y++) { a5(wall.side[0], wall.side[1], 0, y); a5(wall.side[0], wall.side[1], it.cols - 1, y); }
   for (let x = 1; x < it.cols - 1; x++) if (x !== it.exitX) a5(wall.bottom[0], wall.bottom[1], x, it.rows - 1);
-  a5(wall.bottom[0], wall.bottom[1], 0, it.rows - 1);
-  a5(wall.bottom[0], wall.bottom[1], it.cols - 1, it.rows - 1);
+  a5(wall.side[0], wall.side[1], 0, it.rows - 1);
+  a5(wall.side[0], wall.side[1], it.cols - 1, it.rows - 1);
   // Tür und Fußmatte
   a5(floor[0], floor[1], it.exitX, it.rows - 1);
   drawStamp(ctx, sheets, "door", it.exitX * T, (it.rows - 1) * T);
@@ -308,7 +309,7 @@ function syncLabels(layer: HTMLDivElement, cache: Map<string, HTMLDivElement>, i
   for (const [key, el] of cache) if (!seen.has(key)) { el.remove(); cache.delete(key); }
 }
 
-export interface OtherPlayer { id: string; name: string; character: TeCharacterConfig | null }
+export interface OtherPlayer { id: string; name: string; level?: number; character: TeCharacterConfig | null }
 
 interface Props {
   world: WorldDef;
@@ -345,6 +346,10 @@ interface Props {
   onChoose?: (req: { actor: string; talk: number; choice: number }) => Promise<(ChoiceResult & { tracker?: TrackerItem[] }) | null>;
   /** Händler-Gespräch beendet: Handelsfenster öffnen */
   onTrade?: (actorId: string) => void;
+  /** Monster-Figur angesprochen und „Kämpfen“ gewählt */
+  onFight?: (actorId: string, monsterId: string) => void;
+  /** Ids besiegter Monster-Figuren (werden ausgeblendet) */
+  slain?: string[];
   /** Meldet einen abgeschlossenen Quest-Schritt; liefert den gespeicherten Stand (oder null bei Fehler). */
   onAdvance: (quest: string, from: number) => Promise<{ step: number; completed: boolean; tracker?: TrackerItem[] } | null>;
   /** Sichtfenster in Kacheln (nur für Übersichten/Tests ändern). */
@@ -352,7 +357,7 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onAdvance, viewCols, viewRows }: Props) {
+export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, onAdvance, viewCols, viewRows }: Props) {
   // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
   const wrapRef = useRef<HTMLDivElement>(null);
   const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
@@ -396,6 +401,8 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   const [stick, setStick] = useState<{ ox: number; oy: number; x: number; y: number } | null>(null);
   useEffect(() => { coarse.current = window.matchMedia?.("(pointer: coarse)").matches ?? false; }, []);
   const gameRef = useRef<Game | null>(null);
+  const slainRef = useRef<string[]>([]);
+  useEffect(() => { slainRef.current = slain ?? []; }, [slain]);
   const heldRef = useRef<Dir[]>([]);
   /** Kurzer Tastendruck, der zwischen zwei Frames beginnt und endet, soll trotzdem einen Schritt auslösen. */
   const tapRef = useRef<Dir | null>(null);
@@ -603,8 +610,8 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           const prev = liveRef.current.get(o.id);
           const emoteIcon = o.emote ? EMOTE_ICONS[o.emote] : undefined;
           const entry: LiveEntry = prev
-            ? { ...prev, name: o.name, tx: o.x, ty: o.y, dir: o.dir as TeDirLite, key, scene: o.scene ?? -1, emote: emoteIcon ? (prev.emote?.icon === emoteIcon && prev.emote.until > Date.now() ? prev.emote : { icon: emoteIcon, until: Date.now() + 3500 }) : undefined }
-            : { name: o.name, tx: o.x, ty: o.y, cx: o.x, cy: o.y, dir: o.dir as TeDirLite, key, scene: o.scene ?? -1, ...(emoteIcon ? { emote: { icon: emoteIcon, until: Date.now() + 3500 } } : {}) };
+            ? { ...prev, name: o.name, level: o.level, tx: o.x, ty: o.y, dir: o.dir as TeDirLite, key, scene: o.scene ?? -1, emote: emoteIcon ? (prev.emote?.icon === emoteIcon && prev.emote.until > Date.now() ? prev.emote : { icon: emoteIcon, until: Date.now() + 3500 }) : undefined }
+            : { name: o.name, level: o.level, tx: o.x, ty: o.y, cx: o.x, cy: o.y, dir: o.dir as TeDirLite, key, scene: o.scene ?? -1, ...(emoteIcon ? { emote: { icon: emoteIcon, until: Date.now() + 3500 } } : {}) };
           if (!prev || prev.key !== key) {
             entry.sets = prev?.key === key ? prev.sets : undefined;
             loadTeLayerSets(o.character).then((sets) => { const e = liveRef.current.get(o.id); if (e && e.key === key) e.sets = sets; });
@@ -660,6 +667,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         tapRef.current = null;
         g.speed = sprintKey.current || sprintStick.current ? 1.7 : 1;
         step(g, dt, held);
+        setHidden(g, slainRef.current);
         // Dialog, der durch Klick-zum-Laufen (Ankunft beim Akteur) entstand: Oberfläche nachziehen
         if (g.dialog !== syncedDialog.current) handleEventsRef.current?.(g);
 
@@ -705,7 +713,12 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock, windNow, s.x * 0.9 + s.y * 0.55) });
         }
         for (const a of map.actors) {
-          if (a.kind === "chest") {
+          if (g.hidden.has(a.id)) continue;
+          if (a.kind === "monster") {
+            const glyph = getMonster(a.monster ?? "")?.emoji ?? "👾";
+            const bob = Math.sin(clock / 380 + a.x) * 1;
+            sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, a.x * T - camX + T / 2, a.y * T - camY + T / 2 + bob); } });
+          } else if (a.kind === "chest") {
             const open = isChestOpen(a, g.questSteps, world);
             sprites.push({ base: (a.y + 1) * T, draw: () => ctx.drawImage(sheets.chests, 16, open ? 112 : 16, 16, 16, a.x * T - camX, a.y * T - camY, 16, 16) });
           } else if (a.kind === "npc" || a.kind === "merchant") {
@@ -715,13 +728,18 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           }
         }
         const labels: LabelItem[] = [];
+        for (const a of map.actors) {
+          if (a.kind !== "monster" || g.hidden.has(a.id)) continue;
+          const mo = getMonster(a.monster ?? "");
+          labels.push({ key: `m${a.id}`, x: a.x * T + T / 2 - camX, y: a.y * T - camY - 2, name: mo ? `${a.name} · Lv ${mo.level}` : a.name });
+        }
         others.forEach((o, i) => {
           const spot = map.crowd[i];
           const sets = spritesRef.current.others.get(o.id);
           // Wer live da ist, wird nicht zusätzlich als stehende Figur gezeichnet
           if (!spot || !sets || liveRef.current.has(o.id)) return;
           sprites.push({ base: (spot.y + 1) * T, draw: () => drawTeFrame(ctx, sets.front, 1, "down", spot.x * T - camX + T / 2 - 24, spot.y * T - camY - 16, 1) });
-          labels.push({ key: `c${o.id}`, x: spot.x * T + T / 2 - camX, y: spot.y * T - camY - 13, name: o.name });
+          labels.push({ key: `c${o.id}`, x: spot.x * T + T / 2 - camX, y: spot.y * T - camY - 13, name: o.level ? `${o.name} · Lv ${o.level}` : o.name });
         });
         const walkFrames = TE_ANIMS.walk.frames;
         for (const [liveId, e] of liveRef.current) {
@@ -737,7 +755,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           const sets = e.sets;
           const bub = bubblesRef.current.get(liveId);
           labels.push({
-            key: `o${liveId}`, x: e.cx * T + T / 2 - camX, y: e.cy * T - camY - 13, name: e.name,
+            key: `o${liveId}`, x: e.cx * T + T / 2 - camX, y: e.cy * T - camY - 13, name: e.level ? `${e.name} · Lv ${e.level}` : e.name,
             bubble: bub && bub.until > Date.now() ? bub.text : undefined, emote: e.emote && e.emote.until > Date.now() ? e.emote.icon : undefined,
           });
           sprites.push({
@@ -1003,6 +1021,9 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
                   {dialog.index < dialog.lines.length - 1 ? "Weiter ▶" : dialog.choices?.length || dialog.offer ? "Weiter ▶" : "Schließen ▶"}
                 </p>
               </button>
+              {dialog.fight && dialog.index >= dialog.lines.length - 1 && onFight && (
+                <button type="button" onClick={() => { const g = gameRef.current; if (g) { const f = dialog.fight!; pressAction(g); handleEvents(g); onFight(f.actor, f.monster); } }} className="mt-2 w-full rounded-lg bg-red-500/90 hover:bg-red-400 text-white text-xs font-bold py-2">⚔️ Kämpfen</button>
+              )}
               {dialog.merchant && dialog.index >= dialog.lines.length - 1 && onTrade && (
                 <button type="button" onClick={() => { const g = gameRef.current; if (g) { const id = dialog.merchant!; pressAction(g); handleEvents(g); onTrade(id); } }} className="mt-2 w-full rounded-lg bg-amber-500/90 hover:bg-amber-400 text-black text-xs font-bold py-2">🛒 Handeln</button>
               )}

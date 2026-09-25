@@ -1997,9 +1997,24 @@ model Card {
   questProgress DndQuestProgress[]
 
   // Rollenspiel: Gold, erlebte Ereignisse (Flags aus Dialog-Entscheidungen) und Rucksack
-  dndGold      Int                @default(0)
-  dndFlags     Json? // string[]
-  dndInventory DndInventoryItem[]
+  dndGold         Int                @default(0)
+  // Fortschritt: nicht verteilte Attributspunkte/Fähigkeiten, gewählte Fähigkeiten (string[]), Bonus auf Attribute (nur für Proben), zuletzt abgerechnete Stufe
+  dndAttrPoints   Int                @default(0)
+  dndPerkPicks    Int                @default(0)
+  dndPerks        Json?
+  dndAbilityBonus Json?
+  dndLevelClaimed Int                @default(1)
+  // Münzen-Laden: gekaufte Ehrentitel, gewählter Titel, Käufe der zusätzlichen Fähigkeit
+  dndOwnedTitles  Json?
+  dndTitle        String?
+  dndCoinPerkBuys Int                @default(0)
+  // Kampf: aktueller Kampfzustand (ein Kampf zur Zeit) + Versionsnummer gegen doppelte Klicks
+  dndCombat       Json?
+  dndCombatV      Int                @default(0)
+  // Fähigkeitsbaum: gelernte Talent-Ids (string[])
+  dndSkills       Json?
+  dndFlags        Json? // string[]
+  dndInventory    DndInventoryItem[]
 
   @@index([currentLocationId])
 }

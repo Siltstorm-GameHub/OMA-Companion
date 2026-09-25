@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getBuilderAccess, MAX_WORLDS_PER_AUTHOR } from "@/lib/dnd/custom-worlds";
 import { defaultCustomWorldDoc } from "@/lib/te-map/custom-world";
+import { getWorld } from "@/lib/te-map/worlds";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,9 @@ export async function GET() {
   if (!access.allowed) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
 
   const select = { id: true, slug: true, title: true, status: true, reviewNote: true, updatedAt: true, submittedAt: true, author: { select: { name: true, username: true } } } as const;
-  const mine = await prisma.dndCustomWorld.findMany({ where: { authorId: session.user.id }, select, orderBy: { updatedAt: "desc" } });
+  // Von Admins bearbeitete feste Locations sind keine „Meine Locations“ — die stehen im Admin-Bereich unter „Feste Locations“
+  const authored = await prisma.dndCustomWorld.findMany({ where: { authorId: session.user.id }, select, orderBy: { updatedAt: "desc" } });
+  const mine = authored.filter((w) => !getWorld(w.slug));
   return NextResponse.json({ isAdmin: access.isAdmin, max: MAX_WORLDS_PER_AUTHOR, mine });
 }
 
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (!access.allowed) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
 
   if (!access.isAdmin) {
-    const count = await prisma.dndCustomWorld.count({ where: { authorId: session.user.id } });
+    const count = (await prisma.dndCustomWorld.findMany({ where: { authorId: session.user.id }, select: { slug: true } })).filter((w) => !getWorld(w.slug)).length;
     if (count >= MAX_WORLDS_PER_AUTHOR) return NextResponse.json({ error: `Du kannst höchstens ${MAX_WORLDS_PER_AUTHOR} Locations anlegen.` }, { status: 400 });
   }
   const body = await req.json().catch(() => ({}));

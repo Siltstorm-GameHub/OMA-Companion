@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { checkHex, checkVisitTargets, getBuilderAccess, notifyAdmins, resyncPublishedWorld } from "@/lib/dnd/custom-worlds";
+import { getWorld } from "@/lib/te-map/worlds";
 import { sanitizeCustomWorldDoc, validateForSubmit } from "@/lib/te-map/custom-world";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({
     id: r.row.id, slug: r.row.slug, status: r.row.status, reviewNote: r.row.reviewNote, doc: s.doc,
     hex: r.row.hexCol != null && r.row.hexRow != null ? { col: r.row.hexCol, row: r.row.hexRow } : null,
-    canEdit: editable(), isAdmin: r.isAdmin,
+    canEdit: editable(), isAdmin: r.isAdmin, fixed: !!getWorld(r.row.slug),
   });
 }
 

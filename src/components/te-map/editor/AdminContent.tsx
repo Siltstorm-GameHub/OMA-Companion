@@ -68,18 +68,38 @@ export default function AdminContent() {
     call("/api/dnd/admin/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, slug }) }, "Wiederhergestellt");
 
   if (!data) return null;
+  const fixedLocs = data.locations.filter((l) => l.fixed);
+  const communityLocs = data.locations.filter((l) => !l.fixed);
   const activity = data.quests.filter((q) => !q.isWorldQuest);
   const worldQuests = data.quests.filter((q) => q.isWorldQuest);
 
   return (
     <div className="space-y-5">
       <section className="moba-panel rounded-2xl p-4 space-y-2">
-        <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Alle Locations ({data.locations.length})</p>
+        <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Feste Locations ({fixedLocs.length})</p>
         <ul className="divide-y divide-white/5">
-          {data.locations.map((l) => (
+          {fixedLocs.map((l) => (
             <li key={l.id} className="flex flex-wrap items-center gap-2 py-2 text-xs">
               <span className="font-bold text-white">{l.name}</span>
-              <span className="text-gray-500">{l.fixed ? "fest" : `von ${l.author ?? "?"}`} · Feld {l.hexCol}, {l.hexRow}{l.players ? ` · ${l.players} Spieler` : ""}</span>
+              <span className="text-gray-500">{l.fixed ? "fest im Spiel" : `von ${l.author ?? "?"}`} · Feld {l.hexCol}, {l.hexRow}{l.players ? ` · ${l.players} Spieler` : ""}</span>
+              <div className="ml-auto flex gap-2">
+                <button type="button" disabled={busy} onClick={() => void editLocation(l.slug)} className="rounded-lg border border-white/15 text-gray-200 font-semibold px-3 py-1.5 hover:border-white/30">Bearbeiten</button>
+                {l.slug !== START_SLUG && (
+                  <button type="button" disabled={busy} onClick={() => void deleteLocation(l)} className="rounded-lg border border-red-400/30 text-red-300 font-semibold px-3 py-1.5 hover:bg-red-500/10">Löschen</button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="moba-panel rounded-2xl p-4 space-y-2">
+        <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Community-Locations (inkl. deiner eigenen) ({communityLocs.length})</p>
+        <ul className="divide-y divide-white/5">
+          {communityLocs.map((l) => (
+            <li key={l.id} className="flex flex-wrap items-center gap-2 py-2 text-xs">
+              <span className="font-bold text-white">{l.name}</span>
+              <span className="text-gray-500">{l.fixed ? "fest im Spiel" : `von ${l.author ?? "?"}`} · Feld {l.hexCol}, {l.hexRow}{l.players ? ` · ${l.players} Spieler` : ""}</span>
               <div className="ml-auto flex gap-2">
                 <button type="button" disabled={busy} onClick={() => void editLocation(l.slug)} className="rounded-lg border border-white/15 text-gray-200 font-semibold px-3 py-1.5 hover:border-white/30">Bearbeiten</button>
                 {l.slug !== START_SLUG && (

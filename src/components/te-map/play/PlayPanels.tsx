@@ -4,7 +4,7 @@
 // OMA Quest — Spiel-Panels: Chat (mit Moderation), Ereignisse, Händler, Charakter, Inventar, Gruppe, Spielleiter, HUD
 // ============================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EMOTE_ICONS, type ChatMessage } from "@/components/te-map/TeWorld";
 import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { D20 } from "@/components/te-map/play/Dice";
@@ -12,7 +12,10 @@ import type { CharacterSheet } from "@/lib/dnd/rpg-server";
 import type { PartyView, InviteView } from "@/lib/dnd/party";
 import type { WorldEventView } from "@/lib/dnd/world-events";
 import { getItem, ITEMS as ITEM_OPTIONS, SLOT_LABEL, sellPrice, type ItemSlot } from "@/lib/dnd/items";
-import { ABILITY_LABEL, ABILITY_SHORT } from "@/lib/te-map/rpg";
+import { ABILITY_LABEL, ABILITY_SHORT, MAX_LEVEL } from "@/lib/te-map/rpg";
+import { buyPriceFor, effectsOf, getPerk, PERKS, sellPriceFor } from "@/lib/dnd/perks";
+import { Coins, Gold } from "@/components/te-map/play/Currency";
+import type { LeaderboardEntry, ProgressView } from "@/lib/dnd/progression";
 
 const panel = "oq-panel p-4 space-y-2";
 const label = "oq-title";
@@ -39,17 +42,29 @@ export function useSheet(refreshKey = 0): CharacterSheet | null {
   return sheet;
 }
 
-// ── Kopfzeile im Spiel (Stufe, XP, Gold, Münzen) ────────────
+// ── Kopfzeile im Spiel (Stufe, Titel, XP, Gold, Münzen, offene Belohnung) ──
 
-export function HudBar({ refreshKey = 0 }: { refreshKey?: number }) {
+export function HudBar({ refreshKey = 0, onOpen, notify }: { refreshKey?: number; onOpen?: () => void; notify?: Notify }) {
   const sheet = useSheet(refreshKey);
+  const lastLevel = useRef<number | null>(null);
+  useEffect(() => {
+    if (!sheet) return;
+    // Stufenaufstieg melden (nicht beim ersten Laden)
+    if (lastLevel.current !== null && sheet.level > lastLevel.current) notify?.("level", `Stufe ${sheet.level} erreicht!`, "Öffne den Charakterbogen (C) und wähle deine Belohnung.");
+    lastLevel.current = sheet.level;
+  }, [sheet, notify]);
   if (!sheet) return null;
+  const open = sheet.attrPoints + sheet.perkPicks;
   return (
     <div className="oq-panel flex items-center gap-3 px-3 py-1.5 text-xs text-white">
       <span className="font-black text-violet-200">Stufe {sheet.level}</span>
+      <span className="hidden sm:inline text-[10px] text-gray-400">{sheet.title}</span>
       <span className="w-24 h-2 rounded-full bg-black/60 border border-white/15 overflow-hidden" title={`${sheet.xp} XP`}><span className="block h-full bg-violet-400" style={{ width: `${Math.round(sheet.progress * 100)}%` }} /></span>
-      <span className="font-bold text-amber-300" title="Gold (im Spiel)">🪙 {sheet.gold}</span>
-      {sheet.coins !== undefined && <span className="font-bold text-yellow-200" title="OMA-Münzen (App)">💰 {sheet.coins}</span>}
+      <Gold n={sheet.gold} className="font-bold text-amber-300" />
+      {sheet.coins !== undefined && <Coins n={sheet.coins} className="font-bold text-yellow-200" />}
+      {open > 0 && onOpen && (
+        <button type="button" onClick={onOpen} className="pointer-events-auto oq-btn oq-btn-gold text-[10px] px-2 py-0.5 animate-pulse" title="Belohnung wählen">⭐ Aufstieg! ({open})</button>
+      )}
     </div>
   );
 }
@@ -145,7 +160,7 @@ export function EventCards({ events, onDismiss, onChanged, notify }: { events: W
         return (
           <div key={e.id} className="oq-panel !border-amber-300/70 p-3 space-y-1.5 bg-[#1a1608]">
             <div className="flex items-start gap-2">
-              <p className="text-sm font-black text-amber-200">{e.kind === "announce" ? "📣" : e.kind === "check" ? "🎲" : "💰"} {e.title}</p>
+              <p className="text-sm font-black text-amber-200">{e.kind === "announce" ? "📣" : e.kind === "check" ? "🎲" : "🎁"} {e.title}</p>
               <span className="text-[10px] text-gray-400">{e.authorName}{e.everywhere ? " · überall" : ""}</span>
               <button type="button" onClick={() => onDismiss(e.id)} aria-label="Ausblenden" className="ml-auto text-gray-400 hover:text-white">✕</button>
             </div>
@@ -192,7 +207,7 @@ export function ShopPanel({ slug, actorId, merchantName, shop, onClose, onSheetC
       <div className="oq-panel w-full max-w-lg max-h-full overflow-y-auto p-4 space-y-3">
         <div className="flex items-center gap-2">
           <p className="text-sm font-black text-amber-200">🛒 {merchantName}</p>
-          <span className="ml-auto text-xs text-amber-300 font-bold">🪙 {sheet?.gold ?? "…"}</span>
+          <Gold n={sheet?.gold ?? "…"} className="ml-auto text-xs text-amber-300 font-bold" />
           <button type="button" onClick={onClose} className={btn}>Schließen</button>
         </div>
         {node}
@@ -202,7 +217,7 @@ export function ShopPanel({ slug, actorId, merchantName, shop, onClose, onSheetC
             <li key={k} className="flex items-center gap-2 text-xs text-white">
               <span className="oq-slot w-9 h-9 grid place-items-center text-xl">{it.emoji}</span>
               <span className="min-w-0"><b>{it.name}</b> <span className="text-gray-500">({SLOT_LABEL[it.slot]}{it.bonus ? `, +${it.bonus.value} ${ABILITY_SHORT[it.bonus.ability]}` : ""})</span><br /><span className="text-gray-400">{it.desc}</span></span>
-              <button type="button" disabled={!sheet || sheet.gold < it.price} onClick={() => void trade(k, "buy")} className={`${btn} oq-btn-gold ml-auto shrink-0`}>{it.price} 🪙</button>
+              <button type="button" disabled={!sheet || sheet.gold < buyPriceFor(it.price, effectsOf(sheet?.perks ?? []).trader)} onClick={() => void trade(k, "buy")} className={`${btn} oq-btn-gold ml-auto shrink-0`}><Gold n={buyPriceFor(it.price, effectsOf(sheet?.perks ?? []).trader)} /></button>
             </li>) : null; })}
           {shop.length === 0 && <li className="text-xs text-gray-500">Der Händler hat gerade nichts im Angebot.</li>}
         </ul>
@@ -212,7 +227,7 @@ export function ShopPanel({ slug, actorId, merchantName, shop, onClose, onSheetC
           {sheet?.inventory.map((e) => (
             <li key={e.key} className="flex items-center gap-2 text-xs text-white">
               <span className="oq-slot w-9 h-9 grid place-items-center text-xl">{e.item.emoji}</span><span>{e.item.name}{e.qty > 1 ? ` ×${e.qty}` : ""}{e.equipped ? " (angelegt)" : ""}</span>
-              <button type="button" onClick={() => void trade(e.key, "sell")} className={`${btn} ml-auto`}>Verkaufen · {sellPrice(e.item)} 🪙</button>
+              <button type="button" onClick={() => void trade(e.key, "sell")} className={`${btn} ml-auto`}>Verkaufen · <Gold n={sellPriceFor(sellPrice(e.item), effectsOf(sheet?.perks ?? []).trader)} /></button>
             </li>
           ))}
         </ul>
@@ -221,33 +236,155 @@ export function ShopPanel({ slug, actorId, merchantName, shop, onClose, onSheetC
   );
 }
 
-// ── Charakter (Stufe, Gold, Münzen, Attribute) ──────────────
+// ── Charakter (Stufe, Titel, Währungen, Attribute mit Punkteverteilung, Fähigkeiten) ──
 
-export function CharacterPanel({ refreshKey = 0 }: { refreshKey?: number }) {
-  const sheet = useSheet(refreshKey);
+export function CharacterPanel({ refreshKey = 0, onChanged, notify }: { refreshKey?: number; onChanged?: () => void; notify?: Notify }) {
+  const { notify: say, node } = useNotice(notify);
+  const [reload, setReload] = useState(0);
+  const sheet = useSheet(refreshKey + reload);
+  const [busy, setBusy] = useState(false);
   if (!sheet) return null;
+
+  const spend = async (body: Record<string, unknown>, ok: string) => {
+    setBusy(true);
+    const r = await post<CharacterSheet>("/api/dnd/character/level", body);
+    setBusy(false);
+    if (!r.ok) { say("error", r.error); return; }
+    say("level", ok);
+    setReload((n) => n + 1);
+    onChanged?.();
+  };
+  const owned = sheet.perks.map(getPerk).filter((p): p is NonNullable<ReturnType<typeof getPerk>> => !!p);
+  const choices = PERKS.filter((p) => !sheet.perks.includes(p.id));
+
   return (
     <div className={panel}>
+      {node}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <p className="text-base font-black text-white">{sheet.name}</p>
-        <span className="text-sm font-black text-violet-200">Stufe {sheet.level}</span>
-        <span className="text-xs text-amber-300 font-bold" title="Gold im Spiel">🪙 {sheet.gold} Gold</span>
-        {sheet.coins !== undefined && <span className="text-xs text-yellow-200 font-bold" title="OMA-Münzen der App">💰 {sheet.coins} Münzen</span>}
+        <span className="text-sm font-black text-violet-200">Stufe {sheet.level} · {sheet.title}</span>
+        <Gold n={sheet.gold} className="text-xs text-amber-300 font-bold" />
+        {sheet.coins !== undefined && <Coins n={sheet.coins} className="text-xs text-yellow-200 font-bold" />}
       </div>
       <div>
         <div className="h-2.5 rounded-full bg-black/60 border border-white/15 overflow-hidden"><div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-400" style={{ width: `${Math.round(sheet.progress * 100)}%` }} /></div>
-        <p className="text-[10px] text-gray-500 mt-0.5">{sheet.xp} XP{sheet.level < 20 ? ` — nächste Stufe bei ${sheet.xpForNextLevel}` : " — Höchststufe"}</p>
+        <p className="text-[10px] text-gray-500 mt-0.5">{sheet.xp} XP{sheet.level < MAX_LEVEL ? ` — nächste Stufe bei ${sheet.xpForNextLevel}` : " — Höchststufe"}</p>
       </div>
+
+      {(sheet.attrPoints > 0 || sheet.perkPicks > 0) && (
+        <div className="rounded-md border-2 border-amber-300/60 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+          <p className="font-black">⭐ Stufenaufstieg — deine Belohnung wartet</p>
+          <p>{sheet.attrPoints > 0 ? `${sheet.attrPoints} Attributspunkt${sheet.attrPoints === 1 ? "" : "e"} zum Verteilen (+ bei einem Attribut)` : ""}{sheet.attrPoints > 0 && sheet.perkPicks > 0 ? " · " : ""}{sheet.perkPicks > 0 ? `${sheet.perkPicks} Fähigkeit${sheet.perkPicks === 1 ? "" : "en"} zum Wählen` : ""}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-        {sheet.abilities.map((a) => (
-          <div key={a.key} className="oq-slot px-2 py-1.5 text-center" title={ABILITY_LABEL[a.key]}>
-            <p className="text-[9px] text-gray-500 font-bold">{ABILITY_SHORT[a.key]}</p>
-            <p className="text-base font-black text-white">{a.score}</p>
-            <p className="text-[10px] text-sky-300">{a.mod + a.equipment >= 0 ? "+" : "−"}{Math.abs(a.mod + a.equipment)}{a.equipment ? " ⚙" : ""}</p>
-          </div>
-        ))}
+        {sheet.abilities.map((a) => {
+          const total = a.score + a.bonus;
+          return (
+            <div key={a.key} className="oq-slot px-2 py-1.5 text-center" title={ABILITY_LABEL[a.key]}>
+              <p className="text-[9px] text-gray-500 font-bold">{ABILITY_SHORT[a.key]}</p>
+              <p className="text-base font-black text-white">{total}{a.bonus > 0 && <span className="text-[9px] text-emerald-300 font-bold"> (+{a.bonus})</span>}</p>
+              <p className="text-[10px] text-sky-300">{a.mod + a.equipment >= 0 ? "+" : "−"}{Math.abs(a.mod + a.equipment)}{a.equipment ? " ⚙" : ""}</p>
+              {sheet.attrPoints > 0 && total < 20 && (
+                <button type="button" disabled={busy} onClick={() => void spend({ action: "attr", ability: a.key }, `${ABILITY_LABEL[a.key]} +1`)} className="oq-btn oq-btn-gold mt-1 w-full text-xs py-0.5" aria-label={`${ABILITY_LABEL[a.key]} erhöhen`}>+</button>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <p className="text-[10px] text-gray-500">Proben: d20 + Modifikator (+ 1 je 3 Stufen) gegen den Schwierigkeitsgrad. ⚙ = Bonus durch Ausrüstung.</p>
+      <p className="text-[10px] text-gray-500">Proben: d20 + Modifikator (+ 1 je 3 Stufen) gegen den Schwierigkeitsgrad. ⚙ = Bonus durch Ausrüstung und Fähigkeiten. Maximal 20 pro Attribut.</p>
+
+      {owned.length > 0 && (
+        <div className="space-y-1">
+          <p className={label}>Fähigkeiten</p>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {owned.map((p) => <li key={p.id} className="oq-slot px-2.5 py-1.5 text-xs text-white"><span className="mr-1">{p.icon}</span><b>{p.name}</b><br /><span className="text-gray-400">{p.desc}</span></li>)}
+          </ul>
+        </div>
+      )}
+      {sheet.perkPicks > 0 && (
+        <div className="space-y-1">
+          <p className={label}>Fähigkeit wählen</p>
+          <ul className="grid gap-1.5 sm:grid-cols-2">
+            {choices.map((p) => (
+              <li key={p.id}>
+                <button type="button" disabled={busy} onClick={() => void spend({ action: "perk", perk: p.id }, `${p.name} gelernt`)} className="oq-btn w-full text-left px-2.5 py-1.5 text-xs">
+                  <span className="mr-1">{p.icon}</span><b>{p.name}</b><br /><span className="font-normal text-gray-300">{p.desc}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Fortschritt (nächste Belohnung, Meilensteine, Statistik, Bestenliste) ──
+
+export function ProgressPanel({ refreshKey = 0 }: { refreshKey?: number }) {
+  const [data, setData] = useState<{ progress: ProgressView; leaderboard: LeaderboardEntry[] } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/dnd/progress").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancelled && j) setData(j); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+  if (!data) return null;
+  const { progress: p, leaderboard: board } = data;
+  return (
+    <div className={panel}>
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <p className={label}>Fortschritt</p>
+        <span className="text-sm font-black text-white">Stufe {p.level} · {p.title}</span>
+        {p.rank && <span className="text-[11px] text-gray-400">Rang {p.rank.position} von {p.rank.of}</span>}
+      </div>
+
+      {p.next ? (
+        <div className="oq-slot p-3 space-y-0.5">
+          <p className="text-xs font-black text-white">Nächste Stufe: {p.next.level}{p.next.title ? ` — Titel „${p.next.title}“` : ""}</p>
+          <p className="text-[11px] text-gray-300">Noch <b>{p.next.xpMissing} XP</b> · Belohnung: {p.next.attrPoints} Attributspunkt{p.next.perkPick ? " + eine Fähigkeit zum Wählen" : ""}</p>
+        </div>
+      ) : <p className="text-xs text-emerald-300 font-bold">Höchststufe erreicht — du bist ein Mythos.</p>}
+
+      <div className="grid grid-cols-3 gap-1.5 text-center">
+        <div className="oq-slot py-1.5"><p className="text-base font-black text-white">{p.stats.questsCompleted}</p><p className="text-[9px] text-gray-500 uppercase">Quests erledigt</p></div>
+        <div className="oq-slot py-1.5"><p className="text-base font-black text-white">{p.stats.questsActive}</p><p className="text-[9px] text-gray-500 uppercase">Quests laufend</p></div>
+        <div className="oq-slot py-1.5"><p className="text-base font-black text-white">{p.stats.perksChosen}</p><p className="text-[9px] text-gray-500 uppercase">Fähigkeiten</p></div>
+      </div>
+
+      <p className={label}>Meilensteine</p>
+      <ol className="grid gap-1 sm:grid-cols-2">
+        {p.milestones.map((m) => (
+          <li key={m.level} className={`oq-slot px-2.5 py-1 text-[11px] flex items-center gap-2 ${m.reached ? "text-white" : "text-gray-500"}`}>
+            <span className={`w-6 shrink-0 text-center font-black ${m.reached ? "text-emerald-300" : ""}`}>{m.reached ? "✓" : m.level}</span>
+            <span className="min-w-0">
+              <b>Stufe {m.level}</b>{m.title ? ` · ${m.title}` : ""}<br />
+              <span className="text-gray-400">+{m.attrPoints} Attributspunkt{m.perkPick ? " · Fähigkeit" : ""}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      {board.length > 0 && (
+        <>
+          <p className={label}>Bestenliste</p>
+          <ol className="space-y-1">
+            {board.map((e) => (
+              <li key={e.cardId} className={`oq-slot flex items-center gap-2 px-2.5 py-1 text-xs ${e.mine ? "oq-slot-on" : ""}`}>
+                <span className="w-5 text-center font-black text-gray-400">{e.position}</span>
+                {e.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={e.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" referrerPolicy="no-referrer" />
+                ) : <span className="w-6 h-6 rounded-full bg-zinc-800 grid place-items-center text-[10px] font-bold text-white">{e.name.charAt(0).toUpperCase()}</span>}
+                <span className="font-bold text-white truncate">{e.name}</span>
+                <span className="ml-auto text-violet-200 font-black">Lv {e.level}</span>
+                <span className="hidden sm:inline text-[10px] text-gray-400 w-20 text-right">{e.title}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
     </div>
   );
 }
@@ -279,8 +416,8 @@ export function InventoryPanel({ refreshKey = 0, onChanged, notify }: { refreshK
     <div className={panel}>
       <div className="flex items-center gap-3">
         <p className={label}>Inventar</p>
-        <span className="ml-auto text-xs font-bold text-amber-300">🪙 {sheet.gold}</span>
-        {sheet.coins !== undefined && <span className="text-xs font-bold text-yellow-200">💰 {sheet.coins}</span>}
+        <Gold n={sheet.gold} className="ml-auto text-xs font-bold text-amber-300" />
+        {sheet.coins !== undefined && <Coins n={sheet.coins} className="text-xs font-bold text-yellow-200" />}
       </div>
       {node}
       <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
@@ -315,7 +452,7 @@ export function InventoryPanel({ refreshKey = 0, onChanged, notify }: { refreshK
           <span className="text-3xl">{selected.item.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black text-white">{selected.item.name}{selected.qty > 1 ? ` ×${selected.qty}` : ""}</p>
-            <p className="text-[11px] text-gray-400">{SLOT_LABEL[selected.item.slot]}{selected.item.bonus ? ` · +${selected.item.bonus.value} ${ABILITY_LABEL[selected.item.bonus.ability]} auf Proben` : ""} · Wert {selected.item.price} 🪙</p>
+            <p className="text-[11px] text-gray-400">{SLOT_LABEL[selected.item.slot]}{selected.item.bonus ? ` · +${selected.item.bonus.value} ${ABILITY_LABEL[selected.item.bonus.ability]} auf Proben` : ""} · Wert <Gold n={selected.item.price} size={12} /></p>
             <p className="text-[11px] text-gray-300">{selected.item.desc}</p>
           </div>
           {selected.item.slot !== "loot" && <button type="button" onClick={() => void equip(selected.key, !selected.equipped)} className={`${btn} oq-btn-primary`}>{selected.equipped ? "Ablegen" : "Anlegen"}</button>}

@@ -763,7 +763,7 @@ export default function LiveBattleView({
 
   function handleExit() {
     if (onExit) onExit();
-    else router.push("/battle-cards?tab=community");
+    else router.push("/battle-cards?tab=arena");
   }
 
   async function fetchSnapshot() {

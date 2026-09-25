@@ -17,6 +17,7 @@ import {
   type ActorKind,
 } from "@/lib/te-map/custom-world-edit";
 import { ITEMS } from "@/lib/dnd/items";
+import { getMonster, MONSTERS } from "@/lib/dnd/combat";
 import { INTERIOR_TEMPLATES } from "@/lib/te-map/interior";
 import { STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
 import InteriorEditor from "./InteriorEditor";
@@ -54,13 +55,14 @@ const TOOL_BUTTONS: { key: string; label: string; tool: Tool; caveOnly?: boolean
   { key: "npc", label: "NPC", tool: { kind: "actor", actor: "npc" } },
   { key: "merchant", label: "Händler", tool: { kind: "actor", actor: "merchant" } },
   { key: "chest", label: "Truhe", tool: { kind: "actor", actor: "chest" } },
+  { key: "monster", label: "Monster", tool: { kind: "actor", actor: "monster" } },
   { key: "sign", label: "Schild", tool: { kind: "actor", actor: "sign" } },
   { key: "spawn", label: "Startpunkt", tool: { kind: "spawn" } },
   { key: "erase", label: "Radierer", tool: { kind: "erase" } },
 ];
 
 function toolKey(t: Tool): string {
-  return t.kind === "actor" ? (t.actor === "npc" ? "npc" : t.actor === "merchant" ? "merchant" : t.actor === "chest" ? "chest" : "sign") : t.kind;
+  return t.kind === "actor" ? (t.actor === "npc" ? "npc" : t.actor === "merchant" ? "merchant" : t.actor === "chest" ? "chest" : t.actor === "monster" ? "monster" : "sign") : t.kind;
 }
 
 /** Kleine Vorschau eines Objekts (Stempel) bzw. Dach-/Wandblocks. */
@@ -172,7 +174,9 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
     }
     for (const a of doc.actors) {
       if (a.kind === "chest") sprites.push({ base: (a.y + 1) * T, draw: () => ctx.drawImage(sheets.chests, 16, 16, 16, 16, a.x * T, a.y * T, 16, 16) });
-      else if (a.kind === "npc") {
+      else if (a.kind === "monster") {
+        sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "14px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(getMonster(a.monster ?? "")?.emoji ?? "👾", a.x * T + T / 2, a.y * T + T / 2); } });
+      } else if (a.kind === "npc") {
         const sets = npcSets.get(a.id);
         if (sets) sprites.push({ base: (a.y + 1) * T, draw: () => drawTeFrame(ctx, a.dir === "up" ? sets.back : sets.front, 1, a.dir, a.x * T + T / 2 - 24, a.y * T - 16, 1) });
       }
@@ -363,7 +367,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
               </div>
             )}
 
-            {tool.kind === "actor" && <p className="text-[11px] text-gray-500 pt-1">Klick auf die Karte setzt {tool.actor === "npc" ? "einen NPC" : tool.actor === "merchant" ? "einen Händler" : tool.actor === "chest" ? "eine Truhe" : "ein Schild"}. Danach Dialoge unter „Quest“ bearbeiten.</p>}
+            {tool.kind === "actor" && <p className="text-[11px] text-gray-500 pt-1">Klick auf die Karte setzt {tool.actor === "npc" ? "einen NPC" : tool.actor === "merchant" ? "einen Händler" : tool.actor === "chest" ? "eine Truhe" : tool.actor === "monster" ? "ein Monster (Art im Auswahl-Fenster ändern)" : "ein Schild"}. Danach Dialoge unter „Quest“ bearbeiten.</p>}
             {tool.kind === "wall" && <p className="text-[11px] text-gray-500 pt-1">Malen setzt Wandkacheln, der Radierer entfernt sie.</p>}
             {tool.kind === "spawn" && <p className="text-[11px] text-gray-500 pt-1">Hier steht die Figur beim Betreten.</p>}
             {tool.kind === "select" && <p className="text-[11px] text-gray-500 pt-1">Klick wählt NPCs, Truhen und Gebäude aus; NPCs lassen sich ziehen.</p>}
@@ -374,11 +378,19 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
         {selActor && (
           <div className="moba-panel rounded-2xl p-3 space-y-2">
             <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">
-              {selActor.kind === "npc" ? "NPC" : selActor.kind === "merchant" ? "Händler" : selActor.kind === "chest" ? "Truhe" : "Schild"}
+              {selActor.kind === "npc" ? "NPC" : selActor.kind === "merchant" ? "Händler" : selActor.kind === "chest" ? "Truhe" : selActor.kind === "monster" ? "Monster" : "Schild"}
             </p>
             <label className="block text-[11px] text-gray-400">Name
               <input value={selActor.name} maxLength={LIMITS.nameLen} disabled={readOnly} onChange={(e) => commit(updateActor(doc, selActor.id, { name: e.target.value }))} onFocus={onBeginEdit} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white" />
             </label>
+            {selActor.kind === "monster" && (
+              <label className="block text-[11px] text-gray-400">Art des Monsters
+                <select value={selActor.monster ?? "ratte"} disabled={readOnly} onFocus={onBeginEdit} onChange={(e) => { const m = getMonster(e.target.value); if (m) commit(updateActor(doc, selActor.id, { monster: m.id, name: m.name, talk: [{ step: "*", lines: [m.blurb] }] })); }} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white">
+                  {MONSTERS.map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name} (Stufe {m.level})</option>)}
+                </select>
+                <span className="block text-[10px] text-gray-500 mt-1">Spieler kämpfen beim Ansprechen. Nach einem Sieg verschwindet die Figur für 15 Minuten. Achte auf die Stufe — zu starke Monster frustrieren.</span>
+              </label>
+            )}
             {selActor.kind === "merchant" && (
               <div className="text-[11px] text-gray-400 space-y-1">
                 <p>Angebot (bis zu {LIMITS.maxShop} Gegenstände)</p>
@@ -407,9 +419,9 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
                 )}
               </>
             )}
-            <button type="button" onClick={() => onQuestFocus(selActor.id)} className="w-full rounded-lg border border-violet-400/40 text-violet-300 text-[11px] font-semibold py-1.5 hover:bg-violet-500/10">
+            {selActor.kind !== "monster" && <button type="button" onClick={() => onQuestFocus(selActor.id)} className="w-full rounded-lg border border-violet-400/40 text-violet-300 text-[11px] font-semibold py-1.5 hover:bg-violet-500/10">
               Dialoge bearbeiten
-            </button>
+            </button>}
             {!readOnly && (
               <button type="button" onClick={() => { onBeginEdit(); commit(removeAt(doc, selActor.x, selActor.y)); setSelected(null); }} className="w-full rounded-lg border border-red-400/30 text-red-300 text-[11px] font-semibold py-1.5 hover:bg-red-500/10">
                 Entfernen

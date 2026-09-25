@@ -1,14 +1,15 @@
 // ============================================
-// /battle-cards — Hub (3 Reiter: Kampf, Karten, Community)
+// /battle-cards — Hub (5 Reiter: Held, Welt, Arena, Sammlung, Laden)
 // ============================================
-// Kein öffentlicher Karten-Katalog mehr. Verzweigt direkt:
+// Der Hub ist das Menü von OMA Battle Cards und in der App-Navigation der Einstieg. Verzweigt direkt:
 //  - Helden-Einrichtung noch offen → zeigt das Layout (HeroSetup) statt dieser Seite.
-//  - Einrichtung abgeschlossen → drei Reiter:
-//    "Kampf" (Startbildschirm: Startaufstellung, Packs, "Kampf starten"-Button
-//    öffnet Zufallsgegner/Direkt-Herausforderung/NPC in 3 Stufen — siehe
-//    BattleLauncher),
-//    "Karten" (Sammlung — siehe CardCollectionBrowser),
-//    "Community" (eigene offene Herausforderungen, Rangliste).
+//  - Einrichtung abgeschlossen → fünf Reiter:
+//    "Held" (Startseite: Stufe, Vermögen, was gerade wartet),
+//    "Welt" (Einstieg in OMA Quest),
+//    "Arena" (alle Kampfmodi: BattleLauncher, Kampagne, Herausforderungen, Rangliste),
+//    "Sammlung" (Karten, Aufstellung, Duel-Deck — siehe CardCollectionBrowser),
+//    "Laden" (Packs, Glücksrad, Held neu würfeln — vormals /shop).
+//  Alte ?tab=-Werte (kampf/kampagne/community/karten) landen über LEGACY_TABS im passenden Reiter.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,7 +17,7 @@ import MobaIcon from "@/components/battle-cards/MobaIcon";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
-import { countUnopenedPacks, peekNextPackKind } from "@/lib/battle-cards/packs";
+import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
@@ -37,6 +38,14 @@ import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
 import { formatBerlinDate } from "@/lib/time";
+import { getHeroSetup } from "@/lib/battle-cards/hero-setup";
+import { getShopConfig } from "@/lib/shop-config";
+import { getHeroCockpit } from "@/lib/battle-cards/hub-hero";
+import HeldPanel from "@/components/battle-cards/HeldPanel";
+import CoinIcon from "@/components/CoinIcon";
+import DailySpin from "@/components/battle-cards/shop/DailySpin";
+import BuyPack from "@/components/battle-cards/shop/BuyPack";
+import BuyDndReroll from "@/components/battle-cards/shop/BuyDndReroll";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
@@ -93,6 +102,14 @@ export default async function BattleCardsPage() {
     where: { id: userId },
     select: { points: true, eloDuels: true, eloGems: true },
   });
+  const heroSetup = await getHeroSetup(userId);
+  const cockpit = heroSetup ? await getHeroCockpit(heroSetup.card) : null;
+  const hero = cockpit?.card ?? null;
+  const [shopConfig, purchasedToday, todaySpin] = await Promise.all([
+    getShopConfig(),
+    countPacksPurchasedToday(userId),
+    prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
+  ]);
   const upgradeEconomy = await getUpgradeEconomyConfig();
   const activeDuelDeck = await getActiveDuelDeck(userId);
   const duelDeckCount = (activeDuelDeck?.unitCardIds.length ?? 0) + (activeDuelDeck?.tacticCardIds.length ?? 0);
@@ -157,30 +174,82 @@ export default async function BattleCardsPage() {
   const eloGems = currentUser?.eloGems ?? 1000;
   const eloOverall = getCombinedElo(eloDuels, eloGems);
 
-  const kampfPanel = (
-    <div className="space-y-6">
+  const rankingBlock = (
+    <div className="space-y-8">
+      <div className="moba-panel rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-[color:var(--moba-accent)]/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
+              <MobaIcon name="trophy" className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[color:var(--moba-ink)]">Rangliste</p>
+              {currentSeasonWindow && (
+                <p className="text-[10px] text-[color:var(--moba-ink-dim)]">
+                  Saison {currentSeasonWindow.seasonNumber} · endet am {formatBerlinDate(currentSeasonWindow.end)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+        <LeaderboardTabs overall={leaderboardRows} duels={duelsLeaderboardRows} gems={gemsLeaderboardRows} viewerId={userId} />
+      </div>
+    </div>
+  );
+
+
+  const coins = currentUser?.points ?? 0;
+  const openPoints = (hero?.dndAttrPoints ?? 0) + (hero?.dndPerkPicks ?? 0) + (cockpit?.invites.length ?? 0);
+
+  const heldPanel = cockpit && (
+    <HeldPanel
+      cockpit={cockpit}
+      tutorialStep={tutorialStep}
+      coins={coins}
+      eloOverall={eloOverall}
+      unopenedPacks={unopenedPacks}
+      pendingChallenges={pendingChallenges}
+      spunToday={!!todaySpin}
+      lineupCards={lineupCards}
+    />
+  );
+
+  const weltPanel = (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-lg font-black text-white">OMA Quest</h1>
+        <p className="text-xs text-gray-500 mt-0.5">Die Welt deines Helden: Karte, Orte, Quests, Gruppe und Händler.</p>
+      </div>
+      <Link href="/oma-quest" className="moba-panel rounded-2xl p-4 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-3">
+        <span className="flex items-center gap-3">
+          <MobaIcon name="map" className="w-10 h-10 shrink-0" />
+          <span><span className="block text-sm font-bold text-white">Zur Weltkarte</span><span className="block text-xs text-gray-500">Reisen, Quests erledigen, Gold verdienen</span></span>
+        </span>
+        <span className="text-xs font-semibold text-gray-400">Öffnen →</span>
+      </Link>
+    </div>
+  );
+
+  const arenaPanel = (
+    <div className="space-y-8">
       <TutorialProgressBanner step={tutorialStep} />
 
       <BattleLauncher eloOverall={eloOverall} eloDuels={eloDuels} eloGems={eloGems} />
 
-      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
-
       {hasChallenges && (
         <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
       )}
-    </div>
-  );
 
-  const kampagnePanel = (
-    <div className="space-y-4">
-      <div>
+      <div className="space-y-4">
         <h1 className="text-lg font-black text-white">Kampagne</h1>
+        <CampaignMap />
       </div>
-      <CampaignMap />
+
+      {rankingBlock}
     </div>
   );
 
-  const kartenPanel = (
+  const sammlungPanel = (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
@@ -232,25 +301,34 @@ export default async function BattleCardsPage() {
     </div>
   );
 
-  const communityPanel = (
-    <div className="space-y-8">
-      <div className="moba-panel rounded-2xl p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[color:var(--moba-accent)]/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
-              <MobaIcon name="trophy" className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[color:var(--moba-ink)]">Rangliste</p>
-              {currentSeasonWindow && (
-                <p className="text-[10px] text-[color:var(--moba-ink-dim)]">
-                  Saison {currentSeasonWindow.seasonNumber} · endet am {formatBerlinDate(currentSeasonWindow.end)}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-        <LeaderboardTabs overall={leaderboardRows} duels={duelsLeaderboardRows} gems={gemsLeaderboardRows} viewerId={userId} />
+  const ladenPanel = (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="text-lg font-black text-white">Laden</h1>
+        <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400 tabular-nums"><CoinIcon size={16} /> {coins} Münzen</span>
+      </div>
+
+      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <DailySpin
+          alreadySpun={!!todaySpin}
+          lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
+          initialPoints={coins}
+          prizes={shopConfig.wheelPrizes}
+        />
+        <BuyPack
+          packPrices={shopConfig.packPrices}
+          initialPoints={coins}
+          dailyLimit={PACK_DAILY_PURCHASE_LIMIT}
+          purchasedToday={purchasedToday}
+        />
+        <BuyDndReroll
+          cost={shopConfig.dndRerollCost}
+          points={coins}
+          currentCredits={hero?.dndRerollCredits ?? 0}
+          hasCharacter={!!hero?.dndCreatedAt}
+        />
       </div>
     </div>
   );
@@ -259,11 +337,14 @@ export default async function BattleCardsPage() {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <BattleCardsLogo />
       <BattleCardsTabs
-        kampfPanel={kampfPanel}
-        kampagnePanel={kampagnePanel}
-        kartenPanel={kartenPanel}
-        communityPanel={communityPanel}
-        kampfBadge={pendingChallenges}
+        heldPanel={heldPanel}
+        weltPanel={weltPanel}
+        arenaPanel={arenaPanel}
+        sammlungPanel={sammlungPanel}
+        ladenPanel={ladenPanel}
+        arenaBadge={pendingChallenges}
+        heldBadge={openPoints}
+        ladenBadge={unopenedPacks}
       />
     </div>
   );

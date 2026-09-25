@@ -6,9 +6,9 @@
 // jeder einmal (Server), bei Beute bekommen die Schnellsten etwas. Alles ist zeitlich begrenzt.
 
 import { prisma } from "../prisma";
-import { levelOf, resolveCheck, isAbility, type Ability, type RollResult } from "../te-map/rpg";
+import { resolveCheck, isAbility, type Ability, type RollResult } from "../te-map/rpg";
 import { logChronicle } from "./chronicle";
-import { equipmentBonus, getInventory, grantRewards } from "./rpg-server";
+import { checkParams, grantRewards } from "./rpg-server";
 import { isItemKey } from "./items";
 import type { Card } from "@prisma/client";
 
@@ -104,10 +104,7 @@ export async function respondToEvent(card: Card, eventId: string): Promise<Event
 
   const p = (e.params ?? {}) as Record<string, unknown>;
   if (e.kind === "check" && isAbility(p.ability)) {
-    const inv = await getInventory(card.id);
-    const scores = (card.abilityScores ?? {}) as Partial<Record<Ability, number>>;
-    const bonus = equipmentBonus(inv, p.ability);
-    const roll = resolveCheck({ ability: p.ability, dc: Number(p.dc) || 12, score: typeof scores[p.ability] === "number" ? (scores[p.ability] as number) : 10, level: levelOf(card.dndXp), equipmentBonus: bonus });
+    const roll = resolveCheck({ ability: p.ability, dc: Number(p.dc) || 12, ...(await checkParams(card, p.ability)) });
     await prisma.dndWorldEventRoll.create({ data: { eventId, cardId: card.id, cardName: card.name, roll: roll.roll, total: roll.total, success: roll.success } });
     return { roll, success: roll.success, text: roll.success ? "Gelungen!" : "Misslungen." };
   }

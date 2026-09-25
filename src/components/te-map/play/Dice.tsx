@@ -67,6 +67,7 @@ export function DiceOverlay({ ability, dc, roll, onDone }: { ability: string; dc
         {!roll && <p className="text-xs text-gray-300">Der Würfel rollt …</p>}
         {landed && (
           <div className="oq-feed space-y-0.5">
+            {roll.rerolledFrom && <p className="text-[11px] font-bold text-emerald-300">🍀 Glücksrabe: die {roll.rerolledFrom} wurde neu gewürfelt</p>}
             <p className="text-sm font-black text-white">
               {roll.roll}{roll.modifier ? ` ${roll.modifier > 0 ? "+" : "−"} ${Math.abs(roll.modifier)}` : ""} = {roll.total} <span className="text-gray-400 font-semibold">gegen {roll.dc}</span>
             </p>

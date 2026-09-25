@@ -7,6 +7,7 @@
 
 import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
 import { isItemKey } from "@/lib/dnd/items";
+import { getMonster } from "@/lib/dnd/combat";
 import { isAbility, isWeather } from "./rpg";
 import { buildSolid, solidOfMap } from "./engine";
 import { MapBuilder } from "./generate";
@@ -23,6 +24,7 @@ export const LIMITS = {
   maxWalls: 2000,
   maxActors: 16,
   maxNpcs: 10,
+  maxMonsters: 6,
   maxTalks: 8,
   maxChoices: 4,
   maxFlags: 4,
@@ -264,14 +266,18 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
   // Akteure (draußen und in Innenräumen): Kennungen sind welt-weit eindeutig
   const ids = new Set<string>();
   let npcs = 0;
+  let monsters = 0;
   const readActor = (a: unknown, area: { minX: number; minY: number; maxX: number; maxY: number }, allowSign: boolean): Actor | null => {
     if (!isObj(a)) return null;
-    const kind = (a.kind === "chest" || (a.kind === "sign" && allowSign) || a.kind === "merchant") ? a.kind : "npc";
+    const kind = (a.kind === "chest" || (a.kind === "sign" && allowSign) || a.kind === "merchant" || a.kind === "monster") ? a.kind : "npc";
     const id = typeof a.id === "string" && /^[a-z0-9_-]{1,24}$/.test(a.id) ? a.id : "";
     const x = int(a.x, area.minX, area.maxX);
     const y = int(a.y, area.minY, area.maxY);
     if (!id || ids.has(id) || x === null || y === null) { fail("Ein Akteur ist ungültig und wurde entfernt."); return null; }
     if ((kind === "npc" || kind === "merchant") && ++npcs > LIMITS.maxNpcs) { fail(`Höchstens ${LIMITS.maxNpcs} NPCs pro Location.`); return null; }
+    const monster = kind === "monster" && typeof a.monster === "string" ? getMonster(a.monster) : undefined;
+    if (kind === "monster" && !monster) { fail("Ein Monster hat eine ungültige Art und wurde entfernt."); return null; }
+    if (kind === "monster" && ++monsters > LIMITS.maxMonsters) { fail(`Höchstens ${LIMITS.maxMonsters} Monster pro Location.`); return null; }
     ids.add(id);
     const talk: Talk[] = [];
     for (const t of (Array.isArray(a.talk) ? a.talk : []).slice(0, LIMITS.maxTalks)) {
@@ -298,11 +304,13 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
         ...(isWeather(t.weather) ? { weather: t.weather } : {}),
       });
     }
+    if (monster) talk.splice(0, talk.length, { step: "*", lines: [monster.blurb] });
     if (!talk.length) talk.push({ step: "*", lines: ["…"] });
     const actor: Actor = {
-      id, kind, name: text(a.name, LIMITS.nameLen) || (kind === "npc" ? "NPC" : kind === "merchant" ? "Händler" : kind === "chest" ? "Truhe" : "Schild"),
+      id, kind, name: text(a.name, LIMITS.nameLen) || (monster ? monster.name : kind === "npc" ? "NPC" : kind === "merchant" ? "Händler" : kind === "chest" ? "Truhe" : "Schild"),
       x, y, dir: DIRS.includes(a.dir as Dir) ? (a.dir as Dir) : "down", talk,
     };
+    if (monster) actor.monster = monster.id;
     if (kind === "merchant") actor.shop = (Array.isArray(a.shop) ? a.shop : []).filter(isItemKey).filter((k, i, all) => all.indexOf(k) === i).slice(0, LIMITS.maxShop);
     if (kind === "npc" || kind === "merchant") {
       const cfg = sanitizeTeConfig(a.config);

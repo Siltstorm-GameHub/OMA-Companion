@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sanitizeTeConfig } from "@/lib/te-character";
 import { newEventsFor } from "@/lib/dnd/world-events";
+import { levelOf } from "@/lib/te-map/rpg";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const cards = await prisma.card.findMany({
     where: { id: { in: rows.map((r) => r.cardId) } },
-    select: { id: true, name: true, teCharacter: true, linkedDiscordId: true },
+    select: { id: true, name: true, teCharacter: true, linkedDiscordId: true, dndXp: true },
   });
   const discordIds = cards.map((c) => c.linkedDiscordId).filter((v): v is string => !!v);
   const users = discordIds.length ? await prisma.user.findMany({ where: { discordId: { in: discordIds } }, select: { discordId: true, image: true } }) : [];
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       const c = cardById.get(r.cardId);
       const character = sanitizeTeConfig(c?.teCharacter);
       const emoteLive = r.emote && r.emoteAt && Date.now() - r.emoteAt.getTime() < EMOTE_MS ? r.emote : null;
-      return c && character ? [{ id: r.cardId, name: c.name, x: r.x, y: r.y, dir: r.dir, scene: r.scene, character, emote: emoteLive, avatarUrl: c.linkedDiscordId ? avatarByDiscord.get(c.linkedDiscordId) ?? null : null }] : [];
+      return c && character ? [{ id: r.cardId, name: c.name, x: r.x, y: r.y, dir: r.dir, scene: r.scene, level: levelOf(c.dndXp), character, emote: emoteLive, avatarUrl: c.linkedDiscordId ? avatarByDiscord.get(c.linkedDiscordId) ?? null : null }] : [];
     }),
     chat: chatOut,
     hiddenChat,

@@ -52,7 +52,7 @@ export function placeBuilding(d: CustomWorldDoc, b: Building): CustomWorldDoc {
 }
 
 export function nextActorId(d: CustomWorldDoc, kind: ActorKind): string {
-  const base = kind === "npc" ? "npc" : kind === "merchant" ? "haendler" : kind === "chest" ? "kiste" : "schild";
+  const base = kind === "monster" ? "monster" : kind === "npc" ? "npc" : kind === "merchant" ? "haendler" : kind === "chest" ? "kiste" : "schild";
   const used = new Set(allActorsOf({ actors: d.actors, buildings: d.buildings }).map((a) => a.id));
   for (let i = 1; i < 100; i++) if (!used.has(`${base}${i}`)) return `${base}${i}`;
   return `${base}${Date.now() % 100000}`;
@@ -61,6 +61,7 @@ export function nextActorId(d: CustomWorldDoc, kind: ActorKind): string {
 /** Neuen NPC / neue Truhe / neues Schild setzen. Schilder bekommen gleich ihren festen Stempel dazu. */
 export function placeActor(d: CustomWorldDoc, kind: ActorKind, x: number, y: number): { doc: CustomWorldDoc; id: string | null } {
   if (!inMap(d, x, y) || d.actors.length >= LIMITS.maxActors) return { doc: d, id: null };
+  if (kind === "monster" && d.actors.filter((a) => a.kind === "monster").length >= LIMITS.maxMonsters) return { doc: d, id: null };
   if ((kind === "npc" || kind === "merchant") && d.actors.filter((a) => a.kind === "npc" || a.kind === "merchant").length >= LIMITS.maxNpcs) return { doc: d, id: null };
   if (d.actors.some((a) => a.x === x && a.y === y)) return { doc: d, id: null };
   const id = nextActorId(d, kind);
@@ -69,6 +70,8 @@ export function placeActor(d: CustomWorldDoc, kind: ActorKind, x: number, y: num
       ? { id, kind, name: "Neuer NPC", x, y, dir: "down", config: randomTeConfig(), talk: [{ step: "*", lines: ["Hallo!"] }] }
       : kind === "merchant"
         ? { id, kind, name: "Händler", x, y, dir: "down", config: randomTeConfig(), shop: [], talk: [{ step: "*", lines: ["Schau dich in Ruhe um!"] }] }
+        : kind === "monster"
+        ? { id, kind, name: "Riesenratte", x, y, dir: "down", monster: "ratte", talk: [{ step: "*", lines: ["…"] }] }
         : kind === "chest"
         ? { id, kind, name: "Truhe", x, y, dir: "down", talk: [{ step: "*", lines: ["Die Truhe ist leer."] }] }
         : { id, kind, name: "Schild", x, y, dir: "down", talk: [{ step: "*", lines: ["Ein Schild."] }] };

@@ -29,7 +29,7 @@ export const ITEMS: ItemDef[] = [
   { key: "lederruestung", name: "Lederrüstung", emoji: "🦺", slot: "armor", desc: "Riecht nach Abenteuer.", price: 60, bonus: { ability: "con", value: 1 } },
   { key: "kettenhemd", name: "Kettenhemd", emoji: "🛡️", slot: "armor", desc: "Schwer, aber verlässlich.", price: 160, bonus: { ability: "con", value: 2 } },
   { key: "reisemantel", name: "Reisemantel", emoji: "🧥", slot: "armor", desc: "Wetterfest und schick genug für Verhandlungen.", price: 70, bonus: { ability: "cha", value: 1 } },
-  { key: "glueckstaler", name: "Glückstaler", emoji: "🪙", slot: "trinket", desc: "Fällt erstaunlich oft auf die richtige Seite.", price: 80, bonus: { ability: "cha", value: 1 } },
+  { key: "glueckstaler", name: "Glückstaler", emoji: "🍀", slot: "trinket", desc: "Fällt erstaunlich oft auf die richtige Seite.", price: 80, bonus: { ability: "cha", value: 1 } },
   { key: "eulenamulett", name: "Eulenamulett", emoji: "🦉", slot: "trinket", desc: "Man fühlt sich klüger. Vielleicht ist man es sogar.", price: 110, bonus: { ability: "int", value: 1 } },
   { key: "wanderstiefel", name: "Wanderstiefel", emoji: "🥾", slot: "trinket", desc: "Machen jeden Weg ein bisschen kürzer.", price: 75, bonus: { ability: "dex", value: 1 } },
   { key: "bierkrug", name: "Zinnkrug", emoji: "🍺", slot: "loot", desc: "Leer. Wie immer.", price: 6 },

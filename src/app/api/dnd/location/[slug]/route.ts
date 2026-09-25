@@ -44,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   const present = await prisma.card.findMany({
     where: { currentLocationId: location.id, travelToCol: null, dndCreatedAt: { not: null }, ...(myCard ? { id: { not: myCard.id } } : {}) },
-    select: { id: true, name: true, linkedDiscordId: true, teCharacter: true },
+    select: { id: true, name: true, linkedDiscordId: true, teCharacter: true, dndXp: true },
     take: 12,
   });
   const linkedIds = present.map((c) => c.linkedDiscordId).filter((v): v is string => !!v);
@@ -96,6 +96,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     present: present.map((c) => ({
       id: c.id,
       name: c.name,
+      level: levelOf(c.dndXp),
       avatarUrl: c.linkedDiscordId ? avatarByDiscordId.get(c.linkedDiscordId) ?? null : null,
       character: sanitizeTeConfig(c.teCharacter),
     })),

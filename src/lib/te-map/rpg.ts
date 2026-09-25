@@ -44,17 +44,22 @@ export interface RollResult {
   success: boolean;
   crit: boolean;
   fumble: boolean;
+  /** Natürliche 1, die durch „Glücksrabe“ neu gewürfelt wurde */
+  rerolledFrom?: number;
 }
 
 export const rollD20 = (rng: () => number = Math.random): number => 1 + Math.floor(rng() * 20);
 
-export function resolveCheck(input: { ability: Ability; dc: number; score: number; level: number; equipmentBonus?: number; rng?: () => number; roll?: number }): RollResult {
-  const roll = input.roll ?? rollD20(input.rng);
+export function resolveCheck(input: { ability: Ability; dc: number; score: number; level: number; equipmentBonus?: number; rng?: () => number; roll?: number; critMin?: number; rerollFumble?: boolean }): RollResult {
+  let roll = input.roll ?? rollD20(input.rng);
+  let rerolledFrom: number | undefined;
+  // Glücksrabe: eine natürliche 1 wird einmal neu gewürfelt
+  if (input.rerollFumble && roll === 1) { rerolledFrom = 1; roll = rollD20(input.rng); }
   const modifier = abilityMod(input.score) + levelBonus(input.level) + (input.equipmentBonus ?? 0);
   const total = roll + modifier;
-  const crit = roll === 20;
+  const crit = roll >= (input.critMin ?? 20);
   const fumble = roll === 1;
-  return { roll, modifier, total, dc: input.dc, ability: input.ability, success: crit || (!fumble && total >= input.dc), crit, fumble };
+  return { roll, modifier, total, dc: input.dc, ability: input.ability, success: crit || (!fumble && total >= input.dc), crit, fumble, ...(rerolledFrom ? { rerolledFrom } : {}) };
 }
 
 /** Schwierigkeitsgrade zur Orientierung im Editor. */

@@ -638,7 +638,7 @@ export default function DuelLiveView({
   const router = useRouter();
   function handleExit() {
     if (onExit) onExit();
-    else router.push("/battle-cards?tab=community");
+    else router.push("/battle-cards?tab=arena");
   }
   const [snapshot, setSnapshot] = useState<LiveDuelSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);

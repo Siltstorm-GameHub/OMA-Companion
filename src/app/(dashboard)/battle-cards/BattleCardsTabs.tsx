@@ -1,25 +1,37 @@
 "use client";
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { TabPanel } from "@/components/admin/Tabs";
 import { AnimatePresence, motion } from "motion/react";
 import MobaIcon from "@/components/battle-cards/MobaIcon";
 import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 
-type TabKey = "kampf" | "kampagne" | "karten" | "community";
+type TabKey = "held" | "welt" | "arena" | "sammlung" | "laden";
 
 function isTabKey(v: string | null): v is TabKey {
-  return v === "kampf" || v === "kampagne" || v === "karten" || v === "community";
+  return v === "held" || v === "welt" || v === "arena" || v === "sammlung" || v === "laden";
+}
+
+// Alte Reiter-Namen (aus Benachrichtigungen, Lesezeichen, älteren Links) landen im passenden neuen Reiter.
+const LEGACY_TABS: Record<string, TabKey> = {
+  kampf: "arena",
+  kampagne: "arena",
+  community: "arena",
+  duels: "arena",
+  challenges: "arena",
+  karten: "sammlung",
+};
+
+function tabFromParam(v: string | null): TabKey {
+  if (isTabKey(v)) return v;
+  return (v && LEGACY_TABS[v]) || "held";
 }
 
 // MOBA-Style-Nav-Leiste nach Referenz-Screenshot: dünne Gold-Linie nur oben,
 // Ecken-Schnörkel unten links/rechts, Diamant-Trenner zwischen den Reitern,
-// aktiver Reiter als abgerundetes Quadrat-Badge (kein Diamant mehr) mit
-// kleinem Diamant-Ornament darüber (siehe .moba-nav-* in
-// battle-cards-moba.css). Die Farbcodierung pro Reiter bleibt erhalten
-// (wichtig für Wiedererkennung: Kampf=Rose, Kampagne=Grün, Karten=Violett,
-// Community=Amber).
+// aktiver Reiter als abgerundetes Quadrat-Badge mit kleinem Diamant-Ornament
+// darüber (siehe .moba-nav-* in battle-cards-moba.css). Die Farbcodierung pro
+// Reiter bleibt für die Wiedererkennung erhalten.
 const TABS: {
   key: TabKey;
   label: string;
@@ -29,47 +41,43 @@ const TABS: {
   accentLight: string;
   glow: string;
 }[] = [
-  { key: "kampf", label: "Kampf", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
-  { key: "kampagne", label: "Kampagne", icon: "navDungeon", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
-  { key: "karten", label: "Karten", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
-  { key: "community", label: "Community", icon: "navRank", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
+  { key: "held", label: "Held", icon: "profile", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
+  { key: "welt", label: "Welt", icon: "map", accent: "#38bdf8", accentDark: "#0369a1", accentLight: "#7dd3fc", glow: "rgba(56,189,248,0.6)" },
+  { key: "arena", label: "Arena", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
+  { key: "sammlung", label: "Sammlung", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
+  { key: "laden", label: "Laden", icon: "chest", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
 ];
 
-// OMA Quest ist kein Tab-Panel (WorldMap/CharacterCreation leben unter /oma-quest mit
-// eigener Server-Logik für Charaktererstellungs-Gate), sondern ein echter
-// Link im selben Nav-Look — deshalb außerhalb von TABS, als eigenes Element
-// gerendert statt über setActive.
-const DND_LINK_TAB = {
-  label: "OMA Quest",
-  icon: "map" as MobaIconName,
-  accent: "#38bdf8",
-  accentDark: "#0369a1",
-  accentLight: "#7dd3fc",
-  glow: "rgba(56,189,248,0.6)",
-};
-
 function BattleCardsTabsInner({
-  kampfPanel,
-  kampagnePanel,
-  kartenPanel,
-  communityPanel,
-  kampfBadge = 0,
+  heldPanel,
+  weltPanel,
+  arenaPanel,
+  sammlungPanel,
+  ladenPanel,
+  arenaBadge = 0,
+  heldBadge = 0,
+  ladenBadge = 0,
 }: {
-  kampfPanel: ReactNode;
-  kampagnePanel: ReactNode;
-  kartenPanel: ReactNode;
-  communityPanel: ReactNode;
-  kampfBadge?: number;
+  heldPanel: ReactNode;
+  weltPanel: ReactNode;
+  arenaPanel: ReactNode;
+  sammlungPanel: ReactNode;
+  ladenPanel: ReactNode;
+  arenaBadge?: number;
+  heldBadge?: number;
+  ladenBadge?: number;
 }) {
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab");
-  // "duels"/"challenges" bleiben als Alt-Link-Kompatibilität erhalten (z.B. alte Benachrichtigungen).
-  const initialTab: TabKey = isTabKey(requestedTab)
-    ? requestedTab
-    : requestedTab === "duels" || requestedTab === "challenges"
-      ? "community"
-      : "kampf";
-  const [active, setActive] = useState<TabKey>(initialTab);
+  const [active, setActive] = useState<TabKey>(() => tabFromParam(requestedTab));
+  // Links innerhalb des Hubs (z. B. "?tab=arena" aus dem Held-Reiter) ändern nur die URL — Reiter beim Wechsel nachziehen.
+  const [seenParam, setSeenParam] = useState(requestedTab);
+  if (seenParam !== requestedTab) {
+    setSeenParam(requestedTab);
+    setActive(tabFromParam(requestedTab));
+  }
+
+  const badges: Partial<Record<TabKey, number>> = { held: heldBadge, arena: arenaBadge, laden: ladenBadge };
 
   return (
     <div className="space-y-5">
@@ -78,7 +86,8 @@ function BattleCardsTabsInner({
         <img src="/battle-cards/moba/nav-corner-right.png" alt="" className="moba-nav-corner right" />
         {TABS.map((tab) => {
           const isActive = tab.key === active;
-          const showBadge = tab.key === "kampf" && kampfBadge > 0;
+          const badge = badges[tab.key] ?? 0;
+          const showBadge = badge > 0;
           return (
             <button
               key={tab.key}
@@ -110,7 +119,7 @@ function BattleCardsTabsInner({
                     transition={{ type: "spring", stiffness: 500, damping: 20 }}
                     className="moba-nav-notif"
                   >
-                    <span>{kampfBadge > 9 ? "9+" : kampfBadge}</span>
+                    <span>{badge > 9 ? "9+" : badge}</span>
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -118,37 +127,26 @@ function BattleCardsTabsInner({
             </button>
           );
         })}
-        <Link
-          href="/oma-quest"
-          className="moba-nav-item"
-          style={{
-            ["--accent" as string]: DND_LINK_TAB.accent,
-            ["--accent-dark" as string]: DND_LINK_TAB.accentDark,
-            ["--accent-light" as string]: DND_LINK_TAB.accentLight,
-            ["--glow" as string]: DND_LINK_TAB.glow,
-          }}
-        >
-          <span className="moba-nav-icon">
-            <MobaIcon name={DND_LINK_TAB.icon} className="w-9 h-9" />
-          </span>
-          <span className="moba-nav-label">{DND_LINK_TAB.label}</span>
-        </Link>
       </div>
 
-      <TabPanel tabKey="kampf" active={active}>{kampfPanel}</TabPanel>
-      <TabPanel tabKey="kampagne" active={active}>{kampagnePanel}</TabPanel>
-      <TabPanel tabKey="karten" active={active}>{kartenPanel}</TabPanel>
-      <TabPanel tabKey="community" active={active}>{communityPanel}</TabPanel>
+      <TabPanel tabKey="held" active={active}>{heldPanel}</TabPanel>
+      <TabPanel tabKey="welt" active={active}>{weltPanel}</TabPanel>
+      <TabPanel tabKey="arena" active={active}>{arenaPanel}</TabPanel>
+      <TabPanel tabKey="sammlung" active={active}>{sammlungPanel}</TabPanel>
+      <TabPanel tabKey="laden" active={active}>{ladenPanel}</TabPanel>
     </div>
   );
 }
 
 export default function BattleCardsTabs(props: {
-  kampfPanel: ReactNode;
-  kampagnePanel: ReactNode;
-  kartenPanel: ReactNode;
-  communityPanel: ReactNode;
-  kampfBadge?: number;
+  heldPanel: ReactNode;
+  weltPanel: ReactNode;
+  arenaPanel: ReactNode;
+  sammlungPanel: ReactNode;
+  ladenPanel: ReactNode;
+  arenaBadge?: number;
+  heldBadge?: number;
+  ladenBadge?: number;
 }) {
   return (
     <Suspense fallback={null}>

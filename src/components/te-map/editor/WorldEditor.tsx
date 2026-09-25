@@ -27,6 +27,7 @@ interface Loaded {
   hex: Hex | null;
   canEdit: boolean;
   isAdmin: boolean;
+  fixed: boolean;
 }
 
 type Tab = "map" | "quest" | "test";
@@ -171,7 +172,8 @@ export default function WorldEditor({ id }: { id: string }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Link href="/oma-quest/editor" className="text-xs text-gray-400 hover:text-white">← Meine Locations</Link>
+        <Link href="/oma-quest/editor" onClick={(e) => { if (dirty && !window.confirm("Ungespeicherte Änderungen gehen verloren. Trotzdem verlassen?")) e.preventDefault(); }} className="text-xs text-gray-400 hover:text-white">{data.fixed ? "← Admin-Bereich" : "← Meine Locations"}</Link>
+        {data.fixed && <span className="rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300">Feste Location</span>}
         <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${status.cls}`}>{status.text}</span>
         {dirty && <span className="text-[10px] text-amber-300">Ungespeichert</span>}
         <div className="ml-auto flex items-center gap-2">
@@ -179,6 +181,7 @@ export default function WorldEditor({ id }: { id: string }) {
             <>
               <button type="button" onClick={undo} disabled={!stack.undo} className="rounded-lg border border-white/15 px-2.5 py-1.5 text-[11px] font-semibold text-gray-300 disabled:opacity-40" title="Strg+Z">↶ Rückgängig</button>
               <button type="button" onClick={redo} disabled={!stack.redo} className="rounded-lg border border-white/15 px-2.5 py-1.5 text-[11px] font-semibold text-gray-300 disabled:opacity-40" title="Strg+Y">↷</button>
+              <Link href="/oma-quest/editor" onClick={(e) => { if (dirty && !window.confirm("Alle ungespeicherten Änderungen verwerfen?")) e.preventDefault(); }} className="rounded-lg border border-white/15 px-2.5 py-1.5 text-[11px] font-semibold text-gray-300">Abbrechen</Link>
               <button type="button" onClick={() => void save()} disabled={busy !== null || !dirty} className="rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 px-3 py-1.5 text-[11px] font-bold text-white">
                 {busy === "save" ? "Speichert …" : "Speichern"}
               </button>

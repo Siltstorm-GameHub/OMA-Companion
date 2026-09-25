@@ -10,6 +10,7 @@
 // etwas zu sagen haben — die passenden Dialoge werden nacheinander gezeigt.
 
 import { STAMPS, type StampDef } from "./stamps";
+import { getMonster } from "@/lib/dnd/combat";
 import { weatherMatches, type RollResult, type Weather } from "./rpg";
 import { doorFront, doorTile, interiorSpawn, interiorToMap } from "./interior";
 import { worldQuestsOf, type Actor, type Dir, type Talk, type TeMap, type WorldDef, type WorldQuest } from "./types";
@@ -39,6 +40,8 @@ export interface Dialog {
   roll?: RollResult;
   /** Händler: nach dem Gespräch lässt sich handeln */
   merchant?: string;
+  /** Monster-Figur: nach dem Text lässt sich kämpfen (Akteur + Monster-Art) */
+  fight?: { actor: string; monster: string };
 }
 export type Goal = { kind: "talk"; actor: string } | { kind: "enter" } | { kind: "exit" };
 export type GameEvent = { type: "advance"; quest: string; from: number } | { type: "complete"; quest: string };
@@ -85,10 +88,12 @@ export interface Game {
   events: GameEvent[];
   /** Ausrichtung der NPCs (drehen sich beim Ansprechen zur Figur) */
   actorDir: Map<string, Dir>;
+  /** Ausgeblendete Akteure (besiegte Monster): nicht ansprechbar, nicht im Weg */
+  hidden: Set<string>;
 }
 
 /** Begehbarkeit einer Karte (gesperrte Rechtecke, Gebäude, feste Objekte, Akteure). */
-export function solidOfMap(map: TeMap): boolean[][] {
+export function solidOfMap(map: TeMap, hidden?: Set<string>): boolean[][] {
   const solid = Array.from({ length: map.rows }, () => Array<boolean>(map.cols).fill(false));
   const mark = (x: number, y: number, w: number, h: number) => {
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) if (solid[yy]?.[xx] !== undefined) solid[yy][xx] = true;
@@ -99,7 +104,7 @@ export function solidOfMap(map: TeMap): boolean[][] {
     const f = (STAMPS[s.id] as StampDef).solid;
     if (f) mark(s.x + f[0], s.y + f[1], f[2], f[3]);
   }
-  for (const a of map.actors) if (a.kind !== "sign") mark(a.x, a.y, 1, 1);
+  for (const a of map.actors) if (a.kind !== "sign" && !hidden?.has(a.id)) mark(a.x, a.y, 1, 1);
   return solid;
 }
 
@@ -119,8 +124,16 @@ export function createGame(world: WorldDef, questSteps: Record<string, number> =
   return {
     world, map: world.map, scene: null, sceneChanges: 0, path: [], goal: null, speed: 1, solid: buildSolid(world), px: world.map.spawn.x, py: world.map.spawn.y, dir: "down", move: null,
     questSteps: steps, flags: new Set(flags), night, weather, dialog: null, queue: [], events: [],
-    actorDir: new Map(world.map.actors.map((a) => [a.id, a.dir])),
+    actorDir: new Map(world.map.actors.map((a) => [a.id, a.dir])), hidden: new Set(),
   };
+}
+
+/** Besiegte Monster ausblenden bzw. wieder einblenden (Begehbarkeit wird angepasst). */
+export function setHidden(game: Game, ids: Iterable<string>): void {
+  const next = new Set(ids);
+  if (next.size === game.hidden.size && [...next].every((i) => game.hidden.has(i))) return;
+  game.hidden = next;
+  game.solid = solidOfMap(game.map, game.hidden);
 }
 
 export function isWalkable(game: Game, x: number, y: number): boolean {
@@ -213,7 +226,7 @@ export function enterBuilding(game: Game, index: number): void {
   const map = interiorToMap(b.interior);
   game.scene = index;
   game.map = map;
-  game.solid = solidOfMap(map);
+  game.solid = solidOfMap(map, game.hidden);
   const sp = interiorSpawn(b.interior);
   game.px = sp.x; game.py = sp.y; game.dir = "up"; game.move = null;
   game.dialog = null; game.queue = [];
@@ -227,7 +240,7 @@ export function leaveBuilding(game: Game): void {
   const b = game.world.map.buildings[game.scene];
   game.scene = null;
   game.map = game.world.map;
-  game.solid = solidOfMap(game.world.map);
+  game.solid = solidOfMap(game.world.map, game.hidden);
   if (b) { const f = doorFront(b); game.px = f.x; game.py = f.y; }
   game.dir = "down"; game.move = null;
   game.dialog = null; game.queue = [];
@@ -254,11 +267,12 @@ const talkAllowed = (t: Talk, ctx: TalkContext): boolean =>
 export function interactTarget(game: Game): Actor | null {
   if (game.move) return null;
   const [fx, fy] = facingCell(game);
-  const ahead = game.map.actors.find((a) => a.x === fx && a.y === fy);
+  const ahead = game.map.actors.find((a) => a.x === fx && a.y === fy && !game.hidden.has(a.id));
   if (ahead) return ahead;
   let best: Actor | null = null;
   let bestD = Infinity;
   for (const a of game.map.actors) {
+    if (game.hidden.has(a.id)) continue;
     const dx = Math.abs(a.x - game.px);
     const dy = Math.abs(a.y - game.py);
     if (Math.max(dx, dy) <= 1 && dx + dy < bestD) { best = a; bestD = dx + dy; }
@@ -311,7 +325,7 @@ export function walkTo(game: Game, tx: number, ty: number): boolean {
     return true;
   };
 
-  const actor = game.map.actors.find((a) => a.x === tx && a.y === ty);
+  const actor = game.map.actors.find((a) => a.x === tx && a.y === ty && !game.hidden.has(a.id));
   if (actor) {
     const near = (x: number, y: number) => Math.abs(x - actor.x) + Math.abs(y - actor.y) === 1;
     return plan(bfs(game, sx, sy, near), { kind: "talk", actor: actor.id });
@@ -403,6 +417,12 @@ export function pressAction(game: Game): void {
   const actor = interactTarget(game);
   if (!actor) return;
   faceToward(game, actor.x, actor.y);
+  const monster = actor.kind === "monster" && actor.monster ? getMonster(actor.monster) : undefined;
+  if (monster) {
+    game.dialog = { speaker: actor.name, lines: [`${monster.emoji} ${actor.name} — Stufe ${monster.level}, ${monster.hp} LP. ${monster.blurb}`], index: 0, fight: { actor: actor.id, monster: monster.id } };
+    game.queue = [];
+    return;
+  }
   if (actor.kind === "npc" || actor.kind === "merchant") {
     // Der NPC dreht sich zur Figur
     game.actorDir.set(actor.id, ({ down: "up", up: "down", left: "right", right: "left" } as const)[game.dir]);

@@ -44,7 +44,7 @@ const STEP_INFO: Record<
     title: "Spiele Level 1 der Kampagne",
     description: "Kapitel 1: Server-Neustart — dein erstes Level in der Kampagne.",
     reward: "Premium-Pack",
-    href: "/battle-cards?tab=kampagne",
+    href: "/battle-cards?tab=arena",
   },
 };
 

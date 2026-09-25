@@ -37,7 +37,7 @@ interface LocationState {
   coins: number;
   biome: "temperate" | "cold" | "dry" | "cave";
   rpg: { flags: string[]; gold: number; xp: number; level: number } | null;
-  present: { id: string; name: string; avatarUrl: string | null; character: TeCharacterConfig | null }[];
+  present: { id: string; name: string; level?: number; avatarUrl: string | null; character: TeCharacterConfig | null }[];
   eventLog: { id: string; title: string; text: string; xpGained: number; occurredAt: string; cardName: string }[];
   storyTick: { arrived: boolean; newEvent: { title: string; text: string; xpGained: number } | null } | null;
 }
@@ -52,6 +52,18 @@ export default function QuestWorld({ slug }: { slug: string }) {
   const [shopActor, setShopActor] = useState<string | null>(null);
   const [sheetKey, setSheetKey] = useState(0);
   const [menu, setMenu] = useState<MenuTab | null>(null);
+  const [slain, setSlain] = useState<string[]>([]);
+
+  // Besiegte Monster-Figuren dieser Location (kommen nach 15 Minuten wieder)
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/dnd/combat").then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (cancelled || !j) return;
+      const mine = (j.slain as string[]).filter((s) => s.startsWith(`${slug}:`)).map((s) => s.slice(slug.length + 1));
+      setSlain((cur) => (cur.length === mine.length && cur.every((c) => mine.includes(c)) ? cur : mine));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [slug, sheetKey]);
   const { items: feed, push: notify } = useGameFeed();
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
   const world = data?.customWorld ?? staticWorld ?? undefined;
@@ -103,6 +115,18 @@ export default function QuestWorld({ slug }: { slug: string }) {
     if (d.events.length) setEvents((e) => [...e, ...d.events.filter((n) => !e.some((o) => o.id === n.id))]);
   }, []);
 
+  // Monster-Figur auf der Karte: Kampf starten und das Kampf-Fenster öffnen
+  const onFight = useCallback(async (actor: string, monster: string) => {
+    try {
+      const res = await fetch("/api/dnd/combat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "start", monster, slug, actor }) });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { notify("error", json.error ?? "Kampf nicht möglich."); return; }
+      setMenu("combat");
+    } catch {
+      notify("error", "Netzwerkfehler.");
+    }
+  }, [slug, notify]);
+
   const onChoose = useCallback(async (req: { actor: string; talk: number; choice: number }) => {
     try {
       const res = await fetch(`/api/dnd/world/${slug}/choice`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
@@ -111,7 +135,6 @@ export default function QuestWorld({ slug }: { slug: string }) {
       const g = json.granted as { xp: number; gold: number; levelUp: number | null };
       const extra = [g.xp ? `+${g.xp} XP` : "", g.gold ? `+${g.gold} Gold` : "", ...(json.itemNames ?? [])].filter(Boolean).join(" · ");
       if (extra) notify("reward", "Belohnung", extra);
-      if (g.levelUp) notify("level", `Stufe ${g.levelUp} erreicht!`, "Deine Proben werden mit der Zeit leichter.");
       setSheetKey((k) => k + 1);
       return { lines: json.lines, roll: json.roll, flags: json.flags, questSteps: json.questSteps, tracker: json.tracker } as ChoiceResult & { tracker?: import("@/lib/dnd/quest-log").TrackerItem[] };
     } catch {
@@ -121,7 +144,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
 
   // Tastenkürzel fürs Menü (nicht beim Tippen in Feldern)
   useEffect(() => {
-    const keys: Record<string, MenuTab> = { c: "character", i: "inventory", q: "quests", g: "party", t: "chat" };
+    const keys: Record<string, MenuTab> = { c: "character", p: "progress", i: "inventory", q: "quests", g: "party", t: "chat", k: "combat", b: "skills" };
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const typing = e.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName);
@@ -169,7 +192,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
     );
   }
 
-  const others: OtherPlayer[] = data.present.map((p) => ({ id: p.id, name: p.name, character: p.character }));
+  const others: OtherPlayer[] = data.present.map((p) => ({ id: p.id, name: p.name, level: p.level, character: p.character }));
 
   return (
     <div className="space-y-4">
@@ -188,15 +211,19 @@ export default function QuestWorld({ slug }: { slug: string }) {
       <TeWorld
         world={world} character={data.myCharacter} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
-        onChoose={onChoose} onTrade={setShopActor} onAdvance={onAdvance}
+        onChoose={onChoose} onTrade={setShopActor} onFight={onFight} slain={slain} onAdvance={onAdvance}
         feed={feed} notify={notify} paused={!!menu || !!shopActor}
-        hud={<HudBar refreshKey={sheetKey} />}
+        hud={<HudBar refreshKey={sheetKey} onOpen={() => setMenu("character")} notify={notify} />}
         extraControls={(
           <div className="flex flex-wrap items-center justify-center gap-1.5">
             {([
               ["character", "🧙", "Charakter (C)"],
+              ["progress", "📈", "Fortschritt (P)"],
               ["inventory", "🎒", "Inventar (I)"],
               ["quests", "📜", "Quests (Q)"],
+              ["combat", "⚔️", "Kampf (K)"],
+              ["skills", "🌟", "Talente (B)"],
+              ["coins", "🪙", "Münzen-Laden"],
               ["party", "👥", "Gruppe (G)"],
               ["chat", "💬", "Chat (T)"],
               ...(data.isGm ? [["gm", "🎭", "Spielleiter"]] : []),
