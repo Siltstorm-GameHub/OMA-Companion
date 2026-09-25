@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/dnd", destination: "/oma-quest", permanent: true },
-      { source: "/dnd/:slug", destination: "/oma-quest/:slug", permanent: true },
+      { source: "/dnd/:slug([^.]+)", destination: "/oma-quest/:slug", permanent: true },
     ];
   },
   images: {
