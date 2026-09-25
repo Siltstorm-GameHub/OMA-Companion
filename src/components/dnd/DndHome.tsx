@@ -5,7 +5,7 @@
 // Re-Roll-Ansicht um
 // ============================================
 // Sobald dndCreatedAt gesetzt ist, zeigt /oma-quest normalerweise nur noch die
-// Weltkarte — aber gekaufte Re-Roll-Credits (Shop: buy-dnd-reroll) oder ein
+// Weltkarte (samt Chronik) — Charakterblatt, Fortschritt und Quest-Log liegen im Battle-Cards-Hub (Reiter Held/Welt) und im Spielmenü der Welt. Gekaufte Re-Roll-Credits (Shop: buy-dnd-reroll) oder ein
 // übrig gebliebener Gratis-Credit (Erst-Erstellung/Auto-Migration) müssen
 // auch später noch einlösbar sein, nicht nur direkt nach der Erstellung.
 
@@ -13,9 +13,7 @@ import { useState } from "react";
 import { Dices } from "@/components/icons";
 import WorldMap from "./WorldMap";
 import CharacterCreation from "./CharacterCreation";
-import QuestLog from "./QuestLog";
 import Chronicle from "./Chronicle";
-import { CharacterPanel, ProgressPanel } from "@/components/te-map/play/PlayPanels";
 
 export default function DndHome({
   myCardId,
@@ -54,9 +52,6 @@ export default function DndHome({
       )}
       <WorldMap myCardId={myCardId} />
       <Chronicle />
-      <CharacterPanel />
-      <ProgressPanel />
-      <QuestLog />
     </div>
   );
 }
