@@ -43,6 +43,8 @@ export async function resolveAvatarsForCards(cards: Card[]): Promise<Map<string,
   return new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
 }
 
+import { standardAvatarOf } from "./standard-avatars";
+
 export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | null>): BattleCardData & { id: string } {
   return {
     id: card.id,
@@ -56,7 +58,8 @@ export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | 
     baseDefense: card.baseDefense,
     speed: card.speed,
     activityTier: card.activityTier,
-    teCharacter: sanitizeTeConfig(card.teCharacter),
+    // Standard-Karten bekommen ihre Pixel-Figur aus dem Code, auch wenn die Datenbank noch nicht neu befüllt wurde
+    teCharacter: sanitizeTeConfig(card.teCharacter) ?? standardAvatarOf(card.name, card.rarity),
     imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
     // Mit Charakter als Hauptmotiv wandert das echte Profilbild — wie bei einem Admin-Artwork — in das Badge.
     avatarBadgeUrl: avatarByDiscordId

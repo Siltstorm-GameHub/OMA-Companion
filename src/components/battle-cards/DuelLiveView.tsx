@@ -31,6 +31,8 @@ import MobaConfirmDialog from "./MobaConfirmDialog";
 import MobaDivider from "./MobaDivider";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
+import TeCharacter from "@/components/te-character/TeCharacter";
+import { TE_CROP_FIGURE, type TeCharacterConfig } from "@/lib/te-character";
 import TacticCardTile from "./TacticCardTile";
 import StatBadges from "./StatBadges";
 import ErrorNotice from "./ErrorNotice";
@@ -70,6 +72,8 @@ interface LiveDuelUnit {
   ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+  /** Pixel-Figur (hat als Hauptmotiv Vorrang vor imageUrl) */
+  teCharacter?: TeCharacterConfig | null;
   stance: DuelStance;
   ultimateSkillName: string;
   ultimateSkillDescription: string;
@@ -567,14 +571,21 @@ function UnitSlot({
       style={{
         height: FIELD_CARD_HEIGHT,
         touchAction: onDragHandlePointerDown ? "none" : undefined,
-        backgroundImage: unit.imageUrl
-          ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
-          : undefined,
+        backgroundImage: unit.teCharacter
+          ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), linear-gradient(160deg, ${config.color}33, #0a0e2e)`
+          : unit.imageUrl
+            ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${unit.imageUrl})`
+            : undefined,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundColor: unit.imageUrl ? undefined : "#0a0e2e",
+        backgroundColor: unit.imageUrl || unit.teCharacter ? undefined : "#0a0e2e",
       }}
     >
+      {unit.teCharacter && (
+        <div className="absolute inset-x-0 top-2 bottom-12 flex items-center justify-center pointer-events-none">
+          <TeCharacter config={unit.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={3} className="max-h-full w-auto" title={unit.name} />
+        </div>
+      )}
       {isDefense && unit.isAlive ? (
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-1 bg-sky-500/80 py-0.5">
           <img src={MOBA_ICON.shield} alt="" aria-hidden className="w-3 h-3 object-contain" />
@@ -605,7 +616,7 @@ function UnitSlot({
           />
         </div>
       )}
-      {!unit.imageUrl && (
+      {!unit.imageUrl && !unit.teCharacter && (
         <div className="absolute inset-0 flex items-center justify-center">
           <img src={config.icon} alt="" aria-hidden className="w-8 h-8 opacity-40 object-contain" />
         </div>
@@ -2211,14 +2222,21 @@ export default function DuelLiveView({
             top: fieldDragUnit.y - 70,
             transform: "rotate(-4deg) scale(1.08)",
             filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6))",
-            backgroundImage: fieldDragUnit.unit.imageUrl
-              ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${fieldDragUnit.unit.imageUrl})`
-              : undefined,
+            backgroundImage: fieldDragUnit.unit.teCharacter
+              ? "linear-gradient(160deg, #1e293b, #0a0e2e)"
+              : fieldDragUnit.unit.imageUrl
+                ? `linear-gradient(180deg, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%), url(${fieldDragUnit.unit.imageUrl})`
+                : undefined,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            backgroundColor: fieldDragUnit.unit.imageUrl ? undefined : "#0a0e2e",
+            backgroundColor: fieldDragUnit.unit.imageUrl || fieldDragUnit.unit.teCharacter ? undefined : "#0a0e2e",
           }}
         >
+          {fieldDragUnit.unit.teCharacter && (
+            <div className="absolute inset-x-0 top-1 bottom-6 flex items-center justify-center">
+              <TeCharacter config={fieldDragUnit.unit.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={2} className="max-h-full w-auto" />
+            </div>
+          )}
           <span className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center backdrop-blur-sm bg-rose-500/30 text-rose-200">
             <img src={MOBA_ICON.sword} alt="" aria-hidden className="w-3 h-3 object-contain" />
           </span>

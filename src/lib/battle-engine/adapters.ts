@@ -18,13 +18,16 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
   RANDOM: "random",
 };
 
+import { standardAvatarOf } from "@/lib/battle-cards/standard-avatars";
+
 export function cardToBattleUnitDefinition(
   card: Card,
   level: number,
   imageUrl?: string | null,
   avatarBadgeUrl?: string | null
 ): BattleUnitDefinition {
-  const teCharacter = sanitizeTeConfig(card.teCharacter);
+  // Standard-Karten bekommen ihre Pixel-Figur aus dem Code, auch wenn die Datenbank noch nicht neu befüllt wurde
+  const teCharacter = sanitizeTeConfig(card.teCharacter) ?? standardAvatarOf(card.name, card.rarity);
   const resolvedImage = imageUrl !== undefined ? imageUrl : card.imageUrl;
   return {
     cardId: card.id,

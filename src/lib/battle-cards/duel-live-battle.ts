@@ -33,6 +33,7 @@ import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import type { BattleUnitDefinition, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
+import type { TeCharacterConfig } from "@/lib/te-character";
 import { assertNpcDailyLimitNotReached, finalizePvpChallengeSideEffects } from "@/lib/battle-cards/live-battle";
 import { buildDuelDeckInput } from "@/lib/battle-cards/duel-deck";
 import { markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
@@ -104,6 +105,8 @@ export interface LiveDuelUnitSnapshot {
   ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+  /** Pixel-Figur der Karte (hat als Hauptmotiv Vorrang vor imageUrl) */
+  teCharacter?: TeCharacterConfig | null;
   /** Angriffs-/Verteidigungsstellung — öffentlich sichtbar für beide Seiten. */
   stance: DuelStance;
   /** Kurze Klartext-Beschreibung fürs Ultimate-Aktionsfeld (siehe
@@ -204,6 +207,7 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     ultimateCost: unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: unit.isAlive,
     imageUrl: unit.def.imageUrl,
+    teCharacter: unit.def.teCharacter ?? null,
     stance: unit.stance ?? "attack",
     ultimateSkillName: unit.def.ultimateSkill.name,
     ultimateSkillDescription: unit.def.ultimateSkill.description,
@@ -237,6 +241,7 @@ function toHandCard(player: DuelPlayerState, cardId: string): LiveDuelHandCard |
         ultimateSkill: unitDef.ultimateSkill,
         level: unitDef.level,
         imageUrl: unitDef.imageUrl,
+        teCharacter: unitDef.teCharacter ?? null,
         avatarBadgeUrl: unitDef.avatarBadgeUrl,
       },
     };
