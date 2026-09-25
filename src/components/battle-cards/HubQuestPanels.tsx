@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================
-// Battle-Cards-Hub — OMA-Quest-Panels im Hub (Charakterblatt, Fortschritt, Münzen-Laden)
+// Battle-Cards-Hub — OMA-Quest-Panels im Hub (Charakterblatt, Quest-Log, Fortschritt, Münzen-Laden)
 // ============================================
 // Dieselben Panels wie im Quest-Spiel, damit Attribute, Fähigkeiten und der Münzen-Laden nicht nur in der Welt erreichbar sind.
 // Der Spiel-Look (.oq-*) gilt nur unter .oq-skin — deshalb der Wrapper. Nach einer Änderung lädt der Hub seine Serverdaten neu,
@@ -9,11 +9,16 @@
 
 import { useRouter } from "next/navigation";
 import { CharacterPanel, ProgressPanel } from "@/components/te-map/play/PlayPanels";
+import QuestLog from "@/components/dnd/QuestLog";
 import CoinShopPanel from "@/components/te-map/play/CoinShopPanel";
 
 export function HubCharacterSheet() {
   const router = useRouter();
   return <div className="oq-skin"><CharacterPanel onChanged={() => router.refresh()} /></div>;
+}
+
+export function HubQuestLog() {
+  return <div className="oq-skin"><QuestLog /></div>;
 }
 
 export function HubProgress() {

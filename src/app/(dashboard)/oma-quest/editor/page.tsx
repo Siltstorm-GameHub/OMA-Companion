@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getBuilderAccess } from "@/lib/dnd/custom-worlds";
@@ -12,6 +13,9 @@ export default async function EditorHomePage() {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
+      <Link href="/oma-quest" className="inline-flex text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+        ← OMA Quest
+      </Link>
       <div>
         <h1 className="font-battle text-lg text-white">Locations bauen</h1>
         <p className="text-xs text-gray-500">Gestalte eigene Orte für OMA Quest — mit Karte, NPCs und Quest. Sobald du veröffentlichst, erscheint sie auf dem Feld, das du auf der Weltkarte gewählt hast.</p>

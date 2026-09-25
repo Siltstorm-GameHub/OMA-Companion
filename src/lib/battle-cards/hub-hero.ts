@@ -27,6 +27,14 @@ export interface HeroCockpit {
   chronicle: { id: string; kind: string; text: string; createdAt: string }[];
 }
 
+/** Beschriftung des Einstiegs in die Welt (Held-Reiter und Welt-Reiter): je nach Stand des Quest-Charakters und Ort. */
+export function worldEntryLabel(card: Pick<Card, "dndCreatedAt">, place: HeroPlace | null): { title: string; sub: string } {
+  if (!card.dndCreatedAt) return { title: "Dein Abenteuer beginnt", sub: "Erschaffe deinen Charakter in OMA Quest" };
+  if (place?.travelling) return { title: "Weiterreisen", sub: "Du bist unterwegs" };
+  if (place) return { title: `Zurück nach ${place.name}`, sub: "OMA Quest fortsetzen" };
+  return { title: "Zurück in die Welt", sub: "OMA Quest fortsetzen" };
+}
+
 export async function getHeroCockpit(card: Card): Promise<HeroCockpit> {
   // Attributspunkte/Fähigkeitswahlen sind lazy: erst hier stimmt die Zahl "offen" für alle XP-Quellen
   const fresh = card.dndCreatedAt ? await syncLevelRewards(card) : card;

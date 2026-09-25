@@ -40,8 +40,9 @@ import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBa
 import { formatBerlinDate } from "@/lib/time";
 import { getHeroSetup } from "@/lib/battle-cards/hero-setup";
 import { getShopConfig } from "@/lib/shop-config";
-import { getHeroCockpit } from "@/lib/battle-cards/hub-hero";
-import { HubCoinShop, HubProgress } from "@/components/battle-cards/HubQuestPanels";
+import { getHeroCockpit, worldEntryLabel } from "@/lib/battle-cards/hub-hero";
+import { getBuilderAccess } from "@/lib/dnd/custom-worlds";
+import { HubCoinShop, HubProgress, HubQuestLog } from "@/components/battle-cards/HubQuestPanels";
 import HeldPanel from "@/components/battle-cards/HeldPanel";
 import CoinIcon from "@/components/CoinIcon";
 import DailySpin from "@/components/battle-cards/shop/DailySpin";
@@ -111,6 +112,7 @@ export default async function BattleCardsPage() {
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
   ]);
+  const builder = await getBuilderAccess(userId);
   const upgradeEconomy = await getUpgradeEconomyConfig();
   const activeDuelDeck = await getActiveDuelDeck(userId);
   const duelDeckCount = (activeDuelDeck?.unitCardIds.length ?? 0) + (activeDuelDeck?.tacticCardIds.length ?? 0);
@@ -215,6 +217,7 @@ export default async function BattleCardsPage() {
     />
   );
 
+  const worldEntry = hero ? worldEntryLabel(hero, cockpit?.place ?? null) : { title: "Zur Weltkarte", sub: "Reisen, Quests erledigen, Gold verdienen" };
   const weltPanel = (
     <div className="space-y-4">
       <div>
@@ -222,13 +225,28 @@ export default async function BattleCardsPage() {
         <p className="text-xs text-gray-500 mt-0.5">Die Welt deines Helden: Karte, Orte, Quests, Gruppe und Händler.</p>
       </div>
       <Link href="/oma-quest" className="moba-panel rounded-2xl p-4 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-3">
-        <span className="flex items-center gap-3">
+        <span className="flex items-center gap-3 min-w-0">
           <MobaIcon name="map" className="w-10 h-10 shrink-0" />
-          <span><span className="block text-sm font-bold text-white">Zur Weltkarte</span><span className="block text-xs text-gray-500">Reisen, Quests erledigen, Gold verdienen</span></span>
+          <span className="min-w-0"><span className="block text-sm font-bold text-white truncate">{worldEntry.title}</span><span className="block text-xs text-gray-500">{worldEntry.sub}</span></span>
         </span>
-        <span className="text-xs font-semibold text-gray-400">Öffnen →</span>
+        <span className="text-xs font-semibold text-gray-400 shrink-0">Öffnen →</span>
       </Link>
+      {cockpit && cockpit.party && cockpit.party.members.length > 1 && (
+        <p className="text-xs text-gray-400">
+          Gruppe: {cockpit.party.members.filter((m) => m.cardId !== hero?.id).map((m) => `${m.name}${m.here ? " (bei dir)" : ""}`).join(", ")}
+        </p>
+      )}
+      {hero?.dndCreatedAt && <HubQuestLog />}
       {hero?.dndCreatedAt && <HubProgress />}
+      {builder.allowed && (
+        <Link href="/oma-quest/editor" className="moba-panel rounded-2xl p-4 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-sm font-bold text-white">Eigene Location bauen</span>
+            <span className="block text-xs text-gray-500">Karte, NPCs und Quest für die Community gestalten</span>
+          </span>
+          <span className="text-xs font-semibold text-gray-400 shrink-0">Editor →</span>
+        </Link>
+      )}
     </div>
   );
 

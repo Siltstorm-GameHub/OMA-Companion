@@ -18,7 +18,7 @@ import { MAX_LEVEL, levelOf, levelProgress, xpForLevel } from "@/lib/te-map/rpg"
 import { getDndClass } from "@/lib/dnd/classes";
 import { titleOf } from "@/lib/dnd/perks";
 import { displayTitle } from "@/lib/dnd/coin-shop";
-import type { HeroCockpit } from "@/lib/battle-cards/hub-hero";
+import { worldEntryLabel, type HeroCockpit } from "@/lib/battle-cards/hub-hero";
 
 const CHRONICLE_ICON: Record<string, string> = { quest: "📜", level: "⭐", location: "📍", announce: "📣", event: "🎲" };
 
@@ -61,13 +61,7 @@ export default function HeldPanel({
   for (const inv of invites) waiting.push({ icon: "friends", text: `${inv.fromName} lädt dich in eine Gruppe ein`, href: "/oma-quest" });
   if (!spunToday) waiting.push({ icon: "coin", text: "Das tägliche Glücksrad ist bereit", href: "/battle-cards?tab=laden" });
 
-  const worldLabel = !card.dndCreatedAt
-    ? { title: "Dein Abenteuer beginnt", sub: "Erschaffe deinen Charakter in OMA Quest" }
-    : place?.travelling
-      ? { title: "Weiterreisen", sub: "Du bist unterwegs" }
-      : place
-        ? { title: `Zurück nach ${place.name}`, sub: "OMA Quest fortsetzen" }
-        : { title: "Zurück in die Welt", sub: "OMA Quest fortsetzen" };
+  const worldLabel = worldEntryLabel(card, place);
 
   return (
     <div className="space-y-6">

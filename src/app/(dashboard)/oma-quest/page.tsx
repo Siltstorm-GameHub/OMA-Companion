@@ -24,6 +24,9 @@ export default async function DndPage() {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
+      <Link href="/battle-cards" className="inline-flex text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+        ← Battle Cards
+      </Link>
       <div>
         <h1 className="font-battle text-lg text-white">OMA Quest</h1>
         <p className="text-xs text-gray-500">Dein Held ist dein Charakter — reise, erlebe Story-Ereignisse, erfülle Quests.</p>
