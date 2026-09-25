@@ -24,15 +24,18 @@ export interface StoryTickResult {
 
 /**
  * Führt den Story-Tick für genau eine Karte aus. Reisende Charaktere (noch
- * `travelRouteId` gesetzt nach dem Ankunfts-Commit-Versuch) bekommen KEIN
+ * `travelToCol` gesetzt nach dem Ankunfts-Commit-Versuch) bekommen KEIN
  * ortsgebundenes Ereignis (plan Abschnitt 3.3).
+ *
+ * Auf freien Feldern (currentLocationId = null) passiert derzeit nichts — hier
+ * hängt später die Story an Hex-Feldern ohne feste Location ein.
  */
 export async function runStoryTick(cardId: string): Promise<StoryTickResult> {
   const arrival = await commitArrivalIfDue(cardId);
 
   const card = await prisma.card.findUnique({
     where: { id: cardId },
-    select: { id: true, currentLocationId: true, travelRouteId: true, dndCreatedAt: true },
+    select: { id: true, currentLocationId: true, travelToCol: true, dndCreatedAt: true },
   });
   if (!card?.dndCreatedAt) return { arrived: arrival.arrived, newEvent: null };
 
@@ -41,7 +44,7 @@ export async function runStoryTick(cardId: string): Promise<StoryTickResult> {
   }
 
   // Noch (oder wieder) unterwegs → kein ortsgebundener Tick.
-  if (card.travelRouteId || !card.currentLocationId) {
+  if (card.travelToCol != null || !card.currentLocationId) {
     return { arrived: arrival.arrived, newEvent: null };
   }
 

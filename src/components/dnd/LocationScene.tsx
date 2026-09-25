@@ -7,8 +7,7 @@
 // Lädt GET /api/dnd/location/[slug] (führt serverseitig den Story-Tick für
 // den eigenen Charakter aus, siehe route.ts) — zeigt anwesende Charaktere an
 // festen spawnPoints, Story-Panel am storyAnchor, Reise-Buttons zu Nachbar-
-// Locations. `route.travelMinutes` je Nachbarn liefert /api/dnd/world-map
-// NICHT — daher `neighborRoutes` separat mitgeladen.
+// Locations. Reisen läuft über die Hex-Weltkarte (/dnd), nicht mehr von hier.
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -39,17 +38,9 @@ interface SceneData {
   scene: { backgroundImage: string; storyAnchor: { x: number; y: number } };
   present: ScenePresentCard[];
   eventLog: SceneEventLogEntry[];
-  routes: RouteOption[];
   storyTick: { arrived: boolean; newEvent: { title: string; text: string; xpGained: number } | null } | null;
   myCardId: string | null;
   myCardInTransit: boolean;
-}
-
-interface RouteOption {
-  id: string;
-  toSlug: string;
-  toName: string;
-  travelMinutes: number;
 }
 
 export default function LocationScene({ slug }: { slug: string }) {
@@ -85,25 +76,6 @@ export default function LocationScene({ slug }: { slug: string }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Reise konnte nicht abgebrochen werden.");
       toast.success("Reise abgebrochen.");
-      load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unbekannter Fehler.");
-    } finally {
-      setTraveling(false);
-    }
-  }
-
-  async function startTravel(routeId: string) {
-    setTraveling(true);
-    try {
-      const res = await fetch("/api/dnd/character/travel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Reise konnte nicht gestartet werden.");
-      toast.success("Reise gestartet!");
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Unbekannter Fehler.");
@@ -187,20 +159,13 @@ export default function LocationScene({ slug }: { slug: string }) {
           </button>
         </div>
       )}
-      {!data.myCardInTransit && data.routes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {data.routes.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              disabled={traveling}
-              onClick={() => startTravel(r.id)}
-              className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors disabled:opacity-50"
-            >
-              Reisen nach {r.toName} · {r.travelMinutes} Min
-            </button>
-          ))}
-        </div>
+      {!data.myCardInTransit && (
+        <Link
+          href="/dnd"
+          className="inline-flex rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors"
+        >
+          Weiterreisen — Ziel auf der Weltkarte wählen
+        </Link>
       )}
 
       <div className="moba-panel rounded-2xl p-4 space-y-2">

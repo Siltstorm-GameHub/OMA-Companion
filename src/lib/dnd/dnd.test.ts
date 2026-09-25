@@ -7,7 +7,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { roll4d6DropLowest, rollAbilityScores, deriveBaseStats, ABILITY_KEYS } from "./ability-scores";
-import { resolveCharacterLocation } from "./travel";
+import { resolveCharacterPosition } from "./travel";
 import { rollNewCharacterSheet, buildCharacterSheet } from "./character-creation";
 import { getRace } from "./races";
 import { getDndClass } from "./classes";
@@ -91,48 +91,54 @@ describe("buildCharacterSheet", () => {
   });
 });
 
-describe("resolveCharacterLocation", () => {
-  test("stationäre Karte: inTransit=false, locationId gesetzt", () => {
-    const resolved = resolveCharacterLocation({
-      currentLocationId: "loc-1",
-      travelRouteId: null,
-      travelFromLocationId: null,
-      travelDepartedAt: null,
-      travelArrivesAt: null,
-    });
-    assert.equal(resolved.inTransit, false);
-    assert.equal(resolved.locationId, "loc-1");
+describe("resolveCharacterPosition", () => {
+  const still = {
+    currentHexCol: 5,
+    currentHexRow: 5,
+    travelToCol: null,
+    travelToRow: null,
+    travelPath: null,
+    travelDepartedAt: null,
+    travelArrivesAt: null,
+  };
+  // Zwei Ebenen-/Geländefelder in einer Zeile; die Dauer je Feld kommt aus world.json,
+  // getestet wird nur die Zeit-Interpolation (Gesamtdauer = Ankunft − Abreise).
+  const travelling = (departedAt: Date, arrivesAt: Date) => ({
+    ...still,
+    travelToCol: 7,
+    travelToRow: 5,
+    travelPath: [[5, 5], [6, 5], [7, 5]],
+    travelDepartedAt: departedAt,
+    travelArrivesAt: arrivesAt,
   });
 
-  test("reisende Karte vor Ankunft: inTransit=true, progress zwischen 0 und 1", () => {
+  test("stehende Karte: inTransit=false, Feld gesetzt", () => {
+    const resolved = resolveCharacterPosition(still);
+    assert.equal(resolved.inTransit, false);
+    assert.deepEqual(resolved.hex, { col: 5, row: 5 });
+  });
+
+  test("Karte ohne Hex-Position (Alt-Charakter): hex=null, Backfill macht der Aufrufer", () => {
+    const resolved = resolveCharacterPosition({ ...still, currentHexCol: null, currentHexRow: null });
+    assert.equal(resolved.hex, null);
+  });
+
+  test("reisende Karte vor Ankunft: inTransit=true, progress zwischen 0 und 1, Pfad wird mitgegeben", () => {
     const now = new Date("2026-01-01T12:00:00Z");
-    const departedAt = new Date("2026-01-01T11:00:00Z");
-    const arrivesAt = new Date("2026-01-01T13:00:00Z");
-    const resolved = resolveCharacterLocation(
-      {
-        currentLocationId: "loc-1",
-        travelRouteId: "route-1",
-        travelFromLocationId: "loc-1",
-        travelDepartedAt: departedAt,
-        travelArrivesAt: arrivesAt,
-      },
-      now
+    const resolved = resolveCharacterPosition(
+      travelling(new Date("2026-01-01T11:00:00Z"), new Date("2026-01-01T13:00:00Z")),
+      now,
     );
     assert.equal(resolved.inTransit, true);
     assert.equal(resolved.progress, 0.5);
+    assert.equal(resolved.path?.length, 3);
+    assert.deepEqual(resolved.to, { col: 7, row: 5 });
   });
 
   test("Ankunftszeit erreicht: gilt als angekommen (inTransit=false) für Lesezwecke", () => {
-    const now = new Date("2026-01-01T14:00:00Z");
-    const resolved = resolveCharacterLocation(
-      {
-        currentLocationId: "loc-1",
-        travelRouteId: "route-1",
-        travelFromLocationId: "loc-1",
-        travelDepartedAt: new Date("2026-01-01T11:00:00Z"),
-        travelArrivesAt: new Date("2026-01-01T13:00:00Z"),
-      },
-      now
+    const resolved = resolveCharacterPosition(
+      travelling(new Date("2026-01-01T11:00:00Z"), new Date("2026-01-01T13:00:00Z")),
+      new Date("2026-01-01T14:00:00Z"),
     );
     assert.equal(resolved.inTransit, false);
   });

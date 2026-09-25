@@ -7895,23 +7895,23 @@
     "semantic_hash": ""
   },
   "src/app/api/dnd/character/travel/cancel/route.ts": {
-    "mtime": 1790317703.0183256,
-    "ast_hash": "eae61105121d0fba5ae4d074db9c4162",
+    "mtime": 1790319797.3934124,
+    "ast_hash": "c3595236782efcc80144d070bb1920bd",
     "semantic_hash": ""
   },
   "src/app/api/dnd/character/travel/route.ts": {
-    "mtime": 1790317703.0198338,
-    "ast_hash": "fbfc3063cacc8d20d4400bfc8104601c",
+    "mtime": 1790319786.0961158,
+    "ast_hash": "ab89d3288daa35afef4c76356bc51b26",
     "semantic_hash": ""
   },
   "src/app/api/dnd/location/[slug]/route.ts": {
-    "mtime": 1790317703.0198338,
-    "ast_hash": "2972cca98d72f58abbf9e314e37df10c",
+    "mtime": 1790319809.7106743,
+    "ast_hash": "bce9e9559075b083a7e0942b913c445f",
     "semantic_hash": ""
   },
   "src/app/api/dnd/world-map/route.ts": {
-    "mtime": 1790318977.081058,
-    "ast_hash": "e69e2394a9dbe5e7ad009eaae0142d68",
+    "mtime": 1790319829.2992356,
+    "ast_hash": "a63a90c5df9d0a43cc4206265fe16c4b",
     "semantic_hash": ""
   },
   "src/app/api/shop/buy-dnd-reroll/route.ts": {
@@ -7940,18 +7940,13 @@
     "semantic_hash": ""
   },
   "src/components/dnd/LocationScene.tsx": {
-    "mtime": 1790317703.0295968,
-    "ast_hash": "b916b6ff6973ed43cae706d82d1d8a88",
+    "mtime": 1790319809.7106743,
+    "ast_hash": "30ca334d7e7877a6cd879d70fa4d71da",
     "semantic_hash": ""
   },
   "src/components/dnd/WorldMap.tsx": {
-    "mtime": 1790318977.0828607,
-    "ast_hash": "8ee2d925f57aaa99ea4ce73adad2d795",
-    "semantic_hash": ""
-  },
-  "src/components/dnd/ZoomPanMap.tsx": {
-    "mtime": 1790317703.0295968,
-    "ast_hash": "b6d17a686245da7afde97eb10ad355fa",
+    "mtime": 1790320182.8562746,
+    "ast_hash": "5476ee9243b93a569f8bed739f3bcc4d",
     "semantic_hash": ""
   },
   "src/components/pixel-character/PixelCharacter.tsx": {
@@ -7990,8 +7985,8 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/dnd.test.ts": {
-    "mtime": 1790317703.037772,
-    "ast_hash": "d900fa873141ee411c58381f67caaec5",
+    "mtime": 1790319868.754121,
+    "ast_hash": "c7ff3ee9351afa395dda9a5e9f6a01f7",
     "semantic_hash": ""
   },
   "src/lib/dnd/location-scenes.ts": {
@@ -8000,8 +7995,8 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/locations.ts": {
-    "mtime": 1790317703.0388129,
-    "ast_hash": "ec868dae452035e3e1313b6bc37ab03c",
+    "mtime": 1790319746.7495148,
+    "ast_hash": "2f78bd2655decc20d193f527ffaa8319",
     "semantic_hash": ""
   },
   "src/lib/dnd/migration.ts": {
@@ -8025,13 +8020,13 @@
     "semantic_hash": ""
   },
   "src/lib/dnd/story.ts": {
-    "mtime": 1790317703.0408497,
-    "ast_hash": "deff2691c6cfb3b3b87aaf2640b550dd",
+    "mtime": 1790319809.7106743,
+    "ast_hash": "14edc5d5f4053ea1014f1ed27df296d2",
     "semantic_hash": ""
   },
   "src/lib/dnd/travel.ts": {
-    "mtime": 1790317703.0423813,
-    "ast_hash": "781e3812daac25db87aff7fbe2dcaf9c",
+    "mtime": 1790319829.2624962,
+    "ast_hash": "6b037770be876af6fb5ce4cc280f2d9e",
     "semantic_hash": ""
   },
   "src/lib/pixel-character/catalog.json": {
@@ -11097,6 +11092,51 @@
   "public/pixel-character/weapon/1H_Sword_Training/f-move.png": {
     "mtime": 1790318160.206,
     "ast_hash": "526c76380ed35203a18ee0da4b6c611f",
+    "semantic_hash": ""
+  },
+  "scripts/hex-world/build_worldmap.py": {
+    "mtime": 1790319653.0246675,
+    "ast_hash": "a6193f8449b11ad1bc1ce2087ce3b8b8",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/grid.ts": {
+    "mtime": 1790319682.2507825,
+    "ast_hash": "1e17045aa85d67f28a46f757bdb07546",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/hex.test.ts": {
+    "mtime": 1790319711.3506606,
+    "ast_hash": "1ea7928139f1eb2cef4ee025a0c35a77",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/pathfinding.ts": {
+    "mtime": 1790319695.737491,
+    "ast_hash": "22e6522e43a38a519f25cd01cf7a936c",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/terrain.ts": {
+    "mtime": 1790319655.7394683,
+    "ast_hash": "9e68a26af115e20b9553e3e69f6a6ea0",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/world.json": {
+    "mtime": 1790319652.9976983,
+    "ast_hash": "cef04670e28d8a0177b0d1a31eec5b13",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/hex/world.ts": {
+    "mtime": 1790319868.754121,
+    "ast_hash": "1382ea22fa0a167135e90bbacf444cf5",
+    "semantic_hash": ""
+  },
+  "src/lib/dnd/position.ts": {
+    "mtime": 1790319789.2348568,
+    "ast_hash": "60041d38d91288078ff0b2d34a63e78f",
+    "semantic_hash": ""
+  },
+  "public/dnd/hex-world.webp": {
+    "mtime": 1790319652.9696577,
+    "ast_hash": "a56776ed68a416b085a345cd83900547",
     "semantic_hash": ""
   }
 }

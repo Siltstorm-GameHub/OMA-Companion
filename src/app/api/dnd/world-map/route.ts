@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDndWorldSeeded } from "@/lib/dnd/locations";
-import { resolveCharacterLocation } from "@/lib/dnd/travel";
+import { resolveCharacterPosition } from "@/lib/dnd/travel";
 import { sanitizePixelConfig } from "@/lib/pixel-character";
 
 /**
- * Weltkarte: alle Locations + aufgelöste Position jeder Charakter-Karte.
+ * Weltkarte: alle Locations (mit Hex-Feld) + aufgelöste Position jeder Charakter-Karte.
  * Client pollt alle 20-30s (kein SSE, plan Abschnitt 3.1). Resolve-on-Read:
- * "in Transit" wird live aus now() vs. travelDepartedAt/travelArrivesAt
+ * "unterwegs" wird live aus now() vs. travelDepartedAt/travelArrivesAt
  * berechnet, kein Schreibvorgang hier (Commit passiert lazy an anderer
  * Stelle — story-tick/location-Aufruf des jeweils betroffenen Charakters).
+ * Gelände und Kartenbild sind statisch (src/lib/dnd/hex) und stehen nicht in der Antwort.
  */
 export async function GET() {
   const session = await auth();
@@ -28,31 +29,44 @@ export async function GET() {
         linkedDiscordId: true,
         pixelCharacter: true, // Spielfigur (Editor: /battle-cards/my-card)
         currentLocationId: true,
-        travelRouteId: true,
-        travelFromLocationId: true,
+        currentHexCol: true,
+        currentHexRow: true,
+        travelToCol: true,
+        travelToRow: true,
+        travelPath: true,
         travelDepartedAt: true,
         travelArrivesAt: true,
-        travelRoute: { select: { toId: true } },
       },
     }),
   ]);
+  const locById = new Map(locations.map((l) => [l.id, l]));
 
-  const characters = cards.map((c) => {
-    const resolved = resolveCharacterLocation(c);
-    return {
+  const characters = cards.flatMap((c) => {
+    const resolved = resolveCharacterPosition(c);
+    // Alt-Charaktere ohne Hex-Position stehen auf dem Feld ihrer Location.
+    const loc = c.currentLocationId ? locById.get(c.currentLocationId) : undefined;
+    const hex = resolved.hex ?? (loc ? { col: loc.hexCol, row: loc.hexRow } : null);
+    if (!hex) return [];
+    return [{
       cardId: c.id,
       name: c.name,
       discordId: c.linkedDiscordId,
+      hex,
+      locationId: resolved.inTransit ? null : c.currentLocationId,
       inTransit: resolved.inTransit,
-      locationId: resolved.locationId,
-      fromId: resolved.fromId ?? null,
-      toId: resolved.inTransit ? c.travelRoute?.toId ?? null : null,
+      path: resolved.inTransit ? resolved.path!.map((h) => [h.col, h.row]) : null,
       departedAt: resolved.departedAt ?? null,
       arrivesAt: resolved.arrivesAt ?? null,
-      progress: resolved.progress ?? null,
       pixel: sanitizePixelConfig(c.pixelCharacter),
-    };
+    }];
   });
 
-  return NextResponse.json({ locations, characters });
+  return NextResponse.json({
+    now: new Date().toISOString(),
+    locations: locations.map((l) => ({
+      id: l.id, slug: l.slug, name: l.name, description: l.description,
+      locationType: l.locationType, hexCol: l.hexCol, hexRow: l.hexRow,
+    })),
+    characters,
+  });
 }

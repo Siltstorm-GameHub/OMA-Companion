@@ -1972,14 +1972,20 @@ model Card {
   // ODER Auto-Migration (kein eigener Wurf), danach im Shop nachkaufbar (buy-dnd-reroll), pro Nutzung -1
   dndXp         Int     @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
 
-  // --- Standort & Reise ---
+  // --- Standort & Reise (Hex-Weltkarte, siehe src/lib/dnd/hex) ---
+  // Position = Hex-Feld (odd-r-Offset). currentLocationId ist die feste Location auf diesem Feld
+  // (null = freies Feld ohne Location). Alte Charaktere ohne Hex-Position stehen implizit auf dem
+  // Feld ihrer currentLocation (Backfill beim Lesen, siehe travel.ts positionOf).
   currentLocationId String?
   currentLocation    DndLocation? @relation(fields: [currentLocationId], references: [id])
-  travelRouteId      String?
-  travelRoute        DndRoute?    @relation(fields: [travelRouteId], references: [id])
+  currentHexCol      Int?
+  currentHexRow      Int?
+  // Aktive Reise: Zielfeld + geplanter Pfad ([[col,row], …] inkl. Start) + Zeiten. travelToCol != null = unterwegs.
+  travelToCol        Int?
+  travelToRow        Int?
+  travelPath         Json?
   travelDepartedAt   DateTime?
   travelArrivesAt    DateTime?
-  travelFromLocationId String? // Rückkehrpunkt bei Reiseabbruch (== currentLocationId zum Zeitpunkt des Aufbruchs)
 
   eventLogs     DndEventLog[]
   questProgress DndQuestProgress[]
@@ -2009,33 +2015,18 @@ model DndLocation {
   name            String
   description     String?         @db.Text
   locationType    DndLocationType
-  mapX            Float
-  mapY            Float
+  hexCol          Int             @default(0) // Feld auf der Hex-Weltkarte (world.json), siehe lib/dnd/hex
+  hexRow          Int             @default(0)
   mapIcon         String?
   backgroundImage String?
   order           Int             @default(0)
 
-  routesFrom DndRoute[]     @relation("RouteFrom")
-  routesTo   DndRoute[]     @relation("RouteTo")
   storyNodes DndStoryNode[]
   quests     DndQuest[]
   cards      Card[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-model DndRoute {
-  id            String      @id @default(cuid())
-  fromId        String
-  toId          String
-  from          DndLocation @relation("RouteFrom", fields: [fromId], references: [id])
-  to            DndLocation @relation("RouteTo", fields: [toId], references: [id])
-  travelMinutes Int
-  label         String?
-  cards         Card[]
-
-  @@unique([fromId, toId])
 }
 
 // Ereignis-DEFINITION (Vorlage) — kein Charakterbezug, sondern ein Pool-Eintrag,

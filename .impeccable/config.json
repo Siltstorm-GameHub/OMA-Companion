@@ -266,6 +266,15 @@
         ],
         "createdAt": "2026-09-25T06:42:24.243Z",
         "reason": "Claude: false positive - text-gray-400/500 on bg-black/30 over dark panel (#141a28), no colored background; user not consulted"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/dnd/WorldMap.tsx"
+        ],
+        "createdAt": "2026-09-25T07:11:33.638Z",
+        "reason": "Claude: false positive - borderLeft/Right transparent + borderTop/Bottom colored are CSS triangle pointers (map pin, 'Du' tag), not card side accents; user not consulted"
       }
     ]
   }

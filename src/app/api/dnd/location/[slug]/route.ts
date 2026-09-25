@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   const scene = getLocationScene(location.slug);
   const present = await prisma.card.findMany({
-    where: { currentLocationId: location.id, travelRouteId: null, dndCreatedAt: { not: null } },
+    where: { currentLocationId: location.id, travelToCol: null, dndCreatedAt: { not: null } },
     select: { id: true, name: true, linkedDiscordId: true, dndClass: true },
   });
 
@@ -47,11 +47,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   }));
   const eventLog = await getLocationEventLog(location.id);
 
-  const outgoingRoutes = await prisma.dndRoute.findMany({
-    where: { fromId: location.id },
-    include: { to: { select: { slug: true, name: true } } },
-  });
-
   return NextResponse.json({
     location,
     scene,
@@ -64,9 +59,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       occurredAt: e.occurredAt,
       cardName: e.card.name,
     })),
-    routes: outgoingRoutes.map((r) => ({ id: r.id, toSlug: r.to.slug, toName: r.to.name, travelMinutes: r.travelMinutes })),
     storyTick: tickResult,
     myCardId: myCard?.id ?? null,
-    myCardInTransit: !!myCard?.travelRouteId,
+    myCardInTransit: myCard?.travelToCol != null,
   });
 }
