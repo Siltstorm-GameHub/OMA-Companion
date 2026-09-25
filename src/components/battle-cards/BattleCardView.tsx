@@ -185,8 +185,10 @@ export default function BattleCardView({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startFlip(); }
       }}
-      className="block w-full max-w-[240px] text-left cursor-pointer"
-      style={{ opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
+      className="relative block w-full max-w-[240px] shrink-0 grow-0 text-left cursor-pointer"
+      // Feste Kartengröße (1:2) am äußeren Block: Vorder- und Rückseite liegen nur absolut darin und können die Höhe nie beeinflussen,
+      // auch nicht in Flex-/Grid-Umgebungen (Modal, Editor) oder wenn eine Seite gerade ausgeblendet ist.
+      style={{ opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined, aspectRatio: "1 / 2" }}
       aria-label={`${card.name} — Tippen zum Umdrehen`}
     >
       {/* Grundbreite für Container, die sich nach dem Inhalt richten (Flex mit items-center, Grid mit auto): beide
@@ -208,7 +210,7 @@ export default function BattleCardView({
         onAnimationComplete={() => {
           if (closing) { setFlipped((f) => !f); setClosing(false); }
         }}
-        className="relative w-full aspect-[1/2]"
+        className="absolute inset-0"
         style={{ transformOrigin: "50% 50%" }}
       >
         {/* ── Vorderseite ── */}

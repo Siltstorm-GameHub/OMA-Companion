@@ -16,8 +16,7 @@ import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlat
 import TeCharacter from "@/components/te-character/TeCharacter";
 import { TE_CROP_FIGURE } from "@/lib/te-character";
 
-/** Clash-Royale-artiges Upgrade-Badge — ragt über den unteren Rand des
- *  Kartenbilds statt als separate Textzeile unter der Kachel zu stehen (siehe
+/** Upgrade-Badge — breite Leiste direkt UNTER der Karte (überlappt sie nicht). Sie steht im Fluss unter der Kachel (siehe
  *  CardTile). Grün + Pulsieren, sobald ein Upgrade sofort möglich ist (Duplikate
  *  UND Münzen reichen); sonst ein blauer "Tropfen"-Badge mit dem
  *  Duplikat-Fortschritt, wie die Elixier-/Fortschritts-Badges in Clash Royale. */
@@ -39,10 +38,10 @@ function CardUpgradeBadge({
   if (level >= 5) {
     return (
       <span
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 text-[9px] font-black leading-none px-2 py-1 rounded-full text-black whitespace-nowrap"
+        className="mt-1.5 w-full flex items-center justify-center gap-1 text-[11px] font-black uppercase tracking-wide leading-none px-2 py-1.5 rounded-lg text-black whitespace-nowrap"
         style={{
           background: "linear-gradient(180deg, #fde68a, #f59e0b)",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.5)",
+          boxShadow: "0 0 10px rgba(245,158,11,0.55), 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.5)",
         }}
       >
         ★ MAX
@@ -59,15 +58,15 @@ function CardUpgradeBadge({
   if (hasEnoughDuplicates && hasEnoughCoins) {
     return (
       <span
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 text-[10px] font-black leading-none px-2.5 py-1 rounded-full text-black whitespace-nowrap animate-pulse"
+        className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-[12px] font-black uppercase tracking-wide leading-none px-2.5 py-2 rounded-lg text-black whitespace-nowrap animate-pulse"
         style={{
           background: "linear-gradient(180deg, #6ee7b7, #10b981)",
-          boxShadow: "0 0 10px rgba(16,185,129,0.7), inset 0 1px 0 rgba(255,255,255,0.5)",
+          boxShadow: "0 0 14px rgba(16,185,129,0.85), 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.5)",
         }}
       >
-        <MobaIcon name="chevronUp" className="w-3 h-3 shrink-0" />
-        {cost}
-        <CoinIcon size={9} />
+        <MobaIcon name="chevronUp" className="w-3.5 h-3.5 shrink-0" />
+        Upgrade · {cost}
+        <CoinIcon size={12} />
       </span>
     );
   }
@@ -77,22 +76,22 @@ function CardUpgradeBadge({
   // ggf. schon (dann grau/Münzen fehlen), sonst zeigt es den X/Y-Fortschritt.
   return (
     <span
-      className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 text-[9px] font-bold leading-none px-2 py-1 rounded-full text-white whitespace-nowrap overflow-hidden"
+      className="relative mt-1.5 w-full flex items-center justify-center gap-1.5 text-[11px] font-bold leading-none px-2 py-1.5 rounded-lg text-white whitespace-nowrap overflow-hidden"
       style={{
         background: "#1e293b",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(148,163,184,0.35)",
       }}
     >
       <span
         className="absolute inset-y-0 left-0 transition-all"
-        style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#f59e0b" : "#3b82f6" }}
+        style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#b45309" : "#2563eb" }}
       />
-      <MobaIcon name="attack" className="w-2.5 h-2.5 shrink-0 relative" />
+      <MobaIcon name="attack" className="w-3 h-3 shrink-0 relative" />
       <span className="relative inline-flex items-center gap-0.5">
         {hasEnoughDuplicates ? (
           <>
             {cost}
-            <CoinIcon size={8} />
+            <CoinIcon size={11} />
           </>
         ) : (
           `${duplicates}/${needed}`
@@ -137,9 +136,7 @@ export default function CardTile({
       className="flex flex-col items-center gap-1.5 w-full text-left"
       aria-label={`${card.name} — Details ansehen`}
     >
-      {/* Äußerer Wrapper OHNE overflow-hidden — das Upgrade-Badge hängt bewusst
-          über den unteren Kartenrand hinaus (Clash-Royale-Optik) und würde vom
-          card-cut-sm-Zuschnitt der Kunst-Box sonst abgeschnitten. */}
+      {/* Wrapper: Karte und darunter (im Fluss, ohne Überlappung) die Upgrade-Leiste. */}
       <div className="relative w-full">
       <div
         className="card-cut-sm relative w-full aspect-[3/4] overflow-hidden"
