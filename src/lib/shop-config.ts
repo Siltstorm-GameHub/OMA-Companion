@@ -21,6 +21,7 @@ export type PackPrices = Record<PackKind, number>;
 export interface ShopConfig {
   packPrices: PackPrices;
   wheelPrizes: WheelPrize[];
+  dndRerollCost: number;
 }
 
 const DEFAULT_WHEEL_PRIZES: WheelPrize[] = [
@@ -40,9 +41,12 @@ const DEFAULT_PACK_PRICES: PackPrices = {
   COMMUNITY: 2000,
 };
 
+const DEFAULT_DND_REROLL_COST = 300;
+
 export const DEFAULTS: ShopConfig = {
   packPrices: DEFAULT_PACK_PRICES,
   wheelPrizes: DEFAULT_WHEEL_PRIZES,
+  dndRerollCost: DEFAULT_DND_REROLL_COST,
 };
 
 // "shop_pack_cost" ist der historische Key aus der Zeit vor mehreren
@@ -53,6 +57,7 @@ const KEYS = {
   packCostPremium: "shop_pack_cost_premium",
   packCostCommunity: "shop_pack_cost_community",
   wheelPrizes: "shop_wheel_prizes",
+  dndRerollCost: "shop_dnd_reroll_cost",
 } as const;
 
 function parsePositiveInt(raw: string | undefined, fallback: number): number {
@@ -81,7 +86,9 @@ export async function getShopConfig(): Promise<ShopConfig> {
     }
   }
 
-  return { packPrices, wheelPrizes };
+  const dndRerollCost = parsePositiveInt(map.get(KEYS.dndRerollCost), DEFAULTS.dndRerollCost);
+
+  return { packPrices, wheelPrizes, dndRerollCost };
 }
 
 export async function updateShopConfig(patch: Partial<ShopConfig>): Promise<void> {
@@ -90,6 +97,7 @@ export async function updateShopConfig(patch: Partial<ShopConfig>): Promise<void
   if (patch.packPrices?.PREMIUM !== undefined) entries.push([KEYS.packCostPremium, String(patch.packPrices.PREMIUM)]);
   if (patch.packPrices?.COMMUNITY !== undefined) entries.push([KEYS.packCostCommunity, String(patch.packPrices.COMMUNITY)]);
   if (patch.wheelPrizes !== undefined) entries.push([KEYS.wheelPrizes, JSON.stringify(patch.wheelPrizes)]);
+  if (patch.dndRerollCost !== undefined) entries.push([KEYS.dndRerollCost, String(patch.dndRerollCost)]);
 
   await Promise.all(
     entries.map(([key, value]) =>

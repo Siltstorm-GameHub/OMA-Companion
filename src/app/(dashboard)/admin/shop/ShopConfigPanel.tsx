@@ -24,6 +24,7 @@ const PACK_KIND_ORDER: PackKind[] = ["STANDARD", "PREMIUM", "COMMUNITY"];
 export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
   const [packPrices, setPackPrices] = useState<PackPrices>(initial.packPrices);
   const [prizes, setPrizes] = useState<WheelPrize[]>(initial.wheelPrizes);
+  const [dndRerollCost, setDndRerollCost] = useState<number>(initial.dndRerollCost);
   const [saving, setSaving] = useState(false);
 
   const totalWeight = prizes.reduce((s, p) => s + (p.weight > 0 ? p.weight : 0), 0);
@@ -62,18 +63,23 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
       toast.error("Alle Pack-Preise müssen größer als 0 sein");
       return;
     }
+    if (dndRerollCost <= 0) {
+      toast.error("Re-Roll-Preis muss größer als 0 sein");
+      return;
+    }
 
     setSaving(true);
     try {
       const res = await fetch("/api/admin/shop", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packPrices, wheelPrizes: prizes }),
+        body: JSON.stringify({ packPrices, wheelPrizes: prizes, dndRerollCost }),
       });
       if (!res.ok) { toast.error("Speichern fehlgeschlagen"); return; }
       const data: ShopConfig = await res.json();
       setPackPrices(data.packPrices);
       setPrizes(data.wheelPrizes);
+      setDndRerollCost(data.dndRerollCost);
       toast.success("Shop-Einstellungen gespeichert");
     } catch {
       toast.error("Netzwerkfehler");
@@ -104,6 +110,24 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
             </label>
           ))}
         </div>
+      </div>
+
+      {/* ── D&D-Re-Roll-Preis ── */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">D&D-Charakter-Re-Roll</p>
+        <label className="block max-w-xs">
+          <span className="text-xs text-gray-500">Preis (Münzen)</span>
+          <input
+            type="number"
+            min={1}
+            value={dndRerollCost}
+            onChange={(e) => setDndRerollCost(parseInt(e.target.value, 10) || 0)}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-teal-500/50"
+          />
+          <span className="mt-1 block text-[10px] text-gray-600">
+            Kosten für einen zusätzlichen Re-Roll-Credit (Rasse+Klasse+Attribute neu würfeln) im Shop.
+          </span>
+        </label>
       </div>
 
       {/* ── Glücksrad-Preise ── */}

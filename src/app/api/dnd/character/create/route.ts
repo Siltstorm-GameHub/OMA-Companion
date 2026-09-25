@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
   if (card.dndCreatedAt && !reroll) {
     return NextResponse.json({ error: "Charakter wurde bereits erstellt" }, { status: 400 });
   }
-  if (card.dndCreatedAt && reroll && card.dndRerollUsed) {
-    return NextResponse.json({ error: "Re-Roll wurde bereits verwendet" }, { status: 400 });
+  if (card.dndCreatedAt && reroll && card.dndRerollCredits <= 0) {
+    return NextResponse.json({ error: "Keine Re-Roll-Credits verfügbar" }, { status: 400 });
   }
 
   await ensureDndWorldSeeded();
@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
   const startLocation = card.currentLocationId
     ? null
     : await prisma.dndLocation.findUnique({ where: { slug: START_LOCATION_SLUG } });
+
+  // Erst-Erstellung: 1 Gratis-Credit (bisheriges "einmaliger Re-Roll"-Recht,
+  // jetzt als Credit statt Boolean, damit im Shop nachkaufbare Re-Rolls
+  // (buy-dnd-reroll) dieselbe Zählung nutzen). Reroll: verbraucht 1 Credit.
+  const dndRerollCredits = reroll ? { decrement: 1 } : 1;
 
   const updated = await prisma.card.update({
     where: { id: card.id },
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
       abilityScores: toJson(sheet.abilityScores),
       backstory: sheet.backstory,
       dndCreatedAt: card.dndCreatedAt ?? new Date(),
-      dndRerollUsed: reroll ? true : card.dndRerollUsed,
+      dndRerollCredits,
       currentLocationId: startLocation ? startLocation.id : undefined,
       overriddenFields: withDndOverriddenFields(card.overriddenFields ?? []),
     },
@@ -90,7 +95,7 @@ export async function POST(req: NextRequest) {
       baseAttack: updated.baseAttack,
       baseDefense: updated.baseDefense,
       speed: updated.speed,
-      dndRerollUsed: updated.dndRerollUsed,
+      dndRerollCredits: updated.dndRerollCredits,
     },
   });
 }

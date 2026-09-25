@@ -1969,7 +1969,8 @@ model Card {
   abilityScores Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
   backstory     String? @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
   dndCreatedAt  DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
-  dndRerollUsed Boolean @default(false) // einmaliger Re-Roll (Rasse+Klasse+Stats zusammen) — danach endgültig
+  dndRerollCredits Int @default(0) // verfügbare Re-Rolls (Rasse+Klasse+Stats zusammen) — 1 gratis bei Erst-Erstellung
+  // ODER Auto-Migration (kein eigener Wurf), danach im Shop nachkaufbar (buy-dnd-reroll), pro Nutzung -1
   dndXp         Int     @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
 
   // --- Standort & Reise ---

@@ -7,7 +7,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import WorldMap from "@/components/dnd/WorldMap";
+import DndHome from "@/components/dnd/DndHome";
 import CharacterCreation from "@/components/dnd/CharacterCreation";
 import DndMigrationBanner from "@/components/dnd/DndMigrationBanner";
 
@@ -35,7 +35,7 @@ export default async function DndPage() {
           <CharacterCreation mode="create" />
         </>
       ) : (
-        <WorldMap myCardId={card.id} />
+        <DndHome myCardId={card.id} rerollCredits={card.dndRerollCredits} />
       )}
     </div>
   );

@@ -63,6 +63,10 @@ export async function runAutoMigrationIfDeadlinePassed(): Promise<{ migrated: nu
         abilityScores: toJson(sheet.abilityScores),
         backstory: sheet.backstory,
         dndCreatedAt: new Date(),
+        // Nutzer hat nicht selbst ausgewürfelt (Frist verstrichen) — bekommt
+        // dafür 1 Re-Roll-Credit gratis, um die Automatik-Wahl doch noch
+        // einmal zu korrigieren.
+        dndRerollCredits: 1,
         currentLocationId: card.currentLocationId ?? startLocation?.id,
         overriddenFields: withDndOverriddenFields(card.overriddenFields ?? []),
       },

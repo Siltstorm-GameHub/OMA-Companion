@@ -4,6 +4,7 @@ import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import DailySpin from "./DailySpin";
 import BuyPack from "./BuyPack";
+import BuyDndReroll from "./BuyDndReroll";
 import { prisma } from "@/lib/prisma";
 import { getShopConfig } from "@/lib/shop-config";
 import { countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
@@ -18,9 +19,19 @@ export default async function ShopPage() {
       }).catch(() => null)
     : null;
 
-  const { packPrices, wheelPrizes } = await getShopConfig();
+  const { packPrices, wheelPrizes, dndRerollCost } = await getShopConfig();
   const purchasedToday = userId ? await countPacksPurchasedToday(userId) : 0;
   const myPoints  = me?.points ?? 0;
+
+  const myUser = userId
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } })
+    : null;
+  const myCard = myUser?.discordId
+    ? await prisma.card.findUnique({
+        where: { linkedDiscordId: myUser.discordId },
+        select: { dndCreatedAt: true, dndRerollCredits: true },
+      })
+    : null;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -67,6 +78,12 @@ export default async function ShopPage() {
             initialPoints={myPoints}
             dailyLimit={PACK_DAILY_PURCHASE_LIMIT}
             purchasedToday={purchasedToday}
+          />
+          <BuyDndReroll
+            cost={dndRerollCost}
+            points={myPoints}
+            currentCredits={myCard?.dndRerollCredits ?? 0}
+            hasCharacter={!!myCard?.dndCreatedAt}
           />
         </div>
       )}
