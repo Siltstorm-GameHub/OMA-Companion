@@ -24,10 +24,19 @@ export function loadTeImage(src: string): Promise<HTMLImageElement | null> {
   return p;
 }
 
-export async function loadTeLayers(config: TeCharacterConfig): Promise<HTMLImageElement[]> {
-  const imgs = await Promise.all(resolveTeLayers(config).map((l) => loadTeImage(l.src)));
+/** Ebenen-Bilder in der Zeichenreihenfolge für eine Blickrichtung (bei "up" liegen Rücken/Hinterhaar vorn). */
+export async function loadTeLayers(config: TeCharacterConfig, dir: TeDir = "down"): Promise<HTMLImageElement[]> {
+  const imgs = await Promise.all(resolveTeLayers(config, dir).map((l) => loadTeImage(l.src)));
   return imgs.filter((i): i is HTMLImageElement => i !== null);
 }
+
+/** Beide Reihenfolgen (Vorder-/Rückansicht) einmal laden — für Figuren, die sich im Spiel drehen. */
+export interface TeLayerSets { front: HTMLImageElement[]; back: HTMLImageElement[] }
+export async function loadTeLayerSets(config: TeCharacterConfig): Promise<TeLayerSets> {
+  const [front, back] = await Promise.all([loadTeLayers(config, "down"), loadTeLayers(config, "up")]);
+  return { front, back };
+}
+export const layersFor = (sets: TeLayerSets | undefined, dir: TeDir): HTMLImageElement[] => (sets ? (dir === "up" ? sets.back : sets.front) : []);
 
 export interface Crop { x: number; y: number; w: number; h: number }
 const FULL: Crop = { x: 0, y: 0, w: TE_FRAME, h: TE_FRAME };
@@ -75,7 +84,7 @@ export default function TeCharacter({
     const def = TE_ANIMS[anim];
     const loops = loop ?? def.loop;
 
-    loadTeLayers(config).then((images) => {
+    loadTeLayers(config, dir).then((images) => {
       if (cancelled) return;
       ctx.imageSmoothingEnabled = false;
       const draw = (i: number) => {

@@ -56,4 +56,17 @@ describe("Time-Elements-Assets", () => {
     assert.equal(attackAnimFor(defaultTeConfig(), "SUPPORT"), "cast");
     assert.equal(attackAnimFor(defaultTeConfig(), "TANK"), "attack");
   });
+
+  test("Rücken und Hinterhaar: hinter dem Körper von vorn/Seite, darüber bei Blick nach hinten", () => {
+    const first = (id: string) => TE_CATALOG.categories.find((c) => c.id === id)!.items[0].variants[0];
+    const cfg = { v: 1 as const, skin: 0, layers: { head: first("head"), top: first("top"), backextra: first("backextra"), backhair: first("backhair") } };
+    const order = (dir: "down" | "left" | "right" | "up") => resolveTeLayers(cfg, dir).map((l) => l.src.split("/")[3]);
+    for (const dir of ["down", "left", "right"] as const) {
+      const o = order(dir);
+      assert.ok(o.indexOf("backextra") < o.indexOf("top") && o.indexOf("backhair") < o.indexOf("top"), `${dir}: hinter dem Körper`);
+    }
+    const up = order("up");
+    assert.ok(up.indexOf("backextra") > up.lastIndexOf("top") && up.indexOf("backhair") > up.lastIndexOf("top"), "up: vor dem Körper");
+    assert.ok(up.indexOf("backhair") < up.indexOf("head"), "up: aber unter dem Kopf");
+  });
 });

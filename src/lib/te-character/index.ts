@@ -81,8 +81,13 @@ export function sanitizeTeConfig(input: unknown): TeCharacterConfig | null {
 
 export interface TeLayer { src: string; z: number }
 
-/** Alle Sheets (hinten → vorn) für eine Figur. Hautton wirkt auf Gesicht, Körper und Kleidung mit Hautanteil. */
-export function resolveTeLayers(config: TeCharacterConfig): TeLayer[] {
+/** Rücken- und Hinterhaar-Ebenen liegen hinter dem Körper — außer bei Blick nach hinten (Norden): dort sieht man
+ *  den Rücken, also müssen sie über Körper und Kleidung, aber unter Kopf und Haar liegen. */
+const BACK_LAYER_Z_WHEN_FACING_AWAY: Record<string, number> = { backhair: 6.5, backextra: 6.6 };
+
+/** Alle Sheets (hinten → vorn) für eine Figur. Hautton wirkt auf Gesicht, Körper und Kleidung mit Hautanteil.
+ *  Die Reihenfolge hängt von der Blickrichtung ab (siehe BACK_LAYER_Z_WHEN_FACING_AWAY). */
+export function resolveTeLayers(config: TeCharacterConfig, dir: TeDir = "down"): TeLayer[] {
   const t = config.skin > 0 ? `.t${config.skin}` : "";
   const file = (cat: string, id: string, skin: boolean) => `/te/char/${cat}/${id}${skin ? t : ""}.png`;
   const out: TeLayer[] = [
@@ -93,7 +98,7 @@ export function resolveTeLayers(config: TeCharacterConfig): TeLayer[] {
   for (const cat of TE_CATALOG.categories) {
     const v = config.layers[cat.id];
     const item = v ? cat.items.find((i) => i.variants.includes(v)) : undefined;
-    if (item) out.push({ src: file(cat.id, v, item.skin), z: cat.z });
+    if (item) out.push({ src: file(cat.id, v, item.skin), z: (dir === "up" && BACK_LAYER_Z_WHEN_FACING_AWAY[cat.id]) || cat.z });
   }
   return out.sort((a, b) => a.z - b.z);
 }

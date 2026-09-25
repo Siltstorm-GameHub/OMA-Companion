@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { drawTeFrame, loadTeLayers } from "@/components/te-character/TeCharacter";
+import { drawTeFrame, layersFor, loadTeLayerSets, type TeLayerSets } from "@/components/te-character/TeCharacter";
 import { TE_ANIMS, type TeCharacterConfig } from "@/lib/te-character";
 import { groundQuarters, wallQuarters, type Quarters } from "@/lib/te-map/autotile";
 import { createGame, drainEvents, isChestOpen, pressAction, step, syncQuestStep, TILE_MS, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
@@ -152,19 +152,19 @@ export default function TeWorld({ world, character, initialStep, others, onAdvan
   }, [world]);
 
   const playerKey = JSON.stringify(character);
-  const spritesRef = useRef<{ player: HTMLImageElement[]; npcs: Map<string, HTMLImageElement[]>; others: Map<string, HTMLImageElement[]> }>({
-    player: [], npcs: new Map(), others: new Map(),
+  const spritesRef = useRef<{ player: TeLayerSets | undefined; npcs: Map<string, TeLayerSets>; others: Map<string, TeLayerSets> }>({
+    player: undefined, npcs: new Map(), others: new Map(),
   });
   useEffect(() => {
     let cancelled = false;
-    loadTeLayers(character).then((imgs) => { if (!cancelled) spritesRef.current.player = imgs; });
+    loadTeLayerSets(character).then((sets) => { if (!cancelled) spritesRef.current.player = sets; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerKey]);
   const othersKey = JSON.stringify(others.map((o) => [o.id, o.character]));
   useEffect(() => {
     let cancelled = false;
-    Promise.all(others.filter((o) => o.character).map(async (o) => [o.id, await loadTeLayers(o.character!)] as const)).then((entries) => {
+    Promise.all(others.filter((o) => o.character).map(async (o) => [o.id, await loadTeLayerSets(o.character!)] as const)).then((entries) => {
       if (!cancelled) spritesRef.current.others = new Map(entries);
     });
     return () => { cancelled = true; };
@@ -237,7 +237,7 @@ export default function TeWorld({ world, character, initialStep, others, onAdvan
         if (!cancelled) setLoadError(e instanceof Error ? e.message : "Kacheln konnten nicht geladen werden.");
         return;
       }
-      const npcImgs = await Promise.all(world.map.actors.filter((a) => a.kind === "npc" && a.config).map(async (a) => [a.id, await loadTeLayers(a.config!)] as const));
+      const npcImgs = await Promise.all(world.map.actors.filter((a) => a.kind === "npc" && a.config).map(async (a) => [a.id, await loadTeLayerSets(a.config!)] as const));
       if (cancelled) return;
       spritesRef.current.npcs = new Map(npcImgs);
       const baked = bakeStatic(sheets, world);
@@ -284,22 +284,22 @@ export default function TeWorld({ world, character, initialStep, others, onAdvan
             const open = isChestOpen(a, g.questStep);
             sprites.push({ base: (a.y + 1) * T, draw: () => ctx.drawImage(sheets.chests, 16, open ? 112 : 16, 16, 16, a.x * T - camX, a.y * T - camY, 16, 16) });
           } else if (a.kind === "npc") {
-            const imgs = spritesRef.current.npcs.get(a.id) ?? [];
+            const sets = spritesRef.current.npcs.get(a.id);
             const dir = g.actorDir.get(a.id) ?? a.dir;
-            sprites.push({ base: (a.y + 1) * T, draw: () => drawTeFrame(ctx, imgs, 1, dir, a.x * T - camX + T / 2 - 24, a.y * T - camY - 16, 1) });
+            sprites.push({ base: (a.y + 1) * T, draw: () => drawTeFrame(ctx, layersFor(sets, dir), 1, dir, a.x * T - camX + T / 2 - 24, a.y * T - camY - 16, 1) });
           }
         }
         others.forEach((o, i) => {
           const spot = map.crowd[i];
-          const imgs = spritesRef.current.others.get(o.id);
-          if (!spot || !imgs) return;
-          sprites.push({ base: (spot.y + 1) * T, draw: () => drawTeFrame(ctx, imgs, 1, "down", spot.x * T - camX + T / 2 - 24, spot.y * T - camY - 16, 1) });
+          const sets = spritesRef.current.others.get(o.id);
+          if (!spot || !sets) return;
+          sprites.push({ base: (spot.y + 1) * T, draw: () => drawTeFrame(ctx, sets.front, 1, "down", spot.x * T - camX + T / 2 - 24, spot.y * T - camY - 16, 1) });
         });
         const walkFrames = TE_ANIMS.walk.frames;
         const pf = g.move ? walkFrames[Math.floor((clock / 1000) * TE_ANIMS.walk.fps) % walkFrames.length] : 1;
         sprites.push({
           base: fy * T + T,
-          draw: () => drawTeFrame(ctx, spritesRef.current.player, pf, g.dir, fx * T - camX + T / 2 - 24, fy * T - camY - 16, 1),
+          draw: () => drawTeFrame(ctx, layersFor(spritesRef.current.player, g.dir), pf, g.dir, fx * T - camX + T / 2 - 24, fy * T - camY - 16, 1),
         });
         sprites.sort((a, b) => a.base - b.base);
         for (const s of sprites) s.draw();
