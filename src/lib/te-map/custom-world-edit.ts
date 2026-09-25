@@ -5,7 +5,8 @@
 import { randomTeConfig } from "@/lib/te-character";
 import { LIMITS, type CustomWorldDoc } from "./custom-world";
 import { STAMPS, type StampDef, type StampId } from "./stamps";
-import type { Actor, Building, GroundType } from "./types";
+import { allActorsOf, getTemplate, INTERIOR_LIMITS } from "./interior";
+import type { Actor, Building, GroundType, Interior } from "./types";
 
 export type ActorKind = Actor["kind"];
 
@@ -51,21 +52,24 @@ export function placeBuilding(d: CustomWorldDoc, b: Building): CustomWorldDoc {
 }
 
 export function nextActorId(d: CustomWorldDoc, kind: ActorKind): string {
-  const base = kind === "npc" ? "npc" : kind === "chest" ? "kiste" : "schild";
-  for (let i = 1; i < 100; i++) if (!d.actors.some((a) => a.id === `${base}${i}`)) return `${base}${i}`;
+  const base = kind === "npc" ? "npc" : kind === "merchant" ? "haendler" : kind === "chest" ? "kiste" : "schild";
+  const used = new Set(allActorsOf({ actors: d.actors, buildings: d.buildings }).map((a) => a.id));
+  for (let i = 1; i < 100; i++) if (!used.has(`${base}${i}`)) return `${base}${i}`;
   return `${base}${Date.now() % 100000}`;
 }
 
 /** Neuen NPC / neue Truhe / neues Schild setzen. Schilder bekommen gleich ihren festen Stempel dazu. */
 export function placeActor(d: CustomWorldDoc, kind: ActorKind, x: number, y: number): { doc: CustomWorldDoc; id: string | null } {
   if (!inMap(d, x, y) || d.actors.length >= LIMITS.maxActors) return { doc: d, id: null };
-  if (kind === "npc" && d.actors.filter((a) => a.kind === "npc").length >= LIMITS.maxNpcs) return { doc: d, id: null };
+  if ((kind === "npc" || kind === "merchant") && d.actors.filter((a) => a.kind === "npc" || a.kind === "merchant").length >= LIMITS.maxNpcs) return { doc: d, id: null };
   if (d.actors.some((a) => a.x === x && a.y === y)) return { doc: d, id: null };
   const id = nextActorId(d, kind);
   const actor: Actor =
     kind === "npc"
       ? { id, kind, name: "Neuer NPC", x, y, dir: "down", config: randomTeConfig(), talk: [{ step: "*", lines: ["Hallo!"] }] }
-      : kind === "chest"
+      : kind === "merchant"
+        ? { id, kind, name: "Händler", x, y, dir: "down", config: randomTeConfig(), shop: [], talk: [{ step: "*", lines: ["Schau dich in Ruhe um!"] }] }
+        : kind === "chest"
         ? { id, kind, name: "Truhe", x, y, dir: "down", talk: [{ step: "*", lines: ["Die Truhe ist leer."] }] }
         : { id, kind, name: "Schild", x, y, dir: "down", talk: [{ step: "*", lines: ["Ein Schild."] }] };
   let next: CustomWorldDoc = { ...d, actors: [...d.actors, actor] };
@@ -148,4 +152,126 @@ export function resizeDoc(d: CustomWorldDoc, cols: number, rows: number): Custom
 export function setTheme(d: CustomWorldDoc, theme: "outdoor" | "cave"): CustomWorldDoc {
   if (d.theme === theme) return d;
   return { ...d, theme, border: theme === "cave" ? "cave" : "trees", walls: theme === "cave" ? d.walls : [] };
+}
+
+
+// ── Innenräume ──────────────────────────────────────────────
+
+/** Alle Akteure der Welt: draußen und in den Innenräumen (Reihenfolge: draußen zuerst). */
+export const allActors = (d: CustomWorldDoc): Actor[] => allActorsOf({ actors: d.actors, buildings: d.buildings });
+
+/** Wo ein Akteur steht: draußen oder in welchem Gebäude (Index). */
+export function locateActor(d: CustomWorldDoc, id: string): { building: number | null } | null {
+  if (d.actors.some((a) => a.id === id)) return { building: null };
+  const bi = d.buildings.findIndex((b) => b.interior?.actors.some((a) => a.id === id));
+  return bi >= 0 ? { building: bi } : null;
+}
+
+/** Akteur ändern, egal ob draußen oder in einem Innenraum. */
+export function updateAnyActor(d: CustomWorldDoc, id: string, patch: Partial<Actor>): CustomWorldDoc {
+  const loc = locateActor(d, id);
+  if (!loc) return d;
+  if (loc.building === null) return updateActor(d, id, patch);
+  return updateInterior(d, loc.building, (it) => ({ ...it, actors: it.actors.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+}
+
+/** Auf alle Akteure (draußen + drinnen) dieselbe Umwandlung anwenden (z. B. beim Löschen von Quest-Schritten). */
+export function mapAllActors(d: CustomWorldDoc, fn: (a: Actor) => Actor): CustomWorldDoc {
+  return {
+    ...d,
+    actors: d.actors.map(fn),
+    buildings: d.buildings.map((b) => (b.interior ? { ...b, interior: { ...b.interior, actors: b.interior.actors.map(fn) } } : b)),
+  };
+}
+
+export function updateInterior(d: CustomWorldDoc, bi: number, fn: (it: Interior) => Interior): CustomWorldDoc {
+  const b = d.buildings[bi];
+  if (!b?.interior) return d;
+  return { ...d, buildings: d.buildings.map((x, i) => (i === bi ? { ...x, interior: fn(x.interior!) } : x)) };
+}
+
+/** Kennungen der Akteure so umbenennen, dass sie in der ganzen Welt eindeutig sind (Vorlagen bringen feste Namen mit). */
+export function withUniqueActorIds(d: CustomWorldDoc, actors: Actor[]): Actor[] {
+  const used = new Set(allActors(d).map((a) => a.id));
+  return actors.map((a) => {
+    let id = a.id;
+    for (let n = 2; used.has(id); n++) id = `${a.id.replace(/[0-9]+$/, "")}${n}`.slice(0, 24);
+    used.add(id);
+    return { ...a, id };
+  });
+}
+
+/** Innenraum aus einer Vorlage anlegen (ersetzt einen vorhandenen). */
+export function setInteriorFromTemplate(d: CustomWorldDoc, bi: number, templateId: string): CustomWorldDoc {
+  const t = getTemplate(templateId);
+  const b = d.buildings[bi];
+  if (!t || !b) return d;
+  // Akteure des alten Innenraums zählen nicht mehr mit, wenn neue Namen vergeben werden
+  const without: CustomWorldDoc = { ...d, buildings: d.buildings.map((x, i) => (i === bi ? { ...x, interior: undefined } : x)) };
+  const it = t.build();
+  const freshActors = withUniqueActorIds(without, it.actors).map((a) => (a.kind === "npc" || a.kind === "merchant") && !a.config ? { ...a, config: randomTeConfig() } : a);
+  return { ...without, buildings: without.buildings.map((x, i) => (i === bi ? { ...x, interior: { ...it, actors: freshActors } } : x)) };
+}
+
+export function removeInterior(d: CustomWorldDoc, bi: number): CustomWorldDoc {
+  return { ...d, buildings: d.buildings.map((x, i) => {
+    if (i !== bi || !x.interior) return x;
+    const { interior: _drop, ...rest } = x;
+    void _drop;
+    return rest;
+  }) };
+}
+
+const interiorInside = (it: Interior, x: number, y: number) => x >= 1 && y >= 2 && x <= it.cols - 2 && y <= it.rows - 2;
+
+export function interiorPlaceStamp(d: CustomWorldDoc, bi: number, id: StampId, x: number, y: number): CustomWorldDoc {
+  return updateInterior(d, bi, (it) => (x < 0 || y < 0 || x >= it.cols || y >= it.rows || it.stamps.length >= INTERIOR_LIMITS.maxStamps || it.stamps.some((s) => s.id === id && s.x === x && s.y === y) ? it : { ...it, stamps: [...it.stamps, { id, x, y }] }));
+}
+
+export function interiorPlaceActor(d: CustomWorldDoc, bi: number, kind: "npc" | "merchant" | "chest", x: number, y: number): { doc: CustomWorldDoc; id: string | null } {
+  const it = d.buildings[bi]?.interior;
+  if (!it || !interiorInside(it, x, y) || (x === it.exitX && y === it.rows - 2) || it.actors.length >= INTERIOR_LIMITS.maxActors) return { doc: d, id: null };
+  if (it.actors.some((a) => a.x === x && a.y === y)) return { doc: d, id: null };
+  if ((kind === "npc" || kind === "merchant") && allActors(d).filter((a) => a.kind === "npc" || a.kind === "merchant").length >= LIMITS.maxNpcs) return { doc: d, id: null };
+  const id = nextActorId(d, kind);
+  const actor: Actor =
+    kind === "npc" ? { id, kind, name: "Neuer NPC", x, y, dir: "down", config: randomTeConfig(), talk: [{ step: "*", lines: ["Hallo!"] }] }
+    : kind === "merchant" ? { id, kind, name: "Händler", x, y, dir: "down", config: randomTeConfig(), shop: [], talk: [{ step: "*", lines: ["Schau dich in Ruhe um!"] }] }
+    : { id, kind, name: "Truhe", x, y, dir: "down", talk: [{ step: "*", lines: ["Die Truhe ist leer."] }] };
+  return { doc: updateInterior(d, bi, (i) => ({ ...i, actors: [...i.actors, actor] })), id };
+}
+
+export function interiorMoveActor(d: CustomWorldDoc, bi: number, id: string, x: number, y: number): CustomWorldDoc {
+  const it = d.buildings[bi]?.interior;
+  if (!it || !interiorInside(it, x, y) || (x === it.exitX && y === it.rows - 2) || it.actors.some((a) => a.id !== id && a.x === x && a.y === y)) return d;
+  return updateInterior(d, bi, (i) => ({ ...i, actors: i.actors.map((a) => (a.id === id ? { ...a, x, y } : a)) }));
+}
+
+/** Radierer im Innenraum: Akteur, sonst oberstes Objekt auf der Kachel. */
+export function interiorRemoveAt(d: CustomWorldDoc, bi: number, x: number, y: number): CustomWorldDoc {
+  return updateInterior(d, bi, (it) => {
+    const a = it.actors.find((o) => o.x === x && o.y === y);
+    if (a) return { ...it, actors: it.actors.filter((o) => o !== a) };
+    for (let i = it.stamps.length - 1; i >= 0; i--) {
+      const st = it.stamps[i];
+      const def = STAMPS[st.id] as StampDef;
+      if (x >= st.x && x < st.x + def.w && y >= st.y && y < st.y + def.h) return { ...it, stamps: it.stamps.filter((_, k) => k !== i) };
+    }
+    return it;
+  });
+}
+
+/** Größe des Innenraums ändern: Dinge außerhalb entfallen, die Tür bleibt im Bild. */
+export function resizeInterior(d: CustomWorldDoc, bi: number, cols: number, rows: number): CustomWorldDoc {
+  cols = Math.min(INTERIOR_LIMITS.maxCols, Math.max(INTERIOR_LIMITS.minCols, Math.round(cols)));
+  rows = Math.min(INTERIOR_LIMITS.maxRows, Math.max(INTERIOR_LIMITS.minRows, Math.round(rows)));
+  return updateInterior(d, bi, (it) => {
+    const exitX = Math.min(it.exitX, cols - 2);
+    const next: Interior = { ...it, cols, rows, exitX };
+    return {
+      ...next,
+      stamps: it.stamps.filter((s) => s.x < cols && s.y < rows),
+      actors: it.actors.filter((a) => interiorInside(next, a.x, a.y) && !(a.x === exitX && a.y === rows - 2)),
+    };
+  });
 }

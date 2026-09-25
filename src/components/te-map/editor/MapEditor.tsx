@@ -13,10 +13,13 @@ import { drawTeFrame, loadTeLayerSets, type TeLayerSets } from "@/components/te-
 import { bakeStatic, drawStamp, loadSheets, T, type Sheets } from "@/components/te-map/TeWorld";
 import { docToWorld, LIMITS, type BorderStyle, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import {
-  hitTest, moveActor, paintGround, placeActor, placeBuilding, placeStamp, removeAt, resizeDoc, setSpawn, setTheme, setWall, updateActor,
+  hitTest, moveActor, paintGround, placeActor, placeBuilding, placeStamp, removeAt, removeInterior, resizeDoc, setInteriorFromTemplate, setSpawn, setTheme, setWall, updateActor,
   type ActorKind,
 } from "@/lib/te-map/custom-world-edit";
+import { ITEMS } from "@/lib/dnd/items";
+import { INTERIOR_TEMPLATES } from "@/lib/te-map/interior";
 import { STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
+import InteriorEditor from "./InteriorEditor";
 import { GROUND, type Building, type GroundType } from "@/lib/te-map/types";
 
 type Tool =
@@ -48,6 +51,7 @@ const TOOL_BUTTONS: { key: string; label: string; tool: Tool; caveOnly?: boolean
   { key: "stamp", label: "Objekte", tool: { kind: "stamp", id: "tree" } },
   { key: "building", label: "Gebäude", tool: { kind: "building" } },
   { key: "npc", label: "NPC", tool: { kind: "actor", actor: "npc" } },
+  { key: "merchant", label: "Händler", tool: { kind: "actor", actor: "merchant" } },
   { key: "chest", label: "Truhe", tool: { kind: "actor", actor: "chest" } },
   { key: "sign", label: "Schild", tool: { kind: "actor", actor: "sign" } },
   { key: "spawn", label: "Startpunkt", tool: { kind: "spawn" } },
@@ -55,11 +59,11 @@ const TOOL_BUTTONS: { key: string; label: string; tool: Tool; caveOnly?: boolean
 ];
 
 function toolKey(t: Tool): string {
-  return t.kind === "actor" ? (t.actor === "npc" ? "npc" : t.actor === "chest" ? "chest" : "sign") : t.kind;
+  return t.kind === "actor" ? (t.actor === "npc" ? "npc" : t.actor === "merchant" ? "merchant" : t.actor === "chest" ? "chest" : "sign") : t.kind;
 }
 
 /** Kleine Vorschau eines Objekts (Stempel) bzw. Dach-/Wandblocks. */
-function Swatch({ sheets, draw, w, h, selected, title, onClick }: {
+export function Swatch({ sheets, draw, w, h, selected, title, onClick }: {
   sheets: Sheets | null; draw: (ctx: CanvasRenderingContext2D, sheets: Sheets) => void; w: number; h: number; selected: boolean; title: string; onClick: () => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -112,6 +116,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
   const [grid, setGrid] = useState(true);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<Selection>(null);
+  const [interiorOf, setInteriorOf] = useState<number | null>(null);
   const [bld, setBld] = useState<Omit<Building, "x" | "y">>({
     w: 6, roofRows: 3, roof: { k: 0, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 2, windowDx: [0, 4], name: "Haus",
   });
@@ -275,6 +280,10 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
     commit({ ...docRef.current, buildings: docRef.current.buildings.map((b, i) => (i === selected.index ? { ...b, ...patch } : b)) });
   };
 
+  if (interiorOf !== null && doc.buildings[interiorOf]?.interior) {
+    return <InteriorEditor doc={doc} bi={interiorOf} readOnly={readOnly} onChange={onChange} onBeginEdit={onBeginEdit} onQuestFocus={onQuestFocus} onClose={() => setInteriorOf(null)} />;
+  }
+
   return (
     <div className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* Werkzeuge */}
@@ -353,7 +362,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
               </div>
             )}
 
-            {tool.kind === "actor" && <p className="text-[11px] text-gray-500 pt-1">Klick auf die Karte setzt {tool.actor === "npc" ? "einen NPC" : tool.actor === "chest" ? "eine Truhe" : "ein Schild"}. Danach Dialoge unter „Quest“ bearbeiten.</p>}
+            {tool.kind === "actor" && <p className="text-[11px] text-gray-500 pt-1">Klick auf die Karte setzt {tool.actor === "npc" ? "einen NPC" : tool.actor === "merchant" ? "einen Händler" : tool.actor === "chest" ? "eine Truhe" : "ein Schild"}. Danach Dialoge unter „Quest“ bearbeiten.</p>}
             {tool.kind === "wall" && <p className="text-[11px] text-gray-500 pt-1">Malen setzt Wandkacheln, der Radierer entfernt sie.</p>}
             {tool.kind === "spawn" && <p className="text-[11px] text-gray-500 pt-1">Hier steht die Figur beim Betreten.</p>}
             {tool.kind === "select" && <p className="text-[11px] text-gray-500 pt-1">Klick wählt NPCs, Truhen und Gebäude aus; NPCs lassen sich ziehen.</p>}
@@ -364,12 +373,28 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
         {selActor && (
           <div className="moba-panel rounded-2xl p-3 space-y-2">
             <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">
-              {selActor.kind === "npc" ? "NPC" : selActor.kind === "chest" ? "Truhe" : "Schild"}
+              {selActor.kind === "npc" ? "NPC" : selActor.kind === "merchant" ? "Händler" : selActor.kind === "chest" ? "Truhe" : "Schild"}
             </p>
             <label className="block text-[11px] text-gray-400">Name
               <input value={selActor.name} maxLength={LIMITS.nameLen} disabled={readOnly} onChange={(e) => commit(updateActor(doc, selActor.id, { name: e.target.value }))} onFocus={onBeginEdit} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white" />
             </label>
-            {selActor.kind === "npc" && (
+            {selActor.kind === "merchant" && (
+              <div className="text-[11px] text-gray-400 space-y-1">
+                <p>Angebot (bis zu {LIMITS.maxShop} Gegenstände)</p>
+                <div className="max-h-40 overflow-y-auto grid grid-cols-1 gap-0.5">
+                  {ITEMS.map((it) => {
+                    const on = (selActor.shop ?? []).includes(it.key);
+                    return (
+                      <label key={it.key} className="flex items-center gap-1.5">
+                        <input type="checkbox" checked={on} disabled={readOnly || (!on && (selActor.shop ?? []).length >= LIMITS.maxShop)} onChange={() => { onBeginEdit(); commit(updateActor(doc, selActor.id, { shop: on ? (selActor.shop ?? []).filter((k) => k !== it.key) : [...(selActor.shop ?? []), it.key] })); }} />
+                        {it.emoji} {it.name} <span className="text-gray-500">({it.price} Gold)</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {(selActor.kind === "npc" || selActor.kind === "merchant") && (
               <>
                 <label className="block text-[11px] text-gray-400">Blickrichtung
                   <select value={selActor.dir} disabled={readOnly} onChange={(e) => { onBeginEdit(); commit(updateActor(doc, selActor.id, { dir: e.target.value as typeof selActor.dir })); }} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white">
@@ -418,6 +443,25 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
             </div>
             <BlockPicker label="Dach" sheets={sheets} rows={[0, 2]} value={selBuilding.roof} onPick={(roof) => setBuildingField({ roof })} />
             <BlockPicker label="Wand" sheets={sheets} rows={[1, 3]} value={selBuilding.wall} onPick={(wall) => setBuildingField({ wall })} />
+            <div className="border-t border-white/10 pt-2 space-y-1.5">
+              <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Innenraum</p>
+              {selBuilding.interior ? (
+                <>
+                  <p>Der Raum hinter der Tür ({selBuilding.interior.cols}×{selBuilding.interior.rows}, {selBuilding.interior.actors.length} Person(en)).</p>
+                  <button type="button" onClick={() => setInteriorOf(selected.index)} className="w-full rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold py-1.5">{readOnly ? "Innenraum ansehen" : "Innenraum bearbeiten"}</button>
+                  {!readOnly && <button type="button" onClick={() => { if (window.confirm("Den Innenraum samt Möbeln und Personen entfernen?")) { onBeginEdit(); commit(removeInterior(docRef.current, selected.index)); } }} className="w-full rounded-lg border border-red-400/30 text-red-300 font-semibold py-1.5 hover:bg-red-500/10">Innenraum entfernen</button>}
+                </>
+              ) : !readOnly ? (
+                <>
+                  <p>Mit Vorlage anlegen — Spieler betreten das Gebäude dann durch die Tür:</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {INTERIOR_TEMPLATES.map((t) => (
+                      <button key={t.id} type="button" title={t.description} onClick={() => { onBeginEdit(); commit(setInteriorFromTemplate(docRef.current, selected.index, t.id)); setInteriorOf(selected.index); }} className="rounded-lg border border-white/15 text-gray-200 font-semibold px-2 py-1.5 hover:border-white/30">＋ {t.label}</button>
+                    ))}
+                  </div>
+                </>
+              ) : <p>Kein Innenraum.</p>}
+            </div>
             {!readOnly && (
               <button type="button" onClick={() => { onBeginEdit(); commit({ ...doc, buildings: doc.buildings.filter((_, i) => i !== selected.index) }); setSelected(null); }} className="w-full rounded-lg border border-red-400/30 text-red-300 font-semibold py-1.5 hover:bg-red-500/10">
                 Entfernen

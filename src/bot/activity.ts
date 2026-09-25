@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { awardPoints, awardedToday, everAwarded } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
 import { advanceDndQuestObjectiveForDiscordId } from "@/lib/dnd/quests";
+import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
@@ -110,10 +111,35 @@ export async function trackVoice(
   console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(totalMinutes)}min Voice (${checkpointedMinutes}min bereits gespeichert)`);
 }
 
-export async function handleMemberJoin(discordId: string, username: string) {
+/** Platzhalter-User für ein Discord-Mitglied anlegen (wie der Admin-Mitglieder-Sync); beim ersten Login verschmilzt er mit dem OAuth-User. */
+async function createStubUser(discordId: string, username: string, avatar?: string | null) {
+  try {
+    const user = await prisma.user.create({ data: { discordId, username, name: username, image: avatar ?? null } });
+    const account = await prisma.account.findUnique({ where: { provider_providerAccountId: { provider: "discord", providerAccountId: discordId } } });
+    if (!account) await prisma.account.create({ data: { userId: user.id, type: "oauth", provider: "discord", providerAccountId: discordId } });
+    return user;
+  } catch {
+    // Parallel angelegt (Sync-Knopf, Login) → den vorhandenen nehmen
+    return findUser(discordId);
+  }
+}
+
+/** Community-Karte (fertiger OMA-Quest-Charakter) sofort anlegen — idempotent. */
+async function provisionCard(user: { id: string; username: string | null; name: string | null }, discordId: string) {
+  await ensureCommunityCard({ userId: user.id, discordId, displayName: user.username ?? user.name ?? "OMA-Mitglied" })
+    .catch((err) => console.error("  ⚠ Community-Karte konnte nicht angelegt werden:", err));
+}
+
+export async function handleMemberJoin(discordId: string, username: string, avatar?: string | null) {
   await new Promise((r) => setTimeout(r, 5000));
   const user = await findUser(discordId);
-  if (!user) return;
+  if (!user) {
+    // Neues Mitglied ohne App-Konto: Platzhalter-User + Karte, damit es sofort mitspielt (keine Willkommens-Punkte wie bisher)
+    const stub = await createStubUser(discordId, username, avatar);
+    if (stub) await provisionCard(stub, discordId);
+    return;
+  }
+  await provisionCard(user, discordId);
   // Nicht am Punktestand festmachen: wer sein Guthaben im Shop leer kauft und den Server
   // neu betritt, hätte sonst erneut Willkommens-Punkte bekommen.
   if (await everAwarded(user.id, "FIRST_LOGIN")) return;

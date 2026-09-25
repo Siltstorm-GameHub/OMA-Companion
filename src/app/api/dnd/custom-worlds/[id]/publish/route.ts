@@ -29,6 +29,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });
 
   const who = row.author.username ?? row.author.name ?? "Ein Mitglied";
-  await notifyAdmins(session.user.id, "Neue OMA-Quest-Location", `${who} hat „${v.doc.title}“ mit der Quest „${v.doc.quest.title}“ veröffentlicht.`, `/oma-quest/editor/${row.id}`);
+  await notifyAdmins(session.user.id, "Neue OMA-Quest-Location", `${who} hat „${v.doc.title}“ mit ${v.doc.quests.length === 1 ? `der Quest „${v.doc.quests[0].title}“` : `${v.doc.quests.length} Quests`} veröffentlicht.`, `/oma-quest/editor/${row.id}`);
   return NextResponse.json({ ok: true, slug: row.slug });
 }

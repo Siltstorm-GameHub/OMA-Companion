@@ -3,6 +3,7 @@ import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { checkAndAwardBadges } from "@/lib/award-badges";
+import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -168,6 +169,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Fire-and-forget badge check on every login (only first time per earned badge matters)
       if (token.id && user) {
         checkAndAwardBadges(token.id as string).catch(() => {});
+        // Community-Karte spätestens beim Login sicherstellen (der DB-Webhook ist nur eine Zusatzabsicherung)
+        if (token.discordId) {
+          ensureCommunityCard({ userId: token.id as string, discordId: token.discordId as string, displayName: user.name ?? "OMA-Mitglied" }).catch(() => {});
+        }
       }
 
       // ── Aktivitäts-Zeitstempel (unabhängig von Login) ─────────────────────

@@ -10,10 +10,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
-import TeWorld, { type OtherPlayer } from "./TeWorld";
+import TeWorld, { type ChatMessage, type LiveData, type OtherPlayer } from "./TeWorld";
+import { CharacterPanel, EventCards, GmPanel, PartyPanel, ShopPanel, SocialPanel } from "./play/PlayPanels";
+import type { WorldEventView } from "@/lib/dnd/world-events";
+import { allActorsOf } from "@/lib/te-map/interior";
+import type { ChoiceResult } from "@/lib/te-map/engine";
 import { getWorld } from "@/lib/te-map/worlds";
 import type { TeCharacterConfig } from "@/lib/te-character";
 import type { WorldDef } from "@/lib/te-map/types";
+import type { TrackerItem } from "@/lib/dnd/quest-log";
 
 interface LocationState {
   customWorld: WorldDef | null;
@@ -23,7 +28,12 @@ interface LocationState {
   myCardId: string | null;
   myCharacter: TeCharacterConfig;
   hasCharacter: boolean;
-  questStep: number;
+  questSteps: Record<string, number>;
+  tracker: TrackerItem[];
+  visits: { quest: string; title: string; step: number; completed: boolean }[];
+  isGm: boolean;
+  biome: "temperate" | "cold" | "dry" | "cave";
+  rpg: { flags: string[]; gold: number; xp: number; level: number } | null;
   present: { id: string; name: string; avatarUrl: string | null; character: TeCharacterConfig | null }[];
   eventLog: { id: string; title: string; text: string; xpGained: number; occurredAt: string; cardName: string }[];
   storyTick: { arrived: boolean; newEvent: { title: string; text: string; xpGained: number } | null } | null;
@@ -32,6 +42,12 @@ interface LocationState {
 export default function QuestWorld({ slug }: { slug: string }) {
   const [data, setData] = useState<LocationState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [events, setEvents] = useState<WorldEventView[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [emote, setEmote] = useState<{ id: string; n: number } | null>(null);
+  const [shopActor, setShopActor] = useState<string | null>(null);
+  const [sheetKey, setSheetKey] = useState(0);
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
   const world = data?.customWorld ?? staticWorld ?? undefined;
 
@@ -44,24 +60,66 @@ export default function QuestWorld({ slug }: { slug: string }) {
         if (!res.ok) { setError(json.error ?? "Location konnte nicht geladen werden."); return; }
         setData(json);
         if (json.storyTick?.newEvent) toast(json.storyTick.newEvent.title, { description: json.storyTick.newEvent.text });
+        for (const v of json.visits ?? []) toast(v.completed ? `Quest abgeschlossen: ${v.title}` : `Quest-Fortschritt: ${v.title}`, { description: "Du hast den Ort besucht." });
       })
       .catch(() => { if (!cancelled) setError("Netzwerkfehler."); });
     return () => { cancelled = true; };
   }, [slug]);
 
-  const onAdvance = useCallback(async (from: number) => {
+  const onAdvance = useCallback(async (quest: string, from: number) => {
     try {
       const res = await fetch(`/api/dnd/world/${slug}/step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from }),
+        body: JSON.stringify({ quest, from }),
       });
       if (!res.ok) return null;
-      return (await res.json()) as { step: number; completed: boolean };
+      return (await res.json()) as { step: number; completed: boolean; tracker?: TrackerItem[] };
     } catch {
       return null;
     }
   }, [slug]);
+
+  const livePresence = useCallback(async (me: { x: number; y: number; dir: string; emote?: string; chatSince?: string; eventsSince?: string }) => {
+    try {
+      const res = await fetch(`/api/dnd/world/${slug}/presence`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(me) });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return { others: json.others ?? [], chat: json.chat ?? [], events: json.events ?? [] } as LiveData;
+    } catch {
+      return null;
+    }
+  }, [slug]);
+
+  const onLiveData = useCallback((d: { chat: ChatMessage[]; events: WorldEventView[] }) => {
+    if (d.chat.length) setChat((c) => [...c, ...d.chat.filter((m) => !c.some((o) => o.id === m.id))].slice(-60));
+    if (d.events.length) setEvents((e) => [...e, ...d.events.filter((n) => !e.some((o) => o.id === n.id))]);
+  }, []);
+
+  const onChoose = useCallback(async (req: { actor: string; talk: number; choice: number }) => {
+    try {
+      const res = await fetch(`/api/dnd/world/${slug}/choice`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Fehlgeschlagen."); return null; }
+      const g = json.granted as { xp: number; gold: number; levelUp: number | null };
+      const extra = [g.xp ? `+${g.xp} XP` : "", g.gold ? `+${g.gold} Gold` : "", ...(json.itemNames ?? [])].filter(Boolean).join(" · ");
+      if (extra) toast(extra);
+      if (g.levelUp) toast.success(`Stufe ${g.levelUp} erreicht!`);
+      setSheetKey((k) => k + 1);
+      return { lines: json.lines, roll: json.roll, flags: json.flags, questSteps: json.questSteps, tracker: json.tracker } as ChoiceResult & { tracker?: import("@/lib/dnd/quest-log").TrackerItem[] };
+    } catch {
+      return null;
+    }
+  }, [slug]);
+
+  // Beim Verlassen der Seite sofort austragen (sonst bleibt die Figur noch ~12 s stehen)
+  const canEnterNow = !!data?.canEnter;
+  useEffect(() => {
+    if (!canEnterNow) return;
+    const leave = () => navigator.sendBeacon?.(`/api/dnd/world/${slug}/presence`, new Blob([JSON.stringify({ leave: true })], { type: "application/json" }));
+    window.addEventListener("pagehide", leave);
+    return () => { window.removeEventListener("pagehide", leave); leave(); };
+  }, [canEnterNow, slug]);
 
   if (error) return <p className="text-sm text-red-400">{error}</p>;
   if (!data) {
@@ -105,7 +163,21 @@ export default function QuestWorld({ slug }: { slug: string }) {
         </p>
       )}
 
-      <TeWorld world={world} character={data.myCharacter} initialStep={data.questStep} others={others} onAdvance={onAdvance} />
+      <TeWorld
+        world={world} character={data.myCharacter} initialSteps={data.questSteps} tracker={data.tracker} others={others}
+        livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
+        onChoose={onChoose} onTrade={setShopActor} onAdvance={onAdvance}
+      />
+
+      <EventCards events={events.filter((e) => !dismissed.has(e.id))} onDismiss={(id) => setDismissed((d) => new Set(d).add(id))} onChanged={() => setSheetKey((k) => k + 1)} />
+      <SocialPanel slug={slug} chat={chat} onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} />
+      <PartyPanel present={data.present.map((p) => ({ id: p.id, name: p.name }))} myCardId={data.myCardId} />
+      <CharacterPanel refreshKey={sheetKey} />
+      {data.isGm && <GmPanel slug={slug} />}
+      {shopActor && (() => {
+        const m = allActorsOf(world.map).find((a) => a.id === shopActor && a.kind === "merchant");
+        return m ? <ShopPanel slug={slug} actorId={m.id} merchantName={m.name} shop={m.shop ?? []} onClose={() => setShopActor(null)} onSheetChanged={() => setSheetKey((k) => k + 1)} /> : null;
+      })()}
 
       {data.present.length > 0 && (
         <div className="moba-panel rounded-2xl p-4">

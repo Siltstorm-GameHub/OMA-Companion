@@ -3,7 +3,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getLocationEventLog, runStoryTick } from "@/lib/dnd/story";
 import { commitArrivalIfDue } from "@/lib/dnd/travel";
-import { getWorldQuestStep } from "@/lib/dnd/quests";
+import { completeVisitSteps, ensureDndQuestsSeeded, getWorldQuestSteps } from "@/lib/dnd/quests";
+import { getTracker } from "@/lib/dnd/quest-log";
+import { getInventory } from "@/lib/dnd/rpg-server";
+import { getBuilderAccess } from "@/lib/dnd/custom-worlds";
+import { biomeOfTerrain, levelOf } from "@/lib/te-map/rpg";
+import { terrainAt } from "@/lib/dnd/hex/world";
 import { getPublishedCustomWorld } from "@/lib/dnd/custom-worlds";
 import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
 
@@ -49,6 +54,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 
   const eventLog = await getLocationEventLog(location.id);
 
+  // Quests: Besuchs-Schritte, die hier spielen, zählen jetzt; danach Stand aller Quests dieser Welt + HUD-Liste
+  let visits: Awaited<ReturnType<typeof completeVisitSteps>> = [];
+  let questSteps: Record<string, number> = {};
+  let tracker: Awaited<ReturnType<typeof getTracker>> = [];
+  if (canEnter && myCard) {
+    await ensureDndQuestsSeeded();
+    visits = await completeVisitSteps(myCard.id, slug);
+    questSteps = await getWorldQuestSteps(myCard.id, slug);
+    tracker = await getTracker(myCard.id);
+  }
+
   // Feste Welten kennt der Client selbst; Editor-Welten (auch bearbeitete feste) kommen als Daten mit und haben Vorrang.
   const customWorld = await getPublishedCustomWorld(slug);
 
@@ -60,7 +76,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     myCardId: myCard?.id ?? null,
     myCharacter: sanitizeTeConfig(myCard?.teCharacter) ?? defaultTeConfig(),
     hasCharacter: !!sanitizeTeConfig(myCard?.teCharacter),
-    questStep: canEnter && myCard ? await getWorldQuestStep(myCard.id, slug) : 0,
+    questSteps,
+    tracker,
+    visits,
+    biome: biomeOfTerrain(terrainAt({ col: location.hexCol, row: location.hexRow })),
+    isGm: (await getBuilderAccess(session.user.id)).allowed,
+    rpg: canEnter && myCard
+      ? {
+          flags: Array.isArray(myCard.dndFlags) ? (myCard.dndFlags as unknown[]).filter((f) => typeof f === "string") : [],
+          gold: myCard.dndGold, xp: myCard.dndXp, level: levelOf(myCard.dndXp),
+          abilityScores: myCard.abilityScores,
+          inventory: (await getInventory(myCard.id)).map((e) => ({ key: e.key, qty: e.qty, equipped: e.equipped })),
+        }
+      : null,
     present: present.map((c) => ({
       id: c.id,
       name: c.name,

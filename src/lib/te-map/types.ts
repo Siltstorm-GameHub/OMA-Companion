@@ -5,6 +5,7 @@
 // Renderer (components/te-map), die Spiel-Logik (engine.ts) und die Server-Prüfung der Quests.
 
 import type { TeCharacterConfig } from "@/lib/te-character";
+import type { Ability, Weather } from "./rpg";
 import type { StampId } from "./stamps";
 
 /** Bodenarten. Welche Kachelblöcke dahinterstehen, bestimmt das Thema (themes.ts). */
@@ -29,42 +30,98 @@ export interface Building {
   windowDx: number[];
   sign?: StampId;
   name: string;
+  /** Innenraum hinter der Tür (optional) */
+  interior?: Interior;
+}
+
+/** Raum hinter einer Gebäudetür: 2 Reihen Wand oben, Tür unten bei `exitX` (siehe interior.ts). */
+export interface Interior {
+  /** Vorlage, aus der er entstand (nur Information) */
+  template: string;
+  cols: number;
+  rows: number;
+  /** Index in INTERIOR_FLOORS / INTERIOR_WALLS */
+  floor: number;
+  wall: number;
+  stamps: PlacedStamp[];
+  actors: Actor[];
+  exitX: number;
 }
 
 export interface PlacedStamp { id: StampId; x: number; y: number }
 
 /** Ein Dialog eines Akteurs. `step` = Quest-Schritt, in dem er gilt ("*" = sonst). `advance` = nach dem
- *  Dialog rückt die Quest einen Schritt weiter (nur wenn der aktuelle Schritt genau `step` ist). */
+ *  Dialog rückt die Quest einen Schritt weiter (nur wenn der aktuelle Schritt genau `step` ist). Bei Schritt 0
+ *  ist das das Quest-Angebot: der Spieler kann annehmen oder ablehnen. `quest` = Slug der Quest, auf die sich
+ *  `step` bezieht (leer = die erste Quest der Welt). */
+/** Ergebnis einer Entscheidung: Text, Quest-Fortschritt (dieser Quest/dieses Schritts), gemerkte Ereignisse (Flags),
+ *  Erfahrung, Gold und Gegenstände (Schlüssel aus lib/dnd/items.ts). */
+export interface Outcome {
+  lines: string[];
+  advance?: boolean;
+  flags?: string[];
+  xp?: number;
+  gold?: number;
+  items?: string[];
+}
+
+/** Antwortmöglichkeit am Ende eines Dialogs. Mit `check` entscheidet ein Wurf (d20 + Attribut) gegen den Schwierigkeitsgrad
+ *  `dc` über `success` bzw. `fail`; bei `retry` darf man nach einem Fehlschlag erneut würfeln. */
+export interface TalkChoice {
+  text: string;
+  check?: { ability: Ability; dc: number; retry?: boolean };
+  success: Outcome;
+  fail?: Outcome;
+}
+
 export interface Talk {
   step: number | "*";
   lines: string[];
   advance?: boolean;
+  quest?: string;
+  /** Antworten nach dem Dialog (Entscheidungen/Proben); dann rückt die Quest nur über die Ergebnisse weiter */
+  choices?: TalkChoice[];
+  /** Nur zeigen, wenn der Charakter alle diese Ereignisse (Flags) erlebt hat / keines davon */
+  requires?: string[];
+  forbids?: string[];
+  /** Nur am Tag (6–21 Uhr) bzw. nur nachts */
+  time?: "day" | "night";
+  /** Nur bei diesem Wetter ("rain" gilt auch bei Sturm) */
+  weather?: Weather;
 }
 
 export interface Actor {
   id: string;
-  kind: "npc" | "chest" | "sign";
+  kind: "npc" | "chest" | "sign" | "merchant";
   name: string;
   x: number;
   y: number;
   dir: Dir;
-  /** Nur NPCs: Aussehen (Time-Elements-Konfiguration) */
+  /** NPCs/Händler: Aussehen (Time-Elements-Konfiguration) */
   config?: TeCharacterConfig;
+  /** Händler: Gegenstände im Angebot (Schlüssel aus lib/dnd/items.ts) */
+  shop?: string[];
   talk: Talk[];
 }
+
+/** Ein Schritt einer Quest: mit einem Akteur der Heimat-Location reden (`talk`) oder eine andere Location
+ *  besuchen (`visit`, zählt automatisch beim Betreten der Location). */
+export interface QuestStep { kind: "talk" | "visit"; text: string; location?: string }
 
 export interface WorldQuest {
   slug: string;
   title: string;
   /** Ein Text je Schritt plus der Abschlusstext: objectives.length = Schritte + 1. */
   objectives: string[];
+  /** Art je Schritt (ohne Angabe: alles `talk`); gleiche Reihenfolge wie objectives ohne den Abschlusstext. */
+  steps?: QuestStep[];
   xpReward: number;
 }
 
 export interface TeMap {
   cols: number;
   rows: number;
-  theme: "outdoor" | "cave";
+  theme: "outdoor" | "cave" | "inside";
   ground: GroundType[][];
   buildings: Building[];
   stamps: PlacedStamp[];
@@ -82,5 +139,16 @@ export interface WorldDef {
   slug: string;
   title: string;
   map: TeMap;
+  /** Erste (Haupt-)Quest der Location */
   quest: WorldQuest;
+  /** Weitere Quests, die an derselben Location laufen */
+  extraQuests?: WorldQuest[];
+}
+
+/** Alle Quests, die an dieser Location angeboten werden. */
+export const worldQuestsOf = (w: WorldDef): WorldQuest[] => [w.quest, ...(w.extraQuests ?? [])];
+
+/** Schritte einer Quest mit Art (fehlende Angaben = Gespräch). */
+export function stepsOf(q: WorldQuest): QuestStep[] {
+  return q.objectives.slice(0, -1).map((text, i) => q.steps?.[i] ?? { kind: "talk" as const, text });
 }

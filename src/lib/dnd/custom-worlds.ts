@@ -12,9 +12,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createNotificationForUsers } from "@/lib/notifications";
+import { logChronicle } from "./chronicle";
 import { hasMinRole } from "@/lib/roles";
-import { docToWorld, sanitizeCustomWorldDoc, validateForSubmit, worldToDoc, type CustomWorldDoc } from "@/lib/te-map/custom-world";
+import { docQuestSlug, docToWorld, sanitizeCustomWorldDoc, validateForSubmit, worldToDoc, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import { getWorld, WORLD_SLUGS } from "@/lib/te-map/worlds";
+import { worldQuestsOf } from "@/lib/te-map/types";
 import type { WorldDef } from "@/lib/te-map/types";
 import { WORLD_COLS, WORLD_ROWS, terrainAt } from "./hex/world";
 import { DND_LOCATIONS, START_LOCATION_SLUG } from "./locations";
@@ -32,8 +34,11 @@ export async function getBuilderAccess(userId: string): Promise<BuilderAccess> {
   return job ? { allowed: true, isAdmin: false } : { allowed: false };
 }
 
-/** Quest-Slug einer Welt: feste Welten behalten ihren, Editor-Welten "welt-<slug>". */
+/** Slug der ersten ("main") Quest einer Welt: feste Welten behalten ihren, Editor-Welten "welt-<slug>". */
 export const questSlugFor = (slug: string): string => getWorld(slug)?.quest.slug ?? `welt-${slug}`;
+
+/** Alle Quest-Slugs einer festen Welt (für Löschen/Wiederherstellen). */
+const fixedQuestSlugs = (slug: string): string[] => { const w = getWorld(slug); return w ? worldQuestsOf(w).map((q) => q.slug) : [`welt-${slug}`]; };
 
 export async function removedSlugs(kind: "LOCATION" | "QUEST"): Promise<Set<string>> {
   const rows = await prisma.dndRemovedContent.findMany({ where: { kind }, select: { slug: true } });
@@ -94,6 +99,16 @@ export async function pickFreeHex(slug: string): Promise<{ col: number; row: num
 
 // ── Veröffentlichen ─────────────────────────────────────────
 
+/** Besuchs-Schritte müssen auf bestehende, andere Locations zeigen (sonst hängt die Quest fest). */
+export async function checkVisitTargets(doc: CustomWorldDoc, ownSlug: string): Promise<string | null> {
+  const wanted = new Set(doc.quests.flatMap((q) => q.steps.flatMap((st) => (st.kind === "visit" && st.location ? [st.location] : []))));
+  if (!wanted.size) return null;
+  if (wanted.has(ownSlug)) return "Ein Besuchs-Schritt zeigt auf diese Location selbst — dort reicht ein Gespräch.";
+  const found = new Set((await prisma.dndLocation.findMany({ where: { slug: { in: [...wanted] } }, select: { slug: true } })).map((l) => l.slug));
+  const missing = [...wanted].filter((w) => !found.has(w));
+  return missing.length ? `Die Location „${missing[0]}“ aus einem Besuchs-Schritt gibt es nicht (mehr).` : null;
+}
+
 /** DndLocation + DndQuest zur Editor-Welt anlegen bzw. angleichen. Rückgabe: Fehlertext oder null. */
 async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: { col: number; row: number } | null): Promise<string | null> {
   const existing = await prisma.dndLocation.findUnique({ where: { slug }, select: { id: true } });
@@ -114,16 +129,26 @@ async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: {
     });
     locationId = created.id;
   }
-  const steps = doc.quest.objectives.length - 1;
-  const description = doc.quest.objectives.slice(0, -1).join(" → ");
-  const questSlug = questSlugFor(slug);
-  await prisma.dndQuest.upsert({
-    where: { slug: questSlug },
-    create: { slug: questSlug, title: doc.quest.title, description, objectiveType: "WORLD_STEP", targetCount: steps, xpReward: doc.quest.xpReward, coinReward: 0, locationId, adminEdited: true },
-    update: { title: doc.quest.title, description, targetCount: steps, xpReward: doc.quest.xpReward, locationId, adminEdited: true },
-  });
+  const keep: string[] = [];
+  for (const q of doc.quests) {
+    const questSlug = docQuestSlug(slug, q.id, questSlugFor(slug));
+    keep.push(questSlug);
+    const description = q.steps.map((st) => st.text).join(" → ");
+    const steps = JSON.parse(JSON.stringify(q.steps));
+    await prisma.dndQuest.upsert({
+      where: { slug: questSlug },
+      create: { slug: questSlug, title: q.title, description, objectiveType: "WORLD_STEP", targetCount: q.steps.length, xpReward: q.xpReward, coinReward: 0, locationId, steps, adminEdited: true },
+      update: { title: q.title, description, targetCount: q.steps.length, xpReward: q.xpReward, locationId, steps, adminEdited: true },
+    });
+  }
+  // Quests, die der Autor entfernt hat, verschwinden samt Fortschritt
+  const stale = await prisma.dndQuest.findMany({ where: { locationId, objectiveType: "WORLD_STEP", slug: { notIn: keep } }, select: { id: true } });
+  if (stale.length) {
+    await prisma.dndQuestProgress.deleteMany({ where: { questId: { in: stale.map((q) => q.id) } } });
+    await prisma.dndQuest.deleteMany({ where: { id: { in: stale.map((q) => q.id) } } });
+  }
   // Ein zuvor gelöschter fester Inhalt ist mit dem Neuanlegen wieder da
-  await prisma.dndRemovedContent.deleteMany({ where: { OR: [{ kind: "LOCATION", slug }, { kind: "QUEST", slug: questSlug }] } });
+  await prisma.dndRemovedContent.deleteMany({ where: { OR: [{ kind: "LOCATION", slug }, { kind: "QUEST", slug: { in: keep } }] } });
   return null;
 }
 
@@ -152,6 +177,8 @@ export async function publishCustomWorld(id: string, reviewerId: string): Promis
   if (!row) return { error: "Welt nicht gefunden" };
   const v = validateForSubmit(row.doc);
   if (!v.ok) return { error: `Die Welt ist nicht spielbar: ${v.errors[0]}` };
+  const visitProblem = await checkVisitTargets(v.doc, row.slug);
+  if (visitProblem) return { error: visitProblem };
   const wanted = row.hexCol != null && row.hexRow != null ? { col: row.hexCol, row: row.hexRow } : null;
   if (wanted) {
     const problem = await checkHex(wanted, row.slug);
@@ -160,6 +187,7 @@ export async function publishCustomWorld(id: string, reviewerId: string): Promis
   const err = await syncLocationAndQuest(row.slug, v.doc, wanted);
   if (err) return { error: err };
   const loc = await prisma.dndLocation.findUnique({ where: { slug: row.slug }, select: { hexCol: true, hexRow: true } });
+  if (row.status !== "PUBLISHED") await logChronicle("location", `Ein neuer Ort ist entstanden: ${v.doc.title}.`, row.slug);
   await prisma.dndCustomWorld.update({
     where: { id },
     data: { status: "PUBLISHED", publishedAt: row.publishedAt ?? new Date(), reviewedById: reviewerId, reviewNote: null, hexCol: loc?.hexCol ?? null, hexRow: loc?.hexRow ?? null },
@@ -233,8 +261,9 @@ export async function deleteLocation(slug: string): Promise<{ ok: true } | { err
     await tx.dndCustomWorld.deleteMany({ where: { slug } });
     if (isFixedLocation(slug)) {
       await tx.dndRemovedContent.upsert({ where: { kind_slug: { kind: "LOCATION", slug } }, create: { kind: "LOCATION", slug }, update: {} });
-      const qs = questSlugFor(slug);
-      await tx.dndRemovedContent.upsert({ where: { kind_slug: { kind: "QUEST", slug: qs } }, create: { kind: "QUEST", slug: qs }, update: {} });
+      for (const qs of fixedQuestSlugs(slug)) {
+        await tx.dndRemovedContent.upsert({ where: { kind_slug: { kind: "QUEST", slug: qs } }, create: { kind: "QUEST", slug: qs }, update: {} });
+      }
     }
   });
   return { ok: true };
@@ -278,5 +307,5 @@ export async function deleteActivityQuest(id: string): Promise<{ ok: true } | { 
 /** Gelöschten festen Inhalt wieder zulassen (wird beim nächsten Seed neu angelegt). */
 export async function restoreRemoved(kind: "LOCATION" | "QUEST", slug: string): Promise<void> {
   await prisma.dndRemovedContent.deleteMany({ where: { kind, slug } });
-  if (kind === "LOCATION") await prisma.dndRemovedContent.deleteMany({ where: { kind: "QUEST", slug: questSlugFor(slug) } });
+  if (kind === "LOCATION") await prisma.dndRemovedContent.deleteMany({ where: { kind: "QUEST", slug: { in: fixedQuestSlugs(slug) } } });
 }

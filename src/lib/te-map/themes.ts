@@ -12,7 +12,7 @@ export interface GroundTheme {
   blocks: Partial<Record<GroundType, [number, number]>>;
 }
 
-export const THEMES: Record<TeMap["theme"], GroundTheme> = {
+export const THEMES: Record<Exclude<TeMap["theme"], "inside">, GroundTheme> = {
   outdoor: {
     sheet: "a2",
     base: [0, 0],

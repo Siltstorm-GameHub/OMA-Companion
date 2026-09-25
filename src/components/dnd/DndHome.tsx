@@ -13,6 +13,9 @@ import { useState } from "react";
 import { Dices } from "@/components/icons";
 import WorldMap from "./WorldMap";
 import CharacterCreation from "./CharacterCreation";
+import QuestLog from "./QuestLog";
+import Chronicle from "./Chronicle";
+import { CharacterPanel } from "@/components/te-map/play/PlayPanels";
 
 export default function DndHome({
   myCardId,
@@ -50,6 +53,9 @@ export default function DndHome({
         </button>
       )}
       <WorldMap myCardId={myCardId} />
+      <Chronicle />
+      <CharacterPanel />
+      <QuestLog />
     </div>
   );
 }

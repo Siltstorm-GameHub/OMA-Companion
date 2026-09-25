@@ -5,8 +5,9 @@
 // Schritt 0 = Auftraggeber ansprechen, Schritt 1 = Ort/Truhe (oder zweiter NPC), Schritt 2 = zurück
 // zum Auftraggeber. Ton wie bei den Orten: humoristisch statt episch-ernst.
 
-import { MapBuilder } from "./generate";
-import { GROUND, type Actor, type Building, type Talk, type WorldDef, type WorldQuest } from "./types";
+import { MapBuilder, npcLook } from "./generate";
+import { getTemplate } from "./interior";
+import { GROUND, type Actor, type Building, type Interior, type Talk, type WorldDef, type WorldQuest } from "./types";
 
 // ── Dialog-Bausteine ────────────────────────────────────────
 
@@ -34,6 +35,12 @@ const quest = (slug: string, title: string, objectives: [string, string, string]
 });
 
 // Dach-/Wandblöcke (A3): Dächer braun 0, gold 1, grün 2, rot 3, blau 4, dunkel 5; Wände 0/1 (Zeile 1) bzw. 0/3 (Zeile 3)
+/** Innenraum aus einer Vorlage; NPCs/Händler bekommen ein festes Aussehen aus dem Seed. */
+const inside = (templateId: string, seed: number): Interior => {
+  const it = getTemplate(templateId)!.build();
+  return { ...it, actors: it.actors.map((a, i) => (a.kind === "chest" ? a : { ...a, config: npcLook(seed + i) })) };
+};
+
 const house = (b: Omit<Building, "roofRows"> & { roofRows?: number }): Building => ({ roofRows: 3, ...b });
 
 // ── 1 Alt-Hafenstadt (Dorf mit Platz) ───────────────────────
@@ -47,8 +54,8 @@ function hafenstadt(): WorldDef {
   m.keepClear(13, 10, 10, 8);
   m.building(house({ name: "Hafenmeisterei", x: 4, y: 3, w: 6, roof: { k: 0, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 2, windowDx: [0, 4] }));
   m.building(house({ name: "Fischhalle", x: 24, y: 3, w: 7, roof: { k: 3, r: 0 }, wall: { k: 4, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopSword" }));
-  m.building(house({ name: "Lagerhaus", x: 4, y: 19, w: 6, roof: { k: 2, r: 0 }, wall: { k: 0, r: 3 }, doorDx: 2, windowDx: [0, 4] }));
-  m.building(house({ name: "Zum Halben Anker", x: 22, y: 19, w: 7, roof: { k: 4, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopMug" }));
+  m.building(house({ name: "Lagerhaus", x: 4, y: 19, w: 6, roof: { k: 2, r: 0 }, wall: { k: 0, r: 3 }, doorDx: 2, windowDx: [0, 4], interior: inside("lager", 601) }));
+  m.building(house({ name: "Zum Halben Anker", x: 22, y: 19, w: 7, roof: { k: 4, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopMug", interior: inside("taverne", 501) }));
   m.road([[6, 8], [6, 13]], 2);
   m.road([[27, 8], [27, 13]], 2);
   m.road([[6, 24], [17, 24]], 2);
@@ -73,7 +80,28 @@ function hafenstadt(): WorldDef {
     ["Der Frachtbrief! Endlich weiß ich, was wir vermissen. Nämlich alles.", "Hier, deine Belohnung — und der Rat, nie wieder Fisch im Schatten zu lagern."],
     ["Der Hafen läuft, dank dir. Fast."],
   ));
-  m.npc("knut", "Matrose Knut", 29, 10, "down", 12, chatter("Ich fahre zur See, seit ich denken kann. Also seit gestern.", "Das Meer? Das ist da hinten irgendwo. Ich such's morgen."));
+  m.npc("knut", "Matrose Knut", 29, 10, "down", 12, [
+    { step: "*", requires: ["knut-garn"], lines: ["Na, alter Fuchs? Das mit dem Fass bleibt unter uns."] },
+    { step: "*", time: "night", lines: ["Nachts wird's hier gruselig. Da flüstern mir die Möwen Sachen zu."] },
+    {
+      step: "*",
+      lines: ["Ich fahre zur See, seit ich denken kann. Also seit gestern.", "Das Meer? Das ist da hinten irgendwo. Ich such's morgen."],
+      choices: [
+        {
+          text: "Ich versuche, ihm ein Seemannsgarn zu entlocken.",
+          check: { ability: "cha", dc: 10 },
+          success: { lines: ["Knut grinst und verrät dir, wo er sein Notgeld versteckt hat: unter dem dritten Fass. Du findest ein paar Münzen."], gold: 15, flags: ["knut-garn"] },
+          fail: { lines: ["Knut winkt ab: \"Betriebsgeheimnis.\""] },
+        },
+        { text: "Ich nicke höflich und gehe weiter.", success: { lines: ["Knut nickt zurück. Ein Gespräch unter Männern des Meeres."] } },
+      ],
+    },
+  ]);
+  m.addActor({
+    id: "berta", kind: "merchant", name: "Händlerin Berta", x: 19, y: 16, dir: "left", config: npcLook(13),
+    shop: ["rostschwert", "lederruestung", "wanderstiefel", "glueckstaler", "bierkrug"],
+    talk: [{ step: "*", lines: ["Frisch vom Kahn! Naja, vom Kahn. Schau dich um."] }],
+  });
   m.sign("schild", "Schild", 19, 8, ["Willkommen in Alt-Hafenstadt! Es riecht nach Fisch und schlechten Entscheidungen."]);
   for (const [x, y] of [[3, 8], [10, 8]]) m.place("barrel", x, y);
   m.place("crate", 23, 8);

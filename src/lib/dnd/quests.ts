@@ -10,8 +10,12 @@ import { prisma } from "../prisma";
 import { dispatchNotification } from "../notify-dispatch";
 import { updateQuestProgress } from "../quests";
 import { getWorld, WORLD_SLUGS } from "../te-map/worlds";
-import { questLength } from "../te-map/engine";
+import { questLen } from "../te-map/engine";
+import { stepsOf, worldQuestsOf } from "../te-map/types";
 import { resolveWorld } from "./custom-worlds";
+import { logChronicle } from "./chronicle";
+import { shareXpWithParty } from "./party";
+import { levelOf } from "../te-map/rpg";
 
 export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
@@ -22,15 +26,16 @@ export function worldQuestDefs(): DndQuestDef[] {
   return WORLD_SLUGS.flatMap((slug) => {
     const w = getWorld(slug);
     if (!w) return [];
-    return [{
-      slug: w.quest.slug,
-      title: w.quest.title,
-      description: w.quest.objectives.slice(0, -1).join(" → "),
+    return worldQuestsOf(w).map((q) => ({
+      slug: q.slug,
+      title: q.title,
+      description: q.objectives.slice(0, -1).join(" → "),
       objectiveType: "WORLD_STEP",
-      targetCount: questLength(w),
-      xpReward: w.quest.xpReward,
+      targetCount: questLen(q),
+      xpReward: q.xpReward,
       locationSlug: slug,
-    }];
+      steps: stepsOf(q),
+    }));
   });
 }
 
@@ -55,6 +60,7 @@ export async function ensureDndQuestsSeeded(): Promise<void> {
     if (existing?.adminEdited) continue;
     const fields = {
       title: q.title, description: q.description, targetCount: q.targetCount, xpReward: q.xpReward, coinReward: q.coinReward ?? 0,
+      ...(q.steps ? { steps: q.steps as unknown as object } : {}),
     };
     if (existing) {
       await prisma.dndQuest.update({ where: { id: existing.id }, data: fields });
@@ -84,7 +90,8 @@ export async function advanceDndQuestObjective(
     const existing = await prisma.dndQuestProgress.findUnique({
       where: { cardId_questId: { cardId, questId: quest.id } },
     });
-    if (existing?.completed) continue;
+    // Nur angenommene Quests zählen (Annahme im Quest-Log); abgeschlossene nicht mehr
+    if (!existing || existing.completed) continue;
 
     const prevCurrent = existing?.current ?? 0;
     const newCurrent = Math.min(prevCurrent + increment, quest.targetCount);
@@ -107,21 +114,36 @@ export async function advanceDndQuestObjective(
   }
 }
 
+/** Belohnung für eine abgeschlossene Welt-Quest: XP (der Client meldet Schritte, deshalb keine Coins), Stufenaufstieg und
+ *  Quest in der Chronik, halbe XP für Gruppenmitglieder am selben Ort. */
+async function grantWorldQuestReward(cardId: string, quest: { title: string; xpReward: number }, locationSlug: string) {
+  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndXp: true } });
+  if (!card) return;
+  if (quest.xpReward > 0) await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: quest.xpReward } } });
+  await logChronicle("quest", `${card.name} hat die Quest „${quest.title}“ abgeschlossen.`, locationSlug);
+  const after = levelOf(card.dndXp + quest.xpReward);
+  if (after > levelOf(card.dndXp)) await logChronicle("level", `${card.name} hat Stufe ${after} erreicht.`, locationSlug);
+  await shareXpWithParty(cardId, quest.xpReward, locationSlug);
+}
+
 /**
- * Quest-Schritt in einer begehbaren Welt melden. Nur der nächste Schritt zählt (`fromStep` muss dem
- * gespeicherten Stand entsprechen); Wiederholungen und Überspringen werden ignoriert. Beim letzten
- * Schritt gibt es einmalig die XP. Gibt den gespeicherten Stand zurück.
+ * Quest-Schritt einer Quest der Welt melden. Nur der nächste Schritt zählt (`fromStep` muss dem gespeicherten
+ * Stand entsprechen) und nur Gesprächs-Schritte (Besuche zählt der Server selbst, siehe completeVisitSteps);
+ * Wiederholungen und Überspringen werden ignoriert. Beim letzten Schritt gibt es einmalig die XP.
  */
 export async function advanceWorldQuestStep(
   cardId: string,
   locationSlug: string,
+  questSlug: string,
   fromStep: number,
 ): Promise<{ step: number; completed: boolean } | null> {
   const world = await resolveWorld(locationSlug);
-  if (!world) return null;
+  const def = world && worldQuestsOf(world).find((q) => q.slug === questSlug);
+  if (!world || !def) return null;
   await ensureDndQuestsSeeded();
-  const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
+  const quest = await prisma.dndQuest.findUnique({ where: { slug: questSlug } });
   if (!quest) return null;
+  if (stepsOf(def)[fromStep]?.kind === "visit") return { step: fromStep, completed: false };
 
   const existing = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: quest.id } } });
   const current = existing?.current ?? 0;
@@ -141,20 +163,54 @@ export async function advanceWorldQuestStep(
       data: { cardId, questId: quest.id, current: next, completed, completedAt: completed ? new Date() : undefined, rewarded: completed },
     });
   }
-  if (completed && quest.xpReward > 0) {
-    await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: quest.xpReward } } });
-  }
+  if (completed) await grantWorldQuestReward(cardId, quest, locationSlug);
   return { step: next, completed };
 }
 
-/** Bisher gespeicherter Schritt einer Welt-Quest (0 = noch nicht begonnen). */
-export async function getWorldQuestStep(cardId: string, locationSlug: string): Promise<number> {
+/** Gespeicherter Schritt je Quest der Welt (0 = noch nicht angenommen). */
+export async function getWorldQuestSteps(cardId: string, locationSlug: string): Promise<Record<string, number>> {
   const world = await resolveWorld(locationSlug);
-  if (!world) return 0;
-  const quest = await prisma.dndQuest.findUnique({ where: { slug: world.quest.slug } });
-  if (!quest) return 0;
-  const p = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: quest.id } } });
-  return p?.completed ? quest.targetCount : p?.current ?? 0;
+  if (!world) return {};
+  const defs = worldQuestsOf(world);
+  const rows = await prisma.dndQuestProgress.findMany({
+    where: { cardId, quest: { slug: { in: defs.map((q) => q.slug) } } },
+    select: { current: true, completed: true, quest: { select: { slug: true, targetCount: true } } },
+  });
+  const out: Record<string, number> = Object.fromEntries(defs.map((q) => [q.slug, 0]));
+  for (const r of rows) out[r.quest.slug] = r.completed ? r.quest.targetCount : r.current;
+  return out;
+}
+
+/**
+ * Beim Betreten einer Location: alle laufenden Welt-Quests des Charakters, deren aktueller Schritt „Besuche diese
+ * Location" ist, rücken weiter (ein Besuch kann mehrere Quests nacheinander weiterbringen, falls der nächste Schritt
+ * ebenfalls hier spielt). Gibt die weitergerückten Quests zurück (für Hinweise im Spiel).
+ */
+export async function completeVisitSteps(cardId: string, locationSlug: string): Promise<{ quest: string; title: string; step: number; completed: boolean }[]> {
+  const rows = await prisma.dndQuestProgress.findMany({
+    where: { cardId, completed: false, quest: { objectiveType: "WORLD_STEP" } },
+    include: { quest: true },
+  });
+  const done: { quest: string; title: string; step: number; completed: boolean }[] = [];
+  for (const row of rows) {
+    const steps = Array.isArray(row.quest.steps) ? (row.quest.steps as unknown as { kind?: string; location?: string }[]) : [];
+    let current = row.current;
+    let advanced = false;
+    // Mehrere Besuchs-Schritte hintereinander an derselben Location zählen in einem Zug
+    while (current < row.quest.targetCount && steps[current]?.kind === "visit" && steps[current]?.location === locationSlug) {
+      current++;
+      advanced = true;
+    }
+    if (!advanced) continue;
+    const completed = current >= row.quest.targetCount;
+    await prisma.dndQuestProgress.update({
+      where: { id: row.id },
+      data: { current, completed, completedAt: completed ? new Date() : undefined, rewarded: completed ? true : undefined },
+    });
+    if (completed) await grantWorldQuestReward(cardId, row.quest, locationSlug);
+    done.push({ quest: row.quest.slug, title: row.quest.title, step: current, completed });
+  }
+  return done;
 }
 
 /** Coins-Pfad: derselbe user.points + PointTransaction-Mechanismus wie updateQuestProgress

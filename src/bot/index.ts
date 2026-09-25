@@ -209,7 +209,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
   }
 
   // Willkommens-Punkte
-  await handleMemberJoin(member.user.id, member.user.username);
+  await handleMemberJoin(member.user.id, member.user.username, member.user.displayAvatarURL({ size: 256 }));
 });
 
 // Discord Events → nur Status-Updates für Events, die aus der WebApp stammen

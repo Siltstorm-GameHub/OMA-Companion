@@ -55,7 +55,7 @@ describe("Community-Welten (Editor-Dokument)", () => {
     const noAdvance = clone(defaultCustomWorldDoc());
     noAdvance.title = "Test";
     noAdvance.actors[0].talk = [{ step: "*", lines: ["Hi"] }];
-    assert.ok(checkPlayable(noAdvance).some((e) => e.includes("Quest-Schritt 1")));
+    assert.ok(checkPlayable(noAdvance).some((e) => e.includes("lässt sich nicht abschließen")));
   });
 
   test("Startpunkt auf einem Hindernis wird gemeldet", () => {
@@ -67,7 +67,7 @@ describe("Community-Welten (Editor-Dokument)", () => {
   test("Entwurf darf unfertig sein, Einreichen nicht (leerer Schritt-Text)", () => {
     const d = clone(defaultCustomWorldDoc());
     d.title = "Test";
-    d.quest.objectives = ["", "Abgeschlossen!"];
+    d.quests[0].steps[0].text = "";
     const s = sanitizeCustomWorldDoc(d);
     assert.ok(s.ok && s.warnings.length > 0);
     assert.equal(validateForSubmit(d).ok, false);
@@ -99,5 +99,54 @@ describe("Community-Welten (Editor-Dokument)", () => {
       assert.equal(back.quest.slug, orig.quest.slug, `${slug}: Quest-Slug`);
       assert.deepEqual(checkPlayable(s.doc), [], `${slug}: spielbar`);
     }
+  });
+
+  test("altes Dokument mit einer einzelnen Quest wird in eine Quest-Liste übernommen", () => {
+    const old = { ...clone(defaultCustomWorldDoc()), title: "Alt" } as unknown as Record<string, unknown>;
+    delete old.quests;
+    old.quest = { title: "Altquest", objectives: ["Sprich mit dem Auftraggeber.", "Fertig!"], xpReward: 10 };
+    const s = sanitizeCustomWorldDoc(old);
+    assert.ok(s.ok);
+    if (s.ok) {
+      assert.equal(s.doc.quests.length, 1);
+      assert.equal(s.doc.quests[0].id, "main");
+      assert.equal(s.doc.quests[0].done, "Fertig!");
+      assert.equal(s.doc.quests[0].steps[0].kind, "talk");
+    }
+  });
+
+  test("mehrere Quests: jede braucht einen auslösbaren Schritt; Besuchs-Schritte brauchen keinen Dialog", () => {
+    const d = clone(defaultCustomWorldDoc());
+    d.title = "Multi";
+    d.quests.push({
+      id: "q2", title: "Zweite", xpReward: 10, done: "Geschafft",
+      steps: [{ kind: "talk", text: "Sprich mit dem Auftraggeber." }, { kind: "visit", text: "Besuche die Nachbarn.", location: "hafenstadt" }, { kind: "talk", text: "Zurück zum Auftraggeber." }],
+    });
+    // Angebot für Quest 2 fehlt noch, Abgabe (Schritt 3) ebenso
+    const missing = checkPlayable(d);
+    assert.equal(missing.filter((e) => e.includes("Zweite")).length, 2);
+    d.actors[0].talk.push({ step: 0, quest: "q2", lines: ["Noch ein Auftrag."], advance: true }, { step: 2, quest: "q2", lines: ["Danke!"], advance: true });
+    assert.deepEqual(checkPlayable(d), []);
+    const v = validateForSubmit(d);
+    assert.ok(v.ok, v.ok ? "" : v.errors.join("; "));
+    const w = docToWorld(d, "cw-x");
+    assert.equal(w.quest.slug, "welt-cw-x");
+    assert.equal(w.extraQuests?.[0].slug, "welt-cw-x-q2");
+    assert.equal(w.extraQuests?.[0].steps?.[1].kind, "visit");
+    assert.equal(w.map.actors[0].talk.find((t) => t.quest)?.quest, "welt-cw-x-q2");
+  });
+
+  test("Besuchs-Schritt ohne Ziel und Besuch als erster Schritt werden gemeldet; Dialoge für Besuchs-Schritte entfallen", () => {
+    const d = clone(defaultCustomWorldDoc());
+    d.title = "T";
+    d.quests[0].steps = [{ kind: "visit", text: "x" }, { kind: "talk", text: "y" }];
+    const s = sanitizeCustomWorldDoc(d);
+    assert.ok(s.ok && s.warnings.some((w) => w.includes("erste Quest-Schritt")) && s.warnings.some((w) => w.includes("Location")));
+    const e = clone(defaultCustomWorldDoc());
+    e.quests[0].steps = [{ kind: "talk", text: "a" }, { kind: "visit", text: "b", location: "hafenstadt" }];
+    e.actors[0].talk.push({ step: 1, lines: ["Dialog für einen Besuchs-Schritt"], advance: true });
+    const s2 = sanitizeCustomWorldDoc(e);
+    assert.ok(s2.ok);
+    if (s2.ok) assert.ok(!s2.doc.actors[0].talk.some((t) => t.step === 1));
   });
 });

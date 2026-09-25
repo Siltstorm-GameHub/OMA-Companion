@@ -12,6 +12,8 @@ import TeWorld from "@/components/te-map/TeWorld";
 import { defaultTeConfig } from "@/lib/te-character";
 import { docToWorld, LIMITS, validateForSubmit, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import type { Hex } from "@/lib/dnd/hex/grid";
+import { resolveCheck } from "@/lib/te-map/rpg";
+import { worldQuestsOf } from "@/lib/te-map/types";
 import HexPicker from "./HexPicker";
 import MapEditor from "./MapEditor";
 import QuestEditor from "./QuestEditor";
@@ -217,16 +219,30 @@ export default function WorldEditor({ id }: { id: string }) {
       </div>
 
       {tab === "map" && <MapEditor doc={doc} readOnly={readOnly} onChange={change} onBeginEdit={beginEdit} onQuestFocus={(actorId) => { setFocusActor(actorId); setTab("quest"); }} />}
-      {tab === "quest" && <QuestEditor doc={doc} readOnly={readOnly} onChange={(d) => { change(d); }} focusActorId={focusActor} />}
+      {tab === "quest" && <QuestEditor doc={doc} readOnly={readOnly} onChange={(d) => { change(d); }} focusActorId={focusActor} ownSlug={data.slug} />}
       {tab === "test" && testWorld && (
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Probelauf mit deiner Standardfigur. Fortschritte werden nicht gespeichert.</p>
           <TeWorld
             world={testWorld}
             character={defaultTeConfig()}
-            initialStep={0}
+            initialSteps={{}}
+            tracker={[]}
             others={[]}
-            onAdvance={async (from) => ({ step: from + 1, completed: from + 1 >= testWorld.quest.objectives.length - 1 })}
+            onChoose={async ({ actor, talk, choice }) => {
+              // Probelauf: würfelt lokal mit Durchschnittswerten (Wert 12, Stufe 1); nichts wird gespeichert
+              const t = testWorld.map.actors.find((x) => x.id === actor)?.talk[talk];
+              const c = t?.choices?.[choice];
+              if (!t || !c) return null;
+              let outcome = c.success;
+              const roll = c.check ? resolveCheck({ ability: c.check.ability, dc: c.check.dc, score: 12, level: 1 }) : undefined;
+              if (roll && !roll.success) outcome = c.fail ?? { lines: ["Es misslingt."] };
+              return {
+                lines: outcome.lines, roll, flags: outcome.flags,
+                questSteps: outcome.advance && typeof t.step === "number" ? { [t.quest ?? testWorld.quest.slug]: t.step + 1 } : undefined,
+              };
+            }}
+            onAdvance={async (quest, from) => ({ step: from + 1, completed: from + 1 >= (worldQuestsOf(testWorld).find((q) => q.slug === quest)?.objectives.length ?? 1) - 1 })}
           />
         </div>
       )}

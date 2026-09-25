@@ -1996,6 +1996,11 @@ model Card {
   eventLogs     DndEventLog[]
   questProgress DndQuestProgress[]
 
+  // Rollenspiel: Gold, erlebte Ereignisse (Flags aus Dialog-Entscheidungen) und Rucksack
+  dndGold      Int                @default(0)
+  dndFlags     Json? // string[]
+  dndInventory DndInventoryItem[]
+
   @@index([currentLocationId])
 }
 
@@ -2061,6 +2066,118 @@ model DndCustomWorld {
   @@index([status])
 }
 
+// Gegenstand im Rucksack eines Charakters (Katalog: src/lib/dnd/items.ts)
+model DndInventoryItem {
+  id       String  @id @default(cuid())
+  cardId   String
+  card     Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  itemKey  String
+  qty      Int     @default(1)
+  equipped Boolean @default(false)
+
+  @@unique([cardId, itemKey])
+}
+
+// Live-Anwesenheit in einer begehbaren Welt: Position/Blickrichtung des Charakters, vom Client alle paar
+// Sekunden aktualisiert. Wer länger als ~12 s nichts meldet, gilt als nicht mehr da (kein Cron nötig).
+model DndPresence {
+  cardId       String    @id
+  locationSlug String
+  x            Int
+  y            Int
+  dir          String
+  // Gebäude, in dem der Charakter gerade ist (Index in map.buildings), -1 = draußen
+  scene        Int       @default(-1)
+  // Kurzer Gefühlsausdruck über dem Kopf (Emote), ~4 s sichtbar
+  emote        String?
+  emoteAt      DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@index([locationSlug, updatedAt])
+}
+
+// Chat in einer Location (Sprechblasen + Verlauf), nur kurz aufbewahrt
+model DndChatMessage {
+  id           String   @id @default(cuid())
+  locationSlug String
+  cardId       String
+  name         String
+  text         String
+  createdAt    DateTime @default(now())
+
+  @@index([locationSlug, createdAt])
+}
+
+// Gruppe (Party): bis zu 4 Charaktere, teilen sich XP für Welt-Quests, wenn sie am selben Ort sind
+model DndParty {
+  id           String           @id @default(cuid())
+  leaderCardId String
+  createdAt    DateTime         @default(now())
+  members      DndPartyMember[]
+}
+
+model DndPartyMember {
+  cardId   String   @id
+  partyId  String
+  party    DndParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@index([partyId])
+}
+
+model DndPartyInvite {
+  id         String   @id @default(cuid())
+  fromCardId String
+  toCardId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([fromCardId, toCardId])
+  @@index([toCardId])
+}
+
+// Vom Spielleiter (Community-Job/Admin) ausgelöstes Live-Ereignis in einer Location oder weltweit
+model DndWorldEvent {
+  id           String   @id @default(cuid())
+  locationSlug String? // null = überall
+  authorId     String
+  authorName   String
+  kind         String // announce | check | loot
+  title        String
+  text         String   @db.Text
+  params       Json? // check: { ability, dc } · loot: { gold?, item?, max? }
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  rolls DndWorldEventRoll[]
+
+  @@index([locationSlug, createdAt])
+}
+
+model DndWorldEventRoll {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     DndWorldEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cardId    String
+  cardName  String
+  roll      Int
+  total     Int
+  success   Boolean
+  createdAt DateTime      @default(now())
+
+  @@unique([eventId, cardId])
+}
+
+// Chronik der Welt („Heute im Reich"): abgeschlossene Quests, Stufenaufstiege, neue Orte, Ansagen der Spielleiter
+model DndChronicle {
+  id           String   @id @default(cuid())
+  kind         String // quest | level | location | announce | event
+  text         String   @db.Text
+  locationSlug String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // Von Admins gelöschte, im Code vordefinierte Inhalte (feste Locations/Quests): verhindert, dass die
 // idempotenten Seed-Funktionen sie beim nächsten Aufruf wieder anlegen. kind = LOCATION | QUEST.
 model DndRemovedContent {
@@ -2121,6 +2238,8 @@ model DndQuest {
   targetRef       String? // optionale Entitäts-Referenz, z.B. locationSlug
   xpReward        Int          @default(0)
   itemReward      Json?
+  // Schritte der Quest [{kind: talk|visit, text, location?}] — Welt-Quests; leer bei Aktivitäts-Quests
+  steps           Json?
   adminEdited     Boolean      @default(false) // von einem Admin geändert: der Code-Seed überschreibt sie nicht mehr
   coinReward      Int          @default(0) // > 0: zusätzlich über den bestehenden Coins-Pfad vergeben
   linkedQuestType String? // optionaler QuestType (quests-meta.ts) — löst zusätzlich die normale Monats-Quest aus
@@ -2141,6 +2260,8 @@ model DndQuestProgress {
   completed   Boolean   @default(false)
   completedAt DateTime?
   rewarded    Boolean   @default(false)
+  // Wird im Spiel-HUD angezeigt (verfolgt); angenommene Quests sind zunächst verfolgt
+  tracked     Boolean   @default(true)
 
   @@unique([cardId, questId])
 }

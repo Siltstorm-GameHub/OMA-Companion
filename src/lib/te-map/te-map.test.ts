@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { groundQuarters, wallQuarters } from "./autotile";
-import { TILE_MS, createGame, drainEvents, isChestOpen, isWalkable, pressAction, questLength, step, syncQuestStep, type Game } from "./engine";
+import { TILE_MS, activeQuestsOf, answerOffer, createGame, drainEvents, isChestOpen, isWalkable, pressAction, questLength, step, syncQuestStep, type Game } from "./engine";
 import { WORLD_SLUGS, getWorld } from "./worlds";
 import { LOCATION_HEXES } from "@/lib/dnd/hex/world";
 import { sanitizeTeConfig } from "@/lib/te-character";
@@ -95,7 +95,10 @@ function talkTo(g: Game, actorId: string) {
   const spot = spots.find(([dx, dy]) => isWalkable(g, a.x + dx, a.y + dy))!;
   g.px = a.x + spot[0]; g.py = a.y + spot[1]; g.dir = spot[2];
   pressAction(g);
-  while (g.dialog) pressAction(g);
+  while (g.dialog) {
+    if (g.dialog.awaitingChoice) answerOffer(g, true);
+    else pressAction(g);
+  }
 }
 
 describe("Bewegung", () => {
@@ -123,31 +126,72 @@ describe("Quest-Ablauf (Hafenstadt)", () => {
     const world = getWorld("hafenstadt")!;
     const g = createGame(world);
     talkTo(g, "fracht");
-    assert.equal(g.questStep, 0, "Truhe verschlossen");
+    assert.equal(g.questSteps[world.quest.slug], 0, "Truhe verschlossen");
 
     talkTo(g, "olga");
-    assert.equal(g.questStep, 1);
+    assert.equal(g.questSteps[world.quest.slug], 1);
     talkTo(g, "olga");
-    assert.equal(g.questStep, 1, "Erinnerung schaltet nicht weiter");
+    assert.equal(g.questSteps[world.quest.slug], 1, "Erinnerung schaltet nicht weiter");
 
     const chest = world.map.actors.find((a) => a.id === "fracht")!;
-    assert.equal(isChestOpen(chest, g.questStep), false);
+    assert.equal(isChestOpen(chest, g.questSteps, world), false);
     talkTo(g, "fracht");
-    assert.equal(g.questStep, 2);
-    assert.equal(isChestOpen(chest, g.questStep), true);
+    assert.equal(g.questSteps[world.quest.slug], 2);
+    assert.equal(isChestOpen(chest, g.questSteps, world), true);
 
     talkTo(g, "olga");
-    assert.equal(g.questStep, 3);
+    assert.equal(g.questSteps[world.quest.slug], 3);
     const events = drainEvents(g);
     assert.deepEqual(events.map((e) => e.type), ["advance", "advance", "advance", "complete"]);
   });
 
+  test("Angebot: Ablehnen startet die Quest nicht, später kann man annehmen", () => {
+    const world = getWorld("hafenstadt")!;
+    const g = createGame(world);
+    const a = world.map.actors.find((x) => x.id === "olga")!;
+    g.px = a.x + 1; g.py = a.y; g.dir = "left";
+    pressAction(g);
+    while (g.dialog && !g.dialog.awaitingChoice) pressAction(g);
+    assert.ok(g.dialog?.awaitingChoice, "Angebot wartet auf Antwort");
+    answerOffer(g, false);
+    assert.equal(g.dialog, null);
+    assert.equal(g.questSteps[world.quest.slug], 0, "abgelehnt");
+    talkTo(g, "olga");
+    assert.equal(g.questSteps[world.quest.slug], 1, "beim zweiten Mal angenommen");
+  });
+
+  test("mehrere Quests am selben Akteur laufen unabhängig; beide Dialoge kommen nacheinander", () => {
+    const base = getWorld("hafenstadt")!;
+    const second = { slug: "zweite", title: "Zweite", objectives: ["Sprich mit Olga.", "Abgeschlossen!"], xpReward: 5 };
+    const world = {
+      ...base,
+      extraQuests: [second],
+      map: { ...base.map, actors: base.map.actors.map((a) => (a.id === "olga" ? { ...a, talk: [...a.talk, { step: 0, quest: "zweite", lines: ["Noch ein Auftrag."], advance: true }] } : a)) },
+    };
+    const g = createGame(world);
+    talkTo(g, "olga");
+    assert.equal(g.questSteps[world.quest.slug], 1);
+    assert.equal(g.questSteps["zweite"], 1, "zweite Quest im selben Gespräch angenommen");
+    assert.deepEqual(drainEvents(g).map((e) => e.type), ["advance", "advance", "complete"]);
+  });
+
   test("Server-Stand wird nur nach vorn übernommen und gedeckelt", () => {
     const world = getWorld("waldpfad")!;
-    const g = createGame(world, 1);
-    syncQuestStep(g, 0);
-    assert.equal(g.questStep, 1);
-    syncQuestStep(g, 99);
-    assert.equal(g.questStep, questLength(world));
+    const g = createGame(world, { [world.quest.slug]: 1 });
+    syncQuestStep(g, world.quest.slug, 0);
+    assert.equal(g.questSteps[world.quest.slug], 1);
+    syncQuestStep(g, world.quest.slug, 99);
+    assert.equal(g.questSteps[world.quest.slug], questLength(world));
+  });
+});
+
+describe("Quests über mehrere Locations (Engine + Hilfsfunktionen)", () => {
+  test("activeQuestsOf zeigt nur laufende Quests mit aktuellem Ziel", () => {
+    const world = getWorld("hafenstadt")!;
+    assert.deepEqual(activeQuestsOf(world, {}), []);
+    const running = activeQuestsOf(world, { [world.quest.slug]: 1 });
+    assert.equal(running.length, 1);
+    assert.equal(running[0].objective, world.quest.objectives[1]);
+    assert.deepEqual(activeQuestsOf(world, { [world.quest.slug]: questLength(world) }), []);
   });
 });

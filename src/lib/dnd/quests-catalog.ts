@@ -3,6 +3,7 @@
 // ============================================
 
 import type { QuestType } from "../quests";
+import type { QuestStep } from "../te-map/types";
 
 export interface DndQuestDef {
   slug: string;
@@ -15,6 +16,7 @@ export interface DndQuestDef {
   coinReward?: number;
   linkedQuestType?: QuestType;
   locationSlug?: string;
+  steps?: QuestStep[];
 }
 
 // Hartcodierte Quest-Definitionen (v1) — Discord-/App-Aktivität + ein paar

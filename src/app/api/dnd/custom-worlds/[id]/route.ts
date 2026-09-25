@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { checkHex, getBuilderAccess, notifyAdmins, resyncPublishedWorld } from "@/lib/dnd/custom-worlds";
+import { checkHex, checkVisitTargets, getBuilderAccess, notifyAdmins, resyncPublishedWorld } from "@/lib/dnd/custom-worlds";
 import { sanitizeCustomWorldDoc, validateForSubmit } from "@/lib/te-map/custom-world";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (r.row.status === "PUBLISHED") {
     const v = validateForSubmit(json);
     if (!v.ok) return NextResponse.json({ error: `Änderung nicht gespeichert — die veröffentlichte Location muss spielbar bleiben: ${v.errors[0]}` }, { status: 400 });
+    const visitProblem = await checkVisitTargets(v.doc, r.row.slug);
+    if (visitProblem) return NextResponse.json({ error: `Änderung nicht gespeichert — ${visitProblem}` }, { status: 400 });
   }
 
   // Feld auf der Weltkarte: nur vor der Veröffentlichung änderbar (danach stehen Charaktere dort)
