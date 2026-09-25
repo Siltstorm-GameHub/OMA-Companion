@@ -9,6 +9,7 @@ import type { Card } from "@prisma/client";
 import { prisma } from "../prisma";
 import { ABILITIES, MAX_LEVEL, levelOf, xpForLevel, type Ability } from "../te-map/rpg";
 import { displayTitle } from "./coin-shop";
+import { milestonePackAt, packsBetween, type MilestonePackKind } from "./milestone-packs";
 import { MAX_ABILITY, isPerkId, levelReward, milestones, rewardsBetween, titleOf, type Milestone } from "./perks";
 
 export const perksOf = (card: Pick<Card, "dndPerks">): string[] => (Array.isArray(card.dndPerks) ? (card.dndPerks as unknown[]).filter(isPerkId) : []);
@@ -25,15 +26,26 @@ const baseScore = (card: Pick<Card, "abilityScores">, a: Ability): number => {
   return typeof s[a] === "number" ? (s[a] as number) : 10;
 };
 
-/** Fehlende Stufenbelohnungen gutschreiben. Gibt den (ggf. aktualisierten) Charakter zurück. */
+/** Fehlende Stufenbelohnungen gutschreiben (Attributspunkte, Fähigkeitswahlen, Meilenstein-Packs). Gibt den (ggf. aktualisierten) Charakter zurück.
+ *  Das Einlösen ist atomar über `dndLevelClaimed`: laden zwei Aufrufe gleichzeitig (Hub und Spiel), schreibt nur einer gut. */
 export async function syncLevelRewards(card: Card): Promise<Card> {
   const level = levelOf(card.dndXp);
   if (level <= card.dndLevelClaimed) return card;
   const r = rewardsBetween(card.dndLevelClaimed, level);
-  return prisma.card.update({
-    where: { id: card.id },
-    data: { dndLevelClaimed: level, dndAttrPoints: { increment: r.attrPoints }, dndPerkPicks: { increment: r.perkPicks } },
+  const packs = packsBetween(card.dndLevelClaimed, level);
+  // Packs gehören dem App-Account (nicht der Karte); ohne verknüpften Account gibt es keine
+  const owner = packs.length && card.linkedDiscordId ? await prisma.user.findUnique({ where: { discordId: card.linkedDiscordId }, select: { id: true } }) : null;
+
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.card.updateMany({
+      where: { id: card.id, dndLevelClaimed: card.dndLevelClaimed },
+      data: { dndLevelClaimed: level, dndAttrPoints: { increment: r.attrPoints }, dndPerkPicks: { increment: r.perkPicks } },
+    });
+    if (claimed.count && owner) {
+      await tx.cardPack.createMany({ data: packs.map((kind) => ({ userId: owner.id, source: "QUEST_MILESTONE" as const, kind })) });
+    }
   });
+  return prisma.card.findUniqueOrThrow({ where: { id: card.id } });
 }
 
 /** Einen Attributspunkt auf ein Attribut legen (Attribut + Bonus bleibt bei höchstens 20). */
@@ -74,7 +86,7 @@ export interface ProgressView {
   perks: string[];
   /** Was die nächste Stufe bringt (null bei Höchststufe) */
   next: { level: number; xpNeeded: number; xpMissing: number; attrPoints: number; perkPick: boolean; title: string | null } | null;
-  milestones: (Milestone & { reached: boolean })[];
+  milestones: (Milestone & { reached: boolean; pack: MilestonePackKind | null })[];
   stats: { questsCompleted: number; questsActive: number; perksChosen: number };
   rank: { position: number; of: number } | null;
 }
@@ -93,7 +105,7 @@ export async function getProgress(card: Card): Promise<ProgressView> {
   return {
     level, xp: c.dndXp, title: displayTitle(c, titleOf(level)), attrPoints: c.dndAttrPoints, perkPicks: c.dndPerkPicks, perks: perksOf(c),
     next: nr ? { level: nextLevel, xpNeeded: xpForLevel(nextLevel), xpMissing: Math.max(0, xpForLevel(nextLevel) - c.dndXp), attrPoints: nr.attrPoints, perkPick: nr.perkPick, title: milestones().find((m) => m.level === nextLevel)?.title ?? null } : null,
-    milestones: milestones().map((m) => ({ ...m, reached: level >= m.level })),
+    milestones: milestones().map((m) => ({ ...m, reached: level >= m.level, pack: milestonePackAt(m.level) })),
     stats: { questsCompleted: completed, questsActive: active, perksChosen: perksOf(c).length },
     rank: { position: ahead + 1, of: total },
   };

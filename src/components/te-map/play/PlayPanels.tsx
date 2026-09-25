@@ -360,7 +360,7 @@ export function ProgressPanel({ refreshKey = 0 }: { refreshKey?: number }) {
             <span className={`w-6 shrink-0 text-center font-black ${m.reached ? "text-emerald-300" : ""}`}>{m.reached ? "✓" : m.level}</span>
             <span className="min-w-0">
               <b>Stufe {m.level}</b>{m.title ? ` · ${m.title}` : ""}<br />
-              <span className="text-gray-400">+{m.attrPoints} Attributspunkt{m.perkPick ? " · Fähigkeit" : ""}</span>
+              <span className="text-gray-400">+{m.attrPoints} Attributspunkt{m.perkPick ? " · Fähigkeit" : ""}{m.pack ? ` · ${m.pack === "PREMIUM" ? "Premium-Pack" : "Karten-Pack"}` : ""}</span>
             </span>
           </li>
         ))}

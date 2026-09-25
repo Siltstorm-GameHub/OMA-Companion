@@ -2348,6 +2348,7 @@ enum CardPackSource {
   TUTORIAL
   GEMS_PVP_CHEST
   GEMS_TOURNAMENT_REWARD
+  QUEST_MILESTONE // Stufen-Meilenstein in OMA Quest (siehe lib/dnd/milestone-packs.ts)
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
