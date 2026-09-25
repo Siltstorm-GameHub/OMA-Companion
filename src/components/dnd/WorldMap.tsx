@@ -5,14 +5,16 @@
 // Fallback, prozentual positionierte Nodes, motion.div-Badges)
 // ============================================
 // Client-Polling statt SSE (plan Abschnitt 3.1): alle 25s + Refetch bei
-// document.visibilitychange. Mobile: einfacher Listen-Fallback unterhalb von
-// 640px statt Pinch-Zoom/Pan (plan Abschnitt 3.2.2 — explizit dokumentierte
-// Entscheidung, kein halbfertiges Zoom/Pan).
+// document.visibilitychange. Karte ist jetzt auf allen Bildschirmgrößen
+// sichtbar (ersetzt den früheren Mobile-Listen-Fallback) — ZoomPanMap.tsx
+// übernimmt Pinch-Zoom/Pan/Doppel-Tap, damit sie auf dem Handy tatsächlich
+// bedienbar ist.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Loader2, Flag } from "@/components/icons";
+import ZoomPanMap from "./ZoomPanMap";
 
 const POLL_INTERVAL_MS = 25_000;
 
@@ -36,13 +38,6 @@ interface DndCharacterRow {
   toId: string | null;
   progress: number | null;
 }
-
-const TYPE_LABEL: Record<string, string> = {
-  SETTLEMENT: "Siedlung",
-  DUNGEON: "Verlies",
-  WILDERNESS: "Wildnis",
-  LANDMARK: "Wahrzeichen",
-};
 
 /** Kleine Location-Illustration als Marker (/dnd/locations/<slug>.jpg, gleicher
  *  Pfad wie die Szenen-Hintergründe in location-scenes.ts) — fällt bei
@@ -129,8 +124,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
 
   return (
     <div className="space-y-4">
-      {/* Karte: ab sm sichtbar (Desktop/Tablet), darunter Listen-Fallback (plan 3.2.2) */}
-      <div className="hidden sm:block relative w-full aspect-[16/10] rounded-2xl overflow-hidden moba-panel">
+      <ZoomPanMap>
         {!backgroundFailed && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -152,11 +146,12 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
             <Link
               key={loc.id}
               href={`/dnd/${loc.slug}`}
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 group"
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
               style={{ left: `${loc.mapX}%`, top: `${loc.mapY}%` }}
             >
               <LocationMarker slug={loc.slug} isMine={isMine} />
-              <span className="text-[10px] font-bold text-white bg-black/60 rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Immer sichtbar statt hover-only — auf Touch-Geräten gibt es kein Hover. */}
+              <span className="text-[10px] font-bold text-white bg-black/60 rounded px-1.5 py-0.5 whitespace-nowrap">
                 {loc.name}
               </span>
               {here.length > 0 && (
@@ -186,36 +181,13 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
               />
             );
           })}
-      </div>
+      </ZoomPanMap>
 
-      {/* Listen-Fallback (Mobile) — "Wer ist wo" */}
-      <div className="sm:hidden space-y-2">
-        {locations.map((loc) => {
-          const here = charactersAt(loc.id);
-          return (
-            <Link
-              key={loc.id}
-              href={`/dnd/${loc.slug}`}
-              className="moba-panel rounded-xl p-3 flex items-center justify-between gap-2"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-white truncate">{loc.name}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide">{TYPE_LABEL[loc.locationType] ?? loc.locationType}</p>
-              </div>
-              {here.length > 0 && (
-                <span className="shrink-0 text-[10px] font-bold text-amber-300 bg-black/30 rounded-full px-2 py-0.5">
-                  {here.length} hier
-                </span>
-              )}
-            </Link>
-          );
-        })}
-        {characters.some((c) => c.inTransit) && (
-          <p className="text-[11px] text-gray-500 text-center pt-1">
-            {characters.filter((c) => c.inTransit).length} Charakter(e) gerade unterwegs
-          </p>
-        )}
-      </div>
+      {characters.some((c) => c.inTransit) && (
+        <p className="text-[11px] text-gray-500 text-center">
+          {characters.filter((c) => c.inTransit).length} Charakter(e) gerade unterwegs
+        </p>
+      )}
     </div>
   );
 }
