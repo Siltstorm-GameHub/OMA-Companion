@@ -186,6 +186,10 @@ export default function BattleCardView({
       style={{ perspective: 1200, opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
       aria-label={`${card.name} — Tippen zum Umdrehen`}
     >
+      {/* Grundbreite: beide Kartenseiten liegen absolut, ohne diesen Platzhalter hätte der Rahmen in Containern, die sich
+          nach dem Inhalt richten (Flex mit items-center, Grid mit auto), keine Breite und schrumpfte auf 0. Größer als
+          der Container wird er nie (max-w-full), dort greift dann die Breite des Containers. */}
+      <span aria-hidden className="block h-0 max-w-full" style={{ width: 240 }} />
       <motion.div
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 28 }}
