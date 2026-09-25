@@ -1,6 +1,6 @@
 // Pixel-Figuren (Time Elements) der Standard-Karten — Einzige Quelle: Seed-Daten und Kartenansicht nutzen dieselbe Liste,
 // damit die Figur auch ohne erneuten Seed in der Datenbank erscheint.
-import type { TeCharacterConfig } from "@/lib/te-character";
+import { randomTeConfig, sanitizeTeConfig, type TeCharacterConfig } from "@/lib/te-character";
 
 export const STANDARD_AVATARS: Record<string, TeCharacterConfig> = {
   "Bastionella": {"v": 1, "skin": 3, "layers": {"head": "head5", "hair": "hair10_c1", "top": "top15_c3", "bottom": "bottom13_c3", "weapon": "sword1"}},
@@ -15,3 +15,17 @@ export const STANDARD_AVATARS: Record<string, TeCharacterConfig> = {
 };
 
 export const standardAvatarOf = (name: string, rarity: string): TeCharacterConfig | null => (rarity === "STANDARD" ? STANDARD_AVATARS[name] ?? null : null);
+
+/** Stabiler Zufall aus einem Text (gleiche Karte = immer dieselbe Figur). */
+function seededRandom(seed: string): () => number {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  let a = h >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/** Die Pixel-Figur einer Karte: eigene Figur, sonst die feste der Standard-Karten, sonst eine stabile Zufallsfigur (aus der Karten-Id).
+ *  Karten zeigen nur noch Figuren — keine Bilder mehr. */
+export function effectiveTeCharacter(card: { id: string; name: string; rarity: string; teCharacter: unknown }): TeCharacterConfig {
+  return sanitizeTeConfig(card.teCharacter) ?? standardAvatarOf(card.name, card.rarity) ?? randomTeConfig(seededRandom(card.id));
+}

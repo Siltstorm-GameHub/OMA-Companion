@@ -18,7 +18,7 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
   RANDOM: "random",
 };
 
-import { standardAvatarOf } from "@/lib/battle-cards/standard-avatars";
+import { effectiveTeCharacter } from "@/lib/battle-cards/standard-avatars";
 
 export function cardToBattleUnitDefinition(
   card: Card,
@@ -26,8 +26,8 @@ export function cardToBattleUnitDefinition(
   imageUrl?: string | null,
   avatarBadgeUrl?: string | null
 ): BattleUnitDefinition {
-  // Standard-Karten bekommen ihre Pixel-Figur aus dem Code, auch wenn die Datenbank noch nicht neu befüllt wurde
-  const teCharacter = sanitizeTeConfig(card.teCharacter) ?? standardAvatarOf(card.name, card.rarity);
+  // Jede Karte zeigt eine Pixel-Figur (eigene, feste Standard-Figur oder stabile Zufallsfigur)
+  const teCharacter = effectiveTeCharacter(card);
   const resolvedImage = imageUrl !== undefined ? imageUrl : card.imageUrl;
   return {
     cardId: card.id,
@@ -48,7 +48,7 @@ export function cardToBattleUnitDefinition(
     imageUrl: resolvedImage,
     // Mit Charakter als Hauptmotiv wandert das echte Profilbild (bei Community-Karten
     // ist resolvedImage das Discord-Bild) in das kleine Badge — wie bei einem Admin-Artwork.
-    avatarBadgeUrl: avatarBadgeUrl ?? (teCharacter ? resolvedImage ?? null : null),
+    avatarBadgeUrl: avatarBadgeUrl ?? (card.linkedDiscordId ? resolvedImage ?? null : null),
     teCharacter,
     title: card.title,
     rarity: card.rarity,

@@ -39,7 +39,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
               }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
-                {entry.card.rarity === "STANDARD" && entry.card.teCharacter ? (
+                {entry.card.teCharacter ? (
                   <TeCharacter config={entry.card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={2} className="max-h-full w-auto" title={entry.card.name} />
                 ) : entry.card.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -157,7 +157,7 @@ export default function CardTile({
         }}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          {card.rarity === "STANDARD" && card.teCharacter ? (
+          {card.teCharacter ? (
             <TeCharacter config={card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={3} className="max-h-full w-auto" title={card.name} />
           ) : card.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
