@@ -126,7 +126,7 @@ async function main() {
   // Kacheln
   const tileFiles = [
     "tilesets/tileA2.png", "tilesets/tileA3.png", "tilesets/tileA4.png", "tilesets/tileA5_outside.png", "tilesets/tileA5_town.png",
-    "tilesets/tileB_outside.png", "tilesets/tileB_town.png", "characters/!chests.png",
+    "tilesets/tileB_outside.png", "tilesets/tileB_town.png", "characters/!chests.png", "characters/!fires.png", "characters/!lights.png",
     "tilesets/tileA2_caves.png", "tilesets/tileA5_cave1.png", "tilesets/tileB_cave1.png", "tilesets/tileA5_inside.png", "tilesets/tileB_inside.png",
   ];
   for (const f of tileFiles) {

@@ -8,10 +8,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
 import TeWorld, { type ChatMessage, type LiveData, type OtherPlayer } from "./TeWorld";
-import { CharacterPanel, EventCards, GmPanel, PartyPanel, ShopPanel, SocialPanel } from "./play/PlayPanels";
+import { EventCards, HudBar, ShopPanel } from "./play/PlayPanels";
+import GameMenu, { type MenuTab } from "./play/GameMenu";
+import { useGameFeed } from "./play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
 import { allActorsOf } from "@/lib/te-map/interior";
 import type { ChoiceResult } from "@/lib/te-map/engine";
@@ -32,6 +33,8 @@ interface LocationState {
   tracker: TrackerItem[];
   visits: { quest: string; title: string; step: number; completed: boolean }[];
   isGm: boolean;
+  isMod: boolean;
+  coins: number;
   biome: "temperate" | "cold" | "dry" | "cave";
   rpg: { flags: string[]; gold: number; xp: number; level: number } | null;
   present: { id: string; name: string; avatarUrl: string | null; character: TeCharacterConfig | null }[];
@@ -48,6 +51,8 @@ export default function QuestWorld({ slug }: { slug: string }) {
   const [emote, setEmote] = useState<{ id: string; n: number } | null>(null);
   const [shopActor, setShopActor] = useState<string | null>(null);
   const [sheetKey, setSheetKey] = useState(0);
+  const [menu, setMenu] = useState<MenuTab | null>(null);
+  const { items: feed, push: notify } = useGameFeed();
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
   const world = data?.customWorld ?? staticWorld ?? undefined;
 
@@ -59,12 +64,12 @@ export default function QuestWorld({ slug }: { slug: string }) {
         if (cancelled) return;
         if (!res.ok) { setError(json.error ?? "Location konnte nicht geladen werden."); return; }
         setData(json);
-        if (json.storyTick?.newEvent) toast(json.storyTick.newEvent.title, { description: json.storyTick.newEvent.text });
-        for (const v of json.visits ?? []) toast(v.completed ? `Quest abgeschlossen: ${v.title}` : `Quest-Fortschritt: ${v.title}`, { description: "Du hast den Ort besucht." });
+        if (json.storyTick?.newEvent) notify("info", json.storyTick.newEvent.title, json.storyTick.newEvent.text);
+        for (const v of json.visits ?? []) notify(v.completed ? "reward" : "quest", v.completed ? `Quest abgeschlossen: ${v.title}` : `Quest-Fortschritt: ${v.title}`, "Du hast den Ort besucht.");
       })
       .catch(() => { if (!cancelled) setError("Netzwerkfehler."); });
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, notify]);
 
   const onAdvance = useCallback(async (quest: string, from: number) => {
     try {
@@ -91,8 +96,10 @@ export default function QuestWorld({ slug }: { slug: string }) {
     }
   }, [slug]);
 
-  const onLiveData = useCallback((d: { chat: ChatMessage[]; events: WorldEventView[] }) => {
-    if (d.chat.length) setChat((c) => [...c, ...d.chat.filter((m) => !c.some((o) => o.id === m.id))].slice(-60));
+  const onLiveData = useCallback((d: { chat: ChatMessage[]; hiddenChat: string[]; events: WorldEventView[] }) => {
+    if (d.chat.length || d.hiddenChat.length) {
+      setChat((c) => [...c, ...d.chat.filter((m) => !c.some((o) => o.id === m.id))].filter((m) => !d.hiddenChat.includes(m.id)).slice(-60));
+    }
     if (d.events.length) setEvents((e) => [...e, ...d.events.filter((n) => !e.some((o) => o.id === n.id))]);
   }, []);
 
@@ -100,17 +107,32 @@ export default function QuestWorld({ slug }: { slug: string }) {
     try {
       const res = await fetch(`/api/dnd/world/${slug}/choice`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
       const json = await res.json();
-      if (!res.ok) { toast.error(json.error ?? "Fehlgeschlagen."); return null; }
+      if (!res.ok) { notify("error", json.error ?? "Fehlgeschlagen."); return null; }
       const g = json.granted as { xp: number; gold: number; levelUp: number | null };
       const extra = [g.xp ? `+${g.xp} XP` : "", g.gold ? `+${g.gold} Gold` : "", ...(json.itemNames ?? [])].filter(Boolean).join(" · ");
-      if (extra) toast(extra);
-      if (g.levelUp) toast.success(`Stufe ${g.levelUp} erreicht!`);
+      if (extra) notify("reward", "Belohnung", extra);
+      if (g.levelUp) notify("level", `Stufe ${g.levelUp} erreicht!`, "Deine Proben werden mit der Zeit leichter.");
       setSheetKey((k) => k + 1);
       return { lines: json.lines, roll: json.roll, flags: json.flags, questSteps: json.questSteps, tracker: json.tracker } as ChoiceResult & { tracker?: import("@/lib/dnd/quest-log").TrackerItem[] };
     } catch {
       return null;
     }
-  }, [slug]);
+  }, [slug, notify]);
+
+  // Tastenkürzel fürs Menü (nicht beim Tippen in Feldern)
+  useEffect(() => {
+    const keys: Record<string, MenuTab> = { c: "character", i: "inventory", q: "quests", g: "party", t: "chat" };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const typing = e.target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName);
+      if (e.key === "Escape") { setMenu(null); setShopActor(null); return; }
+      if (typing) return;
+      const tab = keys[e.key.toLowerCase()];
+      if (tab) { e.preventDefault(); setMenu((m) => (m === tab ? null : tab)); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Beim Verlassen der Seite sofort austragen (sonst bleibt die Figur noch ~12 s stehen)
   const canEnterNow = !!data?.canEnter;
@@ -133,7 +155,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
 
   if (!data.canEnter) {
     return (
-      <div className="moba-panel rounded-2xl p-6 space-y-3 text-center max-w-md mx-auto">
+      <div className="oq-panel p-6 space-y-3 text-center max-w-md mx-auto">
         <h1 className="font-battle text-lg text-white">{data.location.name}</h1>
         <p className="text-sm text-gray-400">
           {data.inTransit
@@ -167,20 +189,39 @@ export default function QuestWorld({ slug }: { slug: string }) {
         world={world} character={data.myCharacter} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
         onChoose={onChoose} onTrade={setShopActor} onAdvance={onAdvance}
+        feed={feed} notify={notify} paused={!!menu || !!shopActor}
+        hud={<HudBar refreshKey={sheetKey} />}
+        extraControls={(
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {([["character", "🧙", "Charakter (C)"], ["inventory", "🎒", "Inventar (I)"], ["quests", "📜", "Quests (Q)"], ["party", "👥", "Gruppe (G)"], ["chat", "💬", "Chat (T)"]] as [MenuTab, string, string][]).map(([tab, icon, title]) => (
+              <button key={tab} type="button" onClick={() => setMenu(tab)} title={title} aria-label={title} className="oq-btn h-11 w-11 text-xl grid place-items-center">{icon}</button>
+            ))}
+          </div>
+        )}
+        overlay={(
+          <>
+            {events.filter((e) => !dismissed.has(e.id)).length > 0 && (
+              <div className="absolute right-2 top-12 z-30 w-[min(92%,360px)] space-y-2">
+                <EventCards events={events.filter((e) => !dismissed.has(e.id))} onDismiss={(id) => setDismissed((d) => new Set(d).add(id))} onChanged={() => setSheetKey((k) => k + 1)} notify={notify} />
+              </div>
+            )}
+            {menu && (
+              <GameMenu
+                tab={menu} onTab={setMenu} onClose={() => setMenu(null)} slug={slug} present={data.present.map((p) => ({ id: p.id, name: p.name }))}
+                myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)}
+                onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} onChatRemoved={(id) => setChat((c) => c.filter((m) => m.id !== id))}
+              />
+            )}
+            {shopActor && (() => {
+              const m = allActorsOf(world.map).find((a) => a.id === shopActor && a.kind === "merchant");
+              return m ? <ShopPanel slug={slug} actorId={m.id} merchantName={m.name} shop={m.shop ?? []} onClose={() => setShopActor(null)} onSheetChanged={() => setSheetKey((k) => k + 1)} notify={notify} /> : null;
+            })()}
+          </>
+        )}
       />
 
-      <EventCards events={events.filter((e) => !dismissed.has(e.id))} onDismiss={(id) => setDismissed((d) => new Set(d).add(id))} onChanged={() => setSheetKey((k) => k + 1)} />
-      <SocialPanel slug={slug} chat={chat} onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} />
-      <PartyPanel present={data.present.map((p) => ({ id: p.id, name: p.name }))} myCardId={data.myCardId} />
-      <CharacterPanel refreshKey={sheetKey} />
-      {data.isGm && <GmPanel slug={slug} />}
-      {shopActor && (() => {
-        const m = allActorsOf(world.map).find((a) => a.id === shopActor && a.kind === "merchant");
-        return m ? <ShopPanel slug={slug} actorId={m.id} merchantName={m.name} shop={m.shop ?? []} onClose={() => setShopActor(null)} onSheetChanged={() => setSheetKey((k) => k + 1)} /> : null;
-      })()}
-
       {data.present.length > 0 && (
-        <div className="moba-panel rounded-2xl p-4">
+        <div className="oq-panel p-4">
           <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest mb-2">Auch hier</p>
           <ul className="flex flex-wrap gap-3">
             {data.present.map((p) => (
@@ -198,7 +239,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
         </div>
       )}
 
-      <div className="moba-panel rounded-2xl p-4 space-y-2">
+      <div className="oq-panel p-4 space-y-2">
         <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Story</p>
         {data.eventLog.length === 0 ? (
           <p className="text-xs text-gray-500">Hier ist noch nichts passiert.</p>

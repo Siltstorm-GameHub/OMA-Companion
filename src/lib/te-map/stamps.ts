@@ -5,7 +5,7 @@
 // `solid` = begehbarkeitsrelevanter Fußabdruck relativ zur linken oberen Kachel des Stempels
 // ([x, y, w, h]); ohne Angabe ist der Stempel begehbar (Blumen, Steine, Bodenflecken).
 
-export type TileSheet = "out" | "town" | "cave" | "inside";
+export type TileSheet = "out" | "town" | "cave" | "inside" | "fires" | "lights";
 
 export interface StampDef {
   sheet: TileSheet;
@@ -16,6 +16,12 @@ export interface StampDef {
   solid?: readonly [number, number, number, number];
   /** Zusammengesetzte Objekte (z. B. Bett = Kopfteil + farbige Decke): jedes Teil aus dem Sheet an einen Versatz (in Kacheln) */
   parts?: readonly { sx: number; sy: number; w: number; h: number; dx: number; dy: number }[];
+  /** Animiertes Objekt: 4 Bilder (16×32 px) in der Mitte der Gruppe (gx, gy) eines Animationsblatts (fires/lights) */
+  anim?: { gx: number; gy: number; fps: number };
+  /** Animation über einem normalen Objekt (z. B. Flammen im Kamin); Versatz in Pixeln */
+  overlays?: readonly { sheet: "fires" | "lights"; gx: number; gy: number; fps: number; dx: number; dy: number }[];
+  /** Lichtschein (Radius in Pixeln, Versatz vom Objektmittelpunkt) — flackert leicht, drinnen und nachts sichtbar */
+  glow?: { r: number; dx?: number; dy?: number };
 }
 
 export const STAMPS = {
@@ -93,11 +99,11 @@ export const STAMPS = {
   plantGreen: { sheet: "inside", sx: 0, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
   plantPink: { sheet: "inside", sx: 0, sy: 6, w: 1, h: 1, solid: [0, 0, 1, 1] },
   bushPlant: { sheet: "inside", sx: 1, sy: 5, w: 1, h: 2, solid: [0, 1, 1, 1] },
-  lampFloor: { sheet: "inside", sx: 5, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1] },
-  lampBlue: { sheet: "inside", sx: 6, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  lampFloor: { sheet: "inside", sx: 5, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1], glow: { r: 26, dy: 4 } },
+  lampBlue: { sheet: "inside", sx: 6, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1], glow: { r: 24, dy: 4 } },
   coatRack: { sheet: "inside", sx: 7, sy: 1, w: 1, h: 2, solid: [0, 1, 1, 1] },
   clock: { sheet: "inside", sx: 2, sy: 5, w: 1, h: 2, solid: [0, 1, 1, 1] },
-  lantern: { sheet: "inside", sx: 0, sy: 4, w: 1, h: 1 },
+  lantern: { sheet: "inside", sx: 0, sy: 4, w: 1, h: 1, glow: { r: 20, dy: 4 } },
   vase: { sheet: "inside", sx: 1, sy: 4, w: 1, h: 1 },
   frameSmall: { sheet: "inside", sx: 4, sy: 4, w: 1, h: 1 },
   frameMed: { sheet: "inside", sx: 5, sy: 4, w: 1, h: 1 },
@@ -108,9 +114,9 @@ export const STAMPS = {
   hangTools: { sheet: "inside", sx: 7, sy: 5, w: 1, h: 1 },
   wallShelf: { sheet: "inside", sx: 4, sy: 6, w: 1, h: 1 },
   wallShelfWide: { sheet: "inside", sx: 6, sy: 6, w: 2, h: 1 },
-  candle: { sheet: "inside", sx: 0, sy: 13, w: 1, h: 1 },
-  candleGold: { sheet: "inside", sx: 1, sy: 13, w: 1, h: 1 },
-  lampTable: { sheet: "inside", sx: 2, sy: 13, w: 1, h: 1 },
+  candle: { sheet: "inside", sx: 0, sy: 13, w: 1, h: 1, glow: { r: 16, dy: 4 } },
+  candleGold: { sheet: "inside", sx: 1, sy: 13, w: 1, h: 1, glow: { r: 16, dy: 4 } },
+  lampTable: { sheet: "inside", sx: 2, sy: 13, w: 1, h: 1, glow: { r: 22, dy: 4 } },
   papers: { sheet: "inside", sx: 4, sy: 13, w: 1, h: 1 },
   flowerVase: { sheet: "inside", sx: 5, sy: 13, w: 1, h: 1 },
   flowerPink: { sheet: "inside", sx: 6, sy: 13, w: 1, h: 1 },
@@ -159,11 +165,18 @@ export const STAMPS = {
   bedDoubleBlue: { sheet: "inside", sx: 9, sy: 8, w: 2, h: 2, solid: [0, 0, 2, 2], parts: [{ sx: 9, sy: 8, w: 2, h: 1, dx: 0, dy: 0 }, { sx: 9, sy: 10, w: 2, h: 1, dx: 0, dy: 1 }] },
   bedDoubleRed: { sheet: "inside", sx: 9, sy: 8, w: 2, h: 2, solid: [0, 0, 2, 2], parts: [{ sx: 9, sy: 8, w: 2, h: 1, dx: 0, dy: 0 }, { sx: 9, sy: 11, w: 2, h: 1, dx: 0, dy: 1 }] },
   // Werkstatt
-  fireplace: { sheet: "inside", sx: 8, sy: 13, w: 3, h: 3, solid: [0, 1, 3, 2] },
+  fireplace: { sheet: "inside", sx: 8, sy: 13, w: 3, h: 3, solid: [0, 1, 3, 2], overlays: [{ sheet: "fires", gx: 1, gy: 1, fps: 6, dx: 16, dy: 10 }], glow: { r: 52, dx: 24, dy: 34 } },
   oven: { sheet: "inside", sx: 11, sy: 13, w: 1, h: 3, solid: [0, 1, 1, 2] },
   anvil: { sheet: "inside", sx: 12, sy: 13, w: 3, h: 1, solid: [0, 0, 3, 1] },
   forgeCounter: { sheet: "inside", sx: 12, sy: 14, w: 3, h: 2, solid: [0, 0, 3, 2] },
   smithAnvil: { sheet: "inside", sx: 15, sy: 14, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  // ── Animierte Lichter und Feuer (Blätter fires/lights) ──
+  campfire: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 0, gy: 0, fps: 7 }, glow: { r: 46, dy: 8 } },
+  campfireSmall: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 0, gy: 1, fps: 6 }, glow: { r: 30, dy: 8 } },
+  torchStand: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 2, gy: 1, fps: 7 }, glow: { r: 44, dy: -4 } },
+  wallTorch: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, anim: { gx: 3, gy: 1, fps: 7 }, glow: { r: 36, dy: 0 } },
+  hearthFire: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 1, gy: 0, fps: 6 }, glow: { r: 40, dy: 8 } },
+  stoveFire: { sheet: "fires", sx: 0, sy: 0, w: 1, h: 2, solid: [0, 1, 1, 1], anim: { gx: 3, gy: 0, fps: 5 }, glow: { r: 28, dy: 8 } },
   // Fenster/Tür-Kacheln und Schilder für Hausfassaden (1×1)
   window: { sheet: "town", sx: 14, sy: 6, w: 1, h: 1 },
   door: { sheet: "town", sx: 14, sy: 7, w: 1, h: 1 },
@@ -175,4 +188,4 @@ export const STAMPS = {
 export type StampId = keyof typeof STAMPS;
 
 /** Objekte für Innenräume (Kachelblatt "inside"). */
-export const INSIDE_STAMP_IDS = (Object.keys(STAMPS) as StampId[]).filter((id) => (STAMPS[id] as StampDef).sheet === "inside");
+export const INSIDE_STAMP_IDS = (Object.keys(STAMPS) as StampId[]).filter((id) => ["inside", "fires", "lights"].includes((STAMPS[id] as StampDef).sheet));

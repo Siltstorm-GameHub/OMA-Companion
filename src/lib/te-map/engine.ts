@@ -40,6 +40,7 @@ export interface Dialog {
   /** Händler: nach dem Gespräch lässt sich handeln */
   merchant?: string;
 }
+export type Goal = { kind: "talk"; actor: string } | { kind: "enter" } | { kind: "exit" };
 export type GameEvent = { type: "advance"; quest: string; from: number } | { type: "complete"; quest: string };
 
 /** Auswertung einer Antwort (vom Server bzw. im Testlauf lokal). */
@@ -63,7 +64,13 @@ export interface Game {
   px: number;
   py: number;
   dir: Dir;
-  move: { fromX: number; fromY: number; toX: number; toY: number; elapsed: number } | null;
+  move: { fromX: number; fromY: number; toX: number; toY: number; elapsed: number; dur: number } | null;
+  /** Geplanter Weg (Klick/Tippen zum Laufen): nächste Kacheln, ohne die aktuelle */
+  path: [number, number][];
+  /** Was nach dem Weg passiert: Akteur ansprechen, Gebäude betreten, Raum verlassen */
+  goal: Goal | null;
+  /** Lauftempo: 1 normal, > 1 sprinten */
+  speed: number;
   /** Schritt je Quest-Slug (0 … objectives.length − 1; letzter = abgeschlossen) */
   questSteps: Record<string, number>;
   /** Erlebte Ereignisse des Charakters (schalten Dialoge frei/aus) */
@@ -110,7 +117,7 @@ export function createGame(world: WorldDef, questSteps: Record<string, number> =
   const steps: Record<string, number> = {};
   for (const q of worldQuestsOf(world)) steps[q.slug] = Math.min(Math.max(0, questSteps[q.slug] ?? 0), questLen(q));
   return {
-    world, map: world.map, scene: null, sceneChanges: 0, solid: buildSolid(world), px: world.map.spawn.x, py: world.map.spawn.y, dir: "down", move: null,
+    world, map: world.map, scene: null, sceneChanges: 0, path: [], goal: null, speed: 1, solid: buildSolid(world), px: world.map.spawn.x, py: world.map.spawn.y, dir: "down", move: null,
     questSteps: steps, flags: new Set(flags), night, weather, dialog: null, queue: [], events: [],
     actorDir: new Map(world.map.actors.map((a) => [a.id, a.dir])),
   };
@@ -122,22 +129,60 @@ export function isWalkable(game: Game, x: number, y: number): boolean {
   return !game.solid[y][x];
 }
 
-/** Ein Frame: laufende Bewegung fortsetzen bzw. (bei gehaltener Richtung) neue beginnen. */
+/** Ein Frame: laufende Bewegung fortsetzen bzw. (bei gehaltener Richtung oder geplantem Weg) neue beginnen. */
 export function step(game: Game, dtMs: number, held: Dir | null): void {
+  // Eine gehaltene Richtung übernimmt die Steuerung und verwirft einen geplanten Weg
+  if (held) { game.path = []; game.goal = null; }
   if (game.move) {
     game.move.elapsed += dtMs;
-    if (game.move.elapsed < TILE_MS) return;
-    const overshoot = game.move.elapsed - TILE_MS;
+    if (game.move.elapsed < game.move.dur) return;
+    const overshoot = game.move.elapsed - game.move.dur;
     game.px = game.move.toX;
     game.py = game.move.toY;
     game.move = null;
-    if (!held || game.dialog) return;
-    // Übertrag in die nächste Kachel, damit das Laufen bei gehaltener Taste flüssig bleibt
-    startMove(game, held, overshoot);
+    if (game.dialog) return;
+    // Übertrag in die nächste Kachel, damit das Laufen flüssig bleibt
+    if (held) startMove(game, held, overshoot);
+    else followPath(game, overshoot);
     return;
   }
-  if (!held || game.dialog) return;
-  startMove(game, held, 0);
+  if (game.dialog) return;
+  if (held) startMove(game, held, 0);
+  else followPath(game, 0);
+}
+
+const dirTo = (dx: number, dy: number): Dir => (Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
+
+/** Figur zu einer Kachel drehen (für Ansprechen aus der Nähe, auch schräg). */
+export function faceToward(game: Game, x: number, y: number): void {
+  game.dir = dirTo(x - game.px, y - game.py);
+}
+
+/** Nächsten Schritt des geplanten Wegs gehen; am Ziel die vorgemerkte Handlung ausführen. */
+function followPath(game: Game, elapsed: number): void {
+  const next = game.path[0];
+  if (next) {
+    const dx = next[0] - game.px;
+    const dy = next[1] - game.py;
+    // Der Weg passt nicht mehr (Hindernis, Ortswechsel): abbrechen
+    if (Math.abs(dx) + Math.abs(dy) !== 1 || !isWalkable(game, next[0], next[1])) { game.path = []; game.goal = null; return; }
+    game.path.shift();
+    startMove(game, dirTo(dx, dy), elapsed);
+    return;
+  }
+  const goal = game.goal;
+  if (!goal) return;
+  game.goal = null;
+  if (goal.kind === "talk") {
+    const a = game.map.actors.find((o) => o.id === goal.actor);
+    if (a && Math.max(Math.abs(a.x - game.px), Math.abs(a.y - game.py)) <= 1) { faceToward(game, a.x, a.y); pressAction(game); }
+  } else if (goal.kind === "enter") {
+    game.dir = "up";
+    startMove(game, "up", 0);
+  } else {
+    game.dir = "down";
+    startMove(game, "down", 0);
+  }
 }
 
 function startMove(game: Game, dir: Dir, elapsed: number) {
@@ -158,7 +203,7 @@ function startMove(game: Game, dir: Dir, elapsed: number) {
     }
     return;
   }
-  game.move = { fromX: game.px, fromY: game.py, toX: tx, toY: ty, elapsed };
+  game.move = { fromX: game.px, fromY: game.py, toX: tx, toY: ty, elapsed, dur: TILE_MS / Math.max(0.25, game.speed) };
 }
 
 /** Gebäude betreten: Karte wechseln, vor die Innentür stellen. */
@@ -204,6 +249,89 @@ const talkAllowed = (t: Talk, ctx: TalkContext): boolean =>
   (!t.forbids || !t.forbids.some((f) => ctx.flags.has(f))) &&
   (!t.time || (t.time === "night") === ctx.night) &&
   (!t.weather || weatherMatches(t.weather, ctx.weather ?? "clear"));
+
+/** Wen man gerade ansprechen kann: den Akteur vor der Figur, sonst den nächsten in der Nachbarschaft (auch schräg). */
+export function interactTarget(game: Game): Actor | null {
+  if (game.move) return null;
+  const [fx, fy] = facingCell(game);
+  const ahead = game.map.actors.find((a) => a.x === fx && a.y === fy);
+  if (ahead) return ahead;
+  let best: Actor | null = null;
+  let bestD = Infinity;
+  for (const a of game.map.actors) {
+    const dx = Math.abs(a.x - game.px);
+    const dy = Math.abs(a.y - game.py);
+    if (Math.max(dx, dy) <= 1 && dx + dy < bestD) { best = a; bestD = dx + dy; }
+  }
+  return best;
+}
+
+/** Gebäude mit Innenraum, dessen Tür die Figur gerade ansteuert (nur draußen, Blick nach oben vor die Tür), sonst −1. */
+export function doorAhead(game: Game): number {
+  if (game.scene !== null || game.move || game.dir !== "up") return -1;
+  return game.world.map.buildings.findIndex((b) => b.interior && doorFront(b).x === game.px && doorFront(b).y === game.py);
+}
+
+// ── Klick/Tippen zum Laufen: Wegsuche ──────────────────────
+
+function bfs(game: Game, sx: number, sy: number, isTarget: (x: number, y: number) => boolean): [number, number][] | null {
+  const { cols, rows } = game.map;
+  const prev = new Map<number, number>();
+  const key = (x: number, y: number) => y * cols + x;
+  const queue: [number, number][] = [[sx, sy]];
+  prev.set(key(sx, sy), -1);
+  for (let qi = 0; qi < queue.length; qi++) {
+    const [x, y] = queue[qi];
+    if (isTarget(x, y)) {
+      const out: [number, number][] = [];
+      let k = key(x, y);
+      while (prev.get(k) !== -1) { out.push([k % cols, Math.floor(k / cols)]); k = prev.get(k)!; }
+      return out.reverse();
+    }
+    for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || prev.has(key(nx, ny)) || !isWalkable(game, nx, ny)) continue;
+      prev.set(key(nx, ny), key(x, y));
+      queue.push([nx, ny]);
+    }
+  }
+  return null;
+}
+
+/** Zu einer angeklickten/angetippten Kachel laufen: freie Kachel = hingehen, Akteur = hingehen und ansprechen,
+ *  Gebäude mit Innenraum = zur Tür und hinein, Tür im Innenraum = hinaus. Liefert, ob etwas geplant wurde. */
+export function walkTo(game: Game, tx: number, ty: number): boolean {
+  if (game.dialog) return false;
+  const sx = game.move ? game.move.toX : game.px;
+  const sy = game.move ? game.move.toY : game.py;
+  const plan = (path: [number, number][] | null, goal: Goal | null): boolean => {
+    if (!path) return false;
+    game.path = path;
+    game.goal = goal;
+    return true;
+  };
+
+  const actor = game.map.actors.find((a) => a.x === tx && a.y === ty);
+  if (actor) {
+    const near = (x: number, y: number) => Math.abs(x - actor.x) + Math.abs(y - actor.y) === 1;
+    return plan(bfs(game, sx, sy, near), { kind: "talk", actor: actor.id });
+  }
+  if (game.scene === null) {
+    const bi = game.world.map.buildings.findIndex((b) => b.interior && tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.roofRows + 2);
+    if (bi >= 0) {
+      const f = doorFront(game.world.map.buildings[bi]);
+      return plan(bfs(game, sx, sy, (x, y) => x === f.x && y === f.y), { kind: "enter" });
+    }
+  } else {
+    const it = game.world.map.buildings[game.scene]?.interior;
+    if (it && tx === it.exitX && ty === it.rows - 1) {
+      const sp = interiorSpawn(it);
+      return plan(bfs(game, sx, sy, (x, y) => x === sp.x && y === sp.y), { kind: "exit" });
+    }
+  }
+  if (!isWalkable(game, tx, ty)) return false;
+  return plan(bfs(game, sx, sy, (x, y) => x === tx && y === ty), null);
+}
 
 /** Alle Dialoge des Akteurs, die jetzt gelten: je laufender/anstehender Quest der passende Schritt; nur wenn
  *  keiner passt, ein "*"-Dialog (sonst ein Platzhalter). Bedingungen (Ereignisse, Tageszeit) gelten für alle;
@@ -272,9 +400,9 @@ export function pressAction(game: Game): void {
     return;
   }
 
-  const [fx, fy] = facingCell(game);
-  const actor = game.map.actors.find((a) => a.x === fx && a.y === fy);
+  const actor = interactTarget(game);
   if (!actor) return;
+  faceToward(game, actor.x, actor.y);
   if (actor.kind === "npc" || actor.kind === "merchant") {
     // Der NPC dreht sich zur Figur
     game.actorDir.set(actor.id, ({ down: "up", up: "down", left: "right", right: "left" } as const)[game.dir]);

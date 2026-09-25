@@ -10,16 +10,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { drawTeFrame, layersFor, loadTeLayerSets, type TeLayerSets } from "@/components/te-character/TeCharacter";
 import { TE_ANIMS, type TeCharacterConfig } from "@/lib/te-character";
 import { groundQuarters, wallQuarters, type Quarters } from "@/lib/te-map/autotile";
-import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, drainEvents, isChestOpen, pressAction, step, syncQuestStep, TILE_MS, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
+import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
 import type { TrackerItem } from "@/lib/dnd/quest-log";
+import { DiceOverlay } from "@/components/te-map/play/Dice";
+import { GameFeed, type FeedItem, type Notify } from "@/components/te-map/play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
-import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, WEATHER_ICON, WEATHER_LABEL, type Biome, type Weather } from "@/lib/te-map/rpg";
+import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, WEATHER_ICON, WEATHER_LABEL, type Biome, type RollResult, type Weather } from "@/lib/te-map/rpg";
 import { STAMPS, type StampDef, type StampId, type TileSheet } from "@/lib/te-map/stamps";
-import { allActorsOf, INTERIOR_FLOORS, INTERIOR_WALLS, wallTilesAt } from "@/lib/te-map/interior";
+import { allActorsOf, doorFront, INTERIOR_FLOORS, INTERIOR_WALLS, wallTilesAt } from "@/lib/te-map/interior";
 import { CAVE_WALL_TILES, THEMES } from "@/lib/te-map/themes";
 import { worldQuestsOf, type Interior, type WorldDef } from "@/lib/te-map/types";
 
@@ -39,6 +40,8 @@ const SHEET_FILES = {
   chests: "/te/tiles/chests.png",
   inside: "/te/tiles/tileB_inside.png",
   a5inside: "/te/tiles/tileA5_inside.png",
+  fires: "/te/tiles/fires.png",
+  lights: "/te/tiles/lights.png",
 } as const;
 type SheetKey = keyof typeof SHEET_FILES;
 export type Sheets = Record<SheetKey, HTMLImageElement>;
@@ -67,13 +70,22 @@ function drawQuarters(ctx: CanvasRenderingContext2D, img: HTMLImageElement, bx: 
 }
 
 /** Stempel an Pixelposition (x, y) — obere linke Ecke — zeichnen. */
-export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number) {
+export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: StampId, x: number, y: number, tMs = 0) {
   const s = STAMPS[id] as StampDef;
+  if (s.anim) {
+    const f = Math.floor((tMs / 1000) * s.anim.fps) % 4;
+    ctx.drawImage(sheets[s.sheet as TileSheet], s.anim.gx * 48 + 16, s.anim.gy * 128 + f * 32, 16, 32, x, y, 16, 32);
+    return;
+  }
   if (s.parts) {
     for (const p of s.parts) ctx.drawImage(sheets[s.sheet as TileSheet], p.sx * T, p.sy * T, p.w * T, p.h * T, x + p.dx * T, y + p.dy * T, p.w * T, p.h * T);
     return;
   }
   ctx.drawImage(sheets[s.sheet as TileSheet], s.sx * T, s.sy * T, s.w * T, s.h * T, x, y, s.w * T, s.h * T);
+  for (const o of s.overlays ?? []) {
+    const f = Math.floor((tMs / 1000) * o.fps) % 4;
+    ctx.drawImage(sheets[o.sheet], o.gx * 48 + 16, o.gy * 128 + f * 32, 16, 32, x + o.dx, y + o.dy, 16, 32);
+  }
 }
 
 /** Boden, Wege, Wände und Häuser einmal in eine große Zeichenfläche vorzeichnen. */
@@ -131,9 +143,9 @@ export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
 
 /** Live anwesender Spieler (Position in Kacheln, vom Server) */
 export interface LiveOther { id: string; name: string; x: number; y: number; dir: string; character: TeCharacterConfig; avatarUrl: string | null; emote?: string | null; scene?: number }
-export interface ChatMessage { id: string; cardId: string; name: string; text: string; createdAt: string }
+export interface ChatMessage { id: string; cardId: string; name: string; text: string; createdAt: string; reports?: number }
 /** Antwort des Live-Abgleichs: anwesende Spieler, neue Chat-Nachrichten, neue Spielleiter-Ereignisse */
-export interface LiveData { others: LiveOther[]; chat: ChatMessage[]; events: WorldEventView[] }
+export interface LiveData { others: LiveOther[]; chat: ChatMessage[]; hiddenChat?: string[]; events: WorldEventView[] }
 
 export const EMOTE_ICONS: Record<string, string> = { wave: "👋", laugh: "😂", cheer: "🎉", think: "🤔", heart: "❤️", sad: "😢" };
 
@@ -230,35 +242,58 @@ function drawWeather(ctx: CanvasRenderingContext2D, fx: WeatherFx, w: number, h:
   }
 }
 
-/** Sprechblase über einer Figur (Text umgebrochen, auf der Zeichenfläche gehalten). */
-function drawBubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, canvasW: number) {
-  ctx.font = "5px sans-serif";
-  const maxW = 84;
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let line = "";
-  for (const w of words) {
-    const t = line ? `${line} ${w}` : w;
-    if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
-  }
-  if (line) lines.push(line);
-  const shown = lines.slice(0, 4);
-  const w = Math.min(maxW, Math.max(...shown.map((l) => ctx.measureText(l).width))) + 6;
-  const h = shown.length * 6 + 4;
-  const bx = Math.min(canvasW - w - 1, Math.max(1, x - w / 2));
-  const by = Math.max(1, y - h);
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.fillRect(bx, by, w, h);
-  ctx.fillStyle = "#111";
-  ctx.textAlign = "start";
-  shown.forEach((l, i) => ctx.fillText(l, bx + 3, by + 7 + i * 6));
+/** Beschriftung über einer Figur: Name, Sprechblase, Emote. Wird als HTML über die Zeichenfläche gelegt (scharfe, gut lesbare Schrift) —
+ *  auf der Zeichenfläche selbst wäre sie bei 16-px-Kacheln winzig und würde mit hochskaliert. */
+interface LabelItem { key: string; x: number; y: number; name?: string; bubble?: string; emote?: string; hint?: string }
+
+function makeLabelEl(): HTMLDivElement {
+  const root = document.createElement("div");
+  root.style.cssText = "position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;will-change:left,top;";
+  const emote = document.createElement("span");
+  emote.dataset.role = "emote";
+  emote.style.cssText = "font-size:24px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));";
+  const bubble = document.createElement("div");
+  bubble.dataset.role = "bubble";
+  bubble.style.cssText = "position:relative;max-width:240px;padding:5px 10px;border-radius:10px;border:2px solid #16110a;background:#fffdf5;color:#15110a;font:600 14px/1.3 system-ui,sans-serif;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.45);overflow-wrap:anywhere;";
+  const tail = document.createElement("div");
+  tail.style.cssText = "position:absolute;left:50%;bottom:-8px;width:0;height:0;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #16110a;";
+  const tailIn = document.createElement("div");
+  tailIn.style.cssText = "position:absolute;left:50%;bottom:-4px;width:0;height:0;margin-left:-4px;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #fffdf5;";
+  bubble.append(tail, tailIn);
+  const bubbleText = document.createElement("span");
+  bubbleText.dataset.role = "bubble-text";
+  bubble.prepend(bubbleText);
+  const name = document.createElement("span");
+  name.dataset.role = "name";
+  name.style.cssText = "font:800 12px/1 system-ui,sans-serif;color:#fde68a;white-space:nowrap;letter-spacing:.02em;text-shadow:0 0 3px #000,0 0 3px #000,0 1px 2px #000;";
+  const hint = document.createElement("span");
+  hint.dataset.role = "hint";
+  hint.style.cssText = "font:800 12px/1 system-ui,sans-serif;color:#1a1204;background:#f5cf6b;border:2px solid #3a2a08;border-radius:999px;padding:3px 9px;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.5);";
+  root.append(emote, bubble, name, hint);
+  return root;
 }
 
-function drawEmote(ctx: CanvasRenderingContext2D, icon: string, x: number, y: number) {
-  ctx.font = "9px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(icon, x, y);
-  ctx.textAlign = "start";
+/** DOM-Beschriftungen mit der Liste des Frames abgleichen (nur ändern, was sich geändert hat). */
+function syncLabels(layer: HTMLDivElement, cache: Map<string, HTMLDivElement>, items: LabelItem[], cw: number, ch: number) {
+  const seen = new Set<string>();
+  for (const it of items) {
+    seen.add(it.key);
+    let el = cache.get(it.key);
+    if (!el) { el = makeLabelEl(); cache.set(it.key, el); layer.appendChild(el); }
+    el.style.left = `${((it.x / cw) * 100).toFixed(2)}%`;
+    el.style.top = `${((it.y / ch) * 100).toFixed(2)}%`;
+    const set = (role: string, value: string | undefined, display: string) => {
+      const child = el!.querySelector<HTMLElement>(`[data-role="${role}"]`)!;
+      const wanted = value ?? "";
+      if (child.dataset.v !== wanted) { child.dataset.v = wanted; (role === "bubble" ? child.querySelector<HTMLElement>('[data-role="bubble-text"]')! : child).textContent = wanted; }
+      child.style.display = value ? display : "none";
+    };
+    set("emote", it.emote, "block");
+    set("bubble", it.bubble, "block");
+    set("name", it.name, "block");
+    set("hint", it.hint, "block");
+  }
+  for (const [key, el] of cache) if (!seen.has(key)) { el.remove(); cache.delete(key); }
 }
 
 export interface OtherPlayer { id: string; name: string; character: TeCharacterConfig | null }
@@ -268,13 +303,24 @@ interface Props {
   character: TeCharacterConfig;
   /** Gespeicherter Schritt je Quest-Slug dieser Welt (0 = noch nicht angenommen) */
   initialSteps: Record<string, number>;
+  /** Meldungen im Spiel (Zustand liegt beim Aufrufer, siehe useGameFeed) */
+  feed?: FeedItem[];
+  notify?: Notify;
+  /** Spiel angehalten (Menü offen): Tasten und Steuerkreuz sind gesperrt */
+  paused?: boolean;
+  /** Zusätzliche Bedienelemente (Menü-Knöpfe) neben dem Steuerkreuz */
+  extraControls?: React.ReactNode;
+  /** Menü/Overlay über der Spielfläche (z. B. Inventar) */
+  overlay?: React.ReactNode;
+  /** Wird auf der Spielfläche unten links als Leiste gezeigt (Stufe, Gold, Münzen) */
+  hud?: React.ReactNode;
   /** Verfolgte Quests (auch von anderen Locations) fürs HUD */
   tracker: TrackerItem[];
   others: OtherPlayer[];
   /** Live-Abgleich: meldet die eigene Kachel + Blickrichtung und liefert alle gerade anwesenden anderen (oder null bei Fehler). */
   livePresence?: (me: { x: number; y: number; dir: string; scene: number; emote?: string; chatSince?: string; eventsSince?: string }) => Promise<LiveData | null>;
   /** Neue Chat-Nachrichten/Ereignisse aus dem Live-Abgleich (für Verlauf und Anzeigen außerhalb der Zeichenfläche) */
-  onLiveData?: (d: { chat: ChatMessage[]; events: WorldEventView[] }) => void;
+  onLiveData?: (d: { chat: ChatMessage[]; hiddenChat: string[]; events: WorldEventView[] }) => void;
   /** Eigene Karten-Id (für die eigene Sprechblase) */
   myCardId?: string;
   /** Klimazone der Location (bestimmt das Wetter); ohne Angabe gemäßigt */
@@ -294,10 +340,49 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onAdvance, viewCols = DEFAULT_VIEW_W, viewRows = DEFAULT_VIEW_H }: Props) {
-  const VIEW_W = Math.min(viewCols, world.map.cols);
-  const VIEW_H = Math.min(viewRows, world.map.rows);
+export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onAdvance, viewCols, viewRows }: Props) {
+  // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
+  // Zoom (Pinch, Strg+Mausrad, +/−): kleiner = mehr Welt sichtbar, größer = größere Figuren; wird gemerkt
+  const [zoom, setZoomState] = useState(() => {
+    try { const v = typeof window === "undefined" ? 0 : Number(window.localStorage.getItem("oq-zoom")); return v >= 0.6 && v <= 2 ? v : 1; } catch { return 1; }
+  });
+  const setZoom = useCallback((fn: (z: number) => number) => {
+    setZoomState((z) => {
+      const next = Math.min(2, Math.max(0.6, Math.round(fn(z) * 100) / 100));
+      try { window.localStorage.setItem("oq-zoom", String(next)); } catch { /* egal */ }
+      return next;
+    });
+  }, []);
+
+  const fixedView = viewCols !== undefined || viewRows !== undefined;
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || fixedView) return;
+    const measure = () => {
+      const cols = Math.min(48, Math.max(8, Math.floor(el.clientWidth / (T * 4 * zoom))));
+      const rows = Math.min(30, Math.max(6, Math.floor((window.innerHeight * 0.7) / (T * 4 * zoom))));
+      setAuto((a) => (a.cols === cols && a.rows === rows ? a : { cols, rows }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fixedView, zoom]);
+  const VIEW_W = Math.min(viewCols ?? auto.cols, world.map.cols);
+  const VIEW_H = Math.min(viewRows ?? auto.rows, world.map.rows);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const camRef = useRef({ x: 0, y: 0 });
+  const sprintKey = useRef(false);
+  const sprintStick = useRef(false);
+  const coarse = useRef(false);
+  const ptrs = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{ id: number; sx: number; sy: number; t: number; stick: boolean } | null>(null);
+  const pinch = useRef<{ d: number; z: number } | null>(null);
+  const [stick, setStick] = useState<{ ox: number; oy: number; x: number; y: number } | null>(null);
+  useEffect(() => { coarse.current = window.matchMedia?.("(pointer: coarse)").matches ?? false; }, []);
   const gameRef = useRef<Game | null>(null);
   const heldRef = useRef<Dir[]>([]);
   /** Kurzer Tastendruck, der zwischen zwei Frames beginnt und endet, soll trotzdem einen Schritt auslösen. */
@@ -360,13 +445,15 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   }, [world]);
 
   /** Ereignisse der Engine verarbeiten (Hinweise, Server-Meldung, HUD). */
+  const syncedDialog = useRef<unknown>(null);
   const handleEvents = useCallback((g: Game) => {
+    syncedDialog.current = g.dialog;
     for (const e of drainEvents(g)) {
       const q = worldQuestsOf(world).find((o) => o.slug === e.quest);
       if (!q) continue;
       if (e.type === "advance") {
         const from = e.from;
-        toast(from === 0 ? "Quest angenommen: " + q.title : "Quest-Fortschritt: " + q.title, { description: q.objectives[from + 1] });
+        notify?.("quest", from === 0 ? `Quest angenommen: ${q.title}` : `Quest-Fortschritt: ${q.title}`, q.objectives[from + 1]);
         onAdvance(e.quest, from).then((res) => {
           const cur = gameRef.current;
           if (!res || !cur) return;
@@ -374,30 +461,46 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           setUi((u) => ({ ...u, tracker: res.tracker ?? localTracker(cur, u.tracker) }));
         });
       }
-      if (e.type === "complete") toast.success("Quest abgeschlossen: " + q.title, { description: `+${q.xpReward} XP` });
+      if (e.type === "complete") notify?.("reward", `Quest abgeschlossen: ${q.title}`, `+${q.xpReward} XP`);
     }
     setUi((u) => ({ dialog: g.dialog ? { ...g.dialog } : null, tracker: localTracker(g, u.tracker) }));
-  }, [world, onAdvance, localTracker]);
+  }, [world, onAdvance, localTracker, notify]);
+
+  const handleEventsRef = useRef<((g: Game) => void) | null>(null);
+  useEffect(() => { handleEventsRef.current = handleEvents; });
+  const pausedRef = useRef(!!paused);
+  useEffect(() => { pausedRef.current = !!paused; if (paused) { heldRef.current = []; tapRef.current = null; } }, [paused]);
 
   const action = useCallback(() => {
     const g = gameRef.current;
-    if (!g) return;
+    if (!g || pausedRef.current) return;
     pressAction(g);
     handleEvents(g);
   }, [handleEvents]);
 
+  // Würfel: erscheint bei Proben, wartet auf den Wurf des Servers und zeigt genau dieses Ergebnis
+  const [dice, setDice] = useState<{ ability: string; dc: number; roll: RollResult | null } | null>(null);
+  const diceDone = useRef<(() => void) | null>(null);
+
   const choose = useCallback(async (index: number) => {
     const g = gameRef.current;
     if (!g) return;
+    const meta = g.dialog?.choices?.[index];
     const req = chooseOption(g, index);
     setUi((u) => ({ ...u, dialog: g.dialog ? { ...g.dialog } : null }));
     if (!req) return;
+    if (meta?.check) setDice({ ability: meta.check.ability, dc: meta.check.dc, roll: null });
     // Ohne Server (Testlauf im Editor) bleibt die Auswertung aus: die Wahl wird zurückgenommen
     const res = onChoose ? await onChoose(req) : null;
-    if (!res) toast.error("Die Antwort konnte nicht ausgewertet werden.");
+    if (!res) notify?.("error", "Die Antwort konnte nicht ausgewertet werden.");
+    if (meta?.check && res?.roll) {
+      // Der Würfel purzelt und bleibt auf dem Wurf liegen — erst danach geht der Text weiter
+      await new Promise<void>((resolve) => { diceDone.current = resolve; setDice((d) => (d ? { ...d, roll: res.roll! } : d)); });
+    }
+    setDice(null);
     applyChoiceResult(g, res);
     setUi((u) => ({ dialog: g.dialog ? { ...g.dialog } : null, tracker: res?.tracker ?? localTracker(g, u.tracker) }));
-  }, [onChoose, localTracker]);
+  }, [onChoose, localTracker, notify]);
 
   const answer = useCallback((accept: boolean) => {
     const g = gameRef.current;
@@ -414,19 +517,22 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
     };
     const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && ["INPUT", "SELECT", "TEXTAREA"].includes(t.tagName);
     const down = (e: KeyboardEvent) => {
-      if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (pausedRef.current || isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
       const d = keyDir[e.key];
       if (d) {
         e.preventDefault();
         heldRef.current = [...heldRef.current.filter((x) => x !== d), d];
         tapRef.current = d;
-      } else if (e.key === " " || e.key === "Enter" || e.key === "e" || e.key === "E") {
+      } else if (e.key === "Shift") {
+        sprintKey.current = true;
+      } else if (e.key === " " || e.key === "Enter" || e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") {
         if (e.repeat) return;
         e.preventDefault();
         action();
       }
     };
     const up = (e: KeyboardEvent) => {
+      if (e.key === "Shift") sprintKey.current = false;
       const d = keyDir[e.key];
       if (d) heldRef.current = heldRef.current.filter((x) => x !== d);
     };
@@ -438,6 +544,8 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   // Live-Spieler: alle ~0,6 s eigene Kachel melden und die Anwesenden abholen; die Figuren gleiten in der Zeichenschleife
   const liveRef = useRef<Map<string, LiveEntry>>(new Map());
   const fxRef = useRef<WeatherFx | null>(null);
+  const labelLayerRef = useRef<HTMLDivElement>(null);
+  const labelCache = useRef(new Map<string, HTMLDivElement>());
   const livePresenceRef = useRef(livePresence);
   useEffect(() => { livePresenceRef.current = livePresence; });
   const hasLive = !!livePresence;
@@ -474,7 +582,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           cursorRef.current.chat = m.createdAt;
         }
         for (const ev of data.events) cursorRef.current.events = cursorRef.current.events && cursorRef.current.events > ev.expiresAt ? cursorRef.current.events : new Date().toISOString();
-        if (data.chat.length || data.events.length) onLiveDataRef.current?.({ chat: data.chat, events: data.events });
+        if (data.chat.length || data.events.length || data.hiddenChat?.length) onLiveDataRef.current?.({ chat: data.chat, hiddenChat: data.hiddenChat ?? [], events: data.events });
         const next = new Map<string, LiveEntry>();
         for (const o of list) {
           const key = JSON.stringify(o.character);
@@ -536,13 +644,16 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         clock += dt;
         const held = heldRef.current.at(-1) ?? tapRef.current;
         tapRef.current = null;
+        g.speed = sprintKey.current || sprintStick.current ? 1.7 : 1;
         step(g, dt, held);
+        // Dialog, der durch Klick-zum-Laufen (Ankunft beim Akteur) entstand: Oberfläche nachziehen
+        if (g.dialog !== syncedDialog.current) handleEventsRef.current?.(g);
 
         // Position der Figur (interpoliert) und Kamera
         let fx = g.px;
         let fy = g.py;
         if (g.move) {
-          const p = Math.min(1, g.move.elapsed / TILE_MS);
+          const p = Math.min(1, g.move.elapsed / g.move.dur);
           fx = g.move.fromX + (g.move.toX - g.move.fromX) * p;
           fy = g.move.fromY + (g.move.toY - g.move.fromY) * p;
         }
@@ -556,6 +667,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         }
         const vw = VIEW_W * T;
         const vh = VIEW_H * T;
+        void vh;
         // Kleine Karten (Innenräume) mittig zeigen, große folgen der Figur
         const camX = map.cols * T <= vw ? -Math.round((vw - map.cols * T) / 2) : Math.round(Math.min(Math.max(fx * T + T / 2 - vw / 2, 0), map.cols * T - vw));
         const camY = map.rows * T <= vh ? -Math.round((vh - map.rows * T) / 2) : Math.round(Math.min(Math.max(fy * T + T / 2 - vh / 2, 0), map.rows * T - vh));
@@ -574,7 +686,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         for (const s of map.stamps) {
           const d = STAMPS[s.id] as StampDef;
           if (s.x * T + d.w * T < camX || s.x * T > camX + VIEW_W * T || s.y * T + d.h * T < camY || s.y * T > camY + VIEW_H * T) continue;
-          sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY) });
+          sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock) });
         }
         for (const a of map.actors) {
           if (a.kind === "chest") {
@@ -586,15 +698,17 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
             sprites.push({ base: (a.y + 1) * T, draw: () => drawTeFrame(ctx, layersFor(sets, dir), 1, dir, a.x * T - camX + T / 2 - 24, a.y * T - camY - 16, 1) });
           }
         }
+        const labels: LabelItem[] = [];
         others.forEach((o, i) => {
           const spot = map.crowd[i];
           const sets = spritesRef.current.others.get(o.id);
           // Wer live da ist, wird nicht zusätzlich als stehende Figur gezeichnet
           if (!spot || !sets || liveRef.current.has(o.id)) return;
           sprites.push({ base: (spot.y + 1) * T, draw: () => drawTeFrame(ctx, sets.front, 1, "down", spot.x * T - camX + T / 2 - 24, spot.y * T - camY - 16, 1) });
+          labels.push({ key: `c${o.id}`, x: spot.x * T + T / 2 - camX, y: spot.y * T - camY - 13, name: o.name });
         });
         const walkFrames = TE_ANIMS.walk.frames;
-        for (const e of liveRef.current.values()) {
+        for (const [liveId, e] of liveRef.current) {
           if (!e.sets || e.scene !== (g.scene ?? -1)) continue;
           const dx = e.tx - e.cx;
           const dy = e.ty - e.cy;
@@ -605,21 +719,18 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           const dir: TeDirLite = moving ? (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")) : e.dir;
           const frameIdx = moving ? walkFrames[Math.floor((clock / 1000) * TE_ANIMS.walk.fps) % walkFrames.length] : 1;
           const sets = e.sets;
+          const bub = bubblesRef.current.get(liveId);
+          labels.push({
+            key: `o${liveId}`, x: e.cx * T + T / 2 - camX, y: e.cy * T - camY - 13, name: e.name,
+            bubble: bub && bub.until > Date.now() ? bub.text : undefined, emote: e.emote && e.emote.until > Date.now() ? e.emote.icon : undefined,
+          });
           sprites.push({
             base: e.cy * T + T,
             draw: () => {
               const sx = e.cx * T - camX + T / 2;
               const sy = e.cy * T - camY;
               drawTeFrame(ctx, layersFor(sets, dir), frameIdx, dir, sx - 24, sy - 16, 1);
-              ctx.font = "bold 5px sans-serif";
-              ctx.textAlign = "center";
-              ctx.lineWidth = 1.5;
-              ctx.strokeStyle = "rgba(0,0,0,0.85)";
-              ctx.strokeText(e.name, sx, sy - 6);
-              ctx.fillStyle = "#fde68a";
-              ctx.fillText(e.name, sx, sy - 6);
-              ctx.textAlign = "start";
-              if (e.emote && e.emote.until > Date.now()) drawEmote(ctx, e.emote.icon, sx, sy - 12);
+              void sx; void sy;
             },
           });
         }
@@ -631,18 +742,51 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         sprites.sort((a, b) => a.base - b.base);
         for (const s of sprites) s.draw();
 
-        // Sprechblasen (über allen Figuren)
-        const nowMs = Date.now();
-        for (const [id, b] of bubblesRef.current) {
-          if (b.until < nowMs) { bubblesRef.current.delete(id); continue; }
-          const mine = id === myCardIdRef.current;
-          const e = liveRef.current.get(id);
-          if (e && e.scene !== (g.scene ?? -1)) continue;
-          const bx = mine ? fx * T + T / 2 - camX : e ? e.cx * T + T / 2 - camX : null;
-          const by = mine ? fy * T - camY - 18 : e ? e.cy * T - camY - 20 : null;
-          if (bx !== null && by !== null) drawBubble(ctx, b.text, bx, by, canvas.width);
+        // Lichtschein von Kerzen, Lampen, Feuern: drinnen immer, draußen abends/nachts (leichtes Flackern)
+        {
+          const dark = map.theme === "inside" ? 1 : map.theme === "outdoor" ? darkness(berlinHour()) : 0.6;
+          if (dark > 0.05) {
+            ctx.save();
+            ctx.globalCompositeOperation = "lighter";
+            for (const st of map.stamps) {
+              const def = STAMPS[st.id] as StampDef;
+              if (!def.glow) continue;
+              const cx = st.x * T + (def.w * T) / 2 + (def.glow.dx ?? 0) - camX;
+              const cy = st.y * T + (def.h * T) / 2 + (def.glow.dy ?? 0) - camY;
+              if (cx < -60 || cy < -60 || cx > vw + 60 || cy > vh + 60) continue;
+              const flick = 0.85 + 0.15 * Math.sin(clock / 130 + st.x * 3.1 + st.y * 1.7) + 0.05 * Math.sin(clock / 47 + st.x);
+              const rad = def.glow.r * flick;
+              const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, rad);
+              grad.addColorStop(0, `rgba(255,190,90,${(0.32 * dark).toFixed(3)})`);
+              grad.addColorStop(1, "rgba(255,150,40,0)");
+              ctx.fillStyle = grad;
+              ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+            }
+            ctx.restore();
+          }
         }
-        if (myEmoteRef.current && myEmoteRef.current.until > nowMs) drawEmote(ctx, myEmoteRef.current.icon, fx * T + T / 2 - camX, fy * T - camY - 14);
+
+        // Beschriftungen (Namen, Sprechblasen, Emotes) als HTML über der Zeichenfläche
+        const nowMs = Date.now();
+        for (const [id, bb] of bubblesRef.current) if (bb.until < nowMs) bubblesRef.current.delete(id);
+        const myBubble = myCardIdRef.current ? bubblesRef.current.get(myCardIdRef.current) : undefined;
+        const myEmote = myEmoteRef.current && myEmoteRef.current.until > nowMs ? myEmoteRef.current.icon : undefined;
+        camRef.current = { x: camX, y: camY };
+        // Interaktions-Hinweise: wen man gerade ansprechen kann, welche Tür man betritt
+        if (!g.dialog && !pausedRef.current) {
+          const tgt = interactTarget(g);
+          if (tgt) labels.push({ key: "hint", x: tgt.x * T + T / 2 - camX, y: tgt.y * T - camY - (tgt.kind === "npc" || tgt.kind === "merchant" ? 16 : 3), hint: coarse.current ? `💬 ${tgt.name}` : `E · ${tgt.name}` });
+          else {
+            const di = doorAhead(g);
+            if (di >= 0) { const f = doorFront(world.map.buildings[di]); labels.push({ key: "hint", x: f.x * T + T / 2 - camX, y: (f.y - 1) * T - camY, hint: coarse.current ? "🚪 Eintreten" : "↑ Eintreten" }); }
+            else if (g.scene !== null) {
+              const it = world.map.buildings[g.scene]?.interior;
+              if (it && g.px === it.exitX && g.py === it.rows - 2) labels.push({ key: "hint", x: it.exitX * T + T / 2 - camX, y: (it.rows - 1) * T - camY, hint: coarse.current ? "🚪 Hinaus" : "↓ Hinaus" });
+            }
+          }
+        }
+        if (myBubble || myEmote) labels.push({ key: "me", x: fx * T + T / 2 - camX, y: fy * T - camY - 13, bubble: myBubble?.text, emote: myEmote });
+        if (labelLayerRef.current) syncLabels(labelLayerRef.current, labelCache.current, labels, canvas.width, canvas.height);
 
         // Wetter (nur draußen)
         if (map.theme === "outdoor") {
@@ -669,24 +813,113 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   }, [world, othersKey, VIEW_W, VIEW_H]);
 
   const dialog = ui.dialog;
-  const hold = (d: Dir | null) => (e: React.PointerEvent) => {
-    e.preventDefault();
-    heldRef.current = d ? [d] : [];
-    if (d) tapRef.current = d;
+
+  const STICK_START = 14;
+  const STICK_SPRINT = 80;
+  const releaseStick = () => { heldRef.current = []; sprintStick.current = false; setStick(null); };
+  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (pausedRef.current) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.current.size === 2) {
+      // Zwei Finger: Zoom statt Laufen
+      const [a, b] = [...ptrs.current.values()];
+      pinch.current = { d: Math.hypot(a.x - b.x, a.y - b.y), z: zoom };
+      gesture.current = null;
+      releaseStick();
+      return;
+    }
+    gesture.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, t: performance.now(), stick: false };
   };
+  const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (ptrs.current.has(e.pointerId)) ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.current && ptrs.current.size >= 2) {
+      const [a, b] = [...ptrs.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const target = pinch.current.z * (d / Math.max(1, pinch.current.d));
+      setZoom(() => target);
+      return;
+    }
+    const gs = gesture.current;
+    if (!gs || gs.id !== e.pointerId || pausedRef.current) return;
+    const dx = e.clientX - gs.sx;
+    const dy = e.clientY - gs.sy;
+    const dist = Math.hypot(dx, dy);
+    if (!gs.stick && dist < STICK_START) return;
+    if (!gs.stick) {
+      gs.stick = true;
+      if (gameRef.current) { gameRef.current.path = []; gameRef.current.goal = null; }
+    }
+    // Joystick: Richtung nach der stärkeren Achse; weit ziehen = sprinten
+    const dir: Dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+    heldRef.current = [dir];
+    sprintStick.current = dist > STICK_SPRINT;
+    const rect = frameRef.current?.getBoundingClientRect();
+    if (rect) {
+      const cl = Math.min(1, 44 / Math.max(1, dist));
+      setStick({ ox: gs.sx - rect.left, oy: gs.sy - rect.top, x: gs.sx - rect.left + dx * cl, y: gs.sy - rect.top + dy * cl });
+    }
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const gs = gesture.current;
+    ptrs.current.delete(e.pointerId);
+    if (pinch.current) { if (ptrs.current.size < 2) pinch.current = null; gesture.current = null; return; }
+    if (!gs || gs.id !== e.pointerId) return;
+    gesture.current = null;
+    if (gs.stick) { releaseStick(); return; }
+    // Kurzer Tipp/Klick: zu dieser Kachel laufen (Akteure = hingehen + ansprechen, Gebäude = hinein)
+    const canvas = canvasRef.current;
+    const g = gameRef.current;
+    if (!canvas || !g || pausedRef.current || performance.now() - gs.t > 600) return;
+    const rect = canvas.getBoundingClientRect();
+    const lx = ((e.clientX - rect.left) / rect.width) * canvas.width + camRef.current.x;
+    const ly = ((e.clientY - rect.top) / rect.height) * canvas.height + camRef.current.y;
+    const tx = Math.floor(lx / T);
+    const ty = Math.floor(ly / T);
+    // Ein Akteur wird auch angeklickt, wenn man auf seine Figur (über der Kachel) tippt
+    const hit = g.map.actors.find((a) => a.x === tx && (a.y === ty || (a.kind !== "chest" && a.kind !== "sign" && a.y === ty + 1)));
+    walkTo(g, hit ? hit.x : tx, hit ? hit.y : ty);
+  };
+  const onPointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    ptrs.current.delete(e.pointerId);
+    pinch.current = null;
+    gesture.current = null;
+    releaseStick();
+  };
+  // Strg + Mausrad zoomt (ohne Strg bleibt das Seiten-Scrollen unberührt)
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const wheel = (e: WheelEvent) => { if (!e.ctrlKey) return; e.preventDefault(); setZoom((z) => z * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [setZoom]);
 
   return (
-    <div className="space-y-2 max-w-[960px] mx-auto">
-      <div className="relative rounded-2xl overflow-hidden moba-panel bg-[#0b1524]" style={{ touchAction: "none" }}>
+    <div ref={wrapRef} className="space-y-2 w-full max-w-[1800px] mx-auto">
+      <div ref={frameRef} className="relative overflow-hidden oq-panel bg-[#0b1524] select-none" style={{ touchAction: "none" }}>
         <canvas
           ref={canvasRef}
           width={VIEW_W * T}
           height={VIEW_H * T}
           className="block w-full h-auto"
-          style={{ imageRendering: "pixelated", aspectRatio: `${VIEW_W} / ${VIEW_H}` }}
+          style={{ imageRendering: "pixelated", aspectRatio: `${VIEW_W} / ${VIEW_H}`, touchAction: "none", cursor: "pointer" }}
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
           role="img"
           aria-label={world.title}
         />
+        {stick && (
+          <div className="absolute inset-0 z-20 pointer-events-none" aria-hidden>
+            <div className="absolute w-24 h-24 -ml-12 -mt-12 rounded-full border-4 border-white/35 bg-white/10" style={{ left: stick.ox, top: stick.oy }} />
+            <div className="absolute w-11 h-11 -ml-[22px] -mt-[22px] rounded-full bg-violet-500/80 border-2 border-white/70" style={{ left: stick.x, top: stick.y }} />
+          </div>
+        )}
+
+        <div ref={labelLayerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-10" aria-hidden />
+        <GameFeed items={feed ?? []} />
+        {dice && <DiceOverlay ability={dice.ability} dc={dice.dc} roll={dice.roll} onDone={() => { diceDone.current?.(); diceDone.current = null; }} />}
+        {hud && !ui.dialog && <div className="absolute left-2 bottom-2 z-10 pointer-events-none">{hud}</div>}
+        {overlay}
 
         {/* Verfolgte Quests */}
         {ui.tracker.length > 0 && (
@@ -762,40 +995,15 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         )}
       </div>
 
-      {/* Steuerung: Tasten am Rechner, Kreuz + Aktionstaste am Handy */}
-      <div className="flex items-center justify-between gap-4 sm:justify-center">
-        <div className="grid grid-cols-3 gap-1 w-[132px] select-none" aria-label="Steuerkreuz">
-          {([
-            [null, "up", null],
-            ["left", null, "right"],
-            [null, "down", null],
-          ] as (Dir | null)[][]).flat().map((d, i) =>
-            d ? (
-              <button
-                key={i}
-                type="button"
-                aria-label={{ up: "Hoch", down: "Runter", left: "Links", right: "Rechts" }[d]}
-                onPointerDown={hold(d)}
-                onPointerUp={hold(null)}
-                onPointerLeave={hold(null)}
-                onPointerCancel={hold(null)}
-                className="h-10 rounded-lg bg-black/40 border border-white/10 text-white text-lg active:bg-violet-600/60"
-              >
-                {{ up: "↑", down: "↓", left: "←", right: "→" }[d]}
-              </button>
-            ) : <span key={i} />,
-          )}
+      {/* Bedienung: Klick/Tippen zum Laufen, Ziehen = Joystick, WASD/Pfeile, Shift = Sprint, E = Ansprechen */}
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        {extraControls}
+        <div className="flex items-center gap-1" role="group" aria-label="Zoom">
+          <button type="button" onClick={() => setZoom((z) => z / 1.25)} aria-label="Herauszoomen" className="oq-btn h-9 w-9 text-base grid place-items-center">−</button>
+          <button type="button" onClick={() => setZoom((z) => z * 1.25)} aria-label="Hineinzoomen" className="oq-btn h-9 w-9 text-base grid place-items-center">+</button>
         </div>
-        <button
-          type="button"
-          onClick={action}
-          className="h-14 w-14 rounded-full bg-violet-600 text-white font-black text-lg shadow-lg active:bg-violet-500"
-          aria-label="Aktion"
-        >
-          A
-        </button>
-        <p className="hidden sm:block text-[11px] text-gray-500 max-w-[200px]">
-          Pfeiltasten oder WASD zum Laufen, Leertaste/E zum Ansprechen und Öffnen.
+        <p className="hidden md:block text-[11px] text-gray-500 max-w-[520px] text-center">
+          Klicken oder Tippen zum Laufen (auf Personen zum Ansprechen, auf Häuser zum Eintreten) · WASD/Pfeile · Shift sprintet · E/Leertaste spricht an · Ziehen bewegt wie ein Joystick · Strg + Mausrad oder zwei Finger zoomen
         </p>
       </div>
     </div>

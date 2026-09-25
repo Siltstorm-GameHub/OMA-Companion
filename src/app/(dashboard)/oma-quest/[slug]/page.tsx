@@ -10,7 +10,7 @@ export default async function QuestLocationPage({ params }: { params: Promise<{ 
 
   const { slug } = await params;
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-[1800px] mx-auto">
       <QuestWorld slug={slug} />
     </div>
   );

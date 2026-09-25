@@ -20,6 +20,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const text = typeof body?.text === "string" ? body.text.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_LEN) : "";
   if (!text) return NextResponse.json({ error: "Leere Nachricht" }, { status: 400 });
 
+  // Moderation: stummgeschaltet? keine Links/Einladungen
+  const mute = await prisma.dndChatMute.findUnique({ where: { cardId: at.card.id } });
+  if (mute && mute.until > new Date()) {
+    return NextResponse.json({ error: `Du bist im Chat stummgeschaltet (bis ${mute.until.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })} Uhr, ${mute.until.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" })}).` }, { status: 403 });
+  }
+  if (/https?:\/\/|www\.|discord\.gg|\.(com|de|net|org|gg)\b/i.test(text)) return NextResponse.json({ error: "Links und Einladungen sind im Chat nicht erlaubt." }, { status: 400 });
+
   const last = await prisma.dndChatMessage.findFirst({ where: { cardId: at.card.id }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
   if (last && Date.now() - last.createdAt.getTime() < MIN_GAP_MS) return NextResponse.json({ error: "Nicht so schnell." }, { status: 429 });
 

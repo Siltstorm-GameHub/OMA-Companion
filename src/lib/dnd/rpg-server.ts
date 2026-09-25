@@ -28,6 +28,8 @@ export interface CharacterSheet {
   xpForNextLevel: number;
   progress: number;
   gold: number;
+  /** OMA-Münzen des Kontos (App-Währung), nur von der Sheet-API ergänzt */
+  coins?: number;
   abilities: { key: Ability; score: number; mod: number; equipment: number }[];
   inventory: InventoryEntry[];
   flags: string[];

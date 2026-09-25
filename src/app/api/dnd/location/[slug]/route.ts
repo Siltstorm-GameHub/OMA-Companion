@@ -7,6 +7,7 @@ import { completeVisitSteps, ensureDndQuestsSeeded, getWorldQuestSteps } from "@
 import { getTracker } from "@/lib/dnd/quest-log";
 import { getInventory } from "@/lib/dnd/rpg-server";
 import { getBuilderAccess } from "@/lib/dnd/custom-worlds";
+import { hasMinRole } from "@/lib/roles";
 import { biomeOfTerrain, levelOf } from "@/lib/te-map/rpg";
 import { terrainAt } from "@/lib/dnd/hex/world";
 import { getPublishedCustomWorld } from "@/lib/dnd/custom-worlds";
@@ -53,6 +54,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
 
   const eventLog = await getLocationEventLog(location.id);
+  const modUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, points: true } });
 
   // Quests: Besuchs-Schritte, die hier spielen, zählen jetzt; danach Stand aller Quests dieser Welt + HUD-Liste
   let visits: Awaited<ReturnType<typeof completeVisitSteps>> = [];
@@ -81,6 +83,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     visits,
     biome: biomeOfTerrain(terrainAt({ col: location.hexCol, row: location.hexRow })),
     isGm: (await getBuilderAccess(session.user.id)).allowed,
+    isMod: !!modUser && hasMinRole(modUser.role, "moderator"),
+    coins: modUser?.points ?? 0,
     rpg: canEnter && myCard
       ? {
           flags: Array.isArray(myCard.dndFlags) ? (myCard.dndFlags as unknown[]).filter((f) => typeof f === "string") : [],

@@ -1,0 +1,80 @@
+/* ============================================
+   OMA Quest — Spiel-Look (Panels, Buttons, Meldungen)
+   Gilt nur unter .oq-skin (siehe app/(dashboard)/oma-quest/layout.tsx); der Rest der App bleibt unberührt.
+   ============================================ */
+
+.oq-skin .oq-panel {
+  position: relative;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #151d2e 0%, #0b1019 100%);
+  border: 2px solid #4a3b1c;
+  box-shadow: inset 0 0 0 1px #8a6d2f55, inset 0 1px 0 #ffffff14, 0 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Kleine Kopfzeile eines Panels */
+.oq-skin .oq-title {
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f5cf6b;
+  text-shadow: 0 1px 0 #3a1c02;
+}
+
+.oq-skin .oq-btn {
+  border: 2px solid #6b5526;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #2a3a58 0%, #1a2540 100%);
+  color: #f3e7c4;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #0a0f18, inset 0 1px 0 #ffffff26;
+  transition: transform 0.06s ease, filter 0.12s ease;
+}
+.oq-skin .oq-btn:hover:not(:disabled) { filter: brightness(1.15); }
+.oq-skin .oq-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #0a0f18, inset 0 1px 0 #ffffff26; }
+.oq-skin .oq-btn:disabled { opacity: 0.45; }
+.oq-skin .oq-btn-primary { background: linear-gradient(180deg, #8a4fe0 0%, #5a2fb0 100%); border-color: #c4a6ff; color: #fff; }
+.oq-skin .oq-btn-gold { background: linear-gradient(180deg, #f2bd49 0%, #c48a1a 100%); border-color: #ffe08a; color: #2a1a02; }
+
+/* Meldungen im Spiel: kurz einfahren */
+@keyframes oq-feed-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.oq-skin .oq-feed { animation: oq-feed-in 0.22s ease-out; }
+
+/* Slots im Inventar */
+.oq-skin .oq-slot {
+  border-radius: 5px;
+  border: 2px solid #3a3020;
+  background: radial-gradient(120% 100% at 50% 0%, #1b2438 0%, #0b1019 100%);
+  box-shadow: inset 0 0 0 1px #00000088;
+}
+.oq-skin .oq-slot-on { border-color: #f2bd49; box-shadow: inset 0 0 0 1px #00000088, 0 0 8px #f2bd4966; }
+
+/* Würfel */
+@keyframes oq-dice-tumble {
+  0% { transform: translateY(-30px) rotate(0deg) scale(0.8); }
+  20% { transform: translateY(8px) rotate(160deg) scale(1.05); }
+  40% { transform: translateY(-14px) rotate(300deg) scale(1); }
+  60% { transform: translateY(4px) rotate(470deg) scale(1.02); }
+  80% { transform: translateY(-6px) rotate(620deg) scale(1); }
+  100% { transform: translateY(0) rotate(720deg) scale(1); }
+}
+@keyframes oq-dice-shake {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-14deg) translateY(-4px); }
+  75% { transform: rotate(14deg) translateY(-2px); }
+}
+@keyframes oq-dice-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+.oq-skin .oq-dice-shake { animation: oq-dice-shake 0.28s ease-in-out infinite; }
+.oq-skin .oq-dice-tumble { animation: oq-dice-tumble 1.15s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+.oq-skin .oq-dice-pop { animation: oq-dice-pop 0.4s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .oq-skin .oq-feed, .oq-skin .oq-dice-shake, .oq-skin .oq-dice-tumble, .oq-skin .oq-dice-pop { animation: none; }
+}

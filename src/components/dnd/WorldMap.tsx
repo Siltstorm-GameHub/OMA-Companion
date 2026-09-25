@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { useNotice } from "@/components/te-map/play/GameFeed";
 import { Loader2, Minus, Plus } from "@/components/icons";
 import { hexCenter, hexCorners, pointToHex, sameHex, type Hex } from "@/lib/dnd/hex/grid";
 import { planTravel, positionAlongPath } from "@/lib/dnd/hex/pathfinding";
@@ -145,6 +145,7 @@ function LocationBadge({ slug, name, highlighted }: { slug: string; name: string
 }
 
 export default function WorldMap({ myCardId }: { myCardId: string | null }) {
+  const { notify, node: noticeNode } = useNotice();
   const [locations, setLocations] = useState<DndLocationRow[] | null>(null);
   const [characters, setCharacters] = useState<DndCharacterRow[]>([]);
   const [clockOffset, setClockOffset] = useState(0); // Serverzeit − Clientzeit (ms)
@@ -364,10 +365,10 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Reise konnte nicht gestartet werden.");
-      toast.success(`Reise gestartet — Ankunft in ${formatDuration(json.totalMinutes)}`);
+      notify("info", `Reise gestartet — Ankunft in ${formatDuration(json.totalMinutes)}`);
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unbekannter Fehler.");
+      notify("error", e instanceof Error ? e.message : "Unbekannter Fehler.");
     } finally {
       setBusy(false);
     }
@@ -379,10 +380,10 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
       const res = await fetch("/api/dnd/character/travel/cancel", { method: "POST" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Reise konnte nicht abgebrochen werden.");
-      toast.success("Reise abgebrochen — du bleibst auf dem Feld stehen.");
+      notify("info", "Reise abgebrochen — du bleibst auf dem Feld stehen.");
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Unbekannter Fehler.");
+      notify("error", e instanceof Error ? e.message : "Unbekannter Fehler.");
     } finally {
       setBusy(false);
     }
@@ -414,9 +415,10 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
 
   return (
     <div className="space-y-3">
+      {noticeNode}
       <div
         ref={boxRef}
-        className="relative w-full h-[62vh] min-h-[380px] rounded-2xl overflow-hidden moba-panel select-none bg-[#0b1524]"
+        className="relative w-full h-[62vh] min-h-[380px] overflow-hidden oq-panel select-none bg-[#0b1524]"
         style={{ touchAction: "none", cursor: dragging ? "grabbing" : "grab" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -527,7 +529,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
       )}
 
       {/* Info-Panel zum gewählten Feld */}
-      <div className="moba-panel rounded-2xl p-4 space-y-2 min-h-[92px]">
+      <div className="oq-panel p-4 space-y-2 min-h-[92px]">
         {!selected || !selectedTerrain ? (
           <p className="text-xs text-gray-500">
             Reiseziele sind die goldenen Felder — tippe eine Location an, um die Reise zu planen.

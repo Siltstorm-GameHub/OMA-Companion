@@ -67,12 +67,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     take: MAX_OTHERS,
   });
   const chatSince = parseSince(body?.chatSince, 5 * 60_000);
-  const [chat, events] = await Promise.all([
-    prisma.dndChatMessage.findMany({ where: { locationSlug: slug, createdAt: { gt: chatSince } }, orderBy: { createdAt: "asc" }, take: 30 }),
+  const [chat, hiddenRows, events] = await Promise.all([
+    prisma.dndChatMessage.findMany({ where: { locationSlug: slug, createdAt: { gt: chatSince }, hidden: false }, orderBy: { createdAt: "asc" }, take: 30 }),
+    prisma.dndChatMessage.findMany({ where: { locationSlug: slug, hidden: true, hiddenAt: { gt: new Date(Date.now() - 10 * 60_000) } }, select: { id: true }, take: 50 }),
     newEventsFor(slug, parseSince(body?.eventsSince, 10 * 60_000)),
   ]);
-  const chatOut = chat.map((m) => ({ id: m.id, cardId: m.cardId, name: m.name, text: m.text, createdAt: m.createdAt.toISOString() }));
-  if (!rows.length) return NextResponse.json({ others: [], chat: chatOut, events });
+  const reportCounts = chat.length ? await prisma.dndChatReport.groupBy({ by: ["messageId"], where: { messageId: { in: chat.map((m) => m.id) } }, _count: { _all: true } }) : [];
+  const reports = new Map(reportCounts.map((r) => [r.messageId, r._count._all]));
+  const chatOut = chat.map((m) => ({ id: m.id, cardId: m.cardId, name: m.name, text: m.text, createdAt: m.createdAt.toISOString(), reports: reports.get(m.id) ?? 0 }));
+  const hiddenChat = hiddenRows.map((h) => h.id);
+  if (!rows.length) return NextResponse.json({ others: [], chat: chatOut, hiddenChat, events });
 
   const cards = await prisma.card.findMany({
     where: { id: { in: rows.map((r) => r.cardId) } },
@@ -91,6 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       return c && character ? [{ id: r.cardId, name: c.name, x: r.x, y: r.y, dir: r.dir, scene: r.scene, character, emote: emoteLive, avatarUrl: c.linkedDiscordId ? avatarByDiscord.get(c.linkedDiscordId) ?? null : null }] : [];
     }),
     chat: chatOut,
+    hiddenChat,
     events,
   });
 }

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useGameFeed } from "@/components/te-map/play/GameFeed";
 import { Loader2 } from "@/components/icons";
 import TeWorld from "@/components/te-map/TeWorld";
 import { defaultTeConfig } from "@/lib/te-character";
@@ -44,6 +45,7 @@ export default function WorldEditor({ id }: { id: string }) {
   const [tab, setTab] = useState<Tab>("map");
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState<"save" | "publish" | null>(null);
+  const { items: testFeed, push: testNotify } = useGameFeed();
   const [focusActor, setFocusActor] = useState<string | null>(null);
   const history = useRef<CustomWorldDoc[]>([]);
   const future = useRef<CustomWorldDoc[]>([]);
@@ -228,6 +230,8 @@ export default function WorldEditor({ id }: { id: string }) {
             character={defaultTeConfig()}
             initialSteps={{}}
             tracker={[]}
+            feed={testFeed}
+            notify={testNotify}
             others={[]}
             onChoose={async ({ actor, talk, choice }) => {
               // Probelauf: würfelt lokal mit Durchschnittswerten (Wert 12, Stufe 1); nichts wird gespeichert

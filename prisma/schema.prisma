@@ -2098,14 +2098,36 @@ model DndPresence {
 
 // Chat in einer Location (Sprechblasen + Verlauf), nur kurz aufbewahrt
 model DndChatMessage {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   locationSlug String
   cardId       String
   name         String
   text         String
-  createdAt    DateTime @default(now())
+  hidden       Boolean   @default(false) // von der Moderation ausgeblendet
+  hiddenAt     DateTime?
+  createdAt    DateTime  @default(now())
 
   @@index([locationSlug, createdAt])
+}
+
+// Stummschaltung eines Charakters im Chat (Moderation)
+model DndChatMute {
+  cardId    String   @id
+  until     DateTime
+  reason    String?
+  byName    String
+  createdAt DateTime @default(now())
+}
+
+// Meldung einer Chat-Nachricht durch einen Spieler
+model DndChatReport {
+  id             String   @id @default(cuid())
+  messageId      String
+  reporterCardId String
+  createdAt      DateTime @default(now())
+
+  @@unique([messageId, reporterCardId])
+  @@index([messageId])
 }
 
 // Gruppe (Party): bis zu 4 Charaktere, teilen sich XP für Welt-Quests, wenn sie am selben Ort sind

@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import type { LogQuest } from "@/lib/dnd/quest-log";
 
 interface Log { active: LogQuest[]; available: LogQuest[]; completed: LogQuest[] }
@@ -45,7 +45,8 @@ function Steps({ q }: { q: LogQuest }) {
   );
 }
 
-export default function QuestLog() {
+export default function QuestLog({ notify }: { notify?: Notify } = {}) {
+  const { notify: say, node } = useNotice(notify);
   const [log, setLog] = useState<Log | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -69,8 +70,8 @@ export default function QuestLog() {
     try {
       const res = await fetch(`/api/dnd/quests/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(json.error ?? "Fehlgeschlagen."); return; }
-      if (ok) toast.success(ok);
+      if (!res.ok) { say("error", json.error ?? "Fehlgeschlagen."); return; }
+      if (ok) say("info", ok);
       setReload((n) => n + 1);
     } finally {
       setBusy(false);
@@ -83,22 +84,23 @@ export default function QuestLog() {
   return (
     <section className="space-y-3">
       <h2 className="font-battle text-sm text-white">Quests</h2>
+      {node}
 
       <div className="space-y-2">
         <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Laufend ({log.active.length})</p>
         {log.active.length === 0 ? (
-          <p className="text-xs text-gray-500 moba-panel rounded-2xl p-4">Keine laufende Quest. Sprich in einer Location mit den Bewohnern oder nimm unten eine Aktivitäts-Quest an.</p>
+          <p className="text-xs text-gray-500 oq-panel p-4">Keine laufende Quest. Sprich in einer Location mit den Bewohnern oder nimm unten eine Aktivitäts-Quest an.</p>
         ) : log.active.map((q) => (
-          <div key={q.id} className="moba-panel rounded-2xl p-3 space-y-2">
+          <div key={q.id} className="oq-panel p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-bold text-white">{q.title}</p>
               {q.home && <Link href="/oma-quest" className="text-[10px] text-sky-300">{q.home.name}</Link>}
               <Reward q={q} />
               <div className="ml-auto flex gap-1.5">
-                <button type="button" disabled={busy} onClick={() => void act(q.id, q.tracked ? "untrack" : "track")} className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${q.tracked ? "border-amber-300/50 text-amber-200" : "border-white/15 text-gray-300"}`}>
+                <button type="button" disabled={busy} onClick={() => void act(q.id, q.tracked ? "untrack" : "track")} className={`oq-btn px-2.5 py-1 text-[11px] ${q.tracked ? "oq-btn-gold" : ""}`}>
                   {q.tracked ? "★ Verfolgt" : "☆ Verfolgen"}
                 </button>
-                <button type="button" disabled={busy} onClick={() => { if (window.confirm(`„${q.title}“ abbrechen? Der Fortschritt geht verloren.`)) void act(q.id, "abandon", "Quest abgebrochen"); }} className="rounded-lg border border-red-400/30 text-red-300 px-2.5 py-1 text-[11px] font-semibold hover:bg-red-500/10">Abbrechen</button>
+                <button type="button" disabled={busy} onClick={() => { if (window.confirm(`„${q.title}“ abbrechen? Der Fortschritt geht verloren.`)) void act(q.id, "abandon", "Quest abgebrochen"); }} className="oq-btn px-2.5 py-1 text-[11px]">Abbrechen</button>
               </div>
             </div>
             <Steps q={q} />
@@ -110,13 +112,13 @@ export default function QuestLog() {
         <div className="space-y-2">
           <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Verfügbar ({log.available.length})</p>
           {log.available.map((q) => (
-            <div key={q.id} className="moba-panel rounded-2xl p-3 flex flex-wrap items-center gap-3">
+            <div key={q.id} className="oq-panel p-3 flex flex-wrap items-center gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-white">{q.title}</p>
                 <p className="text-[11px] text-gray-400">{q.description}</p>
                 <Reward q={q} />
               </div>
-              <button type="button" disabled={busy} onClick={() => void act(q.id, "accept", "Quest angenommen")} className="ml-auto rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3 py-1.5">Annehmen</button>
+              <button type="button" disabled={busy} onClick={() => void act(q.id, "accept", "Quest angenommen")} className="ml-auto oq-btn oq-btn-primary text-xs px-3 py-1.5">Annehmen</button>
             </div>
           ))}
         </div>

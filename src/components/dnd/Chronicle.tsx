@@ -27,7 +27,7 @@ export default function Chronicle() {
   }, []);
   if (!entries || entries.length === 0) return null;
   return (
-    <section className="moba-panel rounded-2xl p-4 space-y-2">
+    <section className="oq-panel p-4 space-y-2">
       <p className="text-[10px] font-semibold text-violet-400 uppercase tracking-widest">Heute im Reich</p>
       <ul className="space-y-1">
         {entries.map((e) => (
