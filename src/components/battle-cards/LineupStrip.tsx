@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import MobaIcon from "./MobaIcon";
+import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import { TE_CROP_FIGURE } from "@/lib/te-character";
 
@@ -35,12 +36,12 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
               className="card-cut-sm relative flex-1 aspect-[3/4] overflow-hidden"
               style={{
                 background: `linear-gradient(160deg, ${classConfig.color}3a, rgba(12,12,16,0.92))`,
-                boxShadow: `0 0 0 1.5px ${borderColor}`,
+                boxShadow: rarityFrame(entry.card.rarity, borderColor, { glow: 6 }),
               }}
             >
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`absolute inset-x-0 bottom-11 flex items-center justify-center ${isCommunity(entry.card.rarity) ? "top-4" : "top-1"}`}>
                 {entry.card.teCharacter ? (
-                  <TeCharacter config={entry.card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={2} className="max-h-full w-auto" title={entry.card.name} />
+                  <TeCharacter config={entry.card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={entry.card.name} />
                 ) : entry.card.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={entry.card.imageUrl} alt={entry.card.name} className="w-full h-full object-cover" />
@@ -48,6 +49,8 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                   <img src={classConfig.icon} alt="" aria-hidden className="w-4 h-4 object-contain" style={{ opacity: 0.65 }} />
                 )}
               </div>
+              {isCommunity(entry.card.rarity) && <CommunityRibbon compact />}
+              <CardPlate card={entry.card} level={entry.level} levelColor={borderColor} compact />
             </div>
           );
         })}

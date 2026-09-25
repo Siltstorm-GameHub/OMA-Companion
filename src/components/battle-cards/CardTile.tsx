@@ -12,6 +12,7 @@ import { getClassConfig, LEVEL_BORDER, MOBA_CARD_FRAME_IMAGE, type BattleCardDat
 import { tableValueForLevel, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";
+import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import { TE_CROP_FIGURE } from "@/lib/te-character";
 
@@ -149,16 +150,14 @@ export default function CardTile({
           // MOBA-Skin: ein Rahmen-Asset für alle Stufen (s. BattleCardView) — die
           // Rarität zeigt sich über einen stufenfarbigen Glow statt über je ein
           // eigenes Rahmenbild pro Stufe.
-          boxShadow: locked
-            ? `0 0 0 1.5px ${borderColor}`
-            : `0 4px 14px rgba(0,0,0,0.55), 0 0 ${level >= 5 ? 16 : 8}px ${borderColor}66`,
+          boxShadow: rarityFrame(card.rarity, borderColor, { locked, glow: level >= 5 ? 16 : 8 }),
           opacity: locked ? 0.5 : 1,
           filter: locked ? "grayscale(0.9)" : undefined,
         }}
       >
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className={`absolute inset-x-0 bottom-12 flex items-center justify-center ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}>
           {card.teCharacter ? (
-            <TeCharacter config={card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={3} className="max-h-full w-auto" title={card.name} />
+            <TeCharacter config={card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={card.name} />
           ) : card.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
@@ -180,26 +179,11 @@ export default function CardTile({
           />
         )}
 
-        {/* Namensschild als Teil der Karte selbst (Verlaufs-Banner über dem
-            unteren Artwork-Rand) statt separater Textzeile darunter — die
-            Karte soll wie EIN Objekt wirken, nicht wie Bild + schwebender
-            Titel. Level-Chip liegt darüber, damit beides nebeneinander lesbar
-            bleibt. */}
-        <div className="absolute inset-x-0 bottom-0 z-[6] pt-5 pb-1 px-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none">
-          <p className={`font-battle text-[10px] leading-tight truncate text-center ${locked ? "text-gray-500" : "text-white"}`}>
-            {card.name}
-          </p>
-        </div>
-        {!locked && (
-          <span
-            className="absolute bottom-1 left-1 z-[7] text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"
-            style={{ color: borderColor }}
-          >
-            Lv.{level}
-          </span>
-        )}
+        {/* Namensschild (Name, Klasse, Level) und Community-Band */}
+        {isCommunity(card.rarity) && <CommunityRibbon />}
+        <CardPlate card={card} level={level} levelColor={borderColor} locked={locked} />
         {!locked && typeof duplicates === "number" && (
-          <span className="absolute top-1 right-1 z-[7] text-[9px] font-bold leading-none px-1.5 py-1 rounded-full bg-black/70 backdrop-blur-sm text-violet-300">
+          <span className={`absolute right-1 z-[9] text-[9px] font-bold leading-none px-1.5 py-1 rounded-full bg-black/70 backdrop-blur-sm text-violet-300 ${isCommunity(card.rarity) ? "top-5" : "top-1"}`}>
             ×{duplicates}
           </span>
         )}
