@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { BRANCHES, canUnlock, sanitizeSkills, skillEffects, skillPointsLeft, treeOf } from "./skills";
 import { DND_CLASSES } from "./classes";
-import { abilitiesOf, buildFighter, getMonster, performAction, startCombat } from "./combat";
+import { slotAbilities, buildFighter, getMonster, performAction, startCombat } from "./combat";
 
 const mods = { str: 3, dex: 2, con: 2, int: 0, wis: 0, cha: 0 };
 const seq = (...v: number[]) => { let i = 0; return () => v[Math.min(i++, v.length - 1)]; };
@@ -37,7 +37,7 @@ describe("skills", () => {
     assert.equal(fx.hit, 1);
     assert.equal(fx.dmg, 2);
     assert.equal(fx.hp, 8);
-    assert.equal(fx.second, true);
+    assert.equal(fx.slots, 1);
     assert.deepEqual(sanitizeSkills("magier", ["offense2", "offense2", "x", 5]), ["offense2"]);
   });
 
@@ -47,16 +47,17 @@ describe("skills", () => {
     assert.equal(skilled.maxHp, base.maxHp + 20);
     assert.equal(skilled.ac, base.ac + 1);
     assert.equal(skilled.critMin, 19);
-    assert.equal(abilitiesOf(base).second, null);
-    assert.ok(abilitiesOf(skilled).second);
+    assert.equal(slotAbilities(base).length, 1);
+    assert.equal(slotAbilities(skilled).length, 3);
 
-    // Zweite Fähigkeit nutzbar, hat eigene Abklingzeit; Klassenfähigkeit bleibt frei
+    // Fähigkeit II (Zerfleischen) ist nutzbar, hat eigene Abklingzeit; Fähigkeit I bleibt frei
     let s = startCombat(getMonster("golem")!, skilled);
     s = performAction(s, "ability2", seq(0.99, 0.5, 0.5, 0.5)).state;
-    assert.ok(s.log.some((l) => l.includes("Wirbelschlag")));
-    assert.equal(s.round, 2); // 3 AP verbraucht: Monster war dran, Abklingzeit 1 → 0
+    assert.ok(s.log.some((l) => l.includes("Zerfleischen")));
+    assert.equal(s.cooldowns.zerfleischen, 2);
     assert.equal(s.cooldowns.kraftschlag, undefined);
-    assert.ok(performAction(base && startCombat(getMonster("golem")!, base), "ability2").error);
+    assert.ok(performAction(startCombat(getMonster("golem")!, base), "ability2").error);
+    assert.ok(performAction(startCombat(getMonster("golem")!, skilled), "ability4").error);
 
     // Regeneration zu Rundenbeginn
     const regen = { ...startCombat(getMonster("ratte")!, skilled), hp: 10 };
@@ -64,9 +65,11 @@ describe("skills", () => {
     assert.ok(after.log.some((l) => l.includes("erholst")));
   });
 
-  test("Abklingzeit-Talent verkürzt auf 1 Runde", () => {
-    const f = buildFighter({ name: "T", classId: "magier", level: 3, mods, critMin: 20, rerollFumble: false, fx: skillEffects("magier", ["art1"]) });
-    const s = performAction(startCombat(getMonster("golem")!, f), "ability", seq(0.5, 0.5)).state;
-    assert.equal(s.cooldowns.feuerball, 1);
+  test("Klassen-Kunst: Plätze II–IV und Meisterschaft", () => {
+    const all = (ids: string[]) => buildFighter({ name: "T", classId: "magier", level: 9, mods, critMin: 20, rerollFumble: false, fx: skillEffects("magier", ids) });
+    assert.equal(slotAbilities(all(["art1", "art2"])).length, 3);
+    assert.equal(slotAbilities(all(["art1", "art2", "art3"])).length, 4);
+    assert.equal(skillEffects("magier", ["art1", "art2", "art3", "art4"]).mastery, true);
+    assert.equal(skillEffects("magier", ["art1"]).mastery, false);
   });
 });

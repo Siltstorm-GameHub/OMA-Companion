@@ -775,6 +775,32 @@ export default function TournamentManager({
     router.refresh();
   }
 
+  /** Spieler aus der Teilnehmerliste zu einem Match hinzufügen oder entfernen (auch bei laufenden Matches). */
+  async function changeMatchPlayer(matchId: string, userId: string, action: "add" | "remove") {
+    if (!tournament) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, userId, action }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      toast.error(e.error ?? "Fehler beim Ändern der Spieler");
+      return;
+    }
+    const added: MatchEntry | null = action === "add" ? await res.json() : null;
+    setTournament(prev => prev ? {
+      ...prev,
+      matches: prev.matches.map(m => m.id !== matchId ? m : {
+        ...m,
+        entries: added ? [...m.entries, added] : m.entries.filter(e => e.userId !== userId),
+      }),
+    } : prev);
+    router.refresh();
+  }
+
   function setFfaField(matchId: string, userId: string, field: string, val: string) {
     setFfaEdits(prev => ({
       ...prev,
@@ -1079,6 +1105,38 @@ export default function TournamentManager({
                           <span>⚠️ {teamError}</span>
                         </div>
                       )}
+                      {(() => {
+                        const inMatch = new Set(match.entries.map(e => e.userId));
+                        const addable = tournament.participants.filter(p => !inMatch.has(p.userId));
+                        return (
+                          <div className="mb-3 space-y-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {match.entries.map(e => {
+                                const u = tournament.participants.find(p => p.userId === e.userId)?.user
+                                  ?? allUsers.find(x => x.id === e.userId);
+                                return (
+                                  <span key={e.id} className="inline-flex items-center gap-1 text-xs bg-gray-800 border border-gray-700 rounded-full pl-2.5 pr-1 py-0.5 text-gray-200">
+                                    {u ? userName(u) : "?"}
+                                    <button type="button" disabled={loading || !e.userId}
+                                      onClick={() => e.userId && changeMatchPlayer(match.id, e.userId, "remove")}
+                                      className="p-0.5 rounded-full text-gray-500 hover:text-red-400 disabled:opacity-40" title="Aus Match entfernen">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            {addable.length > 0 && (
+                              <select value="" disabled={loading}
+                                onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
+                                className="text-xs bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-300">
+                                <option value="">+ Spieler hinzufügen…</option>
+                                {addable.map(p => <option key={p.userId} value={p.userId}>{userName(p.user)}</option>)}
+                              </select>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {visibleStatFields.length === 0 && !trackMatchWin && !trackPlacement ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.

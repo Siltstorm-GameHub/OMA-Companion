@@ -6,6 +6,7 @@
 
 import type { FxKind } from "./oq-fx-manifest";
 import type { Branch } from "./skills";
+import { ABILITIES, type Element } from "./abilities";
 
 /** Schwebende Zahl bzw. kurzer Text über der Figur (Schaden rot, Heilung grün, kritisch gelb, verfehlt grau). */
 export interface FxFloat { text: string; tone: "dmg" | "crit" | "heal" | "miss" | "info" }
@@ -30,8 +31,9 @@ const HEAL_NUM = [/(?:heilst|wird um|erholst dich um|erholt sich um) (\d+)/, /(\
 export const CLASS_ICON = (classId: string): string => `/oq/class/${["krieger", "paladin", "magier", "kleriker", "schurke", "waldlaeufer", "barde"].includes(classId) ? classId : "krieger"}.png`;
 export const BRANCH_ICON = (b: Branch): string => `/oq/skill/${b}.png`;
 
-/** Effekt für ein Zeichen der Klassenfähigkeit (Zauber-Kennzeichen im Log). */
-const ABILITY_FX: [string, FxKind][] = [["🔥", "fire"], ["❄️", "ice"], ["⚡", "holy"], ["📣", "arcane"], ["🌧️", "arcane"], ["☠️", "crit"]];
+/** Effekt je Element (jedes Element hat eigene Pixel-Grafik). */
+const ELEMENT_FX: Record<Element, FxKind | null> = { physical: null, fire: "fire", ice: "ice", lightning: "lightning", holy: "holy", shadow: "shadow", nature: "nature", sound: "sound", arcane: "arcane" };
+const elementOfLine = (line: string): Element | undefined => ABILITIES.find((a) => line.includes(`${a.icon} ${a.name}`))?.element;
 
 /** Effekt des Standardangriffs je Klasse (jede Klasse sieht anders aus). */
 export const BASIC_ATTACK_FX: Record<string, FxKind> = { krieger: "hit", paladin: "holy", magier: "arcane", kleriker: "holy", schurke: "hit", waldlaeufer: "arrow", barde: "buff" };
@@ -70,7 +72,8 @@ export function fxFromLine(line: string, heroNames: string[] = [], classFor?: (l
     const float: FxFloat | undefined = dmg !== null ? { text: crit ? `−${dmg}!` : `−${dmg}`, tone: crit ? "crit" : "dmg" } : undefined;
     const base = { side: "monster" as const, ...(float ? { float } : {}), actor };
     if (crit) return { kind: "crit", ...base };
-    for (const [mark, kind] of ABILITY_FX) if (line.includes(mark)) return { kind, ...base };
+    const el = elementOfLine(line);
+    if (el && ELEMENT_FX[el]) return { kind: ELEMENT_FX[el]!, ...base };
     if (/trifft sicher/.test(line)) return { kind: "arcane", ...base };
     const cls = classFor?.(line);
     return { kind: (cls && BASIC_ATTACK_FX[cls]) || "hit", ...base };

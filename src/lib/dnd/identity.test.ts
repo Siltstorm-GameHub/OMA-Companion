@@ -38,7 +38,7 @@ describe("Volk und Klasse", () => {
     assert.equal(schurke.critMin, 19);
     const plain = buildFighter({ name: "H", classId: "krieger", level: 3, mods, critMin: 20, rerollFumble: false });
     const ork = buildFighter({ name: "O", classId: "krieger", level: 3, mods, critMin: 20, rerollFumble: false, fx: traitFx("Halbork", "krieger", 3) });
-    const hit = (f: typeof plain) => { const m = getMonster("golem")!; return m.hp - performAction(startCombat(m, f), "attack", seq(0.99, 0.5)).state.monsterHp; };
+    const hit = (f: typeof plain) => { const m = getMonster("wegelagerer")!; return m.hp - performAction(startCombat(m, f), "attack", seq(0.99, 0.5)).state.monsterHp; };
     assert.ok(hit(ork) >= hit(plain) + 2);
     assert.ok(ork.maxHp > plain.maxHp);
   });

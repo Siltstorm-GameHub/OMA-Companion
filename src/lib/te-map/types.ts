@@ -55,7 +55,8 @@ export interface Interior {
   exitX: number;
 }
 
-export interface PlacedStamp { id: StampId; x: number; y: number }
+/** Ein gesetztes Objekt. `say` = kleiner Text, den die Figur beim Ansprechen zu lesen bekommt (macht das Objekt interaktiv). */
+export interface PlacedStamp { id: StampId; x: number; y: number; say?: string }
 
 /** Ein Dialog eines Akteurs. `step` = Quest-Schritt, in dem er gilt ("*" = sonst). `advance` = nach dem
  *  Dialog rückt die Quest einen Schritt weiter (nur wenn der aktuelle Schritt genau `step` ist). Bei Schritt 0

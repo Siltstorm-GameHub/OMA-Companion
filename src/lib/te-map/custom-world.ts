@@ -12,7 +12,8 @@ import { isAmbienceKey } from "@/lib/dnd/oq-ambience";
 import { isAbility, isWeather } from "./rpg";
 import { buildSolid, solidOfMap } from "./engine";
 import { MapBuilder } from "./generate";
-import { INSIDE_STAMP_IDS, STAMPS, type StampId } from "./stamps";
+import { INSIDE_STAMP_IDS, STAMPS, type StampDef, type StampId } from "./stamps";
+import { STAMP_LABELS } from "./stamp-labels";
 import { allActorsOf, INTERIOR_FLOORS, INTERIOR_LIMITS, INTERIOR_WALLS, interiorSpawn, interiorToMap } from "./interior";
 import { stepsOf, worldQuestsOf } from "./types";
 import { GROUND, groundChar, groundFromChar, type Actor, type Building, type Dir, type GroundType, type PlacedStamp, type Outcome, type Talk, type TalkChoice, type WorldDef, type WorldQuest } from "./types";
@@ -22,6 +23,8 @@ export const LIMITS = {
   maxSide: 60,
   maxBuildings: 20,
   maxStamps: 500,
+  /** Objekte mit Interaktionstext */
+  maxSay: 40,
   maxWalls: 2000,
   maxActors: 16,
   maxNpcs: 10,
@@ -228,7 +231,8 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     const x = s.x as number;
     const y = s.y as number;
     if (!inMap(x, y)) continue;
-    stamps.push({ id: s.id as StampId, x, y });
+    const say = text(s.say, LIMITS.lineLen);
+    stamps.push({ id: s.id as StampId, x, y, ...(say && stamps.filter((o) => o.say).length < LIMITS.maxSay ? { say } : {}) });
   }
 
   // Quests (mehrere pro Location); alte Dokumente hatten genau eine unter `quest` mit `objectives`
@@ -404,7 +408,14 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
   const slugOf = (id: string) => docQuestSlug(slug, id, questSlug);
   const mapTalks = (a: Actor): Actor => ({ ...a, talk: a.talk.map((t) => (t.quest ? { ...t, quest: slugOf(t.quest) } : { ...t })) });
   for (const b of doc.buildings) m.building(b.interior ? { ...b, interior: { ...b.interior, actors: b.interior.actors.map(mapTalks) } } : b);
-  for (const s of doc.stamps) m.place(s.id, s.x, s.y);
+  doc.stamps.forEach((s, i) => {
+    m.place(s.id, s.x, s.y);
+    if (!s.say) return;
+    // Interaktives Objekt: unsichtbare Schild-Akteure auf seinen Kacheln (feste Fläche, sonst die ganze Grundfläche), damit man es von jeder Seite ansprechen kann
+    const def = STAMPS[s.id] as StampDef;
+    const [fx, fy, fw, fh] = def.solid ?? [0, 0, def.w, def.h];
+    for (let j = 0; j < Math.min(fh, 3); j++) for (let k = 0; k < Math.min(fw, 3); k++) m.sign(`obj${i}_${j}${k}`, STAMP_LABELS[s.id] ?? "Objekt", s.x + fx + k, s.y + fy + j, [s.say!]);
+  });
   for (const a of doc.actors) m.addActor(mapTalks(a));
   const worldQuests: WorldQuest[] = doc.quests.map((q) => ({
     slug: slugOf(q.id), title: q.title, xpReward: q.xpReward,

@@ -16,7 +16,7 @@ import {
 import { INTERIOR_FLOORS, INTERIOR_LIMITS, INTERIOR_TEMPLATES, INTERIOR_WALLS } from "@/lib/te-map/interior";
 import { INSIDE_STAMP_IDS, STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
 import type { Interior } from "@/lib/te-map/types";
-import { Swatch } from "./MapEditor";
+import { Swatch } from "./Swatch";
 
 const LABELS: Partial<Record<StampId, string>> = {
   shelfCrates: "Kistenregal", shelfCrates2: "Kistenregal 2", sackOpen: "Sack", drum: "Trommelfass", barrelOpen: "Offenes Fass", barrelClosed: "Fass", urn: "Krug",

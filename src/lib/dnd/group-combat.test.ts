@@ -1,7 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { buildFighter, getMonster, RAID_BOSSES, MONSTERS, encountersFor } from "./combat";
-import { alive, applyTimeouts, groupRewards, performGroupAction, scaleMonster, startGroupCombat, TURN_MS } from "./group-combat";
+import { boonSum, alive, applyTimeouts, groupRewards, performGroupAction, scaleMonster, startGroupCombat, TURN_MS } from "./group-combat";
 import { skillEffects } from "./skills";
 import { MAX_PARTY, MAX_RAID, maxPartySize } from "./party";
 
@@ -71,8 +71,8 @@ describe("Gruppenkampf", () => {
   test("Barde: Verstärkung und Aura-Talente erhöhen den Trefferbonus aller", () => {
     let s = start("golem", [member("bard", "barde"), member("k", "krieger", ["group1"])]);
     s = performGroupAction(s, "bard", "ability", undefined, T0, seq(0.5)).state; // Spottlied
-    assert.equal(s.inspire, 2);
     assert.equal(s.taunt, 2);
+    assert.equal(boonSum(s.heroes[0], "hit"), 2);
     s = performGroupAction(s, "bard", "end", undefined, T0).state;
     // Krieger: würfelt 9 + 3 (STR) + 1 (Aura) + 2 (Verstärkung) = 15 → Treffer gegen RK 17? nein; mit 12 → 18 trifft
     const before = s.monsterHp;

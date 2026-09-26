@@ -1,13 +1,13 @@
 // ============================================
 // OMA Quest — Gruppenkampf (rein, ohne Datenbank): rundenweise, jeder Held nacheinander, dann das Monster
 // ============================================
-// Wie der Solo-Kampf (combat.ts), aber mit mehreren Helden: Jeder hat in seinem Zug 3 Aktionspunkte, danach ist der Nächste dran; nach dem
-// letzten Helden greift das Monster an. Rollen: der Paladin zieht mit „Heiliger Schild“ die Angriffe auf sich, Kleriker heilen und beleben
-// Mitstreiter, der Barde verstärkt alle (+2 aufs Treffen) und schwächt das Monster. Talente des Astes „Gruppe“ wirken als Aura auf alle.
-// Wer 60 Sekunden nicht handelt, wird übersprungen.
+// Die einzige Kampf-Engine: der Einzelkampf (combat.ts) läuft als Gruppe mit einem Helden darüber. Jeder Held hat in seinem Zug 3 Aktionspunkte,
+// danach ist der Nächste dran; nach dem letzten greift das Monster an. Klassenfähigkeiten (abilities.ts) tragen ein Element (Schwäche ×1,5,
+// Resistenz ×0,5), können Zustände am Monster auslösen (Brennen, Gift, Blutung, Verlangsamt, Betäubt, Verwundbar, Verspottet), Schild-LP
+// vergeben, heilen oder die Gruppe verstärken. Talente des Astes „Gruppe“ wirken als Aura auf alle. Wer 60 Sekunden nicht handelt, wird übersprungen.
 
-import { AP_PER_ROUND, ABILITY_COOLDOWN, abilitiesOf, attackAbilityOf, dice, die, fxOf, getMonster, rewardFor, swing, type Fighter, type Monster, type Rng } from "./combat";
-import type { Ability } from "../te-map/rpg";
+import { AP_PER_ROUND, apOf, dice, die, fxOf, getMonster, rewardFor, slotAbilities, swing, attackAbilityOf, type Fighter, type Monster, type Rng } from "./combat";
+import { DOT_DAMAGE, ELEMENT_LABEL, STATUS_ICON, STATUS_LABEL, STATUS_ROUNDS, getAbility, type AbilityDef, type Boon, type Element, type StatusId } from "./abilities";
 import type { TeCharacterConfig } from "../te-character";
 
 export const TURN_MS = 60_000;
@@ -22,6 +22,10 @@ export interface GroupHero {
   cooldowns: Record<string, number>;
   /** Runden, in denen der Schild-Bonus (+3 RK) noch gilt */
   guard: number;
+  /** Schild-LP: nehmen Schaden vor den Lebenspunkten auf */
+  shield?: number;
+  /** Verstärkungen (Treffer/Schaden/Regeneration) mit Restrunden */
+  boons?: Boon[];
   /** Hat die Gruppe im Kampf verlassen (Flucht) */
   left: boolean;
   /** Pixel-Figur für die Kampfbühne */
@@ -40,8 +44,10 @@ export interface GroupState {
   turnStartedAt: number;
   /** Monster trifft schlechter (−3), Runden */
   taunt: number;
-  /** Alle Helden treffen besser (+2), Runden */
+  /** Alle Helden treffen besser (+2), Runden (ältere Kämpfe) */
   inspire: number;
+  /** Zustände am Monster: Restrunden je Art (Verspottet steht in `taunt`) */
+  mStatus?: Partial<Record<StatusId, number>>;
   /** Alle Angriffe gehen bevorzugt auf diesen Helden */
   provoke: { cardId: string; rounds: number } | null;
   status: "active" | "won" | "lost" | "fled";
@@ -51,10 +57,16 @@ export interface GroupState {
   results?: GroupReward[];
 }
 
-export type GroupActionKind = "attack" | "ability" | "ability2" | "defend" | "flee" | "end";
-export const isGroupAction = (v: unknown): v is GroupActionKind => v === "attack" || v === "ability" || v === "ability2" || v === "defend" || v === "flee" || v === "end";
+export type GroupActionKind = "attack" | "ability" | "ability2" | "ability3" | "ability4" | "defend" | "flee" | "end";
+const ACTIONS = new Set(["attack", "ability", "ability2", "ability3", "ability4", "defend", "flee", "end"]);
+export const isGroupAction = (v: unknown): v is GroupActionKind => typeof v === "string" && ACTIONS.has(v);
+export const abilitySlotOf = (a: GroupActionKind): number => (a === "ability" ? 1 : a.startsWith("ability") ? Number(a.slice(7)) : 0);
 
 export const alive = (h: GroupHero): boolean => h.hp > 0 && !h.left;
+export const isBoss = (m: Monster): boolean => !!m.raid;
+export const boonSum = (h: GroupHero, kind: Boon["kind"]): number => (h.boons ?? []).filter((b) => b.kind === kind).reduce((t, b) => t + b.v, 0);
+const addBoon = (h: GroupHero, b: Boon) => { h.boons = [...(h.boons ?? []).filter((x) => x.kind !== b.kind), { ...b }]; };
+export const statusRounds = (s: Pick<GroupState, "taunt" | "mStatus">, id: StatusId): number => (id === "taunt" ? s.taunt : s.mStatus?.[id] ?? 0);
 
 /** Monster für n Helden: mehr Lebenspunkte und ab 3 Helden zusätzliche Angriffe. */
 export function scaleMonster(m: Monster, n: number): { hp: number; attacks: number } {
@@ -63,10 +75,10 @@ export function scaleMonster(m: Monster, n: number): { hp: number; attacks: numb
 
 export function startGroupCombat(monster: Monster, members: { cardId: string; name: string; fighter: Fighter; character?: TeCharacterConfig }[], now: number, source?: { slug: string; actor: string }): GroupState {
   const sc = scaleMonster(monster, members.length);
-  const heroes: GroupHero[] = members.map((m) => ({ cardId: m.cardId, name: m.name, fighter: m.fighter, hp: m.fighter.maxHp, ap: 0, cooldowns: {}, guard: 0, left: false, ...(m.character ? { character: m.character } : {}) }));
+  const heroes: GroupHero[] = members.map((m) => ({ cardId: m.cardId, name: m.name, fighter: m.fighter, hp: m.fighter.maxHp, ap: 0, cooldowns: {}, guard: 0, shield: 0, boons: [], left: false, ...(m.character ? { character: m.character } : {}) }));
   heroes[0].ap = AP_PER_ROUND;
   return {
-    monsterId: monster.id, monsterMaxHp: sc.hp, monsterHp: sc.hp, round: 1, turn: 0, turnStartedAt: now, taunt: 0, inspire: 0, provoke: null, status: "active", heroes,
+    monsterId: monster.id, monsterMaxHp: sc.hp, monsterHp: sc.hp, round: 1, turn: 0, turnStartedAt: now, taunt: 0, inspire: 0, mStatus: {}, provoke: null, status: "active", heroes,
     log: [`${monster.emoji} ${monster.name} stellt sich der Gruppe in den Weg! ${monster.blurb}`, `${heroes[0].name} beginnt.`], ...(source ? { source } : {}),
   };
 }
@@ -80,23 +92,45 @@ const nextAlive = (s: GroupState, from: number): number => {
 };
 
 function clone(prev: GroupState): GroupState {
-  return { ...prev, log: [...prev.log], provoke: prev.provoke ? { ...prev.provoke } : null, heroes: prev.heroes.map((h) => ({ ...h, cooldowns: { ...h.cooldowns } })) };
+  return { ...prev, log: [...prev.log], mStatus: { ...(prev.mStatus ?? {}) }, provoke: prev.provoke ? { ...prev.provoke } : null, heroes: prev.heroes.map((h) => ({ ...h, cooldowns: { ...h.cooldowns }, boons: (h.boons ?? []).map((b) => ({ ...b })) })) };
 }
+
+const solo = (s: GroupState): boolean => s.heroes.length === 1;
 
 function checkEnd(s: GroupState, m: Monster): boolean {
   if (s.monsterHp <= 0) { s.status = "won"; s.log.push(`🏆 ${m.name} ist besiegt!`); return true; }
   if (!s.heroes.some(alive)) {
     const anyDown = s.heroes.some((h) => !h.left);
     s.status = anyDown ? "lost" : "fled";
-    s.log.push(anyDown ? "💀 Die Gruppe geht zu Boden …" : "🏃 Die Gruppe hat sich zurückgezogen.");
+    s.log.push(anyDown ? (solo(s) ? "💀 Du gehst zu Boden …" : "💀 Die Gruppe geht zu Boden …") : (solo(s) ? "🏃 Du hast dich zurückgezogen." : "🏃 Die Gruppe hat sich zurückgezogen."));
     return true;
   }
   return false;
 }
 
+/** Schaden auf einen Helden: erst Schild-LP, dann Lebenspunkte. Gibt zurück, wie viel absorbiert wurde. */
+function hurt(h: GroupHero, dmg: number): number {
+  const absorbed = Math.min(h.shield ?? 0, dmg);
+  h.shield = (h.shield ?? 0) - absorbed;
+  h.hp = Math.max(0, h.hp - (dmg - absorbed));
+  return absorbed;
+}
+
 function monsterPhase(s: GroupState, m: Monster, rng: Rng) {
-  const n = s.heroes.length;
-  const attacks = scaleMonster(m, n).attacks;
+  // Zustände über Zeit
+  for (const id of ["burn", "poison", "bleed"] as const) {
+    if ((s.mStatus?.[id] ?? 0) > 0) {
+      const d = DOT_DAMAGE[id] ?? 0;
+      s.monsterHp = Math.max(0, s.monsterHp - d);
+      s.log.push(`${STATUS_ICON[id]} ${STATUS_LABEL[id]}: ${m.name} erleidet ${d} Schaden.`);
+    }
+  }
+  if (s.monsterHp <= 0) return;
+  if ((s.mStatus?.stun ?? 0) > 0) { s.log.push(`💫 ${m.name} ist betäubt und setzt aus.`); return; }
+  const base = scaleMonster(m, s.heroes.length).attacks;
+  const slowed = (s.mStatus?.slow ?? 0) > 0;
+  const attacks = slowed ? Math.max(1, base - 1) : base;
+  const slowPenalty = slowed && base === 1 ? 2 : 0;
   const aura = auraSum(s, "auraAc");
   for (let i = 0; i < attacks; i++) {
     const living = s.heroes.filter(alive);
@@ -105,13 +139,14 @@ function monsterPhase(s: GroupState, m: Monster, rng: Rng) {
     const target = prov ?? living[Math.floor(rng() * living.length)];
     const ac = target.fighter.ac + (target.guard > 0 ? 3 : 0) + aura;
     const roll = die(20, rng);
-    const total = roll + m.attack - (s.taunt > 0 ? 3 : 0);
+    const total = roll + m.attack - (s.taunt > 0 ? 3 : 0) - slowPenalty;
     const crit = roll === 20;
+    const who = solo(s) ? "greift an" : `greift ${target.name} an`;
     if (roll !== 1 && (crit || total >= ac)) {
       const dmg = Math.max(1, dice(m.dmg[0] * (crit ? 2 : 1), m.dmg[1], rng) + m.dmg[2]);
-      target.hp = Math.max(0, target.hp - dmg);
-      s.log.push(`${m.emoji} ${m.name} greift ${target.name} an: ${roll} (=${total}) gegen RK ${ac} — ${crit ? "KRITISCH! " : "Treffer! "}${dmg} Schaden.${target.hp === 0 ? ` ${target.name} geht zu Boden!` : ""}`);
-    } else s.log.push(`${m.emoji} ${m.name} greift ${target.name} an: ${roll} (=${total}) gegen RK ${ac} — daneben.`);
+      const absorbed = hurt(target, dmg);
+      s.log.push(`${m.emoji} ${m.name} ${who}: ${roll} (=${total}) gegen RK ${ac} — ${crit ? "KRITISCH! " : "Treffer! "}${dmg} Schaden.${absorbed ? ` (${absorbed} vom Schild aufgefangen)` : ""}${target.hp === 0 ? ` ${solo(s) ? "Du gehst" : `${target.name} geht`} zu Boden!` : ""}`);
+    } else s.log.push(`${m.emoji} ${m.name} ${who}: ${roll} (=${total}) gegen RK ${ac} — daneben.`);
   }
 }
 
@@ -131,33 +166,157 @@ function advanceTurn(s: GroupState, m: Monster, now: number, rng: Rng) {
   for (const h of s.heroes) {
     h.cooldowns = Object.fromEntries(Object.entries(h.cooldowns).map(([k, v]) => [k, Math.max(0, v - 1)]));
     h.guard = Math.max(0, h.guard - 1);
+    h.boons = (h.boons ?? []).map((b) => ({ ...b, rounds: b.rounds - 1 })).filter((b) => b.rounds > 0);
     h.ap = 0;
   }
   s.taunt = Math.max(0, s.taunt - 1);
   s.inspire = Math.max(0, s.inspire - 1);
+  const st = s.mStatus ?? {};
+  for (const k of Object.keys(st) as StatusId[]) { const v = (st[k] ?? 0) - 1; if (v > 0) st[k] = v; else delete st[k]; }
+  s.mStatus = st;
   if (s.provoke) { s.provoke.rounds -= 1; if (s.provoke.rounds <= 0) s.provoke = null; }
-  // Regeneration (Talente) und Auren-Heilung zu Rundenbeginn
+  // Regeneration (Talente, Barden-Lied) und Auren-Heilung zu Rundenbeginn
   const auraRegen = auraSum(s, "auraRegen");
   for (const h of s.heroes) {
     if (!alive(h)) continue;
-    const heal = Math.min(h.fighter.maxHp - h.hp, fxOf(h.fighter).regen + auraRegen);
-    if (heal > 0) { h.hp += heal; s.log.push(`💚 ${h.name} erholt sich um ${heal} Lebenspunkte.`); }
+    const heal = Math.min(h.fighter.maxHp - h.hp, fxOf(h.fighter).regen + auraRegen + boonSum(h, "regen"));
+    if (heal > 0) { h.hp += heal; s.log.push(`💚 ${solo(s) ? "Du erholst dich" : `${h.name} erholt sich`} um ${heal} Lebenspunkte.`); }
   }
   const first = nextAlive(s, -1);
   s.turn = first; s.turnStartedAt = now; s.heroes[first].ap = AP_PER_ROUND;
-  s.log.push(`— Runde ${s.round} — ${s.heroes[first].name} ist dran.`);
+  s.log.push(solo(s) ? `— Runde ${s.round} —` : `— Runde ${s.round} — ${s.heroes[first].name} ist dran.`);
 }
 
-/** Trefferbonus eines Helden: eigene Talente, Auren der Mitstreiter, Barden-Verstärkung. */
-const hitBonusOf = (s: GroupState, h: GroupHero, ability: Ability, extra: number): number => h.fighter.mods[ability] + fxOf(h.fighter).hit + auraSum(s, "auraHit") + (s.inspire > 0 ? 2 : 0) + extra;
+/** Trefferbonus eines Helden: eigene Talente, Auren der Mitstreiter, Verstärkungen. */
+const hitBonusOf = (s: GroupState, h: GroupHero, ability: keyof Fighter["mods"], extra: number): number => h.fighter.mods[ability] + fxOf(h.fighter).hit + auraSum(s, "auraHit") + boonSum(h, "hit") + (s.inspire > 0 ? 2 : 0) + extra;
 
-function strike(s: GroupState, h: GroupHero, m: Monster, ability: Ability, extra: number, diceSpec: [number, number], label: string, power: number, rng: Rng) {
+interface AtkSpec { ability: keyof Fighter["mods"]; bonus: number; auto?: boolean; critMin?: number; twice?: boolean }
+interface AtkResult { hit: boolean; crit: boolean; text: string }
+
+function attackRoll(s: GroupState, h: GroupHero, m: Monster, spec: AtkSpec, rng: Rng): AtkResult {
   const f = h.fighter;
-  const sw = swing(hitBonusOf(s, h, ability, extra), m.ac, f.critMin, f.rerollFumble, rng);
-  if (!sw.hit) { s.log.push(`${h.name} — ${label}: ${sw.roll} (=${sw.total}) gegen RK ${m.ac} — daneben.`); return; }
-  const dmg = Math.max(1, dice(diceSpec[0] * (sw.crit ? 2 : 1), diceSpec[1], rng) + Math.max(0, f.mods[ability]) + fxOf(f).dmg + power);
+  if (spec.auto) return { hit: true, crit: false, text: "trifft sicher —" };
+  const bonus = hitBonusOf(s, h, spec.ability, spec.bonus);
+  const cm = Math.min(f.critMin, spec.critMin ?? 99);
+  let sw = swing(bonus, m.ac, cm, f.rerollFumble, rng);
+  if (spec.twice) { const b = swing(bonus, m.ac, cm, f.rerollFumble, rng); if ((b.hit && !sw.hit) || (b.hit === sw.hit && b.total > sw.total)) sw = b; }
+  return { hit: sw.hit, crit: sw.crit, text: `${sw.roll} (=${sw.total}) gegen RK ${m.ac} — ${sw.hit ? (sw.crit ? "KRITISCHER TREFFER!" : "Treffer!") : "daneben."}` };
+}
+
+interface Mastery { halfResist?: boolean; weakMult?: number }
+
+/** Schwäche ×1,5 / Resistenz ×0,5 (Meisterschaft: Magier ignorieren die halbe Resistenz, Waldläufer erreichen ×2). */
+export function elementMult(m: Monster, el: Element, mastery?: Mastery): number {
+  if (m.weak?.includes(el)) return mastery?.weakMult ?? 1.5;
+  if (m.resist?.includes(el)) return mastery?.halfResist ? 0.75 : 0.5;
+  return 1;
+}
+
+/** Schaden am Monster: Element-Faktor, Verwundbar (+2), mindestens 1. */
+function hitMonster(s: GroupState, m: Monster, raw: number, el: Element, mastery?: Mastery): { dmg: number; note: string } {
+  const mult = elementMult(m, el, mastery);
+  let dmg = Math.round(raw * mult);
+  if ((s.mStatus?.vulnerable ?? 0) > 0) dmg += 2;
+  dmg = Math.max(1, dmg);
   s.monsterHp = Math.max(0, s.monsterHp - dmg);
-  s.log.push(`${h.name} — ${label}: ${sw.roll} (=${sw.total}) gegen RK ${m.ac} — ${sw.crit ? "KRITISCHER TREFFER! " : "Treffer! "}${dmg} Schaden.`);
+  return { dmg, note: mult > 1 ? ` Schwäche (${ELEMENT_LABEL[el]})!` : mult < 1 ? ` ${m.name} widersteht (${ELEMENT_LABEL[el]}).` : "" };
+}
+
+function applyStatus(s: GroupState, m: Monster, id: StatusId, rounds: number): string {
+  if (id === "stun" && isBoss(m)) return ` ${m.name} ist immun gegen ${STATUS_LABEL.stun}.`;
+  if (id === "taunt") s.taunt = Math.max(s.taunt, rounds);
+  else s.mStatus = { ...(s.mStatus ?? {}), [id]: Math.max(s.mStatus?.[id] ?? 0, rounds) };
+  return ` ${STATUS_ICON[id]} ${STATUS_LABEL[id]}!`;
+}
+
+const BOON_LABEL = (b: Boon): string => (b.kind === "hit" ? `+${b.v} Treffer` : b.kind === "dmg" ? `+${b.v} Schaden` : `Regeneration ${b.v}`);
+
+/** Eine Klassenfähigkeit ausführen (Kosten und Abklingzeit sind bereits abgebucht). */
+function castAbility(s: GroupState, h: GroupHero, m: Monster, def: AbilityDef, ally: GroupHero | undefined, rng: Rng) {
+  const f = h.fighter;
+  const fx = fxOf(f);
+  const mastered = fx.mastery ? getAbility(f.classId, 1)?.mastery : undefined;
+  const ms = def.slot === 1 ? mastered : undefined;
+  const power = fx.power;
+  let line = `${h.name} — ${def.icon} ${def.name}:`;
+  const tail: string[] = [];
+  const status = (list: { status: StatusId; rounds?: number }[] | undefined) => { for (const a of list ?? []) tail.push(applyStatus(s, m, a.status, a.rounds ?? STATUS_ROUNDS)); };
+  const party = () => s.heroes.filter(alive);
+
+  let landed = true;
+  if (def.attack) {
+    const r = attackRoll(s, h, m, { ...def.attack, ...(ms?.autoHit ? { auto: true } : {}) }, rng);
+    landed = r.hit;
+    line += ` ${r.text}`;
+    if (r.hit && def.dmg) {
+      const [n, sides] = def.dmg.dice;
+      const doubled = def.dmg.doubleVs?.some((k) => statusRounds(s, k) > 0) ?? false;
+      const raw = Math.max(1, dice(n * (r.crit ? 2 : 1), sides, rng) * (doubled ? 2 : 1) + (def.dmg.stat ? Math.max(0, f.mods[def.dmg.stat]) : 0) + fx.dmg + power + boonSum(h, "dmg"));
+      // Meisterschaft: Magier ignorieren die halbe Resistenz (alle Zauber), Waldläufer verstärken Schwächen beim Gezielten Schuss
+      const em: Mastery | undefined = mastered ? { ...(mastered.halfResist ? { halfResist: true } : {}), ...(def.slot === 1 && mastered.weakMult ? { weakMult: mastered.weakMult } : {}) } : undefined;
+      const { dmg, note } = hitMonster(s, m, raw, def.element, em);
+      line += ` ${dmg} Schaden.${note}${doubled ? " Doppelt: der Gegner ist wehrlos!" : ""}`;
+    }
+  }
+  if (landed) { status(def.apply); status(ms?.apply); }
+  if (def.boonSelf) { addBoon(h, def.boonSelf); tail.push(` ${BOON_LABEL(def.boonSelf)} (${def.boonSelf.rounds} Runden).`); }
+  const partyBoons = [...(def.boonParty ?? []), ...(ms?.boonParty ?? []), ...(ms?.partyGuardBoon ? [ms.partyGuardBoon] : [])];
+  if (partyBoons.length) {
+    for (const b of partyBoons) for (const x of party()) addBoon(x, b);
+    tail.push(` Die Gruppe ist gestärkt (${partyBoons.map(BOON_LABEL).join(", ")}).`);
+  }
+  if (def.heal && ally) {
+    const [n, sides] = def.heal.dice;
+    const amount = dice(n, sides, rng) + (def.heal.stat ? Math.max(0, f.mods[def.heal.stat]) : 0) + (def.heal.level ? f.level : 0) + power;
+    const revived = ally.hp <= 0;
+    const gained = revived ? Math.min(ally.fighter.maxHp, Math.max(1, amount)) : Math.min(ally.fighter.maxHp - ally.hp, amount);
+    ally.hp += gained;
+    tail.push(revived ? ` ${ally.name} steht wieder auf (${gained} LP)!` : ` ${ally.name} wird um ${gained} geheilt.`);
+    if (ms?.healSecond) {
+      const other = party().filter((x) => x.cardId !== ally.cardId && x.hp < x.fighter.maxHp).sort((a, b) => a.hp / a.fighter.maxHp - b.hp / b.fighter.maxHp)[0];
+      if (other) { const g2 = Math.min(other.fighter.maxHp - other.hp, amount); other.hp += g2; tail.push(` ${other.name} wird um ${g2} geheilt.`); }
+    }
+  }
+  if (def.healParty && landed) {
+    const hp = def.healParty;
+    const amount = (hp.flat ?? 0) + (hp.dice ? dice(hp.dice[0], hp.dice[1], rng) : 0) + (hp.stat ? Math.max(0, f.mods[hp.stat]) : 0) + power;
+    let total = 0;
+    for (const x of s.heroes) {
+      if (x.left) continue;
+      if (x.hp <= 0) { if (hp.revive) { x.hp = Math.max(1, Math.ceil(x.fighter.maxHp / 2)); tail.push(` ${x.name} steht wieder auf!`); } continue; }
+      const g = Math.min(x.fighter.maxHp - x.hp, amount);
+      x.hp += g; total += g;
+    }
+    tail.push(` Alle Verbündeten werden geheilt (${total} LP insgesamt).`);
+  }
+  if (def.shield && ally) {
+    const amount = def.shield.base + (def.shield.level ? f.level : 0) + power;
+    ally.shield = (ally.shield ?? 0) + amount;
+    if (def.shield.guard) ally.guard = Math.max(ally.guard, 2);
+    tail.push(` ${ally.name} bekommt ${amount} Schild-LP${def.shield.guard ? " und +3 Rüstung (2 Runden)" : ""}.`);
+  }
+  if (def.guard) {
+    h.guard = Math.max(h.guard, def.guard.rounds);
+    if (def.guard.heal) {
+      const g = Math.min(f.maxHp - h.hp, dice(def.guard.heal[0], def.guard.heal[1], rng) + f.level + power);
+      h.hp += g;
+      tail.push(` +${g} LP.`);
+    }
+    if (def.guard.provoke) { s.provoke = { cardId: h.cardId, rounds: def.guard.rounds }; tail.push(" Zieht alle Angriffe auf sich."); }
+    tail.push(` +3 Rüstung (${def.guard.rounds} Runden).`);
+  }
+  s.log.push(line + tail.join(""));
+}
+
+/** Basisangriff (1 AP): W6 + Attributsbonus, physisch. */
+function basicAttack(s: GroupState, h: GroupHero, m: Monster, rng: Rng) {
+  const f = h.fighter;
+  const ability = attackAbilityOf(f.classId);
+  const r = attackRoll(s, h, m, { ability, bonus: 0 }, rng);
+  if (!r.hit) { s.log.push(`${h.name} — Angriff: ${r.text}`); return; }
+  const raw = Math.max(1, dice(r.crit ? 2 : 1, 6, rng) + Math.max(0, f.mods[ability]) + fxOf(f).dmg + boonSum(h, "dmg"));
+  const { dmg, note } = hitMonster(s, m, raw, "physical");
+  s.log.push(`${h.name} — Angriff: ${r.text} ${dmg} Schaden.${note}`);
 }
 
 /** Aktion des Helden `cardId`; nur wer dran ist, darf handeln. `target` = Ziel-Held für Heilung/Schutz (Standard: du selbst). */
@@ -174,48 +333,21 @@ export function performGroupAction(prev: GroupState, cardId: string, action: Gro
 
   if (action === "attack") {
     if (!spend(1)) return noAp;
-    strike(s, h, m, attackAbilityOf(h.fighter.classId), 0, [1, 6], "Angriff", 0, rng);
-  } else if (action === "ability" || action === "ability2") {
-    const { main, second } = abilitiesOf(h.fighter);
-    const ab = action === "ability" ? main : second;
-    if (!ab) return { state: prev, error: "Diese Fähigkeit hast du noch nicht gelernt." };
-    const cd = h.cooldowns[ab.id] ?? 0;
-    if (cd > 0) return { state: prev, error: `${ab.name} ist noch ${cd} Runde(n) nicht bereit.` };
-    const ally = s.heroes.find((x) => x.cardId === (target ?? h.cardId) && !x.left);
-    if ((ab.kind === "heal" || (ab.kind === "guard" && ab.id !== "heiliger-schild")) && !ally) return { state: prev, error: "Ungültiges Ziel." };
-    if (!spend(ab.ap)) return noAp;
-    h.cooldowns[ab.id] = Math.max(1, ABILITY_COOLDOWN - fxOf(h.fighter).cooldownMinus);
-    const power = fxOf(h.fighter).power;
-    const bonusMod = Math.max(0, h.fighter.mods[ab.ability]);
-    const [n, sides] = ab.dice ?? [2, 6];
-    const label = `${ab.icon} ${ab.name}`;
-    if (ab.kind === "strike") strike(s, h, m, ab.ability, ab.hitBonus ?? 0, [n, sides], label, power, rng);
-    else if (ab.kind === "spell") {
-      const dmg = Math.max(1, dice(n, sides, rng) + bonusMod + fxOf(h.fighter).dmg + power);
-      s.monsterHp = Math.max(0, s.monsterHp - dmg);
-      s.log.push(`${h.name} — ${label}: trifft sicher — ${dmg} Schaden.`);
-    } else if (ab.kind === "heal") {
-      const t = ally!;
-      const amount = dice(n, sides, rng) + bonusMod + h.fighter.level + power;
-      const revived = t.hp <= 0;
-      const gained = revived ? Math.min(t.fighter.maxHp, Math.max(1, amount)) : Math.min(t.fighter.maxHp - t.hp, amount);
-      t.hp += gained;
-      s.log.push(`${h.name} — ${label}: ${revived ? `${t.name} steht wieder auf (${gained} LP)!` : `${t.name} wird um ${gained} geheilt.`}`);
-    } else if (ab.kind === "guard") {
-      if (ab.id === "heiliger-schild") {
-        const gained = Math.min(h.fighter.maxHp - h.hp, dice(1, 6, rng) + h.fighter.level + power);
-        h.hp += gained; h.guard = 2; s.provoke = { cardId: h.cardId, rounds: 2 };
-        s.log.push(`${h.name} — ${label}: +3 Rüstung, zieht alle Angriffe auf sich (2 Runden), +${gained} LP.`);
-      } else {
-        const t = ally!;
-        const gained = Math.min(t.fighter.maxHp - t.hp, t.hp > 0 ? dice(n, sides, rng) + h.fighter.level + power : 0);
-        t.hp += gained; t.guard = 2;
-        s.log.push(`${h.name} — ${label}: ${t.name} bekommt +3 Rüstung für 2 Runden (+${gained} LP).`);
-      }
-    } else {
-      s.taunt = 2; s.inspire = 2;
-      s.log.push(`${h.name} — ${label}: ${m.name} verliert die Konzentration (−3), die Gruppe trifft +2 besser (2 Runden).`);
-    }
+    basicAttack(s, h, m, rng);
+  } else if (action.startsWith("ability")) {
+    const slot = abilitySlotOf(action);
+    const def = slotAbilities(h.fighter).find((a) => a.slot === slot);
+    if (!def) return { state: prev, error: "Diese Fähigkeit hast du noch nicht gelernt." };
+    const cd = h.cooldowns[def.id] ?? 0;
+    if (cd > 0) return { state: prev, error: `${def.name} ist noch ${cd} Runde(n) nicht bereit.` };
+    let ally: GroupHero | undefined;
+    if (def.target === "ally") {
+      ally = s.heroes.find((x) => x.cardId === (target ?? h.cardId) && !x.left);
+      if (!ally || (!def.heal && ally.hp <= 0)) return { state: prev, error: "Ungültiges Ziel." };
+    } else if (def.target === "self") ally = h;
+    if (!spend(apOf(h.fighter, def))) return noAp;
+    h.cooldowns[def.id] = Math.max(1, def.cd - fxOf(h.fighter).cooldownMinus);
+    castAbility(s, h, m, def, ally, rng);
   } else if (action === "defend") {
     if (!spend(1)) return noAp;
     h.guard = Math.max(h.guard, 1);

@@ -27,7 +27,7 @@ import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, wi
 import { STAMPS, type StampDef, type StampId, type TileSheet } from "@/lib/te-map/stamps";
 import { allActorsOf, doorFront, INTERIOR_FLOORS, INTERIOR_WALLS, wallTilesAt } from "@/lib/te-map/interior";
 import { CAVE_WALL_TILES, GROUND_TEXTURE, THEMES } from "@/lib/te-map/themes";
-import { worldQuestsOf, type Interior, type WorldDef } from "@/lib/te-map/types";
+import { worldQuestsOf, type Building, type Interior, type PlacedStamp, type WorldDef } from "@/lib/te-map/types";
 
 export const T = 16;
 /** Sichtfenster in Kacheln (Standard); die Karte darf größer sein, die Kamera folgt der Figur. */
@@ -123,6 +123,41 @@ export function drawStamp(ctx: CanvasRenderingContext2D, sheets: Sheets, id: Sta
   }
 }
 
+/** Ein Haus (Dach, Wand, Fenster, Tür, Schild) mit der linken oberen Ecke bei (ox, oy) in Pixeln zeichnen — Karte und Editor-Vorschau nutzen dieselbe Funktion. */
+export function drawBuilding(ctx: CanvasRenderingContext2D, sheets: Sheets, b: Pick<Building, "w" | "roofRows" | "roof" | "wall" | "doorDx" | "windowDx" | "sign">, ox: number, oy: number): void {
+  const rows = b.roofRows + 2;
+  for (let j = 0; j < rows; j++) {
+    const isRoof = j < b.roofRows;
+    const blk = isRoof ? b.roof : b.wall;
+    const rowStart = isRoof ? 0 : b.roofRows;
+    const rowCount = isRoof ? b.roofRows : 2;
+    for (let i = 0; i < b.w; i++) {
+      const same = (dx: number, dy: number) => i + dx >= 0 && i + dx < b.w && j - rowStart + dy >= 0 && j - rowStart + dy < rowCount;
+      drawQuarters(ctx, sheets.a3, blk.k * 32, blk.r * 32, wallQuarters(same), ox + i * T, oy + j * T);
+    }
+  }
+  for (const dx of b.windowDx) drawStamp(ctx, sheets, "window", ox + dx * T, oy + b.roofRows * T);
+  drawStamp(ctx, sheets, "door", ox + b.doorDx * T, oy + (b.roofRows + 1) * T);
+  if (b.sign) drawStamp(ctx, sheets, b.sign, ox + b.doorDx * T, oy + b.roofRows * T);
+}
+
+let glowBuf: HTMLCanvasElement | null = null;
+/** Goldener, pulsierender Umriss um ein Objekt (Form aus `draw`, w×h Pixel): zeigt, dass man es gerade ansprechen kann. Wird VOR dem Objekt selbst gezeichnet. */
+function drawOutline(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, tMs: number, draw: (c: CanvasRenderingContext2D, ox: number, oy: number) => void) {
+  const pad = 2;
+  glowBuf ??= document.createElement("canvas");
+  glowBuf.width = w + pad * 2;
+  glowBuf.height = h + pad * 2;
+  const b = glowBuf.getContext("2d");
+  if (!b) return;
+  b.imageSmoothingEnabled = false;
+  draw(b, pad, pad);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = `rgba(255, 226, 120, ${(0.7 + 0.3 * Math.sin(tMs / 220)).toFixed(3)})`;
+  b.fillRect(0, 0, glowBuf.width, glowBuf.height);
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) ctx.drawImage(glowBuf, x - pad + dx, y - pad + dy);
+}
+
 /** Boden, Wege, Wände und Häuser einmal in eine große Zeichenfläche vorzeichnen. */
 export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
   const m = world.map;
@@ -165,22 +200,7 @@ export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
     }
   }
 
-  for (const b of m.buildings) {
-    const rows = b.roofRows + 2;
-    for (let j = 0; j < rows; j++) {
-      const isRoof = j < b.roofRows;
-      const blk = isRoof ? b.roof : b.wall;
-      const rowStart = isRoof ? 0 : b.roofRows;
-      const rowCount = isRoof ? b.roofRows : 2;
-      for (let i = 0; i < b.w; i++) {
-        const same = (dx: number, dy: number) => i + dx >= 0 && i + dx < b.w && j - rowStart + dy >= 0 && j - rowStart + dy < rowCount;
-        drawQuarters(ctx, sheets.a3, blk.k * 32, blk.r * 32, wallQuarters(same), (b.x + i) * T, (b.y + j) * T);
-      }
-    }
-    for (const dx of b.windowDx) drawStamp(ctx, sheets, "window", (b.x + dx) * T, (b.y + b.roofRows) * T);
-    drawStamp(ctx, sheets, "door", (b.x + b.doorDx) * T, (b.y + b.roofRows + 1) * T);
-    if (b.sign) drawStamp(ctx, sheets, b.sign, (b.x + b.doorDx) * T, (b.y + b.roofRows) * T);
-  }
+  for (const b of m.buildings) drawBuilding(ctx, sheets, b, b.x * T, b.y * T);
   return c;
 }
 
@@ -751,10 +771,25 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         const windNow = map.theme === "outdoor" && !reduceMotion.current ? windAt(weatherRef.current, clock) : 0;
         type Sprite = { base: number; draw: () => void };
         const sprites: Sprite[] = [];
+        // Ansprechbares Objekt (Schild, Truhe, Objekt mit Text) in Reichweite: bekommt einen Umriss
+        const glowTarget = !g.dialog && !pausedRef.current ? interactTarget(g) : null;
+        const glowActor = glowTarget && (glowTarget.kind === "sign" || glowTarget.kind === "chest") ? glowTarget : null;
+        let glowStamp: PlacedStamp | null = null;
+        if (glowActor && glowActor.kind === "sign") {
+          let bestArea = Infinity;
+          for (const s of map.stamps) {
+            const d = STAMPS[s.id] as StampDef;
+            if (glowActor.x >= s.x && glowActor.x < s.x + d.w && glowActor.y >= s.y && glowActor.y < s.y + d.h && d.w * d.h < bestArea) { glowStamp = s; bestArea = d.w * d.h; }
+          }
+        }
         for (const s of map.stamps) {
           const d = STAMPS[s.id] as StampDef;
           if (s.x * T + d.w * T < camX || s.x * T > camX + VIEW_W * T || s.y * T + d.h * T < camY || s.y * T > camY + VIEW_H * T) continue;
-          sprites.push({ base: (s.y + d.h) * T, draw: () => drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock, windNow, s.x * 0.9 + s.y * 0.55) });
+          const phase = s.x * 0.9 + s.y * 0.55;
+          sprites.push({ base: (s.y + d.h) * T, draw: () => {
+            if (s === glowStamp) drawOutline(ctx, s.x * T - camX, s.y * T - camY, d.w * T, d.h * T, clock, (c, ox, oy) => drawStamp(c, sheets, s.id, ox, oy, clock, windNow, phase));
+            drawStamp(ctx, sheets, s.id, s.x * T - camX, s.y * T - camY, clock, windNow, phase);
+          } });
         }
         for (const a of map.actors) {
           if (g.hidden.has(a.id)) continue;
@@ -775,7 +810,10 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
             sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, a.x * T - camX + T / 2, a.y * T - camY + T / 2 + bob); } });
           } else if (a.kind === "chest") {
             const open = isChestOpen(a, g.questSteps, world);
-            sprites.push({ base: (a.y + 1) * T, draw: () => ctx.drawImage(sheets.chests, 16, open ? 112 : 16, 16, 16, a.x * T - camX, a.y * T - camY, 16, 16) });
+            sprites.push({ base: (a.y + 1) * T, draw: () => {
+              if (a === glowActor) drawOutline(ctx, a.x * T - camX, a.y * T - camY, 16, 16, clock, (c, ox, oy) => c.drawImage(sheets.chests, 16, open ? 112 : 16, 16, 16, ox, oy, 16, 16));
+              ctx.drawImage(sheets.chests, 16, open ? 112 : 16, 16, 16, a.x * T - camX, a.y * T - camY, 16, 16);
+            } });
           } else if (a.kind === "npc" || a.kind === "merchant") {
             const sets = spritesRef.current.npcs.get(a.id);
             const dir = g.actorDir.get(a.id) ?? a.dir;

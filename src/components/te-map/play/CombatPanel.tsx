@@ -7,11 +7,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { Gold } from "@/components/te-map/play/Currency";
-import { AP_PER_ROUND, abilitiesOf, getMonster, type CombatAction, type CombatState, type Fighter, type Monster } from "@/lib/dnd/combat";
+import { AP_PER_ROUND, getMonster, type CombatAction, type CombatState, type Fighter, type Monster } from "@/lib/dnd/combat";
 import { getItem } from "@/lib/dnd/items";
 import MonsterSprite from "@/components/te-map/play/MonsterSprite";
 import { useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
-import { BattleLog, BattleStage, CommandBar, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
+import { BattleLog, BattleStage, CommandBar, abilityCards, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
 import type { TeCharacterConfig } from "@/lib/te-character";
 import { BIOME_BACKDROP, type BackdropKey } from "@/lib/dnd/oq-backdrop";
 import GroupFightPanel, { type FightCall, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
@@ -113,26 +113,22 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
 
   // ── Kampf: Bühne, Verlauf, Befehle ──
   const m = getMonster(s.monsterId);
-  const { main: ab, second } = abilitiesOf(s.fighter);
-  const cdOf = (id: string) => s.cooldowns?.[id] ?? 0;
   const active = s.status === "active";
-  const heroes: StageHero[] = [{ key: "me", name: s.fighter.name, classId: s.fighter.classId, character: view.character, hp: s.hp, maxHp: s.fighter.maxHp, ac: s.fighter.ac + (s.guard > 0 ? 3 : 0), guard: s.guard > 0, down: s.hp <= 0, left: false, active: true, mine: true }];
+  const heroes: StageHero[] = [{ key: "me", name: s.fighter.name, classId: s.fighter.classId, character: view.character, hp: s.hp, maxHp: s.fighter.maxHp, ac: s.fighter.ac + (s.guard > 0 ? 3 : 0), guard: s.guard > 0, shield: s.shield ?? 0, down: s.hp <= 0, left: false, active: true, mine: true }];
   const cmds: Cmd[] = [
     { key: "attack", label: "Angriff", icon: "⚔️", cost: 1, disabled: s.ap < 1, onClick: () => act("attack") },
-    { key: "ability", label: ab.name, icon: ab.icon, cost: ab.ap, cd: cdOf(ab.id), disabled: s.ap < ab.ap, gold: true, hint: `${ab.name}: ${ab.desc}`, onClick: () => act("ability") },
-    ...(second ? [{ key: "ability2", label: second.name, icon: second.icon, cost: second.ap, cd: cdOf(second.id), disabled: s.ap < second.ap, gold: true, hint: `${second.name}: ${second.desc}`, onClick: () => act("ability2") }] : []),
     { key: "defend", label: "Deckung", icon: "🛡️", cost: 1, disabled: s.ap < 1, hint: "Deckung: +3 Rüstung bis zur nächsten Runde.", onClick: () => act("defend") },
     { key: "flee", label: "Fliehen", icon: "🏃", cost: 1, disabled: s.ap < 1, hint: "Fliehen: Geschicksprobe gegen die Stufe des Monsters.", onClick: () => act("flee") },
   ];
   return (
     <div className="oq-panel p-3 sm:p-4 space-y-2.5">
       <BattleStage
-        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={m?.hp ?? 1} monsterNote={s.taunt > 0 ? "verspottet" : undefined}
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={m?.hp ?? 1} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
         backdrop={backdrop ?? BIOME_BACKDROP[view.biome] ?? "plains"} heroes={heroes} fx={fx} status={s.status}
       />
       {node}
       {active ? (
-        <CommandBar round={s.round} ap={s.ap} apMax={AP_PER_ROUND} cmds={cmds} onEnd={() => act("end")} busy={busy} endLabel="Runde beenden" />
+        <CommandBar round={s.round} ap={s.ap} apMax={AP_PER_ROUND} cmds={cmds} abilities={abilityCards(s.fighter, s.cooldowns ?? {}, s.ap, (a) => act(a as CombatAction))} onEnd={() => act("end")} busy={busy} endLabel="Runde beenden" />
       ) : (
         <div className="space-y-2">
           {s.result && s.status === "won" && (

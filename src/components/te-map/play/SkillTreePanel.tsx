@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
-import { abilityOfClass, secondAbilityOfClass } from "@/lib/dnd/combat";
+import { abilitiesOfClass } from "@/lib/dnd/abilities";
 import { ClassIcon } from "@/components/te-map/play/Fx";
 import { BRANCH_ICON } from "@/lib/dnd/oq-fx";
 import { BRANCHES, BRANCH_LABEL, skillCost, type SkillNode } from "@/lib/dnd/skills";
@@ -25,8 +25,7 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
 
   if (!view) return null;
   const ownedSet = new Set(view.owned);
-  const main = abilityOfClass(view.classId);
-  const second = secondAbilityOfClass(view.classId);
+  const abs = abilitiesOfClass(view.classId);
 
   const learn = async (n: SkillNode) => {
     setBusy(true);
@@ -54,7 +53,7 @@ export default function SkillTreePanel({ refreshKey = 0, onChanged, notify }: { 
         <span className="text-[11px] text-gray-400">{view.points.spent} von {view.points.total} ausgegeben · ein Punkt je Stufe ab 2</span>
       </div>
       <p className="text-[11px] text-gray-400">
-        Klassenfähigkeit: <b className="text-white">{main.icon} {main.name}</b> — {main.desc} Mit „Klassen-Kunst 3“ kommt <b className="text-white">{second.icon} {second.name}</b> dazu. Talente wirken im Kampf; zurücksetzen kannst du sie im Münzen-Laden.
+        Fähigkeit I <b className="text-white">{abs[0].icon} {abs[0].name}</b> hast du von Anfang an; II bis IV schaltest du in der Klassen-Kunst frei: {abs.slice(1).map((a) => `${a.icon} ${a.name}`).join(", ")}. Talente wirken im Kampf; zurücksetzen kannst du sie im Münzen-Laden.
       </p>
       {node}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

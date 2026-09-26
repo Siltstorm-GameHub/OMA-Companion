@@ -64,3 +64,30 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   await prisma.match.delete({ where: { id: matchId } });
   return NextResponse.json({ ok: true });
 }
+
+/** Spieler zu einem (auch laufenden) Match hinzufügen oder daraus entfernen — nur Turnier-Teilnehmende. */
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
+  const { matchId, action, userId } = await req.json();
+  if (!matchId || !userId || (action !== "add" && action !== "remove")) {
+    return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
+  }
+  const match = await prisma.match.findFirst({ where: { id: matchId, eventId }, select: { id: true } });
+  if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+
+  if (action === "add") {
+    const participant = await prisma.tournamentParticipant.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+      select: { userId: true },
+    });
+    if (!participant) return NextResponse.json({ error: "Kein Turnier-Teilnehmer" }, { status: 400 });
+    const existing = await prisma.matchEntry.findFirst({ where: { matchId, userId }, select: { id: true } });
+    if (existing) return NextResponse.json({ error: "Bereits im Match" }, { status: 409 });
+    const entry = await prisma.matchEntry.create({ data: { matchId, userId } });
+    return NextResponse.json(entry, { status: 201 });
+  }
+
+  await prisma.matchEntry.deleteMany({ where: { matchId, userId } });
+  return NextResponse.json({ ok: true });
+}

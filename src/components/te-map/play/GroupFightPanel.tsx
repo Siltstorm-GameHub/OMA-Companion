@@ -6,10 +6,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { playSfx } from "@/lib/dnd/oq-sfx";
-import { BattleLog, BattleStage, CommandBar, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
+import { BattleLog, BattleStage, CommandBar, abilityCards, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
 import { useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
 import { Gold } from "@/components/te-map/play/Currency";
-import { AP_PER_ROUND, abilitiesOf, getMonster, type Monster } from "@/lib/dnd/combat";
+import { AP_PER_ROUND, getMonster, type Monster } from "@/lib/dnd/combat";
 import type { BackdropKey } from "@/lib/dnd/oq-backdrop";
 import { alive, TURN_MS } from "@/lib/dnd/group-combat";
 import { getItem } from "@/lib/dnd/items";
@@ -84,33 +84,30 @@ function Fight({ view, myId, call, busy, backdrop }: { view: GroupFightView; myI
   const turnHero = s.heroes[s.turn];
   const myTurn = s.status === "active" && turnHero?.cardId === myId && !!me && alive(me);
   const secLeft = useCountdown(s.turnStartedAt + TURN_MS, view.serverNow);
-  const { main, second } = me ? abilitiesOf(me.fighter) : { main: null, second: null };
   const [target, setTarget] = useState<string>("");
-  const cd = (id: string) => me?.cooldowns[id] ?? 0;
-  const needsTarget = (ab: { kind: string; id: string } | null) => !!ab && (ab.kind === "heal" || (ab.kind === "guard" && ab.id !== "heiliger-schild"));
   const act = (a: string) => void call({ action: "act", fightId: view.id, act: a, ...(target && target !== myId ? { target } : {}) });
   const targetName = s.heroes.find((h) => h.cardId === (target || myId))?.name;
-  const heroes: StageHero[] = s.heroes.map((h) => ({ key: h.cardId, name: h.name, classId: h.fighter.classId, character: h.character ?? null, hp: h.hp, maxHp: h.fighter.maxHp, ac: h.fighter.ac + (h.guard > 0 ? 3 : 0), guard: h.guard > 0, down: h.hp <= 0, left: h.left, active: h.cardId === turnHero?.cardId, mine: h.cardId === myId }));
-  const monNote = [s.taunt > 0 ? "verspottet" : "", s.inspire > 0 ? "Gruppe inspiriert" : "", s.provoke ? "zielt auf den Schildträger" : ""].filter(Boolean).join(", ") || undefined;
-  const cmds: Cmd[] = me && main ? [
+  const heroes: StageHero[] = s.heroes.map((h) => ({ key: h.cardId, name: h.name, classId: h.fighter.classId, character: h.character ?? null, hp: h.hp, maxHp: h.fighter.maxHp, ac: h.fighter.ac + (h.guard > 0 ? 3 : 0), guard: h.guard > 0, shield: h.shield ?? 0, down: h.hp <= 0, left: h.left, active: h.cardId === turnHero?.cardId, mine: h.cardId === myId }));
+  const monNote = [s.inspire > 0 ? "Gruppe inspiriert" : "", s.provoke ? "zielt auf den Schildträger" : ""].filter(Boolean).join(", ") || undefined;
+  const cards = me ? abilityCards(me.fighter, me.cooldowns, me.ap, act) : [];
+  const needsTarget = !!me && cards.some((c) => c.def.target === "ally");
+  const cmds: Cmd[] = me ? [
     { key: "attack", label: "Angriff", icon: "⚔️", cost: 1, disabled: me.ap < 1, onClick: () => act("attack") },
-    { key: "ability", label: main.name, icon: main.icon, cost: main.ap, cd: cd(main.id), disabled: me.ap < main.ap, gold: true, hint: `${main.name}: ${main.desc}${needsTarget(main) ? " Tippe auf einen Helden, um das Ziel zu wählen." : ""}`, onClick: () => act("ability") },
-    ...(second ? [{ key: "ability2", label: second.name, icon: second.icon, cost: second.ap, cd: cd(second.id), disabled: me.ap < second.ap, gold: true, hint: `${second.name}: ${second.desc}${needsTarget(second) ? " Tippe auf einen Helden, um das Ziel zu wählen." : ""}`, onClick: () => act("ability2") }] : []),
     { key: "defend", label: "Deckung", icon: "🛡️", cost: 1, disabled: me.ap < 1, hint: "Deckung: +3 Rüstung bis zur nächsten Runde.", onClick: () => act("defend") },
     { key: "flee", label: "Fliehen", icon: "🏃", cost: 1, disabled: me.ap < 1, hint: "Fliehen: Geschicksprobe; bei Erfolg verlässt du den Kampf.", onClick: () => act("flee") },
   ] : [];
-  const info = myTurn && (needsTarget(main) || needsTarget(second)) ? `Ziel: ${targetName ?? "du"}` : `${secLeft} s`;
+  const info = myTurn && needsTarget ? `Ziel: ${targetName ?? "du"}` : `${secLeft} s`;
 
   return (
     <div className="space-y-2.5">
       <BattleStage
-        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp} monsterNote={monNote}
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp} monsterNote={monNote} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
         backdrop={backdrop} heroes={heroes} fx={fx} status={s.status}
         selectedKey={myTurn ? target || myId : undefined} onPickHero={myTurn ? (k) => setTarget(k) : undefined}
       />
       {s.status === "active" ? (
         myTurn && me ? (
-          <CommandBar round={s.round} ap={me.ap} apMax={AP_PER_ROUND} cmds={cmds} onEnd={() => act("end")} busy={busy} info={info} />
+          <CommandBar round={s.round} ap={me.ap} apMax={AP_PER_ROUND} cmds={cmds} abilities={cards} onEnd={() => act("end")} busy={busy} info={info} />
         ) : (
           <p className="text-xs text-gray-300 oq-slot p-2.5">{me && !alive(me) ? (me.left ? "Du bist geflohen." : "Du liegst am Boden — ein Kleriker kann dich wiederbeleben.") : `${turnHero?.name ?? "…"} ist dran (${secLeft} s).`}</p>
         )

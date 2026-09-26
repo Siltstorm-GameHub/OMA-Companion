@@ -22,6 +22,7 @@ import { formatBerlinDate, formatBerlinRange, getBerlinDateParts, BERLIN_TZ } fr
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
+import SquadsList from "../squads/SquadsList";
 import EventPredictionsPanel from "./EventPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -511,6 +512,7 @@ export default async function EventsPage() {
             </div>
           )
         }
+        squadsPanel={<SquadsList />}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getBuilderAccess, MAX_WORLDS_PER_AUTHOR } from "@/lib/dnd/custom-worlds";
 import { defaultCustomWorldDoc } from "@/lib/te-map/custom-world";
+import { starterDoc, STARTERS, type StarterId } from "@/lib/te-map/starters";
 import { getWorld } from "@/lib/te-map/worlds";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,9 @@ export async function POST(req: NextRequest) {
     if (count >= MAX_WORLDS_PER_AUTHOR) return NextResponse.json({ error: `Du kannst höchstens ${MAX_WORLDS_PER_AUTHOR} Locations anlegen.` }, { status: 400 });
   }
   const body = await req.json().catch(() => ({}));
-  const doc = defaultCustomWorldDoc(body?.theme === "cave" ? "cave" : "outdoor");
+  const theme = body?.theme === "cave" ? "cave" : "outdoor";
+  const starter = STARTERS.find((s) => s.id === body?.template);
+  const doc = starter ? starterDoc(starter.id as StarterId, theme) : defaultCustomWorldDoc(theme);
   const row = await prisma.dndCustomWorld.create({
     data: { slug: `cw-tmp-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, authorId: session.user.id, title: doc.title, doc: JSON.parse(JSON.stringify(doc)) },
   });

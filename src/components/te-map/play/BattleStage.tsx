@@ -10,7 +10,8 @@ import { useState } from "react";
 import BattleFigure from "@/components/te-character/BattleFigure";
 import MonsterSprite from "@/components/te-map/play/MonsterSprite";
 import { ClassIcon, FxLayer } from "@/components/te-map/play/Fx";
-import { getMonster } from "@/lib/dnd/combat";
+import { apOf, getMonster, slotAbilities, type Fighter } from "@/lib/dnd/combat";
+import { ELEMENT_ICON, ELEMENT_LABEL, STATUS_DESC, STATUS_ICON, STATUS_LABEL, getAbility, type AbilityDef, type StatusId } from "@/lib/dnd/abilities";
 import { BACKDROPS, type BackdropKey } from "@/lib/dnd/oq-backdrop";
 import { berlinHour, isNight } from "@/lib/te-map/rpg";
 import type { FxEvent } from "@/lib/dnd/oq-fx";
@@ -26,6 +27,8 @@ export interface StageHero {
   maxHp: number;
   ac: number;
   guard: boolean;
+  /** Schild-LP */
+  shield?: number;
   down: boolean;
   left: boolean;
   /** Ist gerade am Zug */
@@ -65,6 +68,8 @@ interface StageProps {
   monsterHp: number;
   monsterMaxHp: number;
   monsterNote?: string;
+  /** Zustände am Monster (Restrunden) */
+  monsterStatus?: Partial<Record<StatusId, number>>;
   /** Hintergrund passend zur Location (siehe lib/dnd/oq-backdrop) */
   backdrop?: BackdropKey;
   heroes: StageHero[];
@@ -75,7 +80,7 @@ interface StageProps {
   onPickHero?: (key: string) => void;
 }
 
-export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, backdrop = "plains", heroes, fx, status, selectedKey, onPickHero }: StageProps) {
+export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, monsterStatus, backdrop = "plains", heroes, fx, status, selectedKey, onPickHero }: StageProps) {
   const night = isNight(berlinHour()) && backdrop !== "cave";
   const m = getMonster(monsterId);
   const solo = heroes.length === 1;
@@ -93,10 +98,21 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, b
           <p className="text-[11px] font-black text-white truncate">{m?.name ?? "Monster"} <span className="text-gray-400 font-bold">Lv {m?.level}</span></p>
           <Bar value={monsterHp} max={monsterMaxHp} color="bg-red-500" h="h-2.5" />
           <p className="text-[10px] text-gray-300 tabular-nums">{monsterHp}/{monsterMaxHp} LP · RK {m?.ac}{monsterNote ? ` · ${monsterNote}` : ""}</p>
+          {(m?.weak?.length || m?.resist?.length) ? (
+            <p className="text-[10px] leading-tight flex flex-wrap gap-x-1.5">
+              {m?.weak?.map((e) => <span key={`w${e}`} className="text-emerald-300" title={`Schwach gegen ${ELEMENT_LABEL[e]} (×1,5)`}>{ELEMENT_ICON[e]}▲</span>)}
+              {m?.resist?.map((e) => <span key={`r${e}`} className="text-rose-300" title={`Resistent gegen ${ELEMENT_LABEL[e]} (×0,5)`}>{ELEMENT_ICON[e]}▼</span>)}
+            </p>
+          ) : null}
+          {monsterStatus && Object.entries(monsterStatus).some(([, v]) => (v ?? 0) > 0) && (
+            <p className="text-[10px] leading-tight flex flex-wrap gap-x-1.5">
+              {(Object.entries(monsterStatus) as [StatusId, number][]).filter(([, v]) => v > 0).map(([k, v]) => <span key={k} className="text-amber-200 font-bold" title={`${STATUS_LABEL[k]}: ${STATUS_DESC[k]}`}>{STATUS_ICON[k]}{v}</span>)}
+            </p>
+          )}
         </div>
         <div className="relative flex items-end justify-center min-h-[96px]">
           <FxLayer events={fx.filter((e) => e.side === "monster")} />
-          <MonsterSprite monsterId={monsterId} box={m?.raid ? 130 : 96} hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} />
+          <MonsterSprite monsterId={monsterId} box={m?.raid ? 130 : 96} flip hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} attackKey={fx.filter((e) => e.side === "hero" && (e.kind === "hurt" || e.kind === "miss")).at(-1)?.id} />
         </div>
       </div>
 
@@ -127,7 +143,7 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, b
                   <ClassIcon classId={h.classId} size={10} className="mr-0.5 align-[-1px]" />{h.name}
                 </p>
                 <Bar value={h.hp} max={h.maxHp} color={h.hp / Math.max(1, h.maxHp) < 0.3 ? "bg-red-500" : "bg-emerald-500"} />
-                <p className="text-[9px] text-gray-100 text-center tabular-nums leading-tight" style={{ textShadow: "0 1px 2px #000" }}>{h.left ? "geflohen" : h.down ? "am Boden" : `${h.hp}/${h.maxHp}`}</p>
+                <p className="text-[9px] text-gray-100 text-center tabular-nums leading-tight" style={{ textShadow: "0 1px 2px #000" }}>{h.left ? "geflohen" : h.down ? "am Boden" : `${h.hp}/${h.maxHp}`}{alive && (h.shield ?? 0) > 0 ? <span className="text-sky-300"> +{h.shield}🛡</span> : null}</p>
               </div>
             </>
           );
@@ -151,6 +167,21 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, b
   );
 }
 
+export interface AbilityCardData { key: string; def: AbilityDef; ap: number; cd: number; disabled: boolean; mastered: boolean; onClick: () => void }
+
+/** Karten für die Fähigkeiten, die der Held gerade nutzen darf (Platz 1 = Aktion „ability“, sonst „abilityN“). */
+export function abilityCards(f: Fighter, cooldowns: Record<string, number>, ap: number, act: (action: string) => void): AbilityCardData[] {
+  const mastered = !!f.fx?.mastery;
+  return slotAbilities(f).map((def) => {
+    const cost = apOf(f, def);
+    return { key: def.id, def, ap: cost, cd: cooldowns[def.id] ?? 0, disabled: ap < cost, mastered: mastered && def.slot === 1, onClick: () => act(def.slot === 1 ? "ability" : `ability${def.slot}`) };
+  });
+}
+
+/** Beschreibung mit Meisterschaft (falls freigeschaltet). */
+const descOf = (c: AbilityCardData): string => c.def.desc + (c.mastered && c.def.mastery ? ` ★ ${c.def.mastery.desc}` : "");
+export const masteryOf = (classId: string): string | undefined => getAbility(classId, 1)?.mastery?.desc;
+
 export interface Cmd {
   key: string;
   label: string;
@@ -165,8 +196,11 @@ export interface Cmd {
 }
 
 /** Befehlsleiste unten: große Tippflächen (3 pro Zeile), darunter „Zug beenden“ und die Aktionspunkte. */
-export function CommandBar({ round, ap, apMax, cmds, onEnd, busy, endLabel = "Zug beenden", info }: { round: number; ap: number; apMax: number; cmds: Cmd[]; onEnd: () => void; busy: boolean; endLabel?: string; info?: string }) {
+export function CommandBar({ round, ap, apMax, cmds, abilities, onEnd, busy, endLabel = "Zug beenden", info }: { round: number; ap: number; apMax: number; cmds: Cmd[]; abilities?: AbilityCardData[]; onEnd: () => void; busy: boolean; endLabel?: string; info?: string }) {
   const [hint, setHint] = useState<string | null>(null);
+  const [sheet, setSheet] = useState(false);
+  const many = (abilities?.length ?? 0) > 1;
+  const ready = abilities?.filter((c) => !c.disabled && c.cd === 0).length ?? 0;
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-xs text-white">
@@ -176,7 +210,37 @@ export function CommandBar({ round, ap, apMax, cmds, onEnd, busy, endLabel = "Zu
         </span>
         {info && <span className="ml-auto text-[11px] text-gray-300 tabular-nums">{info}</span>}
       </div>
+      {sheet && many && (
+        <div className="grid grid-cols-2 gap-1.5" role="menu" aria-label="Fähigkeiten">
+          {abilities!.map((c) => (
+            <button
+              key={c.key} type="button" role="menuitem" disabled={busy || c.disabled || c.cd > 0} onClick={() => { setSheet(false); c.onClick(); }}
+              className="oq-btn oq-btn-gold relative min-h-[64px] text-left px-2 py-1.5 flex flex-col gap-0.5 touch-manipulation"
+            >
+              <span className="flex items-center gap-1 text-[12px] font-black leading-tight"><span aria-hidden>{ELEMENT_ICON[c.def.element]}</span>{c.def.name}{c.mastered && <span className="text-amber-200" title="Meisterschaft">★</span>}<span className="ml-auto text-[10px] opacity-80">{c.ap} AP · {c.def.cd} R</span></span>
+              <span className="text-[10px] leading-snug opacity-90">{descOf(c)}</span>
+              <span className="text-[9px] uppercase tracking-wider opacity-70">{ELEMENT_LABEL[c.def.element]}{c.def.target === "ally" ? " · Ziel antippen" : ""}</span>
+              {c.cd > 0 && <span className="absolute inset-0 grid place-items-center rounded bg-black/60 text-sm font-black text-amber-200">{c.cd} R</span>}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-1.5">
+        {abilities && abilities.length === 1 && (
+          <button type="button" disabled={busy || abilities[0].disabled || abilities[0].cd > 0} onClick={() => { setHint(descOf(abilities[0])); abilities[0].onClick(); }} onPointerEnter={() => setHint(descOf(abilities[0]))} className="oq-btn oq-btn-gold relative min-h-[54px] flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 touch-manipulation">
+            <span className="text-xl leading-none" aria-hidden>{abilities[0].def.icon}</span>
+            <span className="text-[11px] font-black leading-tight text-center">{abilities[0].def.name}</span>
+            <span className="absolute top-0.5 right-1 text-[10px] font-black opacity-80">{abilities[0].ap}</span>
+            {abilities[0].cd > 0 && <span className="absolute inset-0 grid place-items-center rounded bg-black/55 text-sm font-black text-amber-200">{abilities[0].cd} R</span>}
+          </button>
+        )}
+        {many && (
+          <button type="button" disabled={busy} aria-expanded={sheet} onClick={() => setSheet((o) => !o)} className="oq-btn oq-btn-gold relative min-h-[54px] flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 touch-manipulation">
+            <span className="text-xl leading-none" aria-hidden>✨</span>
+            <span className="text-[11px] font-black leading-tight text-center">Fähigkeiten {sheet ? "▼" : "▲"}</span>
+            <span className="absolute top-0.5 right-1 text-[10px] font-black opacity-80">{ready}</span>
+          </button>
+        )}
         {cmds.map((c) => (
           <button
             key={c.key} type="button" disabled={busy || c.disabled || (c.cd ?? 0) > 0}

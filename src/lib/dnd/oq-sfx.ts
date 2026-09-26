@@ -18,7 +18,7 @@ export function sfxForFx(kind: FxKind, n = 0): Sfx {
     case "hurt": return "hurt";
     case "fire": return "fire";
     case "ice": return "ice";
-    case "arcane": case "holy": return "spell";
+    case "arcane": case "holy": case "lightning": case "shadow": case "nature": case "sound": return "spell";
     case "heal": return "heal";
     case "guard": return "block";
     case "buff": return "buff";

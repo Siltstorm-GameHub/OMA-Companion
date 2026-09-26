@@ -100,3 +100,11 @@
 .oq-float-info { color: #8fd3ff; font-size: 16px; }
 @keyframes oq-float-up { 0% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); } 30% { transform: translate(-50%, -12px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -54px) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .oq-float { animation: oq-float-fade 1150ms linear 1 forwards; } @keyframes oq-float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } } }
+
+/* Monster-Angriff: Ausfallschritt zu den Helden (lokal nach vorn), Ruhe-Bild während der Angriffsanimation ausblenden */
+@keyframes oq-lunge { 0% { transform: translateX(0); } 28% { transform: translateX(22px); } 55% { transform: translateX(22px); } 100% { transform: translateX(0); } }
+.oq-lunge { animation: oq-lunge 620ms ease-out 1; }
+@keyframes oq-hide-during { 0%, 99% { opacity: 0; } 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .oq-lunge { animation: none; } }
+@keyframes oq-lunge-l { 0% { transform: translateX(0); } 28% { transform: translateX(-22px); } 55% { transform: translateX(-22px); } 100% { transform: translateX(0); } }
+.oq-lunge-l { animation: oq-lunge-l 620ms ease-out 1; }
