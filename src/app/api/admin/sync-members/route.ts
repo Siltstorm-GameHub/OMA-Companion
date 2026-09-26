@@ -192,6 +192,7 @@ export async function POST() {
         where: { id: existing.id },
         data: {
           username,
+          name: username,
           ...(avatar && { image: avatar }),
         },
       });
