@@ -252,7 +252,6 @@ export default function TournamentManagerMobile({
         ) : (
           <FocusedFfaCard
             match={focused}
-            participants={tournament.participants}
             changeMatchPlayer={changeMatchPlayer}
             allUsers={allUsers}
             isCoop={isCoop}
@@ -557,12 +556,11 @@ function FocusedDuelCard({
 
 /* ── FFA / Kooperativ / Ø-Stats: pro Teilnehmer Stat-Stepper statt Zahlenfeld ── */
 function FocusedFfaCard({
-  match, participants, changeMatchPlayer, allUsers, isCoop, trackMatchWin, trackPlacement, placementPoints, visibleStatFields,
+  match, changeMatchPlayer, allUsers, isCoop, trackMatchWin, trackPlacement, placementPoints, visibleStatFields,
   ffaEdits, setFfaField, teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
   validateTeamAssignment, loading, onSave, onReset,
 }: {
   match: Match;
-  participants: Tournament["participants"];
   changeMatchPlayer: (matchId: string, userId: string, action: "add" | "remove") => Promise<void>;
   allUsers: User[];
   isCoop: boolean;
@@ -639,7 +637,7 @@ function FocusedFfaCard({
       {/* Spieler in diesem Match ändern — auch bei laufenden Matches */}
       {(() => {
         const inMatch = new Set(match.entries.map(e => e.userId));
-        const addable = participants.filter(p => !inMatch.has(p.userId));
+        const addable = allUsers.filter(u => !inMatch.has(u.id));
         return (
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
@@ -662,7 +660,7 @@ function FocusedFfaCard({
                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
                 className="w-full text-sm bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-gray-300">
                 <option value="">+ Spieler hinzufügen…</option>
-                {addable.map(p => <option key={p.userId} value={p.userId}>{userName(p.user)}</option>)}
+                {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
               </select>
             )}
           </div>

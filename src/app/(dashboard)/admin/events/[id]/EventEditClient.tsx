@@ -1407,6 +1407,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       {/* ── Tab: Turnier ── */}
       {activeTab === "tournament" && (
         <div className="space-y-4">
+          {!hasTournament && (
           <div>
             <label className={labelCls}>Format</label>
             <div className="grid grid-cols-2 gap-2">
@@ -1421,6 +1422,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               ))}
             </div>
           </div>
+          )}
 
           {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus, ersetzt das ehemalige Format "liga") */}
           {isRoundRobinFamily && (

@@ -65,7 +65,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   return NextResponse.json({ ok: true });
 }
 
-/** Spieler zu einem (auch laufenden) Match hinzufügen oder daraus entfernen — nur Turnier-Teilnehmende. */
+/** Spieler zu einem (auch laufenden) Match hinzufügen oder daraus entfernen. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   await requireModeratorOrEventSquadCaptain(eventId);
@@ -77,15 +77,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   if (action === "add") {
+    // Später angemeldete Spieler sind evtl. noch keine Turnier-Teilnehmer → hier automatisch aufnehmen.
+    let newParticipant = null;
     const participant = await prisma.tournamentParticipant.findUnique({
       where: { eventId_userId: { eventId, userId } },
       select: { userId: true },
     });
-    if (!participant) return NextResponse.json({ error: "Kein Turnier-Teilnehmer" }, { status: 400 });
+    if (!participant) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!user) return NextResponse.json({ error: "User nicht gefunden" }, { status: 404 });
+      const count = await prisma.tournamentParticipant.count({ where: { eventId } });
+      newParticipant = await prisma.tournamentParticipant.create({
+        data: { eventId, userId, seed: count + 1 },
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      });
+    }
     const existing = await prisma.matchEntry.findFirst({ where: { matchId, userId }, select: { id: true } });
     if (existing) return NextResponse.json({ error: "Bereits im Match" }, { status: 409 });
     const entry = await prisma.matchEntry.create({ data: { matchId, userId } });
-    return NextResponse.json(entry, { status: 201 });
+    return NextResponse.json({ entry, participant: newParticipant }, { status: 201 });
   }
 
   await prisma.matchEntry.deleteMany({ where: { matchId, userId } });

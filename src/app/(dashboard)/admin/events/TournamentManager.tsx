@@ -790,9 +790,11 @@ export default function TournamentManager({
       toast.error(e.error ?? "Fehler beim Ändern der Spieler");
       return;
     }
-    const added: MatchEntry | null = action === "add" ? await res.json() : null;
+    const data: { entry: MatchEntry; participant: Participant | null } | null = action === "add" ? await res.json() : null;
+    const added = data?.entry ?? null;
     setTournament(prev => prev ? {
       ...prev,
+      participants: data?.participant ? [...prev.participants, data.participant] : prev.participants,
       matches: prev.matches.map(m => m.id !== matchId ? m : {
         ...m,
         entries: added ? [...m.entries, added] : m.entries.filter(e => e.userId !== userId),
@@ -1108,7 +1110,7 @@ export default function TournamentManager({
                       )}
                       {(() => {
                         const inMatch = new Set(match.entries.map(e => e.userId));
-                        const addable = tournament.participants.filter(p => !inMatch.has(p.userId));
+                        const addable = allUsers.filter(u => !inMatch.has(u.id));
                         return (
                           <div className="mb-3 space-y-2">
                             <div className="flex flex-wrap gap-1.5">
@@ -1132,7 +1134,7 @@ export default function TournamentManager({
                                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
                                 className="text-xs bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-300">
                                 <option value="">+ Spieler hinzufügen…</option>
-                                {addable.map(p => <option key={p.userId} value={p.userId}>{userName(p.user)}</option>)}
+                                {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
                               </select>
                             )}
                           </div>
