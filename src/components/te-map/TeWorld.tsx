@@ -47,6 +47,10 @@ const SHEET_FILES = {
   a5inside: "/te/tiles/tileA5_inside.png",
   fires: "/te/tiles/fires.png",
   lights: "/te/tiles/lights.png",
+  jungle: "/te/tiles/x_jungle.png",
+  beach: "/te/tiles/x_beach.png",
+  ash: "/te/tiles/x_ash.png",
+  dark: "/te/tiles/x_dark.png",
 } as const;
 type SheetKey = keyof typeof SHEET_FILES;
 export type Sheets = Record<SheetKey, HTMLImageElement> & { tex: Record<TextureKey, HTMLImageElement> };

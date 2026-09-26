@@ -2,3 +2,4 @@ OMA Quest — Grafiken (aus dem Battle-Cards-Asset-Ordner)
 - fx/*.png: Ausschnitte aus Super Pixel Impact/Explosion/Fantasy/Blood FX Packs (unTiedGames)
 - class/*.png, skill/*.png: Ausschnitte aus dem UI-Set "Avatar RPG"
 Nutzungsrechte für den Web-Einsatz sind vom Projektinhaber zu bestätigen.
+- mon/wolf*.png: The Wolf Pack (finalbossblues, kostenlose Veröffentlichung); Frostwolf = umgefärbte Variante

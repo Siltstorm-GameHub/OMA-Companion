@@ -187,6 +187,24 @@ for key, folder in MONSTERS.items():
     mon_manifest[key] = info
 
 
+# ── Wölfe (The Wolf Pack, finalbossblues): 32x32-Bilder, Zeile 2 = nach rechts blickend, Spalte 0–2 Gehen, 3–5 Rennen (Angriff) ──
+WOLF_DIR = f'{ROOT}/Pixel Character/wolfpack_9.27.21/tf_color/'
+WOLVES = {'wolf': ('wolf_gray_tf.png', None), 'frostwolf': ('wolf_gray_tf.png', (0.78, 0.95, 1.25)), 'waldwolf': ('wolf_brown_tf.png', None), 'schattenwolf': ('wolf_black_tf.png', None)}
+WOLF_SHEET = WOLF_DIR + 'wolf_gray_tf.png'
+if os.path.exists(WOLF_SHEET):
+    for key, (fname, tint) in WOLVES.items():
+        base = Image.open(WOLF_DIR + fname).convert('RGBA')
+        sheet = base
+        if tint:
+            r, g, b, a = base.split()
+            sheet = Image.merge('RGBA', (r.point(lambda v: min(255, int(v * tint[0] + 12))), g.point(lambda v: min(255, int(v * tint[1] + 20))), b.point(lambda v: min(255, int(v * tint[2] + 30))), a))
+        info = strip([(c * 32, 64, 32, 32) for c in (0, 1, 2, 1)], sheet, f'{OUT}/mon/{key}.png')
+        info['atk'] = strip([(c * 32, 64, 32, 32) for c in (3, 4, 5)], sheet, f'{OUT}/mon/{key}-atk.png')
+        mon_manifest[key] = info
+else:
+    print('FEHLT Wolf-Paket', WOLF_SHEET)
+
+
 # ── Kampf-Effekte (Pixel-Spritesheets, waagerechte Streifen quadratischer Bilder) ──
 FX_DIR = f'{ROOT}/Assets/Effects/'
 FX = {

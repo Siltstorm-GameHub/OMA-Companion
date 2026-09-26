@@ -78,6 +78,8 @@ export const MONSTERS: Monster[] = [
   { id: "ratte", name: "Giftegel", emoji: "🪱", level: 1, hp: 12, ac: 10, attack: 2, dmg: [1, 4, 0], attacks: 1, xp: 14, gold: [0, 3], loot: [{ key: "frachtbrief", chance: 0.2 }], biomes: "any", blurb: "Größer als er sein sollte, grün und sehr anhänglich." },
   { id: "wegelagerer", name: "Wegelagerer", emoji: "🥷", level: 2, hp: 20, ac: 12, attack: 3, dmg: [1, 6, 1], attacks: 1, xp: 26, gold: [4, 12], loot: [{ key: "silberloeffel", chance: 0.3 }, { key: "dolch", chance: 0.05 }], biomes: "any", blurb: "„Geld oder … na ja, auch Geld.“" },
   { id: "wolf", name: "Grauer Wolf", emoji: "🐺", level: 2, hp: 18, ac: 12, attack: 3, dmg: [1, 4, 1], attacks: 2, xp: 28, gold: [0, 0], loot: [], biomes: ["temperate", "cold"], blurb: "Hungrig, und zu zweit beißen kann er auch." },
+  { id: "waldwolf", name: "Waldwolf", emoji: "🐺", level: 3, hp: 26, ac: 12, attack: 4, dmg: [1, 6, 1], attacks: 2, xp: 46, gold: [0, 0], loot: [], biomes: ["temperate"], blurb: "Braun wie die Rinde, leise wie der Nebel und selten allein." },
+  { id: "schattenwolf", name: "Schattenwolf", emoji: "🐺", level: 6, hp: 52, ac: 15, attack: 7, dmg: [2, 4, 2], attacks: 2, xp: 118, gold: [0, 0], loot: [{ key: "reisemantel", chance: 0.06 }], biomes: "any", blurb: "Schwarz wie die Nacht. Man sieht nur die Augen — und dann die Zähne." },
   { id: "skelett", name: "Rastloses Skelett", emoji: "💀", level: 3, hp: 26, ac: 13, attack: 4, dmg: [1, 8, 0], attacks: 1, xp: 40, gold: [3, 10], loot: [{ key: "bierkrug", chance: 0.3 }, { key: "alte-karte", chance: 0.15 }], biomes: "any", blurb: "Klappert bedrohlich. Meistens beim Gehen." },
   { id: "goblin", name: "Goblin-Plünderer", emoji: "👺", level: 3, hp: 24, ac: 13, attack: 4, dmg: [1, 6, 2], attacks: 1, xp: 42, gold: [6, 16], loot: [{ key: "sockenpaar", chance: 0.25 }, { key: "rostschwert", chance: 0.08 }], biomes: "any", blurb: "Trägt mehr Beute, als er tragen kann." },
   { id: "baer", name: "Höhlenbär", emoji: "🐻", level: 4, hp: 40, ac: 12, attack: 5, dmg: [2, 6, 1], attacks: 1, xp: 60, gold: [0, 0], loot: [{ key: "edelstein", chance: 0.1 }], biomes: ["temperate"], blurb: "Wer ihn weckt, hat schlechte Ideen." },
@@ -112,7 +114,7 @@ MONSTERS.push(...RAID_BOSSES);
 
 /** Pixel-Grafik je Monster (Schlüssel aus oq-assets-manifest); ohne Eintrag zeigt die Oberfläche das Emoji. */
 export const MONSTER_SPRITE: Record<string, MonsterSpriteKey> = {
-  ratte: "leech", skorpion: "sandspider", golem: "mudman",
+  ratte: "leech", skorpion: "sandspider", golem: "mudman", wolf: "wolf", frostwolf: "frostwolf", waldwolf: "waldwolf", schattenwolf: "schattenwolf",
   blutegel: "bloodleech", schleimschaedel: "skullslime", dornenbeisser: "shrubtooth", eisschleim: "iceslime", daemonenauge: "demoneye",
   flatterschaedel: "wingedskull", totenkaefer: "skullbeetle", glutkaefer: "firebeetle", knochenwaechter: "bonestatue", schattenauge: "darkeye",
   frostgeist: "frostwraith", wiedergaenger: "wraith", hoellenschaedel: "hellskull",
@@ -120,6 +122,7 @@ export const MONSTER_SPRITE: Record<string, MonsterSpriteKey> = {
 
 /** Schwächen und Resistenzen der Monster (nicht aufgeführt = keine). */
 const MONSTER_ELEMENTS: Record<string, { weak?: Element[]; resist?: Element[] }> = {
+  waldwolf: { weak: ["fire"] }, schattenwolf: { weak: ["holy"], resist: ["shadow"] },
   ratte: { weak: ["fire"] }, blutegel: { weak: ["fire"] }, wolf: { weak: ["fire"] },
   skelett: { weak: ["holy", "sound"], resist: ["shadow"] }, knochenwaechter: { weak: ["holy", "sound"], resist: ["shadow"] },
   baer: { weak: ["fire"] }, skorpion: { weak: ["ice"], resist: ["fire"] },

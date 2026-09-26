@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { drawStamp, T, type Sheets } from "@/components/te-map/TeWorld";
 import { STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
 import { STAMP_LABELS } from "@/lib/te-map/stamp-labels";
+import { PACK_CATEGORIES } from "@/lib/te-map/stamps-packs";
 import { Swatch } from "./Swatch";
 
 export { STAMP_LABELS };
@@ -14,6 +15,7 @@ const CATEGORIES: { key: string; label: string; ids: StampId[] }[] = [
   { key: "dorf", label: "Dorf", ids: ["fountain", "benchWide", "lamp", "armPostL", "armPostR", "noticeBoard", "planks", "fenceH", "crate", "crateBlue", "barrel", "waterBarrel", "jar", "jarGrey", "hay", "scarecrow", "log"] },
   { key: "ruinen", label: "Ruinen", ids: ["ruinWall", "ruinWall2", "ruinPillar", "pillar", "brokenPillar", "stoneBlocks", "obelisk", "grave", "graveCross", "bonesPile", "skull", "bones", "skullPile"] },
   { key: "fels", label: "Fels", ids: ["rocks", "rockBig", "rockGrey", "rockSmall", "stalagmite"] },
+  ...PACK_CATEGORIES,
   { key: "licht", label: "Licht", ids: ["campfire", "campfireSmall", "torchStand", "wallTorch", "hearthFire", "stoveFire"] },
 ];
 

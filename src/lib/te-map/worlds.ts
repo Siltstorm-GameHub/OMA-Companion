@@ -139,6 +139,8 @@ function waldpfad(): WorldDef {
   m.npc("pilzsammler", "Pilzsammlerin Frida", 12, 16, "up", 22, chatter("Nur die roten sind giftig. Oder die weißen. Oder die braunen. Ich frage immer erst den Pilz."));
   m.scatter(["tree", "darkTree"], 46, [2, 2, 32, 24], { spacing: 0 });
   m.scatter(["fruitBush", "stump", "log", "mushrooms", "flowerBed"], 26, [2, 2, 32, 24]);
+  m.scatter(["jBushBig", "jBushMid", "jBushSmall"], 8, [2, 2, 32, 24]);
+  m.scatter(["jFlowerWhite", "jFlowerYellow", "jFlowerPink", "jTuftA"], 12, [2, 2, 32, 24]);
   return { slug: "waldpfad", title: "Der Krähwald", map: m.build({ x: 3, y: 20 }), quest: quest("welt-waldpfad", "Der Weg aus dem Wald", [
     "Sprich mit Förster Holz an der Lichtung.", "Finde die moosige Truhe im Nordwesten.", "Bring den Kompass zu Förster Holz.",
   ], 40) };
@@ -170,6 +172,8 @@ function kuestenstrasse(): WorldDef {
   m.npc("fischer", "Fischer Anselm", 6, 14, "down", 32, chatter("Ich fange nichts. Aber ich fange es mit Stil."));
   m.scatter(["rocks", "rockGrey", "bonesPile", "hedge4"], 16, [2, 2, 32, 24]);
   m.scatter(["log", "hay", "rockSmall"], 8, [2, 15, 32, 10]);
+  m.scatter(["bPalmA", "bPalmC", "bPalmHammock"], 6, [2, 15, 32, 10], { spacing: 2 });
+  m.scatter(["bStarOrange", "bStarBlue", "bShellA", "bShellB", "bShellPink", "bRockBig"], 14, [2, 15, 32, 10]);
   return { slug: "kuestenstrasse", title: "Küste der 1000 Ausreden", map: m.build({ x: 3, y: 12 }), quest: quest("welt-kuestenstrasse", "Die allerletzte Lieferung", [
     "Sprich mit Schmuggler Sven.", "Finde die Kiste unterm Steg.", "Bring die Bestätigung zu Sven.",
   ], 40) };
@@ -194,6 +198,7 @@ function bergpass(): WorldDef {
   ]);
   m.scatter(["rockBig", "rockGrey", "darkTree", "stalagmite"], 34, [2, 2, 32, 24]);
   m.scatter(["skull", "bonesPile", "rockSmall"], 8, [2, 2, 32, 24]);
+  m.scatter(["aSpikesBig", "aSpikes", "aRock", "aTreeTall"], 8, [2, 2, 32, 24]);
   return { slug: "bergpass", title: "Schnarchpass", map: m.build({ x: 3, y: 24 }), quest: quest("welt-bergpass", "Der müde Bote", [
     "Sprich mit Wanderin Frieda.", "Überbringe Wachposten Rolf die Botschaft am Ende des Passes.", "Kehre zu Frieda zurück.",
   ], 40) };
@@ -231,6 +236,7 @@ function ruinen(): WorldDef {
   m.sign("mahnmal", "Mahnmal", 17, 8, ["Hier ruht der Praktikant, der nie dokumentiert hat. Möge sein Wiki Erlösung finden."]);
   m.scatter(["bonesPile", "skull", "bones", "skullPile", "mushrooms"], 12, [10, 6, 17, 14]);
   m.scatter(["tree", "darkTree", "fruitBush", "rocks"], 24, [2, 2, 32, 24]);
+  m.scatter(["aSpikes", "aRockBig", "aBone1", "aBone2", "aSkull", "aGrave1", "aGrave2"], 12, [2, 2, 32, 24]);
   return { slug: "ruinen", title: "Ruine des Ewigen Praktikanten", map: m.build({ x: 17, y: 25 }), quest: quest("welt-ruinen", "Die fehlende Dokumentation", [
     "Sprich mit dem Geist des Praktikanten in der Halle.", "Finde die staubige Kiste im Nordosten der Ruine.", "Bring die Dokumentation zum Geist.",
   ], 50) };
@@ -264,6 +270,8 @@ function verlassenesDorf(): WorldDef {
   m.npc("kind", "Hofhund-Flüsterer", 22, 16, "left", 62, chatter("Der Hund gehört niemandem. Aber er kommt immer wieder. Fast wie ein Bewohner."));
   m.place("hedge4", 12, 16); m.place("fenceH", 2, 12); m.place("fenceH", 4, 12);
   m.scatter(["tree", "darkTree", "fruitBush", "flowerBed", "stump", "rocks", "hay", "scarecrow"], 42, [2, 2, 32, 24]);
+  m.scatter(["aTreeTall", "aTreeBig"], 5, [2, 2, 32, 24]);
+  m.scatter(["aGrave1", "aGrave2", "aGrave3", "aBone1", "aBone2", "aSkull", "aBone3", "aLog"], 12, [2, 2, 32, 24]);
   return { slug: "verlassenes_dorf", title: "Dorf Nirgendwo", map: m.build({ x: 3, y: 14 }), quest: quest("welt-verlassenes-dorf", "Der Beweis für Nirgendwo", [
     "Sprich mit dem letzten Einwohner.", "Finde die Kiste im Garten hinter dem Wirtshaus.", "Bring den Ortsschein zum Einwohner.",
   ], 40) };
@@ -289,6 +297,7 @@ function schmugglerhoehle(): WorldDef {
   ));
   m.npc("schmuggler", "Zwielichtiger Kunde", 14, 15, "up", 72, chatter("Ich habe nichts zu verzollen. Außer diesem einen Sack. Und diesem. Und dem da."));
   m.scatter(["crateBlue", "waterBarrel", "jar", "jarGrey", "rockBig", "stalagmite", "mushrooms", "skull", "rockGrey"], 44, [3, 3, 30, 22]);
+  m.scatter(["dCrystalBig", "dCrystalA", "dCrystalB", "dCrystalC", "dCrystalCluster", "dBoulderA", "dBoulderB"], 18, [2, 2, 32, 24]);
   return { slug: "schmugglerhoehle", title: "Höhle der Zweiten Meinung", map: m.build({ x: 5, y: 22 }), quest: quest("welt-schmugglerhoehle", "Plan B", [
     "Sprich mit Höhlenwirtin Gundula.", "Finde die Kiste in der Sackgasse im Nordwesten.", "Bring Plan B zu Gundula.",
   ], 50) };
@@ -326,6 +335,7 @@ function zwergenfeste(): WorldDef {
   m.place("fountain", 16, 12);
   m.place("pillar", 12, 11); m.place("pillar", 22, 11); m.place("stoneBlocks", 12, 17); m.place("stoneBlocks", 22, 17);
   m.scatter(["waterBarrel", "barrel", "jar", "jarGrey", "crateBlue", "rockBig", "stalagmite", "mushrooms"], 40, [3, 3, 30, 22]);
+  m.scatter(["dCrystalA", "dCrystalB", "dGargoyle", "dMoonStatue", "dBat"], 8, [2, 2, 32, 24]);
   return { slug: "zwergenfeste", title: "Bierbart-Feste", map: m.build({ x: 17, y: 24 }), quest: quest("welt-zwergenfeste", "Der leere Krug", [
     "Sprich mit Zwerg Brumm am Festplatz.", "Finde das verschlossene Fass im Südosten.", "Bring das Rezept zu Brumm.",
   ], 50) };
@@ -351,6 +361,7 @@ function frostgipfel(): WorldDef {
   ));
   m.npc("wetter", "Wettermann Wilhelm", 20, 12, "down", 92, chatter("Heute: Schnee. Morgen: Schnee. Übermorgen: Überraschung, Schnee."));
   m.scatter(["rockBig", "rockGrey", "darkTree", "stalagmite", "skull", "bonesPile", "obelisk"], 36, [2, 2, 32, 24]);
+  m.scatter(["aTreeTall", "aLog"], 5, [2, 2, 32, 24]);
   return { slug: "frostgipfel", title: "Frostgipfel des ewigen Aufschubs", map: m.build({ x: 5, y: 25 }), quest: quest("welt-frostgipfel", "Nächste Woche vielleicht", [
     "Sprich mit Bergsteiger Bernd.", "Hole die Fahne aus der Gipfelkiste im Nordosten.", "Bring die Fahne zu Bernd.",
   ], 50) };
@@ -377,6 +388,8 @@ function sumpf(): WorldDef {
   m.npc("froschkoenig", "Verwunschene Kröte", 26, 10, "down", 102, chatter("Küss mich, dann werde ich ein Prinz. Oder eine noch größere Kröte. Kommt auf den Tag an."));
   m.scatter(["lily", "lilyPink", "reeds", "reedsTuft"], 44, [2, 2, 32, 24]);
   m.scatter(["darkTree", "tree", "log", "stump", "mushrooms", "rockSmall"], 24, [2, 2, 32, 24]);
+  m.scatter(["jTree1", "jTree2", "jBushBig", "jBushMid", "jBushSmall", "jHollowLog"], 12, [2, 2, 32, 24]);
+  m.scatter(["jFlowerWhite", "jFlowerYellow", "jFlowerPink", "jTuftA", "jTuftB", "jRocks"], 22, [2, 2, 32, 24]);
   return { slug: "sumpf", title: "Sumpf der verlorenen Socken", map: m.build({ x: 4, y: 4 }), quest: quest("welt-sumpf", "Die eine Socke", [
     "Sprich mit Sockensammler Otto.", "Finde die Sockenkiste im Südosten des Sumpfes.", "Bring die grün gestreifte Socke zu Otto.",
   ], 40) };
@@ -398,11 +411,11 @@ export const WORLD_SLUGS = Object.keys(BUILDERS);
 
 const MONSTER_SPOTS: Record<string, [string, number, number][]> = {
   hafenstadt: [["ratte", 0.2, 0.7], ["ratte", 0.8, 0.75], ["schleimschaedel", 0.5, 0.85]],
-  waldpfad: [["wolf", 0.5, 0.4], ["dornenbeisser", 0.75, 0.7], ["wegelagerer", 0.4, 0.8], ["blutegel", 0.25, 0.3]],
+  waldpfad: [["wolf", 0.5, 0.4], ["waldwolf", 0.65, 0.25], ["dornenbeisser", 0.75, 0.7], ["wegelagerer", 0.4, 0.8], ["blutegel", 0.25, 0.3]],
   kuestenstrasse: [["wegelagerer", 0.5, 0.5], ["skelett", 0.8, 0.3]],
   bergpass: [["baer", 0.6, 0.5], ["goblin", 0.35, 0.7], ["daemonenauge", 0.8, 0.3]],
-  ruinen: [["skelett", 0.3, 0.4], ["flatterschaedel", 0.7, 0.6], ["golem", 0.5, 0.25], ["wiedergaenger", 0.85, 0.85]],
-  verlassenes_dorf: [["goblin", 0.5, 0.5], ["skelett", 0.75, 0.35]],
+  ruinen: [["schattenwolf", 0.15, 0.8], ["skelett", 0.3, 0.4], ["flatterschaedel", 0.7, 0.6], ["golem", 0.5, 0.25], ["wiedergaenger", 0.85, 0.85]],
+  verlassenes_dorf: [["schattenwolf", 0.25, 0.75], ["goblin", 0.5, 0.5], ["skelett", 0.75, 0.35]],
   schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7], ["schattenauge", 0.25, 0.6]],
   zwergenfeste: [["knochenwaechter", 0.3, 0.6], ["golem", 0.6, 0.4], ["totenkaefer", 0.8, 0.7]],
   frostgipfel: [["frostwolf", 0.5, 0.5], ["eisschleim", 0.3, 0.7], ["frostgeist", 0.6, 0.3], ["drache", 0.85, 0.25]],

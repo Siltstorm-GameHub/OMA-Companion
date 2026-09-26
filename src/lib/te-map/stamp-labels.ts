@@ -1,8 +1,10 @@
 // Deutsche Namen der Objekte (Editor-Auswahl und Interaktions-Hinweise im Spiel)
 
 import type { StampId } from "./stamps";
+import { PACK_LABELS } from "./stamps-packs";
 
 export const STAMP_LABELS: Partial<Record<StampId, string>> = {
+  ...PACK_LABELS,
   tree: "Baum", darkTree: "Dunkler Baum", hedge4: "Hecke", hedgeFlowers: "Blumenhecke", fruitBush: "Beerenbusch", flowerBed: "Blumenbeet",
   flowerTub: "Blumentrog", flowerTubYellow: "Blumentopf", planter: "Pflanzkasten", reeds: "Schilf", reedsTuft: "Schilfbüschel", lily: "Seerose",
   lilyPink: "Rosa Seerose", stump: "Baumstumpf", fountain: "Brunnen", benchWide: "Bank", lamp: "Laterne", noticeBoard: "Anschlagtafel",

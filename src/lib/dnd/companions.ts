@@ -15,7 +15,7 @@ export interface CompanionBonus { kind: CompanionKind; value: number; label: str
 
 /** Welche Eigenschaft welches Monster mitbringt; die Stärke wächst mit der Monsterstufe (Stufe 1–4: klein, 5–8: mittel, ab 9: stark). */
 const KIND: Record<string, CompanionKind> = {
-  ratte: "regen", blutegel: "dmg", wolf: "hit", skelett: "ac", goblin: "dmg", baer: "hp", skorpion: "hit", frostwolf: "ac", hauptmann: "dmg", golem: "ac", drache: "hp",
+  ratte: "regen", blutegel: "dmg", wolf: "hit", waldwolf: "hit", schattenwolf: "dmg", skelett: "ac", goblin: "dmg", baer: "hp", skorpion: "hit", frostwolf: "ac", hauptmann: "dmg", golem: "ac", drache: "hp",
   schleimschaedel: "hp", dornenbeisser: "ac", eisschleim: "regen", daemonenauge: "hit", flatterschaedel: "hit", totenkaefer: "dmg", glutkaefer: "dmg",
   knochenwaechter: "ac", schattenauge: "crit", frostgeist: "regen", wiedergaenger: "hp", hoellenschaedel: "dmg", wegelagerer: "hit",
 };

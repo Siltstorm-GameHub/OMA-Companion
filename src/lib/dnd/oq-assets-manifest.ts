@@ -249,6 +249,46 @@ export const MONSTER_SPRITES = {
       "w": 96,
       "h": 48
     }
+  },
+  "wolf": {
+    "frames": 4,
+    "w": 32,
+    "h": 32,
+    "atk": {
+      "frames": 3,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "frostwolf": {
+    "frames": 4,
+    "w": 32,
+    "h": 32,
+    "atk": {
+      "frames": 3,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "waldwolf": {
+    "frames": 4,
+    "w": 32,
+    "h": 32,
+    "atk": {
+      "frames": 3,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "schattenwolf": {
+    "frames": 4,
+    "w": 32,
+    "h": 32,
+    "atk": {
+      "frames": 3,
+      "w": 32,
+      "h": 32
+    }
   }
 } as const;
 export type MonsterSpriteKey = keyof typeof MONSTER_SPRITES;

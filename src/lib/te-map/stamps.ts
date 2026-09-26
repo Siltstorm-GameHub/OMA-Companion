@@ -5,7 +5,7 @@
 // `solid` = begehbarkeitsrelevanter Fußabdruck relativ zur linken oberen Kachel des Stempels
 // ([x, y, w, h]); ohne Angabe ist der Stempel begehbar (Blumen, Steine, Bodenflecken).
 
-export type TileSheet = "out" | "town" | "cave" | "inside" | "fires" | "lights";
+export type TileSheet = "out" | "town" | "cave" | "inside" | "fires" | "lights" | "jungle" | "beach" | "ash" | "dark";
 
 export interface StampDef {
   sheet: TileSheet;
@@ -25,6 +25,8 @@ export interface StampDef {
   /** Lichtschein (Radius in Pixeln, Versatz vom Objektmittelpunkt) — flackert leicht, drinnen und nachts sichtbar */
   glow?: { r: number; dx?: number; dy?: number };
 }
+
+import { PACK_STAMPS } from "./stamps-packs";
 
 export const STAMPS = {
   // Bäume & Grün
@@ -188,6 +190,7 @@ export const STAMPS = {
   shopSword: { sheet: "town", sx: 3, sy: 0, w: 1, h: 1 },
   shopInn: { sheet: "town", sx: 6, sy: 0, w: 1, h: 1 },
   shopMug: { sheet: "town", sx: 7, sy: 0, w: 1, h: 1 },
+  ...PACK_STAMPS,
 } as const satisfies Record<string, StampDef>;
 
 export type StampId = keyof typeof STAMPS;
