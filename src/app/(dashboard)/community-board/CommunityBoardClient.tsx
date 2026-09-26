@@ -155,10 +155,8 @@ export default function CommunityBoardClient() {
           ))}
         </div>
       )}
-      {/* Ab lg mehrspaltiger Masonry-Flow statt einer einzelnen langen Kette —
-          die Karten haben durch Bilder/Contributions/Idea-Text stark unterschiedliche
-          Höhen, CSS-Columns verteilen das ohne JS-Messen sinnvoll auf die Breite. */}
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-4">
+      {/* Eine Spalte: streng von oben nach unten, neu → alt (mehrere CSS-Spalten würden die Reihenfolge spaltenweise mischen). */}
+      <div className="max-w-2xl mx-auto">
         {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} onWriteAbout={setWriteAbout} />)}
       </div>
 
