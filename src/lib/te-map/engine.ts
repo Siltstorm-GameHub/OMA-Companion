@@ -9,6 +9,7 @@
 // angenommen, 1… = läuft, letzter = abgeschlossen). Ein Akteur kann für mehrere Quests gleichzeitig
 // etwas zu sagen haben — die passenden Dialoge werden nacheinander gezeigt.
 
+import { TIER_META, applyTier, tierOf } from "../dnd/monster-tier";
 import { STAMPS, type StampDef } from "./stamps";
 import { getMonster } from "@/lib/dnd/combat";
 import { weatherMatches, type RollResult, type Weather } from "./rpg";
@@ -434,7 +435,8 @@ export function pressAction(game: Game): void {
   faceToward(game, actor.x, actor.y);
   const monster = actor.kind === "monster" && actor.monster ? getMonster(actor.monster) : undefined;
   if (monster) {
-    game.dialog = { speaker: actor.name, lines: [`${monster.emoji} ${actor.name} — Stufe ${monster.level}, ${monster.hp} LP. ${monster.blurb}`], index: 0, fight: { actor: actor.id, monster: monster.id } };
+    const tier = tierOf(monster, actor.tier);
+    game.dialog = { speaker: actor.name, lines: [`${monster.emoji} ${actor.name}${tier !== "normal" ? ` (${TIER_META[tier].icon} ${TIER_META[tier].label})` : ""} — Stufe ${monster.level}, ${applyTier(monster, tier).hp} LP. ${monster.blurb}`], index: 0, fight: { actor: actor.id, monster: monster.id } };
     game.queue = [];
     return;
   }

@@ -6,6 +6,7 @@
 
 import { getMonster, performAction, type CombatState, type Monster, type Rng } from "./combat";
 import type { SkillFx } from "./skills";
+import { TIER_META, type MonsterTier } from "./monster-tier";
 
 /** Ab so viel Restanteil der Lebenspunkte darf gezähmt werden (höchstens). */
 export const TAME_HP_FRACTION = 0.25;
@@ -15,7 +16,7 @@ export interface CompanionBonus { kind: CompanionKind; value: number; label: str
 
 /** Welche Eigenschaft welches Monster mitbringt; die Stärke wächst mit der Monsterstufe (Stufe 1–4: klein, 5–8: mittel, ab 9: stark). */
 const KIND: Record<string, CompanionKind> = {
-  ratte: "regen", blutegel: "dmg", wolf: "hit", waldwolf: "hit", schattenwolf: "dmg", skelett: "ac", goblin: "dmg", baer: "hp", skorpion: "hit", frostwolf: "ac", hauptmann: "dmg", golem: "ac", drache: "hp",
+  ratte: "regen", blutegel: "dmg", wolf: "hit", waldwolf: "hit", schattenwolf: "dmg", geist: "regen", kuerbiskopf: "dmg", tanzskelett: "ac", wichtel: "hit", gnom: "dmg", eisbaer: "hp", rentier: "regen", eisbaerjunges: "regen", skelett: "ac", goblin: "dmg", baer: "hp", skorpion: "hit", frostwolf: "ac", hauptmann: "dmg", golem: "ac", drache: "hp",
   schleimschaedel: "hp", dornenbeisser: "ac", eisschleim: "regen", daemonenauge: "hit", flatterschaedel: "hit", totenkaefer: "dmg", glutkaefer: "dmg",
   knochenwaechter: "ac", schattenauge: "crit", frostgeist: "regen", wiedergaenger: "hp", hoellenschaedel: "dmg", wegelagerer: "hit",
 };
@@ -62,9 +63,9 @@ export const BAITS = [
 export const baitChance = (key: string): number | null => BAITS.find((b) => b.key === key)?.chance ?? null;
 
 /** Darf jetzt gezähmt werden? (Monster wild, nicht schon Begleiter, unter 25 % Lebenspunkte.) */
-export function tameCheck(monsterId: string, monsterHp: number, monsterMaxHp: number, owned: string[], wild: boolean): string | null {
+export function tameCheck(monsterId: string, monsterHp: number, monsterMaxHp: number, owned: string[], wild: boolean, tier: MonsterTier = "normal"): string | null {
   const m = getMonster(monsterId);
-  if (!isTameable(m)) return "Bosse lassen sich nicht zähmen.";
+  if (!isTameable(m) || !TIER_META[tier].tameable) return "Nur normale Monster lassen sich zähmen — Elite, Bosse und Raid-Bosse nicht.";
   if (!wild) return "Nur wilde Monster aus den Locations lassen sich zähmen.";
   if (owned.includes(m.id)) return `${m.name} begleitet dich schon.`;
   if (monsterHp > monsterMaxHp * TAME_HP_FRACTION) return "Das Monster ist noch zu kräftig — schwäche es auf unter 25 % seiner Lebenspunkte.";
@@ -78,7 +79,7 @@ export function performTame(prev: CombatState, chance: number, owned: string[], 
   if (prev.status !== "active") return { state: prev, error: "Der Kampf ist vorbei." };
   const m = getMonster(prev.monsterId);
   if (!m) return { state: prev, error: "Unbekanntes Monster." };
-  const why = tameCheck(m.id, prev.monsterHp, m.hp, owned, !!prev.source);
+  const why = tameCheck(m.id, prev.monsterHp, prev.monsterMaxHp ?? m.hp, owned, !!prev.source, prev.tier);
   if (why) return { state: prev, error: why };
   if (prev.ap < 1) return { state: prev, error: "Nicht genug Aktionspunkte." };
   const s: CombatState = { ...prev, ap: prev.ap - 1, log: [...prev.log] };

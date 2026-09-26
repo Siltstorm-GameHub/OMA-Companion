@@ -5,6 +5,8 @@
 // Angebots-Dialog am NPC; Aktivitäts-Quests: über „Annehmen" im Log). Mehrere Quests laufen gleichzeitig,
 // auch mehrere an derselben Location; verfolgte Quests zeigt das Spiel-HUD.
 
+import { activeSeasonKeys } from "./season-server";
+import { seasonOfQuest } from "./season-events";
 import { prisma } from "../prisma";
 
 export interface LogStep { kind: "talk" | "visit" | "enter"; text: string; location?: string; locationName?: string }
@@ -67,11 +69,15 @@ export async function getQuestLog(cardId: string): Promise<{ active: LogQuest[];
     prisma.dndLocation.findMany({ select: { slug: true, name: true } }),
   ]);
   const names = new Map(locations.map((l) => [l.slug, l.name]));
+  const running = await activeSeasonKeys();
   const byQuest = new Map(progress.map((p) => [p.questId, p]));
   const out = { active: [] as LogQuest[], available: [] as LogQuest[], completed: [] as LogQuest[] };
   for (const q of quests) {
     const p = byQuest.get(q.id);
     if (!p) {
+      // Event-Quests stehen nur zur Annahme, solange ihr Event läuft
+      const ev = seasonOfQuest(q.slug);
+      if (ev && !running.includes(ev)) continue;
       // Welt-Quests nimmt man im Spiel am NPC an; nur Aktivitäts-Quests stehen zur Annahme bereit
       if (q.objectiveType !== "WORLD_STEP") out.available.push(toLogQuest(q, 0, false, names));
       continue;

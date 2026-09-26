@@ -110,7 +110,7 @@ describe("Gruppenkampf", () => {
   });
 
   test("Raid-Bosse: nur für Raids, nie in normalen Begegnungen", () => {
-    assert.ok(RAID_BOSSES.every((b) => b.raid && b.raid.min >= 5));
+    assert.ok(RAID_BOSSES.every((b) => b.raid && b.raid.min >= 4));
     assert.ok(MONSTERS.filter((m) => m.raid).length >= 2);
     for (let lvl = 1; lvl <= 20; lvl++) assert.ok(!encountersFor(lvl, "temperate").some((m) => m.raid));
     // 8 Helden gegen einen Raid-Boss: ordentlich Lebenspunkte und mehrere Angriffe

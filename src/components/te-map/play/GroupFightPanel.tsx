@@ -101,7 +101,7 @@ function Fight({ view, myId, call, busy, backdrop }: { view: GroupFightView; myI
   return (
     <div className="space-y-2.5">
       <BattleStage
-        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp} monsterNote={monNote} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp} monsterTier={s.tier ?? (getMonster(s.monsterId)?.raid ? "raid" : "normal")} monsterNote={monNote} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
         backdrop={backdrop} heroes={heroes} fx={fx} status={s.status}
         selectedKey={myTurn ? target || myId : undefined} onPickHero={myTurn ? (k) => setTarget(k) : undefined}
       />

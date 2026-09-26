@@ -21,6 +21,8 @@ import type { WorldDef } from "@/lib/te-map/types";
 import { WORLD_COLS, WORLD_ROWS, terrainAt } from "./hex/world";
 import { DND_LOCATIONS, START_LOCATION_SLUG } from "./locations";
 import { DND_QUESTS } from "./quests-catalog";
+import { activeSeasonKeys } from "./season-server";
+import { withEvents } from "./season-events";
 
 export const MAX_WORLDS_PER_AUTHOR = 3;
 
@@ -59,7 +61,10 @@ export async function resolveWorld(slug: string): Promise<WorldDef | undefined> 
   if (custom) return custom;
   const fixed = getWorld(slug);
   if (!fixed) return undefined;
-  return (await removedSlugs("LOCATION")).has(slug) ? undefined : fixed;
+  if ((await removedSlugs("LOCATION")).has(slug)) return undefined;
+  // Laufende Saison-Events verkleiden die feste Welt (Client und Server rechnen dasselbe, siehe season-events.ts)
+  const keys = await activeSeasonKeys();
+  return keys.length ? withEvents(fixed, keys) : fixed;
 }
 
 // ── Hex-Felder ──────────────────────────────────────────────

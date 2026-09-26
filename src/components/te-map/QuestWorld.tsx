@@ -6,6 +6,8 @@
 // Holt den Zustand vom Server (darf ich hier sein? wer ist noch da? Quest-Stand?) und zeigt dann die
 // Spielwelt. Wer nicht an dieser Location angekommen ist, wird zur Weltkarte geschickt.
 
+import { withEvents } from "@/lib/dnd/season-events";
+import EventOverlay from "@/components/te-map/EventOverlay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { backdropOfWorld } from "@/lib/dnd/oq-backdrop";
 import { MuteButton } from "@/components/te-map/play/SoundControl";
@@ -33,6 +35,8 @@ interface LocationState {
   myCharacter: TeCharacterConfig;
   /** Ausgerüsteter Begleiter (Monster-Id) — läuft hinter dem Helden her */
   myCompanion?: string | null;
+  /** Laufende Saison-Events (Look, Monster) */
+  seasonEvents?: { key: string; name: string; icon: string; blurb: string; endsAt: string; tint: string; snow: boolean; fog: boolean }[];
   hasCharacter: boolean;
   questSteps: Record<string, number>;
   tracker: TrackerItem[];
@@ -109,7 +113,13 @@ export default function QuestWorld({ slug }: { slug: string }) {
     } finally { setGfBusy(false); }
   }, [notify]);
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
-  const world = data?.customWorld ?? staticWorld ?? undefined;
+  const eventKeys = (data?.seasonEvents ?? []).map((e) => e.key).join(",");
+  // Feste Locations bekommen die Zutaten laufender Events (Objekte, Event-Monster); Editor-Welten bleiben unverändert
+  const world = useMemo(() => {
+    if (data?.customWorld) return data.customWorld;
+    if (!staticWorld) return undefined;
+    return eventKeys ? withEvents(staticWorld, eventKeys.split(",")) : staticWorld;
+  }, [data?.customWorld, staticWorld, eventKeys]);
   const backdrop = backdropOfWorld(world, data?.biome);
 
   useEffect(() => {
@@ -253,6 +263,14 @@ export default function QuestWorld({ slug }: { slug: string }) {
         </p>
       )}
 
+      {(data.seasonEvents ?? []).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {data.seasonEvents!.map((e) => (
+            <p key={e.key} className="text-xs rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-100 px-3 py-1.5"><b>{e.icon} {e.name}-Event</b> bis {new Date(e.endsAt).toLocaleDateString("de-DE", { day: "numeric", month: "numeric" })} — {e.blurb}</p>
+          ))}
+        </div>
+      )}
+      <div className="relative">
       <TeWorld
         world={world} character={data.myCharacter} companion={data.myCompanion ?? null} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
@@ -310,6 +328,8 @@ export default function QuestWorld({ slug }: { slug: string }) {
           </>
         )}
       />
+        <EventOverlay events={data.seasonEvents ?? []} />
+      </div>
 
       {data.present.length > 0 && (
         <div className="oq-panel p-4">

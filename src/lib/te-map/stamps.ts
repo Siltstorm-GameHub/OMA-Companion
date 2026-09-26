@@ -5,7 +5,7 @@
 // `solid` = begehbarkeitsrelevanter Fußabdruck relativ zur linken oberen Kachel des Stempels
 // ([x, y, w, h]); ohne Angabe ist der Stempel begehbar (Blumen, Steine, Bodenflecken).
 
-export type TileSheet = "out" | "town" | "cave" | "inside" | "fires" | "lights" | "jungle" | "beach" | "ash" | "dark";
+export type TileSheet = "out" | "town" | "cave" | "inside" | "fires" | "lights" | "jungle" | "beach" | "ash" | "dark" | "xt" | "xs" | "xm" | "xi" | "snow";
 
 export interface StampDef {
   sheet: TileSheet;

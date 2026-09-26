@@ -11,6 +11,7 @@ import BattleFigure from "@/components/te-character/BattleFigure";
 import MonsterSprite from "@/components/te-map/play/MonsterSprite";
 import { ClassIcon, FxLayer } from "@/components/te-map/play/Fx";
 import { apOf, getMonster, slotAbilities, type Fighter } from "@/lib/dnd/combat";
+import { TIER_META, type MonsterTier } from "@/lib/dnd/monster-tier";
 import { ELEMENT_ICON, ELEMENT_LABEL, STATUS_DESC, STATUS_ICON, STATUS_LABEL, getAbility, type AbilityDef, type StatusId } from "@/lib/dnd/abilities";
 import { BACKDROPS, type BackdropKey } from "@/lib/dnd/oq-backdrop";
 import { berlinHour, isNight } from "@/lib/te-map/rpg";
@@ -88,6 +89,8 @@ interface StageProps {
   monsterHp: number;
   monsterMaxHp: number;
   monsterNote?: string;
+  /** Stufe des Monsters (Elite/Boss/Raid): größerer Sprite, farbiger Rahmen, Symbol, Banner */
+  monsterTier?: MonsterTier;
   /** Zustände am Monster (Restrunden) */
   monsterStatus?: Partial<Record<StatusId, number>>;
   /** Hintergrund passend zur Location (siehe lib/dnd/oq-backdrop) */
@@ -100,7 +103,7 @@ interface StageProps {
   onPickHero?: (key: string) => void;
 }
 
-export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, monsterStatus, backdrop = "plains", heroes, fx, status, selectedKey, onPickHero }: StageProps) {
+export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, monsterTier = "normal", monsterStatus, backdrop = "plains", heroes, fx, status, selectedKey, onPickHero }: StageProps) {
   const night = isNight(berlinHour()) && backdrop !== "cave";
   const m = getMonster(monsterId);
   const solo = heroes.length === 1;
@@ -115,8 +118,8 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
 
       {/* Monster: rechts oben, Namensschild darüber */}
       <div className={`absolute right-2 top-2 w-[46%] max-w-[190px] flex flex-col items-center gap-1 transition-opacity duration-700 ${won ? "opacity-0 delay-700" : ""} ${tamed ? "opacity-60" : ""}`}>
-        <div className="w-full rounded-md bg-black/70 border border-white/15 px-2 py-1">
-          <p className="text-[11px] font-black text-white truncate">{m?.name ?? "Monster"} <span className="text-gray-400 font-bold">Lv {m?.level}</span></p>
+        <div className="w-full rounded-md bg-black/70 border px-2 py-1" style={{ borderColor: monsterTier === "normal" ? "rgba(255,255,255,0.15)" : TIER_META[monsterTier].color, boxShadow: monsterTier === "normal" ? undefined : `0 0 8px ${TIER_META[monsterTier].color}66` }}>
+          <p className="text-[11px] font-black text-white truncate">{monsterTier !== "normal" && <span aria-label={TIER_META[monsterTier].label} title={TIER_META[monsterTier].label} className="mr-1">{TIER_META[monsterTier].icon}</span>}{m?.name ?? "Monster"} <span className="text-gray-400 font-bold">Lv {m?.level}</span>{monsterTier !== "normal" && <span className="ml-1 text-[9px] uppercase tracking-wider" style={{ color: TIER_META[monsterTier].color }}>{TIER_META[monsterTier].label}</span>}</p>
           <Bar value={monsterHp} max={monsterMaxHp} color="bg-red-500" h="h-2.5" />
           <p className="text-[10px] text-gray-300 tabular-nums">{monsterHp}/{monsterMaxHp} LP · RK {m?.ac}{monsterNote ? ` · ${monsterNote}` : ""}</p>
           {(m?.weak?.length || m?.resist?.length) ? (
@@ -134,7 +137,7 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
         <div className="relative flex items-end justify-center min-h-[96px]">
           <FxLayer events={fx.filter((e) => e.side === "monster")} />
           <StatusAura status={monsterStatus} />
-          <div className={statusClass(monsterStatus)}><MonsterSprite monsterId={monsterId} box={m?.raid ? 130 : 96} flip hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} attackKey={fx.filter((e) => e.side === "hero" && (e.kind === "hurt" || e.kind === "miss")).at(-1)?.id} /></div>
+          <div className={statusClass(monsterStatus)}><MonsterSprite monsterId={monsterId} box={monsterTier === "raid" ? 150 : monsterTier === "boss" ? 130 : monsterTier === "elite" ? 118 : 96} flip hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} attackKey={fx.filter((e) => e.side === "hero" && (e.kind === "hurt" || e.kind === "miss")).at(-1)?.id} /></div>
         </div>
       </div>
 
@@ -177,6 +180,12 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
           );
         })}
       </div>
+
+      {monsterTier !== "normal" && status === "active" && (
+        <div key={monsterId} className="oq-boss-banner absolute inset-x-0 top-[38%] text-center pointer-events-none">
+          <span className="inline-block px-5 py-1.5 rounded-md border-2 bg-black/80 text-lg font-black tracking-widest" style={{ borderColor: TIER_META[monsterTier].color, color: TIER_META[monsterTier].color }}>{TIER_META[monsterTier].icon} {TIER_META[monsterTier].label.toUpperCase()}</span>
+        </div>
+      )}
 
       {status !== "active" && (
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center pointer-events-none">

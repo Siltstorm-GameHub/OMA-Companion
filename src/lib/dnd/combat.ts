@@ -10,6 +10,7 @@ import { NO_FX, type SkillFx } from "./skills";
 import type { MonsterSpriteKey } from "./oq-assets-manifest";
 import { unlockedAbilities, type AbilityDef, type Boon, type Element, type StatusId } from "./abilities";
 import { performGroupAction, type GroupState } from "./group-combat";
+import { TIER_META, applyTier, type MonsterTier } from "./monster-tier";
 
 export type Rng = () => number;
 export const AP_PER_ROUND = 3;
@@ -69,6 +70,8 @@ export interface Monster {
   blurb: string;
   /** Raid-Boss: nur im Gruppenkampf, mit mindestens so vielen Teilnehmern */
   raid?: { min: number };
+  /** Event-Monster: erscheint nur als Figur, solange dieses Saison-Event läuft (nie als Zufallsbegegnung) */
+  event?: "halloween" | "christmas";
   /** Schwächen (Schaden ×1,5) und Resistenzen (×0,5) nach Element */
   weak?: Element[];
   resist?: Element[];
@@ -80,6 +83,14 @@ export const MONSTERS: Monster[] = [
   { id: "wolf", name: "Grauer Wolf", emoji: "🐺", level: 2, hp: 18, ac: 12, attack: 3, dmg: [1, 4, 1], attacks: 2, xp: 28, gold: [0, 0], loot: [], biomes: ["temperate", "cold"], blurb: "Hungrig, und zu zweit beißen kann er auch." },
   { id: "waldwolf", name: "Waldwolf", emoji: "🐺", level: 3, hp: 26, ac: 12, attack: 4, dmg: [1, 6, 1], attacks: 2, xp: 46, gold: [0, 0], loot: [], biomes: ["temperate"], blurb: "Braun wie die Rinde, leise wie der Nebel und selten allein." },
   { id: "schattenwolf", name: "Schattenwolf", emoji: "🐺", level: 6, hp: 52, ac: 15, attack: 7, dmg: [2, 4, 2], attacks: 2, xp: 118, gold: [0, 0], loot: [{ key: "reisemantel", chance: 0.06 }], biomes: "any", blurb: "Schwarz wie die Nacht. Man sieht nur die Augen — und dann die Zähne." },
+  { id: "geist", name: "Spukgeist", emoji: "👻", level: 3, hp: 22, ac: 13, attack: 4, dmg: [1, 6, 0], attacks: 1, xp: 42, gold: [0, 4], loot: [{ key: "sockenpaar", chance: 0.2 }], biomes: "any", event: "halloween", blurb: "Buh! … Ja, das war schon alles. Aber er meint es ernst." },
+  { id: "kuerbiskopf", name: "Kürbiskopf", emoji: "🎃", level: 5, hp: 44, ac: 14, attack: 6, dmg: [1, 8, 1], attacks: 1, xp: 88, gold: [2, 10], loot: [{ key: "bierkrug", chance: 0.3 }], biomes: "any", event: "halloween", blurb: "Grinst immer. Sogar, wenn man ihn trifft." },
+  { id: "tanzskelett", name: "Tanzendes Skelett", emoji: "💀", level: 4, hp: 30, ac: 13, attack: 5, dmg: [1, 8, 0], attacks: 1, xp: 62, gold: [3, 10], loot: [{ key: "alte-karte", chance: 0.15 }], biomes: "any", event: "halloween", blurb: "Klappert im Takt. Der Takt ist unbekannt." },
+  { id: "wichtel", name: "Frecher Wichtel", emoji: "🧝", level: 2, hp: 18, ac: 12, attack: 3, dmg: [1, 4, 1], attacks: 1, xp: 28, gold: [1, 6], loot: [{ key: "silberloeffel", chance: 0.2 }], biomes: "any", event: "christmas", blurb: "Hat deine Socken verräumt. Alle. Aus Prinzip." },
+  { id: "gnom", name: "Zipfelmützen-Gnom", emoji: "🧙", level: 3, hp: 24, ac: 13, attack: 4, dmg: [1, 6, 1], attacks: 1, xp: 42, gold: [2, 8], loot: [{ key: "sockenpaar", chance: 0.25 }], biomes: "any", event: "christmas", blurb: "Klein, rot bemützt und felsenfest überzeugt, dass der Garten ihm gehört." },
+  { id: "eisbaerjunges", name: "Eisbärjunges", emoji: "🐻‍❄️", level: 3, hp: 28, ac: 12, attack: 4, dmg: [1, 6, 1], attacks: 1, xp: 46, gold: [0, 0], loot: [], biomes: ["cold"], blurb: "Flauschig. Die Mutter ist bestimmt gleich um die Ecke." },
+  { id: "eisbaer", name: "Eisbär", emoji: "🐻‍❄️", level: 5, hp: 46, ac: 13, attack: 6, dmg: [2, 6, 0], attacks: 1, xp: 84, gold: [0, 0], loot: [], biomes: ["cold"], blurb: "Weiß, weich aussehend und leider ein Bär." },
+  { id: "rentier", name: "Wildes Rentier", emoji: "🦌", level: 4, hp: 34, ac: 12, attack: 5, dmg: [1, 6, 2], attacks: 1, xp: 60, gold: [0, 0], loot: [], biomes: ["cold", "temperate"], blurb: "Hat gerade Feierabend und ist entsprechend gereizt." },
   { id: "skelett", name: "Rastloses Skelett", emoji: "💀", level: 3, hp: 26, ac: 13, attack: 4, dmg: [1, 8, 0], attacks: 1, xp: 40, gold: [3, 10], loot: [{ key: "bierkrug", chance: 0.3 }, { key: "alte-karte", chance: 0.15 }], biomes: "any", blurb: "Klappert bedrohlich. Meistens beim Gehen." },
   { id: "goblin", name: "Goblin-Plünderer", emoji: "👺", level: 3, hp: 24, ac: 13, attack: 4, dmg: [1, 6, 2], attacks: 1, xp: 42, gold: [6, 16], loot: [{ key: "sockenpaar", chance: 0.25 }, { key: "rostschwert", chance: 0.08 }], biomes: "any", blurb: "Trägt mehr Beute, als er tragen kann." },
   { id: "baer", name: "Höhlenbär", emoji: "🐻", level: 4, hp: 40, ac: 12, attack: 5, dmg: [2, 6, 1], attacks: 1, xp: 60, gold: [0, 0], loot: [{ key: "edelstein", chance: 0.1 }], biomes: ["temperate"], blurb: "Wer ihn weckt, hat schlechte Ideen." },
@@ -107,14 +118,18 @@ export const MONSTERS: Monster[] = [
 
 /** Raid-Bosse (nur für Gruppen im Raid-Modus, bis zu 8 Helden). Werte gelten für einen Helden und werden mit der Gruppengröße hochskaliert. */
 export const RAID_BOSSES: Monster[] = [
-  { id: "hydra", name: "Sumpf-Hydra", emoji: "🐍", level: 10, hp: 140, ac: 16, attack: 9, dmg: [2, 8, 3], attacks: 2, xp: 420, gold: [120, 220], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.4 }, { key: "kettenhemd", chance: 0.3 }], biomes: "any", blurb: "Schlägst du einen Kopf ab, schauen die anderen sehr beleidigt.", raid: { min: 5 } },
-  { id: "drachenfuerst", name: "Drachenfürst", emoji: "🐲", level: 14, hp: 220, ac: 18, attack: 11, dmg: [3, 8, 4], attacks: 2, xp: 800, gold: [250, 450], loot: [{ key: "edelstein", chance: 1 }, { key: "glueckstaler", chance: 0.6 }, { key: "stahlschwert", chance: 0.5 }], biomes: "any", blurb: "Sein Hort ist größer als dein Kontostand. Sein Ego auch.", raid: { min: 6 } },
+  { id: "hydra", name: "Sumpf-Hydra", emoji: "🐍", level: 10, hp: 140, ac: 16, attack: 9, dmg: [2, 8, 3], attacks: 2, xp: 420, gold: [120, 220], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.4 }, { key: "kettenhemd", chance: 0.3 }], biomes: "any", blurb: "Schlägst du einen Kopf ab, schauen die anderen sehr beleidigt.", raid: { min: 4 } },
+  { id: "drachenfuerst", name: "Drachenfürst", emoji: "🐲", level: 14, hp: 220, ac: 18, attack: 11, dmg: [3, 8, 4], attacks: 2, xp: 800, gold: [250, 450], loot: [{ key: "edelstein", chance: 1 }, { key: "glueckstaler", chance: 0.6 }, { key: "stahlschwert", chance: 0.5 }], biomes: "any", blurb: "Sein Hort ist größer als dein Kontostand. Sein Ego auch.", raid: { min: 4 } },
 ];
+RAID_BOSSES.push(
+  { id: "reiter", name: "Kopfloser Reiter", emoji: "🎃", level: 8, hp: 160, ac: 16, attack: 9, dmg: [2, 8, 3], attacks: 2, xp: 520, gold: [140, 240], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.4 }, { key: "kettenhemd", chance: 0.25 }], biomes: "any", event: "halloween", blurb: "Er reitet ohne Kopf durch die Nacht — und trotzdem findet er dich.", raid: { min: 4 } },
+  { id: "rudolph", name: "Rudolph der Rotnasige", emoji: "🦌", level: 9, hp: 180, ac: 16, attack: 9, dmg: [2, 10, 2], attacks: 2, xp: 560, gold: [150, 260], loot: [{ key: "edelstein", chance: 1 }, { key: "glueckstaler", chance: 0.5 }, { key: "stahlschwert", chance: 0.3 }], biomes: "any", event: "christmas", blurb: "Seine Nase leuchtet. Sein Blick sagt: Feierabend war gestern.", raid: { min: 4 } },
+);
 MONSTERS.push(...RAID_BOSSES);
 
 /** Pixel-Grafik je Monster (Schlüssel aus oq-assets-manifest); ohne Eintrag zeigt die Oberfläche das Emoji. */
 export const MONSTER_SPRITE: Record<string, MonsterSpriteKey> = {
-  ratte: "leech", skorpion: "sandspider", golem: "mudman", wolf: "wolf", frostwolf: "frostwolf", waldwolf: "waldwolf", schattenwolf: "schattenwolf",
+  ratte: "leech", skorpion: "sandspider", golem: "mudman", wolf: "wolf", frostwolf: "frostwolf", reiter: "reiter", rudolph: "rudolph", geist: "geist", kuerbiskopf: "kuerbiskopf", tanzskelett: "tanzskelett", wichtel: "wichtel", gnom: "gnom", eisbaer: "eisbaer", rentier: "rentier", eisbaerjunges: "eisbaerjunges", waldwolf: "waldwolf", schattenwolf: "schattenwolf",
   blutegel: "bloodleech", schleimschaedel: "skullslime", dornenbeisser: "shrubtooth", eisschleim: "iceslime", daemonenauge: "demoneye",
   flatterschaedel: "wingedskull", totenkaefer: "skullbeetle", glutkaefer: "firebeetle", knochenwaechter: "bonestatue", schattenauge: "darkeye",
   frostgeist: "frostwraith", wiedergaenger: "wraith", hoellenschaedel: "hellskull",
@@ -122,6 +137,8 @@ export const MONSTER_SPRITE: Record<string, MonsterSpriteKey> = {
 
 /** Schwächen und Resistenzen der Monster (nicht aufgeführt = keine). */
 const MONSTER_ELEMENTS: Record<string, { weak?: Element[]; resist?: Element[] }> = {
+  reiter: { weak: ["holy"], resist: ["shadow"] }, rudolph: { weak: ["fire"], resist: ["ice"] },
+  geist: { weak: ["holy"], resist: ["shadow"] }, kuerbiskopf: { weak: ["fire"] }, tanzskelett: { weak: ["holy", "sound"], resist: ["shadow"] }, eisbaer: { weak: ["fire"], resist: ["ice"] }, eisbaerjunges: { weak: ["fire"], resist: ["ice"] },
   waldwolf: { weak: ["fire"] }, schattenwolf: { weak: ["holy"], resist: ["shadow"] },
   ratte: { weak: ["fire"] }, blutegel: { weak: ["fire"] }, wolf: { weak: ["fire"] },
   skelett: { weak: ["holy", "sound"], resist: ["shadow"] }, knochenwaechter: { weak: ["holy", "sound"], resist: ["shadow"] },
@@ -147,14 +164,19 @@ export const getMonster = (id: string): Monster | undefined => MONSTERS.find((m)
 
 /** Begegnungen, die im Gelände für diese Stufe passen (nicht zu leicht, nicht zu tödlich). */
 export function encountersFor(level: number, biome: Biome): Monster[] {
-  return MONSTERS.filter((m) => !m.raid && (m.biomes === "any" || m.biomes.includes(biome)) && m.level <= level + 3 && m.level >= level - 4);
+  return MONSTERS.filter((m) => !m.raid && !m.event && (m.biomes === "any" || m.biomes.includes(biome)) && m.level <= level + 3 && m.level >= level - 4);
 }
 
 /** Belohnung: schwächere Gegner geben weniger Erfahrung (kein Dauer-Farmen). */
-export function rewardFor(m: Monster, heroLevel: number, rng: Rng): { xp: number; gold: number; items: string[] } {
+export function rewardFor(m: Monster, heroLevel: number, rng: Rng, tier: MonsterTier = "normal"): { xp: number; gold: number; items: string[] } {
+  const t = TIER_META[tier];
   const scale = Math.min(1, Math.max(0.25, 1 - 0.25 * (heroLevel - m.level)));
-  const gold = m.gold[0] + Math.floor(rng() * (m.gold[1] - m.gold[0] + 1));
-  return { xp: Math.round(m.xp * scale), gold, items: m.loot.filter((l) => rng() < l.chance).map((l) => l.key) };
+  const gold = Math.round((m.gold[0] + Math.floor(rng() * (m.gold[1] - m.gold[0] + 1))) * t.gold);
+  const items = m.loot.filter((l) => rng() < Math.min(1, l.chance * t.loot)).map((l) => l.key);
+  // Ab Boss ist mindestens ein Gegenstand sicher (die wahrscheinlichste Beute), Raid-Bosse lassen zusätzlich einen Meister-Köder fallen
+  if (t.guaranteedLoot && !items.length && m.loot.length) items.push([...m.loot].sort((a, b) => b.chance - a.chance)[0].key);
+  if (tier === "raid" && !items.includes("koeder-meister")) items.push("koeder-meister");
+  return { xp: Math.round(m.xp * scale * t.xp), gold, items };
 }
 
 // ── Kampfzustand ────────────────────────────────────────────
@@ -179,6 +201,10 @@ export interface CombatState {
   shield?: number;
   /** Verstärkungen des Helden (Treffer/Schaden/Regeneration) */
   boons?: Boon[];
+  /** Stufe des Monsters (Elite/Boss): Werte und Belohnung sind entsprechend angehoben */
+  tier?: MonsterTier;
+  /** Maximale Lebenspunkte des Monsters (mit Stufe) */
+  monsterMaxHp?: number;
   /** Zustände am Monster: Restrunden je Art */
   mStatus?: Partial<Record<StatusId, number>>;
   status: CombatStatus;
@@ -194,9 +220,10 @@ const LOG_MAX = 40;
 export const die = (sides: number, rng: Rng) => 1 + Math.floor(rng() * sides);
 export const dice = (n: number, sides: number, rng: Rng) => { let t = 0; for (let i = 0; i < n; i++) t += die(sides, rng); return t; };
 
-export function startCombat(monster: Monster, fighter: Fighter, source?: { slug: string; actor: string }): CombatState {
+export function startCombat(monster: Monster, fighter: Fighter, source?: { slug: string; actor: string }, tier?: MonsterTier): CombatState {
+  const hp = applyTier(monster, tier).hp;
   return {
-    monsterId: monster.id, monsterHp: monster.hp, hp: fighter.maxHp, ap: AP_PER_ROUND, round: 1, cooldowns: {}, guard: 0, taunt: 0, shield: 0, boons: [], mStatus: {}, status: "active", fighter, ...(source ? { source } : {}),
+    monsterId: monster.id, monsterHp: hp, monsterMaxHp: hp, ...(tier && tier !== "normal" ? { tier } : {}), hp: fighter.maxHp, ap: AP_PER_ROUND, round: 1, cooldowns: {}, guard: 0, taunt: 0, shield: 0, boons: [], mStatus: {}, status: "active", fighter, ...(source ? { source } : {}),
     log: [`${monster.emoji} ${monster.name} stellt sich dir in den Weg! ${monster.blurb}`],
   };
 }
@@ -216,7 +243,7 @@ const SOLO_ID = "solo";
 /** Der Einzelkampf ist ein Gruppenkampf mit einem Helden — so gelten überall dieselben Regeln. */
 function toGroup(c: CombatState, m: Monster): GroupState {
   return {
-    monsterId: c.monsterId, monsterMaxHp: m.hp, monsterHp: c.monsterHp, round: c.round, turn: 0, turnStartedAt: 0, taunt: c.taunt, inspire: 0, mStatus: { ...(c.mStatus ?? {}) }, provoke: null, status: c.status as GroupState["status"], log: [...c.log],
+    monsterId: c.monsterId, monsterMaxHp: c.monsterMaxHp ?? m.hp, ...(c.tier ? { tier: c.tier } : {}), monsterHp: c.monsterHp, round: c.round, turn: 0, turnStartedAt: 0, taunt: c.taunt, inspire: 0, mStatus: { ...(c.mStatus ?? {}) }, provoke: null, status: c.status as GroupState["status"], log: [...c.log],
     heroes: [{ cardId: SOLO_ID, name: c.fighter.name, fighter: c.fighter, hp: c.hp, ap: c.ap, cooldowns: { ...c.cooldowns }, guard: c.guard, shield: c.shield ?? 0, boons: (c.boons ?? []).map((b) => ({ ...b })), left: false }],
   };
 }

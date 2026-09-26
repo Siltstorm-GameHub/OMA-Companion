@@ -111,6 +111,8 @@ export interface Actor {
   shop?: string[];
   /** Monster: Id aus lib/dnd/combat.ts — die Figur steht auf der Karte und startet beim Ansprechen einen Kampf */
   monster?: string;
+  /** Stufe der Monster-Figur (fehlt = normal): Elite oder Boss */
+  tier?: "elite" | "boss";
   talk: Talk[];
 }
 

@@ -28,7 +28,9 @@ export const LIMITS = {
   maxWalls: 2000,
   maxActors: 16,
   maxNpcs: 10,
-  maxMonsters: 6,
+  maxMonsters: 8,
+  maxElites: 2,
+  maxBosses: 1,
   maxTalks: 8,
   maxChoices: 4,
   maxFlags: 4,
@@ -286,6 +288,8 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
   const ids = new Set<string>();
   let npcs = 0;
   let monsters = 0;
+  let elites = 0;
+  let bosses = 0;
   const readActor = (a: unknown, area: { minX: number; minY: number; maxX: number; maxY: number }, allowSign: boolean): Actor | null => {
     if (!isObj(a)) return null;
     const kind = (a.kind === "chest" || (a.kind === "sign" && allowSign) || a.kind === "merchant" || a.kind === "monster") ? a.kind : "npc";
@@ -297,6 +301,9 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     const monster = kind === "monster" && typeof a.monster === "string" ? getMonster(a.monster) : undefined;
     if (kind === "monster" && !monster) { fail("Ein Monster hat eine ungültige Art und wurde entfernt."); return null; }
     if (kind === "monster" && ++monsters > LIMITS.maxMonsters) { fail(`Höchstens ${LIMITS.maxMonsters} Monster pro Location.`); return null; }
+    const tier = kind === "monster" && (a.tier === "elite" || a.tier === "boss") ? a.tier : undefined;
+    if (tier === "elite" && ++elites > LIMITS.maxElites) { fail(`Höchstens ${LIMITS.maxElites} Elite-Monster pro Location.`); return null; }
+    if (tier === "boss" && ++bosses > LIMITS.maxBosses) { fail(`Höchstens ${LIMITS.maxBosses} Boss pro Location.`); return null; }
     ids.add(id);
     const talk: Talk[] = [];
     for (const t of (Array.isArray(a.talk) ? a.talk : []).slice(0, LIMITS.maxTalks)) {
@@ -330,6 +337,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
       x, y, dir: DIRS.includes(a.dir as Dir) ? (a.dir as Dir) : "down", talk,
     };
     if (monster) actor.monster = monster.id;
+    if (tier) actor.tier = tier;
     if (kind === "merchant") actor.shop = (Array.isArray(a.shop) ? a.shop : []).filter(isItemKey).filter((k, i, all) => all.indexOf(k) === i).slice(0, LIMITS.maxShop);
     if (kind === "npc" || kind === "merchant") {
       const cfg = sanitizeTeConfig(a.config);

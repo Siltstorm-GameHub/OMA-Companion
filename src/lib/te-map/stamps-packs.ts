@@ -64,6 +64,26 @@ export const PACK_STAMPS = {
   dGateStone: { sheet: "dark", sx: 19, sy: 1, w: 3, h: 3, solid: [0, 0, 3, 3] },
   dDoorWood: { sheet: "dark", sx: 19, sy: 5, w: 3, h: 3, solid: [0, 0, 3, 3] },
   dBat: { sheet: "dark", sx: 13, sy: 7, w: 2, h: 2, solid: [0, 1, 2, 1] },
+  // Schnee (umgefärbte Nadelbäume)
+  sTree: { sheet: "snow", sx: 0, sy: 0, w: 3, h: 5, solid: [1, 4, 1, 1], sway: 2.6 },
+  sDarkTree: { sheet: "snow", sx: 3, sy: 0, w: 3, h: 5, solid: [1, 4, 1, 1], sway: 2.6 },
+  // Weihnachten
+  xTree1: { sheet: "xt", sx: 0, sy: 0, w: 3, h: 5, solid: [1, 4, 1, 1], glow: { r: 26, dy: -10 } },
+  xTree2: { sheet: "xt", sx: 3, sy: 0, w: 2, h: 5, solid: [0, 4, 2, 1] },
+  xGift1: { sheet: "xt", sx: 0, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
+  xGift2: { sheet: "xt", sx: 1, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
+  xGift3: { sheet: "xt", sx: 2, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
+  xGift4: { sheet: "xt", sx: 3, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
+  xGiftPink: { sheet: "xt", sx: 4, sy: 5, w: 1, h: 1, solid: [0, 0, 1, 1] },
+  xSnowmanA: { sheet: "xs", sx: 0, sy: 4, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  xSnowmanB: { sheet: "xs", sx: 1, sy: 4, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  xSnowmanC: { sheet: "xs", sx: 2, sy: 4, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  xSnowmanD: { sheet: "xs", sx: 3, sy: 4, w: 1, h: 2, solid: [0, 1, 1, 1] },
+  xGarland: { sheet: "xm", sx: 0, sy: 0, w: 3, h: 1 },
+  xGingerbread: { sheet: "xm", sx: 3, sy: 2, w: 1, h: 1 },
+  xIgloo: { sheet: "xi", sx: 0, sy: 0, w: 5, h: 6, solid: [0, 1, 5, 4] },
+  xSnowLump1: { sheet: "xi", sx: 5, sy: 0, w: 1, h: 1 },
+  xSnowLump2: { sheet: "xi", sx: 6, sy: 0, w: 1, h: 1 },
 } as const satisfies Record<string, StampDef>;
 
 export const PACK_LABELS: Record<keyof typeof PACK_STAMPS, string> = {
@@ -77,6 +97,10 @@ export const PACK_LABELS: Record<keyof typeof PACK_STAMPS, string> = {
   dCrystalBig: "Kristall groß", dCrystalLying: "Kristall liegend", dCrystalCluster: "Kristallgruppe", dCrystalA: "Leuchtkristall", dCrystalB: "Leuchtkristall 2", dCrystalC: "Leuchtkristall 3",
   dCrystalSmallA: "Kristall klein", dCrystalSmallB: "Kristall klein 2", dBoulderA: "Dunkler Felsen", dBoulderB: "Dunkler Felsen 2", dGargoyle: "Wasserspeier", dGargoylePlinth: "Wasserspeier auf Sockel",
   dMoonStatue: "Mondstatue", dGateStone: "Steintor", dDoorWood: "Holztor", dBat: "Fledermausrelief",
+  xTree1: "Weihnachtsbaum", xTree2: "Weihnachtsbaum klein", xGift1: "Geschenk grün", xGift2: "Geschenk rot", xGift3: "Geschenk braun", xGift4: "Geschenk blau", xGiftPink: "Geschenk rosa",
+  xSnowmanA: "Schneemann", xSnowmanB: "Schneemann blau", xSnowmanC: "Schneemann rosa", xSnowmanD: "Schneemann groß", xGarland: "Girlande", xGingerbread: "Lebkuchenmann",
+  sTree: "Verschneite Tanne", sDarkTree: "Verschneite Tanne dicht",
+  xIgloo: "Iglu", xSnowLump1: "Schneehaufen", xSnowLump2: "Schneeklumpen",
 };
 
 /** Kategorien im Objekt-Picker des Editors. */
@@ -84,5 +108,7 @@ export const PACK_CATEGORIES: { key: string; label: string; ids: (keyof typeof P
   { key: "dschungel", label: "Dschungel", ids: ["jTree1", "jTree2", "jBushBig", "jBushMid", "jBushSmall", "jFlowerWhite", "jFlowerYellow", "jFlowerPink", "jRocks", "jRocksBig", "jTuftA", "jTuftB", "jHollowLog"] },
   { key: "strand", label: "Strand", ids: ["bPalmA", "bPalmC", "bPalmHammock", "bStarOrange", "bStarBlue", "bShellA", "bShellB", "bShellPink", "bRockBig"] },
   { key: "oedland", label: "Ödland", ids: ["aTreeTall", "aTreeBig", "aBone1", "aBone2", "aSkull", "aBone3", "aGrave1", "aGrave2", "aGrave3", "aSpikes", "aSpikesBig", "aRock", "aRockBig", "aThorn1", "aThorn2", "aLog"] },
+  { key: "weihnachten", label: "Weihnachten", ids: ["xTree1", "xTree2", "xGift1", "xGift2", "xGift3", "xGift4", "xGiftPink", "xSnowmanA", "xSnowmanB", "xSnowmanC", "xSnowmanD", "xGarland", "xGingerbread", "xIgloo", "xSnowLump1", "xSnowLump2"] },
+  { key: "schnee", label: "Schnee & Eis", ids: ["sTree", "sDarkTree", "xIgloo", "xSnowLump1", "xSnowLump2", "xSnowmanA", "xSnowmanB", "xSnowmanC", "xSnowmanD", "dCrystalBig", "dCrystalLying", "dCrystalCluster", "dCrystalSmallA", "dCrystalSmallB"] },
   { key: "dunkel", label: "Dunkle Welt", ids: ["dCrystalBig", "dCrystalLying", "dCrystalCluster", "dCrystalA", "dCrystalB", "dCrystalC", "dCrystalSmallA", "dCrystalSmallB", "dBoulderA", "dBoulderB", "dGargoyle", "dGargoylePlinth", "dMoonStatue", "dGateStone", "dDoorWood", "dBat"] },
 ];

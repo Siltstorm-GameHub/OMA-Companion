@@ -2695,3 +2695,15 @@ model DndTitleDef {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+/// OMA Quest: Saison-Event (Halloween, Weihnachten) — Zeitfenster, vom Admin angelegt. Look, Monster und Quests kommen aus dem Code (season-events.ts).
+model DndSeasonEvent {
+  id        String   @id @default(cuid())
+  key       String
+  startsAt  DateTime
+  endsAt    DateTime
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([startsAt, endsAt])
+}

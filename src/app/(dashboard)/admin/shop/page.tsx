@@ -4,12 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { titleItems } from "@/lib/dnd/coin-shop";
 import { ShopConfigPanel } from "./ShopConfigPanel";
 import { TitlesPanel } from "./TitlesPanel";
+import { SeasonEventsPanel } from "./SeasonEventsPanel";
 
 export default async function AdminShopPage() {
   await requireRole("admin");
   const config = await getShopConfig();
   await titleItems(); // füllt den Titel-Katalog beim ersten Aufruf mit den Standard-Titeln
   const titles = await prisma.dndTitleDef.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+
+  const seasons = (await prisma.dndSeasonEvent.findMany({ orderBy: { startsAt: "desc" } })).map((e) => ({ id: e.id, key: e.key, startsAt: e.startsAt.toISOString(), endsAt: e.endsAt.toISOString(), active: e.active }));
 
   return (
     <div className="space-y-10 max-w-2xl">
@@ -24,6 +27,12 @@ export default async function AdminShopPage() {
           🏅 Ehrentitel (OMA Quest)
         </h2>
         <TitlesPanel initial={titles} />
+      </section>
+      <section>
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+          🎃 Saison-Events (OMA Quest)
+        </h2>
+        <SeasonEventsPanel initial={seasons} />
       </section>
     </div>
   );

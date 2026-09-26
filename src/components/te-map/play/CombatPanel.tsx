@@ -133,7 +133,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
   return (
     <div className="oq-panel p-3 sm:p-4 space-y-2.5">
       <BattleStage
-        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={m?.hp ?? 1} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp ?? m?.hp ?? 1} monsterTier={s.tier ?? "normal"} monsterStatus={{ ...(s.mStatus ?? {}), taunt: s.taunt }}
         backdrop={backdrop ?? BIOME_BACKDROP[view.biome] ?? "plains"} heroes={heroes} fx={fx} status={s.status}
       />
       {node}

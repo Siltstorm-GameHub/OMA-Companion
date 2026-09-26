@@ -9,7 +9,11 @@ import type { Card, DndGroupFight, DndGroupFightMember } from "@prisma/client";
 import { prisma } from "../prisma";
 import { getMonster, type Monster } from "./combat";
 import { advanceDndQuestObjective } from "./quests";
-import { checkEncounter, fighterOf, markSlain, slainOf } from "./combat-server";
+import { checkEncounter, fighterOf, grantTierTitle, markSlain, slainOf } from "./combat-server";
+import { tierOf } from "./monster-tier";
+import { activeSeasonKeys } from "./season-server";
+import { allActorsOf } from "../te-map/interior";
+import { resolveWorld } from "./custom-worlds";
 import { grantRewards } from "./rpg-server";
 import { logChronicle } from "./chronicle";
 import { getPartyOf, MAX_PARTY } from "./party";
@@ -128,6 +132,7 @@ export async function startLobby(card: Card, monsterId: string, source?: { slug:
   if (!party) return { error: "Du bist in keiner Gruppe." };
   const chk = await checkEncounter(card, monsterId, source, true);
   if ("error" in chk) return chk;
+  if (chk.m.event && !(await activeSeasonKeys()).includes(chk.m.event)) return { error: `${chk.m.name} zeigt sich nur während des ${chk.m.event === "halloween" ? "Halloween" : "Weihnachts"}-Events.` };
   if (chk.m.raid && !party.raid) return { error: "Dafür braucht die Gruppe den Raid-Modus (der Anführer schaltet ihn ein)." };
   if (source && chk.view.slain.includes(`${source.slug}:${source.actor}`)) return { error: "Das Monster ist gerade besiegt." };
 
@@ -187,7 +192,10 @@ export async function beginFight(card: Card, fightId: string, auto = false): Pro
   // Der Auslöser steht vorn, der Rest in der Reihenfolge des Beitritts
   const ordered = [...joined].sort((a, b) => Number(b.cardId === f.initiatorCardId) - Number(a.cardId === f.initiatorCardId)).map((m) => cards.find((c) => c.id === m.cardId)).filter((c): c is Card => !!c);
   const fighters = await Promise.all(ordered.map(async (c) => ({ cardId: c.id, name: c.name, fighter: await fighterOf(c), character: effectiveTeCharacter(c) })));
-  const state = startGroupCombat(monster, fighters, Date.now(), (f.source as { slug: string; actor: string } | null) ?? undefined);
+  const src = (f.source as { slug: string; actor: string } | null) ?? undefined;
+  // Stufe der Figur (Elite/Boss) aus der Welt lesen; Raid-Arten sind immer Raid
+  const figure = src ? allActorsOf((await resolveWorld(src.slug))?.map ?? { actors: [], buildings: [] }).find((a) => a.id === src.actor) : undefined;
+  const state = startGroupCombat(monster, fighters, Date.now(), src, tierOf(monster, figure?.tier));
   if (!(await saveState(f, { status: "ACTIVE", state }))) return RACE;
   if (invited.length) await prisma.dndGroupFightMember.updateMany({ where: { fightId, status: "invited" }, data: { status: "declined" } });
   return { ok: true };
@@ -241,7 +249,8 @@ async function finalize(fightId: string, state: GroupState): Promise<void> {
     const granted = await grantRewards(c, { xp: r.xp, gold: r.gold, items: r.items });
     r.xp = granted.xp; r.gold = granted.gold; r.items = granted.items;
     r.levelUp = levelOf(c.dndXp + granted.xp) > before ? levelOf(c.dndXp + granted.xp) : null;
-    if (state.source) await markSlain(r.cardId, state.source);
+    if (state.source) await markSlain(r.cardId, state.source, state.tier);
+    await grantTierTitle({ id: c.id, name: c.name, dndOwnedTitles: c.dndOwnedTitles }, state.tier ?? "normal");
     await advanceDndQuestObjective(r.cardId, "MONSTER_SLAIN", 1, m.id).catch(() => {});
   }
   // Ergebnis für die Anzeige am Kampfzustand festhalten

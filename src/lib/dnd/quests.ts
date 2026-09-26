@@ -21,6 +21,8 @@ import { effectsOfCard } from "./progression";
 
 export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
+import { activeSeasonKeys } from "./season-server";
+import { seasonOfQuest } from "./season-events";
 
 /** Quests der begehbaren Welten (eine je Location, siehe lib/te-map/worlds.ts). Fortschritt = erledigte
  *  Schritte; bewusst nur XP als Belohnung, weil der Client die Schritte meldet (keine Coins). */
@@ -74,6 +76,22 @@ export async function ensureDndQuestsSeeded(): Promise<void> {
   }
 }
 
+/** Einmalige Extra-Belohnung einer Quest (Event-Titel, Karten-Hintergrund, Begleiter). */
+async function grantQuestPerks(cardId: string, slug: string): Promise<void> {
+  const grant = DND_QUESTS.find((d) => d.slug === slug)?.grant;
+  if (!grant) return;
+  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndOwnedTitles: true, dndCompanions: true, cardUnlocks: true } });
+  if (!card) return;
+  const strs = (v: unknown): string[] => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string") : []);
+  const add = (list: string[], v: string) => (list.includes(v) ? list : [...list, v]);
+  const data: Record<string, unknown> = {};
+  if (grant.title) data.dndOwnedTitles = add(strs(card.dndOwnedTitles), grant.title);
+  if (grant.bg) data.cardUnlocks = add(strs(card.cardUnlocks), `bg:${grant.bg}`);
+  if (grant.companion) data.dndCompanions = add(strs(card.dndCompanions), grant.companion);
+  if (Object.keys(data).length) await prisma.card.update({ where: { id: cardId }, data });
+  await logChronicle("event", `${card.name} hat sich beim Event eine besondere Belohnung verdient.`, undefined);
+}
+
 /**
  * Kernfunktion, arbeitet auf cardId — gleiche Struktur wie updateQuestProgress
  * (Fortschritt pro passendem Quest, Clamp auf target, Belohnung genau einmal).
@@ -89,8 +107,12 @@ export async function advanceDndQuestObjective(
 
   const quests = await prisma.dndQuest.findMany({ where: { objectiveType, ...(ref ? { OR: [{ targetRef: null }, { targetRef: ref }] } : {}) } });
   if (!quests.length) return;
+  const running = await activeSeasonKeys();
 
   for (const quest of quests) {
+    // Event-Quests zählen nur, solange ihr Event läuft
+    const ev = seasonOfQuest(quest.slug);
+    if (ev && !running.includes(ev)) continue;
     const existing = await prisma.dndQuestProgress.findUnique({
       where: { cardId_questId: { cardId, questId: quest.id } },
     });
@@ -114,6 +136,7 @@ export async function advanceDndQuestObjective(
 
     if (justCompleted) {
       await rewardDndQuest(cardId, quest.id, quest.coinReward);
+      await grantQuestPerks(cardId, quest.slug);
     }
   }
 }

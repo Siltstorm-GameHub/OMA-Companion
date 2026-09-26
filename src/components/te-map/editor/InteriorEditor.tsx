@@ -11,6 +11,9 @@ import { bakeInterior, drawStamp, loadSheets, T, type Sheets } from "@/component
 import { ITEMS } from "@/lib/dnd/items";
 import { getMonster, MONSTERS } from "@/lib/dnd/combat";
 import { spriteInfo, spriteKeyOf, spriteScale } from "@/lib/dnd/oq-monster";
+import { TIER_META, tierOf } from "@/lib/dnd/monster-tier";
+import { drawTierAura, drawTierIcon } from "@/components/te-map/tier-draw";
+import { tierCounts } from "@/lib/te-map/custom-world-edit";
 import { LIMITS, type CustomWorldDoc } from "@/lib/te-map/custom-world";
 import {
   interiorMoveActor, interiorMoveStamp, interiorSetStampSay, interiorStampAt, interiorPlaceActor, interiorPlaceStamp, interiorRemoveAt, resizeInterior, setInteriorFromTemplate, updateAnyActor, updateInterior,
@@ -126,9 +129,15 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
           let img = monsterImgs.current.get(sk);
           if (!img) { img = new Image(); img.src = `/oq/mon/${sk}.png`; img.onload = () => setMonsterLoads((t) => t + 1); monsterImgs.current.set(sk, img); }
           const info = spriteInfo(sk);
-          const sc = spriteScale(sk, 34);
+          const tier = tierOf(getMonster(a.monster ?? ""), a.tier);
+          const kk = TIER_META[tier].mapScale;
+          const sc = spriteScale(sk, 34 * kk, 0.5, 1.5 * kk);
           const dw = info.w * sc, dh = info.h * sc;
-          sprites.push({ base: (a.y + 1) * T, draw: () => { if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, 0, 0, info.w, info.h, a.x * T + T / 2 - dw / 2, (a.y + 1) * T - dh + 1, dw, dh); } });
+          sprites.push({ base: (a.y + 1) * T, draw: () => {
+            drawTierAura(ctx, tier, a.x * T + T / 2, (a.y + 1) * T, 0);
+            if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, 0, 0, info.w, info.h, a.x * T + T / 2 - dw / 2, (a.y + 1) * T - dh + 1, dw, dh);
+            drawTierIcon(ctx, tier, a.x * T + T / 2, (a.y + 1) * T - dh, 0);
+          } });
         } else sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "14px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(getMonster(a.monster ?? "")?.emoji ?? "👾", a.x * T + T / 2, a.y * T + T / 2); } });
       } else {
         const sets = npcSets.get(a.id);
@@ -345,11 +354,21 @@ export default function InteriorEditor({ doc, bi, readOnly, onChange, onBeginEdi
                 <input value={sel.name} maxLength={LIMITS.nameLen} disabled={readOnly} onFocus={onBeginEdit} onChange={(e) => commit(updateAnyActor(docRef.current, sel.id, { name: e.target.value }))} className={field} />
               </label>
               {sel.kind === "monster" && (
+                <>
                 <label className="block text-[11px] text-gray-400">Art
                   <select value={sel.monster ?? "ratte"} disabled={readOnly} onFocus={onBeginEdit} onChange={(e) => { const m = getMonster(e.target.value); if (m) commit(updateAnyActor(docRef.current, sel.id, { monster: m.id, name: m.name, talk: [{ step: "*", lines: [m.blurb] }] })); }} className={field}>
                     {MONSTERS.filter((m) => !m.raid).map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name} (Stufe {m.level})</option>)}
                   </select>
                 </label>
+                <label className="block text-[11px] text-gray-400">Stufe
+                <select value={sel.tier ?? "normal"} disabled={readOnly} onFocus={onBeginEdit} onChange={(e) => { const v = e.target.value; commit(updateAnyActor(docRef.current, sel.id, { tier: v === "normal" ? undefined : (v as "elite" | "boss") })); }} className={field}>
+                  <option value="normal">Normal</option>
+                  <option value="elite" disabled={tierCounts(doc).elite >= LIMITS.maxElites && sel.tier !== "elite"}>👑 Elite ({tierCounts(doc).elite}/{LIMITS.maxElites})</option>
+                  <option value="boss" disabled={tierCounts(doc).boss >= LIMITS.maxBosses && sel.tier !== "boss"}>💀 Boss ({tierCounts(doc).boss}/{LIMITS.maxBosses})</option>
+                </select>
+                <span className="block text-[10px] text-gray-500 mt-0.5">Elite: 1,5× Lebenspunkte, doppelte Belohnung, 1 Std. Wiederkehr. Boss: 2,5× Lebenspunkte, +1 Angriff, vierfache Belohnung, 3 Std. Nur normale Monster lassen sich zähmen. Der erste Sieg über eine Stufe bringt einen Ehrentitel.</span>
+              </label>
+                </>
               )}
               {(sel.kind === "npc" || sel.kind === "merchant") && (
                 <label className="block text-[11px] text-gray-400">Blickrichtung

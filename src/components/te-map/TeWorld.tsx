@@ -20,6 +20,8 @@ import { TEXTURES, type TextureKey } from "@/lib/dnd/oq-assets-manifest";
 import { desiredAmbience } from "@/lib/dnd/oq-ambience";
 import { setAmbience, stopAmbience } from "@/lib/dnd/oq-ambience-player";
 import { spriteInfo, spriteKeyOf, spriteScale } from "@/lib/dnd/oq-monster";
+import { TIER_META, tierOf } from "@/lib/dnd/monster-tier";
+import { drawTierAura, drawTierIcon } from "@/components/te-map/tier-draw";
 import { DiceOverlay } from "@/components/te-map/play/Dice";
 import { GameFeed, type FeedItem, type Notify } from "@/components/te-map/play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
@@ -51,6 +53,11 @@ const SHEET_FILES = {
   beach: "/te/tiles/x_beach.png",
   ash: "/te/tiles/x_ash.png",
   dark: "/te/tiles/x_dark.png",
+  xt: "/te/tiles/x_xt.png",
+  xs: "/te/tiles/x_xs.png",
+  xm: "/te/tiles/x_xm.png",
+  xi: "/te/tiles/x_xi.png",
+  snow: "/te/tiles/x_snow.png",
 } as const;
 type SheetKey = keyof typeof SHEET_FILES;
 export type Sheets = Record<SheetKey, HTMLImageElement> & { tex: Record<TextureKey, HTMLImageElement> };
@@ -807,17 +814,29 @@ export default function TeWorld({ world, character, companion, initialSteps, tra
             const glyph = getMonster(a.monster ?? "")?.emoji ?? "👾";
             const bob = Math.sin(clock / 380 + a.x) * 1;
             const sk = spriteKeyOf(a.monster ?? "");
+            const tier = tierOf(getMonster(a.monster ?? ""), a.tier);
+            const kk = TIER_META[tier].mapScale;
             if (sk) {
               // Pixel-Monster: Ruhe-Animation, Fußpunkt unten in der Kachel
               let img = monsterImgs.current.get(sk);
               if (!img) { img = new Image(); img.src = `/oq/mon/${sk}.png`; monsterImgs.current.set(sk, img); }
               const info = spriteInfo(sk);
-              const sc = spriteScale(sk, 34);
+              const sc = spriteScale(sk, 34 * kk, 0.5, 1.5 * kk);
               const dw = info.w * sc, dh = info.h * sc;
               const fi = Math.floor(clock / (1000 / 12)) % info.frames;
-              sprites.push({ base: (a.y + 1) * T, draw: () => { if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, fi * info.w, 0, info.w, info.h, a.x * T - camX + T / 2 - dw / 2, (a.y + 1) * T - camY - dh + 1, dw, dh); } });
+              sprites.push({ base: (a.y + 1) * T, draw: () => {
+                const cx = a.x * T - camX + T / 2, fy = (a.y + 1) * T - camY;
+                drawTierAura(ctx, tier, cx, fy, clock);
+                if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, fi * info.w, 0, info.w, info.h, cx - dw / 2, fy - dh + 1, dw, dh);
+                drawTierIcon(ctx, tier, cx, fy - dh, clock);
+              } });
             } else
-            sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, a.x * T - camX + T / 2, a.y * T - camY + T / 2 + bob); } });
+            sprites.push({ base: (a.y + 1) * T, draw: () => {
+              const cx = a.x * T - camX + T / 2, fy = (a.y + 1) * T - camY;
+              drawTierAura(ctx, tier, cx, fy, clock);
+              ctx.font = `${Math.round(15 * kk)}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, cx, fy - T / 2 * kk + bob);
+              drawTierIcon(ctx, tier, cx, fy - 15 * kk - 4, clock);
+            } });
           } else if (a.kind === "chest") {
             const open = isChestOpen(a, g.questSteps, world);
             sprites.push({ base: (a.y + 1) * T, draw: () => {

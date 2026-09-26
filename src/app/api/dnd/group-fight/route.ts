@@ -1,3 +1,4 @@
+import { activeSeasonKeys } from "@/lib/dnd/season-server";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getMyDndCard } from "@/lib/dnd/quest-log";
@@ -16,7 +17,8 @@ async function me() {
 
 async function snapshot(card: NonNullable<Awaited<ReturnType<typeof getMyDndCard>>>) {
   const [fight, group] = await Promise.all([pollFight(card), groupInfo(card.id)]);
-  return { fight, group, raidBosses: group.raid ? RAID_BOSSES : [] };
+  const running = await activeSeasonKeys();
+  return { fight, group, raidBosses: group.raid ? RAID_BOSSES.filter((m) => !m.event || running.includes(m.event)) : [] };
 }
 
 /** Abfrage (alle paar Sekunden von der Spielfläche): laufender Vorraum/Kampf, Einladung, Gruppen-Infos. */

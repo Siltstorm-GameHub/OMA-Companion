@@ -6,6 +6,7 @@
 // Resistenz ×0,5), können Zustände am Monster auslösen (Brennen, Gift, Blutung, Verlangsamt, Betäubt, Verwundbar, Verspottet), Schild-LP
 // vergeben, heilen oder die Gruppe verstärken. Talente des Astes „Gruppe“ wirken als Aura auf alle. Wer 60 Sekunden nicht handelt, wird übersprungen.
 
+import { applyTier, TIER_META, type MonsterTier } from "./monster-tier";
 import { AP_PER_ROUND, apOf, dice, die, fxOf, getMonster, rewardFor, slotAbilities, swing, attackAbilityOf, type Fighter, type Monster, type Rng } from "./combat";
 import { DOT_DAMAGE, ELEMENT_LABEL, STATUS_ICON, STATUS_LABEL, STATUS_ROUNDS, getAbility, type AbilityDef, type Boon, type Element, type StatusId } from "./abilities";
 import type { TeCharacterConfig } from "../te-character";
@@ -38,6 +39,8 @@ export interface GroupState {
   monsterId: string;
   monsterMaxHp: number;
   monsterHp: number;
+  /** Stufe des Monsters (Elite/Boss/Raid) */
+  tier?: MonsterTier;
   round: number;
   /** Index des Helden, der gerade dran ist */
   turn: number;
@@ -63,7 +66,9 @@ export const isGroupAction = (v: unknown): v is GroupActionKind => typeof v === 
 export const abilitySlotOf = (a: GroupActionKind): number => (a === "ability" ? 1 : a.startsWith("ability") ? Number(a.slice(7)) : 0);
 
 export const alive = (h: GroupHero): boolean => h.hp > 0 && !h.left;
-export const isBoss = (m: Monster): boolean => !!m.raid;
+export const isBoss = (m: Monster, tier?: MonsterTier): boolean => !!m.raid || (!!tier && TIER_META[tier].stunImmune);
+/** Das Monster dieses Kampfes mit den Aufschlägen seiner Stufe. */
+export const monsterOf = (s: Pick<GroupState, "monsterId" | "tier">): Monster | undefined => { const m = getMonster(s.monsterId); return m ? applyTier(m, s.tier) : undefined; };
 export const boonSum = (h: GroupHero, kind: Boon["kind"]): number => (h.boons ?? []).filter((b) => b.kind === kind).reduce((t, b) => t + b.v, 0);
 const addBoon = (h: GroupHero, b: Boon) => { h.boons = [...(h.boons ?? []).filter((x) => x.kind !== b.kind), { ...b }]; };
 export const statusRounds = (s: Pick<GroupState, "taunt" | "mStatus">, id: StatusId): number => (id === "taunt" ? s.taunt : s.mStatus?.[id] ?? 0);
@@ -73,12 +78,12 @@ export function scaleMonster(m: Monster, n: number): { hp: number; attacks: numb
   return { hp: Math.round(m.hp * (1 + 0.6 * (n - 1))), attacks: m.attacks + Math.floor((n - 1) / 2) };
 }
 
-export function startGroupCombat(monster: Monster, members: { cardId: string; name: string; fighter: Fighter; character?: TeCharacterConfig }[], now: number, source?: { slug: string; actor: string }): GroupState {
-  const sc = scaleMonster(monster, members.length);
+export function startGroupCombat(monster: Monster, members: { cardId: string; name: string; fighter: Fighter; character?: TeCharacterConfig }[], now: number, source?: { slug: string; actor: string }, tier?: MonsterTier): GroupState {
+  const sc = scaleMonster(applyTier(monster, tier), members.length);
   const heroes: GroupHero[] = members.map((m) => ({ cardId: m.cardId, name: m.name, fighter: m.fighter, hp: m.fighter.maxHp, ap: 0, cooldowns: {}, guard: 0, shield: 0, boons: [], left: false, ...(m.character ? { character: m.character } : {}) }));
   heroes[0].ap = AP_PER_ROUND;
   return {
-    monsterId: monster.id, monsterMaxHp: sc.hp, monsterHp: sc.hp, round: 1, turn: 0, turnStartedAt: now, taunt: 0, inspire: 0, mStatus: {}, provoke: null, status: "active", heroes,
+    monsterId: monster.id, monsterMaxHp: sc.hp, monsterHp: sc.hp, ...(tier && tier !== "normal" ? { tier } : {}), round: 1, turn: 0, turnStartedAt: now, taunt: 0, inspire: 0, mStatus: {}, provoke: null, status: "active", heroes,
     log: [`${monster.emoji} ${monster.name} stellt sich der Gruppe in den Weg! ${monster.blurb}`, `${heroes[0].name} beginnt.`], ...(source ? { source } : {}),
   };
 }
@@ -223,7 +228,7 @@ function hitMonster(s: GroupState, m: Monster, raw: number, el: Element, mastery
 }
 
 function applyStatus(s: GroupState, m: Monster, id: StatusId, rounds: number): string {
-  if (id === "stun" && isBoss(m)) return ` ${m.name} ist immun gegen ${STATUS_LABEL.stun}.`;
+  if (id === "stun" && isBoss(m, s.tier)) return ` ${m.name} ist immun gegen ${STATUS_LABEL.stun}.`;
   if (id === "taunt") s.taunt = Math.max(s.taunt, rounds);
   else s.mStatus = { ...(s.mStatus ?? {}), [id]: Math.max(s.mStatus?.[id] ?? 0, rounds) };
   return ` ${STATUS_ICON[id]} ${STATUS_LABEL[id]}!`;
@@ -322,7 +327,7 @@ function basicAttack(s: GroupState, h: GroupHero, m: Monster, rng: Rng) {
 /** Aktion des Helden `cardId`; nur wer dran ist, darf handeln. `target` = Ziel-Held für Heilung/Schutz (Standard: du selbst). */
 export function performGroupAction(prev: GroupState, cardId: string, action: GroupActionKind, target: string | undefined, now: number, rng: Rng = Math.random): { state: GroupState; error?: string } {
   if (prev.status !== "active") return { state: prev, error: "Der Kampf ist vorbei." };
-  const m = getMonster(prev.monsterId);
+  const m = monsterOf(prev);
   if (!m) return { state: prev, error: "Unbekanntes Monster." };
   const s = clone(prev);
   const h = s.heroes[s.turn];
@@ -369,7 +374,7 @@ export function performGroupAction(prev: GroupState, cardId: string, action: Gro
 /** Wer zu lange nicht handelt, wird übersprungen (wird bei jedem Zugriff des Servers geprüft). */
 export function applyTimeouts(prev: GroupState, now: number, rng: Rng = Math.random): GroupState {
   if (prev.status !== "active" || now - prev.turnStartedAt < TURN_MS) return prev;
-  const m = getMonster(prev.monsterId);
+  const m = monsterOf(prev);
   if (!m) return prev;
   const s = clone(prev);
   let guardLoop = s.heroes.length + 2;
@@ -386,14 +391,15 @@ export function applyTimeouts(prev: GroupState, now: number, rng: Rng = Math.ran
 /** Belohnungen: volle XP für alle Teilnehmer (+10 % je Held ab dem dritten), Gold wird geteilt, Beute wird verlost. */
 export function groupRewards(state: GroupState, rng: Rng = Math.random): GroupReward[] {
   const m = getMonster(state.monsterId);
+  const tier = state.tier ?? "normal";
   const part = state.heroes.filter((h) => !h.left);
   if (!m || !part.length) return [];
   const n = part.length;
   const bonus = 1 + 0.1 * Math.max(0, n - 2);
-  const base = rewardFor(m, part[0].fighter.level, rng);
+  const base = rewardFor(m, part[0].fighter.level, rng, tier);
   const pool = Math.round(base.gold * (1 + 0.5 * (n - 1)));
   const share = Math.floor(pool / n);
-  const out: GroupReward[] = part.map((h) => ({ cardId: h.cardId, name: h.name, xp: Math.round(rewardFor(m, h.fighter.level, () => 0.999).xp * bonus), gold: share, items: [], levelUp: null }));
+  const out: GroupReward[] = part.map((h) => ({ cardId: h.cardId, name: h.name, xp: Math.round(rewardFor(m, h.fighter.level, () => 0.999, tier).xp * bonus), gold: share, items: [], levelUp: null }));
   for (const item of base.items) out[Math.floor(rng() * out.length)].items.push(item);
   return out;
 }

@@ -289,6 +289,56 @@ export const MONSTER_SPRITES = {
       "w": 32,
       "h": 32
     }
+  },
+  "geist": {
+    "frames": 4,
+    "w": 26,
+    "h": 36
+  },
+  "kuerbiskopf": {
+    "frames": 4,
+    "w": 26,
+    "h": 36
+  },
+  "tanzskelett": {
+    "frames": 4,
+    "w": 26,
+    "h": 36
+  },
+  "wichtel": {
+    "frames": 4,
+    "w": 26,
+    "h": 36
+  },
+  "gnom": {
+    "frames": 4,
+    "w": 26,
+    "h": 36
+  },
+  "reiter": {
+    "frames": 4,
+    "w": 52,
+    "h": 53
+  },
+  "rudolph": {
+    "frames": 4,
+    "w": 52,
+    "h": 53
+  },
+  "eisbaer": {
+    "frames": 4,
+    "w": 42,
+    "h": 36
+  },
+  "eisbaerjunges": {
+    "frames": 4,
+    "w": 42,
+    "h": 36
+  },
+  "rentier": {
+    "frames": 4,
+    "w": 52,
+    "h": 53
   }
 } as const;
 export type MonsterSpriteKey = keyof typeof MONSTER_SPRITES;

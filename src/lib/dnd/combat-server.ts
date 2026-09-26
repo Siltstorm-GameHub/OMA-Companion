@@ -20,6 +20,7 @@ import { skillEffects } from "./skills";
 import { skillsOf } from "./skills-server";
 import { checkParams, getInventory, grantRewards } from "./rpg-server";
 import { baitChance, companionFx, ownedCompanions, performTame } from "./companions";
+import { TIER_META, TIER_TITLE, tierOf, type MonsterTier } from "./monster-tier";
 import { logChronicle } from "./chronicle";
 import { advanceDndQuestObjective } from "./quests";
 import { buildFighter, encountersFor, getMonster, performAction, rewardFor, startCombat, type Biome, type CombatAction, type CombatState, type Fighter, type Monster } from "./combat";
@@ -41,20 +42,20 @@ export interface CombatView {
 
 /** Besiegte Monster-Figuren kommen nach dieser Zeit wieder. */
 export const RESPAWN_MS = 15 * 60_000;
-const SLAIN_RE = /^slain:(.+):([a-z0-9_-]+)@(\d+)$/;
+const SLAIN_RE = /^slain:(.+):([a-z0-9_-]+)@(\d+)(?:~(\d+))?$/;
 const flagList = (card: Pick<Card, "dndFlags">): string[] => (Array.isArray(card.dndFlags) ? (card.dndFlags as unknown[]).filter((f): f is string => typeof f === "string") : []);
 
 /** „slug:akteur“ aller Monster-Figuren, die dieser Held kürzlich besiegt hat. */
 export function slainOf(card: Pick<Card, "dndFlags">, now = Date.now()): string[] {
-  return flagList(card).flatMap((f) => { const m = SLAIN_RE.exec(f); return m && now - Number(m[3]) < RESPAWN_MS ? [`${m[1]}:${m[2]}`] : []; });
+  return flagList(card).flatMap((f) => { const m = SLAIN_RE.exec(f); return m && now - Number(m[3]) < (m[4] ? Number(m[4]) : RESPAWN_MS) ? [`${m[1]}:${m[2]}`] : []; });
 }
 
-export async function markSlain(cardId: string, source: { slug: string; actor: string }) {
+export async function markSlain(cardId: string, source: { slug: string; actor: string }, tier: MonsterTier = "normal") {
   const fresh = await prisma.card.findUnique({ where: { id: cardId }, select: { dndFlags: true } });
   if (!fresh) return;
   const now = Date.now();
-  const keep = flagList(fresh).filter((f) => { const m = SLAIN_RE.exec(f); return !m || (now - Number(m[3]) < RESPAWN_MS && !(m[1] === source.slug && m[2] === source.actor)); });
-  await prisma.card.update({ where: { id: cardId }, data: { dndFlags: [...keep, `slain:${source.slug}:${source.actor}@${now}`] } });
+  const keep = flagList(fresh).filter((f) => { const m = SLAIN_RE.exec(f); return !m || (now - Number(m[3]) < (m[4] ? Number(m[4]) : RESPAWN_MS) && !(m[1] === source.slug && m[2] === source.actor)); });
+  await prisma.card.update({ where: { id: cardId }, data: { dndFlags: [...keep, `slain:${source.slug}:${source.actor}@${now}~${TIER_META[tier].respawnMs}`] } });
 }
 
 const stateOf = (card: Pick<Card, "dndCombat">): CombatState | null => {
@@ -103,11 +104,11 @@ async function save(card: Card, next: CombatState | null): Promise<boolean> {
 const RACE = { error: "Zu schnell — versuch es noch einmal." } as const;
 
 /** Darf dieser Held diese Begegnung starten? Liefert das Monster oder einen Fehlertext. Raid-Bosse gehen nur im Gruppenkampf (`group`). */
-export async function checkEncounter(card: Card, monsterId: string, source: { slug: string; actor: string } | undefined, group = false): Promise<{ m: Monster; view: CombatView } | { error: string }> {
+export async function checkEncounter(card: Card, monsterId: string, source: { slug: string; actor: string } | undefined, group = false): Promise<{ m: Monster; view: CombatView; tier: MonsterTier } | { error: string }> {
   const m = getMonster(monsterId);
   const view = await getCombatView(card);
   if (!m) return { error: "Unbekanntes Monster." };
-  if (m.raid) return group ? { m, view } : { error: "Dieser Boss lässt sich nur mit einer Gruppe im Raid-Modus bekämpfen." };
+  if (m.raid) return group ? { m, view, tier: "raid" as const } : { error: "Dieser Boss lässt sich nur mit einer Gruppe im Raid-Modus bekämpfen." };
   if (source) {
     // Monster-Figur auf der Karte: sie muss in dieser Location stehen, der Held muss dort sein, und sie darf nicht gerade besiegt sein
     const world = await resolveWorld(source.slug);
@@ -116,8 +117,9 @@ export async function checkEncounter(card: Card, monsterId: string, source: { sl
     const loc = card.currentLocationId ? await prisma.dndLocation.findUnique({ where: { id: card.currentLocationId }, select: { slug: true } }) : null;
     if (loc?.slug !== source.slug) return { error: "Du bist nicht in dieser Location." };
     if (view.slain.includes(`${source.slug}:${source.actor}`)) return { error: "Das Monster ist gerade besiegt — es kommt später wieder." };
+    return { m, view, tier: tierOf(m, figure.tier) };
   } else if (!view.encounters.some((e) => e.id === m.id)) return { error: "Diese Begegnung gibt es hier nicht." };
-  return { m, view };
+  return { m, view, tier: "normal" as const };
 }
 
 export async function beginCombat(card: Card, monsterId: string, source?: { slug: string; actor: string }): Promise<{ ok: true } | { error: string }> {
@@ -125,7 +127,7 @@ export async function beginCombat(card: Card, monsterId: string, source?: { slug
   if (cur?.status === "active") return { error: "Du steckst schon in einem Kampf." };
   const chk = await checkEncounter(card, monsterId, source);
   if ("error" in chk) return chk;
-  return (await save(card, startCombat(chk.m, chk.view.hero, source))) ? { ok: true } : RACE;
+  return (await save(card, startCombat(chk.m, chk.view.hero, source, chk.tier))) ? { ok: true } : RACE;
 }
 
 export async function actInCombat(card: Card, action: CombatAction): Promise<{ ok: true } | { error: string }> {
@@ -138,13 +140,15 @@ export async function actInCombat(card: Card, action: CombatAction): Promise<{ o
 
   if (next.status === "won" && m) {
     // Erst den Zustand sichern (Versionsprüfung), dann gutschreiben — so wird nie doppelt belohnt
-    const rew = rewardFor(m, next.fighter.level, Math.random);
+    const tier = next.tier ?? "normal";
+    const rew = rewardFor(m, next.fighter.level, Math.random, tier);
     const xp = Math.max(0, Math.min(500, Math.round(rew.xp * effectsOfCard(card).xpMultiplier)));
     const after = levelOf(card.dndXp + xp);
     next.result = { xp, gold: rew.gold, items: rew.items, levelUp: after > levelOf(card.dndXp) ? after : null, goldLost: 0 };
     if (!(await save(card, next))) return RACE;
     await grantRewards(card, { xp: rew.xp, gold: rew.gold, items: rew.items }, undefined);
-    if (next.source) await markSlain(card.id, next.source);
+    if (next.source) await markSlain(card.id, next.source, tier);
+    await grantTierTitle(card, tier);
     await advanceDndQuestObjective(card.id, "MONSTER_SLAIN", 1, m.id).catch(() => {});
     if (m.level >= 6) await logChronicle("event", `${card.name} hat ${m.name} besiegt.`, undefined);
     return { ok: true };
@@ -178,9 +182,20 @@ export async function tameInCombat(card: Card, baitKey: string): Promise<{ ok: t
   else await prisma.dndInventoryItem.updateMany({ where: { cardId: card.id, itemKey: baitKey }, data: { qty: { decrement: 1 } } });
   if (next.status === "tamed") {
     await prisma.card.update({ where: { id: card.id }, data: { dndCompanions: [...owned, next.monsterId], ...(card.dndCompanion ? {} : { dndCompanion: next.monsterId }) } });
-    if (next.source) await markSlain(card.id, next.source);
+    if (next.source) await markSlain(card.id, next.source, next.tier);
   }
   return { ok: true };
+}
+
+/** Erster Sieg über eine Elite-, Boss- oder Raid-Stufe: Ehrentitel (einmalig). */
+export async function grantTierTitle(card: Pick<Card, "id" | "name" | "dndOwnedTitles">, tier: MonsterTier): Promise<void> {
+  const title = TIER_TITLE[tier];
+  if (!title) return;
+  const fresh = await prisma.card.findUnique({ where: { id: card.id }, select: { dndOwnedTitles: true } });
+  const owned = Array.isArray(fresh?.dndOwnedTitles) ? (fresh!.dndOwnedTitles as unknown[]).filter((t): t is string => typeof t === "string") : [];
+  if (owned.includes(title)) return;
+  await prisma.card.update({ where: { id: card.id }, data: { dndOwnedTitles: [...owned, title] } });
+  await logChronicle("event", `${card.name} hat den Ehrentitel „${title}“ verdient.`, undefined);
 }
 
 /** Beendeten Kampf wegräumen (Ergebnis bestätigt) bzw. aktiven aufgeben. */

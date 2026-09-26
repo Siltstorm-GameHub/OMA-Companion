@@ -346,8 +346,14 @@ function zwergenfeste(): WorldDef {
 function frostgipfel(): WorldDef {
   const m = new MapBuilder(36, 28, "outdoor", 909);
   m.border("rocks");
-  m.fill(GROUND.stone, 2, 2, 32, 24);
-  m.road([[4, 25], [4, 18], [16, 18], [16, 10], [28, 10], [28, 5]], 2, GROUND.sand);
+  m.fill(GROUND.snow, 2, 2, 32, 24);
+  m.fill(GROUND.ice, 20, 15, 9, 6);
+  m.fill(GROUND.ice, 6, 4, 8, 5);
+  m.fill(GROUND.ice, 2, 12, 4, 4);
+  m.road([[4, 25], [4, 18], [16, 18], [16, 10], [28, 10], [28, 5]], 2, GROUND.stone);
+  m.place("xIgloo", 8, 20);
+  m.place("xSnowmanB", 14, 22);
+  m.place("xSnowmanC", 15, 22);
   m.chest("gipfelfahne", "Gipfelkiste", 28, 4, chestTalk(
     ["Auf dem Gipfel steht eine Kiste mit einer Fahne: 'Ich war hier. (Nächste Woche.)'", "Du nimmst die Fahne mit — Beweis, dass es jemand geschafft hat."],
     ["Die Gipfelkiste. Bernd hat bestimmt eine Meinung dazu."],
@@ -360,8 +366,10 @@ function frostgipfel(): WorldDef {
     ["Nächste Woche. Ganz sicher."],
   ));
   m.npc("wetter", "Wettermann Wilhelm", 20, 12, "down", 92, chatter("Heute: Schnee. Morgen: Schnee. Übermorgen: Überraschung, Schnee."));
-  m.scatter(["rockBig", "rockGrey", "darkTree", "stalagmite", "skull", "bonesPile", "obelisk"], 36, [2, 2, 32, 24]);
-  m.scatter(["aTreeTall", "aLog"], 5, [2, 2, 32, 24]);
+  m.scatter(["sTree", "sDarkTree"], 24, [2, 2, 32, 24]);
+  m.scatter(["xSnowLump1", "xSnowLump2", "rockGrey", "rockBig"], 22, [2, 2, 32, 24]);
+  m.scatter(["dCrystalBig", "dCrystalA", "dCrystalB", "dCrystalC", "dCrystalCluster", "dCrystalSmallA"], 9, [2, 2, 32, 24]);
+  m.scatter(["xSnowmanA", "xSnowmanD", "skull", "bonesPile"], 5, [2, 2, 32, 24]);
   return { slug: "frostgipfel", title: "Frostgipfel des ewigen Aufschubs", map: m.build({ x: 5, y: 25 }), quest: quest("welt-frostgipfel", "Nächste Woche vielleicht", [
     "Sprich mit Bergsteiger Bernd.", "Hole die Fahne aus der Gipfelkiste im Nordosten.", "Bring die Fahne zu Bernd.",
   ], 50) };
@@ -409,23 +417,23 @@ export const WORLD_SLUGS = Object.keys(BUILDERS);
 // ── Monster-Figuren der festen Locations ────────────────────
 // Ort als Anteil der Kartengröße; der Platz wird zur nächsten freien, vom Startpunkt erreichbaren Kachel mit Luft drumherum verschoben.
 
-const MONSTER_SPOTS: Record<string, [string, number, number][]> = {
+const MONSTER_SPOTS: Record<string, [string, number, number, ("elite" | "boss")?][]> = {
   hafenstadt: [["ratte", 0.2, 0.7], ["ratte", 0.8, 0.75], ["schleimschaedel", 0.5, 0.85]],
   waldpfad: [["wolf", 0.5, 0.4], ["waldwolf", 0.65, 0.25], ["dornenbeisser", 0.75, 0.7], ["wegelagerer", 0.4, 0.8], ["blutegel", 0.25, 0.3]],
   kuestenstrasse: [["wegelagerer", 0.5, 0.5], ["skelett", 0.8, 0.3]],
   bergpass: [["baer", 0.6, 0.5], ["goblin", 0.35, 0.7], ["daemonenauge", 0.8, 0.3]],
-  ruinen: [["schattenwolf", 0.15, 0.8], ["skelett", 0.3, 0.4], ["flatterschaedel", 0.7, 0.6], ["golem", 0.5, 0.25], ["wiedergaenger", 0.85, 0.85]],
+  ruinen: [["schattenwolf", 0.15, 0.8, "elite"], ["skelett", 0.3, 0.4], ["flatterschaedel", 0.7, 0.6], ["golem", 0.5, 0.25, "elite"], ["wiedergaenger", 0.85, 0.85]],
   verlassenes_dorf: [["schattenwolf", 0.25, 0.75], ["goblin", 0.5, 0.5], ["skelett", 0.75, 0.35]],
-  schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7], ["schattenauge", 0.25, 0.6]],
-  zwergenfeste: [["knochenwaechter", 0.3, 0.6], ["golem", 0.6, 0.4], ["totenkaefer", 0.8, 0.7]],
-  frostgipfel: [["frostwolf", 0.5, 0.5], ["eisschleim", 0.3, 0.7], ["frostgeist", 0.6, 0.3], ["drache", 0.85, 0.25]],
+  schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7, "boss"], ["schattenauge", 0.25, 0.6]],
+  zwergenfeste: [["knochenwaechter", 0.3, 0.6], ["golem", 0.6, 0.4, "elite"], ["totenkaefer", 0.8, 0.7]],
+  frostgipfel: [["eisbaer", 0.2, 0.35, "elite"], ["rentier", 0.75, 0.7], ["eisbaerjunges", 0.45, 0.85], ["frostwolf", 0.5, 0.5], ["eisschleim", 0.3, 0.7], ["frostgeist", 0.6, 0.3], ["drache", 0.85, 0.25, "elite"]],
   sumpf: [["blutegel", 0.3, 0.7], ["schleimschaedel", 0.5, 0.5], ["goblin", 0.75, 0.6], ["hoellenschaedel", 0.85, 0.2]],
 };
 
-function addMonsters(w: WorldDef): WorldDef {
-  const spots = MONSTER_SPOTS[w.slug];
+/** Monster-Figuren auf freie, erreichbare Kacheln nahe den Anteils-Positionen setzen (Kennung `<prefix><n>`). */
+export function placeSpots(w: WorldDef, spots: [string, number, number, ("elite" | "boss")?][] | undefined, prefix: string): WorldDef {
   const m = w.map;
-  if (!spots) return w;
+  if (!spots?.length) return w;
   const solid = solidOfMap(m);
   // Vom Startpunkt erreichbare Kacheln
   const reach = Array.from({ length: m.rows }, () => Array<boolean>(m.cols).fill(false));
@@ -441,7 +449,7 @@ function addMonsters(w: WorldDef): WorldDef {
   const open = (x: number, y: number) => x >= 0 && y >= 0 && x < m.cols && y < m.rows && !solid[y][x];
   const openAround = (x: number, y: number) => [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]].filter(([dx, dy]) => open(x + dx, y + dy)).length;
   const actors = [...m.actors];
-  spots.forEach(([monsterId, fx, fy], i) => {
+  spots.forEach(([monsterId, fx, fy, tier], i) => {
     const mo = getMonster(monsterId);
     if (!mo) return;
     const hx = Math.round(fx * (m.cols - 1));
@@ -456,9 +464,13 @@ function addMonsters(w: WorldDef): WorldDef {
     }
     if (!best) return;
     solid[best[1]][best[0]] = true;
-    actors.push({ id: `mon${i + 1}`, kind: "monster", name: mo.name, x: best[0], y: best[1], dir: "down", monster: mo.id, talk: [{ step: "*", lines: [mo.blurb] }] });
+    actors.push({ id: `${prefix}${i + 1}`, kind: "monster", name: mo.name, x: best[0], y: best[1], dir: "down", monster: mo.id, ...(tier ? { tier } : {}), talk: [{ step: "*", lines: [mo.blurb] }] });
   });
   return { ...w, map: { ...m, actors } };
+}
+
+function addMonsters(w: WorldDef): WorldDef {
+  return placeSpots(w, MONSTER_SPOTS[w.slug], "mon");
 }
 
 /** Welt einer Location (oder undefined für unbekannte Slugs). Wird einmal erzeugt und dann gemerkt. */

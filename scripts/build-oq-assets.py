@@ -205,6 +205,23 @@ else:
     print('FEHLT Wolf-Paket', WOLF_SHEET)
 
 
+# ── Event-Monster (Halloween / Weihnachten, finalbossblues): RPG-Maker-Figurenblätter, 3 Spalten x 4 Zeilen (unten, links, rechts, oben) ──
+EVENT_MONSTERS = {
+    'geist': ('halloween_10.2022/ghost1.png', 26, 36), 'kuerbiskopf': ('halloween_10.2022/horseman/jacko_a_1.png', 26, 36),
+    'tanzskelett': ('halloween_10.2022/day_of_the_dead/dotd_skeletonsheet_1.png', 26, 36),
+    'wichtel': ('christmas_2.26.19/christmas/2019/elfa_1.png', 26, 36), 'gnom': ('christmas_2.26.19/christmas/1x/gnomea_reg.png', 26, 36),
+    'reiter': ('halloween_10.2022/horseman/horseman_a_1.png', 52, 53), 'rudolph': ('christmas_2.26.19/christmas/1x/rudolph_adult_1.png', 52, 53),
+    'eisbaer': ('christmas_2.26.19/christmas/2019/polarbear_1.png', 42, 36), 'eisbaerjunges': ('christmas_2.26.19/christmas/2019/polarbear_cub_1.png', 42, 36), 'rentier': ('christmas_2.26.19/christmas/1x/reindeer_1.png', 52, 53),
+}
+for key, (fname, fw, fh) in EVENT_MONSTERS.items():
+    fp = f'{ROOT}/Assets/{fname}'
+    if not os.path.exists(fp):
+        print('FEHLT Event-Monster', key)
+        continue
+    sheet = Image.open(fp).convert('RGBA')
+    mon_manifest[key] = strip([(c * fw, 2 * fh, fw, fh) for c in (0, 1, 2, 1)], sheet, f'{OUT}/mon/{key}.png')
+
+
 # ── Kampf-Effekte (Pixel-Spritesheets, waagerechte Streifen quadratischer Bilder) ──
 FX_DIR = f'{ROOT}/Assets/Effects/'
 FX = {
