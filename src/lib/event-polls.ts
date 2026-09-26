@@ -91,7 +91,7 @@ export async function getEventPollWinners(
         select: { id: true, name: true, username: true },
       })
     : [];
-  const nameById = new Map(users.map((u) => [u.id, u.name ?? u.username ?? "?"]));
+  const nameById = new Map(users.map((u) => [u.id, u.username ?? u.name ?? "?"]));
 
   return parsedPolls
     .filter((p) => p.ids.length > 0)

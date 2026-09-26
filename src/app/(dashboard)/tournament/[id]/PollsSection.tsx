@@ -85,7 +85,7 @@ function PollCard({
       ? poll.customAnswers.map(a => ({ id: a, label: a }))
       : (poll.answerOptions ?? []).map(u => ({
           id: u.id,
-          label: u.name ?? u.username ?? u.id,
+          label: u.username ?? u.name ?? u.id,
           image: u.image,
           rankPoints: u.rankPoints,
         }));
