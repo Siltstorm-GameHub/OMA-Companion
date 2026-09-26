@@ -21,6 +21,7 @@ import {
 import { ITEMS } from "@/lib/dnd/items";
 import { TEXTURES } from "@/lib/dnd/oq-assets-manifest";
 import { getMonster, MONSTERS } from "@/lib/dnd/combat";
+import { spriteInfo, spriteKeyOf, spriteScale } from "@/lib/dnd/oq-monster";
 import { INTERIOR_TEMPLATES } from "@/lib/te-map/interior";
 import { STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
 import { STAMP_LABELS } from "@/lib/te-map/stamp-labels";
@@ -143,8 +144,10 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
   const lastNameEdit = useRef(0);
   const zoomRef = useRef(zoom);
   const anchor = useRef<{ tx: number; ty: number; px: number; py: number } | null>(null);
+  const [monsterLoads, setMonsterLoads] = useState(0);
   const [npcSets, setNpcSets] = useState<Map<string, TeLayerSets>>(new Map());
   const npcKeys = useRef(new Map<string, string>());
+  const monsterImgs = useRef(new Map<string, HTMLImageElement>());
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +266,15 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
     for (const a of doc.actors) {
       if (a.kind === "chest") sprites.push({ base: (a.y + 1) * T, draw: () => ctx.drawImage(sheets.chests, 16, 16, 16, 16, a.x * T, a.y * T, 16, 16) });
       else if (a.kind === "monster") {
+        const sk = spriteKeyOf(a.monster ?? "");
+        if (sk) {
+          let img = monsterImgs.current.get(sk);
+          if (!img) { img = new Image(); img.src = `/oq/mon/${sk}.png`; img.onload = () => setMonsterLoads((t) => t + 1); monsterImgs.current.set(sk, img); }
+          const info = spriteInfo(sk);
+          const sc = spriteScale(sk, 34);
+          const dw = info.w * sc, dh = info.h * sc;
+          sprites.push({ base: (a.y + 1) * T, draw: () => { if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, 0, 0, info.w, info.h, a.x * T + T / 2 - dw / 2, (a.y + 1) * T - dh + 1, dw, dh); } });
+        } else
         sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "14px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(getMonster(a.monster ?? "")?.emoji ?? "👾", a.x * T + T / 2, a.y * T + T / 2); } });
       } else if (a.kind === "npc") {
         const sets = npcSets.get(a.id);
@@ -351,7 +363,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
         ctx.strokeRect(hx * T + 0.5, hy * T + 0.5, w * T - 1, h * T - 1);
       }
     }
-  }, [sheets, baked, world, doc, npcSets, grid, hover, selected, tool, brush, gType, bld, readOnly, panning]);
+  }, [sheets, baked, world, doc, npcSets, monsterLoads, grid, hover, selected, tool, brush, gType, bld, readOnly, panning]);
 
   const tileAt = (e: React.PointerEvent) => {
     const r = canvasRef.current!.getBoundingClientRect();

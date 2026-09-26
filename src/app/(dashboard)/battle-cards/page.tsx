@@ -1,5 +1,5 @@
 // ============================================
-// /battle-cards — Hub (5 Reiter: Held, Welt, Arena, Sammlung, Laden)
+// /battle-cards — Hub (5 Reiter: Held, Welt, Arena, Sammlung, Shop)
 // ============================================
 // Der Hub ist das Menü von OMA Battle Cards und in der App-Navigation der Einstieg. Verzweigt direkt:
 //  - Helden-Einrichtung noch offen → zeigt das Layout (HeroSetup) statt dieser Seite.
@@ -8,7 +8,7 @@
 //    "Welt" (Einstieg in OMA Quest),
 //    "Arena" (alle Kampfmodi: BattleLauncher, Kampagne, Herausforderungen, Rangliste),
 //    "Sammlung" (Karten, Aufstellung, Duel-Deck — siehe CardCollectionBrowser),
-//    "Laden" (Packs, Glücksrad, Held neu würfeln — vormals /shop).
+//    "Shop" (Packs, Glücksrad, Held neu würfeln — vormals /shop).
 //  Alte ?tab=-Werte (kampf/kampagne/community/karten) landen über LEGACY_TABS im passenden Reiter.
 
 import Link from "next/link";
@@ -213,7 +213,6 @@ export default async function BattleCardsPage() {
       unopenedPacks={unopenedPacks}
       pendingChallenges={pendingChallenges}
       spunToday={!!todaySpin}
-      lineupCards={lineupCards}
     />
   );
 
@@ -324,21 +323,20 @@ export default async function BattleCardsPage() {
   const ladenPanel = (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-lg font-black text-white">Laden</h1>
+        <h1 className="text-lg font-black text-white">Shop</h1>
         <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400 tabular-nums"><CoinIcon size={16} /> {coins} Münzen</span>
       </div>
 
+      <DailySpin
+        alreadySpun={!!todaySpin}
+        lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
+        initialPoints={coins}
+        prizes={shopConfig.wheelPrizes}
+      />
+
       <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
 
-      {hero?.dndCreatedAt && <HubCoinShop />}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <DailySpin
-          alreadySpun={!!todaySpin}
-          lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
-          initialPoints={coins}
-          prizes={shopConfig.wheelPrizes}
-        />
         <BuyPack
           packPrices={shopConfig.packPrices}
           initialPoints={coins}
@@ -352,6 +350,8 @@ export default async function BattleCardsPage() {
           hasCharacter={!!hero?.dndCreatedAt}
         />
       </div>
+
+      {hero?.dndCreatedAt && <HubCoinShop />}
     </div>
   );
 

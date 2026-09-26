@@ -22,7 +22,7 @@ describe("Klassenfähigkeiten: Elemente und Zustände", () => {
 
   test("Schwäche ×1,5, Resistenz ×0,5", () => {
     const weak = (m: string) => { const mon = getMonster(m)!; return mon.hp - performAction(startCombat(mon, fighter("magier")), "ability", seq(0.5, 0.5, 0.5)).state.monsterHp; };
-    // Feuerball auf Ratte (schwach gegen Feuer) vs. Skorpion (resistent gegen Feuer): gleiche Würfel
+    // Feuerball auf Ratte (schwach gegen Feuer) vs. Wüstenspinne (resistent gegen Feuer): gleiche Würfel
     assert.ok(getMonster("ratte")!.weak!.includes("fire"));
     const s1 = performAction(startCombat(getMonster("ratte")!, fighter("magier")), "ability", seq(0.5, 0.5, 0.5)).state;
     const s2 = performAction(startCombat(getMonster("skorpion")!, fighter("magier")), "ability", seq(0.5, 0.5, 0.5)).state;
@@ -37,7 +37,7 @@ describe("Klassenfähigkeiten: Elemente und Zustände", () => {
     s = performAction(s, "ability", seq(0.5, 0.5, 0.01)).state; // Feuerball (2 AP) → Brennen
     assert.equal(s.mStatus?.burn, 2);
     s = performAction(s, "end", seq(0.01)).state;
-    assert.ok(s.log.some((l) => l.includes("Brennen: Steingolem erleidet 3")));
+    assert.ok(s.log.some((l) => l.includes("Brennen: Lehmgolem erleidet 3")));
     assert.equal(s.mStatus?.burn, 1);
   });
 

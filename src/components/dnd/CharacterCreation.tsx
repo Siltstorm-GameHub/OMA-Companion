@@ -36,7 +36,7 @@ export interface RolledCard {
 }
 
 const ABILITY_LABEL: Record<string, string> = {
-  str: "STR", dex: "DEX", con: "CON", int: "INT", wis: "WIS", cha: "CHA",
+  str: "Stärke", dex: "Geschick", con: "Konstitution", int: "Intelligenz", wis: "Weisheit", cha: "Charisma",
 };
 
 // Nur noch die 6 Attribute werden ausgewürfelt (Rasse/Klasse sind bewusste Wahl).

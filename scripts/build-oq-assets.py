@@ -151,7 +151,7 @@ MONSTERS = {
     'leech': 'leech_green', 'skullslime': 'skull_slime_green', 'demoneye': 'demon_eye_red', 'shrubtooth': 'shrubtooth_yellow',
     'mudman': 'mudman_brown', 'wingedskull': 'winged_skull_gray', 'skullbeetle': 'skull_beetle_green', 'wraith': 'wraith_violet',
     'hellskull': 'hell_skull_orange', 'bonestatue': 'bone_statue_gray', 'frostwraith': 'wraith_blue', 'firebeetle': 'skull_beetle_red',
-    'iceslime': 'skull_slime_blue', 'darkeye': 'demon_eye_violet', 'bloodleech': 'leech_red',
+    'iceslime': 'skull_slime_blue', 'darkeye': 'demon_eye_violet', 'bloodleech': 'leech_red', 'sandspider': 'skull_beetle_violet',
 }
 mon_manifest = {}
 

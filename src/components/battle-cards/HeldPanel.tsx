@@ -7,8 +7,6 @@
 import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "@/components/battle-cards/MobaIcon";
-import type { ComponentProps } from "react";
-import LineupStrip from "@/components/battle-cards/LineupStrip";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
 import type { TutorialStepKey } from "@/lib/battle-cards/tutorial";
 import { HubCharacterSheet } from "@/components/battle-cards/HubQuestPanels";
@@ -35,7 +33,7 @@ function ago(iso: string): string {
 interface Waiting { icon: "chest" | "crossedSwords" | "star" | "coin" | "friends"; text: string; href: string }
 
 export default function HeldPanel({
-  cockpit, tutorialStep, coins, eloOverall, unopenedPacks, pendingChallenges, spunToday, lineupCards,
+  cockpit, tutorialStep, coins, eloOverall, unopenedPacks, pendingChallenges, spunToday,
 }: {
   cockpit: HeroCockpit;
   tutorialStep: TutorialStepKey;
@@ -44,7 +42,6 @@ export default function HeldPanel({
   unopenedPacks: number;
   pendingChallenges: number;
   spunToday: boolean;
-  lineupCards: ComponentProps<typeof LineupStrip>["cards"];
 }) {
   const { card, place, tracker, party, invites, chronicle } = cockpit;
   const level = levelOf(card.dndXp);
@@ -180,12 +177,6 @@ export default function HeldPanel({
           </div>
         </div>
       )}
-
-      {/* Aufstellung */}
-      <div className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
-        <LineupStrip cards={lineupCards} />
-      </div>
 
       {/* Chronik */}
       {chronicle.length > 0 && (

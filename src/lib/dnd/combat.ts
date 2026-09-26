@@ -75,16 +75,16 @@ export interface Monster {
 }
 
 export const MONSTERS: Monster[] = [
-  { id: "ratte", name: "Riesenratte", emoji: "🐀", level: 1, hp: 12, ac: 10, attack: 2, dmg: [1, 4, 0], attacks: 1, xp: 14, gold: [0, 3], loot: [{ key: "frachtbrief", chance: 0.2 }], biomes: "any", blurb: "Größer als sie sein sollte und deutlich frecher." },
+  { id: "ratte", name: "Giftegel", emoji: "🪱", level: 1, hp: 12, ac: 10, attack: 2, dmg: [1, 4, 0], attacks: 1, xp: 14, gold: [0, 3], loot: [{ key: "frachtbrief", chance: 0.2 }], biomes: "any", blurb: "Größer als er sein sollte, grün und sehr anhänglich." },
   { id: "wegelagerer", name: "Wegelagerer", emoji: "🥷", level: 2, hp: 20, ac: 12, attack: 3, dmg: [1, 6, 1], attacks: 1, xp: 26, gold: [4, 12], loot: [{ key: "silberloeffel", chance: 0.3 }, { key: "dolch", chance: 0.05 }], biomes: "any", blurb: "„Geld oder … na ja, auch Geld.“" },
   { id: "wolf", name: "Grauer Wolf", emoji: "🐺", level: 2, hp: 18, ac: 12, attack: 3, dmg: [1, 4, 1], attacks: 2, xp: 28, gold: [0, 0], loot: [], biomes: ["temperate", "cold"], blurb: "Hungrig, und zu zweit beißen kann er auch." },
   { id: "skelett", name: "Rastloses Skelett", emoji: "💀", level: 3, hp: 26, ac: 13, attack: 4, dmg: [1, 8, 0], attacks: 1, xp: 40, gold: [3, 10], loot: [{ key: "bierkrug", chance: 0.3 }, { key: "alte-karte", chance: 0.15 }], biomes: "any", blurb: "Klappert bedrohlich. Meistens beim Gehen." },
   { id: "goblin", name: "Goblin-Plünderer", emoji: "👺", level: 3, hp: 24, ac: 13, attack: 4, dmg: [1, 6, 2], attacks: 1, xp: 42, gold: [6, 16], loot: [{ key: "sockenpaar", chance: 0.25 }, { key: "rostschwert", chance: 0.08 }], biomes: "any", blurb: "Trägt mehr Beute, als er tragen kann." },
   { id: "baer", name: "Höhlenbär", emoji: "🐻", level: 4, hp: 40, ac: 12, attack: 5, dmg: [2, 6, 1], attacks: 1, xp: 60, gold: [0, 0], loot: [{ key: "edelstein", chance: 0.1 }], biomes: ["temperate"], blurb: "Wer ihn weckt, hat schlechte Ideen." },
-  { id: "skorpion", name: "Wüstenskorpion", emoji: "🦂", level: 4, hp: 32, ac: 14, attack: 5, dmg: [1, 8, 2], attacks: 1, xp: 58, gold: [0, 4], loot: [{ key: "edelstein", chance: 0.12 }], biomes: ["dry"], blurb: "Der Stachel ist das kleinere Problem — die Zangen sind größer." },
+  { id: "skorpion", name: "Wüstenspinne", emoji: "🕷️", level: 4, hp: 32, ac: 14, attack: 5, dmg: [1, 8, 2], attacks: 1, xp: 58, gold: [0, 4], loot: [{ key: "edelstein", chance: 0.12 }], biomes: ["dry"], blurb: "Ein Schädel auf acht Beinen. Der Sand knirscht, sie nicht." },
   { id: "frostwolf", name: "Frostwolf", emoji: "🐺", level: 5, hp: 38, ac: 14, attack: 6, dmg: [1, 6, 2], attacks: 2, xp: 78, gold: [0, 0], loot: [{ key: "reisemantel", chance: 0.08 }], biomes: ["cold"], blurb: "Sein Atem gefriert, seine Geduld nicht." },
   { id: "hauptmann", name: "Banditenhauptmann", emoji: "🏴‍☠️", level: 6, hp: 58, ac: 15, attack: 7, dmg: [2, 6, 2], attacks: 1, xp: 120, gold: [25, 55], loot: [{ key: "stahlschwert", chance: 0.15 }, { key: "glueckstaler", chance: 0.15 }], biomes: "any", blurb: "Hat Untergebene, einen Hut und keine Skrupel." },
-  { id: "golem", name: "Steingolem", emoji: "🗿", level: 7, hp: 80, ac: 17, attack: 7, dmg: [2, 8, 2], attacks: 1, xp: 170, gold: [10, 30], loot: [{ key: "edelstein", chance: 0.5 }], biomes: "any", blurb: "Langsam, unbeeindruckt und sehr hart." },
+  { id: "golem", name: "Lehmgolem", emoji: "🗿", level: 7, hp: 80, ac: 17, attack: 7, dmg: [2, 8, 2], attacks: 1, xp: 170, gold: [10, 30], loot: [{ key: "edelstein", chance: 0.5 }], biomes: "any", blurb: "Langsam, unbeeindruckt und erstaunlich zäh." },
   { id: "drache", name: "Junger Drache", emoji: "🐉", level: 9, hp: 120, ac: 17, attack: 9, dmg: [2, 10, 3], attacks: 1, xp: 320, gold: [80, 160], loot: [{ key: "edelstein", chance: 1 }, { key: "eulenamulett", chance: 0.3 }], biomes: "any", blurb: "Noch jung, behauptet er. Die Zähne sagen etwas anderes." },
   // ── Pixel-Monster (Super Pixel Monsters Pack 1) ──
   { id: "blutegel", name: "Blutegel", emoji: "🪱", level: 2, hp: 16, ac: 11, attack: 3, dmg: [1, 4, 1], attacks: 1, xp: 30, gold: [0, 2], loot: [], biomes: ["temperate"], blurb: "Saugt gern. An allem, was warm ist." },
@@ -93,8 +93,8 @@ export const MONSTERS: Monster[] = [
   { id: "eisschleim", name: "Eisschleim", emoji: "🧊", level: 3, hp: 26, ac: 11, attack: 4, dmg: [1, 6, 1], attacks: 1, xp: 44, gold: [0, 4], loot: [], biomes: ["cold"], blurb: "Kalt, zäh und überraschend hartnäckig." },
   { id: "daemonenauge", name: "Dämonenauge", emoji: "👁️", level: 4, hp: 30, ac: 14, attack: 5, dmg: [1, 8, 0], attacks: 1, xp: 62, gold: [2, 8], loot: [{ key: "alte-karte", chance: 0.15 }], biomes: "any", blurb: "Schwebt, starrt und blinzelt nie." },
   { id: "flatterschaedel", name: "Flatterschädel", emoji: "🦇", level: 5, hp: 34, ac: 15, attack: 6, dmg: [1, 6, 2], attacks: 2, xp: 80, gold: [3, 10], loot: [{ key: "silberloeffel", chance: 0.2 }], biomes: "any", blurb: "Ein Schädel mit Flügeln. Die Evolution hatte einen schlechten Tag." },
-  { id: "totenkaefer", name: "Totenkäfer", emoji: "🪲", level: 5, hp: 44, ac: 14, attack: 6, dmg: [1, 10, 0], attacks: 1, xp: 84, gold: [0, 6], loot: [{ key: "edelstein", chance: 0.1 }], biomes: "any", blurb: "Trägt seinen Schädel wie einen Helm und beißt wie ein Schraubstock." },
-  { id: "glutkaefer", name: "Glutkäfer", emoji: "🪲", level: 6, hp: 50, ac: 15, attack: 7, dmg: [2, 6, 0], attacks: 1, xp: 115, gold: [0, 8], loot: [{ key: "edelstein", chance: 0.15 }], biomes: ["dry"], blurb: "Heiß gelaufen und schlecht gelaunt." },
+  { id: "totenkaefer", name: "Schädelspinne", emoji: "🕷️", level: 5, hp: 44, ac: 14, attack: 6, dmg: [1, 10, 0], attacks: 1, xp: 84, gold: [0, 6], loot: [{ key: "edelstein", chance: 0.1 }], biomes: "any", blurb: "Trägt ihren Schädel wie einen Helm und beißt wie ein Schraubstock." },
+  { id: "glutkaefer", name: "Glutspinne", emoji: "🕷️", level: 6, hp: 50, ac: 15, attack: 7, dmg: [2, 6, 0], attacks: 1, xp: 115, gold: [0, 8], loot: [{ key: "edelstein", chance: 0.15 }], biomes: ["dry"], blurb: "Heiß gelaufen und schlecht gelaunt." },
   { id: "knochenwaechter", name: "Knochenwächter", emoji: "🦴", level: 6, hp: 60, ac: 16, attack: 6, dmg: [2, 6, 0], attacks: 1, xp: 122, gold: [4, 14], loot: [{ key: "alte-karte", chance: 0.2 }, { key: "edelstein", chance: 0.1 }], biomes: "any", blurb: "Ragt aus dem Boden und spuckt Knochen. Höflich ist anders." },
   { id: "schattenauge", name: "Schattenauge", emoji: "👁️", level: 6, hp: 46, ac: 15, attack: 7, dmg: [1, 10, 2], attacks: 1, xp: 118, gold: [5, 15], loot: [{ key: "eulenamulett", chance: 0.08 }], biomes: "any", blurb: "Das Auge sieht dich. Es hat schon entschieden." },
   { id: "frostgeist", name: "Frostgeist", emoji: "👻", level: 7, hp: 62, ac: 16, attack: 8, dmg: [2, 6, 2], attacks: 1, xp: 165, gold: [8, 24], loot: [{ key: "reisemantel", chance: 0.12 }], biomes: ["cold"], blurb: "Ein Sensenmann im Wintermantel. Er friert nicht — er friert ein." },
@@ -112,7 +112,7 @@ MONSTERS.push(...RAID_BOSSES);
 
 /** Pixel-Grafik je Monster (Schlüssel aus oq-assets-manifest); ohne Eintrag zeigt die Oberfläche das Emoji. */
 export const MONSTER_SPRITE: Record<string, MonsterSpriteKey> = {
-  ratte: "leech", skorpion: "skullbeetle", golem: "mudman",
+  ratte: "leech", skorpion: "sandspider", golem: "mudman",
   blutegel: "bloodleech", schleimschaedel: "skullslime", dornenbeisser: "shrubtooth", eisschleim: "iceslime", daemonenauge: "demoneye",
   flatterschaedel: "wingedskull", totenkaefer: "skullbeetle", glutkaefer: "firebeetle", knochenwaechter: "bonestatue", schattenauge: "darkeye",
   frostgeist: "frostwraith", wiedergaenger: "wraith", hoellenschaedel: "hellskull",

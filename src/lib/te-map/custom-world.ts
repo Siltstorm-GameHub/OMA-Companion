@@ -359,11 +359,12 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
       if (!isObj(st) || typeof st.id !== "string" || !insideIds.has(st.id)) continue;
       const sx = int(st.x, 0, icols - 1);
       const sy = int(st.y, 0, irows - 1);
-      if (sx !== null && sy !== null) istamps.push({ id: st.id as StampId, x: sx, y: sy });
+      const isay = text(st.say, LIMITS.lineLen);
+      if (sx !== null && sy !== null) istamps.push({ id: st.id as StampId, x: sx, y: sy, ...(isay && istamps.filter((o) => o.say).length < LIMITS.maxSay ? { say: isay } : {}) });
     }
     const iactors: Actor[] = [];
     for (const a of (Array.isArray(raw.actors) ? raw.actors : []).slice(0, INTERIOR_LIMITS.maxActors)) {
-      const actor = readActor(a, { minX: 1, minY: 2, maxX: icols - 2, maxY: irows - 2 }, false);
+      const actor = readActor(a, { minX: 1, minY: 2, maxX: icols - 2, maxY: irows - 2 }, true);
       if (!actor) continue;
       if (actor.x === exitX && actor.y === irows - 2) { fail(`Ein Akteur in „${building.name || "Gebäude"}“ steht direkt vor der Tür und wurde entfernt.`); ids.delete(actor.id); continue; }
       iactors.push(actor);
@@ -407,7 +408,18 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
   for (const [x, y] of doc.walls) m.wall(x, y);
   const slugOf = (id: string) => docQuestSlug(slug, id, questSlug);
   const mapTalks = (a: Actor): Actor => ({ ...a, talk: a.talk.map((t) => (t.quest ? { ...t, quest: slugOf(t.quest) } : { ...t })) });
-  for (const b of doc.buildings) m.building(b.interior ? { ...b, interior: { ...b.interior, actors: b.interior.actors.map(mapTalks) } } : b);
+  doc.buildings.forEach((b, bi) => {
+    if (!b.interior) { m.building(b); return; }
+    // Objekte mit Text im Innenraum: unsichtbare Schild-Akteure auf ihren Kacheln (wie draußen)
+    const talkers: Actor[] = [];
+    b.interior.stamps.forEach((s, i) => {
+      if (!s.say) return;
+      const def = STAMPS[s.id] as StampDef;
+      const [fx, fy, fw, fh] = def.solid ?? [0, 0, def.w, def.h];
+      for (let j = 0; j < Math.min(fh, 3); j++) for (let k = 0; k < Math.min(fw, 3); k++) talkers.push({ id: `iobj${bi}_${i}_${j}${k}`, kind: "sign", name: STAMP_LABELS[s.id] ?? "Objekt", x: s.x + fx + k, y: s.y + fy + j, dir: "down", talk: [{ step: "*", lines: [s.say] }] });
+    });
+    m.building({ ...b, interior: { ...b.interior, actors: [...b.interior.actors.map(mapTalks), ...talkers] } });
+  });
   doc.stamps.forEach((s, i) => {
     m.place(s.id, s.x, s.y);
     if (!s.say) return;

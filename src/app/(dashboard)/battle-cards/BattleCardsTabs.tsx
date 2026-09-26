@@ -45,7 +45,7 @@ const TABS: {
   { key: "welt", label: "Welt", icon: "map", accent: "#38bdf8", accentDark: "#0369a1", accentLight: "#7dd3fc", glow: "rgba(56,189,248,0.6)" },
   { key: "arena", label: "Arena", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
   { key: "sammlung", label: "Sammlung", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
-  { key: "laden", label: "Laden", icon: "chest", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
+  { key: "laden", label: "Shop", icon: "chest", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
 ];
 
 function BattleCardsTabsInner({

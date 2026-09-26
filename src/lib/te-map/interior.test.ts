@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { checkPlayable, defaultCustomWorldDoc, docToWorld, sanitizeCustomWorldDoc, type CustomWorldDoc } from "./custom-world";
-import { allActors, setInteriorFromTemplate, withUniqueActorIds } from "./custom-world-edit";
+import { allActors, interiorMoveActor, interiorSetStampSay, interiorPlaceActor, interiorRemoveAt, setInteriorFromTemplate, withUniqueActorIds } from "./custom-world-edit";
 import { INTERIOR_TEMPLATES, doorFront, doorTile, interiorSpawn, interiorToMap } from "./interior";
 import { createGame, enterBuilding, isWalkable, leaveBuilding, solidOfMap, step, TILE_MS } from "./engine";
 import { getWorld } from "./worlds";
@@ -93,5 +93,40 @@ describe("Innenräume", () => {
     (bad.buildings[0].interior as unknown as { cols: number }).cols = 500;
     const s2 = sanitizeCustomWorldDoc(bad);
     assert.ok(s2.ok && s2.doc.buildings[0].interior === undefined && s2.warnings.length > 0);
+  });
+
+  test("Monster und Schilder im Innenraum: setzen, verschieben, entfernen, speichern", () => {
+    let d = withHouse("leer");
+    const m = interiorPlaceActor(d, 0, "monster", 3, 3);
+    assert.ok(m.id);
+    d = m.doc;
+    const sg = interiorPlaceActor(d, 0, "sign", 4, 3);
+    d = sg.doc;
+    assert.ok(d.buildings[0].interior!.stamps.some((s) => s.id === "frameSmall" && s.x === 4 && s.y === 3));
+    d = interiorMoveActor(d, 0, sg.id!, 5, 3);
+    assert.ok(d.buildings[0].interior!.stamps.some((s) => s.id === "frameSmall" && s.x === 5));
+    const s = sanitizeCustomWorldDoc(d);
+    assert.ok(s.ok, s.ok ? "" : s.errors.join("; "));
+    if (!s.ok) return;
+    assert.equal(s.warnings.length, 0, s.warnings.join("; "));
+    const kinds = s.doc.buildings[0].interior!.actors.map((a) => a.kind).sort();
+    assert.deepEqual(kinds, ["monster", "sign"]);
+    d = interiorRemoveAt(d, 0, 5, 3);
+    assert.ok(!d.buildings[0].interior!.stamps.some((st) => st.id === "frameSmall"));
+  });
+
+  test("Text an Möbeln im Innenraum: bleibt beim Speichern, wird zu ansprechbaren Schild-Akteuren", () => {
+    let d = withHouse("leer");
+    d = { ...d, buildings: d.buildings.map((b) => ({ ...b, interior: { ...b.interior!, stamps: [{ id: "barrelClosed", x: 3, y: 3 }] } })) };
+    d = interiorSetStampSay(d, 0, 0, "Riecht nach Met.");
+    const s = sanitizeCustomWorldDoc(d);
+    assert.ok(s.ok);
+    if (!s.ok) return;
+    assert.equal(s.doc.buildings[0].interior!.stamps[0].say, "Riecht nach Met.");
+    const w = docToWorld(s.doc, "test");
+    const talkers = w.map.buildings[0].interior!.actors.filter((a) => a.kind === "sign" && a.talk[0].lines[0] === "Riecht nach Met.");
+    assert.ok(talkers.length >= 1);
+    d = interiorSetStampSay(d, 0, 0, "");
+    assert.equal(d.buildings[0].interior!.stamps[0].say, undefined);
   });
 });

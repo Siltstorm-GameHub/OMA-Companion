@@ -295,7 +295,7 @@ export function CharacterPanel({ refreshKey = 0, onChanged, notify }: { refreshK
           const total = a.score + a.bonus;
           return (
             <div key={a.key} className="oq-slot px-2 py-1.5 text-center" title={ABILITY_LABEL[a.key]}>
-              <p className="text-[9px] text-gray-500 font-bold">{ABILITY_SHORT[a.key]}</p>
+              <p className="text-[10px] text-gray-400 font-bold leading-tight break-words">{ABILITY_LABEL[a.key]}</p>
               <p className="text-base font-black text-white">{total}{a.bonus > 0 && <span className="text-[9px] text-emerald-300 font-bold"> (+{a.bonus})</span>}</p>
               <p className="text-[10px] text-sky-300">{a.mod + a.equipment >= 0 ? "+" : "−"}{Math.abs(a.mod + a.equipment)}{a.equipment ? " ⚙" : ""}</p>
               {sheet.attrPoints > 0 && total < 20 && (

@@ -239,6 +239,16 @@ export const MONSTER_SPRITES = {
       "w": 32,
       "h": 18
     }
+  },
+  "sandspider": {
+    "frames": 12,
+    "w": 96,
+    "h": 48,
+    "atk": {
+      "frames": 9,
+      "w": 96,
+      "h": 48
+    }
   }
 } as const;
 export type MonsterSpriteKey = keyof typeof MONSTER_SPRITES;
