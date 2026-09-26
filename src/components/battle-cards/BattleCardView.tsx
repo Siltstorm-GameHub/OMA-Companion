@@ -17,7 +17,8 @@ import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
 import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 import MobaIcon from "./MobaIcon";
 import TeCharacter from "@/components/te-character/TeCharacter";
-import { TE_CROP_FIGURE, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
+import CardBackdrop from "./CardBackdrop";
+import { TE_CROP_FIGURE, poseAnim, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
 
 export interface BattleCardSkill {
   name: string;
@@ -251,8 +252,9 @@ export default function BattleCardView({
             className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
+            <CardBackdrop config={card.teCharacter} />
             {card.teCharacter ? (
-              <TeCharacter config={card.teCharacter} anim="idle" dir={characterDir} crop={TE_CROP_FIGURE} scale={4} className="max-h-full w-auto" title={card.name} />
+              <TeCharacter config={card.teCharacter} anim={poseAnim(card.teCharacter)} dir={characterDir} crop={TE_CROP_FIGURE} scale={4} className="max-h-full w-auto" title={card.name} />
             ) : card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -283,8 +285,8 @@ export default function BattleCardView({
                 src={card.avatarBadgeUrl}
                 alt=""
                 title="Echtes Profilbild"
-                className="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover"
-                style={{ border: "1.5px solid rgba(255,255,255,0.8)", boxShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+                className="absolute bottom-1.5 left-1.5 w-10 h-10 rounded-full object-cover z-[1]"
+                style={{ border: `2px solid ${classConfig.color}`, boxShadow: "0 1px 6px rgba(0,0,0,0.7)" }}
               />
             )}
           </div>

@@ -14,7 +14,8 @@ import CoinIcon from "@/components/CoinIcon";
 import MobaIcon from "./MobaIcon";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
-import { TE_CROP_FIGURE } from "@/lib/te-character";
+import CardBackdrop from "./CardBackdrop";
+import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 
 /** Upgrade-Badge — breite Leiste direkt UNTER der Karte (überlappt sie nicht). Sie steht im Fluss unter der Kachel (siehe
  *  CardTile). Grün + Pulsieren, sobald ein Upgrade sofort möglich ist (Duplikate
@@ -152,9 +153,10 @@ export default function CardTile({
           filter: locked ? "grayscale(0.9)" : undefined,
         }}
       >
+        {card.teCharacter?.bg && <div className={`absolute inset-x-0 bottom-12 overflow-hidden ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}><CardBackdrop config={card.teCharacter} /></div>}
         <div className={`absolute inset-x-0 bottom-12 flex items-center justify-center ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}>
           {card.teCharacter ? (
-            <TeCharacter config={card.teCharacter} anim="idle" dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={card.name} />
+            <TeCharacter config={card.teCharacter} anim={poseAnim(card.teCharacter)} dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={card.name} />
           ) : card.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />

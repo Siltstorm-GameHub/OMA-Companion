@@ -21,6 +21,10 @@ interface Props {
   compact?: boolean;
   /** Erlaubte Waffen (Item-Kennungen) der Klasse; null/leer = alle. Die aktuell getragene Waffe bleibt auch dann wählbar. */
   allowedWeapons?: string[] | null;
+  /** Freischalt-Zustand gesperrter Teile (Schlüssel „Ebene:Teil“); fehlt = alles frei */
+  itemStates?: Record<string, { ok: boolean; hint: string }>;
+  /** Antippen eines gesperrten Teils (z. B. kaufen) */
+  onLockedPick?: (key: string) => void;
 }
 
 const ANIM_OPTIONS: { id: TeAnim; label: string }[] = [
@@ -70,7 +74,7 @@ function sheetSrc(cat: TeCategory, variant: string, item: TeItem, skin: number) 
   return `/te/char/${cat.id}/${variant}${item.skin && skin > 0 ? `.t${skin}` : ""}.png`;
 }
 
-export default function TeCharacterEditor({ value, onChange, compact = false, allowedWeapons }: Props) {
+export default function TeCharacterEditor({ value, onChange, compact = false, allowedWeapons, itemStates, onLockedPick }: Props) {
   const [catId, setCatId] = useState(TE_CATALOG.categories.find((c) => c.id === "hair")?.id ?? TE_CATALOG.categories[0].id);
   const [anim, setAnim] = useState<TeAnim>("walk");
   const [dir, setDir] = useState<TeDir>("down");
@@ -147,7 +151,15 @@ export default function TeCharacterEditor({ value, onChange, compact = false, al
 
         <button
           type="button"
-          onClick={() => { const r = randomTeConfig(); const w = weaponItemId(r); if (allowedWeapons && w && !allowedWeapons.includes(w)) { const layers = { ...r.layers }; delete layers.weapon; onChange({ ...r, layers }); } else onChange(r); }}
+          onClick={() => {
+            const r = randomTeConfig();
+            const layers = { ...r.layers };
+            const w = weaponItemId(r);
+            if (allowedWeapons && w && !allowedWeapons.includes(w)) delete layers.weapon;
+            // Gesperrte Teile bleiben bei „Zufällige Figur“ außen vor
+            for (const c of TE_CATALOG.categories) { const it = c.items.find((i) => i.variants.includes(layers[c.id] ?? "")); const st = it ? itemStates?.[`${c.id}:${it.id}`] : undefined; if (st && !st.ok) delete layers[c.id]; }
+            onChange({ ...r, layers, pose: value.pose, bg: value.bg, night: value.night });
+          }}
           className={`${compact ? "" : "w-full "}flex items-center justify-center gap-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white text-xs font-semibold px-3 py-2 transition-colors`}
         >
           <Dices className="w-4 h-4" /> Zufällige Figur
@@ -211,15 +223,15 @@ export default function TeCharacterEditor({ value, onChange, compact = false, al
             <button
               key={item.id}
               type="button"
-              onClick={() => choose(item.variants.includes(selected ?? "") ? selected : item.variants[0])}
+              onClick={() => { const st = itemStates?.[`${cat.id}:${item.id}`]; if (st && !st.ok) onLockedPick?.(`${cat.id}:${item.id}`); else choose(item.variants.includes(selected ?? "") ? selected : item.variants[0]); }}
               aria-pressed={selectedItem?.id === item.id}
-              title={item.label}
+              title={itemStates?.[`${cat.id}:${item.id}`] && !itemStates[`${cat.id}:${item.id}`].ok ? `${item.label} — ${itemStates[`${cat.id}:${item.id}`].hint}` : item.label}
               className={`h-[76px] rounded-xl border flex flex-col items-center justify-between py-1 transition-colors ${
                 selectedItem?.id === item.id ? "border-violet-500 bg-violet-500/15" : "border-white/10 bg-[#141a28] hover:border-white/30"
               }`}
             >
-              <Thumb src={sheetSrc(cat, item.variants[0], item, value.skin)} size={52} catId={cat.id} />
-              <span className="text-[9px] text-gray-400 truncate max-w-full px-1 leading-none pb-0.5">{item.label}</span>
+              <span className={itemStates?.[`${cat.id}:${item.id}`] && !itemStates[`${cat.id}:${item.id}`].ok ? "opacity-40" : ""}><Thumb src={sheetSrc(cat, item.variants[0], item, value.skin)} size={52} catId={cat.id} /></span>
+              <span className="text-[9px] text-gray-400 truncate max-w-full px-1 leading-none pb-0.5">{itemStates?.[`${cat.id}:${item.id}`] && !itemStates[`${cat.id}:${item.id}`].ok ? `🔒 ${itemStates[`${cat.id}:${item.id}`].hint}` : item.label}</span>
             </button>
           ))}
         </div>

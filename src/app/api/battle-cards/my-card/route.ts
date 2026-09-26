@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
 import { sanitizeTeConfig } from "@/lib/te-character";
 import { isWeaponAllowed } from "@/lib/te-character/class-weapons";
+import { checkUnlocked } from "@/lib/battle-cards/card-unlocks";
 import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
 
 const requestSchema = z.object({
@@ -55,6 +56,9 @@ export async function PATCH(request: Request) {
   if (character && !isWeaponAllowed(card.dndClass, character, sanitizeTeConfig(card.teCharacter))) {
     return Response.json({ error: "Diese Waffe passt nicht zu deiner Klasse." }, { status: 400 });
   }
+
+  const locked = character ? checkUnlocked(card, character, sanitizeTeConfig(card.teCharacter)) : null;
+  if (locked) return Response.json({ error: locked }, { status: 403 });
 
   try {
     await updateCardContent(card.id, { ...content, ...(character !== undefined ? { teCharacter: character } : {}) });

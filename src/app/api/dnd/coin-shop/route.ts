@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getMyDndCard } from "@/lib/dnd/quest-log";
-import { buyCoinItem, coinShopFor, equipTitle, ownedTitlesOf } from "@/lib/dnd/coin-shop";
+import { allCoinItems, buyCoinItem, coinShopFor, equipTitle, ownedTitlesOf } from "@/lib/dnd/coin-shop";
 
 export const dynamic = "force-dynamic";
 
 async function state(userId: string, cardId: string) {
   const [card, user] = await Promise.all([prisma.card.findUniqueOrThrow({ where: { id: cardId } }), prisma.user.findUnique({ where: { id: userId }, select: { points: true } })]);
-  return { coins: user?.points ?? 0, items: coinShopFor(card), titles: ownedTitlesOf(card), title: card.dndTitle };
+  return { coins: user?.points ?? 0, items: coinShopFor(card, await allCoinItems()), titles: ownedTitlesOf(card), title: card.dndTitle };
 }
 
 /** Münzen-Laden: Katalog mit Verfügbarkeit, eigene Münzen, Ehrentitel. */

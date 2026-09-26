@@ -30,12 +30,24 @@ export const COIN_ITEMS: CoinItem[] = [
   { id: "respec-attr", kind: "respec-attr", name: "Attribute neu verteilen", icon: "🔄", desc: "Setzt alle verteilten Attributspunkte zurück; du bekommst sie zum neu Verteilen zurück.", price: 150 },
   { id: "respec-perks", kind: "respec-perks", name: "Fähigkeiten neu wählen", icon: "🧭", desc: "Vergisst alle gewählten Fähigkeiten; du bekommst die Wahlen zurück.", price: 150 },
   { id: "respec-skills", kind: "respec-skills", name: "Talente neu lernen", icon: "🌟", desc: "Vergisst den ganzen Fähigkeitsbaum; alle Talentpunkte gibt es zurück.", price: 150 },
-  { id: "title-unerschrocken", kind: "title", name: "Ehrentitel: Der Unerschrockene", icon: "🛡️", desc: "Ein Titel für Mutige — erscheint statt deines Stufen-Titels.", price: 150, title: "Der Unerschrockene" },
-  { id: "title-wirtshaus", kind: "title", name: "Ehrentitel: Wirtshaus-Legende", icon: "🍺", desc: "Man kennt dich in jeder Taverne.", price: 150, title: "Wirtshaus-Legende" },
-  { id: "title-sockenkoenig", kind: "title", name: "Ehrentitel: Sockenkönig", icon: "🧦", desc: "Sammler grün gestreifter Socken. Selten und sehr warm.", price: 200, title: "Sockenkönig" },
 ];
 
-export const getCoinItem = (id: string): CoinItem | undefined => COIN_ITEMS.find((i) => i.id === id);
+/** Ehrentitel, mit denen der Katalog beim ersten Aufruf gefüllt wird; danach pflegt der Admin ihn (Tabelle DndTitleDef). */
+const DEFAULT_TITLES: { name: string; icon: string; desc: string; price: number }[] = [
+  { name: "Der Unerschrockene", icon: "🛡️", desc: "Ein Titel für Mutige — erscheint statt deines Stufen-Titels.", price: 150 },
+  { name: "Wirtshaus-Legende", icon: "🍺", desc: "Man kennt dich in jeder Taverne.", price: 150 },
+  { name: "Sockenkönig", icon: "🧦", desc: "Sammler grün gestreifter Socken. Selten und sehr warm.", price: 200 },
+];
+
+/** Aktive Titel als Angebote (füllt den Katalog beim allerersten Aufruf mit den Standard-Titeln). */
+export async function titleItems(): Promise<CoinItem[]> {
+  if ((await prisma.dndTitleDef.count()) === 0) await prisma.dndTitleDef.createMany({ data: DEFAULT_TITLES.map((d, i) => ({ ...d, sortOrder: i })), skipDuplicates: true });
+  const rows = await prisma.dndTitleDef.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  return rows.map((r) => ({ id: `title-${r.id}`, kind: "title" as const, name: `Ehrentitel: ${r.name}`, icon: r.icon, desc: r.desc, price: r.price, title: r.name }));
+}
+
+export const allCoinItems = async (): Promise<CoinItem[]> => [...COIN_ITEMS, ...(await titleItems())];
+export const getCoinItem = async (id: string): Promise<CoinItem | undefined> => (await allCoinItems()).find((i) => i.id === id);
 
 export const ownedTitlesOf = (card: Pick<Card, "dndOwnedTitles">): string[] =>
   (Array.isArray(card.dndOwnedTitles) ? (card.dndOwnedTitles as unknown[]).filter((t): t is string => typeof t === "string") : []);
@@ -47,9 +59,9 @@ export const displayTitle = (card: Pick<Card, "dndTitle" | "dndOwnedTitles">, le
 export interface CoinShopEntry extends CoinItem { available: boolean; reason?: string; owned?: boolean }
 
 /** Katalog mit Verfügbarkeit für diesen Charakter (was ist sinnvoll/kaufbar). */
-export function coinShopFor(card: Card): CoinShopEntry[] {
+export function coinShopFor(card: Card, items: CoinItem[]): CoinShopEntry[] {
   const owned = ownedTitlesOf(card);
-  return COIN_ITEMS.map((i) => {
+  return items.map((i) => {
     if (i.kind === "perk-pick") return card.dndCoinPerkBuys >= (i.maxBuys ?? 1) ? { ...i, available: false, reason: "Schon so oft gekauft, wie es geht." } : { ...i, available: true };
     if (i.kind === "respec-attr") return Object.keys(abilityBonusOf(card)).length ? { ...i, available: true } : { ...i, available: false, reason: "Du hast keine Attributspunkte verteilt." };
     if (i.kind === "respec-skills") return skillsOf(card).length ? { ...i, available: true } : { ...i, available: false, reason: "Du hast noch kein Talent gelernt." };
@@ -59,9 +71,10 @@ export function coinShopFor(card: Card): CoinShopEntry[] {
 }
 
 export async function buyCoinItem(userId: string, card: Card, itemId: string): Promise<{ ok: true; coins: number } | { error: string }> {
-  const item = getCoinItem(itemId);
+  const items = await allCoinItems();
+  const item = items.find((i) => i.id === itemId);
   if (!item) return { error: "Unbekanntes Angebot" };
-  const entry = coinShopFor(card).find((e) => e.id === itemId);
+  const entry = coinShopFor(card, items).find((e) => e.id === itemId);
   if (!entry?.available) return { error: entry?.reason ?? "Nicht verfügbar" };
 
   // Erst Münzen atomar abbuchen (nur wenn genug da sind), dann die Wirkung anwenden

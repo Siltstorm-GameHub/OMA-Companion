@@ -2013,6 +2013,8 @@ model Card {
   dndCombatV      Int                @default(0)
   // Fähigkeitsbaum: gelernte Talent-Ids (string[])
   dndSkills       Json?
+  // Gekaufte Karten-Anpassungen (string[], z. B. "bg:night3")
+  cardUnlocks     Json?
   dndFlags        Json? // string[]
   dndInventory    DndInventoryItem[]
 
@@ -2677,4 +2679,16 @@ model PromotionRequest {
   @@index([status, createdAt])
   @@index([trainingSessionId])
   @@index([requesterId])
+}
+
+/// OMA Quest: Ehrentitel im Münzen-Laden — vom Admin pflegbar (anlegen, bearbeiten, entfernen). Der Titel-Text (`name`) wird beim Charakter gespeichert.
+model DndTitleDef {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String   @default("🏅")
+  desc      String   @default("")
+  price     Int      @default(150)
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 }

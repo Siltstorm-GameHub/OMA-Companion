@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import MyCardEditor from "@/components/battle-cards/MyCardEditor";
 import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
+import { bgStatesOf, itemStatesOf } from "@/lib/battle-cards/card-unlocks";
 
 export const metadata = {
   title: "Meine Community-Karte | OMA Battle Cards",
@@ -35,7 +36,7 @@ export default async function MyCardPage() {
   const avatarByDiscordId = await resolveAvatarsForCards([card]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
       <div>
         <h1 className="text-lg font-black text-white">Meine Community-Karte</h1>
         <p className="text-xs text-gray-500 mt-0.5">
@@ -48,6 +49,9 @@ export default async function MyCardPage() {
         initialTeCharacter={sanitizeTeConfig(card.teCharacter) ?? defaultTeConfig()}
         hasTeCharacter={!!sanitizeTeConfig(card.teCharacter)}
         dndClass={card.dndClass}
+        bgStates={bgStatesOf(card)}
+        itemStates={itemStatesOf(card)}
+        coins={(await prisma.user.findUnique({ where: { id: session.user.id }, select: { points: true } }))?.points ?? 0}
       />
     </div>
   );
