@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react";
 import { getSoundSettings, playSfx, setSoundSettings, subscribeSound } from "@/lib/dnd/oq-sfx";
 
-const SERVER: ReturnType<typeof getSoundSettings> = { volume: 0.5, muted: false };
+const SERVER: ReturnType<typeof getSoundSettings> = { volume: 0.5, muted: false, ambient: true };
 
 export function useSoundSettings() {
   return useSyncExternalStore(subscribeSound, getSoundSettings, () => SERVER);
@@ -40,6 +40,7 @@ export default function SoundControl() {
         onPointerUp={() => playSfx("click")}
         className="w-20 accent-amber-400"
       />
+      <button type="button" aria-pressed={s.ambient} title={s.ambient ? "Ambiente (Hintergrundgeräusche) ausschalten" : "Ambiente einschalten"} aria-label="Ambiente" onClick={() => setSoundSettings({ ambient: !s.ambient })} className={`oq-btn text-xs px-2 py-1 ${s.ambient ? "oq-btn-gold" : ""}`}>🌲</button>
     </div>
   );
 }

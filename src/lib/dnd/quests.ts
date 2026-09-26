@@ -17,7 +17,7 @@ import { logChronicle } from "./chronicle";
 import { shareXpWithParty } from "./party";
 import { levelOf } from "../te-map/rpg";
 import { effectsOf } from "./perks";
-import { perksOf } from "./progression";
+import { effectsOfCard } from "./progression";
 
 export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
@@ -121,10 +121,10 @@ export async function advanceDndQuestObjective(
 /** Belohnung für eine abgeschlossene Welt-Quest: XP (der Client meldet Schritte, deshalb keine Coins), Stufenaufstieg und
  *  Quest in der Chronik, halbe XP für Gruppenmitglieder am selben Ort. */
 async function grantWorldQuestReward(cardId: string, quest: { title: string; xpReward: number }, locationSlug: string) {
-  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndXp: true, dndPerks: true } });
+  const card = await prisma.card.findUnique({ where: { id: cardId }, select: { name: true, dndXp: true, dndPerks: true, dndRace: true, dndClass: true } });
   if (!card) return;
   // Fähigkeit „Lernbegierig“: +10 % Erfahrung
-  const xp = Math.round(quest.xpReward * effectsOf(perksOf(card)).xpMultiplier);
+  const xp = Math.round(quest.xpReward * effectsOfCard(card).xpMultiplier);
   if (xp > 0) await prisma.card.update({ where: { id: cardId }, data: { dndXp: { increment: xp } } });
   await logChronicle("quest", `${card.name} hat die Quest „${quest.title}“ abgeschlossen.`, locationSlug);
   const after = levelOf(card.dndXp + xp);

@@ -7,18 +7,30 @@
 // vor dem Gebäude. Reine Daten/Funktionen (kein DOM), damit Engine, Editor und Server sie teilen.
 
 import type { StampId } from "./stamps";
+import type { TextureKey } from "@/lib/dnd/oq-assets-manifest";
 import type { Actor, Building, Interior, PlacedStamp, TeMap } from "./types";
 
 export const INTERIOR_LIMITS = { minCols: 8, maxCols: 20, minRows: 7, maxRows: 14, maxActors: 8, maxStamps: 120 } as const;
 
 /** Bodenstile: Kachel (x, y) im Innen-Boden-Blatt (tileA5_inside). */
-export const INTERIOR_FLOORS: { label: string; tile: [number, number] }[] = [
+export const INTERIOR_FLOORS: { label: string; tile: [number, number]; /** Pixel-Textur statt Bodenkachel */ tex?: TextureKey }[] = [
   { label: "Holzdielen", tile: [2, 0] },
   { label: "Parkett", tile: [1, 1] },
   { label: "Steinplatten", tile: [5, 1] },
   { label: "Roter Teppich", tile: [2, 2] },
   { label: "Blauer Teppich", tile: [1, 2] },
   { label: "Dunkles Holz", tile: [0, 2] },
+  // Pixel-Texturen (Textur-Pakete): vielfältigere Böden, hinten angefügt, damit gespeicherte Räume gleich bleiben
+  { label: "Dunkle Dielen", tile: [2, 0], tex: "dielen" },
+  { label: "Fliesen", tile: [5, 1], tex: "fliesen" },
+  { label: "Steinplatten hell", tile: [5, 1], tex: "marmor" },
+  { label: "Backstein", tile: [5, 1], tex: "backstein" },
+  { label: "Metallgitter", tile: [5, 1], tex: "metall" },
+  { label: "Kies", tile: [5, 1], tex: "kies" },
+  { label: "Kistenholz", tile: [2, 0], tex: "kistenholz" },
+  { label: "Sand", tile: [5, 1], tex: "sand" },
+  { label: "Eis", tile: [5, 1], tex: "eis" },
+  { label: "Herbstlaub", tile: [2, 0], tex: "waldboden" },
 ];
 
 /** Wandstile: oberes/unteres Kachelpaar der Wand (2 Reihen hoch), `side` = senkrechte Wandkachel für links/rechts (das Tileset hat keine eigenen

@@ -10,7 +10,16 @@ import { prisma } from "../prisma";
 import { ABILITIES, MAX_LEVEL, levelOf, xpForLevel, type Ability } from "../te-map/rpg";
 import { displayTitle } from "./coin-shop";
 import { milestonePackAt, packsBetween, type MilestonePackKind } from "./milestone-packs";
+import { traitChecks } from "./identity";
+import { effectsOf, type PerkEffects } from "./perks";
 import { MAX_ABILITY, isPerkId, levelReward, milestones, rewardsBetween, titleOf, type Milestone } from "./perks";
+
+/** Wirkung von Fähigkeiten UND angeborenen Merkmalen (Volk, Klasse) auf Proben, Erfahrung und Handel. */
+export function effectsOfCard(card: Pick<Card, "dndPerks" | "dndRace" | "dndClass">): PerkEffects {
+  const base = effectsOf(perksOf(card));
+  const t = traitChecks(card.dndRace, card.dndClass);
+  return { ...base, checkBonus: (a) => base.checkBonus(a) + t.checkBonus(a), rerollFumble: base.rerollFumble || t.luck, xpMultiplier: base.xpMultiplier + t.xpBonus };
+}
 
 export const perksOf = (card: Pick<Card, "dndPerks">): string[] => (Array.isArray(card.dndPerks) ? (card.dndPerks as unknown[]).filter(isPerkId) : []);
 

@@ -9,8 +9,15 @@ import type { Ability, Weather } from "./rpg";
 import type { StampId } from "./stamps";
 
 /** Bodenarten. Welche Kachelblöcke dahinterstehen, bestimmt das Thema (themes.ts). */
-export const GROUND = { base: 0, dirt: 1, cobble: 2, stone: 3, sand: 4 } as const;
+/** 0–4: Autotile-Böden der Time-Elements-Sheets · 5–9: Pixel-Texturen (aus den Textur-Paketen, ohne Übergangskanten) */
+export const GROUND = { base: 0, dirt: 1, cobble: 2, stone: 3, sand: 4, snow: 5, ice: 6, planks: 7, marble: 8, forest: 9, lava: 10, water: 11 } as const;
 export type GroundType = (typeof GROUND)[keyof typeof GROUND];
+
+/** Gefahrenböden (Lava, Wasser): sichtbar wie Boden, aber nicht betretbar — wie ein Hindernis. */
+export const HAZARD_GROUND: ReadonlySet<number> = new Set([GROUND.lava, GROUND.water]);
+/** Bodenart als Zeichen im gespeicherten Dokument (0–9, danach a, b …). */
+export const groundChar = (g: number): string => g.toString(36);
+export const groundFromChar = (c: string): GroundType => parseInt(c, 36) as GroundType;
 
 export type Dir = "down" | "left" | "right" | "up";
 
@@ -152,6 +159,8 @@ export interface WorldDef {
   quest: WorldQuest;
   /** Weitere Quests, die an derselben Location laufen */
   extraQuests?: WorldQuest[];
+  /** Geräuschkulisse der Location (Schlüssel aus lib/dnd/oq-ambience) */
+  ambience?: string;
 }
 
 /** Alle Quests, die an dieser Location angeboten werden. */

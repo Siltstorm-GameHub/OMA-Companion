@@ -16,6 +16,8 @@ import type { Hex } from "@/lib/dnd/hex/grid";
 import { resolveCheck } from "@/lib/te-map/rpg";
 import { worldQuestsOf } from "@/lib/te-map/types";
 import HexPicker from "./HexPicker";
+import { AMBIENCE_KEYS, AMBIENCE_LABELS, isAmbienceKey } from "@/lib/dnd/oq-ambience";
+import { previewAmbience } from "@/lib/dnd/oq-ambience-player";
 import MapEditor from "./MapEditor";
 import QuestEditor from "./QuestEditor";
 
@@ -211,6 +213,21 @@ export default function WorldEditor({ id }: { id: string }) {
           </label>
           <label className="text-[11px] text-gray-400">Kurzbeschreibung (für die Weltkarte)
             <input value={doc.description} maxLength={LIMITS.descLen} onFocus={beginEdit} onChange={(e) => change({ ...doc, description: e.target.value })} className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1.5 text-sm text-white" />
+          </label>
+          <label className="text-[11px] text-gray-400 sm:col-span-2">Ambiente (Hintergrundgeräusch der Location)
+            <span className="mt-0.5 flex gap-2">
+              <select
+                value={doc.ambience ?? ""}
+                onFocus={beginEdit}
+                onChange={(e) => { const v = e.target.value; const { ambience: _old, ...rest } = doc; void _old; change(isAmbienceKey(v) ? { ...rest, ambience: v } : rest); previewAmbience(isAmbienceKey(v) ? v : null); }}
+                className="flex-1 rounded bg-zinc-900 border border-white/10 px-2 py-1.5 text-sm text-white"
+              >
+                <option value="">Keines (nur Wetter)</option>
+                {AMBIENCE_KEYS.map((k) => <option key={k} value={k}>{AMBIENCE_LABELS[k]}</option>)}
+              </select>
+              <button type="button" onClick={() => previewAmbience(isAmbienceKey(doc.ambience) ? doc.ambience : null)} className="rounded-lg border border-white/15 px-3 text-sm text-gray-200 hover:border-white/30" aria-label="Ambiente anhören" title="Ambiente anhören (ca. 6 Sekunden)">▶ Anhören</button>
+            </span>
+            <span className="block text-[10px] text-gray-500 mt-0.5">Innenräume bringen ihr eigenes Geräusch mit (Taverne, Schmiede); bei Regen, Sturm und Schnee legt sich draußen das Wetter darüber.</span>
           </label>
         </div>
       )}

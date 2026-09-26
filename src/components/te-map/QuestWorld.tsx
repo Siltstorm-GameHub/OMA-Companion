@@ -7,6 +7,7 @@
 // Spielwelt. Wer nicht an dieser Location angekommen ist, wird zur Weltkarte geschickt.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { backdropOfWorld } from "@/lib/dnd/oq-backdrop";
 import { MuteButton } from "@/components/te-map/play/SoundControl";
 import { FightInvite, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 import Link from "next/link";
@@ -107,6 +108,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
   }, [notify]);
   const staticWorld = useMemo(() => getWorld(slug), [slug]);
   const world = data?.customWorld ?? staticWorld ?? undefined;
+  const backdrop = backdropOfWorld(world, data?.biome);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,7 +296,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
             {menu && (
               <GameMenu
                 tab={menu} onClose={() => setMenu(null)} slug={slug} present={data.present.map((p) => ({ id: p.id, name: p.name }))}
-                myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)} gf={gf} groupCall={groupCall} groupBusy={gfBusy}
+                myCardId={data.myCardId} chat={chat} isMod={data.isMod} isGm={data.isGm} notify={notify} refreshKey={sheetKey} onChanged={() => setSheetKey((k) => k + 1)} gf={gf} groupCall={groupCall} groupBusy={gfBusy} backdrop={backdrop}
                 onEmote={(id) => setEmote((e) => ({ id, n: (e?.n ?? 0) + 1 }))} onChatRemoved={(id) => setChat((c) => c.filter((m) => m.id !== id))}
               />
             )}

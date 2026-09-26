@@ -7,7 +7,25 @@
 import type { FxKind } from "./oq-fx-manifest";
 import type { Branch } from "./skills";
 
-export interface FxEvent { id: number; kind: FxKind; side: "hero" | "monster"; /** Name des betroffenen Helden (Gruppenkampf) */ hero?: string }
+/** Schwebende Zahl bzw. kurzer Text über der Figur (Schaden rot, Heilung grün, kritisch gelb, verfehlt grau). */
+export interface FxFloat { text: string; tone: "dmg" | "crit" | "heal" | "miss" | "info" }
+
+export interface FxEvent {
+  id: number;
+  kind: FxKind;
+  side: "hero" | "monster";
+  /** Name des betroffenen Helden (Gruppenkampf) */
+  hero?: string;
+  float?: FxFloat;
+  /** Wer die Aktion ausgeführt hat (Gruppenkampf: Heldenname; Einzelkampf: „self“) — für die Angriffs-Animation der Figur */
+  actor?: string;
+}
+
+const numberIn = (line: string, ...res: RegExp[]): number | null => {
+  for (const re of res) { const m = re.exec(line); if (m) return Number(m[1]); }
+  return null;
+};
+const HEAL_NUM = [/(?:heilst|wird um|erholst dich um|erholt sich um) (\d+)/, /(\d+) Lebenspunkte geheilt/, /steht wieder auf \((\d+) LP\)/, /\+(\d+) LP/];
 
 export const CLASS_ICON = (classId: string): string => `/oq/class/${["krieger", "paladin", "magier", "kleriker", "schurke", "waldlaeufer", "barde"].includes(classId) ? classId : "krieger"}.png`;
 export const BRANCH_ICON = (b: Branch): string => `/oq/skill/${b}.png`;
@@ -15,26 +33,47 @@ export const BRANCH_ICON = (b: Branch): string => `/oq/skill/${b}.png`;
 /** Effekt für ein Zeichen der Klassenfähigkeit (Zauber-Kennzeichen im Log). */
 const ABILITY_FX: [string, FxKind][] = [["🔥", "fire"], ["❄️", "ice"], ["⚡", "holy"], ["📣", "arcane"], ["🌧️", "arcane"], ["☠️", "crit"]];
 
-/** Kampfzeile → Effekt (oder null). `heroNames` = Namen der Helden (für den Gruppenkampf, um das Ziel zu finden). */
-export function fxFromLine(line: string, heroNames: string[] = []): Omit<FxEvent, "id"> | null {
+/** Effekt des Standardangriffs je Klasse (jede Klasse sieht anders aus). */
+export const BASIC_ATTACK_FX: Record<string, FxKind> = { krieger: "hit", paladin: "holy", magier: "arcane", kleriker: "holy", schurke: "hit", waldlaeufer: "arrow", barde: "buff" };
+
+/** Kampfzeile → Effekt (oder null). `heroNames` = Namen der Helden (für den Gruppenkampf, um das Ziel zu finden); `classFor` liefert die Klasse des Angreifers. */
+export function fxFromLine(line: string, heroNames: string[] = [], classFor?: (line: string) => string | undefined): Omit<FxEvent, "id"> | null {
   // Monster greift an (…greift <Name> an: … / …greift an: …)
+  // Wer handelt? Gruppenkampf: Name am Zeilenanfang; Einzelkampf: der Held selbst
+  const actorOf = (): string | undefined => heroNames.find((n) => line.startsWith(n)) ?? (heroNames.length === 0 ? "self" : undefined);
   if (/greift( .+)? an:/.test(line)) {
     const hero = heroNames.find((n) => line.includes(`greift ${n} an`));
-    if (/daneben/.test(line)) return { kind: "miss", side: "hero", hero };
-    return { kind: "hurt", side: "hero", hero };
+    if (/daneben/.test(line)) return { kind: "miss", side: "hero", hero, float: { text: "Verfehlt", tone: "miss" } };
+    const dmg = numberIn(line, /(\d+) Schaden/);
+    return { kind: "hurt", side: "hero", hero, ...(dmg !== null ? { float: { text: `−${dmg}`, tone: /KRITISCH/.test(line) ? "crit" : "dmg" } } : {}) };
   }
-  if (/\+3 Rüstung|geht in Deckung/.test(line)) return { kind: "guard", side: "hero", hero: heroNames.find((n) => line.startsWith(n) || line.includes(`${n} bekommt`)) };
+  if (/besiegt!/.test(line)) return { kind: "death", side: "monster" };
+  if (/\+3 Rüstung|geht in Deckung/.test(line)) return { kind: "barrier", side: "hero", hero: heroNames.find((n) => line.startsWith(n) || line.includes(`${n} bekommt`)), float: { text: "+3 RK", tone: "info" }, actor: actorOf() };
   // Heilung / Wiederbelebung (auch Talent-Regeneration)
-  if (/heilst|geheilt|wird um \d+ geheilt|steht wieder auf|erholst|erholt sich/.test(line)) {
-    return { kind: "heal", side: "hero", hero: heroNames.find((n) => line.includes(n)) };
+  if (/erholst|erholt sich/.test(line)) {
+    const n = numberIn(line, ...HEAL_NUM);
+    return { kind: "rejuvenate", side: "hero", hero: heroNames.find((h) => line.includes(h)), ...(n !== null ? { float: { text: `+${n}`, tone: "heal" as const } } : {}) };
   }
-  if (/verliert die Konzentration/.test(line)) return { kind: "buff", side: "monster" };
+  if (/heilst|geheilt|wird um \d+ geheilt|steht wieder auf/.test(line)) {
+    const n = numberIn(line, ...HEAL_NUM);
+    // Ziel: im Gruppenkampf der genannte Held, der nicht selbst handelt (sonst der Heiler selbst)
+    const named = heroNames.filter((h) => line.includes(h));
+    const others = named.filter((h) => h !== actorOf());
+    return { kind: "heal", side: "hero", hero: others[0] ?? named[0], ...(n !== null ? { float: { text: `+${n}`, tone: "heal" as const } } : {}), actor: actorOf() };
+  }
+  if (/verliert die Konzentration/.test(line)) return { kind: "buff", side: "monster", float: { text: "−3", tone: "info" }, actor: actorOf() };
   if (/^(Du greifst an|.+ — Angriff|.+: \d+ \(=)/.test(line) || /Schaden\./.test(line) || /daneben/.test(line)) {
-    if (/daneben/.test(line)) return { kind: "miss", side: "monster" };
-    if (/KRITISCHER/.test(line)) return { kind: "crit", side: "monster" };
-    for (const [mark, kind] of ABILITY_FX) if (line.includes(mark)) return { kind, side: "monster" };
-    if (/trifft sicher/.test(line)) return { kind: "arcane", side: "monster" };
-    return { kind: "hit", side: "monster" };
+    const actor = actorOf();
+    if (/daneben/.test(line)) return { kind: "miss", side: "monster", float: { text: "Verfehlt", tone: "miss" }, actor };
+    const dmg = numberIn(line, /(\d+) Schaden/);
+    const crit = /KRITISCHER/.test(line);
+    const float: FxFloat | undefined = dmg !== null ? { text: crit ? `−${dmg}!` : `−${dmg}`, tone: crit ? "crit" : "dmg" } : undefined;
+    const base = { side: "monster" as const, ...(float ? { float } : {}), actor };
+    if (crit) return { kind: "crit", ...base };
+    for (const [mark, kind] of ABILITY_FX) if (line.includes(mark)) return { kind, ...base };
+    if (/trifft sicher/.test(line)) return { kind: "arcane", ...base };
+    const cls = classFor?.(line);
+    return { kind: (cls && BASIC_ATTACK_FX[cls]) || "hit", ...base };
   }
   return null;
 }

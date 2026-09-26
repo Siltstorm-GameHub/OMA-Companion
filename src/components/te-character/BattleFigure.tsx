@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import TeCharacter from "./TeCharacter";
-import { TE_CROP_FIGURE, attackAnimFor, type TeAnim, type TeCharacterConfig } from "@/lib/te-character";
+import { TE_CROP_FIGURE, attackAnimFor, type TeAnim, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
 
 interface Props {
   config: TeCharacterConfig;
@@ -31,10 +31,14 @@ interface Props {
   /** Vergrößerung; die Figur schrumpft per CSS mit, wenn die Kachel schmaler ist. */
   scale?: number;
   title?: string;
+  /** Blickrichtung überschreiben (Seitenansicht: „right“ / „left“) */
+  facing?: TeDir;
+  /** Zusätzliche Klassen für die Zeichenfläche (z. B. feste Höhe) */
+  className?: string;
 }
 
 export default function BattleFigure({
-  config, unitClass, team, attackKey = 0, blockKey = 0, attacking = false, blocking = false, alive = true, victory = false, scale = 3, title,
+  config, unitClass, team, attackKey = 0, blockKey = 0, attacking = false, blocking = false, alive = true, victory = false, scale = 3, title, facing: facingOverride, className,
 }: Props) {
   // Aktuell laufende Einmal-Animation (null = Idle).
   const [playing, setPlaying] = useState<TeAnim | null>(null);
@@ -57,7 +61,7 @@ export default function BattleFigure({
   }
 
   const anim: TeAnim = !alive ? "ko" : playing ?? "idle";
-  const facing = !alive ? "down" : team === "A" ? "up" : "down";
+  const facing = !alive ? "down" : facingOverride ?? (team === "A" ? "up" : "down");
 
   return (
     <div
@@ -73,7 +77,7 @@ export default function BattleFigure({
         loop={playing === null || !alive ? true : false}
         onDone={() => setPlaying(null)}
         replayKey={replay}
-        className="max-w-full h-auto"
+        className={className ?? "max-w-full h-auto"}
         title={title}
       />
     </div>

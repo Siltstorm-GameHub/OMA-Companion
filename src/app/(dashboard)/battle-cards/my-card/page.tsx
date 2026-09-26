@@ -47,6 +47,7 @@ export default async function MyCardPage() {
         card={toCardData(card, avatarByDiscordId)}
         initialTeCharacter={sanitizeTeConfig(card.teCharacter) ?? defaultTeConfig()}
         hasTeCharacter={!!sanitizeTeConfig(card.teCharacter)}
+        dndClass={card.dndClass}
       />
     </div>
   );

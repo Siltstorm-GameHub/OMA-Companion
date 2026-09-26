@@ -13,7 +13,7 @@ import { STAMPS, type StampDef } from "./stamps";
 import { getMonster } from "@/lib/dnd/combat";
 import { weatherMatches, type RollResult, type Weather } from "./rpg";
 import { doorFront, doorTile, interiorSpawn, interiorToMap } from "./interior";
-import { stepsOf, worldQuestsOf, type Actor, type Dir, type Talk, type TeMap, type WorldDef, type WorldQuest } from "./types";
+import { HAZARD_GROUND, stepsOf, worldQuestsOf, type Actor, type Dir, type Talk, type TeMap, type WorldDef, type WorldQuest } from "./types";
 
 export type { Dir };
 export const DELTA: Record<Dir, [number, number]> = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
@@ -99,6 +99,8 @@ export function solidOfMap(map: TeMap, hidden?: Set<string>): boolean[][] {
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) if (solid[yy]?.[xx] !== undefined) solid[yy][xx] = true;
   };
   for (const [x, y, w, h] of map.blocked) mark(x, y, w, h);
+  // Lava und Wasser sind nicht betretbar
+  for (let y = 0; y < map.rows; y++) for (let x = 0; x < map.cols; x++) if (HAZARD_GROUND.has(map.ground[y]?.[x] ?? 0)) solid[y][x] = true;
   for (const b of map.buildings) mark(b.x, b.y, b.w, b.roofRows + 2);
   for (const s of map.stamps) {
     const f = (STAMPS[s.id] as StampDef).solid;

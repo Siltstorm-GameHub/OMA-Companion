@@ -6,11 +6,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { playSfx } from "@/lib/dnd/oq-sfx";
-import { ClassIcon, FxLayer, useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
-import type { FxEvent } from "@/lib/dnd/oq-fx";
+import { BattleLog, BattleStage, CommandBar, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
+import { useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
 import { Gold } from "@/components/te-map/play/Currency";
 import { AP_PER_ROUND, abilitiesOf, getMonster, type Monster } from "@/lib/dnd/combat";
-import { alive, TURN_MS, type GroupHero } from "@/lib/dnd/group-combat";
+import type { BackdropKey } from "@/lib/dnd/oq-backdrop";
+import { alive, TURN_MS } from "@/lib/dnd/group-combat";
 import { getItem } from "@/lib/dnd/items";
 import type { GroupFightView } from "@/lib/dnd/group-fight-server";
 
@@ -21,14 +22,6 @@ export interface GroupSnapshot {
 }
 
 export type FightCall = (body: Record<string, unknown>) => Promise<void>;
-
-function Bar({ value, max, color }: { value: number; max: number; color: string }) {
-  return (
-    <div className="h-2.5 rounded bg-black/50 border border-white/10 overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemax={max}>
-      <div className={`h-full ${color} transition-all`} style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%` }} />
-    </div>
-  );
-}
 
 /** Sekunden bis `target` (Server-Zeit), aktualisiert sich selbst. */
 function useCountdown(target: number, serverNow: number): number {
@@ -83,84 +76,46 @@ function Lobby({ view, myId, call, busy }: { view: GroupFightView; myId: string;
   );
 }
 
-function HeroCard({ h, active, mine, fx }: { h: GroupHero; active: boolean; mine: boolean; fx: FxEvent[] }) {
-  return (
-    <div className={`oq-slot p-2 space-y-1 relative ${active ? "ring-2 ring-amber-300" : ""} ${!alive(h) ? "opacity-60" : ""}`}>
-      <FxLayer events={fx} />
-      <p className="text-[11px] font-black text-white truncate flex items-center gap-1"><ClassIcon classId={h.fighter.classId} size={18} />{mine ? "★ " : ""}{h.name}{active ? " ◀" : ""}{h.left ? " (geflohen)" : h.hp <= 0 ? " (am Boden)" : ""}</p>
-      <Bar value={h.hp} max={h.fighter.maxHp} color="bg-emerald-500" />
-      <p className="text-[10px] text-gray-300">{h.hp}/{h.fighter.maxHp} LP · RK {h.fighter.ac}{h.guard > 0 ? " + Schild" : ""}</p>
-    </div>
-  );
-}
-
-function Fight({ view, myId, call, busy }: { view: GroupFightView; myId: string; call: FightCall; busy: boolean }) {
+function Fight({ view, myId, call, busy, backdrop }: { view: GroupFightView; myId: string; call: FightCall; busy: boolean; backdrop?: BackdropKey }) {
   const s = view.state!;
-  const m = getMonster(s.monsterId);
-  const logEnd = useRef<HTMLDivElement>(null);
-  useEffect(() => { logEnd.current?.scrollIntoView({ block: "nearest" }); }, [s.log.length]);
-  const me = s.heroes.find((h) => h.cardId === myId);
-  const fx = useFxEvents(s.log, s.heroes.map((h) => h.name));
+  const fx = useFxEvents(s.log, s.heroes.map((h) => h.name), (line) => s.heroes.find((h) => line.startsWith(h.name))?.fighter.classId);
   useFightSounds(s.monsterId, s.status);
+  const me = s.heroes.find((h) => h.cardId === myId);
   const turnHero = s.heroes[s.turn];
   const myTurn = s.status === "active" && turnHero?.cardId === myId && !!me && alive(me);
   const secLeft = useCountdown(s.turnStartedAt + TURN_MS, view.serverNow);
   const { main, second } = me ? abilitiesOf(me.fighter) : { main: null, second: null };
   const [target, setTarget] = useState<string>("");
   const cd = (id: string) => me?.cooldowns[id] ?? 0;
-  const act = (a: string) => void call({ action: "act", fightId: view.id, act: a, ...(target ? { target } : {}) });
   const needsTarget = (ab: { kind: string; id: string } | null) => !!ab && (ab.kind === "heal" || (ab.kind === "guard" && ab.id !== "heiliger-schild"));
+  const act = (a: string) => void call({ action: "act", fightId: view.id, act: a, ...(target && target !== myId ? { target } : {}) });
+  const targetName = s.heroes.find((h) => h.cardId === (target || myId))?.name;
+  const heroes: StageHero[] = s.heroes.map((h) => ({ key: h.cardId, name: h.name, classId: h.fighter.classId, character: h.character ?? null, hp: h.hp, maxHp: h.fighter.maxHp, ac: h.fighter.ac + (h.guard > 0 ? 3 : 0), guard: h.guard > 0, down: h.hp <= 0, left: h.left, active: h.cardId === turnHero?.cardId, mine: h.cardId === myId }));
+  const monNote = [s.taunt > 0 ? "verspottet" : "", s.inspire > 0 ? "Gruppe inspiriert" : "", s.provoke ? "zielt auf den Schildträger" : ""].filter(Boolean).join(", ") || undefined;
+  const cmds: Cmd[] = me && main ? [
+    { key: "attack", label: "Angriff", icon: "⚔️", cost: 1, disabled: me.ap < 1, onClick: () => act("attack") },
+    { key: "ability", label: main.name, icon: main.icon, cost: main.ap, cd: cd(main.id), disabled: me.ap < main.ap, gold: true, hint: `${main.name}: ${main.desc}${needsTarget(main) ? " Tippe auf einen Helden, um das Ziel zu wählen." : ""}`, onClick: () => act("ability") },
+    ...(second ? [{ key: "ability2", label: second.name, icon: second.icon, cost: second.ap, cd: cd(second.id), disabled: me.ap < second.ap, gold: true, hint: `${second.name}: ${second.desc}${needsTarget(second) ? " Tippe auf einen Helden, um das Ziel zu wählen." : ""}`, onClick: () => act("ability2") }] : []),
+    { key: "defend", label: "Deckung", icon: "🛡️", cost: 1, disabled: me.ap < 1, hint: "Deckung: +3 Rüstung bis zur nächsten Runde.", onClick: () => act("defend") },
+    { key: "flee", label: "Fliehen", icon: "🏃", cost: 1, disabled: me.ap < 1, hint: "Fliehen: Geschicksprobe; bei Erfolg verlässt du den Kampf.", onClick: () => act("flee") },
+  ] : [];
+  const info = myTurn && (needsTarget(main) || needsTarget(second)) ? `Ziel: ${targetName ?? "du"}` : `${secLeft} s`;
 
   return (
-    <div className="space-y-3">
-      <div className="oq-slot p-3 space-y-1 relative">
-        <FxLayer events={fx.filter((e) => e.side === "monster")} />
-        <p className="text-xs font-black text-white">{m?.emoji} {m?.name} <span className="text-gray-500 font-normal">RK {m?.ac}{s.taunt > 0 ? " · verspottet" : ""}{s.inspire > 0 ? " · Gruppe inspiriert" : ""}{s.provoke ? " · Angriffe auf den Schildträger" : ""}</span></p>
-        <Bar value={s.monsterHp} max={s.monsterMaxHp} color="bg-red-500" />
-        <p className="text-[11px] text-gray-300">{s.monsterHp} / {s.monsterMaxHp} LP · Runde {s.round}</p>
-      </div>
-      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-        {s.heroes.map((h) => <HeroCard key={h.cardId} h={h} active={s.status === "active" && h.cardId === turnHero?.cardId} mine={h.cardId === myId} fx={fx.filter((e) => e.side === "hero" && (e.hero ? e.hero === h.name : h.cardId === myId))} />)}
-      </div>
-      <div className="oq-slot p-2 h-40 overflow-y-auto space-y-0.5 text-[11px] text-gray-200" aria-live="polite">
-        {s.log.map((l, i) => <p key={i} className={i === s.log.length - 1 ? "text-white font-semibold" : ""}>{l}</p>)}
-        <div ref={logEnd} />
-      </div>
-
+    <div className="space-y-2.5">
+      <BattleStage
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={s.monsterMaxHp} monsterNote={monNote}
+        backdrop={backdrop} heroes={heroes} fx={fx} status={s.status}
+        selectedKey={myTurn ? target || myId : undefined} onPickHero={myTurn ? (k) => setTarget(k) : undefined}
+      />
       {s.status === "active" ? (
         myTurn && me ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-white">
-              <span className="font-black">Du bist dran</span>
-              <span className="flex gap-1">{Array.from({ length: AP_PER_ROUND }, (_, i) => <span key={i} className={`w-3 h-3 rounded-full border border-amber-300 ${i < me.ap ? "bg-amber-300" : ""}`} />)}</span>
-              <span className="text-gray-400">{me.ap} Aktion{me.ap === 1 ? "" : "en"} · {secLeft} s</span>
-            </div>
-            {(needsTarget(main) || needsTarget(second)) && (
-              <label className="block text-[11px] text-gray-400">Ziel für Heilung/Schutz
-                <select value={target} onChange={(e) => setTarget(e.target.value)} className="ml-2 rounded bg-zinc-900 border border-white/10 px-2 py-1 text-white">
-                  <option value="">Ich selbst</option>
-                  {s.heroes.filter((h) => !h.left && h.cardId !== myId).map((h) => <option key={h.cardId} value={h.cardId}>{h.name}{h.hp <= 0 ? " (am Boden — belebt)" : ` (${h.hp}/${h.fighter.maxHp})`}</option>)}
-                </select>
-              </label>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              <button type="button" disabled={busy || me.ap < 1} onClick={() => act("attack")} className="oq-btn text-xs px-3 py-2">⚔️ Angriff <span className="text-gray-500">1</span></button>
-              {main && <button type="button" disabled={busy || me.ap < main.ap || cd(main.id) > 0} onClick={() => act("ability")} title={main.desc} className="oq-btn oq-btn-gold text-xs px-3 py-2">{main.icon} {main.name} <span className="opacity-70">{main.ap}{cd(main.id) > 0 ? ` · ${cd(main.id)}R` : ""}</span></button>}
-              {second && <button type="button" disabled={busy || me.ap < second.ap || cd(second.id) > 0} onClick={() => act("ability2")} title={second.desc} className="oq-btn oq-btn-gold text-xs px-3 py-2">{second.icon} {second.name} <span className="opacity-70">{second.ap}{cd(second.id) > 0 ? ` · ${cd(second.id)}R` : ""}</span></button>}
-              <button type="button" disabled={busy || me.ap < 1} onClick={() => act("defend")} className="oq-btn text-xs px-3 py-2">🛡️ Deckung <span className="text-gray-500">1</span></button>
-              <button type="button" disabled={busy || me.ap < 1} onClick={() => act("flee")} className="oq-btn text-xs px-3 py-2">🏃 Fliehen <span className="text-gray-500">1</span></button>
-              <button type="button" disabled={busy} onClick={() => act("end")} className="oq-btn text-xs px-3 py-2 ml-auto">Zug beenden</button>
-            </div>
-            <p className="text-[10px] text-gray-500">{main?.desc}{second ? ` · ${second.desc}` : ""}</p>
-          </div>
+          <CommandBar round={s.round} ap={me.ap} apMax={AP_PER_ROUND} cmds={cmds} onEnd={() => act("end")} busy={busy} info={info} />
         ) : (
-          <p className="text-xs text-gray-300">{me && !alive(me) ? (me.left ? "Du bist geflohen." : "Du liegst am Boden — ein Kleriker kann dich wiederbeleben.") : `${turnHero?.name ?? "…"} ist dran (${secLeft} s).`}</p>
+          <p className="text-xs text-gray-300 oq-slot p-2.5">{me && !alive(me) ? (me.left ? "Du bist geflohen." : "Du liegst am Boden — ein Kleriker kann dich wiederbeleben.") : `${turnHero?.name ?? "…"} ist dran (${secLeft} s).`}</p>
         )
       ) : (
         <div className="space-y-2">
-          <p className={`text-sm font-black ${s.status === "won" ? "text-emerald-300" : s.status === "fled" ? "text-amber-200" : "text-red-300"}`}>
-            {s.status === "won" ? "🏆 Sieg!" : s.status === "fled" ? "🏃 Rückzug" : "💀 Niederlage"}
-          </p>
           {s.status === "won" && s.results && (
             <ul className="text-xs text-gray-200 space-y-0.5">
               {s.results.map((r) => (
@@ -173,9 +128,10 @@ function Fight({ view, myId, call, busy }: { view: GroupFightView; myId: string;
             </ul>
           )}
           {s.status === "lost" && <p className="text-xs text-gray-300">Alle Beteiligten verlieren 10 % ihres Golds.</p>}
-          <button type="button" disabled={busy} onClick={() => void call({ action: "close", fightId: view.id })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5">Weiter</button>
+          <button type="button" disabled={busy} onClick={() => void call({ action: "close", fightId: view.id })} className="oq-btn oq-btn-gold w-full min-h-[48px] text-sm font-black">Weiter</button>
         </div>
       )}
+      <BattleLog log={s.log} />
     </div>
   );
 }
@@ -198,10 +154,10 @@ export function FightInvite({ view, call, busy }: { view: GroupFightView; call: 
   );
 }
 
-export default function GroupFightPanel({ view, myId, call, busy }: { view: GroupFightView; myId: string; call: FightCall; busy: boolean }) {
+export default function GroupFightPanel({ view, myId, call, busy, backdrop }: { view: GroupFightView; myId: string; call: FightCall; busy: boolean; backdrop?: BackdropKey }) {
   return (
     <div className="oq-panel p-4">
-      {view.status === "LOBBY" ? <Lobby view={view} myId={myId} call={call} busy={busy} /> : view.state ? <Fight view={view} myId={myId} call={call} busy={busy} /> : <p className="text-xs text-gray-400">Lädt …</p>}
+      {view.status === "LOBBY" ? <Lobby view={view} myId={myId} call={call} busy={busy} /> : view.state ? <Fight view={view} myId={myId} call={call} busy={busy} backdrop={backdrop} /> : <p className="text-xs text-gray-400">Lädt …</p>}
     </div>
   );
 }

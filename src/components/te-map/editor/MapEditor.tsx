@@ -17,6 +17,7 @@ import {
   type ActorKind,
 } from "@/lib/te-map/custom-world-edit";
 import { ITEMS } from "@/lib/dnd/items";
+import { TEXTURES } from "@/lib/dnd/oq-assets-manifest";
 import { getMonster, MONSTERS } from "@/lib/dnd/combat";
 import { INTERIOR_TEMPLATES } from "@/lib/te-map/interior";
 import { STAMPS, type StampDef, type StampId } from "@/lib/te-map/stamps";
@@ -41,6 +42,13 @@ const GROUND_LABEL: Record<GroundType, { outdoor: string; cave: string; color: s
   [GROUND.cobble]: { outdoor: "Pflaster", cave: "Pflaster", color: "#8c8c96" },
   [GROUND.stone]: { outdoor: "Stein", cave: "Stein", color: "#5b6270" },
   [GROUND.sand]: { outdoor: "Sand", cave: "Sand", color: "#cbb46a" },
+  [GROUND.snow]: { outdoor: "Schnee", cave: "Schnee", color: TEXTURES.schnee.avg },
+  [GROUND.ice]: { outdoor: "Eis", cave: "Eis", color: TEXTURES.eis.avg },
+  [GROUND.planks]: { outdoor: "Holzdielen", cave: "Holzdielen", color: TEXTURES.dielen.avg },
+  [GROUND.marble]: { outdoor: "Steinplatten", cave: "Steinplatten", color: TEXTURES.marmor.avg },
+  [GROUND.forest]: { outdoor: "Herbstlaub", cave: "Herbstlaub", color: TEXTURES.waldboden.avg },
+  [GROUND.lava]: { outdoor: "⚠ Lava", cave: "⚠ Lava", color: TEXTURES.lava.avg },
+  [GROUND.water]: { outdoor: "⚠ Wasser", cave: "⚠ Wasser", color: TEXTURES.wasser.avg },
 };
 
 // Außen-Palette: ohne Türen/Fenster/Schilder-Kacheln und ohne Innenraum-Möbel (die gibt es im Innenraum-Editor)
@@ -323,7 +331,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
             {tool.kind === "ground" && (
               <div className="space-y-2 pt-1">
                 <div className="flex flex-wrap gap-1.5">
-                  {([0, 1, 2, 3, 4] as GroundType[]).map((g) => (
+                  {([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as GroundType[]).map((g) => (
                     <button
                       key={g}
                       type="button"

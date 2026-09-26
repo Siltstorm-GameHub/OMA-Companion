@@ -15,6 +15,7 @@ import { getItem, ITEMS as ITEM_OPTIONS, SLOT_LABEL, sellPrice, type ItemSlot } 
 import { ABILITY_LABEL, ABILITY_SHORT, MAX_LEVEL } from "@/lib/te-map/rpg";
 import { buyPriceFor, effectsOf, getPerk, PERKS, sellPriceFor } from "@/lib/dnd/perks";
 import { Coins, Gold } from "@/components/te-map/play/Currency";
+import { ClassIcon } from "@/components/te-map/play/Fx";
 import type { LeaderboardEntry, ProgressView } from "@/lib/dnd/progression";
 
 const panel = "oq-panel p-4 space-y-2";
@@ -263,12 +264,23 @@ export function CharacterPanel({ refreshKey = 0, onChanged, notify }: { refreshK
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <p className="text-base font-black text-white">{sheet.name}</p>
         <span className="text-sm font-black text-violet-200">Stufe {sheet.level} · {sheet.title}</span>
+        <span className="flex items-center gap-1.5 text-xs font-bold text-amber-200"><ClassIcon classId={sheet.identity.classId} size={20} />{sheet.identity.race ? `${sheet.identity.race} · ` : ""}{sheet.identity.className}</span>
         <Gold n={sheet.gold} className="text-xs text-amber-300 font-bold" />
         {sheet.coins !== undefined && <Coins n={sheet.coins} className="text-xs text-yellow-200 font-bold" />}
       </div>
       <div>
         <div className="h-2.5 rounded-full bg-black/60 border border-white/15 overflow-hidden"><div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-400" style={{ width: `${Math.round(sheet.progress * 100)}%` }} /></div>
         <p className="text-[10px] text-gray-500 mt-0.5">{sheet.xp} XP{sheet.level < MAX_LEVEL ? ` — nächste Stufe bei ${sheet.xpForNextLevel}` : " — Höchststufe"}</p>
+      </div>
+
+      <div className="grid gap-1.5 sm:grid-cols-2">
+        {[sheet.identity.raceTrait && { label: `Volksmerkmal${sheet.identity.race ? ` · ${sheet.identity.race}` : ""}`, t: sheet.identity.raceTrait }, sheet.identity.classTrait && { label: `Klassenmerkmal · ${sheet.identity.className}`, t: sheet.identity.classTrait }].filter((x): x is { label: string; t: { name: string; icon: string; desc: string } } => !!x).map((x) => (
+          <div key={x.label} className="oq-slot p-2">
+            <p className="text-[9px] font-black uppercase tracking-widest text-violet-300">{x.label}</p>
+            <p className="text-xs font-black text-white">{x.t.icon} {x.t.name}</p>
+            <p className="text-[11px] text-gray-300 leading-snug">{x.t.desc}</p>
+          </div>
+        ))}
       </div>
 
       {(sheet.attrPoints > 0 || sheet.perkPicks > 0) && (

@@ -9,27 +9,23 @@ import { useNotice, type Notify } from "@/components/te-map/play/GameFeed";
 import { Gold } from "@/components/te-map/play/Currency";
 import { AP_PER_ROUND, abilitiesOf, getMonster, type CombatAction, type CombatState, type Fighter, type Monster } from "@/lib/dnd/combat";
 import { getItem } from "@/lib/dnd/items";
-import { ClassIcon, FxLayer, useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
+import MonsterSprite from "@/components/te-map/play/MonsterSprite";
+import { useFightSounds, useFxEvents } from "@/components/te-map/play/Fx";
+import { BattleLog, BattleStage, CommandBar, type Cmd, type StageHero } from "@/components/te-map/play/BattleStage";
+import type { TeCharacterConfig } from "@/lib/te-character";
+import { BIOME_BACKDROP, type BackdropKey } from "@/lib/dnd/oq-backdrop";
 import GroupFightPanel, { type FightCall, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 
-interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter }
+interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter; character: TeCharacterConfig }
 
 const BIOME_LABEL: Record<string, string> = { temperate: "gemäßigtes Land", cold: "Kältezone", dry: "Trockengebiet" };
 
-function Bar({ value, max, color }: { value: number; max: number; color: string }) {
-  return (
-    <div className="h-3 rounded bg-black/50 border border-white/10 overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemax={max}>
-      <div className={`h-full ${color} transition-all`} style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%` }} />
-    </div>
-  );
-}
-
-export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, groupCall, groupBusy = false, myCardId }: { refreshKey?: number; onChanged: () => void; notify?: Notify; gf?: GroupSnapshot | null; groupCall?: FightCall; groupBusy?: boolean; myCardId?: string | null }) {
+export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, groupCall, groupBusy = false, myCardId, backdrop }: { refreshKey?: number; onChanged: () => void; notify?: Notify; gf?: GroupSnapshot | null; groupCall?: FightCall; groupBusy?: boolean; myCardId?: string | null; backdrop?: BackdropKey }) {
   const { notify: say, node } = useNotice(notify);
   const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
-  const fx = useFxEvents(view?.state?.log ?? []);
+  const fx = useFxEvents(view?.state?.log ?? [], [], () => view?.state?.fighter.classId);
   useFightSounds(view?.state?.monsterId, view?.state?.status);
 
   useEffect(() => {
@@ -57,7 +53,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
     return (
       <>
         {node}
-        <GroupFightPanel view={gf.fight} myId={myCardId} call={groupCall} busy={groupBusy} />
+        <GroupFightPanel view={gf.fight} myId={myCardId} call={groupCall} busy={groupBusy} backdrop={backdrop} />
       </>
     );
   }
@@ -80,7 +76,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
             const diff = m.level - view.level;
             return (
               <li key={m.id} className="flex items-center gap-2 text-xs text-white">
-                <span className="oq-slot w-10 h-10 grid place-items-center text-2xl">{m.emoji}</span>
+                <span className="oq-slot w-12 h-12 grid place-items-center text-2xl overflow-hidden"><MonsterSprite monsterId={m.id} box={36} /></span>
                 <span className="min-w-0"><b>{m.name}</b> <span className="text-gray-500">Stufe {m.level} · {m.hp} LP · RK {m.ac}</span><br />
                   <span className="text-gray-400">{m.blurb}</span> <span className={diff >= 2 ? "text-red-300" : diff <= -2 ? "text-gray-500" : "text-amber-200"}>{diff >= 2 ? "gefährlich" : diff <= -2 ? "leicht" : "ebenbürtig"}</span>
                 </span>
@@ -102,7 +98,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
               <ul className="space-y-1.5">
                 {gf.raidBosses.map((m) => (
                   <li key={m.id} className="flex items-center gap-2 text-xs text-white">
-                    <span className="oq-slot w-10 h-10 grid place-items-center text-2xl">{m.emoji}</span>
+                    <span className="oq-slot w-12 h-12 grid place-items-center text-2xl overflow-hidden"><MonsterSprite monsterId={m.id} box={36} /></span>
                     <span className="min-w-0"><b>{m.name}</b> <span className="text-gray-500">Stufe {m.level} · mind. {m.raid?.min} Helden</span><br /><span className="text-gray-400">{m.blurb}</span></span>
                     <button type="button" disabled={busy || groupBusy || !canGroup} onClick={() => void groupCall!({ action: "start", monster: m.id })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5 ml-auto shrink-0">👥 Raid starten</button>
                   </li>
@@ -115,64 +111,30 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
     );
   }
 
-  // ── Kampf ──
+  // ── Kampf: Bühne, Verlauf, Befehle ──
   const m = getMonster(s.monsterId);
   const { main: ab, second } = abilitiesOf(s.fighter);
   const cdOf = (id: string) => s.cooldowns?.[id] ?? 0;
   const active = s.status === "active";
+  const heroes: StageHero[] = [{ key: "me", name: s.fighter.name, classId: s.fighter.classId, character: view.character, hp: s.hp, maxHp: s.fighter.maxHp, ac: s.fighter.ac + (s.guard > 0 ? 3 : 0), guard: s.guard > 0, down: s.hp <= 0, left: false, active: true, mine: true }];
+  const cmds: Cmd[] = [
+    { key: "attack", label: "Angriff", icon: "⚔️", cost: 1, disabled: s.ap < 1, onClick: () => act("attack") },
+    { key: "ability", label: ab.name, icon: ab.icon, cost: ab.ap, cd: cdOf(ab.id), disabled: s.ap < ab.ap, gold: true, hint: `${ab.name}: ${ab.desc}`, onClick: () => act("ability") },
+    ...(second ? [{ key: "ability2", label: second.name, icon: second.icon, cost: second.ap, cd: cdOf(second.id), disabled: s.ap < second.ap, gold: true, hint: `${second.name}: ${second.desc}`, onClick: () => act("ability2") }] : []),
+    { key: "defend", label: "Deckung", icon: "🛡️", cost: 1, disabled: s.ap < 1, hint: "Deckung: +3 Rüstung bis zur nächsten Runde.", onClick: () => act("defend") },
+    { key: "flee", label: "Fliehen", icon: "🏃", cost: 1, disabled: s.ap < 1, hint: "Fliehen: Geschicksprobe gegen die Stufe des Monsters.", onClick: () => act("flee") },
+  ];
   return (
-    <div className="oq-panel p-4 space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="oq-slot p-3 space-y-1 relative">
-          <FxLayer events={fx.filter((e) => e.side === "hero")} />
-          <p className="text-xs font-black text-white flex items-center gap-1.5"><ClassIcon classId={s.fighter.classId} size={22} /> {s.fighter.name} <span className="text-gray-500 font-normal">RK {s.fighter.ac + (s.guard > 0 ? 3 : 0)}{s.guard > 0 ? " (Schild)" : ""}</span></p>
-          <Bar value={s.hp} max={s.fighter.maxHp} color="bg-emerald-500" />
-          <p className="text-[11px] text-gray-300">{s.hp} / {s.fighter.maxHp} LP</p>
-        </div>
-        <div className="oq-slot p-3 space-y-1 relative">
-          <FxLayer events={fx.filter((e) => e.side === "monster")} />
-          <p className="text-xs font-black text-white">{m?.emoji} {m?.name} <span className="text-gray-500 font-normal">RK {m?.ac}{s.taunt > 0 ? " · verspottet" : ""}</span></p>
-          <Bar value={s.monsterHp} max={m?.hp ?? 1} color="bg-red-500" />
-          <p className="text-[11px] text-gray-300">{s.monsterHp} / {m?.hp} LP</p>
-        </div>
-      </div>
-
-      <div className="oq-slot p-2 h-40 overflow-y-auto space-y-0.5 text-[11px] text-gray-200" aria-live="polite">
-        {s.log.map((l, i) => <p key={i} className={i === s.log.length - 1 ? "text-white font-semibold" : ""}>{l}</p>)}
-        <div ref={logEnd} />
-      </div>
-
+    <div className="oq-panel p-3 sm:p-4 space-y-2.5">
+      <BattleStage
+        monsterId={s.monsterId} monsterHp={s.monsterHp} monsterMaxHp={m?.hp ?? 1} monsterNote={s.taunt > 0 ? "verspottet" : undefined}
+        backdrop={backdrop ?? BIOME_BACKDROP[view.biome] ?? "plains"} heroes={heroes} fx={fx} status={s.status}
+      />
       {node}
       {active ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-white">
-            <span className="font-black">Runde {s.round}</span>
-            <span className="flex gap-1" aria-label={`${s.ap} Aktionspunkte`}>
-              {Array.from({ length: AP_PER_ROUND }, (_, i) => <span key={i} className={`w-3 h-3 rounded-full border border-amber-300 ${i < s.ap ? "bg-amber-300" : "bg-transparent"}`} />)}
-            </span>
-            <span className="text-gray-400">{s.ap} Aktion{s.ap === 1 ? "" : "en"}</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" disabled={busy || s.ap < 1} onClick={() => act("attack")} className="oq-btn text-xs px-3 py-2">⚔️ Angriff <span className="text-gray-500">1</span></button>
-            <button type="button" disabled={busy || s.ap < ab.ap || cdOf(ab.id) > 0} onClick={() => act("ability")} title={ab.desc} className="oq-btn oq-btn-gold text-xs px-3 py-2">
-              {ab.icon} {ab.name} <span className="opacity-70">{ab.ap}{cdOf(ab.id) > 0 ? ` · ${cdOf(ab.id)}R` : ""}</span>
-            </button>
-            {second && (
-              <button type="button" disabled={busy || s.ap < second.ap || cdOf(second.id) > 0} onClick={() => act("ability2")} title={second.desc} className="oq-btn oq-btn-gold text-xs px-3 py-2">
-                {second.icon} {second.name} <span className="opacity-70">{second.ap}{cdOf(second.id) > 0 ? ` · ${cdOf(second.id)}R` : ""}</span>
-              </button>
-            )}
-            <button type="button" disabled={busy || s.ap < 1} onClick={() => act("defend")} className="oq-btn text-xs px-3 py-2">🛡️ Deckung <span className="text-gray-500">1</span></button>
-            <button type="button" disabled={busy || s.ap < 1} onClick={() => act("flee")} className="oq-btn text-xs px-3 py-2">🏃 Fliehen <span className="text-gray-500">1</span></button>
-            <button type="button" disabled={busy} onClick={() => act("end")} className="oq-btn text-xs px-3 py-2 ml-auto">Runde beenden</button>
-          </div>
-          <p className="text-[10px] text-gray-500">{ab.desc}{second ? ` · ${second.desc}` : ""}</p>
-        </div>
+        <CommandBar round={s.round} ap={s.ap} apMax={AP_PER_ROUND} cmds={cmds} onEnd={() => act("end")} busy={busy} endLabel="Runde beenden" />
       ) : (
         <div className="space-y-2">
-          <p className={`text-sm font-black ${s.status === "won" ? "text-emerald-300" : s.status === "fled" ? "text-amber-200" : "text-red-300"}`}>
-            {s.status === "won" ? "🏆 Sieg!" : s.status === "fled" ? "🏃 Geflohen" : "💀 Niederlage"}
-          </p>
           {s.result && s.status === "won" && (
             <p className="text-xs text-gray-200 flex flex-wrap gap-x-3 gap-y-1 items-center">
               <b>+{s.result.xp} XP</b>
@@ -182,9 +144,10 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
             </p>
           )}
           {s.result && s.status === "lost" && s.result.goldLost > 0 && <p className="text-xs text-gray-300">Du verlierst <Gold n={s.result.goldLost} />.</p>}
-          <button type="button" disabled={busy} onClick={() => void send({ action: "close" })} className="oq-btn oq-btn-gold text-xs px-3 py-1.5">Weiter</button>
+          <button type="button" disabled={busy} onClick={() => void send({ action: "close" })} className="oq-btn oq-btn-gold w-full min-h-[48px] text-sm font-black">Weiter</button>
         </div>
       )}
+      <BattleLog log={s.log} />
     </div>
   );
 }

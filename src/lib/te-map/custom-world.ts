@@ -8,13 +8,14 @@
 import { defaultTeConfig, sanitizeTeConfig } from "@/lib/te-character";
 import { isItemKey } from "@/lib/dnd/items";
 import { getMonster } from "@/lib/dnd/combat";
+import { isAmbienceKey } from "@/lib/dnd/oq-ambience";
 import { isAbility, isWeather } from "./rpg";
 import { buildSolid, solidOfMap } from "./engine";
 import { MapBuilder } from "./generate";
 import { INSIDE_STAMP_IDS, STAMPS, type StampId } from "./stamps";
 import { allActorsOf, INTERIOR_FLOORS, INTERIOR_LIMITS, INTERIOR_WALLS, interiorSpawn, interiorToMap } from "./interior";
 import { stepsOf, worldQuestsOf } from "./types";
-import { GROUND, type Actor, type Building, type Dir, type GroundType, type PlacedStamp, type Outcome, type Talk, type TalkChoice, type WorldDef, type WorldQuest } from "./types";
+import { GROUND, groundChar, groundFromChar, type Actor, type Building, type Dir, type GroundType, type PlacedStamp, type Outcome, type Talk, type TalkChoice, type WorldDef, type WorldQuest } from "./types";
 
 export const LIMITS = {
   minSide: 20,
@@ -74,6 +75,8 @@ export interface CustomWorldDoc {
   v: 1;
   title: string;
   description: string;
+  /** Geräuschkulisse (Ambiente) der Location */
+  ambience?: string;
   cols: number;
   rows: number;
   theme: "outdoor" | "cave";
@@ -182,7 +185,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     let out = "";
     for (let x = 0; x < cols; x++) {
       const c = row[x];
-      out += c !== undefined && c >= "0" && c <= "4" ? c : "0";
+      out += c !== undefined && /^[0-9ab]$/.test(c) ? c : "0";
     }
     ground.push(out);
   }
@@ -378,6 +381,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
       v: 1,
       title: text(input.title, LIMITS.titleLen),
       description: text(input.description, LIMITS.descLen),
+      ...(isAmbienceKey(input.ambience) ? { ambience: input.ambience } : {}),
       cols, rows, theme, border, borderSize, ground, walls, buildings, stamps, actors,
       spawn: { x: spawn.x!, y: spawn.y! },
       quests,
@@ -391,7 +395,7 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
   const m = new MapBuilder(doc.cols, doc.rows, doc.theme, 1);
   for (let y = 0; y < doc.rows; y++) {
     for (let x = 0; x < doc.cols; x++) {
-      const g = Number(doc.ground[y][x]) as GroundType;
+      const g = groundFromChar(doc.ground[y][x]);
       if (g !== GROUND.base) m.fill(g, x, y, 1, 1);
     }
   }
@@ -407,7 +411,7 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
     objectives: [...q.steps.map((st) => st.text), q.done],
     steps: q.steps.map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}), ...(st.actor ? { actor: st.actor } : {}), ...(st.building !== undefined ? { building: st.building } : {}) })),
   }));
-  return { slug, title: doc.title, map: m.build(doc.spawn, 6), quest: worldQuests[0], extraQuests: worldQuests.slice(1) };
+  return { slug, title: doc.title, map: m.build(doc.spawn, 6), quest: worldQuests[0], extraQuests: worldQuests.slice(1), ...(doc.ambience ? { ambience: doc.ambience } : {}) };
 }
 
 /** Spielbarkeit prüfen: Startpunkt frei, alle Akteure und Türen erreichbar, jeder Quest-Schritt auslösbar. */
@@ -526,8 +530,9 @@ export function worldToDoc(world: WorldDef, description = ""): CustomWorldDoc {
     v: 1,
     title: world.title,
     description,
+    ...(world.ambience ? { ambience: world.ambience } : {}),
     cols: m.cols, rows: m.rows, theme: m.theme === "cave" ? "cave" : "outdoor", border, borderSize,
-    ground: m.ground.map((row) => row.join("")),
+    ground: m.ground.map((row) => row.map(groundChar).join("")),
     // Außer dem Rand gibt es in den festen Welten keine Wand-/Sperrflächen
     walls: [],
     buildings: JSON.parse(JSON.stringify(m.buildings)),

@@ -22,6 +22,12 @@ export function sfxForFx(kind: FxKind, n = 0): Sfx {
     case "heal": return "heal";
     case "guard": return "block";
     case "buff": return "buff";
+    case "death": return "crit";
+    case "barrier": return "block";
+    case "attackup": return "buff";
+    case "rejuvenate": return "heal";
+    case "arrow": return "hit2";
+    case "bite": return "hurt";
   }
 }
 
@@ -32,9 +38,9 @@ export function sfxForFeed(kind: "quest" | "info" | "reward" | "level" | "error"
 
 // ── Einstellungen (nur im Browser) ──────────────────────────
 
-export interface SoundSettings { volume: number; muted: boolean }
+export interface SoundSettings { volume: number; muted: boolean; /** Ambiente (Hintergrundgeräusche der Locations) an? */ ambient: boolean }
 const STORE = "oq-sound";
-const DEFAULT: SoundSettings = { volume: 0.5, muted: false };
+const DEFAULT: SoundSettings = { volume: 0.5, muted: false, ambient: true };
 let settings: SoundSettings = DEFAULT;
 let loaded = false;
 const listeners = new Set<() => void>();
@@ -44,7 +50,7 @@ function load(): SoundSettings {
     const raw = window.localStorage.getItem(STORE);
     if (raw) {
       const j = JSON.parse(raw) as Partial<SoundSettings>;
-      return { volume: typeof j.volume === "number" ? Math.min(1, Math.max(0, j.volume)) : DEFAULT.volume, muted: j.muted === true };
+      return { volume: typeof j.volume === "number" ? Math.min(1, Math.max(0, j.volume)) : DEFAULT.volume, muted: j.muted === true, ambient: j.ambient !== false };
     }
   } catch { /* Speicher gesperrt: Standard */ }
   return DEFAULT;
@@ -89,4 +95,19 @@ export function playSfx(key: Sfx, gain = 1): void {
     a.volume = Math.min(1, s.volume * gain);
     void a.play().catch(() => {});
   } catch { /* kein Audio verfügbar */ }
+}
+
+// ── Klassen-Klangfarben (Battle Cards, Duelle, OMA Quest teilen sich dieselben Klänge) ──
+
+export type SfxClass = "TANK" | "DAMAGE_DEALER" | "SUPPORT" | undefined;
+
+/** Trefferklang je Kampfrolle: Tank wuchtig, Schadensausteiler schneidend, Unterstützer magisch. */
+export function sfxForClassHit(cls: SfxClass, crit: boolean): Sfx {
+  if (crit) return "crit";
+  return cls === "TANK" ? "hit" : cls === "DAMAGE_DEALER" ? "hit2" : cls === "SUPPORT" ? "spell" : "hit";
+}
+
+/** Ultimate-Klang je Kampfrolle. */
+export function sfxForClassUltimate(cls: SfxClass): Sfx {
+  return cls === "TANK" ? "boss" : cls === "DAMAGE_DEALER" ? "fire" : cls === "SUPPORT" ? "heal" : "spell";
 }

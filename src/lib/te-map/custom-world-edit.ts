@@ -6,7 +6,7 @@ import { randomTeConfig } from "@/lib/te-character";
 import { LIMITS, type CustomWorldDoc } from "./custom-world";
 import { STAMPS, type StampDef, type StampId } from "./stamps";
 import { allActorsOf, getTemplate, INTERIOR_LIMITS } from "./interior";
-import type { Actor, Building, GroundType, Interior, Talk } from "./types";
+import { groundChar, type Actor, type Building, type GroundType, type Interior, type Talk } from "./types";
 
 export type ActorKind = Actor["kind"];
 
@@ -21,8 +21,8 @@ export function paintGround(d: CustomWorldDoc, x: number, y: number, g: GroundTy
     if (yy < 0 || yy >= d.rows) continue;
     let row = ground[yy];
     for (let xx = x - half; xx < x - half + size; xx++) {
-      if (xx < 0 || xx >= d.cols || row[xx] === String(g)) continue;
-      row = row.slice(0, xx) + g + row.slice(xx + 1);
+      if (xx < 0 || xx >= d.cols || row[xx] === groundChar(g)) continue;
+      row = row.slice(0, xx) + groundChar(g) + row.slice(xx + 1);
       changed = true;
     }
     ground[yy] = row;

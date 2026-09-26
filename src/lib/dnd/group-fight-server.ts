@@ -15,6 +15,7 @@ import { logChronicle } from "./chronicle";
 import { getPartyOf, MAX_PARTY } from "./party";
 import { applyTimeouts, groupRewards, isGroupAction, performGroupAction, startGroupCombat, type GroupActionKind, type GroupState } from "./group-combat";
 import { levelOf } from "../te-map/rpg";
+import { effectiveTeCharacter } from "../battle-cards/standard-avatars";
 
 export const LOBBY_MS = 10_000;
 /** Ein Vorraum, den der Auslöser nicht entscheidet, verfällt nach dieser Zeit. */
@@ -185,7 +186,7 @@ export async function beginFight(card: Card, fightId: string, auto = false): Pro
   const cards = await prisma.card.findMany({ where: { id: { in: joined.map((m) => m.cardId) } } });
   // Der Auslöser steht vorn, der Rest in der Reihenfolge des Beitritts
   const ordered = [...joined].sort((a, b) => Number(b.cardId === f.initiatorCardId) - Number(a.cardId === f.initiatorCardId)).map((m) => cards.find((c) => c.id === m.cardId)).filter((c): c is Card => !!c);
-  const fighters = await Promise.all(ordered.map(async (c) => ({ cardId: c.id, name: c.name, fighter: await fighterOf(c) })));
+  const fighters = await Promise.all(ordered.map(async (c) => ({ cardId: c.id, name: c.name, fighter: await fighterOf(c), character: effectiveTeCharacter(c) })));
   const state = startGroupCombat(monster, fighters, Date.now(), (f.source as { slug: string; actor: string } | null) ?? undefined);
   if (!(await saveState(f, { status: "ACTIVE", state }))) return RACE;
   if (invited.length) await prisma.dndGroupFightMember.updateMany({ where: { fightId, status: "invited" }, data: { status: "declined" } });

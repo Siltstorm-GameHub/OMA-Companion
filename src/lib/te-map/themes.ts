@@ -5,6 +5,7 @@
 // `base` = Füllkachel (16×16), die überall zuerst gezeichnet wird.
 
 import { GROUND, type GroundType, type TeMap } from "./types";
+import type { TextureKey } from "@/lib/dnd/oq-assets-manifest";
 
 export interface GroundTheme {
   sheet: "a2" | "a2caves";
@@ -33,6 +34,11 @@ export const THEMES: Record<Exclude<TeMap["theme"], "inside">, GroundTheme> = {
       [GROUND.sand]: [32, 0],
     },
   },
+};
+
+/** Texturierte Böden (GROUND 5–9) → Textur-Schlüssel (siehe lib/dnd/oq-assets-manifest). */
+export const GROUND_TEXTURE: Partial<Record<GroundType, TextureKey>> = {
+  [GROUND.snow]: "schnee", [GROUND.ice]: "eis", [GROUND.planks]: "dielen", [GROUND.marble]: "marmor", [GROUND.forest]: "waldboden", [GROUND.lava]: "lava", [GROUND.water]: "wasser",
 };
 
 /** Zufällige Wandkacheln der Höhle (A5_cave1, Kachelkoordinaten) — Wurzelwand. */

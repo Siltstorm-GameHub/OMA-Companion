@@ -11,7 +11,11 @@ import { terrainAt } from "./hex/world";
 import { effectsOf } from "./perks";
 import { resolveWorld } from "./custom-worlds";
 import { allActorsOf } from "../te-map/interior";
-import { perksOf } from "./progression";
+import { effectiveTeCharacter } from "../battle-cards/standard-avatars";
+import type { TeCharacterConfig } from "../te-character";
+import { effectsOfCard } from "./progression";
+import { addFx } from "./identity";
+import { traitFx } from "./identity";
 import { skillEffects } from "./skills";
 import { skillsOf } from "./skills-server";
 import { checkParams, grantRewards } from "./rpg-server";
@@ -27,6 +31,8 @@ export interface CombatView {
   biome: Biome;
   level: number;
   hero: Fighter;
+  /** Pixel-Figur des Helden für die Kampfbühne */
+  character: TeCharacterConfig;
 }
 
 /** Besiegte Monster-Figuren kommen nach dieser Zeit wieder. */
@@ -69,13 +75,13 @@ export async function fighterOf(card: Card): Promise<Fighter> {
     crit = { critMin: p.critMin ?? 20, rerollFumble: !!p.rerollFumble };
   }
   const classId = card.dndClass ?? "krieger";
-  return buildFighter({ name: card.name, classId, level, mods, ...crit, fx: skillEffects(classId, skillsOf(card)) });
+  return buildFighter({ name: card.name, classId, level, mods, ...crit, fx: addFx(skillEffects(classId, skillsOf(card)), traitFx(card.dndRace, classId, level)) });
 }
 
 export async function getCombatView(card: Card): Promise<CombatView> {
   const level = levelOf(card.dndXp);
   const biome = biomeOf(card);
-  return { slain: slainOf(card), state: stateOf(card), encounters: encountersFor(level, biome), biome, level, hero: await fighterOf(card) };
+  return { slain: slainOf(card), state: stateOf(card), encounters: encountersFor(level, biome), biome, level, hero: await fighterOf(card), character: effectiveTeCharacter(card) };
 }
 
 /** Speichert den neuen Zustand nur, wenn seit dem Laden niemand anderes geschrieben hat. */
@@ -125,7 +131,7 @@ export async function actInCombat(card: Card, action: CombatAction): Promise<{ o
   if (next.status === "won" && m) {
     // Erst den Zustand sichern (Versionsprüfung), dann gutschreiben — so wird nie doppelt belohnt
     const rew = rewardFor(m, next.fighter.level, Math.random);
-    const xp = Math.max(0, Math.min(500, Math.round(rew.xp * effectsOf(perksOf(card)).xpMultiplier)));
+    const xp = Math.max(0, Math.min(500, Math.round(rew.xp * effectsOfCard(card).xpMultiplier)));
     const after = levelOf(card.dndXp + xp);
     next.result = { xp, gold: rew.gold, items: rew.items, levelUp: after > levelOf(card.dndXp) ? after : null, goldLost: 0 };
     if (!(await save(card, next))) return RACE;

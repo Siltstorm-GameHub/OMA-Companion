@@ -17,8 +17,10 @@ import { getItem, isItemKey, sellPrice, type ItemDef } from "./items";
 import { resolveWorld } from "./custom-worlds";
 import { advanceWorldQuestStep, getWorldQuestSteps } from "./quests";
 import { displayTitle } from "./coin-shop";
-import { buyPriceFor, effectsOf, sellPriceFor, titleOf } from "./perks";
-import { abilityBonusOf, perksOf, syncLevelRewards } from "./progression";
+import { buyPriceFor, sellPriceFor, titleOf } from "./perks";
+import { abilityBonusOf, effectsOfCard, perksOf, syncLevelRewards } from "./progression";
+import { classTraitOf, raceTraitOf } from "./identity";
+import { getDndClass } from "./classes";
 
 // ── Charakterbogen ──────────────────────────────────────────
 
@@ -41,14 +43,17 @@ export interface CharacterSheet {
   attrPoints: number;
   perkPicks: number;
   perks: string[];
+  /** Herkunft und Klasse mit ihren festen Merkmalen */
+  identity: { race: string | null; raceTrait: { name: string; icon: string; desc: string } | null; classId: string; className: string; classTrait: { name: string; icon: string; desc: string } | null };
 }
 
+const pick = (t: { name: string; icon: string; desc: string } | null) => (t ? { name: t.name, icon: t.icon, desc: t.desc } : null);
 const flagsOf = (card: Pick<Card, "dndFlags">): string[] => (Array.isArray(card.dndFlags) ? (card.dndFlags as unknown[]).filter((f): f is string => typeof f === "string") : []);
 
 /** Alles, was eine Probe auf `ability` beeinflusst: Grundwert + verteilte Punkte, Ausrüstung + Fähigkeiten (+ Sondermodifikator), Würfelregeln. */
 export async function checkParams(card: Card, ability: Ability, situational = 0) {
   const inv = await getInventory(card.id);
-  const fx = effectsOf(perksOf(card));
+  const fx = effectsOfCard(card);
   const scores = (card.abilityScores ?? {}) as Partial<Record<Ability, number>>;
   const base = typeof scores[ability] === "number" ? (scores[ability] as number) : 10;
   return {
@@ -85,10 +90,17 @@ export async function getCharacterSheet(input: Card): Promise<CharacterSheet> {
     gold: card.dndGold,
     abilities: ABILITIES.map((key) => {
       const score = typeof scores[key] === "number" ? (scores[key] as number) : 10;
-      return { key, score, bonus: bonus[key] ?? 0, mod: abilityMod(score + (bonus[key] ?? 0)), equipment: equipmentBonus(inventory, key) + effectsOf(perksOf(card)).checkBonus(key) };
+      return { key, score, bonus: bonus[key] ?? 0, mod: abilityMod(score + (bonus[key] ?? 0)), equipment: equipmentBonus(inventory, key) + effectsOfCard(card).checkBonus(key) };
     }),
     inventory, flags: flagsOf(card),
     title: displayTitle(card, titleOf(level)), attrPoints: card.dndAttrPoints, perkPicks: card.dndPerkPicks, perks: perksOf(card),
+    identity: {
+      race: card.dndRace ?? null,
+      raceTrait: pick(raceTraitOf(card.dndRace)),
+      classId: card.dndClass ?? "krieger",
+      className: getDndClass(card.dndClass ?? "krieger")?.name ?? "Krieger",
+      classTrait: pick(classTraitOf(card.dndClass ?? "krieger")),
+    },
   };
 }
 
@@ -97,8 +109,8 @@ export async function getCharacterSheet(input: Card): Promise<CharacterSheet> {
 export interface Granted { xp: number; gold: number; items: string[]; levelUp: number | null }
 
 /** XP, Gold, Gegenstände und Ereignisse gutschreiben; meldet Stufenaufstiege in der Chronik. */
-export async function grantRewards(card: Pick<Card, "id" | "name" | "dndXp" | "dndFlags" | "dndPerks">, o: { xp?: number; gold?: number; items?: string[]; flags?: string[] }, locationSlug?: string): Promise<Granted> {
-  const xp = Math.max(0, Math.min(500, Math.round((o.xp ?? 0) * effectsOf(perksOf(card)).xpMultiplier)));
+export async function grantRewards(card: Pick<Card, "id" | "name" | "dndXp" | "dndFlags" | "dndPerks" | "dndRace" | "dndClass">, o: { xp?: number; gold?: number; items?: string[]; flags?: string[] }, locationSlug?: string): Promise<Granted> {
+  const xp = Math.max(0, Math.min(500, Math.round((o.xp ?? 0) * effectsOfCard(card).xpMultiplier)));
   const gold = Math.max(0, Math.min(5000, Math.round(o.gold ?? 0)));
   const items = (o.items ?? []).filter(isItemKey).slice(0, 5);
   const flags = [...new Set([...flagsOf(card), ...(o.flags ?? [])])].slice(-400);
@@ -194,7 +206,7 @@ export async function tradeItem(card: Card, locationSlug: string, actorId: strin
   if (action === "buy") {
     if (!merchant.shop?.includes(itemKey)) return { error: "Der Händler führt das nicht." };
     // Gold atomar abbuchen: nur wenn genug da ist
-    const price = buyPriceFor(item.price, effectsOf(perksOf(card)).trader);
+    const price = buyPriceFor(item.price, effectsOfCard(card).trader);
     const paid = await prisma.card.updateMany({ where: { id: card.id, dndGold: { gte: price } }, data: { dndGold: { decrement: price } } });
     if (!paid.count) return { error: "Nicht genug Gold." };
     await prisma.dndInventoryItem.upsert({ where: { cardId_itemKey: { cardId: card.id, itemKey } }, create: { cardId: card.id, itemKey }, update: { qty: { increment: 1 } } });
@@ -203,7 +215,7 @@ export async function tradeItem(card: Card, locationSlug: string, actorId: strin
     if (!row || row.qty < 1) return { error: "Das hast du nicht." };
     if (row.qty === 1) await prisma.dndInventoryItem.delete({ where: { id: row.id } });
     else await prisma.dndInventoryItem.update({ where: { id: row.id }, data: { qty: { decrement: 1 } } });
-    await prisma.card.update({ where: { id: card.id }, data: { dndGold: { increment: sellPriceFor(sellPrice(item), effectsOf(perksOf(card)).trader) } } });
+    await prisma.card.update({ where: { id: card.id }, data: { dndGold: { increment: sellPriceFor(sellPrice(item), effectsOfCard(card).trader) } } });
   }
   const fresh = await prisma.card.findUnique({ where: { id: card.id }, select: { dndGold: true } });
   return { ok: true, gold: fresh?.dndGold ?? 0 };

@@ -84,3 +84,19 @@
 @keyframes oq-fx-play { from { background-position-x: 0; } to { background-position-x: calc(var(--fx-w) * -1); } }
 @keyframes oq-fx-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .oq-fx { display: none; } }
+
+/* Pixel-Monster: scharf skaliert, kurzes Zucken bei Treffern */
+.oq-mon { image-rendering: pixelated; background-repeat: no-repeat; }
+@keyframes oq-shake { 0%, 100% { transform: translateX(0); filter: none; } 20% { transform: translateX(-4px); filter: brightness(2) saturate(0.6); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); filter: none; } 80% { transform: translateX(2px); } }
+.oq-shake { animation: oq-shake 320ms ease-out 1; }
+@media (prefers-reduced-motion: reduce) { .oq-mon { animation: none !important; } .oq-shake { animation: none; } }
+
+/* Schwebende Kampfzahlen */
+.oq-float { z-index: 8; font-weight: 900; font-size: 22px; line-height: 1; letter-spacing: 0.02em; white-space: nowrap; transform: translateX(-50%); text-shadow: 0 2px 0 #000, 0 0 6px #000, 2px 0 0 #000, -2px 0 0 #000; animation: oq-float-up 1150ms ease-out 1 forwards; }
+.oq-float-dmg { color: #ff6b5e; }
+.oq-float-crit { color: #ffd23f; font-size: 30px; }
+.oq-float-heal { color: #5be38a; }
+.oq-float-miss { color: #c3c8d4; font-size: 15px; font-weight: 700; }
+.oq-float-info { color: #8fd3ff; font-size: 16px; }
+@keyframes oq-float-up { 0% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); } 30% { transform: translate(-50%, -12px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -54px) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .oq-float { animation: oq-float-fade 1150ms linear 1 forwards; } @keyframes oq-float-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } } }

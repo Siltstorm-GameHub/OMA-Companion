@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Dices } from "@/components/icons";
 import TeCharacter from "./TeCharacter";
+import { weaponItemId } from "@/lib/te-character/class-weapons";
 import {
   TE_ANIMS, TE_CATALOG, TE_FRAME, randomTeConfig,
   type TeAnim, type TeCategory, type TeCharacterConfig, type TeDir, type TeItem,
@@ -18,6 +19,8 @@ interface Props {
   onChange: (next: TeCharacterConfig) => void;
   /** Ohne eigene Vorschau (die Figur wird woanders gezeigt, z.B. in der Karte): nur Hautton, Zufall und Teile. */
   compact?: boolean;
+  /** Erlaubte Waffen (Item-Kennungen) der Klasse; null/leer = alle. Die aktuell getragene Waffe bleibt auch dann wählbar. */
+  allowedWeapons?: string[] | null;
 }
 
 const ANIM_OPTIONS: { id: TeAnim; label: string }[] = [
@@ -67,7 +70,7 @@ function sheetSrc(cat: TeCategory, variant: string, item: TeItem, skin: number) 
   return `/te/char/${cat.id}/${variant}${item.skin && skin > 0 ? `.t${skin}` : ""}.png`;
 }
 
-export default function TeCharacterEditor({ value, onChange, compact = false }: Props) {
+export default function TeCharacterEditor({ value, onChange, compact = false, allowedWeapons }: Props) {
   const [catId, setCatId] = useState(TE_CATALOG.categories.find((c) => c.id === "hair")?.id ?? TE_CATALOG.categories[0].id);
   const [anim, setAnim] = useState<TeAnim>("walk");
   const [dir, setDir] = useState<TeDir>("down");
@@ -144,7 +147,7 @@ export default function TeCharacterEditor({ value, onChange, compact = false }: 
 
         <button
           type="button"
-          onClick={() => onChange(randomTeConfig())}
+          onClick={() => { const r = randomTeConfig(); const w = weaponItemId(r); if (allowedWeapons && w && !allowedWeapons.includes(w)) { const layers = { ...r.layers }; delete layers.weapon; onChange({ ...r, layers }); } else onChange(r); }}
           className={`${compact ? "" : "w-full "}flex items-center justify-center gap-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white text-xs font-semibold px-3 py-2 transition-colors`}
         >
           <Dices className="w-4 h-4" /> Zufällige Figur
@@ -204,7 +207,7 @@ export default function TeCharacterEditor({ value, onChange, compact = false }: 
               Keine
             </button>
           )}
-          {cat.items.map((item) => (
+          {cat.items.filter((item) => cat.id !== "weapon" || !allowedWeapons || allowedWeapons.includes(item.id) || item.id === selectedItem?.id).map((item) => (
             <button
               key={item.id}
               type="button"

@@ -8,6 +8,7 @@ import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import MobaInputBox from "./MobaInputBox";
 import TeCharacterEditor from "@/components/te-character/TeCharacterEditor";
+import { allowedWeapons } from "@/lib/te-character/class-weapons";
 import type { TeCharacterConfig, TeDir } from "@/lib/te-character";
 
 const TITLE_MAX = 25;
@@ -18,6 +19,7 @@ export default function MyCardEditor({
   initialTeCharacter,
   hasTeCharacter,
   setup = false,
+  dndClass = null,
 }: {
   card: BattleCardData & { id: string };
   /** Bisheriger Charakter (Card.teCharacter) bzw. die Standard-Figur zum Losgehen. */
@@ -26,6 +28,8 @@ export default function MyCardEditor({
   hasTeCharacter: boolean;
   /** Teil der Helden-Einrichtung: der Charakter ist Pflicht, gespeichert wird mit "Weiter". */
   setup?: boolean;
+  /** OMA-Quest-Klasse: bestimmt, welche Waffen wählbar sind (Kleidung ist frei) */
+  dndClass?: string | null;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(card.title);
@@ -156,6 +160,7 @@ export default function MyCardEditor({
         </div>
         <TeCharacterEditor
           compact
+          allowedWeapons={allowedWeapons(dndClass)}
           value={teCharacter}
           onChange={(next) => { setTeCharacter(next); setUseCharacter(true); }}
         />
@@ -269,6 +274,7 @@ export default function MyCardEditor({
           )}
         </div>
         <TeCharacterEditor
+          allowedWeapons={allowedWeapons(dndClass)}
           value={teCharacter}
           onChange={(next) => { setTeCharacter(next); setUseCharacter(true); }}
         />

@@ -9,6 +9,7 @@ import { MapBuilder, npcLook } from "./generate";
 import { getTemplate } from "./interior";
 import { solidOfMap } from "./engine";
 import { getMonster } from "@/lib/dnd/combat";
+import { FIXED_AMBIENCE } from "@/lib/dnd/oq-ambience";
 import { GROUND, type Actor, type Building, type Interior, type Talk, type WorldDef, type WorldQuest } from "./types";
 
 // ── Dialog-Bausteine ────────────────────────────────────────
@@ -396,16 +397,16 @@ export const WORLD_SLUGS = Object.keys(BUILDERS);
 // Ort als Anteil der Kartengröße; der Platz wird zur nächsten freien, vom Startpunkt erreichbaren Kachel mit Luft drumherum verschoben.
 
 const MONSTER_SPOTS: Record<string, [string, number, number][]> = {
-  hafenstadt: [["ratte", 0.2, 0.7], ["ratte", 0.8, 0.75]],
-  waldpfad: [["wolf", 0.5, 0.4], ["wolf", 0.75, 0.7], ["wegelagerer", 0.4, 0.8]],
+  hafenstadt: [["ratte", 0.2, 0.7], ["ratte", 0.8, 0.75], ["schleimschaedel", 0.5, 0.85]],
+  waldpfad: [["wolf", 0.5, 0.4], ["dornenbeisser", 0.75, 0.7], ["wegelagerer", 0.4, 0.8], ["blutegel", 0.25, 0.3]],
   kuestenstrasse: [["wegelagerer", 0.5, 0.5], ["skelett", 0.8, 0.3]],
-  bergpass: [["baer", 0.6, 0.5], ["goblin", 0.35, 0.7]],
-  ruinen: [["skelett", 0.3, 0.4], ["skelett", 0.7, 0.6], ["golem", 0.5, 0.25]],
+  bergpass: [["baer", 0.6, 0.5], ["goblin", 0.35, 0.7], ["daemonenauge", 0.8, 0.3]],
+  ruinen: [["skelett", 0.3, 0.4], ["flatterschaedel", 0.7, 0.6], ["golem", 0.5, 0.25], ["wiedergaenger", 0.85, 0.85]],
   verlassenes_dorf: [["goblin", 0.5, 0.5], ["skelett", 0.75, 0.35]],
-  schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7]],
-  zwergenfeste: [["skelett", 0.3, 0.6], ["golem", 0.6, 0.4]],
-  frostgipfel: [["frostwolf", 0.5, 0.5], ["frostwolf", 0.3, 0.7], ["drache", 0.8, 0.3]],
-  sumpf: [["ratte", 0.3, 0.7], ["skelett", 0.5, 0.5], ["goblin", 0.75, 0.6]],
+  schmugglerhoehle: [["goblin", 0.5, 0.45], ["hauptmann", 0.7, 0.7], ["schattenauge", 0.25, 0.6]],
+  zwergenfeste: [["knochenwaechter", 0.3, 0.6], ["golem", 0.6, 0.4], ["totenkaefer", 0.8, 0.7]],
+  frostgipfel: [["frostwolf", 0.5, 0.5], ["eisschleim", 0.3, 0.7], ["frostgeist", 0.6, 0.3], ["drache", 0.85, 0.25]],
+  sumpf: [["blutegel", 0.3, 0.7], ["schleimschaedel", 0.5, 0.5], ["goblin", 0.75, 0.6], ["hoellenschaedel", 0.85, 0.2]],
 };
 
 function addMonsters(w: WorldDef): WorldDef {
@@ -452,7 +453,7 @@ export function getWorld(slug: string): WorldDef | undefined {
   const build = BUILDERS[slug];
   if (!build) return undefined;
   let w = cache.get(slug);
-  if (!w) { w = addMonsters(build()); cache.set(slug, w); }
+  if (!w) { const built = addMonsters(build()); w = FIXED_AMBIENCE[slug] ? { ...built, ambience: FIXED_AMBIENCE[slug] } : built; cache.set(slug, w); }
   return w;
 }
 

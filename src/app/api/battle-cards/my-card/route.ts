@@ -11,6 +11,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
 import { sanitizeTeConfig } from "@/lib/te-character";
+import { isWeaponAllowed } from "@/lib/te-character/class-weapons";
 import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
 
 const requestSchema = z.object({
@@ -48,6 +49,11 @@ export async function PATCH(request: Request) {
     if (character === null && teCharacter !== null) {
       return Response.json({ error: "Ungültiger Charakter." }, { status: 400 });
     }
+  }
+
+  // Waffen nur passend zur Klasse (Kleidung ist frei); die bisherige Waffe darf bleiben
+  if (character && !isWeaponAllowed(card.dndClass, character, sanitizeTeConfig(card.teCharacter))) {
+    return Response.json({ error: "Diese Waffe passt nicht zu deiner Klasse." }, { status: 400 });
   }
 
   try {

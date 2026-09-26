@@ -50,7 +50,7 @@ describe("Quest-Schritte: NPC, Gebäude, Location", () => {
   });
 
   test("Prüfung: erster Schritt kein Betreten, Gebäude braucht Innenraum", () => {
-    let d = base();
+    const d = base();
     const q = d.quests[0];
     const bad = sanitizeCustomWorldDoc({ ...d, quests: [{ ...q, steps: [{ kind: "enter", text: "x", building: 0 }] }] });
     assert.ok(!bad.ok || bad.warnings.length > 0);

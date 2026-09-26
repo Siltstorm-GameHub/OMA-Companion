@@ -8,6 +8,7 @@
 
 import { AP_PER_ROUND, ABILITY_COOLDOWN, abilitiesOf, attackAbilityOf, dice, die, fxOf, getMonster, rewardFor, swing, type Fighter, type Monster, type Rng } from "./combat";
 import type { Ability } from "../te-map/rpg";
+import type { TeCharacterConfig } from "../te-character";
 
 export const TURN_MS = 60_000;
 const LOG_MAX = 60;
@@ -23,6 +24,8 @@ export interface GroupHero {
   guard: number;
   /** Hat die Gruppe im Kampf verlassen (Flucht) */
   left: boolean;
+  /** Pixel-Figur für die Kampfbühne */
+  character?: TeCharacterConfig;
 }
 
 export interface GroupReward { cardId: string; name: string; xp: number; gold: number; items: string[]; levelUp: number | null }
@@ -58,9 +61,9 @@ export function scaleMonster(m: Monster, n: number): { hp: number; attacks: numb
   return { hp: Math.round(m.hp * (1 + 0.6 * (n - 1))), attacks: m.attacks + Math.floor((n - 1) / 2) };
 }
 
-export function startGroupCombat(monster: Monster, members: { cardId: string; name: string; fighter: Fighter }[], now: number, source?: { slug: string; actor: string }): GroupState {
+export function startGroupCombat(monster: Monster, members: { cardId: string; name: string; fighter: Fighter; character?: TeCharacterConfig }[], now: number, source?: { slug: string; actor: string }): GroupState {
   const sc = scaleMonster(monster, members.length);
-  const heroes: GroupHero[] = members.map((m) => ({ cardId: m.cardId, name: m.name, fighter: m.fighter, hp: m.fighter.maxHp, ap: 0, cooldowns: {}, guard: 0, left: false }));
+  const heroes: GroupHero[] = members.map((m) => ({ cardId: m.cardId, name: m.name, fighter: m.fighter, hp: m.fighter.maxHp, ap: 0, cooldowns: {}, guard: 0, left: false, ...(m.character ? { character: m.character } : {}) }));
   heroes[0].ap = AP_PER_ROUND;
   return {
     monsterId: monster.id, monsterMaxHp: sc.hp, monsterHp: sc.hp, round: 1, turn: 0, turnStartedAt: now, taunt: 0, inspire: 0, provoke: null, status: "active", heroes,

@@ -16,13 +16,17 @@ import { groundQuarters, wallQuarters, type Quarters } from "@/lib/te-map/autoti
 import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, setHidden, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
 import type { TrackerItem } from "@/lib/dnd/quest-log";
 import { getMonster } from "@/lib/dnd/combat";
+import { TEXTURES, type TextureKey } from "@/lib/dnd/oq-assets-manifest";
+import { desiredAmbience } from "@/lib/dnd/oq-ambience";
+import { setAmbience, stopAmbience } from "@/lib/dnd/oq-ambience-player";
+import { spriteInfo, spriteKeyOf, spriteScale } from "@/lib/dnd/oq-monster";
 import { DiceOverlay } from "@/components/te-map/play/Dice";
 import { GameFeed, type FeedItem, type Notify } from "@/components/te-map/play/GameFeed";
 import type { WorldEventView } from "@/lib/dnd/world-events";
 import { ABILITY_LABEL, berlinHour, darkness, isAbility, isNight, weatherFor, windAt, WEATHER_ICON, WEATHER_LABEL, type Biome, type RollResult, type Weather } from "@/lib/te-map/rpg";
 import { STAMPS, type StampDef, type StampId, type TileSheet } from "@/lib/te-map/stamps";
 import { allActorsOf, doorFront, INTERIOR_FLOORS, INTERIOR_WALLS, wallTilesAt } from "@/lib/te-map/interior";
-import { CAVE_WALL_TILES, THEMES } from "@/lib/te-map/themes";
+import { CAVE_WALL_TILES, GROUND_TEXTURE, THEMES } from "@/lib/te-map/themes";
 import { worldQuestsOf, type Interior, type WorldDef } from "@/lib/te-map/types";
 
 export const T = 16;
@@ -45,7 +49,13 @@ const SHEET_FILES = {
   lights: "/te/tiles/lights.png",
 } as const;
 type SheetKey = keyof typeof SHEET_FILES;
-export type Sheets = Record<SheetKey, HTMLImageElement>;
+export type Sheets = Record<SheetKey, HTMLImageElement> & { tex: Record<TextureKey, HTMLImageElement> };
+
+/** Ein 16×16-Feld einer 32×32-Pixel-Textur (Feld x,y wählt eines der 2×2 Viertel → nahtlos kachelbar). */
+export function drawTex(ctx: CanvasRenderingContext2D, sheets: Sheets, key: TextureKey, cx: number, cy: number, dx: number, dy: number) {
+  const img = sheets.tex[key];
+  if (img) ctx.drawImage(img, (cx & 1) * 16, (cy & 1) * 16, 16, 16, dx, dy, 16, 16);
+}
 
 let sheetsPromise: Promise<Sheets> | null = null;
 /** Kachelbilder einmal laden und für alle Welten wiederverwenden. */
@@ -60,7 +70,19 @@ export function loadSheets(): Promise<Sheets> {
           img.src = src;
         }),
     ),
-  ).then((entries) => Object.fromEntries(entries) as Sheets).catch((e) => { sheetsPromise = null; throw e; });
+  ).then(async (entries) => {
+    const texEntries = await Promise.all(
+      (Object.keys(TEXTURES) as TextureKey[]).map(
+        (k) => new Promise<readonly [string, HTMLImageElement]>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve([k, img]);
+          img.onerror = () => resolve([k, img]); // fehlende Textur: Feld bleibt leer statt die Welt zu blockieren
+          img.src = `/oq/tex/${k}.png`;
+        }),
+      ),
+    );
+    return { ...Object.fromEntries(entries), tex: Object.fromEntries(texEntries) } as unknown as Sheets;
+  }).catch((e) => { sheetsPromise = null; throw e; });
   return sheetsPromise;
 }
 
@@ -113,6 +135,14 @@ export function bakeStatic(sheets: Sheets, world: WorldDef): HTMLCanvasElement {
   ctx.imageSmoothingEnabled = false;
 
   for (let y = 0; y < m.rows; y++) for (let x = 0; x < m.cols; x++) ctx.drawImage(groundImg, theme.base[0], theme.base[1], T, T, x * T, y * T, T, T);
+
+  // Texturierte Böden (Schnee, Eis, Dielen …) zuerst: die Übergangskanten der anderen Böden legen sich darüber
+  for (let y = 0; y < m.rows; y++) {
+    for (let x = 0; x < m.cols; x++) {
+      const tk = GROUND_TEXTURE[m.ground[y][x]];
+      if (tk) drawTex(ctx, sheets, tk, x, y, x * T, y * T);
+    }
+  }
 
   for (let y = 0; y < m.rows; y++) {
     for (let x = 0; x < m.cols; x++) {
@@ -173,11 +203,13 @@ export function bakeInterior(sheets: Sheets, it: Interior): HTMLCanvasElement {
   const ctx = c.getContext("2d")!;
   ctx.imageSmoothingEnabled = false;
   const a5 = (tx: number, ty: number, x: number, y: number) => ctx.drawImage(sheets.a5inside, tx * T, ty * T, T, T, x * T, y * T, T, T);
-  const floor = INTERIOR_FLOORS[Math.min(Math.max(0, it.floor), INTERIOR_FLOORS.length - 1)].tile;
+  const floorDef = INTERIOR_FLOORS[Math.min(Math.max(0, it.floor), INTERIOR_FLOORS.length - 1)];
+  const floor = floorDef.tile;
+  const floorTile = (x: number, y: number) => (floorDef.tex ? drawTex(ctx, sheets, floorDef.tex, x, y, x * T, y * T) : a5(floor[0], floor[1], x, y));
   const wall = INTERIOR_WALLS[Math.min(Math.max(0, it.wall), INTERIOR_WALLS.length - 1)];
   ctx.fillStyle = "#120c08";
   ctx.fillRect(0, 0, c.width, c.height);
-  for (let y = 2; y < it.rows; y++) for (let x = 0; x < it.cols; x++) a5(floor[0], floor[1], x, y);
+  for (let y = 2; y < it.rows; y++) for (let x = 0; x < it.cols; x++) floorTile(x, y);
   for (let x = 0; x < it.cols; x++) {
     const t = wallTilesAt(it.wall, x, it.cols);
     a5(t.top[0], t.top[1], x, 0);
@@ -188,7 +220,7 @@ export function bakeInterior(sheets: Sheets, it: Interior): HTMLCanvasElement {
   a5(wall.side[0], wall.side[1], 0, it.rows - 1);
   a5(wall.side[0], wall.side[1], it.cols - 1, it.rows - 1);
   // Tür und Fußmatte
-  a5(floor[0], floor[1], it.exitX, it.rows - 1);
+  floorTile(it.exitX, it.rows - 1);
   drawStamp(ctx, sheets, "door", it.exitX * T, (it.rows - 1) * T);
   return c;
 }
@@ -407,6 +439,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   const gameRef = useRef<Game | null>(null);
   const slainRef = useRef<string[]>([]);
   const partyRef = useRef<Set<string>>(new Set());
+  const monsterImgs = useRef(new Map<string, HTMLImageElement>());
   useEffect(() => { partyRef.current = new Set(partyIds ?? []); }, [partyIds]);
   useEffect(() => { slainRef.current = slain ?? []; }, [slain]);
   const heldRef = useRef<Dir[]>([]);
@@ -674,6 +707,11 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         g.speed = sprintKey.current || sprintStick.current ? 1.7 : 1;
         step(g, dt, held);
         setHidden(g, slainRef.current);
+        // Geräuschkulisse: draußen die der Location (+ Wetter), drinnen die des Innenraums
+        {
+          const want = desiredAmbience({ bed: world.ambience, indoors: g.scene !== null, interiorTemplate: g.scene !== null ? world.map.buildings[g.scene]?.interior?.template ?? null : null, weather: weatherRef.current });
+          setAmbience(want.bed, want.layer);
+        }
         // Dialog, der durch Klick-zum-Laufen (Ankunft beim Akteur) entstand: Oberfläche nachziehen
         if (g.dialog !== syncedDialog.current) handleEventsRef.current?.(g);
 
@@ -723,6 +761,17 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
           if (a.kind === "monster") {
             const glyph = getMonster(a.monster ?? "")?.emoji ?? "👾";
             const bob = Math.sin(clock / 380 + a.x) * 1;
+            const sk = spriteKeyOf(a.monster ?? "");
+            if (sk) {
+              // Pixel-Monster: Ruhe-Animation, Fußpunkt unten in der Kachel
+              let img = monsterImgs.current.get(sk);
+              if (!img) { img = new Image(); img.src = `/oq/mon/${sk}.png`; monsterImgs.current.set(sk, img); }
+              const info = spriteInfo(sk);
+              const sc = spriteScale(sk, 34);
+              const dw = info.w * sc, dh = info.h * sc;
+              const fi = Math.floor(clock / (1000 / 12)) % info.frames;
+              sprites.push({ base: (a.y + 1) * T, draw: () => { if (img!.complete && img!.naturalWidth) ctx.drawImage(img!, fi * info.w, 0, info.w, info.h, a.x * T - camX + T / 2 - dw / 2, (a.y + 1) * T - camY - dh + 1, dw, dh); } });
+            } else
             sprites.push({ base: (a.y + 1) * T, draw: () => { ctx.font = "15px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, a.x * T - camX + T / 2, a.y * T - camY + T / 2 + bob); } });
           } else if (a.kind === "chest") {
             const open = isChestOpen(a, g.questSteps, world);
@@ -737,7 +786,9 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
         for (const a of map.actors) {
           if (a.kind !== "monster" || g.hidden.has(a.id)) continue;
           const mo = getMonster(a.monster ?? "");
-          labels.push({ key: `m${a.id}`, x: a.x * T + T / 2 - camX, y: a.y * T - camY - 2, name: mo ? `${a.name} · Lv ${mo.level}` : a.name });
+          const sk = spriteKeyOf(a.monster ?? "");
+          const lift = sk ? Math.max(0, spriteInfo(sk).h * spriteScale(sk, 34) - T) : 0;
+          labels.push({ key: `m${a.id}`, x: a.x * T + T / 2 - camX, y: a.y * T - camY - 2 - lift, name: mo ? `${a.name} · Lv ${mo.level}` : a.name });
         }
         others.forEach((o, i) => {
           const spot = map.crowd[i];
@@ -847,7 +898,7 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
       raf = requestAnimationFrame(frame);
     })();
 
-    return () => { cancelled = true; cancelAnimationFrame(raf); };
+    return () => { cancelled = true; cancelAnimationFrame(raf); stopAmbience(); };
     // others wird pro Frame über die Closure gelesen; die Sprites laden separat (othersKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world, othersKey, VIEW_W, VIEW_H]);
