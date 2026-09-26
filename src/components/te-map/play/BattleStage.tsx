@@ -36,6 +36,26 @@ export interface StageHero {
   mine: boolean;
 }
 
+const PARTICLES: Partial<Record<StatusId, { glyph: string; fall?: boolean; xs: number[] }>> = {
+  burn: { glyph: "🔥", xs: [22, 46, 68] }, poison: { glyph: "🫧", xs: [26, 50, 72] }, bleed: { glyph: "🩸", fall: true, xs: [30, 60] }, taunt: { glyph: "💢", xs: [70] },
+};
+
+/** Überlagerung am Monster: Partikel und Symbole je aktivem Zustand (die Figur selbst wird über `statusClass` gefärbt). */
+function StatusAura({ status }: { status?: Partial<Record<StatusId, number>> }) {
+  const on = (k: StatusId) => (status?.[k] ?? 0) > 0;
+  return (
+    <div aria-hidden className="absolute inset-0 pointer-events-none overflow-visible">
+      {(Object.keys(PARTICLES) as StatusId[]).filter(on).flatMap((k) => PARTICLES[k]!.xs.map((x, i) => (
+        <span key={`${k}${i}`} className={`oq-st-p ${PARTICLES[k]!.fall ? "oq-st-fall" : ""}`} style={{ left: `${x}%`, bottom: PARTICLES[k]!.fall ? undefined : "18%", top: PARTICLES[k]!.fall ? "20%" : undefined, animationDelay: `${i * 0.45}s` }}>{PARTICLES[k]!.glyph}</span>
+      )))}
+      {on("stun") && [0, 0.55, 1.1].map((d) => <span key={d} className="oq-st-orbit" style={{ animationDelay: `-${d}s` }}>⭐</span>)}
+      {on("vulnerable") && <span className="oq-st-ring" />}
+      {on("slow") && <span className="oq-st-p" style={{ left: "40%", top: "0", animationName: "oq-st-pulse", animationDuration: "1.4s" }}>❄️</span>}
+    </div>
+  );
+}
+const statusClass = (st?: Partial<Record<StatusId, number>>): string => (["burn", "poison", "bleed", "slow", "taunt"] as StatusId[]).filter((k) => (st?.[k] ?? 0) > 0).map((k) => `oq-st-${k}`).join(" ");
+
 /** Hintergrund der Location: Himmel-Verlauf oben, Pixel-Boden unten (abgedunkelt), nachts zusätzlich dunkler. */
 function Backdrop({ backdrop, night }: { backdrop: BackdropKey; night: boolean }) {
   const b = BACKDROPS[backdrop];
@@ -112,7 +132,8 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
         </div>
         <div className="relative flex items-end justify-center min-h-[96px]">
           <FxLayer events={fx.filter((e) => e.side === "monster")} />
-          <MonsterSprite monsterId={monsterId} box={m?.raid ? 130 : 96} flip hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} attackKey={fx.filter((e) => e.side === "hero" && (e.kind === "hurt" || e.kind === "miss")).at(-1)?.id} />
+          <StatusAura status={monsterStatus} />
+          <div className={statusClass(monsterStatus)}><MonsterSprite monsterId={monsterId} box={m?.raid ? 130 : 96} flip hitKey={fx.filter((e) => e.side === "monster" && e.kind !== "miss").at(-1)?.id} attackKey={fx.filter((e) => e.side === "hero" && (e.kind === "hurt" || e.kind === "miss")).at(-1)?.id} /></div>
         </div>
       </div>
 

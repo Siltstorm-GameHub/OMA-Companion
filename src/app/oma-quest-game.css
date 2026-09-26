@@ -108,3 +108,21 @@
 @media (prefers-reduced-motion: reduce) { .oq-lunge { animation: none; } }
 @keyframes oq-lunge-l { 0% { transform: translateX(0); } 28% { transform: translateX(-22px); } 55% { transform: translateX(-22px); } 100% { transform: translateX(0); } }
 .oq-lunge-l { animation: oq-lunge-l 620ms ease-out 1; }
+
+/* Statuseffekte am Monster: Partikel steigen auf, Zustände färben die Figur */
+@keyframes oq-st-rise { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-46px) scale(1.1); opacity: 0; } }
+@keyframes oq-st-fall { 0% { transform: translateY(-10px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(40px); opacity: 0; } }
+@keyframes oq-st-orbit { from { transform: rotate(0deg) translateX(26px) rotate(0deg); } to { transform: rotate(360deg) translateX(26px) rotate(-360deg); } }
+@keyframes oq-st-pulse { 0%, 100% { opacity: 0.25; transform: scale(0.9); } 50% { opacity: 0.9; transform: scale(1.1); } }
+@keyframes oq-st-flicker { 0%, 100% { filter: drop-shadow(0 0 6px #ff7a1a) brightness(1.05); } 50% { filter: drop-shadow(0 0 10px #ffb13a) brightness(1.25); } }
+@keyframes oq-st-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.oq-st-p { position: absolute; font-size: 14px; line-height: 1; pointer-events: none; animation: oq-st-rise 1.5s ease-out infinite; }
+.oq-st-fall { animation-name: oq-st-fall; }
+.oq-st-orbit { position: absolute; left: 50%; top: 4px; margin-left: -7px; font-size: 14px; animation: oq-st-orbit 1.6s linear infinite; pointer-events: none; }
+.oq-st-ring { position: absolute; inset: 8%; border-radius: 9999px; border: 2px dashed #ff5a5a; animation: oq-st-pulse 1.1s ease-in-out infinite; pointer-events: none; }
+.oq-st-burn { animation: oq-st-flicker 0.7s ease-in-out infinite; }
+.oq-st-poison { filter: hue-rotate(60deg) saturate(1.4) drop-shadow(0 0 5px #66dd44); }
+.oq-st-bleed { filter: drop-shadow(0 0 4px #cc1a1a); }
+.oq-st-slow { filter: saturate(0.6) brightness(0.9) drop-shadow(0 0 6px #6ab8ff); }
+.oq-st-taunt { animation: oq-st-sway 0.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .oq-st-p, .oq-st-orbit, .oq-st-ring, .oq-st-burn, .oq-st-taunt { animation: none; } }

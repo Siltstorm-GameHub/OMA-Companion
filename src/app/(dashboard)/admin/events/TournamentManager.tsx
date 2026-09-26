@@ -864,6 +864,7 @@ export default function TournamentManager({
           validateTeamAssignment={validateTeamAssignment}
           submit1v1={submit1v1}
           submitFfa={submitFfa}
+          changeMatchPlayer={changeMatchPlayer}
           resetMatch={resetMatch}
           deleteMatch={deleteMatch}
           generateRoundRobinMatches={generateRoundRobinMatches}

@@ -99,6 +99,7 @@ interface Props {
   validateTeamAssignment: (matchId: string, entries: MatchEntry[]) => string | null;
   submit1v1: (matchId: string, winnerId: string | null, isDraw?: boolean) => Promise<void>;
   submitFfa: (matchId: string, entries: MatchEntry[], opts?: { silent?: boolean }) => Promise<boolean>;
+  changeMatchPlayer: (matchId: string, userId: string, action: "add" | "remove") => Promise<void>;
   resetMatch: (matchId: string) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
   generateRoundRobinMatches: () => Promise<void>;
@@ -127,7 +128,7 @@ export default function TournamentManagerMobile({
   visibleStatFields, placementPoints, supportsDraw, rounds,
   scores1v1, setScores1v1, ffaEdits, setFfaField,
   teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
-  validateTeamAssignment, submit1v1, submitFfa, resetMatch, deleteMatch, generateRoundRobinMatches,
+  validateTeamAssignment, submit1v1, submitFfa, changeMatchPlayer, resetMatch, deleteMatch, generateRoundRobinMatches,
   showAdd, setShowAdd, mTitle, setMTitle, mScheduled, setMScheduled, mNotes, setMNotes,
   mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, addMatch,
 }: Props) {
@@ -251,6 +252,8 @@ export default function TournamentManagerMobile({
         ) : (
           <FocusedFfaCard
             match={focused}
+            participants={tournament.participants}
+            changeMatchPlayer={changeMatchPlayer}
             allUsers={allUsers}
             isCoop={isCoop}
             trackMatchWin={trackMatchWin}
@@ -554,11 +557,13 @@ function FocusedDuelCard({
 
 /* ── FFA / Kooperativ / Ø-Stats: pro Teilnehmer Stat-Stepper statt Zahlenfeld ── */
 function FocusedFfaCard({
-  match, allUsers, isCoop, trackMatchWin, trackPlacement, placementPoints, visibleStatFields,
+  match, participants, changeMatchPlayer, allUsers, isCoop, trackMatchWin, trackPlacement, placementPoints, visibleStatFields,
   ffaEdits, setFfaField, teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
   validateTeamAssignment, loading, onSave, onReset,
 }: {
   match: Match;
+  participants: Tournament["participants"];
+  changeMatchPlayer: (matchId: string, userId: string, action: "add" | "remove") => Promise<void>;
   allUsers: User[];
   isCoop: boolean;
   trackMatchWin: boolean;
@@ -630,6 +635,39 @@ function FocusedFfaCard({
       {teamError && (
         <p className="text-[11px] text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {teamError}</p>
       )}
+
+      {/* Spieler in diesem Match ändern — auch bei laufenden Matches */}
+      {(() => {
+        const inMatch = new Set(match.entries.map(e => e.userId));
+        const addable = participants.filter(p => !inMatch.has(p.userId));
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {match.entries.map(e => {
+                const u = allUsers.find(x => x.id === e.userId);
+                return (
+                  <span key={e.id} className="inline-flex items-center gap-1 text-sm bg-gray-800 border border-gray-700 rounded-full pl-3 pr-1.5 py-1 text-gray-200">
+                    {u ? userName(u) : "?"}
+                    <button type="button" disabled={loading || !e.userId} aria-label="Aus Match entfernen"
+                      onClick={() => e.userId && changeMatchPlayer(match.id, e.userId, "remove")}
+                      className="p-1.5 rounded-full text-gray-500 active:text-red-400 disabled:opacity-40">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+            {addable.length > 0 && (
+              <select value="" disabled={loading}
+                onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
+                className="w-full text-sm bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-gray-300">
+                <option value="">+ Spieler hinzufügen…</option>
+                {addable.map(p => <option key={p.userId} value={p.userId}>{userName(p.user)}</option>)}
+              </select>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Teilnehmer — auf breiteren Touch-Screens (Tablet) zweispaltig, solange pro Spieler nur wenige Werte erfasst werden */}
       <div className={`grid grid-cols-1 gap-2 items-start ${fieldCount <= 3 && match.entries.length >= 2 ? "md:grid-cols-2" : ""}`}>
