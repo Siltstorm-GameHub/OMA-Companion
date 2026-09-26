@@ -1,3 +1,4 @@
+import { companionView } from "@/lib/dnd/companion-server";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -77,6 +78,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     inTransit,
     myCardId: myCard?.id ?? null,
     myCharacter: sanitizeTeConfig(myCard?.teCharacter) ?? defaultTeConfig(),
+    myCompanion: myCard ? companionView(myCard).equipped : null,
     hasCharacter: !!sanitizeTeConfig(myCard?.teCharacter),
     questSteps,
     tracker,

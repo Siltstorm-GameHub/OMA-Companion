@@ -2015,6 +2015,9 @@ model Card {
   dndSkills       Json?
   // Gekaufte Karten-Anpassungen (string[], z. B. "bg:night3")
   cardUnlocks     Json?
+  // Begleiter: gezähmte Monster (string[] Monster-Ids, jedes einmal) und der ausgerüstete
+  dndCompanions   Json?
+  dndCompanion    String?
   dndFlags        Json? // string[]
   dndInventory    DndInventoryItem[]
 

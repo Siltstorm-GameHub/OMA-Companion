@@ -11,6 +11,7 @@ import { D20 } from "@/components/te-map/play/Dice";
 import type { CharacterSheet } from "@/lib/dnd/rpg-server";
 import type { PartyView, InviteView } from "@/lib/dnd/party";
 import type { WorldEventView } from "@/lib/dnd/world-events";
+import CompanionPanel from "@/components/te-map/play/CompanionPanel";
 import { getItem, ITEMS as ITEM_OPTIONS, SLOT_LABEL, sellPrice, type ItemSlot } from "@/lib/dnd/items";
 import { ABILITY_LABEL, ABILITY_SHORT, MAX_LEVEL } from "@/lib/te-map/rpg";
 import { buyPriceFor, effectsOf, getPerk, PERKS, sellPriceFor } from "@/lib/dnd/perks";
@@ -329,6 +330,7 @@ export function CharacterPanel({ refreshKey = 0, onChanged, notify }: { refreshK
           </ul>
         </div>
       )}
+      <CompanionPanel onChanged={onChanged} />
     </div>
   );
 }

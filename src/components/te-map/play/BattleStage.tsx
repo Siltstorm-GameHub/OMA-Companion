@@ -94,7 +94,7 @@ interface StageProps {
   backdrop?: BackdropKey;
   heroes: StageHero[];
   fx: FxEvent[];
-  status: "active" | "won" | "lost" | "fled";
+  status: "active" | "won" | "lost" | "fled" | "tamed";
   /** Tippen auf einen Helden wählt ihn als Ziel (Heilung, Schutz) */
   selectedKey?: string;
   onPickHero?: (key: string) => void;
@@ -107,13 +107,14 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
   const hClass = figureHeight(heroes.length);
   const heroKeyOf = (e: FxEvent): string | undefined => (solo ? heroes[0].key : heroes.find((h) => h.name === e.hero)?.key ?? heroes.find((h) => h.mine)?.key);
   const won = status === "won";
+  const tamed = status === "tamed";
 
   return (
     <div className="relative w-full h-[330px] sm:h-[390px] overflow-hidden rounded-md border-2 border-[#4a3b1c] shadow-[0_3px_0_rgba(0,0,0,0.6)]">
       <Backdrop backdrop={backdrop} night={night} />
 
       {/* Monster: rechts oben, Namensschild darüber */}
-      <div className={`absolute right-2 top-2 w-[46%] max-w-[190px] flex flex-col items-center gap-1 transition-opacity duration-700 ${won ? "opacity-0 delay-700" : ""}`}>
+      <div className={`absolute right-2 top-2 w-[46%] max-w-[190px] flex flex-col items-center gap-1 transition-opacity duration-700 ${won ? "opacity-0 delay-700" : ""} ${tamed ? "opacity-60" : ""}`}>
         <div className="w-full rounded-md bg-black/70 border border-white/15 px-2 py-1">
           <p className="text-[11px] font-black text-white truncate">{m?.name ?? "Monster"} <span className="text-gray-400 font-bold">Lv {m?.level}</span></p>
           <Bar value={monsterHp} max={monsterMaxHp} color="bg-red-500" h="h-2.5" />
@@ -179,8 +180,8 @@ export function BattleStage({ monsterId, monsterHp, monsterMaxHp, monsterNote, m
 
       {status !== "active" && (
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center pointer-events-none">
-          <span className={`inline-block px-4 py-1.5 rounded-md border-2 bg-black/75 text-lg font-black tracking-wide ${won ? "border-emerald-300 text-emerald-200" : status === "fled" ? "border-amber-300 text-amber-200" : "border-red-400 text-red-300"}`}>
-            {won ? "SIEG!" : status === "fled" ? "RÜCKZUG" : "NIEDERLAGE"}
+          <span className={`inline-block px-4 py-1.5 rounded-md border-2 bg-black/75 text-lg font-black tracking-wide ${won || tamed ? "border-emerald-300 text-emerald-200" : status === "fled" ? "border-amber-300 text-amber-200" : "border-red-400 text-red-300"}`}>
+            {won ? "SIEG!" : tamed ? "GEZÄHMT!" : status === "fled" ? "RÜCKZUG" : "NIEDERLAGE"}
           </span>
         </div>
       )}

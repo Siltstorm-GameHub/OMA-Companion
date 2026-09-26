@@ -224,7 +224,7 @@ export async function tradeItem(card: Card, locationSlug: string, actorId: strin
 /** Ausrüsten/Ablegen: je Platz (Waffe/Rüstung/Schmuck) ist ein Gegenstand aktiv. */
 export async function setEquipped(cardId: string, itemKey: string, equipped: boolean): Promise<{ ok: true } | { error: string }> {
   const item = getItem(itemKey);
-  if (!item || item.slot === "loot") return { error: "Das lässt sich nicht ausrüsten." };
+  if (!item || item.slot === "loot" || item.slot === "bait") return { error: "Das lässt sich nicht ausrüsten." };
   const row = await prisma.dndInventoryItem.findUnique({ where: { cardId_itemKey: { cardId, itemKey } } });
   if (!row) return { error: "Das hast du nicht." };
   if (equipped) {

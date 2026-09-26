@@ -135,6 +135,11 @@ const MONSTER_ELEMENTS: Record<string, { weak?: Element[]; resist?: Element[] }>
 };
 for (const m of MONSTERS) Object.assign(m, MONSTER_ELEMENTS[m.id] ?? {});
 
+/** Zähmköder als seltene Beute: schwache Monster lassen eher einfache fallen, starke bessere. */
+const BAIT_DROPS = (level: number, raid: boolean): { key: string; chance: number }[] =>
+  raid ? [{ key: "koeder-meister", chance: 0.25 }] : level >= 9 ? [{ key: "koeder-gut", chance: 0.12 }, { key: "koeder-meister", chance: 0.05 }] : level >= 5 ? [{ key: "koeder-einfach", chance: 0.15 }, { key: "koeder-gut", chance: 0.08 }] : [{ key: "koeder-einfach", chance: 0.12 }];
+for (const m of MONSTERS) m.loot = [...m.loot, ...BAIT_DROPS(m.level, !!m.raid)];
+
 export const getMonster = (id: string): Monster | undefined => MONSTERS.find((m) => m.id === id);
 
 /** Begegnungen, die im Gelände für diese Stufe passen (nicht zu leicht, nicht zu tödlich). */
@@ -151,7 +156,7 @@ export function rewardFor(m: Monster, heroLevel: number, rng: Rng): { xp: number
 
 // ── Kampfzustand ────────────────────────────────────────────
 
-export type CombatStatus = "active" | "won" | "lost" | "fled";
+export type CombatStatus = "active" | "won" | "lost" | "fled" | "tamed";
 export interface CombatResult { xp: number; gold: number; items: string[]; levelUp: number | null; goldLost: number }
 export interface CombatState {
   monsterId: string;
@@ -208,7 +213,7 @@ const SOLO_ID = "solo";
 /** Der Einzelkampf ist ein Gruppenkampf mit einem Helden — so gelten überall dieselben Regeln. */
 function toGroup(c: CombatState, m: Monster): GroupState {
   return {
-    monsterId: c.monsterId, monsterMaxHp: m.hp, monsterHp: c.monsterHp, round: c.round, turn: 0, turnStartedAt: 0, taunt: c.taunt, inspire: 0, mStatus: { ...(c.mStatus ?? {}) }, provoke: null, status: c.status, log: [...c.log],
+    monsterId: c.monsterId, monsterMaxHp: m.hp, monsterHp: c.monsterHp, round: c.round, turn: 0, turnStartedAt: 0, taunt: c.taunt, inspire: 0, mStatus: { ...(c.mStatus ?? {}) }, provoke: null, status: c.status as GroupState["status"], log: [...c.log],
     heroes: [{ cardId: SOLO_ID, name: c.fighter.name, fighter: c.fighter, hp: c.hp, ap: c.ap, cooldowns: { ...c.cooldowns }, guard: c.guard, shield: c.shield ?? 0, boons: (c.boons ?? []).map((b) => ({ ...b })), left: false }],
   };
 }

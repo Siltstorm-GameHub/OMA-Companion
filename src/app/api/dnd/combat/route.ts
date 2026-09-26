@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getMyDndCard } from "@/lib/dnd/quest-log";
 import { prisma } from "@/lib/prisma";
-import { actInCombat, beginCombat, closeCombat, getCombatView } from "@/lib/dnd/combat-server";
+import { actInCombat, tameInCombat, beginCombat, closeCombat, getCombatView } from "@/lib/dnd/combat-server";
 import { hasOpenGroupFight } from "@/lib/dnd/group-fight-server";
 import { isCombatAction } from "@/lib/dnd/combat";
 
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   const source = typeof body?.slug === "string" && typeof body?.actor === "string" ? { slug: body.slug, actor: body.actor } : undefined;
   const r = body?.action === "start" && typeof body.monster === "string" ? await beginCombat(m.card, body.monster, source)
     : body?.action === "act" && isCombatAction(body.act) ? await actInCombat(m.card, body.act)
+    : body?.action === "tame" && typeof body.bait === "string" ? await tameInCombat(m.card, body.bait)
     : body?.action === "close" ? await closeCombat(m.card)
     : { error: "Ungültige Aktion" };
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: 400 });

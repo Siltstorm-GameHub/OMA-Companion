@@ -31,6 +31,8 @@ interface LocationState {
   inTransit: boolean;
   myCardId: string | null;
   myCharacter: TeCharacterConfig;
+  /** Ausgerüsteter Begleiter (Monster-Id) — läuft hinter dem Helden her */
+  myCompanion?: string | null;
   hasCharacter: boolean;
   questSteps: Record<string, number>;
   tracker: TrackerItem[];
@@ -252,7 +254,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
       )}
 
       <TeWorld
-        world={world} character={data.myCharacter} initialSteps={data.questSteps} tracker={data.tracker} others={others}
+        world={world} character={data.myCharacter} companion={data.myCompanion ?? null} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
         onChoose={onChoose} onTrade={setShopActor} onFight={onFight} slain={slain} partyIds={gf?.group.memberIds} canGroupFight={!!gf?.group.inParty && gf.group.here >= 2} onAdvance={onAdvance}
         feed={feed} notify={notify} paused={!!menu || !!shopActor}

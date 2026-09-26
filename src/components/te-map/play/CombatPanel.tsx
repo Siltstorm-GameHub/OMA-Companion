@@ -16,7 +16,8 @@ import type { TeCharacterConfig } from "@/lib/te-character";
 import { BIOME_BACKDROP, type BackdropKey } from "@/lib/dnd/oq-backdrop";
 import GroupFightPanel, { type FightCall, type GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 
-interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter; character: TeCharacterConfig }
+interface Bait { key: string; name: string; emoji: string; qty: number; chance: number }
+interface View { state: CombatState | null; encounters: Monster[]; biome: string; level: number; hero: Fighter; character: TeCharacterConfig; companions?: string[]; baits?: Bait[] }
 
 const BIOME_LABEL: Record<string, string> = { temperate: "gemäßigtes Land", cold: "Kältezone", dry: "Trockengebiet" };
 
@@ -24,6 +25,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
   const { notify: say, node } = useNotice(notify);
   const [view, setView] = useState<View | null>(null);
   const [busy, setBusy] = useState(false);
+  const [baitOpen, setBaitOpen] = useState(false);
   const logEnd = useRef<HTMLDivElement>(null);
   const fx = useFxEvents(view?.state?.log ?? [], [], () => view?.state?.fighter.classId);
   useFightSounds(view?.state?.monsterId, view?.state?.status);
@@ -114,11 +116,19 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
   // ── Kampf: Bühne, Verlauf, Befehle ──
   const m = getMonster(s.monsterId);
   const active = s.status === "active";
+  const baits = view.baits ?? [];
+  const tameable = !!m && !m.raid && !!s.source && !(view.companions ?? []).includes(m.id);
+  const weak = !!m && s.monsterHp <= m.hp * 0.25;
   const heroes: StageHero[] = [{ key: "me", name: s.fighter.name, classId: s.fighter.classId, character: view.character, hp: s.hp, maxHp: s.fighter.maxHp, ac: s.fighter.ac + (s.guard > 0 ? 3 : 0), guard: s.guard > 0, shield: s.shield ?? 0, down: s.hp <= 0, left: false, active: true, mine: true }];
   const cmds: Cmd[] = [
     { key: "attack", label: "Angriff", icon: "⚔️", cost: 1, disabled: s.ap < 1, onClick: () => act("attack") },
     { key: "defend", label: "Deckung", icon: "🛡️", cost: 1, disabled: s.ap < 1, hint: "Deckung: +3 Rüstung bis zur nächsten Runde.", onClick: () => act("defend") },
     { key: "flee", label: "Fliehen", icon: "🏃", cost: 1, disabled: s.ap < 1, hint: "Fliehen: Geschicksprobe gegen die Stufe des Monsters.", onClick: () => act("flee") },
+    ...(tameable ? [{
+      key: "tame", label: "Zähmen", icon: "🐾", cost: 1, disabled: s.ap < 1 || !weak || !baits.length, gold: true,
+      hint: !baits.length ? "Zähmen braucht einen Zähmköder (beim Händler)." : !weak ? "Erst das Monster auf unter 25 % seiner Lebenspunkte bringen." : "Zähmen: mit einem Köder als Begleiter gewinnen.",
+      onClick: () => setBaitOpen((o) => !o),
+    }] : []),
   ];
   return (
     <div className="oq-panel p-3 sm:p-4 space-y-2.5">
@@ -127,6 +137,16 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
         backdrop={backdrop ?? BIOME_BACKDROP[view.biome] ?? "plains"} heroes={heroes} fx={fx} status={s.status}
       />
       {node}
+      {active && baitOpen && tameable && weak && (
+        <div className="oq-slot p-2 space-y-1.5" role="menu" aria-label="Zähmköder">
+          <p className="text-[11px] text-gray-300">Welchen Köder wirfst du? (kostet 1 AP, der Köder ist danach verbraucht)</p>
+          {baits.map((b) => (
+            <button key={b.key} type="button" role="menuitem" disabled={busy || s.ap < 1} onClick={() => { setBaitOpen(false); void send({ action: "tame", bait: b.key }); }} className="oq-btn oq-btn-gold w-full min-h-[44px] flex items-center gap-2 px-2 text-xs font-black touch-manipulation">
+              <span className="text-xl" aria-hidden>{b.emoji}</span><span className="text-left">{b.name} <span className="opacity-70">×{b.qty}</span></span><span className="ml-auto">{Math.round(b.chance * 100)} %</span>
+            </button>
+          ))}
+        </div>
+      )}
       {active ? (
         <CommandBar round={s.round} ap={s.ap} apMax={AP_PER_ROUND} cmds={cmds} abilities={abilityCards(s.fighter, s.cooldowns ?? {}, s.ap, (a) => act(a as CombatAction))} onEnd={() => act("end")} busy={busy} endLabel="Runde beenden" />
       ) : (
@@ -139,6 +159,7 @@ export default function CombatPanel({ refreshKey = 0, onChanged, notify, gf, gro
               {s.result.levelUp && <b className="text-violet-300">⭐ Stufe {s.result.levelUp}!</b>}
             </p>
           )}
+          {s.status === "tamed" && m && <p className="text-xs text-emerald-200">🐾 <b>{m.name}</b> ist jetzt dein Begleiter! Unter „Charakter“ rüstest du ihn aus.</p>}
           {s.result && s.status === "lost" && s.result.goldLost > 0 && <p className="text-xs text-gray-300">Du verlierst <Gold n={s.result.goldLost} />.</p>}
           <button type="button" disabled={busy} onClick={() => void send({ action: "close" })} className="oq-btn oq-btn-gold w-full min-h-[48px] text-sm font-black">Weiter</button>
         </div>

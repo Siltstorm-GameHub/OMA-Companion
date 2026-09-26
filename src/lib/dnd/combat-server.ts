@@ -18,7 +18,8 @@ import { addFx } from "./identity";
 import { traitFx } from "./identity";
 import { skillEffects } from "./skills";
 import { skillsOf } from "./skills-server";
-import { checkParams, grantRewards } from "./rpg-server";
+import { checkParams, getInventory, grantRewards } from "./rpg-server";
+import { baitChance, companionFx, ownedCompanions, performTame } from "./companions";
 import { logChronicle } from "./chronicle";
 import { advanceDndQuestObjective } from "./quests";
 import { buildFighter, encountersFor, getMonster, performAction, rewardFor, startCombat, type Biome, type CombatAction, type CombatState, type Fighter, type Monster } from "./combat";
@@ -33,6 +34,9 @@ export interface CombatView {
   hero: Fighter;
   /** Pixel-Figur des Helden für die Kampfbühne */
   character: TeCharacterConfig;
+  /** Gezähmte Monster (Begleiter) und die Zähmköder im Rucksack */
+  companions: string[];
+  baits: { key: string; name: string; emoji: string; qty: number; chance: number }[];
 }
 
 /** Besiegte Monster-Figuren kommen nach dieser Zeit wieder. */
@@ -75,13 +79,17 @@ export async function fighterOf(card: Card): Promise<Fighter> {
     crit = { critMin: p.critMin ?? 20, rerollFumble: !!p.rerollFumble };
   }
   const classId = card.dndClass ?? "krieger";
-  return buildFighter({ name: card.name, classId, level, mods, ...crit, fx: addFx(skillEffects(classId, skillsOf(card)), traitFx(card.dndRace, classId, level)) });
+  return buildFighter({ name: card.name, classId, level, mods, ...crit, fx: addFx(addFx(skillEffects(classId, skillsOf(card)), traitFx(card.dndRace, classId, level)), companionFx(equippedCompanion(card))) });
 }
+
+/** Der ausgerüstete Begleiter (nur, wenn er auch wirklich gezähmt wurde). */
+export const equippedCompanion = (card: Pick<Card, "dndCompanions" | "dndCompanion">): string | null => (card.dndCompanion && ownedCompanions(card.dndCompanions).includes(card.dndCompanion) ? card.dndCompanion : null);
 
 export async function getCombatView(card: Card): Promise<CombatView> {
   const level = levelOf(card.dndXp);
   const biome = biomeOf(card);
-  return { slain: slainOf(card), state: stateOf(card), encounters: encountersFor(level, biome), biome, level, hero: await fighterOf(card), character: effectiveTeCharacter(card) };
+  const baits = (await getInventory(card.id)).filter((e) => e.item.slot === "bait" && baitChance(e.key) !== null).map((e) => ({ key: e.key, name: e.item.name, emoji: e.item.emoji, qty: e.qty, chance: baitChance(e.key)! }));
+  return { slain: slainOf(card), state: stateOf(card), encounters: encountersFor(level, biome), biome, level, hero: await fighterOf(card), character: effectiveTeCharacter(card), companions: ownedCompanions(card.dndCompanions), baits };
 }
 
 /** Speichert den neuen Zustand nur, wenn seit dem Laden niemand anderes geschrieben hat. */
@@ -149,6 +157,30 @@ export async function actInCombat(card: Card, action: CombatAction): Promise<{ o
     return { ok: true };
   }
   return (await save(card, next)) ? { ok: true } : RACE;
+}
+
+/** Zähmversuch mit einem Köder (1 AP). Erfolg: das Monster wird Begleiter (einmal je Monster) und verlässt den Kampf. Der Köder ist in jedem Fall verbraucht. */
+export async function tameInCombat(card: Card, baitKey: string): Promise<{ ok: true } | { error: string }> {
+  const cur = stateOf(card);
+  if (!cur) return { error: "Du kämpfst gerade nicht." };
+  const chance = baitChance(baitKey);
+  if (chance === null) return { error: "Das ist kein Zähmköder." };
+  const have = (await getInventory(card.id)).find((e) => e.key === baitKey);
+  if (!have || have.qty < 1) return { error: "Du hast diesen Köder nicht." };
+  const owned = ownedCompanions(card.dndCompanions);
+  const r = performTame(cur, chance, owned);
+  if (r.error) return { error: r.error };
+  const next = r.state;
+  if (next.status === "tamed") next.result = { xp: 0, gold: 0, items: [], levelUp: null, goldLost: 0 };
+  if (!(await save(card, next))) return RACE;
+  // Köder verbrauchen
+  if (have.qty <= 1) await prisma.dndInventoryItem.deleteMany({ where: { cardId: card.id, itemKey: baitKey } });
+  else await prisma.dndInventoryItem.updateMany({ where: { cardId: card.id, itemKey: baitKey }, data: { qty: { decrement: 1 } } });
+  if (next.status === "tamed") {
+    await prisma.card.update({ where: { id: card.id }, data: { dndCompanions: [...owned, next.monsterId], ...(card.dndCompanion ? {} : { dndCompanion: next.monsterId }) } });
+    if (next.source) await markSlain(card.id, next.source);
+  }
+  return { ok: true };
 }
 
 /** Beendeten Kampf wegräumen (Ergebnis bestätigt) bzw. aktiven aufgeben. */

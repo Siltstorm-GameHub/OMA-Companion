@@ -366,6 +366,8 @@ export interface OtherPlayer { id: string; name: string; level?: number; charact
 interface Props {
   world: WorldDef;
   character: TeCharacterConfig;
+  /** Begleiter (Monster-Id): läuft hinter der Figur her */
+  companion?: string | null;
   /** Gespeicherter Schritt je Quest-Slug dieser Welt (0 = noch nicht angenommen) */
   initialSteps: Record<string, number>;
   /** Meldungen im Spiel (Zustand liegt beim Aufrufer, siehe useGameFeed) */
@@ -413,7 +415,7 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
+export default function TeWorld({ world, character, companion, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
   // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
   const wrapRef = useRef<HTMLDivElement>(null);
   const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
@@ -494,6 +496,10 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
   }, [world]);
 
   const playerKey = JSON.stringify(character);
+  // Begleiter: die letzten Kacheln des Helden (er läuft der zweitletzten nach) und seine weich bewegte Position
+  const companionRef = useRef({ trail: [] as { x: number; y: number }[], x: 0, y: 0, last: 0, scene: -2 as number | null });
+  const companionId = useRef<string | null>(null);
+  useEffect(() => { companionId.current = companion ?? null; }, [companion]);
   const spritesRef = useRef<{ player: TeLayerSets | undefined; npcs: Map<string, TeLayerSets>; others: Map<string, TeLayerSets> }>({
     player: undefined, npcs: new Map(), others: new Map(),
   });
@@ -862,6 +868,34 @@ export default function TeWorld({ world, character, initialSteps, tracker: initi
               void sx; void sy;
             },
           });
+        }
+        // Begleiter hinter dem Helden (folgt auch in Gebäude und Locations)
+        if (companionId.current) {
+          const cp = companionRef.current;
+          if (cp.scene !== g.scene || !cp.trail.length) { cp.scene = g.scene; cp.trail = [{ x: g.px, y: g.py }]; cp.x = g.px; cp.y = g.py; cp.last = clock; }
+          const lastT = cp.trail[cp.trail.length - 1];
+          if (lastT.x !== g.px || lastT.y !== g.py) { cp.trail.push({ x: g.px, y: g.py }); if (cp.trail.length > 4) cp.trail.shift(); }
+          const tgt = cp.trail.length >= 2 ? cp.trail[cp.trail.length - 2] : cp.trail[0];
+          const dtc = Math.min(0.1, Math.max(0, (clock - cp.last) / 1000));
+          cp.last = clock;
+          const kk = 1 - Math.exp(-dtc * 7);
+          cp.x += (tgt.x - cp.x) * kk;
+          cp.y += (tgt.y - cp.y) * kk;
+          const cid = companionId.current;
+          const ck = spriteKeyOf(cid);
+          const bobC = Math.sin(clock / 260) * 1;
+          if (ck) {
+            let cimg = monsterImgs.current.get(ck);
+            if (!cimg) { cimg = new Image(); cimg.src = `/oq/mon/${ck}.png`; monsterImgs.current.set(ck, cimg); }
+            const cinfo = spriteInfo(ck);
+            const csc = spriteScale(ck, 22, 0.3, 1);
+            const cdw = cinfo.w * csc, cdh = cinfo.h * csc;
+            const cfi = Math.floor(clock / (1000 / 12)) % cinfo.frames;
+            sprites.push({ base: cp.y * T + T, draw: () => { if (cimg!.complete && cimg!.naturalWidth) ctx.drawImage(cimg!, cfi * cinfo.w, 0, cinfo.w, cinfo.h, cp.x * T - camX + T / 2 - cdw / 2, (cp.y + 1) * T - camY - cdh + 1 + bobC, cdw, cdh); } });
+          } else {
+            const glyph = getMonster(cid)?.emoji ?? "🐾";
+            sprites.push({ base: cp.y * T + T, draw: () => { ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, cp.x * T - camX + T / 2, cp.y * T - camY + T / 2 + 2 + bobC); } });
+          }
         }
         const pf = g.move ? walkFrames[Math.floor((clock / 1000) * TE_ANIMS.walk.fps) % walkFrames.length] : 1;
         sprites.push({

@@ -102,7 +102,7 @@ function hafenstadt(): WorldDef {
   ]);
   m.addActor({
     id: "berta", kind: "merchant", name: "Händlerin Berta", x: 19, y: 16, dir: "left", config: npcLook(13),
-    shop: ["rostschwert", "lederruestung", "wanderstiefel", "glueckstaler", "bierkrug"],
+    shop: ["rostschwert", "lederruestung", "wanderstiefel", "glueckstaler", "koeder-einfach", "koeder-gut", "bierkrug"],
     talk: [{ step: "*", lines: ["Frisch vom Kahn! Naja, vom Kahn. Schau dich um."] }],
   });
   m.sign("schild", "Schild", 19, 8, ["Willkommen in Alt-Hafenstadt! Es riecht nach Fisch und schlechten Entscheidungen."]);
