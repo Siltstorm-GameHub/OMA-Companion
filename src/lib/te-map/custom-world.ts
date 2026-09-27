@@ -53,7 +53,7 @@ export type BorderStyle = "none" | "trees" | "cave" | "rocks";
 
 /** Schritt einer Quest im Editor: Gespräch in dieser Location oder Besuch einer anderen (Slug der Ziel-Location). */
 export interface DocQuestStep {
-  kind: "talk" | "visit" | "enter";
+  kind: "talk" | "visit" | "enter" | "goal";
   text: string;
   /** visit: Slug der Ziel-Location */
   location?: string;
@@ -61,6 +61,11 @@ export interface DocQuestStep {
   actor?: string;
   /** enter: Index des Gebäudes (mit Innenraum), das betreten werden muss */
   building?: number;
+  /** goal: Ereignis, Bezug, Stufe (nur MONSTER_SLAIN), Anzahl — siehe QuestStep in te-map/types.ts */
+  objectiveType?: string;
+  targetRef?: string;
+  tier?: string;
+  targetCount?: number;
 }
 
 export interface CustomWorldQuest {
@@ -71,6 +76,12 @@ export interface CustomWorldQuest {
   /** Abschlusstext */
   done: string;
   xpReward: number;
+  /** Questreihe: freier Name, unter dem der Autor zusammengehörige Quests (auch über mehrere Locations) veröffentlicht */
+  questline?: string;
+  /** Teil-Nummer innerhalb der Questreihe (Anzeige "Teil 2") */
+  part?: number;
+  /** Slug einer Quest (auch in einer anderen eigenen Location), die zuerst abgeschlossen sein muss */
+  requires?: string;
 }
 
 /** Datenbank-Slug einer Quest der Location `slug`. "main" behält bei übernommenen festen Welten den alten Slug. */
@@ -82,6 +93,8 @@ export interface CustomWorldDoc {
   description: string;
   /** Geräuschkulisse (Ambiente) der Location */
   ambience?: string;
+  /** Location-Typ „Stadt": zusätzliche Pflicht-Ausstattung (Händler-, Taverne-Gebäude, Schwarzes Brett), siehe `validateForSubmit`. Fehlt = normale Location, keine Pflichten. */
+  locationType?: "wild" | "town";
   cols: number;
   rows: number;
   theme: "outdoor" | "cave";
@@ -138,11 +151,12 @@ const int = (v: unknown, min: number, max: number): number | null =>
 const text = (v: unknown, max: number): string => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
 const DIRS: Dir[] = ["down", "left", "right", "up"];
 
-export function defaultCustomWorldDoc(theme: "outdoor" | "cave" = "outdoor", cols = 30, rows = 24): CustomWorldDoc {
-  return {
+export function defaultCustomWorldDoc(theme: "outdoor" | "cave" = "outdoor", cols = 30, rows = 24, locationType?: "wild" | "town"): CustomWorldDoc {
+  const base: CustomWorldDoc = {
     v: 1,
     title: "Neue Location",
     description: "",
+    ...(locationType === "town" ? { locationType } : {}),
     cols, rows, theme,
     border: theme === "cave" ? "cave" : "trees",
     borderSize: 2,
@@ -163,6 +177,22 @@ export function defaultCustomWorldDoc(theme: "outdoor" | "cave" = "outdoor", col
     spawn: { x: Math.floor(cols / 2), y: Math.floor(rows / 2) + 3 },
     quests: [{ id: "main", title: "Erste Aufgabe", steps: [{ kind: "talk", text: "Sprich mit dem Auftraggeber." }], done: "Abgeschlossen!", xpReward: 20 }],
   };
+  if (locationType !== "town") return base;
+  // Stadt-Vorlage: Händler-Gebäude + Händler, Taverne-Gebäude, Schwarzes Brett — die Pflicht-Ausstattung schon vorplatziert.
+  const midX = Math.floor(cols / 2);
+  return {
+    ...base,
+    buildings: [
+      { x: 2, y: 2, w: 6, roofRows: 3, roof: { k: 3, r: 0 }, wall: { k: 4, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopSword", role: "shop", name: "Handelshaus" },
+      { x: cols - 8, y: 2, w: 6, roofRows: 3, roof: { k: 4, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopMug", role: "tavern", name: "Taverne" },
+    ],
+    stamps: [{ id: "noticeBoard", x: midX, y: rows - 5 }],
+    actors: [
+      ...base.actors,
+      { id: "haendler", kind: "merchant", name: "Händlerin", x: 5, y: 8, dir: "down", config: defaultTeConfig(), shop: [], talk: [{ step: "*", lines: ["Schau dich um, vielleicht ist was für dich dabei."] }] },
+      { id: "brett", kind: "questboard", name: "Schwarzes Brett", x: midX, y: rows - 5, dir: "down", talk: [{ step: "*", lines: ["Ein Brett mit ein paar angepinnten Zetteln."] }] },
+    ],
+  };
 }
 
 /** Baut das Dokument aus unbekannter Eingabe neu auf. Ungültige Teile werden entfernt und als `warnings`
@@ -177,6 +207,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
   const rows = int(input.rows, LIMITS.minSide, LIMITS.maxSide);
   if (cols === null || rows === null) return { ok: false, errors: [`Die Karte muss ${LIMITS.minSide}–${LIMITS.maxSide} Kacheln breit und hoch sein.`] };
   const theme = input.theme === "cave" ? "cave" : "outdoor";
+  const locationType = input.locationType === "town" ? "town" : undefined;
   let border: BorderStyle = input.border === "trees" || input.border === "cave" || input.border === "rocks" ? input.border : "none";
   // Rand und Thema müssen zusammenpassen (Höhlenwand nur in der Höhle, Bäume nur draußen)
   if ((border === "cave" && theme !== "cave") || (border === "trees" && theme === "cave")) border = theme === "cave" ? "cave" : "trees";
@@ -222,8 +253,9 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     const doorDx = int(b.doorDx, 0, w - 1) ?? Math.floor(w / 2);
     const windowDx = (Array.isArray(b.windowDx) ? b.windowDx : []).filter((d): d is number => Number.isInteger(d) && d >= 0 && d < w && d !== doorDx).slice(0, 4);
     const sign = typeof b.sign === "string" && ["shopSword", "shopInn", "shopMug"].includes(b.sign) ? (b.sign as StampId) : undefined;
+    const role = b.role === "shop" || b.role === "tavern" ? b.role : undefined;
     rawBuildings.push(b);
-    buildings.push({ x, y, w, roofRows, roof: { k: roof.k, r: roof.r }, wall: { k: wall.k, r: wall.r }, doorDx, windowDx, ...(sign ? { sign } : {}), name: text(b.name, LIMITS.nameLen) });
+    buildings.push({ x, y, w, roofRows, roof: { k: roof.k, r: roof.r }, wall: { k: wall.k, r: wall.r }, doorDx, windowDx, ...(sign ? { sign } : {}), ...(role ? { role } : {}), name: text(b.name, LIMITS.nameLen) });
   }
 
   const stamps: PlacedStamp[] = [];
@@ -261,21 +293,37 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     const qsteps: DocQuestStep[] = [];
     for (const [si, st] of stepsIn.slice(0, LIMITS.maxSteps).entries()) {
       const o: Record<string, unknown> = isObj(st) ? st : { text: st };
-      const kind = o.kind === "visit" ? "visit" : o.kind === "enter" ? "enter" : "talk";
+      const kind = o.kind === "visit" ? "visit" : o.kind === "enter" ? "enter" : o.kind === "goal" ? "goal" : "talk";
       const actorRef = typeof o.actor === "string" && /^[a-z0-9_-]{1,24}$/.test(o.actor) ? o.actor : undefined;
       const buildingRef = Number.isInteger(o.building) && (o.building as number) >= 0 && (o.building as number) < rawBuildings.length ? (o.building as number) : undefined;
       const location = typeof o.location === "string" && /^[a-z0-9_-]{1,40}$/.test(o.location) ? o.location : undefined;
       if (kind === "visit" && !location) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1}: Wähle die Location, die besucht werden soll.`);
       if (kind === "enter" && buildingRef === undefined) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1}: Wähle das Gebäude, das betreten werden soll.`);
-      if ((kind === "visit" || kind === "enter") && si === 0) fail("Der erste Quest-Schritt muss ein Gespräch sein (dort nimmt man die Quest an).");
+      if ((kind === "visit" || kind === "enter" || kind === "goal") && si === 0) fail("Der erste Quest-Schritt muss ein Gespräch sein (dort nimmt man die Quest an).");
+      const goalObjectiveType = o.objectiveType === "COMPANION_TAMED" ? "COMPANION_TAMED" : "MONSTER_SLAIN";
+      let goalRef = typeof o.targetRef === "string" && /^[a-z0-9_-]{1,24}$/.test(o.targetRef) ? o.targetRef : undefined;
+      if (kind === "goal" && goalObjectiveType === "MONSTER_SLAIN" && goalRef && !getMonster(goalRef)) {
+        fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1}: Unbekanntes Monster — Ziel gilt jetzt für jedes Monster.`);
+        goalRef = undefined;
+      }
+      const goalTier = o.tier === "elite" || o.tier === "boss" ? o.tier : undefined;
+      const goalCount = int(o.targetCount, 1, 20) ?? 1;
       const t = text(o.text, LIMITS.objectiveLen);
       if (!t) fail(`Quest „${text(rq.title, LIMITS.titleLen) || qid}“, Schritt ${si + 1} hat keinen Text.`);
-      qsteps.push({ kind, text: t, ...(kind === "visit" && location ? { location } : {}), ...(kind === "talk" && actorRef ? { actor: actorRef } : {}), ...(kind === "enter" && buildingRef !== undefined ? { building: buildingRef } : {}) });
+      qsteps.push({
+        kind, text: t,
+        ...(kind === "visit" && location ? { location } : {}), ...(kind === "talk" && actorRef ? { actor: actorRef } : {}), ...(kind === "enter" && buildingRef !== undefined ? { building: buildingRef } : {}),
+        ...(kind === "goal" ? { objectiveType: goalObjectiveType, targetCount: goalCount, ...(goalRef ? { targetRef: goalRef } : {}), ...(goalTier ? { tier: goalTier } : {}) } : {}),
+      });
     }
     while (qsteps.length < LIMITS.minSteps) qsteps.push({ kind: "talk", text: "" });
+    const questline = text(rq.questline, LIMITS.titleLen) || undefined;
+    const part = int(rq.part, 1, 99) ?? undefined;
+    const requires = typeof rq.requires === "string" && /^[a-z0-9_-]{1,60}$/.test(rq.requires) ? rq.requires : undefined;
     const quest: CustomWorldQuest = {
       id: qid, title: text(rq.title, LIMITS.titleLen), steps: qsteps,
       done: text(rq.done, LIMITS.objectiveLen) || "Abgeschlossen!", xpReward: int(rq.xpReward, 0, LIMITS.maxXp) ?? 0,
+      ...(questline ? { questline } : {}), ...(part !== undefined ? { part } : {}), ...(requires ? { requires } : {}),
     };
     if (!quest.title) fail("Jede Quest braucht einen Titel.");
     quests.push(quest);
@@ -292,7 +340,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
   let bosses = 0;
   const readActor = (a: unknown, area: { minX: number; minY: number; maxX: number; maxY: number }, allowSign: boolean): Actor | null => {
     if (!isObj(a)) return null;
-    const kind = (a.kind === "chest" || (a.kind === "sign" && allowSign) || a.kind === "merchant" || a.kind === "monster") ? a.kind : "npc";
+    const kind = (a.kind === "chest" || ((a.kind === "sign" || a.kind === "questboard") && allowSign) || a.kind === "merchant" || a.kind === "monster") ? a.kind : "npc";
     const id = typeof a.id === "string" && /^[a-z0-9_-]{1,24}$/.test(a.id) ? a.id : "";
     const x = int(a.x, area.minX, area.maxX);
     const y = int(a.y, area.minY, area.maxY);
@@ -333,7 +381,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
     if (monster) talk.splice(0, talk.length, { step: "*", lines: [monster.blurb] });
     if (!talk.length) talk.push({ step: "*", lines: ["…"] });
     const actor: Actor = {
-      id, kind, name: text(a.name, LIMITS.nameLen) || (monster ? monster.name : kind === "npc" ? "NPC" : kind === "merchant" ? "Händler" : kind === "chest" ? "Truhe" : "Schild"),
+      id, kind, name: text(a.name, LIMITS.nameLen) || (monster ? monster.name : kind === "npc" ? "NPC" : kind === "merchant" ? "Händler" : kind === "chest" ? "Truhe" : kind === "questboard" ? "Schwarzes Brett" : "Schild"),
       x, y, dir: DIRS.includes(a.dir as Dir) ? (a.dir as Dir) : "down", talk,
     };
     if (monster) actor.monster = monster.id;
@@ -395,6 +443,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
       title: text(input.title, LIMITS.titleLen),
       description: text(input.description, LIMITS.descLen),
       ...(isAmbienceKey(input.ambience) ? { ambience: input.ambience } : {}),
+      ...(locationType ? { locationType } : {}),
       cols, rows, theme, border, borderSize, ground, walls, buildings, stamps, actors,
       spawn: { x: spawn.x!, y: spawn.y! },
       quests,
@@ -440,7 +489,11 @@ export function docToWorld(doc: CustomWorldDoc, slug = "vorschau", questSlug?: s
   const worldQuests: WorldQuest[] = doc.quests.map((q) => ({
     slug: slugOf(q.id), title: q.title, xpReward: q.xpReward,
     objectives: [...q.steps.map((st) => st.text), q.done],
-    steps: q.steps.map((st) => ({ kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}), ...(st.actor ? { actor: st.actor } : {}), ...(st.building !== undefined ? { building: st.building } : {}) })),
+    steps: q.steps.map((st) => ({
+      kind: st.kind, text: st.text, ...(st.location ? { location: st.location } : {}), ...(st.actor ? { actor: st.actor } : {}), ...(st.building !== undefined ? { building: st.building } : {}),
+      ...(st.kind === "goal" ? { objectiveType: st.objectiveType, targetCount: st.targetCount, ...(st.targetRef ? { targetRef: st.targetRef } : {}), ...(st.tier ? { tier: st.tier } : {}) } : {}),
+    })),
+    ...(q.questline ? { questline: q.questline } : {}), ...(q.part !== undefined ? { part: q.part } : {}), ...(q.requires ? { requires: q.requires } : {}),
   }));
   return { slug, title: doc.title, map: m.build(doc.spawn, 6), quest: worldQuests[0], extraQuests: worldQuests.slice(1), ...(doc.ambience ? { ambience: doc.ambience } : {}) };
 }
@@ -503,7 +556,7 @@ export function checkPlayable(doc: CustomWorldDoc): string[] {
   const firstId = doc.quests[0]?.id;
   for (const q of doc.quests) {
     for (const [i, st] of q.steps.entries()) {
-      if (st.kind === "visit") continue;
+      if (st.kind === "visit" || st.kind === "goal") continue;
       if (st.kind === "enter") {
         const b = st.building !== undefined ? doc.buildings[st.building] : undefined;
         if (!b) errors.push(`Quest „${q.title}“, Schritt ${i + 1}: Das Gebäude, das betreten werden soll, gibt es nicht mehr.`);
@@ -520,6 +573,15 @@ export function checkPlayable(doc: CustomWorldDoc): string[] {
       const ok = allActorsOf({ actors: doc.actors, buildings: doc.buildings }).some((a) => a.talk.some((t) => t.step === i && (t.quest ?? firstId) === q.id && (t.advance || t.choices?.some((c) => c.success.advance))));
       if (!ok) errors.push(`Quest „${q.title}“, Schritt ${i + 1} lässt sich nicht abschließen: Ein Akteur braucht dafür einen Dialog für diese Quest und „Schritt ${i + 1}“ mit „Quest rückt weiter“.`);
     }
+  }
+  // Location-Typ „Stadt": Pflicht-Ausstattung (siehe defaultCustomWorldDoc-Vorlage). Händler dürfen auch im
+  // Innenraum eines Gebäudes stehen (wie bei den Vorlagen „Laden“/„Schmiede“), daher über alle Akteure prüfen.
+  if (doc.locationType === "town") {
+    const all = allActorsOf({ actors: doc.actors, buildings: doc.buildings });
+    if (!doc.buildings.some((b) => b.role === "shop")) errors.push("Als Stadt braucht die Location ein Händler-Gebäude (Gebäude-Rolle „Händler“).");
+    if (!all.some((a) => a.kind === "merchant")) errors.push("Als Stadt braucht die Location mindestens einen Händler.");
+    if (!doc.buildings.some((b) => b.role === "tavern")) errors.push("Als Stadt braucht die Location ein Taverne-Gebäude (Gebäude-Rolle „Taverne“).");
+    if (!all.some((a) => a.kind === "questboard")) errors.push("Als Stadt braucht die Location ein Schwarzes Brett (Quest-Board).");
   }
   return errors;
 }

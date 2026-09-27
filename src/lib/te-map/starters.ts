@@ -7,9 +7,10 @@ import { placeActor, placeStamp, rectGround, setInteriorFromTemplate, setWall } 
 import { GROUND, type Building } from "./types";
 import type { StampId } from "./stamps";
 
-export type StarterId = "leer" | "dorf" | "lichtung" | "hoehle";
+export type StarterId = "leer" | "stadt" | "dorf" | "lichtung" | "hoehle";
 
 export const STARTERS: { id: StarterId; label: string; description: string; theme: "outdoor" | "cave"; icon: string }[] = [
+  { id: "stadt", label: "Stadt", description: "Taverne, Laden mit Händler und ein Schwarzes Brett (Quest-Board) — erfüllt die Pflichten des Location-Typs „Stadt“.", theme: "outdoor", icon: "🏙️" },
   { id: "dorf", label: "Dorf", description: "Wege, Taverne und Laden mit Innenräumen, ein Brunnen.", theme: "outdoor", icon: "🏘️" },
   { id: "lichtung", label: "Lichtung", description: "Waldlichtung mit Lagerfeuer und Blumen.", theme: "outdoor", icon: "🌲" },
   { id: "hoehle", label: "Höhle", description: "Dunkle Höhle mit Felswänden, Fackeln und einer Truhe.", theme: "cave", icon: "🕳️" },
@@ -18,13 +19,26 @@ export const STARTERS: { id: StarterId; label: string; description: string; them
 
 const stamps = (d: CustomWorldDoc, list: [StampId, number, number][]) => list.reduce((doc, [id, x, y]) => placeStamp(doc, id, x, y), d);
 
-const house = (x: number, y: number, w: number, doorDx: number, k: number, name: string, sign?: Building["sign"]): Building => ({
-  x, y, w, roofRows: 3, roof: { k, r: 0 }, wall: { k: 0, r: 1 }, doorDx, windowDx: w >= 5 ? [0, w - 1].filter((i) => i !== doorDx) : [], name, ...(sign ? { sign } : {}),
+const house = (x: number, y: number, w: number, doorDx: number, k: number, name: string, sign?: Building["sign"], role?: Building["role"]): Building => ({
+  x, y, w, roofRows: 3, roof: { k, r: 0 }, wall: { k: 0, r: 1 }, doorDx, windowDx: w >= 5 ? [0, w - 1].filter((i) => i !== doorDx) : [], name, ...(sign ? { sign } : {}), ...(role ? { role } : {}),
 });
 
 export function starterDoc(id: StarterId, theme: "outdoor" | "cave" = "outdoor"): CustomWorldDoc {
   const base = defaultCustomWorldDoc(id === "hoehle" ? "cave" : theme);
   switch (id) {
+    case "stadt": {
+      let d = base;
+      d = rectGround(d, 2, 15, 27, 16, GROUND.dirt);
+      d = rectGround(d, 14, 8, 15, 16, GROUND.dirt);
+      d = {
+        ...d, title: "Neue Stadt", locationType: "town",
+        buildings: [house(4, 6, 6, 2, 0, "Taverne", "shopMug", "tavern"), house(19, 6, 5, 2, 1, "Laden", "shopSword", "shop")],
+      };
+      d = setInteriorFromTemplate(d, 0, "taverne");
+      d = setInteriorFromTemplate(d, 1, "laden");
+      d = placeActor(d, "questboard", 14, 18).doc; // setzt auch den noticeBoard-Stempel
+      return stamps(d, [["fountain", 6, 13], ["tree", 3, 17], ["tree", 24, 17], ["lamp", 12, 12], ["lamp", 17, 12], ["flowerBed", 20, 12]]);
+    }
     case "dorf": {
       let d = base;
       d = rectGround(d, 2, 15, 27, 16, GROUND.dirt);

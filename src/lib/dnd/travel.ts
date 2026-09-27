@@ -19,6 +19,7 @@ import { prisma } from "../prisma";
 import { positionAlongPath } from "./hex/pathfinding";
 import { stepMinutesOf } from "./hex/world";
 import type { Hex } from "./hex/grid";
+import { advanceQuestSignal } from "./quests";
 
 type PositionCard = Pick<
   Card,
@@ -68,7 +69,12 @@ export function resolveCharacterPosition(card: PositionCard, now: Date = new Dat
   const total = card.travelArrivesAt.getTime() - card.travelDepartedAt.getTime();
   const elapsed = now.getTime() - card.travelDepartedAt.getTime();
   const progress = total > 0 ? Math.min(1, Math.max(0, elapsed / total)) : 1;
-  const pos = positionAlongPath(stepMinutesOf(path), elapsed / 60000);
+  // Die tatsächliche Reise kann durch Begleiter/Ausrüstung/Talent kürzer sein als die reinen Geländekosten (stepMinutesOf); das
+  // Verhältnis lässt sich aus der gespeicherten Ankunftszeit ableiten, ohne den Bonus selbst noch einmal zu speichern.
+  const rawSteps = stepMinutesOf(path);
+  const rawTotal = rawSteps.reduce((a, b) => a + b, 0);
+  const ratio = rawTotal > 0 ? total / 60000 / rawTotal : 1;
+  const pos = positionAlongPath(rawSteps.map((m) => m * ratio), elapsed / 60000);
   return {
     inTransit: true,
     hex: here ?? path[0],
@@ -98,13 +104,15 @@ export async function commitArrivalIfDue(
 ): Promise<{ arrived: boolean; hex?: Hex; locationId?: string | null }> {
   const card = await prisma.card.findUnique({
     where: { id: cardId },
-    select: { id: true, travelToCol: true, travelToRow: true, travelArrivesAt: true },
+    select: { id: true, travelToCol: true, travelToRow: true, travelPath: true, travelArrivesAt: true },
   });
   if (card?.travelToCol == null || card.travelToRow == null || !card.travelArrivesAt) return { arrived: false };
   if (new Date() < card.travelArrivesAt) return { arrived: false };
 
   const hex = { col: card.travelToCol, row: card.travelToRow };
   const location = await locationAtHex(hex);
+  const traveledSteps = (parseTravelPath(card.travelPath)?.length ?? 1) - 1;
+  if (traveledSteps > 0) await advanceQuestSignal(cardId, "TRAVEL_DISTANCE", traveledSteps).catch(() => {});
   await prisma.card.update({
     where: { id: card.id },
     data: {

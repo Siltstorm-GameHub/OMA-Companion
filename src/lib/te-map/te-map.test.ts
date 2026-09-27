@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { groundQuarters, wallQuarters } from "./autotile";
-import { TILE_MS, activeQuestsOf, answerOffer, createGame, drainEvents, isChestOpen, isWalkable, pressAction, questLength, step, syncQuestStep, type Game } from "./engine";
+import { TILE_MS, activeQuestsOf, answerOffer, createGame, drainEvents, isChestOpen, isWalkable, pressAction, questLength, questMarkerOf, step, syncQuestStep, type Game } from "./engine";
 import { WORLD_SLUGS, getWorld } from "./worlds";
 import { LOCATION_HEXES } from "@/lib/dnd/hex/world";
 import { sanitizeTeConfig } from "@/lib/te-character";
@@ -182,6 +182,27 @@ describe("Quest-Ablauf (Hafenstadt)", () => {
     assert.equal(g.questSteps[world.quest.slug], 1);
     syncQuestStep(g, world.quest.slug, 99);
     assert.equal(g.questSteps[world.quest.slug], questLength(world));
+  });
+
+  test("Marker (!/?): Boris zeigt '!' vor der Kette, sperrt Folgequests hinter `requires` und '?' bei fertigem Ziel-Schritt", () => {
+    const world = getWorld("hafenstadt")!;
+    const boris = world.map.actors.find((a) => a.id === "boris")!;
+    const g = createGame(world);
+    assert.equal(questMarkerOf(boris, g.questSteps, world), null, "Erste Übung hängt an der Fracht-Quest, noch nichts anzubieten");
+    g.questSteps[world.quest.slug] = questLength(world); // "Die verlorene Fracht" abgeschlossen
+    assert.equal(questMarkerOf(boris, g.questSteps, world), "offer", "erste Übung ist jetzt verfügbar");
+
+    g.questSteps["welt-hafenstadt-q2"] = 1; // angenommen, Ziel-Schritt noch offen
+    assert.equal(questMarkerOf(boris, g.questSteps, world), null, "mitten im Ziel-Schritt gibt es weder Angebot noch Abgabe");
+
+    g.questSteps["welt-hafenstadt-q2"] = 2; // Ziel erreicht, Abgabe bereit
+    assert.equal(questMarkerOf(boris, g.questSteps, world), "turnin");
+
+    g.questSteps["welt-hafenstadt-q2"] = 3; // abgeschlossen
+    assert.equal(questMarkerOf(boris, g.questSteps, world), "offer", "Folgequest (q3) jetzt freigeschaltet");
+
+    g.questSteps["welt-hafenstadt-q2"] = 0; // (hypothetisch) noch nicht abgeschlossen
+    assert.equal(questMarkerOf(boris, g.questSteps, world), "offer", "q2 selbst wieder anbietbar, q3 bleibt aber gesperrt");
   });
 });
 

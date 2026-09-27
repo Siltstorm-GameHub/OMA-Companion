@@ -41,6 +41,8 @@ export interface Dialog {
   roll?: RollResult;
   /** Händler: nach dem Gespräch lässt sich handeln */
   merchant?: string;
+  /** Schwarzes Brett: nach dem Gespräch lässt sich das Quest-Log öffnen */
+  questBoard?: boolean;
   /** Monster-Figur: nach dem Text lässt sich kämpfen (Akteur + Monster-Art) */
   fight?: { actor: string; monster: string };
 }
@@ -386,6 +388,24 @@ export function isChestOpen(actor: Actor, questSteps: Record<string, number>, wo
   return actor.talk.some((t) => t.advance && typeof t.step === "number" && (questSteps[talkQuest(world, t)] ?? 0) > t.step);
 }
 
+/** Markierung über einem Akteur: „!" hat einen neuen Auftrag anzubieten, „?" wartet auf eine Abgabe (Vorrang vor „!").
+ *  Ein Angebot, dessen Voraussetzungs-Quest (siehe `requires`) noch nicht erfüllt ist, zeigt kein „!" — nur bei
+ *  Voraussetzungen aus derselben Welt prüfbar; unbekannte (andere Welt) gelten vorsichtshalber als nicht erfüllt. */
+export function questMarkerOf(actor: Actor, questSteps: Record<string, number>, world: WorldDef): "offer" | "turnin" | null {
+  const defs = new Map(worldQuestsOf(world).map((q) => [q.slug, q]));
+  let offer = false;
+  for (const t of actor.talk) {
+    if (typeof t.step !== "number" || !t.advance) continue;
+    const slug = talkQuest(world, t);
+    if ((questSteps[slug] ?? 0) !== t.step) continue;
+    if (t.step > 0) return "turnin";
+    const def = defs.get(slug);
+    const reqDef = def?.requires ? defs.get(def.requires) : undefined;
+    if (!def?.requires || (reqDef && (questSteps[def.requires] ?? 0) >= questLen(reqDef))) offer = true;
+  }
+  return offer ? "offer" : null;
+}
+
 const toDialog = (game: Game, actor: Actor, t: Talk): Dialog => {
   const hasChoices = !!t.choices?.length;
   return {
@@ -396,6 +416,7 @@ const toDialog = (game: Game, actor: Actor, t: Talk): Dialog => {
     advance: !hasChoices && t.advance && typeof t.step === "number" ? { quest: talkQuest(game.world, t), from: t.step } : undefined,
     offer: !hasChoices && !!t.advance && t.step === 0,
     ...(actor.kind === "merchant" ? { merchant: actor.id } : {}),
+    ...(actor.kind === "questboard" ? { questBoard: true } : {}),
     ...(hasChoices ? { choices: t.choices!.map((c) => ({ text: c.text, ...(c.check ? { check: { ability: c.check.ability, dc: c.check.dc } } : {}) })), ref: { actor: actor.id, talk: actor.talk.indexOf(t) } } : {}),
   };
 };

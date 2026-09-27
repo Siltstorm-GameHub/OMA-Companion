@@ -101,6 +101,21 @@ describe("Community-Welten (Editor-Dokument)", () => {
     }
   });
 
+  test("Location-Typ „Stadt“: fehlende Pflicht-Ausstattung wird gemeldet, die Vorlage selbst ist vollständig", () => {
+    const bare = { ...clone(defaultCustomWorldDoc()), title: "Kahle Stadt", locationType: "town" as const };
+    const errors = checkPlayable(bare);
+    assert.ok(errors.some((e) => e.includes("Händler-Gebäude")));
+    assert.ok(errors.some((e) => e.includes("mindestens einen Händler")));
+    assert.ok(errors.some((e) => e.includes("Taverne-Gebäude")));
+    assert.ok(errors.some((e) => e.includes("Schwarzes Brett")));
+
+    const withTownDoc = { ...clone(defaultCustomWorldDoc("outdoor", 30, 24, "town")), title: "Stadt" };
+    assert.deepEqual(checkPlayable(withTownDoc), []);
+
+    // Ohne locationType gelten die Pflichten nicht, auch bei derselben kahlen Karte
+    assert.deepEqual(checkPlayable({ ...bare, locationType: undefined }), []);
+  });
+
   test("altes Dokument mit einer einzelnen Quest wird in eine Quest-Liste übernommen", () => {
     const old = { ...clone(defaultCustomWorldDoc()), title: "Alt" } as unknown as Record<string, unknown>;
     delete old.quests;

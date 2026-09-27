@@ -8,7 +8,7 @@
 import type { Card, DndGroupFight, DndGroupFightMember } from "@prisma/client";
 import { prisma } from "../prisma";
 import { getMonster, type Monster } from "./combat";
-import { advanceDndQuestObjective } from "./quests";
+import { advanceQuestSignal } from "./quests";
 import { checkEncounter, fighterOf, grantTierTitle, markSlain, slainOf } from "./combat-server";
 import { tierOf } from "./monster-tier";
 import { activeSeasonKeys } from "./season-server";
@@ -251,7 +251,8 @@ async function finalize(fightId: string, state: GroupState): Promise<void> {
     r.levelUp = levelOf(c.dndXp + granted.xp) > before ? levelOf(c.dndXp + granted.xp) : null;
     if (state.source) await markSlain(r.cardId, state.source, state.tier);
     await grantTierTitle({ id: c.id, name: c.name, dndOwnedTitles: c.dndOwnedTitles }, state.tier ?? "normal");
-    await advanceDndQuestObjective(r.cardId, "MONSTER_SLAIN", 1, m.id).catch(() => {});
+    await advanceQuestSignal(r.cardId, "MONSTER_SLAIN", 1, m.id, state.tier).catch(() => {});
+    if (state.tier && state.tier !== "normal") await advanceQuestSignal(r.cardId, "TIER_SLAIN", 1, state.tier).catch(() => {});
   }
   // Ergebnis für die Anzeige am Kampfzustand festhalten
   await prisma.dndGroupFight.update({ where: { id: fightId }, data: { state: JSON.parse(JSON.stringify({ ...state, results: rewards })) } });

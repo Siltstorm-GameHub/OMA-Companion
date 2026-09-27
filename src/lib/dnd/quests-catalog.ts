@@ -19,79 +19,17 @@ export interface DndQuestDef {
   steps?: QuestStep[];
   /** Saison-Event: nur annehmbar/zählend, solange das Event läuft (Fortschritt und Belohnungen bleiben) */
   event?: "halloween" | "christmas";
+  /** Slug einer Quest, die zuerst abgeschlossen sein muss (Kette) */
+  requires?: string;
   /** Einmalige Belohnung beim Abschluss: Ehrentitel, Karten-Hintergrund (Schlüssel wie in card-catalog), Begleiter (Monster-Id) */
   grant?: { title?: string; bg?: string; companion?: string };
 }
 
-// Hartcodierte Quest-Definitionen (v1) — Discord-/App-Aktivität + ein paar
-// standortgebundene. Weitere Quests sind reine Content-Arbeit (neuer Eintrag).
+// Keine hartcodierten Aktivitäts-/Kampf-Quests mehr (die gibt es jetzt nur noch als tägliche/monatliche Rotation,
+// siehe quests-bounty.ts) — hier stehen nur noch die zeitlich begrenzten Saison-Event-Quests (vom Admin über die
+// Saison-Events-Verwaltung gesteuert, siehe season-events.ts). Alles andere kommt entweder von der Community
+// (Nebenquests im Location-Editor) oder von Admins (Hauptquest, siehe Welt-Editor der festen Locations).
 export const DND_QUESTS: DndQuestDef[] = [
-  {
-    slug: "dnd-plaudertasche",
-    title: "Die Plaudertasche",
-    description: "Schreibe 30 Nachrichten im Discord — dein Charakter hört überall mit.",
-    objectiveType: "MESSAGE_SENT",
-    targetCount: 30,
-    xpReward: 50,
-  },
-  {
-    slug: "dnd-stammgast",
-    title: "Stammgast im Sprachkanal",
-    description: "Verbringe 60 Minuten im Voice-Chat.",
-    objectiveType: "VOICE_MINUTES",
-    targetCount: 60,
-    xpReward: 60,
-  },
-  {
-    slug: "dnd-event-teilnehmer",
-    title: "Auf zum nächsten Event",
-    description: "Melde dich bei einem Community-Event an.",
-    objectiveType: "EVENT_ATTEND",
-    targetCount: 1,
-    xpReward: 40,
-    coinReward: 50,
-  },
-  {
-    slug: "dnd-demokrat",
-    title: "Demokratisches Prinzip",
-    description: "Stimme bei einer Event-Umfrage ab.",
-    objectiveType: "POLL_VOTE",
-    targetCount: 1,
-    xpReward: 20,
-  },
-  {
-    slug: "dnd-arena-kaempfer",
-    title: "Arena-Kämpfer",
-    description: "Bestreite 3 Battle-Cards-Duelle.",
-    objectiveType: "BATTLE_CARD_DUEL",
-    targetCount: 3,
-    xpReward: 80,
-    coinReward: 100,
-  },
-  {
-    slug: "dnd-weltenbummler",
-    title: "Weltenbummler",
-    description: "Besuche 3 verschiedene Locations.",
-    objectiveType: "LOCATION_VISITED",
-    targetCount: 3,
-    xpReward: 70,
-  },
-  {
-    slug: "dnd-geschichtenerzaehler",
-    title: "Geschichtensammler",
-    description: "Erlebe 5 Story-Ereignisse an deinen Reisezielen.",
-    objectiveType: "STORY_NODE_COMPLETED",
-    targetCount: 5,
-    xpReward: 90,
-    coinReward: 75,
-  },
-  // Kampf-Quests: zählen Siege über Monster (targetRef = Monster-Id, ohne Angabe jedes Monster)
-  { slug: "dnd-rattenplage", title: "Egelplage", description: "Besiege 5 Giftegel.", objectiveType: "MONSTER_SLAIN", targetRef: "ratte", targetCount: 5, xpReward: 60 },
-  { slug: "dnd-wolfsjagd", title: "Wolfsjagd", description: "Besiege 3 Wölfe.", objectiveType: "MONSTER_SLAIN", targetRef: "wolf", targetCount: 3, xpReward: 80, coinReward: 40 },
-  { slug: "dnd-goblinplage", title: "Goblin-Plage", description: "Vertreibe 3 Goblin-Plünderer.", objectiveType: "MONSTER_SLAIN", targetRef: "goblin", targetCount: 3, xpReward: 100, coinReward: 50 },
-  { slug: "dnd-knochenjaeger", title: "Knochenjäger", description: "Zerlege 3 rastlose Skelette.", objectiveType: "MONSTER_SLAIN", targetRef: "skelett", targetCount: 3, xpReward: 100 },
-  { slug: "dnd-banditenschreck", title: "Banditenschreck", description: "Besiege einen Banditenhauptmann.", objectiveType: "MONSTER_SLAIN", targetRef: "hauptmann", targetCount: 1, xpReward: 160, coinReward: 80 },
-  { slug: "dnd-monsterjaeger", title: "Monsterjäger", description: "Besiege 10 beliebige Monster.", objectiveType: "MONSTER_SLAIN", targetCount: 10, xpReward: 220, coinReward: 100 },
   // Saison-Events (siehe season-events.ts)
   { slug: "dnd-ev-halloween-geister", title: "Geisterstunde", description: "Vertreibe 5 Spukgeister (nur zu Halloween).", objectiveType: "MONSTER_SLAIN", targetRef: "geist", targetCount: 5, xpReward: 120, coinReward: 40, event: "halloween" },
   { slug: "dnd-ev-halloween-kuerbis", title: "Kürbisernte", description: "Besiege 3 Kürbisköpfe (nur zu Halloween).", objectiveType: "MONSTER_SLAIN", targetRef: "kuerbiskopf", targetCount: 3, xpReward: 160, coinReward: 50, event: "halloween" },

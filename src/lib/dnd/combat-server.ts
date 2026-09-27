@@ -22,7 +22,7 @@ import { checkParams, getInventory, grantRewards } from "./rpg-server";
 import { baitChance, companionFx, ownedCompanions, performTame } from "./companions";
 import { TIER_META, TIER_TITLE, tierOf, type MonsterTier } from "./monster-tier";
 import { logChronicle } from "./chronicle";
-import { advanceDndQuestObjective } from "./quests";
+import { advanceQuestSignal } from "./quests";
 import { buildFighter, encountersFor, getMonster, performAction, rewardFor, startCombat, type Biome, type CombatAction, type CombatState, type Fighter, type Monster } from "./combat";
 
 export interface CombatView {
@@ -149,7 +149,8 @@ export async function actInCombat(card: Card, action: CombatAction): Promise<{ o
     await grantRewards(card, { xp: rew.xp, gold: rew.gold, items: rew.items }, undefined);
     if (next.source) await markSlain(card.id, next.source, tier);
     await grantTierTitle(card, tier);
-    await advanceDndQuestObjective(card.id, "MONSTER_SLAIN", 1, m.id).catch(() => {});
+    await advanceQuestSignal(card.id, "MONSTER_SLAIN", 1, m.id, tier).catch(() => {});
+    if (tier !== "normal") await advanceQuestSignal(card.id, "TIER_SLAIN", 1, tier).catch(() => {});
     if (m.level >= 6) await logChronicle("event", `${card.name} hat ${m.name} besiegt.`, undefined);
     return { ok: true };
   }
@@ -183,6 +184,7 @@ export async function tameInCombat(card: Card, baitKey: string): Promise<{ ok: t
   if (next.status === "tamed") {
     await prisma.card.update({ where: { id: card.id }, data: { dndCompanions: [...owned, next.monsterId], ...(card.dndCompanion ? {} : { dndCompanion: next.monsterId }) } });
     if (next.source) await markSlain(card.id, next.source, next.tier);
+    await advanceQuestSignal(card.id, "COMPANION_TAMED", 1, next.monsterId).catch(() => {});
   }
   return { ok: true };
 }

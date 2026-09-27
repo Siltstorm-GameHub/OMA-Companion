@@ -135,7 +135,7 @@ export class MapBuilder {
   }
   /** Fertigen Akteur übernehmen (Editor-Welten: Aussehen kommt aus der Konfiguration, nicht aus einem Seed). */
   addActor(a: Actor) {
-    if (a.kind === "sign") this.actors.push(a);
+    if (a.kind === "sign" || a.kind === "questboard") this.actors.push(a);
     else this.actor(a);
   }
   chest(id: string, name: string, x: number, y: number, talk: Talk[]) {
@@ -144,6 +144,11 @@ export class MapBuilder {
   /** Schild: liegt auf einem vorhandenen (soliden) Stempel und wird nur angesprochen. */
   sign(id: string, name: string, x: number, y: number, lines: string[]) {
     this.actors.push({ id, kind: "sign", name, x, y, dir: "down", talk: [{ step: "*", lines }] });
+  }
+  /** Schwarzes Brett/Quest-Board: liegt wie ein Schild auf einem vorhandenen Stempel (z. B. `noticeBoard`), öffnet
+   *  aber statt reinem Text das Quest-Log (siehe `Dialog.questBoard` in engine.ts). */
+  questboard(id: string, name: string, x: number, y: number, lines: string[]) {
+    this.actors.push({ id, kind: "questboard", name, x, y, dir: "down", talk: [{ step: "*", lines }] });
   }
 
   // ── Ränder ──

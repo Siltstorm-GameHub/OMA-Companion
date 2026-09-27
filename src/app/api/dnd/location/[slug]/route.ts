@@ -5,9 +5,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getLocationEventLog, runStoryTick } from "@/lib/dnd/story";
 import { commitArrivalIfDue } from "@/lib/dnd/travel";
-import { completeVisitSteps, ensureDndQuestsSeeded, getWorldQuestSteps } from "@/lib/dnd/quests";
+import { completeVisitSteps, ensureDailyBounties, ensureDndQuestsSeeded, getWorldQuestSteps } from "@/lib/dnd/quests";
 import { getTracker } from "@/lib/dnd/quest-log";
-import { getInventory } from "@/lib/dnd/rpg-server";
+import { discoverLocation, getInventory } from "@/lib/dnd/rpg-server";
 import { getBuilderAccess } from "@/lib/dnd/custom-worlds";
 import { hasMinRole } from "@/lib/roles";
 import { biomeOfTerrain, levelOf } from "@/lib/te-map/rpg";
@@ -64,6 +64,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
   let tracker: Awaited<ReturnType<typeof getTracker>> = [];
   if (canEnter && myCard) {
     await ensureDndQuestsSeeded();
+    await ensureDailyBounties();
+    await discoverLocation(myCard, slug);
     visits = await completeVisitSteps(myCard.id, slug);
     questSteps = await getWorldQuestSteps(myCard.id, slug);
     tracker = await getTracker(myCard.id);

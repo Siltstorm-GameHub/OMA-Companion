@@ -280,6 +280,18 @@ export default function WorldEditor({ id }: { id: string }) {
                   </span>
                   <span className="block text-[10px] text-gray-500 mt-0.5">Innenräume bringen ihr eigenes Geräusch mit (Taverne, Schmiede); bei Regen, Sturm und Schnee legt sich draußen das Wetter darüber.</span>
                 </label>
+                <label className="text-[11px] text-gray-400 sm:col-span-2">Location-Typ
+                  <select
+                    value={doc.locationType ?? "wild"}
+                    onFocus={beginEdit}
+                    onChange={(e) => { const v = e.target.value; const { locationType: _old, ...rest } = doc; void _old; change(v === "town" ? { ...rest, locationType: "town" } : rest); }}
+                    className="mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-1.5 text-sm text-white"
+                  >
+                    <option value="wild">Normal</option>
+                    <option value="town">Stadt</option>
+                  </select>
+                  <span className="block text-[10px] text-gray-500 mt-0.5">Als „Stadt“ braucht die Location ein Händler-Gebäude (mit Händler), ein Taverne-Gebäude und ein Schwarzes Brett (Quest-Board) — die Gebäude-Rolle stellst du bei jedem Gebäude selbst ein.</span>
+                </label>
               </div>
             )}
             <HexPicker

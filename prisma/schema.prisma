@@ -2321,8 +2321,25 @@ model DndQuest {
   locationId      String?
   location        DndLocation? @relation(fields: [locationId], references: [id])
   createdAt       DateTime     @default(now())
+  // Story: leer = Hauptstory (fest codiert, von Admins verwaltet); gesetzt = Nebenquest einer Community-Location, geschrieben von diesem User
+  authorId        String?
+  // Anzeigename des Autors zur Zeit des letzten Veröffentlichens (denormalisiert, damit das Quest-Log nicht je Zeile nachschlagen muss)
+  authorName      String?
+  // Questreihe: freier Name, unter dem der Autor mehrere zusammengehörige Quests veröffentlicht (auch über mehrere Locations hinweg)
+  questline       String?
+  // Teil-Nummer innerhalb der Questreihe (Anzeige "Teil 2"), vom Autor vergeben
+  part            Int?
+  // Slug einer Quest, die zuerst abgeschlossen sein muss (Kette); unbekannter/gelöschter Slug wirkt wie "keine Voraussetzung"
+  requires        String?
+  // Täglicher Bounty aus dem gemeinsamen Pool (quests-bounty.ts); Slug trägt das Datum, Fortschritt beginnt so jeden Tag neu
+  bounty          Boolean      @default(false)
+  // "daily" | "monthly" — nur bei bounty=true gesetzt, für die Gruppierung im Quest-Log
+  bountyCadence   String?
 
   progress DndQuestProgress[]
+
+  @@index([authorId])
+  @@index([questline])
 }
 
 model DndQuestProgress {
@@ -2337,6 +2354,8 @@ model DndQuestProgress {
   rewarded    Boolean   @default(false)
   // Wird im Spiel-HUD angezeigt (verfolgt); angenommene Quests sind zunächst verfolgt
   tracked     Boolean   @default(true)
+  // Fortschritt innerhalb des aktuellen "Ziel"-Schritts (kind "goal", z. B. 2 von 3 Elite-Wölfen); nur für WORLD_STEP-Quests relevant
+  goalProgress Int      @default(0)
 
   @@unique([cardId, questId])
 }

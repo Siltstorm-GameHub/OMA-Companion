@@ -16,6 +16,8 @@ export interface ItemDef {
   desc: string;
   price: number;
   bonus?: { ability: Ability; value: number };
+  /** Verkürzt die Reisezeit (Anteil, z. B. 0.1 = 10 % schneller) */
+  travelSpeed?: number;
 }
 
 export const SLOT_LABEL: Record<ItemSlot, string> = { weapon: "Waffe", armor: "Rüstung", trinket: "Schmuck", loot: "Fundstück", bait: "Zähmköder" };
@@ -31,7 +33,8 @@ export const ITEMS: ItemDef[] = [
   { key: "reisemantel", name: "Reisemantel", emoji: "🧥", slot: "armor", desc: "Wetterfest und schick genug für Verhandlungen.", price: 70, bonus: { ability: "cha", value: 1 } },
   { key: "glueckstaler", name: "Glückstaler", emoji: "🍀", slot: "trinket", desc: "Fällt erstaunlich oft auf die richtige Seite.", price: 80, bonus: { ability: "cha", value: 1 } },
   { key: "eulenamulett", name: "Eulenamulett", emoji: "🦉", slot: "trinket", desc: "Man fühlt sich klüger. Vielleicht ist man es sogar.", price: 110, bonus: { ability: "int", value: 1 } },
-  { key: "wanderstiefel", name: "Wanderstiefel", emoji: "🥾", slot: "trinket", desc: "Machen jeden Weg ein bisschen kürzer.", price: 75, bonus: { ability: "dex", value: 1 } },
+  { key: "wanderstiefel", name: "Wanderstiefel", emoji: "🥾", slot: "trinket", desc: "Machen jeden Weg ein bisschen kürzer.", price: 75, bonus: { ability: "dex", value: 1 }, travelSpeed: 0.08 },
+  { key: "siebenmeilenstiefel", name: "Siebenmeilenstiefel", emoji: "👢", slot: "trinket", desc: "Jeder Schritt trägt weiter, als er sollte. Reisen fühlen sich halb so lang an.", price: 220, travelSpeed: 0.18 },
   { key: "koeder-einfach", name: "Einfacher Zähmköder", emoji: "🍖", slot: "bait", desc: "Zähmt ein geschwächtes Monster (unter 25 % LP) mit 30 % Chance.", price: 40 },
   { key: "koeder-gut", name: "Guter Zähmköder", emoji: "🥩", slot: "bait", desc: "Zähmt ein geschwächtes Monster (unter 25 % LP) mit 55 % Chance.", price: 120 },
   { key: "koeder-meister", name: "Meister-Zähmköder", emoji: "🍯", slot: "bait", desc: "Zähmt ein geschwächtes Monster (unter 25 % LP) mit 80 % Chance.", price: 300 },

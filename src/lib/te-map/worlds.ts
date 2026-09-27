@@ -37,6 +37,16 @@ const quest = (slug: string, title: string, objectives: [string, string, string]
   slug, title, objectives: [...objectives, "Abgeschlossen!"], xpReward,
 });
 
+/** Auftraggeber einer Zusatz-Quest (Kette in derselben Welt): Angebot (Schritt 0, rückt vor), stiller Zwischenschritt
+ *  (Ziel/Besuch, kein Dialog nötig), Abgabe (letzter Schritt, rückt vor + schließt ab), sonst Plauderei. */
+function chainTalk(questSlug: string, offer: string[], turnIn: string[], after: string[], lastStep: number): Talk[] {
+  return [
+    { step: 0, quest: questSlug, lines: offer, advance: true },
+    { step: lastStep, quest: questSlug, lines: turnIn, advance: true },
+    { step: "*", lines: after },
+  ];
+}
+
 // Dach-/Wandblöcke (A3): Dächer braun 0, gold 1, grün 2, rot 3, blau 4, dunkel 5; Wände 0/1 (Zeile 1) bzw. 0/3 (Zeile 3)
 /** Innenraum aus einer Vorlage; NPCs/Händler bekommen ein festes Aussehen aus dem Seed. */
 const inside = (templateId: string, seed: number): Interior => {
@@ -56,9 +66,9 @@ function hafenstadt(): WorldDef {
   m.fill(GROUND.cobble, 13, 10, 10, 8);
   m.keepClear(13, 10, 10, 8);
   m.building(house({ name: "Hafenmeisterei", x: 4, y: 3, w: 6, roof: { k: 0, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 2, windowDx: [0, 4] }));
-  m.building(house({ name: "Fischhalle", x: 24, y: 3, w: 7, roof: { k: 3, r: 0 }, wall: { k: 4, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopSword" }));
+  m.building(house({ name: "Fischhalle", x: 24, y: 3, w: 7, roof: { k: 3, r: 0 }, wall: { k: 4, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopSword", role: "shop" }));
   m.building(house({ name: "Lagerhaus", x: 4, y: 19, w: 6, roof: { k: 2, r: 0 }, wall: { k: 0, r: 3 }, doorDx: 2, windowDx: [0, 4], interior: inside("lager", 601) }));
-  m.building(house({ name: "Zum Halben Anker", x: 22, y: 19, w: 7, roof: { k: 4, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopMug", interior: inside("taverne", 501) }));
+  m.building(house({ name: "Zum Halben Anker", x: 22, y: 19, w: 7, roof: { k: 4, r: 0 }, wall: { k: 0, r: 1 }, doorDx: 3, windowDx: [1, 5], sign: "shopMug", interior: inside("taverne", 501), role: "tavern" }));
   m.road([[6, 8], [6, 13]], 2);
   m.road([[27, 8], [27, 13]], 2);
   m.road([[6, 24], [17, 24]], 2);
@@ -70,6 +80,10 @@ function hafenstadt(): WorldDef {
   m.place("benchWide", 14, 16);
   m.place("flowerTub", 20, 16);
   m.place("noticeBoard", 15, 8);
+  m.questboard("brett", "Schwarzes Brett", 15, 8, [
+    "Ein Brett voller angepinnter Zettel: Gesuche, Verträge, ein paar durchgestrichene Preise.",
+    "Ganz unten hängt wieder eine dieser Patchnotizen.",
+  ]);
   m.place("sign", 19, 8);
   m.place("planks", 32, 22);
   m.chest("fracht", "Frachtkiste", 31, 19, chestTalk(
@@ -106,13 +120,69 @@ function hafenstadt(): WorldDef {
     talk: [{ step: "*", lines: ["Frisch vom Kahn! Naja, vom Kahn. Schau dich um."] }],
   });
   m.sign("schild", "Schild", 19, 8, ["Willkommen in Alt-Hafenstadt! Es riecht nach Fisch und schlechten Entscheidungen."]);
+  m.sign("patchnotiz", "Angepinnter Zettel", 15, 9, [
+    "„Patchnotiz 0.7.3: Fischgeruch in Alt-Hafenstadt um 4% erhöht. Für ein ausgewogeneres Spielerlebnis.“",
+    "Niemand weiß, wer diese Zettel überall aufhängt. Oder warum.",
+  ]);
   for (const [x, y] of [[3, 8], [10, 8]]) m.place("barrel", x, y);
   m.place("crate", 23, 8);
   m.place("hay", 30, 24);
   m.scatter(["flowerBed", "rocks", "hedgeFlowers"], 14, [2, 2, 32, 24]);
-  return { slug: "hafenstadt", title: "Alt-Hafenstadt", map: m.build({ x: 17, y: 15 }), quest: quest("welt-hafenstadt", "Die verlorene Fracht", [
-    "Sprich mit Hafenmeisterin Olga.", "Finde die Frachtkiste im Osten der Stadt.", "Bring den Frachtbrief zu Olga.",
-  ], 40) };
+
+  // ── Kapitel 0: Ausbildung (Tutorial-Kette, nur hier in Alt-Hafenstadt) ──
+  m.npc("boris", "Wehrmeister Boris", 9, 16, "right", 14, [
+    ...chainTalk("welt-hafenstadt-q2",
+      ["Na, Frischling? Bevor du dich Monstern stellst, übe an etwas Kleinem. Da drüben am Kai wimmelt's von Giftegeln.", "Erledige einen. Ich hab schon Schlimmeres bluten sehen."],
+      ["Einen Giftegel weniger. Respekt — oder Glück. Meistens ist es Glück.", "Als Nächstes: Zähmen. Kauf dir bei Berta einen Zähmköder und mach dir einen Freund, statt ihn zu verhauen."],
+      ["Kai ist im Osten. Die Dinger sind harmlos, solange du nicht schläfst."],
+      2),
+    ...chainTalk("welt-hafenstadt-q3",
+      ["Ein Zähmköder von Berta, ein Monster unter einem Viertel seiner Lebenspunkte, fertig ist der Begleiter.", "Zähm mir irgendwas. Ich zähl's nicht nach."],
+      ["Schau dir das an, dein eigenes kleines Monster! Es folgt dir jetzt überall hin. Fast schon niedlich.", "Wenn du weiterkommen willst, schau auch mal in deinen Fähigkeitsbaum — da wartet einiges."],
+      ["Berta verkauft die Köder gleich hier auf dem Platz."],
+      2),
+    { step: "*", lines: ["Haltung, Klinge, Nerven aus Stahl. Zwei von drei reichen meistens."] },
+  ]);
+  m.npc("mira", "Reiseleiterin Mira", 21, 8, "down", 15, [
+    { step: 0, quest: "welt-hafenstadt-q4", lines: ["Du warst noch nie außerhalb der Stadt? Das ändern wir. Reis einmal in den Krähwald — und wieder zurück, wenn's dich nicht verschluckt.", "Die Weltkarte findest du über deinen Charakter. Ich warte hier."], advance: true },
+    { step: "*", lines: ["Reisen bildet — und wer weiß, irgendwann biete ich hier auch Schnellreise für ein paar Münzen an. Aber erst, wenn du die ganze Hauptgeschichte durch hast. Geschäft ist Geschäft."] },
+  ]);
+
+  return {
+    slug: "hafenstadt", title: "Alt-Hafenstadt", map: m.build({ x: 17, y: 15 }),
+    quest: quest("welt-hafenstadt", "Die verlorene Fracht", [
+      "Sprich mit Hafenmeisterin Olga.", "Finde die Frachtkiste im Osten der Stadt.", "Bring den Frachtbrief zu Olga.",
+    ], 40),
+    extraQuests: [
+      {
+        slug: "welt-hafenstadt-q2", title: "Erste Übung", xpReward: 30, requires: "welt-hafenstadt",
+        objectives: ["Sprich mit Wehrmeister Boris.", "Besiege einen Giftegel am Kai.", "Melde dich bei Boris zurück.", "Abgeschlossen!"],
+        steps: [
+          { kind: "talk", text: "Sprich mit Wehrmeister Boris." },
+          { kind: "goal", text: "Besiege einen Giftegel.", objectiveType: "MONSTER_SLAIN", targetRef: "ratte", targetCount: 1 },
+          { kind: "talk", text: "Melde dich bei Boris zurück." },
+        ],
+      },
+      {
+        slug: "welt-hafenstadt-q3", title: "Ein neuer Freund", xpReward: 30, requires: "welt-hafenstadt-q2",
+        objectives: ["Sprich mit Boris.", "Zähme ein Monster (Köder bei Berta kaufen).", "Zeig Boris deinen neuen Begleiter.", "Abgeschlossen!"],
+        steps: [
+          { kind: "talk", text: "Sprich mit Boris." },
+          { kind: "goal", text: "Zähme ein Monster.", objectiveType: "COMPANION_TAMED", targetCount: 1 },
+          { kind: "talk", text: "Zeig Boris deinen neuen Begleiter." },
+        ],
+      },
+      {
+        slug: "welt-hafenstadt-q4", title: "Erste Reise", xpReward: 30, requires: "welt-hafenstadt-q3",
+        objectives: ["Sprich mit Reiseleiterin Mira.", "Reise in den Krähwald.", "Kehre nach Alt-Hafenstadt zurück.", "Abgeschlossen!"],
+        steps: [
+          { kind: "talk", text: "Sprich mit Reiseleiterin Mira." },
+          { kind: "visit", text: "Reise in den Krähwald.", location: "waldpfad" },
+          { kind: "visit", text: "Kehre nach Alt-Hafenstadt zurück.", location: "hafenstadt" },
+        ],
+      },
+    ],
+  };
 }
 
 // ── 2 Krähwald ──────────────────────────────────────────────

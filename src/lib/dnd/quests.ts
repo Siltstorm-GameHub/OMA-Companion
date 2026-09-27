@@ -23,6 +23,7 @@ export { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { DND_QUESTS, type DndQuestDef } from "./quests-catalog";
 import { activeSeasonKeys } from "./season-server";
 import { seasonOfQuest } from "./season-events";
+import { bountiesOf, bountySlug, periodKey, type BountyCadence } from "./quests-bounty";
 
 /** Quests der begehbaren Welten (eine je Location, siehe lib/te-map/worlds.ts). Fortschritt = erledigte
  *  Schritte; bewusst nur XP als Belohnung, weil der Client die Schritte meldet (keine Coins). */
@@ -63,7 +64,7 @@ export async function ensureDndQuestsSeeded(): Promise<void> {
     const existing = await prisma.dndQuest.findUnique({ where: { slug: q.slug }, select: { id: true, adminEdited: true } });
     if (existing?.adminEdited) continue;
     const fields = {
-      title: q.title, description: q.description, targetCount: q.targetCount, xpReward: q.xpReward, coinReward: q.coinReward ?? 0,
+      title: q.title, description: q.description, targetCount: q.targetCount, xpReward: q.xpReward, coinReward: q.coinReward ?? 0, requires: q.requires ?? null,
       ...(q.steps ? { steps: q.steps as unknown as object } : {}),
     };
     if (existing) {
@@ -74,6 +75,38 @@ export async function ensureDndQuestsSeeded(): Promise<void> {
       });
     }
   }
+}
+
+/** Die 3 Vorlagen dieser Rotation (täglich/monatlich) — legt sie beim ersten Aufruf des Zeitraums an. Gibt ihre Slugs zurück. */
+async function ensureBounties(cadence: BountyCadence): Promise<string[]> {
+  const key = periodKey(cadence);
+  const templates = bountiesOf(cadence, key);
+  const slugs = templates.map((t) => bountySlug(cadence, key, t.id));
+  const existing = await prisma.dndQuest.findMany({ where: { slug: { in: slugs } }, select: { slug: true } });
+  const have = new Set(existing.map((e) => e.slug));
+  for (const t of templates) {
+    const slug = bountySlug(cadence, key, t.id);
+    if (have.has(slug)) continue;
+    await prisma.dndQuest.create({
+      data: { slug, title: t.title, description: t.description, objectiveType: t.objectiveType, targetRef: t.targetRef, targetCount: t.targetCount, xpReward: t.xpReward, coinReward: t.coinReward, bounty: true, bountyCadence: cadence },
+    });
+  }
+  return slugs;
+}
+
+/** Die 3 täglichen und 3 monatlichen Aktivitäts-Quests von jetzt (gemeinsame Liste für alle) — keine Story, reine Aktivitätsziele. */
+export async function ensureDailyBounties(): Promise<string[]> {
+  const [daily, monthly] = await Promise.all([ensureBounties("daily"), ensureBounties("monthly")]);
+  return [...daily, ...monthly];
+}
+
+/** Ist eine Voraussetzungs-Quest (falls gesetzt) für diese Karte abgeschlossen? Unbekannter/gelöschter Slug wirkt wie "keine Voraussetzung". */
+export async function prereqMet(cardId: string, requiresSlug: string | null | undefined): Promise<boolean> {
+  if (!requiresSlug) return true;
+  const req = await prisma.dndQuest.findUnique({ where: { slug: requiresSlug }, select: { id: true } });
+  if (!req) return true;
+  const progress = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: req.id } }, select: { completed: true } });
+  return !!progress?.completed;
 }
 
 /** Einmalige Extra-Belohnung einer Quest (Event-Titel, Karten-Hintergrund, Begleiter). */
@@ -141,6 +174,43 @@ export async function advanceDndQuestObjective(
   }
 }
 
+interface GoalStepJson { kind?: string; objectiveType?: string; targetRef?: string; tier?: string; targetCount?: number }
+
+/** "Ziel"-Schritte laufender Welt-Quests (Community-Locations, z. B. "3 Elite-Wölfe besiegen"): rückt den Schritt automatisch
+ *  weiter, sobald sein Ziel erreicht ist — wie ein abgeschlossener Dialog-Schritt, nur ohne Dialog. */
+async function advanceWorldGoalSteps(cardId: string, objectiveType: string, ref: string | undefined, increment: number, tier?: string): Promise<void> {
+  const rows = await prisma.dndQuestProgress.findMany({ where: { cardId, completed: false, quest: { objectiveType: "WORLD_STEP" } }, include: { quest: true } });
+  for (const row of rows) {
+    const steps = Array.isArray(row.quest.steps) ? (row.quest.steps as unknown as GoalStepJson[]) : [];
+    const step = steps[row.current];
+    if (!step || step.kind !== "goal" || step.objectiveType !== objectiveType) continue;
+    if (step.targetRef && step.targetRef !== ref) continue;
+    if (step.tier && step.tier !== tier) continue;
+    const goalTarget = Math.max(1, step.targetCount ?? 1);
+    const newGoal = Math.min((row.goalProgress ?? 0) + increment, goalTarget);
+    if (newGoal < goalTarget) {
+      await prisma.dndQuestProgress.update({ where: { id: row.id }, data: { goalProgress: newGoal } });
+      continue;
+    }
+    const next = row.current + 1;
+    const completed = next >= row.quest.targetCount;
+    await prisma.dndQuestProgress.update({
+      where: { id: row.id },
+      data: { current: next, goalProgress: 0, completed, completedAt: completed ? new Date() : undefined, rewarded: completed ? true : undefined },
+    });
+    if (completed && row.quest.locationId) {
+      const loc = await prisma.dndLocation.findUnique({ where: { id: row.quest.locationId }, select: { slug: true } });
+      if (loc) await grantWorldQuestReward(cardId, row.quest, loc.slug);
+    }
+  }
+}
+
+/** Ein Spielereignis melden: zählt für Aktivitäts-/Bounty-/Katalog-Quests (targetRef-Abgleich wie bisher) UND für "Ziel"-Schritte
+ *  laufender Community-Welt-Quests. Einzige Stelle, die Kampf-/Zähm-/Reise-/Sammel-/Entdeckungs-Ereignisse an Quests meldet. */
+export async function advanceQuestSignal(cardId: string, objectiveType: string, increment: number, ref?: string, tier?: string): Promise<void> {
+  await Promise.all([advanceDndQuestObjective(cardId, objectiveType, increment, ref), advanceWorldGoalSteps(cardId, objectiveType, ref, increment, tier)]);
+}
+
 /** Belohnung für eine abgeschlossene Welt-Quest: XP (der Client meldet Schritte, deshalb keine Coins), Stufenaufstieg und
  *  Quest in der Chronik, halbe XP für Gruppenmitglieder am selben Ort. */
 async function grantWorldQuestReward(cardId: string, quest: { title: string; xpReward: number }, locationSlug: string) {
@@ -185,6 +255,8 @@ export async function advanceWorldQuestStep(
   if (existing?.completed || current !== fromStep || fromStep >= quest.targetCount) {
     return { step: existing?.completed ? quest.targetCount : current, completed: !!existing?.completed };
   }
+  // Kette: die Voraussetzungs-Quest muss abgeschlossen sein, bevor man diese hier annimmt (erster Schritt = Angebot)
+  if (!existing && fromStep === 0 && !(await prereqMet(cardId, quest.requires))) return { step: 0, completed: false };
 
   const next = current + 1;
   const completed = next >= quest.targetCount;

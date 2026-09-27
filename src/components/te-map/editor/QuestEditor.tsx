@@ -9,8 +9,10 @@
 // betritt — so laufen Quests über mehrere Locations. Mehrere Quests können am selben Akteur hängen.
 
 import { useEffect, useRef, useState } from "react";
-import { LIMITS, type CustomWorldDoc, type CustomWorldQuest, type DocQuestStep } from "@/lib/te-map/custom-world";
+import { docQuestSlug, LIMITS, type CustomWorldDoc, type CustomWorldQuest, type DocQuestStep } from "@/lib/te-map/custom-world";
 import { allActors, bindTalkStep, locateActor, mapAllActors, updateAnyActor } from "@/lib/te-map/custom-world-edit";
+import { GOAL_STEP_TYPES } from "@/lib/dnd/quest-objectives";
+import { MONSTERS } from "@/lib/dnd/combat";
 import TalkAdvanced from "./TalkAdvanced";
 import type { Actor, Talk } from "@/lib/te-map/types";
 
@@ -28,11 +30,14 @@ const input = "mt-0.5 w-full rounded bg-zinc-900 border border-white/10 px-2 py-
 export default function QuestEditor({ doc, readOnly, onChange, focusActorId, ownSlug }: Props) {
   const [qi, setQi] = useState(0);
   const [locations, setLocations] = useState<{ slug: string; name: string }[]>([]);
+  const [myQuests, setMyQuests] = useState<{ slug: string; title: string; locationName: string }[]>([]);
+  const [myQuestlines, setMyQuestlines] = useState<string[]>([]);
   const focusRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { focusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [focusActorId]);
   useEffect(() => {
     let cancelled = false;
     fetch("/api/dnd/custom-worlds/hexes").then((r) => r.json()).then((j) => { if (!cancelled && j.taken) setLocations(j.taken.map((t: { slug: string; name: string }) => ({ slug: t.slug, name: t.name }))); }).catch(() => {});
+    fetch("/api/dnd/custom-worlds/my-quests").then((r) => r.json()).then((j) => { if (!cancelled) { setMyQuests(j.quests ?? []); setMyQuestlines(j.questlines ?? []); } }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -71,9 +76,29 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
 
   const enterable = doc.buildings.flatMap((b, i) => (b.interior ? [{ index: i, name: b.name || `Gebäude ${i + 1}` }] : []));
   const talkers = allActors(doc).filter((a) => a.kind === "npc" || a.kind === "merchant" || a.kind === "chest");
-  const addStep = (kind: "talk" | "visit" | "enter") => {
+  const placedMonsters = [...new Set(allActors(doc).flatMap((a) => (a.kind === "monster" && a.monster ? [a.monster] : [])))];
+  const addStep = (kind: "talk" | "visit" | "enter" | "goal") => {
     if (quest.steps.length >= LIMITS.maxSteps) return;
-    patchQuest({ steps: [...quest.steps, { kind, text: "", ...(kind === "visit" ? { location: locations.find((l) => l.slug !== ownSlug)?.slug } : {}), ...(kind === "enter" && enterable[0] ? { building: enterable[0].index } : {}) }] });
+    patchQuest({
+      steps: [...quest.steps, {
+        kind, text: "",
+        ...(kind === "visit" ? { location: locations.find((l) => l.slug !== ownSlug)?.slug } : {}),
+        ...(kind === "enter" && enterable[0] ? { building: enterable[0].index } : {}),
+        ...(kind === "goal" ? { objectiveType: "MONSTER_SLAIN", targetCount: 3, ...(placedMonsters[0] ? { targetRef: placedMonsters[0] } : {}) } : {}),
+      }],
+    });
+  };
+  /** Diese Quest als Vorlage für den nächsten Teil einer Questreihe nutzen: gleiche Reihe, Teil+1, Voraussetzung = diese Quest. */
+  const duplicateAsNextPart = () => {
+    if (quests.length >= LIMITS.maxQuests) return;
+    let n = quests.length + 1;
+    while (quests.some((q) => q.id === `q${n}`)) n++;
+    const mySlug = docQuestSlug(ownSlug, quest.id);
+    setQuests([...quests, {
+      id: `q${n}`, title: `${quest.title} — Teil ${(quest.part ?? 1) + 1}`, steps: [{ kind: "talk", text: "" }], done: "Abgeschlossen!", xpReward: quest.xpReward,
+      ...(quest.questline ? { questline: quest.questline } : {}), part: (quest.part ?? 1) + 1, requires: mySlug,
+    }]);
+    setQi(quests.length);
   };
   /** Schritt „Gespräch“ an einen bestimmten NPC binden: der bekommt automatisch den passenden Dialog. */
   const bindActor = (i: number, actorId: string) => {
@@ -118,6 +143,30 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
           <input type="number" min={0} max={LIMITS.maxXp} value={quest.xpReward} disabled={readOnly} onChange={(e) => patchQuest({ xpReward: Math.min(LIMITS.maxXp, Math.max(0, Math.round(Number(e.target.value) || 0))) })} className={input} />
         </label>
 
+        <div className="rounded-lg border border-violet-400/20 bg-violet-500/5 p-2.5 space-y-2">
+          <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">Questreihe (optional)</p>
+          <label className="block text-[11px] text-gray-400">Name der Reihe — Spieler sehen ihn als Serie, auch über mehrere Locations hinweg
+            <input value={quest.questline ?? ""} maxLength={LIMITS.titleLen} disabled={readOnly} list="oq-questlines" placeholder="z. B. Die Asche-Chroniken" onChange={(e) => patchQuest({ questline: e.target.value || undefined })} className={input} />
+            <datalist id="oq-questlines">{myQuestlines.map((n) => <option key={n} value={n} />)}</datalist>
+          </label>
+          {quest.questline && (
+            <label className="block text-[11px] text-gray-400">Teil-Nummer
+              <input type="number" min={1} max={99} value={quest.part ?? 1} disabled={readOnly} onChange={(e) => patchQuest({ part: Math.min(99, Math.max(1, Math.round(Number(e.target.value) || 1))) })} className={input} />
+            </label>
+          )}
+          <label className="block text-[11px] text-gray-400">Voraussetzung — erst annehmbar, wenn diese Quest abgeschlossen ist
+            <select value={quest.requires ?? ""} disabled={readOnly} onChange={(e) => patchQuest({ requires: e.target.value || undefined })} className={input}>
+              <option value="">Keine</option>
+              {myQuests.filter((q) => q.slug !== docQuestSlug(ownSlug, quest.id)).map((q) => <option key={q.slug} value={q.slug}>{q.title} ({q.locationName})</option>)}
+            </select>
+          </label>
+          {!readOnly && (
+            <button type="button" onClick={duplicateAsNextPart} disabled={quests.length >= LIMITS.maxQuests} className="w-full rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold py-1.5 hover:border-white/30 disabled:opacity-50">
+              + Nächsten Teil dieser Reihe anlegen
+            </button>
+          )}
+        </div>
+
         <div className="space-y-2">
           <p className="text-[11px] text-gray-400">Schritte</p>
           {quest.steps.map((st, i) => (
@@ -131,15 +180,23 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
                     value={st.kind} disabled={readOnly}
                     onChange={(e) => {
                       const k = e.target.value;
-                      const { actor: _a, building: _b, location: _l, ...rest } = st;
-                      void _a; void _b; void _l;
-                      patchQuest({ steps: quest.steps.map((s, si) => (si === i ? (k === "visit" ? { ...rest, kind: "visit", location: locations.find((l) => l.slug !== ownSlug)?.slug } : k === "enter" ? { ...rest, kind: "enter", ...(enterable[0] ? { building: enterable[0].index } : {}) } : { ...rest, kind: "talk" }) : s)) });
+                      const { actor: _a, building: _b, location: _l, objectiveType: _o, targetRef: _r, tier: _t, targetCount: _c, ...rest } = st;
+                      void _a; void _b; void _l; void _o; void _r; void _t; void _c;
+                      patchQuest({
+                        steps: quest.steps.map((s, si) => (si === i ? (
+                          k === "visit" ? { ...rest, kind: "visit", location: locations.find((l) => l.slug !== ownSlug)?.slug }
+                          : k === "enter" ? { ...rest, kind: "enter", ...(enterable[0] ? { building: enterable[0].index } : {}) }
+                          : k === "goal" ? { ...rest, kind: "goal", objectiveType: "MONSTER_SLAIN", targetCount: 3, ...(placedMonsters[0] ? { targetRef: placedMonsters[0] } : {}) }
+                          : { ...rest, kind: "talk" }
+                        ) : s)),
+                      });
                     }}
                     className="rounded bg-zinc-900 border border-white/10 px-1.5 py-0.5 text-white text-[11px]"
                   >
                     <option value="talk">Gespräch mit einem NPC</option>
                     <option value="enter">Gebäude betreten</option>
                     <option value="visit">Location erreichen</option>
+                    <option value="goal">Ziel erreichen (z. B. Monster besiegen)</option>
                   </select>
                 )}
                 {!readOnly && quest.steps.length > LIMITS.minSteps && (
@@ -172,7 +229,36 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
                   {locations.filter((l) => l.slug !== ownSlug).map((l) => <option key={l.slug} value={l.slug}>{l.name}</option>)}
                 </select>
               )}
-              <input value={st.text} maxLength={LIMITS.objectiveLen} disabled={readOnly} placeholder={st.kind === "visit" ? "z. B. Erreiche den Bergpass." : st.kind === "enter" ? "z. B. Betritt die Taverne." : "z. B. Sprich mit Olga."} onChange={(e) => patchStep(i, { text: e.target.value })} className={input} />
+              {st.kind === "goal" && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="block text-[10px] text-gray-500">Ereignis
+                    <select value={st.objectiveType ?? "MONSTER_SLAIN"} disabled={readOnly} onChange={(e) => patchStep(i, { objectiveType: e.target.value, ...(e.target.value !== "MONSTER_SLAIN" ? { tier: undefined } : {}) })} className={input}>
+                      {GOAL_STEP_TYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-[10px] text-gray-500">Anzahl
+                    <input type="number" min={1} max={20} value={st.targetCount ?? 1} disabled={readOnly} onChange={(e) => patchStep(i, { targetCount: Math.min(20, Math.max(1, Math.round(Number(e.target.value) || 1))) })} className={input} />
+                  </label>
+                  <label className="block text-[10px] text-gray-500">Monster
+                    <select value={st.targetRef ?? ""} disabled={readOnly} onChange={(e) => patchStep(i, { targetRef: e.target.value || undefined })} className={input}>
+                      <option value="">Beliebiges Monster</option>
+                      {placedMonsters.length > 0 && <optgroup label="In dieser Location platziert">{placedMonsters.map((id) => { const m = MONSTERS.find((x) => x.id === id); return m ? <option key={id} value={id}>{m.emoji} {m.name}</option> : null; })}</optgroup>}
+                      <optgroup label="Alle Monster">{MONSTERS.filter((m) => !m.raid).map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name}</option>)}</optgroup>
+                    </select>
+                  </label>
+                  {st.objectiveType !== "COMPANION_TAMED" && (
+                    <label className="block text-[10px] text-gray-500">Stufe
+                      <select value={st.tier ?? ""} disabled={readOnly} onChange={(e) => patchStep(i, { tier: e.target.value || undefined })} className={input}>
+                        <option value="">Beliebig</option>
+                        <option value="elite">👑 nur Elite</option>
+                        <option value="boss">💀 nur Boss</option>
+                      </select>
+                    </label>
+                  )}
+                  <p className="col-span-2 text-[10px] text-gray-500">Rückt automatisch weiter, sobald das Ziel erreicht ist — ohne eigenen Dialog. Ein Monster ohne Auswahl muss nicht in dieser Location stehen.</p>
+                </div>
+              )}
+              <input value={st.text} maxLength={LIMITS.objectiveLen} disabled={readOnly} placeholder={st.kind === "visit" ? "z. B. Erreiche den Bergpass." : st.kind === "enter" ? "z. B. Betritt die Taverne." : st.kind === "goal" ? "z. B. Besiege 3 Elite-Wölfe im Krähwald." : "z. B. Sprich mit Olga."} onChange={(e) => patchStep(i, { text: e.target.value })} className={input} />
             </div>
           ))}
           {!readOnly && quest.steps.length < LIMITS.maxSteps && (
@@ -180,6 +266,7 @@ export default function QuestEditor({ doc, readOnly, onChange, focusActorId, own
               <button type="button" onClick={() => addStep("talk")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Gespräch</button>
               <button type="button" onClick={() => addStep("enter")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Gebäude betreten</button>
               <button type="button" onClick={() => addStep("visit")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Location erreichen</button>
+              <button type="button" onClick={() => addStep("goal")} className="rounded-lg border border-white/15 text-gray-300 text-[11px] font-semibold px-3 py-1.5 hover:border-white/30">+ Ziel (Kampf/Zähmen)</button>
             </div>
           )}
           <label className="block text-[11px] text-gray-400">Abschlusstext

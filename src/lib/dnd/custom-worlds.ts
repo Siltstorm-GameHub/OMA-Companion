@@ -115,7 +115,13 @@ export async function checkVisitTargets(doc: CustomWorldDoc, ownSlug: string): P
 }
 
 /** DndLocation + DndQuest zur Editor-Welt anlegen bzw. angleichen. Rückgabe: Fehlertext oder null. */
-async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: { col: number; row: number } | null): Promise<string | null> {
+async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: { col: number; row: number } | null, authorId?: string | null): Promise<string | null> {
+  // Hauptstory (die 10 festen Locations) bleibt ohne Autor, egal wer sie als Admin bearbeitet; Community-Locations tragen ihren Autor.
+  let author: { id: string; name: string } | null = null;
+  if (!WORLD_SLUGS.includes(slug) && authorId) {
+    const u = await prisma.user.findUnique({ where: { id: authorId }, select: { name: true, username: true } });
+    author = { id: authorId, name: u?.name ?? u?.username ?? "Unbekannt" };
+  }
   const existing = await prisma.dndLocation.findUnique({ where: { slug }, select: { id: true } });
   let locationId = existing?.id;
   if (existing) {
@@ -140,10 +146,13 @@ async function syncLocationAndQuest(slug: string, doc: CustomWorldDoc, wanted: {
     keep.push(questSlug);
     const description = q.steps.map((st) => st.text).join(" → ");
     const steps = JSON.parse(JSON.stringify(q.steps));
+    // Voraussetzung darf nicht auf die Quest selbst zeigen (sonst nie annehmbar)
+    const requires = q.requires && q.requires !== questSlug ? q.requires : null;
+    const story = { authorId: author?.id ?? null, authorName: author?.name ?? null, questline: q.questline ?? null, part: q.part ?? null, requires };
     await prisma.dndQuest.upsert({
       where: { slug: questSlug },
-      create: { slug: questSlug, title: q.title, description, objectiveType: "WORLD_STEP", targetCount: q.steps.length, xpReward: q.xpReward, coinReward: 0, locationId, steps, adminEdited: true },
-      update: { title: q.title, description, targetCount: q.steps.length, xpReward: q.xpReward, locationId, steps, adminEdited: true },
+      create: { slug: questSlug, title: q.title, description, objectiveType: "WORLD_STEP", targetCount: q.steps.length, xpReward: q.xpReward, coinReward: 0, locationId, steps, adminEdited: true, ...story },
+      update: { title: q.title, description, targetCount: q.steps.length, xpReward: q.xpReward, locationId, steps, adminEdited: true, ...story },
     });
   }
   // Quests, die der Autor entfernt hat, verschwinden samt Fortschritt
@@ -189,7 +198,7 @@ export async function publishCustomWorld(id: string, reviewerId: string): Promis
     const problem = await checkHex(wanted, row.slug);
     if (problem) return { error: `${problem} Der Autor (oder du) muss ein anderes Feld wählen.` };
   }
-  const err = await syncLocationAndQuest(row.slug, v.doc, wanted);
+  const err = await syncLocationAndQuest(row.slug, v.doc, wanted, row.authorId);
   if (err) return { error: err };
   const loc = await prisma.dndLocation.findUnique({ where: { slug: row.slug }, select: { hexCol: true, hexRow: true } });
   if (row.status !== "PUBLISHED") await logChronicle("location", `Ein neuer Ort ist entstanden: ${v.doc.title}.`, row.slug);
@@ -206,7 +215,7 @@ export async function resyncPublishedWorld(id: string): Promise<string | null> {
   if (!row || row.status !== "PUBLISHED") return null;
   const v = validateForSubmit(row.doc);
   if (!v.ok) return `Die Welt ist nicht spielbar: ${v.errors[0]}`;
-  return syncLocationAndQuest(row.slug, v.doc, null);
+  return syncLocationAndQuest(row.slug, v.doc, null, row.authorId);
 }
 
 // ── Admin: alles bearbeiten und löschen ─────────────────────

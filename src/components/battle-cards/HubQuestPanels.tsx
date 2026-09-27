@@ -18,7 +18,7 @@ export function HubCharacterSheet() {
 }
 
 export function HubQuestLog() {
-  return <div className="oq-skin"><QuestLog /></div>;
+  return <div className="oq-skin"><QuestLog compact /></div>;
 }
 
 export function HubProgress() {

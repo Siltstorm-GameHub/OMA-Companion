@@ -6,6 +6,10 @@ import { positionOfCard } from "@/lib/dnd/position";
 import { planTravel } from "@/lib/dnd/hex/pathfinding";
 import { LOCATION_HEXES, WORLD_COLS, WORLD_ROWS, terrainAt } from "@/lib/dnd/hex/world";
 import { inBounds } from "@/lib/dnd/hex/grid";
+import { getInventory } from "@/lib/dnd/rpg-server";
+import { equippedCompanion } from "@/lib/dnd/combat-server";
+import { effectsOfCard } from "@/lib/dnd/progression";
+import { totalTravelBonus } from "@/lib/dnd/travel-speed";
 
 /**
  * Reise antreten. Input: { col, row } — Hex-Feld einer festen Location (die Weltkarte ist das
@@ -53,8 +57,16 @@ export async function POST(req: NextRequest) {
   const plan = planTravel(from, target, WORLD_COLS, WORLD_ROWS, terrainAt);
   if (!plan) return NextResponse.json({ error: "Kein Weg zu diesem Feld" }, { status: 400 });
 
+  // Reisetempo-Bonus: ausgerüstete Gegenstände, ein Begleiter (Reittier) und das Talent "Wegkundig" — gemeinsam gedeckelt
+  const [inventory] = await Promise.all([getInventory(fresh.id)]);
+  const bonus = totalTravelBonus({
+    equippedItems: inventory.filter((e) => e.equipped).map((e) => e.item),
+    companionId: equippedCompanion(fresh),
+    perkBonus: effectsOfCard(fresh).travelSpeed,
+  });
+  const minutes = plan.totalMinutes * (1 - bonus);
   const now = new Date();
-  const arrivesAt = new Date(now.getTime() + plan.totalMinutes * 60 * 1000);
+  const arrivesAt = new Date(now.getTime() + minutes * 60 * 1000);
 
   await prisma.card.update({
     where: { id: fresh.id },
@@ -73,7 +85,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     travelDepartedAt: now,
     travelArrivesAt: arrivesAt,
-    totalMinutes: plan.totalMinutes,
+    totalMinutes: minutes,
     steps: plan.path.length - 1,
+    speedBonus: bonus,
   });
 }

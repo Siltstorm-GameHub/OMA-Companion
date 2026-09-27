@@ -24,6 +24,8 @@ export interface PerkDef {
   critMin?: number;
   /** +10 % Erfahrung aus Quests und Ergebnissen */
   xpBonus?: number;
+  /** Verkürzt die Reisezeit auf der Weltkarte (Anteil, z. B. 0.1 = 10 % schneller) */
+  travelSpeed?: number;
 }
 
 export const PERKS: PerkDef[] = [
@@ -35,6 +37,7 @@ export const PERKS: PerkDef[] = [
   { id: "gluecksrabe", name: "Glücksrabe", icon: "🍀", desc: "Bei einer natürlichen 1 darfst du einmal neu würfeln.", rerollFumble: true },
   { id: "adlerauge", name: "Adlerauge", icon: "🦅", desc: "Eine 19 oder 20 auf dem Würfel gelingt immer.", critMin: 19 },
   { id: "lernbegierig", name: "Lernbegierig", icon: "📚", desc: "+10 % Erfahrung aus Quests und Ergebnissen.", xpBonus: 0.1 },
+  { id: "wegkundig", name: "Wegkundig", icon: "🧭", desc: "Du kennst die Abkürzungen — 10 % kürzere Reisezeit auf der Weltkarte.", travelSpeed: 0.1 },
 ];
 
 const BY_ID = new Map(PERKS.map((p) => [p.id, p]));
@@ -91,6 +94,8 @@ export function milestones(): Milestone[] {
 // ── Wirkung der Fähigkeiten ─────────────────────────────────
 
 export interface PerkEffects {
+  /** Reise-Bonus aus Fähigkeiten (Anteil) */
+  travelSpeed: number;
   checkBonus: (ability: Ability) => number;
   rerollFumble: boolean;
   critMin: number;
@@ -106,6 +111,7 @@ export function effectsOf(perkIds: readonly string[]): PerkEffects {
     critMin: Math.min(20, ...perks.map((p) => p.critMin ?? 20)),
     xpMultiplier: 1 + perks.reduce((s, p) => s + (p.xpBonus ?? 0), 0),
     trader: perks.some((p) => p.trader),
+    travelSpeed: perks.reduce((s, p) => s + (p.travelSpeed ?? 0), 0),
   };
 }
 

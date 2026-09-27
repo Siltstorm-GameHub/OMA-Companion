@@ -39,6 +39,8 @@ export interface Building {
   name: string;
   /** Innenraum hinter der Tür (optional) */
   interior?: Interior;
+  /** Rolle des Gebäudes für den Location-Typ „Stadt" (siehe `CustomWorldDoc.locationType`): Händler- bzw. Taverne-Gebäude. Rein informativ, ohne Rolle = normales Haus. */
+  role?: "shop" | "tavern";
 }
 
 /** Raum hinter einer Gebäudetür: 2 Reihen Wand oben, Tür unten bei `exitX` (siehe interior.ts). */
@@ -100,7 +102,7 @@ export interface Talk {
 
 export interface Actor {
   id: string;
-  kind: "npc" | "chest" | "sign" | "merchant" | "monster";
+  kind: "npc" | "chest" | "sign" | "merchant" | "monster" | "questboard";
   name: string;
   x: number;
   y: number;
@@ -116,15 +118,23 @@ export interface Actor {
   talk: Talk[];
 }
 
-/** Ein Schritt einer Quest: mit einem Akteur der Heimat-Location reden (`talk`) oder eine andere Location
- *  besuchen (`visit`, zählt automatisch beim Betreten der Location). */
+/** Ein Schritt einer Quest: mit einem Akteur der Heimat-Location reden (`talk`), eine andere Location besuchen (`visit`, zählt automatisch
+ *  beim Betreten), ein Gebäude betreten (`enter`) oder automatisch mitzählen, sobald der Spieler etwas im Spiel erreicht (`goal`, z. B.
+ *  "3 Wölfe besiegen" — rückt ohne eigenen Dialog weiter, sobald `targetCount` erreicht ist). */
 export interface QuestStep {
-  /** talk = Gespräch (optional mit einem bestimmten NPC `actor`), enter = ein Gebäude dieser Location betreten (`building` = Index), visit = eine andere Location erreichen */
-  kind: "talk" | "visit" | "enter";
+  kind: "talk" | "visit" | "enter" | "goal";
   text: string;
   location?: string;
   actor?: string;
   building?: number;
+  /** goal: welches Spielereignis zählt ("MONSTER_SLAIN" | "COMPANION_TAMED") */
+  objectiveType?: string;
+  /** goal: worauf es sich bezieht (Monster-Id); ohne Angabe zählt jedes passende Ereignis */
+  targetRef?: string;
+  /** goal + MONSTER_SLAIN: nur diese Stufe zählt ("elite" | "boss"); ohne Angabe zählt jede Stufe */
+  tier?: string;
+  /** goal: wie oft */
+  targetCount?: number;
 }
 
 export interface WorldQuest {
@@ -135,6 +145,15 @@ export interface WorldQuest {
   /** Art je Schritt (ohne Angabe: alles `talk`); gleiche Reihenfolge wie objectives ohne den Abschlusstext. */
   steps?: QuestStep[];
   xpReward: number;
+  /** Story: fehlt bei der Hauptstory (feste Locations); Community-Locations tragen hier ihren Autor ein (siehe custom-worlds.ts) */
+  authorId?: string;
+  authorName?: string;
+  /** Questreihe: freier Name, unter dem der Autor zusammengehörige Quests veröffentlicht (auch über mehrere Locations hinweg) */
+  questline?: string;
+  /** Teil-Nummer innerhalb der Questreihe */
+  part?: number;
+  /** Slug einer Quest, die zuerst abgeschlossen sein muss */
+  requires?: string;
 }
 
 export interface TeMap {

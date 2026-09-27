@@ -15,7 +15,7 @@ import type { Outcome } from "../te-map/types";
 import { logChronicle } from "./chronicle";
 import { getItem, isItemKey, sellPrice, type ItemDef } from "./items";
 import { resolveWorld } from "./custom-worlds";
-import { advanceWorldQuestStep, getWorldQuestSteps } from "./quests";
+import { advanceQuestSignal, advanceWorldQuestStep, getWorldQuestSteps } from "./quests";
 import { displayTitle } from "./coin-shop";
 import { buyPriceFor, sellPriceFor, titleOf } from "./perks";
 import { abilityBonusOf, effectsOfCard, perksOf, syncLevelRewards } from "./progression";
@@ -125,10 +125,19 @@ export async function grantRewards(card: Pick<Card, "id" | "name" | "dndXp" | "d
   });
   for (const key of items) {
     await prisma.dndInventoryItem.upsert({ where: { cardId_itemKey: { cardId: card.id, itemKey: key } }, create: { cardId: card.id, itemKey: key }, update: { qty: { increment: 1 } } });
+    await advanceQuestSignal(card.id, "ITEM_COLLECTED", 1, key).catch(() => {});
   }
   const after = levelOf(card.dndXp + xp);
   if (after > before) await logChronicle("level", `${card.name} hat Stufe ${after} erreicht.`, locationSlug);
   return { xp, gold, items, levelUp: after > before ? after : null };
+}
+
+/** Meldet eine Location als "zum ersten Mal betreten" (Flag `discovered:<slug>`) und zählt sie für Quests (LOCATION_DISCOVERED). No-op, wenn schon bekannt. */
+export async function discoverLocation(card: Pick<Card, "id" | "dndFlags">, slug: string): Promise<void> {
+  const flag = `discovered:${slug}`;
+  if (flagsOf(card).includes(flag)) return;
+  await prisma.card.update({ where: { id: card.id }, data: { dndFlags: [...flagsOf(card), flag].slice(-400) } });
+  await advanceQuestSignal(card.id, "LOCATION_DISCOVERED", 1, slug).catch(() => {});
 }
 
 // ── Entscheidungen und Proben ───────────────────────────────

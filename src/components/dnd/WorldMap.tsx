@@ -366,7 +366,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Reise konnte nicht gestartet werden.");
-      notify("info", `Reise gestartet — Ankunft in ${formatDuration(json.totalMinutes)}`);
+      notify("info", `Reise gestartet — Ankunft in ${formatDuration(json.totalMinutes)}${json.speedBonus > 0 ? ` (−${Math.round(json.speedBonus * 100)} % durch Begleiter/Ausrüstung/Talent)` : ""}`);
       await load();
     } catch (e) {
       notify("error", e instanceof Error ? e.message : "Unbekannter Fehler.");
@@ -613,7 +613,7 @@ export default function WorldMap({ myCardId }: { myCardId: string | null }) {
                 >
                   Reise beginnen
                 </button>
-                <span className="text-xs text-gray-400">{formatDuration(plan.totalMinutes)} · {plan.path.length - 1} Felder</span>
+                <span className="text-xs text-gray-400">bis zu {formatDuration(plan.totalMinutes)} · {plan.path.length - 1} Felder <span className="text-gray-600">(schneller mit Begleiter, Ausrüstung oder Talent)</span></span>
               </div>
             ) : (
               <p className="text-xs text-gray-500">Von deiner Position gibt es keinen Weg dorthin.</p>

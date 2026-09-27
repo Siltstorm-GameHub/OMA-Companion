@@ -26,7 +26,7 @@ export const TERRAIN: Record<TerrainCode, TerrainDef> = {
 };
 
 /** Basisdauer für ein Feld mit Kosten 1 (Ebene). */
-export const MINUTES_PER_HEX = 15;
+export const MINUTES_PER_HEX = 5;
 
 export function isTerrainCode(c: string): c is TerrainCode {
   return c in TERRAIN;

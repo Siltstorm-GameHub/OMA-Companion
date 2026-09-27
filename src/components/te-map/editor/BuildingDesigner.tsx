@@ -11,12 +11,13 @@ import { LIMITS } from "@/lib/te-map/custom-world";
 import type { Building } from "@/lib/te-map/types";
 import { Swatch } from "./Swatch";
 
-export type BuildingLook = Pick<Building, "name" | "w" | "roofRows" | "roof" | "wall" | "doorDx" | "windowDx" | "sign">;
+export type BuildingLook = Pick<Building, "name" | "w" | "roofRows" | "roof" | "wall" | "doorDx" | "windowDx" | "sign" | "role">;
 
 export const MIN_W = 3;
 export const MAX_W = 12;
 const ROOF_HEIGHTS = [{ v: 2, label: "Niedrig" }, { v: 3, label: "Mittel" }, { v: 4, label: "Hoch" }];
 const SIGNS: { v: Building["sign"] | ""; label: string }[] = [{ v: "", label: "Keins" }, { v: "shopSword", label: "Waffen" }, { v: "shopInn", label: "Gasthaus" }, { v: "shopMug", label: "Krug" }];
+const ROLES: { v: Building["role"] | ""; label: string }[] = [{ v: "", label: "Keine" }, { v: "shop", label: "Händler" }, { v: "tavern", label: "Taverne" }];
 
 type Preset = { id: string; label: string; look: BuildingLook };
 const PRESETS: Preset[] = [
@@ -178,6 +179,16 @@ export default function BuildingDesigner({ sheets, look, onChange, readOnly = fa
             <button key={s.v} type="button" disabled={readOnly} onClick={() => onChange({ sign: (s.v || undefined) as Building["sign"] })} className={`rounded border py-1 text-[10px] ${(look.sign ?? "") === s.v ? "border-amber-400 text-amber-200 bg-amber-400/10" : "border-white/10 text-gray-400 hover:border-white/30"}`}>{s.label}</button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <span className="block">Rolle (für den Location-Typ „Stadt“)</span>
+        <div className="mt-0.5 grid grid-cols-3 gap-1">
+          {ROLES.map((r) => (
+            <button key={r.v} type="button" disabled={readOnly} onClick={() => onChange({ role: (r.v || undefined) as Building["role"] })} className={`rounded border py-1 text-[10px] ${(look.role ?? "") === r.v ? "border-amber-400 text-amber-200 bg-amber-400/10" : "border-white/10 text-gray-400 hover:border-white/30"}`}>{r.label}</button>
+          ))}
+        </div>
+        <span className="block text-[10px] text-gray-500 mt-0.5">Rein informativ: Damit erkennt der Editor, dass dieses Gebäude ein Händler- bzw. Taverne-Gebäude ist (Pflicht bei „Stadt“).</span>
       </div>
     </div>
   );

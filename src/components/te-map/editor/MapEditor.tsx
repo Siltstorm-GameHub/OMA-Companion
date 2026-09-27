@@ -91,6 +91,7 @@ const TOOL_GROUPS: { label: string; tools: ToolButton[] }[] = [
     { key: "chest", label: "Truhe", icon: "📦", hot: "T", tool: { kind: "actor", actor: "chest" }, hint: "Klick setzt eine Truhe." },
     { key: "monster", label: "Monster", icon: "👾", hot: "M", tool: { kind: "actor", actor: "monster" }, hint: "Klick setzt ein Monster (Art im Auswahl-Fenster ändern)." },
     { key: "sign", label: "Schild", icon: "🪧", hot: "S", tool: { kind: "actor", actor: "sign" }, hint: "Klick setzt ein Schild mit Text." },
+    { key: "questboard", label: "Quest-Board", icon: "📜", hot: "Q", tool: { kind: "actor", actor: "questboard" }, hint: "Klick setzt ein Schwarzes Brett — öffnet im Spiel das Quest-Log (Pflicht bei „Stadt“)." },
     { key: "spawn", label: "Start", icon: "🚩", hot: "P", tool: { kind: "spawn" }, hint: "Hier steht die Figur beim Betreten." },
   ] },
 ];
@@ -583,7 +584,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
         {selActor && (
           <div className="moba-panel rounded-2xl p-3 space-y-2">
             <p className={HEAD}>
-              {selActor.kind === "npc" ? "NPC" : selActor.kind === "merchant" ? "Händler" : selActor.kind === "chest" ? "Truhe" : selActor.kind === "monster" ? "Monster" : "Schild"}
+              {selActor.kind === "npc" ? "NPC" : selActor.kind === "merchant" ? "Händler" : selActor.kind === "chest" ? "Truhe" : selActor.kind === "monster" ? "Monster" : selActor.kind === "questboard" ? "Quest-Board" : "Schild"}
             </p>
             <label className="block text-[11px] text-gray-400">Name
               <input value={selActor.name} maxLength={LIMITS.nameLen} disabled={readOnly} onChange={(e) => commit(updateActor(doc, selActor.id, { name: e.target.value }))} onFocus={onBeginEdit} className={INPUT} />
@@ -635,7 +636,7 @@ export default function MapEditor({ doc, readOnly, onChange, onBeginEdit, onQues
               </>
             )}
             {selActor.kind !== "monster" && <button type="button" onClick={() => onQuestFocus(selActor.id)} className="w-full rounded-lg border border-violet-400/40 text-violet-300 text-[11px] font-semibold py-1.5 hover:bg-violet-500/10">
-              {selActor.kind === "sign" || selActor.kind === "chest" ? "Text & Inhalt bearbeiten" : "Dialoge bearbeiten"}
+              {selActor.kind === "sign" || selActor.kind === "chest" || selActor.kind === "questboard" ? "Text & Inhalt bearbeiten" : "Dialoge bearbeiten"}
             </button>}
             {!readOnly && (
               <button type="button" onClick={deleteSelection} title="Entf" className="w-full rounded-lg border border-red-400/30 text-red-300 text-[11px] font-semibold py-1.5 hover:bg-red-500/10">

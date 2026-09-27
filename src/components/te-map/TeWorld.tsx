@@ -13,7 +13,7 @@ import Link from "next/link";
 import { drawTeFrame, layersFor, loadTeLayerSets, type TeLayerSets } from "@/components/te-character/TeCharacter";
 import { TE_ANIMS, type TeCharacterConfig } from "@/lib/te-character";
 import { groundQuarters, wallQuarters, type Quarters } from "@/lib/te-map/autotile";
-import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, setHidden, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
+import { activeQuestsOf, answerOffer, applyChoiceResult, chooseOption, createGame, doorAhead, drainEvents, interactTarget, isChestOpen, pressAction, questMarkerOf, setHidden, step, syncQuestStep, walkTo, type ChoiceResult, type Dialog, type Dir, type Game } from "@/lib/te-map/engine";
 import type { TrackerItem } from "@/lib/dnd/quest-log";
 import { getMonster } from "@/lib/dnd/combat";
 import { TEXTURES, type TextureKey } from "@/lib/dnd/oq-assets-manifest";
@@ -411,6 +411,8 @@ interface Props {
   onChoose?: (req: { actor: string; talk: number; choice: number }) => Promise<(ChoiceResult & { tracker?: TrackerItem[] }) | null>;
   /** Händler-Gespräch beendet: Handelsfenster öffnen */
   onTrade?: (actorId: string) => void;
+  /** Schwarzes Brett angesprochen: Quest-Log öffnen */
+  onQuestBoard?: () => void;
   /** Monster-Figur angesprochen und „Kämpfen“ gewählt */
   onFight?: (actorId: string, monsterId: string, group?: boolean) => void;
   /** Gruppenmitglieder (Karten-Ids): ihr Name wird hervorgehoben */
@@ -426,7 +428,7 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, companion, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
+export default function TeWorld({ world, character, companion, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onQuestBoard, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
   // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
   const wrapRef = useRef<HTMLDivElement>(null);
   const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
@@ -790,9 +792,9 @@ export default function TeWorld({ world, character, companion, initialSteps, tra
         const sprites: Sprite[] = [];
         // Ansprechbares Objekt (Schild, Truhe, Objekt mit Text) in Reichweite: bekommt einen Umriss
         const glowTarget = !g.dialog && !pausedRef.current ? interactTarget(g) : null;
-        const glowActor = glowTarget && (glowTarget.kind === "sign" || glowTarget.kind === "chest") ? glowTarget : null;
+        const glowActor = glowTarget && (glowTarget.kind === "sign" || glowTarget.kind === "chest" || glowTarget.kind === "questboard") ? glowTarget : null;
         let glowStamp: PlacedStamp | null = null;
-        if (glowActor && glowActor.kind === "sign") {
+        if (glowActor && (glowActor.kind === "sign" || glowActor.kind === "questboard")) {
           let bestArea = Infinity;
           for (const s of map.stamps) {
             const d = STAMPS[s.id] as StampDef;
@@ -846,7 +848,18 @@ export default function TeWorld({ world, character, companion, initialSteps, tra
           } else if (a.kind === "npc" || a.kind === "merchant") {
             const sets = spritesRef.current.npcs.get(a.id);
             const dir = g.actorDir.get(a.id) ?? a.dir;
-            sprites.push({ base: (a.y + 1) * T, draw: () => drawTeFrame(ctx, layersFor(sets, dir), 1, dir, a.x * T - camX + T / 2 - 24, a.y * T - camY - 16, 1) });
+            const marker = questMarkerOf(a, g.questSteps, world);
+            const bob = marker ? Math.sin(clock / 300) * 1.5 : 0;
+            sprites.push({ base: (a.y + 1) * T, draw: () => {
+              drawTeFrame(ctx, layersFor(sets, dir), 1, dir, a.x * T - camX + T / 2 - 24, a.y * T - camY - 16, 1);
+              if (!marker) return;
+              const cx = a.x * T - camX + T / 2, my = a.y * T - camY - 14 + bob;
+              const glyph = marker === "turnin" ? "?" : "!";
+              ctx.font = "bold 13px system-ui, sans-serif";
+              ctx.textAlign = "center"; ctx.textBaseline = "middle";
+              ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.65)"; ctx.strokeText(glyph, cx, my);
+              ctx.fillStyle = marker === "turnin" ? "#38bdf8" : "#facc15"; ctx.fillText(glyph, cx, my);
+            } });
           }
         }
         const labels: LabelItem[] = [];
@@ -1181,6 +1194,9 @@ export default function TeWorld({ world, character, companion, initialSteps, tra
               )}
               {dialog.merchant && dialog.index >= dialog.lines.length - 1 && onTrade && (
                 <button type="button" onClick={() => { const g = gameRef.current; if (g) { const id = dialog.merchant!; pressAction(g); handleEvents(g); onTrade(id); } }} className="mt-2 w-full rounded-lg bg-amber-500/90 hover:bg-amber-400 text-black text-xs font-bold py-2">🛒 Handeln</button>
+              )}
+              {dialog.questBoard && dialog.index >= dialog.lines.length - 1 && onQuestBoard && (
+                <button type="button" onClick={() => { const g = gameRef.current; if (g) { pressAction(g); handleEvents(g); onQuestBoard(); } }} className="mt-2 w-full rounded-lg bg-sky-500/90 hover:bg-sky-400 text-black text-xs font-bold py-2">📜 Aufträge ansehen</button>
               )}
             </div>
           )
