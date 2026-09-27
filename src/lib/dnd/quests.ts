@@ -109,6 +109,15 @@ export async function prereqMet(cardId: string, requiresSlug: string | null | un
   return !!progress?.completed;
 }
 
+/** Ist die 10-Kapitel-Hauptstory (Finale: Der Patch am Frostgipfel) abgeschlossen? Anders als `prereqMet`
+ *  gilt eine (noch) nicht gesäte Quest hier als NICHT erfüllt — das schaltet sonst die Schnellreise fälschlich frei. */
+export async function hasFinishedMainStory(cardId: string): Promise<boolean> {
+  const req = await prisma.dndQuest.findUnique({ where: { slug: "welt-frostgipfel-q3" }, select: { id: true } });
+  if (!req) return false;
+  const progress = await prisma.dndQuestProgress.findUnique({ where: { cardId_questId: { cardId, questId: req.id } }, select: { completed: true } });
+  return !!progress?.completed;
+}
+
 /** Einmalige Extra-Belohnung einer Quest (Event-Titel, Karten-Hintergrund, Begleiter). */
 async function grantQuestPerks(cardId: string, slug: string): Promise<void> {
   const grant = DND_QUESTS.find((d) => d.slug === slug)?.grant;

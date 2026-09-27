@@ -43,6 +43,8 @@ export interface Dialog {
   merchant?: string;
   /** Schwarzes Brett: nach dem Gespräch lässt sich das Quest-Log öffnen */
   questBoard?: boolean;
+  /** Reisebüro: nach dem Gespräch lässt sich (bei erfüllter Voraussetzung) die Schnellreise öffnen */
+  fastTravel?: boolean;
   /** Monster-Figur: nach dem Text lässt sich kämpfen (Akteur + Monster-Art) */
   fight?: { actor: string; monster: string };
 }
@@ -417,6 +419,7 @@ const toDialog = (game: Game, actor: Actor, t: Talk): Dialog => {
     offer: !hasChoices && !!t.advance && t.step === 0,
     ...(actor.kind === "merchant" ? { merchant: actor.id } : {}),
     ...(actor.kind === "questboard" ? { questBoard: true } : {}),
+    ...(t.fastTravel ? { fastTravel: true } : {}),
     ...(hasChoices ? { choices: t.choices!.map((c) => ({ text: c.text, ...(c.check ? { check: { ability: c.check.ability, dc: c.check.dc } } : {}) })), ref: { actor: actor.id, talk: actor.talk.indexOf(t) } } : {}),
   };
 };

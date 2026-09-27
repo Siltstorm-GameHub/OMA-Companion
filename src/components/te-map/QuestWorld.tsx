@@ -274,7 +274,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
       <TeWorld
         world={world} character={data.myCharacter} companion={data.myCompanion ?? null} initialSteps={data.questSteps} tracker={data.tracker} others={others}
         livePresence={livePresence} onLiveData={onLiveData} myCardId={data.myCardId ?? undefined} biome={data.biome} emote={emote} flags={data.rpg?.flags ?? []}
-        onChoose={onChoose} onTrade={setShopActor} onQuestBoard={() => setMenu("quests")} onFight={onFight} slain={slain} partyIds={gf?.group.memberIds} canGroupFight={!!gf?.group.inParty && gf.group.here >= 2} onAdvance={onAdvance}
+        onChoose={onChoose} onTrade={setShopActor} onQuestBoard={() => setMenu("quests")} onFastTravel={() => setMenu("fastTravel")} onFight={onFight} slain={slain} partyIds={gf?.group.memberIds} canGroupFight={!!gf?.group.inParty && gf.group.here >= 2} onAdvance={onAdvance}
         feed={feed} notify={notify} paused={!!menu || !!shopActor}
         hud={<HudBar refreshKey={sheetKey} onOpen={() => setMenu("character")} notify={notify} />}
         extraControls={(

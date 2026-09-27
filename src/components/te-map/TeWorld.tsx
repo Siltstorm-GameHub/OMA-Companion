@@ -413,6 +413,8 @@ interface Props {
   onTrade?: (actorId: string) => void;
   /** Schwarzes Brett angesprochen: Quest-Log öffnen */
   onQuestBoard?: () => void;
+  /** Reisebüro angesprochen: Schnellreise-Fenster öffnen */
+  onFastTravel?: () => void;
   /** Monster-Figur angesprochen und „Kämpfen“ gewählt */
   onFight?: (actorId: string, monsterId: string, group?: boolean) => void;
   /** Gruppenmitglieder (Karten-Ids): ihr Name wird hervorgehoben */
@@ -428,7 +430,7 @@ interface Props {
   viewRows?: number;
 }
 
-export default function TeWorld({ world, character, companion, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onQuestBoard, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
+export default function TeWorld({ world, character, companion, initialSteps, tracker: initialTracker, others, livePresence, onLiveData, feed, notify, paused, extraControls, overlay, hud, myCardId, biome, emote, flags: initialFlags = [], onChoose, onTrade, onQuestBoard, onFastTravel, onFight, slain, partyIds, canGroupFight, onAdvance, viewCols, viewRows }: Props) {
   // Sichtfenster passt sich der Fensterbreite an: gleicher Pixelmaßstab (≈ 4×), auf großen Bildschirmen sieht man mehr von der Welt
   const wrapRef = useRef<HTMLDivElement>(null);
   const [auto, setAuto] = useState({ cols: DEFAULT_VIEW_W, rows: DEFAULT_VIEW_H });
@@ -1197,6 +1199,9 @@ export default function TeWorld({ world, character, companion, initialSteps, tra
               )}
               {dialog.questBoard && dialog.index >= dialog.lines.length - 1 && onQuestBoard && (
                 <button type="button" onClick={() => { const g = gameRef.current; if (g) { pressAction(g); handleEvents(g); onQuestBoard(); } }} className="mt-2 w-full rounded-lg bg-sky-500/90 hover:bg-sky-400 text-black text-xs font-bold py-2">📜 Aufträge ansehen</button>
+              )}
+              {dialog.fastTravel && dialog.index >= dialog.lines.length - 1 && onFastTravel && (
+                <button type="button" onClick={() => { const g = gameRef.current; if (g) { pressAction(g); handleEvents(g); onFastTravel(); } }} className="mt-2 w-full rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-black text-xs font-bold py-2">🧭 Schnellreise</button>
               )}
             </div>
           )

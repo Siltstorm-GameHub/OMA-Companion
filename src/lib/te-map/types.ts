@@ -98,6 +98,8 @@ export interface Talk {
   time?: "day" | "night";
   /** Nur bei diesem Wetter ("rain" gilt auch bei Sturm) */
   weather?: Weather;
+  /** Reisebüro: nach dem Dialog lässt sich (bei erfüllter Voraussetzung) die Schnellreise öffnen */
+  fastTravel?: boolean;
 }
 
 export interface Actor {

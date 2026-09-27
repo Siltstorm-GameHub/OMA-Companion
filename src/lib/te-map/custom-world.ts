@@ -376,6 +376,7 @@ export function sanitizeCustomWorldDoc(input: unknown): { ok: true; doc: CustomW
         ...(forbids.length ? { forbids } : {}),
         ...(t.time === "day" || t.time === "night" ? { time: t.time } : {}),
         ...(isWeather(t.weather) ? { weather: t.weather } : {}),
+        ...(t.fastTravel === true ? { fastTravel: true } : {}),
       });
     }
     if (monster) talk.splice(0, talk.length, { step: "*", lines: [monster.blurb] });

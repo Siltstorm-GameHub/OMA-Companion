@@ -215,4 +215,21 @@ describe("Quests über mehrere Locations (Engine + Hilfsfunktionen)", () => {
     assert.equal(running[0].objective, world.quest.objectives[1]);
     assert.deepEqual(activeQuestsOf(world, { [world.quest.slug]: questLength(world) }), []);
   });
+
+  test("Kapitel 1 (Krähwald) hängt am Abschluss von Kapitel 0 (Hafenstadt); Holz' zweite Quest verkettet sich lokal", () => {
+    const waldpfad = getWorld("waldpfad")!;
+    assert.equal(waldpfad.quest.requires, "welt-hafenstadt-q4", "Der Weg aus dem Wald ist erst nach dem Hafenstadt-Tutorial verfügbar");
+
+    const holz = waldpfad.map.actors.find((a) => a.id === "holz")!;
+    const g = createGame(waldpfad);
+    // Voraussetzung liegt in einer anderen Welt: lokal nicht prüfbar, Marker bleibt vorsichtshalber verborgen (Server entscheidet beim Annehmen)
+    assert.equal(questMarkerOf(holz, g.questSteps, waldpfad), null);
+
+    g.questSteps[waldpfad.quest.slug] = questLength(waldpfad); // "Der Weg aus dem Wald" abgeschlossen
+    assert.equal(questMarkerOf(holz, g.questSteps, waldpfad), "offer", "welt-waldpfad-q2 ist jetzt (lokal geprüft) verfügbar");
+    g.questSteps["welt-waldpfad-q2"] = 1;
+    assert.equal(questMarkerOf(holz, g.questSteps, waldpfad), null, "Ziel-Schritt (Wolf besiegen) läuft noch");
+    g.questSteps["welt-waldpfad-q2"] = 2;
+    assert.equal(questMarkerOf(holz, g.questSteps, waldpfad), "turnin");
+  });
 });

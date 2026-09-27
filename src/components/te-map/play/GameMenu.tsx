@@ -15,9 +15,10 @@ import type { BackdropKey } from "@/lib/dnd/oq-backdrop";
 import type { FightCall, GroupSnapshot } from "@/components/te-map/play/GroupFightPanel";
 import SkillTreePanel from "@/components/te-map/play/SkillTreePanel";
 import CoinShopPanel from "@/components/te-map/play/CoinShopPanel";
+import FastTravelPanel from "@/components/te-map/play/FastTravelPanel";
 import { CharacterPanel, GmPanel, InventoryPanel, PartyPanel, ProgressPanel, SocialPanel } from "@/components/te-map/play/PlayPanels";
 
-export type MenuTab = "character" | "progress" | "inventory" | "quests" | "combat" | "skills" | "coins" | "party" | "chat" | "gm";
+export type MenuTab = "character" | "progress" | "inventory" | "quests" | "combat" | "skills" | "coins" | "party" | "chat" | "gm" | "fastTravel";
 
 const TAB_LABEL: Record<MenuTab, string> = {
   character: "Charakter",
@@ -30,6 +31,7 @@ const TAB_LABEL: Record<MenuTab, string> = {
   party: "Gruppe",
   chat: "Chat",
   gm: "Spielleiter",
+  fastTravel: "Schnellreise",
 };
 
 interface Props {
@@ -63,6 +65,7 @@ export default function GameMenu({ tab, onClose, slug, present, myCardId, chat, 
   else if (tab === "combat") body = <CombatPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} gf={gf} groupCall={groupCall} groupBusy={groupBusy} myCardId={myCardId} backdrop={backdrop} />;
   else if (tab === "skills") body = <SkillTreePanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
   else if (tab === "coins") body = <CoinShopPanel refreshKey={refreshKey} onChanged={onChanged} notify={notify} />;
+  else if (tab === "fastTravel") body = <FastTravelPanel notify={notify} />;
   else if (tab === "party") body = <PartyPanel present={present} myCardId={myCardId} notify={notify} />;
   else if (tab === "chat") body = <SocialPanel slug={slug} chat={chat} onEmote={onEmote} isMod={isMod} myCardId={myCardId} onRemoved={onChatRemoved} notify={notify} />;
   else if (tab === "gm" && isGm) body = <GmPanel slug={slug} notify={notify} />;
