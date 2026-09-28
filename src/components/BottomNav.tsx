@@ -8,7 +8,7 @@ const NAV = [
   { label: "Home",    href: "/dashboard",   glyph: NAV_GLYPHS.home },
   { label: "Events",  href: "/events",      glyph: NAV_GLYPHS.events },
   { label: "Battle Cards", href: "/battle-cards", glyph: NAV_GLYPHS.battleCards },
-  { label: "Spenden", href: "/donations",   glyph: NAV_GLYPHS.donations },
+  { label: "Support", href: "/donations",   glyph: NAV_GLYPHS.donations },
   { label: "Rang",    href: "/leaderboard", glyph: NAV_GLYPHS.leaderboard },
   { label: "Profil",  href: "/profile",     glyph: NAV_GLYPHS.profile },
 ];

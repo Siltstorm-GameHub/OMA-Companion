@@ -8,6 +8,8 @@ import { TrendingDown } from "@/components/icons";
 import { Users } from "@/components/icons";
 import { Flame, CalendarDays, ShoppingCart, Wallet, Lightbulb } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
+import SupportTabs from "@/components/support/SupportTabs";
+import FanshopSection from "@/components/support/FanshopSection";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
@@ -86,8 +88,8 @@ export default async function DonationsPage() {
   const myStreak = myId ? calcStreak(entriesByUser.get(myId) ?? []) : 0;
   const myEntry  = myId ? entriesByUser.has(myId) : false;
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 pt-0 pb-8 sm:py-8 space-y-8">
+  const donationsContent = (
+    <div className="space-y-8">
 
       {/* Header */}
       <div className="text-center space-y-2">
@@ -350,6 +352,12 @@ export default async function DonationsPage() {
           <p className="text-sm">Noch keine Spenden eingetragen.</p>
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 pt-0 pb-8 sm:py-8">
+      <SupportTabs donations={donationsContent} fanshop={<FanshopSection />} />
     </div>
   );
 }

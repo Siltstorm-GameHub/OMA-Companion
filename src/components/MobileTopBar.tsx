@@ -19,7 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/shop":       "Shop",
   "/tournament": "Turnier-Details",
   "/leaderboard":"Rangliste",
-  "/donations":  "Spendenpool",
+  "/donations":  "Support",
   "/profile":    "Mein Profil",
   "/points":     "Punktesystem",
   "/admin":      "Admin",

@@ -11,6 +11,7 @@ export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Clip des Jahres",  url: "/clip-des-jahres" },
   { label: "Clip-Galerie",     url: "/clip-galerie" },
   { label: "Gameserver",       url: "/servers" },
-  { label: "Spendenpool",      url: "/donations" },
+  { label: "Support",          url: "/donations" },
+  { label: "Fanshop",          url: "/donations" },
   { label: "Feed",             url: "/feed" },
 ];
