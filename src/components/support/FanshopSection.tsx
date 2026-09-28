@@ -11,8 +11,9 @@ const SHOP_URL = "https://oma-merch.myspreadshop.de/";
  */
 export default function FanshopSection() {
   return (
-    <div className="space-y-4 max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto">
-      <div className="text-center space-y-2">
+    <div className="space-y-4">
+      {/* Header + Footnote bleiben schmal & lesbar, auch wenn das iFrame darunter volle Breite nutzt */}
+      <div className="text-center space-y-2 max-w-2xl mx-auto">
         <div className="flex items-center justify-center gap-2 text-teal-400 mb-1">
           <ShoppingBag className="w-5 h-5" />
           <span className="text-xs font-semibold uppercase tracking-widest">OMA Fanshop</span>
@@ -40,8 +41,10 @@ export default function FanshopSection() {
         </div>
       </div>
 
+      {/* Das iFrame nutzt volle verfügbare Breite und wächst mit dem Viewport mit,
+          statt wie der Rest der Seite auf eine Lesebreite gedeckelt zu sein. */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-hidden w-full"
         style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}
       >
         <iframe
@@ -53,7 +56,7 @@ export default function FanshopSection() {
         />
       </div>
 
-      <p className="text-[11px] text-gray-600 text-center">
+      <p className="text-[11px] text-gray-600 text-center max-w-2xl mx-auto">
         Der Shop wird von Spreadshirt betrieben — Zahlung, Versand und Widerruf laufen dort.
       </p>
     </div>
