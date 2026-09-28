@@ -147,6 +147,7 @@ export default function ServerCard({ server }: { server: Server }) {
       {showCredentials && (
         <ServerCredentials
           serverId={server.id}
+          game={server.game}
           host={server.host}
           port={server.port}
           password={server.password}
