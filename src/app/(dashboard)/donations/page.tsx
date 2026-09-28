@@ -89,7 +89,7 @@ export default async function DonationsPage() {
   const myEntry  = myId ? entriesByUser.has(myId) : false;
 
   const donationsContent = (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-2xl mx-auto">
 
       {/* Header */}
       <div className="text-center space-y-2">
@@ -356,7 +356,7 @@ export default async function DonationsPage() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-0 pb-8 sm:py-8">
+    <div className="px-4 pt-0 pb-8 sm:py-8">
       <SupportTabs donations={donationsContent} fanshop={<FanshopSection />} />
     </div>
   );

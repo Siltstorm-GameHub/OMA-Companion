@@ -11,7 +11,7 @@ const SHOP_URL = "https://oma-merch.myspreadshop.de/";
  */
 export default function FanshopSection() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto">
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2 text-teal-400 mb-1">
           <ShoppingBag className="w-5 h-5" />
