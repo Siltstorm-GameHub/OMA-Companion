@@ -104,6 +104,7 @@ export type VisibleServer = {
   name: string;
   game: string;
   description: string | null;
+  joinInstructions: string | null;
   maxSlots: number;
   occupied: number;
   available: number;
@@ -149,6 +150,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         name: server.name,
         game: server.game,
         description: server.description,
+        joinInstructions: server.joinInstructions,
         maxSlots: server.maxSlots,
         occupied,
         available,

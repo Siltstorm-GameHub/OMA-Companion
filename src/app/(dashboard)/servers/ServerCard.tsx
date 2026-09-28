@@ -24,6 +24,7 @@ type Server = {
   name: string;
   game: string;
   description: string | null;
+  joinInstructions: string | null;
   maxSlots: number;
   occupied: number;
   available: number;
@@ -147,7 +148,7 @@ export default function ServerCard({ server }: { server: Server }) {
       {showCredentials && (
         <ServerCredentials
           serverId={server.id}
-          game={server.game}
+          joinInstructions={server.joinInstructions}
           host={server.host}
           port={server.port}
           password={server.password}

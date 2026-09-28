@@ -696,3 +696,9 @@ CREATE INDEX IF NOT EXISTS "PromotionRequest_requesterId_idx" ON "PromotionReque
 
 ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "gameCoverUrl" TEXT;
 ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "gameCoverName" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Community-Gameserver: admin-gepflegte "So trittst du bei"-Anleitung
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "joinInstructions" TEXT;

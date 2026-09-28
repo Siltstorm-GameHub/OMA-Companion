@@ -10,6 +10,7 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
 import { EmptyState } from "@/components/EmptyState";
+import JoinInstructionsPreview from "./JoinInstructionsPreview";
 
 type Light = "green" | "yellow" | "red";
 
@@ -18,6 +19,7 @@ type Server = {
   name: string;
   game: string;
   description: string | null;
+  joinInstructions: string | null;
   host: string;
   port: string | null;
   password: string | null;
@@ -45,6 +47,7 @@ type FormState = {
   name: string;
   game: string;
   description: string;
+  joinInstructions: string;
   host: string;
   port: string;
   password: string;
@@ -59,12 +62,22 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: "", game: "", description: "", host: "", port: "", password: "",
+  name: "", game: "", description: "", joinInstructions: "", host: "", port: "", password: "",
   statusSource: "none", ampInstanceId: "", gamedigType: "", queryPort: "", queryTelnetPort: "", queryTelnetPassword: "",
   maxSlots: "10", openAccess: false,
 };
 
 type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
+
+// Startpunkt für "So trittst du bei" beim Anlegen — Admin passt danach frei an,
+// nichts davon wird erzwungen oder überschreibt bereits getippten Text.
+function defaultJoinInstructions(game: string): string {
+  if (!game.trim()) return "";
+  if (/minecraft/i.test(game)) {
+    return 'Minecraft starten → "Mehrspieler" → "Server hinzufügen" → Adresse einfügen → beitreten.';
+  }
+  return 'Spiel starten → Mehrspieler-/Server-Browser öffnen → "Direct Connect" bzw. "Server per IP beitreten" wählen → Adresse einfügen.';
+}
 
 export default function ServerManager({ initialServers }: { initialServers: Server[] }) {
   const [servers, setServers] = useState<Server[]>(initialServers);
@@ -108,7 +121,10 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
 
   // Übernimmt einen AMP-Vorschlag in das "Server anlegen"-Formular; Host/Passwort/Slots bleiben manuell.
   function useSuggestion(suggestion: AmpSuggestion) {
-    setForm({ ...EMPTY_FORM, name: suggestion.name, game: suggestion.game, port: suggestion.port ?? "", ampInstanceId: suggestion.ampInstanceId });
+    setForm({
+      ...EMPTY_FORM, name: suggestion.name, game: suggestion.game, port: suggestion.port ?? "", ampInstanceId: suggestion.ampInstanceId,
+      joinInstructions: defaultJoinInstructions(suggestion.game),
+    });
     setAmpSuggestions((s) => s.filter((x) => x.ampInstanceId !== suggestion.ampInstanceId));
     toast("Bitte Host/IP und ggf. Passwort ergänzen, dann anlegen", { icon: "ℹ️" });
   }
@@ -125,7 +141,13 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "AMP-Abfrage fehlgeschlagen"); return; }
       const setter = target === "create" ? setForm : setEditForm;
-      setter((f) => ({ ...f, name: data.name || f.name, game: data.game || f.game, port: data.port ?? f.port }));
+      setter((f) => {
+        const game = data.game || f.game;
+        return {
+          ...f, name: data.name || f.name, game, port: data.port ?? f.port,
+          joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
+        };
+      });
       toast.success("Von AMP übernommen — Host/IP und Passwort bitte manuell prüfen");
     } catch {
       toast.error("AMP-Abfrage fehlgeschlagen");
@@ -145,6 +167,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           name: form.name.trim(),
           game: form.game.trim(),
           description: form.description.trim() || undefined,
+          joinInstructions: form.joinInstructions.trim() || undefined,
           host: form.host.trim(),
           port: form.port.trim() || undefined,
           password: form.password.trim() || undefined,
@@ -175,6 +198,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       name: server.name,
       game: server.game,
       description: server.description ?? "",
+      joinInstructions: server.joinInstructions ?? "",
       host: server.host,
       port: server.port ?? "",
       password: server.password ?? "",
@@ -199,6 +223,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           name: editForm.name.trim(),
           game: editForm.game.trim(),
           description: editForm.description.trim() || null,
+          joinInstructions: editForm.joinInstructions.trim() || null,
           host: editForm.host.trim(),
           port: editForm.port.trim() || null,
           password: editForm.password.trim() || null,
@@ -283,7 +308,10 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
         <div className="grid grid-cols-2 gap-2">
           <input placeholder="Name (z.B. Survival #1)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <GameNameInput value={form.game} onChange={(game) => setForm({ ...form, game })}
+          <GameNameInput value={form.game} onChange={(game) => setForm((f) => ({
+            ...f, game,
+            joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
+          }))}
             placeholder="Spiel (z.B. Minecraft)"
             className="bg-white/5 border border-white/10 rounded-xl py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Host / IP" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })}
@@ -303,6 +331,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+          <textarea
+            placeholder={'"So trittst du bei" (optional) — z.B. "Spiel starten → Mehrspieler → Direct Connect → Adresse einfügen"'}
+            value={form.joinInstructions} onChange={(e) => setForm({ ...form, joinInstructions: e.target.value })}
+            rows={2}
+            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20 resize-none" />
+          <JoinInstructionsPreview text={form.joinInstructions} />
           <select value={form.statusSource} onChange={(e) => setForm({ ...form, statusSource: e.target.value as FormState["statusSource"] })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
             <option value="none">Live-Status: keiner</option>
@@ -375,6 +409,9 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     {server.pendingCount > 0 && (
                       <span className="text-amber-400"> · {server.pendingCount} offene Bewerbung{server.pendingCount === 1 ? "" : "en"}</span>
                     )}
+                    {!server.joinInstructions?.trim() && (
+                      <span className="text-amber-400"> · Keine Beitritts-Anleitung hinterlegt</span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -405,7 +442,10 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                   <div className="grid grid-cols-2 gap-2">
                     <input placeholder="Name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <GameNameInput value={editForm.game} onChange={(game) => setEditForm({ ...editForm, game })}
+                    <GameNameInput value={editForm.game} onChange={(game) => setEditForm((f) => ({
+                      ...f, game,
+                      joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
+                    }))}
                       placeholder="Spiel"
                       className="bg-white/5 border border-white/10 rounded-lg py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Host / IP" value={editForm.host} onChange={(e) => setEditForm({ ...editForm, host: e.target.value })}
@@ -425,6 +465,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                    <textarea
+                      placeholder={'"So trittst du bei" (optional)'}
+                      value={editForm.joinInstructions} onChange={(e) => setEditForm({ ...editForm, joinInstructions: e.target.value })}
+                      rows={2}
+                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20 resize-none" />
+                    <JoinInstructionsPreview text={editForm.joinInstructions} />
                     <select value={editForm.statusSource} onChange={(e) => setEditForm({ ...editForm, statusSource: e.target.value as FormState["statusSource"] })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20">
                       <option value="none">Live-Status: keiner</option>

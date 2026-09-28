@@ -10,6 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     name: string;
     game: string;
     description: string | null;
+    joinInstructions: string | null;
     host: string;
     port: string | null;
     password: string | null;

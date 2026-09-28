@@ -293,6 +293,15 @@
         ],
         "createdAt": "2026-09-25T07:48:26.287Z",
         "reason": "Claude: false positive - inactive tab text on dark bg-black/30 pill, not a colored surface; user not consulted"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/servers/ServerManager.tsx"
+        ],
+        "createdAt": "2026-09-28T11:31:36.294Z",
+        "reason": "pre-existing icon buttons: text-gray-500 hover:text-{color} switches together with hover:bg-{color}, never gray-on-colored-bg simultaneously; unrelated to this session's join-instructions change"
       }
     ]
   }
