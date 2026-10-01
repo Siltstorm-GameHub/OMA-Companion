@@ -218,16 +218,6 @@ const RULES: RuleSeed[] = [
     legacyBotConfigKey: "rank_up",
   },
   {
-    key: "leaderboard",
-    label: "Monatliche Rangliste",
-    description: "Am 1. des Monats mit den Top-10 des Vormonats.",
-    category: "system",
-    pushEnabled: false, inAppEnabled: false, discordDmEnabled: false, discordChanEnabled: true,
-    titleTemplate: "🏆 Monats-Rangliste · {month}",
-    bodyTemplate: "🏆 Die aktivsten Mitglieder im **{month}**:\n\n{lines}",
-    legacyBotConfigKey: "leaderboard",
-  },
-  {
     key: "birthday",
     label: "Geburtstag",
     description: "Täglich für Nutzer mit Geburtstag heute.",
@@ -700,6 +690,9 @@ const RULES: RuleSeed[] = [
 ];
 
 async function main() {
+  // Entfernte Regel: monatliche Discord-Rangliste (Cron wurde gelöscht)
+  await prisma.notificationRule.deleteMany({ where: { key: "leaderboard" } });
+
   const legacyConfig = Object.fromEntries(
     (await prisma.botConfig.findMany()).map((r) => [r.key, r.value]),
   );

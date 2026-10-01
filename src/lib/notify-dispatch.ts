@@ -57,7 +57,6 @@ const RULE_TYPE: Record<string, NotificationType> = {
   server_approved:    "server",
   server_denied:      "server",
   server_revoked:     "server",
-  leaderboard:        "admin",
   birthday:           "admin",
 };
 

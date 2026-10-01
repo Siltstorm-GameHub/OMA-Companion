@@ -9,10 +9,6 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/monthly-leaderboard",
-      "schedule": "0 11 1 * *"
-    },
-    {
       "path": "/api/cron/monthly-quests",
       "schedule": "0 0 1 * *"
     },
