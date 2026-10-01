@@ -10,6 +10,7 @@ type Nomination = {
   clipUrl: string;
   thumbnailUrl: string | null;
   clipTitle: string | null;
+  customTitle: string | null;
   submittedBy: { name: string | null; username: string | null } | null;
   twitchCreatorLogin: string | null;
   partnerTwitchLogin: string | null;

@@ -7,6 +7,7 @@ type WinnerNomination = {
   clipUrl: string;
   thumbnailUrl: string | null;
   clipTitle: string | null;
+  customTitle?: string | null;
   submittedBy?: { name: string | null; username: string | null } | null;
   twitchCreatorLogin: string | null;
   partnerTwitchLogin: string | null;
@@ -26,7 +27,7 @@ export default function ClipWinnerCard({ winner, embedParent, rewardCoins, badge
       <TwitchClipEmbed
         clipUrl={winner.clipUrl}
         thumbnailUrl={winner.thumbnailUrl}
-        title={winner.clipTitle ?? "Gewinner-Clip"}
+        title={winner.customTitle ?? winner.clipTitle ?? "Gewinner-Clip"}
         parent={embedParent}
         overlay={
           <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-amber-500 text-black text-xs font-bold px-2 py-1 rounded-full">
@@ -35,7 +36,7 @@ export default function ClipWinnerCard({ winner, embedParent, rewardCoins, badge
         }
       />
       <div className="px-4 py-3 border-t border-amber-500/10">
-        <p className="text-white font-semibold">{winner.clipTitle ?? "Unbekannter Clip"}</p>
+        <p className="text-white font-semibold">{winner.customTitle ?? winner.clipTitle ?? "Unbekannter Clip"}</p>
         <p className="text-sm text-gray-400 mt-0.5">
           Kanal: <span className="text-[#9146ff]">{credit.channel}</span>
           {credit.creator && (

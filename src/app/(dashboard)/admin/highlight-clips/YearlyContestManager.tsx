@@ -12,6 +12,7 @@ type Nomination = {
   id: string;
   clipUrl: string;
   clipTitle: string | null;
+  customTitle: string | null;
   submittedBy: { id: string; name: string | null; username: string | null } | null;
   twitchCreatorLogin: string | null;
   partnerTwitchLogin: string | null;
@@ -182,7 +183,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
                       <Trophy className={`w-4 h-4 shrink-0 mt-0.5 ${noAccountWinner ? "text-amber-400" : "text-emerald-400"}`} />
                       <div className="text-sm">
                         <p className="font-medium text-white">
-                          Gewinner: {winner.clipTitle ?? "Unbekannter Clip"}
+                          Gewinner: {winner.customTitle ?? winner.clipTitle ?? "Unbekannter Clip"}
                         </p>
                         <p className="text-gray-400 text-xs mt-0.5">
                           {winner.submittedBy ? (
@@ -219,7 +220,8 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
                   <div key={nom.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${isWinner ? "bg-amber-500/5" : "bg-white/[0.02]"}`}>
                     <span className="text-gray-600 w-4 text-right">{i + 1}.</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white truncate">{nom.clipTitle ?? nom.clipUrl}</p>
+                      <p className="text-white truncate">{nom.customTitle ?? nom.clipTitle ?? nom.clipUrl}</p>
+                      {nom.customTitle && nom.clipTitle && <p className="text-[11px] text-gray-600 truncate">Original: {nom.clipTitle}</p>}
                       <p className="text-xs text-gray-500">
                         {nom.submittedBy ? (
                           <Link href={`/profile/${nom.submittedBy.id}`} className="hover:text-gray-300 transition-colors">{name}</Link>

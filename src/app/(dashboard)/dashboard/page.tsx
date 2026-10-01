@@ -323,7 +323,7 @@ export default async function DashboardPage() {
     winnerNominationIds.length > 0
       ? prisma.clipNomination.findMany({
           where:  { id: { in: winnerNominationIds } },
-          select: { id: true, clipUrl: true, thumbnailUrl: true, clipTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
+          select: { id: true, clipUrl: true, thumbnailUrl: true, clipTitle: true, customTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
         })
       : Promise.resolve([]),
   ]);
@@ -331,7 +331,8 @@ export default async function DashboardPage() {
   // Reihenfolge der Gewinner-Nominierungen beibehalten (findMany garantiert das nicht)
   const winnerClips = winnerNominationIds
     .map(id => winnerClipsUnordered.find(c => c.id === id))
-    .filter((c): c is NonNullable<typeof c> => !!c);
+    .filter((c): c is NonNullable<typeof c> => !!c)
+    .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
   // Plain-Object-Liste für die client-seitig rotierende Events-Kachel — Countdown wird hier
   // (mit dem Server-"now") vorberechnet statt live im Client zu ticken.

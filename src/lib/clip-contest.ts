@@ -178,7 +178,7 @@ export async function finalizeContest(contestId: string): Promise<string> {
   });
 
   if (winners.length > 0) {
-    await notifyContestFinished(contest.month, contest.year, winners[0].clipTitle, winners.length);
+    await notifyContestFinished(contest.month, contest.year, winners[0].customTitle ?? winners[0].clipTitle, winners.length);
   }
 
   return message;

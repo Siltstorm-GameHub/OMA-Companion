@@ -469,6 +469,7 @@ model ClipNomination {
   clipUrl            String
   thumbnailUrl       String?
   clipTitle          String?
+  customTitle        String? // Admin-Umbenennung nur für die Community (Twitch-Titel bleibt in clipTitle)
   submittedByUserId  String? // Community-Clip: User der eingereicht hat
   twitchCreatorLogin String? // Partner-Clip: Twitch-Login des Clip-Erstellers
   partnerTwitchLogin String? // Partner-Clip: Twitch-Login des Kanals

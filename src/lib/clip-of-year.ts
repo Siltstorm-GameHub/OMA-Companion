@@ -124,7 +124,7 @@ export async function finalizeYearlyContest(contestId: string): Promise<string> 
   });
 
   if (winners.length > 0) {
-    await notifyYearlyContestFinished(contest.year, winners[0].clipTitle, winners.length);
+    await notifyYearlyContestFinished(contest.year, winners[0].customTitle ?? winners[0].clipTitle, winners.length);
   }
 
   return message;
