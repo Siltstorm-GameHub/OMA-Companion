@@ -12,6 +12,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Discord({
       allowDangerousEmailAccountLinking: true,
+checks: ["state"],
       authorization: { params: { scope: "identify email guilds" } },
       profile(profile) {
         return {
