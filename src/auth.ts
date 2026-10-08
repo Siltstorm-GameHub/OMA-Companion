@@ -11,18 +11,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     Discord({
+      clientId: process.env.DISCORD_CLIENT_ID,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
-checks: ["state"],
-      authorization: { params: { scope: "identify email guilds" } },
+      
+      // ── OIDC-Fix für Auth.js v5 / @auth/core ──────────────────────────
+      // Discord unterstützt kein OIDC. Wir definieren die Endpunkte direkt,
+      // um fälschliche OIDC Issuer-Prüfungen gegen https://authjs.dev zu verhindern.
+      issuer: "https://discord.com",
+      checks: ["state"],
+      authorization: {
+        url: "https://discord.com/oauth2/authorize",
+        params: { scope: "identify email guilds" },
+      },
+      token: "https://discord.com/api/oauth2/token",
+      userinfo: "https://discord.com/api/users/@me",
+      // ─────────────────────────────────────────────────────────────────
+
       profile(profile) {
         return {
-          // id muss zurückgegeben werden, damit Auth.js providerAccountId = Discord-Snowflake setzt.
-          // PrismaAdapter v2 ignoriert das id-Feld in createUser und lässt Prisma eine CUID vergeben –
-          // die User-DB-ID bleibt also weiterhin eine CUID, nicht die Discord-ID.
-          id:    profile.id,
-          name:  profile.username,
-          email: profile.email ?? null,
-          image: profile.avatar
+          id:     profile.id,
+          name:   profile.username,
+          email:  profile.email ?? null,
+          image:  profile.avatar
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
             : null,
         };
@@ -62,9 +73,6 @@ checks: ["state"],
         const discordId = account.providerAccountId;
 
         // ── Duplikat-Erkennung & Merge ────────────────────────────────────────
-        // Tritt auf wenn ein Stub-User (aus dem Mitglieder-Sync) mit derselben
-        // discordId existiert, aber noch NIE eingeloggt war (kein oder alter Account-Eintrag).
-        // NextAuth hat in diesem Fall einen zweiten User angelegt → zusammenführen.
         try {
           const stubUser = await prisma.user.findFirst({
             where: { discordId, id: { not: user.id } },
@@ -74,21 +82,14 @@ checks: ["state"],
             console.log(`[AUTH] Merge gestartet: Stub ${stubUser.id} ↔ OAuth-User ${user.id} (Discord: ${discordId})`);
             let merged = false;
 
-            // Versuch 1: Stub behalten, OAuth-User (brandneu, keine Daten) löschen.
-            // Schlägt fehl wenn der OAuth-User doch schon FK-referenzierte Daten hat.
             try {
               await prisma.$transaction(async (tx) => {
-                // 1. Stub-Account ohne echte Tokens löschen
                 await tx.account.deleteMany({ where: { userId: stubUser.id, provider: "discord" } });
-                // 2. OAuth-Account (mit Tokens) auf den Stub übertragen
                 await tx.account.updateMany({ where: { userId: user.id }, data: { userId: stubUser.id } });
-                // 3. Stub mit Discord-Profildaten aktualisieren (name nicht überschreiben –
-                //    Stub hat bereits den server-spezifischen Nickname aus dem Sync)
                 await tx.user.update({
                   where: { id: stubUser.id },
                   data:  { discordId, ...(user.image ? { image: user.image } : {}) },
                 });
-                // 4. OAuth-User löschen (brandneu, noch keine echten Daten)
                 await tx.user.delete({ where: { id: user.id } });
               });
               token.id = stubUser.id;
@@ -98,24 +99,19 @@ checks: ["state"],
               console.warn(`[AUTH] Merge Richtung 1 fehlgeschlagen (OAuth-User hat ggf. Daten), versuche Richtung 2:`, txErr);
             }
 
-            // Fallback Versuch 2: OAuth-User behalten, Stub-discordId freigeben.
-            // Verhindert State-Korruption falls Versuch 1 nach Account-Transfer abgebrochen ist.
             if (!merged) {
               try {
                 await prisma.$transaction(async (tx) => {
-                  // Stub-discordId freigeben, damit kein Unique-Konflikt bleibt
                   await tx.user.update({ where: { id: stubUser.id }, data: { discordId: null } });
-                  // OAuth-User als kanonischen User setzen
                   await tx.user.update({
                     where: { id: user.id },
                     data:  { discordId, ...(user.image ? { image: user.image } : {}) },
                   });
-                  // Evtl. durch Versuch 1 fehllaufend umgehängte Accounts zurücksetzen
                   await tx.account.updateMany({ where: { userId: stubUser.id, provider: "discord" }, data: { userId: user.id } });
                 });
                 token.id = user.id;
                 merged   = true;
-                console.warn(`[AUTH] Merge Richtung 2 (Fallback): OAuth-User ${user.id} behält discordId. Stub ${stubUser.id} (discordId gecleart) manuell prüfen oder nächsten Sync abwarten.`);
+                console.warn(`[AUTH] Merge Richtung 2 (Fallback): OAuth-User ${user.id} behält discordId.`);
               } catch (tx2Err) {
                 console.error(`[AUTH] Beide Merge-Richtungen fehlgeschlagen:`, tx2Err);
                 token.id = user.id;
@@ -124,13 +120,10 @@ checks: ["state"],
 
             token.discordId = discordId;
           } else {
-            // Kein anderer Stub → Stub IS der aktive User oder normaler Erstlogin.
-            // discordId + Email setzen (Stub hat oft noch keine Email).
             await prisma.user.update({
               where: { id: user.id },
               data:  { discordId, ...(user.email ? { email: user.email } : {}) },
             }).catch(async () => {
-              // Email-Kollision → nur discordId setzen
               await prisma.user.update({
                 where: { id: user.id },
                 data:  { discordId },
@@ -147,7 +140,6 @@ checks: ["state"],
         }
 
       } else if (user) {
-        // Anderer Provider (falls je hinzugefügt)
         token.id = user.id;
       }
 
@@ -167,18 +159,15 @@ checks: ["state"],
         }
       }
 
-      // Fire-and-forget badge check on every login (only first time per earned badge matters)
+      // Fire-and-forget badge check on every login
       if (token.id && user) {
         checkAndAwardBadges(token.id as string).catch(() => {});
-        // Community-Karte spätestens beim Login sicherstellen (der DB-Webhook ist nur eine Zusatzabsicherung)
         if (token.discordId) {
           ensureCommunityCard({ userId: token.id as string, discordId: token.discordId as string, displayName: user.name ?? "OMA-Mitglied" }).catch(() => {});
         }
       }
 
-      // ── Aktivitäts-Zeitstempel (unabhängig von Login) ─────────────────────
-      // jwt-Callback läuft bei jedem Session-Zugriff, nicht nur beim Login.
-      // Throttle auf alle 30min pro Token, um nicht bei jedem Request zu schreiben.
+      // ── Aktivitäts-Zeitstempel ─────────────────────
       if (token.id) {
         const lastSync = token.lastActivitySync as number | undefined;
         const now = Date.now();
