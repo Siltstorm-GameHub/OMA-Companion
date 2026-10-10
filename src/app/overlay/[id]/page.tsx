@@ -79,6 +79,7 @@ export default async function OverlayPage({
       <style>{`
         html, body { background: transparent !important; }
         [data-animated-bg] { display: none !important; }
+        body::before, body::after { display: none !important; }
       `}</style>
       <OverlayClient
         eventId={event.id}

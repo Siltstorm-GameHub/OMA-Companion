@@ -58,6 +58,7 @@ export default async function ProfileOverlayPage({
       <style>{`
         html, body { background: transparent !important; }
         [data-animated-bg] { display: none !important; }
+        body::before, body::after { display: none !important; }
       `}</style>
       <ProfileOverlayClient userId={user.id} token={token} layout={layout} rotateSeconds={rotateSeconds} />
     </>
