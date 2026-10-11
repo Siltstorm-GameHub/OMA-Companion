@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Kennung dieses Builds — wird beim Build fest in Server- UND Browser-Code eingesetzt. Die
+  // OBS-Overlays vergleichen damit ihren geladenen Code mit dem des Servers und laden sich nach
+  // einem Deployment selbst neu (OBS-Browserquellen lädt sonst niemand je neu, siehe
+  // useOverlayStream). Lokal "dev", dann findet nie ein Neuladen statt.
+  env: {
+    OMA_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || "dev",
+  },
   turbopack: {
     root: path.resolve(__dirname),
   },

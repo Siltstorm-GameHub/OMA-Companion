@@ -64,6 +64,9 @@ export function overlayStreamResponse(
       };
 
       req.signal.addEventListener("abort", close);
+      // Build-Kennung zuerst: ein Overlay mit Code von einem älteren Deployment lädt sich daraufhin
+      // neu (siehe useOverlayStream) — sonst kennt es z.B. neu hinzugekommene Hintergründe nicht.
+      write(`event: build\ndata: ${JSON.stringify(process.env.OMA_BUILD_ID ?? "dev")}\n\n`);
       await poll();
       if (closed) return;
       timers.poll = setInterval(poll, pollMs);
