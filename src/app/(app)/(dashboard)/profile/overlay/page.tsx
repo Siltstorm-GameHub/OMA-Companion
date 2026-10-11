@@ -50,6 +50,7 @@ export default async function StreamerOverlaySettingsPage() {
       initialProfile={config.profile ?? defaultProfileLayout()}
       initialPauseText={config.pauseText}
       initialLite={config.lite}
+      initialPauseBackground={config.pauseBackground}
       activeEvent={activeEvent}
       streamingEvents={streamingEvents}
     />

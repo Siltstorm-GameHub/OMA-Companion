@@ -178,6 +178,8 @@ export type StreamerOverlayPayload = (
   lite: boolean;
   /** Pausen-Bildschirm per Live-Steuerung über das Spiel-Overlay gelegt. */
   pause: boolean;
+  /** Hintergrund der Pausen-Szene (Schlüssel aus pauseBackgrounds.ts). */
+  pauseBackground: string;
 };
 
 /** Szenen des festen Streamer-Links (`&scene=…`) — je OBS-Szene eine eigene Browser-Quelle. */

@@ -453,7 +453,7 @@ export async function getStreamerOverlayPayload(
 ): Promise<StreamerOverlayPayload | null> {
   const [eventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
   if (!streamer) return null;
-  const common = { streamer, pauseText: config.pauseText, lite: config.lite, pause: control.pause };
+  const common = { streamer, pauseText: config.pauseText, lite: config.lite, pause: control.pause, pauseBackground: config.pauseBackground };
   const zoom = activeZoom(control);
 
   if (eventId) {

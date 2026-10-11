@@ -49,7 +49,10 @@ describe("Overlay-Layout", () => {
     assert.equal(cfg.profile, null);
     assert.equal(cfg.pauseText, "Gleich zurück");
     assert.equal(cfg.lite, true);
-    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false });
+    assert.equal(cfg.pauseBackground, "dark");
+    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false, pauseBackground: "dark" });
+    assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "space" })).pauseBackground, "space");
+    assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "gibtsnicht" })).pauseBackground, "dark");
     assert.equal(sanitizeLayout({ elements: {} }, ELEMENT_KEYS), null);
   });
 

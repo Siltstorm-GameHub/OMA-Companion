@@ -17,6 +17,7 @@ import {
   type ElementKey, type ProfileElementKey, type OverlayLayout,
 } from "@/components/overlay/types";
 import { formatBerlinDate } from "@/lib/time";
+import { PAUSE_BACKGROUNDS } from "@/components/overlay/pauseBackgrounds";
 
 type Mode = "event" | "profile";
 
@@ -49,13 +50,14 @@ function obsDragUrl(url: string, name: string) {
 }
 
 export default function StreamerOverlaySettings({
-  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, activeEvent, streamingEvents,
+  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, initialPauseBackground, activeEvent, streamingEvents,
 }: {
   overlayUrl: string;
   initialEvent: OverlayLayout<ElementKey>;
   initialProfile: OverlayLayout<ProfileElementKey>;
   initialPauseText: string | null;
   initialLite: boolean;
+  initialPauseBackground: string;
   activeEvent: { id: string; title: string } | null;
   /** Kommende Events, für die der User als Streamer angemeldet ist. */
   streamingEvents: { id: string; title: string; startAt: string }[];
@@ -66,8 +68,9 @@ export default function StreamerOverlaySettings({
   const [profileLayout, setProfileLayout] = useState(initialProfile);
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
   const [lite, setLite] = useState(initialLite);
-  const snapshot = () => JSON.stringify({ eventLayout, profileLayout, pauseText: pauseText.trim(), lite });
-  const [saved, setSaved] = useState(() => JSON.stringify({ eventLayout: initialEvent, profileLayout: initialProfile, pauseText: initialPauseText ?? "", lite: initialLite }));
+  const [pauseBackground, setPauseBackground] = useState(initialPauseBackground);
+  const snapshot = () => JSON.stringify({ eventLayout, profileLayout, pauseText: pauseText.trim(), lite, pauseBackground });
+  const [saved, setSaved] = useState(() => JSON.stringify({ eventLayout: initialEvent, profileLayout: initialProfile, pauseText: initialPauseText ?? "", lite: initialLite, pauseBackground: initialPauseBackground }));
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const dirty = snapshot() !== saved;
@@ -80,7 +83,7 @@ export default function StreamerOverlaySettings({
       const res = await fetch("/api/profile/overlay", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event: eventLayout, profile: profileLayout, pauseText: pauseText.trim() || null, lite }),
+        body: JSON.stringify({ event: eventLayout, profile: profileLayout, pauseText: pauseText.trim() || null, lite, pauseBackground }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
@@ -209,6 +212,41 @@ export default function StreamerOverlaySettings({
               onChange={e => setPauseText(e.target.value)}
               className="input-glass"
             />
+          </div>
+          <div>
+            <p className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1">
+              <Moon className="w-3.5 h-3.5 text-teal-300" /> Hintergrund der Pausen-Szene
+            </p>
+            <p className="text-xs text-gray-500 mb-2.5">
+              Die Bilder sind im Stream leicht animiert (Sterne, Regen, Lichter …) – im Leicht-Modus bleiben sie still.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PAUSE_BACKGROUNDS.map(bg => {
+                const active = pauseBackground === bg.key;
+                return (
+                  <button
+                    key={bg.key}
+                    type="button"
+                    onClick={() => setPauseBackground(bg.key)}
+                    aria-pressed={active}
+                    className={`relative aspect-video rounded-xl overflow-hidden text-left transition-all ${
+                      active ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-black/60" : "ring-1 ring-white/10 hover:ring-white/30"
+                    }`}
+                    style={{
+                      backgroundImage: bg.image ? `${bg.overlay}, url(${bg.image})` : `${bg.overlay}, repeating-conic-gradient(#2a2a32 0% 25%, #1c1c22 0% 50%) 50% / 16px 16px`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
+                  >
+                    <span className="absolute inset-x-0 bottom-0 px-2 py-1.5 bg-gradient-to-t from-black/85 to-transparent">
+                      <span className="block text-xs font-semibold text-white">{bg.label}</span>
+                      <span className="block text-[10px] text-gray-300">{bg.hint}</span>
+                    </span>
+                    {active && <Check className="absolute top-1.5 right-1.5 w-4 h-4 text-teal-300" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

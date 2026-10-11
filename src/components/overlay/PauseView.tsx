@@ -9,6 +9,7 @@ import { CommunityTile, LiveMembersTile } from "./ProfileOverlayView";
 import { PanelShell, TwitchGlyph, pickTickerMatch } from "./tiles";
 import { DEFAULT_PAUSE_TEXT, displayName, type StreamerOverlayPayload, type UpcomingEvent, type OverlayUser } from "./types";
 import { isEliminationFormat } from "./layout";
+import PauseBackground from "./PauseBackground";
 
 /**
  * Pausen-Szene des festen Streamer-Links (`&scene=pause`) — für "Gleich zurück"-/Pausen-Szenen in
@@ -23,7 +24,7 @@ export default function PauseView({ payload }: { payload: StreamerOverlayPayload
 
   return (
     <OverlayStage lite={lite}>
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.16), rgba(6,6,9,0.96) 60%)" }} />
+      <PauseBackground backgroundKey={payload.pauseBackground} lite={lite} />
 
       {/* Kopf: Logo, Pausentext, Streamer */}
       <div style={{ position: "absolute", top: 56, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>

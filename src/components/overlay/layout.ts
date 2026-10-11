@@ -13,6 +13,7 @@ import {
   type ElementKey, type ProfileElementKey, type LayoutEntry, type LayoutPositions, type OverlayLayout,
   type OverlayControl,
 } from "./types";
+import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } from "./pauseBackgrounds";
 
 /** Ausgangspositionen (Prozent von 1920×1080). Tabelle/Teilnehmer/Gesamttabelle teilen sich
  *  bewusst dieselbe Position — sie stapeln sich dadurch von Anfang an zu einer rotierenden
@@ -147,6 +148,8 @@ export type StreamerOverlayConfig = {
   pauseText: string | null;
   /** Leicht-Modus für schwächere PCs (keine Glas-/Unschärfe-Effekte, keine Dauer-Animationen). */
   lite: boolean;
+  /** Hintergrund der Pausen-Szene, siehe pauseBackgrounds.ts. */
+  pauseBackground: PauseBackgroundKey;
 };
 
 export const PAUSE_TEXT_MAX = 60;
@@ -158,16 +161,17 @@ export function sanitizePauseText(raw: unknown): string | null {
 }
 
 export function parseStreamerConfig(json: string | null | undefined): StreamerOverlayConfig {
-  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false };
+  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND };
   if (!json) return empty;
   try {
-    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown };
+    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown };
     return {
       // Unbekannte Element-Schlüssel (z.B. entfernte wie "favorites") fallen hier still heraus.
       event: sanitizeLayout(parsed.event, ELEMENT_KEYS),
       profile: sanitizeLayout(parsed.profile, PROFILE_ELEMENT_KEYS),
       pauseText: sanitizePauseText(parsed.pauseText),
       lite: parsed.lite === true,
+      pauseBackground: isPauseBackground(parsed.pauseBackground) ? parsed.pauseBackground : DEFAULT_PAUSE_BACKGROUND,
     };
   } catch {
     return empty;
