@@ -53,13 +53,39 @@ function SceneEffects({ sceneKey }: { sceneKey: string }) {
           <Shimmer x={60} y={80} w={10} h={6} delay={1.5} />
         </>
       );
-    case "neoncity":
+    case "neonalley":
       return (
         <>
-          <Glow x={9} y={42} size={18} color="255,60,190" anim="flicker" duration={5} />
-          <Glow x={89} y={38} size={16} color="255,60,190" anim="flicker" duration={7} delay={2} />
-          <Glow x={70} y={50} size={20} color="45,212,191" anim="pulse" duration={8} />
-          <Rain opacity={0.32} />
+          <Glow x={29} y={35} size={12} color="255,60,190" anim="flicker" duration={6} />
+          <Glow x={63} y={15} size={14} color="45,212,191" anim="pulse" duration={7} />
+          <Glow x={41} y={48} size={9} color="255,60,190" anim="flicker" duration={9} delay={2} />
+          <Glow x={55} y={47} size={9} color="45,212,191" anim="pulse" duration={5} delay={1} />
+          <Glow x={90} y={42} size={10} color="255,150,90" anim="pulse" duration={6} />
+          <Drift top={70} height={22} opacity={0.2} duration={60} color="190,140,255" />
+          <Shimmer x={35} y={80} w={30} h={14} />
+          <Rain opacity={0.26} />
+        </>
+      );
+    case "neonstreet":
+      return (
+        <>
+          <Glow x={6} y={12} size={12} color="45,212,191" anim="flicker" duration={7} />
+          <Glow x={25} y={22} size={10} color="45,212,191" anim="pulse" duration={6} delay={1.5} />
+          <Glow x={95} y={10} size={12} color="255,60,190" anim="flicker" duration={9} delay={2} />
+          <Glow x={80} y={25} size={11} color="255,60,190" anim="pulse" duration={5} />
+          <Glow x={87} y={49} size={8} color="255,90,200" anim="pulse" duration={4} />
+          <Drift top={56} height={18} opacity={0.18} duration={70} color="160,190,255" />
+          <Shimmer x={10} y={78} w={80} h={18} />
+          <Rain opacity={0.24} />
+        </>
+      );
+    case "cyberroom":
+      return (
+        <>
+          <Twinkle seed={13} count={45} area={[30, 40, 85, 76]} color="94,234,212" size={4} />
+          <Glow x={12} y={58} size={14} color="140,120,255" anim="pulse" duration={7} />
+          <Glow x={92} y={72} size={12} color="255,80,150" anim="flicker" duration={10} />
+          <Rain opacity={0.2} />
         </>
       );
     case "esports":
@@ -94,10 +120,70 @@ function SceneEffects({ sceneKey }: { sceneKey: string }) {
     case "space":
       return (
         <>
-          <Twinkle seed={7} count={70} area={[0, 0, 100, 100]} />
-          <Glow x={16} y={20} size={16} color="255,240,220" anim="pulse" duration={8} />
-          <Glow x={10} y={55} size={36} color="200,40,90" anim="breathe" duration={14} />
-          <Glow x={75} y={35} size={32} color="45,212,191" anim="breathe" duration={17} delay={3} />
+          <Twinkle seed={7} count={40} area={[6, 12, 94, 45]} />
+          <Glow x={71} y={51} size={22} color="255,190,120" anim="pulse" duration={7} />
+          <Twinkle seed={71} count={45} area={[15, 55, 85, 74]} color="255,205,140" size={4} />
+          <ShootingStar />
+        </>
+      );
+    case "hexagon":
+      return (
+        <>
+          <Drift top={30} height={22} opacity={0.22} duration={70} color="45,212,191" />
+          <Twinkle seed={8} count={40} area={[0, 62, 100, 98]} color="45,212,191" size={7} />
+          <Glow x={5} y={78} size={10} color="248,60,90" anim="pulse" duration={5} />
+          <Glow x={80} y={86} size={10} color="248,60,90" anim="pulse" duration={6.5} delay={1.5} />
+        </>
+      );
+    case "lounge":
+      return (
+        <>
+          <Glow x={31} y={42} size={12} color="255,60,120" anim="flicker" duration={8} />
+          <Glow x={68} y={42} size={12} color="255,60,120" anim="flicker" duration={10} delay={3} />
+          <Glow x={27} y={22} size={10} color="45,212,191" anim="pulse" duration={6} />
+          <Glow x={73} y={22} size={10} color="45,212,191" anim="pulse" duration={6} delay={3} />
+          {[[6, 27], [14, 31], [6, 48], [88, 27], [93, 48]].map(([x, y], i) => (
+            <Glow key={i} x={x} y={y} size={7} color="94,234,212" anim="pulse" duration={3 + i} delay={i * 0.7} />
+          ))}
+          <Drift top={68} height={22} opacity={0.14} duration={90} color="45,212,191" />
+        </>
+      );
+    case "mansion":
+      return (
+        <>
+          <Glow x={7.5} y={62} size={8} color="255,180,90" anim="flicker" duration={4} />
+          <Glow x={20} y={35} size={20} color="140,180,255" anim="breathe" duration={12} />
+          <Glow x={53} y={46} size={7} color="255,210,150" anim="pulse" duration={9} />
+          <Motes seed={9} count={30} area={[10, 35, 45, 95]} color="200,215,255" size={3} kind="dust" />
+          <Drift top={76} height={22} opacity={0.15} duration={100} color="150,170,200" />
+        </>
+      );
+    case "castle":
+      return (
+        <>
+          <Glow x={93} y={52} size={26} color="255,200,120" anim="pulse" duration={8} />
+          <Drift top={2} height={26} opacity={0.2} duration={140} color="255,225,195" />
+          <Drift top={58} height={16} opacity={0.18} duration={110} color="255,225,200" reverse />
+          <Shimmer x={26} y={72} w={14} h={20} />
+          <Shimmer x={50} y={82} w={6} h={10} delay={1.2} />
+        </>
+      );
+    case "rooftop":
+      return (
+        <>
+          <Glow x={74} y={74} size={22} color="255,170,110" anim="pulse" duration={8} />
+          <Drift top={6} height={34} opacity={0.18} duration={130} color="255,190,205" />
+          <Twinkle seed={10} count={20} area={[30, 0, 75, 15]} />
+          <Twinkle seed={101} count={40} area={[25, 72, 100, 90]} color="255,220,160" size={4} />
+        </>
+      );
+    case "station":
+      return (
+        <>
+          <Twinkle seed={11} count={80} area={[0, 0, 100, 55]} />
+          <Glow x={45} y={22} size={40} color="120,170,255" anim="breathe" duration={16} />
+          <Glow x={68} y={51} size={10} color="255,230,170" anim="flicker" duration={7} />
+          <Motes seed={12} count={24} area={[0, 68, 55, 92]} color="210,255,140" size={5} kind="firefly" />
           <ShootingStar />
         </>
       );
@@ -285,6 +371,34 @@ function Bokeh({ seed, count }: { seed: number; count: number }) {
   return <>{items}</>;
 }
 
+/** Schwebende Partikel: "firefly" = Glühwürmchen (leuchten auf, wandern ziellos), "dust" = Staub
+ *  im Lichtstrahl (driftet langsam nach oben). */
+function Motes({ seed, count, area, color, size, kind }: {
+  seed: number; count: number; area: [number, number, number, number]; color: string; size: number; kind: "firefly" | "dust";
+}) {
+  const rand = rng(seed);
+  const items: ReactNode[] = [];
+  for (let i = 0; i < count; i++) {
+    const s = size * (0.6 + rand() * 0.8);
+    items.push(
+      <span
+        key={i}
+        className={kind === "firefly" ? "oma-pb-firefly" : "oma-pb-dust"}
+        style={{
+          ...layer,
+          left: `${area[0] + rand() * (area[2] - area[0])}%`,
+          top: `${area[1] + rand() * (area[3] - area[1])}%`,
+          width: s, height: s, borderRadius: "50%",
+          background: `radial-gradient(circle, rgba(${color},1) 0%, rgba(${color},0.35) 45%, rgba(${color},0) 72%)`,
+          animationDuration: `${(kind === "firefly" ? 5 : 14) + rand() * 8}s`,
+          animationDelay: `${-rand() * 20}s`,
+        }}
+      />,
+    );
+  }
+  return <>{items}</>;
+}
+
 /** Gelegentliche Sternschnuppe (einmal pro Zyklus, sonst unsichtbar). */
 function ShootingStar() {
   return (
@@ -332,6 +446,10 @@ function EffectStyles() {
       @keyframes oma-pb-float    { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(-260px); opacity: 0; } }
       @keyframes oma-pb-shoot    { 0%, 88% { opacity: 0; transform: rotate(160deg) translateX(0); } 90% { opacity: 1; } 96% { opacity: 0; transform: rotate(160deg) translateX(700px); } 100% { opacity: 0; transform: rotate(160deg) translateX(700px); } }
       @keyframes oma-pb-trail    { 0% { transform: translateX(-600px); opacity: 0; } 10% { opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(2200px); opacity: 0; } }
+      @keyframes oma-pb-firefly  { 0% { transform: translate(0, 0); opacity: 0; } 20% { opacity: 1; } 40% { transform: translate(18px, -14px); opacity: 0.3; } 60% { transform: translate(-10px, -26px); opacity: 1; } 80% { opacity: 0.2; } 100% { transform: translate(6px, -4px); opacity: 0; } }
+      @keyframes oma-pb-dust     { 0% { transform: translate(0, 0); opacity: 0; } 20% { opacity: 0.8; } 80% { opacity: 0.6; } 100% { transform: translate(30px, -120px); opacity: 0; } }
+      .oma-pb-firefly  { animation: oma-pb-firefly ease-in-out infinite; }
+      .oma-pb-dust     { animation: oma-pb-dust linear infinite; }
       .oma-pb-kenburns { animation: oma-pb-kenburns 45s ease-in-out infinite alternate; will-change: transform; }
       .oma-pb-twinkle  { animation: oma-pb-twinkle ease-in-out infinite; }
       .oma-pb-pulse    { animation: oma-pb-pulse ease-in-out infinite; }
