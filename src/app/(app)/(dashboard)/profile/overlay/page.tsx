@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserOverlayToken, buildStreamerOverlayUrl } from "@/lib/overlay";
-import { getStreamerActiveEventId } from "@/lib/overlay-state";
+import { getStreamerActiveEventId, getStreamerUpcomingEvents } from "@/lib/overlay-state";
 import { parseStreamerConfig, defaultStreamerEventLayout, defaultProfileLayout } from "@/components/overlay/layout";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import StreamerOverlaySettings from "./StreamerOverlaySettings";
@@ -11,10 +11,9 @@ export const metadata = { title: "OBS-Overlay – Old Masters Ally" };
 
 /** Einstellungen des festen Streamer-Links: zwei Szenen-Links (Spiel, Pause), zwei Layouts
  *  (mit/ohne laufendes Event), Pausentext und Leicht-Modus. */
-export default async function StreamerOverlaySettingsPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
+export default async function StreamerOverlaySettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login?callbackUrl=/profile/overlay");
-  const { event: highlightEventId } = await searchParams;
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -34,10 +33,11 @@ export default async function StreamerOverlaySettingsPage({ searchParams }: { se
   const token = await ensureUserOverlayToken(user.id);
   const config = parseStreamerConfig(user.overlayLayoutJson);
 
-  // Status-Zeile: was zeigt der Link genau jetzt? Und ggf. das Event, von dessen Anmeldung man kommt.
-  const [activeEventId, highlightEvent] = await Promise.all([
+  // Status: was zeigt der Link genau jetzt — und für welche kommenden Events ist der User als
+  // Streamer angemeldet (die erscheinen dann automatisch, ohne hier etwas tun zu müssen)?
+  const [activeEventId, streamingEvents] = await Promise.all([
     getStreamerActiveEventId(user.id),
-    highlightEventId ? prisma.event.findUnique({ where: { id: highlightEventId }, select: { id: true, title: true, startAt: true } }) : null,
+    getStreamerUpcomingEvents(user.id),
   ]);
   const activeEvent = activeEventId
     ? await prisma.event.findUnique({ where: { id: activeEventId }, select: { id: true, title: true } })
@@ -51,7 +51,7 @@ export default async function StreamerOverlaySettingsPage({ searchParams }: { se
       initialPauseText={config.pauseText}
       initialLite={config.lite}
       activeEvent={activeEvent}
-      highlightEvent={highlightEvent ? { id: highlightEvent.id, title: highlightEvent.title, startAt: highlightEvent.startAt.toISOString() } : null}
+      streamingEvents={streamingEvents}
     />
   );
 }

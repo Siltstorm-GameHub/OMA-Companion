@@ -483,3 +483,15 @@ export async function getStreamerOverlayPayload(
     ...common,
   };
 }
+
+/** Kommende (oder seit < 24h laufende) Events, für die der User als Streamer angemeldet ist — für
+ *  die Übersicht auf der Einstellungsseite ("erscheint automatisch, sobald es losgeht"). */
+export async function getStreamerUpcomingEvents(userId: string) {
+  const rows = await prisma.eventCommunityStreamer.findMany({
+    where: { userId, event: { status: { notIn: ["finished", "closed"] }, startAt: { gte: new Date(Date.now() - 24 * 3600_000) } } },
+    orderBy: { event: { startAt: "asc" } },
+    take: 5,
+    select: { event: { select: { id: true, title: true, startAt: true } } },
+  });
+  return rows.map(r => ({ id: r.event.id, title: r.event.title, startAt: r.event.startAt.toISOString() }));
+}

@@ -49,7 +49,7 @@ function obsDragUrl(url: string, name: string) {
 }
 
 export default function StreamerOverlaySettings({
-  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, activeEvent, highlightEvent,
+  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, activeEvent, streamingEvents,
 }: {
   overlayUrl: string;
   initialEvent: OverlayLayout<ElementKey>;
@@ -57,10 +57,11 @@ export default function StreamerOverlaySettings({
   initialPauseText: string | null;
   initialLite: boolean;
   activeEvent: { id: string; title: string } | null;
-  highlightEvent: { id: string; title: string; startAt: string } | null;
+  /** Kommende Events, für die der User als Streamer angemeldet ist. */
+  streamingEvents: { id: string; title: string; startAt: string }[];
 }) {
   const [overlayUrl, setOverlayUrl] = useState(initialUrl);
-  const [mode, setMode] = useState<Mode>(highlightEvent || activeEvent ? "event" : "profile");
+  const [mode, setMode] = useState<Mode>(activeEvent || streamingEvents.length > 0 ? "event" : "profile");
   const [eventLayout, setEventLayout] = useState(initialEvent);
   const [profileLayout, setProfileLayout] = useState(initialProfile);
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
@@ -159,11 +160,18 @@ export default function StreamerOverlaySettings({
                 ? <>Gerade aktiv: <span className="text-gray-300">Event-Modus · {activeEvent.title}</span></>
                 : <>Gerade aktiv: <span className="text-gray-300">Profil-Modus</span> (kein laufendes Event, bei dem du live mitspielst oder als Streamer angemeldet bist)</>}
             </p>
-            {highlightEvent && highlightEvent.id !== activeEvent?.id && (
-              <p className="text-gray-400">
-                <span className="text-teal-300">{highlightEvent.title}</span> erscheint automatisch, sobald es
-                losgeht ({formatBerlinDate(new Date(highlightEvent.startAt), { weekday: "short", day: "2-digit", month: "2-digit" })}).
-              </p>
+            {streamingEvents.filter(e => e.id !== activeEvent?.id).length > 0 && (
+              <div className="text-gray-400">
+                Als Streamer angemeldet – erscheint automatisch, sobald es losgeht:
+                <ul className="mt-1 space-y-0.5">
+                  {streamingEvents.filter(e => e.id !== activeEvent?.id).map(e => (
+                    <li key={e.id}>
+                      <Link href={`/tournament/${e.id}`} className="text-teal-300 hover:underline">{e.title}</Link>
+                      <span className="text-gray-500"> · {formatBerlinDate(new Date(e.startAt), { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             <button
               onClick={regenerate}

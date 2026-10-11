@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { STREAMER_OVERLAY_SETTINGS_PATH } from "@/lib/overlay";
 
-/** Streamer nutzen den festen Streamer-Link — er zeigt dieses Event automatisch, solange es läuft.
- *  Die Einstellungsseite öffnet sich mit Vorschau auf genau dieses Event. */
-const settingsUrl = (eventId: string) => `${STREAMER_OVERLAY_SETTINGS_PATH}?event=${encodeURIComponent(eventId)}`;
+/**
+ * Anmeldung als Streamer eines Events (EventCommunityStreamer) — macht sichtbar, wer das Event
+ * streamt, und schaltet den festen Streamer-Overlay-Link des Users für dieses Event in den
+ * Event-Modus (siehe getStreamerActiveEventId). Link und Einstellungen liegen im Profil.
+ */
 
 type Params = { params: Promise<{ id: string }> };
-
-export async function GET(_req: NextRequest, { params }: Params) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  const { id: eventId } = await params;
-  const userId = session.user.id;
-
-  const streamer = await prisma.eventCommunityStreamer.findUnique({
-    where: { eventId_userId: { eventId, userId } },
-  });
-  if (!streamer) return NextResponse.json({ error: "Nicht als Streamer angemeldet" }, { status: 403 });
-
-  return NextResponse.json({ overlayUrl: settingsUrl(eventId) });
-}
 
 export async function POST(_req: NextRequest, { params }: Params) {
   const session = await auth();
@@ -47,7 +34,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } },
   });
 
-  return NextResponse.json({ ...record, overlayUrl: settingsUrl(eventId) });
+  return NextResponse.json(record);
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
