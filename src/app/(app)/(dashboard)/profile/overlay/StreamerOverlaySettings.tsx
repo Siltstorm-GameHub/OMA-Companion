@@ -17,7 +17,7 @@ import {
   type ElementKey, type ProfileElementKey, type OverlayLayout,
 } from "@/components/overlay/types";
 import { formatBerlinDate } from "@/lib/time";
-import { PAUSE_BACKGROUNDS } from "@/components/overlay/pauseBackgrounds";
+import { PAUSE_BACKGROUNDS, pauseThumbnail } from "@/components/overlay/pauseBackgrounds";
 
 type Mode = "event" | "profile";
 
@@ -233,7 +233,7 @@ export default function StreamerOverlaySettings({
                       active ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-black/60" : "ring-1 ring-white/10 hover:ring-white/30"
                     }`}
                     style={{
-                      backgroundImage: bg.image ? `${bg.overlay}, url(${bg.image})` : `${bg.overlay}, repeating-conic-gradient(#2a2a32 0% 25%, #1c1c22 0% 50%) 50% / 16px 16px`,
+                      backgroundImage: bg.image ? `${bg.overlay}, url(${pauseThumbnail(bg)})` : `${bg.overlay}, repeating-conic-gradient(#2a2a32 0% 25%, #1c1c22 0% 50%) 50% / 16px 16px`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }}

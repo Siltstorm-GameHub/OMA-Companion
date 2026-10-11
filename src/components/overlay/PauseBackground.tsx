@@ -434,7 +434,7 @@ function Trails() {
 function EffectStyles() {
   return (
     <style>{`
-      @keyframes oma-pb-kenburns { 0% { transform: scale(1.02) translate(0, 0); } 100% { transform: scale(1.1) translate(-1.5%, -1%); } }
+      @keyframes oma-pb-kenburns { 0% { transform: scale(1.015) translate(0, 0); } 100% { transform: scale(1.04) translate(-0.8%, -0.5%); } }
       @keyframes oma-pb-twinkle  { 0%, 100% { opacity: 0.15; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
       @keyframes oma-pb-pulse    { 0%, 100% { opacity: 0.55; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } }
       @keyframes oma-pb-breathe  { 0%, 100% { opacity: 0.25; transform: scale(0.9); } 50% { opacity: 0.7; transform: scale(1.1); } }

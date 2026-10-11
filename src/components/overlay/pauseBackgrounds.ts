@@ -2,8 +2,9 @@
  * Hintergründe der Pausen-Szene — vom Streamer in den Overlay-Einstellungen wählbar. Bewusst ohne
  * React, damit Server (Prüfen der Auswahl), Overlay und Einstellungs-Vorschau dieselbe Liste nutzen.
  *
- * Die Bilder (public/overlay/pause/*.jpg, 1920×1080) wurden mit Canva generiert (Design
- * "OMA Overlay – Pausen-Hintergründe"). Jedes bekommt im normalen Modus eine eigene, leichte
+ * Die Bilder (public/overlay/pause/*.jpg, 1920×1080, aus dem Canva-Export in voller Qualität mit
+ * JPG-Qualität 92 und ohne Farb-Unterabtastung neu kodiert) wurden mit Canva generiert (Design
+ * "OMA Overlay – Pausen-Hintergründe"). Kleine Vorschauen (480×270) liegen unter pause/thumbs/. Jedes bekommt im normalen Modus eine eigene, leichte
  * Effekt-Ebene (siehe PauseBackground.tsx, Schlüssel = key); im Leicht-Modus bleiben sie statisch.
  */
 
@@ -52,6 +53,11 @@ export const DEFAULT_PAUSE_BACKGROUND: PauseBackgroundKey = "dark";
 
 export function isPauseBackground(v: unknown): v is PauseBackgroundKey {
   return typeof v === "string" && PAUSE_BACKGROUNDS.some(b => b.key === v);
+}
+
+/** Kleines Vorschaubild für die Auswahl in den Einstellungen — lädt nicht alle Bilder in voller Größe. */
+export function pauseThumbnail(bg: PauseBackground): string | null {
+  return bg.image ? bg.image.replace("/overlay/pause/", "/overlay/pause/thumbs/") : null;
 }
 
 export function getPauseBackground(key: string | null | undefined): PauseBackground {
