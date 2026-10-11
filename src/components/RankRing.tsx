@@ -1,4 +1,5 @@
 "use client";
+import "./RankRing.css";
 import type { CSSProperties, ReactNode } from "react";
 import { useJobBadge } from "@/components/community-jobs/JobBadge";
 import { getJobRing, GOLD } from "@/lib/job-ring";

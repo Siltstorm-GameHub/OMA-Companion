@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* OBS-Browser-Source: komplett transparent, nur die Overlay-Kacheln sind sichtbar. Bewusst OHNE
+   globals.css — keine Hintergrund-Blobs, kein Theme, keine App-Chrome-Regeln (siehe app/layout.tsx). */
+
+/* Gleiche Fluid-Basisschrift wie in globals.css: die Overlay-Kacheln nutzen vereinzelt
+   Tailwind-rem-Werte (Icon-Größen, Abstände), die sollen bei 1920px exakt wie bisher ausfallen. */
+html {
+  font-size: clamp(13px, calc(11.5px + 0.5vw), 18px);
+}
+
+html, body {
+  background: transparent;
+  margin: 0;
+  overflow: hidden;
+}

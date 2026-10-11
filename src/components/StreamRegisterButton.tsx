@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Tv2, Loader2, Link2 } from "@/components/icons";
+import Link from "next/link";
+import { Tv2, Loader2, Link2, Smartphone } from "@/components/icons";
 import { toast } from "sonner";
 
 export default function StreamRegisterButton({
@@ -16,8 +17,10 @@ export default function StreamRegisterButton({
   const [linkLoading, setLinkLoading] = useState(false);
   const [active, setActive] = useState(isStreaming);
 
+  // Einstellungen des festen Streamer-Links — derselbe OBS-Link gilt für alle Events, dieses
+  // Event erscheint darin automatisch, solange es läuft.
   function openOverlaySettings(url: string) {
-    window.open(url, "_blank", "noopener,noreferrer");
+    router.push(url);
   }
 
   async function toggle() {
@@ -40,8 +43,9 @@ export default function StreamRegisterButton({
       setActive(v => !v);
       if (!wasActive) {
         const data = await res.json().catch(() => ({}));
-        toast.success("Als Streamer angemeldet! Overlay-Einstellungen öffnen sich in einem neuen Tab.");
+        toast.success("Als Streamer angemeldet! Dein Overlay zeigt dieses Event automatisch, sobald es läuft.");
         if (data.overlayUrl) openOverlaySettings(data.overlayUrl);
+        return;
       } else {
         toast.success("Streamer-Anmeldung zurückgezogen");
       }
@@ -93,6 +97,16 @@ export default function StreamRegisterButton({
           {linkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
           Overlay-Einstellungen
         </button>
+      )}
+      {active && (
+        <Link
+          href="/profile/overlay/live"
+          title="Overlay während des Streams steuern"
+          className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-xl border border-white/[0.08] text-gray-400 hover:text-teal-300 hover:border-teal-500/30 transition-all"
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          Live-Steuerung
+        </Link>
       )}
     </div>
   );

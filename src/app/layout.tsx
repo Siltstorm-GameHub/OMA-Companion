@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Russo_One } from "next/font/google";
-import "./globals.css";
+import { appBaseUrl } from "@/lib/brand";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -19,13 +19,6 @@ const russoOne = Russo_One({
   weight: "400",
   display: "swap",
 });
-import { SessionProvider } from "@/components/SessionProvider";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { ThemedToaster } from "@/components/ThemedToaster";
-import { AnimatedBackground } from "@/components/AnimatedBackground";
-import { CursorGlow } from "@/components/CursorGlow";
-import { ExitAppGuard } from "@/components/ExitAppGuard";
-import { appBaseUrl } from "@/lib/brand";
 
 export const metadata: Metadata = {
   // Ohne metadataBase kann Next die von opengraph-image.tsx erzeugte URL nicht
@@ -62,37 +55,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/**
+ * Bewusst minimal: nur Dokument-Gerüst, Schriften und Metadaten. Alles, was zur App-Oberfläche
+ * gehört (globals.css, Theme, Session, Hintergrund-Animationen, Service Worker, Zurück-Abfänger),
+ * steckt in app/(app)/layout.tsx — die OBS-Overlays unter app/(overlay) bekommen davon nichts
+ * mit und müssen nichts per `!important` wieder abschalten.
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" data-theme="dark" suppressHydrationWarning className={`${spaceGrotesk.variable} ${russoOne.variable}`}>
-      <head>
-        {/* Prevent flash of wrong theme */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t);})()`,
-          }}
-        />
-        {/* Service Worker registrieren */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js")}`,
-          }}
-        />
-      </head>
-      <body className="antialiased" style={{ background: "var(--bg-base, #080c18)" }}>
-        {/* Hex-Grid canvas — fixed, behind content but above body bg */}
-        <AnimatedBackground />
-        {/* Cursor-Lichtschein — folgt der Maus mit Lerp */}
-        <CursorGlow />
-
-        <ThemeProvider>
-          <div style={{ position: "relative", zIndex: 2, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-            <SessionProvider>{children}</SessionProvider>
-          </div>
-          <ThemedToaster />
-          <ExitAppGuard />
-        </ThemeProvider>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

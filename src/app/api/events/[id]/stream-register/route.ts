@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureOverlayToken, buildOverlaySettingsUrl } from "@/lib/overlay";
+import { STREAMER_OVERLAY_SETTINGS_PATH } from "@/lib/overlay";
+
+/** Streamer nutzen den festen Streamer-Link — er zeigt dieses Event automatisch, solange es läuft.
+ *  Die Einstellungsseite öffnet sich mit Vorschau auf genau dieses Event. */
+const settingsUrl = (eventId: string) => `${STREAMER_OVERLAY_SETTINGS_PATH}?event=${encodeURIComponent(eventId)}`;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,8 +20,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   });
   if (!streamer) return NextResponse.json({ error: "Nicht als Streamer angemeldet" }, { status: 403 });
 
-  const token = await ensureOverlayToken(eventId);
-  return NextResponse.json({ overlayUrl: buildOverlaySettingsUrl(eventId, token, userId) });
+  return NextResponse.json({ overlayUrl: settingsUrl(eventId) });
 }
 
 export async function POST(_req: NextRequest, { params }: Params) {
@@ -44,8 +47,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } },
   });
 
-  const token = await ensureOverlayToken(eventId);
-  return NextResponse.json({ ...record, overlayUrl: buildOverlaySettingsUrl(eventId, token, userId) });
+  return NextResponse.json({ ...record, overlayUrl: settingsUrl(eventId) });
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {

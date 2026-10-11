@@ -29,7 +29,19 @@ model User {
   // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von
   // jedem Event, nur für User mit gesetztem twitchLogin erreichbar. Lazy erzeugt wie Event.overlayToken.
   overlayToken       String?   @unique
-  birthday           DateTime? // Nur Datum relevant (month/day)
+  // Einstellungen des festen Streamer-Overlays (/overlay/streamer/[userId]?token=overlayToken) —
+  // JSON: { event: { elements, rotateSeconds } | null, profile: { elements, rotateSeconds } | null },
+  // siehe StreamerOverlayConfig in src/components/overlay/layout.ts. Fehlt das Feld, greifen die
+  // Standard-Layouts. Liegt bewusst am User statt in der URL: Änderungen erscheinen sofort in OBS,
+  // ohne den Link neu einfügen zu müssen.
+  overlayLayoutJson  String?
+  // Live-Steuerung des eigenen Streamer-Overlays (Seite /profile/overlay/live, z.B. vom Handy) —
+  // JSON: { hidden: string[], zoom: string | null, zoomUntil: number | null, pause: boolean }, siehe
+  // parseOverlayControl in src/components/overlay/layout.ts. Wirkt NUR auf das Overlay dieses Users
+  // (anders als Event.overlayControlJson, das alle Overlays eines Events steuert); beide werden
+  // im Streamer-Overlay zusammengeführt.
+  overlayControlJson String?
+  birthday         DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
   bannerUrl          String? // Eigenes Profil-Banner (Vercel Blob), 1200×300 empfohlen

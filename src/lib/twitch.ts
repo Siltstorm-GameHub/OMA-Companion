@@ -120,3 +120,29 @@ export async function getLiveStreams(logins: string[]): Promise<TwitchStream[]> 
   const data = (await res.json()) as { data: TwitchStream[] };
   return data.data;
 }
+
+/**
+ * Wie getLiveStreams, aber für beliebig viele Logins (Helix erlaubt 100 je Anfrage) und ohne die
+ * 20er-Begrenzung — fürs Overlay, das den Live-Status aller Community-Mitglieder braucht.
+ * Ohne Twitch-Zugangsdaten (lokal) oder bei Fehlern: leere Liste statt Ausnahme.
+ */
+export async function getLiveStreamsForLogins(logins: string[]): Promise<TwitchStream[]> {
+  if (logins.length === 0 || !TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return [];
+  try {
+    const token = await getAppAccessToken();
+    const chunks: string[][] = [];
+    for (let i = 0; i < logins.length; i += 100) chunks.push(logins.slice(i, i + 100));
+    const results = await Promise.all(chunks.map(async chunk => {
+      const params = chunk.map(l => `user_login=${encodeURIComponent(l)}`).join("&");
+      const res = await fetch(`https://api.twitch.tv/helix/streams?${params}&first=100`, {
+        headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) return [];
+      return ((await res.json()) as { data: TwitchStream[] }).data;
+    }));
+    return results.flat();
+  } catch {
+    return [];
+  }
+}

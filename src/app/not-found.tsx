@@ -1,3 +1,4 @@
+import "./globals.css";
 import Link from "next/link";
 import { SearchX } from "@/components/icons";
 import { Home } from "@/components/icons";

@@ -1,18 +1,55 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureUserOverlayToken, buildProfileOverlaySettingsUrl } from "@/lib/overlay";
+import { ensureUserOverlayToken, buildStreamerOverlayUrl, STREAMER_OVERLAY_SETTINGS_PATH } from "@/lib/overlay";
+import { sanitizeLayout, sanitizePauseText, parseStreamerConfig } from "@/components/overlay/layout";
+import { ELEMENT_KEYS, PROFILE_ELEMENT_KEYS } from "@/components/overlay/types";
+import { invalidateStreamerConfig } from "@/lib/overlay-state";
 
-export async function GET() {
+async function requireStreamer() {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  const userId = session.user.id;
+  if (!session?.user?.id) return { error: NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 }) };
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, twitchLogin: true } });
+  if (!user) return { error: NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 }) };
+  if (!user.twitchLogin) {
+    return { error: NextResponse.json({ error: "Kein Twitch-Konto hinterlegt", code: "NO_TWITCH" }, { status: 400 }) };
+  }
+  return { userId: user.id };
+}
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { twitchLogin: true } });
-  if (!user?.twitchLogin) {
-    return NextResponse.json({ error: "Kein Twitch-Konto hinterlegt", code: "NO_TWITCH" }, { status: 400 });
+/** Fester Streamer-Link + Pfad der Einstellungsseite. */
+export async function GET() {
+  const r = await requireStreamer();
+  if ("error" in r) return r.error;
+  const token = await ensureUserOverlayToken(r.userId);
+  return NextResponse.json({ overlayUrl: buildStreamerOverlayUrl(r.userId, token), settingsUrl: STREAMER_OVERLAY_SETTINGS_PATH });
+}
+
+/**
+ * PUT { event?, profile?, pauseText?, lite? } — speichert die Einstellungen des festen
+ * Streamer-Links. Nur mitgeschickte Felder ändern sich; event/profile = null setzt den Modus aufs
+ * Standard-Layout zurück. Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
+ */
+export async function PUT(req: NextRequest) {
+  const r = await requireStreamer();
+  if ("error" in r) return r.error;
+  const body = await req.json().catch(() => null) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown } | null;
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+
+  const event = body.event == null ? null : sanitizeLayout(body.event, ELEMENT_KEYS);
+  const profile = body.profile == null ? null : sanitizeLayout(body.profile, PROFILE_ELEMENT_KEYS);
+  if ((body.event != null && !event) || (body.profile != null && !profile)) {
+    return NextResponse.json({ error: "Layout ungültig – mindestens ein Element muss aktiv sein" }, { status: 400 });
   }
 
-  const token = await ensureUserOverlayToken(userId);
-  return NextResponse.json({ overlayUrl: buildProfileOverlaySettingsUrl(userId, token) });
+  const current = await prisma.user.findUnique({ where: { id: r.userId }, select: { overlayLayoutJson: true } });
+  const config = parseStreamerConfig(current?.overlayLayoutJson);
+  if ("event" in body) config.event = event;
+  if ("profile" in body) config.profile = profile;
+  if ("pauseText" in body) config.pauseText = sanitizePauseText(body.pauseText);
+  if ("lite" in body) config.lite = body.lite === true;
+
+  await prisma.user.update({ where: { id: r.userId }, data: { overlayLayoutJson: JSON.stringify(config) } });
+  invalidateStreamerConfig(r.userId);
+  return NextResponse.json({ ok: true, ...config });
 }

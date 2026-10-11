@@ -9,7 +9,7 @@ import { ensureOverlayToken, buildOverlayUrl } from "@/lib/overlay";
  * mitgeliefert und dort in OverlayClient.tsx angewendet: `hidden` blendet Elemente unabhängig
  * vom URL-Standardlayout aus, `zoom` zeigt genau ein Element kurzzeitig als Vollbild-Kachel.
  */
-const VALID_ELEMENTS = ["brand", "liveinfo", "ticker", "bracket", "table", "seriesTable", "participants", "favorites", "badges"];
+const VALID_ELEMENTS = ["brand", "liveinfo", "ticker", "bracket", "table", "seriesTable", "participants"];
 
 type OverlayControl = { hidden: string[]; zoom: string | null };
 
