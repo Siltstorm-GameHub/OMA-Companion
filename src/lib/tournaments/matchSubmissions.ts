@@ -4,6 +4,33 @@ import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/apply
 export const MAX_SCREENSHOTS = 4;
 export const MAX_NOTE_LENGTH = 500;
 
+/** Blob-Pfad-Präfix der Nachweis-Screenshots (siehe Upload-Kind "match-proof"). */
+export const PROOF_PREFIX = "match-proof/";
+/** Screenshots werden so viele Tage nach Abschluss der aktiven Eventphase gelöscht. */
+export const PROOF_RETENTION_DAYS_AFTER_PHASE = 14;
+/** Absolute Obergrenze für Events, deren Phase nie abgeschlossen wurde. */
+export const PROOF_RETENTION_DAYS_MAX = 60;
+/** Hochgeladene, aber nie abgeschickte Screenshots (z.B. Tab geschlossen). */
+export const PROOF_ORPHAN_MAX_AGE_DAYS = 2;
+
+/**
+ * Teilnehmer dürfen ihre Meldung korrigieren, bis ein Admin die aktive Eventphase
+ * abgeschlossen hat (completionData.gamePhaseComplete) bzw. das Event beendet ist.
+ */
+export function isParticipantEditLocked(event: {
+  status: string;
+  tournamentStatus: string | null;
+  completionData: string | null;
+}): boolean {
+  if (event.status === "finished" || event.tournamentStatus === "finalized") return true;
+  if (!event.completionData) return false;
+  try {
+    return (JSON.parse(event.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Nur Bilder aus dem eigenen Blob-Store (Upload-Kind "match-proof") sind als Nachweis erlaubt. */
 export function isProofUrl(url: unknown): url is string {
   if (typeof url !== "string" || url.length > 500) return false;
@@ -12,7 +39,7 @@ export function isProofUrl(url: unknown): url is string {
     return (
       u.protocol === "https:" &&
       u.hostname.endsWith(".public.blob.vercel-storage.com") &&
-      u.pathname.startsWith("/match-proof/")
+      u.pathname.startsWith(`/${PROOF_PREFIX}`)
     );
   } catch {
     return false;

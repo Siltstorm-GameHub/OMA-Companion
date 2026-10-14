@@ -46,7 +46,7 @@ import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import MatchResultSubmit, { type MyMatch } from "./MatchResultSubmit";
-import { parseScreenshotUrls } from "@/lib/tournaments/matchSubmissions";
+import { parseScreenshotUrls, isParticipantEditLocked } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
@@ -1176,11 +1176,12 @@ export default async function TournamentDetailPage({
 
           {/* Format-spezifische Ansicht */}
           <div className="lg:col-span-3">
-            {hasTournament && event.status !== "finished" && myMatches.length > 0 && (
+            {hasTournament && myMatches.length > 0 && (
               <MatchResultSubmit
                 eventId={event.id}
                 matches={myMatches}
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
+                locked={isParticipantEditLocked(event)}
               />
             )}
             {!hasTournament && (

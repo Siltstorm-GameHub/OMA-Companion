@@ -30,6 +30,7 @@ const uname = (u: U | null) => u?.username ?? u?.name ?? "?";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   pending:   { label: "Wird geprüft",    cls: "bg-amber-900/40 text-amber-300" },
+  processing:{ label: "Wird geprüft",    cls: "bg-amber-900/40 text-amber-300" },
   approved:  { label: "Übernommen",      cls: "bg-emerald-900/40 text-emerald-300" },
   corrected: { label: "Korrigiert",      cls: "bg-blue-900/40 text-blue-300" },
   rejected:  { label: "Abgelehnt",       cls: "bg-red-900/40 text-red-300" },
@@ -38,10 +39,9 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const inputCls =
   "w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
-function MatchForm({ eventId, m, statFields }: { eventId: string; m: MyMatch; statFields: string[] }) {
+function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyMatch; statFields: string[]; locked: boolean }) {
   const router = useRouter();
   const s = m.submission;
-  const locked = s?.status === "approved" || s?.status === "corrected";
   const initialStats: Record<string, number> = s?.statsJson ? JSON.parse(s.statsJson) : {};
 
   const [score1, setScore1] = useState(s?.score1?.toString() ?? "");
@@ -93,9 +93,14 @@ function MatchForm({ eventId, m, statFields }: { eventId: string; m: MyMatch; st
 
       {s?.reviewNote && <p className="text-xs text-gray-400">Admin: {s.reviewNote}</p>}
 
+      {locked && <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>}
+      {!locked && (s?.status === "approved" || s?.status === "corrected") && !open && (
+        <p className="text-xs text-gray-500">Bis zum Abschluss der aktiven Eventphase kannst du die Meldung korrigieren — sie wird dann erneut von einem Admin geprüft.</p>
+      )}
+
       {!locked && !open && (
         <button onClick={() => setOpen(true)} className="text-xs text-teal-300 hover:underline">
-          {s?.status === "rejected" ? "Neu melden" : "Meldung bearbeiten"}
+          {s?.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
         </button>
       )}
 
@@ -167,10 +172,12 @@ export default function MatchResultSubmit({
   eventId,
   matches,
   statFields,
+  locked,
 }: {
   eventId: string;
   matches: MyMatch[];
   statFields: string[];
+  locked: boolean;
 }) {
   if (matches.length === 0) return null;
   return (
@@ -178,11 +185,11 @@ export default function MatchResultSubmit({
       <div>
         <h3 className="text-sm font-semibold text-white">Ergebnis melden</h3>
         <p className="text-xs text-gray-500">
-          Trage dein Ergebnis ein und lade Screenshots als Nachweis hoch. Ein Admin prüft die Meldung und übernimmt oder korrigiert sie.
+          Trage dein Ergebnis ein und lade Screenshots als Nachweis hoch. Ein Admin prüft die Meldung und übernimmt oder korrigiert sie. Screenshots werden nach einiger Zeit automatisch gelöscht.
         </p>
       </div>
       {matches.map((m) => (
-        <MatchForm key={m.id} eventId={eventId} m={m} statFields={statFields} />
+        <MatchForm key={m.id} eventId={eventId} m={m} statFields={statFields} locked={locked} />
       ))}
     </div>
   );

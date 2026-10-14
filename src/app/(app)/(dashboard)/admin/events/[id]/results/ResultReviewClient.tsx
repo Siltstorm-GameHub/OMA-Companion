@@ -28,6 +28,7 @@ export type ReviewMatch = {
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   pending:   { label: "Offen",      cls: "bg-amber-900/40 text-amber-300" },
+  processing:{ label: "In Arbeit",  cls: "bg-amber-900/40 text-amber-300" },
   approved:  { label: "Übernommen", cls: "bg-emerald-900/40 text-emerald-300" },
   corrected: { label: "Korrigiert", cls: "bg-blue-900/40 text-blue-300" },
   rejected:  { label: "Abgelehnt",  cls: "bg-red-900/40 text-red-300" },
@@ -71,7 +72,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return toast.error(data.error ?? "Aktion fehlgeschlagen");
-      toast.success(action === "reject" ? "Meldung abgelehnt" : "Ergebnis übernommen");
+      toast.success(data.supersededByPlayer ? "Übernommen — der Spieler hat zwischenzeitlich neu gemeldet, bitte erneut prüfen" : action === "reject" ? "Meldung abgelehnt" : "Ergebnis übernommen");
       router.refresh();
     } finally {
       setBusy(false);
@@ -99,6 +100,8 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
           </button>
         ))}
       </div>
+
+      {sub.screenshotUrls.length === 0 && <p className="text-xs text-gray-500">Screenshots wurden automatisch gelöscht.</p>}
 
       {sub.note && <p className="text-xs text-gray-400">„{sub.note}“</p>}
 

@@ -8,6 +8,7 @@ import {
   applySubmissionValues,
   cleanInt,
   cleanStats,
+  isParticipantEditLocked,
   isProofUrl,
 } from "@/lib/tournaments/matchSubmissions";
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const match = await prisma.match.findFirst({
     where: { id: body.matchId, eventId },
-    include: { entries: { select: { userId: true } }, event: { select: { tournamentStatus: true, status: true } } },
+    include: { entries: { select: { userId: true } }, event: { select: { tournamentStatus: true, status: true, completionData: true } } },
   });
   if (!match) return NextResponse.json({ error: "Match nicht gefunden" }, { status: 404 });
 
@@ -47,16 +48,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     match.player1Id === user.id || match.player2Id === user.id || match.entries.some((e) => e.userId === user.id);
   if (!isInMatch) return NextResponse.json({ error: "Du spielst in diesem Match nicht mit" }, { status: 403 });
 
-  if (match.event.status === "finished" || match.event.tournamentStatus === "finalized") {
-    return NextResponse.json({ error: "Das Event ist bereits abgeschlossen" }, { status: 409 });
+  if (isParticipantEditLocked(match.event)) {
+    return NextResponse.json(
+      { error: "Die aktive Eventphase ist abgeschlossen — Ergebnisse können nicht mehr geändert werden" },
+      { status: 409 },
+    );
   }
 
   const existing = await prisma.matchResultSubmission.findUnique({
     where: { matchId_userId: { matchId: match.id, userId: user.id } },
   });
-  if (existing && (existing.status === "approved" || existing.status === "corrected")) {
-    return NextResponse.json({ error: "Deine Meldung wurde bereits übernommen" }, { status: 409 });
-  }
 
   try {
     const data = {
@@ -106,50 +107,57 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const reviewNote =
     typeof body.reviewNote === "string" && body.reviewNote.trim() ? body.reviewNote.trim().slice(0, MAX_NOTE_LENGTH) : null;
 
+  // Atomar "beanspruchen": zwei Admins (oder Doppelklick) können dieselbe Meldung nicht parallel übernehmen.
+  const claimed = await prisma.matchResultSubmission.updateMany({
+    where: { id: sub.id, status: "pending" },
+    data: { status: "processing" },
+  });
+  if (claimed.count === 0) {
+    return NextResponse.json({ error: "Meldung wurde bereits bearbeitet oder vom Spieler geändert — bitte neu laden" }, { status: 409 });
+  }
+
+  const release = () =>
+    prisma.matchResultSubmission.updateMany({ where: { id: sub.id, status: "processing" }, data: { status: "pending" } });
+
   try {
+    const base = { reviewedById: reviewer.id, reviewedAt: new Date(), reviewNote };
+    let data: Record<string, unknown>;
+
     if (body.action === "reject") {
-      const updated = await prisma.matchResultSubmission.update({
-        where: { id: sub.id },
-        data: { status: "rejected", reviewedById: reviewer.id, reviewedAt: new Date(), reviewNote },
-      });
-      return NextResponse.json(updated);
+      data = { ...base, status: "rejected" };
+    } else {
+      const original = {
+        score1: sub.score1, score2: sub.score2, placement: sub.placement, score: sub.score,
+        statsJson: sub.statsJson ? JSON.parse(sub.statsJson) : null,
+      };
+      const values =
+        body.action === "correct"
+          ? {
+              score1: cleanInt(body.score1),
+              score2: cleanInt(body.score2),
+              placement: cleanInt(body.placement, 1000),
+              score: cleanInt(body.score, 10_000_000),
+              statsJson: cleanStats(body.statsJson),
+            }
+          : original;
+
+      await applySubmissionValues(eventId, sub.userId, sub.matchId, values);
+
+      data = {
+        ...base,
+        status: body.action === "correct" ? "corrected" : "approved",
+        ...(body.action === "correct"
+          ? { ...values, statsJson: values.statsJson ? JSON.stringify(values.statsJson) : null, originalJson: JSON.stringify(original) }
+          : {}),
+      };
     }
 
-    const original = {
-      score1: sub.score1, score2: sub.score2, placement: sub.placement, score: sub.score,
-      statsJson: sub.statsJson ? JSON.parse(sub.statsJson) : null,
-    };
-    const values =
-      body.action === "correct"
-        ? {
-            score1: cleanInt(body.score1),
-            score2: cleanInt(body.score2),
-            placement: cleanInt(body.placement, 1000),
-            score: cleanInt(body.score, 10_000_000),
-            statsJson: cleanStats(body.statsJson),
-          }
-        : original;
-
-    await applySubmissionValues(eventId, sub.userId, sub.matchId, values);
-
-    const updated = await prisma.matchResultSubmission.update({
-      where: { id: sub.id },
-      data: {
-        status: body.action === "correct" ? "corrected" : "approved",
-        reviewedById: reviewer.id,
-        reviewedAt: new Date(),
-        reviewNote,
-        ...(body.action === "correct"
-          ? {
-              ...values,
-              statsJson: values.statsJson ? JSON.stringify(values.statsJson) : null,
-              originalJson: JSON.stringify(original),
-            }
-          : {}),
-      },
-    });
-    return NextResponse.json(updated);
+    // Hat der Spieler währenddessen neu gemeldet (Status wieder "pending"), bleibt seine neue Meldung offen.
+    const done = await prisma.matchResultSubmission.updateMany({ where: { id: sub.id, status: "processing" }, data });
+    const updated = await prisma.matchResultSubmission.findUnique({ where: { id: sub.id } });
+    return NextResponse.json({ ...updated, supersededByPlayer: done.count === 0 });
   } catch (err) {
+    await release();
     return fail(err);
   }
 }

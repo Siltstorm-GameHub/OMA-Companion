@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/match-proof-cleanup",
+      "schedule": "30 3 * * *"
+    },
+    {
       "path": "/api/cron/birthdays",
       "schedule": "0 7 * * *"
     },
