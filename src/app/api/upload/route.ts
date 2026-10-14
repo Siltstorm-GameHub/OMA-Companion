@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 import { getSessionUser } from "@/lib/roles";
+import sharp from "sharp";
 import { resolveStoreId } from "@/lib/blob-store";
 
 /**
@@ -64,6 +65,7 @@ const KINDS = {
   "badge":               { minRole: "admin",     maxBytes: 1_000_000 },
   "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
   "tactic-card-art":     { minRole: "admin",     maxBytes: 8_000_000 },
+  "match-proof":         { minRole: "user",      maxBytes: 4_000_000 }, // Ergebnis-Nachweis (Screenshots) für Match-Meldungen
   "community-job-asset": { minRole: "user",      maxBytes: 6_000_000 }, // Fotograf-Uploads (Clips-Standbild/Collage/Screenshot/Banner/Grafik)
 } as const;
 
@@ -116,7 +118,25 @@ export async function POST(req: NextRequest) {
 
   // Dateiname wird nie vom Client übernommen — nur die Endung, und die aus dem
   // geprüften MIME-Typ abgeleitet.
-  const ext = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" }[file.type]!;
+  let ext = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" }[file.type]!;
+  let body: Blob | Buffer = file;
+  let contentType = file.type;
+
+  // Nachweis-Screenshots verkleinern (max. 1920 px, WebP): spart auf dem kostenlosen
+  // Blob-Kontingent ca. 80–90 % Speicher, Text/Scoreboards bleiben gut lesbar.
+  if (kind === "match-proof") {
+    try {
+      body = await sharp(Buffer.from(await file.arrayBuffer()))
+        .rotate()
+        .resize({ width: 1920, height: 1920, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+      ext = "webp";
+      contentType = "image/webp";
+    } catch {
+      return NextResponse.json({ error: "Bild konnte nicht verarbeitet werden" }, { status: 422 });
+    }
+  }
   const path = `${kind}/${randomUUID()}.${ext}`;
 
   // Store-ID explizit mitgeben: bei OIDC-Auth sucht der SDK sie unter
@@ -124,9 +144,9 @@ export async function POST(req: NextRequest) {
   const storeId = resolveStoreId();
 
   try {
-    const blob = await put(path, file, {
+    const blob = await put(path, body, {
       access: "public",
-      contentType: file.type,
+      contentType,
       // Vercel Blob hängt sonst ein Zufallssuffix an — wir vergeben mit der
       // UUID bereits einen kollisionsfreien Namen.
       addRandomSuffix: false,

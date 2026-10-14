@@ -34,6 +34,8 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
 
   if (!event) notFound();
 
+  const pendingCount = await prisma.matchResultSubmission.count({ where: { eventId: id, status: "pending" } });
+
   const registeredIds = new Set(event.registrations.filter(r => r.role !== "spectator").map(r => r.userId));
   const registeredUsers = allUsers.filter(u => registeredIds.has(u.id));
 
@@ -95,6 +97,13 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         </Link>
         <span>/</span>
         <span className="text-gray-300">Turnierbaum</span>
+        <Link
+          href={`/admin/events/${event.id}/results`}
+          className="ml-auto px-3 py-1 rounded-lg bg-teal-600/20 text-teal-300 hover:bg-teal-600/30 text-xs font-medium"
+        >
+          Ergebnis-Prüfung
+          {pendingCount > 0 && <span className="ml-1.5 px-1.5 rounded-full bg-amber-500 text-black">{pendingCount}</span>}
+        </Link>
       </div>
 
       <TournamentManager
