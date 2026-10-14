@@ -64,6 +64,7 @@ const KINDS = {
   "badge":               { minRole: "admin",     maxBytes: 1_000_000 },
   "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
   "tactic-card-art":     { minRole: "admin",     maxBytes: 8_000_000 },
+  "match-proof":         { minRole: "user",      maxBytes: 6_000_000 }, // Ergebnis-Nachweis (Screenshots) für Match-Meldungen
   "community-job-asset": { minRole: "user",      maxBytes: 6_000_000 }, // Fotograf-Uploads (Clips-Standbild/Collage/Screenshot/Banner/Grafik)
 } as const;
 
