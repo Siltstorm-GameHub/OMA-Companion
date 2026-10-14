@@ -16,6 +16,7 @@ import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import StatPointsTable from "@/components/StatPointsTable";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
@@ -1492,22 +1493,14 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 </p>
               </div>
 
-              {tmtStatFields.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Stat</p>
-                  {tmtStatFields.map(f => (
-                    <div key={f} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-300 flex-1 truncate">{f}</span>
-                      <input type="number" step="0.1"
-                        value={tmtStatConfig.pointsByField[f] ?? 0}
-                        onChange={e => setTmtStatConfig(c => ({
-                          ...c, pointsByField: { ...c.pointsByField, [f]: Number(e.target.value) },
-                        }))}
-                        className={`${inputCls} w-24 text-center`} />
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-2">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Statistik</p>
+                <StatPointsTable
+                  fields={tmtStatFields}
+                  values={tmtStatConfig.pointsByField}
+                  onChange={(f, v) => setTmtStatConfig(c => ({ ...c, pointsByField: { ...c.pointsByField, [f]: v } }))}
+                />
+              </div>
 
               <div className="pt-2 border-t border-white/[0.06] space-y-3">
                 <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">

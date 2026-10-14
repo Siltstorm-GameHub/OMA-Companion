@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
     placementRewardsJson, hidden, registrationLocked, squadId,
     gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
+    format: bodyFormat, statFields: bodyStatFields, statConfig: bodyStatConfig,
   } = body;
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
@@ -113,6 +114,27 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Turnier-Einstellungen aus dem Wizard (Einzel-Event): Format, Stat-Felder und Punkte je Stat.
+  // Bei Events in einer Reihe mit festem Format gewinnt die Reihe (siehe oben).
+  const VALID_FORMATS = ["single_elimination", "round_robin", "liga", "coop_stats", "avg_stats", "ffa"];
+  const eventFormat = seriesFormat ?? (typeof bodyFormat === "string" && VALID_FORMATS.includes(bodyFormat) ? bodyFormat : null);
+  let eventStatFields = seriesStatFields;
+  let eventStatConfigJson: string | null = null;
+  if (!seriesFormat && eventFormat) {
+    let raw: unknown = bodyStatFields;
+    if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch { raw = null; } }
+    if (Array.isArray(raw)) {
+      const fields = [...new Set(raw.filter((f): f is string => typeof f === "string").map(f => f.trim()).filter(Boolean))];
+      if (fields.length) eventStatFields = JSON.stringify(fields);
+      const stats = Array.isArray(bodyStatConfig?.stats)
+        ? (bodyStatConfig.stats as { field?: unknown; pointsPer?: unknown }[])
+            .filter(r => typeof r.field === "string" && fields.includes(r.field) && Number.isFinite(Number(r.pointsPer)) && Number(r.pointsPer) !== 0)
+            .map(r => ({ field: r.field as string, pointsPer: Number(r.pointsPer) }))
+        : [];
+      if (stats.length) eventStatConfigJson = JSON.stringify({ stats });
+    }
+  }
+
   // Derive participation coin default (10) from placementRewardsJson or series config
   const rewardsData = placementRewardsJson
     ? JSON.stringify(placementRewardsJson)
@@ -141,9 +163,10 @@ export async function POST(req: NextRequest) {
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,
       placementRewardsJson: rewardsData,
       ...(game === "OMA Gems" && { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER }),
-      ...(seriesFormat       && { format:       seriesFormat }),
+      ...(eventFormat        && { format:       eventFormat }),
       ...(seriesPointsConfig && { pointsConfig: seriesPointsConfig }),
-      ...(seriesStatFields   && { statFields:   seriesStatFields }),
+      ...(eventStatFields    && { statFields:   eventStatFields }),
+      ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),
     },
   });
 

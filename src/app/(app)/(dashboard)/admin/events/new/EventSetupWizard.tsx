@@ -12,6 +12,7 @@ import { Check, Plus, Trash2, CalendarDays } from "@/components/icons";
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import StatPointsTable from "@/components/StatPointsTable";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
@@ -183,6 +184,7 @@ export default function EventSetupWizard({
   const [newSeriesDesc, setNewSeriesDesc] = useState("");
   const [format, setFormat]           = useState("single_elimination");
   const [statFields, setStatFields]   = useState<string[]>([]);
+  const [statPointsByField, setStatPointsByField] = useState<Record<string, number>>({});
   const [eventHidden, setEventHidden] = useState(false);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
@@ -395,7 +397,13 @@ export default function EventSetupWizard({
 
     if (eventType === "tournament") {
       body.format = format;
-      if (hasStat) body.statFields = JSON.stringify(statFields);
+      if (hasStat) {
+        body.statFields = JSON.stringify(statFields);
+        const stats = statFields
+          .filter(f => (statPointsByField[f] ?? 0) !== 0)
+          .map(f => ({ field: f, pointsPer: statPointsByField[f] }));
+        if (stats.length) body.statConfig = { stats };
+      }
     }
 
     if (isGemsTournament && endAt) {
@@ -867,6 +875,19 @@ export default function EventSetupWizard({
           <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
             <p className="text-sm font-medium text-amber-300 mb-3">Stat-Felder</p>
             <StatFieldEditor fields={statFields} onChange={setStatFields} />
+            {statFields.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium text-amber-300">Punkte pro Statistik</p>
+                <p className="text-[11px] text-gray-500">
+                  Wie viele Punkte gibt jede Einheit einer Statistik? Lässt sich später im Reiter „Turnier“ des Events ändern.
+                </p>
+                <StatPointsTable
+                  fields={statFields}
+                  values={statPointsByField}
+                  onChange={(f, v) => setStatPointsByField(prev => ({ ...prev, [f]: v }))}
+                />
+              </div>
+            )}
           </div>
         )}
 

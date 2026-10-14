@@ -148,7 +148,9 @@ export async function applySubmissionValues(
     await prisma.$transaction([
       prisma.matchEntry.update({
         where: { id: plan.entryId },
-        data: { placement: v.placement, score: v.score, statsJson: v.statsJson ? JSON.stringify(v.statsJson) : null },
+        // Wie der Admin-Weg (applyMatchResult): nur die Stats zählen. placement/score der Einträge bleiben leer —
+        // sie würden sonst den Rundensieger (placement === 1) auf der Turnierseite und im Overlay setzen.
+        data: { placement: null, score: null, statsJson: v.statsJson ? JSON.stringify(v.statsJson) : null },
       }),
       prisma.match.update({ where: { id: matchId }, data: { playedAt: new Date(), resultConfirmed: !provisional } }),
     ]);
