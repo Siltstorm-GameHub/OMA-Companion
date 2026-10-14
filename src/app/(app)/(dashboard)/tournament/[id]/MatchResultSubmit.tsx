@@ -46,8 +46,6 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
 
   const [score1, setScore1] = useState(s?.score1?.toString() ?? "");
   const [score2, setScore2] = useState(s?.score2?.toString() ?? "");
-  const [placement, setPlacement] = useState(s?.placement?.toString() ?? "");
-  const [score, setScore] = useState(s?.score?.toString() ?? "");
   const [stats, setStats] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(initialStats).map(([k, v]) => [k, String(v)])),
   );
@@ -65,7 +63,7 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matchId: m.id,
-          ...(m.isDuel ? { score1, score2 } : { placement, score, statsJson: stats }),
+          ...(m.isDuel ? { score1, score2 } : { statsJson: stats }),
           note,
           screenshotUrls: urls,
         }),
@@ -119,14 +117,6 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs text-gray-400 space-y-1">
-                Platzierung
-                <input type="number" min={1} value={placement} onChange={(e) => setPlacement(e.target.value)} className={inputCls} />
-              </label>
-              <label className="text-xs text-gray-400 space-y-1">
-                Punkte
-                <input type="number" min={0} value={score} onChange={(e) => setScore(e.target.value)} className={inputCls} />
-              </label>
               {statFields.map((f) => (
                 <label key={f} className="text-xs text-gray-400 space-y-1">
                   {f}

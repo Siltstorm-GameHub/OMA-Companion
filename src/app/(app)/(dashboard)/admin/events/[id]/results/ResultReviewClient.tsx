@@ -42,8 +42,6 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
   const router = useRouter();
   const [score1, setScore1] = useState(sub.score1?.toString() ?? "");
   const [score2, setScore2] = useState(sub.score2?.toString() ?? "");
-  const [placement, setPlacement] = useState(sub.placement?.toString() ?? "");
-  const [score, setScore] = useState(sub.score?.toString() ?? "");
   const [stats, setStats] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(sub.stats).map(([k, v]) => [k, String(v)])),
   );
@@ -53,10 +51,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
 
   const changed =
     (match.isDuel && (score1 !== (sub.score1?.toString() ?? "") || score2 !== (sub.score2?.toString() ?? ""))) ||
-    (!match.isDuel &&
-      (placement !== (sub.placement?.toString() ?? "") ||
-        score !== (sub.score?.toString() ?? "") ||
-        statFields.some((f) => (stats[f] ?? "") !== String(sub.stats[f] ?? ""))));
+    (!match.isDuel && statFields.some((f) => (stats[f] ?? "") !== String(sub.stats[f] ?? "")));
 
   async function act(action: "approve" | "correct" | "reject") {
     setBusy(true);
@@ -67,7 +62,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
         body: JSON.stringify({
           submissionId: sub.id, action, reviewNote,
           ...(action === "correct"
-            ? match.isDuel ? { score1, score2 } : { placement, score, statsJson: stats }
+            ? match.isDuel ? { score1, score2 } : { statsJson: stats }
             : {}),
         }),
       });
@@ -117,12 +112,6 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <label className="text-xs text-gray-400 space-y-1">Platzierung
-            <input type="number" min={1} value={placement} disabled={done} onChange={(e) => setPlacement(e.target.value)} className={inputCls} />
-          </label>
-          <label className="text-xs text-gray-400 space-y-1">Punkte
-            <input type="number" min={0} value={score} disabled={done} onChange={(e) => setScore(e.target.value)} className={inputCls} />
-          </label>
           {statFields.map((f) => (
             <label key={f} className="text-xs text-gray-400 space-y-1">{f}
               <input type="number" min={0} value={stats[f] ?? ""} disabled={done} onChange={(e) => setStats({ ...stats, [f]: e.target.value })} className={inputCls} />
@@ -135,7 +124,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
         <p className="text-xs text-blue-300/80">
           Ursprünglich gemeldet: {match.isDuel
             ? `${sub.original.score1 ?? "–"} : ${sub.original.score2 ?? "–"}`
-            : `Platz ${sub.original.placement ?? "–"}, Punkte ${sub.original.score ?? "–"}`}
+            : Object.entries(sub.original.statsJson ?? {}).map(([k, v]) => `${k} ${v}`).join(", ") || "–"}
         </p>
       )}
 
