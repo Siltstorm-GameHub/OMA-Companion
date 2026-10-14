@@ -516,7 +516,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     }
   }
 
-  async function saveTmtSettings() {
+  /** startStatus: "pending" legt das Turnier nur an (noch nicht gestartet), "active" startet es direkt. */
+  async function saveTmtSettings(startStatus: "pending" | "active" = "active") {
     setTmtLoading(true);
     const config = usesMatchResultPoints
       ? { win: tmtPoints.win, draw: tmtPoints.draw }
@@ -532,9 +533,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId: event.id, format: resolvedTmtFormat, pointsConfig: config,
-          statFields: hasStat ? tmtStatFields : null, statConfig }),
+          statFields: hasStat ? tmtStatFields : null, statConfig, status: startStatus }),
       });
-      if (res.ok) { toast.success("Turnier erstellt"); router.refresh(); }
+      if (res.ok) { toast.success(startStatus === "pending" ? "Einstellungen gespeichert — Turnier noch nicht gestartet" : "Turnier erstellt"); router.refresh(); }
       else { const e = await res.json(); toast.error(e.error ?? "Fehler"); }
     } else {
       const res = await fetch(`/api/tournaments/${event.id}`, {
@@ -546,6 +547,17 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       else { toast.error("Fehler beim Speichern"); }
     }
     setTmtLoading(false);
+  }
+
+  async function startTournament() {
+    setTmtLoading(true);
+    const res = await fetch(`/api/tournaments/${event.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    setTmtLoading(false);
+    if (res.ok) { toast.success("Turnier gestartet"); router.refresh(); }
+    else toast.error("Fehler beim Starten");
   }
 
   async function removeUser(userId: string, name: string, role: "player" | "spectator" = "player") {
@@ -852,7 +864,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   </button>
                 ))}
               </div>
-              <button onClick={saveTmtSettings} disabled={tmtLoading}
+              <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
                 <Trophy className="w-4 h-4" />
                 {tmtLoading ? "Wird erstellt…" : "Turnier erstellen & Reiter wiederherstellen"}
@@ -1557,11 +1569,33 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           )}
 
-          <button onClick={saveTmtSettings} disabled={tmtLoading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
-            <Trophy className="w-4 h-4" />
-            {tmtLoading ? "Speichert…" : hasTournament ? "Turnier-Einstellungen speichern" : "Turnier erstellen"}
-          </button>
+          <div className="space-y-2">
+            {hasTournament ? (
+              <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
+                <Trophy className="w-4 h-4" />
+                {tmtLoading ? "Speichert…" : "Turnier-Einstellungen speichern"}
+              </button>
+            ) : (
+              <>
+                <button onClick={() => saveTmtSettings("pending")} disabled={tmtLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
+                  <Trophy className="w-4 h-4" />
+                  {tmtLoading ? "Speichert…" : "Einstellungen speichern (Turnier noch nicht starten)"}
+                </button>
+                <button onClick={() => saveTmtSettings("active")} disabled={tmtLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-amber-300 border border-amber-700/60 hover:bg-amber-900/20 transition-colors disabled:opacity-50">
+                  Turnier erstellen & direkt starten
+                </button>
+              </>
+            )}
+            {hasTournament && event.tournamentStatus !== "active" && event.tournamentStatus !== "finished" && event.tournamentStatus !== "finalized" && (
+              <button onClick={startTournament} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900/20 transition-colors disabled:opacity-50">
+                Turnier jetzt starten
+              </button>
+            )}
+          </div>
 
           {/* Turnierbaum — im selben Reiter wie die Turnier-Einstellungen */}
           {bracketTournament && (
