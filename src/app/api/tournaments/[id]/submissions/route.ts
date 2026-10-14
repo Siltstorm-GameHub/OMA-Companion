@@ -6,10 +6,13 @@ import {
   MAX_NOTE_LENGTH,
   MAX_SCREENSHOTS,
   applySubmissionValues,
+  checkSubmissionValues,
+  revertProvisional,
   cleanInt,
   cleanStats,
   isParticipantEditLocked,
   isProofUrl,
+  type SubmissionValues,
 } from "@/lib/tournaments/matchSubmissions";
 
 function fail(err: unknown) {
@@ -81,12 +84,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const hasValue = data.score1 != null || data.score2 != null || data.placement != null || data.score != null || data.statsJson;
     if (!hasValue) return NextResponse.json({ error: "Bitte ein Ergebnis angeben" }, { status: 400 });
 
+    const values: SubmissionValues = {
+      score1: data.score1, score2: data.score2, placement: data.placement, score: data.score,
+      statsJson: data.statsJson ? JSON.parse(data.statsJson) : null,
+    };
+    // Vorab prüfen (z.B. Unentschieden im K.-o.-Baum), damit keine unbrauchbare Meldung gespeichert wird.
+    await checkSubmissionValues(eventId, user.id, match.id, values);
+
     const submission = await prisma.matchResultSubmission.upsert({
       where: { matchId_userId: { matchId: match.id, userId: user.id } },
       create: { ...data, matchId: match.id, userId: user.id },
-      update: data,
+      update: { ...data, applied: false },
     });
-    return NextResponse.json(submission, { status: existing ? 200 : 201 });
+
+    // Direkt für alle sichtbar — außer ein Admin hat das Ergebnis dieses Matches bereits bestätigt;
+    // dann bleibt die Korrektur offen, bis ein Admin sie prüft.
+    const fresh = await prisma.match.findUnique({ where: { id: match.id }, select: { resultConfirmed: true, playedAt: true } });
+    const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed;
+    if (!adminConfirmed) {
+      await applySubmissionValues(eventId, user.id, match.id, values, true);
+    }
+    return NextResponse.json({ ...submission, visible: !adminConfirmed }, { status: existing ? 200 : 201 });
   } catch (err) {
     return fail(err);
   }
@@ -124,7 +142,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let data: Record<string, unknown>;
 
     if (body.action === "reject") {
-      data = { ...base, status: "rejected" };
+      if (sub.applied) await revertProvisional(eventId, sub.userId, sub.matchId);
+      data = { ...base, status: "rejected", applied: false };
     } else {
       const original = {
         score1: sub.score1, score2: sub.score2, placement: sub.placement, score: sub.score,

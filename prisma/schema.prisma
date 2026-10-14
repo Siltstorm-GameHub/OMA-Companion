@@ -642,6 +642,8 @@ model Match {
   score1      Int?
   score2      Int?
   playedAt    DateTime?
+  // false = vorläufiges Ergebnis (von Teilnehmern gemeldet, sofort sichtbar, noch keine Punkte) bis ein Admin es bestätigt
+  resultConfirmed Boolean  @default(true)
   event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]
@@ -2765,6 +2767,8 @@ model MatchResultSubmission {
   reviewedById   String?
   reviewedAt     DateTime?
   reviewNote     String?
+  // true = die Werte dieser Meldung sind aktuell als vorläufiges Ergebnis im Match eingetragen
+  applied        Boolean   @default(false)
   originalJson   String? // JSON: ursprünglich gemeldete Werte, falls ein Admin sie korrigiert hat
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

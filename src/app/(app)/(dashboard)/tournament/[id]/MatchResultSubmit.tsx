@@ -72,7 +72,7 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return toast.error(data.error ?? "Senden fehlgeschlagen");
-      toast.success("Ergebnis gemeldet — ein Admin prüft es anhand deiner Screenshots");
+      toast.success(data.visible === false ? "Korrektur gemeldet — ein Admin prüft sie, bis dahin gilt das bestätigte Ergebnis" : "Ergebnis eingetragen — es ist sofort sichtbar, ein Admin prüft es anhand deiner Screenshots");
       setOpen(false);
       router.refresh();
     } finally {
@@ -185,7 +185,7 @@ export default function MatchResultSubmit({
       <div>
         <h3 className="text-sm font-semibold text-white">Ergebnis melden</h3>
         <p className="text-xs text-gray-500">
-          Trage dein Ergebnis ein und lade Screenshots als Nachweis hoch. Ein Admin prüft die Meldung und übernimmt oder korrigiert sie. Screenshots werden nach einiger Zeit automatisch gelöscht.
+          Trage dein Ergebnis ein und lade Screenshots als Nachweis hoch. Dein Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Screenshots werden nach einiger Zeit automatisch gelöscht.
         </p>
       </div>
       {matches.map((m) => (
