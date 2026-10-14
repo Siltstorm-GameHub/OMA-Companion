@@ -89,16 +89,11 @@ export function isDuelMatch(m: { player1Id: string | null; player2Id: string | n
   return m.entries.length === 0 && (!!m.player1Id || !!m.player2Id);
 }
 
-/**
- * Übernimmt die (ggf. korrigierten) Werte einer Meldung ins eigentliche Match-Ergebnis.
- * Läuft über applyMatchResult, damit Bracket-Aufrücken und Punktevergabe unverändert greifen.
- */
-export async function applySubmissionValues(
-  eventId: string,
-  submissionUserId: string,
-  matchId: string,
-  v: SubmissionValues,
-) {
+type Plan =
+  | { kind: "duel"; winnerId: string | null; isDraw: boolean; score1: number; score2: number }
+  | { kind: "entry"; entryId: string };
+
+async function planFor(eventId: string, submissionUserId: string, matchId: string, v: SubmissionValues) {
   const [event, match] = await Promise.all([
     prisma.event.findUnique({ where: { id: eventId }, select: { format: true } }),
     prisma.match.findFirst({ where: { id: matchId, eventId }, include: { entries: true } }),
@@ -117,21 +112,64 @@ export async function applySubmissionValues(
       throw new ApplyMatchResultError("Im K.-o.-Baum ist kein Unentschieden möglich", 400);
     }
     const winnerId = isDraw ? null : v.score1 > v.score2 ? match.player1Id : match.player2Id;
-    await applyMatchResult({ eventId, matchId, winnerId, score1: v.score1, score2: v.score2, isDraw });
-    return;
+    return { match, plan: { kind: "duel", winnerId, isDraw, score1: v.score1, score2: v.score2 } as Plan };
   }
 
   const entry = match.entries.find((e) => e.userId === submissionUserId);
   if (!entry) throw new ApplyMatchResultError("Melder ist nicht Teil dieses Matches", 400);
-  await prisma.$transaction([
-    prisma.matchEntry.update({
-      where: { id: entry.id },
-      data: {
-        placement: v.placement,
-        score: v.score,
-        statsJson: v.statsJson ? JSON.stringify(v.statsJson) : null,
-      },
-    }),
-    prisma.match.update({ where: { id: matchId }, data: { playedAt: new Date() } }),
-  ]);
+  return { match, plan: { kind: "entry", entryId: entry.id } as Plan };
+}
+
+/** Wirft ApplyMatchResultError, falls die Werte nicht ins Match übernommen werden könnten (ohne etwas zu schreiben). */
+export async function checkSubmissionValues(eventId: string, submissionUserId: string, matchId: string, v: SubmissionValues) {
+  await planFor(eventId, submissionUserId, matchId, v);
+}
+
+/**
+ * Trägt die Werte einer Meldung ins eigentliche Match-Ergebnis ein.
+ *  - provisional = false (Admin): regulär über applyMatchResult — Bracket-Aufrücken, Punkte, Match bestätigt.
+ *  - provisional = true (Teilnehmer-Meldung): sofort sichtbar, aber ohne Punktevergabe und unbestätigt.
+ */
+export async function applySubmissionValues(
+  eventId: string,
+  submissionUserId: string,
+  matchId: string,
+  v: SubmissionValues,
+  provisional = false,
+) {
+  const { plan } = await planFor(eventId, submissionUserId, matchId, v);
+
+  if (plan.kind === "duel") {
+    await applyMatchResult({
+      eventId, matchId, winnerId: plan.winnerId, score1: plan.score1, score2: plan.score2,
+      isDraw: plan.isDraw, skipPoints: provisional,
+    });
+  } else {
+    await prisma.$transaction([
+      prisma.matchEntry.update({
+        where: { id: plan.entryId },
+        data: { placement: v.placement, score: v.score, statsJson: v.statsJson ? JSON.stringify(v.statsJson) : null },
+      }),
+      prisma.match.update({ where: { id: matchId }, data: { playedAt: new Date(), resultConfirmed: !provisional } }),
+    ]);
+  }
+
+  // Genau eine Meldung pro Match gilt als "aktuell eingetragen".
+  await prisma.matchResultSubmission.updateMany({ where: { matchId }, data: { applied: false } });
+  await prisma.matchResultSubmission.updateMany({
+    where: { matchId, userId: submissionUserId },
+    data: { applied: true },
+  });
+}
+
+/** Macht ein vorläufig eingetragenes Ergebnis rückgängig (abgelehnte Meldung). Bestätigte Ergebnisse bleiben unberührt. */
+export async function revertProvisional(eventId: string, submissionUserId: string, matchId: string) {
+  const match = await prisma.match.findFirst({ where: { id: matchId, eventId }, include: { entries: true } });
+  if (!match || match.resultConfirmed) return;
+  if (isDuelMatch(match)) {
+    await applyMatchResult({ eventId, matchId, action: "reset" });
+  } else {
+    const entry = match.entries.find((e) => e.userId === submissionUserId);
+    if (entry) await prisma.matchEntry.update({ where: { id: entry.id }, data: { placement: null, score: null, statsJson: null } });
+  }
 }

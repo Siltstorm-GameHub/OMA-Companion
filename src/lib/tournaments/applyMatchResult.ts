@@ -37,6 +37,12 @@ export type ApplyMatchResultInput = {
   isDraw?: boolean;
   entries?: { id: string; statsJson?: Record<string, number> | null }[];
   action?: string;
+  /**
+   * Vorläufiges Ergebnis (z.B. von Teilnehmern gemeldet): Ergebnis und Bracket-Aufrücken werden
+   * gespeichert und sind sofort sichtbar, aber es werden KEINE Punkte vergeben und das Match bleibt
+   * unbestätigt (resultConfirmed = false), bis ein Admin es regulär einträgt.
+   */
+  skipPoints?: boolean;
 };
 
 /**
@@ -58,6 +64,7 @@ export async function applyMatchResult({
   isDraw,
   entries,
   action,
+  skipPoints = false,
 }: ApplyMatchResultInput) {
   // ── Reset a match result ─────────────────────────────────────────────
   if (action === "reset") {
@@ -87,7 +94,7 @@ export async function applyMatchResult({
             data: { player2Id: null, winnerId: null, score1: null, score2: null, playedAt: null },
           });
         }
-      } else {
+      } else if (match.resultConfirmed) {
         // Kein Folgematch = das zurückgesetzte Match war das Finale. Die dort vergebenen
         // Turnier-Belohnungen müssen mit zurück, sonst bleiben sie nach dem Zurücksetzen
         // stehen und werden beim erneuten Eintragen ein zweites Mal ausgezahlt.
@@ -100,7 +107,7 @@ export async function applyMatchResult({
 
     const reset = await prisma.match.update({
       where: { id: matchId },
-      data: { winnerId: null, score1: null, score2: null, playedAt: null },
+      data: { winnerId: null, score1: null, score2: null, playedAt: null, resultConfirmed: true },
     });
     return reset;
   }
@@ -122,7 +129,7 @@ export async function applyMatchResult({
 
     const match = await prisma.match.update({
       where: { id: matchId },
-      data: { playedAt: new Date() },
+      data: { playedAt: new Date(), resultConfirmed: !skipPoints },
       include: { entries: true },
     });
 
@@ -138,9 +145,10 @@ export async function applyMatchResult({
   // Read existing match state before update (for idempotency / reversal)
   const existingMatch = await prisma.match.findUnique({
     where: { id: matchId },
-    select: { playedAt: true, winnerId: true, player1Id: true, player2Id: true },
+    select: { playedAt: true, winnerId: true, player1Id: true, player2Id: true, resultConfirmed: true },
   });
-  const wasAlreadyPlayed = !!existingMatch?.playedAt;
+  // Nur bestätigte Ergebnisse haben Punkte ausgelöst, die bei einer Korrektur zurückgebucht werden müssen.
+  const wasAlreadyPlayed = !!existingMatch?.playedAt && existingMatch.resultConfirmed;
 
   const match = await prisma.match.update({
     where: { id: matchId },
@@ -149,6 +157,7 @@ export async function applyMatchResult({
       score1: score1 ?? null,
       score2: score2 ?? null,
       playedAt: new Date(),
+      resultConfirmed: !skipPoints,
     },
   });
 
@@ -169,11 +178,11 @@ export async function applyMatchResult({
         where: { id: nextMatch.id },
         data: isFirstSlot ? { player1Id: winnerId ?? null } : { player2Id: winnerId ?? null },
       });
-    } else {
+    } else if (!skipPoints) {
       // Finale. Die Belohnung hängt am Sieger, nicht am Speichervorgang: bei unverändertem
       // Sieger passiert nichts (sonst zahlt jede Korrektur erneut aus), bei geändertem Sieger
       // wird die alte Vergabe exakt zurückgebucht und danach neu ausgezahlt.
-      const oldWinnerId = existingMatch?.winnerId ?? null;
+      const oldWinnerId = existingMatch?.resultConfirmed ? existingMatch.winnerId ?? null : null;
       const newWinnerId = winnerId ?? null;
 
       if (oldWinnerId !== newWinnerId) {
@@ -191,7 +200,7 @@ export async function applyMatchResult({
       }
       await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "finished" } });
     }
-  } else if (event?.pointsConfig) {
+  } else if (event?.pointsConfig && !skipPoints) {
     const config  = JSON.parse(event.pointsConfig) as Record<string, number>;
     const drawPts = config["draw"];
     const winPts  = config["win"];

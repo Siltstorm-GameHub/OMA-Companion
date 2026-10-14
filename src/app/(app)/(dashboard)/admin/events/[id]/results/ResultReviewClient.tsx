@@ -8,6 +8,7 @@ type Sub = {
   id: string;
   user: { id: string; name: string };
   status: string;
+  applied: boolean;
   score1: number | null; score2: number | null; placement: number | null; score: number | null;
   stats: Record<string, number>;
   note: string | null;
@@ -89,7 +90,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
           Gemeldet von <span className="font-medium">{sub.user.name}</span>
           <span className="text-xs text-gray-500"> · {new Date(sub.createdAt).toLocaleString("de-DE")}</span>
         </p>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? sub.status}</span>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? sub.status}{sub.applied && !done ? " · vorläufig sichtbar" : ""}</span>
       </div>
 
       <div className="flex flex-wrap gap-2">

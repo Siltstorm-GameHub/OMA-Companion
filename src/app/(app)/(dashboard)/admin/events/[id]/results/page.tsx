@@ -40,6 +40,7 @@ export default async function AdminEventResultsPage({ params }: { params: Promis
       id: s.id,
       user: { id: s.user.id, name: s.user.username ?? s.user.name ?? "?" },
       status: s.status,
+      applied: s.applied,
       score1: s.score1, score2: s.score2, placement: s.placement, score: s.score,
       stats: s.statsJson ? (JSON.parse(s.statsJson) as Record<string, number>) : {},
       note: s.note,
