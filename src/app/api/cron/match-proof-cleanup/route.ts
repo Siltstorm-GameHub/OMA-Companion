@@ -40,7 +40,7 @@ function phaseClosedAt(completionData: string | null): Date | null {
  *  2. spätestens PROOF_RETENTION_DAYS_MAX Tage nach der Meldung (Event nie abgeschlossen)
  *  3. verwaiste Uploads (hochgeladen, nie abgeschickt) nach PROOF_ORPHAN_MAX_AGE_DAYS Tagen
  *
- * Läuft täglich (siehe vercel.json).
+ * Läuft täglich (siehe vercel.json). Fristen: 7 Tage nach Phasenabschluss, max. 14 Tage.
  */
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

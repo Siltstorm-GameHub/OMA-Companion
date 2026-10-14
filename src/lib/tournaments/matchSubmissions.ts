@@ -7,9 +7,9 @@ export const MAX_NOTE_LENGTH = 500;
 /** Blob-Pfad-Präfix der Nachweis-Screenshots (siehe Upload-Kind "match-proof"). */
 export const PROOF_PREFIX = "match-proof/";
 /** Screenshots werden so viele Tage nach Abschluss der aktiven Eventphase gelöscht. */
-export const PROOF_RETENTION_DAYS_AFTER_PHASE = 14;
+export const PROOF_RETENTION_DAYS_AFTER_PHASE = 7;
 /** Absolute Obergrenze für Events, deren Phase nie abgeschlossen wurde. */
-export const PROOF_RETENTION_DAYS_MAX = 60;
+export const PROOF_RETENTION_DAYS_MAX = 14;
 /** Hochgeladene, aber nie abgeschickte Screenshots (z.B. Tab geschlossen). */
 export const PROOF_ORPHAN_MAX_AGE_DAYS = 2;
 
