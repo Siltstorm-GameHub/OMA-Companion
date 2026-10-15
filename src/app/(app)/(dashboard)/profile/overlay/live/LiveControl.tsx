@@ -8,7 +8,7 @@ import {
   ArrowRight as SkipForward,
 } from "@/components/icons";
 import { SCENE_LABELS, type OverlayControl, type OverlayScene } from "@/components/overlay/types";
-import OverlayLayoutsEditor, { type OverlayLayouts } from "@/components/overlay/OverlayLayoutsEditor";
+import { OverlayConnectionStatus, useOverlayConnection } from "@/components/overlay/OverlayConnectionStatus";
 
 type ElementInfo = { key: string; label: string; available: boolean; zoomable: boolean };
 type ControlState = {
@@ -39,12 +39,14 @@ const DURATIONS: { label: string; seconds: number | null }[] = [
 const COUNTDOWN_MINUTES = [3, 5, 10, 15];
 
 /**
- * Fernbedienung fürs eigene OBS-Overlay: Szene wechseln (Spiel, Pause, Intro, Clips, Outro — es
- * reicht EINE Browser-Quelle in OBS), Elemente groß einblenden (zeitlich begrenzt oder dauerhaft),
- * ein-/ausblenden und Position/Größe aller Bausteine anpassen. Fragt den Zustand regelmäßig ab,
- * damit ein Wechsel zwischen Event- und Profil-Modus (Event startet/endet) ohne Neuladen ankommt.
+ * Fernbedienung fürs eigene OBS-Overlay — bewusst NUR Knöpfe für den laufenden Stream: Szene
+ * wechseln (Spiel, Pause, Intro, Clips, Outro — es reicht EINE Browser-Quelle in OBS), Countdown,
+ * Elemente groß einblenden und ein-/ausblenden. Gestaltet (Layout, Aussehen) wird in den
+ * Overlay-Einstellungen. Fragt den Zustand regelmäßig ab, damit ein Wechsel zwischen Event- und
+ * Profil-Modus (Event startet/endet) ohne Neuladen ankommt.
  */
-export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
+export default function LiveControl() {
+  const connection = useOverlayConnection(10_000);
   const [state, setState] = useState<ControlState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,10 +171,11 @@ export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
         <h1 className="text-lg font-semibold text-white">Overlay-Steuerung</h1>
         <p className="flex items-center gap-1.5 text-sm text-gray-400 mt-1">
           <Radio className={`w-3.5 h-3.5 ${state.mode === "event" ? "text-rose-400" : "text-gray-500"}`} />
-          {state.mode === "event" ? <>Event-Modus · <span className="text-gray-200">{state.title}</span></> : "Profil-Modus (kein laufendes Event)"}
+          {state.mode === "event" ? <>Turnier läuft · <span className="text-gray-200">{state.title}</span></> : "Normales Streamen (kein Turnier)"}
           {busy && <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" />}
         </p>
         {error && <p className="text-xs text-amber-300 mt-1">{error}</p>}
+        <div className="mt-2"><OverlayConnectionStatus connection={connection} compact /></div>
       </div>
 
       {/* ── Szene ── */}
@@ -337,20 +340,21 @@ export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
           })}
         </div>
         <p className="text-xs text-gray-500">
-          Gilt nur für Elemente, die in deinem Layout aktiv sind – welche das sind, legst du unten unter „Position, Größe & Sichtbarkeit“ fest.
+          Gilt nur für Elemente, die in deinem Layout aktiv sind – welche das sind, legst du in den Overlay-Einstellungen unter „Layout“ fest.
         </p>
       </div>
 
-      {/* ── Position & Größe ── */}
-      <div>
-        <h2 className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-          <LayoutGrid className="w-3.5 h-3.5" /> Position, Größe & Sichtbarkeit
-        </h2>
-        <OverlayLayoutsEditor
-          initial={layouts}
-          initialTab={CLIP_SCENES.includes(control.scene) ? "clips" : control.scene === "pause" ? "pause" : state.mode}
-        />
-      </div>
+      {/* ── Gestalten passiert in den Einstellungen ── */}
+      <Link
+        href="/profile/overlay?tab=layout"
+        className="flex items-center gap-3 rounded-2xl px-4 py-3 border border-white/[0.08] text-gray-300 hover:border-teal-500/40 hover:text-teal-200 transition-all"
+      >
+        <LayoutGrid className="w-5 h-5 shrink-0 text-teal-300" />
+        <span className="text-sm">
+          <span className="font-semibold">Layout & Aussehen anpassen</span>
+          <span className="block text-xs text-gray-500">Position und Größe der Kacheln, Vorlagen, Hintergrund – in den Overlay-Einstellungen.</span>
+        </span>
+      </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 px-1">
         <span className="flex items-center gap-1.5">

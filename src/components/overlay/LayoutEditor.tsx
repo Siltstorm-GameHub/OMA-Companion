@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Move, Repeat, Maximize2, Timer } from "@/components/icons";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "./PositionCanvas";
 import { SCALE_STEPS, snapScale, type LayoutEntry, type OverlayLayout } from "./types";
+import HelpTip from "./HelpTip";
 
 export type EditorElementOption<K extends string> = CanvasElementOption<K> & {
   /** Kurzer Hinweis unter dem Schalter, z.B. "nur bei K.-o.-Turnieren". */
@@ -19,7 +20,7 @@ const DEFAULT_CYCLE = { onSec: 10, offSec: 6 };
  * `value.elements`).
  */
 export default function LayoutEditor<K extends string>({
-  options, stackable, elementSize, defaultPositions, value, onChange, stacking = true,
+  options, stackable, elementSize, defaultPositions, value, onChange, stacking = true, preview,
 }: {
   options: EditorElementOption<K>[];
   stackable: readonly K[];
@@ -29,7 +30,11 @@ export default function LayoutEditor<K extends string>({
   onChange: (next: OverlayLayout<K>) => void;
   /** false = kein Stapeln/Rotieren (Vollbild-Szenen wie Pause und Clips). */
   stacking?: boolean;
+  /** Echte Overlay-Vorschau hinter den Kästchen (URL der Vorschau-Seite) plus Bedienelemente darüber. */
+  preview?: { src: string; controls?: React.ReactNode };
 }) {
+  // Zeitsteuerung und Rotationstakt sind Feinheiten — für Einsteiger erst auf Wunsch sichtbar.
+  const [showMore, setShowMore] = useState(() => Object.values(value.elements).some(e => (e as LayoutEntry | undefined)?.cycle));
   // Position ausgeschalteter Elemente merken, damit Aus-/Einschalten sie nicht zurücksetzt.
   const [parked, setParked] = useState<Partial<Record<K, LayoutEntry>>>({});
 
@@ -84,11 +89,12 @@ export default function LayoutEditor<K extends string>({
   return (
     <>
       <div className="glass rounded-2xl p-5 mb-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Elemente</h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Jedes Element lässt sich einzeln ein- und ausblenden und unten frei positionieren.
-          {stacking && " Zieh mehrere aufeinander, damit sie sich zu einer Stelle stapeln und automatisch durchrotieren."}
-        </p>
+        <h2 className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          Was soll zu sehen sein?
+          <HelpTip text={stacking
+            ? "Antippen blendet eine Kachel ein oder aus. Liegen Kacheln unten in der Vorschau übereinander, wechseln sie sich automatisch ab."
+            : "Antippen blendet einen Baustein ein oder aus. Position und Größe stellst du darunter ein."} />
+        </h2>
         <div className="flex flex-wrap gap-2">
           {options.map(({ key, label, icon: Icon, hint }) => {
             const active = !!value.elements[key];
@@ -111,12 +117,12 @@ export default function LayoutEditor<K extends string>({
           })}
         </div>
 
-        {stacking && hasAnyStack && (
+        {showMore && stacking && hasAnyStack && (
           <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/[0.06]">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5 shrink-0">
               <Repeat className="w-3.5 h-3.5" /> Rotation
             </span>
-            <span className="text-sm text-gray-400">Jedes gestapelte Element sichtbar für</span>
+            <span className="text-sm text-gray-400">Übereinanderliegende Kacheln wechseln alle</span>
             <input
               type="number"
               min={4}
@@ -157,16 +163,16 @@ export default function LayoutEditor<K extends string>({
                     ))}
                   </span>
                 </span>
-                <label className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
+                {showMore && <label className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={!!entry.cycle}
                     onChange={e => patchEntry(key, { cycle: e.target.checked ? { ...DEFAULT_CYCLE } : undefined })}
                     className="accent-teal-400"
                   />
-                  <Timer className="w-3.5 h-3.5" /> Zeitgesteuert
-                </label>
-                {entry.cycle && (
+                  <Timer className="w-3.5 h-3.5" /> Nur zeitweise zeigen
+                </label>}
+                {showMore && entry.cycle && (
                   <span className="flex items-center gap-1.5 text-gray-500">
                     <input
                       type="number" min={2} max={300} value={entry.cycle.onSec}
@@ -186,18 +192,27 @@ export default function LayoutEditor<K extends string>({
             );
           })}
         </div>
+        <button
+          type="button"
+          onClick={() => setShowMore(v => !v)}
+          className="mt-3 text-xs text-gray-500 hover:text-teal-300"
+        >
+          {showMore ? "Weniger Optionen" : "Mehr Optionen (nur zeitweise zeigen, Wechseltakt)"}
+        </button>
       </div>
 
       <div className="glass rounded-2xl p-5 mb-4">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-          <Move className="w-3.5 h-3.5" /> Position
-        </h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die Vorschau
-          entspricht 1920×1080.
-          {stacking && " Zwei Elemente übereinander bilden automatisch einen Stapel; die Marken-Kachel lässt sich nicht mit anderen überlappen."}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <Move className="w-3.5 h-3.5" /> Wo soll es stehen?
+            <HelpTip text={stacking
+              ? "Kästchen mit der Maus oder dem Finger verschieben. Sie rasten am Raster, am Bildschirmrand und an anderen Kacheln ein. Legst du eine Kachel auf eine andere, wechseln sich beide ab."
+              : "Kästchen mit der Maus oder dem Finger verschieben. Sie rasten am Raster, am Bildschirmrand und aneinander ein."} />
+          </h2>
+          {preview?.controls}
+        </div>
         <PositionCanvas
+          previewSrc={preview?.src}
           options={options}
           elementSize={elementSize}
           activeElements={activeElements}

@@ -16,6 +16,8 @@ import {
   type StreamerOverlayConfig,
 } from "@/components/overlay/layout";
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
+import { EMPTY_CONTROL } from "@/components/overlay/layout";
+import { buildDemoEventState, type DemoFormat } from "@/lib/overlay-demo";
 
 /**
  * Datenquelle aller OBS-Overlays (Event-, Profil- und Streamer-Stream sowie der Startzustand
@@ -449,17 +451,35 @@ export function getStreamerActiveEventId(userId: string): Promise<string | null>
 
 /** Komplette Payload des Streamer-Links — Event-Modus, wenn gerade ein Event gestreamt wird,
  *  sonst Profil-Modus. Ohne gespeichertes Layout greifen die Standard-Layouts. */
+export type OverlayPreview = { mode: "event" | "profile"; demo: DemoFormat };
+
+/**
+ * `preview` (Layout-Vorschau in der App): erzwingt Turnier- bzw. Normal-Ansicht, ignoriert die
+ * Live-Steuerung (Szene, Zoom, Ausblenden) und zeigt ohne laufendes Event ein Beispielturnier.
+ */
 export async function getStreamerOverlayPayload(
-  userId: string, config: StreamerOverlayConfig, control: OverlayControl,
+  userId: string, config: StreamerOverlayConfig, liveControl: OverlayControl, preview?: OverlayPreview,
 ): Promise<StreamerOverlayPayload | null> {
-  const [eventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
+  const control = preview ? { ...EMPTY_CONTROL } : liveControl;
+  const [realEventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
   if (!streamer) return null;
+  const eventId = preview?.mode === "profile" ? null : realEventId;
   const common = {
     streamer, pauseText: config.pauseText, lite: config.lite, scene: control.scene, pauseBackground: config.pauseBackground,
-    clips: config.clips, countdownUntil: control.countdownUntil, clipSkip: control.clipSkip,
+    // In der Vorschau immer stumm — sonst spielt die Einstellungsseite Clips mit Ton ab.
+    clips: preview ? { ...config.clips, muted: true } : config.clips,
+    countdownUntil: control.countdownUntil, clipSkip: control.clipSkip,
     pauseLayout: config.pauseLayout ?? defaultPauseLayout(), clipLayout: config.clipLayout ?? defaultClipLayout(),
   };
   const zoom = activeZoom(control);
+
+  if (preview?.mode === "event" && !eventId) {
+    const demo = buildDemoEventState(streamer, preview.demo);
+    return {
+      mode: "event", eventId: "demo", event: demo,
+      layout: adaptEventLayout(config.event ?? defaultStreamerEventLayout(), demo.format), ...common,
+    };
+  }
 
   if (eventId) {
     const event = await getEventOverlayState(eventId);
@@ -468,7 +488,7 @@ export async function getStreamerOverlayPayload(
       // Event-Steuerung (Touchscreen-Widget, gilt für alle Overlays des Events) + eigene Steuerung
       // des Streamers: ausgeblendet ist, was eine der beiden ausblendet; der eigene Zoom hat Vorrang.
       const isKey = (k: string): k is ElementKey => (ELEMENT_KEYS as string[]).includes(k);
-      const mergedControl = {
+      const mergedControl = preview ? { hidden: [], zoom: null } : {
         hidden: [...new Set([...event.control.hidden, ...control.hidden.filter(isKey)])],
         zoom: (zoom && isKey(zoom) ? zoom : null) ?? event.control.zoom,
       };

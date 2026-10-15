@@ -433,6 +433,18 @@ model OverlayClipBlock {
 // zu sehen. Twitch nennt die Freigabe nicht je Clip; erkannt wird sie an der automatischen
 // Kennzeichnung "MatureGame" laufender Community-Kanäle (source "twitch") oder von Moderatoren
 // gesetzt (source "admin"). Siehe src/lib/overlay-clips.ts.
+// Lebenszeichen offener Streamer-Overlays — für "In OBS verbunden ✓" in Einstellungen und
+// Live-Steuerung. Je User und Quelle (scene = feste Szene aus dem Link oder "auto") eine Zeile,
+// alle ~30s aktualisiert, solange der SSE-Stream läuft. Vorschauen in der App zählen nicht.
+model OverlayPresence {
+  userId     String
+  scene      String // "auto" | "pause" | "intro" | "clips" | "outro" | "gameplay"
+  isObs      Boolean // User-Agent der OBS-Browserquelle erkannt
+  lastSeenAt DateTime @default(now())
+
+  @@id([userId, scene])
+}
+
 model OverlayMatureGame {
   gameId    String   @id // Twitch-Game-ID
   name      String

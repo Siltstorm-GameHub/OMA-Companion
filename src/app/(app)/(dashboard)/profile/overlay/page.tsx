@@ -7,12 +7,14 @@ import { parseStreamerConfig, defaultStreamerEventLayout, defaultProfileLayout }
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import StreamerOverlaySettings from "./StreamerOverlaySettings";
+import { SETTINGS_TABS, type SettingsTab } from "./settingsTabs";
 
 export const metadata = { title: "OBS-Overlay – Old Masters Ally" };
 
 /** Einstellungen des festen Streamer-Links: Szenen-Links (Spiel, Pause, Intro, Clip-Pause, Outro),
  *  zwei Layouts (mit/ohne laufendes Event), Pausentext, Clip-Szenen und Leicht-Modus. */
-export default async function StreamerOverlaySettingsPage() {
+export default async function StreamerOverlaySettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login?callbackUrl=/profile/overlay");
 
@@ -36,9 +38,10 @@ export default async function StreamerOverlaySettingsPage() {
 
   // Status: was zeigt der Link genau jetzt — und für welche kommenden Events ist der User als
   // Streamer angemeldet (die erscheinen dann automatisch, ohne hier etwas tun zu müssen)?
-  const [activeEventId, streamingEvents] = await Promise.all([
+  const [activeEventId, streamingEvents, presenceCount] = await Promise.all([
     getStreamerActiveEventId(user.id),
     getStreamerUpcomingEvents(user.id),
+    prisma.overlayPresence.count({ where: { userId: user.id } }),
   ]);
   const activeEvent = activeEventId
     ? await prisma.event.findUnique({ where: { id: activeEventId }, select: { id: true, title: true } })
@@ -59,6 +62,8 @@ export default async function StreamerOverlaySettingsPage() {
       initialClips={config.clips}
       activeEvent={activeEvent}
       streamingEvents={streamingEvents}
+      everConnected={presenceCount > 0}
+      initialSettingsTab={SETTINGS_TABS.includes(tab as SettingsTab) ? tab as SettingsTab : "look"}
     />
   );
 }

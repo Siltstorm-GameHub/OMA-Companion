@@ -14,9 +14,15 @@ import type { OverlayScene, StreamerOverlayPayload } from "./types";
  * die URL fest (je OBS-Szene eine eigene Browser-Quelle).
  */
 export default function StreamerOverlayClient({
-  userId, token, scene, initial,
-}: { userId: string; token: string; scene: OverlayScene | null; initial: StreamerOverlayPayload }) {
-  const payload = useOverlayStream(`/api/overlay/streamer/${userId}/stream?token=${encodeURIComponent(token)}`, initial);
+  userId, token, scene, initial, preview,
+}: {
+  userId: string; token: string; scene: OverlayScene | null; initial: StreamerOverlayPayload;
+  /** Layout-Vorschau in der App — eigener Stream ohne Lebenszeichen und ohne Live-Steuerung. */
+  preview?: { mode: "event" | "profile"; demo: "liga" | "ko" };
+}) {
+  const query = new URLSearchParams({ token, scene: scene ?? "auto" });
+  if (preview) { query.set("preview", preview.mode); query.set("demo", preview.demo); }
+  const payload = useOverlayStream(`/api/overlay/streamer/${userId}/stream?${query}`, initial);
 
   // Feste Szene aus der URL (eigene OBS-Quelle je Szene), sonst die per Live-Steuerung gewählte —
   // so reicht EINE Browser-Quelle in OBS, und die Szene wechselt vom Handy aus.

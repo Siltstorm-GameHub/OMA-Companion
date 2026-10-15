@@ -14,18 +14,22 @@ export default async function StreamerOverlayPage({
   params, searchParams,
 }: {
   params: Promise<{ userId: string }>;
-  searchParams: Promise<{ token?: string; scene?: string }>;
+  searchParams: Promise<{ token?: string; scene?: string; preview?: string; demo?: string }>;
 }) {
   const { userId } = await params;
-  const { token, scene } = await searchParams;
+  const { token, scene, preview, demo } = await searchParams;
 
   const stored = await getStreamerConfig(userId);
   if (!stored?.token || !token || stored.token !== token) notFound();
 
-  const initial = await getStreamerOverlayPayload(userId, stored.config, stored.control);
+  // ?preview=event|profile: Layout-Vorschau in der App (Beispieldaten, ohne Live-Steuerung).
+  const previewOpt = preview
+    ? { mode: preview === "event" ? "event" as const : "profile" as const, demo: demo === "ko" ? "ko" as const : "liga" as const }
+    : undefined;
+  const initial = await getStreamerOverlayPayload(userId, stored.config, stored.control, previewOpt);
   if (!initial) notFound();
 
   // Ohne (gültiges) `&scene=` folgt der Link der Szene aus der Live-Steuerung.
   const validScene: OverlayScene | null = OVERLAY_SCENES.includes(scene as OverlayScene) ? scene as OverlayScene : null;
-  return <StreamerOverlayClient userId={userId} token={token} scene={validScene} initial={initial} />;
+  return <StreamerOverlayClient userId={userId} token={token} scene={validScene} initial={initial} preview={previewOpt} />;
 }

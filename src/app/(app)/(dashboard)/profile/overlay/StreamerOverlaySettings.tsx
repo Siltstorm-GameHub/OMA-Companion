@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  Tv2, Copy, Check, ExternalLink, RefreshCw, Save, Loader2, Radio, Move, Zap,
-  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid, Sparkles, Settings,
+  Tv2, Check, RefreshCw, Save, Loader2, Radio, Move, Zap,
+  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid, Sparkles, Settings, Wand2,
 } from "@/components/icons";
+import { OverlayConnectionStatus, useOverlayConnection } from "@/components/overlay/OverlayConnectionStatus";
+import HelpTip from "@/components/overlay/HelpTip";
+import OverlaySetupWizard, { WIZARD_DONE_KEY } from "./OverlaySetupWizard";
+import LiveControlQr from "./LiveControlQr";
+import type { SettingsTab } from "./settingsTabs";
 import OverlayLayoutsEditor, { type OverlayLayouts, type LayoutTab } from "@/components/overlay/OverlayLayoutsEditor";
 import { PAUSE_TEXT_MAX } from "@/components/overlay/layout";
 import {
@@ -15,8 +20,9 @@ import {
 import { formatBerlinDate } from "@/lib/time";
 import { PAUSE_BACKGROUNDS, pauseThumbnail } from "@/components/overlay/pauseBackgrounds";
 import MyClipsPanel from "./MyClipsPanel";
+import SceneLink, { obsDragUrl } from "./SceneLink";
 
-type SettingsTab = "look" | "clips" | "layout" | "advanced";
+
 const TABS: { key: SettingsTab; label: string; icon: typeof Tv2 }[] = [
   { key: "look",     label: "Aussehen",  icon: Sparkles },
   { key: "clips",    label: "Clips",     icon: Clapperboard },
@@ -31,18 +37,10 @@ const CLIP_SOURCE_OPTIONS: { key: ClipSource; label: string; hint: string }[] = 
   { key: "game",   label: "Aktuelles Spiel", hint: "passend zu deinem Twitch-Spiel, sonst Beliebteste" },
 ];
 
-/** OBS übernimmt beim Hineinziehen eines Links diese Parameter für die neue Browser-Quelle
- *  (Name und Größe) — die Overlay-Seite selbst ignoriert sie. */
-function obsDragUrl(url: string, name: string) {
-  const u = new URL(url);
-  u.searchParams.set("layer-name", name);
-  u.searchParams.set("layer-width", "1920");
-  u.searchParams.set("layer-height", "1080");
-  return u.toString();
-}
 
 export default function StreamerOverlaySettings({
   overlayUrl: initialUrl, initialLayouts, initialPauseText, initialLite, initialPauseBackground, initialClips, activeEvent, streamingEvents,
+  initialSettingsTab = "look", everConnected,
 }: {
   overlayUrl: string;
   initialLayouts: OverlayLayouts;
@@ -53,9 +51,25 @@ export default function StreamerOverlaySettings({
   activeEvent: { id: string; title: string } | null;
   /** Kommende Events, für die der User als Streamer angemeldet ist. */
   streamingEvents: { id: string; title: string; startAt: string }[];
+  /** Reiter beim Öffnen (z.B. ?tab=layout aus der Live-Steuerung). */
+  initialSettingsTab?: SettingsTab;
+  /** Wurde der Link schon einmal geöffnet? Sonst startet der Einrichtungs-Assistent. */
+  everConnected: boolean;
 }) {
   const [overlayUrl, setOverlayUrl] = useState(initialUrl);
-  const [tab, setTab] = useState<SettingsTab>("look");
+  const [tab, setTab] = useState<SettingsTab>(initialSettingsTab);
+  const connection = useOverlayConnection(5000);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  // Assistent beim ersten Besuch: Link noch nie geöffnet und Assistent nicht schon geschlossen.
+  useEffect(() => {
+    if (everConnected) return;
+    const t = setTimeout(() => {
+      let done = false;
+      try { done = localStorage.getItem(WIZARD_DONE_KEY) === "1"; } catch { /* ohne Speicher: anzeigen */ }
+      if (!done) setWizardOpen(true);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [everConnected]);
   const initialTab: LayoutTab = activeEvent || streamingEvents.length > 0 ? "event" : "profile";
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
   const [lite, setLite] = useState(initialLite);
@@ -114,18 +128,46 @@ export default function StreamerOverlaySettings({
   const sectionTitle = "text-xs font-semibold text-gray-400 uppercase tracking-wide";
   const settingsTab = tab === "look" || tab === "clips";
 
+  if (wizardOpen) {
+    return (
+      <div className="flex items-start justify-center p-4 sm:p-8">
+        <div className="w-full max-w-3xl space-y-4">
+          <div className="flex items-center gap-2.5">
+            <Wand2 className="w-5 h-5 text-teal-400" />
+            <h1 className="text-lg font-semibold text-white">Overlay einrichten</h1>
+          </div>
+          <OverlaySetupWizard
+            overlayUrl={overlayUrl}
+            layouts={initialLayouts}
+            pauseBackground={initialPauseBackground}
+            // Neu laden: Der Assistent speichert direkt, die Seite soll den aktuellen Stand zeigen.
+            onClose={() => window.location.assign("/profile/overlay")}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start justify-center p-4 sm:p-8">
       <div className="w-full max-w-3xl space-y-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <Tv2 className="w-5 h-5 text-teal-400" />
-            <h1 className="text-lg font-semibold text-white">OBS-Overlay</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2.5 mb-1">
+              <Tv2 className="w-5 h-5 text-teal-400" />
+              <h1 className="text-lg font-semibold text-white">OBS-Overlay</h1>
+            </div>
+            <p className="text-sm text-gray-500">
+              Ein Link für alle Streams: Turnierinfos während Events, sonst Rang, Community-Events und Clips –
+              plus Pause, Intro und Outro.
+            </p>
           </div>
-          <p className="text-sm text-gray-500">
-            Ein Link für alle Streams: Turnierinfos während Events, sonst Rang, Community-Events und Clips –
-            plus Pause, Intro und Outro.
-          </p>
+          <button
+            onClick={() => setWizardOpen(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-gray-400 hover:text-teal-300 hover:border-teal-500/30"
+          >
+            <Wand2 className="w-3.5 h-3.5" /> Einrichtungs-Assistent
+          </button>
         </div>
 
         {/* ── Schnellstart ── */}
@@ -140,6 +182,7 @@ export default function StreamerOverlaySettings({
                 erscheinen soll.
               </p>
               <SceneLink icon={Tv2} label="Dein Overlay-Link" hint="bleibt immer gleich" url={overlayUrl} dragUrl={obsDragUrl(overlayUrl, "OMA Overlay")} />
+              <div className="mt-2.5"><OverlayConnectionStatus connection={connection} /></div>
             </div>
           </div>
           <div className="flex gap-3">
@@ -156,13 +199,14 @@ export default function StreamerOverlaySettings({
               >
                 <Smartphone className="w-4 h-4" /> Live-Steuerung öffnen
               </Link>
+              <div className="hidden sm:block mt-3"><LiveControlQr size={104} /></div>
             </div>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-gray-500 border-t border-white/[0.06] pt-3">
             <Radio className={`w-3.5 h-3.5 shrink-0 ${activeEvent ? "text-rose-400" : "text-gray-600"}`} />
             {activeEvent
-              ? <>Gerade: <span className="text-gray-300">Event-Modus · {activeEvent.title}</span></>
-              : <>Gerade: <span className="text-gray-300">ohne Event</span> – während Events, bei denen du live mitspielst oder als Streamer angemeldet bist, wechselt es automatisch.</>}
+              ? <>Gerade: <span className="text-gray-300">Turnier läuft · {activeEvent.title}</span> – dein Overlay zeigt die Turnier-Ansicht.</>
+              : <>Gerade: <span className="text-gray-300">Normales Streamen</span> – spielst du bei einem OMA-Turnier mit und bist live, wechselt dein Overlay automatisch in die Turnier-Ansicht.</>}
           </p>
         </div>
 
@@ -188,7 +232,10 @@ export default function StreamerOverlaySettings({
               <label className="flex items-start gap-3 cursor-pointer">
                 <input type="checkbox" checked={lite} onChange={e => setLite(e.target.checked)} className="accent-teal-400 mt-1" />
                 <span>
-                  <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Zap className="w-3.5 h-3.5 text-amber-300" /> Leicht-Modus</span>
+                  <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium">
+                    <Zap className="w-3.5 h-3.5 text-amber-300" /> Leicht-Modus
+                    <HelpTip text="Spart Rechenleistung: keine Glas- und Unschärfe-Effekte, keine Dauer-Animationen. Einschalten, wenn dein Stream ruckelt." />
+                  </span>
                   <span className="block text-xs text-gray-500">
                     Ohne Glas-, Unschärfe- und Dauer-Animationen. Empfohlen, wenn OBS ruckelt oder das Overlay flackert.
                   </span>
@@ -293,12 +340,18 @@ export default function StreamerOverlaySettings({
           </>
         )}
 
-        {tab === "layout" && <OverlayLayoutsEditor initial={initialLayouts} initialTab={initialTab} />}
+        {/* Bleibt beim Reiterwechsel erhalten (nur versteckt), damit nichts verloren geht. */}
+        <div hidden={tab !== "layout"}>
+          <OverlayLayoutsEditor initial={initialLayouts} initialTab={initialTab} overlayUrl={overlayUrl} />
+        </div>
 
         {tab === "advanced" && (
           <div className="glass rounded-2xl p-5 space-y-4">
             <div>
-              <h2 className={sectionTitle}>Feste Links je Szene</h2>
+              <h2 className={`${sectionTitle} flex items-center gap-1.5`}>
+                Feste Links je Szene
+                <HelpTip text="Normalerweise reicht dein einer Overlay-Link – die Szene wechselst du in der Live-Steuerung. Feste Links zeigen immer dieselbe Szene, egal was die Live-Steuerung sagt." />
+              </h2>
               <p className="text-xs text-gray-500 mt-1 mb-3">
                 Nur nötig, wenn du in OBS eigene Szenen hast, die immer dasselbe zeigen sollen – unabhängig von der
                 Live-Steuerung.
@@ -377,65 +430,6 @@ function TextField({
         <Icon className="w-3.5 h-3.5 text-teal-300" /> {label}
       </label>
       <input id={id} value={value} maxLength={PAUSE_TEXT_MAX} placeholder={placeholder} onChange={e => onChange(e.target.value)} className="input-glass" />
-    </div>
-  );
-}
-
-/** Eine Szene: ziehbarer Griff (für OBS), Link, Kopieren und Vorschau. */
-function SceneLink({
-  icon: Icon, label, hint, url, dragUrl,
-}: { icon: typeof Tv2; label: string; hint: string; url: string; dragUrl: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success("Link kopiert");
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      toast.message(label, { description: url });
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5">
-        <Icon className="w-3.5 h-3.5 text-teal-300" /> {label}
-        <span className="text-xs text-gray-500 font-normal">· {hint}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        {/* Normaler Link, damit OBS beim Hineinziehen eine Browser-Quelle anlegt. Ein Klick tut
-           bewusst nichts (die Vorschau hat einen eigenen Knopf), sonst landet man im Overlay. */}
-        <a
-          href={dragUrl}
-          draggable
-          onClick={e => e.preventDefault()}
-          title="In OBS ziehen"
-          className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-2.5 rounded-lg border border-dashed border-teal-500/40 text-teal-300 cursor-grab active:cursor-grabbing hover:bg-teal-500/10"
-        >
-          <Move className="w-3.5 h-3.5" /> In OBS ziehen
-        </a>
-        <code className="flex-1 min-w-0 text-xs text-gray-300 bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2.5 overflow-x-auto whitespace-nowrap">
-          {url}
-        </code>
-        <button
-          onClick={copy}
-          title="Kopieren"
-          className="shrink-0 flex items-center gap-1.5 text-sm px-3 py-2.5 rounded-lg bg-teal-500/15 border border-teal-500/40 text-teal-300 hover:bg-teal-500/25 transition-all font-medium"
-        >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-        </button>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Vorschau in neuem Tab"
-          className="shrink-0 flex items-center px-2.5 py-2.5 rounded-lg border border-white/[0.08] text-gray-400 hover:text-teal-300"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      </div>
     </div>
   );
 }
