@@ -14,6 +14,7 @@ import {
 
 const ZOOM_SECONDS_MIN = 3;
 const ZOOM_SECONDS_MAX = 600;
+const COUNTDOWN_MINUTES_MAX = 120;
 
 /** Was zeigt das Overlay gerade, und welche Elemente haben Inhalt? */
 function describe(payload: StreamerOverlayPayload) {
@@ -63,6 +64,7 @@ function controlResponse(control: OverlayControl) {
   return {
     control: { ...control, zoom, zoomUntil: zoom ? control.zoomUntil : null },
     zoomRemainingMs: zoom && control.zoomUntil ? Math.max(0, control.zoomUntil - Date.now()) : null,
+    countdownRemainingMs: control.countdownUntil ? Math.max(0, control.countdownUntil - Date.now()) : null,
   };
 }
 
@@ -80,7 +82,7 @@ export async function GET() {
 }
 
 /**
- * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], pause?: boolean } — nur
+ * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], pause?: boolean, countdownMinutes?: number | null } — nur
  * mitgeschickte Felder ändern sich. zoomSeconds = automatisch nach so vielen Sekunden beenden
  * (null/fehlt = bis zum Zurücksetzen). Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
@@ -89,7 +91,7 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const userId = session.user.id;
 
-  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown } | null;
+  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; countdownMinutes?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { overlayControlJson: true } });
@@ -105,6 +107,13 @@ export async function PUT(req: NextRequest) {
   }
   if ("hidden" in body) control.hidden = Array.isArray(body.hidden) ? body.hidden : [];
   if ("pause" in body) control.pause = body.pause === true;
+  if ("countdownMinutes" in body) {
+    // Intro-Countdown: Minuten ab jetzt, null/0 = beenden.
+    const minutes = Number(body.countdownMinutes);
+    control.countdownUntil = Number.isFinite(minutes) && minutes > 0
+      ? Date.now() + Math.min(COUNTDOWN_MINUTES_MAX, minutes) * 60_000
+      : null;
+  }
 
   const next = sanitizeControl(control);
   await prisma.user.update({ where: { id: userId }, data: { overlayControlJson: JSON.stringify(next) } });

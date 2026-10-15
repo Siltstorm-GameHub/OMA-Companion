@@ -45,7 +45,7 @@ const TWITCH_LIVE_TTL_MS = 60_000;
 const COMMUNITY_TTL_MS = 60_000;
 
 /** Einfacher TTL-Cache mit Zusammenlegung paralleler Ladevorgänge. */
-function createCache<T>() {
+export function createCache<T>() {
   const values = new Map<string, { value: T; at: number }>();
   const pending = new Map<string, Promise<T>>();
   return {
@@ -216,7 +216,7 @@ const liveCache = createCache<Map<string, LiveMember>>();
  * höchstens einmal pro Minute und Server-Prozess). Schlüssel = User-ID. Ohne Twitch-Zugang
  * (lokal) oder bei Fehlern leer — das Overlay fällt dann einfach auf "nicht live" zurück.
  */
-function getCommunityLive(): Promise<Map<string, LiveMember>> {
+export function getCommunityLive(): Promise<Map<string, LiveMember>> {
   return liveCache.get("all", TWITCH_LIVE_TTL_MS, async () => {
     const users = await prisma.user.findMany({
       where: { twitchLogin: { not: null }, leftServerAt: null },
@@ -453,7 +453,10 @@ export async function getStreamerOverlayPayload(
 ): Promise<StreamerOverlayPayload | null> {
   const [eventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
   if (!streamer) return null;
-  const common = { streamer, pauseText: config.pauseText, lite: config.lite, pause: control.pause, pauseBackground: config.pauseBackground };
+  const common = {
+    streamer, pauseText: config.pauseText, lite: config.lite, pause: control.pause, pauseBackground: config.pauseBackground,
+    clips: config.clips, countdownUntil: control.countdownUntil,
+  };
   const zoom = activeZoom(control);
 
   if (eventId) {

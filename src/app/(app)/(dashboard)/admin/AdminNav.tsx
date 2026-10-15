@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { Handshake } from "@/components/icons";
 import { Users, Users2 } from "@/components/icons";
 import { Server } from "@/components/icons";
-import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
+import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase, Tv2 } from "@/components/icons";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
 import DailyPollActionBadge from "@/components/DailyPollActionBadge";
@@ -44,11 +44,12 @@ const CATEGORIES: {
     icon: CalendarDays,
     minRole: "moderator",
     allowCaptain: true,
-    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips", "/admin/squads"],
+    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips", "/admin/overlay-clips", "/admin/squads"],
     tabs: [
       { href: "/admin/events",          label: "Events",          icon: CalendarDays,  minRole: "moderator", allowCaptain: true },
       { href: "/admin/squads",          label: "Squads",          icon: Shield,        minRole: "moderator" },
       { href: "/admin/highlight-clips", label: "Highlight Clips", icon: Clapperboard,  minRole: "moderator" },
+      { href: "/admin/overlay-clips",   label: "Overlay-Clips",   icon: Tv2,           minRole: "moderator" },
     ],
   },
   {

@@ -180,11 +180,47 @@ export type StreamerOverlayPayload = (
   pause: boolean;
   /** Hintergrund der Pausen-Szene (Schlüssel aus pauseBackgrounds.ts). */
   pauseBackground: string;
+  /** Einstellungen der Clip-Szenen (Intro, Clips, Outro). */
+  clips: ClipSceneConfig;
+  /** Ende des Intro-Countdowns (ms seit Epoch), per Live-Steuerung gestartet — null = kein Countdown. */
+  countdownUntil: number | null;
 };
 
 /** Szenen des festen Streamer-Links (`&scene=…`) — je OBS-Szene eine eigene Browser-Quelle. */
-export type OverlayScene = "gameplay" | "pause";
+export type OverlayScene = "gameplay" | "pause" | "intro" | "clips" | "outro";
+export const OVERLAY_SCENES: OverlayScene[] = ["gameplay", "pause", "intro", "clips", "outro"];
 export const DEFAULT_PAUSE_TEXT = "Gleich geht's weiter";
+export const DEFAULT_INTRO_TEXT = "Stream startet gleich";
+export const DEFAULT_OUTRO_TEXT = "Danke fürs Zuschauen!";
+
+/** Welche Community-Clips der Loop zeigt. */
+export type ClipSource = "top" | "recent" | "game";
+export const CLIP_SOURCES: ClipSource[] = ["top", "recent", "game"];
+
+export type ClipSceneConfig = {
+  source: ClipSource;
+  /** Clips stumm abspielen — schützt vor Problemen mit Musik in fremden Clips. */
+  muted: boolean;
+  /** Eigener Text der Intro- bzw. Outro-Szene, null = Standardtext. */
+  introText: string | null;
+  outroText: string | null;
+};
+
+/** Ein Clip im Community-Clip-Loop (Twitch-Clip, eingebettet über den offiziellen Player). */
+export type OverlayClip = {
+  id: string;
+  title: string;
+  /** Anzeigename und Login des Kanals, auf dem der Clip entstand. */
+  channel: string;
+  channelLogin: string;
+  /** Wer den Clip geschnitten hat. */
+  creator: string;
+  durationSec: number;
+  views: number;
+  game: string | null;
+  createdAt: string;
+  thumbnailUrl: string;
+};
 
 /** Einstellungsseite des festen Streamer-Links (in der App, Login nötig). */
 export const STREAMER_OVERLAY_SETTINGS_PATH = "/profile/overlay";
@@ -198,6 +234,8 @@ export type OverlayControl = {
   zoomUntil: number | null;
   /** Pausen-Bildschirm über das Spiel-Overlay legen. */
   pause: boolean;
+  /** Ende des Intro-Countdowns (ms seit Epoch), null = keiner. */
+  countdownUntil: number | null;
 };
 
 export const ELEMENT_LABELS: Record<ElementKey, string> = {

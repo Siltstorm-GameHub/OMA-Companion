@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserOverlayToken, buildStreamerOverlayUrl, STREAMER_OVERLAY_SETTINGS_PATH } from "@/lib/overlay";
-import { sanitizeLayout, sanitizePauseText, parseStreamerConfig } from "@/components/overlay/layout";
+import { sanitizeLayout, sanitizePauseText, parseStreamerConfig, sanitizeClipConfig } from "@/components/overlay/layout";
 import { isPauseBackground } from "@/components/overlay/pauseBackgrounds";
 import { ELEMENT_KEYS, PROFILE_ELEMENT_KEYS } from "@/components/overlay/types";
 import { invalidateStreamerConfig } from "@/lib/overlay-state";
@@ -27,14 +27,14 @@ export async function GET() {
 }
 
 /**
- * PUT { event?, profile?, pauseText?, lite?, pauseBackground? } — speichert die Einstellungen des festen
+ * PUT { event?, profile?, pauseText?, lite?, pauseBackground?, clips? } — speichert die Einstellungen des festen
  * Streamer-Links. Nur mitgeschickte Felder ändern sich; event/profile = null setzt den Modus aufs
  * Standard-Layout zurück. Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
 export async function PUT(req: NextRequest) {
   const r = await requireStreamer();
   if ("error" in r) return r.error;
-  const body = await req.json().catch(() => null) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown } | null;
+  const body = await req.json().catch(() => null) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const event = body.event == null ? null : sanitizeLayout(body.event, ELEMENT_KEYS);
@@ -50,6 +50,8 @@ export async function PUT(req: NextRequest) {
   if ("pauseText" in body) config.pauseText = sanitizePauseText(body.pauseText);
   if ("lite" in body) config.lite = body.lite === true;
   if ("pauseBackground" in body && isPauseBackground(body.pauseBackground)) config.pauseBackground = body.pauseBackground;
+  // Teil-Update: nicht mitgeschickte Clip-Felder behalten ihren Wert.
+  if ("clips" in body) config.clips = sanitizeClipConfig(body.clips, config.clips);
 
   await prisma.user.update({ where: { id: r.userId }, data: { overlayLayoutJson: JSON.stringify(config) } });
   invalidateStreamerConfig(r.userId);

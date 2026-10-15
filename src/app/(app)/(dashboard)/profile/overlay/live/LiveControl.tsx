@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pause, Play, Maximize2, X, Smartphone, Settings, Radio, Loader2 } from "@/components/icons";
+import { Eye, EyeOff, Pause, Play, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer } from "@/components/icons";
 import type { OverlayControl } from "@/components/overlay/types";
 
 type ElementInfo = { key: string; label: string; available: boolean; zoomable: boolean };
@@ -21,6 +21,7 @@ const DURATIONS: { label: string; seconds: number | null }[] = [
   { label: "30 s", seconds: 30 },
   { label: "Dauerhaft", seconds: null },
 ];
+const COUNTDOWN_MINUTES = [3, 5, 10, 15];
 
 /**
  * Fernbedienung fürs eigene OBS-Overlay: Elemente groß einblenden (zeitlich begrenzt oder
@@ -36,8 +37,11 @@ export default function LiveControl() {
   // Restzeit eines zeitlich begrenzten Zooms in Sekunden — kommt vom Server und wird hier nur
   // heruntergezählt (unabhängig von der Uhr des Geräts).
   const [remaining, setRemaining] = useState<number | null>(null);
+  // Restzeit des Intro-Countdowns in Sekunden — ebenfalls vom Server, nur lokal heruntergezählt.
+  const [countdown, setCountdown] = useState<number | null>(null);
   const busyRef = useRef(false);
   const applyRemaining = (ms: number | null | undefined) => setRemaining(ms == null ? null : Math.ceil(ms / 1000));
+  const applyCountdown = (ms: number | null | undefined) => setCountdown(ms == null ? null : Math.ceil(ms / 1000));
 
   const load = useCallback(async () => {
     if (busyRef.current) return; // keine laufende Änderung mit älterem Stand überschreiben
@@ -47,6 +51,7 @@ export default function LiveControl() {
       if (!res.ok) { setError(data.error ?? "Konnte nicht geladen werden"); return; }
       setState(data);
       applyRemaining(data.zoomRemainingMs);
+      applyCountdown(data.countdownRemainingMs);
       setError(null);
     } catch {
       setError("Keine Verbindung – versuche es gleich erneut");
@@ -67,14 +72,22 @@ export default function LiveControl() {
     return () => clearInterval(t);
   }, [counting]);
 
+  const countingDown = countdown != null && countdown > 0;
+  useEffect(() => {
+    if (!countingDown) return;
+    const t = setInterval(() => setCountdown(c => (c != null && c > 0 ? c - 1 : c)), 1000);
+    return () => clearInterval(t);
+  }, [countingDown]);
+
   async function update(
-    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; pause: boolean }>,
+    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; pause: boolean; countdownMinutes: number | null }>,
     optimistic: Partial<OverlayControl>,
     optimisticRemaining?: number | null,
   ) {
     if (!state) return;
     const previous = state;
     const previousRemaining = remaining;
+    const previousCountdown = countdown;
     setState({ ...state, control: { ...state.control, ...optimistic } });
     if (optimisticRemaining !== undefined) setRemaining(optimisticRemaining);
     busyRef.current = true;
@@ -89,9 +102,11 @@ export default function LiveControl() {
       if (!res.ok) throw new Error(data.error ?? "Fehlgeschlagen");
       setState(s => (s ? { ...s, control: data.control } : s));
       applyRemaining(data.zoomRemainingMs);
+      applyCountdown(data.countdownRemainingMs);
     } catch (e) {
       setState(previous);
       setRemaining(previousRemaining);
+      setCountdown(previousCountdown);
       toast.error(e instanceof Error ? e.message : "Fehlgeschlagen");
     } finally {
       busyRef.current = false;
@@ -116,6 +131,17 @@ export default function LiveControl() {
   const startZoom = (key: string) => update({ zoom: key, zoomSeconds: duration }, { zoom: key }, duration);
   const stopZoom = () => update({ zoom: null }, { zoom: null, zoomUntil: null }, null);
   const togglePause = () => update({ pause: !control.pause }, { pause: !control.pause });
+  const startCountdown = (minutes: number) => {
+    setCountdown(minutes * 60);
+    update({ countdownMinutes: minutes }, {});
+  };
+  const stopCountdown = () => {
+    setCountdown(null);
+    update({ countdownMinutes: null }, { countdownUntil: null });
+  };
+  const countdownLabel = countdown != null
+    ? `${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")}`
+    : null;
   const toggleHidden = (key: string) => {
     const hidden = control.hidden.includes(key) ? control.hidden.filter(k => k !== key) : [...control.hidden, key];
     update({ hidden }, { hidden });
@@ -145,6 +171,40 @@ export default function LiveControl() {
         {control.pause ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
         {control.pause ? "Pause beenden – Overlay wieder zeigen" : "Pausen-Bildschirm einblenden"}
       </button>
+
+      {/* ── Intro-Countdown ── */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <Timer className="w-3.5 h-3.5" /> Intro-Countdown
+          </h2>
+          {countdownLabel && (
+            <span className="text-sm font-semibold text-teal-200 tabular-nums">
+              {countdown === 0 ? "abgelaufen" : `noch ${countdownLabel}`}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {COUNTDOWN_MINUTES.map(m => (
+            <button
+              key={m}
+              onClick={() => startCountdown(m)}
+              className="rounded-xl py-3 text-sm font-semibold border border-white/[0.08] text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/10 transition-all"
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+        {countdown != null && (
+          <button
+            onClick={stopCountdown}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold border border-rose-400/40 text-rose-200 bg-rose-500/10 hover:bg-rose-500/20"
+          >
+            <X className="w-4 h-4" /> Countdown beenden
+          </button>
+        )}
+        <p className="text-xs text-gray-500">Erscheint in deiner Intro-Szene (Overlay-Einstellungen → Intro-Szene).</p>
+      </div>
 
       {/* ── Groß einblenden ── */}
       <div className="glass rounded-2xl p-4 space-y-3">

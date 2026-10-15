@@ -146,3 +146,57 @@ export async function getLiveStreamsForLogins(logins: string[]): Promise<TwitchS
     return [];
   }
 }
+
+/** Clip mit allen Feldern, die der Community-Clip-Loop der Overlays braucht. */
+export type TwitchClipFull = TwitchClip & {
+  broadcaster_id: string;
+  game_id: string;
+  view_count: number;
+  /** Länge in Sekunden (Twitch-Clips: max. 60). */
+  duration: number;
+};
+
+/**
+ * Die meistgesehenen Clips eines Kanals seit `since` (Helix sortiert bei gesetztem Zeitraum nach
+ * Aufrufen). Ohne Twitch-Zugangsdaten (lokal) oder bei Fehlern: leere Liste statt Ausnahme.
+ */
+export async function getBroadcasterClips(broadcasterId: string, since: Date, first = 25): Promise<TwitchClipFull[]> {
+  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return [];
+  try {
+    const token = await getAppAccessToken();
+    const params = new URLSearchParams({
+      broadcaster_id: broadcasterId,
+      started_at: since.toISOString(),
+      ended_at: new Date().toISOString(),
+      first: String(Math.min(100, Math.max(1, first))),
+    });
+    const res = await fetch(`https://api.twitch.tv/helix/clips?${params}`, {
+      headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return ((await res.json()) as { data: TwitchClipFull[] }).data;
+  } catch {
+    return [];
+  }
+}
+
+/** Spielnamen zu Twitch-Game-IDs (100 je Anfrage). Fehler → fehlende Einträge statt Ausnahme. */
+export async function getTwitchGameNames(ids: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0 || !TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return names;
+  try {
+    const token = await getAppAccessToken();
+    for (let i = 0; i < unique.length; i += 100) {
+      const params = unique.slice(i, i + 100).map(id => `id=${encodeURIComponent(id)}`).join("&");
+      const res = await fetch(`https://api.twitch.tv/helix/games?${params}`, {
+        headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      for (const g of ((await res.json()) as { data: { id: string; name: string }[] }).data) names.set(g.id, g.name);
+    }
+  } catch { /* ohne Spielnamen weiter */ }
+  return names;
+}

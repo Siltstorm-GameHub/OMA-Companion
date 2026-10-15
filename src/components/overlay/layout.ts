@@ -11,7 +11,7 @@
 import {
   ELEMENT_KEYS, ELEMENT_SIZE, PROFILE_ELEMENT_KEYS, DEFAULT_ROTATE_SECONDS, EDGE_MARGIN,
   type ElementKey, type ProfileElementKey, type LayoutEntry, type LayoutPositions, type OverlayLayout,
-  type OverlayControl,
+  type OverlayControl, type ClipSceneConfig, CLIP_SOURCES, type ClipSource,
 } from "./types";
 import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } from "./pauseBackgrounds";
 
@@ -150,7 +150,21 @@ export type StreamerOverlayConfig = {
   lite: boolean;
   /** Hintergrund der Pausen-Szene, siehe pauseBackgrounds.ts. */
   pauseBackground: PauseBackgroundKey;
+  /** Clip-Szenen (Intro, Clips, Outro). */
+  clips: ClipSceneConfig;
 };
+
+export const DEFAULT_CLIP_CONFIG: ClipSceneConfig = { source: "top", muted: true, introText: null, outroText: null };
+
+export function sanitizeClipConfig(raw: unknown, base: ClipSceneConfig = DEFAULT_CLIP_CONFIG): ClipSceneConfig {
+  const r = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  return {
+    source: CLIP_SOURCES.includes(r.source as ClipSource) ? r.source as ClipSource : base.source,
+    muted: typeof r.muted === "boolean" ? r.muted : base.muted,
+    introText: "introText" in r ? sanitizePauseText(r.introText) : base.introText,
+    outroText: "outroText" in r ? sanitizePauseText(r.outroText) : base.outroText,
+  };
+}
 
 export const PAUSE_TEXT_MAX = 60;
 
@@ -161,10 +175,10 @@ export function sanitizePauseText(raw: unknown): string | null {
 }
 
 export function parseStreamerConfig(json: string | null | undefined): StreamerOverlayConfig {
-  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND };
+  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND, clips: { ...DEFAULT_CLIP_CONFIG } };
   if (!json) return empty;
   try {
-    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown };
+    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown };
     return {
       // Unbekannte Element-Schlüssel (z.B. entfernte wie "favorites") fallen hier still heraus.
       event: sanitizeLayout(parsed.event, ELEMENT_KEYS),
@@ -172,6 +186,7 @@ export function parseStreamerConfig(json: string | null | undefined): StreamerOv
       pauseText: sanitizePauseText(parsed.pauseText),
       lite: parsed.lite === true,
       pauseBackground: isPauseBackground(parsed.pauseBackground) ? parsed.pauseBackground : DEFAULT_PAUSE_BACKGROUND,
+      clips: sanitizeClipConfig(parsed.clips),
     };
   } catch {
     return empty;
@@ -240,7 +255,7 @@ export function adaptEventLayout(layout: OverlayLayout<ElementKey>, format: stri
 // ── Live-Steuerung des eigenen Overlays ───────────────────────────────────────
 
 const CONTROL_KEYS = new Set<string>([...ELEMENT_KEYS, ...PROFILE_ELEMENT_KEYS]);
-export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, pause: false };
+export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, pause: false, countdownUntil: null };
 
 export function sanitizeControl(raw: unknown): OverlayControl {
   if (!raw || typeof raw !== "object") return { ...EMPTY_CONTROL };
@@ -250,7 +265,11 @@ export function sanitizeControl(raw: unknown): OverlayControl {
     : [];
   const zoom = typeof r.zoom === "string" && CONTROL_KEYS.has(r.zoom) ? r.zoom : null;
   const until = Number(r.zoomUntil);
-  return { hidden, zoom, zoomUntil: zoom && Number.isFinite(until) && until > 0 ? until : null, pause: r.pause === true };
+  const countdown = Number(r.countdownUntil);
+  return {
+    hidden, zoom, zoomUntil: zoom && Number.isFinite(until) && until > 0 ? until : null, pause: r.pause === true,
+    countdownUntil: r.countdownUntil != null && Number.isFinite(countdown) && countdown > 0 ? countdown : null,
+  };
 }
 
 export function parseOverlayControl(json: string | null | undefined): OverlayControl {

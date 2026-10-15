@@ -9,8 +9,8 @@ import StreamerOverlaySettings from "./StreamerOverlaySettings";
 
 export const metadata = { title: "OBS-Overlay – Old Masters Ally" };
 
-/** Einstellungen des festen Streamer-Links: zwei Szenen-Links (Spiel, Pause), zwei Layouts
- *  (mit/ohne laufendes Event), Pausentext und Leicht-Modus. */
+/** Einstellungen des festen Streamer-Links: Szenen-Links (Spiel, Pause, Intro, Clip-Pause, Outro),
+ *  zwei Layouts (mit/ohne laufendes Event), Pausentext, Clip-Szenen und Leicht-Modus. */
 export default async function StreamerOverlaySettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login?callbackUrl=/profile/overlay");
@@ -51,6 +51,7 @@ export default async function StreamerOverlaySettingsPage() {
       initialPauseText={config.pauseText}
       initialLite={config.lite}
       initialPauseBackground={config.pauseBackground}
+      initialClips={config.clips}
       activeEvent={activeEvent}
       streamingEvents={streamingEvents}
     />

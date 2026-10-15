@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Tv2, Copy, Check, ExternalLink, RefreshCw, RotateCcw, Save, Loader2, Radio, Move, Zap,
   Sparkles, Table2, Users, LayoutGrid, Trophy, Swords, TrendingUp, CalendarClock, Clapperboard, Moon, Smartphone,
+  Rocket, LogOut, Music, Timer,
 } from "@/components/icons";
 import LayoutEditor, { type EditorElementOption } from "@/components/overlay/LayoutEditor";
 import {
@@ -14,10 +15,18 @@ import {
 } from "@/components/overlay/layout";
 import {
   ELEMENT_SIZE, PROFILE_ELEMENT_SIZE, STACKABLE_ELEMENTS, PROFILE_STACKABLE, DEFAULT_PAUSE_TEXT,
-  type ElementKey, type ProfileElementKey, type OverlayLayout,
+  DEFAULT_INTRO_TEXT, DEFAULT_OUTRO_TEXT,
+  type ElementKey, type ProfileElementKey, type OverlayLayout, type ClipSceneConfig, type ClipSource,
 } from "@/components/overlay/types";
 import { formatBerlinDate } from "@/lib/time";
 import { PAUSE_BACKGROUNDS, pauseThumbnail } from "@/components/overlay/pauseBackgrounds";
+import MyClipsPanel from "./MyClipsPanel";
+
+const CLIP_SOURCE_OPTIONS: { key: ClipSource; label: string; hint: string }[] = [
+  { key: "top",    label: "Beliebteste",     hint: "meistgesehene Clips der letzten 90 Tage" },
+  { key: "recent", label: "Neueste",         hint: "frische Clips der letzten 30 Tage" },
+  { key: "game",   label: "Aktuelles Spiel", hint: "passend zu deinem Twitch-Spiel, sonst Beliebteste" },
+];
 
 type Mode = "event" | "profile";
 
@@ -50,7 +59,7 @@ function obsDragUrl(url: string, name: string) {
 }
 
 export default function StreamerOverlaySettings({
-  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, initialPauseBackground, activeEvent, streamingEvents,
+  overlayUrl: initialUrl, initialEvent, initialProfile, initialPauseText, initialLite, initialPauseBackground, initialClips, activeEvent, streamingEvents,
 }: {
   overlayUrl: string;
   initialEvent: OverlayLayout<ElementKey>;
@@ -58,6 +67,7 @@ export default function StreamerOverlaySettings({
   initialPauseText: string | null;
   initialLite: boolean;
   initialPauseBackground: string;
+  initialClips: ClipSceneConfig;
   activeEvent: { id: string; title: string } | null;
   /** Kommende Events, für die der User als Streamer angemeldet ist. */
   streamingEvents: { id: string; title: string; startAt: string }[];
@@ -69,13 +79,25 @@ export default function StreamerOverlaySettings({
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
   const [lite, setLite] = useState(initialLite);
   const [pauseBackground, setPauseBackground] = useState(initialPauseBackground);
-  const snapshot = () => JSON.stringify({ eventLayout, profileLayout, pauseText: pauseText.trim(), lite, pauseBackground });
-  const [saved, setSaved] = useState(() => JSON.stringify({ eventLayout: initialEvent, profileLayout: initialProfile, pauseText: initialPauseText ?? "", lite: initialLite, pauseBackground: initialPauseBackground }));
+  const [clipSource, setClipSource] = useState<ClipSource>(initialClips.source);
+  const [clipsMuted, setClipsMuted] = useState(initialClips.muted);
+  const [introText, setIntroText] = useState(initialClips.introText ?? "");
+  const [outroText, setOutroText] = useState(initialClips.outroText ?? "");
+  const clipsBody = () => ({ source: clipSource, muted: clipsMuted, introText: introText.trim() || null, outroText: outroText.trim() || null });
+  const snapshot = () => JSON.stringify({ eventLayout, profileLayout, pauseText: pauseText.trim(), lite, pauseBackground, clips: clipsBody() });
+  const [saved, setSaved] = useState(() => JSON.stringify({
+    eventLayout: initialEvent, profileLayout: initialProfile, pauseText: initialPauseText ?? "", lite: initialLite, pauseBackground: initialPauseBackground,
+    clips: { source: initialClips.source, muted: initialClips.muted, introText: initialClips.introText, outroText: initialClips.outroText },
+  }));
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const dirty = snapshot() !== saved;
 
-  const pauseUrl = (() => { const u = new URL(overlayUrl); u.searchParams.set("scene", "pause"); return u.toString(); })();
+  const sceneUrl = (scene: string) => { const u = new URL(overlayUrl); u.searchParams.set("scene", scene); return u.toString(); };
+  const pauseUrl = sceneUrl("pause");
+  const introUrl = sceneUrl("intro");
+  const clipsUrl = sceneUrl("clips");
+  const outroUrl = sceneUrl("outro");
 
   async function save() {
     setSaving(true);
@@ -83,7 +105,7 @@ export default function StreamerOverlaySettings({
       const res = await fetch("/api/profile/overlay", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event: eventLayout, profile: profileLayout, pauseText: pauseText.trim() || null, lite, pauseBackground }),
+        body: JSON.stringify({ event: eventLayout, profile: profileLayout, pauseText: pauseText.trim() || null, lite, pauseBackground, clips: clipsBody() }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
@@ -149,6 +171,9 @@ export default function StreamerOverlaySettings({
           <div className="space-y-3 mb-4">
             <SceneLink icon={Swords} label="Spiel-Szene" hint="Kacheln über dem Gameplay" url={overlayUrl} dragUrl={obsDragUrl(overlayUrl, "OMA Overlay")} />
             <SceneLink icon={Moon} label="Pausen-Szene" hint="Vollbild für Pause / gleich zurück" url={pauseUrl} dragUrl={obsDragUrl(pauseUrl, "OMA Pause")} />
+            <SceneLink icon={Rocket} label="Intro-Szene" hint="Community-Clips + Countdown vor dem Start" url={introUrl} dragUrl={obsDragUrl(introUrl, "OMA Intro")} />
+            <SceneLink icon={Clapperboard} label="Clip-Pause" hint="Community-Clips statt Standbild" url={clipsUrl} dragUrl={obsDragUrl(clipsUrl, "OMA Clips")} />
+            <SceneLink icon={LogOut} label="Outro-Szene" hint="Community-Clips zum Abschluss" url={outroUrl} dragUrl={obsDragUrl(outroUrl, "OMA Outro")} />
           </div>
           <div className="text-xs text-gray-500 leading-relaxed border-t border-white/[0.06] pt-3 space-y-1.5">
             <p>
@@ -249,6 +274,74 @@ export default function StreamerOverlaySettings({
             </div>
           </div>
         </div>
+
+        {/* ── Clip-Szenen ── */}
+        <div className="glass rounded-2xl p-5 mb-4 space-y-4">
+          <div>
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Clip-Szenen (Intro, Clip-Pause, Outro)</h2>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Spielen Clips von Community-Kanälen über den offiziellen Twitch-Player ab, dazwischen eine Karte mit
+              OMA-Logo und Link zur App. Es laufen nur Clips von Mitgliedern, die zugestimmt haben. Den Hintergrund
+              übernehmen die Szenen von der Pausen-Szene.
+            </p>
+          </div>
+          <div>
+            <p className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5">
+              <Clapperboard className="w-3.5 h-3.5 text-teal-300" /> Welche Clips?
+            </p>
+            <div className="grid sm:grid-cols-3 gap-2">
+              {CLIP_SOURCE_OPTIONS.map(o => (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => setClipSource(o.key)}
+                  aria-pressed={clipSource === o.key}
+                  className={`text-left rounded-xl px-3 py-2.5 border transition-all ${
+                    clipSource === o.key ? "bg-teal-500/15 border-teal-500/40" : "border-white/[0.08] hover:border-white/20"
+                  }`}
+                >
+                  <span className={`block text-sm font-medium ${clipSource === o.key ? "text-teal-200" : "text-gray-200"}`}>{o.label}</span>
+                  <span className="block text-[11px] text-gray-500">{o.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={!clipsMuted} onChange={e => setClipsMuted(!e.target.checked)} className="accent-teal-400 mt-1" />
+            <span>
+              <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Music className="w-3.5 h-3.5 text-teal-300" /> Clips mit Ton abspielen</span>
+              <span className="block text-xs text-gray-500">
+                Achtung: Läuft in einem fremden Clip urheberrechtlich geschützte Musik, kann das in deinem Stream zu
+                Stummschaltung oder einer Meldung führen. Ohne Haken laufen die Clips stumm. Die Lautstärke regelst
+                du wie gewohnt im OBS-Mixer.
+              </span>
+            </span>
+          </label>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor="intro-text">
+                <Rocket className="w-3.5 h-3.5 text-teal-300" /> Text der Intro-Szene
+              </label>
+              <input id="intro-text" value={introText} maxLength={PAUSE_TEXT_MAX} placeholder={DEFAULT_INTRO_TEXT} onChange={e => setIntroText(e.target.value)} className="input-glass" />
+            </div>
+            <div>
+              <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor="outro-text">
+                <LogOut className="w-3.5 h-3.5 text-teal-300" /> Text der Outro-Szene
+              </label>
+              <input id="outro-text" value={outroText} maxLength={PAUSE_TEXT_MAX} placeholder={DEFAULT_OUTRO_TEXT} onChange={e => setOutroText(e.target.value)} className="input-glass" />
+            </div>
+          </div>
+          <p className="flex items-start gap-1.5 text-xs text-gray-500">
+            <Timer className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>
+              Den Countdown fürs Intro (z.B. „Start in 05:00“) startest du in der{" "}
+              <Link href="/profile/overlay/live" className="text-teal-300 hover:underline">Live-Steuerung</Link>. Die
+              Clip-Pause zeigt den Text der Pausen-Szene.
+            </span>
+          </p>
+        </div>
+
+        <MyClipsPanel />
 
         {/* ── Layouts der Spiel-Szene ── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Spiel-Szene</h2>

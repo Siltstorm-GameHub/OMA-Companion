@@ -41,7 +41,10 @@ model User {
   // (anders als Event.overlayControlJson, das alle Overlays eines Events steuert); beide werden
   // im Streamer-Overlay zusammengeführt.
   overlayControlJson String?
-  birthday         DateTime? // Nur Datum relevant (month/day)
+  // Zustimmung: Clips des eigenen Twitch-Kanals dürfen im Community-Clip-Loop der Overlays (Intro-,
+  // Clip- und Outro-Szene) anderer Streamer laufen. Bewusst Opt-in — siehe src/lib/overlay-clips.ts.
+  overlayClipsOptIn  Boolean   @default(false)
+  birthday        DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
   bannerUrl          String? // Eigenes Profil-Banner (Vercel Blob), 1200×300 empfohlen
@@ -409,6 +412,17 @@ model EventPollVote {
   updatedAt DateTime  @updatedAt
 
   @@unique([pollId, voterId])
+}
+
+// ── Community-Clip-Loop der OBS-Overlays ─────────────────────────────────────
+// Vom Loop ausgeschlossene Twitch-Clips — vom Kanalinhaber selbst (z.B. Clip mit geschützter
+// Musik) oder von Moderatoren. Lose Referenz auf die Twitch-Clip-ID, Clips liegen nur bei Twitch.
+
+model OverlayClipBlock {
+  clipId           String   @id // Twitch-Clip-ID (slug)
+  broadcasterLogin String // Kanal des Clips (lowercase), für die Anzeige in Listen
+  blockedByUserId  String?
+  createdAt        DateTime @default(now())
 }
 
 // ── Clip-Einreichungen ────────────────────────────────────────────────────────
