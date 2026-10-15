@@ -58,6 +58,15 @@ export default function ClipLoopView({
 
   const current = clips.length ? clips[index % clips.length] : null;
 
+  // "Nächster Clip" aus der Live-Steuerung, z.B. wenn ein Clip nur Twitchs Alters-Hinweis zeigt.
+  // Den Stand beim Laden merken, damit ein alter Klick nicht sofort weiterspringt.
+  const [seenSkip, setSeenSkip] = useState(payload.clipSkip);
+  if (payload.clipSkip !== seenSkip) {
+    setSeenSkip(payload.clipSkip);
+    setIndex(i => i + 1);
+    setPhase("card");
+  }
+
   // Taktgeber: Karte → Clip → Karte (nächster Clip) … Ohne Clips bleibt die Karte stehen.
   // Abhängig von ID/Dauer statt vom Objekt: ein Neuladen der Liste startet den laufenden Takt nicht neu.
   const currentId = current?.id;

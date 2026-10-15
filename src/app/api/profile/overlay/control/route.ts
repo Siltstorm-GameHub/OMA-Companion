@@ -85,7 +85,7 @@ export async function GET() {
 }
 
 /**
- * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], scene?: OverlayScene, countdownMinutes?: number | null } — nur
+ * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], scene?: OverlayScene, countdownMinutes?: number | null, skipClip?: true } — nur
  * mitgeschickte Felder ändern sich. zoomSeconds = automatisch nach so vielen Sekunden beenden
  * (null/fehlt = bis zum Zurücksetzen). Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
@@ -94,7 +94,7 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const userId = session.user.id;
 
-  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; scene?: unknown; countdownMinutes?: unknown } | null;
+  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; scene?: unknown; countdownMinutes?: unknown; skipClip?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { overlayControlJson: true } });
@@ -111,6 +111,7 @@ export async function PUT(req: NextRequest) {
   if ("hidden" in body) control.hidden = Array.isArray(body.hidden) ? body.hidden : [];
   if ("pause" in body) control.scene = body.pause === true ? "pause" : "gameplay"; // älteres Format
   if (OVERLAY_SCENES.includes(body.scene as OverlayScene)) control.scene = body.scene as OverlayScene;
+  if (body.skipClip === true) control.clipSkip = Date.now(); // Clip-Loop springt zum nächsten Clip
   if ("countdownMinutes" in body) {
     // Intro-Countdown: Minuten ab jetzt, null/0 = beenden.
     const minutes = Number(body.countdownMinutes);

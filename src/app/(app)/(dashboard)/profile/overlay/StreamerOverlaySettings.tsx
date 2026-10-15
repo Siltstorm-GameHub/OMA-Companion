@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Tv2, Copy, Check, ExternalLink, RefreshCw, Save, Loader2, Radio, Move, Zap,
-  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid,
+  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid, Sparkles, Settings,
 } from "@/components/icons";
 import OverlayLayoutsEditor, { type OverlayLayouts, type LayoutTab } from "@/components/overlay/OverlayLayoutsEditor";
 import { PAUSE_TEXT_MAX } from "@/components/overlay/layout";
@@ -15,6 +15,14 @@ import {
 import { formatBerlinDate } from "@/lib/time";
 import { PAUSE_BACKGROUNDS, pauseThumbnail } from "@/components/overlay/pauseBackgrounds";
 import MyClipsPanel from "./MyClipsPanel";
+
+type SettingsTab = "look" | "clips" | "layout" | "advanced";
+const TABS: { key: SettingsTab; label: string; icon: typeof Tv2 }[] = [
+  { key: "look",     label: "Aussehen",  icon: Sparkles },
+  { key: "clips",    label: "Clips",     icon: Clapperboard },
+  { key: "layout",   label: "Layout",    icon: LayoutGrid },
+  { key: "advanced", label: "Erweitert", icon: Settings },
+];
 
 const CLIP_SOURCE_OPTIONS: { key: ClipSource; label: string; hint: string }[] = [
   { key: "all",    label: "Alle",            hint: "alle Clips der Community, bunt gemischt" },
@@ -47,6 +55,7 @@ export default function StreamerOverlaySettings({
   streamingEvents: { id: string; title: string; startAt: string }[];
 }) {
   const [overlayUrl, setOverlayUrl] = useState(initialUrl);
+  const [tab, setTab] = useState<SettingsTab>("look");
   const initialTab: LayoutTab = activeEvent || streamingEvents.length > 0 ? "event" : "profile";
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
   const [lite, setLite] = useState(initialLite);
@@ -102,66 +111,210 @@ export default function StreamerOverlaySettings({
     }
   }
 
+  const sectionTitle = "text-xs font-semibold text-gray-400 uppercase tracking-wide";
+  const settingsTab = tab === "look" || tab === "clips";
+
   return (
     <div className="flex items-start justify-center p-4 sm:p-8">
-      <div className="w-full max-w-3xl">
-        <div className="flex items-center gap-2.5 mb-1">
-          <Tv2 className="w-5 h-5 text-teal-400" />
-          <h1 className="text-lg font-semibold text-white">OBS-Overlay</h1>
-        </div>
-        <p className="text-sm text-gray-500 mb-6">
-          Einmal einrichten, für jeden Stream: Spielst du bei einem laufenden Event mit und bist live
-          (oder hast dich als Streamer angemeldet), zeigt das Overlay automatisch Turnierbaum, Tabelle
-          und aktuelles Match. Sonst zeigt es deinen Rang, die nächsten Community-Events und was in der
-          Community los ist.
-        </p>
-
-        <Link
-          href="/profile/overlay/live"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-4 border border-teal-500/30 bg-teal-500/10 text-teal-200 hover:bg-teal-500/15 transition-all"
-        >
-          <Smartphone className="w-5 h-5 shrink-0" />
-          <span className="text-sm">
-            <span className="font-semibold">Live-Steuerung öffnen</span>
-            <span className="block text-xs text-teal-200/70">Während des Streams Szene wechseln (Spiel, Pause, Intro, Clips, Outro), Tabellen groß einblenden, Elemente verschieben – ideal am Handy.</span>
-          </span>
-        </Link>
-
-        {/* ── Links ── */}
-        <div className="glass rounded-2xl p-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Dein OBS-Link</h2>
-          <div className="space-y-3 mb-3">
-            <SceneLink icon={Tv2} label="OMA-Overlay" hint="einmal in OBS einfügen – Szene wechselst du in der Live-Steuerung" url={overlayUrl} dragUrl={obsDragUrl(overlayUrl, "OMA Overlay")} />
+      <div className="w-full max-w-3xl space-y-4">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Tv2 className="w-5 h-5 text-teal-400" />
+            <h1 className="text-lg font-semibold text-white">OBS-Overlay</h1>
           </div>
-          <details className="mb-4 group">
-            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-200 select-none">
-              Optional: feste Links je Szene (für eigene OBS-Szenen, die immer dasselbe zeigen sollen)
-            </summary>
-            <div className="space-y-3 mt-3">
-              <SceneLink icon={Moon} label="Pause" hint="immer Pausen-Szene" url={pauseUrl} dragUrl={obsDragUrl(pauseUrl, "OMA Pause")} />
-              <SceneLink icon={Rocket} label="Intro" hint="immer Intro mit Clips + Countdown" url={introUrl} dragUrl={obsDragUrl(introUrl, "OMA Intro")} />
-              <SceneLink icon={Clapperboard} label="Clips" hint="immer Clip-Pause" url={clipsUrl} dragUrl={obsDragUrl(clipsUrl, "OMA Clips")} />
-              <SceneLink icon={LogOut} label="Outro" hint="immer Outro mit Clips" url={outroUrl} dragUrl={obsDragUrl(outroUrl, "OMA Outro")} />
+          <p className="text-sm text-gray-500">
+            Ein Link für alle Streams: Turnierinfos während Events, sonst Rang, Community-Events und Clips –
+            plus Pause, Intro und Outro.
+          </p>
+        </div>
+
+        {/* ── Schnellstart ── */}
+        <div className="glass rounded-2xl p-5 space-y-4">
+          <div className="flex gap-3">
+            <StepNumber n={1} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-100">In OBS einfügen</p>
+              <p className="text-xs text-gray-500 mb-2.5">
+                Den Griff <Move className="w-3 h-3 inline -mt-0.5" /> in OBS ziehen (Größe 1920×1080 wird automatisch
+                gesetzt) oder den Link als Browser-Quelle einfügen. Lege die Quelle in jede Szene, in der das Overlay
+                erscheinen soll.
+              </p>
+              <SceneLink icon={Tv2} label="Dein Overlay-Link" hint="bleibt immer gleich" url={overlayUrl} dragUrl={obsDragUrl(overlayUrl, "OMA Overlay")} />
             </div>
-          </details>
-          <div className="text-xs text-gray-500 leading-relaxed border-t border-white/[0.06] pt-3 space-y-1.5">
-            <p>
-              <span className="text-gray-300">Am einfachsten:</span> den Griff <Move className="w-3 h-3 inline -mt-0.5" /> direkt
-              in OBS ziehen – Name und Größe (1920×1080) werden automatisch gesetzt. Alternativ Link kopieren
-              und unter <span className="text-gray-300">Quellen → Hinzufügen → Browser-Quelle</span> einfügen. Lege die
-              Quelle in jede OBS-Szene, in der das Overlay erscheinen soll; was es zeigt, steuerst du dann über die
-              Live-Steuerung. Änderungen erscheinen nach dem Speichern von selbst.
-            </p>
-            <p className="flex items-center gap-1.5">
-              <Radio className={`w-3.5 h-3.5 ${activeEvent ? "text-rose-400" : "text-gray-600"}`} />
-              {activeEvent
-                ? <>Gerade aktiv: <span className="text-gray-300">Event-Modus · {activeEvent.title}</span></>
-                : <>Gerade aktiv: <span className="text-gray-300">Profil-Modus</span> (kein laufendes Event, bei dem du live mitspielst oder als Streamer angemeldet bist)</>}
-            </p>
+          </div>
+          <div className="flex gap-3">
+            <StepNumber n={2} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-100">Während des Streams steuern</p>
+              <p className="text-xs text-gray-500 mb-2.5">
+                Szene wechseln (Spiel, Pause, Intro, Clips, Outro), Tabellen groß einblenden, Countdown starten – am
+                besten am Handy.
+              </p>
+              <Link
+                href="/profile/overlay/live"
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-teal-500/40 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 font-medium transition-all"
+              >
+                <Smartphone className="w-4 h-4" /> Live-Steuerung öffnen
+              </Link>
+            </div>
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-gray-500 border-t border-white/[0.06] pt-3">
+            <Radio className={`w-3.5 h-3.5 shrink-0 ${activeEvent ? "text-rose-400" : "text-gray-600"}`} />
+            {activeEvent
+              ? <>Gerade: <span className="text-gray-300">Event-Modus · {activeEvent.title}</span></>
+              : <>Gerade: <span className="text-gray-300">ohne Event</span> – während Events, bei denen du live mitspielst oder als Streamer angemeldet bist, wechselt es automatisch.</>}
+          </p>
+        </div>
+
+        {/* ── Reiter ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              aria-pressed={tab === t.key}
+              className={`flex items-center justify-center gap-1.5 text-sm px-3 py-2 rounded-xl border font-medium transition-all ${
+                tab === t.key ? "bg-teal-500/15 border-teal-500/40 text-teal-300" : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+              }`}
+            >
+              <t.icon className="w-4 h-4 shrink-0" /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "look" && (
+          <>
+            <div className="glass rounded-2xl p-5">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={lite} onChange={e => setLite(e.target.checked)} className="accent-teal-400 mt-1" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Zap className="w-3.5 h-3.5 text-amber-300" /> Leicht-Modus</span>
+                  <span className="block text-xs text-gray-500">
+                    Ohne Glas-, Unschärfe- und Dauer-Animationen. Empfohlen, wenn OBS ruckelt oder das Overlay flackert.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="glass rounded-2xl p-5 space-y-3">
+              <h2 className={sectionTitle}>Texte</h2>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <TextField id="pause-text" icon={Moon} label="Pause" value={pauseText} placeholder={DEFAULT_PAUSE_TEXT} onChange={setPauseText} />
+                <TextField id="intro-text" icon={Rocket} label="Intro" value={introText} placeholder={DEFAULT_INTRO_TEXT} onChange={setIntroText} />
+                <TextField id="outro-text" icon={LogOut} label="Outro" value={outroText} placeholder={DEFAULT_OUTRO_TEXT} onChange={setOutroText} />
+              </div>
+              <p className="text-xs text-gray-500">Die Clip-Pause zeigt den Text der Pause.</p>
+            </div>
+
+            <div className="glass rounded-2xl p-5">
+              <h2 className={sectionTitle}>Hintergrund für Pause, Intro, Clips und Outro</h2>
+              <p className="text-xs text-gray-500 mt-1 mb-3">
+                Im Stream leicht animiert (Sterne, Regen, Lichter …) – im Leicht-Modus still.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {PAUSE_BACKGROUNDS.map(bg => {
+                  const active = pauseBackground === bg.key;
+                  return (
+                    <button
+                      key={bg.key}
+                      type="button"
+                      onClick={() => setPauseBackground(bg.key)}
+                      aria-pressed={active}
+                      className={`relative aspect-video rounded-xl overflow-hidden text-left transition-all ${
+                        active ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-black/60" : "ring-1 ring-white/10 hover:ring-white/30"
+                      }`}
+                      style={{
+                        backgroundImage: bg.image ? `${bg.overlay}, url(${pauseThumbnail(bg)})` : `${bg.overlay}, repeating-conic-gradient(#2a2a32 0% 25%, #1c1c22 0% 50%) 50% / 16px 16px`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }}
+                    >
+                      <span className="absolute inset-x-0 bottom-0 px-2 py-1.5 bg-gradient-to-t from-black/85 to-transparent">
+                        <span className="block text-xs font-semibold text-white">{bg.label}</span>
+                        <span className="block text-[10px] text-gray-300">{bg.hint}</span>
+                      </span>
+                      {active && <Check className="absolute top-1.5 right-1.5 w-4 h-4 text-teal-300" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === "clips" && (
+          <>
+            <div className="glass rounded-2xl p-5 space-y-4">
+              <div>
+                <h2 className={sectionTitle}>Community-Clips in Intro, Clip-Pause und Outro</h2>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Laufen über den offiziellen Twitch-Player, dazwischen eine Karte mit OMA-Logo und Link zur App.
+                  Clips mit Alters-Hinweis von Twitch werden ausgelassen; einen einzelnen Clip überspringst du in der
+                  Live-Steuerung.
+                </p>
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5">
+                  <Clapperboard className="w-3.5 h-3.5 text-teal-300" /> Welche Clips?
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {CLIP_SOURCE_OPTIONS.map(o => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={() => setClipSource(o.key)}
+                      aria-pressed={clipSource === o.key}
+                      className={`text-left rounded-xl px-3 py-2.5 border transition-all ${
+                        clipSource === o.key ? "bg-teal-500/15 border-teal-500/40" : "border-white/[0.08] hover:border-white/20"
+                      }`}
+                    >
+                      <span className={`block text-sm font-medium ${clipSource === o.key ? "text-teal-200" : "text-gray-200"}`}>{o.label}</span>
+                      <span className="block text-[11px] text-gray-500">{o.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={!clipsMuted} onChange={e => setClipsMuted(!e.target.checked)} className="accent-teal-400 mt-1" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Music className="w-3.5 h-3.5 text-teal-300" /> Clips mit Ton abspielen</span>
+                  <span className="block text-xs text-gray-500">
+                    Achtung: Läuft in einem fremden Clip geschützte Musik, kann das in deinem Stream zu Stummschaltung oder
+                    einer Meldung führen. Lautstärke regelst du im OBS-Mixer.
+                  </span>
+                </span>
+              </label>
+              <p className="flex items-start gap-1.5 text-xs text-gray-500">
+                <Timer className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>Den Countdown fürs Intro startest du in der <Link href="/profile/overlay/live" className="text-teal-300 hover:underline">Live-Steuerung</Link>.</span>
+              </p>
+            </div>
+            <MyClipsPanel />
+          </>
+        )}
+
+        {tab === "layout" && <OverlayLayoutsEditor initial={initialLayouts} initialTab={initialTab} />}
+
+        {tab === "advanced" && (
+          <div className="glass rounded-2xl p-5 space-y-4">
+            <div>
+              <h2 className={sectionTitle}>Feste Links je Szene</h2>
+              <p className="text-xs text-gray-500 mt-1 mb-3">
+                Nur nötig, wenn du in OBS eigene Szenen hast, die immer dasselbe zeigen sollen – unabhängig von der
+                Live-Steuerung.
+              </p>
+              <div className="space-y-3">
+                <SceneLink icon={Moon} label="Pause" hint="immer Pausen-Szene" url={pauseUrl} dragUrl={obsDragUrl(pauseUrl, "OMA Pause")} />
+                <SceneLink icon={Rocket} label="Intro" hint="Clips + Countdown" url={introUrl} dragUrl={obsDragUrl(introUrl, "OMA Intro")} />
+                <SceneLink icon={Clapperboard} label="Clips" hint="Clip-Pause" url={clipsUrl} dragUrl={obsDragUrl(clipsUrl, "OMA Clips")} />
+                <SceneLink icon={LogOut} label="Outro" hint="Clips zum Schluss" url={outroUrl} dragUrl={obsDragUrl(outroUrl, "OMA Outro")} />
+              </div>
+            </div>
             {streamingEvents.filter(e => e.id !== activeEvent?.id).length > 0 && (
-              <div className="text-gray-400">
-                Als Streamer angemeldet – erscheint automatisch, sobald es losgeht:
-                <ul className="mt-1 space-y-0.5">
+              <div className="border-t border-white/[0.06] pt-4">
+                <h2 className={sectionTitle}>Als Streamer angemeldet</h2>
+                <p className="text-xs text-gray-500 mt-1 mb-2">Erscheinen automatisch, sobald sie losgehen:</p>
+                <ul className="space-y-0.5 text-xs">
                   {streamingEvents.filter(e => e.id !== activeEvent?.id).map(e => (
                     <li key={e.id}>
                       <Link href={`/tournament/${e.id}`} className="text-teal-300 hover:underline">{e.title}</Link>
@@ -171,169 +324,59 @@ export default function StreamerOverlaySettings({
                 </ul>
               </div>
             )}
+            <div className="border-t border-white/[0.06] pt-4">
+              <h2 className={sectionTitle}>Sicherheit</h2>
+              <button
+                onClick={regenerate}
+                disabled={regenerating}
+                className="mt-2 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-white/[0.08] text-gray-300 hover:text-rose-300 hover:border-rose-400/40 transition-all disabled:opacity-50"
+              >
+                {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                Links neu erzeugen
+              </button>
+              <p className="text-xs text-gray-500 mt-1.5">Z.B. wenn ein Link versehentlich im Stream zu sehen war. Danach in OBS ersetzen.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Speichern (Aussehen & Clips) ── */}
+        {(settingsTab || dirty) && (
+          <div className="sticky bottom-4 glass rounded-2xl p-3 flex items-center gap-3">
+            <span className="text-xs text-gray-500 flex-1">
+              {dirty ? "Ungespeicherte Änderungen an Aussehen oder Clips" : "Aussehen und Clips gespeichert"}
+            </span>
             <button
-              onClick={regenerate}
-              disabled={regenerating}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-rose-300 transition-colors disabled:opacity-50 pt-1"
+              onClick={save}
+              disabled={!dirty || saving}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-teal-500/15 border border-teal-500/40 text-teal-300 hover:bg-teal-500/25 transition-all font-medium disabled:opacity-40"
             >
-              {regenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-              Links neu erzeugen (z.B. wenn einer versehentlich im Stream zu sehen war)
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Speichern
             </button>
           </div>
-        </div>
-
-        {/* ── Darstellung ── */}
-        <div className="glass rounded-2xl p-5 mb-4 space-y-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Darstellung</h2>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={lite} onChange={e => setLite(e.target.checked)} className="accent-teal-400 mt-1" />
-            <span>
-              <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Zap className="w-3.5 h-3.5 text-amber-300" /> Leicht-Modus</span>
-              <span className="block text-xs text-gray-500">
-                Ohne Glas- und Unschärfe-Effekte und ohne Dauer-Animationen. Empfohlen, wenn OBS ruckelt oder
-                das Overlay kurz flackert – besonders auf schwächeren PCs.
-              </span>
-            </span>
-          </label>
-          <div>
-            <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor="pause-text">
-              <Moon className="w-3.5 h-3.5 text-teal-300" /> Text der Pausen-Szene
-            </label>
-            <input
-              id="pause-text"
-              value={pauseText}
-              maxLength={PAUSE_TEXT_MAX}
-              placeholder={DEFAULT_PAUSE_TEXT}
-              onChange={e => setPauseText(e.target.value)}
-              className="input-glass"
-            />
-          </div>
-          <div>
-            <p className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1">
-              <Moon className="w-3.5 h-3.5 text-teal-300" /> Hintergrund der Pausen-Szene
-            </p>
-            <p className="text-xs text-gray-500 mb-2.5">
-              Die Bilder sind im Stream leicht animiert (Sterne, Regen, Lichter …) – im Leicht-Modus bleiben sie still.
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {PAUSE_BACKGROUNDS.map(bg => {
-                const active = pauseBackground === bg.key;
-                return (
-                  <button
-                    key={bg.key}
-                    type="button"
-                    onClick={() => setPauseBackground(bg.key)}
-                    aria-pressed={active}
-                    className={`relative aspect-video rounded-xl overflow-hidden text-left transition-all ${
-                      active ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-black/60" : "ring-1 ring-white/10 hover:ring-white/30"
-                    }`}
-                    style={{
-                      backgroundImage: bg.image ? `${bg.overlay}, url(${pauseThumbnail(bg)})` : `${bg.overlay}, repeating-conic-gradient(#2a2a32 0% 25%, #1c1c22 0% 50%) 50% / 16px 16px`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
-                  >
-                    <span className="absolute inset-x-0 bottom-0 px-2 py-1.5 bg-gradient-to-t from-black/85 to-transparent">
-                      <span className="block text-xs font-semibold text-white">{bg.label}</span>
-                      <span className="block text-[10px] text-gray-300">{bg.hint}</span>
-                    </span>
-                    {active && <Check className="absolute top-1.5 right-1.5 w-4 h-4 text-teal-300" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Clip-Szenen ── */}
-        <div className="glass rounded-2xl p-5 mb-4 space-y-4">
-          <div>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Clip-Szenen (Intro, Clip-Pause, Outro)</h2>
-            <p className="text-xs text-gray-500 mt-1.5">
-              Spielen Clips von Community-Kanälen über den offiziellen Twitch-Player ab, dazwischen eine Karte mit
-              OMA-Logo und Link zur App. Es laufen nur Clips von Mitgliedern, die zugestimmt haben. Den Hintergrund
-              übernehmen die Szenen von der Pausen-Szene.
-            </p>
-          </div>
-          <div>
-            <p className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5">
-              <Clapperboard className="w-3.5 h-3.5 text-teal-300" /> Welche Clips?
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {CLIP_SOURCE_OPTIONS.map(o => (
-                <button
-                  key={o.key}
-                  type="button"
-                  onClick={() => setClipSource(o.key)}
-                  aria-pressed={clipSource === o.key}
-                  className={`text-left rounded-xl px-3 py-2.5 border transition-all ${
-                    clipSource === o.key ? "bg-teal-500/15 border-teal-500/40" : "border-white/[0.08] hover:border-white/20"
-                  }`}
-                >
-                  <span className={`block text-sm font-medium ${clipSource === o.key ? "text-teal-200" : "text-gray-200"}`}>{o.label}</span>
-                  <span className="block text-[11px] text-gray-500">{o.hint}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={!clipsMuted} onChange={e => setClipsMuted(!e.target.checked)} className="accent-teal-400 mt-1" />
-            <span>
-              <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Music className="w-3.5 h-3.5 text-teal-300" /> Clips mit Ton abspielen</span>
-              <span className="block text-xs text-gray-500">
-                Achtung: Läuft in einem fremden Clip urheberrechtlich geschützte Musik, kann das in deinem Stream zu
-                Stummschaltung oder einer Meldung führen. Ohne Haken laufen die Clips stumm. Die Lautstärke regelst
-                du wie gewohnt im OBS-Mixer.
-              </span>
-            </span>
-          </label>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor="intro-text">
-                <Rocket className="w-3.5 h-3.5 text-teal-300" /> Text der Intro-Szene
-              </label>
-              <input id="intro-text" value={introText} maxLength={PAUSE_TEXT_MAX} placeholder={DEFAULT_INTRO_TEXT} onChange={e => setIntroText(e.target.value)} className="input-glass" />
-            </div>
-            <div>
-              <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor="outro-text">
-                <LogOut className="w-3.5 h-3.5 text-teal-300" /> Text der Outro-Szene
-              </label>
-              <input id="outro-text" value={outroText} maxLength={PAUSE_TEXT_MAX} placeholder={DEFAULT_OUTRO_TEXT} onChange={e => setOutroText(e.target.value)} className="input-glass" />
-            </div>
-          </div>
-          <p className="flex items-start gap-1.5 text-xs text-gray-500">
-            <Timer className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <span>
-              Den Countdown fürs Intro (z.B. „Start in 05:00“) startest du in der{" "}
-              <Link href="/profile/overlay/live" className="text-teal-300 hover:underline">Live-Steuerung</Link>. Die
-              Clip-Pause zeigt den Text der Pausen-Szene.
-            </span>
-          </p>
-        </div>
-
-        {/* ── Speichern der Einstellungen oben ── */}
-        <div className="glass rounded-2xl p-3 mb-4 flex items-center gap-3">
-          <span className="text-xs text-gray-500 flex-1">
-            {dirty ? "Ungespeicherte Änderungen an Darstellung und Clip-Szenen" : "Darstellung und Clip-Szenen gespeichert"}
-          </span>
-          <button
-            onClick={save}
-            disabled={!dirty || saving}
-            className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-teal-500/15 border border-teal-500/40 text-teal-300 hover:bg-teal-500/25 transition-all font-medium disabled:opacity-40"
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Speichern
-          </button>
-        </div>
-
-        <MyClipsPanel />
-
-        {/* ── Layouts aller Szenen ── */}
-        <h2 className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-          <LayoutGrid className="w-3.5 h-3.5" /> Position, Größe & Sichtbarkeit
-        </h2>
-        <OverlayLayoutsEditor initial={initialLayouts} initialTab={initialTab} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span className="w-7 h-7 shrink-0 rounded-full border border-teal-500/40 bg-teal-500/10 text-teal-300 text-sm font-semibold flex items-center justify-center">
+      {n}
+    </span>
+  );
+}
+
+function TextField({
+  id, icon: Icon, label, value, placeholder, onChange,
+}: { id: string; icon: typeof Tv2; label: string; value: string; placeholder: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-sm text-gray-200 font-medium mb-1.5" htmlFor={id}>
+        <Icon className="w-3.5 h-3.5 text-teal-300" /> {label}
+      </label>
+      <input id={id} value={value} maxLength={PAUSE_TEXT_MAX} placeholder={placeholder} onChange={e => onChange(e.target.value)} className="input-glass" />
     </div>
   );
 }

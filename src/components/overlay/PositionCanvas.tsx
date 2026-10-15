@@ -116,7 +116,8 @@ export default function PositionCanvas<K extends string>({
       if (!stacking) { onChange(drag.key, candidate); return; }
       const stackable = others.filter(k => !isFixed(k));
       const stackPartner = stackable.find(k => overlaps(candidate, drag.key, positions[k], k));
-      onChange(drag.key, stackPartner ? { ...positions[stackPartner], scale: ownScale ?? positions[stackPartner].scale } : candidate);
+      // Im Stapel gilt die Größe des Stapels — sonst würde die Kachel beim Rotieren springen.
+      onChange(drag.key, stackPartner ? { ...positions[stackPartner] } : candidate);
     };
     const handleUp = () => {
       dragState.current = null;

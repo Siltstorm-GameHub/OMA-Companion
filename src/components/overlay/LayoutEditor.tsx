@@ -55,6 +55,19 @@ export default function LayoutEditor<K extends string>({
     onChange({ ...value, elements: { ...value.elements, [key]: { ...current, ...patch } } });
   }
 
+  /** Größe gilt für den ganzen Stapel: alle gestapelten Elemente an derselben Stelle mitziehen. */
+  function patchScale(key: K, scale: number) {
+    const current = value.elements[key];
+    if (!current) return;
+    const same = (p: LayoutEntry) => p.x.toFixed(1) === current.x.toFixed(1) && p.y.toFixed(1) === current.y.toFixed(1);
+    const elements = { ...value.elements };
+    for (const k of activeElements) {
+      const e = elements[k];
+      if (e && (k === key || (stacking && stackable.includes(k) && stackable.includes(key) && same(e)))) elements[k] = { ...e, scale };
+    }
+    onChange({ ...value, elements });
+  }
+
   function toggle(key: K) {
     const elements = { ...value.elements };
     if (elements[key]) {
@@ -130,7 +143,7 @@ export default function LayoutEditor<K extends string>({
                   <Maximize2 className="w-3.5 h-3.5" />
                   <input
                     type="range" min={0.6} max={1.6} step={0.05} value={scale}
-                    onChange={e => patchEntry(key, { scale: Number(e.target.value) })}
+                    onChange={e => patchScale(key, Number(e.target.value))}
                     className="w-28 accent-teal-400"
                   />
                   <span className="text-xs text-gray-400 w-9 tabular-nums">{Math.round(scale * 100)}%</span>
@@ -180,7 +193,7 @@ export default function LayoutEditor<K extends string>({
           elementSize={elementSize}
           activeElements={activeElements}
           positions={positions}
-          onChange={(key, pos) => patchEntry(key, { x: pos.x, y: pos.y })}
+          onChange={(key, pos) => patchEntry(key, { x: pos.x, y: pos.y, ...(pos.scale !== undefined ? { scale: pos.scale } : {}) })}
           stacking={stacking}
         />
       </div>

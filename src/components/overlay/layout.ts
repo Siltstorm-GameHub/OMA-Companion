@@ -16,16 +16,15 @@ import {
 import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } from "./pauseBackgrounds";
 import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS, type PauseElementKey, type ClipElementKey } from "./sceneLayouts";
 
-/** Ausgangspositionen (Prozent von 1920×1080). Tabelle/Teilnehmer/Gesamttabelle teilen sich
- *  bewusst dieselbe Position — sie stapeln sich dadurch von Anfang an zu einer rotierenden
- *  Gruppe. Turnierbaum hat einen eigenen x-Wert, weil er breiter ist (620px vs. 460px) — beide
- *  Werte sind so gewählt, dass die Kachel mit ca. EDGE_MARGIN Abstand rechtsbündig am
- *  Bildschirmrand sitzt (rechnerisch: (1920 − Kachelbreite − 28) / 1920 × 100). */
+/** Ausgangspositionen (Prozent von 1920×1080). Alle Kacheln sind gleich breit (TILE_WIDTH):
+ *  Turnierbaum, Tabelle, Teilnehmer und Gesamttabelle stapeln sich oben rechts zu einer
+ *  rotierenden Gruppe (rechtsbündig mit EDGE_MARGIN: (1920 − 460 − 28) / 1920 × 100 = 74.6),
+ *  die drei Leisten stehen unten nebeneinander (y = (1080 − 90 − 28) / 1080 × 100 = 89.1). */
 export const DEFAULT_EVENT_POSITIONS: Record<ElementKey, { x: number; y: number }> = {
-  brand:        { x: 1.5,  y: 90.6 },
-  liveinfo:     { x: 19,   y: 90.6 },
-  ticker:       { x: 40,   y: 90.6 },
-  bracket:      { x: 66,   y: 2.6 },
+  brand:        { x: 1.5,  y: 89.1 },
+  liveinfo:     { x: 26.3, y: 89.1 },
+  ticker:       { x: 51,   y: 89.1 },
+  bracket:      { x: 74.6, y: 2.6 },
   table:        { x: 74.6, y: 2.6 },
   seriesTable:  { x: 74.6, y: 2.6 },
   participants: { x: 74.6, y: 2.6 },
@@ -34,11 +33,11 @@ export const DEFAULT_EVENT_POSITIONS: Record<ElementKey, { x: number; y: number 
 /** Rang und nächstes Event rotieren oben rechts, Community-Kachel und "Gerade live" links darüber
  *  der Marken-Kachel (ebenfalls als Stapel). */
 export const DEFAULT_PROFILE_POSITIONS: Record<ProfileElementKey, { x: number; y: number }> = {
-  brand:       { x: 1.5, y: 90.6 },
-  rank:        { x: 77.7, y: 2.6 },
-  nextEvent:   { x: 77.7, y: 2.6 },
-  community:   { x: 1.5, y: 70 },
-  liveMembers: { x: 1.5, y: 70 },
+  brand:       { x: 1.5, y: 89.1 },
+  rank:        { x: 74.6, y: 2.6 },
+  nextEvent:   { x: 74.6, y: 2.6 },
+  community:   { x: 1.5, y: 69.1 },
+  liveMembers: { x: 1.5, y: 69.1 },
 };
 
 const ELIMINATION_FORMATS = ["single_elimination", "double_elimination"];
@@ -261,7 +260,7 @@ export function adaptEventLayout(layout: OverlayLayout<ElementKey>, format: stri
 // ── Live-Steuerung des eigenen Overlays ───────────────────────────────────────
 
 const CONTROL_KEYS = new Set<string>([...ELEMENT_KEYS, ...PROFILE_ELEMENT_KEYS]);
-export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null };
+export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null, clipSkip: null };
 
 export function sanitizeControl(raw: unknown): OverlayControl {
   if (!raw || typeof raw !== "object") return { ...EMPTY_CONTROL };
@@ -277,6 +276,7 @@ export function sanitizeControl(raw: unknown): OverlayControl {
     // `pause: true` stammt aus der Zeit vor dem Szenen-Wechsel und entspricht der Pausen-Szene.
     scene: OVERLAY_SCENES.includes(r.scene as OverlayScene) ? r.scene as OverlayScene : r.pause === true ? "pause" : "gameplay",
     countdownUntil: r.countdownUntil != null && Number.isFinite(countdown) && countdown > 0 ? countdown : null,
+    clipSkip: Number.isFinite(Number(r.clipSkip)) && Number(r.clipSkip) > 0 ? Number(r.clipSkip) : null,
   };
 }
 

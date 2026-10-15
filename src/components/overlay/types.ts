@@ -135,22 +135,30 @@ export const PROFILE_STACKABLE: ProfileElementKey[] = ["rank", "nextEvent", "com
  *  den Einstellungen und für die Breite der jeweils aktiven Kachel im Overlay selbst. Etwas
  *  großzügiger als die tatsächliche Mindestgröße bemessen (Inhalt variiert), damit sich
  *  Elemente in den Einstellungen auch bei mehr Inhalt nie ungewollt berühren. */
+/** Einheitliche Kachelmaße: EINE Breite, drei Höhen. Gleich große Kacheln lassen sich passgenau
+ *  stapeln und rotieren ohne Größensprung; ein gemischter Stapel nimmt fest die größte Höhe an. */
+export const TILE_WIDTH = 460;
+export const TILE_HEIGHT = { bar: 90, card: 200, panel: 340 } as const;
+const BAR = { width: TILE_WIDTH, height: TILE_HEIGHT.bar };
+const CARD = { width: TILE_WIDTH, height: TILE_HEIGHT.card };
+const PANEL = { width: TILE_WIDTH, height: TILE_HEIGHT.panel };
+
 export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }> = {
-  brand:        { width: 300, height: 78 },
-  liveinfo:     { width: 300, height: 78 },
-  ticker:       { width: 620, height: 78 },
-  bracket:      { width: 620, height: 360 },
-  table:        { width: 460, height: 310 },
-  seriesTable:  { width: 460, height: 310 },
-  participants: { width: 460, height: 310 },
+  brand:        BAR,
+  liveinfo:     BAR,
+  ticker:       BAR,
+  bracket:      PANEL,
+  table:        PANEL,
+  seriesTable:  PANEL,
+  participants: PANEL,
 };
 
 export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; height: number }> = {
-  brand:       { width: 300, height: 78 },
-  rank:        { width: 320, height: 90 },
-  nextEvent:   { width: 400, height: 110 },
-  community:   { width: 420, height: 170 },
-  liveMembers: { width: 400, height: 200 },
+  brand:       BAR,
+  rank:        BAR,
+  nextEvent:   CARD,
+  community:   CARD,
+  liveMembers: CARD,
 };
 
 export const DEFAULT_ROTATE_SECONDS = 14;
@@ -158,9 +166,9 @@ export const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
 export const PANEL_FADE_MS = 900;
 export const CYCLE_FADE_MS = 1000;
 export const ZOOM_EXIT_MS = 500; // muss zur oma-zoom-out-Animationsdauer in MotionStyles passen
-export const PANEL_LIST_HEIGHT = 300; // Feste Höhe für Listen in Panels — lange Listen scrollen intern statt die Kachel wachsen zu lassen
+export const PANEL_LIST_HEIGHT = 280; // Feste Höhe für Listen in Panels — lange Listen scrollen intern statt die Kachel wachsen zu lassen
 export const PANEL_LIST_HEIGHT_COMPACT = 250;
-export const TICKER_ENTRIES_WIDTH = 620; // Feste Breite für die FFA-Mitspielerliste im Match-Ticker
+export const TICKER_ENTRIES_WIDTH = 400; // Feste Breite für die FFA-Mitspielerliste im Match-Ticker
 
 /** Payload des festen Streamer-Links: zeigt das gerade gestreamte Event, sonst das Profil. */
 export type StreamerOverlayPayload = (
@@ -185,6 +193,8 @@ export type StreamerOverlayPayload = (
   clips: ClipSceneConfig;
   /** Ende des Intro-Countdowns (ms seit Epoch), per Live-Steuerung gestartet — null = kein Countdown. */
   countdownUntil: number | null;
+  /** "Nächster Clip" aus der Live-Steuerung (Zeitstempel, jede Änderung = weiterspringen). */
+  clipSkip: number | null;
   /** Layouts der Pausen- und der Clip-Szenen (gespeichert oder Standard). */
   pauseLayout: OverlayLayout<PauseElementKey>;
   clipLayout: OverlayLayout<ClipElementKey>;
@@ -226,6 +236,8 @@ export type OverlayClip = {
   durationSec: number;
   views: number;
   game: string | null;
+  /** Twitch-Game-ID — für die Erkennung von Spielen ab 18 (Alters-Hinweis im Player). */
+  gameId: string | null;
   createdAt: string;
   thumbnailUrl: string;
 };
@@ -244,6 +256,8 @@ export type OverlayControl = {
   scene: OverlayScene;
   /** Ende des Intro-Countdowns (ms seit Epoch), null = keiner. */
   countdownUntil: number | null;
+  /** Zeitpunkt des letzten "Nächster Clip" (ms) — jede Änderung springt im Clip-Loop weiter. */
+  clipSkip: number | null;
 };
 
 export const ELEMENT_LABELS: Record<ElementKey, string> = {

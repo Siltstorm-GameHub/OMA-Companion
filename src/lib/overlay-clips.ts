@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getBroadcasterClips, getTwitchGameNames, getTwitchUsers } from "@/lib/twitch";
+import { getBroadcasterClips, getChannelInfos, getTwitchGameNames, getTwitchUsers } from "@/lib/twitch";
 import { sameGame } from "@/lib/game-match";
 import { createCache, getCommunityLive } from "@/lib/overlay-state";
 import type { ClipSource, OverlayClip } from "@/components/overlay/types";
@@ -12,6 +12,12 @@ import type { ClipSource, OverlayClip } from "@/components/overlay/types";
  * Im Pool landen alle Community-Kanäle außer denen, deren Inhaber sich abgemeldet haben
  * (User.overlayClipsOptOut), abzüglich der Clips, die der Inhaber selbst oder Moderatoren
  * ausgeschlossen haben (OverlayClipBlock).
+ *
+ * Alters-Hinweis: Clips mit Inhaltskennzeichnung zeigt der Twitch-Player erst nach einem Klick —
+ * im Loop wäre nur der Hinweis zu sehen. Twitch nennt die Kennzeichnung nicht je Clip, deshalb:
+ *   - Kanäle mit eigener Kennzeichnung (z.B. "ProfanityVulgarity") fallen ganz heraus,
+ *   - Spiele ab 18 (automatische Kennzeichnung "MatureGame", sobald ein Community-Kanal sie
+ *     streamt) werden in OverlayMatureGame gemerkt; Moderatoren können Spiele auch selbst sperren.
  *
  * Last: Twitch wird pro Kanal höchstens alle CHANNEL_TTL_MS gefragt, der zusammengesetzte Pool
  * ist für alle Overlays derselbe.
@@ -29,16 +35,26 @@ const LOOP_LIMIT = 40;
 const ALL_LIMIT = 300;
 /** Ab so vielen passenden Clips zeigt die Quelle "game" nur das aktuelle Spiel. */
 const GAME_MIN_CLIPS = 3;
+/** Automatische Twitch-Kennzeichnung für Spiele ab 18 — betrifft nur Clips dieses Spiels. */
+const MATURE_GAME_LABEL = "MatureGame";
 
-type ChannelClips = OverlayClip[];
+type ClipPool = {
+  clips: OverlayClip[];
+  /** Kanäle mit eigener Inhaltskennzeichnung (login → Kennzeichnungen) — ihre Clips fallen heraus. */
+  labelledChannels: Map<string, string[]>;
+};
 
-const channelCache = createCache<ChannelClips>();
-const poolCache = createCache<OverlayClip[]>();
+/** Warum ein Clip nicht im Loop läuft (null = läuft). */
+export type ClipRestriction = "blocked" | "channel" | "game" | null;
+
+const channelCache = createCache<OverlayClip[]>();
+const poolCache = createCache<ClipPool>();
 const blockCache = createCache<Set<string>>();
+const matureCache = createCache<Map<string, { name: string; source: string }>>();
 const broadcasterIdCache = new Map<string, string>();
 
 /** Clips eines Kanals der letzten LOOKBACK_DAYS Tage, unabhängig von Zustimmung und Sperren. */
-export function getChannelClips(login: string): Promise<ChannelClips> {
+export function getChannelClips(login: string): Promise<OverlayClip[]> {
   const key = login.toLowerCase();
   return channelCache.get(key, CHANNEL_TTL_MS, async () => {
     let id = broadcasterIdCache.get(key);
@@ -59,14 +75,15 @@ export function getChannelClips(login: string): Promise<ChannelClips> {
       durationSec: Math.max(5, Math.min(90, Math.round(c.duration || 30))),
       views: c.view_count,
       game: games.get(c.game_id) ?? null,
+      gameId: c.game_id || null,
       createdAt: c.created_at,
       thumbnailUrl: c.thumbnail_url,
     }));
   });
 }
 
-/** Alle Clips aller zustimmenden Community-Kanäle — inkl. gesperrter (die filtert der Aufrufer). */
-export function getClipPool(): Promise<OverlayClip[]> {
+/** Alle Clips aller teilnehmenden Community-Kanäle — inkl. gesperrter (die filtert der Aufrufer). */
+function getClipPool(): Promise<ClipPool> {
   return poolCache.get("all", POOL_TTL_MS, async () => {
     const users = await prisma.user.findMany({
       where: { overlayClipsOptOut: false, twitchLogin: { not: null }, leftServerAt: null },
@@ -78,9 +95,35 @@ export function getClipPool(): Promise<OverlayClip[]> {
     if (missing.length) {
       for (const u of await getTwitchUsers(missing).catch(() => [])) broadcasterIdCache.set(u.login.toLowerCase(), u.id);
     }
-    const perChannel = await Promise.all(logins.map(l => getChannelClips(l).catch(() => [])));
-    return perChannel.flat();
+    const [perChannel, infos] = await Promise.all([
+      Promise.all(logins.map(l => getChannelClips(l).catch(() => []))),
+      getChannelInfos(logins.map(l => broadcasterIdCache.get(l)!).filter(Boolean)),
+    ]);
+
+    const labelledChannels = new Map<string, string[]>();
+    const matureGames: { gameId: string; name: string }[] = [];
+    for (const info of infos) {
+      const labels = info.content_classification_labels ?? [];
+      const own = labels.filter(l => l !== MATURE_GAME_LABEL);
+      if (own.length) labelledChannels.set(info.broadcaster_login.toLowerCase(), own);
+      if (labels.includes(MATURE_GAME_LABEL) && info.game_id) matureGames.push({ gameId: info.game_id, name: info.game_name });
+    }
+    if (matureGames.length) await rememberMatureGames(matureGames);
+
+    return { clips: perChannel.flat(), labelledChannels };
   });
+}
+
+/** Neu erkannte Spiele ab 18 merken (bestehende Einträge, auch von Moderatoren, bleiben unverändert). */
+async function rememberMatureGames(games: { gameId: string; name: string }[]) {
+  const known = await getMatureGames();
+  const fresh = games.filter(g => !known.has(g.gameId));
+  if (!fresh.length) return;
+  await prisma.overlayMatureGame.createMany({
+    data: fresh.map(g => ({ gameId: g.gameId, name: g.name, source: "twitch" })),
+    skipDuplicates: true,
+  }).catch(() => {});
+  matureCache.delete("all");
 }
 
 export function getBlockedClipIds(): Promise<Set<string>> {
@@ -90,9 +133,42 @@ export function getBlockedClipIds(): Promise<Set<string>> {
   });
 }
 
-/** Nach Zustimmung oder Sperre: nächster Abruf baut Pool bzw. Sperrliste neu. */
+export function getMatureGames(): Promise<Map<string, { name: string; source: string }>> {
+  return matureCache.get("all", BLOCKS_TTL_MS, async () => {
+    const rows = await prisma.overlayMatureGame.findMany({ select: { gameId: true, name: true, source: true } });
+    return new Map(rows.map(r => [r.gameId, { name: r.name, source: r.source }]));
+  });
+}
+
+/** Nach Zustimmung oder Sperre: nächster Abruf baut Pool bzw. Sperrlisten neu. */
 export function invalidateClipPool() { poolCache.delete("all"); }
 export function invalidateClipBlocks() { blockCache.delete("all"); }
+export function invalidateMatureGames() { matureCache.delete("all"); }
+
+/** Alle Clips mit dem Grund, warum sie (nicht) im Loop laufen — für Admin- und Profilseite. */
+export async function getClipPoolWithRestrictions(): Promise<{
+  clips: (OverlayClip & { restriction: ClipRestriction })[];
+  labelledChannels: { login: string; labels: string[] }[];
+}> {
+  const [pool, blocked, mature] = await Promise.all([getClipPool(), getBlockedClipIds(), getMatureGames()]);
+  return {
+    clips: pool.clips.map(c => ({ ...c, restriction: restrictionOf(c, pool, blocked, mature) })),
+    labelledChannels: [...pool.labelledChannels].map(([login, labels]) => ({ login, labels })),
+  };
+}
+
+/** Restriktion eines einzelnen Clips (z.B. für die eigenen Clips auf der Profilseite). */
+export async function getClipRestrictions(clips: OverlayClip[]): Promise<Map<string, ClipRestriction>> {
+  const [pool, blocked, mature] = await Promise.all([getClipPool(), getBlockedClipIds(), getMatureGames()]);
+  return new Map(clips.map(c => [c.id, restrictionOf(c, pool, blocked, mature)]));
+}
+
+function restrictionOf(clip: OverlayClip, pool: ClipPool, blocked: Set<string>, mature: Map<string, unknown>): ClipRestriction {
+  if (blocked.has(clip.id)) return "blocked";
+  if (pool.labelledChannels.has(clip.channelLogin)) return "channel";
+  if (clip.gameId && mature.has(clip.gameId)) return "game";
+  return null;
+}
 
 /**
  * Clips für den Loop eines Streamers:
@@ -104,8 +180,8 @@ export function invalidateClipBlocks() { blockCache.delete("all"); }
  * Die Reihenfolge mischt das Overlay selbst (jede OBS-Quelle anders).
  */
 export async function getOverlayClips(userId: string, source: ClipSource): Promise<OverlayClip[]> {
-  const [pool, blocked] = await Promise.all([getClipPool(), getBlockedClipIds()]);
-  const clips = pool.filter(c => !blocked.has(c.id));
+  const [pool, blocked, mature] = await Promise.all([getClipPool(), getBlockedClipIds(), getMatureGames()]);
+  const clips = pool.clips.filter(c => restrictionOf(c, pool, blocked, mature) === null);
   const byViews = () => [...clips].sort((a, b) => b.views - a.views);
 
   if (source === "all") return clips.slice(0, ALL_LIMIT);

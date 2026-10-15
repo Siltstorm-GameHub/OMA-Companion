@@ -456,7 +456,7 @@ export async function getStreamerOverlayPayload(
   if (!streamer) return null;
   const common = {
     streamer, pauseText: config.pauseText, lite: config.lite, scene: control.scene, pauseBackground: config.pauseBackground,
-    clips: config.clips, countdownUntil: control.countdownUntil,
+    clips: config.clips, countdownUntil: control.countdownUntil, clipSkip: control.clipSkip,
     pauseLayout: config.pauseLayout ?? defaultPauseLayout(), clipLayout: config.clipLayout ?? defaultClipLayout(),
   };
   const zoom = activeZoom(control);

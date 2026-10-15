@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getBlockedClipIds, getChannelClips, invalidateClipBlocks, invalidateClipPool } from "@/lib/overlay-clips";
+import { getChannelClips, getClipRestrictions, invalidateClipBlocks, invalidateClipPool } from "@/lib/overlay-clips";
 
 /** Eigene Clips im Community-Clip-Loop: abmelden/wieder anmelden und einzelne Clips ausschließen. */
 
@@ -14,10 +14,14 @@ async function currentUser() {
 /** `optIn` = Clips laufen im Loop (Standard), gespeichert wird die Abmeldung (overlayClipsOptOut). */
 async function describe(user: { twitchLogin: string | null; overlayClipsOptOut: boolean }) {
   if (!user.twitchLogin) return { optIn: !user.overlayClipsOptOut, clips: [] };
-  const [clips, blocked] = await Promise.all([getChannelClips(user.twitchLogin), getBlockedClipIds()]);
+  const clips = await getChannelClips(user.twitchLogin);
+  const restrictions = await getClipRestrictions(clips);
   return {
     optIn: !user.overlayClipsOptOut,
-    clips: [...clips].sort((a, b) => b.views - a.views).map(c => ({ ...c, blocked: blocked.has(c.id) })),
+    clips: [...clips].sort((a, b) => b.views - a.views).map(c => {
+      const restriction = restrictions.get(c.id) ?? null;
+      return { ...c, blocked: restriction === "blocked", restriction };
+    }),
   };
 }
 

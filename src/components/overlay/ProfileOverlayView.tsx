@@ -11,6 +11,7 @@ import { OverlayStage } from "./EventOverlayView";
 import { useRotatingIndex } from "./motion";
 import ZoomLayer, { useZoomTransition, ZoomBannerShell } from "./ZoomLayer";
 import { PanelShell, IdentityFlipTile, TopEdge, TwitchGlyph } from "./tiles";
+import { AutoScrollViewport } from "./AutoScrollViewport";
 import {
   PROFILE_ELEMENT_SIZE, PROFILE_STACKABLE,
   type ProfileElementKey, type ProfileOverlayState, type OverlayLayout, type OverlayStreamer,
@@ -85,7 +86,7 @@ export default function ProfileOverlayView({
         rotateSeconds={layout.rotateSeconds}
         available={key => available[key]}
         hidden={key => hidden.has(key)}
-        widthOf={key => PROFILE_ELEMENT_SIZE[key].width}
+        sizeOf={key => PROFILE_ELEMENT_SIZE[key]}
         render={(key, { visible, hasCycle }) => tile(key, visible, hasCycle)}
       />}
     </OverlayStage>
@@ -98,7 +99,7 @@ function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userI
     <div
       style={{
         position: "relative", display: "flex", alignItems: "center", gap: 14,
-        width: PROFILE_ELEMENT_SIZE.rank.width, height: PROFILE_ELEMENT_SIZE.rank.height,
+        width: PROFILE_ELEMENT_SIZE.rank.width, height: "100%", minHeight: PROFILE_ELEMENT_SIZE.rank.height, boxSizing: "border-box",
         background: "rgba(9,9,14,0.82)", backdropFilter: "blur(18px) saturate(1.4)", WebkitBackdropFilter: "blur(18px) saturate(1.4)",
         border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         padding: "0 22px", overflow: "hidden",
@@ -270,7 +271,8 @@ export function CommunityTile({
 export function LiveMembersTile({ members }: { members: LiveMember[] }) {
   return (
     <PanelShell title="Gerade live aus der Community">
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, width: PROFILE_ELEMENT_SIZE.liveMembers.width - 36 }}>
+      {/* Feste Kartenhöhe: mehr als drei Mitglieder laufen automatisch durch statt die Kachel zu strecken. */}
+      <AutoScrollViewport axis="y" size={130} gap={8}>
         {members.map(m => (
           <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <RankedAvatar badge={null} src={m.image} alt={m.name} size={30} />
@@ -287,7 +289,7 @@ export function LiveMembersTile({ members }: { members: LiveMember[] }) {
             </span>
           </div>
         ))}
-      </div>
+      </AutoScrollViewport>
     </PanelShell>
   );
 }

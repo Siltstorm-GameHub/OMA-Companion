@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { Clapperboard, Eye, EyeOff, Loader2 } from "@/components/icons";
 import type { OverlayClip } from "@/components/overlay/types";
 
-type MyClip = OverlayClip & { blocked: boolean };
+type MyClip = OverlayClip & { blocked: boolean; restriction: "blocked" | "channel" | "game" | null };
+
+const RESTRICTION_NOTE = {
+  channel: "läuft nicht: dein Kanal hat bei Twitch eine Inhaltskennzeichnung (Alters-Hinweis im Player)",
+  game: "läuft nicht: Spiel ab 18 (Twitch zeigt nur einen Alters-Hinweis)",
+} as const;
 
 /**
  * Zustimmung zum Community-Clip-Loop und Ausschluss einzelner eigener Clips (z.B. mit Musik).
@@ -97,6 +102,9 @@ export default function MyClipsPanel() {
                       <a href={`https://clips.twitch.tv/${c.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-teal-300">
                         <span className="block text-sm text-gray-200 truncate">{c.title}</span>
                         <span className="block text-[11px] text-gray-500">{c.views.toLocaleString("de-DE")} Aufrufe · {c.durationSec} s{c.game ? ` · ${c.game}` : ""}</span>
+                        {(c.restriction === "channel" || c.restriction === "game") && (
+                          <span className="block text-[11px] text-amber-300">{RESTRICTION_NOTE[c.restriction]}</span>
+                        )}
                       </a>
                       <button
                         onClick={() => update({ clipId: c.id, blocked: !c.blocked }, c.id)}

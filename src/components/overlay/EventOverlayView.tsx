@@ -90,7 +90,7 @@ export default function EventOverlayView({
           rotateSeconds={layout.rotateSeconds}
           available={key => contentAvailable[key]}
           hidden={key => hiddenElements.has(key)}
-          widthOf={key => ELEMENT_SIZE[key].width}
+          sizeOf={key => ELEMENT_SIZE[key]}
           render={key => content(key)}
         />
       )}
@@ -115,7 +115,8 @@ export default function EventOverlayView({
  *  die ohnehin schon breiteren Elemente (Turnierbaum/Ticker) nicht bis an den Bildschirmrand
  *  reichen. */
 function zoomWidthFor(key: ElementKey): number {
-  return Math.min(ELEMENT_SIZE[key].width * 1.6, 900);
+  // Turnierbaum und Match brauchen in groß mehr Breite als die einheitliche Kachelbreite.
+  return key === "bracket" || key === "ticker" ? 900 : Math.min(ELEMENT_SIZE[key].width * 1.6, 900);
 }
 
 /** Banner-Kachel unter dem Logo: Eventname, Spiel, Status-Punkt (gruen = aktiv/offen, rot

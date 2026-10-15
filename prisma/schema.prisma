@@ -429,6 +429,17 @@ model OverlayClipBlock {
   createdAt        DateTime @default(now())
 }
 
+// Spiele, deren Clips Twitch nur mit Alters-Hinweis abspielt — im Loop wäre dann nur der Hinweis
+// zu sehen. Twitch nennt die Freigabe nicht je Clip; erkannt wird sie an der automatischen
+// Kennzeichnung "MatureGame" laufender Community-Kanäle (source "twitch") oder von Moderatoren
+// gesetzt (source "admin"). Siehe src/lib/overlay-clips.ts.
+model OverlayMatureGame {
+  gameId    String   @id // Twitch-Game-ID
+  name      String
+  source    String // "twitch" | "admin"
+  createdAt DateTime @default(now())
+}
+
 // ── Clip-Einreichungen ────────────────────────────────────────────────────────
 
 model EventClipSubmission {

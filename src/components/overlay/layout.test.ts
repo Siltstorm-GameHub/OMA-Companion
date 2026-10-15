@@ -74,12 +74,12 @@ describe("Overlay-Layout", () => {
 
   test("Live-Steuerung: unbekannte Elemente fliegen raus, Zoom läuft ab", () => {
     const c = sanitizeControl({ hidden: ["table", "table", "favorites", 3, "community"], zoom: "seriesTable", zoomUntil: 5000, pause: true });
-    assert.deepEqual(c, { hidden: ["table", "community"], zoom: "seriesTable", zoomUntil: 5000, scene: "pause", countdownUntil: null });
+    assert.deepEqual(c, { hidden: ["table", "community"], zoom: "seriesTable", zoomUntil: 5000, scene: "pause", countdownUntil: null, clipSkip: null });
     assert.equal(activeZoom(c, 4999), "seriesTable");
     assert.equal(activeZoom(c, 5000), null);
     assert.equal(activeZoom({ ...c, zoomUntil: null }, 9e15), "seriesTable");
-    assert.deepEqual(sanitizeControl({ zoom: "badges" }), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null });
-    assert.deepEqual(parseOverlayControl("{kaputt"), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null });
+    assert.deepEqual(sanitizeControl({ zoom: "badges" }), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null, clipSkip: null });
+    assert.deepEqual(parseOverlayControl("{kaputt"), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null, clipSkip: null });
   });
 
   test("Clip-Szenen: Standard, Teil-Update, ungültige Werte", () => {

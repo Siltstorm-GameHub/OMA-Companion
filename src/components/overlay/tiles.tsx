@@ -53,8 +53,8 @@ export function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
 
 const FLIP_INTERVAL_MS = 6000;
 const FLIP_DURATION_MS = 1100;
-export const FLIP_WIDTH = 300;
-export const FLIP_HEIGHT = 78;
+export const FLIP_WIDTH = ELEMENT_SIZE.brand.width;
+export const FLIP_HEIGHT = ELEMENT_SIZE.brand.height;
 /** Neue, fixe Marken-Kachel: Vorderseite OMA-Logo+Wortmarke, Rückseite Avatar+Name+Twitch-Icon
  *  des Streamers, der diesen Link erzeugt hat. Ohne bekannten Streamer (sehr alte Links, oder
  *  wenn der User seither gelöscht wurde) bleibt sie als einzelne, nicht drehende OMA-Fläche
@@ -221,12 +221,12 @@ export function MatchTicker({
   const fields = parseStatFields(statFields);
 
   return (
-    <div>
+    <div style={{ height: "100%" }}>
       {/* key=match.id lässt die Kachel bei jedem neuen laufenden/nächsten Match einmal
          einschweben, statt kommentarlos den Inhalt zu tauschen. */}
       <TickerTile key={match.id}>
         {hasDuel ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, width: "100%" }}>
             <PlayerName user={userOf(match.player1Id)} winner={p1Winner} winnerKey={match.winnerId} align="right" />
             <Score score1={match.score1} score2={match.score2} />
             <PlayerName user={userOf(match.player2Id)} winner={p2Winner} winnerKey={match.winnerId} align="left" />
@@ -277,7 +277,9 @@ export function TickerTile({
         border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: 14,
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
-        padding: "18px 26px",
+        padding: "0 22px",
+        height: "100%",
+        boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
         gap: 16,
@@ -315,11 +317,11 @@ function PlayerName({
       {/* key=winnerKey lässt den Glow einmal aufflackern, sobald ein Sieger feststeht,
          statt ihn dauerhaft leuchten zu lassen. */}
       <div key={winner ? winnerKey : "pending"} className={winner ? "oma-anim-flare" : undefined} style={{ borderRadius: 999 }}>
-        <RankedAvatar badge={null} userId={user?.id} src={user?.image} alt={name} size={40} />
+        <RankedAvatar badge={null} userId={user?.id} src={user?.image} alt={name} size={32} />
       </div>
       <span
         style={{
-          fontSize: 24, fontWeight: winner ? 700 : 500,
+          fontSize: 19, fontWeight: winner ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           color: winner ? "#5eead4" : "#fff",
           textShadow: winner ? "0 0 18px rgba(45,212,191,0.5)" : "none",
         }}
@@ -329,7 +331,7 @@ function PlayerName({
     </>
   );
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 200, flexDirection: align === "right" ? "row-reverse" : "row" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width: 150, minWidth: 0, flexDirection: align === "right" ? "row-reverse" : "row" }}>
       {row}
     </div>
   );
@@ -337,10 +339,10 @@ function PlayerName({
 
 function Score({ score1, score2 }: { score1: number | null; score2: number | null }) {
   if (score1 == null && score2 == null) {
-    return <span style={{ fontSize: 22, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>vs</span>;
+    return <span style={{ fontSize: 20, color: "rgba(255,255,255,0.3)", fontWeight: 600, flexShrink: 0 }}>vs</span>;
   }
   return (
-    <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", display: "flex", gap: 10 }}>
+    <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", display: "flex", gap: 8, flexShrink: 0 }}>
       {/* key=score* lässt die Ziffer bei jeder Änderung einmal "poppen", statt sie
          unbemerkt auszutauschen — genau das Signal, das ein Live-Score braucht. */}
       <span key={`s1-${score1}`} className="oma-anim-pop">{score1 ?? 0}</span>
@@ -364,6 +366,9 @@ export function PanelShell({ title, children }: { title: string; children: React
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         padding: "15px 18px",
         overflow: "hidden",
+        // Füllt die feste Kachelhöhe (StackedLayout) — ohne feste Höhe einfach so hoch wie der Inhalt.
+        height: "100%",
+        boxSizing: "border-box",
       }}
     >
       <TopEdge radius={16} />

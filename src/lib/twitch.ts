@@ -200,3 +200,32 @@ export async function getTwitchGameNames(ids: string[]): Promise<Map<string, str
   } catch { /* ohne Spielnamen weiter */ }
   return names;
 }
+
+export type TwitchChannelInfo = {
+  broadcaster_id: string;
+  broadcaster_login: string;
+  game_id: string;
+  game_name: string;
+  /** Inhaltskennzeichnungen, z.B. "MatureGame" (automatisch bei Spielen ab 18), "ProfanityVulgarity". */
+  content_classification_labels: string[];
+};
+
+/** Kanal-Infos inkl. Inhaltskennzeichnungen (100 Kanäle je Anfrage). Fehler → fehlende Einträge. */
+export async function getChannelInfos(broadcasterIds: string[]): Promise<TwitchChannelInfo[]> {
+  const ids = [...new Set(broadcasterIds.filter(Boolean))];
+  if (ids.length === 0 || !TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) return [];
+  const results: TwitchChannelInfo[] = [];
+  try {
+    const token = await getAppAccessToken();
+    for (let i = 0; i < ids.length; i += 100) {
+      const params = ids.slice(i, i + 100).map(id => `broadcaster_id=${encodeURIComponent(id)}`).join("&");
+      const res = await fetch(`https://api.twitch.tv/helix/channels?${params}`, {
+        headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      results.push(...((await res.json()) as { data: TwitchChannelInfo[] }).data);
+    }
+  } catch { /* ohne Kanal-Infos weiter */ }
+  return results;
+}

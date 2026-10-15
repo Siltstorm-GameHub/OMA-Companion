@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Eye, EyeOff, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer, Swords, Moon, Rocket, Clapperboard, LogOut, LayoutGrid, Tv2,
+  ArrowRight as SkipForward,
 } from "@/components/icons";
 import { SCENE_LABELS, type OverlayControl, type OverlayScene } from "@/components/overlay/types";
 import OverlayLayoutsEditor, { type OverlayLayouts } from "@/components/overlay/OverlayLayoutsEditor";
@@ -94,7 +95,7 @@ export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
   }, [countingDown]);
 
   async function update(
-    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; scene: OverlayScene; countdownMinutes: number | null }>,
+    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; scene: OverlayScene; countdownMinutes: number | null; skipClip: true }>,
     optimistic: Partial<OverlayControl>,
     optimisticRemaining?: number | null,
   ) {
@@ -145,6 +146,7 @@ export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
   const startZoom = (key: string) => update({ zoom: key, zoomSeconds: duration }, { zoom: key }, duration);
   const stopZoom = () => update({ zoom: null }, { zoom: null, zoomUntil: null }, null);
   const setScene = (scene: OverlayScene) => update({ scene }, { scene });
+  const skipClip = () => update({ skipClip: true }, {});
   const startCountdown = (minutes: number) => {
     setCountdown(minutes * 60);
     update({ countdownMinutes: minutes }, {});
@@ -199,6 +201,14 @@ export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
             );
           })}
         </div>
+        {CLIP_SCENES.includes(control.scene) && (
+          <button
+            onClick={skipClip}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold border border-white/[0.08] text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/10"
+          >
+            <SkipForward className="w-4 h-4" /> Nächster Clip
+          </button>
+        )}
         <p className="text-xs text-gray-500">
           {CLIP_SCENES.includes(control.scene)
             ? state.clipCount > 0
