@@ -60,7 +60,7 @@ export default function ResetSelectiveButton({ series }: { series: SeriesOption[
             Setzt Münzen aller User auf 0 und löscht alle Events/Eventreihen — außer den hier ausgewählten
             Eventreihen. Deren Ligapunkte, Rang-Punkte und Event-Statistiken bleiben erhalten. Zusätzlich
             zurückgesetzt: LuL, Quest-Fortschritt, Duelle, Event-Vorhersagen, Shop-Inventar. Unangetastet:
-            Abzeichen, Wanderpokale, Clip-Contests, Spendenpool.
+            Wanderpokale, Clip-Contests, Spendenpool.
           </p>
 
           <button

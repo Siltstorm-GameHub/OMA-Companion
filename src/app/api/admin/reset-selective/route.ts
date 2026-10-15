@@ -7,7 +7,7 @@ import { resetAllExceptSeries } from "@/lib/reset-selective";
  * Setzt Münzen & Rang-Punkte aller User zurück, außer den ausgewählten Eventreihen (deren
  * Rang-Punkte-Beitrag erhalten bleibt) — inkl. vollständiger Löschung aller Events/Eventreihen
  * außerhalb der Auswahl sowie LuL, Quest-Fortschritt, Duellen, Vorhersagen und Shop-Inventar.
- * Badges, Wanderpokale, Clip-Contests und der Spendenpool bleiben unangetastet.
+ * Wanderpokale, Clip-Contests und der Spendenpool bleiben unangetastet.
  */
 export async function POST(req: NextRequest) {
   await requireRole("admin");

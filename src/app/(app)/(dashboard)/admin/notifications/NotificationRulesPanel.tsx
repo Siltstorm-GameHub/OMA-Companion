@@ -35,14 +35,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   events:       "Events",
   tournaments:  "Turniere",
   quests:       "Quests",
-  badges:       "Abzeichen",
   clips:        "Clip des Monats",
   rank:         "Rang",
   battle_cards: "Battle Cards",
   system:       "System",
 };
 
-const CATEGORY_ORDER = ["events", "tournaments", "quests", "badges", "clips", "rank", "battle_cards", "system"];
+const CATEGORY_ORDER = ["events", "tournaments", "quests", "clips", "rank", "battle_cards", "system"];
 
 // Welche Platzhalter pro Regel beim Versand ersetzt werden (siehe src/lib/notify-dispatch.ts Aufrufer)
 const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
@@ -91,16 +90,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{questTitle}", description: "Titel der Quest" },
     { key: "{reward}", description: "Münzen-Belohnung" },
   ],
-  badge_earned: [
-    { key: "{badgeIcon}", description: "Icon des Abzeichens" },
-    { key: "{badgeName}", description: "Name des Abzeichens" },
-    { key: "{badgeDesc}", description: "Beschreibung des Abzeichens" },
-  ],
-  badge_awarded: [
-    { key: "{badgeIcon}", description: "Icon des Abzeichens" },
-    { key: "{badgeName}", description: "Name des Abzeichens" },
-    { key: "{badgeDesc}", description: "Beschreibung des Abzeichens" },
-  ],
   clip_started: [
     { key: "{month}", description: "Monatsname" },
     { key: "{year}", description: "Jahr" },
@@ -145,8 +134,6 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   prediction_result: { "{result}": "richtig" },
   duel_challenge:  { "{challenger}": "MaxMustermann", "{wager}": "100" },
   duel_result:     { "{result}": "Du hast gegen MaxMustermann gewonnen und 100 Münzen erhalten!" },
-  badge_earned:    { "{badgeIcon}": "🏅", "{badgeName}": "Serien-Sieger", "{badgeDesc}": "3 Events in Folge gewonnen" },
-  badge_awarded:   { "{badgeIcon}": "🏅", "{badgeName}": "Serien-Sieger", "{badgeDesc}": "3 Events in Folge gewonnen" },
   clip_started:    { "{month}": "Dezember", "{year}": "2026", "{nominationCount}": "12" },
   clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
   clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },

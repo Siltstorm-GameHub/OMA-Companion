@@ -147,26 +147,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/battle-cards/my-card",
   },
   {
-    key: "badge_earned",
-    label: "System-Abzeichen freigeschaltet",
-    description: "Wenn ein Nutzer automatisch ein System-Abzeichen erreicht.",
-    category: "badges",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "{badgeIcon} Neues Abzeichen freigeschaltet!",
-    bodyTemplate: "„{badgeName}\" — {badgeDesc}",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "badge_awarded",
-    label: "Abzeichen von Admin vergeben",
-    description: "Wenn ein Admin ein individuelles Abzeichen vergibt.",
-    category: "badges",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: true, discordChanEnabled: false,
-    titleTemplate: "{badgeIcon} Neues Abzeichen erhalten!",
-    bodyTemplate: "„{badgeName}\" — {badgeDesc}",
-    urlTemplate: "/profile",
-  },
-  {
     key: "clip_started",
     label: "Clip des Monats – Abstimmung gestartet",
     description: "Wenn ein neuer Clip-Contest erstellt wird.",
@@ -692,6 +672,8 @@ const RULES: RuleSeed[] = [
 async function main() {
   // Entfernte Regel: monatliche Discord-Rangliste (Cron wurde gelöscht)
   await prisma.notificationRule.deleteMany({ where: { key: "leaderboard" } });
+  // Entfernte Regeln: Abzeichen-System wurde komplett entfernt
+  await prisma.notificationRule.deleteMany({ where: { key: { in: ["badge_earned", "badge_awarded"] } } });
 
   const legacyConfig = Object.fromEntries(
     (await prisma.botConfig.findMany()).map((r) => [r.key, r.value]),
