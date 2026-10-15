@@ -5,7 +5,7 @@ import AdminNav from "./AdminNav";
 // Der blanket Gate hier lässt zusätzlich zu Moderatoren/Admins auch reine Squad-Captains durch (globale
 // Rolle bleibt "user") — jede einzelne Unterseite hat aber weiterhin ihre eigene Rechteprüfung, die für
 // Captains standardmäßig moderator-only bleibt. Nur die Event-/Reihen-bezogenen Seiten wurden gezielt auf
-// requireModeratorOr...SquadCaptain umgestellt — alle anderen (Nutzer, Badges, Server, …) bleiben für
+// requireModeratorOr...SquadCaptain umgestellt — alle anderen (Nutzer, Server, …) bleiben für
 // Captains dadurch automatisch verschlossen, ohne dass hier eine Sonderbehandlung nötig ist.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { captainedSquadIds } = await requireModeratorOrAnySquadCaptain();

@@ -13,10 +13,8 @@ import WanderpocalSection, { type WanderpocalHolderInfo } from "@/components/Wan
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
-import type { Badge } from "@/lib/badges";
 import type { FavoriteGame } from "@/lib/favorite-games";
 import type { WanderpocalHolder, WanderpocalStat } from "@/lib/wanderpocal";
-import BadgesSection from "./BadgesSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection, { type ProfileSquad } from "./SquadsSection";
 import ProfileCompletion from "./ProfileCompletion";
@@ -28,15 +26,6 @@ import ProfileQuestsAndTournaments, {
 } from "./ProfileQuestsAndTournaments";
 import CommunityJobsPanel from "./CommunityJobsPanel";
 import ProfileJobBadge from "./ProfileJobBadge";
-
-interface CustomBadgeDisplay {
-  id:       string;
-  icon:     string;
-  name:     string;
-  desc:     string;
-  category: string;
-  earnedAt: string;
-}
 
 interface Props {
   // Hero
@@ -61,9 +50,6 @@ interface Props {
   pokaleCount:              number;
   topGames:                 string[];
   favoriteGames:            FavoriteGame[];
-  systemBadges:             Badge[];
-  customBadges:             CustomBadgeDisplay[];
-  showcaseBadgeKeys:        string[];
   voiceHours:               number;
   messageCount:             number;
   coinsEarned:              number;
@@ -112,7 +98,7 @@ export default function ProfileMobileView(props: Props) {
     bannerUrl, displayName, avatarUrl, rankPoints, rankLabel, rankColor, memberSince, totalPoints,
     editorBirthday, editorBio, editorTwitchLogin, editorBannerUrl,
     userId, eventCount, eventWins, pollMasterCount, pokaleCount, topGames, favoriteGames,
-    systemBadges, customBadges, showcaseBadgeKeys, voiceHours, messageCount, coinsEarned, coinsSpent,
+    voiceHours, messageCount, coinsEarned, coinsSpent,
     questsWithProgress, tournamentParticipations, squads, profileCompletionDone, rewardPerItem, reviewYears,
     hasTwitch, eventRegs,
     wanderpokalItems, eventPokalItems, wanderpocalTrophies, wanderpocalStats, wanderpocalRankMap, wanderpocalHolders,
@@ -236,12 +222,6 @@ export default function ProfileMobileView(props: Props) {
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🥇 Event-Pokale</h2>
               <Trophy3DViewer items={eventPokalItems} emptyMessage="Noch keine Event-Pokale gewonnen" />
             </section>
-
-            <BadgesSection
-              systemBadges={systemBadges}
-              customBadges={customBadges}
-              showcaseKeys={showcaseBadgeKeys}
-            />
 
             <section>
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>

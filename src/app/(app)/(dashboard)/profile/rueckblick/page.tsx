@@ -7,13 +7,12 @@ import { getAvailableReviewYears, buildYearReview } from "@/lib/year-review";
 import { POKAL_CATEGORY_IMAGE, getPokalCategoryLabel } from "@/lib/pokal";
 import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
-import BadgeIcon from "@/components/BadgeIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
 import { TrendingUp } from "@/components/icons";
 import { Sparkles } from "@/components/icons";
-import { CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Award, Dices, Target } from "@/components/icons";
+import { CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Dices, Target } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [
@@ -179,22 +178,6 @@ export default async function YearReviewPage({
             </div>
           )}
         </div>
-      )}
-
-      {/* ── Neue Abzeichen ───────────────────────────────────────────── */}
-      {review.newBadges.length > 0 && (
-        <section>
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <Award className="w-3.5 h-3.5" /> {review.newBadges.length} neue Abzeichen
-          </h2>
-          <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">
-            {review.newBadges.map((b, i) => (
-              <span key={`${b.name}-${i}`} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-gray-300">
-                <BadgeIcon icon={b.icon} size={24} alt={b.name} /> {b.name}
-              </span>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* ── Neue Pokale ──────────────────────────────────────────────── */}

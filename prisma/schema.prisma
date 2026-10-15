@@ -64,9 +64,7 @@ model User {
   eloGems         Int @default(1000)
   eloGemsMatches  Int @default(0)
 
-  // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
-  showcaseBadgesJson String?
-  // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | "badge:<key>" | null }.
+  // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | null }.
   // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
   // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
   vitrineSlotsJson   String?
@@ -99,8 +97,6 @@ model User {
   contestVotes                     ClipContestVote[]
   yearlyClipVotes                  YearlyClipContestVote[]
   eventPollVotes                   EventPollVote[]
-  systemBadges                     UserSystemBadge[]
-  customBadgeAwards                UserCustomBadge[]
   dailyMessages                    DailyMessage[]
   dailyPolls                       DailyPoll[]
   dailyPollVotes                   DailyPollVote[]
@@ -986,45 +982,6 @@ model LobbyMessage {
 
   @@index([createdAt])
   @@map("lobbymessage")
-}
-
-// ── Abzeichen ────────────────────────────────────────────────────────────────
-
-// Automatisch vergebene System-Abzeichen (definiert in badges.ts)
-model UserSystemBadge {
-  userId   String
-  badgeKey String
-  earnedAt DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, badgeKey])
-}
-
-// Admin-erstellte Custom-Abzeichen
-model CustomBadge {
-  id        String            @id @default(cuid())
-  icon      String // Emoji — Fallback, wenn imageUrl leer ist
-  imageUrl  String? // Eigene Abzeichen-Grafik (Vercel Blob); hat Vorrang vor icon
-  name      String
-  desc      String
-  category  String // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
-  coins     Int               @default(0) // optionale Münzen-Belohnung
-  createdAt DateTime          @default(now())
-  createdBy String // Admin-User-ID
-  awards    UserCustomBadge[]
-}
-
-// Manuell vergebene Custom-Abzeichen
-model UserCustomBadge {
-  userId        String
-  customBadgeId String
-  earnedAt      DateTime    @default(now())
-  awardedBy     String // Admin-User-ID
-  note          String? // optionale Notiz vom Admin
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
-
-  @@id([userId, customBadgeId])
 }
 
 // ── Wanderpokal ──────────────────────────────────────────────────────────────

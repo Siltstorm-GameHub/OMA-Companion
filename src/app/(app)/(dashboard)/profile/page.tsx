@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import RankedAvatar from "@/components/RankedAvatar";
-import { computeBadges } from "@/lib/badges";
-import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import PokalSection from "@/components/PokalSection";
@@ -50,12 +48,12 @@ export default async function ProfilePage() {
   const month = nowParts.month;
   const year  = nowParts.year;
 
-  const [[user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships], wanderpokalStatusData] =
+  const [[user, eventRegs, eventCount, startedEvents, tournamentParticipations, questsWithProgress, pokale, leaderboardRank, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships], wanderpokalStatusData] =
     await Promise.all([
       Promise.all([
         prisma.user.findUnique({
           where:  { id: userId },
-          select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseBadgesJson: true, favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, bannerUrl: true, voiceMinutesTotal: true, messagesTotal: true },
+          select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, bannerUrl: true, voiceMinutesTotal: true, messagesTotal: true },
         }),
         prisma.eventRegistration.findMany({
           where:   { userId },
@@ -78,7 +76,6 @@ export default async function ProfilePage() {
           },
           orderBy: { id: "desc" }, take: 10,
         }),
-        prisma.tournamentParticipant.count({ where: { userId } }),
         prisma.quest.findMany({
           where:   { month, year },
           include: { progress: { where: { userId } } },
@@ -91,12 +88,6 @@ export default async function ProfilePage() {
         prisma.user.findUnique({ where: { id: userId }, select: { rankPoints: true } }).then(async (u) => {
           const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
           return higher + 1;
-        }),
-        prisma.userSystemBadge.findMany({ where: { userId }, select: { badgeKey: true } }),
-        prisma.userCustomBadge.findMany({
-          where: { userId },
-          include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
-          orderBy: { earnedAt: "asc" },
         }),
         prisma.wanderpocalHolder.findMany({ where: { userId } }),
         prisma.wanderpocalStat.findMany({ where: { userId } }),
@@ -140,9 +131,6 @@ export default async function ProfilePage() {
   const messageCount = user?.messagesTotal ?? 0;
   const coinsEarned  = coinsEarnedAgg._sum.amount ?? 0;
   const coinsSpent   = Math.abs(coinsSpentAgg._sum.amount ?? 0);
-  const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount }, earnedSystemKeys);
-  const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = formatBerlinDate(user.createdAt, { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
@@ -164,20 +152,8 @@ export default async function ProfilePage() {
     })
   );
 
-  const showcaseBadgeKeys: string[] = (() => {
-    try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
-  })();
-
   const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
 
-  const mappedCustomBadges = userCustomBadges.map(uc => ({
-    id:       uc.badge.id,
-    icon:     uc.badge.icon,
-    name:     uc.badge.name,
-    desc:     uc.badge.desc,
-    category: uc.badge.category,
-    earnedAt: uc.earnedAt.toISOString(),
-  }));
 
   const profileCompletionDone = {
     bio:           !!user.bio,
@@ -275,7 +251,7 @@ export default async function ProfilePage() {
                 <JobBadge userId={userId} />
               </div>
               <p className="text-xs text-gray-500 mb-1">
-                Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
+                Mitglied seit {memberSince}
               </p>
               <div className="mb-1"><ProfileJobBadge userId={userId} /></div>
               <div className="flex items-center gap-1 mb-2">
@@ -357,13 +333,6 @@ export default async function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* ── Linke Spalte ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
-
-            {/* Abzeichen */}
-            <BadgesSection
-              systemBadges={badges}
-              customBadges={mappedCustomBadges}
-              showcaseKeys={showcaseBadgeKeys}
-            />
 
             {/* Wanderpokal */}
             <WanderpocalSection
@@ -454,9 +423,6 @@ export default async function ProfilePage() {
           pokaleCount={pokale.length}
           topGames={topGames}
           favoriteGames={favoriteGames}
-          systemBadges={badges}
-          customBadges={mappedCustomBadges}
-          showcaseBadgeKeys={showcaseBadgeKeys}
           voiceHours={voiceHours}
           messageCount={messageCount}
           coinsEarned={coinsEarned}

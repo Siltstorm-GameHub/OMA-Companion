@@ -5,11 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import RankedAvatar from "@/components/RankedAvatar";
 import BotPreviewShell from "@/components/BotPreviewShell";
-import { computeBadges } from "@/lib/badges";
 import { Clock, MessageSquare, ArrowLeft } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
-import BadgesSection from "../BadgesSection";
 import PokalSection from "@/components/PokalSection";
 import { JournalistPortfolio } from "@/components/JournalistReportLists";
 import { FotografPortfolio } from "@/components/FotografGalleries";
@@ -81,14 +79,14 @@ export default async function PublicProfilePage({
   const month = nowParts.month;
   const year  = nowParts.year;
 
-  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, pokale, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, totalUsers, questsWithProgress, pokale, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
         select: {
           id: true, name: true, username: true, image: true,
           points: true, rankPoints: true, createdAt: true,
-          showcaseBadgesJson: true, favoriteGamesJson: true,
+          favoriteGamesJson: true,
           bio: true, birthday: true, twitchLogin: true,
           voiceMinutesTotal: true, messagesTotal: true,
         },
@@ -116,7 +114,6 @@ export default async function PublicProfilePage({
         orderBy: { id: "desc" },
         take: 10,
       }),
-      prisma.tournamentParticipant.count({ where: { userId: id } }),
       prisma.user.count(),
       prisma.quest.findMany({
         where: { month, year },
@@ -126,12 +123,6 @@ export default async function PublicProfilePage({
       prisma.pokal.findMany({
         where: { userId: id },
         orderBy: { awardedAt: "desc" },
-      }),
-      prisma.userSystemBadge.findMany({ where: { userId: id }, select: { badgeKey: true } }),
-      prisma.userCustomBadge.findMany({
-        where: { userId: id },
-        include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
-        orderBy: { earnedAt: "asc" },
       }),
       prisma.wanderpocalHolder.findMany({ where: { userId: id } }),
       prisma.wanderpocalStat.findMany({ where: { userId: id } }),
@@ -189,15 +180,9 @@ export default async function PublicProfilePage({
   const messageCount = user.messagesTotal ?? 0;
   const coinsEarned  = coinsEarnedAgg._sum.amount ?? 0;
   const coinsSpent   = Math.abs(coinsSpentAgg._sum.amount ?? 0);
-  const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount }, earnedSystemKeys);
-  const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = formatBerlinDate(user.createdAt, { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
-  const showcaseBadgeKeys: string[] = (() => {
-    try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
-  })();
   const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
 
   // Für den 3D-Pokal-Viewer + "wer ist aktueller Halter"-Anzeige — dieselbe
@@ -273,7 +258,7 @@ export default async function PublicProfilePage({
               <JobBadge userId={id} />
             </div>
             <p className="text-xs text-gray-500 mb-1">
-              Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
+              Mitglied seit {memberSince}
             </p>
             <div className="flex items-center gap-1 mb-2">
               <CoinIcon size={12} />
@@ -324,21 +309,6 @@ export default async function PublicProfilePage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* ── Linke Spalte ─────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
-
-          {/* Abzeichen */}
-          <BadgesSection
-            systemBadges={badges}
-            customBadges={userCustomBadges.map(uc => ({
-              id:       uc.badge.id,
-              icon:     uc.badge.icon,
-              name:     uc.badge.name,
-              desc:     uc.badge.desc,
-              category: uc.badge.category,
-              earnedAt: uc.earnedAt.toISOString(),
-            }))}
-            showcaseKeys={showcaseBadgeKeys}
-            readOnly
-          />
 
           {/* Wanderpokal */}
           <WanderpocalSection

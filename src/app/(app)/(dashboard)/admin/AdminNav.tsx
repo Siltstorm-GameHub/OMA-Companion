@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { Handshake } from "@/components/icons";
 import { Users, Users2 } from "@/components/icons";
 import { Server } from "@/components/icons";
-import { LayoutDashboard, Bell, CalendarDays, Medal, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
+import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase } from "@/components/icons";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
 import DailyPollActionBadge from "@/components/DailyPollActionBadge";
@@ -69,11 +69,10 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs"],
+    prefixes: ["/admin/notifications", "/admin/users", "/admin/minigames", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
-      { href: "/admin/badges",        label: "Abzeichen",        icon: Medal,       minRole: "admin" },
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },

@@ -1,5 +1,4 @@
 import { prisma } from "./prisma";
-import { getBadgeDef } from "./badges";
 import { getBerlinDateParts } from "./time";
 
 /** Abgeschlossene Jahre, für die ein Rückblick sinnvoll ist (Beitrittsjahr bis letztes volles Jahr). */
@@ -31,7 +30,6 @@ export type YearReview = {
   voiceHoursEstimate: number;
   messagesEstimate:   number;
 
-  newBadges: { icon: string; name: string }[];
 
   newPokale: { id: string; title: string; category: string; isSeries: boolean }[];
 
@@ -54,7 +52,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     biggestWin, txInYear,
     eventRegs, tournamentParts,
     lulEntries, duelsRaw, predictionRows,
-    donationsAgg, systemBadges, customBadges, pokaleAcquired,
+    donationsAgg, pokaleAcquired,
   ] = await Promise.all([
     prisma.pointTransaction.aggregate({
       where: { userId, amount: { gt: 0 }, reason: { startsWith: "[Münzen]" }, createdAt: { gte: yearStart, lt: yearEnd } },
@@ -104,14 +102,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
       where: { userId, year },
       _sum:  { amount: true },
     }),
-    prisma.userSystemBadge.findMany({
-      where:  { userId, earnedAt: { gte: yearStart, lt: yearEnd } },
-      select: { badgeKey: true },
-    }),
-    prisma.userCustomBadge.findMany({
-      where:   { userId, earnedAt: { gte: yearStart, lt: yearEnd } },
-      include: { badge: { select: { icon: true, name: true } } },
-    }),
     prisma.pokal.findMany({
       where:  { userId, awardedAt: { gte: yearStart, lt: yearEnd } },
       select: { id: true, title: true, category: true, isSeries: true },
@@ -147,12 +137,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
   const busiestEntry = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
   const busiestMonth = busiestEntry ? { month: Number(busiestEntry[0]), count: busiestEntry[1] } : null;
 
-  const newBadges = [
-    ...systemBadges.map(b => getBadgeDef(b.badgeKey)).filter((b): b is NonNullable<typeof b> => !!b)
-      .map(b => ({ icon: b.icon, name: b.name })),
-    ...customBadges.map(c => ({ icon: c.badge.icon, name: c.badge.name })),
-  ];
-
   const newPokale = pokaleAcquired;
 
   const lul = lulEntries.length > 0 ? {
@@ -185,7 +169,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     tournamentWins,
     voiceHoursEstimate,
     messagesEstimate,
-    newBadges,
     newPokale,
     lul,
     duels,

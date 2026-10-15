@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { checkAndAwardBadges } from "@/lib/award-badges";
 import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -159,9 +158,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // Fire-and-forget badge check on every login
       if (token.id && user) {
-        checkAndAwardBadges(token.id as string).catch(() => {});
         if (token.discordId) {
           ensureCommunityCard({ userId: token.id as string, discordId: token.discordId as string, displayName: user.name ?? "OMA-Mitglied" }).catch(() => {});
         }

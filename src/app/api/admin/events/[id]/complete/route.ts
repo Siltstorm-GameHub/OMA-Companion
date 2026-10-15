@@ -3,7 +3,6 @@ import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
-import { checkAndAwardBadges } from "@/lib/award-badges";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { awardEventPokal } from "@/lib/award-pokal";
@@ -1271,11 +1270,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
         note:             body.finalRankingNote?.trim() || null,
       });
     })().catch(err => console.error("[Discord] Ergebnis-Post fehlgeschlagen:", err));
-  }
-
-  // Badge-Check für alle Teilnehmer (fire-and-forget)
-  for (const userId of participantIds) {
-    checkAndAwardBadges(userId).catch(() => {});
   }
 
   // Wanderpokal: Trophäen-Halter neu berechnen (fire-and-forget)

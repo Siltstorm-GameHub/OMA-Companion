@@ -14,7 +14,7 @@ type Prefs = {
 
 const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string }[] = [
   { key: "event",  label: "Events",          desc: "Event startet & Ergebnis (nur bei Anmeldung)", icon: "📅" },
-  { key: "badge",  label: "Abzeichen",        desc: "Neues Badge freigeschaltet",                   icon: "🏅" },
+  { key: "badge",  label: "Battle Cards",     desc: "Stufenaufstieg deiner Community-Karte",         icon: "🃏" },
   { key: "quest",  label: "Quests",           desc: "Quest abgeschlossen & Belohnung erhalten",      icon: "⭐" },
   { key: "points", label: "Punkte & Münzen",  desc: "Münzen oder Rang-Punkte erhalten",              icon: "💰" },
   { key: "clip",   label: "Clip des Monats",  desc: "Abstimmung & Ergebnisse",                       icon: "🎬" },
