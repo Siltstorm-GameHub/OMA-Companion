@@ -5,6 +5,7 @@ import { ensureUserOverlayToken, buildStreamerOverlayUrl, STREAMER_OVERLAY_SETTI
 import { sanitizeLayout, sanitizePauseText, parseStreamerConfig, sanitizeClipConfig } from "@/components/overlay/layout";
 import { isPauseBackground } from "@/components/overlay/pauseBackgrounds";
 import { ELEMENT_KEYS, PROFILE_ELEMENT_KEYS } from "@/components/overlay/types";
+import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS } from "@/components/overlay/sceneLayouts";
 import { invalidateStreamerConfig } from "@/lib/overlay-state";
 
 async function requireStreamer() {
@@ -27,19 +28,22 @@ export async function GET() {
 }
 
 /**
- * PUT { event?, profile?, pauseText?, lite?, pauseBackground?, clips? } — speichert die Einstellungen des festen
+ * PUT { event?, profile?, pauseLayout?, clipLayout?, pauseText?, lite?, pauseBackground?, clips? } — speichert die Einstellungen des festen
  * Streamer-Links. Nur mitgeschickte Felder ändern sich; event/profile = null setzt den Modus aufs
  * Standard-Layout zurück. Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
 export async function PUT(req: NextRequest) {
   const r = await requireStreamer();
   if ("error" in r) return r.error;
-  const body = await req.json().catch(() => null) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown } | null;
+  const body = await req.json().catch(() => null) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown; pauseLayout?: unknown; clipLayout?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const event = body.event == null ? null : sanitizeLayout(body.event, ELEMENT_KEYS);
   const profile = body.profile == null ? null : sanitizeLayout(body.profile, PROFILE_ELEMENT_KEYS);
-  if ((body.event != null && !event) || (body.profile != null && !profile)) {
+  const pauseLayout = body.pauseLayout == null ? null : sanitizeLayout(body.pauseLayout, PAUSE_ELEMENT_KEYS);
+  const clipLayout = body.clipLayout == null ? null : sanitizeLayout(body.clipLayout, CLIP_ELEMENT_KEYS);
+  if ((body.event != null && !event) || (body.profile != null && !profile)
+    || (body.pauseLayout != null && !pauseLayout) || (body.clipLayout != null && !clipLayout)) {
     return NextResponse.json({ error: "Layout ungültig – mindestens ein Element muss aktiv sein" }, { status: 400 });
   }
 
@@ -47,6 +51,8 @@ export async function PUT(req: NextRequest) {
   const config = parseStreamerConfig(current?.overlayLayoutJson);
   if ("event" in body) config.event = event;
   if ("profile" in body) config.profile = profile;
+  if ("pauseLayout" in body) config.pauseLayout = pauseLayout;
+  if ("clipLayout" in body) config.clipLayout = clipLayout;
   if ("pauseText" in body) config.pauseText = sanitizePauseText(body.pauseText);
   if ("lite" in body) config.lite = body.lite === true;
   if ("pauseBackground" in body && isPauseBackground(body.pauseBackground)) config.pauseBackground = body.pauseBackground;

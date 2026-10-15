@@ -3,19 +3,20 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getBlockedClipIds, getChannelClips, invalidateClipBlocks, invalidateClipPool } from "@/lib/overlay-clips";
 
-/** Eigene Clips im Community-Clip-Loop: Zustimmung und einzelne Clips ausschließen. */
+/** Eigene Clips im Community-Clip-Loop: abmelden/wieder anmelden und einzelne Clips ausschließen. */
 
 async function currentUser() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  return prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, twitchLogin: true, overlayClipsOptIn: true } });
+  return prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, twitchLogin: true, overlayClipsOptOut: true } });
 }
 
-async function describe(user: { twitchLogin: string | null; overlayClipsOptIn: boolean }) {
-  if (!user.twitchLogin) return { optIn: user.overlayClipsOptIn, clips: [] };
+/** `optIn` = Clips laufen im Loop (Standard), gespeichert wird die Abmeldung (overlayClipsOptOut). */
+async function describe(user: { twitchLogin: string | null; overlayClipsOptOut: boolean }) {
+  if (!user.twitchLogin) return { optIn: !user.overlayClipsOptOut, clips: [] };
   const [clips, blocked] = await Promise.all([getChannelClips(user.twitchLogin), getBlockedClipIds()]);
   return {
-    optIn: user.overlayClipsOptIn,
+    optIn: !user.overlayClipsOptOut,
     clips: [...clips].sort((a, b) => b.views - a.views).map(c => ({ ...c, blocked: blocked.has(c.id) })),
   };
 }
@@ -39,9 +40,9 @@ export async function PUT(req: NextRequest) {
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   if ("optIn" in body) {
-    const optIn = body.optIn === true;
-    await prisma.user.update({ where: { id: user.id }, data: { overlayClipsOptIn: optIn } });
-    user.overlayClipsOptIn = optIn;
+    const optOut = body.optIn !== true;
+    await prisma.user.update({ where: { id: user.id }, data: { overlayClipsOptOut: optOut } });
+    user.overlayClipsOptOut = optOut;
     invalidateClipPool();
   }
 

@@ -32,6 +32,7 @@ import { POINT_RULES } from "@/lib/points";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import AccountDataSection from "@/components/AccountDataSection";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
 import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "@/lib/trophy-models";
@@ -393,6 +394,8 @@ export default async function ProfilePage() {
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📺 Stream-Overlay</h2>
               <ProfileOverlayButton hasTwitch={!!user.twitchLogin} />
             </section>
+
+            <AccountDataSection />
 
           </div>
         </div>

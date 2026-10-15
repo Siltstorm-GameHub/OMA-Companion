@@ -197,7 +197,11 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs text-gray-700 mt-4 px-2">
-            Durch die Anmeldung stimmst du der Nutzung deiner Discord-Daten zu.
+            Mit der Anmeldung werden deine Discord-Daten wie in der{" "}
+            <a href="/datenschutz" className="underline hover:text-gray-500">Datenschutzerklärung</a> beschrieben verarbeitet.
+          </p>
+          <p className="text-center text-[11px] text-gray-700 mt-2">
+            <a href="/impressum" className="hover:text-gray-500">Impressum</a> · <a href="/datenschutz" className="hover:text-gray-500">Datenschutz</a>
           </p>
         </div>
       </div>

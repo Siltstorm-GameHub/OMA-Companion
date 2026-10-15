@@ -9,8 +9,9 @@ import type { ClipSource, OverlayClip } from "@/components/overlay/types";
  *
  * Die Clips bleiben bei Twitch und laufen im Overlay über den offiziellen Clip-Player (Einbettung
  * ist von Twitch ausdrücklich vorgesehen) — es wird nichts heruntergeladen oder neu geschnitten.
- * Im Pool landen nur Kanäle, deren Inhaber zugestimmt haben (User.overlayClipsOptIn), abzüglich
- * der Clips, die der Inhaber selbst oder Moderatoren ausgeschlossen haben (OverlayClipBlock).
+ * Im Pool landen alle Community-Kanäle außer denen, deren Inhaber sich abgemeldet haben
+ * (User.overlayClipsOptOut), abzüglich der Clips, die der Inhaber selbst oder Moderatoren
+ * ausgeschlossen haben (OverlayClipBlock).
  *
  * Last: Twitch wird pro Kanal höchstens alle CHANNEL_TTL_MS gefragt, der zusammengesetzte Pool
  * ist für alle Overlays derselbe.
@@ -24,6 +25,8 @@ const CLIPS_PER_CHANNEL = 25;
 const RECENT_DAYS = 30;
 /** Höchstens so viele Clips je Overlay-Abruf — reicht für weit über eine Stunde Loop. */
 const LOOP_LIMIT = 40;
+/** Quelle "all": alle Clips des Pools, nur gegen extreme Mengen gedeckelt (Overlay mischt selbst). */
+const ALL_LIMIT = 300;
 /** Ab so vielen passenden Clips zeigt die Quelle "game" nur das aktuelle Spiel. */
 const GAME_MIN_CLIPS = 3;
 
@@ -66,7 +69,7 @@ export function getChannelClips(login: string): Promise<ChannelClips> {
 export function getClipPool(): Promise<OverlayClip[]> {
   return poolCache.get("all", POOL_TTL_MS, async () => {
     const users = await prisma.user.findMany({
-      where: { overlayClipsOptIn: true, twitchLogin: { not: null }, leftServerAt: null },
+      where: { overlayClipsOptOut: false, twitchLogin: { not: null }, leftServerAt: null },
       select: { twitchLogin: true },
     });
     // Twitch-User-IDs gebündelt vorab auflösen, statt einzeln je Kanal.
@@ -93,6 +96,7 @@ export function invalidateClipBlocks() { blockCache.delete("all"); }
 
 /**
  * Clips für den Loop eines Streamers:
+ *   - all:    alle freigegebenen Clips (Standard),
  *   - top:    meistgesehene der letzten 90 Tage,
  *   - recent: neueste (letzte 30 Tage, sonst die neuesten überhaupt),
  *   - game:   passend zum Spiel, das der Streamer gerade auf Twitch spielt — zu wenige oder nicht
@@ -104,6 +108,7 @@ export async function getOverlayClips(userId: string, source: ClipSource): Promi
   const clips = pool.filter(c => !blocked.has(c.id));
   const byViews = () => [...clips].sort((a, b) => b.views - a.views);
 
+  if (source === "all") return clips.slice(0, ALL_LIMIT);
   if (source === "recent") {
     const sorted = [...clips].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const since = new Date(Date.now() - RECENT_DAYS * 86400_000).toISOString();

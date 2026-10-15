@@ -30,13 +30,15 @@ function snapToGrid(v: number): number { return Math.round(v / GRID_STEP_PCT) * 
  *  - Beim Ziehen rasten linke/obere Kanten zusätzlich an denen anderer Elemente ein (Ausrichtungs-
  *    Hilfslinien-Gefühl ohne die Linien selbst zu zeichnen), unabhängig je Achse. */
 export default function PositionCanvas<K extends string>({
-  options, elementSize, activeElements, positions, onChange,
+  options, elementSize, activeElements, positions, onChange, stacking = true,
 }: {
   options: CanvasElementOption<K>[];
   elementSize: Record<K, { width: number; height: number }>;
   activeElements: K[];
   positions: Record<K, Pos>;
   onChange: (key: K, pos: Pos) => void;
+  /** false = Elemente dürfen sich frei überlappen, ohne zu einem Stapel einzurasten (Vollbild-Szenen). */
+  stacking?: boolean;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{ key: K; grabDx: number; grabDy: number } | null>(null);
@@ -111,6 +113,7 @@ export default function PositionCanvas<K extends string>({
         return;
       }
 
+      if (!stacking) { onChange(drag.key, candidate); return; }
       const stackable = others.filter(k => !isFixed(k));
       const stackPartner = stackable.find(k => overlaps(candidate, drag.key, positions[k], k));
       onChange(drag.key, stackPartner ? { ...positions[stackPartner], scale: ownScale ?? positions[stackPartner].scale } : candidate);

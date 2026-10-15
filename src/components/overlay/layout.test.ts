@@ -6,6 +6,7 @@ import {
   sanitizeControl, parseOverlayControl, activeZoom, sanitizeClipConfig, DEFAULT_CLIP_CONFIG,
 } from "./layout";
 import { spreadChannels } from "./clip-order";
+import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS } from "./sceneLayouts";
 import { ELEMENT_KEYS, type ElementKey } from "./types";
 import { sameGame } from "../../lib/game-match";
 
@@ -51,7 +52,7 @@ describe("Overlay-Layout", () => {
     assert.equal(cfg.pauseText, "Gleich zurück");
     assert.equal(cfg.lite, true);
     assert.equal(cfg.pauseBackground, "dark");
-    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false, pauseBackground: "dark", clips: DEFAULT_CLIP_CONFIG });
+    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false, pauseBackground: "dark", clips: DEFAULT_CLIP_CONFIG, pauseLayout: null, clipLayout: null });
     assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "space" })).pauseBackground, "space");
     assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "gibtsnicht" })).pauseBackground, "dark");
     assert.equal(sanitizeLayout({ elements: {} }, ELEMENT_KEYS), null);
@@ -73,12 +74,12 @@ describe("Overlay-Layout", () => {
 
   test("Live-Steuerung: unbekannte Elemente fliegen raus, Zoom läuft ab", () => {
     const c = sanitizeControl({ hidden: ["table", "table", "favorites", 3, "community"], zoom: "seriesTable", zoomUntil: 5000, pause: true });
-    assert.deepEqual(c, { hidden: ["table", "community"], zoom: "seriesTable", zoomUntil: 5000, pause: true, countdownUntil: null });
+    assert.deepEqual(c, { hidden: ["table", "community"], zoom: "seriesTable", zoomUntil: 5000, scene: "pause", countdownUntil: null });
     assert.equal(activeZoom(c, 4999), "seriesTable");
     assert.equal(activeZoom(c, 5000), null);
     assert.equal(activeZoom({ ...c, zoomUntil: null }, 9e15), "seriesTable");
-    assert.deepEqual(sanitizeControl({ zoom: "badges" }), { hidden: [], zoom: null, zoomUntil: null, pause: false, countdownUntil: null });
-    assert.deepEqual(parseOverlayControl("{kaputt"), { hidden: [], zoom: null, zoomUntil: null, pause: false, countdownUntil: null });
+    assert.deepEqual(sanitizeControl({ zoom: "badges" }), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null });
+    assert.deepEqual(parseOverlayControl("{kaputt"), { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null });
   });
 
   test("Clip-Szenen: Standard, Teil-Update, ungültige Werte", () => {
@@ -96,9 +97,27 @@ describe("Overlay-Layout", () => {
     assert.equal(sanitizeControl({ countdownUntil: -5 }).countdownUntil, null);
   });
 
+  test("Szenen-Wechsel per Live-Steuerung", () => {
+    assert.equal(sanitizeControl({ scene: "clips" }).scene, "clips");
+    assert.equal(sanitizeControl({ scene: "quatsch" }).scene, "gameplay");
+    assert.equal(sanitizeControl({ scene: "outro", pause: true }).scene, "outro");
+    assert.equal(parseStreamerConfig(null).clips.source, "all");
+  });
+
   test("Clip-Loop: gleicher Kanal möglichst nie direkt hintereinander", () => {
     const order = spreadChannels(["a", "a", "a", "b", "b", "c"].map(channelLogin => ({ channelLogin })));
     for (let i = 1; i < order.length; i++) assert.notEqual(order[i].channelLogin, order[i - 1].channelLogin);
     assert.equal(spreadChannels([{ channelLogin: "a" }, { channelLogin: "a" }]).length, 2);
+  });
+
+  test("Szenen-Layouts: gespeichert oder Standard, unbekannte Bausteine fliegen raus", () => {
+    const cfg = parseStreamerConfig(JSON.stringify({
+      pauseLayout: { elements: { title: { x: 5, y: 5, scale: 1.4 }, quatsch: { x: 1, y: 1 } }, rotateSeconds: 10 },
+      clipLayout: { elements: { player: { x: 10, y: 10 } } },
+    }));
+    assert.deepEqual(cfg.pauseLayout?.elements, { title: { x: 5, y: 5, scale: 1.4 } });
+    assert.deepEqual(Object.keys(cfg.clipLayout!.elements), ["player"]);
+    assert.equal(sanitizeLayout({ elements: { brand: { x: 1, y: 1 } } }, PAUSE_ELEMENT_KEYS), null);
+    assert.ok(CLIP_ELEMENT_KEYS.includes("player"));
   });
 });

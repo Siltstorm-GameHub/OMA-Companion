@@ -4,6 +4,7 @@
  * Speichern der Einstellungen) dieselben Definitionen nutzt.
  */
 import type { SeriesRankingRow } from "@/lib/seriesRanking";
+import type { PauseElementKey, ClipElementKey } from "./sceneLayouts";
 
 export type OverlayEntry = {
   id: string;
@@ -176,14 +177,17 @@ export type StreamerOverlayPayload = (
   pauseText: string | null;
   /** Leicht-Modus: keine Unschärfe-/Glas-Effekte, keine Dauer-Animationen. */
   lite: boolean;
-  /** Pausen-Bildschirm per Live-Steuerung über das Spiel-Overlay gelegt. */
-  pause: boolean;
+  /** Per Live-Steuerung gewählte Szene — gilt für den Link ohne `&scene=`. */
+  scene: OverlayScene;
   /** Hintergrund der Pausen-Szene (Schlüssel aus pauseBackgrounds.ts). */
   pauseBackground: string;
   /** Einstellungen der Clip-Szenen (Intro, Clips, Outro). */
   clips: ClipSceneConfig;
   /** Ende des Intro-Countdowns (ms seit Epoch), per Live-Steuerung gestartet — null = kein Countdown. */
   countdownUntil: number | null;
+  /** Layouts der Pausen- und der Clip-Szenen (gespeichert oder Standard). */
+  pauseLayout: OverlayLayout<PauseElementKey>;
+  clipLayout: OverlayLayout<ClipElementKey>;
 };
 
 /** Szenen des festen Streamer-Links (`&scene=…`) — je OBS-Szene eine eigene Browser-Quelle. */
@@ -194,8 +198,12 @@ export const DEFAULT_INTRO_TEXT = "Stream startet gleich";
 export const DEFAULT_OUTRO_TEXT = "Danke fürs Zuschauen!";
 
 /** Welche Community-Clips der Loop zeigt. */
-export type ClipSource = "top" | "recent" | "game";
-export const CLIP_SOURCES: ClipSource[] = ["top", "recent", "game"];
+export type ClipSource = "all" | "top" | "recent" | "game";
+export const CLIP_SOURCES: ClipSource[] = ["all", "top", "recent", "game"];
+
+export const SCENE_LABELS: Record<OverlayScene, string> = {
+  gameplay: "Spiel", pause: "Pause", intro: "Intro", clips: "Clips", outro: "Outro",
+};
 
 export type ClipSceneConfig = {
   source: ClipSource;
@@ -232,8 +240,8 @@ export type OverlayControl = {
   zoom: string | null;
   /** Zeitpunkt (ms), ab dem der Zoom automatisch endet — null = bis zum Zurücksetzen. */
   zoomUntil: number | null;
-  /** Pausen-Bildschirm über das Spiel-Overlay legen. */
-  pause: boolean;
+  /** Aktive Szene des Links ohne `&scene=` (Spiel, Pause, Intro, Clips, Outro). */
+  scene: OverlayScene;
   /** Ende des Intro-Countdowns (ms seit Epoch), null = keiner. */
   countdownUntil: number | null;
 };
@@ -252,7 +260,7 @@ export const PROFILE_ELEMENT_LABELS: Record<ProfileElementKey, string> = {
   brand: "OMA-Logo & Ich",
   rank: "Rang",
   nextEvent: "Nächstes Event",
-  community: "Community",
+  community: "Clips",
   liveMembers: "Gerade live",
 };
 

@@ -20,8 +20,9 @@ export const ROLE_STYLES: Record<Role, string> = {
 export async function getSessionUser() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  // deletedAt: gelöschte Konten (src/lib/account-deletion.ts) gelten als nicht eingeloggt
+  const user = await prisma.user.findFirst({
+    where: { id: session.user.id, deletedAt: null },
     select: { id: true, name: true, username: true, email: true, image: true, role: true, points: true, rankPoints: true },
   });
   return user;

@@ -11,9 +11,10 @@
 import {
   ELEMENT_KEYS, ELEMENT_SIZE, PROFILE_ELEMENT_KEYS, DEFAULT_ROTATE_SECONDS, EDGE_MARGIN,
   type ElementKey, type ProfileElementKey, type LayoutEntry, type LayoutPositions, type OverlayLayout,
-  type OverlayControl, type ClipSceneConfig, CLIP_SOURCES, type ClipSource,
+  type OverlayControl, type ClipSceneConfig, CLIP_SOURCES, type ClipSource, OVERLAY_SCENES, type OverlayScene,
 } from "./types";
 import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } from "./pauseBackgrounds";
+import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS, type PauseElementKey, type ClipElementKey } from "./sceneLayouts";
 
 /** Ausgangspositionen (Prozent von 1920×1080). Tabelle/Teilnehmer/Gesamttabelle teilen sich
  *  bewusst dieselbe Position — sie stapeln sich dadurch von Anfang an zu einer rotierenden
@@ -152,9 +153,12 @@ export type StreamerOverlayConfig = {
   pauseBackground: PauseBackgroundKey;
   /** Clip-Szenen (Intro, Clips, Outro). */
   clips: ClipSceneConfig;
+  /** Eigene Layouts der Pausen- bzw. Clip-Szenen, null = Standard (siehe sceneLayouts.ts). */
+  pauseLayout: OverlayLayout<PauseElementKey> | null;
+  clipLayout: OverlayLayout<ClipElementKey> | null;
 };
 
-export const DEFAULT_CLIP_CONFIG: ClipSceneConfig = { source: "top", muted: true, introText: null, outroText: null };
+export const DEFAULT_CLIP_CONFIG: ClipSceneConfig = { source: "all", muted: true, introText: null, outroText: null };
 
 export function sanitizeClipConfig(raw: unknown, base: ClipSceneConfig = DEFAULT_CLIP_CONFIG): ClipSceneConfig {
   const r = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
@@ -175,10 +179,10 @@ export function sanitizePauseText(raw: unknown): string | null {
 }
 
 export function parseStreamerConfig(json: string | null | undefined): StreamerOverlayConfig {
-  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND, clips: { ...DEFAULT_CLIP_CONFIG } };
+  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND, clips: { ...DEFAULT_CLIP_CONFIG }, pauseLayout: null, clipLayout: null };
   if (!json) return empty;
   try {
-    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown };
+    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown; pauseLayout?: unknown; clipLayout?: unknown };
     return {
       // Unbekannte Element-Schlüssel (z.B. entfernte wie "favorites") fallen hier still heraus.
       event: sanitizeLayout(parsed.event, ELEMENT_KEYS),
@@ -187,6 +191,8 @@ export function parseStreamerConfig(json: string | null | undefined): StreamerOv
       lite: parsed.lite === true,
       pauseBackground: isPauseBackground(parsed.pauseBackground) ? parsed.pauseBackground : DEFAULT_PAUSE_BACKGROUND,
       clips: sanitizeClipConfig(parsed.clips),
+      pauseLayout: sanitizeLayout(parsed.pauseLayout, PAUSE_ELEMENT_KEYS),
+      clipLayout: sanitizeLayout(parsed.clipLayout, CLIP_ELEMENT_KEYS),
     };
   } catch {
     return empty;
@@ -255,7 +261,7 @@ export function adaptEventLayout(layout: OverlayLayout<ElementKey>, format: stri
 // ── Live-Steuerung des eigenen Overlays ───────────────────────────────────────
 
 const CONTROL_KEYS = new Set<string>([...ELEMENT_KEYS, ...PROFILE_ELEMENT_KEYS]);
-export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, pause: false, countdownUntil: null };
+export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null };
 
 export function sanitizeControl(raw: unknown): OverlayControl {
   if (!raw || typeof raw !== "object") return { ...EMPTY_CONTROL };
@@ -267,7 +273,9 @@ export function sanitizeControl(raw: unknown): OverlayControl {
   const until = Number(r.zoomUntil);
   const countdown = Number(r.countdownUntil);
   return {
-    hidden, zoom, zoomUntil: zoom && Number.isFinite(until) && until > 0 ? until : null, pause: r.pause === true,
+    hidden, zoom, zoomUntil: zoom && Number.isFinite(until) && until > 0 ? until : null,
+    // `pause: true` stammt aus der Zeit vor dem Szenen-Wechsel und entspricht der Pausen-Szene.
+    scene: OVERLAY_SCENES.includes(r.scene as OverlayScene) ? r.scene as OverlayScene : r.pause === true ? "pause" : "gameplay",
     countdownUntil: r.countdownUntil != null && Number.isFinite(countdown) && countdown > 0 ? countdown : null,
   };
 }

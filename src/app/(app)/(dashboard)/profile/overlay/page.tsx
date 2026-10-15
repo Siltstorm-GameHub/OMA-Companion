@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureUserOverlayToken, buildStreamerOverlayUrl } from "@/lib/overlay";
 import { getStreamerActiveEventId, getStreamerUpcomingEvents } from "@/lib/overlay-state";
 import { parseStreamerConfig, defaultStreamerEventLayout, defaultProfileLayout } from "@/components/overlay/layout";
+import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import StreamerOverlaySettings from "./StreamerOverlaySettings";
 
@@ -46,8 +47,12 @@ export default async function StreamerOverlaySettingsPage() {
   return (
     <StreamerOverlaySettings
       overlayUrl={buildStreamerOverlayUrl(user.id, token)}
-      initialEvent={config.event ?? defaultStreamerEventLayout()}
-      initialProfile={config.profile ?? defaultProfileLayout()}
+      initialLayouts={{
+        event: config.event ?? defaultStreamerEventLayout(),
+        profile: config.profile ?? defaultProfileLayout(),
+        pause: config.pauseLayout ?? defaultPauseLayout(),
+        clips: config.clipLayout ?? defaultClipLayout(),
+      }}
       initialPauseText={config.pauseText}
       initialLite={config.lite}
       initialPauseBackground={config.pauseBackground}

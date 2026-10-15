@@ -23,6 +23,7 @@ model User {
   createdAt    DateTime  @default(now())
   lastActiveAt DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
   lastLoginAt  DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
+  deletedAt    DateTime? // Konto auf eigenen Wunsch gelöscht und anonymisiert (src/lib/account-deletion.ts) — Login damit gesperrt
   leftServerAt DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
 
   twitchLogin        String?   @unique
@@ -41,9 +42,12 @@ model User {
   // (anders als Event.overlayControlJson, das alle Overlays eines Events steuert); beide werden
   // im Streamer-Overlay zusammengeführt.
   overlayControlJson String?
-  // Zustimmung: Clips des eigenen Twitch-Kanals dürfen im Community-Clip-Loop der Overlays (Intro-,
-  // Clip- und Outro-Szene) anderer Streamer laufen. Bewusst Opt-in — siehe src/lib/overlay-clips.ts.
+  // VERALTET (war das Opt-in für den Community-Clip-Loop, ersetzt durch overlayClipsOptOut). Bleibt
+  // nur stehen, weil der Build-Abgleich (scripts/db-push.mjs) keine Spalten mit Daten löscht.
   overlayClipsOptIn  Boolean   @default(false)
+  // Abmeldung vom Community-Clip-Loop: Clips des eigenen Twitch-Kanals laufen standardmäßig in den
+  // Intro-/Clip-/Outro-Szenen anderer Streamer — true = nicht mehr. Siehe src/lib/overlay-clips.ts.
+  overlayClipsOptOut Boolean   @default(false)
   birthday        DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)

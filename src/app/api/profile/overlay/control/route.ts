@@ -5,8 +5,9 @@ import { getStreamerConfig, getStreamerOverlayPayload, invalidateStreamerConfig 
 import { parseOverlayControl, sanitizeControl, activeZoom, isEliminationFormat } from "@/components/overlay/layout";
 import {
   ELEMENT_LABELS, PROFILE_ELEMENT_LABELS, ZOOMABLE_ELEMENTS, ZOOMABLE_PROFILE_ELEMENTS, ELEMENT_KEYS, PROFILE_ELEMENT_KEYS,
-  type StreamerOverlayPayload, type OverlayControl,
+  OVERLAY_SCENES, type StreamerOverlayPayload, type OverlayControl, type OverlayScene,
 } from "@/components/overlay/types";
+import { getOverlayClips } from "@/lib/overlay-clips";
 
 /** Live-Steuerung des eigenen Streamer-Overlays (Seite /profile/overlay/live). Wirkt nur auf das
  *  Overlay des angemeldeten Users — die Event-weite Steuerung des Touchscreen-Widgets bleibt davon
@@ -78,11 +79,13 @@ export async function GET() {
   const payload = await getStreamerOverlayPayload(userId, stored.config, stored.control);
   if (!payload) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-  return NextResponse.json({ ...describe(payload), ...controlResponse(stored.control) });
+  // Wie viele Clips der Loop gerade hat — damit leere Clip-Szenen in der Steuerung erklärbar sind.
+  const clipCount = (await getOverlayClips(userId, stored.config.clips.source).catch(() => [])).length;
+  return NextResponse.json({ ...describe(payload), ...controlResponse(stored.control), clipCount });
 }
 
 /**
- * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], pause?: boolean, countdownMinutes?: number | null } — nur
+ * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], scene?: OverlayScene, countdownMinutes?: number | null } — nur
  * mitgeschickte Felder ändern sich. zoomSeconds = automatisch nach so vielen Sekunden beenden
  * (null/fehlt = bis zum Zurücksetzen). Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
@@ -91,7 +94,7 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const userId = session.user.id;
 
-  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; countdownMinutes?: unknown } | null;
+  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; scene?: unknown; countdownMinutes?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { overlayControlJson: true } });
@@ -106,7 +109,8 @@ export async function PUT(req: NextRequest) {
       : null;
   }
   if ("hidden" in body) control.hidden = Array.isArray(body.hidden) ? body.hidden : [];
-  if ("pause" in body) control.pause = body.pause === true;
+  if ("pause" in body) control.scene = body.pause === true ? "pause" : "gameplay"; // älteres Format
+  if (OVERLAY_SCENES.includes(body.scene as OverlayScene)) control.scene = body.scene as OverlayScene;
   if ("countdownMinutes" in body) {
     // Intro-Countdown: Minuten ab jetzt, null/0 = beenden.
     const minutes = Number(body.countdownMinutes);

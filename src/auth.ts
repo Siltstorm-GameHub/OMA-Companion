@@ -147,8 +147,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where:  { id: token.id as string },
-            select: { role: true, points: true, rankPoints: true },
+            select: { role: true, points: true, rankPoints: true, deletedAt: true },
           });
+          // Konto gelöscht (src/lib/account-deletion.ts) → Session sofort beenden
+          if (dbUser?.deletedAt) return null;
           token.role       = dbUser?.role       ?? "user";
           token.points     = dbUser?.points     ?? 0;
           token.rankPoints = dbUser?.rankPoints ?? 0;

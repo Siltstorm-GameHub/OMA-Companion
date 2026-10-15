@@ -9,61 +9,91 @@ import { CommunityTile, LiveMembersTile } from "./ProfileOverlayView";
 import { PanelShell, TwitchGlyph, pickTickerMatch } from "./tiles";
 import { DEFAULT_PAUSE_TEXT, displayName, type StreamerOverlayPayload, type UpcomingEvent, type OverlayUser } from "./types";
 import { isEliminationFormat } from "./layout";
+import { PAUSE_ELEMENT_KEYS, PAUSE_ELEMENT_SIZE, type PauseElementKey } from "./sceneLayouts";
 import PauseBackground from "./PauseBackground";
+import SceneLayout from "./SceneLayout";
 
 /**
- * Pausen-Szene des festen Streamer-Links (`&scene=pause`) — für "Gleich zurück"-/Pausen-Szenen in
- * OBS. Bewusst eine feste Vollbild-Komposition statt frei positionierbarer Kacheln: deckt das
- * Bild komplett ab und zeigt groß, was Zuschauer in der Pause interessiert.
- *   - Event-Modus: Tabelle bzw. Turnierbaum groß, daneben das nächste Match und die Gesamttabelle.
- *   - Profil-Modus: kommende Community-Events, Community-Kachel, gerade live streamende Mitglieder.
+ * Pausen-Szene des festen Streamer-Links — für "Gleich zurück"-/Pausen-Szenen in OBS. Deckt das
+ * Bild komplett ab; die Bausteine (Titel, Turnier bzw. nächste Events, Match, Clips-Kachel …)
+ * stehen dort, wo der Streamer sie im Layout der Pausen-Szene platziert hat.
+ *   - Event-Modus: Tabelle bzw. Turnierbaum, Live-Info, nächstes Match, Gesamttabelle.
+ *   - Profil-Modus: kommende Community-Events, Clips-Kachel, gerade live streamende Mitglieder.
  */
 export default function PauseView({ payload }: { payload: StreamerOverlayPayload }) {
   const { streamer, lite } = payload;
   const text = payload.pauseText ?? DEFAULT_PAUSE_TEXT;
+  const event = payload.mode === "event" ? eventContent(payload) : null;
+  const profile = payload.mode === "profile" ? payload.profile : null;
+  const sized = (key: PauseElementKey, node: React.ReactNode) => <div style={{ width: PAUSE_ELEMENT_SIZE[key].width }}>{node}</div>;
+
+  const render = (key: PauseElementKey): React.ReactNode => {
+    switch (key) {
+      case "title":
+        return (
+          <div style={{ width: PAUSE_ELEMENT_SIZE.title.width, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+            <img src={BRAND_LOGO} alt="" width={84} height={84} style={{ display: "block", filter: "drop-shadow(0 0 18px rgba(20,184,166,0.5))" }} />
+            <h1 className="oma-anim-breathe" style={{ margin: 0, fontSize: 64, fontWeight: 700, letterSpacing: "-0.01em", color: "#fff", textAlign: "center" }}>
+              {text}
+            </h1>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 22, color: "#c4a3ff", fontWeight: 600 }}>
+              {streamer.twitchLogin && <TwitchGlyph size={20} />}
+              {streamer.twitchLogin ?? displayName(streamer)}
+            </span>
+          </div>
+        );
+      case "main":
+        if (event) return sized(key, event.content(event.main));
+        if (profile && profile.upcomingEvents.length > 0) {
+          return (
+            <div style={{ width: 460 }}>
+              <PanelShell title="Nächste Community-Events">
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {profile.upcomingEvents.map(e => <UpcomingRow key={e.id} event={e} />)}
+                </div>
+              </PanelShell>
+            </div>
+          );
+        }
+        return null;
+      case "info":
+        return event ? sized(key, event.content("liveinfo")) : null;
+      case "match":
+        return event?.hasTicker ? sized(key, event.content("ticker")) : null;
+      case "series":
+        return event?.hasSeries ? sized(key, event.content("seriesTable")) : null;
+      case "community":
+        return profile && profile.community.length > 0
+          ? sized(key, <CommunityTile items={profile.community} rotateSeconds={payload.layout.rotateSeconds} isVisible hasCycle={false} />)
+          : null;
+      case "live":
+        return profile && profile.liveMembers.length > 0 ? sized(key, <LiveMembersTile members={profile.liveMembers} />) : null;
+      case "footer":
+        return (
+          <div style={{ width: PAUSE_ELEMENT_SIZE.footer.width, textAlign: "center", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em", color: "#5eead4" }}>
+            OLD MASTERS ALLY · www.oma-app.de
+          </div>
+        );
+    }
+  };
 
   return (
     <OverlayStage lite={lite}>
       <PauseBackground backgroundKey={payload.pauseBackground} lite={lite} />
-
-      {/* Kopf: Logo, Pausentext, Streamer */}
-      <div style={{ position: "absolute", top: 56, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-        <img src={BRAND_LOGO} alt="" width={84} height={84} style={{ display: "block", filter: "drop-shadow(0 0 18px rgba(20,184,166,0.5))" }} />
-        <h1 className="oma-anim-breathe" style={{ margin: 0, fontSize: 64, fontWeight: 700, letterSpacing: "-0.01em", color: "#fff", textAlign: "center", maxWidth: 1500 }}>
-          {text}
-        </h1>
-        <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 22, color: "#c4a3ff", fontWeight: 600 }}>
-          {streamer.twitchLogin && <TwitchGlyph size={20} />}
-          {streamer.twitchLogin ?? displayName(streamer)}
-        </span>
-      </div>
-
-      <div style={{ position: "absolute", top: 330, left: 120, right: 120, bottom: 110, display: "flex", gap: 48, justifyContent: "center", alignItems: "flex-start" }}>
-        {payload.mode === "event" ? <EventColumns payload={payload} /> : <ProfileColumns payload={payload} />}
-      </div>
-
-      <div style={{ position: "absolute", bottom: 44, left: 0, right: 0, textAlign: "center", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em", color: "#5eead4" }}>
-        OLD MASTERS ALLY · www.oma-app.de
-      </div>
+      <SceneLayout layout={payload.pauseLayout} order={PAUSE_ELEMENT_KEYS} render={render} />
     </OverlayStage>
   );
 }
 
-/** Größere Darstellung derselben Kacheln wie im Spiel-Overlay. CSS-zoom statt transform: scale,
- *  damit die vergrößerte Kachel auch im Layout mehr Platz belegt und untereinander gestapelte
- *  Kacheln sich nicht überlappen (OBS-Browserquellen sind Chromium, zoom wird unterstützt). */
-function Scaled({ width, scale, children }: { width: number; scale: number; children: React.ReactNode }) {
-  return <div style={{ width, zoom: scale, flexShrink: 0 }}>{children}</div>;
-}
-
-function EventColumns({ payload }: { payload: Extract<StreamerOverlayPayload, { mode: "event" }> }) {
+/** Inhalte des Event-Modus — dieselben Kacheln wie im Spiel-Overlay. */
+function eventContent(payload: Extract<StreamerOverlayPayload, { mode: "event" }>) {
   const { event } = payload;
   const users = new Map(event.participants.map(p => [p.userId, p.user]));
   const userOf = (id: string | null): OverlayUser | undefined => (id ? users.get(id) : undefined);
   const ticker = pickTickerMatch(event.matches);
   const isLive = ticker ? !ticker.winnerId && !ticker.playedAt : event.status === "active";
-  const main = isEliminationFormat(event.format) ? "bracket" : event.format ? "table" : "participants";
+  const main = isEliminationFormat(event.format) ? "bracket" as const : event.format ? "table" as const : "participants" as const;
   const content = (key: Parameters<typeof ElementContent>[0]["elementKey"]) => (
     <ElementContent
       elementKey={key} matches={event.matches} userOf={userOf} format={event.format} statFields={event.statFields}
@@ -71,46 +101,7 @@ function EventColumns({ payload }: { payload: Extract<StreamerOverlayPayload, { 
       isLive={isLive} ligaPunkteByUser={event.ligaPunkteByUser} seriesTable={event.seriesTable} compact={false}
     />
   );
-
-  return (
-    <>
-      <Scaled width={620} scale={1.3}>{content(main)}</Scaled>
-      <div style={{ display: "flex", flexDirection: "column", gap: 28, width: 620 }}>
-        {content("liveinfo")}
-        {ticker && content("ticker")}
-        {(event.seriesTable?.ranking.length ?? 0) > 0 && content("seriesTable")}
-      </div>
-    </>
-  );
-}
-
-function ProfileColumns({ payload }: { payload: Extract<StreamerOverlayPayload, { mode: "profile" }> }) {
-  const { profile, layout } = payload;
-  return (
-    <>
-      {profile.upcomingEvents.length > 0 && (
-        <Scaled width={460} scale={1.25}>
-          <PanelShell title="Nächste Community-Events">
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {profile.upcomingEvents.map(e => <UpcomingRow key={e.id} event={e} />)}
-            </div>
-          </PanelShell>
-        </Scaled>
-      )}
-      <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-        {profile.community.length > 0 && (
-          <Scaled width={420} scale={1.2}>
-            <CommunityTile items={profile.community} rotateSeconds={layout.rotateSeconds} isVisible hasCycle={false} />
-          </Scaled>
-        )}
-        {profile.liveMembers.length > 0 && (
-          <Scaled width={400} scale={1.2}>
-            <LiveMembersTile members={profile.liveMembers} />
-          </Scaled>
-        )}
-      </div>
-    </>
-  );
+  return { content, main, hasTicker: !!ticker, hasSeries: (event.seriesTable?.ranking.length ?? 0) > 0 };
 }
 
 function UpcomingRow({ event }: { event: UpcomingEvent }) {

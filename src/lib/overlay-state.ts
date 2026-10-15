@@ -15,6 +15,7 @@ import {
   parseStreamerConfig, defaultStreamerEventLayout, defaultProfileLayout, adaptEventLayout, parseOverlayControl as parseUserControl, activeZoom,
   type StreamerOverlayConfig,
 } from "@/components/overlay/layout";
+import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 
 /**
  * Datenquelle aller OBS-Overlays (Event-, Profil- und Streamer-Stream sowie der Startzustand
@@ -454,8 +455,9 @@ export async function getStreamerOverlayPayload(
   const [eventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
   if (!streamer) return null;
   const common = {
-    streamer, pauseText: config.pauseText, lite: config.lite, pause: control.pause, pauseBackground: config.pauseBackground,
+    streamer, pauseText: config.pauseText, lite: config.lite, scene: control.scene, pauseBackground: config.pauseBackground,
     clips: config.clips, countdownUntil: control.countdownUntil,
+    pauseLayout: config.pauseLayout ?? defaultPauseLayout(), clipLayout: config.clipLayout ?? defaultClipLayout(),
   };
   const zoom = activeZoom(control);
 

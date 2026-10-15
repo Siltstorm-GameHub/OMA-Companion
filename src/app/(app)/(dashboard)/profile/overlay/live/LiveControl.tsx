@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, EyeOff, Pause, Play, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer } from "@/components/icons";
-import type { OverlayControl } from "@/components/overlay/types";
+import {
+  Eye, EyeOff, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer, Swords, Moon, Rocket, Clapperboard, LogOut, LayoutGrid, Tv2,
+} from "@/components/icons";
+import { SCENE_LABELS, type OverlayControl, type OverlayScene } from "@/components/overlay/types";
+import OverlayLayoutsEditor, { type OverlayLayouts } from "@/components/overlay/OverlayLayoutsEditor";
 
 type ElementInfo = { key: string; label: string; available: boolean; zoomable: boolean };
 type ControlState = {
@@ -13,7 +16,18 @@ type ControlState = {
   eventZoom: string | null;
   elements: ElementInfo[];
   control: OverlayControl;
+  /** Anzahl Clips im Community-Clip-Loop dieses Streamers. */
+  clipCount: number;
 };
+
+const SCENES: { key: OverlayScene; icon: typeof Swords; hint: string }[] = [
+  { key: "gameplay", icon: Swords,       hint: "Kacheln übers Spiel" },
+  { key: "pause",    icon: Moon,         hint: "Vollbild-Pause" },
+  { key: "intro",    icon: Rocket,       hint: "Clips + Countdown" },
+  { key: "clips",    icon: Clapperboard, hint: "Community-Clips" },
+  { key: "outro",    icon: LogOut,       hint: "Clips zum Schluss" },
+];
+const CLIP_SCENES: OverlayScene[] = ["intro", "clips", "outro"];
 
 const POLL_MS = 4000;
 const DURATIONS: { label: string; seconds: number | null }[] = [
@@ -24,12 +38,12 @@ const DURATIONS: { label: string; seconds: number | null }[] = [
 const COUNTDOWN_MINUTES = [3, 5, 10, 15];
 
 /**
- * Fernbedienung fürs eigene OBS-Overlay: Elemente groß einblenden (zeitlich begrenzt oder
- * dauerhaft), ein-/ausblenden und den Pausen-Bildschirm über das Spiel-Overlay legen. Fragt den
- * Zustand regelmäßig ab, damit ein Wechsel zwischen Event- und Profil-Modus (Event startet/endet)
- * hier ohne Neuladen ankommt.
+ * Fernbedienung fürs eigene OBS-Overlay: Szene wechseln (Spiel, Pause, Intro, Clips, Outro — es
+ * reicht EINE Browser-Quelle in OBS), Elemente groß einblenden (zeitlich begrenzt oder dauerhaft),
+ * ein-/ausblenden und Position/Größe aller Bausteine anpassen. Fragt den Zustand regelmäßig ab,
+ * damit ein Wechsel zwischen Event- und Profil-Modus (Event startet/endet) ohne Neuladen ankommt.
  */
-export default function LiveControl() {
+export default function LiveControl({ layouts }: { layouts: OverlayLayouts }) {
   const [state, setState] = useState<ControlState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,7 +94,7 @@ export default function LiveControl() {
   }, [countingDown]);
 
   async function update(
-    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; pause: boolean; countdownMinutes: number | null }>,
+    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; scene: OverlayScene; countdownMinutes: number | null }>,
     optimistic: Partial<OverlayControl>,
     optimisticRemaining?: number | null,
   ) {
@@ -130,7 +144,7 @@ export default function LiveControl() {
 
   const startZoom = (key: string) => update({ zoom: key, zoomSeconds: duration }, { zoom: key }, duration);
   const stopZoom = () => update({ zoom: null }, { zoom: null, zoomUntil: null }, null);
-  const togglePause = () => update({ pause: !control.pause }, { pause: !control.pause });
+  const setScene = (scene: OverlayScene) => update({ scene }, { scene });
   const startCountdown = (minutes: number) => {
     setCountdown(minutes * 60);
     update({ countdownMinutes: minutes }, {});
@@ -148,7 +162,7 @@ export default function LiveControl() {
   };
 
   return (
-    <div className="max-w-xl mx-auto w-full p-4 sm:p-8 space-y-4">
+    <div className="max-w-3xl mx-auto w-full p-4 sm:p-8 space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-white">Overlay-Steuerung</h1>
         <p className="flex items-center gap-1.5 text-sm text-gray-400 mt-1">
@@ -159,18 +173,40 @@ export default function LiveControl() {
         {error && <p className="text-xs text-amber-300 mt-1">{error}</p>}
       </div>
 
-      {/* ── Pause ── */}
-      <button
-        onClick={togglePause}
-        className={`w-full flex items-center justify-center gap-2 rounded-2xl py-5 text-base font-semibold border transition-all ${
-          control.pause
-            ? "bg-amber-500/20 border-amber-400/50 text-amber-200"
-            : "glass border-white/[0.08] text-gray-200 hover:border-amber-400/40"
-        }`}
-      >
-        {control.pause ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-        {control.pause ? "Pause beenden – Overlay wieder zeigen" : "Pausen-Bildschirm einblenden"}
-      </button>
+      {/* ── Szene ── */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+          <Tv2 className="w-3.5 h-3.5" /> Szene
+        </h2>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {SCENES.map(({ key, icon: Icon, hint }) => {
+            const active = control.scene === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setScene(key)}
+                aria-pressed={active}
+                className={`rounded-xl px-2 py-3.5 border transition-all ${
+                  active
+                    ? "bg-teal-500/20 border-teal-400/60 text-teal-100"
+                    : "border-white/[0.08] text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/10"
+                }`}
+              >
+                <Icon className="w-5 h-5 mx-auto mb-1" />
+                <span className="block text-sm font-semibold">{SCENE_LABELS[key]}</span>
+                <span className="block text-[10px] text-gray-500">{hint}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-500">
+          {CLIP_SCENES.includes(control.scene)
+            ? state.clipCount > 0
+              ? <>{state.clipCount} Community-Clips im Loop.</>
+              : <span className="text-amber-300">Gerade keine Community-Clips verfügbar – die Szene zeigt so lange die Logo-Karte.</span>
+            : <>Gilt für deinen OBS-Link ohne feste Szene. {state.clipCount > 0 && <>{state.clipCount} Community-Clips bereit.</>}</>}
+        </p>
+      </div>
 
       {/* ── Intro-Countdown ── */}
       <div className="glass rounded-2xl p-4 space-y-3">
@@ -291,8 +327,19 @@ export default function LiveControl() {
           })}
         </div>
         <p className="text-xs text-gray-500">
-          Gilt nur für Elemente, die in deinem Layout aktiv sind – welche das sind, legst du in den Overlay-Einstellungen fest.
+          Gilt nur für Elemente, die in deinem Layout aktiv sind – welche das sind, legst du unten unter „Position, Größe & Sichtbarkeit“ fest.
         </p>
+      </div>
+
+      {/* ── Position & Größe ── */}
+      <div>
+        <h2 className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+          <LayoutGrid className="w-3.5 h-3.5" /> Position, Größe & Sichtbarkeit
+        </h2>
+        <OverlayLayoutsEditor
+          initial={layouts}
+          initialTab={CLIP_SCENES.includes(control.scene) ? "clips" : control.scene === "pause" ? "pause" : state.mode}
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 px-1">

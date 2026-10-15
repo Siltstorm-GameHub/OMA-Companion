@@ -25,6 +25,7 @@ export default async function StreamerOverlayPage({
   const initial = await getStreamerOverlayPayload(userId, stored.config, stored.control);
   if (!initial) notFound();
 
-  const validScene: OverlayScene = OVERLAY_SCENES.includes(scene as OverlayScene) ? scene as OverlayScene : "gameplay";
+  // Ohne (gültiges) `&scene=` folgt der Link der Szene aus der Live-Steuerung.
+  const validScene: OverlayScene | null = OVERLAY_SCENES.includes(scene as OverlayScene) ? scene as OverlayScene : null;
   return <StreamerOverlayClient userId={userId} token={token} scene={validScene} initial={initial} />;
 }

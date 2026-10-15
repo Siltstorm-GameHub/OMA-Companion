@@ -6,6 +6,8 @@ import { OverlayStage } from "./EventOverlayView";
 import { TwitchGlyph } from "./tiles";
 import PauseBackground from "./PauseBackground";
 import { shuffle, spreadChannels } from "./clip-order";
+import SceneLayout from "./SceneLayout";
+import { CLIP_ELEMENT_KEYS, CLIP_ELEMENT_SIZE, type ClipElementKey } from "./sceneLayouts";
 import {
   DEFAULT_INTRO_TEXT, DEFAULT_OUTRO_TEXT, DEFAULT_PAUSE_TEXT, displayName,
   type OverlayClip, type StreamerOverlayPayload,
@@ -17,8 +19,6 @@ const CARD_MS = 7000;
 const CLIP_LOAD_BUFFER_MS = 2500;
 /** Clip-Liste regelmäßig neu holen (neue Clips, Sperren, geänderte Quelle). */
 const REFRESH_MS = 15 * 60_000;
-
-const PLAYER = { top: 176, width: 1280, height: 720 };
 
 type Variant = "intro" | "clips" | "outro";
 
@@ -76,72 +76,80 @@ export default function ClipLoopView({
     : variant === "outro" ? config.outroText ?? DEFAULT_OUTRO_TEXT
     : payload.pauseText ?? DEFAULT_PAUSE_TEXT;
 
+  const hasPlayer = !!payload.clipLayout.elements.player;
+  const render = (key: ClipElementKey): React.ReactNode => {
+    const { width, height } = CLIP_ELEMENT_SIZE[key];
+    switch (key) {
+      case "title":
+        return (
+          <div style={{ width, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <h1 style={{ margin: 0, fontSize: 52, fontWeight: 700, letterSpacing: "-0.01em", color: "#fff", textAlign: "center", textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
+              {headline}
+            </h1>
+            {variant === "intro" && payload.countdownUntil
+              ? <Countdown until={payload.countdownUntil} />
+              : (
+                <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 22, color: "#c4a3ff", fontWeight: 600 }}>
+                  {streamer.twitchLogin && <TwitchGlyph size={20} />}
+                  {streamer.twitchLogin ?? displayName(streamer)}
+                </span>
+              )}
+          </div>
+        );
+      case "player":
+        return (
+          <div
+            style={{
+              width, height, borderRadius: 18, overflow: "hidden", background: "rgba(6,6,9,0.72)",
+              border: "1px solid rgba(94,234,212,0.28)", boxShadow: "0 0 60px rgba(20,184,166,0.18), 0 20px 60px rgba(0,0,0,0.55)",
+            }}
+          >
+            {phase === "clip" && current && host ? (
+              <iframe
+                key={current.id}
+                title={current.title}
+                src={`https://clips.twitch.tv/embed?clip=${encodeURIComponent(current.id)}&parent=${encodeURIComponent(host)}&autoplay=true&muted=${config.muted}&preload=auto`}
+                width={width}
+                height={height}
+                allow="autoplay; fullscreen"
+                style={{ display: "block", border: 0 }}
+              />
+            ) : (
+              <BrandCard key={`card-${index}`} next={current} empty={clips.length === 0} />
+            )}
+          </div>
+        );
+      case "caption":
+        // Bildunterschrift nur, solange ein Clip läuft und der Player überhaupt zu sehen ist.
+        if (!hasPlayer || phase !== "clip" || !current) return null;
+        return (
+          <div key={`caption-${current.id}`} className="oma-anim-slidein" style={{ width, height, display: "flex", alignItems: "center", gap: 14 }}>
+            <TwitchGlyph size={30} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {current.title}
+              </span>
+              <span style={{ fontSize: 17, color: "rgba(255,255,255,0.7)" }}>
+                Clip von <span style={{ color: "#c4a3ff", fontWeight: 600 }}>twitch.tv/{current.channelLogin}</span>
+                {current.game && <> · {current.game}</>}
+                {current.creator && current.creator.toLowerCase() !== current.channelLogin && <> · geclippt von {current.creator}</>}
+              </span>
+            </div>
+          </div>
+        );
+      case "footer":
+        return (
+          <div style={{ width, textAlign: "center", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em", color: "#5eead4" }}>
+            OLD MASTERS ALLY · www.oma-app.de
+          </div>
+        );
+    }
+  };
+
   return (
     <OverlayStage lite={lite}>
       <PauseBackground backgroundKey={payload.pauseBackground} lite={lite} />
-
-      {/* Kopf */}
-      <div style={{ position: "absolute", top: 40, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 52, fontWeight: 700, letterSpacing: "-0.01em", color: "#fff", textAlign: "center", maxWidth: 1600, textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
-          {headline}
-        </h1>
-        {variant === "intro" && payload.countdownUntil
-          ? <Countdown until={payload.countdownUntil} />
-          : (
-            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 22, color: "#c4a3ff", fontWeight: 600 }}>
-              {streamer.twitchLogin && <TwitchGlyph size={20} />}
-              {streamer.twitchLogin ?? displayName(streamer)}
-            </span>
-          )}
-      </div>
-
-      {/* Bühne: Logo-Karte oder Clip */}
-      <div
-        style={{
-          position: "absolute", top: PLAYER.top, left: (1920 - PLAYER.width) / 2, width: PLAYER.width, height: PLAYER.height,
-          borderRadius: 18, overflow: "hidden", background: "rgba(6,6,9,0.72)",
-          border: "1px solid rgba(94,234,212,0.28)", boxShadow: "0 0 60px rgba(20,184,166,0.18), 0 20px 60px rgba(0,0,0,0.55)",
-        }}
-      >
-        {phase === "clip" && current && host ? (
-          <iframe
-            key={current.id}
-            title={current.title}
-            src={`https://clips.twitch.tv/embed?clip=${encodeURIComponent(current.id)}&parent=${encodeURIComponent(host)}&autoplay=true&muted=${config.muted}&preload=auto`}
-            width={PLAYER.width}
-            height={PLAYER.height}
-            allow="autoplay; fullscreen"
-            style={{ display: "block", border: 0 }}
-          />
-        ) : (
-          <BrandCard key={`card-${index}`} next={current} empty={clips.length === 0} />
-        )}
-      </div>
-
-      {/* Bildunterschrift zum laufenden Clip */}
-      {phase === "clip" && current && (
-        <div
-          key={`caption-${current.id}`}
-          className="oma-anim-slidein"
-          style={{ position: "absolute", top: PLAYER.top + PLAYER.height + 18, left: (1920 - PLAYER.width) / 2, width: PLAYER.width, display: "flex", alignItems: "center", gap: 14 }}
-        >
-          <TwitchGlyph size={30} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {current.title}
-            </span>
-            <span style={{ fontSize: 17, color: "rgba(255,255,255,0.7)" }}>
-              Clip von <span style={{ color: "#c4a3ff", fontWeight: 600 }}>twitch.tv/{current.channelLogin}</span>
-              {current.game && <> · {current.game}</>}
-              {current.creator && current.creator.toLowerCase() !== current.channelLogin && <> · geclippt von {current.creator}</>}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div style={{ position: "absolute", bottom: 30, left: 0, right: 0, textAlign: "center", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em", color: "#5eead4" }}>
-        OLD MASTERS ALLY · www.oma-app.de
-      </div>
+      <SceneLayout layout={payload.clipLayout} order={CLIP_ELEMENT_KEYS} render={render} />
     </OverlayStage>
   );
 }

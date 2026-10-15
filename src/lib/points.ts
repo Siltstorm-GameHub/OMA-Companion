@@ -69,9 +69,37 @@ export const DAILY_CAPS: Partial<Record<PointRule, number>> = {
   COMMUNITY_JOB_VOTE:  25,  // max 5 belohnte Bewertungen/Tag (5 Münzen je Bewertung)
 };
 
+/**
+ * Reine Berechnung einer Vergabe (ohne DB): Betrag inkl. Geburtstags-Boost, ob zusätzlich
+ * Rang-Punkte fließen, und die exakt so zu speichernden Transaktions-Begründungen.
+ */
+export function computeAward(rule: PointRule, opts: { birthdayBoost?: boolean; customReason?: string } = {}) {
+  const { amount, reason, category } = POINT_RULES[rule];
+  const amountFinal = opts.birthdayBoost ? amount * 2 : amount;
+  const fullReason = (opts.customReason ?? reason) + (opts.birthdayBoost ? ` ${BIRTHDAY_SUFFIX}` : "");
+  const givesRankPoints = RANK_POINT_CATEGORIES.has(category as PointCategory);
+  return {
+    amount: amountFinal,
+    givesRankPoints,
+    coinReason: `${COIN_PREFIX} ${fullReason}`,
+    rankReason: givesRankPoints ? `${RANK_PREFIX} ${fullReason}` : null,
+  };
+}
+
+/** Teilt gespeicherte Transaktionen nach Währung auf (Grundlage für revokePointsByReason). */
+export function sumByCurrency(txns: { amount: number; reason: string }[]) {
+  let coins = 0;
+  let rankPoints = 0;
+  for (const t of txns) {
+    if (t.reason.startsWith(COIN_PREFIX)) coins += t.amount;
+    else if (t.reason.startsWith(RANK_PREFIX)) rankPoints += t.amount;
+  }
+  return { coins, rankPoints };
+}
+
 // ─── Punkte vergeben ───────────────────────────────────────────────────────
 export async function awardPoints(userId: string, rule: PointRule, customReason?: string) {
-  const { amount, reason } = POINT_RULES[rule];
+  const { reason } = POINT_RULES[rule];
 
   // Täglichen Cap prüfen
   const cap = DAILY_CAPS[rule];
@@ -93,19 +121,15 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   const pointsBefore   = before?.points     ?? 0;
 
   // Geburtstags-Boost: 2x Punkte wenn aktiv
-  const hasBirthdayBoost = before?.birthdayBoostUntil && before.birthdayBoostUntil > new Date();
-  const finalAmount = hasBirthdayBoost ? amount * 2 : amount;
-
-  const givesRankPoints = RANK_POINT_CATEGORIES.has(POINT_RULES[rule].category as PointCategory);
-
-  const fullReason = (customReason ?? reason) + (hasBirthdayBoost ? ` ${BIRTHDAY_SUFFIX}` : "");
+  const birthdayBoost = !!before?.birthdayBoostUntil && before.birthdayBoostUntil > new Date();
+  const { amount: finalAmount, givesRankPoints, coinReason, rankReason } = computeAward(rule, { birthdayBoost, customReason });
 
   const results = await prisma.$transaction([
     prisma.pointTransaction.create({
-      data: { userId, amount: finalAmount, reason: `${COIN_PREFIX} ${fullReason}` },
+      data: { userId, amount: finalAmount, reason: coinReason },
     }),
-    ...(givesRankPoints ? [prisma.pointTransaction.create({
-      data: { userId, amount: finalAmount, reason: `${RANK_PREFIX} ${fullReason}` },
+    ...(rankReason ? [prisma.pointTransaction.create({
+      data: { userId, amount: finalAmount, reason: rankReason },
     })] : []),
     prisma.user.update({
       where:  { id: userId },
@@ -174,12 +198,7 @@ export async function revokePointsByReason(userId: string, baseReason: string) {
   });
   if (txns.length === 0) return { coins: 0, rankPoints: 0 };
 
-  let coins = 0;
-  let rankPoints = 0;
-  for (const t of txns) {
-    if (t.reason.startsWith(COIN_PREFIX)) coins += t.amount;
-    else rankPoints += t.amount;
-  }
+  const { coins, rankPoints } = sumByCurrency(txns);
 
   const correctionReason = `[Korrektur] ${baseReason}`;
   await prisma.$transaction([

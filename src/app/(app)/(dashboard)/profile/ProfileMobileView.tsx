@@ -12,6 +12,7 @@ import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
 import WanderpocalSection, { type WanderpocalHolderInfo } from "@/components/WanderpocalSection";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import AccountDataSection from "@/components/AccountDataSection";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import type { FavoriteGame } from "@/lib/favorite-games";
 import type { WanderpocalHolder, WanderpocalStat } from "@/lib/wanderpocal";
@@ -274,6 +275,8 @@ export default function ProfileMobileView(props: Props) {
             </section>
 
             <ProfileRecentEvents eventRegs={eventRegs} userId={userId} />
+
+            <AccountDataSection />
           </>
         )}
       </div>

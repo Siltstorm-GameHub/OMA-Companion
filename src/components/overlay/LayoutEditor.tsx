@@ -19,7 +19,7 @@ const DEFAULT_CYCLE = { onSec: 10, offSec: 6 };
  * `value.elements`).
  */
 export default function LayoutEditor<K extends string>({
-  options, stackable, elementSize, defaultPositions, value, onChange,
+  options, stackable, elementSize, defaultPositions, value, onChange, stacking = true,
 }: {
   options: EditorElementOption<K>[];
   stackable: readonly K[];
@@ -27,6 +27,8 @@ export default function LayoutEditor<K extends string>({
   defaultPositions: Record<K, { x: number; y: number }>;
   value: OverlayLayout<K>;
   onChange: (next: OverlayLayout<K>) => void;
+  /** false = kein Stapeln/Rotieren (Vollbild-Szenen wie Pause und Clips). */
+  stacking?: boolean;
 }) {
   // Position ausgeschalteter Elemente merken, damit Aus-/Einschalten sie nicht zurücksetzt.
   const [parked, setParked] = useState<Partial<Record<K, LayoutEntry>>>({});
@@ -71,8 +73,8 @@ export default function LayoutEditor<K extends string>({
       <div className="glass rounded-2xl p-5 mb-4">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Elemente</h2>
         <p className="text-xs text-gray-500 mb-3">
-          Jedes Element lässt sich einzeln ein- und ausblenden und unten frei positionieren. Zieh
-          mehrere aufeinander, damit sie sich zu einer Stelle stapeln und automatisch durchrotieren.
+          Jedes Element lässt sich einzeln ein- und ausblenden und unten frei positionieren.
+          {stacking && " Zieh mehrere aufeinander, damit sie sich zu einer Stelle stapeln und automatisch durchrotieren."}
         </p>
         <div className="flex flex-wrap gap-2">
           {options.map(({ key, label, icon: Icon, hint }) => {
@@ -96,7 +98,7 @@ export default function LayoutEditor<K extends string>({
           })}
         </div>
 
-        {hasAnyStack && (
+        {stacking && hasAnyStack && (
           <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/[0.06]">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5 shrink-0">
               <Repeat className="w-3.5 h-3.5" /> Rotation
@@ -170,8 +172,8 @@ export default function LayoutEditor<K extends string>({
         </h2>
         <p className="text-xs text-gray-500 mb-3">
           Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die Vorschau
-          entspricht 1920×1080. Zwei Elemente übereinander bilden automatisch einen Stapel; die
-          Marken-Kachel lässt sich nicht mit anderen überlappen.
+          entspricht 1920×1080.
+          {stacking && " Zwei Elemente übereinander bilden automatisch einen Stapel; die Marken-Kachel lässt sich nicht mit anderen überlappen."}
         </p>
         <PositionCanvas
           options={options}
@@ -179,6 +181,7 @@ export default function LayoutEditor<K extends string>({
           activeElements={activeElements}
           positions={positions}
           onChange={(key, pos) => patchEntry(key, { x: pos.x, y: pos.y })}
+          stacking={stacking}
         />
       </div>
     </>
