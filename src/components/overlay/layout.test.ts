@@ -7,7 +7,7 @@ import {
 } from "./layout";
 import { spreadChannels } from "./clip-order";
 import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS } from "./sceneLayouts";
-import { ELEMENT_KEYS, type ElementKey } from "./types";
+import { ELEMENT_KEYS, snapScale, type ElementKey } from "./types";
 import { sameGame } from "../../lib/game-match";
 
 describe("Overlay-Layout", () => {
@@ -19,7 +19,7 @@ describe("Overlay-Layout", () => {
 
   test("Werte werden begrenzt, Unsinn verworfen", () => {
     const parsed = parseLayoutParam<ElementKey>("brand:150,-5,s9;ticker:abc,1", ELEMENT_KEYS)!;
-    assert.deepEqual(parsed, { brand: { x: 100, y: 0, scale: 2 } });
+    assert.deepEqual(parsed, { brand: { x: 100, y: 0, scale: 1.3 } }); // größte der fünf Stufen
     assert.equal(parseLayoutParam("", ELEMENT_KEYS), null);
   });
 
@@ -115,9 +115,17 @@ describe("Overlay-Layout", () => {
       pauseLayout: { elements: { title: { x: 5, y: 5, scale: 1.4 }, quatsch: { x: 1, y: 1 } }, rotateSeconds: 10 },
       clipLayout: { elements: { player: { x: 10, y: 10 } } },
     }));
-    assert.deepEqual(cfg.pauseLayout?.elements, { title: { x: 5, y: 5, scale: 1.4 } });
+    assert.deepEqual(cfg.pauseLayout?.elements, { title: { x: 5, y: 5, scale: 1.3 } });
     assert.deepEqual(Object.keys(cfg.clipLayout!.elements), ["player"]);
     assert.equal(sanitizeLayout({ elements: { brand: { x: 1, y: 1 } } }, PAUSE_ELEMENT_KEYS), null);
     assert.ok(CLIP_ELEMENT_KEYS.includes("player"));
+  });
+
+  test("Größe: fünf Stufen, ältere Werte rasten ein", () => {
+    assert.equal(snapScale(undefined), 1);
+    assert.equal(snapScale(0.5), 0.7);
+    assert.equal(snapScale(1.05), 1);
+    assert.equal(snapScale(1.2), 1.15);
+    assert.equal(snapScale(1.6), 1.3);
   });
 });

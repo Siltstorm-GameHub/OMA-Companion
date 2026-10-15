@@ -34,7 +34,8 @@ export function AutoScrollViewport({
     const measure = () => {
       const trackSize = axis === "x" ? track.scrollWidth : track.scrollHeight;
       const max = Math.max(0, trackSize - contentSize);
-      if (max <= 0) {
+      // Passt alles in die volle Größe, braucht es weder Scrollen noch die Pfeil-Streifen.
+      if (max <= 0 || trackSize <= size) {
         setSteps([0]);
         setStepIndex(0);
         return;
@@ -50,7 +51,7 @@ export function AutoScrollViewport({
     const ro = new ResizeObserver(measure);
     ro.observe(track);
     return () => ro.disconnect();
-  }, [axis, contentSize]);
+  }, [axis, contentSize, size]);
 
   useEffect(() => {
     if (steps.length <= 1) return;
@@ -77,9 +78,11 @@ export function AutoScrollViewport({
   const outerStyle: React.CSSProperties = axis === "x"
     ? { display: "flex", alignItems: "center", width: size }
     : { display: "flex", flexDirection: "column", height: size };
+  // Ohne Scrollen nutzt der Inhalt die volle Größe (keine Pfeil-Streifen nötig).
+  const visibleSize = scrollable ? contentSize : size;
   const viewportStyle: React.CSSProperties = axis === "x"
-    ? { overflow: "hidden", width: contentSize, flexShrink: 0 }
-    : { overflow: "hidden", height: contentSize, flexShrink: 0 };
+    ? { overflow: "hidden", width: visibleSize, flexShrink: 0 }
+    : { overflow: "hidden", height: visibleSize, flexShrink: 0 };
 
   return (
     <div style={outerStyle}>

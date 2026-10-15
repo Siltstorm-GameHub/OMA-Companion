@@ -4,16 +4,15 @@ import { useState } from "react";
 import { Calendar, Clock, Gamepad2, Trophy, Clapperboard, Vote, Users } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import { getGameFallbackGradient } from "@/lib/game-cover";
-import { BRAND_LOGO } from "@/lib/brand";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 import StackedLayout from "./StackedLayout";
 import { OverlayStage } from "./EventOverlayView";
 import { useRotatingIndex } from "./motion";
 import ZoomLayer, { useZoomTransition, ZoomBannerShell } from "./ZoomLayer";
-import { PanelShell, IdentityFlipTile, TopEdge, TwitchGlyph } from "./tiles";
+import { PanelShell, IdentityFlipTile, TwitchGlyph } from "./tiles";
 import { AutoScrollViewport } from "./AutoScrollViewport";
 import {
-  PROFILE_ELEMENT_SIZE, PROFILE_STACKABLE,
+  PROFILE_ELEMENT_SIZE, PROFILE_STACKABLE, CARD_BODY_HEIGHT,
   type ProfileElementKey, type ProfileOverlayState, type OverlayLayout, type OverlayStreamer,
   type UpcomingEvent, type CommunityItem, type LiveMember,
 } from "./types";
@@ -93,44 +92,23 @@ export default function ProfileOverlayView({
   );
 }
 
-/** Rang-Kachel: Avatar, Name und Rang-Punkte. */
+/** Rang-Karte: großer Avatar, Name und Rang-Punkte — gleiche Größe wie "Nächstes Event", mit dem
+ *  sie standardmäßig oben rechts rotiert. */
 function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userId: string; image: string | null; name: string }) {
   return (
-    <div
-      style={{
-        position: "relative", display: "flex", alignItems: "center", gap: 14,
-        width: PROFILE_ELEMENT_SIZE.rank.width, height: "100%", minHeight: PROFILE_ELEMENT_SIZE.rank.height, boxSizing: "border-box",
-        background: "rgba(9,9,14,0.82)", backdropFilter: "blur(18px) saturate(1.4)", WebkitBackdropFilter: "blur(18px) saturate(1.4)",
-        border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
-        padding: "0 22px", overflow: "hidden",
-      }}
-    >
-      <TopEdge radius={14} />
-      {/* Wasserzeichen — analog PanelShell, damit auch die nicht auf PanelShell basierende
-         Rang-Kachel das OMA-Logo im Hintergrund trägt. */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-      <img
-        src={BRAND_LOGO}
-        alt=""
-        style={{
-          position: "absolute", inset: 0, width: "100%", height: "100%",
-          objectFit: "contain", padding: 20,
-          opacity: 0.05, filter: "grayscale(1)",
-          pointerEvents: "none",
-        }}
-      />
-      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
-        <RankedAvatar badge={null} userId={userId} src={image} alt={name} size={48} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    <PanelShell title="Rang">
+      <div style={{ display: "flex", alignItems: "center", gap: 18, height: CARD_BODY_HEIGHT }}>
+        <RankedAvatar badge={null} userId={userId} src={image} alt={name} size={96} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {name}
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
-            <Trophy size={12} style={{ color: "#5eead4" }} /> {rankLabel}
+          <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 18, color: "rgba(255,255,255,0.7)" }}>
+            <Trophy size={18} style={{ color: "#5eead4" }} /> {rankLabel}
           </span>
         </div>
       </div>
-    </div>
+    </PanelShell>
   );
 }
 
@@ -154,8 +132,8 @@ function NextEventTile({
 
   return (
     <PanelShell title={event.matchesCurrentGame ? "Passendes Event" : "Nächstes Event"}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, opacity: fadeIn ? 1 : 0, transition: "opacity 250ms ease" }}>
-        <div style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, height: CARD_BODY_HEIGHT, opacity: fadeIn ? 1 : 0, transition: "opacity 250ms ease" }}>
+        <div style={{ width: 98, height: CARD_BODY_HEIGHT - 8, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
           {showCover ? (
             // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
             <img
@@ -169,20 +147,20 @@ function NextEventTile({
           )}
           <div style={{ position: "absolute", inset: 0, borderRadius: "inherit", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.1)" }} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 17, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 21, fontWeight: 700, color: "#fff", lineHeight: 1.2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
             {event.title}
           </span>
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.65)" }}>
-              <Calendar size={13} style={{ flexShrink: 0, color: "#5eead4" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, color: "rgba(255,255,255,0.7)" }}>
+              <Calendar size={15} style={{ flexShrink: 0, color: "#5eead4" }} />
               {dateLabel}
-              <Clock size={13} style={{ flexShrink: 0, marginLeft: 4, color: "#5eead4" }} />
+              <Clock size={15} style={{ flexShrink: 0, marginLeft: 4, color: "#5eead4" }} />
               {timeLabel} Uhr
             </span>
             {event.game && (
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                <Gamepad2 size={13} style={{ flexShrink: 0, color: "#5eead4" }} />
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <Gamepad2 size={15} style={{ flexShrink: 0, color: "#5eead4" }} />
                 {event.game}
               </span>
             )}
@@ -210,31 +188,31 @@ export function CommunityTile({
 
   return (
     <PanelShell title={item.kind === "clip" ? item.label : COMMUNITY_TITLES[item.kind]}>
-      <div style={{ width: PROFILE_ELEMENT_SIZE.community.width - 36, minHeight: 96, opacity: fadeIn ? 1 : 0, transition: "opacity 250ms ease" }}>
+      <div style={{ width: PROFILE_ELEMENT_SIZE.community.width - 36, height: CARD_BODY_HEIGHT, display: "flex", flexDirection: "column", justifyContent: "center", opacity: fadeIn ? 1 : 0, transition: "opacity 250ms ease" }}>
         {item.kind === "clip" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 128, height: 72, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 200, height: 113, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {item.thumbnailUrl
                 // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
                 ? <img src={item.thumbnailUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : <Clapperboard size={22} style={{ color: "#5eead4" }} />}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", ...textStyle }}>{item.title}</span>
-              {item.by && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", ...textStyle }}>von {item.by}</span>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#fff", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>{item.title}</span>
+              {item.by && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", ...textStyle }}>von {item.by}</span>}
             </div>
           </div>
         )}
 
         {item.kind === "poll" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, fontWeight: 700, color: "#fff", ...textStyle }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 16, fontWeight: 700, color: "#fff", ...textStyle }}>
               <Vote size={14} style={{ color: "#5eead4", flexShrink: 0 }} /> {item.question}
             </span>
             {item.options.map(o => (
-              <div key={o.label} style={{ position: "relative", height: 20, borderRadius: 6, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+              <div key={o.label} style={{ position: "relative", height: 21, borderRadius: 6, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
                 <div style={{ position: "absolute", inset: 0, width: `${o.percent}%`, background: "rgba(20,184,166,0.3)", transition: "width 600ms ease" }} />
-                <div style={{ position: "relative", display: "flex", justifyContent: "space-between", padding: "0 8px", fontSize: 12, lineHeight: "20px", color: "#fff" }}>
+                <div style={{ position: "relative", display: "flex", justifyContent: "space-between", padding: "0 8px", fontSize: 13, lineHeight: "21px", color: "#fff" }}>
                   <span style={textStyle}>{o.label}</span>
                   <span style={{ fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>{o.percent}%</span>
                 </div>
@@ -247,16 +225,16 @@ export function CommunityTile({
         )}
 
         {item.kind === "wanderpokal" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {item.holders.map(h => (
               <div key={h.title} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <RankedAvatar badge={null} src={h.image} alt={h.name} size={26} />
-                <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#fff", ...textStyle }}>
+                <RankedAvatar badge={null} src={h.image} alt={h.name} size={32} />
+                <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#fff", ...textStyle }}>
                   <span style={{ fontWeight: 700 }}>{h.name}</span>
                   <span style={{ color: "rgba(255,255,255,0.55)" }}> · {h.title}</span>
                 </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#facc15", flexShrink: 0 }}>
-                  <Trophy size={12} /> {h.winCount}
+                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 14, color: "#facc15", flexShrink: 0 }}>
+                  <Trophy size={14} /> {h.winCount}
                 </span>
               </div>
             ))}
@@ -272,7 +250,7 @@ export function LiveMembersTile({ members }: { members: LiveMember[] }) {
   return (
     <PanelShell title="Gerade live aus der Community">
       {/* Feste Kartenhöhe: mehr als drei Mitglieder laufen automatisch durch statt die Kachel zu strecken. */}
-      <AutoScrollViewport axis="y" size={130} gap={8}>
+      <AutoScrollViewport axis="y" size={CARD_BODY_HEIGHT} gap={8}>
         {members.map(m => (
           <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <RankedAvatar badge={null} src={m.image} alt={m.name} size={30} />

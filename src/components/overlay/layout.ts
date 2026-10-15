@@ -11,7 +11,7 @@
 import {
   ELEMENT_KEYS, ELEMENT_SIZE, PROFILE_ELEMENT_KEYS, DEFAULT_ROTATE_SECONDS, EDGE_MARGIN,
   type ElementKey, type ProfileElementKey, type LayoutEntry, type LayoutPositions, type OverlayLayout,
-  type OverlayControl, type ClipSceneConfig, CLIP_SOURCES, type ClipSource, OVERLAY_SCENES, type OverlayScene,
+  type OverlayControl, type ClipSceneConfig, snapScale, CLIP_SOURCES, type ClipSource, OVERLAY_SCENES, type OverlayScene,
 } from "./types";
 import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } from "./pauseBackgrounds";
 import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS, type PauseElementKey, type ClipElementKey } from "./sceneLayouts";
@@ -79,7 +79,8 @@ function sanitizeEntry(raw: { x?: unknown; y?: unknown; scale?: unknown; cycle?:
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   const entry: LayoutEntry = { x: clamp(x, 0, 100), y: clamp(y, 0, 100) };
   const scale = Number(raw.scale);
-  if (raw.scale != null && Number.isFinite(scale) && scale > 0) entry.scale = clamp(scale, 0.5, 2);
+  // Nur noch fünf Stufen — ältere, stufenlose Werte rasten auf die nächstgelegene ein.
+  if (raw.scale != null && Number.isFinite(scale) && scale > 0) entry.scale = snapScale(scale);
   const cycle = raw.cycle as { onSec?: unknown; offSec?: unknown } | null | undefined;
   if (cycle && typeof cycle === "object") {
     const onSec = Number(cycle.onSec);

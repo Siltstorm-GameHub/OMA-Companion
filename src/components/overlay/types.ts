@@ -155,7 +155,7 @@ export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }>
 
 export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; height: number }> = {
   brand:       BAR,
-  rank:        BAR,
+  rank:        CARD,
   nextEvent:   CARD,
   community:   CARD,
   liveMembers: CARD,
@@ -166,8 +166,28 @@ export const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
 export const PANEL_FADE_MS = 900;
 export const CYCLE_FADE_MS = 1000;
 export const ZOOM_EXIT_MS = 500; // muss zur oma-zoom-out-Animationsdauer in MotionStyles passen
-export const PANEL_LIST_HEIGHT = 280; // Feste Höhe für Listen in Panels — lange Listen scrollen intern statt die Kachel wachsen zu lassen
-export const PANEL_LIST_HEIGHT_COMPACT = 250;
+/** Platz, den der Panel-Rahmen selbst braucht (Innenabstand, Rahmen, Überschrift) — der Rest der
+ *  Kachelhöhe gehört dem Inhalt, damit Listen und Karten die Kachel bis unten ausfüllen. */
+export const PANEL_CHROME = 62;
+export const PANEL_LIST_HEIGHT = TILE_HEIGHT.panel - PANEL_CHROME; // Listen scrollen intern statt die Kachel wachsen zu lassen
+export const PANEL_LIST_HEIGHT_COMPACT = PANEL_LIST_HEIGHT;
+/** Inhaltshöhe der Karten (Nächstes Event, Clips, Gerade live). */
+export const CARD_BODY_HEIGHT = TILE_HEIGHT.card - PANEL_CHROME;
+
+/** Die fünf Größenstufen der Kacheln (Editor und Live-Steuerung) — klein bis groß. */
+export const SCALE_STEPS = [
+  { value: 0.7, label: "XS", title: "Sehr klein" },
+  { value: 0.85, label: "S", title: "Klein" },
+  { value: 1, label: "M", title: "Normal" },
+  { value: 1.15, label: "L", title: "Groß" },
+  { value: 1.3, label: "XL", title: "Sehr groß" },
+] as const;
+
+/** Nächstgelegene Größenstufe (ältere Layouts hatten stufenlose Werte). */
+export function snapScale(scale: number | undefined): number {
+  const s = scale ?? 1;
+  return SCALE_STEPS.reduce((best, step) => (Math.abs(step.value - s) < Math.abs(best - s) ? step.value : best), 1 as number);
+}
 export const TICKER_ENTRIES_WIDTH = 400; // Feste Breite für die FFA-Mitspielerliste im Match-Ticker
 
 /** Payload des festen Streamer-Links: zeigt das gerade gestreamte Event, sonst das Profil. */

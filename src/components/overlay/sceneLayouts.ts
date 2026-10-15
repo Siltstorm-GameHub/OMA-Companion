@@ -17,12 +17,13 @@ export const CLIP_ELEMENT_KEYS: ClipElementKey[] = ["title", "player", "caption"
 /** Grundgröße je Baustein (px bei 1920×1080, vor der Skalierung). */
 export const PAUSE_ELEMENT_SIZE: Record<PauseElementKey, { width: number; height: number }> = {
   title:     { width: 1500, height: 230 },
-  main:      { width: 620, height: 420 },
-  info:      { width: 620, height: 78 },
-  match:     { width: 620, height: 78 },
-  series:    { width: 460, height: 310 },
-  community: { width: 420, height: 170 },
-  live:      { width: 400, height: 200 },
+  // Dieselben einheitlichen Kachelmaße wie in der Spiel-Szene (siehe TILE_WIDTH/TILE_HEIGHT).
+  main:      { width: 460, height: 340 },
+  info:      { width: 460, height: 90 },
+  match:     { width: 460, height: 90 },
+  series:    { width: 460, height: 340 },
+  community: { width: 460, height: 200 },
+  live:      { width: 460, height: 200 },
   footer:    { width: 900, height: 30 },
 };
 
@@ -39,10 +40,10 @@ export const DEFAULT_PAUSE_POSITIONS: Record<PauseElementKey, Entry> = {
   title:     { x: 10.9, y: 4.4 },
   main:      { x: 6.3, y: 30.6, scale: 1.3 },
   info:      { x: 51, y: 30.6 },
-  match:     { x: 51, y: 40.4 },
-  series:    { x: 51, y: 50.2 },
-  community: { x: 52.1, y: 30.6, scale: 1.2 },
-  live:      { x: 52.1, y: 52.8, scale: 1.2 },
+  match:     { x: 51, y: 39.8 },
+  series:    { x: 51, y: 49.1 },
+  community: { x: 52.1, y: 30.6, scale: 1.15 },
+  live:      { x: 52.1, y: 52.8, scale: 1.15 },
   footer:    { x: 26.6, y: 95.4 },
 };
 

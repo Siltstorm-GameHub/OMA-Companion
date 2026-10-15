@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Move, Repeat, Maximize2, Timer } from "@/components/icons";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "./PositionCanvas";
-import type { LayoutEntry, OverlayLayout } from "./types";
+import { SCALE_STEPS, snapScale, type LayoutEntry, type OverlayLayout } from "./types";
 
 export type EditorElementOption<K extends string> = CanvasElementOption<K> & {
   /** Kurzer Hinweis unter dem Schalter, z.B. "nur bei K.-o.-Turnieren". */
@@ -141,12 +141,21 @@ export default function LayoutEditor<K extends string>({
                 </span>
                 <span className="flex items-center gap-2 text-gray-500">
                   <Maximize2 className="w-3.5 h-3.5" />
-                  <input
-                    type="range" min={0.6} max={1.6} step={0.05} value={scale}
-                    onChange={e => patchScale(key, Number(e.target.value))}
-                    className="w-28 accent-teal-400"
-                  />
-                  <span className="text-xs text-gray-400 w-9 tabular-nums">{Math.round(scale * 100)}%</span>
+                  <span className="flex rounded-lg border border-white/[0.08] overflow-hidden">
+                    {SCALE_STEPS.map(step => (
+                      <button
+                        key={step.value}
+                        type="button"
+                        title={step.title}
+                        onClick={() => patchScale(key, step.value)}
+                        className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                          snapScale(scale) === step.value ? "bg-teal-500/20 text-teal-200" : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        {step.label}
+                      </button>
+                    ))}
+                  </span>
                 </span>
                 <label className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
                   <input

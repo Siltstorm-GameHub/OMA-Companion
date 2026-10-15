@@ -71,14 +71,14 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
   const omaFace = (
     <FlipFace justify="center">
       {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-      <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
+      <img src={BRAND_LOGO} alt="" width={44} height={44} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+        <span style={{ fontSize: 19, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
           Old Masters Ally
         </span>
         {/* Für Zuschauer: schnell erkennbar, wo sie die Community/App finden — ohne diesen
            Hinweis kannte man die URL nur, wenn der Streamer sie mündlich erwähnt. */}
-        <span style={{ fontSize: 12, fontWeight: 500, color: "#5eead4" }}>
+        <span style={{ fontSize: 15, fontWeight: 500, color: "#5eead4" }}>
           www.oma-app.de
         </span>
       </div>
@@ -105,14 +105,14 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
       >
         {omaFace}
         <FlipFace back>
-          <RankedAvatar badge={null} userId={streamer.id} src={streamer.image} alt={name} size={36} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <RankedAvatar badge={null} userId={streamer.id} src={streamer.image} alt={name} size={48} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 19, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {name}
             </span>
             {streamer.twitchLogin && (
-              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500, color: "#c4a3ff" }}>
-                <TwitchGlyph size={12} />
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, fontWeight: 500, color: "#c4a3ff" }}>
+                <TwitchGlyph size={15} />
                 {streamer.twitchLogin}
               </span>
             )}
@@ -140,12 +140,12 @@ export function LiveInfoTile({ eventTitle, game, isLive }: { eventTitle: string;
   return (
     <TickerTile breathe={isLive} bodyStyle={{ width: ELEMENT_SIZE.liveinfo.width, height: ELEMENT_SIZE.liveinfo.height, padding: "0 20px" }}>
       <LiveBadge live={isLive} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
+        <span style={{ fontSize: 19, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {eventTitle}
         </span>
         {game && (
-          <span style={{ fontSize: 11, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 15, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {game}
           </span>
         )}
