@@ -1,8 +1,5 @@
 // Validierung und Normalisierung der Gameserver-Einstellungen für POST/PUT der Admin-API.
-// Nur die hier gelisteten Felder dürfen von außen gesetzt werden (kein createdBy/id/createdAt),
-// und die Live-Status-Felder werden passend zur gewählten Quelle aufgeräumt.
-
-export type QueryType = "amp" | "gamedig";
+// Nur die hier gelisteten Felder dürfen von außen gesetzt werden (kein createdBy/id/createdAt).
 
 export type GameServerInput = {
   name: string;
@@ -12,32 +9,17 @@ export type GameServerInput = {
   host: string;
   port: string | null;
   password: string | null;
-  queryType: QueryType | null;
-  ampInstanceId: string | null;
-  gamedigType: string | null;
-  queryPort: string | null;
-  queryTelnetPort: string | null;
-  queryTelnetPassword: string | null;
   maxSlots: number;
-  isActive: boolean;
+  isOnline: boolean;
   openAccess: boolean;
 };
 
 const FIELDS = [
   "name", "game", "description", "joinInstructions", "host", "port", "password",
-  "queryType", "ampInstanceId", "gamedigType", "queryPort", "queryTelnetPort", "queryTelnetPassword",
-  "maxSlots", "isActive", "openAccess",
+  "maxSlots", "isOnline", "openAccess",
 ] as const satisfies readonly (keyof GameServerInput)[];
 
 export const MAX_SLOTS_LIMIT = 1000;
-
-// Live-Status-Quelle eines Servers. Ältere Datensätze haben queryType = null und nur eine
-// ampInstanceId — die gelten weiterhin als AMP-Server.
-export function statusSourceOf(server: { queryType: string | null; ampInstanceId: string | null }): QueryType | null {
-  if (server.queryType === "gamedig") return "gamedig";
-  if (server.queryType === "amp" || server.ampInstanceId) return "amp";
-  return null;
-}
 
 export function isValidPort(value: string): boolean {
   if (!/^\d+$/.test(value)) return false;
@@ -86,37 +68,12 @@ export function validateServerInput(raw: Partial<Record<keyof GameServerInput, u
   const port = str(raw.port);
   if (port && !isValidPort(port)) return { error: "Port muss zwischen 1 und 65535 liegen" };
 
-  const queryTypeRaw = str(raw.queryType);
-  if (queryTypeRaw && queryTypeRaw !== "amp" && queryTypeRaw !== "gamedig") return { error: "Unbekannte Live-Status-Quelle" };
-  const queryType = statusSourceOf({ queryType: queryTypeRaw, ampInstanceId: str(raw.ampInstanceId) });
-
-  let ampInstanceId: string | null = null;
-  let gamedigType: string | null = null;
-  let queryPort: string | null = null;
-  let queryTelnetPort: string | null = null;
-  let queryTelnetPassword: string | null = null;
-
-  if (queryType === "amp") {
-    ampInstanceId = str(raw.ampInstanceId);
-    if (!ampInstanceId) return { error: "Für den AMP-Live-Status wird eine AMP Instance-ID benötigt" };
-  } else if (queryType === "gamedig") {
-    gamedigType = str(raw.gamedigType);
-    queryPort = str(raw.queryPort);
-    queryTelnetPort = str(raw.queryTelnetPort);
-    queryTelnetPassword = str(raw.queryTelnetPassword);
-    if (!gamedigType) return { error: "Für die direkte Abfrage wird ein GameDig-Typ benötigt" };
-    if (!port && !queryPort) return { error: "Für die direkte Abfrage wird ein Port oder Query-Port benötigt" };
-    if (queryPort && !isValidPort(queryPort)) return { error: "Query-Port muss zwischen 1 und 65535 liegen" };
-    if (queryTelnetPort && !isValidPort(queryTelnetPort)) return { error: "Telnet-Port muss zwischen 1 und 65535 liegen" };
-  }
-
   return {
     data: {
       name, game, description, joinInstructions, host, port,
       password: str(raw.password),
-      queryType, ampInstanceId, gamedigType, queryPort, queryTelnetPort, queryTelnetPassword,
       maxSlots,
-      isActive: typeof raw.isActive === "boolean" ? raw.isActive : true,
+      isOnline: typeof raw.isOnline === "boolean" ? raw.isOnline : true,
       openAccess: raw.openAccess === true,
     },
   };

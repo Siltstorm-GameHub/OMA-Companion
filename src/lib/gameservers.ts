@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { getInstanceSummaries } from "@/lib/amp";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export type TrafficLight = "green" | "yellow" | "red";
@@ -71,46 +70,6 @@ export async function getServersWithAdminCounts() {
   );
 }
 
-export type AmpSyncSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null; maxPlayers: number | null };
-export type AmpSyncResult = {
-  deactivated: { id: string; name: string }[];
-  suggestions: AmpSyncSuggestion[];
-};
-
-// Gleicht die verknüpften Server mit dem AMP-Controller ab:
-// - Server, deren AMP-Instanz nicht mehr existiert, werden automatisch deaktiviert
-//   (nicht gelöscht, damit Bewerbungshistorie erhalten bleibt).
-// - AMP-Instanzen ohne verknüpften Server werden als Vorschlag zurückgegeben; da AMP
-//   Host/IP und Passwort nicht zuverlässig liefert, legt der Sync sie nicht selbst an —
-//   ein Admin übernimmt Name/Spiel/Port per Klick und ergänzt den Rest manuell.
-export async function syncGameServersWithAmp(): Promise<AmpSyncResult> {
-  const instances = await getInstanceSummaries();
-  const instanceIds = new Set(instances.map((i) => i.instanceId));
-
-  const linkedServers = await prisma.gameServer.findMany({
-    where: { ampInstanceId: { not: null }, isActive: true },
-  });
-  const toDeactivate = linkedServers.filter((s) => s.ampInstanceId && !instanceIds.has(s.ampInstanceId));
-
-  if (toDeactivate.length > 0) {
-    await prisma.gameServer.updateMany({
-      where: { id: { in: toDeactivate.map((s) => s.id) } },
-      data: { isActive: false },
-    });
-  }
-
-  const knownInstanceIds = new Set(
-    (await prisma.gameServer.findMany({ where: { ampInstanceId: { not: null } }, select: { ampInstanceId: true } })).map(
-      (s) => s.ampInstanceId
-    )
-  );
-  const suggestions = instances
-    .filter((i) => !knownInstanceIds.has(i.instanceId))
-    .map((i) => ({ ampInstanceId: i.instanceId, name: i.name, game: i.game, port: i.port, maxPlayers: i.maxPlayers }));
-
-  return { deactivated: toDeactivate.map((s) => ({ id: s.id, name: s.name })), suggestions };
-}
-
 export type VisibleServer = {
   id: string;
   name: string;
@@ -124,17 +83,18 @@ export type VisibleServer = {
   myStatus: "none" | "pending" | "approved" | "denied" | "revoked" | "waitlisted";
   waitlistPosition?: number;
   openAccess: boolean;
+  online: boolean;
   host?: string;
   port?: string | null;
   password?: string | null;
 };
 
-// Liste aller aktiven Server inkl. Ampel und (falls genehmigt) Zugangsdaten für den jeweiligen User.
+// Liste aller Server inkl. Ampel, Online-Status und (falls genehmigt) Zugangsdaten für den jeweiligen User.
+// Offline geschaltete Server bleiben sichtbar und werden nur als offline angezeigt (online-Server zuerst).
 // Wird sowohl von /api/servers als auch von der /servers-Seite (SSR) verwendet.
 export async function getVisibleServers(userId: string | undefined): Promise<VisibleServer[]> {
   const servers = await prisma.gameServer.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isOnline: "desc" }, { createdAt: "desc" }],
   });
 
   const myApplications = userId
@@ -170,6 +130,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         myStatus: hasApproved ? "approved" : ((application?.status as VisibleServer["myStatus"]) ?? "none"),
         ...(waitlistPosition !== undefined ? { waitlistPosition } : {}),
         openAccess: server.openAccess,
+        online: server.isOnline,
         ...(hasApproved
           ? { host: server.host, port: server.port, password: server.password }
           : {}),

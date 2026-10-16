@@ -37,7 +37,6 @@ import {
   CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
 } from "@/components/community-jobs/CoachTools";
 import GameCover from "@/components/GameCover";
-import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 import { upload } from "@vercel/blob/client";
 import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, CLIP_UPLOAD_PREFIX, isVideoUrl } from "@/lib/upload-limits";
@@ -292,14 +291,13 @@ interface Recommendations {
 interface Payout { id: string; weekStart: string; weekEnd: string; rawScore: number; tierLabel: string | null; baseCoins: number; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
 interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
-interface ServerSummary { id: string; name: string; game: string }
+interface ServerSummary { id: string; name: string; game: string; online: boolean }
 
 function OfficeView({ membership, guide, onChanged }: { membership: Membership; guide?: string; onChanged: () => void }) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [servers, setServers] = useState<ServerSummary[]>([]);
-  const liveStatus = useAllLiveStatus();
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
   const [busy, setBusy] = useState(false);
@@ -372,9 +370,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
     };
   }, [membership.jobKey]);
 
-  const onlineServers = servers
-    .filter(s => liveStatus[s.id]?.online)
-    .sort((a, b) => (liveStatus[b.id]?.currentPlayers ?? 0) - (liveStatus[a.id]?.currentPlayers ?? 0));
+  const onlineServers = servers.filter(s => s.online);
 
   const contractEnd = new Date(membership.contractEndAt);
   const renewOpensAt = new Date(new Date(membership.contractStartAt).setMonth(new Date(membership.contractStartAt).getMonth() + 2));
@@ -683,23 +679,20 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
         <div className="p-4 border-b border-white/[0.04] space-y-2">
           <SectionHeader tone="teal" icon={<ServerIcon className="w-3.5 h-3.5" />} title="Aktive Community-Server" />
           <div className="space-y-1">
-            {onlineServers.map(s => {
-              const status = liveStatus[s.id];
-              return (
-                <Link key={s.id} href="/servers"
-                  className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-                  <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-300 truncate">{s.name}</p>
-                    <p className="text-[10px] text-gray-600 truncate">{s.game}</p>
-                  </div>
-                  <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
-                    <span className="w-1 h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" />
-                    {status?.currentPlayers ?? 0}{status?.maxPlayers != null ? `/${status.maxPlayers}` : ""} online
-                  </span>
-                </Link>
-              );
-            })}
+            {onlineServers.map(s => (
+              <Link key={s.id} href="/servers"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+                <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-300 truncate">{s.name}</p>
+                  <p className="text-[10px] text-gray-600 truncate">{s.game}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
+                  <span className="w-1 h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" />
+                  Online
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       )}

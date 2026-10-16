@@ -408,15 +408,11 @@ ALTER TABLE "Card" DROP COLUMN IF EXISTS "avatarAnimationsJson";
 ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "openAccess" BOOLEAN NOT NULL DEFAULT false;
 
 -- ═══════════════════════════════════════════════════════════════
--- Community-Gameserver: direkte Live-Status-Abfrage (GameDig/A2S) für
--- Docker-Server ohne AMP, z.B. Enshrouded/7 Days to Die — plus Warteliste
+-- Community-Gameserver: Warteliste
+-- (Die frühere Live-Status-Abfrage per AMP/GameDig wurde entfernt — ihre Spalten
+--  löscht prisma/manual-sql/drop_gameserver_live_status.sql.)
 -- ═══════════════════════════════════════════════════════════════
 
-ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryType" TEXT;
-ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "gamedigType" TEXT;
-ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryPort" TEXT;
-ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryTelnetPort" TEXT;
-ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "queryTelnetPassword" TEXT;
 -- serverapplication.status bekommt neuen möglichen Wert "waitlisted" (freier String, kein ALTER nötig)
 
 -- ═══════════════════════════════════════════════════════════════

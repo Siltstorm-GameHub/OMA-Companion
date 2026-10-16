@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const existing = await prisma.gameServer.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Server nicht gefunden" }, { status: 404 });
 
-  // Teil-Updates (z.B. nur isActive) werden mit dem bestehenden Datensatz zusammengeführt
+  // Teil-Updates (z.B. nur isOnline per Schalter) werden mit dem bestehenden Datensatz zusammengeführt
   // und dann komplett validiert, damit nie ein ungültiger Zustand gespeichert wird.
   const result = validateServerInput({ ...existing, ...pickServerFields(body) });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });

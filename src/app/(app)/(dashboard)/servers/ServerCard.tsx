@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 import GameCover from "@/components/GameCover";
 import ApplyButton from "./ApplyButton";
 import ServerCredentials from "./ServerCredentials";
-import { useLiveStatus } from "@/lib/useServerLiveStatus";
 
 type Light = "green" | "yellow" | "red";
 
@@ -32,6 +31,7 @@ type Server = {
   myStatus: string;
   waitlistPosition?: number;
   openAccess: boolean;
+  online: boolean;
   host?: string;
   port?: string | null;
   password?: string | null;
@@ -40,11 +40,10 @@ type Server = {
 const PRESENCE_ONLINE = "#14b8a6"; // Marken-Teal, konsistent mit dem Presence-Dot-Konzept
 const PRESENCE_OFFLINE = "#52525b"; // neutrales Grau — "offline" ist kein Fehlerzustand, keine Warnfarbe
 
-// Presence-Dot auf dem Server-Cover (Discord/Slack-Muster): zeigt live an, ob das Spiel
-// selbst bereit ist. Bewusst getrennt vom Kapazitätsbalken rechts, der die Plätze zeigt —
+// Presence-Dot auf dem Server-Cover (Discord/Slack-Muster): zeigt, ob der Server laut Admin-Schalter
+// online ist. Bewusst getrennt vom Kapazitätsbalken rechts, der die Plätze zeigt —
 // unterschiedliche Form (Dot auf Avatar vs. Balken im Textblock) und Bedeutung.
-function PresenceDot({ online }: { online: boolean | undefined }) {
-  // undefined = Status noch nicht geladen → neutraler Puls-Platzhalter statt hartem Pop-in
+function PresenceDot({ online }: { online: boolean }) {
   return (
     <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3" aria-hidden="true">
       {online && (
@@ -54,9 +53,9 @@ function PresenceDot({ online }: { online: boolean | undefined }) {
         />
       )}
       <span
-        className={`relative inline-flex h-3 w-3 rounded-full border-2 ${online === undefined ? "motion-safe:animate-pulse" : ""}`}
+        className="relative inline-flex h-3 w-3 rounded-full border-2"
         style={{
-          background: online === undefined ? "rgba(255,255,255,0.15)" : online ? PRESENCE_ONLINE : PRESENCE_OFFLINE,
+          background: online ? PRESENCE_ONLINE : PRESENCE_OFFLINE,
           borderColor: "var(--bg-surface)",
         }}
       />
@@ -91,9 +90,7 @@ function CapacityBar({ occupied, maxSlots, light, isOffline }: { occupied: numbe
 
 export default function ServerCard({ server }: { server: Server }) {
   const showCredentials = server.myStatus === "approved" && !!server.host;
-  const liveStatus = useLiveStatus(server.id);
-  const isOffline = liveStatus?.online === false;
-  const isLoading = liveStatus === undefined;
+  const isOffline = !server.online;
 
   return (
     <motion.div
@@ -109,26 +106,13 @@ export default function ServerCard({ server }: { server: Server }) {
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
           <GameCover game={server.game} className="w-10 h-10" rounded="rounded-lg" />
-          <PresenceDot online={liveStatus?.online} />
+          <PresenceDot online={server.online} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{server.name}</p>
           <p className="text-xs text-gray-500">{server.game}</p>
-          {isLoading ? (
-            <span className="motion-safe:animate-pulse inline-block h-3 w-24 rounded bg-white/10 mt-1" />
-          ) : liveStatus.online && liveStatus.currentPlayers !== null ? (
-            <>
-              <p className="text-xs mt-1 tabular-nums" style={{ color: PRESENCE_ONLINE }}>
-                {liveStatus.currentPlayers}
-                {liveStatus.maxPlayers !== null ? `/${liveStatus.maxPlayers}` : ""} Spieler online
-              </p>
-              {liveStatus.players && liveStatus.players.length > 0 && (
-                <p className="text-[11px] text-gray-500 mt-0.5 truncate">
-                  {liveStatus.players.slice(0, 6).join(", ")}
-                  {liveStatus.players.length > 6 ? ` +${liveStatus.players.length - 6} weitere` : ""}
-                </p>
-              )}
-            </>
+          {server.online ? (
+            <p className="text-xs mt-1" style={{ color: PRESENCE_ONLINE }}>Server online</p>
           ) : (
             <p className="text-xs text-gray-500 mt-1">Server offline</p>
           )}

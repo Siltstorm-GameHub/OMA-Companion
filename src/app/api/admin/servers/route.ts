@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
   const server = await prisma.gameServer.create({
-    data: { ...result.data, isActive: true, createdBy: admin.id },
+    data: { ...result.data, createdBy: admin.id },
   });
 
   return NextResponse.json({ ...server, occupied: 0, pendingCount: 0, light: trafficLight(server.maxSlots, server.maxSlots) }, { status: 201 });

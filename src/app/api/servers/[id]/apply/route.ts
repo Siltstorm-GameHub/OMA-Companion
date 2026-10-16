@@ -13,7 +13,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const message: string | null = typeof body?.message === "string" ? body.message.trim().slice(0, 500) || null : null;
 
   const server = await prisma.gameServer.findUnique({ where: { id: serverId } });
-  if (!server || !server.isActive) return NextResponse.json({ error: "Server nicht gefunden" }, { status: 404 });
+  // Bewerben geht auch, während der Server als offline markiert ist — offline heißt nur "läuft gerade nicht".
+  if (!server) return NextResponse.json({ error: "Server nicht gefunden" }, { status: 404 });
 
   const existing = await prisma.serverApplication.findUnique({
     where: { serverId_userId: { serverId, userId } },
