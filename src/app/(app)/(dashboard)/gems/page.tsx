@@ -3,7 +3,7 @@
 // ============================================
 // Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
 // Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
-//    "Spielen"  (Event-Turnier, Kampagne, Rangliste nach Kampagnen-Sternen),
+//    "Spielen"  (Event-Turnier, Kampagne, Rangliste nach höchster Stufe),
 //    "Sammlung" (Startaufstellung + Karten),
 //    "Shop"     (Glücksrad, Packs öffnen und kaufen).
 //  Alte ?tab=-Werte landen über LEGACY_TABS in BattleCardsTabs im passenden Reiter.
@@ -16,7 +16,7 @@ import { ensureGemsStarter } from "@/lib/battle-cards/auto-starter";
 import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignStarsLeaderboard } from "@/lib/battle-cards/leaderboard";
+import { getCampaignLeaderboard } from "@/lib/battle-cards/leaderboard";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
@@ -69,7 +69,7 @@ export default async function GemsPage() {
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
-    getCampaignStarsLeaderboard(),
+    getCampaignLeaderboard(),
   ]);
 
   const ownedCards = ownedUserCards.map((uc) => ({

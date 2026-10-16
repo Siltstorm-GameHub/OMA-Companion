@@ -82,9 +82,22 @@ vorerst temporär (307), in Phase 2 auf permanent umstellen.
 - Taktikkarten-Reste aus Engine und `/api/internal/grant-tactic-cards-to-all` entfernt
 - Balancing-Simulation: `scripts/simulate-campaign-balance.ts` (ohne DB, automatischer Spieler)
 
-Ergebnis der Simulation mit Stufe-1-Teams (40 Kämpfe je Level, vorsichtige Untergrenze):
-Level 1–10 fast immer gewonnen, meist in Runde 1; Level 11 ≈ 40 %, Level 12 (Endboss) ≈ 43 %.
-Mit Stufe-3-Karten lagen 11/12 bei 70 %/95 %, mit Stufe 5 bei 100 %. Offen: Kurve anpassen?
+Kampagnen-Kurve geglättet: Ohne Karten-Stufen waren Level 1–10 trivial und 11/12 eine Wand
+(≈ 40 %). Die `statMultiplier` sind jetzt per Simulation kalibriert (`--calibrate`): Der Bot
+gewinnt Level 1–5 immer, danach fällt die Siegquote gleichmäßig von 90 % (erster Boss) auf
+≈ 64 % (Endboss).
+
+**3b. Endlos-Turm** — erledigt
+- Nach Level 12 folgen Endlos-Stufen 13, 14, … (`endless-levels.ts`), deterministisch aus der
+  Stufennummer erzeugt (alle Spieler haben dieselben Gegner), ID `endless-<n>`
+- Teams mit fester Rollen-Aufteilung (Tank, 2× Schaden, Support, ab Stufe 16 zweiter Tank), jedes
+  Monster auf dieselbe Stärke normiert, jede 5. Stufe ein Boss
+- Schwierigkeit: Basis 1,15, +4 % je Stufe. Bot-Siegquote ≈ 100 % (13) → 70 % (20) → 35 % (25) →
+  0 % ab ≈ 34 (`simulate-campaign-balance.ts --endless`)
+- Fortschritt, Sterne und Münzen wie in der Kampagne; Freischaltung der Reihe nach
+- Rangliste: höchste geschaffte Stufe, dann Sterne, dann wer früher dort war
+- Kampagnen-Karte: Abschnitt „Endlos-Turm“ mit den letzten 3 geschafften, der nächsten und 2
+  gesperrten Vorschau-Stufen
 
 **4. Datenbank aufräumen** (erst nach einem `pg_dump`)
 - Tabellen: `Dnd*`, `DuelDeck`, `TacticCard`, `UserTacticCard`, `BattleChallenge`, `BattleQueueEntry`,

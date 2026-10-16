@@ -1,7 +1,7 @@
 // ============================================
 // Kampagnen-Logik — Kampagne im "OMA Gems"-Modus
 // ============================================
-// Bindeglied zwischen den hart hinterlegten Level-Inhalten (campaign-levels.ts)
+// Bindeglied zwischen den Level-Inhalten (campaign-levels.ts, endless-levels.ts)
 // und dem Spieler-Fortschritt in der DB (UserCampaignProgress, siehe
 // schema.prisma). Enthält bewusst KEINE Kampf-Start-Logik (die lebt in
 // live-battle.ts, um Zirkelimporte zu vermeiden — live-battle.ts importiert
@@ -12,6 +12,7 @@ import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
 import type { InteractiveBattleState } from "@/lib/battle-engine/interactive";
 import { instantiateMonster } from "./monster-content";
 import { CAMPAIGN_LEVELS, getCampaignLevel, type CampaignLevelDef } from "./campaign-levels";
+import { ENDLESS_FIRST_STAGE, endlessLevelId, generateEndlessLevel, parseEndlessStage } from "./endless-levels";
 
 export { CAMPAIGN_LEVELS, getCampaignLevel };
 
@@ -45,20 +46,56 @@ export interface CampaignBoardLevel {
   stars: number;
   completed: boolean;
   unlocked: boolean;
+  /** "chapter" = die 12 festen Kampagnen-Level, "endless" = Endlos-Turm (siehe endless-levels.ts). */
+  section: "chapter" | "endless";
 }
 
-/** Kompletter Kartenzustand für die Kampagnen-Map-UI: Level-Inhalte +
- *  Spieler-Fortschritt + berechnete Freischaltung (Level N braucht Level N-1
- *  abgeschlossen; Level 1 ist immer freigeschaltet). */
+/** Wie viele schon geschaffte Endlos-Stufen und gesperrte Vorschau-Stufen die Karte zeigt. */
+const ENDLESS_SHOWN_COMPLETED = 3;
+const ENDLESS_SHOWN_PREVIEW = 2;
+
+/** Rein, damit testbar: Kapitel-Level N braucht Level N-1, die erste Endlos-Stufe das
+ *  letzte Kapitel-Level, jede weitere Endlos-Stufe ihre Vorgängerin. */
+export function isLevelUnlocked(levelId: string, completedLevelIds: ReadonlySet<string>): boolean {
+  const chapterIndex = CAMPAIGN_LEVELS.findIndex((l) => l.id === levelId);
+  if (chapterIndex === 0) return true;
+  if (chapterIndex > 0) return completedLevelIds.has(CAMPAIGN_LEVELS[chapterIndex - 1].id);
+  const stage = parseEndlessStage(levelId);
+  if (stage === null) return false;
+  const previous = stage === ENDLESS_FIRST_STAGE ? CAMPAIGN_LEVELS[CAMPAIGN_LEVELS.length - 1].id : endlessLevelId(stage - 1);
+  return completedLevelIds.has(previous);
+}
+
+/** Höchste geschaffte Endlos-Stufe, oder null. */
+export function highestEndlessStage(completedLevelIds: Iterable<string>): number | null {
+  let best: number | null = null;
+  for (const id of completedLevelIds) {
+    const stage = parseEndlessStage(id);
+    if (stage !== null && (best === null || stage > best)) best = stage;
+  }
+  return best;
+}
+
+/** Rein, damit testbar: welche Endlos-Stufen die Karte zeigt — die letzten geschafften,
+ *  die nächste spielbare und zwei gesperrte zur Vorschau. Leer, solange das Kapitel offen ist. */
+export function endlessStagesToShow(chapterCompleted: boolean, highest: number | null): number[] {
+  if (!chapterCompleted) return [];
+  const next = (highest ?? ENDLESS_FIRST_STAGE - 1) + 1;
+  const first = Math.max(ENDLESS_FIRST_STAGE, next - ENDLESS_SHOWN_COMPLETED);
+  const stages: number[] = [];
+  for (let stage = first; stage <= next + ENDLESS_SHOWN_PREVIEW; stage++) stages.push(stage);
+  return stages;
+}
+
+/** Kompletter Kartenzustand für die Kampagnen-Map-UI: Kapitel-Level + der sichtbare
+ *  Ausschnitt des Endlos-Turms, jeweils mit Spieler-Fortschritt und Freischaltung. */
 export async function getCampaignBoard(userId: string): Promise<CampaignBoardLevel[]> {
   const progressRows = await prisma.userCampaignProgress.findMany({ where: { userId } });
   const progressByLevelId = new Map(progressRows.map((p) => [p.levelId, p]));
+  const completed = new Set(progressRows.filter((p) => p.completed).map((p) => p.levelId));
 
-  let previousCompleted = true;
-  return CAMPAIGN_LEVELS.map((levelDef) => {
+  const toBoardLevel = (levelDef: CampaignLevelDef, section: CampaignBoardLevel["section"]): CampaignBoardLevel => {
     const progress = progressByLevelId.get(levelDef.id);
-    const unlocked = previousCompleted;
-    previousCompleted = progress?.completed ?? false;
     return {
       id: levelDef.id,
       order: levelDef.order,
@@ -67,14 +104,25 @@ export async function getCampaignBoard(userId: string): Promise<CampaignBoardLev
       isBoss: levelDef.isBoss ?? false,
       stars: progress?.stars ?? 0,
       completed: progress?.completed ?? false,
-      unlocked,
+      unlocked: isLevelUnlocked(levelDef.id, completed),
+      section,
     };
-  });
+  };
+
+  const chapterCompleted = completed.has(CAMPAIGN_LEVELS[CAMPAIGN_LEVELS.length - 1].id);
+  const endless = endlessStagesToShow(chapterCompleted, highestEndlessStage(completed));
+  return [
+    ...CAMPAIGN_LEVELS.map((l) => toBoardLevel(l, "chapter")),
+    ...endless.map((stage) => toBoardLevel(generateEndlessLevel(stage), "endless")),
+  ];
 }
 
 export async function isCampaignLevelUnlocked(userId: string, levelId: string): Promise<boolean> {
-  const board = await getCampaignBoard(userId);
-  return board.some((l) => l.id === levelId && l.unlocked);
+  const completed = await prisma.userCampaignProgress.findMany({
+    where: { userId, completed: true },
+    select: { levelId: true },
+  });
+  return isLevelUnlocked(levelId, new Set(completed.map((p) => p.levelId)));
 }
 
 /** Aktualisiert den Fortschritt nach einem gewonnenen Kampf — die beste je

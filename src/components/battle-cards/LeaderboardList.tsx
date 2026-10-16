@@ -3,7 +3,12 @@ import Link from "next/link";
 import MobaIcon from "./MobaIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Star } from "@/components/icons";
-import { MAX_CAMPAIGN_STARS, type LeaderboardRow } from "@/lib/battle-cards/leaderboard";
+import type { LeaderboardRow } from "@/lib/battle-cards/leaderboard";
+import { ENDLESS_FIRST_STAGE } from "@/lib/battle-cards/endless-levels";
+
+function stageLabel(stage: number): string {
+  return stage >= ENDLESS_FIRST_STAGE ? `Endlos-Stufe ${stage}` : `Level ${stage} von 12`;
+}
 
 /** Eigene Rang-Plaketten statt Emoji-Medaillen (🥇🥈🥉 rendern je nach OS/
  *  Browser unterschiedlich und fallen aus dem sonst durchgehend selbstgebauten
@@ -43,16 +48,16 @@ function Row({ row, place, isViewer }: { row: LeaderboardRow; place: number; isV
       <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white truncate font-semibold">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></p>
-        <p className="text-[11px] text-gray-500">{row.levelsCleared} Level geschafft</p>
+        <p className="text-[11px] text-gray-500 flex items-center gap-1">
+          <Star className="w-3 h-3 text-amber-300" fill="currentColor" /> {row.stars} Sterne
+        </p>
       </div>
-      <span className="flex items-center gap-1 text-xs font-semibold text-amber-300 tabular-nums shrink-0">
-        <Star className="w-3.5 h-3.5" fill="currentColor" /> {row.stars}
-      </span>
+      <span className="text-xs font-semibold text-white tabular-nums shrink-0 text-right">{stageLabel(row.highestStage)}</span>
     </Link>
   );
 }
 
-/** Rangliste nach Kampagnen-Sternen. Mit `limit` nur die ersten Plätze — der Betrachter
+/** Rangliste der Kampagne inkl. Endlos-Turm. Mit `limit` nur die ersten Plätze — der Betrachter
  *  wird dann zusätzlich unten angehängt, falls er außerhalb steht. */
 export default function LeaderboardList({ rows, viewerId, limit }: { rows: LeaderboardRow[]; viewerId: string; limit?: number }) {
   if (rows.length === 0) {
@@ -72,7 +77,7 @@ export default function LeaderboardList({ rows, viewerId, limit }: { rows: Leade
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
         <MobaIcon name="info" className="w-3 h-3 shrink-0" />
-        Sortiert nach Kampagnen-Sternen (max. {MAX_CAMPAIGN_STARS}) · bei Gleichstand zählt, wer zuerst dort war
+        Sortiert nach höchster geschaffter Stufe, dann Sternen · bei Gleichstand zählt, wer zuerst dort war
       </p>
       {shown.map((row, i) => (
         <Row key={row.userId} row={row} place={i + 1} isViewer={row.userId === viewerId} />

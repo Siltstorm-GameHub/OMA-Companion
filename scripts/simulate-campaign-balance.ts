@@ -3,10 +3,14 @@
  *
  *   npx tsx scripts/simulate-campaign-balance.ts [kämpfe-pro-level=40] [spieler-stufe=1]
  *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --calibrate
+ *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --endless [--base=1.6] [--growth=1.06] [--to=35]
  *
  * Mit --calibrate wird je Level der statMultiplier gesucht, bei dem der automatische Spieler
  * die Ziel-Siegquote aus TARGET_WIN_RATE erreicht (Bisektion) — Vorschlagswerte zum Eintragen
  * in campaign-levels.ts.
+ *
+ * Mit --endless werden die Endlos-Stufen ab 13 simuliert (siehe endless-levels.ts); --base und
+ * --growth überschreiben testweise die Schwierigkeits-Konstanten.
  *
  * Läuft komplett ohne Datenbank: das Spieler-Team besteht aus 5 der 6 Standard-Karten
  * (prisma/battle-cards-seed-data.ts, je Kampf zufällig gewählt), die Gegner aus den
@@ -25,11 +29,17 @@ import { BOARD_COLS, BOARD_ROWS, ULTIMATE_SKILL_COST } from "@/lib/battle-engine
 import { resolveBoardSession, type SwapMove } from "@/lib/battle-engine/board-match3";
 import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/battle-cards/campaign-levels";
 import { buildCampaignEnemyTeam, computeStars } from "@/lib/battle-cards/campaign";
+import { ENDLESS_BASE_MULTIPLIER, ENDLESS_FIRST_STAGE, ENDLESS_GROWTH, generateEndlessLevel } from "@/lib/battle-cards/endless-levels";
 
 const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const BATTLES = Number(positional[0] ?? 40);
 const PLAYER_LEVEL = Number(positional[1] ?? 1);
 const CALIBRATE = process.argv.includes("--calibrate");
+const ENDLESS = process.argv.includes("--endless");
+const flag = (name: string, fallback: number) => {
+  const raw = process.argv.find((a) => a.startsWith(`--${name}=`));
+  return raw ? Number(raw.split("=")[1]) : fallback;
+};
 
 /** Ziel-Siegquote des automatischen Spielers je Kampagnen-Level (Index 0 = Level 1) —
  *  sanft fallend, Bosse (6, 12) als spürbare Stufe. Ein Mensch spielt besser als der Bot. */
@@ -133,6 +143,23 @@ function calibrate(level: CampaignLevelDef, target: number): number {
     else high = mid;
   }
   return Math.round(((low + high) / 2) * 100) / 100;
+}
+
+if (ENDLESS) {
+  const base = flag("base", ENDLESS_BASE_MULTIPLIER);
+  const growth = flag("growth", ENDLESS_GROWTH);
+  const to = flag("to", 35);
+  console.log(`Endlos-Turm: ${BATTLES} Kämpfe je Stufe, Basis ${base}, Wachstum ${growth}
+`);
+  console.log("Stufe          Gegner  Multiplikator  Siege   Ø Runden");
+  for (let stage = ENDLESS_FIRST_STAGE; stage <= to; stage++) {
+    const level = { ...generateEndlessLevel(stage), statMultiplier: base * growth ** (stage - ENDLESS_FIRST_STAGE) };
+    const r = simulate(level, BATTLES);
+    console.log(
+      `${String(stage).padStart(3)} ${level.isBoss ? "(Boss)" : "      "}    ${String(level.monsters.length).padStart(4)}  ${level.statMultiplier.toFixed(2).padStart(13)}  ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgRounds.toFixed(1).padStart(7)}`
+    );
+  }
+  process.exit(0);
 }
 
 console.log(`Kampagnen-Balancing: ${BATTLES} Kämpfe je Level, Spielerkarten Stufe ${PLAYER_LEVEL}${CALIBRATE ? ", Kalibrierung" : ""}

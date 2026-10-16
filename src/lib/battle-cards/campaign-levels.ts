@@ -20,6 +20,7 @@
 // Siegquote, nicht der Multiplikator.
 
 import type { MonsterTemplate } from "./monster-content";
+import { generateEndlessLevel, parseEndlessStage } from "./endless-levels";
 import {
   AFK_FARMER,
   GRIEFER_IMP,
@@ -172,6 +173,10 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
   },
 ];
 
+/** Kapitel-Level oder (nach Level 12) eine Endlos-Stufe, siehe endless-levels.ts. */
 export function getCampaignLevel(levelId: string): CampaignLevelDef | undefined {
-  return CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+  const chapterLevel = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+  if (chapterLevel) return chapterLevel;
+  const stage = parseEndlessStage(levelId);
+  return stage !== null ? generateEndlessLevel(stage) : undefined;
 }

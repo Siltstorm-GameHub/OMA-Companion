@@ -2,20 +2,20 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "@/components/icons";
 import { auth } from "@/auth";
-import { getCampaignStarsLeaderboard } from "@/lib/battle-cards/leaderboard";
+import { getCampaignLeaderboard } from "@/lib/battle-cards/leaderboard";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 
 export const metadata = {
   title: "Rangliste | OMA Gems | OMA",
 };
 
-// Vollständige Rangliste nach Kampagnen-Sternen (im Hub stehen nur die ersten Plätze).
+// Vollständige Rangliste der Kampagne inkl. Endlos-Turm (im Hub stehen nur die ersten Plätze).
 export default async function GemsLeaderboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login?notice=login_required&callbackUrl=/gems/leaderboard");
   }
-  const rows = await getCampaignStarsLeaderboard();
+  const rows = await getCampaignLeaderboard();
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">

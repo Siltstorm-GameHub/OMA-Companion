@@ -10,6 +10,9 @@
 // wie bei den anderen Launchern) — nach dem Verlassen wird die Karte über
 // GET /api/battle-cards/campaign neu geladen, damit neue Sterne/Freischaltungen
 // sofort sichtbar sind.
+//
+// Unter dem Kapitel folgt der Endlos-Turm (siehe endless-levels.ts): ein Ausschnitt
+// aus den letzten geschafften Stufen, der nächsten spielbaren und zwei Vorschau-Stufen.
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -29,6 +32,7 @@ export interface CampaignBoardLevel {
   stars: number;
   completed: boolean;
   unlocked: boolean;
+  section: "chapter" | "endless";
 }
 
 // Leichter Zickzack-Versatz je Knoten, für das "gewundene Pfad"-Gefühl einer
@@ -193,6 +197,18 @@ export default function CampaignMap() {
   }
 
   const nextUpLevelId = levels?.find((l) => l.unlocked && !l.completed)?.id;
+  const chapterLevels = levels?.filter((l) => l.section === "chapter") ?? [];
+  const endlessLevels = levels?.filter((l) => l.section === "endless") ?? [];
+  const bestEndlessStage = endlessLevels.filter((l) => l.completed).reduce((best, l) => Math.max(best, l.order), 0);
+
+  function renderNodes(nodes: CampaignBoardLevel[]) {
+    return nodes.map((level, index) => (
+      <div key={level.id} className="w-full flex flex-col items-center">
+        <LevelNode level={level} index={index} isNextUp={level.id === nextUpLevelId} onSelect={() => start(level.id)} />
+        {starting === level.id && <Loader2 className="w-4 h-4 text-gray-400 animate-spin mt-1.5" />}
+      </div>
+    ));
+  }
 
   return (
     <div className="space-y-4">
@@ -238,21 +254,31 @@ export default function CampaignMap() {
           <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
         </div>
       ) : (
-        <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">
-          {levels.map((level, index) => (
-            <div key={level.id} className="w-full flex flex-col items-center">
-              <LevelNode
-                level={level}
-                index={index}
-                isNextUp={level.id === nextUpLevelId}
-                onSelect={() => start(level.id)}
-              />
-              {starting === level.id && (
-                <Loader2 className="w-4 h-4 text-gray-400 animate-spin mt-1.5" />
+        <>
+          <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(chapterLevels)}</div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <MobaIcon name="trophy" className="w-4 h-4" />
+                <h2 className="font-battle text-sm text-white uppercase tracking-wide">Endlos-Turm</h2>
+              </div>
+              {bestEndlessStage > 0 && (
+                <span className="text-[11px] font-semibold text-amber-300">Beste Stufe: {bestEndlessStage}</span>
               )}
             </div>
-          ))}
-        </div>
+            {endlessLevels.length === 0 ? (
+              <p className="moba-panel rounded-2xl px-4 py-4 text-xs text-gray-400">
+                Schaffe Level 12, um den Endlos-Turm zu öffnen. Danach wird jede Stufe ein Stück schwerer — wie weit kommst du?
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Wie weit kommst du?</p>
+                <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
