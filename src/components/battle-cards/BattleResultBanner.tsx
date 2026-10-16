@@ -10,8 +10,7 @@ import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { Handshake } from "@/components/icons";
-import { Crown, Skull, Flame } from "@/components/icons";
-import { winStreakBonusFor } from "@/lib/battle-cards/win-streak-constants";
+import { Crown, Skull } from "@/components/icons";
 
 export type BattleOutcome = "win" | "loss" | "draw";
 
@@ -24,17 +23,13 @@ const OUTCOME_CONFIG: Record<BattleOutcome, { label: string; color: string; icon
 export default function BattleResultBanner({
   outcome,
   label,
-  /** Aktuelle Sieges-Serie des Betrachters — nur bei eigenem Sieg (nicht als Zuschauer) übergeben. */
-  winStreak,
 }: {
   outcome: BattleOutcome;
   label?: string;
-  winStreak?: number;
 }) {
   const config = OUTCOME_CONFIG[outcome];
   const Icon = config.icon;
   const displayLabel = label ?? config.label;
-  const bonusCoins = winStreak ? winStreakBonusFor(winStreak) : 0;
 
   useEffect(() => {
     if (outcome !== "win") return;
@@ -78,18 +73,6 @@ export default function BattleResultBanner({
       >
         {displayLabel}
       </motion.p>
-      {outcome === "win" && !!winStreak && winStreak >= 2 && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-          className="flex items-center gap-1.5 text-xs font-semibold text-orange-300"
-        >
-          <Flame className="w-3.5 h-3.5" />
-          Sieges-Serie: {winStreak}
-          {bonusCoins > 0 && <span className="text-amber-300">· +{bonusCoins} Bonus-Münzen</span>}
-        </motion.div>
-      )}
     </motion.div>
   );
 }

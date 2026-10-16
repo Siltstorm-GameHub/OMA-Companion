@@ -3,11 +3,12 @@
 // ============================================
 // Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
 // Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
-//    "Spielen"  (Event-Turnier + Kampagne),
+//    "Spielen"  (Event-Turnier, Kampagne, Rangliste nach Kampagnen-Sternen),
 //    "Sammlung" (Startaufstellung + Karten),
 //    "Shop"     (Glücksrad, Packs öffnen und kaufen).
 //  Alte ?tab=-Werte landen über LEGACY_TABS in BattleCardsTabs im passenden Reiter.
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +17,8 @@ import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DA
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getShopConfig } from "@/lib/shop-config";
+import { getCampaignStarsLeaderboard } from "@/lib/battle-cards/leaderboard";
+import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
 import BattleCardsTabs from "./BattleCardsTabs";
@@ -28,6 +31,7 @@ import DailySpin from "@/components/battle-cards/shop/DailySpin";
 import BuyPack from "@/components/battle-cards/shop/BuyPack";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
+const LEADERBOARD_PREVIEW = 5;
 
 export const metadata = {
   title: "OMA Gems | OMA",
@@ -62,11 +66,12 @@ export default async function GemsPage() {
   const unopenedPacks = await countUnopenedPacks(userId);
   const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, upgradeEconomy] = await Promise.all([
+  const [shopConfig, purchasedToday, todaySpin, upgradeEconomy, leaderboardRows] = await Promise.all([
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
     getUpgradeEconomyConfig(),
+    getCampaignStarsLeaderboard(),
   ]);
 
   const ownedCards = ownedUserCards.map((uc) => ({
@@ -89,6 +94,18 @@ export default async function GemsPage() {
       <div className="space-y-4">
         <h1 className="text-lg font-black text-white">Kampagne</h1>
         <CampaignMap />
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-black text-white">Rangliste</h1>
+          {leaderboardRows.length > LEADERBOARD_PREVIEW && (
+            <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+              Alle anzeigen →
+            </Link>
+          )}
+        </div>
+        <LeaderboardList rows={leaderboardRows} viewerId={userId} limit={LEADERBOARD_PREVIEW} />
       </div>
     </div>
   );

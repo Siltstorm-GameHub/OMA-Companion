@@ -2,9 +2,8 @@
 // Saison-Engine — Aktivitäts-Stufen der Community-Karten
 // ============================================
 // Berechnet für jedes Community-Mitglied die Aktivitäts-Stufe (Ghost … Old Master) aus seinen
-// Events und Quests. Die Klasse (Tank/Damage Dealer/Support) kommt NICHT mehr aus der Aktivität,
-// sondern aus der Helden-Einrichtung: das Mitglied wählt eine Klasse und würfelt die Werte selbst
-// (siehe lib/battle-cards/hero-setup.ts, lib/dnd/class-mapping.ts). Die Saison ändert daran nichts.
+// Events und Quests. Klasse und Werte (Tank/Damage Dealer/Support) werden beim Anlegen der Karte
+// ausgewürfelt (siehe season/community-card-stats.ts). Die Saison ändert daran nichts.
 
 import type { ActivityTier } from "@prisma/client";
 

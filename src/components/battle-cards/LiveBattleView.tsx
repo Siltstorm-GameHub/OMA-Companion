@@ -5,15 +5,10 @@
 // ============================================
 // Eigenes Vollbild-Fenster (fixed inset-0) im selben Arena-Look wie
 // BattleScreen.tsx (die reine Wiedergabekomponente für fertige Replays).
-// Zeigt den aktuellen LiveBattle-Zustand (Polling) und lässt den Spieler,
-// sobald seine Einheit an der Reihe ist, die Aktion (Normalangriff/Aktiv/
-// Ultimate) und — falls nötig — das Ziel wählen (Glow: rot Gegner, grün
-// Verbündete). "Als nächstes dran" zeigt die kommenden 5 Einheiten mit
-// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch) — bei OMA Gems
-// (boardMode) stattdessen "Nächste Gegner-Angriffe" (nur Gegner-Slots, siehe
-// upcomingDisplay): eigene Zug-Slots sind dort bedeutungslos, da alle
-// eigenen Helden ohnehin gemeinsam per Match angreifen statt einzeln der
-// Reihe nach. Auto-Kampf überlässt die eigenen Entscheidungen der KI.
+// Zeigt den aktuellen LiveBattle-Zustand (Polling) im OMA-Gems-Layout
+// (Empires-&-Puzzles-Stil): Gegner oben, Match-3-Brett in der Mitte, eigene
+// Helden darunter. Jeder Zug auf dem Brett lässt alle eigenen Helden gemeinsam
+// angreifen; voll aufgeladene Helden lösen ihr Ultimate per Klick aus.
 //
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
@@ -23,14 +18,11 @@ import type { TeCharacterConfig } from "@/lib/te-character";
 import { Children, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Handshake } from "@/components/icons";
-import { Loader2, Skull, Star, Swords } from "@/components/icons";
+import { Loader2, Swords } from "@/components/icons";
 import MobaIcon from "./MobaIcon";
 import MobaConfirmDialog from "./MobaConfirmDialog";
-import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import { enemySlotForColumn, pickEnemyForColumn, type BoardGrid, type SpecialGrid, type SwapMove } from "@/lib/battle-engine/board-match3";
@@ -49,14 +41,11 @@ import {
 import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
-import VictoryChestReveal, { type ChestPrize } from "./VictoryChestReveal";
-import RankUpOverlay from "./RankUpOverlay";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
-import { parseNpcMode, NPC_BATTLE_WIN_REWARD } from "@/lib/battle-cards/npc-battle-types";
 
-/** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
- *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
+/** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für Turniere —
+ *  Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
  *  stattdessen das zum aktuellen Kapitel passende Hintergrundbild (aktuell
  *  nur Kapitel 1, siehe CAMPAIGN_CHAPTER_BACKGROUND), statt der generischen
  *  Arena — das ist der eigene Look der Kampagne. */
@@ -134,8 +123,6 @@ interface FloatingEffect {
 interface LiveSnapshot {
   id: string;
   mode: string;
-  /** true bei allen OMA-Gems-Kämpfen — blendet den Auto-Kampf-Umschalter aus. */
-  boardMode: boolean;
   status: "active" | "finished";
   round: number;
   units: LiveUnit[];
@@ -154,20 +141,12 @@ interface LiveSnapshot {
     deadline: number | null;
     board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
   } | null;
-  autoA: boolean;
-  autoB: boolean;
   playerAId: string;
-  playerBId: string | null;
   resultBattleId: string | null;
   winner: "A" | "B" | "DRAW" | null;
-  chestPrize: ChestPrize | null;
   /** Nur bei einem gewonnenen Kampagnen-Kampf gesetzt — Sterne-Ergebnis für die
    *  Animation im Kampfende-Screen (siehe computeStars in campaign.ts). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
-  /** Nur gesetzt, wenn DIESER Betrachter durch das Kampfergebnis eine neue
-   *  Rang-Division erreicht hat (siehe computeRankUp in live-battle.ts) — der
-   *  Client zeigt das als eigenen Feier-Moment (siehe RankUpOverlay). */
-  rankUp: { mode: string; fromLabel: string; toLabel: string; toEmoji: string; elo: number } | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -177,11 +156,8 @@ function hpBarColor(pct: number): string {
 }
 
 /** Belohnung für den OMA-Gems-Ergebnisbildschirm (siehe GemsResultScreen) —
- *  Kampagne zeigt Sterne, ein gewonnener NPC-Kampf (Match-3-Puzzle-Variante)
- *  Münzen mit Glücksrad-Dreh, alles andere (Turnier, Niederlage, Unentschieden)
- *  keinen Belohnungs-Block. Die Gems-PvP-Sieges-Kiste läuft weiterhin separat
- *  über VictoryChestReveal, kommt hier also nie als "coins"/"stars" durch. */
-function computeGemsReward(snapshot: LiveSnapshot, myTeam: TeamId | null): GemsReward {
+ *  Kampagne zeigt Sterne, Turniere (Belohnung erst bei Turnierende) keinen Block. */
+function computeGemsReward(snapshot: LiveSnapshot): GemsReward {
   if (snapshot.campaignResult) {
     return {
       kind: "stars",
@@ -189,12 +165,6 @@ function computeGemsReward(snapshot: LiveSnapshot, myTeam: TeamId | null): GemsR
       starsGained: snapshot.campaignResult.starsGained,
       coinsAwarded: snapshot.campaignResult.coinsAwarded,
     };
-  }
-  if (myTeam !== null && snapshot.winner === myTeam) {
-    const parsed = parseNpcMode(snapshot.mode);
-    if (parsed?.isPuzzle) {
-      return { kind: "coins", amount: NPC_BATTLE_WIN_REWARD[parsed.difficulty] };
-    }
   }
   return { kind: "none" };
 }
@@ -312,12 +282,10 @@ function formatModifierDuration(m: ActiveStatModifier): string {
   return `noch ${m.remainingRounds} ${m.remainingRounds === 1 ? "Runde" : "Runden"}`;
 }
 
-/** Reihe von Heldenkarten. Klassisch: zentriert umbrechend. OMA Gems (boardMode):
- *  auf dasselbe 7-Spalten-Raster wie das Brett gelegt — jede Karte steht über/
+/** Reihe von Heldenkarten, auf dasselbe 7-Spalten-Raster wie das Brett gelegt — jede Karte steht über/
  *  unter den Spalten ihres Slots (siehe enemySlotForColumn), damit sichtbar ist,
  *  welcher Gegner von welcher Spalte getroffen wird. */
-function SlotRow({ boardMode, children }: { boardMode: boolean; children: ReactNode }) {
-  if (!boardMode) return <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">{children}</div>;
+function SlotRow({ children }: { children: ReactNode }) {
   const kids = Children.toArray(children);
   return (
     <div className="px-2.5">
@@ -763,7 +731,7 @@ export default function LiveBattleView({
 
   function handleExit() {
     if (onExit) onExit();
-    else router.push("/gems?tab=arena");
+    else router.push("/gems");
   }
 
   async function fetchSnapshot() {
@@ -1042,29 +1010,6 @@ export default function LiveBattleView({
     }).catch(() => {});
   }
 
-  async function toggleAuto(on: boolean) {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/battle-cards/live/${liveBattleId}/auto`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ on }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Fehler");
-        return;
-      }
-      setSnapshot(data);
-      setSelectedAction(null);
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (!mounted) return null;
 
   return createPortal(
@@ -1126,7 +1071,7 @@ export default function LiveBattleView({
             <div className="absolute top-6 left-0 right-0 flex items-center justify-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={BRAND_LOGO} alt="OMA" className="h-8 w-auto object-contain" />
-              <span className="font-battle text-base text-white uppercase tracking-wide">Battle Cards</span>
+              <span className="font-battle text-base text-white uppercase tracking-wide">OMA Gems</span>
             </div>
             <div className="relative flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
@@ -1142,7 +1087,6 @@ export default function LiveBattleView({
             setSelectedAction={setSelectedAction}
             submitAction={submitAction}
             submitUltimate={submitUltimate}
-            toggleAuto={toggleAuto}
             effects={effects}
             attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
@@ -1181,7 +1125,6 @@ function LiveBattleBody({
   setSelectedAction,
   submitAction,
   submitUltimate,
-  toggleAuto,
   effects,
   attackingUnitIds,
   saveBoardProgress,
@@ -1199,7 +1142,6 @@ function LiveBattleBody({
   setSelectedAction: (a: AvailableAction | null) => void;
   submitAction: (actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) => void;
   submitUltimate: (casterId: string) => void;
-  toggleAuto: (on: boolean) => void;
   effects: FloatingEffect[];
   attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
@@ -1210,20 +1152,11 @@ function LiveBattleBody({
   ultimateBusy: boolean;
   onExit: () => void;
 }) {
-  const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
-  const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
+  const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : null;
+  const opponentTeam: TeamId = "B";
   const isMyDecision = !!snapshot.awaiting && snapshot.awaiting.controlledByPlayerId === viewerId;
-  const myAuto = myTeam === "A" ? snapshot.autoA : snapshot.autoB;
   const deadline = snapshot.awaiting?.deadline ?? null;
   const remainingSeconds = deadline !== null ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
-  // OMA Gems (jeder Match-3-Brett-Modus: Puzzle-PvE, Kampagne, Gems-PvP, Turnier —
-  // siehe boardMode in live-battle.ts) — nur dort zeigt der Server ein Brett im
-  // Snapshot UND sind Heldenkarten mit vollem Rage-Balken per Klick sofort
-  // auslösbar (siehe ultimateReadyFor unten). Vorher fälschlich per
-  // `mode.includes("PUZZLE")` erkannt, was Kampagne/Gems-PvP/Turnier NICHT
-  // erfasste (deren Mode-Strings enthalten "PUZZLE" nicht) — dort ließ sich das
-  // Ultimate dadurch nie per Klick auslösen.
-  const isPuzzleMode = snapshot.boardMode;
 
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
@@ -1326,33 +1259,11 @@ function LiveBattleBody({
       window.setTimeout(() => setBeams((prev) => prev.filter((x) => x.id !== b.id)), GEM_BEAM_DURATION_MS + GEM_IMPACT_MS + 80);
     });
   }
-  // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
-  // (siehe Kommentar am Render unten) — nur die Gegner-Slots zeigen, wann als
-  // Nächstes ein Angriff auf einen selbst zukommt.
-  // `ownTurnsBefore`: Anzahl eigener Zug-Slots, die in der rohen Reihenfolge VOR
-  // diesem Gegner-Angriff liegen — 0 bedeutet "passiert direkt im Anschluss an
-  // deinen nächsten Zug" (der Server löst dazwischenliegende Gegner-Züge sofort
-  // mit auf, siehe advance() in interactive.ts), nicht "irgendwann später".
-  const upcomingDisplay: { id: string; ownTurnsBefore: number }[] = snapshot.boardMode
-    ? (() => {
-        const result: { id: string; ownTurnsBefore: number }[] = [];
-        let ownCount = 0;
-        for (const id of snapshot.upcoming) {
-          if (result.length >= 5) break;
-          const u = unitById(id);
-          if (!u) continue;
-          if (u.teamId === opponentTeam) result.push({ id, ownTurnsBefore: ownCount });
-          else ownCount++;
-        }
-        return result;
-      })()
-    : snapshot.upcoming.map((id) => ({ id, ownTurnsBefore: 0 }));
-
   // Empires-&-Puzzles-Countdown je Gegner: Anzahl DEINER Züge bis zu seinem
   // nächsten Angriff (1 = nach deinem nächsten Zug) — erste Nennung je Gegner in
   // der Zugreihenfolge, eigene Zug-Slots davor zählen mit.
   const enemyCountdown = new Map<string, number>();
-  if (snapshot.boardMode) {
+  {
     let ownCount = 0;
     for (const id of snapshot.upcoming) {
       const u = unitById(id);
@@ -1370,7 +1281,6 @@ function LiveBattleBody({
   }
   function ultimateReadyFor(unit: LiveUnit): boolean {
     return (
-      isPuzzleMode &&
       !ultimateBusy &&
       myTeam !== null &&
       unit.teamId === myTeam &&
@@ -1407,15 +1317,6 @@ function LiveBattleBody({
     }
   }, [snapshot.awaiting?.board]);
 
-  // Gems-PvP-Sieges-Kiste: einmal eingesammelt, bleibt die Öffnen-Animation für
-  // den Rest dieser Kampf-Ansicht ausgeblendet (Snapshot wird weiter gepollt).
-  const [chestDismissed, setChestDismissed] = useState(false);
-  // Rang-Aufstieg (siehe RankUpOverlay) erscheint erst, NACHDEM eine eventuelle
-  // Sieges-Kiste weggeklickt wurde — sonst überlappen sich zwei Vollbild-Feier-
-  // Momente. Kein chestPrize? Dann ist chestDismissed weiterhin `false`, aber
-  // der Reveal unten prüft zusätzlich `!snapshot.chestPrize`, damit es nicht
-  // ewig darauf wartet.
-  const [rankUpDismissed, setRankUpDismissed] = useState(false);
 
   // Sieg-/Niederlage-Sound genau einmal abspielen, sobald der Kampf endet — der
   // Ref verhindert ein erneutes Abspielen bei Re-Renders, solange der Kampf
@@ -1452,31 +1353,14 @@ function LiveBattleBody({
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
       <GemBeamOverlay beams={beams} />
-      {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
-        <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
+      {/* Kampfende: direkt der Vollbild-Ergebnisbildschirm. */}
+      {snapshot.status === "finished" && (
+        <GemsResultScreen
+          outcome={snapshot.winner === null ? "draw" : snapshot.winner === myTeam ? "win" : "loss"}
+          reward={computeGemsReward(snapshot)}
+          onExit={onExit}
+        />
       )}
-      {snapshot.status === "finished" &&
-        snapshot.rankUp &&
-        !rankUpDismissed &&
-        (!snapshot.chestPrize || chestDismissed) && (
-          <RankUpOverlay rankUp={snapshot.rankUp} onClose={() => setRankUpDismissed(true)} />
-        )}
-      {/* OMA Gems: direkt zum Ergebnisbildschirm statt über die kleine "Sieg!"-
-          Kachel + "Zum Ergebnis"-Link zur separaten Replay-Seite — die
-          Kampfwiederholung ist nur für OMA Duels sinnvoll (siehe unten in der
-          "Entscheidung"-Sektion, dort bleibt sie für Duels unverändert).
-          Erscheint erst NACH einer eventuellen Sieges-Kiste/Rang-Aufstieg,
-          damit sich die Vollbild-Feier-Momente nicht überlappen. */}
-      {snapshot.status === "finished" &&
-        snapshot.boardMode &&
-        (!snapshot.chestPrize || chestDismissed) &&
-        (!snapshot.rankUp || rankUpDismissed) && (
-          <GemsResultScreen
-            outcome={snapshot.winner === null ? "draw" : snapshot.winner === myTeam ? "win" : "loss"}
-            reward={computeGemsReward(snapshot, myTeam)}
-            onExit={onExit}
-          />
-        )}
       <AnimatePresence>
         {ultimateCutscene && (
           <UltimateCutsceneOverlay
@@ -1487,87 +1371,10 @@ function LiveBattleBody({
           />
         )}
       </AnimatePresence>
-      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden. Bei OMA Gems
-          (boardMode) ist die klassische Zugreihenfolge für den Spieler
-          bedeutungslos (alle eigenen Helden greifen ohnehin gemeinsam per
-          Match an, nie einzeln der Reihe nach) — hier zählt stattdessen, WANN
-          als Nächstes ein Gegner angreift, daher gefiltert auf reine
-          Gegner-Slots und umbenannt (siehe upcoming-Puffergröße in
-          live-battle.ts). */}
-      {!snapshot.boardMode && (
-      <div className="shrink-0 pt-1 space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          {upcomingDisplay.length > 0 ? (
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">
-              {snapshot.boardMode ? "Nächste Gegner-Angriffe" : "Als nächstes dran"}
-            </span>
-          ) : (
-            <span />
-          )}
-          {snapshot.status !== "finished" && myTeam && !snapshot.boardMode && (
-            <button
-              type="button"
-              onClick={() => toggleAuto(!myAuto)}
-              disabled={busy}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors disabled:opacity-40 shrink-0 ${
-                myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
-              }`}
-            >
-              <MobaIcon name="boss" className="w-3 h-3" /> Auto {myAuto ? "an" : "aus"}
-            </button>
-          )}
-        </div>
-        {upcomingDisplay.length > 0 && (
-          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz,
-          // bei boardMode zusätzlich Raum für das "sofort"/"in X"-Badge unterhalb jedes
-          // Kreises — sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ab.
-          <div className={`flex items-center gap-2 overflow-x-auto ${snapshot.boardMode ? "pt-1.5 pb-3" : "py-1.5"}`}>
-            {upcomingDisplay.map(({ id, ownTurnsBefore }, i) => {
-              const u = unitById(id);
-              if (!u) return null;
-              const isMine = myTeam !== null && u.teamId === myTeam;
-              const ringColor = isMine ? "#3b82f6" : "#ef4444";
-              const config = getClassConfig(u.class);
-              return (
-                <div key={`${id}-${i}`} className="relative shrink-0" style={{ opacity: 1 - i * 0.08 }}>
-                  <div
-                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden"
-                    style={{ boxShadow: `0 0 0 3px ${ringColor}` }}
-                    title={u.name}
-                  >
-                    {u.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={config.icon} alt="" aria-hidden className="w-6 h-6 object-contain" />
-                      </div>
-                    )}
-                  </div>
-                  {snapshot.boardMode && (
-                    <span
-                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded-full whitespace-nowrap"
-                      style={{ background: ownTurnsBefore === 0 ? "#f97316" : "#3f3f46", color: ownTurnsBefore === 0 ? "#000" : "#d4d4d8" }}
-                    >
-                      {ownTurnsBefore === 0 ? "sofort" : `in ${ownTurnsBefore}`}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      )}
-
-      {/* Kampffeld — füllt den Freiraum. Klassisch: Gegner oben, eigene Helden
-          unten direkt über der Entscheidung. OMA Gems (boardMode, Empires-&-
-          Puzzles-Layout): Gegner oben, das Brett in der Mitte (siehe
-          Entscheidungs-Panel), die eigenen Helden UNTER dem Brett. */}
-      <div className={`flex-1 flex flex-col gap-3 min-h-0 py-2 ${snapshot.boardMode ? "justify-center" : "justify-end"}`}>
-        <SlotRow boardMode={snapshot.boardMode}>
+      {/* Kampffeld — Gegner oben, das Brett in der Mitte (siehe Entscheidungs-Panel),
+          die eigenen Helden UNTER dem Brett. */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0 py-2 justify-center">
+        <SlotRow>
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard
               key={u.instanceId}
@@ -1588,128 +1395,18 @@ function LiveBattleBody({
             />
           ))}
         </SlotRow>
-        {!snapshot.boardMode && (
-          <>
-            <div className="border-t border-white/10 mx-6" />
-            <SlotRow boardMode={snapshot.boardMode}>
-              {unitsByTeam(myTeam ?? "A").map((u) => (
-                <UnitCard
-                  key={u.instanceId}
-                  unit={u}
-                  // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
-                  // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
-                  // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
-                  // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
-                  isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
-                  glow={glowFor(u)}
-                  ultimateReady={ultimateReadyFor(u)}
-                  effects={effectsFor(u)}
-                  isAttacking={attackingUnitIds.has(u.instanceId)}
-                  isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
-                  onClick={() => handleUnitClick(u)}
-                  onUltimateClick={() => handleUnitClick(u)}
-                  cardRef={(el) => {
-                    if (el) cardElementsRef.current.set(u.instanceId, el);
-                    else cardElementsRef.current.delete(u.instanceId);
-                  }}
-                />
-              ))}
-            </SlotRow>
-          </>
-        )}
       </div>
 
       {/* Entscheidung — direkt unter den Helden */}
       <div className="shrink-0 space-y-1.5">
-        {snapshot.status === "finished" && snapshot.boardMode ? (
-          // OMA Gems: kein Zwischenschritt hier — der Vollbild-Ergebnisbildschirm
-          // (GemsResultScreen, s.o.) übernimmt bereits die gesamte Anzeige.
+        {snapshot.status === "finished" ? (
+          // Der Vollbild-Ergebnisbildschirm (GemsResultScreen, s.o.) übernimmt die Anzeige.
           null
-        ) : snapshot.status === "finished" ? (
-          <div
-            className="flex items-center gap-3 rounded-xl p-3 overflow-hidden relative"
-            style={{
-              background:
-                snapshot.winner === null
-                  ? "linear-gradient(135deg, #27272a 0%, #18181b 100%)"
-                  : snapshot.winner === myTeam
-                    ? "linear-gradient(135deg, #78350f 0%, #451a03 100%)"
-                    : "linear-gradient(135deg, #3f1224 0%, #1c0a12 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.4)",
-            }}
-          >
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-              style={{
-                background:
-                  snapshot.winner === null
-                    ? "radial-gradient(circle at 35% 28%, #9ca3af, #4b5563)"
-                    : snapshot.winner === myTeam
-                      ? "radial-gradient(circle at 35% 28%, #fde68a, #d97706)"
-                      : "radial-gradient(circle at 35% 28%, #fca5a5, #b91c1c)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25)",
-              }}
-            >
-              {snapshot.winner === null ? (
-                <Handshake className="w-5 h-5 text-black/70" strokeWidth={2.2} />
-              ) : snapshot.winner === myTeam ? (
-                <MobaIcon name="trophy" className="w-5 h-5" />
-              ) : (
-                <Skull className="w-5 h-5 text-black/70" strokeWidth={2.2} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-battle text-base text-white uppercase tracking-wide">
-                {snapshot.winner === null ? "Unentschieden" : snapshot.winner === myTeam ? "Sieg!" : "Niederlage"}
-              </p>
-              {snapshot.campaignResult ? (
-                <div className="flex items-center gap-2 mt-0.5">
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3].map((n) => {
-                      const earned = n <= snapshot.campaignResult!.stars;
-                      const isNew = earned && n > snapshot.campaignResult!.stars - snapshot.campaignResult!.starsGained;
-                      return (
-                        <Star
-                          key={n}
-                          className={`w-4 h-4 animate-number-pop ${earned ? "text-amber-400" : "text-gray-700"} ${isNew ? "drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" : ""}`}
-                          style={{ animationDelay: `${n * 140}ms` }}
-                          fill={earned ? "currentColor" : "none"}
-                        />
-                      );
-                    })}
-                  </div>
-                  {snapshot.campaignResult.starsGained > 0 && (
-                    <span
-                      className="flex items-center gap-1 text-[11px] font-semibold text-amber-300 animate-number-pop"
-                      style={{ animationDelay: "560ms" }}
-                    >
-                      +{snapshot.campaignResult.starsGained} Stern{snapshot.campaignResult.starsGained === 1 ? "" : "e"}
-                      {snapshot.campaignResult.coinsAwarded > 0 && (
-                        <span className="flex items-center gap-0.5 text-gray-400 font-normal">
-                          (+{snapshot.campaignResult.coinsAwarded} <CoinIcon size={11} />)
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[11px] text-gray-400">Kampf beendet.</p>
-              )}
-            </div>
-            {snapshot.resultBattleId && (
-              <Link
-                href={`/gems/battles/${snapshot.resultBattleId}`}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/10 text-white hover:bg-white/15 transition-colors shrink-0"
-              >
-                Zum Ergebnis <MobaIcon name="chevronRight" className="w-3.5 h-3.5" />
-              </Link>
-            )}
-          </div>
         ) : isMyDecision && snapshot.awaiting ? (
           // Feste Höhe (unabhängig von 1-3 verfügbaren Aktionen bzw. Ziel-Auswahl-
           // Ansicht) — sonst verschieben sich die Helden darüber je nach Rage-Stand
           // von Zug zu Zug, weil dieses Panel mal höher, mal niedriger wäre.
-          <div className={`moba-panel rounded-xl p-2.5 flex flex-col ${snapshot.boardMode ? "" : "h-[212px] lg:h-[300px] overflow-y-auto"}`}>
+          <div className="moba-panel rounded-xl p-2.5 flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
                 // Rundennummer mit in den Turn-Key aufnehmen: bleibt nur noch EINE
@@ -1730,8 +1427,7 @@ function LiveBattleBody({
                 // Budget aufgebraucht ist, läuft der reguläre Zug automatisch (wie
                 // bei der KI, siehe interactive.ts); der Spieler greift ausschließlich
                 // per Ultimate-Klick auf eine voll aufgeladene Heldenkarte an. Der
-                // hier übergebene actionType wird serverseitig für boardMode-Züge
-                // ignoriert (Platzhalter).
+                // hier übergebene actionType ist ein Platzhalter.
                 onConfirm={(swaps, meta) => {
                   handleMoveStart(meta.columns);
                   submitAction("normalAttack", undefined, swaps);
@@ -1799,7 +1495,7 @@ function LiveBattleBody({
               </div>
             )}
           </div>
-        ) : snapshot.boardMode && lastBoard ? (
+        ) : lastBoard ? (
           // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
           // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
           <div className="moba-panel rounded-xl p-2.5 flex flex-col gap-1.5">
@@ -1817,29 +1513,24 @@ function LiveBattleBody({
           </div>
         ) : (
           <p className="text-xs text-gray-500 text-center py-1">
-            {myAuto
-              ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
-              : !snapshot.awaiting
-                ? "Kampf läuft automatisch weiter…"
-                : remainingSeconds !== null
-                  ? `Gegner ist am Zug… (${remainingSeconds}s)`
-                  : "Gegner ist am Zug…"}
+            {!snapshot.awaiting
+              ? "Kampf läuft automatisch weiter…"
+              : remainingSeconds !== null
+                ? `Gegner ist am Zug… (${remainingSeconds}s)`
+                : "Gegner ist am Zug…"}
           </p>
         )}
       </div>
 
-      {snapshot.boardMode && (
-        <div className="shrink-0 pt-2">
-          <SlotRow boardMode={snapshot.boardMode}>
+      <div className="shrink-0 pt-2">
+          <SlotRow>
           {unitsByTeam(myTeam ?? "A").map((u) => (
             <UnitCard
               key={u.instanceId}
               unit={u}
-              // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
-              // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
-              // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
-              // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
-              isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
+              // Alle eigenen Helden greifen gemeinsam per Match an — "Am Zug" für
+              // eine einzelne Einheit wäre irreführend (siehe applyBoardRage in interactive.ts).
+              isActing={false}
               glow={glowFor(u)}
               ultimateReady={ultimateReadyFor(u)}
               effects={effectsFor(u)}
@@ -1855,7 +1546,6 @@ function LiveBattleBody({
           ))}
         </SlotRow>
         </div>
-      )}
 
       {/* Text, was passiert — unterhalb der Entscheidung */}
       <div className="shrink-0 rounded-md border border-[color:var(--moba-accent-line)] px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">

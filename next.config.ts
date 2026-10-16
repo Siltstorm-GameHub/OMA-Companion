@@ -18,18 +18,17 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["node_modules/sharp/**/*", "node_modules/@img/**/*"],
   },
-  // OMA Battle Cards ist auf OMA Gems reduziert (siehe docs/gems-reduktion-plan.md). Bewusst
-  // vorübergehende Weiterleitungen (307), solange die Umstellung nicht abgeschlossen ist — 308
-  // würden Browser dauerhaft cachen.
+  // OMA Battle Cards ist auf OMA Gems reduziert (siehe docs/gems-reduktion-plan.md) — alte Links
+  // leiten dauerhaft (308) weiter.
   async redirects() {
     return [
       // Der Shop ist ein Reiter im Gems-Hub.
-      { source: "/shop", destination: "/gems?tab=laden", permanent: false },
-      { source: "/battle-cards/:path*", destination: "/gems/:path*", permanent: false },
-      // OMA Quest (vormals /dnd) und OMA Duels sind abgeschaltet.
-      { source: "/oma-quest/:path*", destination: "/gems", permanent: false },
-      { source: "/dnd/:path*", destination: "/gems", permanent: false },
-      { source: "/gems/:sub(challenges|duel-deck|my-card|leaderboard)", destination: "/gems", permanent: false },
+      { source: "/shop", destination: "/gems?tab=laden", permanent: true },
+      { source: "/battle-cards/:path*", destination: "/gems/:path*", permanent: true },
+      // OMA Quest (vormals /dnd) und OMA Duels sind entfernt.
+      { source: "/oma-quest/:path*", destination: "/gems", permanent: true },
+      { source: "/dnd/:path*", destination: "/gems", permanent: true },
+      { source: "/gems/:sub(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
     ];
   },
   images: {

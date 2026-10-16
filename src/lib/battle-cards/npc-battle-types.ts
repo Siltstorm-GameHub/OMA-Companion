@@ -1,79 +1,12 @@
+// ============================================
+// OMA Gems — Schwierigkeit und LiveBattle.mode der Event-Turniere
+// ============================================
+
 export type NpcDifficulty = "EASY" | "MEDIUM" | "HARD";
 
-/** NPC-Kartenstufe je Schwierigkeit (siehe LEVEL_STAT_MULTIPLIER in
- *  battle-engine/constants.ts) — zentral hier, damit live-battle.ts (echte
- *  NPC-Kämpfe) und die Gewinnchancen-Einschätzung (matchup-strength) exakt
- *  dieselbe Skalierung verwenden. */
+/** Monster-Stufe je Turnier-Schwierigkeit (siehe LEVEL_STAT_MULTIPLIER in
+ *  battle-engine/constants.ts und generateGemsTournamentBossTeam). */
 export const DIFFICULTY_LEVEL: Record<NpcDifficulty, number> = { EASY: 1, MEDIUM: 3, HARD: 5 };
-
-/** Münz-Belohnung bei Sieg gegen NPC, je Schwierigkeit — zentral hier, damit
- *  live-battle.ts (Vergabe) und NpcBattleLauncher.tsx (Anzeige) denselben Wert nutzen. */
-export const NPC_BATTLE_WIN_REWARD: Record<NpcDifficulty, number> = { EASY: 100, MEDIUM: 200, HARD: 300 };
-
-/** Max. Anzahl gestarteter NPC-Kämpfe pro Tag (UTC) und User, über alle
- *  Schwierigkeiten summiert — verhindert Farmen der Münz-Belohnung. Auf
- *  Infinity gesetzt (unbegrenzt) für Playtests — betrifft gemeinsam OMA Duels
- *  (PVE_EASY/MEDIUM/HARD) UND OMA Gems-NPC-Kämpfe (PVE_PUZZLE_*), da beide
- *  denselben Zähler teilen (siehe countNpcBattlesStartedToday in
- *  live-battle.ts). UI-Code muss den Sonderfall Infinity abfangen (siehe
- *  NpcBattleLauncher.tsx/NpcPuzzleBattleLauncher.tsx: "Unbegrenzt" statt Zahl). */
-export const NPC_BATTLE_DAILY_LIMIT = Infinity;
-
-// ── OMA-Duels-NPC-Kämpfe (neuer Deck/Feld-Modus, siehe duels-live.ts) ──────
-// Ersetzt PVE_EASY/MEDIUM/HARD (alter sequentieller Modus, live-battle.ts/
-// interactive.ts — bleibt nur für bereits abgeschlossene Alt-Kämpfe relevant,
-// NpcBattleLauncher.tsx startet ab jetzt ausschließlich hierüber).
-
-const PVE_DUELS_PREFIX = "PVE_DUELS_";
-
-export function duelsPveModeFor(difficulty: NpcDifficulty): string {
-  return `${PVE_DUELS_PREFIX}${difficulty}`;
-}
-
-export function parseDuelsPveMode(mode: string): { difficulty: NpcDifficulty } | null {
-  if (!mode.startsWith(PVE_DUELS_PREFIX)) return null;
-  const difficulty = mode.slice(PVE_DUELS_PREFIX.length) as NpcDifficulty;
-  return difficulty in DIFFICULTY_LEVEL ? { difficulty } : null;
-}
-
-// ── Match-3-"OMA Gems" (Puzzle-PvE, siehe board-match3.ts) ──────────
-// Zusätzlicher LiveBattle.mode-Präfix neben dem bestehenden Auto-Kampf-PVE —
-// beide Modi laufen parallel, teilen sich aber Schwierigkeit/Belohnung/Limit.
-
-const PVE_PREFIX = "PVE_";
-export const PUZZLE_MODE_PREFIX = "PVE_PUZZLE_";
-
-export function puzzleModeFor(difficulty: NpcDifficulty): string {
-  return `${PUZZLE_MODE_PREFIX}${difficulty}`;
-}
-
-/** Extrahiert Schwierigkeit + ob es sich um den Puzzle-Modus handelt, aus einem
- *  LiveBattle.mode-String — zentral hier, damit live-battle.ts (Belohnungs-
- *  Vergabe in finalizeLiveBattle) und UI-Code dieselbe Zuordnung nutzen. Ersetzt
- *  das naive `mode.slice("PVE_".length)`, das für "PVE_PUZZLE_EASY" fälschlich
- *  "PUZZLE_EASY" ergeben würde (kein gültiger NpcDifficulty-Key). */
-export function parseNpcMode(mode: string): { difficulty: NpcDifficulty; isPuzzle: boolean } | null {
-  const prefix = mode.startsWith(PUZZLE_MODE_PREFIX) ? PUZZLE_MODE_PREFIX : mode.startsWith(PVE_PREFIX) ? PVE_PREFIX : null;
-  if (!prefix) return null;
-
-  const difficulty = mode.slice(prefix.length) as NpcDifficulty;
-  if (!(difficulty in DIFFICULTY_LEVEL)) return null;
-
-  return { difficulty, isPuzzle: prefix === PUZZLE_MODE_PREFIX };
-}
-
-// ── OMA-Gems-PvP (asynchroner Ghost-Angriff, siehe gems-pvp.ts) ────────────
-
-/** LiveBattle.mode für einen Gems-PvP-Kampf — kein Suffix nötig, der Gegner
- *  steckt in LiveBattle.playerBId (Team B ist trotzdem KI-gesteuert, siehe
- *  startLiveGemsPvpBattle). */
-export const PVP_GEMS_MODE = "PVP_GEMS";
-
-/** Max. Anzahl gestarteter Gems-PvP-Angriffe pro Tag (UTC) und User — einziger
- *  Farm-Deckel für die Sieges-Kiste, eigenständig vom NPC-Tageslimit. */
-export const GEMS_PVP_DAILY_LIMIT = 5;
-
-// ── OMA-Gems-Turniere (Score-Attack, siehe gems-tournament.ts) ─────────────
 
 const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
 

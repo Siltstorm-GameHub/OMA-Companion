@@ -2,9 +2,8 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import MobaIcon from "./MobaIcon";
 import RankedAvatar from "@/components/RankedAvatar";
-import BattleRankBadge from "@/components/battle-cards/BattleRankBadge";
-import { PLACEMENT_MATCHES } from "@/lib/battle-cards/elo";
-import type { LeaderboardRow } from "@/lib/battle-cards/leaderboard";
+import { Star } from "@/components/icons";
+import { MAX_CAMPAIGN_STARS, type LeaderboardRow } from "@/lib/battle-cards/leaderboard";
 
 /** Eigene Rang-Plaketten statt Emoji-Medaillen (🥇🥈🥉 rendern je nach OS/
  *  Browser unterschiedlich und fallen aus dem sonst durchgehend selbstgebauten
@@ -16,21 +15,7 @@ const RANK_STYLE = [
   { gradient: "radial-gradient(circle at 35% 28%, #fdba8c, #9a5b2e)", ring: "#f0a868" },
 ];
 
-/** Nicht eingestufte User (siehe PLACEMENT_MATCHES) bekommen NIE eine
- *  Medaille/Zahl, egal an welcher Listenposition sie gerade stehen — die
- *  Positionsnummer würde sonst eine "echte" Platzierung vortäuschen, die es
- *  ohne genug Elo-Platzierungsspiele noch nicht gibt. */
-function RankBadge({ place, isRanked }: { place: number; isRanked: boolean }) {
-  if (!isRanked) {
-    return (
-      <span
-        className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0"
-        title="Noch nicht eingestuft"
-      >
-        –
-      </span>
-    );
-  }
+function RankBadge({ place }: { place: number }) {
   const style = RANK_STYLE[place - 1];
   if (!style) {
     return <span className="w-6 text-center text-sm font-bold text-gray-500 shrink-0">{place}</span>;
@@ -46,56 +31,60 @@ function RankBadge({ place, isRanked }: { place: number; isRanked: boolean }) {
   );
 }
 
-export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardRow[]; viewerId: string }) {
+function Row({ row, place, isViewer }: { row: LeaderboardRow; place: number; isViewer: boolean }) {
+  return (
+    <Link
+      href={`/profile/${row.userId}`}
+      className={`moba-corner-row p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
+        isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
+      }`}
+    >
+      <RankBadge place={place} />
+      <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-white truncate font-semibold">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></p>
+        <p className="text-[11px] text-gray-500">{row.levelsCleared} Level geschafft</p>
+      </div>
+      <span className="flex items-center gap-1 text-xs font-semibold text-amber-300 tabular-nums shrink-0">
+        <Star className="w-3.5 h-3.5" fill="currentColor" /> {row.stars}
+      </span>
+    </Link>
+  );
+}
+
+/** Rangliste nach Kampagnen-Sternen. Mit `limit` nur die ersten Plätze — der Betrachter
+ *  wird dann zusätzlich unten angehängt, falls er außerhalb steht. */
+export default function LeaderboardList({ rows, viewerId, limit }: { rows: LeaderboardRow[]; viewerId: string; limit?: number }) {
   if (rows.length === 0) {
     return (
       <div className="moba-panel rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
         <MobaIcon name="trophy" className="w-6 h-6 opacity-50" />
-        <p className="text-sm text-gray-500">Noch keine ausgetragenen Kämpfe — sei der Erste!</p>
+        <p className="text-sm text-gray-500">Noch hat niemand Sterne gesammelt — sei der Erste!</p>
       </div>
     );
   }
 
-  const viewerRank = rows.findIndex((r) => r.userId === viewerId);
+  const viewerIndex = rows.findIndex((r) => r.userId === viewerId);
+  const shown = limit ? rows.slice(0, limit) : rows;
+  const viewerOutside = viewerIndex >= shown.length;
 
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
         <MobaIcon name="info" className="w-3 h-3 shrink-0" />
-        Sortiert nach Elo · Rang ab {PLACEMENT_MATCHES} Platzierungsspielen
+        Sortiert nach Kampagnen-Sternen (max. {MAX_CAMPAIGN_STARS}) · bei Gleichstand zählt, wer zuerst dort war
       </p>
-      {rows.map((row, i) => {
-        const isViewer = row.userId === viewerId;
-        const matchesToGo = PLACEMENT_MATCHES - row.total;
-        return (
-          <Link
-            key={row.userId}
-            href={`/profile/${row.userId}`}
-            className={`moba-corner-row p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
-              isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
-            } ${!row.isRanked ? "opacity-70" : ""}`}
-          >
-            <RankBadge place={i + 1} isRanked={row.isRanked} />
-            <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate font-semibold">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></p>
-              <p className="text-[11px] text-gray-500">
-                {row.isRanked
-                  ? `${row.total} Kämpfe · ${Math.round(row.winRate * 100)}% Winrate`
-                  : `${row.total}/${PLACEMENT_MATCHES} Kämpfe · noch ${Math.max(0, matchesToGo)} bis Einstufung`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {row.isRanked && <BattleRankBadge elo={row.elo} />}
-              <span className="text-xs font-semibold text-gray-300 tabular-nums">{row.isRanked ? row.elo : "–"}</span>
-            </div>
-          </Link>
-        );
-      })}
-      {viewerRank === -1 && (
-        <p className="text-xs text-gray-500 text-center pt-1">
-          Trage dein erstes Duell aus, um hier zu erscheinen.
-        </p>
+      {shown.map((row, i) => (
+        <Row key={row.userId} row={row} place={i + 1} isViewer={row.userId === viewerId} />
+      ))}
+      {viewerOutside && (
+        <>
+          <p className="text-center text-xs text-gray-600">⋯</p>
+          <Row row={rows[viewerIndex]} place={viewerIndex + 1} isViewer />
+        </>
+      )}
+      {viewerIndex === -1 && (
+        <p className="text-xs text-gray-500 text-center pt-1">Gewinne dein erstes Kampagnen-Level, um hier zu erscheinen.</p>
       )}
     </div>
   );

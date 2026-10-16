@@ -1,12 +1,15 @@
 // ============================================
-// Interaktive Kämpfe (Zug-für-Zug) — DB-Orchestrierung
+// OMA Gems — interaktive Kämpfe (Zug für Zug) — DB-Orchestrierung
 // ============================================
 // Bindeglied zwischen dem reinen Engine-Stepper (lib/battle-engine/interactive.ts)
 // und der DB: erzeugt/lädt/aktualisiert den LiveBattle-Zustand und baut daraus
 // das für den Client bestimmte Snapshot-Objekt. Sobald ein Kampf endet, wird er
-// wie bisher als normales Battle (+ ggf. resolvte BattleChallenge, Win-Streak)
-// persistiert — die restliche App (Replay-Seite, Kampfhistorie, Rangliste,
-// Win-Streak) merkt vom neuen interaktiven Ablauf nichts.
+// als normales Battle persistiert (Replay-Seite).
+//
+// Seit der Reduktion auf OMA Gems gibt es nur noch zwei Modi, beide auf dem
+// Match-3-Brett gegen KI-gesteuerte Monster:
+//  - Kampagne ("CAMPAIGN_<levelId>", siehe campaign.ts)
+//  - Event-Turnier ("TOURNAMENT_<id>", siehe gems-tournament.ts)
 
 import type { TeCharacterConfig } from "@/lib/te-character";
 import { prisma } from "@/lib/prisma";
@@ -17,11 +20,10 @@ import {
   describeCurrentDecision,
   previewUpcomingTurns,
   recordBoardProgress,
-  type Controller,
   type InteractiveBattleState,
   type PendingDecision,
 } from "@/lib/battle-engine/interactive";
-import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "@/lib/battle-engine/decision";
+import type { AvailableAction } from "@/lib/battle-engine/decision";
 import { buildRosterFromUnits } from "@/lib/battle-engine/stats";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
@@ -36,99 +38,31 @@ import type {
   TeamId,
 } from "@/lib/battle-engine/types";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
-import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
-import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
 import {
   buildCampaignEnemyTeam,
   CAMPAIGN_COINS_PER_STAR,
-  CAMPAIGN_LEVELS,
   computeStars,
   getCampaignLevel,
   isCampaignLevelUnlocked,
   recordCampaignResult,
 } from "@/lib/battle-cards/campaign";
-import { markTutorialCampaignLevel1Done, markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
-import { applyWinStreak, applyAttackerOnlyWinStreak } from "@/lib/battle-cards/win-streak";
-import { applyEloResult, applyOneSidedEloResult, type EloResult } from "@/lib/battle-cards/elo";
-import { getBattleRank, getBattleRankFullLabel } from "@/lib/battle-cards/battle-rank";
-import {
-  DIFFICULTY_LEVEL,
-  GEMS_PVP_DAILY_LIMIT,
-  NPC_BATTLE_DAILY_LIMIT,
-  NPC_BATTLE_WIN_REWARD,
-  parseNpcMode,
-  parseTournamentMode,
-  PVP_GEMS_MODE,
-  puzzleModeFor,
-  tournamentModeFor,
-  type NpcDifficulty,
-} from "@/lib/battle-cards/npc-battle-types";
-import { grantGemsPvpVictoryChest } from "@/lib/battle-cards/gems-pvp";
-import type { LiveBattle, Prisma } from "@prisma/client";
-import { dispatchNotification } from "@/lib/notify-dispatch";
+import { parseTournamentMode, tournamentModeFor } from "@/lib/battle-cards/npc-battle-types";
+import type { LiveBattle } from "@prisma/client";
 import { updateQuestProgress } from "@/lib/quests";
-import { advanceDndQuestObjectiveForUser } from "@/lib/dnd/quests";
 
 export class LiveBattleError extends Error {}
 
 const TEAM_SIZE = 5;
 
-/** PVP mit beiden Seiten auf Auto-Kampf: pro advance()-Aufruf wird nur EIN Zug
- *  automatisch aufgelöst, statt sofort bis zum Ende durchzulaufen — so bleibt
- *  der Kampf für beide Spieler zuschaubar (Polling deckt den Rest ab). Bei PVE
- *  bleibt es bewusst ungedrosselt (undefined), das entspricht dort weiterhin
- *  einem "Zum Ende springen". */
-const PVP_AUTO_PACE_STEPS = 1;
+const CAMPAIGN_MODE_PREFIX = "CAMPAIGN_";
+const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
 
-function advanceOptionsFor(playerBId: string | null): { maxAutoActions?: number } {
-  return playerBId ? { maxAutoActions: PVP_AUTO_PACE_STEPS } : {};
-}
-
-function startOfTodayUTC(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
-
-/** Zählt heute (UTC) gestartete NPC-Kämpfe dieses Users, über alle Schwierigkeiten —
- *  Grundlage für NPC_BATTLE_DAILY_LIMIT, damit die Münz-Belohnung nicht gefarmt werden kann. */
-async function countNpcBattlesStartedToday(userId: string): Promise<number> {
-  return prisma.liveBattle.count({
-    where: {
-      playerAId: userId,
-      playerBId: null,
-      mode: { startsWith: "PVE_" },
-      createdAt: { gte: startOfTodayUTC() },
-    },
-  });
-}
-
-/** Zählt heute (UTC) gestartete OMA-Gems-PvP-Angriffe dieses Users — Grundlage
- *  für GEMS_PVP_DAILY_LIMIT, damit die Sieges-Kiste nicht gefarmt werden kann. */
-async function countGemsPvpBattlesStartedToday(userId: string): Promise<number> {
-  return prisma.liveBattle.count({
-    where: { playerAId: userId, mode: PVP_GEMS_MODE, createdAt: { gte: startOfTodayUTC() } },
-  });
-}
-
-async function assertGemsPvpDailyLimitNotReached(userId: string): Promise<void> {
-  const startedToday = await countGemsPvpBattlesStartedToday(userId);
-  if (startedToday >= GEMS_PVP_DAILY_LIMIT) {
-    throw new LiveBattleError(
-      `Heutiges Limit erreicht (max. ${GEMS_PVP_DAILY_LIMIT} OMA-Gems-Angriffe pro Tag). Versuch es morgen wieder.`
-    );
-  }
-}
-
-export function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
-  const pool = [...items];
-  const picked: T[] = [];
-  while (pool.length > 0 && picked.length < count) {
-    const idx = Math.floor(Math.random() * pool.length);
-    picked.push(pool.splice(idx, 1)[0]);
-  }
-  return picked;
+/** Nur Kampagne und Turnier werden noch unterstützt — ältere, noch offene Kämpfe aus
+ *  abgeschalteten Modi (Duels, PvP, freies PvE) lassen sich nicht mehr fortsetzen. */
+function isSupportedMode(mode: string): boolean {
+  return mode.startsWith(CAMPAIGN_MODE_PREFIX) || mode.startsWith(TOURNAMENT_MODE_PREFIX);
 }
 
 function toState(live: Pick<LiveBattle, "stateJson">): InteractiveBattleState {
@@ -171,18 +105,14 @@ export interface LiveBattleAwaiting {
   candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
   /** Epoch-ms — ab hier entscheidet die KI-Logik automatisch, falls niemand reagiert. */
   deadline: number | null;
-  /** Nur im Puzzle-Modus (siehe board-match3.ts) — initiales Grid für die
-   *  Match-3-Mini-Session dieses Zugs sowie bislang bestätigte Swaps (für die
-   *  Wiederherstellung nach einem Reload, siehe saveBoardProgress). */
+  /** Initiales Grid für die Match-3-Mini-Session dieses Zugs sowie bislang bestätigte
+   *  Swaps (für die Wiederherstellung nach einem Reload, siehe saveBoardProgress). */
   board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
 export interface LiveBattleSnapshot {
   id: string;
   mode: string;
-  /** true bei allen OMA-Gems-Kämpfen (Puzzle-PvE, Kampagne, Gems-PvP, Turnier) — der Client
-   *  blendet dafür den Auto-Kampf-Umschalter aus, das Match-3-Brett soll aktiv gespielt werden. */
-  boardMode: boolean;
   status: "active" | "finished";
   round: number;
   units: LiveUnitSnapshot[];
@@ -194,48 +124,20 @@ export interface LiveBattleSnapshot {
    *  sind (für Kampfeffekte/Animationen, siehe LiveBattleView.tsx). */
   logLength: number;
   awaiting: LiveBattleAwaiting | null;
-  autoA: boolean;
-  autoB: boolean;
   playerAId: string;
-  playerBId: string | null;
   resultBattleId: string | null;
   winner: BattleWinner | null;
-  /** Nur gesetzt für einen gewonnenen Gems-PvP-Ghost-Angriff — die Sieges-Kiste
-   *  (siehe gems-pvp.ts), die der Client als Öffnen-Animation zeigt. */
-  chestPrize: { kind: "coins"; amount: number } | { kind: "pack"; packKind: string } | null;
   /** Nur gesetzt für einen gewonnenen Kampagnen-Kampf — Sterne-Ergebnis (siehe
    *  computeStars/recordCampaignResult in campaign.ts), das der Client im
    *  Kampfende-Screen mit Animation zeigt (neu hinzugekommene Sterne
    *  hervorgehoben). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
-  /** Nur gesetzt, wenn der BETRACHTENDE Spieler durch dieses Kampfergebnis eine
-   *  neue Rang-Division erreicht hat (siehe computeRankUp/battle-rank.ts) — der
-   *  Client zeigt das als eigenen Feier-Moment im Kampfende-Screen. */
-  rankUp: RankUpInfo | null;
-}
-
-/** Ergebnis eines Rang-Divisions-Aufstiegs für EINEN Spieler — wird am
- *  Battle-Datensatz gespeichert (gleiches Muster wie gemsChestPrize/
- *  campaignResult) und in buildSnapshot je nach Betrachter (playerAId/
- *  playerBId) auf `rankUp` gemappt. */
-export interface RankUpInfo {
-  mode: string;
-  fromLabel: string;
-  toLabel: string;
-  toEmoji: string;
-  elo: number;
-}
-
-/** Vergleicht die Rang-Division vor/nach einem Elo-Update — meldet nur einen
- *  Aufstieg (nicht jede Elo-Änderung), Rangverlust wird bewusst NICHT gefeiert. */
-function computeRankUp(mode: string, before: number, after: number): RankUpInfo | null {
-  const from = getBattleRank(before);
-  const to = getBattleRank(after);
-  if (to.min <= from.min) return null;
-  return { mode, fromLabel: getBattleRankFullLabel(from), toLabel: getBattleRankFullLabel(to), toEmoji: to.emoji, elo: after };
 }
 
 const RECENT_LOG_TAIL = 12;
+/** Großzügiger Vorschau-Puffer: der Client filtert "upcoming" auf reine Gegner-Züge
+ *  ("Nächste Gegner-Angriffe"), eigene Slots sind bei OMA Gems bedeutungslos. */
+const UPCOMING_PREVIEW = 12;
 
 function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
   return {
@@ -257,210 +159,58 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
 }
 
 async function buildSnapshot(
-  live: Pick<LiveBattle, "id" | "mode" | "playerAId" | "playerBId" | "resultBattleId">,
+  live: Pick<LiveBattle, "id" | "mode" | "playerAId" | "resultBattleId">,
   state: InteractiveBattleState,
-  pendingDecision: PendingDecision | null,
-  viewerId: string
+  pendingDecision: PendingDecision | null
 ): Promise<LiveBattleSnapshot> {
-  const allUnits = [...state.unitsA, ...state.unitsB];
+  const awaiting: LiveBattleAwaiting | null = pendingDecision
+    ? { ...pendingDecision, controlledByPlayerId: live.playerAId, deadline: state.turnDeadline }
+    : null;
 
-  let awaiting: LiveBattleAwaiting | null = null;
-  if (pendingDecision) {
-    const controlledByPlayerId = pendingDecision.teamId === "A" ? live.playerAId : (live.playerBId as string);
-    awaiting = { ...pendingDecision, controlledByPlayerId, deadline: state.turnDeadline };
-  }
-
-  // Sieges-Kiste (Gems-PvP) / Sterne-Ergebnis (Kampagne) / Rang-Aufstieg — alle
-  // drei werden am Battle-Datensatz gespeichert (siehe finalizeLiveBattle), nur
-  // nachladen, wenn tatsächlich relevant. Rang-Aufstieg kann bei JEDER PvP-
-  // Challenge auftreten (DUELS oder GEMS), nicht nur GEMS — daher zusätzlich
-  // über `live.playerBId` erkannt (nur echte Spieler-gegen-Spieler-Kämpfe haben
-  // einen zweiten Spieler UND eine Elo-Änderung).
-  let chestPrize: LiveBattleSnapshot["chestPrize"] = null;
+  // Sterne-Ergebnis der Kampagne wird am Battle-Datensatz gespeichert (siehe finalizeLiveBattle).
   let campaignResult: LiveBattleSnapshot["campaignResult"] = null;
-  let rankUp: RankUpInfo | null = null;
-  if ((live.mode === PVP_GEMS_MODE || live.mode.startsWith("CAMPAIGN_") || live.playerBId) && live.resultBattleId) {
+  if (live.mode.startsWith(CAMPAIGN_MODE_PREFIX) && live.resultBattleId) {
     const battle = await prisma.battle.findUnique({
       where: { id: live.resultBattleId },
       select: { teamSnapshot: true },
     });
-    const snapshotJson = battle?.teamSnapshot as {
-      gemsChestPrize?: LiveBattleSnapshot["chestPrize"];
-      campaignResult?: LiveBattleSnapshot["campaignResult"];
-      rankUpA?: RankUpInfo;
-      rankUpB?: RankUpInfo;
-    } | null;
-    chestPrize = snapshotJson?.gemsChestPrize ?? null;
+    const snapshotJson = battle?.teamSnapshot as { campaignResult?: LiveBattleSnapshot["campaignResult"] } | null;
     campaignResult = snapshotJson?.campaignResult ?? null;
-    rankUp = (viewerId === live.playerAId ? snapshotJson?.rankUpA : snapshotJson?.rankUpB) ?? null;
   }
 
   return {
     id: live.id,
     mode: live.mode,
-    boardMode: state.boardMode,
     status: state.winner ? "finished" : "active",
     round: state.round,
-    units: allUnits.map(toUnitSnapshot),
-    // Bei OMA Gems filtert der Client "upcoming" auf reine Gegner-Züge (siehe
-    // LiveBattleView.tsx: "Nächste Gegner-Angriffe" statt "Als nächstes dran",
-    // eigene Zug-Slots sind dort bedeutungslos, da alle eigenen Helden ohnehin
-    // gemeinsam per Match angreifen) — großzügigerer Vorschau-Puffer, damit nach
-    // dem Herausfiltern der eigenen Slots noch genug Gegner-Einträge übrig bleiben.
-    upcoming: previewUpcomingTurns(state, state.boardMode ? 12 : 5),
+    units: [...state.unitsA, ...state.unitsB].map(toUnitSnapshot),
+    upcoming: previewUpcomingTurns(state, UPCOMING_PREVIEW),
     recentLog: state.log.slice(-RECENT_LOG_TAIL),
     logLength: state.log.length,
     awaiting,
-    autoA: state.autoA,
-    autoB: state.autoB,
     playerAId: live.playerAId,
-    playerBId: live.playerBId,
     resultBattleId: live.resultBattleId,
     winner: state.winner,
-    chestPrize,
     campaignResult,
-    rankUp,
   };
 }
 
 async function requireAccess(liveBattleId: string, viewerId: string) {
   const live = await prisma.liveBattle.findUnique({ where: { id: liveBattleId } });
   if (!live) throw new LiveBattleError("Kampf nicht gefunden.");
-  if (viewerId !== live.playerAId && viewerId !== live.playerBId) {
-    throw new LiveBattleError("Kein Zugriff auf diesen Kampf.");
+  if (viewerId !== live.playerAId) throw new LiveBattleError("Kein Zugriff auf diesen Kampf.");
+  if (!isSupportedMode(live.mode)) {
+    throw new LiveBattleError("Dieser Kampf stammt aus einem abgeschalteten Spielmodus und lässt sich nicht mehr öffnen.");
   }
   return live;
 }
 
-// ---------- Abschluss: wie bisher als Battle (+ Challenge/Win-Streak) persistieren ----------
-
-/** Lädt die aktuellen Elo-Ratings beider Spieler für den jeweiligen Modus
- *  (DUELS/GEMS haben getrennte Pools, siehe elo.ts), berechnet das neue Rating
- *  und schreibt zurück. Zweigt explizit auf mode auf statt mit computed
- *  property keys zu selecten/updaten — Letzteres lässt Prisma den
- *  Rückgabetyp nicht mehr sinnvoll inferieren.
- *
- *  Bei GEMS bewegt sich NUR der Angreifer (A) — der Verteidiger (B) wurde nur
- *  automatisiert angegriffen, hat sich also nie bewusst auf den Kampf
- *  eingelassen (anders als bei DUELS, wo beide Seiten eine Challenge annehmen
- *  mussten). B's Rating fließt nur als Gegner-Stärke in die Erwartungswert-
- *  Berechnung ein, bleibt selbst aber unverändert, egal ob er gewinnt oder
- *  verliert (siehe applyOneSidedEloResult in elo.ts). */
-async function applyEloForChallenge(
-  mode: string,
-  playerAId: string,
-  playerBId: string,
-  result: EloResult
-): Promise<{ ratingA: number; newA: number; ratingB: number; newB: number } | undefined> {
-  const [userA, userB] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: playerAId },
-      select: { eloDuels: true, eloDuelsMatches: true, eloGems: true, eloGemsMatches: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: playerBId },
-      select: { eloDuels: true, eloDuelsMatches: true, eloGems: true, eloGemsMatches: true },
-    }),
-  ]);
-  if (!userA || !userB) return undefined;
-
-  const ratingA = mode === "GEMS" ? userA.eloGems : userA.eloDuels;
-  const ratingB = mode === "GEMS" ? userB.eloGems : userB.eloDuels;
-  const matchesA = mode === "GEMS" ? userA.eloGemsMatches : userA.eloDuelsMatches;
-  const matchesB = mode === "GEMS" ? userB.eloGemsMatches : userB.eloDuelsMatches;
-
-  if (mode === "GEMS") {
-    const { newA } = applyOneSidedEloResult({ ratingA, ratingB, matchesA, result });
-    await prisma.user.update({
-      where: { id: playerAId },
-      data: { eloGems: newA, eloGemsMatches: matchesA + 1 },
-    });
-    return { ratingA, newA, ratingB, newB: ratingB };
-  }
-
-  const { newA, newB } = applyEloResult({ ratingA, ratingB, matchesA, matchesB, result });
-
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: playerAId }, data: { eloDuels: newA, eloDuelsMatches: matchesA + 1 } }),
-    prisma.user.update({ where: { id: playerBId }, data: { eloDuels: newB, eloDuelsMatches: matchesB + 1 } }),
-  ]);
-
-  return { ratingA, newA, ratingB, newB };
-}
-
-/** Elo/Win-Streak/BattleChallenge-Abschluss + Benachrichtigung für eine
- *  Spieler-gegen-Spieler-Begegnung — liest nur `winner`/IDs, nicht die interne
- *  Zustandsform einer bestimmten Kampf-Engine. Dadurch von `finalizeLiveBattle`
- *  (alter sequentieller Duell-/Gems-Modus) UND `finalizeDuelBattle` (neuer
- *  OMA-Duels-Live-Modus, siehe duel-live-battle.ts) gemeinsam nutzbar, statt
- *  die Elo-/Win-Streak-Logik zu duplizieren. */
-export async function finalizePvpChallengeSideEffects(
-  live: Pick<LiveBattle, "id" | "playerAId" | "playerBId">,
-  winner: TeamId | "DRAW" | null,
-  battleId: string
-): Promise<void> {
-  if (!live.playerBId) return;
-  const challenge = await prisma.battleChallenge.findUnique({ where: { liveBattleId: live.id } });
-  if (!challenge) return;
-
-  const winnerId = winner === "A" ? live.playerAId : winner === "B" ? live.playerBId : null;
-
-  // Einziger Farm-Deckel ist jetzt GEMS_PVP_DAILY_LIMIT (max. Angriffe pro Tag,
-  // siehe assertGemsPvpDailyLimitNotReached) — jeder resolvte Kampf zählt für
-  // Rangliste + Sieges-Kiste, unabhängig davon, wie oft man denselben Gegner
-  // am selben Tag schon getroffen hat.
-  const countsForRanking = true;
-
-  await prisma.battleChallenge.update({
-    where: { id: challenge.id },
-    data: { status: "resolved", battleId, winnerId, respondedAt: new Date(), countsForRanking },
-  });
-  if (winnerId) {
-    if (challenge.mode === "GEMS") {
-      // Nur der Angreifer (playerAId) hat sich bewusst auf den Kampf eingelassen —
-      // der Verteidiger bleibt unberührt, auch bei erfolgreicher Verteidigung.
-      await applyAttackerOnlyWinStreak(live.playerAId, winnerId === live.playerAId);
-    } else {
-      const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
-      await applyWinStreak(winnerId, loserId);
-    }
-  }
-  let rankUpA: RankUpInfo | null = null;
-  let rankUpB: RankUpInfo | null = null;
-  const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
-  const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
-  if (eloUpdate) {
-    rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
-    rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
-  }
-  // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
-  // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
-  // er hat den Kampf nicht selbst bestritten.
-  let gemsChestPrize: LiveBattleSnapshot["chestPrize"] = null;
-  if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
-    gemsChestPrize = await grantGemsPvpVictoryChest(live.playerAId);
-  }
-  // Kisten-Gewinn UND Rang-Aufstieg(e) gemeinsam am Battle-Datensatz speichern,
-  // damit der Client sie im nächsten Snapshot als Animation zeigen kann (siehe
-  // buildSnapshot) — ein einziger Write statt mehrerer sich überschreibender.
-  if (gemsChestPrize || rankUpA || rankUpB) {
-    const extraTeamSnapshot: Record<string, unknown> = { playerAId: live.playerAId, playerBId: live.playerBId };
-    if (gemsChestPrize) extraTeamSnapshot.gemsChestPrize = gemsChestPrize;
-    if (rankUpA) extraTeamSnapshot.rankUpA = rankUpA;
-    if (rankUpB) extraTeamSnapshot.rankUpB = rankUpB;
-    await prisma.battle.update({
-      where: { id: battleId },
-      data: { teamSnapshot: extraTeamSnapshot as Prisma.InputJsonValue },
-    });
-  }
-  await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battleId);
-}
+// ---------- Abschluss: als Battle persistieren, Belohnungen ----------
 
 async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleState) {
   if (live.resultBattleId) return; // bereits abgeschlossen (defensiv, z.B. doppelter Request)
 
-  const allUnits = [...state.unitsA, ...state.unitsB];
-  const roster = buildRosterFromUnits(allUnits);
+  const roster = buildRosterFromUnits([...state.unitsA, ...state.unitsB]);
   const dbResult = state.winner === "A" ? "WIN" : state.winner === "B" ? "LOSS" : "DRAW";
 
   const battle = await prisma.battle.create({
@@ -468,7 +218,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       playerId: live.playerAId,
       opponentType: live.mode,
       result: dbResult,
-      teamSnapshot: { playerAId: live.playerAId, playerBId: live.playerBId },
+      teamSnapshot: { playerAId: live.playerAId },
       battleLog: serializeBattleLog(state.log, roster),
     },
   });
@@ -478,55 +228,27 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
     data: { status: "finished", resultBattleId: battle.id },
   });
 
-  // Monats-Quest "BATTLE_CARD_DUEL" zählt seit der Reduktion auf OMA Gems jeden beendeten
-  // Kampagnen- oder Turnierkampf (Sieg oder Niederlage).
-  if (!live.playerBId && (live.mode.startsWith("CAMPAIGN_") || live.mode.startsWith("TOURNAMENT_"))) {
-    updateQuestProgress(live.playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-  }
+  // Monats-Quest "BATTLE_CARD_DUEL" zählt jeden beendeten Kampf (Sieg oder Niederlage).
+  updateQuestProgress(live.playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
 
-  if (live.playerBId) {
-    await finalizePvpChallengeSideEffects(live, state.winner, battle.id);
-  } else if (live.mode.startsWith("TOURNAMENT_")) {
-    const parsed = parseTournamentMode(live.mode);
-    if (parsed) {
-      const hpTotal = state.unitsA.reduce((sum, u) => sum + u.maxHp, 0);
-      const hpRemaining = state.unitsA.reduce((sum, u) => sum + Math.max(0, u.currentHp), 0);
-      const hpPercent = hpTotal > 0 ? hpRemaining / hpTotal : 0;
-      const score = Math.max(
-        0,
-        (state.winner === "A" ? 1000 : 0) + Math.round(hpPercent * 500) - state.round * 10
-      );
+  const tournament = parseTournamentMode(live.mode);
+  if (tournament) {
+    const hpTotal = state.unitsA.reduce((sum, u) => sum + u.maxHp, 0);
+    const hpRemaining = state.unitsA.reduce((sum, u) => sum + Math.max(0, u.currentHp), 0);
+    const hpPercent = hpTotal > 0 ? hpRemaining / hpTotal : 0;
+    const score = Math.max(0, (state.winner === "A" ? 1000 : 0) + Math.round(hpPercent * 500) - state.round * 10);
 
-      const existing = await prisma.gemsTournamentAttempt.findUnique({
-        where: { tournamentId_userId: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId } },
-      });
-      if (!existing || score > existing.bestScore) {
-        await prisma.gemsTournamentAttempt.upsert({
-          where: { tournamentId_userId: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId } },
-          create: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId, bestScore: score },
-          update: { bestScore: score },
-        });
-      }
-    }
-  } else if (state.winner === "A" && live.mode.startsWith("PVE_")) {
-    const parsed = parseNpcMode(live.mode);
-    const reward = parsed ? NPC_BATTLE_WIN_REWARD[parsed.difficulty] : undefined;
-    if (parsed && reward) {
-      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
-      await prisma.pointTransaction.create({
-        data: {
-          userId: live.playerAId,
-          amount: reward,
-          reason: `${parsed.isPuzzle ? "OMA Gems" : "OMA Duels"} gewonnen (${parsed.difficulty})`,
-        },
+    const key = { tournamentId_userId: { tournamentId: tournament.gemsTournamentId, userId: live.playerAId } };
+    const existing = await prisma.gemsTournamentAttempt.findUnique({ where: key });
+    if (!existing || score > existing.bestScore) {
+      await prisma.gemsTournamentAttempt.upsert({
+        where: key,
+        create: { tournamentId: tournament.gemsTournamentId, userId: live.playerAId, bestScore: score },
+        update: { bestScore: score },
       });
     }
-    // Tutorial-Schritt 1: klassisches OMA Duels (nicht OMA Gems), Stufe Einfach.
-    if (parsed && !parsed.isPuzzle && parsed.difficulty === "EASY") {
-      await markTutorialNpcBattleDone(live.playerAId);
-    }
-  } else if (state.winner === "A" && live.mode.startsWith("CAMPAIGN_")) {
-    const levelId = live.mode.slice("CAMPAIGN_".length);
+  } else if (state.winner === "A" && live.mode.startsWith(CAMPAIGN_MODE_PREFIX)) {
+    const levelId = live.mode.slice(CAMPAIGN_MODE_PREFIX.length);
     const stars = computeStars(state);
     const { starsGained } = await recordCampaignResult(live.playerAId, levelId, stars);
     // Münz-Belohnung nur für NEU erreichte Sterne (CAMPAIGN_COINS_PER_STAR je
@@ -546,73 +268,14 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       });
     }
     // Sterne-Ergebnis am Battle-Datensatz speichern, damit der Client es direkt
-    // im nächsten Snapshot als Animation im Kampfende-Screen zeigen kann (siehe
-    // buildSnapshot, gleiches Muster wie gemsChestPrize).
+    // im nächsten Snapshot als Animation im Kampfende-Screen zeigen kann.
     await prisma.battle.update({
       where: { id: battle.id },
-      data: {
-        teamSnapshot: {
-          playerAId: live.playerAId,
-          playerBId: live.playerBId,
-          campaignResult: { levelId, stars, starsGained, coinsAwarded },
-        },
-      },
+      data: { teamSnapshot: { playerAId: live.playerAId, campaignResult: { levelId, stars, starsGained, coinsAwarded } } },
     });
-    // Tutorial-Schritt 3: erstes Kampagnen-Level gewonnen — schließt das Tutorial ab.
-    if (levelId === CAMPAIGN_LEVELS[0].id) {
-      await markTutorialCampaignLevel1Done(live.playerAId);
-    }
   }
 
   return battle;
-}
-
-/** Quest-Fortschritt + Ergebnis-Benachrichtigung für beide Teilnehmer — für
- *  Challenge-Annahme UND Matchmaking gleichermaßen (beide laufen inzwischen
- *  über denselben LiveBattle-Abschluss, statt es je Aufrufer zu duplizieren). */
-async function notifyPvpBattleResolved(
-  playerAId: string,
-  playerBId: string,
-  winnerId: string | null,
-  battleId: string
-) {
-  updateQuestProgress(playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-  updateQuestProgress(playerBId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-  advanceDndQuestObjectiveForUser(playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-  advanceDndQuestObjectiveForUser(playerBId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-
-  const [playerA, playerB] = await Promise.all([
-    prisma.user.findUnique({ where: { id: playerAId }, select: { username: true, name: true } }),
-    prisma.user.findUnique({ where: { id: playerBId }, select: { username: true, name: true } }),
-  ]);
-  const nameA = playerA?.username ?? playerA?.name ?? "Gegner";
-  const nameB = playerB?.username ?? playerB?.name ?? "Gegner";
-  const url = `/gems/battles/${battleId}`;
-
-  dispatchNotification("battle_result", {
-    users: [playerAId],
-    urlOverride: url,
-    placeholders: {
-      "{result}":
-        winnerId === playerAId
-          ? `Du hast gegen ${nameB} gewonnen!`
-          : winnerId === playerBId
-            ? `Du hast gegen ${nameB} verloren.`
-            : `Unentschieden gegen ${nameB}.`,
-    },
-  }).catch(() => {});
-  dispatchNotification("battle_result", {
-    users: [playerBId],
-    urlOverride: url,
-    placeholders: {
-      "{result}":
-        winnerId === playerBId
-          ? `Du hast gegen ${nameA} gewonnen!`
-          : winnerId === playerAId
-            ? `Du hast gegen ${nameA} verloren.`
-            : `Unentschieden gegen ${nameA}.`,
-    },
-  }).catch(() => {});
 }
 
 async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattleState) {
@@ -631,20 +294,17 @@ async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattl
 async function createLiveBattle(
   mode: string,
   playerAId: string,
-  playerBId: string | null,
   teamA: BattleUnitDefinition[],
-  teamB: BattleUnitDefinition[],
-  controllers: { A: Controller; B: Controller },
-  boardMode = false
+  teamB: BattleUnitDefinition[]
 ): Promise<LiveBattleSnapshot> {
-  const created = createInteractiveState(teamA, teamB, controllers, { boardMode });
-  const { state, pendingDecision } = advance(created, undefined, advanceOptionsFor(playerBId));
+  const created = createInteractiveState(teamA, teamB, { A: "human", B: "ai" }, { boardMode: true });
+  const { state, pendingDecision } = advance(created, undefined);
 
   const live = await prisma.liveBattle.create({
     data: {
       mode,
       playerAId,
-      playerBId,
+      playerBId: null,
       stateJson: toJson(state),
       status: state.winner ? "finished" : "active",
     },
@@ -655,48 +315,22 @@ async function createLiveBattle(
   }
 
   const fresh = await prisma.liveBattle.findUniqueOrThrow({ where: { id: live.id } });
-  return buildSnapshot(fresh, state, pendingDecision, playerAId);
+  return buildSnapshot(fresh, state, pendingDecision);
 }
 
-/** Wirft einen Fehler, falls der User sein Tageslimit an NPC-Kämpfen erreicht
- *  hat — zentral hier, damit Auto-Kampf UND Puzzle-Modus (siehe
- *  countNpcBattlesStartedToday: zählt "PVE_"-Präfix-Modi zusammen) dieselbe
- *  Fehlermeldung und dasselbe gemeinsame Tageslimit verwenden. */
-export async function assertNpcDailyLimitNotReached(userId: string): Promise<void> {
-  const startedToday = await countNpcBattlesStartedToday(userId);
-  if (startedToday >= NPC_BATTLE_DAILY_LIMIT) {
-    throw new LiveBattleError(
-      `Heutiges Limit erreicht (max. ${NPC_BATTLE_DAILY_LIMIT} NPC-Kämpfe pro Tag). Versuch es morgen wieder.`
-    );
-  }
-}
-
-/** Lädt die aktuelle Startaufstellung des Users (Lineup, sonst die ersten
- *  TEAM_SIZE eigenen Karten) — für Auto-Kampf UND Puzzle-Modus gleichermaßen. */
-async function loadPlayerLineup(userId: string) {
+/** Baut das Spieler-Team aus der Startaufstellung (sonst die ersten TEAM_SIZE eigenen Karten). */
+async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
   const userCards = await prisma.userCard.findMany({
     where: { userId },
     include: { card: true },
     orderBy: { acquiredAt: "asc" },
   });
-  if (userCards.length === 0) throw new LiveBattleError("Noch kein Start-Pack gewählt.");
+  if (userCards.length === 0) throw new LiveBattleError("Du hast noch keine Karten. Öffne zuerst OMA Gems.");
 
   const lineup = userCards.filter((uc) => uc.inLineup);
-  return (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
-}
-
-export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
-  await assertNpcDailyLimitNotReached(userId);
-  const playerTeamCards = await loadPlayerLineup(userId);
-
-  const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
-  const opponentCards = sampleWithoutReplacement(standardCards, TEAM_SIZE);
-
-  const avatarByDiscordId = await resolveAvatarsForCards([
-    ...playerTeamCards.map((uc) => uc.card),
-    ...opponentCards,
-  ]);
-  const teamA = playerTeamCards.map((uc) =>
+  const teamCards = (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
+  const avatarByDiscordId = await resolveAvatarsForCards(teamCards.map((uc) => uc.card));
+  return teamCards.map((uc) =>
     cardToBattleUnitDefinition(
       uc.card,
       uc.level,
@@ -704,50 +338,10 @@ export async function startLivePveBattle(userId: string, difficulty: NpcDifficul
       resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
     )
   );
-  const npcLevel = DIFFICULTY_LEVEL[difficulty];
-  const teamB = opponentCards.map((card) =>
-    cardToBattleUnitDefinition(
-      card,
-      npcLevel,
-      resolveCardImageUrl(card, avatarByDiscordId),
-      resolveAvatarBadgeUrl(card, avatarByDiscordId)
-    )
-  );
-
-  return createLiveBattle(`PVE_${difficulty}`, userId, null, teamA, teamB, { A: "human", B: "ai" });
 }
 
-/** Wie startLivePveBattle, aber im Match-3-"OMA Gems"-Modus (siehe
- *  board-match3.ts): der Spieler erzeugt Rage über ein Puzzle-Brett statt rein
- *  automatisch, UND die Gegner sind eine eigene Riege humorvoller Monster
- *  (siehe puzzle-monsters.ts) statt der zufälligen Standard-Karten des
- *  Auto-Kampfs — passend zum verspielteren Empires-&-Puzzles-Setting. Teilt
- *  sich Aufstellung/Tageslimit mit dem bestehenden Auto-Kampf-PVE. */
-export async function startLivePvePuzzleBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
-  await assertNpcDailyLimitNotReached(userId);
-  const playerTeamCards = await loadPlayerLineup(userId);
-
-  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
-  const teamA = playerTeamCards.map((uc) =>
-    cardToBattleUnitDefinition(
-      uc.card,
-      uc.level,
-      resolveCardImageUrl(uc.card, avatarByDiscordId),
-      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
-    )
-  );
-  const npcLevel = DIFFICULTY_LEVEL[difficulty];
-  const teamB = sampleWithoutReplacement(puzzleMonsterRoster(npcLevel), TEAM_SIZE);
-
-  return createLiveBattle(puzzleModeFor(difficulty), userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
-}
-
-/** Startet ein Kampagnen-Level (siehe campaign-levels.ts/campaign.ts) — läuft
- *  wie OMA Gems über das Match-3-Brett (boardMode: true), aber mit
- *  fest kuratiertem Gegner-Team statt zufälliger Monster und OHNE das
- *  tägliche NPC-Limit (Kampagnen-Level lassen sich beliebig oft wiederholen,
- *  um mehr Sterne zu holen — die Münz-Belohnung gibt es aber nur einmal pro
- *  Level, siehe finalizeLiveBattle). */
+/** Startet ein Kampagnen-Level (siehe campaign-levels.ts/campaign.ts) — fest kuratiertes
+ *  Gegner-Team, beliebig oft wiederholbar (Münzen gibt es nur für neu erreichte Sterne). */
 export async function startLiveCampaignBattle(userId: string, levelId: string): Promise<LiveBattleSnapshot> {
   const levelDef = getCampaignLevel(levelId);
   if (!levelDef) throw new LiveBattleError("Unbekanntes Kampagnen-Level.");
@@ -755,88 +349,8 @@ export async function startLiveCampaignBattle(userId: string, levelId: string): 
   const unlocked = await isCampaignLevelUnlocked(userId, levelId);
   if (!unlocked) throw new LiveBattleError("Dieses Level ist noch nicht freigeschaltet.");
 
-  const playerTeamCards = await loadPlayerLineup(userId);
-  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
-  const teamA = playerTeamCards.map((uc) =>
-    cardToBattleUnitDefinition(
-      uc.card,
-      uc.level,
-      resolveCardImageUrl(uc.card, avatarByDiscordId),
-      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
-    )
-  );
-  const teamB = buildCampaignEnemyTeam(levelDef);
-
-  return createLiveBattle(`CAMPAIGN_${levelId}`, userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
-}
-
-/** Erzeugt den LiveBattle zu einer bereits angenommenen/gematchten PVP-Begegnung
- *  und verknüpft ihn direkt mit der BattleChallenge (liveBattleId). */
-export async function startLivePvpBattle(
-  challengeId: string,
-  challengerId: string,
-  opponentId: string,
-  mode: "PVP_CHALLENGE" | "PVP_MATCHMAKING"
-): Promise<LiveBattleSnapshot> {
-  const [teamAResult, teamBResult] = await Promise.all([buildBattleTeam(challengerId), buildBattleTeam(opponentId)]);
-  if (teamAResult.units.length === 0 || teamBResult.units.length === 0) {
-    throw new LiveBattleError("Ein Spieler hat keine gültige Startaufstellung mehr.");
-  }
-
-  const snapshot = await createLiveBattle(mode, challengerId, opponentId, teamAResult.units, teamBResult.units, {
-    A: "human",
-    B: "human",
-  });
-
-  await prisma.battleChallenge.update({
-    where: { id: challengeId },
-    data: { status: snapshot.status === "finished" ? "resolved" : "live", liveBattleId: snapshot.id },
-  });
-
-  return snapshot;
-}
-
-/** OMA-Gems-Ghost-Angriff: sofortiger, asynchroner Kampf gegen einen KI-
- *  gesteuerten Nachbau der AKTUELLEN Aufstellung eines anderen Users — der
- *  Angegriffene muss weder online sein noch reagieren (kein Annahme-Schritt,
- *  im Gegensatz zu startLivePvpBattle). Legt trotzdem eine BattleChallenge an
- *  (mode: "GEMS"), damit der Kampf über denselben Resolve-Pfad läuft wie
- *  klassisches PvP und in dieselbe Saison-Rangliste einfließt. */
-export async function startLiveGemsPvpBattle(challengerId: string, opponentId: string): Promise<LiveBattleSnapshot> {
-  if (challengerId === opponentId) {
-    throw new LiveBattleError("Du kannst dich nicht selbst herausfordern.");
-  }
-  await assertGemsPvpDailyLimitNotReached(challengerId);
-
-  const [teamAResult, teamBResult] = await Promise.all([buildBattleTeam(challengerId), buildBattleTeam(opponentId)]);
-  if (teamAResult.units.length === 0) {
-    throw new LiveBattleError("Noch kein Start-Pack gewählt.");
-  }
-  if (teamBResult.units.length === 0) {
-    throw new LiveBattleError("Dieser Nutzer hat noch keine gültige Startaufstellung.");
-  }
-
-  const snapshot = await createLiveBattle(
-    PVP_GEMS_MODE,
-    challengerId,
-    opponentId,
-    teamAResult.units,
-    teamBResult.units,
-    { A: "human", B: "ai" },
-    true
-  );
-
-  await prisma.battleChallenge.create({
-    data: {
-      challengerId,
-      opponentId,
-      mode: "GEMS",
-      status: snapshot.status === "finished" ? "resolved" : "live",
-      liveBattleId: snapshot.id,
-    },
-  });
-
-  return snapshot;
+  const teamA = await loadPlayerTeam(userId);
+  return createLiveBattle(`${CAMPAIGN_MODE_PREFIX}${levelId}`, userId, teamA, buildCampaignEnemyTeam(levelDef));
 }
 
 /** Startet einen Versuch in einem laufenden OMA-Gems-Turnier (Score-Attack
@@ -867,66 +381,37 @@ export async function startLiveGemsTournamentBattle(
     throw new LiveBattleError(`Maximale Anzahl Versuche erreicht (${tournament.maxAttemptsPerUser}).`);
   }
 
-  const playerTeamCards = await loadPlayerLineup(userId);
-  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
-  const teamA = playerTeamCards.map((uc) =>
-    cardToBattleUnitDefinition(
-      uc.card,
-      uc.level,
-      resolveCardImageUrl(uc.card, avatarByDiscordId),
-      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
-    )
-  );
+  const teamA = await loadPlayerTeam(userId);
   const teamB = JSON.parse(tournament.bossTeamJson) as BattleUnitDefinition[];
-
-  return createLiveBattle(
-    tournamentModeFor(tournament.id),
-    userId,
-    null,
-    teamA,
-    teamB,
-    { A: "human", B: "ai" },
-    true
-  );
+  return createLiveBattle(tournamentModeFor(tournament.id), userId, teamA, teamB);
 }
 
-// ---------- Lesen / Aktion / Auto-Kampf ----------
+// ---------- Lesen / Aktion ----------
 
 export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: string): Promise<LiveBattleSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   const state = toState(live);
 
-  // Normalerweise rein lesend — advance() NICHT aufrufen: das würde bei aktiviertem
-  // Auto-Kampf sofort weiterspielen, aber ein reiner Read-Pfad persistiert nichts,
-  // der Fortschritt ginge beim nächsten Poll wieder verloren (siehe
-  // describeCurrentDecision-Doku). Zwei Ausnahmen, die beide fortsetzen + persistieren:
-  //  - Zug-Timeout abgelaufen: es gibt keinen Hintergrund-Job, der das sonst
-  //    durchsetzen würde, also übernimmt genau dieser Poll-Request die KI-Entscheidung.
-  //  - Mitten in einem gedrosselten Auto-Kampf-Durchlauf (beide PVP-Seiten auf Auto,
-  //    siehe PVP_AUTO_PACE_STEPS): weder Timeout noch awaitingUnitId, aber auch noch
-  //    nicht beendet — genau dieser Poll-Request löst den nächsten Zug aus, dadurch
-  //    entfaltet sich der Kampf für Zuschauer schrittweise statt in einem Sprung.
+  // Normalerweise rein lesend. Ausnahme: Zug-Timeout abgelaufen — es gibt keinen
+  // Hintergrund-Job, der das sonst durchsetzen würde, also übernimmt genau dieser
+  // Request die KI-Entscheidung und persistiert sie.
   const timedOut = !!state.awaitingUnitId && state.turnDeadline !== null && Date.now() >= state.turnDeadline;
   const midAutoRun = !state.winner && !state.awaitingUnitId;
-  // live.status kann "finished" sein, ohne dass state.winner gesetzt ist — z.B. wenn
-  // die Challenge-Cleanup-Cron einen liegen gelassenen Kampf abgebrochen hat (siehe
-  // challenge-expiry.ts). In dem Fall NICHT weiterspielen/persistieren, sonst würde
-  // ein später zurückkehrender Spieler den eigentlich abgebrochenen Kampf unbemerkt
-  // wiederbeleben und am Ende doch noch reguläre Elo-/Sieges-Serien-Effekte auslösen.
   if (live.status === "active" && (timedOut || midAutoRun)) {
-    const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
+    const { state: newState, pendingDecision } = advance(state, undefined);
     const updated = await persistAndMaybeFinalize(live, newState);
-    return buildSnapshot(updated, newState, pendingDecision, viewerId);
+    return buildSnapshot(updated, newState, pendingDecision);
   }
 
-  return buildSnapshot(live, state, describeCurrentDecision(state), viewerId);
+  return buildSnapshot(live, state, describeCurrentDecision(state));
 }
 
+/** Bestätigt einen Zug auf dem Brett. Der Spieler wählt nie manuell Aktion/Ziel — die
+ *  Ziele entstehen automatisch pro Match (siehe applyBoardRage in interactive.ts). */
 export async function submitLiveBattleAction(
   liveBattleId: string,
   viewerId: string,
   actionType: ActionType,
-  targetId: string | undefined,
   boardSwaps?: SwapMove[]
 ): Promise<LiveBattleSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
@@ -935,46 +420,17 @@ export async function submitLiveBattleAction(
   const state = toState(live);
   if (!state.awaitingUnitId) throw new LiveBattleError("Gerade wartet niemand auf eine Entscheidung.");
 
-  const allUnits = [...state.unitsA, ...state.unitsB];
-  const unit = allUnits.find((u) => u.instanceId === state.awaitingUnitId);
+  const unit = [...state.unitsA, ...state.unitsB].find((u) => u.instanceId === state.awaitingUnitId);
   if (!unit) throw new LiveBattleError("Aktive Einheit nicht gefunden.");
+  if (unit.teamId !== "A") throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
-  const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
-  if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
-
-  // Im Match-3-Brett-Modus (OMA Gems) wählt der Spieler nie manuell eine Aktion/
-  // ein Ziel — der Client schickt hier nur die Swap-Sequenz, `actionType`/
-  // `targetId` (aktuell hartkodiert "normalAttack" ohne Ziel, siehe
-  // BoardMatch3.tsx onConfirm) werden serverseitig ohnehin ignoriert (die
-  // eigentlichen Ziele entstehen automatisch pro Match, siehe applyBoardRage in
-  // interactive.ts). Die normale Aktions-/Ziel-Validierung unten passt dafür
-  // nicht (sie würde "normalAttack" ohne Ziel fälschlich als "Ungültiges Ziel"
-  // ablehnen) und wird daher für boardMode-Züge übersprungen.
-  let resolvedTargetId: string | undefined;
-  if (!state.boardMode) {
-    const available = describeAvailableActions(unit, allUnits);
-    const chosen = available.find((a) => a.actionType === actionType);
-    if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
-
-    if (chosen.targetKind !== "none") {
-      const candidates = candidateTargetIds(unit, chosen.targetKind, allUnits);
-      if (!targetId || !candidates.includes(targetId)) throw new LiveBattleError("Ungültiges Ziel.");
-      resolvedTargetId = targetId;
-    }
-  }
-
-  const { state: newState, pendingDecision } = advance(
-    state,
-    { actionType, targetId: resolvedTargetId, boardSwaps: state.boardMode ? boardSwaps : undefined },
-    advanceOptionsFor(live.playerBId)
-  );
+  const { state: newState, pendingDecision } = advance(state, { actionType, boardSwaps });
   const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision, viewerId);
+  return buildSnapshot(updated, newState, pendingDecision);
 }
 
 /** Löst ein Ultimate SOFORT aus, unabhängig von der Zugreihenfolge (siehe
- *  applyUltimateInterrupt) — z.B. per Klick auf eine Heldenkarte mit vollem
- *  Rage-Balken, auch während gerade eine ANDERE eigene Einheit am Zug ist. */
+ *  applyUltimateInterrupt) — per Klick auf eine Heldenkarte mit vollem Rage-Balken. */
 export async function submitUltimateInterrupt(
   liveBattleId: string,
   viewerId: string,
@@ -987,23 +443,21 @@ export async function submitUltimateInterrupt(
   const state = toState(live);
   const caster = [...state.unitsA, ...state.unitsB].find((u) => u.instanceId === casterId);
   if (!caster) throw new LiveBattleError("Einheit nicht gefunden.");
-
-  const controllingPlayerId = caster.teamId === "A" ? live.playerAId : live.playerBId;
-  if (controllingPlayerId !== viewerId) throw new LiveBattleError("Das ist nicht deine Einheit.");
+  if (caster.teamId !== "A") throw new LiveBattleError("Das ist nicht deine Einheit.");
 
   const { state: newState, pendingDecision, applied } = applyUltimateInterrupt(state, casterId, targetId);
   if (!applied) throw new LiveBattleError("Ultimate ist gerade nicht verfügbar (Rage zu niedrig?).");
 
   const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision, viewerId);
+  return buildSnapshot(updated, newState, pendingDecision);
 }
 
 /** Speichert den bisherigen Fortschritt der laufenden Match-3-Mini-Session
  *  (siehe BoardMatch3.tsx: nach jedem bestätigten Swap aufgerufen, fire-and-
  *  forget) — reine Zustands-Aktualisierung ohne Turn-Order-Auswirkung, KEINE
- *  Rage-Vergabe (die passiert weiterhin ausschließlich beim eigentlichen
- *  Zug-Abschluss über /action). Ermöglicht, dass ein Reload mitten in der
- *  Mini-Session den Fortschritt nicht verwirft. */
+ *  Rage-Vergabe (die passiert ausschließlich beim eigentlichen Zug-Abschluss
+ *  über /action). Ermöglicht, dass ein Reload mitten in der Mini-Session den
+ *  Fortschritt nicht verwirft. */
 export async function saveBoardProgress(
   liveBattleId: string,
   viewerId: string,
@@ -1015,30 +469,10 @@ export async function saveBoardProgress(
   const state = toState(live);
   if (!state.awaitingUnitId) throw new LiveBattleError("Gerade wartet niemand auf eine Entscheidung.");
 
-  const allUnits = [...state.unitsA, ...state.unitsB];
-  const unit = allUnits.find((u) => u.instanceId === state.awaitingUnitId);
-  if (!unit) throw new LiveBattleError("Aktive Einheit nicht gefunden.");
-
-  const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
-  if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
-
   if (!recordBoardProgress(state, swaps)) {
     throw new LiveBattleError("Board-Fortschritt konnte nicht gespeichert werden.");
   }
 
   const updated = await persistAndMaybeFinalize(live, state);
-  return buildSnapshot(updated, state, describeCurrentDecision(state), viewerId);
-}
-
-export async function setLiveBattleAuto(liveBattleId: string, viewerId: string, on: boolean): Promise<LiveBattleSnapshot> {
-  const live = await requireAccess(liveBattleId, viewerId);
-  if (live.status === "finished") throw new LiveBattleError("Dieser Kampf ist bereits beendet.");
-
-  const state = toState(live);
-  if (viewerId === live.playerAId) state.autoA = on;
-  else state.autoB = on;
-
-  const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
-  const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision, viewerId);
+  return buildSnapshot(updated, state, describeCurrentDecision(state));
 }

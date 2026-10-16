@@ -3,18 +3,11 @@
 // ============================================
 // OMA Gems — Ergebnisbildschirm (direkt, kein Zwischenschritt)
 // ============================================
-// Ersetzt die bisherige kleine "Sieg!"-Kachel mit "Zum Ergebnis"-Link: bei OMA
-// Gems soll der Spieler NICHT erst zur separaten Replay-Seite navigieren
-// müssen, um sein Ergebnis zu sehen — die Kampfwiederholung ist ohnehin nur
-// für OMA Duels sinnvoll (asynchrone Herausforderung, die man nicht live
-// verfolgt hat). Zeigt je nach Kampf-Art die passende Belohnung:
+// Zeigt das Kampfergebnis direkt im Kampf-Overlay, ohne Umweg über die Replay-Seite,
+// je nach Kampf-Art mit der passenden Belohnung:
 //  - Kampagne  → Sterne (siehe campaignResult)
-//  - NPC-Kampf → Münzen mit kurzem Glücksrad-Dreh
+//  - Münzen    → Münzen mit kurzem Glücksrad-Dreh (derzeit von keinem Modus genutzt)
 //  - Turnier/Verlust/Unentschieden → kein Belohnungs-Block
-// Die Gems-PvP-Sieges-Kiste (Ghost-Angriff) läuft weiterhin über
-// VictoryChestReveal, DESSEN "Einsammeln"-Button jetzt direkt onExit auslöst
-// (siehe LiveBattleView.tsx) — dieser Screen hier kommt für den Ghost-Angriff
-// also gar nicht zum Einsatz.
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";

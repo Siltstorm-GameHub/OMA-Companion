@@ -103,7 +103,7 @@ export function PackCoverArt({
       >
         <div className="flex items-center gap-1.5">
           <img src="/brand/logo-64.png" alt="" className="w-5 h-5" />
-          <p className="text-[11px] font-black uppercase tracking-wider text-white leading-none">Battle Cards</p>
+          <p className="text-[11px] font-black uppercase tracking-wider text-white leading-none">OMA Gems</p>
         </div>
         {showLabel && (
           <span

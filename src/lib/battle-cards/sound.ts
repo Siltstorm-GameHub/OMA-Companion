@@ -1,11 +1,11 @@
 // ============================================
-// Kampf-Sounds — OMA Battle Cards (Gems, Duels, Live-Kampf)
+// Kampf-Sounds — OMA Gems (Live-Kampf, Brett)
 // ============================================
-// Alle Klänge kommen aus derselben Bibliothek wie in OMA Quest (lib/dnd/oq-sfx): gleiche Samples, gleiche Lautstärke, gleicher Stumm-Schalter.
+// Alle Klänge kommen aus game-sfx.ts: gleiche Samples, gleiche Lautstärke, gleicher Stumm-Schalter.
 // Früher hatte dieses Modul eigene, per Web Audio erzeugte Töne; die Namen der Funktionen bleiben, damit die Bildschirme unverändert bleiben.
 
 import type { UnitClass } from "@/lib/battle-engine/types";
-import { playSfx, sfxForClassHit, sfxForClassUltimate } from "@/lib/dnd/oq-sfx";
+import { playSfx, sfxForClassHit, sfxForClassUltimate } from "./game-sfx";
 import { isSoundMuted, setSoundMuted } from "./sound-prefs";
 
 export { isSoundMuted, setSoundMuted };

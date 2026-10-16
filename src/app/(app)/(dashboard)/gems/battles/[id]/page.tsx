@@ -12,6 +12,8 @@ export const metadata = {
   title: "Kampf-Replay | OMA Gems | OMA",
 };
 
+// Replay eines beendeten Kampfs. Seit der Reduktion auf OMA Gems gibt es nur noch Kämpfe gegen
+// Monster (Kampagne, Turnier) — einsehbar nur für den Spieler selbst.
 export default async function BattleReplayPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -19,93 +21,28 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
   }
   const { id } = await params;
 
-  const [battle, challenge] = await Promise.all([
-    prisma.battle.findUnique({ where: { id } }),
-    prisma.battleChallenge.findFirst({
-      where: { battleId: id },
-      include: {
-        challenger: { select: { username: true, name: true } },
-        opponent: { select: { username: true, name: true } },
-      },
-    }),
-  ]);
+  const battle = await prisma.battle.findUnique({ where: { id } });
   if (!battle || !isStoredBattleLog(battle.battleLog)) notFound();
+  if (battle.playerId !== session.user.id) notFound();
 
-  // Battle-Replays sind für alle eingeloggten Mitglieder einsehbar (verlinkt aus der
-  // öffentlichen "Kampfhistorie aller Mitglieder" im Community-Reiter) — nur PVE-Testkämpfe
-  // ohne Challenge-Datensatz bleiben auf den ausführenden Spieler beschränkt.
-  const viewerId = session.user.id;
-  const isParticipant = challenge
-    ? viewerId === challenge.challengerId || viewerId === challenge.opponentId
-    : viewerId === battle.playerId;
-  if (!challenge && !isParticipant) notFound();
-
-  const challengerName = challenge?.challenger.username ?? challenge?.challenger.name ?? "Herausforderer";
-  const opponentName = challenge?.opponent.username ?? challenge?.opponent.name ?? "Gegner";
-
-  let outcome: BattleOutcome;
-  let outcomeLabel: string | undefined;
-  if (challenge) {
-    if (isParticipant) {
-      outcome = challenge.winnerId === null ? "draw" : challenge.winnerId === viewerId ? "win" : "loss";
-    } else {
-      // Zuschauer (nicht Teilnehmer): keine persönliche Niederlage möglich — immer
-      // die "Sieg"-Aufmachung (goldene Krone) mit dem Namen des Gewinners, bzw. Unentschieden.
-      outcome = challenge.winnerId === null ? "draw" : "win";
-      outcomeLabel = challenge.winnerId === null
-        ? "Unentschieden"
-        : `${challenge.winnerId === challenge.challengerId ? challengerName : opponentName} gewinnt!`;
-    }
-  } else {
-    outcome = battle.result === "DRAW" ? "draw" : battle.result === "WIN" ? "win" : "loss";
-  }
-
-  // Aktuelle Sieges-Serie nur für den Betrachter selbst bei eigenem Sieg abrufen (nicht
-  // als Zuschauer, nicht bei PVE-Testkämpfen ohne Challenge — dort wird keine gepflegt).
-  let winStreak: number | undefined;
-  if (challenge && isParticipant && outcome === "win") {
-    const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { battleWinStreak: true } });
-    winStreak = viewer?.battleWinStreak;
-  }
-
-  // Team A ist immer der Herausforderer/Spieler (siehe live-battle.ts), Team B der
-  // Herausgeforderte bzw. bei PVE das NPC-Team — für die Kampf-Statistik: eigenes
-  // Team blau, gegnerisches rot, nur für den Betrachter als Teilnehmer bestimmbar.
-  const viewerTeamId = !challenge
-    ? "A"
-    : isParticipant
-      ? viewerId === challenge.challengerId
-        ? "A"
-        : "B"
-      : null;
-  const teamALabel = !challenge ? "Dein Team" : isParticipant && viewerId === challenge.challengerId ? "Dein Team" : challengerName;
-  const teamBLabel = !challenge
-    ? "Gegner (NPC)"
-    : isParticipant && viewerId === challenge.opponentId
-      ? "Dein Team"
-      : opponentName;
+  const outcome: BattleOutcome = battle.result === "DRAW" ? "draw" : battle.result === "WIN" ? "win" : "loss";
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <Link
-        href="/gems?tab=arena"
+        href="/gems"
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zum Kampf
+        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu OMA Gems
       </Link>
-      {challenge && (
-        <h1 className="text-lg font-black text-white">
-          {challengerName} <span className="text-gray-500 font-normal">vs.</span> {opponentName}
-        </h1>
-      )}
-      <BattleResultBanner outcome={outcome} label={outcomeLabel} winStreak={winStreak} />
+      <BattleResultBanner outcome={outcome} />
       <BattleScreen roster={battle.battleLog.roster} log={battle.battleLog.log} />
       <BattleStatsPanel
         roster={battle.battleLog.roster}
         log={battle.battleLog.log}
-        viewerTeamId={viewerTeamId}
-        teamALabel={teamALabel}
-        teamBLabel={teamBLabel}
+        viewerTeamId="A"
+        teamALabel="Dein Team"
+        teamBLabel="Gegner"
       />
     </div>
   );

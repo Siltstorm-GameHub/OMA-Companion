@@ -3,10 +3,10 @@
 // ============================================
 // Battle Cards — Kampf-Soundeffekte (Replay)
 // ============================================
-// Gleiche Klänge wie überall in OMA Quest / Battle Cards (lib/dnd/oq-sfx); nur die Namen der Funktionen bleiben für den Replay-Bildschirm.
+// Gleiche Klänge wie im Live-Kampf (game-sfx.ts); nur die Namen der Funktionen bleiben für den Replay-Bildschirm.
 
 import type { UnitClass } from "@/lib/battle-engine/types";
-import { playSfx, sfxForClassHit, sfxForClassUltimate } from "@/lib/dnd/oq-sfx";
+import { playSfx, sfxForClassHit, sfxForClassUltimate } from "./game-sfx";
 
 export const playHitSfx = () => playSfx("hit");
 export const playCritSfx = () => playSfx("crit");

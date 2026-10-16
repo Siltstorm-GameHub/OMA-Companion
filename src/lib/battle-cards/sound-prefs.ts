@@ -1,12 +1,12 @@
 "use client";
 
 // ============================================
-// Battle Cards — Ton-Schalter: gemeinsam mit OMA Quest
+// OMA Gems — Ton-Schalter
 // ============================================
-// Es gibt nur noch EINE Ton-Einstellung für alle Spielmodi (OMA Quest, Gems, Duels, Replay): Stumm und Lautstärke aus lib/dnd/oq-sfx.
+// Es gibt EINE Ton-Einstellung für Kampf, Brett und Replay: Stumm und Lautstärke aus game-sfx.ts.
 // Diese Funktionen bleiben als Schnittstelle der Battle-Cards-Bildschirme erhalten.
 
-import { getSoundSettings, setSoundSettings } from "@/lib/dnd/oq-sfx";
+import { getSoundSettings, setSoundSettings } from "./game-sfx";
 
 export function isSoundMuted(): boolean {
   return getSoundSettings().muted;

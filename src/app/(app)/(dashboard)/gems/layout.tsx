@@ -22,7 +22,6 @@
 
 import { Metamorphous } from "next/font/google";
 import "@/app/battle-cards-moba.css";
-import "@/app/oma-quest-game.css";
 
 const metamorphous = Metamorphous({
   subsets: ["latin"],

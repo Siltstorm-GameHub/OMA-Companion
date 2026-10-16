@@ -144,7 +144,7 @@ const RULES: RuleSeed[] = [
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "🃏 Stufenaufstieg: {tier}",
     bodyTemplate: "Deine Karte „{cardName}\" hat die Aktivitäts-Stufe **{tier}** erreicht!",
-    urlTemplate: "/gems/my-card",
+    urlTemplate: "/gems?tab=sammlung",
   },
   {
     key: "clip_started",

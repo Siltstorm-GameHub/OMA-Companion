@@ -1,9 +1,9 @@
 // ============================================
-// Battle-Cards-Wortmarke — Header
+// OMA-Gems-Wortmarke — Header
 // ============================================
 // Nutzt das echte OMA-Logo (BRAND_LOGO, wie auf der Login-Seite/CoverBrandBadge)
-// statt eines eigens generierten Emblems — plus "Battle Cards"-Schriftzug in der
-// Battle-Cards-eigenen Display-Schrift (siehe .font-battle in globals.css).
+// statt eines eigens generierten Emblems — plus "OMA Gems"-Schriftzug in der
+// spieleigenen Display-Schrift (siehe .font-battle in globals.css).
 
 "use client";
 
@@ -27,7 +27,7 @@ export default function BattleCardsLogo() {
         <img src={BRAND_LOGO} alt="OMA" className="relative h-10 sm:h-12 w-auto object-contain" />
       </div>
       <span className="font-battle text-lg sm:text-xl uppercase tracking-wide">
-        Battle Cards
+        OMA Gems
       </span>
     </motion.div>
   );

@@ -44,7 +44,7 @@ und lokaler Git-Tag `battle-cards-full-v1`.
 
 ## Phasen
 
-**1. Abschalten, ohne zu löschen** (schnell, leicht rückgängig zu machen) — umgesetzt auf Branch `gems-phase-1`
+**1. Abschalten, ohne zu löschen** — erledigt (Commit e5c46ef0)
 - Navigation: OMA Quest raus, Battle Cards → OMA Gems
 - Hub: Reiter auf *Spielen* (Kampagne + Turnier), *Sammlung* (Karten, Lineup) und *Shop* reduzieren
 - Helden-Gate im Layout entfernen, dafür ein neues einfaches Onboarding (siehe offene Punkte)
@@ -55,14 +55,25 @@ Zusätzlich in Phase 1: Die Monats-Quest `BATTLE_CARD_DUEL` zählt jetzt beendet
 Turnierkämpfe. Das Profil-Widget für Herausforderungen ist entfernt. Die Weiterleitungen sind
 vorerst temporär (307), in Phase 2 auf permanent umstellen.
 
-**2. Code entfernen**
-- Ordner und Dateien laut Liste oben löschen, Build und Tests grün bekommen
-- `live-battle.ts` auf Kampagne und Turnier eindampfen; die anderen `startLive*`-Pfade und
-  den Nicht-Brett-Zweig in `interactive.ts` entfernen
+**2. Code entfernen** — erledigt
+- Ordner und Dateien laut Liste oben gelöscht; Typecheck und Tests grün
+- `live-battle.ts` auf Kampagne und Turnier eingedampft; Kämpfe aus abgeschalteten Modi lassen sich
+  nicht mehr öffnen (Weiterleitung auf `/gems`)
+- Community-Karten werden ohne OMA Quest erzeugt (`season/community-card-stats.ts`: zufällige
+  Klasse, Basiswerte ±10 %)
+- Sounds und Kartenhintergründe aus OMA Quest übernommen (`public/battle-cards/sfx`, `public/battle-cards/tex`,
+  `game-sfx.ts`, `card-backdrops.ts`)
+- Taktikkarten aus den Packs entfernt (Premium = 5 Karten, Standard = 1 Karte)
+- Rangliste nach Kampagnen-Sternen (`leaderboard.ts`, Hub-Reiter *Spielen* + `/gems/leaderboard`)
+- Admin: Saison-1-/Elo-Reset, Ranglisten-Saison, Taktikkarten, Titel, Saison-Events und Re-Roll-Preis
+  entfernt; übrig bleibt der manuelle Lauf für die Aktivitäts-Stufen
+- Weiterleitungen permanent (308)
 
 **3. Gems glätten**
+- Nicht-Brett-Zweig in `interactive.ts` entfernen (in Phase 2 bewusst zurückgestellt: hängt am
+  gespeicherten `boardMode`-Flag laufender Kämpfe) und `GemsResultScreen` um die ungenutzte
+  Münz-Variante kürzen
 - Level fix auf 1: `LEVEL_STAT_MULTIPLIER` und Upgrade-UI raus, Kartenwerte direkt aus `Card`
-- Synergien aus `team-builder.ts` raus
 - Kampagnen-Balancing einmal gegen Level-1-Teams prüfen (die Kampagne war auf
   aufgewertete Karten ausgelegt)
 

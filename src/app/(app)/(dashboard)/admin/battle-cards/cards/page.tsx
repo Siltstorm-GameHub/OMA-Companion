@@ -18,8 +18,7 @@ export default async function AdminCommunityCardsPage() {
           🎴 Community-Karten — Untertitel & Beschreibung
         </h2>
         <p className="text-xs text-gray-600">
-          Bleibt leer, solange nichts eingetragen wurde. Mitglieder können ihre eigene Karte auch selbst
-          bearbeiten (/gems/my-card).
+          Bleibt leer, solange nichts eingetragen wurde.
         </p>
       </div>
       <CommunityCardsAdmin cards={cards} />

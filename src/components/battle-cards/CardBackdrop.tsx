@@ -1,4 +1,4 @@
-import { BACKDROPS } from "@/lib/dnd/oq-backdrop";
+import { BACKDROPS } from "@/lib/battle-cards/card-backdrops";
 import { isImageBg, type TeCharacterConfig } from "@/lib/te-character";
 
 /** Gewählter Kartenhintergrund (Himmel oben, Boden unten); ohne Auswahl nichts. Liegt absolut hinter der Figur. */
@@ -19,7 +19,7 @@ export default function CardBackdrop({ config }: { config: TeCharacterConfig | n
       <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${b.sky[0]} 0%, ${b.sky[1]} 62%)` }} />
       <div
         className="absolute inset-x-0 bottom-0 h-[38%]"
-        style={{ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,${b.dim * 0.5}), rgba(0,0,0,${b.dim + 0.1})), url(/oq/tex/${b.ground}.png)`, backgroundSize: "auto, 48px 48px", imageRendering: "pixelated", borderTop: "1px solid rgba(0,0,0,0.45)" }}
+        style={{ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,${b.dim * 0.5}), rgba(0,0,0,${b.dim + 0.1})), url(/battle-cards/tex/${b.ground}.png)`, backgroundSize: "auto, 48px 48px", imageRendering: "pixelated", borderTop: "1px solid rgba(0,0,0,0.45)" }}
       />
       {config.night && <div className="absolute inset-0 bg-[#050a25]/50" />}
     </div>

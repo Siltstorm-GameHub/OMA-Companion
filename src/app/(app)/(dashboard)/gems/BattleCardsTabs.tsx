@@ -63,7 +63,7 @@ function BattleCardsTabsInner({
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab");
   const [active, setActive] = useState<TabKey>(() => tabFromParam(requestedTab));
-  // Links innerhalb des Hubs (z. B. "?tab=arena" aus dem Held-Reiter) ändern nur die URL — Reiter beim Wechsel nachziehen.
+  // Links innerhalb des Hubs (z. B. "?tab=laden") ändern nur die URL — Reiter beim Wechsel nachziehen.
   const [seenParam, setSeenParam] = useState(requestedTab);
   if (seenParam !== requestedTab) {
     setSeenParam(requestedTab);

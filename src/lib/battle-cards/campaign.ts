@@ -10,7 +10,6 @@
 import { prisma } from "@/lib/prisma";
 import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
 import type { InteractiveBattleState } from "@/lib/battle-engine/interactive";
-import { logChronicle } from "@/lib/dnd/chronicle";
 import { instantiateMonster } from "./monster-content";
 import { CAMPAIGN_LEVELS, getCampaignLevel, type CampaignLevelDef } from "./campaign-levels";
 
@@ -95,6 +94,9 @@ export async function recordCampaignResult(
   });
   const previousBestStars = existing?.stars ?? 0;
   const starsGained = Math.max(0, stars - previousBestStars);
+  // Ohne Verbesserung nichts schreiben: updatedAt markiert so den Zeitpunkt des letzten
+  // Sterne-Zuwachses und dient der Rangliste als Gleichstands-Regel (siehe leaderboard.ts).
+  if (existing?.completed && starsGained === 0) return { starsGained };
 
   await prisma.userCampaignProgress.upsert({
     where: { userId_levelId: { userId, levelId } },
@@ -105,14 +107,6 @@ export async function recordCampaignResult(
       completedAt: existing?.completedAt ?? new Date(),
     },
   });
-
-  // Ruhm in der Welt: der erste Sieg über einen Boss erscheint in der Chronik von OMA Quest (nur Anzeige, keine Belohnung)
-  const levelDef = getCampaignLevel(levelId);
-  if (!existing && levelDef?.isBoss) {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } });
-    const hero = user?.discordId ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { name: true } }) : null;
-    if (hero) await logChronicle("event", `${hero.name} hat in der Arena besiegt: ${levelDef.name.replace(/^Boss:\s*/, "")}.`);
-  }
 
   return { starsGained };
 }

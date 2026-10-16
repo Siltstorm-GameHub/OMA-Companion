@@ -3,7 +3,7 @@
 // ============================================
 // Packs lösen sich NICHT mehr automatisch auf. Kauf (Shop) und Glücksrad-
 // Gewinn erzeugen beide nur eine CardPack-Zeile im Inventar — geöffnet wird
-// manuell auf /battle-cards (mit Öffnen-Animation im Client, siehe
+// manuell auf /gems (mit Öffnen-Animation im Client, siehe
 // PackOpener.tsx). Community-Karten sind fest an echte Discord-Mitglieder
 // gebunden, sind aber (mit unterschiedlicher Wahrscheinlichkeit je nach
 // Pack-Sorte) über alle Packs erhältlich — siehe COMMUNITY_CHANCE unten.
@@ -11,15 +11,13 @@
 // Der Pack-Preis je Sorte ist admin-konfigurierbar, siehe lib/shop-config.ts.
 
 import { prisma } from "@/lib/prisma";
-import type { Card, CardPackSource, CardRarity, TacticCard } from "@prisma/client";
+import type { Card, CardPackSource, CardRarity } from "@prisma/client";
 
 export const PACK_DAILY_PURCHASE_LIMIT = 5;
 
 export type PackKind = "STANDARD" | "PREMIUM" | "COMMUNITY";
 
-/** Anzahl Karten, die beim Öffnen einer Pack-Sorte gezogen werden — bei
- *  STANDARD/PREMIUM zusätzlich zu evtl. beigemischten Taktik-Karten (siehe
- *  TACTIC_CARD_CHANCE), bei COMMUNITY ausschließlich Helden-Karten. */
+/** Anzahl Karten, die beim Öffnen einer Pack-Sorte gezogen werden. */
 export const PACK_CARD_COUNT: Record<PackKind, number> = {
   STANDARD: 1,
   PREMIUM: 5,
@@ -29,22 +27,11 @@ export const PACK_CARD_COUNT: Record<PackKind, number> = {
 /** Chance (0–1) auf eine Community-Karte im Pack. Wird EINMAL pro Pack
  *  gewürfelt (nicht pro Karten-Slot) — bei PREMIUM bedeutet "~25%" also:
  *  in ca. jedem 4. Premium-Pack steckt eine Community-Karte, nicht dass
- *  25% aller 5 gezogenen Karten einzeln Community sind. Greift nur bei
- *  Helden-Slots (siehe drawCardsForPack) — ein Taktik-Karten-Slot kann nie
- *  die Community-Chance "verbrauchen". COMMUNITY-Packs garantieren immer
+ *  25% aller 5 gezogenen Karten einzeln Community sind. COMMUNITY-Packs garantieren immer
  *  eine Community-Karte und brauchen daher keinen Eintrag hier. */
 export const COMMUNITY_CHANCE: Partial<Record<PackKind, number>> = {
   STANDARD: 0.03,
   PREMIUM: 0.25,
-};
-
-/** Anteil der Pack-Slots, die statt einer Helden-Karte eine Taktik-Karte
- *  (Item/Falle) ziehen. STANDARD zieht IMMER zusätzlich genau 1 Taktik-Karte
- *  (kein Slot-Ersatz, siehe drawCardsForPack); PREMIUM würfelt das pro Slot
- *  unabhängig (im Schnitt die Hälfte der 5 Slots); COMMUNITY droppt nie
- *  Taktik-Karten und braucht daher keinen Eintrag. */
-export const TACTIC_CARD_CHANCE: Partial<Record<PackKind, number>> = {
-  PREMIUM: 0.5,
 };
 
 export class PackError extends Error {}
@@ -55,19 +42,9 @@ export interface OpenPackResult {
   duplicates: number;
 }
 
-export interface OpenPackTacticResult {
-  tacticCard: TacticCard;
-  isNewCard: boolean;
-  quantity: number;
-}
-
-/** Ein einzelner gezogener Pack-Inhalt — entweder eine Helden- oder eine
- *  Taktik-Karte. `duplicates` ist bei beiden Varianten einheitlich benannt
- *  (bei Taktik-Karten intern "quantity" in UserTacticCard), damit Client-Code
- *  nicht zwischen den beiden Feldnamen unterscheiden muss. */
-export type PackDrawResult =
-  | { itemKind: "card"; card: Card; isNewCard: boolean; duplicates: number }
-  | { itemKind: "tactic"; tacticCard: TacticCard; isNewCard: boolean; duplicates: number };
+/** Ein einzelner gezogener Pack-Inhalt. `itemKind` bleibt als Kennung für den Client erhalten
+ *  (früher gab es zusätzlich Taktik-Karten für OMA Duels). */
+export type PackDrawResult = { itemKind: "card"; card: Card; isNewCard: boolean; duplicates: number };
 
 function startOfTodayUTC(): Date {
   const now = new Date();
@@ -134,41 +111,8 @@ async function drawCard(userId: string, rarity: CardRarity): Promise<OpenPackRes
   return awardDrawnCard(userId, picked);
 }
 
-/** Schreibt eine gezogene Taktik-Karte gut (neu oder +1 Anzahl) — Pendant zu
- *  awardDrawnCard für UserTacticCard statt UserCard. */
-async function awardDrawnTacticCard(userId: string, picked: TacticCard): Promise<OpenPackTacticResult> {
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.userTacticCard.findUnique({
-      where: { userId_tacticCardId: { userId, tacticCardId: picked.id } },
-    });
-
-    if (existing) {
-      const updated = await tx.userTacticCard.update({
-        where: { id: existing.id },
-        data: { quantity: { increment: 1 } },
-      });
-      return { tacticCard: picked, isNewCard: false, quantity: updated.quantity };
-    }
-
-    await tx.userTacticCard.create({ data: { userId, tacticCardId: picked.id, quantity: 1 } });
-    return { tacticCard: picked, isNewCard: true, quantity: 1 };
-  });
-}
-
-/** Zieht eine zufällige Taktik-Karte (Item/Falle) — aktuell ohne Seltenheits-
- *  Unterscheidung, da bislang alle Taktik-Karten rarity=STANDARD sind. */
-async function drawTacticCard(userId: string): Promise<OpenPackTacticResult> {
-  const pool = await prisma.tacticCard.findMany();
-  if (pool.length === 0) {
-    throw new PackError("Keine Taktik-Karten vorhanden.");
-  }
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-  return awardDrawnTacticCard(userId, picked);
-}
-
-/** Zieht GENAU die angegebene Karte (siehe CardPack.guaranteedCardId) —
- *  für das Tutorial-Community-Pack, das immer die eigene Community-Karte
- *  des Users enthalten soll, nicht eine zufällige. */
+/** Zieht GENAU die angegebene Karte (siehe CardPack.guaranteedCardId) — für ältere,
+ *  noch ungeöffnete Tutorial-Packs, die die eigene Community-Karte garantieren. */
 async function drawExactCard(userId: string, cardId: string): Promise<OpenPackResult> {
   const picked = await prisma.card.findUnique({ where: { id: cardId } });
   if (!picked) {
@@ -181,15 +125,9 @@ function asCardResult(r: OpenPackResult): PackDrawResult {
   return { itemKind: "card", card: r.card, isNewCard: r.isNewCard, duplicates: r.duplicates };
 }
 
-function asTacticResult(r: OpenPackTacticResult): PackDrawResult {
-  return { itemKind: "tactic", tacticCard: r.tacticCard, isNewCard: r.isNewCard, duplicates: r.quantity };
-}
-
-/** Zieht alle Karten für ein Pack der angegebenen Sorte. COMMUNITY bleibt
- *  reine Helden-Karten (garantiert 1 Community-Karte, wie bisher). STANDARD
- *  zieht zusätzlich zur 1 Helden-Karte IMMER genau 1 Taktik-Karte (2 Items
- *  insgesamt). PREMIUM würfelt für jeden der 5 Slots unabhängig, ob eine
- *  Helden- oder eine Taktik-Karte gezogen wird (TACTIC_CARD_CHANCE.PREMIUM). */
+/** Zieht alle Karten für ein Pack der angegebenen Sorte. COMMUNITY garantiert
+ *  eine Community-Karte. STANDARD zieht 1, PREMIUM 5 Karten — die (einmal pro
+ *  Pack gewürfelte) Community-Chance ersetzt dabei den ersten Slot. */
 async function drawCardsForPack(userId: string, kind: PackKind): Promise<PackDrawResult[]> {
   if (kind === "COMMUNITY") {
     return [asCardResult(await drawCard(userId, "COMMUNITY"))];
@@ -201,27 +139,9 @@ async function drawCardsForPack(userId: string, kind: PackKind): Promise<PackDra
   const communityPoolAvailable = chance > 0 && (await communityCardPoolSize()) > 0;
   const wonCommunitySlot = communityPoolAvailable && Math.random() < chance;
 
-  if (kind === "STANDARD") {
-    const hero = await drawCard(userId, wonCommunitySlot ? "COMMUNITY" : "STANDARD");
-    const tactic = await drawTacticCard(userId);
-    return [asCardResult(hero), asTacticResult(tactic)];
-  }
-
-  // PREMIUM: 5 unabhängige Slots. Die (einmal pro Pack gewürfelte) Community-
-  // Chance greift beim ERSTEN Slot, der als Helden-Slot ausgewürfelt wird —
-  // vorher waren alle 5 Slots automatisch Helden, jetzt kann das je nach
-  // Zufall auch ein späterer Slot sein.
-  const count = PACK_CARD_COUNT.PREMIUM;
-  const tacticChance = TACTIC_CARD_CHANCE.PREMIUM ?? 0;
   const results: PackDrawResult[] = [];
-  let communityAwarded = false;
-  for (let i = 0; i < count; i++) {
-    if (Math.random() < tacticChance) {
-      results.push(asTacticResult(await drawTacticCard(userId)));
-      continue;
-    }
-    const useCommunity = wonCommunitySlot && !communityAwarded;
-    if (useCommunity) communityAwarded = true;
+  for (let i = 0; i < PACK_CARD_COUNT[kind]; i++) {
+    const useCommunity = wonCommunitySlot && i === 0;
     results.push(asCardResult(await drawCard(userId, useCommunity ? "COMMUNITY" : "STANDARD")));
   }
   return results;
@@ -256,11 +176,9 @@ export async function openNextPack(
     ? [asCardResult(await drawExactCard(userId, pack.guaranteedCardId))]
     : await drawCardsForPack(userId, pack.kind as PackKind);
 
-  const firstItem = cards[0];
-  const openedCardId = firstItem.itemKind === "card" ? firstItem.card.id : firstItem.tacticCard.id;
   await prisma.cardPack.update({
     where: { id: pack.id },
-    data: { openedAt: new Date(), openedCardId },
+    data: { openedAt: new Date(), openedCardId: cards[0].card.id },
   });
 
   const remainingUnopened = await countUnopenedPacks(userId);

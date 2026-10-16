@@ -73,7 +73,7 @@ function PackCard({
       }
       onBought(kind, cost);
       toast.success(`🎴 ${info.label} gekauft!`, {
-        description: "Öffne es auf der Battle-Cards-Seite.",
+        description: "Öffne es im Shop-Reiter von OMA Gems.",
       });
       router.refresh();
     } catch {

@@ -3,36 +3,26 @@ import { ArrowRight } from "@/components/icons";
 import { requireRole } from "@/lib/roles";
 import { getSeasonConfig } from "@/lib/season/season-config";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
-import { getSeasonRewardConfig } from "@/lib/battle-cards/season-reward-config";
 import { SeasonConfigPanel } from "./SeasonConfigPanel";
-import { SeasonRewardsPanel } from "./SeasonRewardsPanel";
 import { UpgradeEconomyPanel } from "./UpgradeEconomyPanel";
 
 export default async function AdminBattleCardsPage() {
   await requireRole("admin");
   const config = await getSeasonConfig();
   const upgradeEconomy = await getUpgradeEconomyConfig();
-  const rewardConfig = await getSeasonRewardConfig();
 
   return (
     <div className="space-y-10 max-w-2xl">
       <section>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          🎴 Battle Cards — Saison
+          🎴 OMA Gems — Community-Karten
         </h2>
         <SeasonConfigPanel initial={config} />
       </section>
 
       <section>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          🏆 Battle Cards — Ranglisten-Saison
-        </h2>
-        <SeasonRewardsPanel initial={rewardConfig} />
-      </section>
-
-      <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          ⬆️ Battle Cards — Upgrade-Wirtschaft
+          ⬆️ OMA Gems — Upgrade-Wirtschaft
         </h2>
         <UpgradeEconomyPanel
           initialDuplicateThresholds={upgradeEconomy.duplicateThresholds}
@@ -48,16 +38,6 @@ export default async function AdminBattleCardsPage() {
           <div>
             <p className="text-sm font-semibold text-white">Community-Karten bearbeiten</p>
             <p className="text-xs text-gray-500">Untertitel & Beschreibung pro Mitglied setzen</p>
-          </div>
-          <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
-        </Link>
-        <Link
-          href="/admin/battle-cards/tactic-cards"
-          className="flex items-center justify-between gap-3 glass rounded-2xl p-4 hover:bg-white/[0.04] transition-colors"
-        >
-          <div>
-            <p className="text-sm font-semibold text-white">Taktik-Karten bearbeiten</p>
-            <p className="text-xs text-gray-500">OMA Duels: Items & Fallen — Name, Text, Artwork</p>
           </div>
           <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
         </Link>
