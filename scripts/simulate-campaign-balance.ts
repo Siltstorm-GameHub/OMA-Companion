@@ -2,6 +2,11 @@
  * Balancing-Check der OMA-Gems-Kampagne gegen Spieler-Teams ohne Karten-Stufen.
  *
  *   npx tsx scripts/simulate-campaign-balance.ts [kämpfe-pro-level=40] [spieler-stufe=1]
+ *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --calibrate
+ *
+ * Mit --calibrate wird je Level der statMultiplier gesucht, bei dem der automatische Spieler
+ * die Ziel-Siegquote aus TARGET_WIN_RATE erreicht (Bisektion) — Vorschlagswerte zum Eintragen
+ * in campaign-levels.ts.
  *
  * Läuft komplett ohne Datenbank: das Spieler-Team besteht aus 5 der 6 Standard-Karten
  * (prisma/battle-cards-seed-data.ts, je Kampf zufällig gewählt), die Gegner aus den
@@ -18,11 +23,17 @@ import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { advance, applyUltimateInterrupt, createInteractiveState, type InteractiveBattleState } from "@/lib/battle-engine/interactive";
 import { BOARD_COLS, BOARD_ROWS, ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import { resolveBoardSession, type SwapMove } from "@/lib/battle-engine/board-match3";
-import { CAMPAIGN_LEVELS } from "@/lib/battle-cards/campaign-levels";
+import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/battle-cards/campaign-levels";
 import { buildCampaignEnemyTeam, computeStars } from "@/lib/battle-cards/campaign";
 
-const BATTLES = Number(process.argv[2] ?? 40);
-const PLAYER_LEVEL = Number(process.argv[3] ?? 1);
+const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const BATTLES = Number(positional[0] ?? 40);
+const PLAYER_LEVEL = Number(positional[1] ?? 1);
+const CALIBRATE = process.argv.includes("--calibrate");
+
+/** Ziel-Siegquote des automatischen Spielers je Kampagnen-Level (Index 0 = Level 1) —
+ *  sanft fallend, Bosse (6, 12) als spürbare Stufe. Ein Mensch spielt besser als der Bot. */
+const TARGET_WIN_RATE = [1, 1, 0.99, 0.98, 0.96, 0.9, 0.9, 0.87, 0.84, 0.8, 0.74, 0.66];
 const TEAM_SIZE = 5;
 
 const standardCards: Card[] = STANDARD_CARDS.map((seed, i) => ({
@@ -89,12 +100,11 @@ function fireReadyUltimates(state: InteractiveBattleState) {
   }
 }
 
-function simulate(levelIndex: number) {
-  const level = CAMPAIGN_LEVELS[levelIndex];
+function simulate(level: CampaignLevelDef, battles: number) {
   let wins = 0;
   let starSum = 0;
   let roundSum = 0;
-  for (let i = 0; i < BATTLES; i++) {
+  for (let i = 0; i < battles; i++) {
     let { state, pendingDecision } = advance(createInteractiveState(playerTeam(), buildCampaignEnemyTeam(level)));
     let guard = 0;
     while (!state.winner && pendingDecision && guard++ < 500) {
@@ -108,14 +118,35 @@ function simulate(levelIndex: number) {
       starSum += computeStars(state);
     }
   }
-  return { level, winRate: wins / BATTLES, avgStars: wins ? starSum / wins : 0, avgRounds: roundSum / BATTLES };
+  return { winRate: wins / battles, avgStars: wins ? starSum / wins : 0, avgRounds: roundSum / battles };
 }
 
-console.log(`Kampagnen-Balancing: ${BATTLES} Kämpfe je Level, Spielerkarten Stufe ${PLAYER_LEVEL}\n`);
-console.log("Level                              Siege   Ø Sterne   Ø Runden");
+/** Bisektion über den statMultiplier, bis die Siegquote nahe am Ziel liegt. */
+function calibrate(level: CampaignLevelDef, target: number): number {
+  if (target >= 1) return level.statMultiplier;
+  let low = 0.5;
+  let high = 4;
+  for (let step = 0; step < 8; step++) {
+    const mid = (low + high) / 2;
+    const { winRate } = simulate({ ...level, statMultiplier: mid }, BATTLES);
+    if (winRate > target) low = mid;
+    else high = mid;
+  }
+  return Math.round(((low + high) / 2) * 100) / 100;
+}
+
+console.log(`Kampagnen-Balancing: ${BATTLES} Kämpfe je Level, Spielerkarten Stufe ${PLAYER_LEVEL}${CALIBRATE ? ", Kalibrierung" : ""}
+`);
+console.log(CALIBRATE ? "Level                              Ziel   bisher   Vorschlag" : "Level                              Siege   Ø Sterne   Ø Runden");
 for (let i = 0; i < CAMPAIGN_LEVELS.length; i++) {
-  const r = simulate(i);
+  const level = CAMPAIGN_LEVELS[i];
+  if (CALIBRATE) {
+    const suggestion = calibrate(level, TARGET_WIN_RATE[i] ?? 0.65);
+    console.log(`${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(TARGET_WIN_RATE[i] * 100).toFixed(0).padStart(4)} %   ${level.statMultiplier.toFixed(2).padStart(6)}   ${suggestion.toFixed(2).padStart(9)}`);
+    continue;
+  }
+  const r = simulate(level, BATTLES);
   console.log(
-    `${String(i + 1).padStart(2)}. ${r.level.name.padEnd(30)} ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgStars.toFixed(1).padStart(6)}   ${r.avgRounds.toFixed(1).padStart(7)}`
+    `${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgStars.toFixed(1).padStart(6)}   ${r.avgRounds.toFixed(1).padStart(7)}`
   );
 }

@@ -7,18 +7,17 @@
 // in der DB (siehe UserCampaignProgress in schema.prisma + campaign.ts).
 //
 // Ein Kapitel, 12 Level, steigende Schwierigkeit über drei Stellschrauben:
-//  - `level` (1-5): dieselbe Stufen-Kurve wie Spieler-Karten (LEVEL_STAT_MULTIPLIER)
-//  - `statMultiplier`: zusätzliche Basis-Stat-Skalierung über Stufe 5 hinaus,
-//    damit sich auch die letzten Level noch spürbar steigern (siehe monster-content.ts)
+//  - `level` (1-5): Monster-Stufe (LEVEL_STAT_MULTIPLIER)
+//  - `statMultiplier`: zusätzliche Basis-Stat-Skalierung (siehe monster-content.ts)
 //  - Team-Größe/-Zusammensetzung: startet bei einem einzelnen schwachen Gegner,
 //    endet bei einem vollen 5er-Team samt Endgegner
 //
-// `statMultiplier`-Werte wurden angehoben (Stand: seit Helden bei OMA Gems pro
-// Match einen zusätzlichen echten Normalangriff auslösen, nicht mehr nur Rage
-// — siehe applyBoardRage in interactive.ts). Dadurch teilen Spieler-Teams pro
-// Runde deutlich mehr Schaden aus als zuvor; ohne Anpassung wären die Gegner-
-// HP/DEF/ATK-Werte relativ dazu zu niedrig gewesen. Level 1 bleibt bewusst
-// unverändert (reines Tutorial, ein einzelner schwacher Gegner).
+// Die `statMultiplier`-Werte sind gegen Spieler-Teams ohne Karten-Stufen kalibriert
+// (scripts/simulate-campaign-balance.ts --calibrate): Die Siegquote eines einfachen
+// automatischen Spielers fällt von 100 % (Level 1–5, Einstieg) über 90 % beim ersten
+// Boss gleichmäßig auf rund 65 % beim Endboss. Weil die Monster-Zusammensetzung je
+// Level stark schwankt, sind die Werte bewusst NICHT monoton — maßgeblich ist die
+// Siegquote, nicht der Multiplikator.
 
 import type { MonsterTemplate } from "./monster-content";
 import {
@@ -86,7 +85,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Willkommen bei 300ms Verzögerung.",
     monsters: [LAG_SPIKE, RAGE_QUIT_CONTROLLER],
     level: 2,
-    statMultiplier: 1.15,
+    statMultiplier: 2.3,
   },
   {
     id: "lvl-04",
@@ -95,7 +94,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Alles glänzt, nichts ist geschenkt.",
     monsters: [LOOT_GOBLIN, PAY2WIN_TRUHE, TUTORIAL_SLIME],
     level: 2,
-    statMultiplier: 1.2,
+    statMultiplier: 2.1,
   },
   {
     id: "lvl-05",
@@ -104,7 +103,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Hier wird nicht gespielt, hier wird getrollt.",
     monsters: [GRIEFER_IMP, GRIEFER_IMP, AFK_FARMER],
     level: 2,
-    statMultiplier: 1.3,
+    statMultiplier: 2.4,
   },
   {
     id: "lvl-06",
@@ -113,7 +112,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "504 Gateway Timeout — und keine Gnade.",
     monsters: [SERVERABSTURZ_KRAKEN, LAG_SPIKE, LAG_SPIKE],
     level: 3,
-    statMultiplier: 1.35,
+    statMultiplier: 2.43,
     isBoss: true,
   },
   {
@@ -123,7 +122,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Wurde offiziell schwächer designt. Merkt man kaum.",
     monsters: [RAGE_QUIT_CONTROLLER, RAGE_QUIT_CONTROLLER, GRIEFER_IMP, AFK_FARMER],
     level: 3,
-    statMultiplier: 1.35,
+    statMultiplier: 2.2,
   },
   {
     id: "lvl-08",
@@ -132,7 +131,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Hier kauft man sich den Sieg. Fast.",
     monsters: [PAY2WIN_TRUHE, PAY2WIN_TRUHE, LOOT_GOBLIN, LOOT_GOBLIN],
     level: 3,
-    statMultiplier: 1.4,
+    statMultiplier: 2.16,
   },
   {
     id: "lvl-09",
@@ -141,7 +140,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Noch drei Level bis zum nächsten Item. Ehrlich.",
     monsters: [SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, GRIEFER_IMP],
     level: 4,
-    statMultiplier: 1.45,
+    statMultiplier: 1.87,
   },
   {
     id: "lvl-10",
@@ -150,7 +149,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Alle haben Ranked-Erfahrung. Nur du nicht.",
     monsters: [RAGE_QUIT_CONTROLLER, LAG_SPIKE, GRIEFER_IMP, PAY2WIN_TRUHE, AFK_FARMER],
     level: 4,
-    statMultiplier: 1.5,
+    statMultiplier: 1.92,
   },
   {
     id: "lvl-11",
@@ -159,7 +158,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Die Ladebildschirm-Musik wird schon bedrohlich.",
     monsters: [SERVERABSTURZ_KRAKEN, SERVERABSTURZ_KRAKEN, RAGE_QUIT_CONTROLLER, RAGE_QUIT_CONTROLLER, GRIEFER_IMP],
     level: 5,
-    statMultiplier: 1.55,
+    statMultiplier: 1.18,
   },
   {
     id: "lvl-12",
@@ -168,7 +167,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "End of Season. Kein Extra-Leben mehr.",
     monsters: [SEASON_PASS_DRACHE, SERVERABSTURZ_KRAKEN, SERVERABSTURZ_KRAKEN],
     level: 5,
-    statMultiplier: 1.75,
+    statMultiplier: 1.61,
     isBoss: true,
   },
 ];
