@@ -2,14 +2,11 @@ import Link from "next/link";
 import { ArrowRight } from "@/components/icons";
 import { requireRole } from "@/lib/roles";
 import { getSeasonConfig } from "@/lib/season/season-config";
-import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { SeasonConfigPanel } from "./SeasonConfigPanel";
-import { UpgradeEconomyPanel } from "./UpgradeEconomyPanel";
 
 export default async function AdminBattleCardsPage() {
   await requireRole("admin");
   const config = await getSeasonConfig();
-  const upgradeEconomy = await getUpgradeEconomyConfig();
 
   return (
     <div className="space-y-10 max-w-2xl">
@@ -18,16 +15,6 @@ export default async function AdminBattleCardsPage() {
           🎴 OMA Gems — Community-Karten
         </h2>
         <SeasonConfigPanel initial={config} />
-      </section>
-
-      <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          ⬆️ OMA Gems — Upgrade-Wirtschaft
-        </h2>
-        <UpgradeEconomyPanel
-          initialDuplicateThresholds={upgradeEconomy.duplicateThresholds}
-          initialUpgradeCosts={upgradeEconomy.upgradeCosts}
-        />
       </section>
 
       <section className="space-y-3">

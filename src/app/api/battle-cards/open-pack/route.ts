@@ -7,7 +7,7 @@ function serializeDrawResult(result: PackDrawResult, avatarByDiscordId: Map<stri
     itemKind: "card" as const,
     card: toCardData(result.card, avatarByDiscordId),
     isNewCard: result.isNewCard,
-    duplicates: result.duplicates,
+    coins: result.coins,
   };
 }
 

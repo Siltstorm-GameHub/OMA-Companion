@@ -190,33 +190,6 @@ export interface BattleUnitState {
 
 export type Team = BattleUnitDefinition[];
 
-// ---------- Taktik-Karten (OMA Duels — Items/Fallen) ----------
-
-export type TacticCardKind = "INSTANT" | "TRAP";
-
-export type TrapTriggerCondition =
-  | { type: "onEnemyAttack" }
-  | { type: "onEnemySummon" }
-  | { type: "onEnemyUltimate" }
-  | { type: "onEnemyStanceChange" };
-
-/** Statische Definition einer Taktik-Karte (Item/Falle), analog zu
- *  `BattleUnitDefinition` — DB-frei, entsteht aus `TacticCard` via
- *  `tacticCardToDefinition` (adapters.ts). */
-export interface TacticCardDefinition {
-  id: string;
-  name: string;
-  kind: TacticCardKind;
-  effects: Effect[];
-  /** Nur bei kind === "TRAP" gesetzt. */
-  triggerCondition?: TrapTriggerCondition;
-  imageUrl?: string | null;
-  /** Nur für Anzeige-Zwecke (Karten-Detailanzeige im OMA-Duels-Spielbrett,
-   *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik. */
-  description?: string;
-  flavorText?: string;
-}
-
 // ---------- Log / Replay ----------
 
 export type ActionType = "normalAttack" | "active" | "ultimate";

@@ -14,7 +14,6 @@ const LINEUP_SIZE = 5;
 export interface LineupCard {
   cardId: string;
   card: BattleCardData;
-  level: number;
 }
 
 export default function LineupEditor({
@@ -67,7 +66,7 @@ export default function LineupEditor({
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {cards.map(({ cardId, card, level }) => {
+        {cards.map(({ cardId, card }) => {
           const isSelected = selected.includes(cardId);
           const isDisabled = !isSelected && selected.length >= LINEUP_SIZE;
           return (
@@ -82,7 +81,7 @@ export default function LineupEditor({
                   className="rounded-xl transition-shadow"
                   style={{ boxShadow: isSelected ? "0 0 0 3px #8b5cf6, 0 0 20px rgba(139,92,246,0.5)" : undefined }}
                 >
-                  <BattleCardView card={{ ...card, level }} />
+                  <BattleCardView card={card} />
                 </div>
               </button>
               {isSelected && (

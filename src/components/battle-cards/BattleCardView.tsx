@@ -41,7 +41,6 @@ export interface BattleCardData {
   passiveNegative: BattleCardSkill;
   activeSkill: BattleCardSkill;
   ultimateSkill: BattleCardSkill;
-  level?: number;
   imageUrl?: string | null;
   /** Charakter des Mitglieds (Community-Karte) — hat als Hauptmotiv Vorrang vor imageUrl. */
   teCharacter?: TeCharacterConfig | null;
@@ -61,9 +60,8 @@ export const LEVEL_BORDER: Record<number, string> = {
 };
 
 /** MOBA-Style-Kartenrahmen (echte Alpha-Transparenz, KEIN Schwarz-Hintergrund/
- *  screen-Blend wie die frühere Canva-Rahmen-Serie) — ein Rahmen für alle
- *  Stufen, die Rarität zeigt sich stattdessen über LEVEL_BORDER als Farb-Glow
- *  (siehe cardFaceShadow) + LevelStars. */
+ *  screen-Blend wie die frühere Canva-Rahmen-Serie). LEVEL_BORDER färbt nur noch
+ *  die Monster-Stufen im Kampf (siehe LiveBattleView) — Spielerkarten haben keine Stufen. */
 export const MOBA_CARD_FRAME_IMAGE = "/battle-cards/moba/card-frame.png";
 
 // Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
@@ -79,23 +77,6 @@ const ACTIVITY_TIER_ICON: Record<NonNullable<BattleCardData["activityTier"]>, st
   LEGENDE: "🔥",
   OLD_MASTER: "👑",
 };
-
-function LevelStars({ level }: { level: number }) {
-  const filled = Math.max(0, level - 1);
-  return (
-    <div className="flex gap-0.5" aria-label={`Stufe ${level}`}>
-      {Array.from({ length: 4 }).map((_, i) => (
-        <span
-          key={i}
-          className="text-[10px] leading-none"
-          style={{ color: i < filled ? LEVEL_BORDER[level] : "rgba(255,255,255,0.15)" }}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-  );
-}
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
@@ -163,16 +144,8 @@ export default function BattleCardView({
   // Fällt auf das Klassen-Icon zurück, falls das Artwork nicht lädt (Netzwerk-
   // Hänger/Timeout), statt die Karte dauerhaft leer zu lassen.
   const [imgFailed, setImgFailed] = useState(false);
-  const level = card.level ?? 1;
   const classConfig = getClassConfig(card.class);
-  const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
-  // Höchststufe (prismatisch) bekommt zusätzlich einen stärkeren Glow + wiederkehrenden
-  // Lichtsweep, damit sie sich auch in der vollen Flip-Karte (nicht nur der
-  // CardTile-Kachel, siehe dortiges level>=5-Glow) als Top-Tier absetzt.
-  const isMaxLevel = level >= 5;
-  // MOBA-Skin: ein Rahmen-Asset für alle Stufen (s.o.), die Rarität zeigt sich
-  // über einen stufenfarbigen Glow statt über 5 unterschiedliche Rahmenbilder.
-  const cardFaceShadow = `var(--shadow-card), 0 0 ${isMaxLevel ? 22 : 12}px ${borderColor}66`;
+  const cardFaceShadow = `var(--shadow-card), 0 0 12px ${LEVEL_BORDER[1]}66`;
 
   return (
     // Umdrehen ohne 3D: die Karte schrumpft in der Breite auf 0, tauscht dann die Seite und wächst wieder.
@@ -230,22 +203,12 @@ export default function BattleCardView({
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
             style={{ objectFit: "fill" }}
           />
-          {isMaxLevel && (
-            <motion.div
-              className="absolute inset-y-0 left-0 w-1/4 pointer-events-none z-10"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)", skewX: -20 }}
-              initial={{ x: "-220%" }}
-              animate={{ x: "520%" }}
-              transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 2.6, ease: "easeInOut" }}
-            />
-          )}
-          {/* Name+Sterne zentriert statt linksbündig — die Rahmen-Ornamentik (Canva-Artwork)
+          {/* Name zentriert statt linksbündig — die Rahmen-Ornamentik (Canva-Artwork)
               reicht an den Ecken tief in die Karte hinein (bei x=5-10% bis zu 35% der Höhe),
               zur horizontalen Mitte hin aber nur ~2-6%. Zentrierter Text bleibt so unterhalb
               der Ornamentik statt darunter/dahinter zu verschwinden. */}
           <div className="flex flex-col items-center text-center gap-0.5 shrink-0">
             <p className="font-battle text-[13px] text-white leading-tight truncate max-w-full">{card.name}</p>
-            <LevelStars level={level} />
           </div>
 
           <div

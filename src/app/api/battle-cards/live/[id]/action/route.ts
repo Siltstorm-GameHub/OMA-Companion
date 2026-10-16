@@ -2,22 +2,19 @@
 // POST /api/battle-cards/live/[id]/action
 // ============================================
 // Bestätigt einen Zug auf dem Match-3-Brett (Swap-Sequenz). Führt den Kampf
-// automatisch bis zur nächsten Entscheidung des Spielers (oder Kampfende) fort.
+// automatisch bis zum nächsten Zug des Spielers (oder Kampfende) fort.
 
 import { auth } from "@/auth";
-import { submitLiveBattleAction, LiveBattleError } from "@/lib/battle-cards/live-battle";
+import { submitBoardMove, LiveBattleError } from "@/lib/battle-cards/live-battle";
 import { BOARD_MOVE_BUDGET_PER_TURN } from "@/lib/battle-engine/constants";
 import type { SwapMove } from "@/lib/battle-engine/board-match3";
-import type { ActionType } from "@/lib/battle-engine/types";
-
-const VALID_ACTIONS: ActionType[] = ["normalAttack", "active", "ultimate"];
 
 /** Grobe Formvalidierung der vom Client gemeldeten Swap-Sequenz — die
  *  eigentliche Auflösung (und damit die tatsächlich gutgeschriebene Rage)
- *  passiert autoritativ serverseitig in submitLiveBattleAction/interactive.ts,
+ *  passiert autoritativ serverseitig in submitBoardMove/interactive.ts,
  *  hier geht es nur darum, offensichtlich fehlerhafte Payloads früh abzulehnen. */
-function parseBoardSwaps(value: unknown): SwapMove[] | undefined {
-  if (!Array.isArray(value)) return undefined;
+function parseBoardSwaps(value: unknown): SwapMove[] | null {
+  if (!Array.isArray(value)) return null;
   const swaps: SwapMove[] = [];
   for (const entry of value.slice(0, BOARD_MOVE_BUDGET_PER_TURN)) {
     if (
@@ -38,14 +35,13 @@ export async function POST(req: Request, ctx: RouteContext<"/api/battle-cards/li
   const { id } = await ctx.params;
 
   const body = await req.json().catch(() => ({}));
-  const actionType: ActionType | undefined = VALID_ACTIONS.includes(body?.actionType) ? body.actionType : undefined;
   const boardSwaps = parseBoardSwaps(body?.boardSwaps);
-  if (!actionType) {
-    return Response.json({ error: "Ungültige Aktion." }, { status: 400 });
+  if (!boardSwaps) {
+    return Response.json({ error: "Ungültiger Zug." }, { status: 400 });
   }
 
   try {
-    const snapshot = await submitLiveBattleAction(id, session.user.id, actionType, boardSwaps);
+    const snapshot = await submitBoardMove(id, session.user.id, boardSwaps);
     return Response.json(snapshot);
   } catch (error) {
     if (error instanceof LiveBattleError) {

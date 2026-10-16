@@ -27,7 +27,6 @@ export default async function LineupPage() {
 
   const cards = userCards.map((uc) => ({
     cardId: uc.cardId,
-    level: uc.level,
     card: toCardData(uc.card, avatarByDiscordId),
   }));
 

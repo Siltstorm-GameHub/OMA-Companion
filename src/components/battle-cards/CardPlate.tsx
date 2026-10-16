@@ -1,5 +1,5 @@
 // ============================================
-// Kartenschild: Name, Klasse und Level gut lesbar + deutliche Unterscheidung Community- / Standard-Karte
+// Kartenschild: Name und Klasse gut lesbar + deutliche Unterscheidung Community- / Standard-Karte
 // ============================================
 // Community-Karten (Mitglieder) tragen ein türkis-goldenes Band „COMMUNITY", einen leuchtenden Rahmen und ein getöntes Namensschild;
 // Standard-Karten bleiben sachlich (grauer Stahlrahmen, dunkles Schild).
@@ -10,13 +10,13 @@ type Rarity = BattleCardData["rarity"];
 
 export const isCommunity = (rarity: Rarity): boolean => rarity === "COMMUNITY";
 
-/** Rahmen der Karte: Community leuchtet türkis/gold, Standard bleibt in der Stufenfarbe. */
-export function rarityFrame(rarity: Rarity, levelColor: string, opts: { locked?: boolean; glow?: number } = {}): string {
-  if (opts.locked) return `0 0 0 1.5px ${levelColor}`;
+/** Rahmen der Karte: Community leuchtet türkis/gold, Standard bleibt sachlich grau. */
+export function rarityFrame(rarity: Rarity, frameColor: string, opts: { locked?: boolean; glow?: number } = {}): string {
+  if (opts.locked) return `0 0 0 1.5px ${frameColor}`;
   const g = opts.glow ?? 8;
   return isCommunity(rarity)
     ? `0 0 0 2.5px #22d3ee, 0 0 0 4px #f5c451, 0 4px 14px rgba(0,0,0,0.55), 0 0 ${g + 10}px #22d3ee88`
-    : `0 0 0 1.5px ${levelColor}, 0 4px 14px rgba(0,0,0,0.55), 0 0 ${g}px ${levelColor}66`;
+    : `0 0 0 1.5px ${frameColor}, 0 4px 14px rgba(0,0,0,0.55), 0 0 ${g}px ${frameColor}66`;
 }
 
 /** Band oben auf der Karte: nur bei Community-Karten. */
@@ -31,8 +31,8 @@ export function CommunityRibbon({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Namensschild unten auf der Karte: Name groß, darunter Klasse (mit Symbol) und Level. */
-export function CardPlate({ card, level, levelColor, locked = false, compact = false }: { card: Pick<BattleCardData, "name" | "class" | "rarity">; level: number; levelColor: string; locked?: boolean; compact?: boolean }) {
+/** Namensschild unten auf der Karte: Name groß, darunter Klasse (mit Symbol). */
+export function CardPlate({ card, locked = false, compact = false }: { card: Pick<BattleCardData, "name" | "class" | "rarity">; locked?: boolean; compact?: boolean }) {
   const cls = getClassConfig(card.class);
   const community = isCommunity(card.rarity);
   return (
@@ -45,7 +45,6 @@ export function CardPlate({ card, level, levelColor, locked = false, compact = f
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={cls.icon} alt="" aria-hidden className={compact ? "w-3 h-3 object-contain" : "w-3.5 h-3.5 object-contain"} />
         <span className={`font-bold uppercase tracking-wide truncate ${compact ? "text-[8px]" : "text-[9px]"}`} style={{ color: cls.color }}>{cls.label}</span>
-        {!locked && <span className={`font-black rounded px-1 bg-black/70 ${compact ? "text-[8px]" : "text-[9px]"}`} style={{ color: levelColor }}>Lv.{level}</span>}
       </div>
     </div>
   );

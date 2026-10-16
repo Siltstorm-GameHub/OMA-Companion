@@ -11,7 +11,7 @@ import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 const LINEUP_SIZE = 5;
 
 /** Kompakte Deck-Vorschau oben im Kampf-Reiter — zeigt die aktuelle Startaufstellung, immer sichtbar. */
-export default function LineupStrip({ cards }: { cards: { card: BattleCardData; level: number }[] }) {
+export default function LineupStrip({ cards }: { cards: { card: BattleCardData }[] }) {
   const slots = Array.from({ length: LINEUP_SIZE }, (_, i) => cards[i] ?? null);
 
   return (
@@ -30,7 +30,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
             );
           }
           const classConfig = getClassConfig(entry.card.class);
-          const borderColor = LEVEL_BORDER[entry.level] ?? LEVEL_BORDER[1];
+          const borderColor = LEVEL_BORDER[1];
           return (
             <div
               key={i}
@@ -52,7 +52,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                 )}
               </div>
               {isCommunity(entry.card.rarity) && <CommunityRibbon compact />}
-              <CardPlate card={entry.card} level={entry.level} levelColor={borderColor} compact />
+              <CardPlate card={entry.card} compact />
             </div>
           );
         })}

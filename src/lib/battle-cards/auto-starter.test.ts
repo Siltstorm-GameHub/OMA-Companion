@@ -22,7 +22,7 @@ describe("Auto-Startpaket", () => {
   });
 
   test("eigene Community-Karte steht im Lineup und wird nicht neu vergeben", () => {
-    const plan = planStarterLineup([{ cardId: "own", class: "SUPPORT", rarity: "COMMUNITY", level: 1 }], "own", POOL);
+    const plan = planStarterLineup([{ cardId: "own", class: "SUPPORT", rarity: "COMMUNITY" }], "own", POOL);
     assert.equal(plan.lineupCardIds[0], "own");
     assert.ok(!plan.grantCardIds.includes("own"));
     assert.equal(plan.lineupCardIds.length, 5);
@@ -30,7 +30,7 @@ describe("Auto-Startpaket", () => {
   });
 
   test("vorhandene Karten werden genutzt statt neue zu vergeben", () => {
-    const owned = ["t1", "t2", "d1", "d2", "s1", "s2"].map((id) => ({ cardId: id, class: classOf(id), rarity: "STANDARD" as const, level: 1 }));
+    const owned = ["t1", "t2", "d1", "d2", "s1", "s2"].map((id) => ({ cardId: id, class: classOf(id), rarity: "STANDARD" as const }));
     const plan = planStarterLineup(owned, null, POOL);
     assert.equal(plan.lineupCardIds.length, 5);
     assert.equal(plan.grantCardIds.length, 0);

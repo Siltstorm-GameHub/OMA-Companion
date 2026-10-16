@@ -8,20 +8,15 @@
 // (1 Karte pro Community-Mitglied) — die wird über /api/battle-cards/
 // other-cards seitenweise nachgeladen, je nach aktuellem Filter neu.
 //
-// Übersicht als dichtes Kachel-Raster (Clash-Royale-artig): Level-Rahmen +
-// Duplikat-Zähler direkt auf der Kachel, volle Karte samt Upgrade öffnet
-// sich erst im Detail-Modal beim Antippen.
+// Übersicht als dichtes Kachel-Raster (Clash-Royale-artig), die volle Karte
+// öffnet sich erst im Detail-Modal beim Antippen.
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "@/components/icons";
 import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
-import CoinIcon from "@/components/CoinIcon";
 import CardTile from "./CardTile";
 import CardDetailModal, { type CardDetailSelection } from "./CardDetailModal";
-import CardUpgradeOverlay from "./CardUpgradeOverlay";
-import type { CardUpgradeAnimationState } from "./CardUpgradeOverlay";
 import type { BattleCardData } from "./BattleCardView";
-import type { UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 
 const PAGE_SIZE = 12;
 
@@ -36,8 +31,6 @@ const FILTERS: { key: CardClassFilter; label: string; icon?: string }[] = [
 
 export interface OwnedCardEntry {
   id: string;
-  level: number;
-  duplicates: number;
   /** ISO-Zeitstempel, wann die Karte erworben wurde — steuert das "Neu"-Ribbon. */
   acquiredAt: string;
   card: BattleCardData & { id: string };
@@ -55,24 +48,16 @@ export default function CardCollectionBrowser({
   ownedCards: initialOwnedCards,
   initialOtherCards,
   initialOtherTotal,
-  initialCoins,
-  duplicateThresholds,
-  upgradeCosts,
 }: {
   ownedCards: OwnedCardEntry[];
   initialOtherCards: (BattleCardData & { id: string })[];
   initialOtherTotal: number;
-  initialCoins: number;
-  duplicateThresholds: UpgradeTable;
-  upgradeCosts: UpgradeTable;
 }) {
   const [filter, setFilter] = useState<CardClassFilter>("ALL");
   const [otherCards, setOtherCards] = useState(initialOtherCards);
   const [otherTotal, setOtherTotal] = useState(initialOtherTotal);
   const [loading, setLoading] = useState(false);
-  const [ownedCards, setOwnedCards] = useState(initialOwnedCards);
-  const [coins, setCoins] = useState(initialCoins);
-  const [upgradeAnimation, setUpgradeAnimation] = useState<CardUpgradeAnimationState | null>(null);
+  const ownedCards = initialOwnedCards;
   const [selected, setSelected] = useState<Selected>(null);
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
 
@@ -108,19 +93,6 @@ export default function CardCollectionBrowser({
       }
       return next;
     });
-  }
-
-  function handleUpgraded(userCardId: string, fromLevel: number, newLevel: number, newCoins: number) {
-    setOwnedCards((prev) =>
-      prev.map((oc) =>
-        oc.id === userCardId ? { ...oc, level: newLevel, card: { ...oc.card, level: newLevel } } : oc
-      )
-    );
-    setCoins(newCoins);
-    const upgradedCard = ownedCards.find((oc) => oc.id === userCardId)?.card;
-    if (upgradedCard) {
-      setUpgradeAnimation({ card: upgradedCard, fromLevel, toLevel: newLevel });
-    }
   }
 
   const filteredOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
@@ -160,25 +132,13 @@ export default function CardCollectionBrowser({
     setLoading(false);
   }
 
-  // Aus dem leichten `selected`-Zeiger die volle Detail-Auswahl ableiten — so
-  // zeigt das Modal nach einem Upgrade sofort die aktuelle Stufe, statt einen
-  // beim Öffnen eingefrorenen Stand zu behalten.
+  // Aus dem leichten `selected`-Zeiger die volle Detail-Auswahl ableiten.
   const selection: CardDetailSelection | null = (() => {
     if (!selected) return null;
     if (selected.kind === "owned") {
       const oc = ownedCards.find((o) => o.id === selected.userCardId);
       if (!oc) return null;
-      return {
-        card: oc.card,
-        owned: {
-          userCardId: oc.id,
-          duplicates: oc.duplicates,
-          coins,
-          duplicateThresholds,
-          upgradeCosts,
-          onUpgraded: (fromLevel, newLevel, newCoins) => handleUpgraded(oc.id, fromLevel, newLevel, newCoins),
-        },
-      };
+      return { card: oc.card };
     }
     const card = otherCards.find((c) => c.id === selected.cardId);
     return card ? { card } : null;
@@ -186,7 +146,7 @@ export default function CardCollectionBrowser({
 
   return (
     <div className="space-y-6">
-      {/* Klassen-Filter + Münzstand */}
+      {/* Klassen-Filter */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           {FILTERS.map(({ key, label, icon }) => (
@@ -205,10 +165,6 @@ export default function CardCollectionBrowser({
             </button>
           ))}
         </div>
-        <span className="moba-pill text-sm font-bold tabular-nums normal-case">
-          <CoinIcon size={16} />
-          {coins.toLocaleString("de-DE")}
-        </span>
       </div>
 
       {/* Sammel-Fortschritt — kontextuell zum aktuellen Klassenfilter */}
@@ -235,11 +191,6 @@ export default function CardCollectionBrowser({
             <CardTile
               key={oc.id}
               card={oc.card}
-              level={oc.level}
-              duplicates={oc.duplicates}
-              coins={coins}
-              duplicateThresholds={duplicateThresholds}
-              upgradeCosts={upgradeCosts}
               isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS && !viewedIds.has(oc.id)}
               onClick={() => {
                 setSelected({ kind: "owned", userCardId: oc.id });
@@ -266,7 +217,6 @@ export default function CardCollectionBrowser({
               <CardTile
                 key={card.id}
                 card={card}
-                level={card.level ?? 1}
                 locked
                 onClick={() => setSelected({ kind: "other", cardId: card.id })}
               />
@@ -290,7 +240,6 @@ export default function CardCollectionBrowser({
       )}
 
       <CardDetailModal selection={selection} onClose={() => setSelected(null)} />
-      <CardUpgradeOverlay state={upgradeAnimation} onClose={() => setUpgradeAnimation(null)} />
     </div>
   );
 }

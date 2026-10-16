@@ -69,13 +69,22 @@ vorerst temporär (307), in Phase 2 auf permanent umstellen.
   entfernt; übrig bleibt der manuelle Lauf für die Aktivitäts-Stufen
 - Weiterleitungen permanent (308)
 
-**3. Gems glätten**
-- Nicht-Brett-Zweig in `interactive.ts` entfernen (in Phase 2 bewusst zurückgestellt: hängt am
-  gespeicherten `boardMode`-Flag laufender Kämpfe) und `GemsResultScreen` um die ungenutzte
-  Münz-Variante kürzen
-- Level fix auf 1: `LEVEL_STAT_MULTIPLIER` und Upgrade-UI raus, Kartenwerte direkt aus `Card`
-- Kampagnen-Balancing einmal gegen Level-1-Teams prüfen (die Kampagne war auf
-  aufgewertete Karten ausgelegt)
+**3. Gems glätten** — erledigt
+- Karten haben keine Stufen mehr: Spielerkarten kämpfen mit Basiswerten (Stufe 1), Stufen gibt es nur
+  noch für Monster. Upgrade-System komplett entfernt (Logik, API, Admin-Panel, Kachel-Badges, Overlay)
+- Neue Duplikate werden beim Pack-Öffnen sofort zu Münzen (25 Standard / 50 Community,
+  `DUPLICATE_COIN_VALUE` in `card-coins.ts`)
+- Umstellungs-Skript für Bestandsdaten: `scripts/convert-card-levels.ts` (Standard = Trockenlauf,
+  `--apply` schreibt). Muss einmal gegen die Produktions-DB laufen
+- Engine (`interactive.ts`) kennt nur noch das Brett: kein Auto-Kampf, kein Zug-Timeout, keine
+  manuelle Aktions-/Zielwahl mehr. Dabei behoben: Ein Ultimate der gerade wartenden Einheit
+  verbrauchte bisher deren Brett-Zug, ohne ausgelöst zu werden
+- Taktikkarten-Reste aus Engine und `/api/internal/grant-tactic-cards-to-all` entfernt
+- Balancing-Simulation: `scripts/simulate-campaign-balance.ts` (ohne DB, automatischer Spieler)
+
+Ergebnis der Simulation mit Stufe-1-Teams (40 Kämpfe je Level, vorsichtige Untergrenze):
+Level 1–10 fast immer gewonnen, meist in Runde 1; Level 11 ≈ 40 %, Level 12 (Endboss) ≈ 43 %.
+Mit Stufe-3-Karten lagen 11/12 bei 70 %/95 %, mit Stufe 5 bei 100 %. Offen: Kurve anpassen?
 
 **4. Datenbank aufräumen** (erst nach einem `pg_dump`)
 - Tabellen: `Dnd*`, `DuelDeck`, `TacticCard`, `UserTacticCard`, `BattleChallenge`, `BattleQueueEntry`,

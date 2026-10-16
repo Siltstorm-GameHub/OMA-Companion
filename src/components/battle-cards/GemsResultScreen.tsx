@@ -6,10 +6,9 @@
 // Zeigt das Kampfergebnis direkt im Kampf-Overlay, ohne Umweg über die Replay-Seite,
 // je nach Kampf-Art mit der passenden Belohnung:
 //  - Kampagne  → Sterne (siehe campaignResult)
-//  - Münzen    → Münzen mit kurzem Glücksrad-Dreh (derzeit von keinem Modus genutzt)
 //  - Turnier/Verlust/Unentschieden → kein Belohnungs-Block
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { Handshake } from "@/components/icons";
@@ -19,7 +18,6 @@ import MobaIcon from "./MobaIcon";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
-  | { kind: "coins"; amount: number }
   | { kind: "none" };
 
 export default function GemsResultScreen({
@@ -31,8 +29,6 @@ export default function GemsResultScreen({
   reward: GemsReward;
   onExit: () => void;
 }) {
-  const [coinSpinning, setCoinSpinning] = useState(reward.kind === "coins");
-
   useEffect(() => {
     if (outcome === "win") {
       confetti({
@@ -42,11 +38,7 @@ export default function GemsResultScreen({
         colors: ["#a78bfa", "#7c3aed", "#fde68a", "#ffffff"],
       });
     }
-    if (reward.kind === "coins") {
-      const t = setTimeout(() => setCoinSpinning(false), 850);
-      return () => clearTimeout(t);
-    }
-  }, [outcome, reward.kind]);
+  }, [outcome]);
 
   const config =
     outcome === "win"
@@ -126,35 +118,6 @@ export default function GemsResultScreen({
                   </span>
                 )}
               </span>
-            )}
-          </motion.div>
-        )}
-
-        {reward.kind === "coins" && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col items-center gap-2"
-          >
-            {/* Glücksrad-Dreh: kurzes Tumbeln statt eines echten Mehrwalzen-Rads —
-                schnelles, verspieltes Feedback statt einer nüchternen Zahl. */}
-            <motion.div
-              animate={coinSpinning ? { rotateY: [0, 360, 720, 1080], scale: [1, 1.15, 1, 1.15] } : { rotateY: 0, scale: 1 }}
-              transition={{ duration: 0.85, ease: "easeOut" }}
-              style={{ transformStyle: "preserve-3d" }}
-            >
-              <CoinIcon size={56} />
-            </motion.div>
-            {!coinSpinning && (
-              <motion.p
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 14 }}
-                className="flex items-center gap-1 text-xl font-black text-amber-300"
-              >
-                +{reward.amount} <CoinIcon size={16} />
-              </motion.p>
             )}
           </motion.div>
         )}

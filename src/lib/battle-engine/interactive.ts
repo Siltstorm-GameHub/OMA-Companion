@@ -1,16 +1,17 @@
 // ============================================
-// Battle-Engine — Interaktiver, pausierbarer Kampf-Stepper
+// Battle-Engine — OMA Gems: pausierbarer Kampf-Stepper mit Match-3-Brett
 // ============================================
-// Ergänzt runBattle() (ein Aufruf = kompletter Kampf) um eine Variante, die
-// bei jeder menschlich gesteuerten Einheit anhält und auf eine Spieler-
-// Entscheidung (Aktion + ggf. Ziel) wartet, statt automatisch zu entscheiden.
-// Der komplette Zustand ist JSON-serialisierbar (siehe InteractiveBattleState)
-// — eine Anfrage pro Zug, dazwischen liegt der Zustand in der DB
-// (LiveBattle.stateJson, siehe lib/battle-cards/live-battle.ts).
+// Ergänzt runBattle() (ein Aufruf = kompletter Kampf) um eine Variante, die bei
+// jedem Zug einer Spieler-Einheit (Team A) anhält und auf einen Zug auf dem
+// Match-3-Brett wartet. Der komplette Zustand ist JSON-serialisierbar (siehe
+// InteractiveBattleState) — eine Anfrage pro Zug, dazwischen liegt der Zustand
+// in der DB (LiveBattle.stateJson, siehe lib/battle-cards/live-battle.ts).
 //
-// KI-gesteuerte Seiten (NPC in PVE, oder eine per Auto-Kampf freigegebene
-// Seite) entscheiden weiterhin automatisch über defaultDecideAction() +
-// die eingebauten Zielregeln — exakt wie runBattle() bisher.
+// Team A wird vom Spieler gesteuert, Team B (Monster) von der KI über
+// defaultDecideAction() + die eingebauten Zielregeln — exakt wie runBattle().
+// Jeder Spieler-Zug ist ein Zug auf dem Brett: jedes Match lässt die Helden der
+// passenden Klasse angreifen (siehe applyBoardRage). Ultimates werden unabhängig
+// von der Zugreihenfolge per Klick ausgelöst (siehe applyUltimateInterrupt).
 
 import {
   generateBoard,
@@ -29,26 +30,18 @@ import {
   RAGE_PER_ROUND_END,
   ROUND_LIMIT,
   SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP,
-  TURN_DECISION_TIMEOUT_MS,
   ULTIMATE_SKILL_COST,
 } from "./constants";
-import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "./decision";
 import { tickStatModifierDurations } from "./effects";
 import { checkWinner, defaultDecideAction, grantRage, performAction } from "./engine";
 import { computeInitiativeOrder } from "./initiative";
 import { triggerPassiveForUnit, triggerPassivesForAll } from "./passives";
 import { createRng, randomSeed } from "./rng";
 import { createTeamState } from "./stats";
-import type {
-  ActionType,
-  BattleLogEntry,
-  BattleUnitDefinition,
-  BattleUnitState,
-  BattleWinner,
-  TeamId,
-} from "./types";
+import type { ActionType, BattleLogEntry, BattleUnitDefinition, BattleUnitState, BattleWinner, TeamId } from "./types";
 
-export type Controller = "human" | "ai";
+/** Vom Spieler gesteuertes Team — Team B sind immer KI-gesteuerte Monster. */
+const PLAYER_TEAM: TeamId = "A";
 
 export interface InteractiveBattleState {
   seed: number;
@@ -61,64 +54,33 @@ export interface InteractiveBattleState {
   order: string[];
   orderIndex: number;
   winner: BattleWinner | null;
-  controllers: { A: Controller; B: Controller };
-  /** Seite hat "Auto-Kampf" aktiviert — Entscheidungen laufen wie bei einer KI-Seite automatisch. */
-  autoA: boolean;
-  autoB: boolean;
-  /** Gesetzt, sobald turnStart für diese Einheit bereits geloggt wurde und auf eine
-   *  menschliche Entscheidung gewartet wird — verhindert doppeltes turnStart beim Fortsetzen. */
+  /** Gesetzt, sobald turnStart für diese Spieler-Einheit bereits geloggt wurde und auf
+   *  einen Brett-Zug gewartet wird — verhindert doppeltes turnStart beim Fortsetzen. */
   awaitingUnitId: string | null;
-  /** Epoch-ms, ab dem die KI-Logik automatisch für die wartende Einheit entscheidet,
-   *  falls bis dahin keine Spieler-Entscheidung eingetroffen ist. Nur relevant,
-   *  solange awaitingUnitId gesetzt ist. */
-  turnDeadline: number | null;
-  /** Anzahl der Züge in Folge, die diese Seite per Timeout (nicht per Auto-Kampf)
-   *  verpasst hat — wird bei einer echten Spieler-Entscheidung zurückgesetzt. Ab
-   *  TIMEOUT_STREAK_AUTO_THRESHOLD aufeinanderfolgenden Timeouts wird Auto-Kampf
-   *  für diese Seite automatisch aktiviert (siehe stepOnce). */
-  timeoutStreakA: number;
-  timeoutStreakB: number;
-  /** Puzzle-PvE-Modus ("OMA Gems", siehe board-match3.ts): zeigt bei
-   *  jedem menschlichen Zug zusätzlich ein Match-3-Brett, dessen Matches Rage
-   *  erzeugen, statt dass Rage rein automatisch steigt. Bei false (Standard-
-   *  Auto-Kampf-Modi, PvP) bleibt das gesamte Board-Verhalten inaktiv. */
-  boardMode: boolean;
-  /** Das PERSISTENTE Match-3-Brett bei boardMode — wird EINMALIG zu Kampfbeginn
-   *  gezogen (siehe createInteractiveState) und danach über die gesamte
-   *  Zug-Historie fortgeschrieben (jeder Swap verändert es dauerhaft, siehe
-   *  applyBoardRage), NIE bei einem neuen Zug neu generiert. Ein komplett
-   *  neues Brett entsteht nur noch, wenn auf dem aktuellen keinerlei Zug mehr
-   *  ein Match ergäbe (Deadlock, siehe hasAnyValidMove/regenerateBoardIfNeeded). */
+  /** Das PERSISTENTE Match-3-Brett — wird EINMALIG zu Kampfbeginn gezogen (siehe
+   *  createInteractiveState) und danach über die gesamte Zug-Historie
+   *  fortgeschrieben (jeder Swap verändert es dauerhaft, siehe applyBoardRage),
+   *  NIE bei einem neuen Zug neu generiert. Ein komplett neues Brett entsteht nur,
+   *  wenn auf dem aktuellen keinerlei Zug mehr ein Match ergäbe (Deadlock, siehe
+   *  hasAnyValidMove/regenerateBoardIfNeeded). */
   boardGrid: BoardGrid | null;
   /** Sonder-Steine (siehe SpecialGemKind in board-match3.ts) — parallel zu
    *  `boardGrid`, genauso persistent über den gesamten Kampfverlauf. */
   boardSpecials: SpecialGrid | null;
   boardRngState: number;
-  /** Das Brett für den GERADE wartenden menschlichen Zug — Grid/RngState werden
-   *  beim Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt)
-   *  und beim Verarbeiten der Entscheidung wieder geleert. `appliedSwaps` hält
-   *  den bisherigen Fortschritt der laufenden Mini-Session fest (siehe
-   *  recordBoardProgress) — wird bei jedem clientseitig bestätigten Swap
-   *  aktualisiert und mitpersistiert, damit ein Reload mitten im Zug den
-   *  Board-Fortschritt NICHT verwirft, sondern BoardMatch3.tsx ihn beim
-   *  Neuladen rekonstruieren kann. */
+  /** Das Brett für den GERADE wartenden Spieler-Zug — Grid/RngState werden beim
+   *  Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt) und beim
+   *  Verarbeiten des Zugs wieder geleert. `appliedSwaps` hält den bisherigen
+   *  Fortschritt der laufenden Mini-Session fest (siehe recordBoardProgress), damit
+   *  ein Reload mitten im Zug den Board-Fortschritt NICHT verwirft. */
   pendingBoard: { grid: BoardGrid; specials: SpecialGrid; rngState: number; appliedSwaps: SwapMove[] } | null;
 }
-
-/** Nach so vielen aufeinanderfolgenden verpassten Zügen (Zug-Timeout, siehe
- *  TURN_DECISION_TIMEOUT_MS) wird Auto-Kampf automatisch für die betroffene
- *  Seite aktiviert. */
-export const TIMEOUT_STREAK_AUTO_THRESHOLD = 3;
 
 export interface PendingDecision {
   unitId: string;
   teamId: TeamId;
-  actions: AvailableAction[];
-  candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
-  /** Nur gesetzt, wenn boardMode aktiv ist — das initiale Grid für die
-   *  Match-3-Mini-Session dieses Zugs (siehe board-match3.ts) sowie die
-   *  bislang bestätigten Swaps (für die Wiederherstellung nach einem Reload,
-   *  siehe recordBoardProgress). */
+  /** Brett für die Match-3-Mini-Session dieses Zugs (siehe board-match3.ts) sowie die
+   *  bislang bestätigten Swaps (für die Wiederherstellung nach einem Reload). */
   board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
@@ -127,20 +89,17 @@ export interface AdvanceResult {
   pendingDecision: PendingDecision | null;
 }
 
-export interface PlayerDecision {
-  actionType: ActionType;
-  targetId?: string;
-  /** Nur bei boardMode: die vom Spieler in der Mini-Session gemachten Swaps —
-   *  wird serverseitig via resolveBoardSession() autoritativ neu berechnet
-   *  (siehe applyBoardRage), niemals unvalidiert übernommen. */
-  boardSwaps?: SwapMove[];
+/** Ein Spieler-Zug: die in der Mini-Session gemachten Swaps — werden serverseitig via
+ *  resolveBoardSession() autoritativ neu berechnet (siehe applyBoardRage), niemals
+ *  unvalidiert übernommen. */
+export interface PlayerMove {
+  boardSwaps: SwapMove[];
 }
 
 export function createInteractiveState(
   teamA: BattleUnitDefinition[],
   teamB: BattleUnitDefinition[],
-  controllers: { A: Controller; B: Controller },
-  options: { seed?: number; roundLimit?: number; boardMode?: boolean } = {}
+  options: { seed?: number; roundLimit?: number } = {}
 ): InteractiveBattleState {
   const seed = options.seed ?? randomSeed();
   const rng = createRng(seed);
@@ -152,16 +111,7 @@ export function createInteractiveState(
   log.push({ type: "battleStart", teamA: unitsA.map((u) => u.instanceId), teamB: unitsB.map((u) => u.instanceId) });
   triggerPassivesForAll("battleStart", allUnits, rng, 0, log);
 
-  const boardMode = options.boardMode ?? false;
-  let boardGrid: BoardGrid | null = null;
-  let boardSpecials: SpecialGrid | null = null;
-  let boardRngState = 0;
-  if (boardMode) {
-    const initialBoard = pickPlayableBoard(rng);
-    boardGrid = initialBoard.grid;
-    boardSpecials = initialBoard.specials;
-    boardRngState = initialBoard.rngState;
-  }
+  const initialBoard = pickPlayableBoard(rng);
 
   return {
     seed,
@@ -174,17 +124,10 @@ export function createInteractiveState(
     order: [],
     orderIndex: 0,
     winner: checkWinner(unitsA, unitsB),
-    controllers,
-    autoA: false,
-    autoB: false,
     awaitingUnitId: null,
-    turnDeadline: null,
-    timeoutStreakA: 0,
-    timeoutStreakB: 0,
-    boardMode,
-    boardGrid,
-    boardSpecials,
-    boardRngState,
+    boardGrid: initialBoard.grid,
+    boardSpecials: initialBoard.specials,
+    boardRngState: initialBoard.rngState,
     pendingBoard: null,
   };
 }
@@ -206,7 +149,7 @@ function pickPlayableBoard(rng: ReturnType<typeof createRng>): { grid: BoardGrid
 
 /** Ersetzt `state.boardGrid` nur, wenn darauf kein Zug mehr ein Match ergäbe
  *  (Deadlock) — der Normalfall lässt das persistente Brett unverändert, damit
- *  es wie vom User gefordert über den gesamten Kampfverlauf bestehen bleibt. */
+ *  es über den gesamten Kampfverlauf bestehen bleibt. */
 function regenerateBoardIfNeeded(state: InteractiveBattleState, rng: ReturnType<typeof createRng>): void {
   if (state.boardGrid && hasAnyValidMove(state.boardGrid)) return;
   const picked = pickPlayableBoard(rng);
@@ -216,10 +159,6 @@ function regenerateBoardIfNeeded(state: InteractiveBattleState, rng: ReturnType<
 }
 
 type StepStatus = "continue" | "paused" | "finished";
-
-function isAutoForTeam(state: InteractiveBattleState, teamId: TeamId): boolean {
-  return teamId === "A" ? state.autoA : state.autoB;
-}
 
 /** Löst die vom Spieler eingereichten Swaps AUTORITATIV serverseitig gegen das
  *  bei der Pause generierte `state.pendingBoard` auf (siehe resolveBoardSession)
@@ -325,15 +264,12 @@ function applyBoardRage(
 }
 
 /** Führt genau eine atomare Schrittigkeit aus (ein Sub-Schritt der Kampfschleife
- *  aus runBattle) und mutiert `state`/die Unit-Objekte in `allUnits` direkt.
- *  `autoActionCounter`, falls übergeben, wird bei jeder tatsächlich ausgeführten
- *  Zug-Entscheidung hochgezählt — Grundlage für die Drosselung in advance(). */
+ *  aus runBattle) und mutiert `state`/die Unit-Objekte in `allUnits` direkt. */
 function stepOnce(
   state: InteractiveBattleState,
   rng: ReturnType<typeof createRng>,
   allUnits: BattleUnitState[],
-  playerDecision?: PlayerDecision,
-  autoActionCounter?: { count: number }
+  playerMove?: PlayerMove
 ): StepStatus {
   const log = state.log;
   const findUnit = (id: string) => allUnits.find((u) => u.instanceId === id);
@@ -343,9 +279,9 @@ function stepOnce(
     return 1 + suddenDeathRounds * SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP;
   }
 
-  function executeUnitAction(unit: BattleUnitState, actionType: ActionType, targetId?: string) {
+  function executeUnitAction(unit: BattleUnitState, actionType: ActionType) {
     const before = log.length;
-    performAction(unit, actionType, allUnits, rng, state.round, log, suddenDeathMultiplier(), targetId);
+    performAction(unit, actionType, allUnits, rng, state.round, log, suddenDeathMultiplier());
     grantRage(unit, RAGE_PER_ACTION, state.round, log, "action");
 
     const dealtDamageTo = new Set<string>();
@@ -355,84 +291,41 @@ function stepOnce(
     }
     if (dealtDamageTo.size > 0) {
       triggerPassiveForUnit("onDealDamage", unit, allUnits, rng, state.round, log);
-      for (const targetId2 of dealtDamageTo) {
-        const target = findUnit(targetId2);
+      for (const targetId of dealtDamageTo) {
+        const target = findUnit(targetId);
         if (target) triggerPassiveForUnit("onTakeDamage", target, allUnits, rng, state.round, log);
       }
     }
     triggerPassiveForUnit("turnEnd", unit, allUnits, rng, state.round, log);
   }
 
-  if (state.winner) return "finished";
-
-  // Fortsetzen: Entscheidung für die zuvor pausierte Einheit anwenden.
-  if (state.awaitingUnitId) {
-    const unit = findUnit(state.awaitingUnitId);
-    if (!unit) {
-      state.awaitingUnitId = null;
-      return "continue";
-    }
-    // Auto-Kampf kann zwischen Pause und Fortsetzen aktiviert worden sein (der
-    // Spieler entscheidet sich um, statt selbst zu wählen), ODER das Zug-Timeout
-    // ist abgelaufen — in beiden Fällen übernimmt die KI-Logik genau diese eine
-    // noch offene Entscheidung.
-    const wasAlreadyAuto = isAutoForTeam(state, unit.teamId);
-    let decision = playerDecision;
-    let missedByTimeout = false;
-    if (!decision) {
-      const timedOut = state.turnDeadline !== null && Date.now() >= state.turnDeadline;
-      if (wasAlreadyAuto || timedOut) {
-        decision = { actionType: defaultDecideAction(unit) };
-        missedByTimeout = timedOut && !wasAlreadyAuto;
-      } else {
-        return "paused"; // reines Polling, keine Entscheidung mitgeschickt, Timeout noch nicht erreicht
-      }
-    }
-
-    // Im Match-3-Brett-Modus (OMA Gems) gibt es keine separate Normalangriff-
-    // /Aktiv-Aktion für den regulären Zug mehr — jedes einzelne Match einer
-    // Klasse hat bereits WÄHREND der Board-Auswertung einen echten Angriff der
-    // Helden dieser Klasse ausgelöst (siehe applyBoardRage). Der Zug selbst
-    // "verstreicht" hier also nur noch (Reihenfolge weiterschalten), ohne eine
-    // weitere Aktion auszuführen. Zusätzliche Angriffe entstehen ausschließlich
-    // per Ultimate-Klick auf eine voll aufgeladene Heldenkarte, unabhängig von
-    // der Zugreihenfolge (siehe applyUltimateInterrupt). `decision.actionType/
-    // targetId` vom Client wird bei einer Board-Entscheidung daher ignoriert.
-    // Nur der Auto-Kampf-/Timeout-Fallback (kein playerDecision, s.o.) führt
-    // noch eine klassische automatische Aktion aus.
-    const isPlayerBoardDecision = !!playerDecision && state.boardMode;
-    if (isPlayerBoardDecision) {
-      applyBoardRage(state, allUnits, unit.teamId, playerDecision.boardSwaps ?? [], rng);
-    } else {
-      executeUnitAction(unit, decision.actionType, decision.targetId);
-      autoActionCounter && autoActionCounter.count++;
-    }
-    state.pendingBoard = null;
-    state.awaitingUnitId = null;
-    state.turnDeadline = null;
-    state.orderIndex += 1;
-
-    // Timeout-Serie pflegen: eine echte Spieler-Entscheidung setzt sie zurück, ein
-    // verpasster Zug zählt hoch — ab TIMEOUT_STREAK_AUTO_THRESHOLD in Folge wird
-    // Auto-Kampf für diese Seite automatisch aktiviert.
-    if (playerDecision) {
-      if (unit.teamId === "A") state.timeoutStreakA = 0;
-      else state.timeoutStreakB = 0;
-    } else if (missedByTimeout) {
-      if (unit.teamId === "A") {
-        state.timeoutStreakA += 1;
-        if (state.timeoutStreakA >= TIMEOUT_STREAK_AUTO_THRESHOLD) state.autoA = true;
-      } else {
-        state.timeoutStreakB += 1;
-        if (state.timeoutStreakB >= TIMEOUT_STREAK_AUTO_THRESHOLD) state.autoB = true;
-      }
-    }
+  function finishIfDecided(): StepStatus {
     state.winner = checkWinner(state.unitsA, state.unitsB);
     if (state.winner) {
       log.push({ type: "battleEnd", winner: state.winner, round: state.round });
       return "finished";
     }
     return "continue";
+  }
+
+  if (state.winner) return "finished";
+
+  // Fortsetzen: Brett-Zug für die zuvor pausierte Spieler-Einheit anwenden. Der Zug
+  // selbst "verstreicht" nur noch (Reihenfolge weiterschalten) — die Angriffe sind
+  // bereits während der Board-Auswertung gelaufen (siehe applyBoardRage).
+  if (state.awaitingUnitId) {
+    const unit = findUnit(state.awaitingUnitId);
+    if (!unit) {
+      state.awaitingUnitId = null;
+      return "continue";
+    }
+    if (!playerMove) return "paused"; // reines Polling, kein Zug mitgeschickt
+
+    applyBoardRage(state, allUnits, unit.teamId, playerMove.boardSwaps, rng);
+    state.pendingBoard = null;
+    state.awaitingUnitId = null;
+    state.orderIndex += 1;
+    return finishIfDecided();
   }
 
   // Runden-Ende / Runden-Start.
@@ -445,11 +338,7 @@ function stepOnce(
       }
       triggerPassivesForAll("roundEnd", allUnits, rng, state.round, log);
       log.push({ type: "roundEnd", round: state.round });
-      state.winner = checkWinner(state.unitsA, state.unitsB);
-      if (state.winner) {
-        log.push({ type: "battleEnd", winner: state.winner, round: state.round });
-        return "finished";
-      }
+      if (finishIfDecided() === "finished") return "finished";
     }
 
     state.round += 1;
@@ -476,62 +365,33 @@ function stepOnce(
     return "continue";
   }
 
-  const isHuman = state.controllers[unit.teamId] === "human" && !isAutoForTeam(state, unit.teamId);
-  if (isHuman) {
+  if (unit.teamId === PLAYER_TEAM) {
+    // Spieler-Zug: auf einen Brett-Zug warten. Kein Zug-Timeout — das Brett braucht
+    // echte Zeit zum Lösen. Das persistente Brett wird nur bei einem echten Deadlock
+    // ersetzt (siehe regenerateBoardIfNeeded).
     state.awaitingUnitId = unit.instanceId;
-    // Kein Zug-Timeout im Match-3-Brett-Modus (OMA Gems): das Brett braucht echte
-    // Zeit zum Lösen, ein 10s-Timeout würde sonst nach wenigen verpassten Zügen
-    // automatisch Auto-Kampf für diese Seite aktivieren (TIMEOUT_STREAK_AUTO_THRESHOLD)
-    // — genau das soll bei OMA Gems nicht passieren. Nebeneffekt sonst auch: bei
-    // jedem automatisch übersprungenen Zug wird ein KOMPLETT NEUES Brett generiert,
-    // was wie ein zufälliges Verschieben der Edelsteine wirkt, obwohl der Spieler
-    // gar nicht am Zug war.
-    state.turnDeadline = state.boardMode ? null : Date.now() + TURN_DECISION_TIMEOUT_MS;
-    if (state.boardMode) {
-      // Kein neues Brett pro Zug — das persistente boardGrid wird nur bei einem
-      // echten Deadlock ersetzt (siehe regenerateBoardIfNeeded), sonst über den
-      // gesamten Kampf unverändert weitergeführt.
-      regenerateBoardIfNeeded(state, rng);
-      state.pendingBoard = {
-        grid: state.boardGrid as BoardGrid,
-        specials: state.boardSpecials as SpecialGrid,
-        rngState: state.boardRngState,
-        appliedSwaps: [],
-      };
-    }
+    regenerateBoardIfNeeded(state, rng);
+    state.pendingBoard = {
+      grid: state.boardGrid as BoardGrid,
+      specials: state.boardSpecials as SpecialGrid,
+      rngState: state.boardRngState,
+      appliedSwaps: [],
+    };
     return "paused";
   }
 
-  executeUnitAction(unit, defaultDecideAction(unit), undefined);
-  autoActionCounter && autoActionCounter.count++;
+  executeUnitAction(unit, defaultDecideAction(unit));
   state.orderIndex += 1;
-  state.winner = checkWinner(state.unitsA, state.unitsB);
-  if (state.winner) {
-    log.push({ type: "battleEnd", winner: state.winner, round: state.round });
-    return "finished";
-  }
-  return "continue";
+  return finishIfDecided();
 }
 
-/** Führt den Kampf so lange automatisch fort, bis entweder eine menschliche
- *  Einheit an der Reihe ist (pendingDecision gesetzt), der Kampf endet, oder —
- *  falls `maxAutoActions` gesetzt ist — so viele automatische Zug-Entscheidungen
- *  ausgeführt wurden. Letzteres drosselt den Fall, dass BEIDE Seiten Auto-Kampf
- *  aktiviert haben: ohne Drosselung würde die Engine sonst ohne jede Pause bis
- *  zum Kampfende durchlaufen (siehe live-battle.ts — dort nur für PVP gesetzt,
- *  damit die interessierten Spieler dem Kampf weiter zusehen können, statt dass
- *  er einfach fertig ist; bei PVE bleibt das bewusst ungedrosselt als
- *  Sofort-Auflösung). `playerDecision` wird — falls vorhanden — nur EINMAL auf
- *  die zuvor pausierte Einheit angewendet (siehe awaitingUnitId), niemals auf
- *  spätere Einheiten. */
-export function advance(
-  state: InteractiveBattleState,
-  playerDecision?: PlayerDecision,
-  options: { maxAutoActions?: number } = {}
-): AdvanceResult {
+/** Führt den Kampf so lange automatisch fort (Monster-Züge, Runden-Wechsel), bis
+ *  entweder eine Spieler-Einheit an der Reihe ist (pendingDecision gesetzt) oder der
+ *  Kampf endet. `playerMove` wird — falls vorhanden — nur EINMAL auf die zuvor
+ *  pausierte Einheit angewendet (siehe awaitingUnitId), niemals auf spätere Einheiten. */
+export function advance(state: InteractiveBattleState, playerMove?: PlayerMove): AdvanceResult {
   const rng = createRng(state.rngState);
   const allUnits = [...state.unitsA, ...state.unitsB];
-  const autoActionCounter = { count: 0 };
 
   let status: StepStatus = "continue";
   let first = true;
@@ -539,8 +399,7 @@ export function advance(
   // Kampf braucht bei Weitem nicht so viele Sub-Schritte.
   let guard = 0;
   while (status === "continue" && guard < 5000) {
-    if (options.maxAutoActions !== undefined && autoActionCounter.count >= options.maxAutoActions) break;
-    status = stepOnce(state, rng, allUnits, first ? playerDecision : undefined, autoActionCounter);
+    status = stepOnce(state, rng, allUnits, first ? playerMove : undefined);
     first = false;
     guard += 1;
   }
@@ -550,52 +409,34 @@ export function advance(
   return { state, pendingDecision: describeCurrentDecision(state) };
 }
 
-/** Rein lesend: beschreibt die aktuell offene Entscheidung (falls vorhanden), OHNE
- *  den Kampf fortzusetzen — für Snapshot-Lesezugriffe (Polling), die den
- *  persistierten Zustand nicht verändern dürfen. Ein persistierter Zustand ist
- *  entweder beendet (winner gesetzt), wartet auf genau eine Einheit
- *  (awaitingUnitId gesetzt) — oder (nur bei per maxAutoActions gedrosseltem
- *  Auto-Kampf, siehe advance()) mitten in einem noch laufenden automatischen
- *  Durchlauf ohne aktuell wartende Einheit; für diesen dritten Fall liefert
- *  diese Funktion korrekt null zurück (Aufrufer muss dann per advance()
- *  weiter fortsetzen, siehe live-battle.ts). */
+/** Rein lesend: beschreibt den aktuell offenen Spieler-Zug (falls vorhanden), OHNE
+ *  den Kampf fortzusetzen — für Snapshot-Lesezugriffe (Polling). */
 export function describeCurrentDecision(state: InteractiveBattleState): PendingDecision | null {
   if (state.winner || !state.awaitingUnitId) return null;
-  const allUnits = [...state.unitsA, ...state.unitsB];
-  const unit = allUnits.find((u) => u.instanceId === state.awaitingUnitId);
+  const unit = [...state.unitsA, ...state.unitsB].find((u) => u.instanceId === state.awaitingUnitId);
   if (!unit) return null;
 
-  const actions = describeAvailableActions(unit, allUnits);
-  const candidateTargetsByAction: Partial<Record<ActionType, string[]>> = {};
-  for (const a of actions) {
-    if (a.targetKind !== "none") {
-      candidateTargetsByAction[a.actionType] = candidateTargetIds(unit, a.targetKind, allUnits);
-    }
-  }
-  const board =
-    state.boardMode && state.pendingBoard
-      ? {
-          grid: state.pendingBoard.grid,
-          specials: state.pendingBoard.specials,
-          moveBudget: BOARD_MOVE_BUDGET_PER_TURN,
-          appliedSwaps: state.pendingBoard.appliedSwaps,
-        }
-      : null;
+  const board = state.pendingBoard
+    ? {
+        grid: state.pendingBoard.grid,
+        specials: state.pendingBoard.specials,
+        moveBudget: BOARD_MOVE_BUDGET_PER_TURN,
+        appliedSwaps: state.pendingBoard.appliedSwaps,
+      }
+    : null;
 
-  return { unitId: unit.instanceId, teamId: unit.teamId, actions, candidateTargetsByAction, board };
+  return { unitId: unit.instanceId, teamId: unit.teamId, board };
 }
 
 /** Aktualisiert den bislang bestätigten Fortschritt der laufenden Match-3-
  *  Mini-Session (siehe pendingBoard.appliedSwaps) — eine leichte Zustands-
  *  Änderung ohne Turn-Order-Auswirkung, NICHT über advance()/stepOnce()
- *  laufend: es wird weder Rage vergeben noch die Aktion ausgeführt, das
- *  passiert weiterhin ausschließlich beim eigentlichen Zug-Abschluss (siehe
- *  applyBoardRage). Dient nur dazu, dass ein Reload mitten in der Mini-Session
- *  den Fortschritt nicht verwirft (siehe live-battle.ts: saveBoardProgress).
+ *  laufend: es wird weder Rage vergeben noch angegriffen, das passiert
+ *  ausschließlich beim eigentlichen Zug-Abschluss (siehe applyBoardRage).
  *  Gibt zurück, ob die Aktualisierung angewendet wurde (false z.B., wenn
- *  gerade kein Board-Zug aussteht oder das Zug-Budget überschritten wäre). */
+ *  gerade kein Brett-Zug aussteht oder das Zug-Budget überschritten wäre). */
 export function recordBoardProgress(state: InteractiveBattleState, swaps: SwapMove[]): boolean {
-  if (!state.boardMode || !state.pendingBoard) return false;
+  if (!state.pendingBoard) return false;
   if (swaps.length > BOARD_MOVE_BUDGET_PER_TURN) return false;
   state.pendingBoard.appliedSwaps = swaps;
   return true;
@@ -632,20 +473,16 @@ export interface UltimateInterruptResult {
   state: InteractiveBattleState;
   pendingDecision: PendingDecision | null;
   /** false, wenn das Ultimate NICHT ausgelöst wurde (Einheit tot/unbekannt,
-   *  nicht menschlich gesteuert, oder Rage unter den Kosten) — der Aufrufer
-   *  soll das dem Spieler dann als Fehler melden, statt es still zu ignorieren. */
+   *  keine Spieler-Einheit, oder Rage unter den Kosten) — der Aufrufer soll das
+   *  dem Spieler dann als Fehler melden, statt es still zu ignorieren. */
   applied: boolean;
 }
 
-/** Löst ein Ultimate SOFORT aus, unabhängig davon, ob `casterId` laut
- *  Zugreihenfolge gerade selbst am Zug ist (Empires-&-Puzzles-Stil: voller
- *  Rage-Balken → per Kartenklick jederzeit auslösbar). Zwei Fälle:
- *  - `casterId` ist die gerade wartende Einheit: läuft 1:1 wie eine normale
- *    Spieler-Entscheidung durch advance()/stepOnce() — orderIndex rückt vor.
- *  - `casterId` ist eine ANDERE eigene, lebende Einheit: echter Interrupt —
- *    die Zugreihenfolge (orderIndex/awaitingUnitId) bleibt unangetastet, die
- *    Einheit handelt "zwischendurch" und ist später an ihrem regulären Zug
- *    ganz normal wieder dran (dann ggf. mit niedrigerer Rage). */
+/** Löst ein Ultimate SOFORT aus, unabhängig von der Zugreihenfolge (Empires-&-
+ *  Puzzles-Stil: voller Rage-Balken → per Kartenklick jederzeit auslösbar). Die
+ *  Zugreihenfolge (orderIndex/awaitingUnitId) und ein offenes Brett bleiben
+ *  unangetastet — auch wenn genau diese Einheit gerade am Zug ist, bleibt ihr
+ *  Brett-Zug danach weiter offen. */
 export function applyUltimateInterrupt(
   state: InteractiveBattleState,
   casterId: string,
@@ -654,18 +491,13 @@ export function applyUltimateInterrupt(
   const allUnits = [...state.unitsA, ...state.unitsB];
   const caster = allUnits.find((u) => u.instanceId === casterId);
 
-  if (state.winner || !caster || !caster.isAlive || state.controllers[caster.teamId] !== "human") {
+  if (state.winner || !caster || !caster.isAlive || caster.teamId !== PLAYER_TEAM) {
     return { state, pendingDecision: describeCurrentDecision(state), applied: false };
   }
 
   const ultimateCost = caster.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
   if (caster.rage < ultimateCost) {
     return { state, pendingDecision: describeCurrentDecision(state), applied: false };
-  }
-
-  if (state.awaitingUnitId === casterId) {
-    const result = advance(state, { actionType: "ultimate", targetId });
-    return { ...result, applied: true };
   }
 
   const rng = createRng(state.rngState);

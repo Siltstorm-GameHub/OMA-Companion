@@ -23,13 +23,11 @@ import {
   type InteractiveBattleState,
   type PendingDecision,
 } from "@/lib/battle-engine/interactive";
-import type { AvailableAction } from "@/lib/battle-engine/decision";
 import { buildRosterFromUnits } from "@/lib/battle-engine/stats";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type {
-  ActionType,
   ActiveStatModifier,
   BattleLogEntry,
   BattleUnitDefinition,
@@ -101,10 +99,6 @@ export interface LiveBattleAwaiting {
   unitId: string;
   teamId: TeamId;
   controlledByPlayerId: string;
-  actions: AvailableAction[];
-  candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
-  /** Epoch-ms — ab hier entscheidet die KI-Logik automatisch, falls niemand reagiert. */
-  deadline: number | null;
   /** Initiales Grid für die Match-3-Mini-Session dieses Zugs sowie bislang bestätigte
    *  Swaps (für die Wiederherstellung nach einem Reload, siehe saveBoardProgress). */
   board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
@@ -164,7 +158,7 @@ async function buildSnapshot(
   pendingDecision: PendingDecision | null
 ): Promise<LiveBattleSnapshot> {
   const awaiting: LiveBattleAwaiting | null = pendingDecision
-    ? { ...pendingDecision, controlledByPlayerId: live.playerAId, deadline: state.turnDeadline }
+    ? { ...pendingDecision, controlledByPlayerId: live.playerAId }
     : null;
 
   // Sterne-Ergebnis der Kampagne wird am Battle-Datensatz gespeichert (siehe finalizeLiveBattle).
@@ -297,7 +291,7 @@ async function createLiveBattle(
   teamA: BattleUnitDefinition[],
   teamB: BattleUnitDefinition[]
 ): Promise<LiveBattleSnapshot> {
-  const created = createInteractiveState(teamA, teamB, { A: "human", B: "ai" }, { boardMode: true });
+  const created = createInteractiveState(teamA, teamB);
   const { state, pendingDecision } = advance(created, undefined);
 
   const live = await prisma.liveBattle.create({
@@ -318,7 +312,8 @@ async function createLiveBattle(
   return buildSnapshot(fresh, state, pendingDecision);
 }
 
-/** Baut das Spieler-Team aus der Startaufstellung (sonst die ersten TEAM_SIZE eigenen Karten). */
+/** Baut das Spieler-Team aus der Startaufstellung (sonst die ersten TEAM_SIZE eigenen Karten).
+ *  Spielerkarten kämpfen immer mit ihren Basiswerten (Stufe 1) — Stufen gibt es nur noch für Monster. */
 async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
   const userCards = await prisma.userCard.findMany({
     where: { userId },
@@ -333,7 +328,7 @@ async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
   return teamCards.map((uc) =>
     cardToBattleUnitDefinition(
       uc.card,
-      uc.level,
+      1,
       resolveCardImageUrl(uc.card, avatarByDiscordId),
       resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
     )
@@ -392,12 +387,10 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   const live = await requireAccess(liveBattleId, viewerId);
   const state = toState(live);
 
-  // Normalerweise rein lesend. Ausnahme: Zug-Timeout abgelaufen — es gibt keinen
-  // Hintergrund-Job, der das sonst durchsetzen würde, also übernimmt genau dieser
-  // Request die KI-Entscheidung und persistiert sie.
-  const timedOut = !!state.awaitingUnitId && state.turnDeadline !== null && Date.now() >= state.turnDeadline;
-  const midAutoRun = !state.winner && !state.awaitingUnitId;
-  if (live.status === "active" && (timedOut || midAutoRun)) {
+  // Normalerweise rein lesend. Ausnahme: ein Zustand ohne Sieger und ohne wartende
+  // Einheit (sollte nach advance() nicht vorkommen) wird hier weitergeführt.
+  const stalled = !state.winner && !state.awaitingUnitId;
+  if (live.status === "active" && stalled) {
     const { state: newState, pendingDecision } = advance(state, undefined);
     const updated = await persistAndMaybeFinalize(live, newState);
     return buildSnapshot(updated, newState, pendingDecision);
@@ -406,13 +399,12 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   return buildSnapshot(live, state, describeCurrentDecision(state));
 }
 
-/** Bestätigt einen Zug auf dem Brett. Der Spieler wählt nie manuell Aktion/Ziel — die
- *  Ziele entstehen automatisch pro Match (siehe applyBoardRage in interactive.ts). */
-export async function submitLiveBattleAction(
+/** Bestätigt einen Zug auf dem Brett. Die Ziele entstehen automatisch pro Match
+ *  (siehe applyBoardRage in interactive.ts). */
+export async function submitBoardMove(
   liveBattleId: string,
   viewerId: string,
-  actionType: ActionType,
-  boardSwaps?: SwapMove[]
+  boardSwaps: SwapMove[]
 ): Promise<LiveBattleSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   if (live.status === "finished") throw new LiveBattleError("Dieser Kampf ist bereits beendet.");
@@ -424,7 +416,7 @@ export async function submitLiveBattleAction(
   if (!unit) throw new LiveBattleError("Aktive Einheit nicht gefunden.");
   if (unit.teamId !== "A") throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
-  const { state: newState, pendingDecision } = advance(state, { actionType, boardSwaps });
+  const { state: newState, pendingDecision } = advance(state, { boardSwaps });
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
 }

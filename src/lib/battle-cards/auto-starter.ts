@@ -17,7 +17,6 @@ export interface StarterOwnedCard {
   cardId: string;
   class: CardClass;
   rarity: CardRarity;
-  level: number;
 }
 
 export interface StarterPoolCard {
@@ -48,12 +47,11 @@ export function planStarterLineup(
   rng: () => number = Math.random
 ): StarterPlan {
   const ownedIds = new Set(owned.map((o) => o.cardId));
-  // Eigene Community-Karte zuerst, dann Community vor Standard, dann höhere Stufe.
+  // Eigene Community-Karte zuerst, dann Community vor Standard.
   const ownedSorted = [...owned].sort(
     (a, b) =>
       Number(b.cardId === ownCommunityCardId) - Number(a.cardId === ownCommunityCardId) ||
-      Number(b.rarity === "COMMUNITY") - Number(a.rarity === "COMMUNITY") ||
-      b.level - a.level
+      Number(b.rarity === "COMMUNITY") - Number(a.rarity === "COMMUNITY")
   );
   const pool = shuffle(standardPool.filter((c) => !ownedIds.has(c.id)), rng);
 
@@ -120,12 +118,12 @@ export async function ensureGemsStarter(userId: string): Promise<void> {
 
     const owned = await tx.userCard.findMany({
       where: { userId },
-      select: { cardId: true, level: true, card: { select: { class: true, rarity: true } } },
+      select: { cardId: true, card: { select: { class: true, rarity: true } } },
     });
     const standardPool = await tx.card.findMany({ where: { rarity: "STANDARD" }, select: { id: true, class: true } });
 
     const plan = planStarterLineup(
-      owned.map((o) => ({ cardId: o.cardId, level: o.level, class: o.card.class, rarity: o.card.rarity })),
+      owned.map((o) => ({ cardId: o.cardId, class: o.card.class, rarity: o.card.rarity })),
       owned.some((o) => o.cardId === ownCommunityCardId) ? ownCommunityCardId : null,
       standardPool
     );
@@ -133,7 +131,7 @@ export async function ensureGemsStarter(userId: string): Promise<void> {
 
     if (plan.grantCardIds.length > 0) {
       await tx.userCard.createMany({
-        data: plan.grantCardIds.map((cardId) => ({ userId, cardId, level: 1, duplicates: 1 })),
+        data: plan.grantCardIds.map((cardId) => ({ userId, cardId })),
         skipDuplicates: true,
       });
     }

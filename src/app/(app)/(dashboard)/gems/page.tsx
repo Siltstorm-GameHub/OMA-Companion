@@ -15,7 +15,6 @@ import { prisma } from "@/lib/prisma";
 import { ensureGemsStarter } from "@/lib/battle-cards/auto-starter";
 import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
-import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getShopConfig } from "@/lib/shop-config";
 import { getCampaignStarsLeaderboard } from "@/lib/battle-cards/leaderboard";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
@@ -66,24 +65,21 @@ export default async function GemsPage() {
   const unopenedPacks = await countUnopenedPacks(userId);
   const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, upgradeEconomy, leaderboardRows] = await Promise.all([
+  const [shopConfig, purchasedToday, todaySpin, leaderboardRows] = await Promise.all([
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
-    getUpgradeEconomyConfig(),
     getCampaignStarsLeaderboard(),
   ]);
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
-    level: uc.level,
-    duplicates: uc.duplicates,
     acquiredAt: uc.acquiredAt.toISOString(),
-    card: { ...toCardData(uc.card, avatarByDiscordId), level: uc.level },
+    card: toCardData(uc.card, avatarByDiscordId),
   }));
   const lineupCards = ownedUserCards
     .filter((uc) => uc.inLineup)
-    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), level: uc.level }));
+    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId) }));
 
   const coins = currentUser?.points ?? 0;
 
@@ -126,9 +122,6 @@ export default async function GemsPage() {
         ownedCards={ownedCards}
         initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
         initialOtherTotal={otherCardsSorted.length}
-        initialCoins={coins}
-        duplicateThresholds={upgradeEconomy.duplicateThresholds}
-        upgradeCosts={upgradeEconomy.upgradeCosts}
       />
     </div>
   );

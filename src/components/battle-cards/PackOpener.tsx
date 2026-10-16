@@ -21,7 +21,7 @@ import { PACK_CLIP_PATH, PACK_TEXTURE, PackCoverArt, type PackVisualKind } from 
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
-type RevealedItem = { itemKind: "card"; card: BattleCardData; isNewCard: boolean; duplicates: number };
+type RevealedItem = { itemKind: "card"; card: BattleCardData; isNewCard: boolean; coins: number };
 
 function imageUrlOf(item: RevealedItem): string | null | undefined {
   return item.card.imageUrl;
@@ -296,7 +296,7 @@ export default function PackOpener({
                     </p>
                   ) : (
                     <p className="text-xs text-gray-400">
-                      {current.isNewCard ? "Neue Karte für deine Sammlung!" : `Duplikat — jetzt ${current.duplicates}x`}
+                      {current.isNewCard ? "Neue Karte für deine Sammlung!" : `Schon in deiner Sammlung — +${current.coins} Münzen`}
                     </p>
                   )}
                   <div className="flex gap-2">

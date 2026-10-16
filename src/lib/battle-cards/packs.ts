@@ -11,7 +11,9 @@
 // Der Pack-Preis je Sorte ist admin-konfigurierbar, siehe lib/shop-config.ts.
 
 import { prisma } from "@/lib/prisma";
+import { COIN_PREFIX } from "@/lib/points";
 import type { Card, CardPackSource, CardRarity } from "@prisma/client";
+import { DUPLICATE_COIN_VALUE } from "./card-coins";
 
 export const PACK_DAILY_PURCHASE_LIMIT = 5;
 
@@ -39,12 +41,13 @@ export class PackError extends Error {}
 export interface OpenPackResult {
   card: Card;
   isNewCard: boolean;
-  duplicates: number;
+  /** Münzen für eine bereits besessene Karte (siehe DUPLICATE_COIN_VALUE), sonst 0. */
+  coins: number;
 }
 
 /** Ein einzelner gezogener Pack-Inhalt. `itemKind` bleibt als Kennung für den Client erhalten
  *  (früher gab es zusätzlich Taktik-Karten für OMA Duels). */
-export type PackDrawResult = { itemKind: "card"; card: Card; isNewCard: boolean; duplicates: number };
+export type PackDrawResult = { itemKind: "card"; card: Card; isNewCard: boolean; coins: number };
 
 function startOfTodayUTC(): Date {
   const now = new Date();
@@ -74,8 +77,9 @@ export async function grantPack(
   await prisma.cardPack.create({ data: { userId, source, kind } });
 }
 
-/** Schreibt eine gezogene Karte gut (neu oder +1 Duplikat) — gemeinsame
- *  Transaktionslogik für zufällige (drawCard) und garantierte (drawExactCard)
+/** Schreibt eine gezogene Karte gut — neu in die Sammlung, oder als Duplikat direkt in
+ *  Münzen (Karten haben keine Stufen, eine zweite Kopie hätte sonst keinen Nutzen).
+ *  Gemeinsame Transaktionslogik für zufällige (drawCard) und garantierte (drawExactCard)
  *  Ziehungen. */
 async function awardDrawnCard(userId: string, picked: Card): Promise<OpenPackResult> {
   return prisma.$transaction(async (tx) => {
@@ -84,17 +88,16 @@ async function awardDrawnCard(userId: string, picked: Card): Promise<OpenPackRes
     });
 
     if (existing) {
-      const updated = await tx.userCard.update({
-        where: { id: existing.id },
-        data: { duplicates: { increment: 1 } },
+      const coins = DUPLICATE_COIN_VALUE[picked.rarity];
+      await tx.user.update({ where: { id: userId }, data: { points: { increment: coins } } });
+      await tx.pointTransaction.create({
+        data: { userId, amount: coins, reason: `${COIN_PREFIX} OMA Gems: Duplikat ${picked.name}` },
       });
-      return { card: picked, isNewCard: false, duplicates: updated.duplicates };
+      return { card: picked, isNewCard: false, coins };
     }
 
-    await tx.userCard.create({
-      data: { userId, cardId: picked.id, level: 1, duplicates: 1 },
-    });
-    return { card: picked, isNewCard: true, duplicates: 1 };
+    await tx.userCard.create({ data: { userId, cardId: picked.id } });
+    return { card: picked, isNewCard: true, coins: 0 };
   });
 }
 
@@ -122,7 +125,7 @@ async function drawExactCard(userId: string, cardId: string): Promise<OpenPackRe
 }
 
 function asCardResult(r: OpenPackResult): PackDrawResult {
-  return { itemKind: "card", card: r.card, isNewCard: r.isNewCard, duplicates: r.duplicates };
+  return { itemKind: "card", card: r.card, isNewCard: r.isNewCard, coins: r.coins };
 }
 
 /** Zieht alle Karten für ein Pack der angegebenen Sorte. COMMUNITY garantiert

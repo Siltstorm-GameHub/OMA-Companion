@@ -5,10 +5,9 @@
 // um, die die Engine versteht. Einziger Berührungspunkt zwischen Prisma und
 // der (sonst DB-freien) Engine — hält die Engine selbst weiter testbar ohne DB.
 
-import type { Card, NormalAttackTargetRule, TacticCard } from "@prisma/client";
-import { parseActiveSkill, parsePassiveSkill, parseTacticEffects, parseTacticTriggerCondition } from "./skill-schema";
-import { sanitizeTeConfig } from "@/lib/te-character";
-import type { BattleUnitDefinition, SingleEnemySelector, TacticCardDefinition } from "./types";
+import type { Card, NormalAttackTargetRule } from "@prisma/client";
+import { parseActiveSkill, parsePassiveSkill } from "./skill-schema";
+import type { BattleUnitDefinition, SingleEnemySelector } from "./types";
 
 const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemySelector> = {
   LOWEST_DEFENSE: "lowestDefense",
@@ -52,21 +51,6 @@ export function cardToBattleUnitDefinition(
     teCharacter,
     title: card.title,
     rarity: card.rarity,
-    flavorText: card.flavorText,
-  };
-}
-
-/** Wandelt einen DB-`TacticCard`-Datensatz (Item/Falle für OMA Duels) in eine
- *  `TacticCardDefinition` um — analog zu `cardToBattleUnitDefinition`. */
-export function tacticCardToDefinition(card: TacticCard): TacticCardDefinition {
-  return {
-    id: card.id,
-    name: card.name,
-    kind: card.kind,
-    effects: parseTacticEffects(card.effects, `${card.name}.effects`),
-    triggerCondition: parseTacticTriggerCondition(card.triggerCondition, `${card.name}.triggerCondition`),
-    imageUrl: card.imageUrl,
-    description: card.description,
     flavorText: card.flavorText,
   };
 }
