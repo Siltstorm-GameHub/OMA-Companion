@@ -34,13 +34,13 @@ export default function DashboardChrome({
   // News-Ticker und der Header (OMA-Schriftzug/Logo + Profilbild) lenken dort
   // nur ab. Die Navigation (BottomNav mobil, Nav-Links in der FloatingPill
   // auf Desktop) bleibt bewusst erhalten, damit man den Bereich verlassen kann.
-  const isBattleCards = pathname === "/battle-cards" || pathname.startsWith("/battle-cards/");
+  const isBattleCards = pathname === "/gems" || pathname.startsWith("/gems/");
   const hideTicker = isBattleCards;
   // Laufender Kampf (klassisch + OMA Duels) rendert sich selbst als
   // Vollbild-Overlay mit eigenem "Verlassen"-Button (siehe LiveBattlePage) —
   // die mobile BottomNav braucht es dort nicht zum Verlassen, überlappt aber
   // (gleicher z-index 50, im DOM nach dem Kampf-Overlay) unten die Karten.
-  const isLiveBattle = pathname.startsWith("/battle-cards/live/");
+  const isLiveBattle = pathname.startsWith("/gems/live/");
 
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>

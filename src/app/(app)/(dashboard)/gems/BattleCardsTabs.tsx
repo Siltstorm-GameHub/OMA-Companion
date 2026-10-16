@@ -6,25 +6,28 @@ import { AnimatePresence, motion } from "motion/react";
 import MobaIcon from "@/components/battle-cards/MobaIcon";
 import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 
-type TabKey = "held" | "welt" | "arena" | "sammlung" | "laden";
+type TabKey = "spielen" | "sammlung" | "laden";
 
 function isTabKey(v: string | null): v is TabKey {
-  return v === "held" || v === "welt" || v === "arena" || v === "sammlung" || v === "laden";
+  return v === "spielen" || v === "sammlung" || v === "laden";
 }
 
 // Alte Reiter-Namen (aus Benachrichtigungen, Lesezeichen, älteren Links) landen im passenden neuen Reiter.
 const LEGACY_TABS: Record<string, TabKey> = {
-  kampf: "arena",
-  kampagne: "arena",
-  community: "arena",
-  duels: "arena",
-  challenges: "arena",
+  held: "spielen",
+  welt: "spielen",
+  arena: "spielen",
+  kampf: "spielen",
+  kampagne: "spielen",
+  community: "spielen",
+  duels: "spielen",
+  challenges: "spielen",
   karten: "sammlung",
 };
 
 function tabFromParam(v: string | null): TabKey {
   if (isTabKey(v)) return v;
-  return (v && LEGACY_TABS[v]) || "held";
+  return (v && LEGACY_TABS[v]) || "spielen";
 }
 
 // MOBA-Style-Nav-Leiste nach Referenz-Screenshot: dünne Gold-Linie nur oben,
@@ -41,30 +44,20 @@ const TABS: {
   accentLight: string;
   glow: string;
 }[] = [
-  { key: "held", label: "Held", icon: "profile", accent: "#fbbf24", accentDark: "#b45309", accentLight: "#fde68a", glow: "rgba(251,191,36,0.6)" },
-  { key: "welt", label: "Welt", icon: "map", accent: "#38bdf8", accentDark: "#0369a1", accentLight: "#7dd3fc", glow: "rgba(56,189,248,0.6)" },
-  { key: "arena", label: "Arena", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
+  { key: "spielen", label: "Spielen", icon: "navChampions", accent: "#fb7185", accentDark: "#be123c", accentLight: "#fda4af", glow: "rgba(251,113,133,0.6)" },
   { key: "sammlung", label: "Sammlung", icon: "navInventory", accent: "#a78bfa", accentDark: "#6d28d9", accentLight: "#c4b5fd", glow: "rgba(167,139,250,0.6)" },
   { key: "laden", label: "Shop", icon: "chest", accent: "#34d399", accentDark: "#047857", accentLight: "#6ee7b7", glow: "rgba(52,211,153,0.6)" },
 ];
 
 function BattleCardsTabsInner({
-  heldPanel,
-  weltPanel,
-  arenaPanel,
+  spielenPanel,
   sammlungPanel,
   ladenPanel,
-  arenaBadge = 0,
-  heldBadge = 0,
   ladenBadge = 0,
 }: {
-  heldPanel: ReactNode;
-  weltPanel: ReactNode;
-  arenaPanel: ReactNode;
+  spielenPanel: ReactNode;
   sammlungPanel: ReactNode;
   ladenPanel: ReactNode;
-  arenaBadge?: number;
-  heldBadge?: number;
   ladenBadge?: number;
 }) {
   const searchParams = useSearchParams();
@@ -77,7 +70,7 @@ function BattleCardsTabsInner({
     setActive(tabFromParam(requestedTab));
   }
 
-  const badges: Partial<Record<TabKey, number>> = { held: heldBadge, arena: arenaBadge, laden: ladenBadge };
+  const badges: Partial<Record<TabKey, number>> = { laden: ladenBadge };
 
   return (
     <div className="space-y-5">
@@ -129,9 +122,7 @@ function BattleCardsTabsInner({
         })}
       </div>
 
-      <TabPanel tabKey="held" active={active}>{heldPanel}</TabPanel>
-      <TabPanel tabKey="welt" active={active}>{weltPanel}</TabPanel>
-      <TabPanel tabKey="arena" active={active}>{arenaPanel}</TabPanel>
+      <TabPanel tabKey="spielen" active={active}>{spielenPanel}</TabPanel>
       <TabPanel tabKey="sammlung" active={active}>{sammlungPanel}</TabPanel>
       <TabPanel tabKey="laden" active={active}>{ladenPanel}</TabPanel>
     </div>
@@ -139,13 +130,9 @@ function BattleCardsTabsInner({
 }
 
 export default function BattleCardsTabs(props: {
-  heldPanel: ReactNode;
-  weltPanel: ReactNode;
-  arenaPanel: ReactNode;
+  spielenPanel: ReactNode;
   sammlungPanel: ReactNode;
   ladenPanel: ReactNode;
-  arenaBadge?: number;
-  heldBadge?: number;
   ladenBadge?: number;
 }) {
   return (

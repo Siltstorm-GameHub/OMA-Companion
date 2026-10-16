@@ -18,7 +18,7 @@ const NAV = [
   { label: "Home",    href: "/dashboard",   glyph: NAV_GLYPHS.home },
   { label: "Events",  href: "/events",      glyph: NAV_GLYPHS.events },
   { label: "Rang",    href: "/leaderboard", glyph: NAV_GLYPHS.leaderboard },
-  { label: "Battle Cards", href: "/battle-cards", glyph: NAV_GLYPHS.battleCards },
+  { label: "OMA Gems", href: "/gems", glyph: NAV_GLYPHS.battleCards },
   { label: "Support", href: "/donations",   glyph: NAV_GLYPHS.donations },
   { label: "Profil",  href: "/profile",     glyph: NAV_GLYPHS.profile },
 ];

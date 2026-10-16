@@ -37,16 +37,8 @@
       "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/battle-cards-season",
-      "schedule": "0 6 * * *"
-    },
-    {
       "path": "/api/cron/battle-cards-gems-tournament",
       "schedule": "30 6 * * *"
-    },
-    {
-      "path": "/api/cron/battle-cards-challenge-cleanup",
-      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/community-job-payout",
@@ -55,10 +47,6 @@
     {
       "path": "/api/cron/community-job-clip-cleanup",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/dnd-travel-sweep",
-      "schedule": "0 3 * * *"
     }
   ]
 }

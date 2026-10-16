@@ -7,7 +7,7 @@
 // Attribute werden gewürfelt. Löst POST /api/dnd/character/create aus
 // (Erst-Erstellung ODER Re-Roll, je nach isReroll), zeigt danach das
 // Ergebnis an. Aussehen bleibt bewusst getrennt — verlinkt auf den
-// bestehenden Skin-Auswahl-Flow (/battle-cards/my-card), der schon heute die
+// bestehenden Skin-Auswahl-Flow (/gems/my-card), der schon heute die
 // einzige aktiv verdrahtete Aussehens-Anpassung für Community-Karten ist.
 
 import { useMemo, useState } from "react";
@@ -300,7 +300,7 @@ export default function CharacterCreation({
       <div className="flex flex-col sm:flex-row gap-2 pt-2">
         {!setup && (
           <Link
-            href="/battle-cards/my-card"
+            href="/gems/my-card"
             className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/5 transition-colors"
           >
             Aussehen anpassen <ArrowRight className="w-3.5 h-3.5" />

@@ -53,8 +53,8 @@ const TEMPLATES: QuestTemplate[] = [
   },
   {
     type: "BATTLE_CARD_DUEL",
-    titles: ["Kartenduellant", "Deck-Stratege", "Arena-Kämpfer", "Karten-Champion"],
-    descriptions: ["Spiele {target} Battle-Cards-Duell(e)"],
+    titles: ["Edelsteinsammler", "Kombo-Stratege", "Kampagnen-Kämpfer", "Gems-Champion"],
+    descriptions: ["Spiele {target} OMA-Gems-Kämpfe (Kampagne oder Turnier)"],
     targets: [3, 5, 8],
     rewards: [150, 250, 400],
   },

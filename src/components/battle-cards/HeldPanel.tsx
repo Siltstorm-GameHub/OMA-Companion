@@ -51,12 +51,12 @@ export default function HeldPanel({
   const character = sanitizeTeConfig(card.teCharacter) ?? defaultTeConfig();
 
   const waiting: Waiting[] = [];
-  if (unopenedPacks > 0) waiting.push({ icon: "chest", text: `${unopenedPacks} ungeöffnete${unopenedPacks === 1 ? "s Pack" : " Packs"}`, href: "/battle-cards?tab=laden" });
-  if (pendingChallenges > 0) waiting.push({ icon: "crossedSwords", text: `${pendingChallenges} Herausforderung${pendingChallenges === 1 ? "" : "en"} von der Community`, href: "/battle-cards?tab=arena" });
+  if (unopenedPacks > 0) waiting.push({ icon: "chest", text: `${unopenedPacks} ungeöffnete${unopenedPacks === 1 ? "s Pack" : " Packs"}`, href: "/gems?tab=laden" });
+  if (pendingChallenges > 0) waiting.push({ icon: "crossedSwords", text: `${pendingChallenges} Herausforderung${pendingChallenges === 1 ? "" : "en"} von der Community`, href: "/gems?tab=arena" });
   if (card.dndAttrPoints > 0) waiting.push({ icon: "star", text: `${card.dndAttrPoints} Attributspunkt${card.dndAttrPoints === 1 ? "" : "e"} zu verteilen`, href: "#charakterblatt" });
   if (card.dndPerkPicks > 0) waiting.push({ icon: "star", text: `${card.dndPerkPicks} Fähigkeit${card.dndPerkPicks === 1 ? "" : "en"} zu wählen`, href: "#charakterblatt" });
   for (const inv of invites) waiting.push({ icon: "friends", text: `${inv.fromName} lädt dich in eine Gruppe ein`, href: "/oma-quest" });
-  if (!spunToday) waiting.push({ icon: "coin", text: "Das tägliche Glücksrad ist bereit", href: "/battle-cards?tab=laden" });
+  if (!spunToday) waiting.push({ icon: "coin", text: "Das tägliche Glücksrad ist bereit", href: "/gems?tab=laden" });
 
   const worldLabel = worldEntryLabel(card, place);
 
@@ -96,7 +96,7 @@ export default function HeldPanel({
             {card.dndGold} Gold
           </span>
           <span className="moba-pill normal-case px-3 py-2 text-gray-300 tabular-nums">Elo {eloOverall}</span>
-          <Link href="/battle-cards/my-card" className="moba-pill normal-case font-semibold px-3 py-2 hover:bg-white/[0.06] transition-colors">
+          <Link href="/gems/my-card" className="moba-pill normal-case font-semibold px-3 py-2 hover:bg-white/[0.06] transition-colors">
             <MobaIcon name="profile" className="w-3.5 h-3.5" /> Heldenkarte
           </Link>
         </div>
@@ -111,7 +111,7 @@ export default function HeldPanel({
             <span className="block text-xs text-gray-500">{worldLabel.sub}</span>
           </span>
         </Link>
-        <Link href="/battle-cards?tab=arena" className="moba-panel rounded-2xl p-4 hover:bg-white/[0.04] transition-colors flex items-center gap-3">
+        <Link href="/gems?tab=arena" className="moba-panel rounded-2xl p-4 hover:bg-white/[0.04] transition-colors flex items-center gap-3">
           <MobaIcon name="crossedSwords" className="w-8 h-8 shrink-0" />
           <span>
             <span className="block text-sm font-bold text-white">Kampf starten</span>

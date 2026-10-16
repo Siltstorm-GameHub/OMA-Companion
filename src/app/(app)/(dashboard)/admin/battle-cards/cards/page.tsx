@@ -19,7 +19,7 @@ export default async function AdminCommunityCardsPage() {
         </h2>
         <p className="text-xs text-gray-600">
           Bleibt leer, solange nichts eingetragen wurde. Mitglieder können ihre eigene Karte auch selbst
-          bearbeiten (/battle-cards/my-card).
+          bearbeiten (/gems/my-card).
         </p>
       </div>
       <CommunityCardsAdmin cards={cards} />

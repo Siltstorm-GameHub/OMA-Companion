@@ -18,13 +18,18 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["node_modules/sharp/**/*", "node_modules/@img/**/*"],
   },
-  // Umbenennung auf OMA Quest: alte Links unter /dnd und /dnd/<ort> leiten dauerhaft um.
+  // OMA Battle Cards ist auf OMA Gems reduziert (siehe docs/gems-reduktion-plan.md). Bewusst
+  // vorübergehende Weiterleitungen (307), solange die Umstellung nicht abgeschlossen ist — 308
+  // würden Browser dauerhaft cachen.
   async redirects() {
     return [
-      // Der Shop ist in den Battle-Cards-Hub gezogen (Reiter "Laden").
-      { source: "/shop", destination: "/battle-cards?tab=laden", permanent: true },
-      { source: "/dnd", destination: "/oma-quest", permanent: true },
-      { source: "/dnd/:slug([^.]+)", destination: "/oma-quest/:slug", permanent: true },
+      // Der Shop ist ein Reiter im Gems-Hub.
+      { source: "/shop", destination: "/gems?tab=laden", permanent: false },
+      { source: "/battle-cards/:path*", destination: "/gems/:path*", permanent: false },
+      // OMA Quest (vormals /dnd) und OMA Duels sind abgeschaltet.
+      { source: "/oma-quest/:path*", destination: "/gems", permanent: false },
+      { source: "/dnd/:path*", destination: "/gems", permanent: false },
+      { source: "/gems/:sub(challenges|duel-deck|my-card|leaderboard)", destination: "/gems", permanent: false },
     ];
   },
   images: {

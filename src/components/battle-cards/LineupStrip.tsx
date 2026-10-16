@@ -16,7 +16,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
 
   return (
     <Link
-      href="/battle-cards/lineup"
+      href="/gems/lineup"
       className="flex items-center gap-3 moba-panel rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
     >
       <div className="flex gap-1.5 flex-1 min-w-0">

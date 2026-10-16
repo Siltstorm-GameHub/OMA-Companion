@@ -53,7 +53,7 @@ export const QUEST_TYPE_META: Record<
     color: "text-violet-300", bar: "from-violet-600 to-violet-400", bg: "from-violet-500/10",
   },
   BATTLE_CARD_DUEL: {
-    label: "Battle Cards", unit: "Duelle",     icon: "🃏",
+    label: "OMA Gems",     unit: "Kämpfe",     icon: "💎",
     color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
   },
   COMMUNITY_JOB_VOTE: {

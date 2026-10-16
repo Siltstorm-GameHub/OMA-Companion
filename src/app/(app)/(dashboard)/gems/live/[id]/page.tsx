@@ -7,7 +7,7 @@ import { DUEL_MODE } from "@/lib/battle-cards/duel-live-battle";
 import { parseDuelsPveMode } from "@/lib/battle-cards/npc-battle-types";
 
 export const metadata = {
-  title: "Laufender Kampf | Battle Cards | OMA",
+  title: "Laufender Kampf | OMA Gems | OMA",
 };
 
 export default async function LiveBattlePage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,7 @@ export default async function LiveBattlePage({ params }: { params: Promise<{ id:
   if (viewerId !== live.playerAId && viewerId !== live.playerBId) notFound();
 
   if (live.resultBattleId) {
-    redirect(`/battle-cards/battles/${live.resultBattleId}`);
+    redirect(`/gems/battles/${live.resultBattleId}`);
   }
 
   // Beide Ansichten rendern sich selbst als Vollbild-Overlay (fixed inset-0) —

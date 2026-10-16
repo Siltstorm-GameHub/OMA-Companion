@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-card
       dispatchNotification("battle_challenge", {
         users: [challenge.challengerId],
         placeholders: { "{challenger}": `${opponentName} hat deine Herausforderung angenommen — der Kampf läuft` },
-        urlOverride: `/battle-cards/live/${challenge.liveBattleId}`,
+        urlOverride: `/gems/live/${challenge.liveBattleId}`,
       }).catch(() => {});
     }
     // status "resolved" (Kampf endete sofort, z.B. Sonderfall): Ergebnis-Benachrichtigung

@@ -38,7 +38,7 @@ export default function MatchmakingWidget() {
     stopPolling();
     setWaiting(false);
     toast.success("Zufallsgegner gefunden — Kampf startet!");
-    if (liveBattleId) router.push(`/battle-cards/live/${liveBattleId}`);
+    if (liveBattleId) router.push(`/gems/live/${liveBattleId}`);
     router.refresh();
   }
 

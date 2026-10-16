@@ -13,7 +13,7 @@ export const metadata = {
 export default async function MyCardPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login?notice=login_required&callbackUrl=/battle-cards/my-card");
+    redirect("/login?notice=login_required&callbackUrl=/gems/my-card");
   }
 
   const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { discordId: true } });

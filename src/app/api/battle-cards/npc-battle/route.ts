@@ -5,7 +5,7 @@
 // duel-live-battle.ts) — ersetzt den alten sequentiellen PVE-LiveBattle
 // (startLivePveBattle/live-battle.ts). Gibt sofort den ersten Snapshot
 // zurück; Folge-Runden laufen über /api/battle-cards/duel/[id]/action.
-// Braucht ein bereits zusammengestelltes Duell-Deck (siehe /battle-cards/duel-deck).
+// Braucht ein bereits zusammengestelltes Duell-Deck (siehe /gems/duel-deck).
 
 import { auth } from "@/auth";
 import { startDuelPveBattle, LiveDuelBattleError } from "@/lib/battle-cards/duel-live-battle";

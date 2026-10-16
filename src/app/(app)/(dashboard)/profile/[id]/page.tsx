@@ -17,7 +17,6 @@ import FavoriteGamesSection from "../FavoriteGamesSection";
 import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
-import BattleChallengeWidget from "@/components/battle-cards/BattleChallengeWidget";
 import ProfileStatTiles from "../ProfileStatTiles";
 import { getBerlinDateParts, formatBerlinDate } from "@/lib/time";
 import ProfileRecentEvents from "../ProfileRecentEvents";
@@ -226,9 +225,6 @@ export default async function PublicProfilePage({
             className="inline-flex items-center gap-2 text-xs glass border border-white/[0.08] hover:border-rose-500/30 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-all">
             ⚔️ Mit mir vergleichen
           </Link>
-          {viewerId && (
-            <BattleChallengeWidget opponentId={id} opponentName={displayName} />
-          )}
         </div>
       </div>
 

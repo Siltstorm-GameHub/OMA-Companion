@@ -18,13 +18,13 @@ export default async function DndPage() {
   if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=%2Foma-quest");
 
   const setup = await getHeroSetup(session.user.id);
-  if (!setup || setup.step !== "done") redirect("/battle-cards");
+  if (!setup || setup.step !== "done") redirect("/gems");
   const card = setup.card;
   const builder = await getBuilderAccess(session.user.id);
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
-      <Link href="/battle-cards" className="inline-flex text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+      <Link href="/gems" className="inline-flex text-xs font-semibold text-gray-400 hover:text-white transition-colors">
         ← Battle Cards
       </Link>
       <div>

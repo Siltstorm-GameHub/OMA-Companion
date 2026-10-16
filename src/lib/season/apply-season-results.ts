@@ -54,7 +54,7 @@ export async function runSeasonUpdate(members: MemberSeasonInput[]) {
           "{cardName}": card.name,
           "{tier}": ACTIVITY_TIER_LABEL[result.activityTier] ?? result.activityTier,
         },
-        urlOverride: "/battle-cards/my-card",
+        urlOverride: "/gems/my-card",
       }).catch(() => {});
     }
   }

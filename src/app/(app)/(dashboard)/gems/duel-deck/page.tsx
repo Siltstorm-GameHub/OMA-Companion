@@ -14,11 +14,11 @@ export const metadata = {
 export default async function DuelDeckPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login?notice=login_required&callbackUrl=/battle-cards/duel-deck");
+    redirect("/login?notice=login_required&callbackUrl=/gems/duel-deck");
   }
 
   if (!(await hasStarterDeck(session.user.id))) {
-    redirect("/battle-cards");
+    redirect("/gems");
   }
 
   const userId = session.user.id;

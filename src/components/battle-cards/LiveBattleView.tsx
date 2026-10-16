@@ -763,7 +763,7 @@ export default function LiveBattleView({
 
   function handleExit() {
     if (onExit) onExit();
-    else router.push("/battle-cards?tab=arena");
+    else router.push("/gems?tab=arena");
   }
 
   async function fetchSnapshot() {
@@ -1698,7 +1698,7 @@ function LiveBattleBody({
             </div>
             {snapshot.resultBattleId && (
               <Link
-                href={`/battle-cards/battles/${snapshot.resultBattleId}`}
+                href={`/gems/battles/${snapshot.resultBattleId}`}
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/10 text-white hover:bg-white/15 transition-colors shrink-0"
               >
                 Zum Ergebnis <MobaIcon name="chevronRight" className="w-3.5 h-3.5" />

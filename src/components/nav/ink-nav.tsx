@@ -31,7 +31,7 @@ type Phase = "rest" | "out" | "pre";
 const SECTION_PREFIXES: Record<string, string[]> = {
   "/dashboard":   ["/quests", "/servers", "/squads", "/feed", "/community-board", "/interviews", "/clip-des-monats", "/clip-des-jahres", "/clip-galerie"],
   "/events":      ["/tournament"],
-  "/battle-cards": ["/oma-quest", "/shop"],
+  "/gems":       ["/shop"],
   "/leaderboard": ["/points"],
 };
 

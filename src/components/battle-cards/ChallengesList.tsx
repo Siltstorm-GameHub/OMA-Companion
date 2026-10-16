@@ -144,7 +144,7 @@ export default function ChallengesList({
         return;
       }
       if (data.challenge?.liveBattleId) {
-        router.push(`/battle-cards/live/${data.challenge.liveBattleId}`);
+        router.push(`/gems/live/${data.challenge.liveBattleId}`);
         return;
       }
       router.refresh();
@@ -170,7 +170,7 @@ export default function ChallengesList({
                 footer={
                   <div className="flex justify-center">
                     <Link
-                      href={c.liveBattleId ? `/battle-cards/live/${c.liveBattleId}` : "#"}
+                      href={c.liveBattleId ? `/gems/live/${c.liveBattleId}` : "#"}
                       className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide px-4 py-1.5 rounded-full text-white transition-transform active:scale-95"
                       style={{
                         background: "linear-gradient(180deg, #5eead4 0%, #14b8a6 55%, #0f766e 100%)",

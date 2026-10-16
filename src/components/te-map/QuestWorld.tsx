@@ -259,7 +259,7 @@ export default function QuestWorld({ slug }: { slug: string }) {
       {!data.hasCharacter && (
         <p className="text-xs text-amber-300 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2">
           Du hast noch keinen eigenen Charakter — das ist eine Standardfigur.{" "}
-          <Link href="/battle-cards/my-card" className="underline">Gestalte deinen Charakter</Link>, damit du dich hier wiedererkennst.
+          <Link href="/gems/my-card" className="underline">Gestalte deinen Charakter</Link>, damit du dich hier wiedererkennst.
         </p>
       )}
 

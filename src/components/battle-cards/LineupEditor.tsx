@@ -61,7 +61,7 @@ export default function LineupEditor({
         return;
       }
       toast.success("Startaufstellung gespeichert!");
-      router.push("/battle-cards");
+      router.push("/gems");
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");

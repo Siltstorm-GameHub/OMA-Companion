@@ -478,6 +478,12 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
     data: { status: "finished", resultBattleId: battle.id },
   });
 
+  // Monats-Quest "BATTLE_CARD_DUEL" zählt seit der Reduktion auf OMA Gems jeden beendeten
+  // Kampagnen- oder Turnierkampf (Sieg oder Niederlage).
+  if (!live.playerBId && (live.mode.startsWith("CAMPAIGN_") || live.mode.startsWith("TOURNAMENT_"))) {
+    updateQuestProgress(live.playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
+  }
+
   if (live.playerBId) {
     await finalizePvpChallengeSideEffects(live, state.winner, battle.id);
   } else if (live.mode.startsWith("TOURNAMENT_")) {
@@ -581,7 +587,7 @@ async function notifyPvpBattleResolved(
   ]);
   const nameA = playerA?.username ?? playerA?.name ?? "Gegner";
   const nameB = playerB?.username ?? playerB?.name ?? "Gegner";
-  const url = `/battle-cards/battles/${battleId}`;
+  const url = `/gems/battles/${battleId}`;
 
   dispatchNotification("battle_result", {
     users: [playerAId],

@@ -2,7 +2,7 @@
 // GET /api/battle-cards/other-cards
 // ============================================
 // Paginierte, gefilterte Liste aller Karten, die der Spieler NICHT besitzt
-// ("Alle Karten im Spiel" auf /battle-cards) — damit beim Laden/Filtern
+// ("Alle Karten im Spiel" auf /gems) — damit beim Laden/Filtern
 // nicht immer der komplette Kartenbestand auf einmal geschickt wird.
 //
 // Query-Params: class (TANK|SUPPORT|DAMAGE_DEALER, optional), offset, limit

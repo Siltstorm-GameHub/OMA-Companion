@@ -9,7 +9,7 @@
 // (siehe NPC_BATTLE_WIN_REWARD), max. NPC_BATTLE_DAILY_LIMIT Starts pro Tag
 // (über alle Stufen summiert, geteilt mit OMA Gems), damit das nicht
 // gefarmt werden kann. Braucht ein zusammengestelltes Duell-Deck — ohne das
-// verweist die Fehlermeldung auf /battle-cards/duel-deck.
+// verweist die Fehlermeldung auf /gems/duel-deck.
 //
 // Die Gewinnchancen-Vorschau (MatchupBadge) ist bewusst entfernt: sie basierte
 // auf der alten 5er-PVE-Lineup und passt nicht mehr aufs neue 20-Karten-Deck —
@@ -115,7 +115,7 @@ export default function NpcBattleLauncher() {
         <div className="space-y-1.5">
           <ErrorNotice message={error} />
           {needsDuelDeck && (
-            <Link href="/battle-cards/duel-deck" className="text-xs font-semibold text-teal-300 hover:text-teal-200 underline">
+            <Link href="/gems/duel-deck" className="text-xs font-semibold text-teal-300 hover:text-teal-200 underline">
               Jetzt Duell-Deck zusammenstellen →
             </Link>
           )}

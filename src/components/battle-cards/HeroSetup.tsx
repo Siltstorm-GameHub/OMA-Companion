@@ -126,8 +126,8 @@ export default function HeroSetup({
             <li><span className="font-bold text-white">OMA Duels:</span> stelle dein Duell-Deck zusammen (mit deinem Helden).</li>
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Link href="/battle-cards/lineup" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">Lineup ansehen</Link>
-            <Link href="/battle-cards/duel-deck" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">Duell-Deck bauen</Link>
+            <Link href="/gems/lineup" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">Lineup ansehen</Link>
+            <Link href="/gems/duel-deck" className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:bg-white/5 transition-colors">Duell-Deck bauen</Link>
             <button
               type="button"
               onClick={() => router.refresh()}

@@ -2,22 +2,20 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
-import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
+import { ensureGemsStarter } from "@/lib/battle-cards/auto-starter";
 import LineupEditor from "@/components/battle-cards/LineupEditor";
 
 export const metadata = {
-  title: "Startaufstellung | OMA Battle Cards",
+  title: "Startaufstellung | OMA Gems",
 };
 
 export default async function LineupPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login?notice=login_required&callbackUrl=/battle-cards/lineup");
+    redirect("/login?notice=login_required&callbackUrl=/gems/lineup");
   }
 
-  if (!(await hasStarterDeck(session.user.id))) {
-    redirect("/battle-cards");
-  }
+  await ensureGemsStarter(session.user.id);
 
   const userCards = await prisma.userCard.findMany({
     where: { userId: session.user.id },

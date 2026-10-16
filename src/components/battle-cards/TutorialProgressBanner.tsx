@@ -37,14 +37,14 @@ const STEP_INFO: Record<
     title: "Passe deine Community-Karte an",
     description: "Gib ihr einen eigenen Untertitel und Beschreibungstext.",
     reward: "+500 Münzen",
-    href: "/battle-cards/my-card",
+    href: "/gems/my-card",
   },
   "campaign-level-1": {
     icon: "map",
     title: "Spiele Level 1 der Kampagne",
     description: "Kapitel 1: Server-Neustart — dein erstes Level in der Kampagne.",
     reward: "Premium-Pack",
-    href: "/battle-cards?tab=arena",
+    href: "/gems?tab=arena",
   },
 };
 

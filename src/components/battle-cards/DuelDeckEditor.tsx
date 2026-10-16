@@ -82,7 +82,7 @@ export default function DuelDeckEditor({
         return;
       }
       toast.success("Duell-Deck gespeichert!");
-      router.push("/battle-cards");
+      router.push("/gems");
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
