@@ -29,19 +29,31 @@ export async function countWaitlistedApplications(serverId?: string): Promise<nu
 // Rückt die älteste Warteliste-Bewerbung eines Servers zu "pending" auf, sobald ein Slot frei
 // wird (z.B. nach Entzug einer Freigabe). Kein Auto-Approve — ein Moderator muss weiterhin
 // manuell genehmigen, konsistent mit dem übrigen Freigabe-Flow bei Gameservern.
-export async function promoteNextWaitlisted(serverId: string): Promise<void> {
+export async function promoteNextWaitlisted(serverId: string): Promise<boolean> {
   const next = await prisma.serverApplication.findFirst({
     where: { serverId, status: "waitlisted" },
     orderBy: { appliedAt: "asc" },
     include: { server: true },
   });
-  if (!next) return;
+  if (!next) return false;
 
   await prisma.serverApplication.update({ where: { id: next.id }, data: { status: "pending" } });
   await dispatchNotification("server_waitlist_promoted", {
     users: [next.userId],
     placeholders: { "{serverName}": next.server.name },
   }).catch(() => {});
+  return true;
+}
+
+// Nach einer Erhöhung von maxSlots: rückt so viele Warteliste-Bewerbungen auf "pending" nach,
+// wie Plätze frei sind — abzüglich bereits offener Bewerbungen, die die Plätze schon beanspruchen.
+export async function promoteWaitlistedIntoFreeSlots(serverId: string): Promise<void> {
+  const server = await prisma.gameServer.findUnique({ where: { id: serverId }, select: { maxSlots: true } });
+  if (!server) return;
+  const [occupied, pending] = await Promise.all([countOccupiedSlots(serverId), countPendingApplications(serverId)]);
+  for (let free = server.maxSlots - occupied - pending; free > 0; free--) {
+    if (!(await promoteNextWaitlisted(serverId))) return;
+  }
 }
 
 // Server-Liste für die Admin-Verwaltung inkl. Ampel und Anzahl offener Bewerbungen.
@@ -59,7 +71,7 @@ export async function getServersWithAdminCounts() {
   );
 }
 
-export type AmpSyncSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
+export type AmpSyncSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null; maxPlayers: number | null };
 export type AmpSyncResult = {
   deactivated: { id: string; name: string }[];
   suggestions: AmpSyncSuggestion[];
@@ -94,7 +106,7 @@ export async function syncGameServersWithAmp(): Promise<AmpSyncResult> {
   );
   const suggestions = instances
     .filter((i) => !knownInstanceIds.has(i.instanceId))
-    .map((i) => ({ ampInstanceId: i.instanceId, name: i.name, game: i.game, port: i.port }));
+    .map((i) => ({ ampInstanceId: i.instanceId, name: i.name, game: i.game, port: i.port, maxPlayers: i.maxPlayers }));
 
   return { deactivated: toDeactivate.map((s) => ({ id: s.id, name: s.name })), suggestions };
 }

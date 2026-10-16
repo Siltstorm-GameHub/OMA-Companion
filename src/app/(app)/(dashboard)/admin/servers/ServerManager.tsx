@@ -2,15 +2,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {  } from "@/components/icons";
-import { ToggleLeft, ToggleRight } from "@/components/icons";
-import { Users, Sparkles } from "@/components/icons";
-import { Plus, Trash2, Loader2, Pencil, Eye, EyeOff, Download, RefreshCw, Globe } from "@/components/icons";
+import { Globe, Loader2, Pencil, Plus, RefreshCw, Sparkles, ToggleLeft, ToggleRight, Trash2, Users } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
 import { EmptyState } from "@/components/EmptyState";
-import JoinInstructionsPreview from "./JoinInstructionsPreview";
+import { useLiveStatus } from "@/lib/useServerLiveStatus";
+import ServerForm, { EMPTY_FORM, defaultJoinInstructions, formFromServer, formToPayload, type ServerFormState } from "./ServerForm";
 
 type Light = "green" | "yellow" | "red";
 
@@ -42,52 +39,22 @@ const LIGHT_COLOR: Record<Light, string> = {
   yellow: "#fbbf24",
   red: "#f87171",
 };
+const UNKNOWN_COLOR = "#71717a";
 
-type FormState = {
-  name: string;
-  game: string;
-  description: string;
-  joinInstructions: string;
-  host: string;
-  port: string;
-  password: string;
-  statusSource: "none" | "amp" | "gamedig";
-  ampInstanceId: string;
-  gamedigType: string;
-  queryPort: string;
-  queryTelnetPort: string;
-  queryTelnetPassword: string;
-  maxSlots: string;
-  openAccess: boolean;
-};
+type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null; maxPlayers: number | null };
 
-const EMPTY_FORM: FormState = {
-  name: "", game: "", description: "", joinInstructions: "", host: "", port: "", password: "",
-  statusSource: "none", ampInstanceId: "", gamedigType: "", queryPort: "", queryTelnetPort: "", queryTelnetPassword: "",
-  maxSlots: "10", openAccess: false,
-};
-
-type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
-
-// Startpunkt für "So trittst du bei" beim Anlegen — Admin passt danach frei an,
-// nichts davon wird erzwungen oder überschreibt bereits getippten Text.
-function defaultJoinInstructions(game: string): string {
-  if (!game.trim()) return "";
-  if (/minecraft/i.test(game)) {
-    return 'Minecraft starten → "Mehrspieler" → "Server hinzufügen" → Adresse einfügen → beitreten.';
-  }
-  return 'Spiel starten → Mehrspieler-/Server-Browser öffnen → "Direct Connect" bzw. "Server per IP beitreten" wählen → Adresse einfügen.';
+async function errorMessage(res: Response, fallback: string): Promise<string> {
+  const data = await res.json().catch(() => null);
+  return data?.error ?? fallback;
 }
 
 export default function ServerManager({ initialServers }: { initialServers: Server[] }) {
   const [servers, setServers] = useState<Server[]>(initialServers);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ServerFormState>(EMPTY_FORM);
+  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showEditPassword, setShowEditPassword] = useState(false);
-  const [fetchingAmp, setFetchingAmp] = useState<"create" | "edit" | null>(null);
+  const [editForm, setEditForm] = useState<ServerFormState>(EMPTY_FORM);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [ampSuggestions, setAmpSuggestions] = useState<AmpSuggestion[]>([]);
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -119,131 +86,56 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
     }
   }
 
-  // Übernimmt einen AMP-Vorschlag in das "Server anlegen"-Formular; Host/Passwort/Slots bleiben manuell.
-  function useSuggestion(suggestion: AmpSuggestion) {
+  // Übernimmt einen AMP-Vorschlag in das "Server anlegen"-Formular; Host/Passwort bleiben manuell.
+  function applySuggestion(suggestion: AmpSuggestion) {
     setForm({
-      ...EMPTY_FORM, name: suggestion.name, game: suggestion.game, port: suggestion.port ?? "", ampInstanceId: suggestion.ampInstanceId,
+      ...EMPTY_FORM, name: suggestion.name, game: suggestion.game, port: suggestion.port ?? "",
+      statusSource: "amp", ampInstanceId: suggestion.ampInstanceId,
+      maxSlots: suggestion.maxPlayers ? String(suggestion.maxPlayers) : EMPTY_FORM.maxSlots,
       joinInstructions: defaultJoinInstructions(suggestion.game),
     });
     setAmpSuggestions((s) => s.filter((x) => x.ampInstanceId !== suggestion.ampInstanceId));
     toast("Bitte Host/IP und ggf. Passwort ergänzen, dann anlegen", { icon: "ℹ️" });
   }
 
-  // Übernimmt Servername, Spiel und Spiel-Port von AMP für die angegebene Instance-ID.
-  // Host/IP und Passwort liefert AMP nicht zuverlässig (nur interne Bind-Adresse,
-  // kein generisches Passwort-Feld) — die bleiben bewusst unverändert.
-  async function fetchFromAmp(target: "create" | "edit") {
-    const ampInstanceId = (target === "create" ? form : editForm).ampInstanceId.trim();
-    if (!ampInstanceId) { toast.error("Bitte zuerst eine AMP Instance-ID eintragen"); return; }
-    setFetchingAmp(target);
-    try {
-      const res = await fetch(`/api/admin/amp/instances/${encodeURIComponent(ampInstanceId)}`);
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "AMP-Abfrage fehlgeschlagen"); return; }
-      const setter = target === "create" ? setForm : setEditForm;
-      setter((f) => {
-        const game = data.game || f.game;
-        return {
-          ...f, name: data.name || f.name, game, port: data.port ?? f.port,
-          joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
-        };
-      });
-      toast.success("Von AMP übernommen — Host/IP und Passwort bitte manuell prüfen");
-    } catch {
-      toast.error("AMP-Abfrage fehlgeschlagen");
-    } finally {
-      setFetchingAmp(null);
-    }
-  }
-
   async function createServer() {
-    if (!form.name.trim() || !form.game.trim() || !form.host.trim() || !form.maxSlots) return;
-    setSaving(true);
+    setCreating(true);
     try {
       const res = await fetch("/api/admin/servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          game: form.game.trim(),
-          description: form.description.trim() || undefined,
-          joinInstructions: form.joinInstructions.trim() || undefined,
-          host: form.host.trim(),
-          port: form.port.trim() || undefined,
-          password: form.password.trim() || undefined,
-          ampInstanceId: form.statusSource === "amp" ? form.ampInstanceId.trim() || undefined : undefined,
-          queryType: form.statusSource === "gamedig" ? "gamedig" : undefined,
-          gamedigType: form.statusSource === "gamedig" ? form.gamedigType.trim() || undefined : undefined,
-          queryPort: form.statusSource === "gamedig" ? form.queryPort.trim() || undefined : undefined,
-          queryTelnetPort: form.statusSource === "gamedig" ? form.queryTelnetPort.trim() || undefined : undefined,
-          queryTelnetPassword: form.statusSource === "gamedig" ? form.queryTelnetPassword.trim() || undefined : undefined,
-          maxSlots: Number(form.maxSlots),
-          openAccess: form.openAccess,
-        }),
+        body: JSON.stringify(formToPayload(form)),
       });
-      if (!res.ok) { toast.error("Fehler beim Anlegen"); return; }
+      if (!res.ok) { toast.error(await errorMessage(res, "Fehler beim Anlegen")); return; }
       const created = await res.json();
       setServers((s) => [created, ...s]);
       setForm(EMPTY_FORM);
       toast.success(`${created.name} angelegt`);
     } finally {
-      setSaving(false);
+      setCreating(false);
     }
   }
 
   function startEdit(server: Server) {
     setEditingId(server.id);
-    setShowEditPassword(false);
-    setEditForm({
-      name: server.name,
-      game: server.game,
-      description: server.description ?? "",
-      joinInstructions: server.joinInstructions ?? "",
-      host: server.host,
-      port: server.port ?? "",
-      password: server.password ?? "",
-      statusSource: server.queryType === "gamedig" ? "gamedig" : server.ampInstanceId ? "amp" : "none",
-      ampInstanceId: server.ampInstanceId ?? "",
-      gamedigType: server.gamedigType ?? "",
-      queryPort: server.queryPort ?? "",
-      queryTelnetPort: server.queryTelnetPort ?? "",
-      queryTelnetPassword: server.queryTelnetPassword ?? "",
-      maxSlots: String(server.maxSlots),
-      openAccess: server.openAccess,
-    });
+    setEditForm(formFromServer(server));
   }
 
   async function saveEdit(id: string) {
-    setSaving(true);
+    setSavingEdit(true);
     try {
       const res = await fetch(`/api/admin/servers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editForm.name.trim(),
-          game: editForm.game.trim(),
-          description: editForm.description.trim() || null,
-          joinInstructions: editForm.joinInstructions.trim() || null,
-          host: editForm.host.trim(),
-          port: editForm.port.trim() || null,
-          password: editForm.password.trim() || null,
-          ampInstanceId: editForm.statusSource === "amp" ? editForm.ampInstanceId.trim() || null : null,
-          queryType: editForm.statusSource === "gamedig" ? "gamedig" : null,
-          gamedigType: editForm.statusSource === "gamedig" ? editForm.gamedigType.trim() || null : null,
-          queryPort: editForm.statusSource === "gamedig" ? editForm.queryPort.trim() || null : null,
-          queryTelnetPort: editForm.statusSource === "gamedig" ? editForm.queryTelnetPort.trim() || null : null,
-          queryTelnetPassword: editForm.statusSource === "gamedig" ? editForm.queryTelnetPassword.trim() || null : null,
-          maxSlots: Number(editForm.maxSlots),
-          openAccess: editForm.openAccess,
-        }),
+        body: JSON.stringify(formToPayload(editForm)),
       });
-      if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
+      if (!res.ok) { toast.error(await errorMessage(res, "Fehler beim Speichern")); return; }
       const updated = await res.json();
       setServers((s) => s.map((x) => (x.id === id ? updated : x)));
       setEditingId(null);
       toast.success("Gespeichert");
     } finally {
-      setSaving(false);
+      setSavingEdit(false);
     }
   }
 
@@ -253,7 +145,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !server.isActive }),
     });
-    if (!res.ok) { toast.error("Fehler"); return; }
+    if (!res.ok) { toast.error(await errorMessage(res, "Fehler")); return; }
     const updated = await res.json();
     setServers((s) => s.map((x) => (x.id === server.id ? updated : x)));
   }
@@ -292,7 +184,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                   <p className="text-sm text-white truncate">{s.name}</p>
                   <p className="text-xs text-gray-500">{s.game || "unbekanntes Spiel"}{s.port ? ` · Port ${s.port}` : ""} · noch nicht angelegt</p>
                 </div>
-                <button onClick={() => useSuggestion(s)}
+                <button onClick={() => applySuggestion(s)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 transition-colors shrink-0">
                   Übernehmen
                 </button>
@@ -305,80 +197,8 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       {/* ── Neuen Server anlegen ─────────────────────────────── */}
       <div className="glass rounded-2xl p-5 space-y-3" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
         <h2 className="text-sm font-semibold text-white">Server anlegen</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <input placeholder="Name (z.B. Survival #1)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <GameNameInput value={form.game} onChange={(game) => setForm((f) => ({
-            ...f, game,
-            joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
-          }))}
-            placeholder="Spiel (z.B. Minecraft)"
-            className="bg-white/5 border border-white/10 rounded-xl py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Host / IP" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Port (optional)" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <div className="relative">
-            <input type={showPassword ? "text" : "password"} placeholder="Passwort (optional)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-3 pr-9 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-            <button type="button" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}
-              aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-          <input type="number" min={1} placeholder="Max. Spieler" value={form.maxSlots} onChange={(e) => setForm({ ...form, maxSlots: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <textarea
-            placeholder={'"So trittst du bei" (optional) — z.B. "Spiel starten → Mehrspieler → Direct Connect → Adresse einfügen"'}
-            value={form.joinInstructions} onChange={(e) => setForm({ ...form, joinInstructions: e.target.value })}
-            rows={2}
-            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20 resize-none" />
-          <JoinInstructionsPreview text={form.joinInstructions} />
-          <select value={form.statusSource} onChange={(e) => setForm({ ...form, statusSource: e.target.value as FormState["statusSource"] })}
-            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20">
-            <option value="none">Live-Status: keiner</option>
-            <option value="amp">Live-Status: AMP-Controller</option>
-            <option value="gamedig">Live-Status: Direkte Abfrage (Docker-Server ohne AMP)</option>
-          </select>
-          {form.statusSource === "amp" && (
-            <div className="col-span-2 flex gap-2">
-              <input placeholder="AMP Instance-ID" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-              <button type="button" onClick={() => fetchFromAmp("create")} disabled={fetchingAmp === "create" || !form.ampInstanceId.trim()}
-                title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
-                {fetchingAmp === "create" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                Von AMP übernehmen
-              </button>
-            </div>
-          )}
-          {form.statusSource === "gamedig" && (
-            <>
-              <input placeholder="GameDig-Typ (z.B. enshrouded, sdtd)" value={form.gamedigType} onChange={(e) => setForm({ ...form, gamedigType: e.target.value })}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-              <input placeholder="Query-Port (falls != Port)" value={form.queryPort} onChange={(e) => setForm({ ...form, queryPort: e.target.value })}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-              <input placeholder="Telnet-Port (optional, für Spielernamen bei 7DTD)" value={form.queryTelnetPort} onChange={(e) => setForm({ ...form, queryTelnetPort: e.target.value })}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-              <input placeholder="Telnet-Passwort (optional)" value={form.queryTelnetPassword} onChange={(e) => setForm({ ...form, queryTelnetPassword: e.target.value })}
-                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-            </>
-          )}
-        </div>
-        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-          <input type="checkbox" checked={form.openAccess} onChange={(e) => setForm({ ...form, openAccess: e.target.checked })}
-            className="accent-teal-500 w-3.5 h-3.5" />
-          <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-          Ohne Bewerbung für alle freigeben (jeder angemeldete User sieht die Zugangsdaten sofort)
-        </label>
-        <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-          Server anlegen
-        </button>
+        <ServerForm value={form} onChange={setForm} variant="create" submitLabel="Server anlegen"
+          submitIcon={<Plus className="w-3.5 h-3.5" />} saving={creating} onSubmit={createServer} />
       </div>
 
       {/* ── Server-Liste ────────────────────────────────────────── */}
@@ -394,26 +214,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             <div key={server.id} className="rounded-xl glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: server.isActive ? 1 : 0.5 }}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <GameCover game={server.game} className="w-9 h-9" rounded="rounded-lg" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
-                    <span className="w-2 h-2 shrink-0 rounded-full" style={{ backgroundColor: LIGHT_COLOR[server.light] }} />
-                    {server.name}
-                    {server.openAccess && (
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
-                        <Globe className="w-2.5 h-2.5" /> Offen für alle
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {server.game} · {server.occupied}/{server.maxSlots} Plätze belegt
-                    {server.pendingCount > 0 && (
-                      <span className="text-amber-400"> · {server.pendingCount} offene Bewerbung{server.pendingCount === 1 ? "" : "en"}</span>
-                    )}
-                    {!server.joinInstructions?.trim() && (
-                      <span className="text-amber-400"> · Keine Beitritts-Anleitung hinterlegt</span>
-                    )}
-                  </p>
-                </div>
+                <ServerSummary server={server} />
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Link href={`/admin/servers/${server.id}/applications`}
                     className="relative p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors" title="Bewerbungen">
@@ -425,94 +226,24 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     )}
                   </Link>
                   <button onClick={() => (editingId === server.id ? setEditingId(null) : startEdit(server))}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title="Bearbeiten">
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title="Bearbeiten" aria-label="Bearbeiten">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => toggleActive(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title={server.isActive ? "Deaktivieren" : "Aktivieren"}>
+                  <button onClick={() => toggleActive(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors"
+                    title={server.isActive ? "Deaktivieren" : "Aktivieren"} aria-label={server.isActive ? "Deaktivieren" : "Aktivieren"}>
                     {server.isActive ? <ToggleRight className="w-4 h-4 text-emerald-400" /> : <ToggleLeft className="w-4 h-4" />}
                   </button>
-                  <button onClick={() => deleteServer(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/8 transition-colors">
+                  <button onClick={() => deleteServer(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                    title="Löschen" aria-label="Löschen">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
 
               {editingId === server.id && (
-                <div className="px-4 pb-4 border-t border-white/[0.05] pt-3 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <input placeholder="Name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <GameNameInput value={editForm.game} onChange={(game) => setEditForm((f) => ({
-                      ...f, game,
-                      joinInstructions: f.joinInstructions.trim() === "" ? defaultJoinInstructions(game) : f.joinInstructions,
-                    }))}
-                      placeholder="Spiel"
-                      className="bg-white/5 border border-white/10 rounded-lg py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Host / IP" value={editForm.host} onChange={(e) => setEditForm({ ...editForm, host: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Port" value={editForm.port} onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <div className="relative">
-                      <input type={showEditPassword ? "text" : "password"} placeholder="Passwort" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-9 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                      <button type="button" onClick={() => setShowEditPassword((v) => !v)} tabIndex={-1}
-                        aria-label={showEditPassword ? "Passwort verbergen" : "Passwort anzeigen"}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                        {showEditPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    <input type="number" min={1} placeholder="Max. Spieler" value={editForm.maxSlots} onChange={(e) => setEditForm({ ...editForm, maxSlots: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <textarea
-                      placeholder={'"So trittst du bei" (optional)'}
-                      value={editForm.joinInstructions} onChange={(e) => setEditForm({ ...editForm, joinInstructions: e.target.value })}
-                      rows={2}
-                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20 resize-none" />
-                    <JoinInstructionsPreview text={editForm.joinInstructions} />
-                    <select value={editForm.statusSource} onChange={(e) => setEditForm({ ...editForm, statusSource: e.target.value as FormState["statusSource"] })}
-                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20">
-                      <option value="none">Live-Status: keiner</option>
-                      <option value="amp">Live-Status: AMP-Controller</option>
-                      <option value="gamedig">Live-Status: Direkte Abfrage (Docker-Server ohne AMP)</option>
-                    </select>
-                    {editForm.statusSource === "amp" && (
-                      <div className="col-span-2 flex gap-2">
-                        <input placeholder="AMP Instance-ID" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                        <button type="button" onClick={() => fetchFromAmp("edit")} disabled={fetchingAmp === "edit" || !editForm.ampInstanceId.trim()}
-                          title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
-                          {fetchingAmp === "edit" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                          Von AMP übernehmen
-                        </button>
-                      </div>
-                    )}
-                    {editForm.statusSource === "gamedig" && (
-                      <>
-                        <input placeholder="GameDig-Typ (z.B. enshrouded, sdtd)" value={editForm.gamedigType} onChange={(e) => setEditForm({ ...editForm, gamedigType: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                        <input placeholder="Query-Port (falls != Port)" value={editForm.queryPort} onChange={(e) => setEditForm({ ...editForm, queryPort: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                        <input placeholder="Telnet-Port (optional)" value={editForm.queryTelnetPort} onChange={(e) => setEditForm({ ...editForm, queryTelnetPort: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                        <input placeholder="Telnet-Passwort (optional)" value={editForm.queryTelnetPassword} onChange={(e) => setEditForm({ ...editForm, queryTelnetPassword: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                      </>
-                    )}
-                  </div>
-                  <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-                    <input type="checkbox" checked={editForm.openAccess} onChange={(e) => setEditForm({ ...editForm, openAccess: e.target.checked })}
-                      className="accent-teal-500 w-3.5 h-3.5" />
-                    <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-                    Ohne Bewerbung für alle freigeben (jeder angemeldete User sieht die Zugangsdaten sofort)
-                  </label>
-                  <button onClick={() => saveEdit(server.id)} disabled={saving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    Speichern
-                  </button>
+                <div className="px-4 pb-4 border-t border-white/[0.05] pt-3">
+                  <ServerForm value={editForm} onChange={setEditForm} variant="edit" submitLabel="Speichern"
+                    saving={savingEdit} onSubmit={() => saveEdit(server.id)} />
                 </div>
               )}
             </div>
@@ -520,6 +251,46 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
         </div>
       )}
       {ConfirmDialogElement}
+    </div>
+  );
+}
+
+// Kopfzeile eines Servers. Bei "Offen für alle" gibt es keine Platzvergabe per Bewerbung —
+// dort zeigen Ampel und Text den Live-Status statt der (immer leeren) belegten Plätze.
+function ServerSummary({ server }: { server: Server }) {
+  const live = useLiveStatus(server.id);
+  const liveText = live
+    ? live.online
+      ? `${live.currentPlayers ?? 0}${live.maxPlayers ? `/${live.maxPlayers}` : ""} online`
+      : "offline"
+    : null;
+  const dotColor = server.openAccess
+    ? live ? (live.online ? LIGHT_COLOR.green : LIGHT_COLOR.red) : UNKNOWN_COLOR
+    : LIGHT_COLOR[server.light];
+
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
+        <span className="w-2 h-2 shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+        {server.name}
+        {server.openAccess && (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
+            <Globe className="w-2.5 h-2.5" /> Offen für alle
+          </span>
+        )}
+      </p>
+      <p className="text-xs text-gray-500">
+        {server.game}
+        {server.openAccess
+          ? ` · ${liveText ?? "kein Live-Status"}`
+          : ` · ${server.occupied}/${server.maxSlots} Plätze belegt${liveText ? ` · ${liveText}` : ""}`}
+        {server.pendingCount > 0 && (
+          <span className="text-amber-400"> · {server.pendingCount} offene Bewerbung{server.pendingCount === 1 ? "" : "en"}</span>
+        )}
+        {!server.joinInstructions?.trim() && (
+          <span className="text-amber-400"> · Keine Beitritts-Anleitung hinterlegt</span>
+        )}
+      </p>
     </div>
   );
 }

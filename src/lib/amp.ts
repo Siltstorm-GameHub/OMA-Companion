@@ -117,6 +117,7 @@ export type InstanceDetails = {
   name: string;
   game: string;
   port: string | null;
+  maxPlayers: number | null;
 };
 
 // Extrahiert die Felder, die AMP zuverlässig kennt (Servername, Spiel, Spiel-Port).
@@ -135,6 +136,8 @@ function summarizeInstance(instance: AmpInstance): InstanceDetails & { instanceI
     name: instance.FriendlyName || instance.InstanceName,
     game: instance.ModuleDisplayName || "",
     port,
+    // Max. Spielerzahl laut Spielserver — dient im Admin-Formular als Vorschlag für maxSlots.
+    maxPlayers: instance.Metrics?.["Active Users"]?.MaxValue || null,
   };
 }
 
