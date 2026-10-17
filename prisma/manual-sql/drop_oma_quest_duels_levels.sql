@@ -8,9 +8,10 @@
 --
 -- REIHENFOLGE — unbedingt einhalten:
 --   1. Sicherung ziehen (pg_dump der kompletten DB).
---   2. Umstellungs-Skript gegen die Produktions-DB laufen lassen:
---        npx tsx scripts/convert-card-levels.ts           (Trockenlauf prüfen)
---        npx tsx scripts/convert-card-levels.ts --apply
+--   2. Karten-Stufen und Duplikate in Münzen umwandeln — im SQL-Editor:
+--        convert_card_levels_1_preview.sql   (Vorschau, Summen prüfen)
+--        convert_card_levels_2_apply.sql     (anwenden)
+--      oder lokal mit Produktions-DATABASE_URL: npx tsx scripts/convert-card-levels.ts [--apply]
 --      Es erstattet Karten-Stufen und Duplikate als Münzen. Danach stehen alle Karten auf
 --      Stufe 1 / 1 Kopie — genau das prüft dieses Skript unten und bricht sonst ab.
 --   3. Dieses Skript im Supabase SQL-Editor ausführen (kompletter Block).

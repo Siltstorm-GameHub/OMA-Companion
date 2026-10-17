@@ -112,7 +112,9 @@ gewinnt Level 1–5 immer, danach fällt die Siegquote gleichmäßig von 90 % (e
 Reihenfolge — der Production-Build bricht ab, solange die DB noch Daten in den entfernten
 Spalten hat (`scripts/db-push.mjs` läuft ohne `--accept-data-loss`):
 1. Sicherung: `pg_dump` der Produktions-DB
-2. `npx tsx scripts/convert-card-levels.ts` (Trockenlauf), dann mit `--apply`
+2. Umstellung im Supabase SQL-Editor: `prisma/manual-sql/convert_card_levels_1_preview.sql`
+   (Vorschau), dann `convert_card_levels_2_apply.sql` — oder lokal mit Produktions-`DATABASE_URL`
+   `npx tsx scripts/convert-card-levels.ts` (Trockenlauf), dann mit `--apply`
 3. `drop_oma_quest_duels_levels.sql` im Supabase SQL-Editor ausführen
 4. Phase 4 committen und deployen
 
