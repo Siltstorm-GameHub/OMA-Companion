@@ -8,7 +8,6 @@
 // (Skill-Details siehe Offene Punkte in PROJECT_CONTEXT.md) später rein als
 // Daten ergänzt werden, ohne die Engine anzufassen.
 
-import type { TeCharacterConfig } from "@/lib/te-character";
 import type { HeroLook } from "@/lib/gems/hero/look";
 
 export type UnitClass = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
@@ -138,10 +137,8 @@ export interface BattleUnitDefinition {
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork statt des Profilbilds selbst ist (siehe resolve-image.ts). */
   avatarBadgeUrl?: string | null;
-  /** Charakter der Community-Karte (siehe lib/te-character) — die Kampf-Ansichten zeigen
-   *  ihn statt des Bildes und spielen Angriffs-/Block-Animationen. Rein Anzeige, keine Kampf-Logik. */
-  teCharacter?: TeCharacterConfig | null;
-  /** Look im Cartoon-Stil (siehe lib/gems/hero) — die Kampf-Ansichten zeichnen den Helden daraus. */
+  /** Look im Cartoon-Stil (siehe lib/gems/hero) — die Kampf-Ansichten zeichnen den Helden daraus und
+   *  spielen Angriffs-/Block-Animationen. Rein Anzeige, keine Kampf-Logik. */
   heroLook?: HeroLook | null;
   /** Nur für Anzeige-Zwecke (z.B. Handkarten-Kacheln im OMA-Duels-Spielbrett,
    *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik.
@@ -278,7 +275,6 @@ export interface RosterEntry {
   ultimateSkillDescription: string;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
-  teCharacter?: TeCharacterConfig | null;
   /** Look im Cartoon-Stil (siehe lib/gems/hero) — die Kampf-Ansichten zeichnen den Helden daraus. */
   heroLook?: HeroLook | null;
 }

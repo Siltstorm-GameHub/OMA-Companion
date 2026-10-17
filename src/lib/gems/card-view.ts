@@ -42,7 +42,6 @@ export async function resolveAvatarsForCards(cards: Card[]): Promise<Map<string,
   return new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
 }
 
-import { effectiveTeCharacter } from "./standard-avatars";
 import { effectiveHeroLook } from "./hero/look";
 
 export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | null>): BattleCardData & { id: string } {
@@ -58,12 +57,10 @@ export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | 
     baseDefense: card.baseDefense,
     speed: card.speed,
     activityTier: card.activityTier,
-    // Jede Karte zeigt eine Pixel-Figur (eigene, feste Standard-Figur oder stabile Zufallsfigur) — keine Bilder mehr
-    teCharacter: effectiveTeCharacter(card),
     // Held im Cartoon-Stil: eigener Look, feste Standard-Looks oder stabiler Zufalls-Look (hero/look.ts)
     heroLook: effectiveHeroLook(card),
     imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
-    // Mit Charakter als Hauptmotiv wandert das echte Profilbild — wie bei einem Admin-Artwork — in das Badge.
+    // Mit dem Helden als Hauptmotiv wandert das echte Profilbild — wie bei einem Admin-Artwork — in das Badge.
     avatarBadgeUrl: avatarByDiscordId
       ? (card.linkedDiscordId
           ? avatarByDiscordId.get(card.linkedDiscordId) ?? null

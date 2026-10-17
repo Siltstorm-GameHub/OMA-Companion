@@ -33,8 +33,10 @@ import CoinIcon from "@/components/CoinIcon";
 import DailySpin from "@/components/gems/shop/DailySpin";
 import BuyPack from "@/components/gems/shop/BuyPack";
 import HeroFigure from "@/components/gems/HeroFigure";
-import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
-import { effectiveHeroLook } from "@/lib/gems/hero/look";
+import HeroBackdrop from "@/components/gems/HeroBackdrop";
+import { getOwnCommunityCard, getOwnedCosmetics } from "@/lib/gems/hero/my-hero";
+import CosmeticShop from "@/components/gems/shop/CosmeticShop";
+import { effectiveHeroLook, type HeroClass } from "@/lib/gems/hero/look";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const LEADERBOARD_PREVIEW = 5;
@@ -94,6 +96,7 @@ export default async function GemsPage() {
 
   const coins = currentUser?.points ?? 0;
   const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);
+  const ownedCosmetics = ownHeroCard ? await getOwnedCosmetics(userId) : new Set<string>();
   const seasonEntries = seasonRows.map(toSeasonEntry);
   const isLeader = playStatus.current.isEndless
     ? seasonRows[0]?.userId === userId
@@ -130,13 +133,14 @@ export default async function GemsPage() {
           href="/gems/held"
           className="glass rounded-2xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors"
         >
-          <span className="w-16 h-16 shrink-0">
-            <HeroFigure look={effectiveHeroLook(ownHeroCard)} title={ownHeroCard.name} className="w-full h-full" />
+          <span className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden">
+            <HeroBackdrop id={effectiveHeroLook(ownHeroCard).backdrop} />
+            <HeroFigure look={effectiveHeroLook(ownHeroCard)} title={ownHeroCard.name} className="relative w-full h-full" />
           </span>
           <span className="flex-1 min-w-0">
             <span className="block font-display text-base font-bold text-white">Mein Held gestalten</span>
             <span className="block text-xs text-gray-400">
-              Gesicht, Frisur, Ausrüstung und Pose deiner Community-Karte — so sehen dich alle Sammler.
+              Gesicht, Frisur, Ausrüstung, Pose und Hintergrund deiner Community-Karte — so sehen dich alle Sammler.
             </span>
           </span>
           <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
@@ -194,6 +198,15 @@ export default async function GemsPage() {
           purchasedToday={purchasedToday}
         />
       </div>
+
+      {ownHeroCard && (
+        <CosmeticShop
+          look={effectiveHeroLook(ownHeroCard)}
+          heroClass={ownHeroCard.class as HeroClass}
+          owned={[...ownedCosmetics]}
+          coins={coins}
+        />
+      )}
     </div>
   );
 

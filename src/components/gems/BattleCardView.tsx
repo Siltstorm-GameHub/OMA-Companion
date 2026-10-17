@@ -15,7 +15,7 @@ import { Flame, RotateCcw, Swords, ThumbsDown, ThumbsUp } from "@/components/ico
 import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/gems/class-config";
 import HeroFigure from "./HeroFigure";
-import type { TeCharacterConfig } from "@/lib/te-character";
+import HeroBackdrop from "./HeroBackdrop";
 import type { HeroLook } from "@/lib/gems/hero/look";
 
 export interface BattleCardSkill {
@@ -40,8 +40,6 @@ export interface BattleCardData {
   activeSkill: BattleCardSkill;
   ultimateSkill: BattleCardSkill;
   imageUrl?: string | null;
-  /** Charakter des Mitglieds (Community-Karte) — hat als Hauptmotiv Vorrang vor imageUrl. */
-  teCharacter?: TeCharacterConfig | null;
   /** Held im Cartoon-Stil (siehe lib/gems/hero) — Hauptmotiv der Karte. */
   heroLook?: HeroLook | null;
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
@@ -193,8 +191,9 @@ export default function BattleCardView({
             className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
+            {card.heroLook && <HeroBackdrop id={card.heroLook.backdrop} />}
             {card.heroLook ? (
-              <HeroFigure look={card.heroLook} title={card.name} className="h-full w-auto max-w-full" />
+              <HeroFigure look={card.heroLook} title={card.name} className="relative h-full w-auto max-w-full" />
             ) : card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

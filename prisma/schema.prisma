@@ -156,6 +156,7 @@ model User {
   gemsPlayer                       GemsPlayer?
   gemsRelics                       UserRelic[]
   gemsTowerClears                  GemsTowerClear[]
+  gemsCosmetics                    UserCosmetic[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1947,10 +1948,8 @@ model Card {
   lastGeneratedAt  DateTime?
 
   imageUrl    String?
-  // Pixel-Figur der Karte (Time-Elements-Baukasten, siehe src/lib/te-character). Shape:
-  // TeCharacterConfig. null = keine eigene Figur (Standard-Figur bzw. Discord-Profilbild).
-  teCharacter Json?
-  // Look im Cartoon-Stil (siehe lib/gems/hero/look.ts) — ersetzt teCharacter (wird in Phase 10d entfernt).
+  // Look im Cartoon-Stil (siehe lib/gems/hero/look.ts). null = Standard-Look (fest für Standard-Karten,
+  // sonst stabil aus der Karten-Id). Die frühere Pixel-Figur (teCharacter) ist seit Phase 10d entfernt.
   heroLook    Json?
 
   createdAt DateTime @default(now())
@@ -2278,4 +2277,19 @@ model GemsTowerSeason {
   season      String   @id
   finalizedAt DateTime @default(now())
   rankingJson String
+}
+
+// OMA Gems — gekaufte Kosmetik für „Mein Held“ (itemId wie "accessory:headset", siehe
+// lib/gems/hero/cosmetics.ts). Über Ränge, Turmwächter und Saison erspielte Teile werden aus dem
+// Fortschritt abgeleitet und stehen nicht hier.
+model UserCosmetic {
+  id         String   @id @default(cuid())
+  userId     String
+  itemId     String
+  pricePaid  Int      @default(0)
+  acquiredAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
 }

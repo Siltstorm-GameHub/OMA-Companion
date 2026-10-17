@@ -14,7 +14,6 @@
 // läuft ausschließlich serverseitig (lib/gems/live-battle.ts).
 
 import HeroFigure from "./HeroFigure";
-import type { TeCharacterConfig } from "@/lib/te-character";
 import type { HeroLook } from "@/lib/gems/hero/look";
 import { Children, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -79,7 +78,6 @@ interface LiveUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
-  teCharacter?: TeCharacterConfig | null;
   heroLook?: HeroLook | null;
   statModifiers: ActiveStatModifier[];
 }

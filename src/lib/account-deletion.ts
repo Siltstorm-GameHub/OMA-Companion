@@ -43,7 +43,7 @@ export async function anonymizeUser(userId: string): Promise<void> {
     ...(card ? [
       prisma.card.update({
         where: { id: card.id },
-        data: { linkedDiscordId: null, name: DELETED_USER_NAME, imageUrl: null, sourceStatsJson: undefined, teCharacter: undefined, heroLook: undefined },
+        data: { linkedDiscordId: null, name: DELETED_USER_NAME, imageUrl: null, sourceStatsJson: undefined, heroLook: undefined },
       }),
     ] : []),
 

@@ -11,6 +11,7 @@ import { Lock } from "@/components/icons";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import HeroFigure from "./HeroFigure";
+import HeroBackdrop from "./HeroBackdrop";
 import { RankBadge } from "./CardRank";
 
 export default function CardTile({
@@ -50,6 +51,7 @@ export default function CardTile({
           filter: locked ? "grayscale(0.9)" : undefined,
         }}
       >
+        {card.heroLook && <HeroBackdrop id={card.heroLook.backdrop} />}
         <div className={`absolute inset-x-0 bottom-12 flex items-center justify-center ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}>
           {card.heroLook ? (
             <HeroFigure look={card.heroLook} title={card.name} className="h-full w-auto max-w-full" />

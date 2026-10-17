@@ -1,6 +1,15 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { cosmeticItemId, isAvailable, unavailableParts, unlockFor, unlockLabel } from "./cosmetics";
+import {
+  coinPrice,
+  cosmeticItemId,
+  cosmeticsUnlockedBy,
+  earnedCosmetics,
+  isAvailable,
+  unavailableParts,
+  unlockFor,
+  unlockLabel,
+} from "./cosmetics";
 import { defaultLook, randomLook, type HeroClass } from "./look";
 
 const CLASSES: HeroClass[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
@@ -39,5 +48,39 @@ describe("Kosmetik für Mein Held", () => {
     assert.equal(unlockLabel(unlockFor("accessory", "umhang", "TANK")), "Turmwächter 20");
     assert.equal(unlockLabel(unlockFor("pose", "jubel", "TANK")), "Karte auf Rang 5");
     assert.equal(unlockLabel(unlockFor("scheme", "gold", "TANK")), "Saison Top 10");
+  });
+
+  test("erspielte Teile aus Rang, Wächtern und Saison", () => {
+    const nothing = { maxCardRank: 0, guardianStages: new Set<number>(), bestSeasonPlace: null };
+    assert.deepEqual(earnedCosmetics(nothing), []);
+    const strong = { maxCardRank: 5, guardianStages: new Set([20, 30]), bestSeasonPlace: 1 };
+    assert.deepEqual(
+      new Set(earnedCosmetics(strong)),
+      new Set(["scheme:glut", "scheme:gold", "emblem:stern", "emblem:krone", "accessory:umhang", "pose:jubel"])
+    );
+    const top10 = earnedCosmetics({ maxCardRank: 3, guardianStages: new Set([20]), bestSeasonPlace: 7 });
+    assert.ok(top10.includes("scheme:gold") && !top10.includes("emblem:krone") && !top10.includes("pose:jubel"));
+  });
+
+  test("Kartenhintergründe: drei frei, Vulkan über Turmwächter 40", () => {
+    assert.equal(unlockFor("backdrop", "wald", "SUPPORT").kind, "free");
+    assert.equal(coinPrice("backdrop:burg"), 700);
+    assert.equal(unlockLabel(unlockFor("backdrop", "vulkan", "TANK")), "Turmwächter 40");
+    assert.ok(earnedCosmetics({ maxCardRank: 0, guardianStages: new Set([40]), bestSeasonPlace: null }).includes("backdrop:vulkan"));
+    assert.deepEqual(cosmeticsUnlockedBy({ guardianStage: 40 }).map((u) => u.label), ["Hintergrund Vulkan"]);
+    assert.deepEqual(unavailableParts({ ...defaultLook("TANK"), backdrop: "nacht" }, "TANK", none), ["backdrop:nacht"]);
+  });
+
+  test("Preise nur für kaufbare Teile", () => {
+    assert.equal(coinPrice("accessory:headset"), 1200);
+    assert.equal(coinPrice("accessory:umhang"), null);
+    assert.equal(coinPrice("scheme:tuerkis"), null);
+    assert.equal(coinPrice("gibt:es-nicht"), null);
+  });
+
+  test("welcher Erfolg was freischaltet", () => {
+    assert.deepEqual(cosmeticsUnlockedBy({ rankReached: 3 }).map((u) => u.itemId), ["emblem:stern"]);
+    assert.deepEqual(cosmeticsUnlockedBy({ rankReached: 2 }), []);
+    assert.deepEqual(cosmeticsUnlockedBy({ guardianStage: 20 }).map((u) => u.label), ["Accessoire Umhang"]);
   });
 });

@@ -48,6 +48,13 @@ describe("Helden-Look", () => {
     assert.deepEqual(effectiveHeroLook({ id: "c1", name: "Mira", rarity: "COMMUNITY", class: "TANK" }), randomLook("c1", "TANK"));
   });
 
+  test("Hintergrund: alte Looks ohne Feld bekommen den Standard, Zufalls-Looks nur freie", () => {
+    const old = { ...defaultLook("TANK"), backdrop: undefined };
+    assert.equal(sanitizeHeroLook(old, "TANK", { ...defaultLook("TANK"), backdrop: "berge" }).backdrop, "berge");
+    assert.equal(sanitizeHeroLook({ ...defaultLook("TANK"), backdrop: "mond" }, "TANK").backdrop, "wiese");
+    for (let i = 0; i < 30; i++) assert.ok(["wiese", "wald", "berge"].includes(randomLook(`k${i}`, "SUPPORT").backdrop));
+  });
+
   test("alte Kämpfe: Look aus der Pixel-Figur ableiten, Monster bleiben ohne Look", () => {
     const unit = { cardId: "c1", name: "Mira", class: "TANK" as const, teCharacter: { v: 1 } };
     assert.deepEqual(heroLookForUnit(unit), randomLook("c1", "TANK"));

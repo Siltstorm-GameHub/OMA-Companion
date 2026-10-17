@@ -73,7 +73,6 @@ const standardCards: Card[] = STANDARD_CARDS.map((seed, i) => ({
   passiveNegative: seed.passiveNegative,
   activeSkill: seed.activeSkill,
   ultimateSkill: seed.ultimateSkill,
-  teCharacter: seed.teCharacter,
   linkedDiscordId: null,
   activityTier: null,
   sourceStatsJson: null,

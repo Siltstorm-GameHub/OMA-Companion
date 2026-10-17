@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { ArrowLeft } from "@/components/icons";
 import HeroEditor from "@/components/gems/HeroEditor";
 import { getOwnCommunityCard, getOwnedCosmetics } from "@/lib/gems/hero/my-hero";
+import { prisma } from "@/lib/prisma";
 import { effectiveHeroLook, type HeroClass } from "@/lib/gems/hero/look";
 
 export const metadata = {
@@ -36,6 +37,7 @@ export default async function MyHeroPage() {
           heroClass={card.class as HeroClass}
           initialLook={effectiveHeroLook(card)}
           owned={[...(await getOwnedCosmetics(userId))]}
+          coins={(await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0}
         />
       ) : (
         <p className="glass rounded-2xl p-6 text-sm text-gray-400">

@@ -161,7 +161,9 @@ export async function finalizeDueTowerSeasons(now: Date = new Date()): Promise<{
       await createNotification(ranking[i].userId, {
         type: "event_result",
         title: `Turm-Saison ${seasonLabel(season)}: Platz ${place}`,
-        body: `Du hast Endlos-Stufe ${ranking[i].highestStage} erreicht. Dein Pack liegt im OMA-Gems-Shop.`,
+        body: `Du hast Endlos-Stufe ${ranking[i].highestStage} erreicht. Dein Pack liegt im OMA-Gems-Shop${
+          place === 1 ? ", dazu Farbschema „Saison-Gold“ und Emblem „Krone“ für deinen Helden" : ", dazu Farbschema „Saison-Gold“ für deinen Helden"
+        }.`,
         url: "/gems?tab=laden",
       });
     }

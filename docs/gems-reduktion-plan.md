@@ -230,7 +230,7 @@ eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
 - Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
   Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
 
-**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — in Arbeit (10a, 10b erledigt)
+**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — erledigt bis 10d (10e optional)
 Entscheidung: Stil A (Cartoon mit Outline, Muster im Canvas „OMA Gems Helden-Stile“) und Option 3
 (feste Grundfiguren plus Kosmetik ohne Kampfvorteil). Ersetzt die Pixel-Figuren (Time Elements,
 `lib/te-character`, 15 MB unter `public/te`). Monster bleiben, wie sie sind.
@@ -296,9 +296,16 @@ Umsetzung in Schritten (jeder Schritt einzeln deploybar):
 - 10b „Mein Held“ (erledigt — `/gems/held`, `HeroEditor`, `POST /api/gems/hero-look`, Freischalt-Regeln in
   `lib/gems/hero/cosmetics.ts`; bis 10c sind nur freie Teile wählbar): Editor mit Live-Vorschau (wie das Kosmetik-Muster), nur für die eigene
   Community-Karte, API zum Speichern; Admin kann Looks weiter überschreiben.
-- 10c Kosmetik-Katalog und Freischaltungen: Inventar, Shop-Bereich „Kosmetik“, Hinweise im
+- 10c Kosmetik-Katalog und Freischaltungen (erledigt — `UserCosmetic` für Gekauftes, erspielte Teile werden aus
+  Rängen, Wächtern und Saison-Ranglisten abgeleitet, Kauf über `POST /api/gems/cosmetics/buy`, Editor mit
+  Anprobieren und „Kaufen & speichern“, Shop-Bereich „Kosmetik“, Hinweis im Ergebnisbildschirm): Inventar, Shop-Bereich „Kosmetik“, Hinweise im
   Ergebnisbildschirm („Neu: Umhang freigeschaltet“), Kosmetik-Teile als Saison-/Wächter-Belohnung.
-- 10d Aufräumen: Kartenhintergründe im neuen Stil (statt Pixel-Szenen), `lib/te-character`,
+- 10d Aufräumen (erledigt — 8 Kartenhintergründe im Cartoon-Stil als neues Look-Teil `backdrop`
+  (`components/gems/HeroBackdrop.tsx`; Wiese, Wald, Berge frei, Küste/Wüste/Burg/Nacht je 700 Münzen,
+  Vulkan über Turmwächter 40), Pixel-System samt `standard-avatars.ts`, `public/te`,
+  `public/gems-assets/bg` und `tex` entfernt; Spalte per `prisma/manual-sql/clear_card_te_character.sql`
+  geleert, der Build entfernt sie dann ohne Datenverlust; alte gespeicherte Kämpfe zeigen weiter
+  abgeleitete Looks): Kartenhintergründe im neuen Stil (statt Pixel-Szenen), `lib/te-character`,
   `TeCharacter`/`BattleFigure`, `public/te` und `teCharacter`-Spalte entfernen.
 - Optional 10e: Profi-Zeichnungen. Die Teile in 10a zeichne ich als einfache Vektorgrafik (Qualität wie
   im Muster). Weil alle Teile auf demselben Gerüst sitzen, kann ein Zeichner sie später 1:1 ersetzen,

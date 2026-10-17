@@ -7,7 +7,7 @@
 
 import { basesForClass, type HeroClass, type HeroLook } from "./look";
 
-export type CosmeticSlot = "scheme" | "emblem" | "headgear" | "accessory" | "pose";
+export type CosmeticSlot = "scheme" | "emblem" | "headgear" | "accessory" | "pose" | "backdrop";
 
 export type Unlock =
   | { kind: "free" }
@@ -54,6 +54,16 @@ const RULES: Record<CosmeticSlot, Record<string, Unlock>> = {
     angriff: { kind: "coins", price: 800 },
     jubel: { kind: "rank", rank: 5 },
   },
+  backdrop: {
+    wiese: { kind: "free" },
+    wald: { kind: "free" },
+    berge: { kind: "free" },
+    kueste: { kind: "coins", price: 700 },
+    wueste: { kind: "coins", price: 700 },
+    burg: { kind: "coins", price: 700 },
+    nacht: { kind: "coins", price: 700 },
+    vulkan: { kind: "guardian", stage: 40 },
+  },
 };
 
 /** Zur Klasse passend von Anfang an frei: das Farbschema der Klasse und zwei Kopfbedeckungen. */
@@ -63,7 +73,7 @@ const CLASS_FREE: Record<HeroClass, { scheme: string; headgear: string[] }> = {
   SUPPORT: { scheme: "violett", headgear: ["kapuze", "muetze"] },
 };
 
-export const COSMETIC_SLOTS: CosmeticSlot[] = ["scheme", "emblem", "headgear", "accessory", "pose"];
+export const COSMETIC_SLOTS: CosmeticSlot[] = ["scheme", "emblem", "headgear", "accessory", "pose", "backdrop"];
 
 /** Kennung eines Kosmetik-Teils, wie sie im Besitz (UserCosmetic.itemId, Phase 10c) steht. */
 export function cosmeticItemId(slot: CosmeticSlot, id: string): string {
@@ -74,7 +84,7 @@ export function unlockFor(slot: CosmeticSlot, id: string, cls: HeroClass): Unloc
   const free = CLASS_FREE[cls];
   if (slot === "scheme" && id === free.scheme) return { kind: "free" };
   if (slot === "headgear" && free.headgear.includes(id)) return { kind: "free" };
-  return RULES[slot][id] ?? { kind: "free" };
+  return RULES[slot]?.[id] ?? { kind: "free" };
 }
 
 export function isAvailable(slot: CosmeticSlot, id: string, cls: HeroClass, owned: ReadonlySet<string>): boolean {
@@ -106,4 +116,72 @@ export function unavailableParts(look: HeroLook, cls: HeroClass, owned: Readonly
     if (!isAvailable(slot, look[slot], cls, owned)) problems.push(cosmeticItemId(slot, look[slot]));
   }
   return problems;
+}
+
+// ---------- Erspielte Teile ----------
+
+/** Alle Teile mit ihrer Regel (über alle Slots), für Shop und Ableitung. */
+export function allCosmetics(): { slot: CosmeticSlot; id: string; itemId: string; unlock: Unlock }[] {
+  return COSMETIC_SLOTS.flatMap((slot) =>
+    Object.entries(RULES[slot]).map(([id, unlock]) => ({ slot, id, itemId: cosmeticItemId(slot, id), unlock }))
+  );
+}
+
+export interface CosmeticProgress {
+  /** Höchster Rang irgendeiner eigenen Karte (card-ranks.ts). */
+  maxCardRank: number;
+  /** Je geschaffte Wächter-Stufen (Endlos-Stufe 20, 30, …). */
+  guardianStages: ReadonlySet<number>;
+  /** Beste Platzierung in einer abgeschlossenen Turm-Saison, oder null. */
+  bestSeasonPlace: number | null;
+}
+
+/** Rein, damit testbar: welche Teile der Fortschritt freischaltet (Rang, Wächter, Saison). Wird bei
+ *  jedem Zugriff neu abgeleitet — so gelten auch Erfolge von vor der Einführung der Kosmetik. */
+export function earnedCosmetics(progress: CosmeticProgress): string[] {
+  return allCosmetics()
+    .filter(({ unlock }) => {
+      if (unlock.kind === "rank") return progress.maxCardRank >= unlock.rank;
+      if (unlock.kind === "guardian") return progress.guardianStages.has(unlock.stage);
+      if (unlock.kind === "season") {
+        const place = progress.bestSeasonPlace;
+        return place !== null && (unlock.place === "first" ? place === 1 : place <= 10);
+      }
+      return false;
+    })
+    .map((c) => c.itemId);
+}
+
+/** Preis eines kaufbaren Teils, sonst null (frei oder nur erspielbar). */
+export function coinPrice(itemId: string): number | null {
+  const item = allCosmetics().find((c) => c.itemId === itemId);
+  return item?.unlock.kind === "coins" ? item.unlock.price : null;
+}
+
+/** Teile, die ein bestimmter Erfolg neu freischaltet — für den Hinweis im Ergebnisbildschirm. */
+export function cosmeticsUnlockedBy(event: { rankReached?: number; guardianStage?: number }): { itemId: string; label: string }[] {
+  return allCosmetics()
+    .filter(({ unlock }) =>
+      (unlock.kind === "rank" && unlock.rank === event.rankReached) ||
+      (unlock.kind === "guardian" && unlock.stage === event.guardianStage)
+    )
+    .map((c) => ({ itemId: c.itemId, label: cosmeticLabel(c.slot, c.id) }));
+}
+
+const SLOT_LABEL: Record<CosmeticSlot, string> = {
+  scheme: "Farbschema",
+  emblem: "Emblem",
+  headgear: "Kopfbedeckung",
+  accessory: "Accessoire",
+  pose: "Pose",
+  backdrop: "Hintergrund",
+};
+
+/** Lesbarer Name, z. B. „Accessoire Umhang“. */
+export function cosmeticLabel(slot: CosmeticSlot, id: string): string {
+  const name = id.charAt(0).toUpperCase() + id.slice(1);
+  const pretty: Record<string, string> = { tuerkis: "OMA-Türkis", muetze: "Mütze", keins: "Keins", juwel: "OMA-Juwel", glut: "Glut", gold: "Saison-Gold", nacht: "Mitternacht", rot: "Kampfrot", kueste: "Küste", wueste: "Wüste" };
+  // „nacht“ heißt als Farbschema „Mitternacht“, als Hintergrund schlicht „Nacht“.
+  const label = slot === "backdrop" && id === "nacht" ? "Nacht" : pretty[id] ?? name;
+  return `${SLOT_LABEL[slot]} ${label}`;
 }

@@ -40,6 +40,7 @@ export interface GemsResultDetails {
   /** Fehlt bei Ergebnissen aus der Zeit vor den Karten-Rängen. */
   rankUps?: { name: string; rank: number }[];
   relicGranted?: { name: string; description: string } | null;
+  cosmeticsUnlocked?: string[];
 }
 
 export default function GemsResultScreen({
@@ -197,6 +198,20 @@ export default function GemsResultScreen({
                 </span>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {(details?.cosmeticsUnlocked ?? []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="w-full rounded-xl px-3 py-2.5 text-left bg-amber-500/10 ring-1 ring-amber-400/30"
+          >
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-200">
+              <Gift className="w-3.5 h-3.5 shrink-0" /> Neu für deinen Helden: {details!.cosmeticsUnlocked!.join(", ")}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Anlegen unter „Mein Held“ in der Sammlung.</p>
           </motion.div>
         )}
 

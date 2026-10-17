@@ -13,7 +13,6 @@
 // Endlos-Turm und Tages-Herausforderung laufen mit dem Wochen-Modifikator (tower-rules.ts),
 // Wächter-Stufen mit der Community-Karte der Woche (weekly-guardian.ts).
 
-import type { TeCharacterConfig } from "@/lib/te-character";
 import { prisma } from "@/lib/prisma";
 import {
   advance,
@@ -61,6 +60,8 @@ import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
 import { rankForWins, withRankBonus } from "@/lib/gems/card-ranks";
 import { heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
+import { cosmeticsUnlockedBy } from "@/lib/gems/hero/cosmetics";
+import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
 import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
 import { getEquippedRelicIds, grantRelic } from "@/lib/gems/relic-store";
 import { recordTowerClear } from "@/lib/gems/tower-season";
@@ -119,7 +120,6 @@ export interface LiveUnitSnapshot {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
-  teCharacter?: TeCharacterConfig | null;
   heroLook?: HeroLook | null;
   /** Aktive Stat-Buffs/-Debuffs (Angriff/Verteidigung/Speed) — für die
    *  Buff/Debuff-Icons auf der Heldenkarte, siehe UnitCard in LiveBattleView.tsx. */
@@ -177,6 +177,8 @@ export interface GemsBattleResult {
   rankUps: { name: string; rank: number }[];
   /** Relikt für den ersten Sieg überhaupt über diesen Turmwächter (siehe relics.ts). */
   relicGranted: { name: string; description: string } | null;
+  /** Kosmetik für „Mein Held“, die dieser Sieg neu freigeschaltet hat (Rang, Turmwächter). */
+  cosmeticsUnlocked?: string[];
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -198,7 +200,6 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     isAlive: u.isAlive,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
-    teCharacter: u.def.teCharacter ?? null,
     heroLook: heroLookForUnit({ ...u.def, cardId: u.def.cardId }),
     statModifiers: u.statModifiers,
   };
@@ -337,6 +338,7 @@ async function settleGemsBattle(
   let next: GemsBattleResult["next"] = null;
   let challengeScore: number | null = null;
   let relicGranted: GemsBattleResult["relicGranted"] = null;
+  let guardianFirstStage: number | null = null;
 
   if (isDaily) {
     challengeScore = battleScore(won, hpShare(state.unitsA), state.round);
@@ -368,6 +370,7 @@ async function settleGemsBattle(
           packGranted = true;
         }
       }
+      if (firstClear && isGuardianStage(stage)) guardianFirstStage = stage;
       const relic = firstClear ? relicForGuardianStage(stage) : null;
       if (relic && (await grantRelic(userId, relic))) {
         relicGranted = { name: relic.name, description: relic.description };
@@ -403,8 +406,32 @@ async function settleGemsBattle(
       challengeScore,
       rankUps,
       relicGranted,
+      cosmeticsUnlocked: won ? await newCosmeticUnlocks(userId, state, rankUps, guardianFirstStage) : [],
     },
   };
+}
+
+/** Kosmetik, die dieser Sieg erstmals freischaltet: ein neuer höchster Karten-Rang (über alle eigenen
+ *  Karten) oder ein zum ersten Mal besiegter Turmwächter. Nur für Mitglieder mit eigener
+ *  Community-Karte — nur die können Kosmetik tragen. */
+async function newCosmeticUnlocks(
+  userId: string,
+  state: InteractiveBattleState,
+  rankUps: GemsBattleResult["rankUps"],
+  guardianFirstStage: number | null
+): Promise<string[]> {
+  if (rankUps.length === 0 && guardianFirstStage === null) return [];
+  const labels: string[] = [];
+  if (rankUps.length > 0) {
+    const lineup = new Set(state.unitsA.map((u) => u.def.cardId));
+    const cards = await prisma.userCard.findMany({ where: { userId }, select: { cardId: true, winsInLineup: true } });
+    const maxAfter = cards.reduce((m, c) => Math.max(m, rankForWins(c.winsInLineup)), 0);
+    const maxBefore = cards.reduce((m, c) => Math.max(m, rankForWins(c.winsInLineup - (lineup.has(c.cardId) ? 1 : 0))), 0);
+    for (let rank = maxBefore + 1; rank <= maxAfter; rank++) labels.push(...cosmeticsUnlockedBy({ rankReached: rank }).map((u) => u.label));
+  }
+  if (guardianFirstStage !== null) labels.push(...cosmeticsUnlockedBy({ guardianStage: guardianFirstStage }).map((u) => u.label));
+  if (labels.length === 0 || !(await getOwnCommunityCard(userId))) return [];
+  return labels;
 }
 
 /** Zählt einen Sieg für jede Karte, die mitgekämpft hat (Team A), und meldet Rangaufstiege. */

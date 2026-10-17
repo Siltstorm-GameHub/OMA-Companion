@@ -17,8 +17,6 @@
 import type { NormalAttackTargetRule, CardClass } from "@prisma/client";
 import { LEVEL_STAT_MULTIPLIER } from "../src/lib/battle-engine/constants";
 import type { ActiveSkillData, PassiveSkillData } from "../src/lib/battle-engine/types";
-import type { TeCharacterConfig } from "../src/lib/te-character";
-import { STANDARD_AVATARS } from "../src/lib/gems/standard-avatars";
 
 export function curve(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
@@ -42,8 +40,6 @@ export interface StandardCardSeed {
   normalAttackTargetRule: NormalAttackTargetRule | null;
   flavorText: string;
   imageUrl: string | null;
-  /** Pixel-Figur (neues Avatar-System, Time Elements) — hat als Hauptmotiv Vorrang vor imageUrl */
-  teCharacter: TeCharacterConfig | null;
   passivePositive: PassiveSkillData;
   passiveNegative: PassiveSkillData;
   activeSkill: ActiveSkillData;
@@ -63,7 +59,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
     imageUrl: "/gems-assets/bastionella.png",
-    teCharacter: STANDARD_AVATARS["Bastionella"],
     passivePositive: {
       name: "Schildwall",
       description:
@@ -146,7 +141,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Manche Mauern hält man für unüberwindbar. Betonbert ist eine davon.",
     imageUrl: "/gems-assets/betonbert.png",
-    teCharacter: STANDARD_AVATARS["Betonbert"],
     passivePositive: {
       name: "Steinhaut",
       description: "Seine Haut ist so hart wie Fels — dauerhaft erhöhte Verteidigung.",
@@ -215,7 +209,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Scharf genug, jede Rüstung zu durchtrennen. Zerbrechlich genug, beim ersten Gegenschlag zu splittern.",
     imageUrl: "/gems-assets/scherbe.png",
-    teCharacter: STANDARD_AVATARS["Scherbe"],
     passivePositive: {
       name: "Scharfe Kante",
       description: "Jeder Treffer sitzt — dauerhaft erhöhter Angriff.",
@@ -284,7 +277,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: "HIGHEST_HP",
     flavorText: "Ein Ziel zu verfehlen, kommt für Fernrohr nicht infrage. Deckung zu suchen allerdings auch nicht.",
     imageUrl: "/gems-assets/fernrohr.png",
-    teCharacter: STANDARD_AVATARS["Fernrohr"],
     passivePositive: {
       name: "Weitsicht",
       description: "Der geübte Blick durchs Visier — dauerhaft erhöhter Angriff.",
@@ -353,7 +345,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Keine Schramme im Team ist zu klein, um sie zu übersehen. Die eigene Verletzlichkeit dagegen schon.",
     imageUrl: "/gems-assets/pflaesterchen.png",
-    teCharacter: STANDARD_AVATARS["Pflästerchen"],
     passivePositive: {
       name: "Sanfte Hand",
       description: "Am Rundenende heilt der Verbündete mit dem niedrigsten HP-Anteil leicht.",
@@ -430,7 +421,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Für jede Lage hat Kato_09 einen Plan. Nur nicht immer die Zeit, ihn rechtzeitig umzusetzen.",
     imageUrl: "/gems-assets/kato-09.png",
-    teCharacter: STANDARD_AVATARS["Kato_09"],
     passivePositive: {
       name: "Kühle Analyse",
       description:
@@ -511,7 +501,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Jeder Treffer, der auf ihm landet, lädt ihn nur weiter auf.",
     imageUrl: "/gems-assets/kupferkurt.png",
-    teCharacter: STANDARD_AVATARS["Kupferkurt"],
     passivePositive: {
       name: "Erdung",
       description: "Jeder erlittene Treffer lädt ihn mit zusätzlicher Rage auf.",
@@ -590,7 +579,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: "LOWEST_HP",
     flavorText: "Sie sucht sich nie den stärksten Gegner. Sie sucht sich den, der es zuerst nicht mehr überlebt.",
     imageUrl: "/gems-assets/nachtklinge.png",
-    teCharacter: STANDARD_AVATARS["Nachtklinge"],
     passivePositive: {
       name: "Blutzoll",
       description: "Jeder ausgeteilte Treffer heilt sie ein wenig.",
@@ -666,7 +654,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText: "Sie muss ihr Team nicht stärker machen. Es reicht ihr, den Gegner schwächer zu machen.",
     imageUrl: "/gems-assets/truebsal.png",
-    teCharacter: STANDARD_AVATARS["Trübsal"],
     passivePositive: {
       name: "Zehrender Nebel",
       description: "Am Rundenende schwächt sie den gefährlichsten Gegner.",

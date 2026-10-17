@@ -3,7 +3,8 @@
 // ============================================
 // Ein Held besteht aus Bausteinen auf einem gemeinsamen Gerüst (siehe parts.tsx und
 // docs/gems-helden-geruest.md): Grundfigur (Körperbau + Waffe, an die Klasse gebunden), Gesicht,
-// Hautton, Frisur und Haarfarbe, Farbschema der Ausrüstung, Emblem, Kopfbedeckung, Accessoire, Pose.
+// Hautton, Frisur und Haarfarbe, Farbschema der Ausrüstung, Emblem, Kopfbedeckung, Accessoire, Pose
+// und Kartenhintergrund.
 // Card.heroLook speichert die Auswahl; fehlt sie, gibt es feste Looks für die Standard-Karten und
 // einen stabilen Zufalls-Look aus der Karten-Id für alle anderen. Rein, ohne DOM und ohne DB.
 
@@ -21,6 +22,8 @@ export interface HeroLook {
   headgear: string;
   accessory: string;
   pose: string;
+  /** Kartenhintergrund (HERO_BACKDROPS, gezeichnet in components/gems/HeroBackdrop.tsx). */
+  backdrop: string;
 }
 
 interface Option {
@@ -120,6 +123,21 @@ export const HERO_POSES: Option[] = [
   { id: "jubel", label: "Jubel" },
 ];
 
+/** Kartenhintergründe im Cartoon-Stil (ersetzen die Pixel-Szenen). */
+export const HERO_BACKDROPS: Option[] = [
+  { id: "wiese", label: "Wiese" },
+  { id: "wald", label: "Wald" },
+  { id: "berge", label: "Berge" },
+  { id: "kueste", label: "Küste" },
+  { id: "wueste", label: "Wüste" },
+  { id: "burg", label: "Burg" },
+  { id: "nacht", label: "Nacht" },
+  { id: "vulkan", label: "Vulkan" },
+];
+
+/** Hintergründe, die allen von Anfang an offenstehen (Zufalls-Looks wählen nur daraus). */
+const FREE_BACKDROPS = ["wiese", "wald", "berge"];
+
 const CLASS_SCHEME: Record<HeroClass, string> = { TANK: "tuerkis", DAMAGE_DEALER: "rot", SUPPORT: "violett" };
 
 const has = (list: Option[], id: unknown): id is string => typeof id === "string" && list.some((o) => o.id === id);
@@ -165,6 +183,7 @@ export function defaultLook(cls: HeroClass): HeroLook {
     headgear: cls === "TANK" ? "helm" : "keine",
     accessory: "keins",
     pose: "stehen",
+    backdrop: "wiese",
   };
 }
 
@@ -175,7 +194,8 @@ export function randomLook(seed: string, cls: HeroClass): HeroLook {
   const bases = basesForClass(cls);
   const headgearChance = cls === "TANK" ? 0.6 : cls === "SUPPORT" ? 0.4 : 0.3;
   const classHeadgear = cls === "TANK" ? "helm" : cls === "SUPPORT" ? "kapuze" : "stirnband";
-  return {
+  // Reihenfolge der Zufallszüge nicht ändern — sonst sähen bestehende Karten anders aus.
+  const look: Omit<HeroLook, "backdrop"> = {
     v: 2,
     base: pick(bases),
     face: pick(HERO_FACES).id,
@@ -188,6 +208,7 @@ export function randomLook(seed: string, cls: HeroClass): HeroLook {
     accessory: "keins",
     pose: "stehen",
   };
+  return { ...look, backdrop: pick(FREE_BACKDROPS) };
 }
 
 /** Prüft einen gespeicherten Look feldweise; Ungültiges fällt auf den Grund-Look zurück. Die
@@ -207,6 +228,7 @@ export function sanitizeHeroLook(raw: unknown, cls: HeroClass, fallback: HeroLoo
     headgear: has(HERO_HEADGEAR, r.headgear) ? r.headgear : fallback.headgear,
     accessory: has(HERO_ACCESSORIES, r.accessory) ? r.accessory : fallback.accessory,
     pose: has(HERO_POSES, r.pose) ? r.pose : fallback.pose,
+    backdrop: has(HERO_BACKDROPS, r.backdrop) ? r.backdrop : fallback.backdrop,
   };
 }
 
@@ -214,15 +236,15 @@ const L = (look: Omit<HeroLook, "v">): HeroLook => ({ v: 2, ...look });
 
 /** Feste Looks der 9 Standard-Karten — feste Charaktere, nicht veränderbar. */
 export const STANDARD_LOOKS: Record<string, HeroLook> = {
-  Bastionella: L({ base: "tank-schild", face: "entschlossen", skin: 1, hair: "lang", hairColor: 3, scheme: "tuerkis", emblem: "juwel", headgear: "helm", accessory: "keins", pose: "stehen" }),
-  Betonbert: L({ base: "tank-axt", face: "grinsen", skin: 3, hair: "kurz", hairColor: 0, scheme: "tuerkis", emblem: "juwel", headgear: "helm", accessory: "keins", pose: "stehen" }),
-  Kupferkurt: L({ base: "tank-schild", face: "ruhig", skin: 2, hair: "locken", hairColor: 1, scheme: "glut", emblem: "juwel", headgear: "keine", accessory: "schal", pose: "stehen" }),
-  Scherbe: L({ base: "dd-klinge", face: "grinsen", skin: 2, hair: "stachelig", hairColor: 0, scheme: "rot", emblem: "juwel", headgear: "keine", accessory: "schal", pose: "angriff" }),
-  Fernrohr: L({ base: "dd-bogen", face: "entschlossen", skin: 4, hair: "kurz", hairColor: 2, scheme: "rot", emblem: "juwel", headgear: "keine", accessory: "brille", pose: "stehen" }),
-  Nachtklinge: L({ base: "dd-klinge", face: "ruhig", skin: 0, hair: "pony", hairColor: 6, scheme: "nacht", emblem: "blitz", headgear: "kapuze", accessory: "keins", pose: "angriff" }),
-  Pflästerchen: L({ base: "support-stab", face: "froehlich", skin: 0, hair: "pony", hairColor: 4, scheme: "violett", emblem: "herz", headgear: "kapuze", accessory: "keins", pose: "stehen" }),
-  Kato_09: L({ base: "support-laterne", face: "frech", skin: 2, hair: "zopf", hairColor: 5, scheme: "violett", emblem: "juwel", headgear: "keine", accessory: "headset", pose: "stehen" }),
-  Trübsal: L({ base: "support-stab", face: "staunend", skin: 5, hair: "irokese", hairColor: 7, scheme: "wald", emblem: "juwel", headgear: "muetze", accessory: "keins", pose: "stehen" }),
+  Bastionella: L({ backdrop: "burg", base: "tank-schild", face: "entschlossen", skin: 1, hair: "lang", hairColor: 3, scheme: "tuerkis", emblem: "juwel", headgear: "helm", accessory: "keins", pose: "stehen" }),
+  Betonbert: L({ backdrop: "berge", base: "tank-axt", face: "grinsen", skin: 3, hair: "kurz", hairColor: 0, scheme: "tuerkis", emblem: "juwel", headgear: "helm", accessory: "keins", pose: "stehen" }),
+  Kupferkurt: L({ backdrop: "wueste", base: "tank-schild", face: "ruhig", skin: 2, hair: "locken", hairColor: 1, scheme: "glut", emblem: "juwel", headgear: "keine", accessory: "schal", pose: "stehen" }),
+  Scherbe: L({ backdrop: "wiese", base: "dd-klinge", face: "grinsen", skin: 2, hair: "stachelig", hairColor: 0, scheme: "rot", emblem: "juwel", headgear: "keine", accessory: "schal", pose: "angriff" }),
+  Fernrohr: L({ backdrop: "kueste", base: "dd-bogen", face: "entschlossen", skin: 4, hair: "kurz", hairColor: 2, scheme: "rot", emblem: "juwel", headgear: "keine", accessory: "brille", pose: "stehen" }),
+  Nachtklinge: L({ backdrop: "nacht", base: "dd-klinge", face: "ruhig", skin: 0, hair: "pony", hairColor: 6, scheme: "nacht", emblem: "blitz", headgear: "kapuze", accessory: "keins", pose: "angriff" }),
+  Pflästerchen: L({ backdrop: "wiese", base: "support-stab", face: "froehlich", skin: 0, hair: "pony", hairColor: 4, scheme: "violett", emblem: "herz", headgear: "kapuze", accessory: "keins", pose: "stehen" }),
+  Kato_09: L({ backdrop: "wald", base: "support-laterne", face: "frech", skin: 2, hair: "zopf", hairColor: 5, scheme: "violett", emblem: "juwel", headgear: "keine", accessory: "headset", pose: "stehen" }),
+  Trübsal: L({ backdrop: "wald", base: "support-stab", face: "staunend", skin: 5, hair: "irokese", hairColor: 7, scheme: "wald", emblem: "juwel", headgear: "muetze", accessory: "keins", pose: "stehen" }),
 };
 
 /** Der Look einer Karte: gespeicherter Look, sonst der feste der Standard-Karten, sonst ein stabiler
@@ -233,17 +255,17 @@ export function effectiveHeroLook(card: { id: string; name: string; rarity: stri
   return card.heroLook ? sanitizeHeroLook(card.heroLook, card.class, fallback) : fallback;
 }
 
-/** Look einer Kampf-Einheit. Ältere gespeicherte Kämpfe kennen nur die Pixel-Figur (teCharacter) —
- *  für sie wird der Look aus Karten-Id, Name und Klasse abgeleitet. Monster (ohne beides) bleiben Bild. */
+/** Look einer Kampf-Einheit. Kämpfe, die vor den Cartoon-Helden gespeichert wurden, tragen im JSON
+ *  nur die frühere Pixel-Figur (Feld „teCharacter“) — für sie wird der Look aus Karten-Id, Name und
+ *  Klasse abgeleitet. Monster (ohne beides) bleiben Bild. */
 export function heroLookForUnit(unit: {
   cardId: string;
   name: string;
   class: HeroClass;
   rarity?: string;
   heroLook?: HeroLook | null;
-  teCharacter?: unknown;
 }): HeroLook | null {
   if (unit.heroLook) return unit.heroLook;
-  if (!unit.teCharacter) return null;
+  if (!(unit as { teCharacter?: unknown }).teCharacter) return null;
   return effectiveHeroLook({ id: unit.cardId, name: unit.name, rarity: unit.rarity ?? "STANDARD", class: unit.class });
 }

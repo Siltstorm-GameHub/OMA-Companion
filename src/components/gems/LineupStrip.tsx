@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import HeroFigure from "./HeroFigure";
+import HeroBackdrop from "./HeroBackdrop";
 import { RankBadge } from "./CardRank";
 
 const LINEUP_SIZE = 5;
@@ -39,6 +40,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                 boxShadow: rarityFrame(entry.card.rarity, borderColor, { glow: 6 }),
               }}
             >
+              {entry.card.heroLook && <HeroBackdrop id={entry.card.heroLook.backdrop} />}
               <div className={`absolute inset-x-0 bottom-11 flex items-center justify-center ${isCommunity(entry.card.rarity) ? "top-4" : "top-1"}`}>
                 {entry.card.heroLook ? (
                   <HeroFigure look={entry.card.heroLook} title={entry.card.name} className="h-full w-auto max-w-full" />

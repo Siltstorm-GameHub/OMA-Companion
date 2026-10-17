@@ -17,7 +17,6 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
   RANDOM: "random",
 };
 
-import { effectiveTeCharacter } from "@/lib/gems/standard-avatars";
 import { effectiveHeroLook } from "@/lib/gems/hero/look";
 
 export function cardToBattleUnitDefinition(
@@ -26,8 +25,6 @@ export function cardToBattleUnitDefinition(
   imageUrl?: string | null,
   avatarBadgeUrl?: string | null
 ): BattleUnitDefinition {
-  // Jede Karte zeigt eine Pixel-Figur (eigene, feste Standard-Figur oder stabile Zufallsfigur)
-  const teCharacter = effectiveTeCharacter(card);
   const resolvedImage = imageUrl !== undefined ? imageUrl : card.imageUrl;
   return {
     cardId: card.id,
@@ -46,10 +43,9 @@ export function cardToBattleUnitDefinition(
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
     imageUrl: resolvedImage,
-    // Mit Charakter als Hauptmotiv wandert das echte Profilbild (bei Community-Karten
+    // Mit dem Helden als Hauptmotiv wandert das echte Profilbild (bei Community-Karten
     // ist resolvedImage das Discord-Bild) in das kleine Badge — wie bei einem Admin-Artwork.
     avatarBadgeUrl: avatarBadgeUrl ?? (card.linkedDiscordId ? resolvedImage ?? null : null),
-    teCharacter,
     heroLook: effectiveHeroLook(card),
     title: card.title,
     rarity: card.rarity,

@@ -5,17 +5,23 @@
 // ============================================
 // Live-Vorschau oben, darunter je Slot die Auswahl. Formen (Grundfigur, Gesicht, Frisur, Ausrüstung,
 // Pose) zeigen eine kleine Vorschau des eigenen Helden mit genau diesem Teil, Farben ein Farbfeld.
-// Gesperrte Teile zeigen, wie man sie bekommt (cosmetics.ts); gespeichert wird serverseitig geprüft.
+// Gesperrte Teile lassen sich anprobieren und zeigen, wie man sie bekommt (cosmetics.ts). Fehlen nur
+// kaufbare Teile, wird „Kaufen & speichern“ angeboten; erspielbare Teile (Rang, Wächter, Saison) muss
+// man erst erreichen. Kauf und Speichern prüft der Server.
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Check, Dices, Lock, RotateCcw } from "@/components/icons";
+import { Modal } from "@/components/ui/Modal";
+import CoinIcon from "@/components/CoinIcon";
 import HeroFigure from "./HeroFigure";
+import HeroBackdrop from "./HeroBackdrop";
 import ErrorNotice from "./ErrorNotice";
 import { getClassConfig } from "./BattleCardView";
 import {
   HERO_ACCESSORIES,
+  HERO_BACKDROPS,
   HERO_BASES,
   HERO_EMBLEMS,
   HERO_FACES,
@@ -28,9 +34,17 @@ import {
   type HeroClass,
   type HeroLook,
 } from "@/lib/gems/hero/look";
-import { isAvailable, unlockFor, unlockLabel, type CosmeticSlot } from "@/lib/gems/hero/cosmetics";
+import {
+  coinPrice,
+  cosmeticLabel,
+  isAvailable,
+  unavailableParts,
+  unlockFor,
+  unlockLabel,
+  type CosmeticSlot,
+} from "@/lib/gems/hero/cosmetics";
 
-type ShapeSlot = "base" | "face" | "hair" | "emblem" | "headgear" | "accessory" | "pose";
+type ShapeSlot = "base" | "face" | "hair" | "emblem" | "headgear" | "accessory" | "pose" | "backdrop";
 
 interface ShapeSection {
   slot: ShapeSlot;
@@ -43,12 +57,15 @@ export default function HeroEditor({
   heroClass,
   initialLook,
   owned,
+  coins: initialCoins,
 }: {
   name: string;
   heroClass: HeroClass;
   initialLook: HeroLook;
-  /** Freigeschaltete Kosmetik-Teile ("scheme:gold" …). */
+  /** Freigeschaltete Kosmetik-Teile ("scheme:gold" …): gekauft oder erspielt. */
   owned: string[];
+  /** Münz-Guthaben zum Kaufen. */
+  coins: number;
 }) {
   const router = useRouter();
   const [look, setLook] = useState<HeroLook>(initialLook);
@@ -56,12 +73,24 @@ export default function HeroEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const ownedSet = useMemo(() => new Set(owned), [owned]);
+  const [ownedList, setOwnedList] = useState<string[]>(owned);
+  const [coins, setCoins] = useState(initialCoins);
+  const [confirmBuy, setConfirmBuy] = useState(false);
+  const ownedSet = useMemo(() => new Set(ownedList), [ownedList]);
+  // Was am angezogenen Look noch fehlt: kaufbar (Münzen) oder nur erspielbar (Rang, Wächter, Saison).
+  const missing = unavailableParts(look, heroClass, ownedSet).filter((id) => !id.startsWith("base:"));
+  const toBuy = missing.filter((id) => coinPrice(id) !== null);
+  const notBuyable = missing.filter((id) => coinPrice(id) === null);
+  const buyTotal = toBuy.reduce((sum, id) => sum + (coinPrice(id) ?? 0), 0);
+  const partLabel = (itemId: string) => {
+    const [slot, id] = itemId.split(":");
+    return cosmeticLabel(slot as CosmeticSlot, id);
+  };
   const changed = JSON.stringify(look) !== JSON.stringify(saved);
   const classColor = getClassConfig(heroClass).color;
 
   const available = (slot: string, id: string) =>
-    slot === "scheme" || slot === "emblem" || slot === "headgear" || slot === "accessory" || slot === "pose"
+    slot === "scheme" || slot === "emblem" || slot === "headgear" || slot === "accessory" || slot === "pose" || slot === "backdrop"
       ? isAvailable(slot as CosmeticSlot, id, heroClass, ownedSet)
       : true;
   const lockText = (slot: string, id: string) => unlockLabel(unlockFor(slot as CosmeticSlot, id, heroClass));
@@ -78,6 +107,7 @@ export default function HeroEditor({
     { slot: "accessory", title: "Accessoire", options: HERO_ACCESSORIES },
     { slot: "emblem", title: "Emblem", options: HERO_EMBLEMS },
     { slot: "pose", title: "Pose", options: HERO_POSES },
+    { slot: "backdrop", title: "Kartenhintergrund", options: HERO_BACKDROPS },
   ];
 
   function randomize() {
@@ -94,7 +124,30 @@ export default function HeroEditor({
       headgear: pickAvailable("headgear", HERO_HEADGEAR),
       accessory: pickAvailable("accessory", HERO_ACCESSORIES),
       pose: pickAvailable("pose", HERO_POSES),
+      backdrop: pickAvailable("backdrop", HERO_BACKDROPS),
     });
+  }
+
+  async function buyAndSave() {
+    setConfirmBuy(false);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/gems/cosmetics/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds: toBuy }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Kauf fehlgeschlagen.");
+      setOwnedList((cur) => [...cur, ...toBuy]);
+      setCoins(data.points);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unbekannter Fehler.");
+      setSaving(false);
+      return;
+    }
+    await save();
   }
 
   async function save() {
@@ -122,10 +175,12 @@ export default function HeroEditor({
   const optionButton = (selected: boolean, enabled: boolean) =>
     `relative flex flex-col items-center gap-1 rounded-xl p-1.5 text-[11px] font-semibold transition-colors min-h-[44px] ${
       selected
-        ? "bg-teal-500/15 ring-2 ring-teal-400 text-white"
+        ? enabled
+          ? "bg-teal-500/15 ring-2 ring-teal-400 text-white"
+          : "bg-amber-500/10 ring-2 ring-amber-400 text-white"
         : enabled
           ? "glass hover:bg-white/[0.06] text-gray-300"
-          : "glass opacity-50 cursor-not-allowed text-gray-500"
+          : "glass hover:bg-white/[0.06] text-gray-500"
     }`;
 
   const swatchRow = (
@@ -140,13 +195,12 @@ export default function HeroEditor({
             key={it.key}
             type="button"
             onClick={it.onPick}
-            disabled={!it.enabled}
             title={it.enabled ? it.label : `${it.label} — ${it.lock}`}
-            aria-label={it.enabled ? it.label : `${it.label}, gesperrt: ${it.lock}`}
+            aria-label={it.enabled ? it.label : `${it.label}, gesperrt: ${it.lock} (anprobieren)`}
             aria-pressed={it.selected}
             className={`relative w-11 h-11 rounded-full border-[3px] transition-transform ${
               it.selected ? "border-white scale-110" : "border-[#1b1326]"
-            } ${it.enabled ? "hover:scale-105" : "opacity-40 cursor-not-allowed"}`}
+            } ${it.enabled ? "hover:scale-105" : "opacity-60 hover:opacity-90"}`}
             style={{ background: it.color }}
           >
             {!it.enabled && <Lock className="w-3.5 h-3.5 absolute inset-0 m-auto text-white" />}
@@ -166,8 +220,11 @@ export default function HeroEditor({
           className="rounded-2xl overflow-hidden flex flex-row md:flex-col items-center md:items-stretch"
           style={{ border: `2px solid ${classColor}`, background: `linear-gradient(165deg, ${classColor}44 0%, #101016 72%)` }}
         >
-          <div className="w-28 h-32 md:w-auto md:h-72 shrink-0 px-2 pt-2 md:px-6 md:pt-4">
-            <HeroFigure look={look} title={name} idle className="w-full h-full" />
+          <div className="relative w-28 h-32 md:w-auto md:h-72 shrink-0 overflow-hidden">
+            <HeroBackdrop id={look.backdrop} />
+            <div className="absolute inset-0 px-2 pt-2 md:px-6 md:pt-4">
+              <HeroFigure look={look} title={name} idle className="w-full h-full" />
+            </div>
           </div>
           <div className="px-3 py-2 md:px-4 md:pb-4 md:pt-1 min-w-0">
             <p className="font-display text-lg md:text-xl font-bold text-white truncate">{name}</p>
@@ -176,10 +233,33 @@ export default function HeroEditor({
         </div>
         {error && <ErrorNotice message={error} />}
         {notice && <p className="text-xs text-teal-300">{notice}</p>}
+        {notBuyable.length > 0 && (
+          <p className="text-xs text-amber-300">
+            Nur anprobiert: {notBuyable.map((id) => `${partLabel(id)} (${lockText(id.split(":")[0], id.split(":")[1])})`).join(", ")}.
+          </p>
+        )}
+        {toBuy.length > 0 && notBuyable.length === 0 && coins < buyTotal && (
+          <p className="text-xs text-amber-300">Dafür fehlen dir {buyTotal - coins} Münzen.</p>
+        )}
+        <p className="flex items-center gap-1 text-[11px] text-gray-500">
+          <CoinIcon size={11} /> {coins} Münzen
+        </p>
         <div className="flex gap-2">
-          <Button onClick={save} disabled={!changed} loading={saving} className="flex-1">
-            Speichern
-          </Button>
+          {toBuy.length > 0 && notBuyable.length === 0 ? (
+            <Button
+              onClick={() => setConfirmBuy(true)}
+              disabled={coins < buyTotal}
+              loading={saving}
+              icon={<CoinIcon size={14} />}
+              className="flex-1"
+            >
+              Kaufen & speichern · {buyTotal}
+            </Button>
+          ) : (
+            <Button onClick={save} disabled={!changed || missing.length > 0} loading={saving} className="flex-1">
+              Speichern
+            </Button>
+          )}
           <Button variant="ghost" onClick={randomize} icon={<Dices className="w-4 h-4" />} aria-label="Zufällig">
             Zufall
           </Button>
@@ -188,15 +268,39 @@ export default function HeroEditor({
           </Button>
         </div>
         <p className="hidden md:block text-[11px] text-gray-500">
-          Gesperrte Teile bekommst du über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison. Kosmetik verändert keine
-          Kampfwerte.
+          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison.
+          Kosmetik verändert keine Kampfwerte.
         </p>
       </div>
 
+      <Modal open={confirmBuy} onClose={() => setConfirmBuy(false)} title="Kosmetik kaufen?" size="sm">
+        <div className="space-y-4">
+          <ul className="space-y-1.5 text-sm">
+            {toBuy.map((id) => (
+              <li key={id} className="flex items-center justify-between gap-3">
+                <span className="text-gray-200">{partLabel(id)}</span>
+                <span className="flex items-center gap-1 text-amber-300 tabular-nums">
+                  {coinPrice(id)} <CoinIcon size={13} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-gray-400">
+            Zusammen {buyTotal} Münzen, danach hast du noch {coins - buyTotal}. Gekaufte Teile behältst du dauerhaft.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setConfirmBuy(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={buyAndSave}>Kaufen & speichern</Button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="space-y-6">
         <p className="md:hidden text-[11px] text-gray-500">
-          Gesperrte Teile bekommst du über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison. Kosmetik verändert keine
-          Kampfwerte.
+          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison.
+          Kosmetik verändert keine Kampfwerte.
         </p>
         {swatchRow(
           "Hautton",
@@ -231,13 +335,13 @@ export default function HeroEditor({
                   <button
                     key={o.id}
                     type="button"
-                    disabled={!enabled}
                     onClick={() => set({ [section.slot]: o.id } as Partial<HeroLook>)}
                     aria-pressed={selected}
                     className={optionButton(selected, enabled)}
                   >
-                    <span className="w-full h-16 block">
-                      <HeroFigure look={preview} className="w-full h-full" />
+                    <span className="relative w-full h-16 block rounded-lg overflow-hidden">
+                      {section.slot === "backdrop" && <HeroBackdrop id={o.id} />}
+                      <HeroFigure look={preview} className="relative w-full h-full" />
                     </span>
                     <span className="truncate max-w-full">{o.label}</span>
                     {!enabled && (
