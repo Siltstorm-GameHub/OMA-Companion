@@ -79,7 +79,7 @@ export async function ensureCommunityCard(
       });
 
       await tx.userCard.create({
-        data: { userId: member.userId, cardId: created.id, level: 1, duplicates: 1 },
+        data: { userId: member.userId, cardId: created.id },
       });
 
       return created;

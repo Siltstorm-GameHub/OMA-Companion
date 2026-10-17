@@ -45,7 +45,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
         where: { id: card.id },
         data: { linkedDiscordId: null, name: DELETED_USER_NAME, imageUrl: null, sourceStatsJson: undefined, teCharacter: undefined },
       }),
-      prisma.dndChatMessage.updateMany({ where: { cardId: card.id }, data: { name: DELETED_USER_NAME } }),
     ] : []),
 
     prisma.user.update({
@@ -124,7 +123,6 @@ export async function buildUserExport(userId: string) {
       communityBoardComments: true,
       pokale: true,
       battleCardUserCards: true,
-      dndCustomWorlds: true,
       pushSubscriptions: { select: { createdAt: true } },
       accounts: { select: { provider: true, providerAccountId: true } },
     },

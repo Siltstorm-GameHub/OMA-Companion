@@ -57,20 +57,6 @@ model User {
   voiceMinutesTotal Int @default(0)
   messagesTotal     Int @default(0)
 
-  // Battle Cards: aktuelle/beste Sieges-Serie in PVP-Kämpfen (Challenge + Matchmaking,
-  // keine Testkämpfe), siehe lib/battle-cards/win-streak.ts
-  battleWinStreak     Int @default(0)
-  battleBestWinStreak Int @default(0)
-
-  // Battle Cards: getrennte Elo-Ratings je Spielmodus (siehe lib/battle-cards/elo.ts),
-  // saisonal sanft zurückgesetzt (ranked-season.ts: softResetAllElo) statt komplett
-  // genullt — die *Matches-Zähler laufen ab dem letzten Reset (Saisonwechsel ODER
-  // Admin-Hard-Reset) neu von 0, sie steuern den höheren Platzierungs-K-Faktor.
-  eloDuels        Int @default(1000)
-  eloDuelsMatches Int @default(0)
-  eloGems         Int @default(1000)
-  eloGemsMatches  Int @default(0)
-
   // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | null }.
   // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
   // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
@@ -162,17 +148,10 @@ model User {
   battleCardUserCards              UserCard[]
   battleCardBattles                Battle[]                     @relation("BattleCardPlayer")
   battleCardPacks                  CardPack[]
-  battleChallengesSent             BattleChallenge[]            @relation("BattleChallengeChallenger")
-  battleChallengesReceived         BattleChallenge[]            @relation("BattleChallengeOpponent")
-  battleQueueEntry                 BattleQueueEntry?
   liveBattlesAsA                   LiveBattle[]                 @relation("LiveBattlePlayerA")
   liveBattlesAsB                   LiveBattle[]                 @relation("LiveBattlePlayerB")
   campaignProgress                 UserCampaignProgress[]
-  tutorialProgress                 UserTutorialProgress?
   gemsTournamentAttempts           GemsTournamentAttempt[]
-  duelDecks                        DuelDeck[]
-  userTacticCards                  UserTacticCard[]
-  dndCustomWorlds                  DndCustomWorld[]             @relation("DndCustomWorldAuthor")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1964,420 +1943,20 @@ model Card {
   lastGeneratedAt  DateTime?
 
   imageUrl    String?
-  // Charakter (Time-Elements-Baukasten, siehe src/lib/te-character): Ebenen-Auswahl des Users
-  // für seine Community-Karte, zugleich seine Spielfigur in OMA Quest. Shape: TeCharacterConfig.
-  // null = noch nicht angepasst (Karte zeigt das Discord-Profilbild bzw. Klassen-Icon).
+  // Pixel-Figur der Karte (Time-Elements-Baukasten, siehe src/lib/te-character). Shape:
+  // TeCharacterConfig. null = keine eigene Figur (Standard-Figur bzw. Discord-Profilbild).
   teCharacter Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   userCards UserCard[]
-
-  // --- OMA-Quest-Charakterbogen (nur relevant/befüllt für rarity = COMMUNITY) ---
-  dndRace          String? // z.B. "Mensch", "Elf", "Zwerg", "Halbling", "Halbork" — ausgewürfelt
-  dndClass         String? // volle OMA-Quest-Klasse (Krieger/Magier/Kleriker/Schurke/Waldläufer/...),
-  // NICHT dasselbe wie class: CardClass — siehe DND_CLASS_TO_CARD_CLASS in src/lib/dnd/class-mapping.ts
-  abilityScores    Json? // { str, dex, con, int, wis, cha } — 4d6-drop-lowest, klassisch
-  backstory        String?   @db.Text // ausgewürfelt bei Erstellung, danach frei editierbar (kein overriddenFields-Kandidat)
-  dndCreatedAt     DateTime? // wann der Charakter erstellt wurde (Gate: Erstellung nur einmal möglich)
-  // Helden-Einrichtung (OMA Battle Cards, siehe lib/battle-cards/hero-setup.ts): heroRolledAt = Rasse/Klasse
-  // gewählt und Werte gewürfelt, heroPackAt = Start-Pack gewählt. null = Schritt offen. Bewusst getrennt von
-  // dndCreatedAt (das schon die automatisch erzeugte Karte hat): alle Mitglieder durchlaufen den Ablauf.
-  heroRolledAt     DateTime?
-  heroPackAt       DateTime?
-  dndRerollCredits Int       @default(0) // verfügbare Re-Rolls (Rasse+Klasse+Stats zusammen) — 1 gratis bei Erst-Erstellung
-  // ODER Auto-Migration (kein eigener Wurf), danach im Shop nachkaufbar (buy-dnd-reroll), pro Nutzung -1
-  dndXp            Int       @default(0) // Summe aus Story-Ereignissen + DndQuest.xpReward — rein kosmetisch/Fortschritt, kein Battle-Balance-Faktor
-
-  // --- Standort & Reise (Hex-Weltkarte, siehe src/lib/dnd/hex) ---
-  // Position = Hex-Feld (odd-r-Offset). currentLocationId ist die feste Location auf diesem Feld
-  // (null = freies Feld ohne Location). Alte Charaktere ohne Hex-Position stehen implizit auf dem
-  // Feld ihrer currentLocation (Backfill beim Lesen, siehe travel.ts positionOf).
-  currentLocationId String?
-  currentLocation   DndLocation? @relation(fields: [currentLocationId], references: [id])
-  currentHexCol     Int?
-  currentHexRow     Int?
-  // Aktive Reise: Zielfeld + geplanter Pfad ([[col,row], …] inkl. Start) + Zeiten. travelToCol != null = unterwegs.
-  travelToCol       Int?
-  travelToRow       Int?
-  travelPath        Json?
-  travelDepartedAt  DateTime?
-  travelArrivesAt   DateTime?
-
-  eventLogs     DndEventLog[]
-  questProgress DndQuestProgress[]
-
-  // Rollenspiel: Gold, erlebte Ereignisse (Flags aus Dialog-Entscheidungen) und Rucksack
-  dndGold         Int                @default(0)
-  // Fortschritt: nicht verteilte Attributspunkte/Fähigkeiten, gewählte Fähigkeiten (string[]), Bonus auf Attribute (nur für Proben), zuletzt abgerechnete Stufe
-  dndAttrPoints   Int                @default(0)
-  dndPerkPicks    Int                @default(0)
-  dndPerks        Json?
-  dndAbilityBonus Json?
-  dndLevelClaimed Int                @default(1)
-  // Münzen-Laden: gekaufte Ehrentitel, gewählter Titel, Käufe der zusätzlichen Fähigkeit
-  dndOwnedTitles  Json?
-  dndTitle        String?
-  dndCoinPerkBuys Int                @default(0)
-  // Kampf: aktueller Kampfzustand (ein Kampf zur Zeit) + Versionsnummer gegen doppelte Klicks
-  dndCombat       Json?
-  dndCombatV      Int                @default(0)
-  // Fähigkeitsbaum: gelernte Talent-Ids (string[])
-  dndSkills       Json?
-  // Gekaufte Karten-Anpassungen (string[], z. B. "bg:night3")
-  cardUnlocks     Json?
-  // Begleiter: gezähmte Monster (string[] Monster-Ids, jedes einmal) und der ausgerüstete
-  dndCompanions   Json?
-  dndCompanion    String?
-  dndFlags        Json? // string[]
-  dndInventory    DndInventoryItem[]
-
-  @@index([currentLocationId])
-}
-
-// ============================================
-// OMA-Quest-Weltkarte, Reisen, Story & Quests
-// ============================================
-// Story-Content selbst (Ereignis-/Backstory-Texte) ist prozedural aus
-// hartcodierten gewichteten Tabellen gezogen (src/lib/dnd/*), NIE per LLM-Call
-// — kostenfrei, wie in der Planung festgelegt. DndStoryNode ist die
-// Ereignis-DEFINITION (Pool-Eintrag je Location-Typ), DndEventLog ist der
-// tatsächlich gewürfelte, resolvierte Verlaufseintrag je Charakter.
-
-enum DndLocationType {
-  SETTLEMENT // Stadt/Dorf — Handel, NPC-Dialoge, sichere Zone, Quest-Geber
-  DUNGEON // Ruine/Verlies — Kämpfe, Loot, klassische Rollenspiel-Encounter
-  WILDERNESS // Wald/Sumpf/Berge — Erkundung, Sammeln, Zufallsbegegnungen
-  LANDMARK // besonderer Ort — Story-/Lore-lastige Einzelereignisse
-}
-
-model DndLocation {
-  id              String          @id @default(cuid())
-  slug            String          @unique
-  name            String
-  description     String?         @db.Text
-  locationType    DndLocationType
-  hexCol          Int             @default(0) // Feld auf der Hex-Weltkarte (world.json), siehe lib/dnd/hex
-  hexRow          Int             @default(0)
-  mapIcon         String?
-  backgroundImage String?
-  order           Int             @default(0)
-
-  storyNodes DndStoryNode[]
-  quests     DndQuest[]
-  cards      Card[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// Von Community-Job-Mitgliedern/Admins gebaute begehbare Welt (Editor unter /oma-quest/editor).
-// `doc` = CustomWorldDoc (src/lib/te-map/custom-world.ts). Erst mit Status PUBLISHED gibt es dazu eine
-// DndLocation (Hex-Feld auf der Weltkarte) und eine DndQuest.
-model DndCustomWorld {
-  id           String    @id @default(cuid())
-  slug         String    @unique // "cw-<id-Ende>", = Slug der DndLocation
-  authorId     String
-  title        String
-  status       String    @default("DRAFT") // DRAFT | PENDING | PUBLISHED | REJECTED
-  doc          Json
-  reviewNote   String?   @db.Text
-  reviewedById String?
-  // Gewünschtes/festes Feld auf der Hex-Weltkarte (leer = beim Freigeben automatisch ein freies Landfeld)
-  hexCol       Int?
-  hexRow       Int?
-  submittedAt  DateTime?
-  publishedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  author User @relation("DndCustomWorldAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@index([authorId])
-  @@index([status])
-}
-
-// Gegenstand im Rucksack eines Charakters (Katalog: src/lib/dnd/items.ts)
-model DndInventoryItem {
-  id       String  @id @default(cuid())
-  cardId   String
-  card     Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  itemKey  String
-  qty      Int     @default(1)
-  equipped Boolean @default(false)
-
-  @@unique([cardId, itemKey])
-}
-
-// Live-Anwesenheit in einer begehbaren Welt: Position/Blickrichtung des Charakters, vom Client alle paar
-// Sekunden aktualisiert. Wer länger als ~12 s nichts meldet, gilt als nicht mehr da (kein Cron nötig).
-model DndPresence {
-  cardId       String    @id
-  locationSlug String
-  x            Int
-  y            Int
-  dir          String
-  // Gebäude, in dem der Charakter gerade ist (Index in map.buildings), -1 = draußen
-  scene        Int       @default(-1)
-  // Kurzer Gefühlsausdruck über dem Kopf (Emote), ~4 s sichtbar
-  emote        String?
-  emoteAt      DateTime?
-  updatedAt    DateTime  @updatedAt
-
-  @@index([locationSlug, updatedAt])
-}
-
-// Chat in einer Location (Sprechblasen + Verlauf), nur kurz aufbewahrt
-model DndChatMessage {
-  id           String    @id @default(cuid())
-  locationSlug String
-  cardId       String
-  name         String
-  text         String
-  hidden       Boolean   @default(false) // von der Moderation ausgeblendet
-  hiddenAt     DateTime?
-  createdAt    DateTime  @default(now())
-
-  @@index([locationSlug, createdAt])
-}
-
-// Stummschaltung eines Charakters im Chat (Moderation)
-model DndChatMute {
-  cardId    String   @id
-  until     DateTime
-  reason    String?
-  byName    String
-  createdAt DateTime @default(now())
-}
-
-// Meldung einer Chat-Nachricht durch einen Spieler
-model DndChatReport {
-  id             String   @id @default(cuid())
-  messageId      String
-  reporterCardId String
-  createdAt      DateTime @default(now())
-
-  @@unique([messageId, reporterCardId])
-  @@index([messageId])
-}
-
-// Gruppe (Party): bis zu 4 Charaktere, teilen sich XP für Welt-Quests, wenn sie am selben Ort sind
-model DndParty {
-  id           String           @id @default(cuid())
-  leaderCardId String
-  name         String?
-  // Raid-Modus: erlaubt bis zu 8 statt 4 Mitglieder (für Raid-Bosse)
-  raid         Boolean          @default(false)
-  // Gewonnene Gruppenkämpfe (Gruppen-Rangliste)
-  wins         Int              @default(0)
-  createdAt    DateTime         @default(now())
-  members      DndPartyMember[]
-}
-
-// Gruppenkampf: Vorraum (Zustimmung der Mitglieder), dann rundenweiser Kampf; der Zustand liegt als JSON an der Zeile
-model DndGroupFight {
-  id              String                 @id @default(cuid())
-  status          String // LOBBY | ACTIVE | WON | LOST | FLED | CANCELLED
-  initiatorCardId String
-  monsterId       String
-  source          Json?
-  state           Json?
-  v               Int                    @default(0)
-  lobbyEndsAt     DateTime
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  members         DndGroupFightMember[]
-
-  @@index([status, updatedAt])
-}
-
-model DndGroupFightMember {
-  fightId String
-  cardId  String
-  status  String // invited | joined | declined
-  seen    Boolean       @default(false) // Ergebnis bestätigt
-  fight   DndGroupFight @relation(fields: [fightId], references: [id], onDelete: Cascade)
-
-  @@id([fightId, cardId])
-  @@index([cardId])
-}
-
-model DndPartyMember {
-  cardId   String   @id
-  partyId  String
-  party    DndParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
-  joinedAt DateTime @default(now())
-
-  @@index([partyId])
-}
-
-model DndPartyInvite {
-  id         String   @id @default(cuid())
-  fromCardId String
-  toCardId   String
-  createdAt  DateTime @default(now())
-
-  @@unique([fromCardId, toCardId])
-  @@index([toCardId])
-}
-
-// Vom Spielleiter (Community-Job/Admin) ausgelöstes Live-Ereignis in einer Location oder weltweit
-model DndWorldEvent {
-  id           String   @id @default(cuid())
-  locationSlug String? // null = überall
-  authorId     String
-  authorName   String
-  kind         String // announce | check | loot
-  title        String
-  text         String   @db.Text
-  params       Json? // check: { ability, dc } · loot: { gold?, item?, max? }
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-
-  rolls DndWorldEventRoll[]
-
-  @@index([locationSlug, createdAt])
-}
-
-model DndWorldEventRoll {
-  id        String        @id @default(cuid())
-  eventId   String
-  event     DndWorldEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  cardId    String
-  cardName  String
-  roll      Int
-  total     Int
-  success   Boolean
-  createdAt DateTime      @default(now())
-
-  @@unique([eventId, cardId])
-}
-
-// Chronik der Welt („Heute im Reich"): abgeschlossene Quests, Stufenaufstiege, neue Orte, Ansagen der Spielleiter
-model DndChronicle {
-  id           String   @id @default(cuid())
-  kind         String // quest | level | location | announce | event
-  text         String   @db.Text
-  locationSlug String?
-  createdAt    DateTime @default(now())
-
-  @@index([createdAt])
-}
-
-// Von Admins gelöschte, im Code vordefinierte Inhalte (feste Locations/Quests): verhindert, dass die
-// idempotenten Seed-Funktionen sie beim nächsten Aufruf wieder anlegen. kind = LOCATION | QUEST.
-model DndRemovedContent {
-  id        String   @id @default(cuid())
-  kind      String
-  slug      String
-  createdAt DateTime @default(now())
-
-  @@unique([kind, slug])
-}
-
-// Ereignis-DEFINITION (Vorlage) — kein Charakterbezug, sondern ein Pool-Eintrag,
-// aus dem beim Story-Tick pro Location(-Typ) gewichtet gezogen wird. Die
-// tatsächlich einem Charakter widerfahrene Instanz landet in DndEventLog.
-model DndStoryNode {
-  id           String           @id @default(cuid())
-  slug         String           @unique
-  locationId   String?
-  location     DndLocation?     @relation(fields: [locationId], references: [id])
-  locationType DndLocationType? // falls locationId leer: Pool gilt für ALLE Locations dieses Typs
-  weight       Int              @default(10)
-  title        String
-  text         String           @db.Text
-  xpReward     Int              @default(0)
-  createdAt    DateTime         @default(now())
-
-  eventLogs DndEventLog[]
-}
-
-// Resolvierter Verlaufseintrag je Charakter ("was ist wann passiert") — das,
-// was im Story-Panel der Location-Szene gerendert wird (nach locationId
-// gefiltert). Deckt auch "zwei Charaktere trafen sich hier" ab (kein
-// separates DndEncounter-Modell nötig für v1).
-model DndEventLog {
-  id          String        @id @default(cuid())
-  cardId      String
-  card        Card          @relation(fields: [cardId], references: [id])
-  locationId  String
-  storyNodeId String?
-  storyNode   DndStoryNode? @relation(fields: [storyNodeId], references: [id])
-  title       String
-  text        String        @db.Text
-  xpGained    Int           @default(0)
-  occurredAt  DateTime      @default(now())
-
-  @@index([cardId, occurredAt])
-  @@index([locationId, occurredAt])
-}
-
-model DndQuest {
-  id              String       @id @default(cuid())
-  slug            String       @unique
-  title           String
-  description     String       @db.Text
-  objectiveType   String // z.B. "MONSTER_SLAIN", "LOCATION_VISITED", "MESSAGE_SENT", "VOICE_MINUTES",
-  // "EVENT_ATTEND", "POLL_VOTE", "BATTLE_CARD_DUEL", "STORY_NODE_COMPLETED"
-  targetCount     Int
-  targetRef       String? // optionale Entitäts-Referenz, z.B. locationSlug
-  xpReward        Int          @default(0)
-  itemReward      Json?
-  // Schritte der Quest [{kind: talk|visit, text, location?}] — Welt-Quests; leer bei Aktivitäts-Quests
-  steps           Json?
-  adminEdited     Boolean      @default(false) // von einem Admin geändert: der Code-Seed überschreibt sie nicht mehr
-  coinReward      Int          @default(0) // > 0: zusätzlich über den bestehenden Coins-Pfad vergeben
-  linkedQuestType String? // optionaler QuestType (quests-meta.ts) — löst zusätzlich die normale Monats-Quest aus
-  locationId      String?
-  location        DndLocation? @relation(fields: [locationId], references: [id])
-  createdAt       DateTime     @default(now())
-  // Story: leer = Hauptstory (fest codiert, von Admins verwaltet); gesetzt = Nebenquest einer Community-Location, geschrieben von diesem User
-  authorId        String?
-  // Anzeigename des Autors zur Zeit des letzten Veröffentlichens (denormalisiert, damit das Quest-Log nicht je Zeile nachschlagen muss)
-  authorName      String?
-  // Questreihe: freier Name, unter dem der Autor mehrere zusammengehörige Quests veröffentlicht (auch über mehrere Locations hinweg)
-  questline       String?
-  // Teil-Nummer innerhalb der Questreihe (Anzeige "Teil 2"), vom Autor vergeben
-  part            Int?
-  // Slug einer Quest, die zuerst abgeschlossen sein muss (Kette); unbekannter/gelöschter Slug wirkt wie "keine Voraussetzung"
-  requires        String?
-  // Täglicher Bounty aus dem gemeinsamen Pool (quests-bounty.ts); Slug trägt das Datum, Fortschritt beginnt so jeden Tag neu
-  bounty          Boolean      @default(false)
-  // "daily" | "monthly" — nur bei bounty=true gesetzt, für die Gruppierung im Quest-Log
-  bountyCadence   String?
-
-  progress DndQuestProgress[]
-
-  @@index([authorId])
-  @@index([questline])
-}
-
-model DndQuestProgress {
-  id          String    @id @default(cuid())
-  cardId      String
-  card        Card      @relation(fields: [cardId], references: [id])
-  questId     String
-  quest       DndQuest  @relation(fields: [questId], references: [id])
-  current     Int       @default(0)
-  completed   Boolean   @default(false)
-  completedAt DateTime?
-  rewarded    Boolean   @default(false)
-  // Wird im Spiel-HUD angezeigt (verfolgt); angenommene Quests sind zunächst verfolgt
-  tracked     Boolean   @default(true)
-  // Fortschritt innerhalb des aktuellen "Ziel"-Schritts (kind "goal", z. B. 2 von 3 Elite-Wölfen); nur für WORLD_STEP-Quests relevant
-  goalProgress Int      @default(0)
-
-  @@unique([cardId, questId])
 }
 
 model UserCard {
   id         String   @id @default(cuid())
   userId     String
   cardId     String
-  level      Int      @default(1) // 1-5
-  duplicates Int      @default(1) // gesamt erhaltene Kopien (inkl. verbrauchte für Upgrades)
   inLineup   Boolean  @default(false) // Teil der aktuellen Startaufstellung (max. 5 pro User)
   acquiredAt DateTime @default(now())
 
@@ -2417,7 +1996,7 @@ enum CardPackSource {
   TUTORIAL
   GEMS_PVP_CHEST
   GEMS_TOURNAMENT_REWARD
-  QUEST_MILESTONE // Stufen-Meilenstein in OMA Quest (siehe lib/dnd/milestone-packs.ts)
+  QUEST_MILESTONE // nicht mehr vergeben (OMA Quest entfernt), bleibt für alte Pack-Datensätze
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
@@ -2446,108 +2025,17 @@ model CardPack {
   @@index([userId])
 }
 
-// ── Battle-Cards-Duelle (ersetzt das alte Münzen-Duell als Herausforderung
-// zwischen zwei Usern) ─────────────────────────────────────────────────────
-// Löst sich sofort bei Annahme auf (kein separates "Wird gespielt" nötig —
-// die Kampf-Engine ist deterministisch/serverseitig, keine Live-Eingabe).
-
-model BattleChallenge {
-  id               String    @id @default(cuid())
-  challengerId     String
-  opponentId       String
-  status           String    @default("pending") // pending | live | declined | resolved | expired
-  // "DUELS" (Yu-Gi-Oh-artiges Deck/Feld-PvP, mit Annahme-Schritt — Wert bewusst unverändert
-  // gelassen, obwohl die Engine dahinter komplett neu ist: leaderboard.ts und die
-  // Battle-Cards-Seite filtern hart auf diesen String für die Rangliste, ein neuer Wert
-  // hätte neue Duelle dort stillschweigend verschwinden lassen) | "GEMS" (asynchroner
-  // Match-3-Ghost-Angriff, startet direkt mit status="live", kein "pending"/Annahme) — beide
-  // zählen gemeinsam in die Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln
-  // filterbar.
-  mode             String    @default("DUELS")
-  liveBattleId     String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
-  battleId         String? // gesetzt sobald resolved, verweist auf Battle.id
-  winnerId         String?
-  createdAt        DateTime  @default(now())
-  respondedAt      DateTime?
-  // false = zählt NICHT für Rangliste/Sieges-Kiste — bei GEMS-Kämpfen gesetzt, sobald dasselbe
-  // Angreifer/Gegner-Paar am selben Tag bereits GEMS_PVP_OPPONENT_DAILY_CAP resolvte Kämpfe hatte
-  // (verhindert Farmen: denselben Gegner beliebig oft anzugreifen darf keine beliebig große
-  // Rangliste-/Belohnungswirkung haben, siehe finalizeLiveBattle). Für DUELS immer true.
-  countsForRanking Boolean   @default(true)
-
-  challenger User @relation("BattleChallengeChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
-  opponent   User @relation("BattleChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
-
-  @@index([challengerId, opponentId, createdAt])
-}
-
-// ── OMA Duels (Yu-Gi-Oh-artiges Live-PvP) — Deck-Auswahl ────────────────────
-// Ersetzt die alte 5er-PVE-Lineup (lineup.ts) als Kampf-Zusammenstellung für
-// diesen Modus: Duell-Decks sind größer (fix DUEL_DECK_TOTAL_SIZE Karten,
-// siehe duel-constants.ts) und mischen Einheiten- mit Taktik-Karten.
-model DuelDeck {
-  id            String   @id @default(cuid())
-  userId        String
-  name          String   @default("Standard")
-  unitCardIds   String[] // Card-IDs, mind. DUEL_DECK_MIN_UNIT_CARDS
-  tacticCardIds String[] // TacticCard-IDs, Rest bis DUEL_DECK_TOTAL_SIZE
-  isActive      Boolean  @default(true) // aktuell für PVP_DUELS_LIVE-Herausforderungen gewähltes Deck
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-enum TacticCardKind {
-  INSTANT // wirkt sofort beim Ausspielen (Items, z.B. Energy-Drinks)
-  TRAP // verdeckt gesetzt, wirkt bei Trigger-Bedingung (z.B. Server-Lag)
-}
-
-// Items/Fallen fürs OMA-Duels-Deck — humorvoller Gaming-Bezug (Energy-Drinks,
-// Fast-Food, Lag, Rage-Quit, ...), gleicher Ton wie puzzle-monsters.ts.
-model TacticCard {
-  id               String         @id @default(cuid())
-  name             String
-  kind             TacticCardKind
-  flavorText       String
-  description      String
-  effects          Json // wiederverwendet Effect-Typen aus battle-engine/types.ts
-  triggerCondition Json? // nur TRAP, z.B. { type: "onEnemyAttack" }
-  imageUrl         String? // extern per ComfyUI generiert, per Admin-Upload gesetzt (wie Card.imageUrl)
-  rarity           CardRarity     @default(STANDARD)
-  createdAt        DateTime       @default(now())
-
-  userTacticCards UserTacticCard[]
-}
-
-model UserTacticCard {
-  id           String @id @default(cuid())
-  userId       String
-  tacticCardId String
-  quantity     Int    @default(1)
-
-  user       User       @relation(fields: [userId], references: [id])
-  tacticCard TacticCard @relation(fields: [tacticCardId], references: [id])
-
-  @@unique([userId, tacticCardId])
-}
-
-// ── Interaktive Kämpfe (Zug-für-Zug, Spieler steuert Ziel/Ultimate-Aktivierung) ─
+// ── Interaktive Kämpfe (OMA Gems, Zug für Zug auf dem Match-3-Brett) ──────────
 // Ein LiveBattle hält den seriell fortsetzbaren Kampf-Zustand (siehe
-// lib/battle-engine/interactive.ts) zwischen den einzelnen Zug-Requests. Für
-// PVE ist playerBId null (Team B = KI/NPC), bei PVP steuern beide Spieler
-// ihre eigene Seite. Nach Abschluss wird das Ergebnis wie bisher in ein
-// normales Battle (+ ggf. BattleChallenge) übernommen und LiveBattle bleibt
-// nur noch als Verlaufs-Datensatz stehen (status="finished").
+// lib/battle-engine/interactive.ts) zwischen den einzelnen Zug-Requests. Team B
+// ist immer KI-gesteuert (playerBId null; gefüllt nur bei Alt-Kämpfen aus dem
+// entfernten PvP). Nach Abschluss wird das Ergebnis in ein normales Battle
+// übernommen, LiveBattle bleibt als Verlaufs-Datensatz stehen (status="finished").
 model LiveBattle {
   id             String   @id @default(cuid())
-  // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVE_PUZZLE_EASY" | "PVE_PUZZLE_MEDIUM" | "PVE_PUZZLE_HARD"
-  // | "PVP_DUELS_LIVE" | "PVP_GEMS" | "CAMPAIGN_<levelId>" (campaign-levels.ts)
-  // | "TOURNAMENT_<gemsTournamentId>" (siehe GemsTournament unten)
-  // "PVP_CHALLENGE"/"PVP_MATCHMAKING" sind der abgelöste alte sequentielle Duell-Modus —
-  // nur noch für bereits laufende/abgeschlossene Alt-Kämpfe relevant, wird nicht mehr neu vergeben.
+  // "CAMPAIGN_<levelId>" (campaign-levels.ts / endless-levels.ts) | "TOURNAMENT_<gemsTournamentId>"
+  // (siehe GemsTournament unten). Alt-Kämpfe können noch Modi der entfernten Spielarten tragen
+  // (PVE_*, PVP_*), diese lassen sich nicht mehr öffnen.
   mode           String
   playerAId      String
   playerBId      String? // null = Team B ist NPC/KI-gesteuert
@@ -2630,42 +2118,6 @@ model UserCampaignProgress {
   @@index([userId])
 }
 
-// ── Battle-Cards-Tutorial ────────────────────────────────────────────────
-// Startet, sobald ein User sein Start-Pack wählt (siehe grantStarterPick in
-// starter-pick.ts) — nicht rückwirkend für User, die ihr Start-Pack schon
-// vor Einführung des Tutorials gewählt hatten. Ein Saison-1-Reset (siehe
-// resetAllCardOwnership) zwingt User zurück in StarterPickFlow, was dieses
-// Tutorial automatisch neu startet (grantStarterPick setzt alle Felder
-// zurück auf null, siehe tutorial.ts: startOrResetTutorial).
-model UserTutorialProgress {
-  id                        String    @id @default(cuid())
-  userId                    String    @unique
-  npcBattleCompletedAt      DateTime? // Schritt 1: NPC-Kampf (Einfach) gespielt — +200 Münzen, Community-Pack
-  communityCardCustomizedAt DateTime? // Schritt 2: eigene Community-Karte bearbeitet — +500 Münzen
-  campaignLevel1CompletedAt DateTime? // Schritt 3: Kampagne Kapitel 1, Level 1 gewonnen — Premium-Pack
-  completedAt               DateTime? // alle Schritte erledigt
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ── Battle-Cards-Matchmaking ("Zufallsgegner suchen") ───────────────────────
-// Ein User legt sich per Warteschlangen-Eintrag rein; der nächste, der ebenfalls
-// beitritt, matched sich sofort gegen den ältesten wartenden Eintrag — es startet
-// direkt ein interaktiver LiveBattle (siehe oben), beide steuern ihre Seite selbst.
-// matchedChallengeId wird auf dem Eintrag des zuerst Wartenden gesetzt, damit
-// dessen Poll-Request den LiveBattle findet — der Eintrag wird danach von diesem
-// Poll konsumiert (gelöscht).
-model BattleQueueEntry {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  createdAt          DateTime @default(now())
-  matchedChallengeId String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 /// Protokoll aller Admin-/Moderator-Aktionen in den Community-Jobs (Wer, Was, Wann, Grund).
 model CommunityJobAuditLog {
   id           String   @id @default(cuid())
@@ -2713,30 +2165,6 @@ model PromotionRequest {
   @@index([status, createdAt])
   @@index([trainingSessionId])
   @@index([requesterId])
-}
-
-/// OMA Quest: Ehrentitel im Münzen-Laden — vom Admin pflegbar (anlegen, bearbeiten, entfernen). Der Titel-Text (`name`) wird beim Charakter gespeichert.
-model DndTitleDef {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  icon      String   @default("🏅")
-  desc      String   @default("")
-  price     Int      @default(150)
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-}
-
-/// OMA Quest: Saison-Event (Halloween, Weihnachten) — Zeitfenster, vom Admin angelegt. Look, Monster und Quests kommen aus dem Code (season-events.ts).
-model DndSeasonEvent {
-  id        String   @id @default(cuid())
-  key       String
-  startsAt  DateTime
-  endsAt    DateTime
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  @@index([startsAt, endsAt])
 }
 
 // ── Ergebnis-Meldungen mit Screenshot-Nachweis ───────────────────────────────

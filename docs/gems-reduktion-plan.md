@@ -99,12 +99,22 @@ gewinnt Level 1–5 immer, danach fällt die Siegquote gleichmäßig von 90 % (e
 - Kampagnen-Karte: Abschnitt „Endlos-Turm“ mit den letzten 3 geschafften, der nächsten und 2
   gesperrten Vorschau-Stufen
 
-**4. Datenbank aufräumen** (erst nach einem `pg_dump`)
-- Tabellen: `Dnd*`, `DuelDeck`, `TacticCard`, `UserTacticCard`, `BattleChallenge`, `BattleQueueEntry`,
-  `UserTutorialProgress`
-- `Card`: alle `dnd*`-/Hero-Felder, `cardUnlocks`; `UserCard`: `level`, `duplicates`
-- `User`: `elo*`, `battleWinStreak`, `battleBestWinStreak`
-- Enum `CardPackSource`: `GEMS_PVP_CHEST`, `QUEST_MILESTONE`, `TUTORIAL`
+**4. Datenbank aufräumen** — vorbereitet, Ausführung durch das Team
+- `prisma/schema.prisma` bereinigt: alle `Dnd*`-Modelle, `DuelDeck`, `TacticCard`, `UserTacticCard`,
+  `BattleChallenge`, `BattleQueueEntry`, `UserTutorialProgress`; an `Card` alle `dnd*`-/Hero-/Reise-Felder
+  und `cardUnlocks`; an `UserCard` `level`/`duplicates`; an `User` `elo*` und die Sieges-Serie
+- Passendes SQL: `prisma/manual-sql/drop_oma_quest_duels_levels.sql` (eine Transaktion, idempotent,
+  bricht ab, falls das Umstellungs-Skript noch nicht gelaufen ist). Gegen `prisma migrate diff`
+  geprüft: entfernt exakt dieselben Objekte wie das Schema
+- Bleibt bewusst: Enum-Werte `GEMS_PVP_CHEST`/`QUEST_MILESTONE`/`TUTORIAL` (alte Packs) und
+  `LiveBattle.playerBId` (Alt-Kämpfe)
+
+Reihenfolge — der Production-Build bricht ab, solange die DB noch Daten in den entfernten
+Spalten hat (`scripts/db-push.mjs` läuft ohne `--accept-data-loss`):
+1. Sicherung: `pg_dump` der Produktions-DB
+2. `npx tsx scripts/convert-card-levels.ts` (Trockenlauf), dann mit `--apply`
+3. `drop_oma_quest_duels_levels.sql` im Supabase SQL-Editor ausführen
+4. Phase 4 committen und deployen
 
 ## Geklärte Punkte
 
