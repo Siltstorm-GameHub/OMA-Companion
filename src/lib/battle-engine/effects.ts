@@ -30,6 +30,9 @@ export interface EffectContext {
    *  Match-3-Match (siehe applyBoardRage in interactive.ts) — wird 1:1 in die
    *  damage/heal-Log-Einträge übernommen, damit die UI ihn anzeigen kann. */
   matchBonusPercent?: number;
+  /** Zusätzlicher Schaden je Ziel als Anteil seiner maximalen Leben (Spieler-Ultimates, siehe
+   *  PLAYER_ULTIMATE_MAX_HP_SHARE). */
+  targetMaxHpShare?: number;
 }
 
 /** Liest den Wert für die aktuelle Kartenstufe aus einem valuePerLevel-Array (1-indiziert, geclamped). */
@@ -76,7 +79,8 @@ export function executeEffect(effect: Effect, level: number, ctx: EffectContext)
         const effectiveAttack = ctx.actor.attack + value;
         const roll = rollDamage(effectiveAttack, target.defense, ctx.rng, ctx.suddenDeathMultiplier);
         const isCrit = (effect.canCrit ?? true) && roll.isCrit;
-        applyDamageToUnit(target, roll.amount, isCrit, ctx);
+        const bonus = ctx.targetMaxHpShare ? Math.round(target.maxHp * ctx.targetMaxHpShare) : 0;
+        applyDamageToUnit(target, roll.amount + bonus, isCrit, ctx);
       }
       break;
     }

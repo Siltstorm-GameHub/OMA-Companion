@@ -2,16 +2,23 @@
 // Auto-Startpaket — Einstieg in OMA Gems ohne Helden-Einrichtung
 // ============================================
 // Ersetzt Helden-Setup + Start-Pack-Auswahl: Wer /gems ohne Lineup öffnet, bekommt automatisch ein
-// spielbares 5er-Lineup. Vorhandene Karten werden zuerst genutzt (eigene Community-Karte vorn, dann
-// je Klasse mindestens eine Karte), fehlende Plätze füllen zufällige Standard-Karten auf, die der
-// Spieler dabei neu erhält. Idempotent: Sobald ein Lineup existiert, passiert nichts mehr.
+// spielbares 5er-Lineup in der Verteilung STARTER_CLASS_MIX (1 Tank, 2 Damage Dealer, 2 Supports).
+// Vorhandene Karten werden zuerst genutzt (eigene Community-Karte vorn), fehlende Plätze füllen
+// zufällige Standard-Karten der noch fehlenden Klassen auf, die der Spieler dabei neu erhält.
+// Idempotent: Sobald ein Lineup existiert, passiert nichts mehr.
 
 import type { CardClass, CardRarity } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 import { LINEUP_SIZE } from "./lineup";
 
-const CLASSES: CardClass[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
+/** Wunsch-Verteilung des Start-Lineups — zwei Damage Dealer, damit die ersten Kämpfe nicht
+ *  zäh werden. Auch Grundlage des Balance-Simulators (scripts/simulate-campaign-balance.ts). */
+export const STARTER_CLASS_MIX: [CardClass, number][] = [
+  ["TANK", 1],
+  ["DAMAGE_DEALER", 2],
+  ["SUPPORT", 2],
+];
 
 export interface StarterOwnedCard {
   cardId: string;
@@ -69,16 +76,18 @@ export function planStarterLineup(
     if (own) take(own.cardId, own.class, false);
   }
 
-  // Jede Klasse mindestens einmal — erst aus dem Besitz, sonst aus dem Pool.
-  for (const cls of CLASSES) {
-    if (lineup.length >= LINEUP_SIZE || lineup.some((c) => c.class === cls)) continue;
-    const fromOwned = ownedSorted.find((o) => o.class === cls && !taken.has(o.cardId));
-    if (fromOwned) {
-      take(fromOwned.cardId, cls, false);
-      continue;
+  // Wunsch-Verteilung auffüllen — je Klasse erst aus dem Besitz, sonst aus dem Pool.
+  for (const [cls, wanted] of STARTER_CLASS_MIX) {
+    while (lineup.length < LINEUP_SIZE && lineup.filter((c) => c.class === cls).length < wanted) {
+      const fromOwned = ownedSorted.find((o) => o.class === cls && !taken.has(o.cardId));
+      if (fromOwned) {
+        take(fromOwned.cardId, cls, false);
+        continue;
+      }
+      const fromPool = pool.find((c) => c.class === cls && !taken.has(c.id));
+      if (!fromPool) break;
+      take(fromPool.id, cls, true);
     }
-    const fromPool = pool.find((c) => c.class === cls && !taken.has(c.id));
-    if (fromPool) take(fromPool.id, cls, true);
   }
 
   for (const o of ownedSorted) {

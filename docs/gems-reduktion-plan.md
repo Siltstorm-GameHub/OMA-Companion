@@ -162,7 +162,7 @@ Münzbudget: rund 1000 Münzen pro Woche. Umsetzung als **Tageslimit von 150 Mü
 | Quelle | Münzen |
 |---|---|
 | Erster Sieg des Tages | 20 + 5 je Serientag (Serie 1–7 → 25–55) |
-| Neuer Stern im Kapitel (Level 1–12) | 20 je Stern (vorher 100) |
+| Neuer Stern im Kapitel (Level 1–12) | 20 je Stern (vorher 100), außerhalb des Limits (einmalig max. 720) |
 | Neue Endlos-Stufe | 10, je 10 Stufen über 13 hinaus +2 |
 | Tages-Herausforderung gewonnen (einmal am Tag) | 40 |
 | Turmwächter erstmals besiegt (Stufe 20, 30, …) | ein Standard-Pack, außerhalb des Limits |
@@ -190,6 +190,29 @@ Umgesetzt in: `lib/gems/daily-rules.ts` (Zahlen, Serie, Tageslimit), `daily.ts` 
 `POST /api/gems/daily-challenge`. Die Tages-Herausforderung öffnet nach Level 6.
 Balance (Simulator, automatischer Spieler): Wächter-Stufe 20 liegt bei rund 50 % Siegquote, die
 Stufen davor bei 70–95 % — eine spürbare Hürde, keine Wand.
+
+**8. Spielerlebnis nach Playtest** — erledigt
+Befunde aus einem Testdurchlauf als neuer Spieler (Handy): Level 1–2 in 1–2 Zügen vorbei, ab Level 3
+töteten schnelle Gegner zwei Helden, bevor man ziehen konnte; Tageslimit nach drei Minuten erreicht;
+keine Einführung; schwache Ultimates; überlappende Plaketten; langer Hub.
+- Engine: In Runde 1 zieht immer der Spieler zuerst (`playerFirstInOpeningRound`). Mindestschaden
+  5 % des Angriffs. Spieler-Ultimates treffen zusätzlich mit 10 % der maximalen Leben des Ziels.
+- Kapitel neu kalibriert (`scripts/simulate-campaign-balance.ts --calibrate`): Angriff, Leben und
+  Verteidigung getrennt (`attackMultiplier`, `defenseMultiplier`). Ein Gegnertreffer nimmt anfangs
+  12 % der Leben eines Helden, steigt sanft an und ist erst ab Level 8 hart. Kämpfe dauern 3–10 Züge.
+  Siegquote des Bots: 100 % bis Level 6, danach fallend auf etwa 70 %.
+- Endlos-Turm: Leben/Verteidigung und Angriff getrennt (`ENDLESS_BASE_MULTIPLIER` 1,4,
+  `ENDLESS_ATTACK_BASE_MULTIPLIER` 1,2). Ab Stufe 22 ernst, um Stufe 34 die Grenze für den Bot.
+- Startpaket: 1 Tank, 2 Damage Dealer, 2 Supports (`STARTER_CLASS_MIX`).
+- Kapitel-Sterne zählen nicht ins Tageslimit.
+- Kampf: geführte Hinweise in Level 1–2 (Zug-Vorschlag sofort, dann Angriffs-Zähler, Spalten-Zielen,
+  Ultimate), Stufenname oben, Gegner direkt über dem Brett und größer bei bis zu drei Gegnern, nur
+  noch eine Plakette je Heldenkarte.
+- Hub: Tages-Herausforderung und Wochen-Regel erst ab Level 6, Turmwächter erst im Turm. Die
+  Kapitel-Karte zeigt nur fünf Level um das aktuelle (alle per Knopf), nach dem Kapitel eine Zeile.
+
+Offen aus dem Playtest: Wartezeit pro Zug (6–13 s Animation), Spezialstein antippen beendet den Zug
+ohne Hinweis, wenig Sammelziel (13 Karten).
 
 ## Geklärte Punkte
 

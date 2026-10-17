@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { BellOff, ChevronLeft, Loader2, Swords, Volume2 } from "@/components/icons";
+import { BellOff, ChevronLeft, Lightbulb, Loader2, Swords, Volume2, X } from "@/components/icons";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
@@ -126,6 +126,22 @@ interface LiveSnapshot {
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
   /** Kampagne und Tages-Herausforderung: Münzen, Tipp, Nochmal/Weiter (siehe GemsResultScreen). */
   gemsResult: GemsResultDetails | null;
+  title: string | null;
+}
+
+/** Level mit geführter Einführung (siehe BattleCoach). */
+const TUTORIAL_MODES = new Set(["CAMPAIGN_lvl-01", "CAMPAIGN_lvl-02"]);
+
+/** Kurzer Hinweis für die ersten Kämpfe — erklärt immer nur das, was gerade passiert. */
+function coachText(input: { movesMade: number; ultimateReady: boolean; countdownShown: boolean }): string | null {
+  if (input.ultimateReady) return "Ultimate bereit! Tippe auf den leuchtenden Helden — er löst seine Spezialattacke sofort aus.";
+  if (input.movesMade === 0)
+    return "Tausche zwei benachbarte Steine, sodass mindestens 3 gleiche in einer Reihe liegen. Jede Steinsorte lässt eine Helden-Klasse angreifen — der leuchtende Vorschlag zeigt dir einen Zug.";
+  if (input.movesMade === 1 && input.countdownShown)
+    return "Die Zahl mit den Schwertern am Gegner zeigt, nach wie vielen deiner Züge er angreift. Bei 1 schlägt er gleich zu.";
+  if (input.movesMade <= 3)
+    return "Treffer gehen an den Gegner über der Spalte, in der die Steine verschwinden — so zielst du auf den gefährlichsten Gegner.";
+  return null;
 }
 
 function hpBarColor(pct: number): string {
@@ -292,7 +308,10 @@ function UnitCard({
   isVictory,
   onUltimateClick,
   cardRef,
+  large,
 }: {
+  /** Größere Karte — für Gegner, wenn höchstens drei auf dem Feld stehen. */
+  large?: boolean;
   unit: LiveUnit;
   isActing: boolean;
   /** Rage-Balken voll — Karte ist per Klick sofort auslösbar
@@ -357,7 +376,7 @@ function UnitCard({
       ref={cardRef}
       type="button"
       onClick={handleClick}
-      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit || impactFlash ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
+      className={`${large ? "w-24 sm:w-32" : "w-20 sm:w-28"} shrink-0 text-left relative ${isHit || impactFlash ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
       style={{
         opacity: unit.isAlive ? 1 : 0.35,
         filter: unit.isAlive ? (impactFlash ? "brightness(1.7) saturate(1.3)" : "none") : "grayscale(1)",
@@ -463,19 +482,19 @@ function UnitCard({
           ))}
         </div>
       )}
-      {isActing && (
-        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
-          Am Zug
-        </span>
-      )}
-      {canFireUltimate && !isActing && (
-        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-400 text-black whitespace-nowrap animate-pulse">
-          Ultimate bereit
-        </span>
-      )}
-      {isAttacking && (
-        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap">
-          Angriff!
+      {/* Höchstens EINE Plakette über der Karte — vorher lagen „Angriff!“, „Ultimate bereit“ und
+          „Am Zug“ übereinander und waren nicht mehr lesbar. Vorrang: Angriff, Ultimate, Am Zug. */}
+      {(isAttacking || canFireUltimate || isActing) && (
+        <span
+          className={`absolute -top-1.5 left-1/2 -translate-x-1/2 z-20 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+            isAttacking
+              ? "bg-orange-500 text-white"
+              : canFireUltimate
+                ? "bg-amber-400 text-black animate-pulse"
+                : "bg-teal-500 text-black"
+          }`}
+        >
+          {isAttacking ? "Angriff!" : canFireUltimate ? "Ultimate bereit" : "Am Zug"}
         </span>
       )}
 
@@ -1271,6 +1290,19 @@ function LiveBattleBody({
     if (ultimateReadyFor(unit)) submitUltimate(unit.instanceId);
   }
 
+  const isTutorial = TUTORIAL_MODES.has(snapshot.mode);
+  const [movesMade, setMovesMade] = useState(0);
+  const [coachDismissed, setCoachDismissed] = useState(false);
+  const coach =
+    isTutorial && !coachDismissed && snapshot.status !== "finished"
+      ? coachText({
+          movesMade,
+          ultimateReady: unitsByTeam(myTeam ?? "A").some((u) => ultimateReadyFor(u)),
+          countdownShown: enemyCountdown.size > 0,
+        })
+      : null;
+  const enemies = unitsByTeam(opponentTeam);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
       <GemBeamOverlay beams={beams} />
@@ -1296,11 +1328,33 @@ function LiveBattleBody({
       </AnimatePresence>
       {/* Kampffeld — Gegner oben, das Brett in der Mitte (siehe Entscheidungs-Panel),
           die eigenen Helden UNTER dem Brett. */}
-      <div className="flex-1 flex flex-col gap-3 min-h-0 py-2 justify-center">
+      <div className="flex-1 flex flex-col gap-3 min-h-0 py-2 justify-end">
+        {(snapshot.title || coach) && (
+          <div className="flex-1 min-h-0 flex flex-col justify-center items-center gap-2 text-center px-2">
+            {snapshot.title && (
+              <p className="font-display text-sm sm:text-base font-bold text-white/90 drop-shadow">{snapshot.title}</p>
+            )}
+            {coach && (
+              <div className="glass-heavy rounded-xl px-3 py-2.5 max-w-sm text-left flex items-start gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-200 leading-snug flex-1">{coach}</p>
+                <button
+                  type="button"
+                  onClick={() => setCoachDismissed(true)}
+                  className="text-gray-500 hover:text-white shrink-0"
+                  aria-label="Hinweise ausblenden"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <SlotRow>
-          {unitsByTeam(opponentTeam).map((u) => (
+          {enemies.map((u) => (
             <UnitCard
               key={u.instanceId}
+              large={enemies.length <= 3}
               unit={u}
               isActing={snapshot.awaiting?.unitId === u.instanceId}
               effects={effectsFor(u)}
@@ -1345,7 +1399,9 @@ function LiveBattleBody({
                 onConfirm={(swaps, meta) => {
                   handleMoveStart(meta.columns);
                   submitMove(swaps);
+                  setMovesMade((n) => n + 1);
                 }}
+                hintDelayMs={isTutorial && movesMade === 0 ? 400 : undefined}
                 onAnimationEnd={handleAnimationEnd}
                 onProgress={saveBoardProgress}
                 onGemsDestroyed={handleGemsDestroyed}

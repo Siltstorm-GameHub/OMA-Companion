@@ -18,7 +18,9 @@ export { CAMPAIGN_LEVELS, getCampaignLevel };
 
 
 export function buildCampaignEnemyTeam(levelDef: CampaignLevelDef): BattleUnitDefinition[] {
-  return levelDef.monsters.map((m) => instantiateMonster(m, levelDef.level, levelDef.statMultiplier));
+  return levelDef.monsters.map((m) =>
+    instantiateMonster(m, levelDef.level, levelDef.statMultiplier, levelDef.attackMultiplier, levelDef.defenseMultiplier)
+  );
 }
 
 /** 1-3 Sterne aus der am Kampfende verbliebenen Team-HP (Team A, der Spieler)

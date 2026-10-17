@@ -7,7 +7,9 @@
 //
 // Schwierigkeit: Monster immer auf Stufe 5, die Basiswerte wachsen je Stufe um
 // ENDLESS_GROWTH (exponentiell) — irgendwann ist eine Stufe praktisch nicht mehr zu
-// schaffen, das ist die natürliche Grenze des Turms. Damit die zufällige Auswahl die
+// schaffen, das ist die natürliche Grenze des Turms. Leben/Verteidigung und Angriff haben
+// getrennte Startwerte (ENDLESS_BASE_MULTIPLIER / ENDLESS_ATTACK_BASE_MULTIPLIER): mehr
+// Leben hält die Kämpfe spannend lang, der flachere Angriff vermeidet Ein-Treffer-Kills. Damit die zufällige Auswahl die
 // Schwierigkeit nicht verzerrt, wird jedes Monster vorab auf dieselbe Stärke normiert
 // (normalizeMonster, Bosse etwas stärker), und jedes Team folgt derselben Rollen-Aufteilung
 // (TEAM_ROLES) — gezogen wird nur, WELCHES Monster eine Rolle füllt.
@@ -38,7 +40,8 @@ import { guardianAbilityFor, isGuardianStage, withGuardianAbility } from "./towe
 /** Erste Endlos-Stufe — direkt nach dem letzten Kampagnen-Level. */
 export const ENDLESS_FIRST_STAGE = 13;
 /** Basis-Multiplikator der ersten Endlos-Stufe und Wachstum je weiterer Stufe. */
-export const ENDLESS_BASE_MULTIPLIER = 1.15;
+export const ENDLESS_BASE_MULTIPLIER = 1.4;
+export const ENDLESS_ATTACK_BASE_MULTIPLIER = 1.2;
 export const ENDLESS_GROWTH = 1.04;
 const ENDLESS_MONSTER_LEVEL = 5;
 const BOSS_EVERY = 5;
@@ -114,8 +117,14 @@ export function normalizeMonster<T extends BaseStats>(m: T, targetPower: number)
   };
 }
 
+/** Multiplikator für Leben und Verteidigung der Monster auf Stufe `stage`. */
 export function endlessStatMultiplier(stage: number): number {
   return ENDLESS_BASE_MULTIPLIER * ENDLESS_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
+}
+
+/** Multiplikator für den Angriff der Monster auf Stufe `stage`. */
+export function endlessAttackMultiplier(stage: number): number {
+  return ENDLESS_ATTACK_BASE_MULTIPLIER * ENDLESS_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
 }
 
 function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterTemplate[] {
@@ -127,9 +136,7 @@ function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterT
   );
 }
 
-function roundedMultiplier(stage: number): number {
-  return Math.round(endlessStatMultiplier(stage) * 100) / 100;
-}
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Erzeugt die Endlos-Stufe `stage` — für dieselbe Nummer immer exakt dieselbe Stufe. */
 export function generateEndlessLevel(stage: number): CampaignLevelDef {
@@ -153,7 +160,8 @@ export function generateEndlessLevel(stage: number): CampaignLevelDef {
         : tagline,
     monsters,
     level: ENDLESS_MONSTER_LEVEL,
-    statMultiplier: roundedMultiplier(stage),
+    statMultiplier: round2(endlessStatMultiplier(stage)),
+    attackMultiplier: round2(endlessAttackMultiplier(stage)),
     isBoss,
     isGuardian,
   };
@@ -173,6 +181,7 @@ export function generateDailyChallengeLevel(dateKey: string): CampaignLevelDef {
     tagline: "Für alle gleich — wer gewinnt mit den meisten Leben in den wenigsten Runden?",
     monsters: rollTeam(rng, 5, false),
     level: ENDLESS_MONSTER_LEVEL,
-    statMultiplier: roundedMultiplier(DAILY_CHALLENGE_STAGE),
+    statMultiplier: round2(endlessStatMultiplier(DAILY_CHALLENGE_STAGE)),
+    attackMultiplier: round2(endlessAttackMultiplier(DAILY_CHALLENGE_STAGE)),
   };
 }

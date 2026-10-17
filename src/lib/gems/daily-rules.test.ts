@@ -82,6 +82,19 @@ describe("OMA Gems: Münzen", () => {
     assert.equal(applyDailyCap([{ label: "x", coins: 10 }], GEMS_DAILY_COIN_CAP).total, 0);
   });
 
+  test("Kapitel-Sterne liegen außerhalb des Limits und belasten es nicht", () => {
+    const result = applyDailyCap(
+      [
+        { label: "Sterne", coins: 60, uncapped: true },
+        { label: "Bonus", coins: 40 },
+      ],
+      GEMS_DAILY_COIN_CAP - 10
+    );
+    assert.deepEqual(result.lines.map((l) => l.coins), [60, 10]);
+    assert.equal(result.total, 70);
+    assert.equal(result.cappedTotal, 10);
+  });
+
   test("eine volle Woche liegt beim Budget von rund 1000 Münzen", () => {
     assert.ok(GEMS_DAILY_COIN_CAP * 7 >= 1000 && GEMS_DAILY_COIN_CAP * 7 <= 1100);
   });

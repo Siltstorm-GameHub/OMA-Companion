@@ -1,11 +1,12 @@
 // ============================================
 // Battle-Engine — Schadensformel
 // ============================================
-// PLATZHALTER (siehe PROJECT_CONTEXT.md, Offene Punkte #3): Schaden = ATK − DEF×0.5.
+// PLATZHALTER (siehe PROJECT_CONTEXT.md, Offene Punkte #3): Schaden = ATK − DEF×0.5,
+// mindestens MIN_DAMAGE_ATTACK_SHARE des Angriffs.
 // Bewusst isoliert, damit die Formel später ausgetauscht werden kann, ohne
 // die restliche Engine anzufassen.
 
-import { CRIT_CHANCE, CRIT_DAMAGE_MULTIPLIER } from "./constants";
+import { CRIT_CHANCE, CRIT_DAMAGE_MULTIPLIER, MIN_DAMAGE_ATTACK_SHARE } from "./constants";
 import type { Rng } from "./rng";
 
 export interface DamageRoll {
@@ -23,7 +24,7 @@ export function rollDamage(
   rng: Rng,
   suddenDeathMultiplier = 1
 ): DamageRoll {
-  const base = Math.max(1, attack - defense * 0.5);
+  const base = Math.max(1, attack * MIN_DAMAGE_ATTACK_SHARE, attack - defense * 0.5);
   const isCrit = rng() < CRIT_CHANCE;
   const critMultiplier = isCrit ? CRIT_DAMAGE_MULTIPLIER : 1;
   const amount = Math.round(base * critMultiplier * suddenDeathMultiplier);

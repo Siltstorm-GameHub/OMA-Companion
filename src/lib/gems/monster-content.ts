@@ -35,13 +35,22 @@ export function monsterImagePath(slug: string): string {
  *  Skill-Werte skalieren weiterhin ausschließlich über `level` (curve()), da
  *  sie ohnehin auf den — bereits multiplizierten — Angriffswert aufaddiert
  *  werden (siehe damage.ts). */
-export function instantiateMonster(template: MonsterTemplate, level: number, statMultiplier = 1): BattleUnitDefinition {
+export function instantiateMonster(
+  template: MonsterTemplate,
+  level: number,
+  statMultiplier = 1,
+  /** Getrennter Angriffs-Multiplikator (Standard: wie statMultiplier) — das Kapitel hält
+   *  Gegnertreffer damit bewusst flacher als ihre Leben, siehe campaign-levels.ts. */
+  attackMultiplier = statMultiplier,
+  /** Getrennter Verteidigungs-Multiplikator (Standard: wie statMultiplier). */
+  defenseMultiplier = statMultiplier
+): BattleUnitDefinition {
   return {
     ...template,
     level,
     baseHp: Math.round(template.baseHp * statMultiplier),
-    baseAttack: Math.round(template.baseAttack * statMultiplier),
-    baseDefense: Math.round(template.baseDefense * statMultiplier),
+    baseAttack: Math.round(template.baseAttack * attackMultiplier),
+    baseDefense: Math.round(template.baseDefense * defenseMultiplier),
     avatarBadgeUrl: null,
   };
 }

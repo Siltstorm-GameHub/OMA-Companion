@@ -21,6 +21,12 @@ describe("Auto-Startpaket", () => {
     assert.deepEqual(new Set(plan.lineupCardIds.map(classOf)), new Set(["TANK", "DAMAGE_DEALER", "SUPPORT"]));
   });
 
+  test("ohne Besitz: 1 Tank, 2 Damage Dealer, 2 Supports", () => {
+    const plan = planStarterLineup([], null, POOL);
+    const count = (cls: string) => plan.lineupCardIds.filter((id) => classOf(id) === cls).length;
+    assert.deepEqual([count("TANK"), count("DAMAGE_DEALER"), count("SUPPORT")], [1, 2, 2]);
+  });
+
   test("eigene Community-Karte steht im Lineup und wird nicht neu vergeben", () => {
     const plan = planStarterLineup([{ cardId: "own", class: "SUPPORT", rarity: "COMMUNITY" }], "own", POOL);
     assert.equal(plan.lineupCardIds[0], "own");

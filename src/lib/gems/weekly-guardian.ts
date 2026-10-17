@@ -11,7 +11,13 @@ import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
 import { resolveAvatarsForCards } from "./card-view";
 import { resolveAvatarBadgeUrl, resolveCardImageUrl } from "./resolve-image";
-import { ENDLESS_BOSS_POWER, ENDLESS_MONSTER_LEVEL, endlessStatMultiplier, normalizeMonster } from "./endless-levels";
+import {
+  ENDLESS_BOSS_POWER,
+  ENDLESS_MONSTER_LEVEL,
+  endlessAttackMultiplier,
+  endlessStatMultiplier,
+  normalizeMonster,
+} from "./endless-levels";
 import { withGuardianAbility } from "./tower-rules";
 
 async function weeklyGuardianCard(week: number) {
@@ -38,12 +44,13 @@ export async function buildWeeklyGuardian(week: number, stage: number): Promise<
   );
   const normalized = normalizeMonster(base, ENDLESS_BOSS_POWER);
   const multiplier = Math.round(endlessStatMultiplier(stage) * 100) / 100;
+  const attackMultiplier = Math.round(endlessAttackMultiplier(stage) * 100) / 100;
   return withGuardianAbility(
     {
       ...normalized,
       name: `Wächter ${card.name}`,
       baseHp: Math.round(normalized.baseHp * multiplier),
-      baseAttack: Math.round(normalized.baseAttack * multiplier),
+      baseAttack: Math.round(normalized.baseAttack * attackMultiplier),
       baseDefense: Math.round(normalized.baseDefense * multiplier),
     },
     stage

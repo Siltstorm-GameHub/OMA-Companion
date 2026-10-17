@@ -26,6 +26,7 @@ import {
   BOARD_COLS,
   BOARD_MOVE_BUDGET_PER_TURN,
   MAX_BOARD_RAGE_PER_TURN,
+  PLAYER_ULTIMATE_MAX_HP_SHARE,
   RAGE_PER_ACTION,
   RAGE_PER_ROUND_END,
   ROUND_LIMIT,
@@ -263,6 +264,16 @@ function applyBoardRage(
   }
 }
 
+/** In der ersten Runde macht immer der Spieler den ersten Zug: sein schnellster Held rückt an
+ *  den Anfang, alle anderen behalten ihre Reihenfolge. Sonst könnten schnelle Gegner Helden
+ *  ausschalten, bevor der Spieler das Brett überhaupt berührt hat. */
+export function playerFirstInOpeningRound<T extends { teamId: TeamId }>(order: T[], round: number): T[] {
+  if (round !== 1) return order;
+  const index = order.findIndex((u) => u.teamId === PLAYER_TEAM);
+  if (index <= 0) return order;
+  return [order[index], ...order.slice(0, index), ...order.slice(index + 1)];
+}
+
 /** Führt genau eine atomare Schrittigkeit aus (ein Sub-Schritt der Kampfschleife
  *  aus runBattle) und mutiert `state`/die Unit-Objekte in `allUnits` direkt. */
 function stepOnce(
@@ -345,7 +356,7 @@ function stepOnce(
     log.push({ type: "roundStart", round: state.round });
     const suddenDeathRounds = Math.max(0, state.round - state.roundLimit);
     if (suddenDeathRounds === 1) log.push({ type: "suddenDeathStart", round: state.round });
-    state.order = computeInitiativeOrder(allUnits).map((u) => u.instanceId);
+    state.order = playerFirstInOpeningRound(computeInitiativeOrder(allUnits), state.round).map((u) => u.instanceId);
     state.orderIndex = 0;
     return "continue";
   }
@@ -504,7 +515,18 @@ export function applyUltimateInterrupt(
   const suddenDeathRounds = Math.max(0, state.round - state.roundLimit);
   const suddenDeathMultiplier = 1 + suddenDeathRounds * SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP;
 
-  performAction(caster, "ultimate", allUnits, rng, state.round, state.log, suddenDeathMultiplier, targetId);
+  performAction(
+    caster,
+    "ultimate",
+    allUnits,
+    rng,
+    state.round,
+    state.log,
+    suddenDeathMultiplier,
+    targetId,
+    undefined,
+    PLAYER_ULTIMATE_MAX_HP_SHARE
+  );
   state.rngState = rng.getState();
 
   state.winner = checkWinner(state.unitsA, state.unitsB);

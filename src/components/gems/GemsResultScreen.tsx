@@ -25,7 +25,7 @@ export type GemsReward =
 /** Spiegel von GemsBattleResult (lib/gems/live-battle.ts) für den Client. */
 export interface GemsResultDetails {
   rewards: {
-    lines: { label: string; requested: number; coins: number }[];
+    lines: { label: string; requested: number; coins: number; uncapped?: boolean }[];
     coinsTotal: number;
     capReached: boolean;
     earnedToday: number;

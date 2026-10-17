@@ -47,7 +47,14 @@ import {
   recordCampaignResult,
 } from "@/lib/gems/campaign";
 import { generateDailyChallengeLevel, parseEndlessStage } from "@/lib/gems/endless-levels";
-import { battleScore, berlinDateKey, CHAPTER_COINS_PER_STAR, endlessStageCoins, weekIndex } from "@/lib/gems/daily-rules";
+import {
+  battleScore,
+  berlinDateKey,
+  CHAPTER_COINS_PER_STAR,
+  endlessStageCoins,
+  weekIndex,
+  type RewardRequest,
+} from "@/lib/gems/daily-rules";
 import { grantGemsRewards, type GemsRewardSummary } from "@/lib/gems/daily";
 import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip, weeklyModifierFor } from "@/lib/gems/tower-rules";
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
@@ -146,6 +153,8 @@ export interface LiveBattleSnapshot {
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
   /** Kampagne und Tages-Herausforderung: Münzen, Tipp, Nochmal/Weiter (siehe GemsResultScreen). */
   gemsResult: GemsBattleResult | null;
+  /** Name der Stufe für die Kopfzeile im Kampf, z.B. „Ping-Trouble-Pass“. */
+  title: string | null;
 }
 
 export interface GemsBattleResult {
@@ -182,6 +191,12 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     teCharacter: u.def.teCharacter ?? null,
     statModifiers: u.statModifiers,
   };
+}
+
+function battleTitle(mode: string): string | null {
+  if (mode.startsWith(DAILY_MODE_PREFIX)) return "Tages-Herausforderung";
+  if (mode.startsWith(CAMPAIGN_MODE_PREFIX)) return getCampaignLevel(mode.slice(CAMPAIGN_MODE_PREFIX.length))?.name ?? null;
+  return null;
 }
 
 async function buildSnapshot(
@@ -224,6 +239,7 @@ async function buildSnapshot(
     winner: state.winner,
     campaignResult,
     gemsResult,
+    title: battleTitle(live.mode),
   };
 }
 
@@ -318,11 +334,12 @@ async function settleGemsBattle(
     const stars = computeStars(state);
     const { starsGained, firstClear } = await recordCampaignResult(userId, levelId, stars);
     const levelDef = getCampaignLevel(levelId);
-    const requests: { label: string; coins: number }[] = [];
+    const requests: RewardRequest[] = [];
     if (stage === null && starsGained > 0) {
       requests.push({
         label: `${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} · ${levelDef?.name ?? levelId}`,
         coins: starsGained * CHAPTER_COINS_PER_STAR,
+        uncapped: true,
       });
     }
     if (stage !== null && firstClear) {

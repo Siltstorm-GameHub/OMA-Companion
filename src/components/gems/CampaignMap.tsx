@@ -35,6 +35,9 @@ export interface CampaignBoardLevel {
   section: "chapter" | "endless";
 }
 
+/** So viele Kapitel-Level zeigt die Karte auf einmal (aktuelles Level, eins davor, drei danach). */
+const CHAPTER_WINDOW = 5;
+
 // Leichter Zickzack-Versatz je Knoten, für das "gewundene Pfad"-Gefühl einer
 // Kampagnen-Karte — rein optisch, keine funktionale Bedeutung.
 const ZIGZAG_OFFSETS = [0, 34, 54, 34, 0, -34, -54, -34];
@@ -146,6 +149,7 @@ export default function CampaignMap() {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
+  const [showAllChapter, setShowAllChapter] = useState(false);
 
   async function loadBoard() {
     try {
@@ -210,6 +214,14 @@ export default function CampaignMap() {
   const chapterLevels = levels?.filter((l) => l.section === "chapter") ?? [];
   const endlessLevels = levels?.filter((l) => l.section === "endless") ?? [];
   const bestEndlessStage = endlessLevels.filter((l) => l.completed).reduce((best, l) => Math.max(best, l.order), 0);
+  // Kapitel-Karte kompakt: nur ein Ausschnitt um das aktuelle Level (die 12 Knoten allein waren
+  // mobil fast zwei Bildschirme lang), nach geschafftem Kapitel nur noch eine Zusammenfassung.
+  const chapterDone = chapterLevels.length > 0 && chapterLevels.every((l) => l.completed);
+  const chapterStars = chapterLevels.reduce((sum, l) => sum + l.stars, 0);
+  const currentIndex = Math.max(0, chapterLevels.findIndex((l) => !l.completed));
+  const windowStart = Math.max(0, Math.min(currentIndex - 1, chapterLevels.length - CHAPTER_WINDOW));
+  const visibleChapter = showAllChapter ? chapterLevels : chapterDone ? [] : chapterLevels.slice(windowStart, windowStart + CHAPTER_WINDOW);
+  const hiddenCount = chapterLevels.length - visibleChapter.length;
 
   function renderNodes(nodes: CampaignBoardLevel[]) {
     return nodes.map((level, index) => (
@@ -265,7 +277,24 @@ export default function CampaignMap() {
         </div>
       ) : (
         <>
-          <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(chapterLevels)}</div>
+          {visibleChapter.length > 0 && (
+            <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(visibleChapter)}</div>
+          )}
+          {chapterDone && !showAllChapter && (
+            <p className="glass rounded-2xl px-4 py-3 text-xs text-gray-300 flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" />
+              Kapitel geschafft · {chapterStars} von {chapterLevels.length * 3} Sternen. Fehlende Sterne bringen noch Münzen.
+            </p>
+          )}
+          {(hiddenCount > 0 || showAllChapter) && (
+            <button
+              type="button"
+              onClick={() => setShowAllChapter((v) => !v)}
+              className="w-full text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+            >
+              {showAllChapter ? "Weniger anzeigen" : `Alle ${chapterLevels.length} Level anzeigen`}
+            </button>
+          )}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">

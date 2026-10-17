@@ -157,6 +157,7 @@ export default function BoardMatch3({
   onProgress,
   onGemsDestroyed,
   onAnimationEnd,
+  hintDelayMs = HINT_DELAY_MS,
 }: {
   grid: BoardGrid;
   /** Sonder-Steine (siehe SpecialGemKind) — parallel zu `grid`. */
@@ -197,6 +198,8 @@ export default function BoardMatch3({
    *  schickt daraus je Stein ein Geschoss senkrecht nach oben zum Gegner, der
    *  über dieser Spalte steht (siehe pickEnemyForColumn, handleGemsDestroyed). */
   onGemsDestroyed?: (tiles: { cls: UnitClass; rect: DOMRect; column: number }[]) => void;
+  /** Wartezeit bis zum Zug-Vorschlag — die Einführung (Level 1–2) zeigt ihn sofort. */
+  hintDelayMs?: number;
 }) {
   // Rein lokaler Vorschau-Seed — muss NICHT mit dem serverseitigen rngState
   // übereinstimmen (der ist dem Client bewusst nicht bekannt, siehe Anti-Cheat-
@@ -273,12 +276,12 @@ export default function BoardMatch3({
   // Auswahl oder Sperre setzt den Timer zurück und blendet den Hinweis aus.
   useEffect(() => {
     if (interactionLocked) return;
-    const timer = window.setTimeout(() => setHint(findHintMove(board, specials)), HINT_DELAY_MS);
+    const timer = window.setTimeout(() => setHint(findHintMove(board, specials)), hintDelayMs);
     return () => {
       window.clearTimeout(timer);
       setHint(null);
     };
-  }, [board, specials, interactionLocked, selected]);
+  }, [board, specials, interactionLocked, selected, hintDelayMs]);
 
   async function playSteps(steps: BoardAnimationStep[], startGrid: BoardGrid, startIds: number[]) {
     let curGrid = startGrid;

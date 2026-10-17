@@ -15,6 +15,7 @@ import {
   GEMS_DAILY_COIN_CAP,
   nextStreak,
   type RewardLine,
+  type RewardRequest,
 } from "./daily-rules";
 
 export interface GemsRewardSummary {
@@ -47,7 +48,7 @@ export async function grantGemsRewards(
   userId: string,
   input: {
     won: boolean;
-    requests: { label: string; coins: number }[];
+    requests: RewardRequest[];
     challenge?: { date: string; score: number };
   }
 ): Promise<GemsRewardSummary> {
@@ -55,7 +56,7 @@ export async function grantGemsRewards(
 
   return prisma.$transaction(async (tx) => {
     const stats = await statsRow(tx, userId, today);
-    const requests: { label: string; coins: number }[] = [];
+    const requests: RewardRequest[] = [];
     const statsUpdate: Prisma.GemsDailyStatsUpdateInput = {};
     let streakDays: number | null = null;
 
@@ -88,10 +89,10 @@ export async function grantGemsRewards(
     }
 
     requests.push(...input.requests.filter((r) => r.coins > 0));
-    const { lines, total, capReached } = applyDailyCap(requests, stats.coinsEarned);
+    const { lines, total, cappedTotal, capReached } = applyDailyCap(requests, stats.coinsEarned);
 
     if (total > 0) {
-      statsUpdate.coinsEarned = { increment: total };
+      if (cappedTotal > 0) statsUpdate.coinsEarned = { increment: cappedTotal };
       await tx.user.update({ where: { id: userId }, data: { points: { increment: total } } });
       await tx.pointTransaction.create({
         data: {
@@ -109,7 +110,7 @@ export async function grantGemsRewards(
       lines,
       coinsTotal: total,
       capReached,
-      earnedToday: stats.coinsEarned + total,
+      earnedToday: stats.coinsEarned + cappedTotal,
       cap: GEMS_DAILY_COIN_CAP,
       streakDays,
     };

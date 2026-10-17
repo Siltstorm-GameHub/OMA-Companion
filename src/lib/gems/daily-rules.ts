@@ -2,8 +2,9 @@
 // OMA Gems — Tages- und Wochenregeln (rein, ohne DB)
 // ============================================
 // Münzbudget: rund 1000 Münzen pro Woche aus OMA Gems, umgesetzt als festes Tageslimit
-// (GEMS_DAILY_COIN_CAP × 7 ≈ 1050). Alle Münzquellen zählen ins Limit; Packs für besiegte
-// Turmwächter nicht. Tage und Wochen laufen nach Berliner Zeit (Woche ab Montag).
+// (GEMS_DAILY_COIN_CAP × 7 ≈ 1050). Alle wiederkehrenden Münzquellen zählen ins Limit. Außerhalb
+// liegen die einmaligen Kapitel-Sterne (höchstens 12 × 3 × CHAPTER_COINS_PER_STAR = 720 Münzen),
+// damit neue Spieler das Limit nicht schon in den ersten Minuten erreichen, und Wächter-Packs. Tage und Wochen laufen nach Berliner Zeit (Woche ab Montag).
 // Die DB-Seite (Gutschrift, Serie, Tages-Herausforderung) liegt in daily.ts.
 
 import { fromDatetimeLocalBerlin, getBerlinDateParts } from "@/lib/time";
@@ -85,28 +86,40 @@ export function endlessStageCoins(stage: number): number {
   return ENDLESS_STAGE_BASE_COINS + ENDLESS_STAGE_COINS_PER_TEN * Math.floor(Math.max(0, stage - ENDLESS_FIRST_STAGE) / 10);
 }
 
+export interface RewardRequest {
+  label: string;
+  coins: number;
+  /** Einmalige Belohnung außerhalb des Tageslimits (Kapitel-Sterne). */
+  uncapped?: boolean;
+}
+
 export interface RewardLine {
   label: string;
+  uncapped?: boolean;
   /** Angefragte Münzen vor dem Tageslimit. */
   requested: number;
   /** Tatsächlich gutgeschrieben. */
   coins: number;
 }
 
-/** Verteilt angefragte Münzen der Reihe nach auf das restliche Tageslimit. */
+/** Verteilt angefragte Münzen der Reihe nach auf das restliche Tageslimit. `uncapped`-Zeilen
+ *  werden immer voll gutgeschrieben und belasten das Limit nicht. `cappedTotal` ist der Teil,
+ *  der ins Tageslimit zählt. */
 export function applyDailyCap(
-  requests: { label: string; coins: number }[],
+  requests: RewardRequest[],
   earnedToday: number,
   cap: number = GEMS_DAILY_COIN_CAP
-): { lines: RewardLine[]; total: number; capReached: boolean } {
+): { lines: RewardLine[]; total: number; cappedTotal: number; capReached: boolean } {
   let remaining = Math.max(0, cap - earnedToday);
   const lines = requests.map((r) => {
+    if (r.uncapped) return { label: r.label, requested: r.coins, coins: r.coins, uncapped: true };
     const coins = Math.min(r.coins, remaining);
     remaining -= coins;
     return { label: r.label, requested: r.coins, coins };
   });
   const total = lines.reduce((sum, l) => sum + l.coins, 0);
-  return { lines, total, capReached: remaining === 0 };
+  const cappedTotal = lines.filter((l) => !l.uncapped).reduce((sum, l) => sum + l.coins, 0);
+  return { lines, total, cappedTotal, capReached: remaining === 0 };
 }
 
 /** Punktzahl eines Kampfs für Tages-Herausforderung und Turnier: Sieg zählt am meisten,

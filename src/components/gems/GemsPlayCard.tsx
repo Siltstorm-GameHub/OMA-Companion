@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import CoinIcon from "@/components/CoinIcon";
-import { CalendarDays, Crown, Flame, Lock, Play, Shield, Sparkles, TrendingUp } from "@/components/icons";
+import { CalendarDays, Crown, Flame, Play, Shield, Sparkles, TrendingUp } from "@/components/icons";
 import type { GemsPlayStatus } from "@/lib/gems/play-status";
 import { startGemsBattle, type GemsBattleTarget } from "@/lib/gems/start-battle-client";
 import ErrorNotice from "./ErrorNotice";
@@ -136,62 +136,60 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
 
       {error && <ErrorNotice message={error} />}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="glass rounded-2xl p-4 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-teal-300" />
-            <h3 className="font-display text-sm font-bold text-white">Tages-Herausforderung</h3>
-          </div>
-          {daily.unlocked ? (
-            <>
-              <p className="text-xs text-gray-400">
-                {today.challengeAttempts === 0
-                  ? "Eine Stufe, für alle gleich. Gewinne mit möglichst viel Leben in wenigen Runden."
-                  : `Beste Punktzahl: ${today.challengeBestScore}${daily.rank ? ` · Platz ${daily.rank} von ${daily.players}` : ""}`}
-              </p>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] text-amber-300 flex items-center gap-1">
-                  {today.challengeWon ? "Heute gewonnen" : <>Sieg: +{daily.winCoins} <CoinIcon size={11} /></>}
-                </span>
-                <Button
-                  size="sm"
-                  variant={today.challengeAttempts === 0 ? "primary" : "accent"}
-                  onClick={() => start({ kind: "daily" })}
-                  loading={starting === "daily"}
-                  disabled={starting !== null}
-                >
-                  {today.challengeAttempts === 0 ? "Versuchen" : "Nochmal"}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <p className="flex items-center gap-1.5 text-xs text-gray-500">
-              <Lock className="w-3.5 h-3.5 shrink-0" /> Öffnet, sobald du Level 6 der Kampagne geschafft hast.
+      {/* Für Neue nichts, was noch nicht zählt: Herausforderung und Wochen-Regel erst ab Level 6
+          (dort öffnet die Herausforderung, für die die Wochen-Regel gilt), Turmwächter erst im Turm. */}
+      {daily.unlocked && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="glass rounded-2xl p-4 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-teal-300" />
+              <h3 className="font-display text-sm font-bold text-white">Tages-Herausforderung</h3>
+            </div>
+            <p className="text-xs text-gray-400">
+              {today.challengeAttempts === 0
+                ? "Eine Stufe, für alle gleich. Gewinne mit möglichst viel Leben in wenigen Runden."
+                : `Beste Punktzahl: ${today.challengeBestScore}${daily.rank ? ` · Platz ${daily.rank} von ${daily.players}` : ""}`}
             </p>
-          )}
-          <Link href="/gems/leaderboard?ansicht=heute" className="block text-[11px] font-semibold text-gray-500 hover:text-white">
-            Bestenliste heute →
-          </Link>
-        </div>
-
-        <div className="glass rounded-2xl p-4 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-teal-300" />
-            <h3 className="font-display text-sm font-bold text-white">Diese Woche: {week.modifierName}</h3>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-amber-300 flex items-center gap-1">
+                {today.challengeWon ? "Heute gewonnen" : <>Sieg: +{daily.winCoins} <CoinIcon size={11} /></>}
+              </span>
+              <Button
+                size="sm"
+                variant={today.challengeAttempts === 0 ? "primary" : "accent"}
+                onClick={() => start({ kind: "daily" })}
+                loading={starting === "daily"}
+                disabled={starting !== null}
+              >
+                {today.challengeAttempts === 0 ? "Versuchen" : "Nochmal"}
+              </Button>
+            </div>
+            <Link href="/gems/leaderboard?ansicht=heute" className="block text-[11px] font-semibold text-gray-500 hover:text-white">
+              Bestenliste heute →
+            </Link>
           </div>
-          <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Endlos-Turm und in der Tages-Herausforderung.</p>
-          <p className="text-xs text-gray-300 flex items-start gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-rose-300 shrink-0 mt-px" />
-            <span>
-              Turmwächter auf Stufe {week.guardianStage}
-              {week.guardianName ? `: ${week.guardianName}` : ""} · {week.guardianAbility}. Erster Sieg bringt ein Pack.
-            </span>
-          </p>
-          <Link href="/gems/leaderboard?ansicht=woche" className="block text-[11px] font-semibold text-gray-500 hover:text-white">
-            Rangliste dieser Woche →
-          </Link>
+
+          <div className="glass rounded-2xl p-4 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-teal-300" />
+              <h3 className="font-display text-sm font-bold text-white">Diese Woche: {week.modifierName}</h3>
+            </div>
+            <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Endlos-Turm und in der Tages-Herausforderung.</p>
+            {current.isEndless && (
+              <p className="text-xs text-gray-300 flex items-start gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-rose-300 shrink-0 mt-px" />
+                <span>
+                  Turmwächter auf Stufe {week.guardianStage}
+                  {week.guardianName ? `: ${week.guardianName}` : ""} · {week.guardianAbility}. Erster Sieg bringt ein Pack.
+                </span>
+              </p>
+            )}
+            <Link href="/gems/leaderboard?ansicht=woche" className="block text-[11px] font-semibold text-gray-500 hover:text-white">
+              Rangliste dieser Woche →
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

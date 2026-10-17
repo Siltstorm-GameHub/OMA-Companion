@@ -5,15 +5,16 @@
  *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --calibrate
  *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --endless [--base=1.6] [--growth=1.06] [--to=35]
  *
- * Mit --calibrate wird je Level der statMultiplier gesucht, bei dem der automatische Spieler
- * die Ziel-Siegquote aus TARGET_WIN_RATE erreicht (Bisektion) — Vorschlagswerte zum Eintragen
- * in campaign-levels.ts.
+ * Mit --calibrate wird je Level zuerst der attackMultiplier gesucht, bei dem der härteste
+ * einzelne Gegnertreffer CHAPTER_HIT_TARGET der Leben eines Starthelden nimmt, danach der
+ * statMultiplier (Leben/Verteidigung) für die Ziel-Siegquote aus TARGET_WIN_RATE (jeweils
+ * Bisektion) — Vorschlagswerte zum Eintragen in campaign-levels.ts.
  *
  * Mit --endless werden die Endlos-Stufen ab 13 simuliert (siehe endless-levels.ts); --base und
  * --growth überschreiben testweise die Schwierigkeits-Konstanten.
  *
- * Läuft komplett ohne Datenbank: das Spieler-Team besteht aus 5 der 6 Standard-Karten
- * (prisma/gems-seed-data.ts, je Kampf zufällig gewählt), die Gegner aus den
+ * Läuft komplett ohne Datenbank: das Spieler-Team ist wie das Startpaket aufgebaut (1 Tank,
+ * 2 Damage Dealer, 2 Supports aus prisma/gems-seed-data.ts, je Kampf zufällig), die Gegner aus den
  * Kampagnen-Leveln. Gespielt wird über dieselbe Engine wie im echten Kampf
  * (lib/battle-engine/interactive.ts), mit einem einfachen automatischen Spieler:
  *  - löst jedes bereite Ultimate sofort aus,
@@ -29,7 +30,15 @@ import { BOARD_COLS, BOARD_ROWS, ULTIMATE_SKILL_COST } from "@/lib/battle-engine
 import { resolveBoardSession, type SwapMove } from "@/lib/battle-engine/board-match3";
 import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/gems/campaign-levels";
 import { buildCampaignEnemyTeam, computeStars } from "@/lib/gems/campaign";
-import { ENDLESS_BASE_MULTIPLIER, ENDLESS_FIRST_STAGE, ENDLESS_GROWTH, generateEndlessLevel } from "@/lib/gems/endless-levels";
+import { createTeamState } from "@/lib/battle-engine/stats";
+import { STARTER_CLASS_MIX } from "@/lib/gems/auto-starter";
+import {
+  ENDLESS_ATTACK_BASE_MULTIPLIER,
+  ENDLESS_BASE_MULTIPLIER,
+  ENDLESS_FIRST_STAGE,
+  ENDLESS_GROWTH,
+  generateEndlessLevel,
+} from "@/lib/gems/endless-levels";
 
 const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const BATTLES = Number(positional[0] ?? 40);
@@ -44,6 +53,12 @@ const flag = (name: string, fallback: number) => {
 /** Ziel-Siegquote des automatischen Spielers je Kampagnen-Level (Index 0 = Level 1) —
  *  sanft fallend, Bosse (6, 12) als spürbare Stufe. Ein Mensch spielt besser als der Bot. */
 const TARGET_WIN_RATE = [1, 1, 0.99, 0.98, 0.96, 0.9, 0.9, 0.87, 0.84, 0.8, 0.74, 0.66];
+/** Ziel für den härtesten einzelnen Gegnertreffer je Kapitel-Level, als Anteil der Leben des
+ *  schwächsten Starthelden — steigt sanft, statt bei Level 3 von „kaum“ auf „tödlich“ zu springen. */
+const CHAPTER_HIT_TARGET = [0.12, 0.2, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75];
+/** Ziel-Kampflänge in Spieler-Zügen je Kapitel-Level — kurz genug fürs Handy, lang genug, dass
+ *  die Gegner zum Zug kommen. Mit --calibrate wird darauf der statMultiplier gesucht. */
+const CHAPTER_MOVES_TARGET = [3, 3, 4, 4, 5, 6, 6, 6, 7, 7, 8, 9];
 const TEAM_SIZE = 5;
 
 const standardCards: Card[] = STANDARD_CARDS.map((seed, i) => ({
@@ -75,7 +90,31 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 function playerTeam() {
-  return shuffle(standardCards).slice(0, TEAM_SIZE).map((c) => cardToBattleUnitDefinition(c, PLAYER_LEVEL));
+  const picked = STARTER_CLASS_MIX.flatMap(([cls, count]) =>
+    shuffle(standardCards.filter((c) => c.class === cls)).slice(0, count)
+  );
+  return picked.slice(0, TEAM_SIZE).map((c) => cardToBattleUnitDefinition(c, PLAYER_LEVEL));
+}
+
+const heroStates = createTeamState(standardCards.map((c) => cardToBattleUnitDefinition(c, PLAYER_LEVEL)), "A");
+
+/** Härtester normaler Gegnertreffer gegen irgendeinen Starthelden, als Anteil seiner Leben. */
+function maxHitShare(level: CampaignLevelDef): number {
+  const enemies = createTeamState(buildCampaignEnemyTeam(level), "B");
+  let worst = 0;
+  for (const e of enemies) for (const h of heroStates) worst = Math.max(worst, Math.max(1, e.attack - h.defense * 0.5) / h.maxHp);
+  return worst;
+}
+
+function calibrateAttack(level: CampaignLevelDef, target: number): number {
+  let low = 0.1;
+  let high = 4;
+  for (let step = 0; step < 20; step++) {
+    const mid = (low + high) / 2;
+    if (maxHitShare({ ...level, attackMultiplier: mid, defenseMultiplier: mid }) < target) low = mid;
+    else high = mid;
+  }
+  return Math.round(((low + high) / 2) * 100) / 100;
 }
 
 /** Gieriger Brett-Zug: der Tausch mit den meisten zerstörten Steinen (Zufall bei Gleichstand). */
@@ -114,6 +153,7 @@ function simulate(level: CampaignLevelDef, battles: number) {
   let wins = 0;
   let starSum = 0;
   let roundSum = 0;
+  let moveSum = 0;
   for (let i = 0; i < battles; i++) {
     let { state, pendingDecision } = advance(createInteractiveState(playerTeam(), buildCampaignEnemyTeam(level)));
     let guard = 0;
@@ -121,6 +161,7 @@ function simulate(level: CampaignLevelDef, battles: number) {
       fireReadyUltimates(state);
       if (state.winner) break;
       ({ state, pendingDecision } = advance(state, { boardSwaps: [bestSwap(state)] }));
+      moveSum++;
     }
     roundSum += state.round;
     if (state.winner === "A") {
@@ -128,18 +169,34 @@ function simulate(level: CampaignLevelDef, battles: number) {
       starSum += computeStars(state);
     }
   }
-  return { winRate: wins / battles, avgStars: wins ? starSum / wins : 0, avgRounds: roundSum / battles };
+  return { winRate: wins / battles, avgStars: wins ? starSum / wins : 0, avgRounds: roundSum / battles, avgMoves: moveSum / battles };
 }
 
-/** Bisektion über den statMultiplier, bis die Siegquote nahe am Ziel liegt. */
-function calibrate(level: CampaignLevelDef, target: number): number {
-  if (target >= 1) return level.statMultiplier;
-  let low = 0.5;
+/** Ab diesem Level (Index) wird der Angriff auf die Ziel-Siegquote kalibriert statt auf den
+ *  Trefferanteil — vorher sind die Treffer bewusst gedeckelt (Einstieg), danach muss der Gegner
+ *  echten Druck machen. */
+const WIN_RATE_FROM_LEVEL_INDEX = 6;
+
+function calibrateAttackForWinRate(level: CampaignLevelDef, target: number): number {
+  let low = 0.3;
   let high = 4;
   for (let step = 0; step < 8; step++) {
     const mid = (low + high) / 2;
-    const { winRate } = simulate({ ...level, statMultiplier: mid }, BATTLES);
+    const { winRate } = simulate({ ...level, attackMultiplier: mid }, BATTLES);
     if (winRate > target) low = mid;
+    else high = mid;
+  }
+  return Math.round(((low + high) / 2) * 100) / 100;
+}
+
+/** Bisektion über den statMultiplier, bis die mittlere Zahl an Spieler-Zügen am Ziel liegt. */
+function calibrateMoves(level: CampaignLevelDef, targetMoves: number): number {
+  let low = 0.3;
+  let high = 60;
+  for (let step = 0; step < 11; step++) {
+    const mid = (low + high) / 2;
+    const { avgMoves } = simulate({ ...level, statMultiplier: mid }, BATTLES);
+    if (avgMoves < targetMoves) low = mid;
     else high = mid;
   }
   return Math.round(((low + high) / 2) * 100) / 100;
@@ -148,15 +205,18 @@ function calibrate(level: CampaignLevelDef, target: number): number {
 if (ENDLESS) {
   const base = flag("base", ENDLESS_BASE_MULTIPLIER);
   const growth = flag("growth", ENDLESS_GROWTH);
+  const attackBase = flag("abase", ENDLESS_ATTACK_BASE_MULTIPLIER);
+  const step = flag("step", 1);
   const to = flag("to", 35);
-  console.log(`Endlos-Turm: ${BATTLES} Kämpfe je Stufe, Basis ${base}, Wachstum ${growth}
+  console.log(`Endlos-Turm: ${BATTLES} Kämpfe je Stufe, Basis ${base} (Angriff ${attackBase}), Wachstum ${growth}
 `);
-  console.log("Stufe          Gegner  Multiplikator  Siege   Ø Runden");
-  for (let stage = ENDLESS_FIRST_STAGE; stage <= to; stage++) {
-    const level = { ...generateEndlessLevel(stage), statMultiplier: base * growth ** (stage - ENDLESS_FIRST_STAGE) };
+  console.log("Stufe          Gegner  Multiplikator  Siege   Ø Runden   Ø Züge");
+  for (let stage = ENDLESS_FIRST_STAGE; stage <= to; stage += step) {
+    const n = stage - ENDLESS_FIRST_STAGE;
+    const level = { ...generateEndlessLevel(stage), statMultiplier: base * growth ** n, attackMultiplier: attackBase * growth ** n };
     const r = simulate(level, BATTLES);
     console.log(
-      `${String(stage).padStart(3)} ${level.isBoss ? "(Boss)" : "      "}    ${String(level.monsters.length).padStart(4)}  ${level.statMultiplier.toFixed(2).padStart(13)}  ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgRounds.toFixed(1).padStart(7)}`
+      `${String(stage).padStart(3)} ${level.isBoss ? "(Boss)" : "      "}    ${String(level.monsters.length).padStart(4)}  ${level.statMultiplier.toFixed(2).padStart(13)}  ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgRounds.toFixed(1).padStart(7)}   ${r.avgMoves.toFixed(1).padStart(6)}`
     );
   }
   process.exit(0);
@@ -164,16 +224,30 @@ if (ENDLESS) {
 
 console.log(`Kampagnen-Balancing: ${BATTLES} Kämpfe je Level, Spielerkarten Stufe ${PLAYER_LEVEL}${CALIBRATE ? ", Kalibrierung" : ""}
 `);
-console.log(CALIBRATE ? "Level                              Ziel   bisher   Vorschlag" : "Level                              Siege   Ø Sterne   Ø Runden");
+console.log(
+  CALIBRATE
+    ? "Level                              Treffer   attack   Züge   stat (bisher)   Siege (Ziel)"
+    : "Level                              Siege   Ø Sterne   Ø Runden   Ø Züge   Treffer"
+);
 for (let i = 0; i < CAMPAIGN_LEVELS.length; i++) {
   const level = CAMPAIGN_LEVELS[i];
   if (CALIBRATE) {
-    const suggestion = calibrate(level, TARGET_WIN_RATE[i] ?? 0.65);
-    console.log(`${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(TARGET_WIN_RATE[i] * 100).toFixed(0).padStart(4)} %   ${level.statMultiplier.toFixed(2).padStart(6)}   ${suggestion.toFixed(2).padStart(9)}`);
+    const hitCapped = calibrateAttack(level, CHAPTER_HIT_TARGET[i]);
+    const suggestion = calibrateMoves({ ...level, attackMultiplier: hitCapped, defenseMultiplier: hitCapped }, CHAPTER_MOVES_TARGET[i]);
+    const attackMultiplier =
+      i >= WIN_RATE_FROM_LEVEL_INDEX
+        ? calibrateAttackForWinRate({ ...level, statMultiplier: suggestion, defenseMultiplier: hitCapped }, TARGET_WIN_RATE[i])
+        : hitCapped;
+    const defenseMultiplier = hitCapped;
+    const check = simulate({ ...level, attackMultiplier, defenseMultiplier, statMultiplier: suggestion }, BATTLES);
+    const hit = maxHitShare({ ...level, attackMultiplier, defenseMultiplier, statMultiplier: suggestion });
+    console.log(
+      `${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(hit * 100).toFixed(0).padStart(5)} %   ${attackMultiplier.toFixed(2).padStart(6)}   ${CHAPTER_MOVES_TARGET[i].toString().padStart(4)}   ${suggestion.toFixed(2)} (${level.statMultiplier.toFixed(2)})   ${(check.winRate * 100).toFixed(0).padStart(4)} % (${(TARGET_WIN_RATE[i] * 100).toFixed(0)} %) ${check.avgMoves.toFixed(1)} Züge`
+    );
     continue;
   }
   const r = simulate(level, BATTLES);
   console.log(
-    `${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgStars.toFixed(1).padStart(6)}   ${r.avgRounds.toFixed(1).padStart(7)}`
+    `${String(i + 1).padStart(2)}. ${level.name.padEnd(30)} ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgStars.toFixed(1).padStart(6)}   ${r.avgRounds.toFixed(1).padStart(7)}   ${r.avgMoves.toFixed(1).padStart(6)}   ${(maxHitShare(level) * 100).toFixed(0).padStart(4)} %`
   );
 }

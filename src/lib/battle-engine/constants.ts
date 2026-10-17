@@ -23,6 +23,12 @@ export const ROUND_LIMIT = 10;
 export const SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP = 0.1;
 
 export const CRIT_CHANCE = 0.1;
+/** Mindestschaden als Anteil des Angriffs — auch gegen sehr hohe Verteidigung bleibt ein
+ *  Treffer spürbar (vorher fiel er auf 1 Schaden). */
+export const MIN_DAMAGE_ATTACK_SHARE = 0.05;
+/** OMA Gems: Ultimates des Spielers treffen zusätzlich mit diesem Anteil der MAXIMALEN Leben
+ *  des Ziels — so bleibt ein Ultimate auch gegen starke Gegner im Endlos-Turm ein Höhepunkt. */
+export const PLAYER_ULTIMATE_MAX_HP_SHARE = 0.1;
 export const CRIT_DAMAGE_MULTIPLIER = 1.5;
 
 
