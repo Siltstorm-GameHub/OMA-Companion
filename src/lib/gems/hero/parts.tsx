@@ -6,9 +6,11 @@
 // werden relativ zur Hand (Ursprung 0|0, Waffe zeigt nach oben) gezeichnet und je Pose gedreht.
 // Farben kommen aus Paletten (look.ts), Konturen sind immer OUTLINE in 5 px. Ein Zeichner kann jedes
 // Teil 1:1 ersetzen, solange Gerüst, Ebenen und Farbslots gleich bleiben — siehe
-// docs/gems-helden-geruest.md. Reine Darstellung, keine Hooks.
+// docs/gems-helden-geruest.md. Gelieferte Zeichnungen (art.ts) haben Vorrang vor den Teilen hier.
+// Reine Darstellung, keine Hooks.
 
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
+import { heroArt, type ArtNode } from "./art";
 import {
   HERO_HAIR_COLORS,
   HERO_SCHEMES,
@@ -60,6 +62,8 @@ const RIGS: Record<Build, { shoulderL: Pt; shoulderR: Pt; emblem: Pt; hands: Rec
 /** Drehung der Waffe in Grad je Pose (0 = Waffe zeigt senkrecht nach oben). */
 const WEAPON_ANGLE: Record<string, number> = { stehen: 18, angriff: 62, jubel: -8 };
 
+const BUILD_NAME: Record<Build, string> = { broad: "breit", slim: "schlank", robe: "robe" };
+
 function buildOf(base: string): Build {
   if (base.startsWith("tank")) return "broad";
   if (base.startsWith("dd")) return "slim";
@@ -71,6 +75,23 @@ function paletteOf(look: HeroLook): Palette {
   const skin = HERO_SKINS[look.skin] ?? HERO_SKINS[1];
   const hair = HERO_HAIR_COLORS[look.hairColor] ?? HERO_HAIR_COLORS[0];
   return { ...scheme, skin: skin.base, skinShade: skin.shade, hair: hair.base, hairShade: hair.shade };
+}
+
+// ---------- Gelieferte Zeichnungen ----------
+
+/** Gelieferte Zeichnung als React-Elemente; Farbslots („$main“ …) kommen aus der Palette. */
+export function renderArt([tag, attrs, children]: ArtNode, p: Partial<Palette>, key: number): ReactNode {
+  const props: Record<string, unknown> = { key };
+  for (const [name, value] of Object.entries(attrs)) {
+    props[name] = typeof value === "string" && value.startsWith("$") ? p[value.slice(1) as keyof Palette] ?? "none" : value;
+  }
+  return createElement(tag, props, ...children.map((c, i) => renderArt(c, p, i)));
+}
+
+/** Zeichnung für ein Teil, falls geliefert — sonst das eingebaute Teil. */
+function drawn(key: string, p: Palette, fallback: ReactNode): ReactNode {
+  const nodes = heroArt(key);
+  return nodes ? <g data-art={key}>{nodes.map((n, i) => renderArt(n, p, i))}</g> : fallback;
 }
 
 // ---------- Körper ----------
@@ -137,8 +158,10 @@ function Arm({ from, to, p }: { from: Pt; to: Pt; p: Palette }) {
 
 // ---------- Emblem ----------
 
-function Emblem({ id, at }: { id: string; at: Pt }) {
+function Emblem({ id, at, p }: { id: string; at: Pt; p: Palette }) {
   const [x, y] = at;
+  const art = heroArt(`emblem-${id}`);
+  if (art) return <g transform={`translate(${x} ${y})`}>{drawn(`emblem-${id}`, p, null)}</g>;
   switch (id) {
     case "stern":
       return (
@@ -187,7 +210,7 @@ function Shield({ p, emblem }: { p: Palette; emblem: string }) {
     <g>
       <path d="M-36 -44 Q0 -58 36 -44 L32 18 Q0 46 -32 18 Z" fill={p.dark} {...line} />
       <path d="M-24 -34 Q0 -44 24 -34 L22 10 Q0 30 -22 10 Z" fill={p.main} />
-      <Emblem id={emblem} at={[0, -10]} />
+      <Emblem id={emblem} at={[0, -10]} p={p} />
     </g>
   );
 }
@@ -420,6 +443,20 @@ function AccessoryFace({ id, p }: { id: string; p: Palette }) {
 // ---------- Zusammensetzen ----------
 
 function Weapon({ base, p, emblem }: { base: string; p: Palette; emblem: string }): { right: ReactNode; left: ReactNode } {
+  const key = `waffe-${base}`;
+  if (!heroArt(key)) return BuiltinWeapon({ base, p, emblem });
+  const art = (
+    <g>
+      {drawn(key, p, null)}
+      {/* Auf gezeichneten Schilden sitzt das Emblem weiter aus dem Look. */}
+      {base === "tank-schild" && <Emblem id={emblem} at={[0, -10]} p={p} />}
+    </g>
+  );
+  // Schild und Bogen sitzen in der linken Hand, alles andere in der rechten.
+  return base === "tank-schild" || base === "dd-bogen" ? { right: null, left: art } : { right: art, left: null };
+}
+
+function BuiltinWeapon({ base, p, emblem }: { base: string; p: Palette; emblem: string }): { right: ReactNode; left: ReactNode } {
   switch (base) {
     case "tank-schild":
       return { right: null, left: <Shield p={p} emblem={emblem} /> };
@@ -448,28 +485,35 @@ export function HeroParts({ look }: { look: HeroLook }) {
   const rightAngle = look.base === "support-laterne" ? 0 : look.base === "support-stab" ? angle / 3 : angle;
   const showHairBack = look.headgear !== "kapuze";
   const showHairFront = look.headgear !== "helm" || look.hair === "lang" || look.hair === "zopf";
+  const b = BUILD_NAME[build];
 
   return (
     <g>
       <ellipse cx={110} cy={226} rx={66} ry={9} fill="#000000" opacity={0.35} />
-      <AccessoryBack id={look.accessory} p={p} />
-      <HeadgearBack id={look.headgear} p={p} />
-      {showHairBack && <HairBack id={look.hair} p={p} />}
-      <Legs build={build} />
-      <Torso build={build} p={p} />
-      <Emblem id={look.emblem} at={rig.emblem} />
-      <ShoulderPads build={build} p={p} />
+      {look.accessory === "umhang" && drawn("accessoire-umhang-hinten", p, <AccessoryBack id={look.accessory} p={p} />)}
+      {look.headgear === "kapuze" && drawn("kopfbedeckung-kapuze-hinten", p, <HeadgearBack id={look.headgear} p={p} />)}
+      {showHairBack && (look.hair === "lang" || look.hair === "zopf") && drawn(`frisur-${look.hair}-hinten`, p, <HairBack id={look.hair} p={p} />)}
+      {build !== "robe" && drawn(`beine-${b}`, p, <Legs build={build} />)}
+      {drawn(`koerper-${b}`, p, <Torso build={build} p={p} />)}
+      <Emblem id={look.emblem} at={rig.emblem} p={p} />
+      {build === "broad" && drawn("polster-breit", p, <ShoulderPads build={build} p={p} />)}
       <Arm from={rig.shoulderL} to={hands.L} p={p} />
       <Arm from={rig.shoulderR} to={hands.R} p={p} />
       {weapon.right && <g transform={`translate(${hands.R[0]} ${hands.R[1]}) rotate(${rightAngle})`}>{weapon.right}</g>}
       {weapon.left && <g transform={`translate(${hands.L[0]} ${hands.L[1]}) rotate(${look.base === "dd-bogen" ? 0 : -6})`}>{weapon.left}</g>}
-      <AccessoryNeck id={look.accessory} />
-      <circle cx={110} cy={86} r={44} fill={p.skin} {...line} />
-      <path d="M110 130 A44 44 0 0 0 152 98 Q140 120 110 124 Z" fill={p.skinShade} opacity={0.6} />
-      <Face id={look.face} />
-      {showHairFront && <HairFront id={look.hair} p={p} />}
-      <HeadgearFront id={look.headgear} p={p} />
-      <AccessoryFace id={look.accessory} p={p} />
+      {look.accessory === "schal" && drawn("accessoire-schal", p, <AccessoryNeck id={look.accessory} />)}
+      {drawn(
+        "kopf",
+        p,
+        <g>
+          <circle cx={110} cy={86} r={44} fill={p.skin} {...line} />
+          <path d="M110 130 A44 44 0 0 0 152 98 Q140 120 110 124 Z" fill={p.skinShade} opacity={0.6} />
+        </g>
+      )}
+      {drawn(`gesicht-${look.face}`, p, <Face id={look.face} />)}
+      {showHairFront && look.hair !== "glatze" && drawn(`frisur-${look.hair}-vorn`, p, <HairFront id={look.hair} p={p} />)}
+      {look.headgear !== "keine" && drawn(`kopfbedeckung-${look.headgear}-vorn`, p, <HeadgearFront id={look.headgear} p={p} />)}
+      {(look.accessory === "brille" || look.accessory === "headset") && drawn(`accessoire-${look.accessory}`, p, <AccessoryFace id={look.accessory} p={p} />)}
     </g>
   );
 }

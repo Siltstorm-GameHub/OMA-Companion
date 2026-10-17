@@ -3,10 +3,12 @@
 // ============================================
 // Flache Szenen mit derselben dunklen Outline wie die Helden (parts.tsx). Die Fläche ist 3:4 wie eine
 // Karte und wird per „slice“ auf jede Rahmengröße zugeschnitten; der Horizont liegt so tief, dass
-// der Held davor steht. Welche Szene eine Karte zeigt, steht im Look (look.backdrop).
+// der Held davor steht. Welche Szene eine Karte zeigt, steht im Look (look.backdrop). Eine gelieferte
+// Zeichnung (art/helden/hintergrund-<id>.svg, siehe lib/gems/hero/art.ts) ersetzt die Szene.
 
 import { useId } from "react";
-import { OUTLINE } from "@/lib/gems/hero/parts";
+import { OUTLINE, renderArt } from "@/lib/gems/hero/parts";
+import { heroArt } from "@/lib/gems/hero/art";
 
 const S = { stroke: OUTLINE, strokeWidth: 3, strokeLinejoin: "round" as const };
 
@@ -154,8 +156,14 @@ export default function HeroBackdrop({ id, className }: { id: string; className?
           <stop offset="0.7" stopColor={sky[1]} />
         </linearGradient>
       </defs>
-      <rect width="300" height="400" fill={`url(#${gradient})`} />
-      <Scene id={id in SKY ? id : "wiese"} />
+      {heroArt(`hintergrund-${id}`) ? (
+        heroArt(`hintergrund-${id}`)!.map((n, i) => renderArt(n, {}, i))
+      ) : (
+        <>
+          <rect width="300" height="400" fill={`url(#${gradient})`} />
+          <Scene id={id in SKY ? id : "wiese"} />
+        </>
+      )}
     </svg>
   );
 }

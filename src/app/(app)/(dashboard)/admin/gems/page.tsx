@@ -28,6 +28,16 @@ export default async function AdminBattleCardsPage() {
           </div>
           <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
         </Link>
+        <Link
+          href="/admin/gems/helden"
+          className="flex items-center justify-between gap-3 glass rounded-2xl p-4 hover:bg-white/[0.04] transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold text-white">Helden-Prüfbogen</p>
+            <p className="text-xs text-gray-500">Alle Figuren-Teile groß und in Kartengröße, gelieferte Zeichnungen markiert</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
+        </Link>
       </section>
     </div>
   );

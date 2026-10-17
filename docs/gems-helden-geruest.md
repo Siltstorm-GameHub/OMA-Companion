@@ -93,14 +93,71 @@ Farbschemata, Hauttöne und Haarfarben stehen in `src/lib/gems/hero/look.ts`.
 | Emblem | juwel, stern, krone, herz, blitz (Größe etwa 28 × 28 um den Emblem-Punkt) |
 | Pose | stehen, angriff, jubel (nur Arme und Waffenwinkel ändern sich) |
 
+## Kartenhintergründe
+
+Fläche 300 × 400 (Hochformat 3:4), wird auf jede Kartengröße zugeschnitten (unten mittig verankert).
+Horizont bei etwa y = 270, darunter Boden — der Held steht im unteren Drittel davor. Gleiche Outline
+wie die Figuren, nur 3 px. Keine Farbslots, Farben frei. Motive: wiese, wald, berge, kueste, wueste,
+burg, nacht, vulkan. Unten liegt das Namensschild der Karte: dort nichts Wichtiges zeichnen.
+
 ## Lieferformat
 
-- Je Teil eine SVG-Datei mit `viewBox="0 0 220 240"` (Waffen: `viewBox` um den Ursprung, z. B.
-  `-60 -110 120 180`), nur Pfade und Grundformen, keine eingebetteten Bilder, keine Schriften,
-  keine Filter.
-- Farbslots als Platzhalterfarben einreichen und in einer Liste benennen, oder mit
-  `fill="var(--main)"` usw. — wir übertragen sie in den Code.
-- Dateinamen: `<slot>-<id>.svg`, z. B. `frisur-locken.svg`, `waffe-dd-klinge.svg`,
-  `koerper-breit.svg`; Teile mit Vorder- und Rückseite als `-vorn` / `-hinten`.
+- Je Teil eine SVG-Datei, Name genau wie in der Liste unten (`<teil>.svg`, alles klein).
+- Zeichenflächen (`viewBox`, wird beim Import geprüft):
+  - Figuren-Teile: `0 0 220 240` — auf dem Gerüst platziert, also Kopf-Teile um (110 | 86) usw.
+  - Waffen: `-60 -110 120 180` — Ursprung (0 | 0) = Mitte der Hand, Waffe zeigt nach oben.
+  - Embleme: `-20 -20 40 40` — Ursprung = Emblem-Punkt (Brust bzw. Schildmitte).
+  - Hintergründe: `0 0 300 400`.
+- Nur Pfade und Grundformen (path, circle, ellipse, rect, line, polyline, polygon) und Gruppen.
+  Abgelehnt werden: eingebettete Bilder, Schrift (in Pfade umwandeln), Filter, Verläufe, Muster,
+  Masken, Beschneidungspfade, verknüpfte Elemente (`<use>`). Ebenen, ids, `style`-Angaben und
+  Metadaten aus Inkscape oder Illustrator sind in Ordnung.
+- Farbslots (damit Kosmetik umfärben kann) entweder als `fill="var(--main)"` usw. oder mit diesen
+  Platzhalterfarben:
+
+  | Slot | Platzhalter |
+  |---|---|
+  | `main` | `#FF00FF` |
+  | `dark` | `#800080` |
+  | `light` | `#FF80FF` |
+  | `metal` | `#00FFFF` |
+  | `skin` | `#FFFF00` |
+  | `skinShade` | `#808000` |
+  | `hair` | `#00FF00` |
+  | `hairShade` | `#008000` |
+
+  Alle anderen Farben bleiben fest (Outline `#1b1326`, Neutraltöne).
 - Prüfbild: jede Figur einmal in klein (80 px breit) ansehen — Gesicht und Klasse müssen auch auf
-  der Handy-Karte erkennbar bleiben.
+  der Handy-Karte erkennbar bleiben. Der Admin-Prüfbogen (`/admin/gems/helden`) zeigt jedes Teil
+  groß und in dieser Größe.
+
+Nicht jedes Teil muss auf einmal kommen: Was fehlt, zeichnet weiter der Code. Arme (Linie Schulter →
+Hand) und der Bodenschatten bleiben im Code, damit Posen und Animationen stimmen.
+
+### Teile und Dateinamen
+
+| Ebene | Dateien |
+|---|---|
+| Körper | `koerper-breit`, `koerper-schlank`, `koerper-robe` |
+| Beine | `beine-breit`, `beine-schlank` (Robe hat keine) |
+| Schulterpolster | `polster-breit` |
+| Kopf | `kopf` (Kopf mit Schattenstufe, ohne Gesicht) |
+| Gesicht | `gesicht-froehlich`, `-entschlossen`, `-grinsen`, `-ruhig`, `-frech`, `-staunend` |
+| Frisur vorn | `frisur-kurz-vorn`, `frisur-stachelig-vorn`, `frisur-pony-vorn`, `frisur-lang-vorn`, `frisur-zopf-vorn`, `frisur-locken-vorn`, `frisur-irokese-vorn` |
+| Frisur hinten | `frisur-lang-hinten`, `frisur-zopf-hinten` |
+| Kopfbedeckung | `kopfbedeckung-helm-vorn`, `kopfbedeckung-kapuze-vorn`, `kopfbedeckung-kapuze-hinten`, `kopfbedeckung-stirnband-vorn`, `kopfbedeckung-muetze-vorn` |
+| Accessoire | `accessoire-umhang-hinten`, `accessoire-schal`, `accessoire-brille`, `accessoire-headset` |
+| Waffe | `waffe-tank-schild`, `waffe-tank-axt`, `waffe-dd-klinge`, `waffe-dd-bogen`, `waffe-support-stab`, `waffe-support-laterne` |
+| Emblem | `emblem-juwel`, `emblem-stern`, `emblem-krone`, `emblem-herz`, `emblem-blitz` |
+| Hintergrund | `hintergrund-wiese`, `-wald`, `-berge`, `-kueste`, `-wueste`, `-burg`, `-nacht`, `-vulkan` |
+
+Auf gezeichnete Schilde setzt die App das Emblem aus dem Look (Schildmitte, 10 Einheiten über dem
+Ursprung) — das Schild selbst also ohne Emblem zeichnen.
+
+## Übernahme in die App
+
+1. Dateien nach `art/helden/` legen.
+2. `npx tsx scripts/import-hero-art.ts` — prüft alle Dateien (Name, Zeichenfläche, erlaubte
+   Elemente, Farbslots) und schreibt `src/lib/gems/hero/art.generated.ts`. Bei einem Fehler wird
+   nichts übernommen; die Meldung nennt Datei und Grund. Nur prüfen: `--check`.
+3. Im Admin-Prüfbogen kontrollieren, committen, deployen. Code-Änderungen sind nicht nötig.

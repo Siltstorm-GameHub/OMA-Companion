@@ -230,7 +230,7 @@ eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
 - Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
   Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
 
-**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — erledigt bis 10d (10e optional)
+**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — erledigt (10e: Strecke für Zeichnungen steht, Zeichnungen selbst stehen aus)
 Entscheidung: Stil A (Cartoon mit Outline, Muster im Canvas „OMA Gems Helden-Stile“) und Option 3
 (feste Grundfiguren plus Kosmetik ohne Kampfvorteil). Ersetzt die Pixel-Figuren (Time Elements,
 `lib/te-character`, 15 MB unter `public/te`). Monster bleiben, wie sie sind.
@@ -307,7 +307,11 @@ Umsetzung in Schritten (jeder Schritt einzeln deploybar):
   geleert, der Build entfernt sie dann ohne Datenverlust; alte gespeicherte Kämpfe zeigen weiter
   abgeleitete Looks): Kartenhintergründe im neuen Stil (statt Pixel-Szenen), `lib/te-character`,
   `TeCharacter`/`BattleFigure`, `public/te` und `teCharacter`-Spalte entfernen.
-- Optional 10e: Profi-Zeichnungen. Die Teile in 10a zeichne ich als einfache Vektorgrafik (Qualität wie
+- 10e Profi-Zeichnungen (Strecke erledigt — gelieferte SVGs in `art/helden/`, Prüfung und Umwandlung per
+  `scripts/import-hero-art.ts` nach `lib/gems/hero/art.generated.ts`, `parts.tsx`/`HeroBackdrop` nehmen
+  je Teil die Zeichnung statt der Vektorgrafik und färben Farbslots aus dem Look; Admin-Prüfbogen
+  `/admin/gems/helden`; Vorgabe mit Dateinamen und Platzhalterfarben in `docs/gems-helden-geruest.md`.
+  Offen: die Zeichnungen selbst, von einem Zeichner): Profi-Zeichnungen. Die Teile in 10a zeichne ich als einfache Vektorgrafik (Qualität wie
   im Muster). Weil alle Teile auf demselben Gerüst sitzen, kann ein Zeichner sie später 1:1 ersetzen,
   ohne Code-Änderung — dafür gibt es eine Gerüst-Vorgabe (Maße, Ankerpunkte, Ebenen, Farbslots).
 
