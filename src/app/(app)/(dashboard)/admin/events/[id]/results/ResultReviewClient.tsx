@@ -7,6 +7,7 @@ import { toast } from "sonner";
 type Sub = {
   id: string;
   user: { id: string; name: string };
+  forUser: { id: string; name: string } | null;
   status: string;
   applied: boolean;
   score1: number | null; score2: number | null; placement: number | null; score: number | null;
@@ -82,6 +83,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
     <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-white">
+          {sub.forUser && <>Werte von <span className="font-medium">{sub.forUser.name}</span> · </>}
           Gemeldet von <span className="font-medium">{sub.user.name}</span>
           <span className="text-xs text-gray-500"> · {new Date(sub.createdAt).toLocaleString("de-DE")}</span>
         </p>

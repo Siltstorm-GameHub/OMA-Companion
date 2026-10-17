@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "@/components/icons";
-import { parseScreenshotUrls, isDuelMatch } from "@/lib/tournaments/matchSubmissions";
+import { parseScreenshotUrls, isDuelMatch, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import ResultReviewClient, { type ReviewMatch } from "./ResultReviewClient";
 
 export default async function AdminEventResultsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +39,8 @@ export default async function AdminEventResultsPage({ params }: { params: Promis
     submissions: m.submissions.map(s => ({
       id: s.id,
       user: { id: s.user.id, name: s.user.username ?? s.user.name ?? "?" },
+      // FFA/Coop: Spieler, dessen Werte gemeldet wurden (auch Meldungen für andere Spieler)
+      forUser: isDuelMatch(m) ? null : { id: submissionSubject(s), name: s.forUserId ? nameOf.get(s.forUserId) ?? "?" : s.user.username ?? s.user.name ?? "?" },
       status: s.status,
       applied: s.applied,
       score1: s.score1, score2: s.score2, placement: s.placement, score: s.score,

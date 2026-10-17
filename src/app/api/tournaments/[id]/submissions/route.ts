@@ -12,6 +12,8 @@ import {
   cleanStats,
   isParticipantEditLocked,
   isProofUrl,
+  isDuelMatch,
+  submissionSubject,
   type SubmissionValues,
 } from "@/lib/tournaments/matchSubmissions";
 
@@ -22,7 +24,7 @@ function fail(err: unknown) {
   throw err;
 }
 
-/** Teilnehmer meldet sein Ergebnis samt Screenshot-Nachweis (erneutes Senden ersetzt eine offene/abgelehnte Meldung). */
+/** Teilnehmer meldet ein Ergebnis (eigenes oder das eines anderen Spielers) samt Screenshot-Nachweis (erneutes Senden ersetzt die eigene Meldung). */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   const user = await getSessionUser();
@@ -47,9 +49,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (!match) return NextResponse.json({ error: "Match nicht gefunden" }, { status: 404 });
 
+  // Jeder Teilnehmer des Events (kein Zuschauer) darf Ergebnisse melden — auch für Matches/Spieler,
+  // an denen er selbst nicht beteiligt ist.
   const isInMatch =
     match.player1Id === user.id || match.player2Id === user.id || match.entries.some((e) => e.userId === user.id);
-  if (!isInMatch) return NextResponse.json({ error: "Du spielst in diesem Match nicht mit" }, { status: 403 });
+  if (!isInMatch) {
+    const [reg, participant] = await Promise.all([
+      prisma.eventRegistration.findUnique({ where: { userId_eventId: { userId: user.id, eventId } }, select: { role: true } }),
+      prisma.tournamentParticipant.findUnique({ where: { eventId_userId: { eventId, userId: user.id } }, select: { id: true } }),
+    ]);
+    if (!participant && (!reg || reg.role === "spectator")) {
+      return NextResponse.json({ error: "Nur Teilnehmer des Events können Ergebnisse melden" }, { status: 403 });
+    }
+  }
+
+  // FFA/Coop: Für welchen Spieler werden die Werte gemeldet? (Standard: der Melder selbst)
+  const isDuel = isDuelMatch(match);
+  const subjectId = !isDuel && typeof body.forUserId === "string" && body.forUserId ? body.forUserId : user.id;
+  if (!isDuel && !match.entries.some((e) => e.userId === subjectId)) {
+    return NextResponse.json({ error: "Dieser Spieler spielt in diesem Match nicht mit" }, { status: 400 });
+  }
+  const forUserId = subjectId === user.id ? "" : subjectId;
 
   if (isParticipantEditLocked(match.event)) {
     return NextResponse.json(
@@ -59,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const existing = await prisma.matchResultSubmission.findUnique({
-    where: { matchId_userId: { matchId: match.id, userId: user.id } },
+    where: { matchId_userId_forUserId: { matchId: match.id, userId: user.id, forUserId } },
   });
 
   try {
@@ -89,11 +109,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       statsJson: data.statsJson ? JSON.parse(data.statsJson) : null,
     };
     // Vorab prüfen (z.B. Unentschieden im K.-o.-Baum), damit keine unbrauchbare Meldung gespeichert wird.
-    await checkSubmissionValues(eventId, user.id, match.id, values);
+    await checkSubmissionValues(eventId, subjectId, match.id, values);
 
     const submission = await prisma.matchResultSubmission.upsert({
-      where: { matchId_userId: { matchId: match.id, userId: user.id } },
-      create: { ...data, matchId: match.id, userId: user.id },
+      where: { matchId_userId_forUserId: { matchId: match.id, userId: user.id, forUserId } },
+      create: { ...data, matchId: match.id, userId: user.id, forUserId },
       update: { ...data, applied: false },
     });
 
@@ -102,7 +122,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const fresh = await prisma.match.findUnique({ where: { id: match.id }, select: { resultConfirmed: true, playedAt: true } });
     const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed;
     if (!adminConfirmed) {
-      await applySubmissionValues(eventId, user.id, match.id, values, true);
+      await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true);
     }
     return NextResponse.json({ ...submission, visible: !adminConfirmed }, { status: existing ? 200 : 201 });
   } catch (err) {
@@ -142,7 +162,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let data: Record<string, unknown>;
 
     if (body.action === "reject") {
-      if (sub.applied) await revertProvisional(eventId, sub.userId, sub.matchId);
+      if (sub.applied) await revertProvisional(eventId, submissionSubject(sub), sub.matchId);
       data = { ...base, status: "rejected", applied: false };
     } else {
       const original = {
@@ -160,7 +180,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             }
           : original;
 
-      await applySubmissionValues(eventId, sub.userId, sub.matchId, values);
+      await applySubmissionValues(eventId, sub.id, submissionSubject(sub), sub.matchId, values);
 
       data = {
         ...base,

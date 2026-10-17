@@ -2186,10 +2186,12 @@ model MatchResultSubmission {
   eventId        String
   matchId        String
   userId         String // Melder
+  // FFA / Coop: Spieler, dessen Werte gemeldet werden ("" = der Melder selbst; bei 1v1 immer "")
+  forUserId      String    @default("")
   // 1v1 / Liga / Round Robin: Score in Match-Orientierung (score1 = player1Id)
   score1         Int?
   score2         Int?
-  // FFA / Coop: Werte des Melders selbst
+  // FFA / Coop: Werte des gemeldeten Spielers (forUserId bzw. Melder)
   placement      Int?
   score          Int?
   statsJson      String? // JSON: {"Kills": 12}
@@ -2208,7 +2210,7 @@ model MatchResultSubmission {
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user  User  @relation("MatchResultSubmitter", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([matchId, userId])
+  @@unique([matchId, userId, forUserId])
   @@index([eventId, status])
 }
 

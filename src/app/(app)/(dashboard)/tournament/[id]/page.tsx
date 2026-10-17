@@ -45,8 +45,8 @@ import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
-import MatchResultSubmit, { type MyMatch } from "./MatchResultSubmit";
-import { parseScreenshotUrls, isParticipantEditLocked } from "@/lib/tournaments/matchSubmissions";
+import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
+import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
@@ -227,38 +227,49 @@ export default async function TournamentDetailPage({
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
   const hasTournament = !!event.format;
 
-  // Matches, in denen der User mitspielt — dafür kann er ein Ergebnis samt Screenshot-Nachweis melden.
-  const mySubmissions = hasTournament
+  // Alle Teilnehmer (keine Zuschauer) dürfen Ergebnisse melden — eigene und die anderer Spieler,
+  // jeweils samt Screenshot-Nachweis.
+  const canReportResults = hasTournament && (isRegistered || event.participants.some(p => p.userId === userId));
+  const mySubmissionRows = canReportResults
     ? await prisma.matchResultSubmission.findMany({ where: { eventId, userId } })
     : [];
-  const userById = new Map(event.participants.map(p => [p.userId, p.user]));
-  const myMatches: MyMatch[] = hasTournament
+  const userById = new Map<string, { id: string; name: string | null; username: string | null }>([
+    ...event.registrations.map(r => [r.userId, r.user] as const),
+    ...event.participants.map(p => [p.userId, p.user] as const),
+  ]);
+  const toU = (id: string | null) => {
+    const u = id ? userById.get(id) : null;
+    return u ? { id: u.id, name: u.name, username: u.username } : null;
+  };
+  const reportMatches: ReportMatch[] = canReportResults
     ? event.matches
-        .filter(m => m.player1Id === userId || m.player2Id === userId || m.entries.some(e => e.userId === userId))
-        .filter(m => !(m.player1Id === null && m.player2Id === null && m.entries.length === 0))
+        .filter(m => m.entries.length > 0 ? true : !!m.player1Id && !!m.player2Id)
         .map(m => {
-          const sub = mySubmissions.find(x => x.matchId === m.id);
           const isDuel = m.entries.length === 0;
-          const p1 = m.player1Id ? userById.get(m.player1Id) ?? null : null;
-          const p2 = m.player2Id ? userById.get(m.player2Id) ?? null : null;
+          const p1 = toU(m.player1Id);
+          const p2 = toU(m.player2Id);
           const nm = (u: { name: string | null; username: string | null } | null) => u?.username ?? u?.name ?? "?";
           return {
             id: m.id,
             label: m.title ?? (isDuel ? `${nm(p1)} vs ${nm(p2)}` : `Runde ${m.round} · Match ${m.position}`),
             isDuel,
-            player1: p1 && { id: p1.id, name: p1.name, username: p1.username },
-            player2: p2 && { id: p2.id, name: p2.name, username: p2.username },
+            player1: p1,
+            player2: p2,
+            players: isDuel ? [] : m.entries.flatMap(e => { const u = toU(e.userId); return u ? [u] : []; }),
             played: !!m.playedAt,
-            submission: sub
-              ? {
-                  status: sub.status, score1: sub.score1, score2: sub.score2, placement: sub.placement,
-                  score: sub.score, statsJson: sub.statsJson, note: sub.note, reviewNote: sub.reviewNote,
-                  screenshotUrls: parseScreenshotUrls(sub.screenshotUrls),
-                }
-              : null,
+            mine: m.player1Id === userId || m.player2Id === userId || m.entries.some(e => e.userId === userId),
           };
         })
     : [];
+  const mySubmissions: MySubmission[] = mySubmissionRows.map(sub => {
+    const m = event.matches.find(x => x.id === sub.matchId);
+    return {
+      matchId: sub.matchId,
+      subjectId: m && m.entries.length > 0 ? submissionSubject(sub) : null,
+      status: sub.status, score1: sub.score1, score2: sub.score2, statsJson: sub.statsJson,
+      note: sub.note, reviewNote: sub.reviewNote, screenshotUrls: parseScreenshotUrls(sub.screenshotUrls),
+    };
+  });
 
   // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
   // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
@@ -1176,14 +1187,6 @@ export default async function TournamentDetailPage({
 
           {/* Format-spezifische Ansicht */}
           <div className="lg:col-span-3">
-            {hasTournament && myMatches.length > 0 && (
-              <MatchResultSubmit
-                eventId={event.id}
-                matches={myMatches}
-                statFields={event.statFields ? JSON.parse(event.statFields) : []}
-                locked={isParticipantEditLocked(event)}
-              />
-            )}
             {!hasTournament && (
               <div className="glass rounded-2xl p-10 text-center">
                 <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
@@ -1242,6 +1245,17 @@ export default async function TournamentDetailPage({
                 votedUserIds={[...votedUserIds]}
                 externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
                 finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
+              />
+            )}
+            {/* Erst der Tabellenstand, darunter das (eingeklappte) Melden von Ergebnissen */}
+            {reportMatches.length > 0 && (
+              <MatchResultSubmit
+                eventId={event.id}
+                userId={userId}
+                matches={reportMatches}
+                submissions={mySubmissions}
+                statFields={event.statFields ? JSON.parse(event.statFields) : []}
+                locked={isParticipantEditLocked(event)}
               />
             )}
           </div>

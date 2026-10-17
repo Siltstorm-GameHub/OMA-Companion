@@ -4,26 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ProofUploader from "@/components/match-results/ProofUploader";
+import { ChevronDown } from "@/components/icons";
 
 type U = { id: string; name: string | null; username: string | null };
-export type MyMatch = {
+export type ReportMatch = {
   id: string;
   label: string;
   isDuel: boolean;
   player1: U | null;
   player2: U | null;
+  /** FFA/Coop: Spieler mit Eintrag in diesem Match */
+  players: U[];
   played: boolean;
-  submission: {
-    status: string;
-    score1: number | null;
-    score2: number | null;
-    placement: number | null;
-    score: number | null;
-    statsJson: string | null;
-    note: string | null;
-    screenshotUrls: string[];
-    reviewNote: string | null;
-  } | null;
+  /** Der aktuelle User spielt in diesem Match mit */
+  mine: boolean;
+};
+export type MySubmission = {
+  matchId: string;
+  /** Spieler, dessen Werte gemeldet wurden (FFA/Coop); bei 1v1 null */
+  subjectId: string | null;
+  status: string;
+  score1: number | null;
+  score2: number | null;
+  statsJson: string | null;
+  note: string | null;
+  screenshotUrls: string[];
+  reviewNote: string | null;
 };
 
 const uname = (u: U | null) => u?.username ?? u?.name ?? "?";
@@ -39,9 +45,17 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const inputCls =
   "w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
-function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyMatch; statFields: string[]; locked: boolean }) {
+function MatchForm({
+  eventId, m, subject, s, statFields, locked,
+}: {
+  eventId: string;
+  m: ReportMatch;
+  subject: U | null;
+  s: MySubmission | null;
+  statFields: string[];
+  locked: boolean;
+}) {
   const router = useRouter();
-  const s = m.submission;
   const initialStats: Record<string, number> = s?.statsJson ? JSON.parse(s.statsJson) : {};
 
   const [score1, setScore1] = useState(s?.score1?.toString() ?? "");
@@ -63,7 +77,7 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matchId: m.id,
-          ...(m.isDuel ? { score1, score2 } : { statsJson: stats }),
+          ...(m.isDuel ? { score1, score2 } : { statsJson: stats, forUserId: subject?.id }),
           note,
           screenshotUrls: urls,
         }),
@@ -81,7 +95,10 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
   return (
     <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-white truncate">{m.label}</p>
+        <p className="text-sm font-medium text-white truncate">
+          {m.label}
+          {!m.isDuel && subject && <span className="text-gray-400 font-normal"> · {uname(subject)}</span>}
+        </p>
         {s && (
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
             {STATUS[s.status]?.label ?? s.status}
@@ -160,27 +177,103 @@ function MatchForm({ eventId, m, statFields, locked }: { eventId: string; m: MyM
 
 export default function MatchResultSubmit({
   eventId,
+  userId,
   matches,
+  submissions,
   statFields,
   locked,
 }: {
   eventId: string;
-  matches: MyMatch[];
+  userId: string;
+  matches: ReportMatch[];
+  submissions: MySubmission[];
   statFields: string[];
   locked: boolean;
 }) {
-  if (matches.length === 0) return null;
+  // Vorauswahl: erstes eigenes, noch nicht gespieltes Match — sonst das erste überhaupt.
+  const defaultMatch = matches.find((m) => m.mine && !m.played) ?? matches.find((m) => m.mine) ?? matches[0];
+  const [expanded, setExpanded] = useState(false);
+  const [matchId, setMatchId] = useState(defaultMatch?.id ?? "");
+  const match = matches.find((m) => m.id === matchId) ?? defaultMatch;
+  const defaultSubject = (m: ReportMatch | undefined) =>
+    m?.players.find((p) => p.id === userId)?.id ?? m?.players[0]?.id ?? "";
+  const [subjectId, setSubjectId] = useState(defaultSubject(defaultMatch));
+
+  if (!match) return null;
+
+  const subject = match.isDuel ? null : match.players.find((p) => p.id === subjectId) ?? match.players[0] ?? null;
+  const submission =
+    submissions.find((x) => x.matchId === match.id && (match.isDuel || x.subjectId === subject?.id)) ?? null;
+  const pendingCount = submissions.filter((x) => x.status === "pending" || x.status === "processing").length;
+
   return (
-    <div className="glass rounded-2xl p-4 mb-4 space-y-3">
-      <div>
-        <h3 className="text-sm font-semibold text-white">Ergebnis melden</h3>
-        <p className="text-xs text-gray-500">
-          Trage dein Ergebnis ein und lade Screenshots als Nachweis hoch. Dein Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Screenshots werden nach einiger Zeit automatisch gelöscht.
-        </p>
-      </div>
-      {matches.map((m) => (
-        <MatchForm key={m.id} eventId={eventId} m={m} statFields={statFields} locked={locked} />
-      ))}
+    <div className="glass rounded-2xl mt-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between gap-2 p-4 text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white">Ergebnis melden</span>
+          {pendingCount > 0 && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-300">
+              {pendingCount} in Prüfung
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3">
+          <p className="text-xs text-gray-500">
+            Trage dein Ergebnis oder das eines anderen Spielers ein und lade Screenshots als Nachweis hoch. Das Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Screenshots werden nach einiger Zeit automatisch gelöscht.
+          </p>
+
+          <div className={`grid gap-2 ${match.isDuel ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+            <label className="text-xs text-gray-400 space-y-1">
+              Match / Runde
+              <select
+                value={match.id}
+                onChange={(e) => {
+                  setMatchId(e.target.value);
+                  setSubjectId(defaultSubject(matches.find((m) => m.id === e.target.value)));
+                }}
+                className={inputCls}
+              >
+                {matches.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-gray-900">
+                    {m.label}{m.mine ? " (du)" : ""}{m.played ? " ✓" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!match.isDuel && (
+              <label className="text-xs text-gray-400 space-y-1">
+                Spieler
+                <select value={subject?.id ?? ""} onChange={(e) => setSubjectId(e.target.value)} className={inputCls}>
+                  {match.players.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-gray-900">
+                      {uname(p)}{p.id === userId ? " (du)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+
+          <MatchForm
+            key={`${match.id}:${subject?.id ?? ""}`}
+            eventId={eventId}
+            m={match}
+            subject={subject}
+            s={submission}
+            statFields={statFields}
+            locked={locked}
+          />
+        </div>
+      )}
     </div>
   );
 }
