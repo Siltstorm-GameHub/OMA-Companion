@@ -1986,9 +1986,9 @@ model Battle {
 
 // ── Karten-Packs ─────────────────────────────────────────────────────────────
 // Packs lösen sich NICHT automatisch auf — Kauf/Gewinn legt nur ein
-// ungeöffnetes Pack ins Inventar, geöffnet wird manuell auf /battle-cards
+// ungeöffnetes Pack ins Inventar, geöffnet wird manuell auf /gems
 // (mit Öffnen-Animation im Client). PURCHASE ist zusätzlich auf maximal
-// 5 Käufe/Tag begrenzt (siehe lib/battle-cards/packs.ts).
+// 5 Käufe/Tag begrenzt (siehe lib/gems/packs.ts).
 
 enum CardPackSource {
   PURCHASE
@@ -2000,7 +2000,7 @@ enum CardPackSource {
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
-// siehe COMMUNITY_CHANCE/PACK_CARD_COUNT in lib/battle-cards/packs.ts.
+// siehe COMMUNITY_CHANCE/PACK_CARD_COUNT in lib/gems/packs.ts.
 enum CardPackKind {
   STANDARD
   PREMIUM

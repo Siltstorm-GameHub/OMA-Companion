@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import LiveBattleView from "@/components/battle-cards/LiveBattleView";
+import LiveBattleView from "@/components/gems/LiveBattleView";
 
 export const metadata = {
   title: "Laufender Kampf | OMA Gems | OMA",

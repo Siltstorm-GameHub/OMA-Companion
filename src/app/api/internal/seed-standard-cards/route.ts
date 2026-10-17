@@ -12,7 +12,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { STANDARD_CARDS } from "../../../../../prisma/battle-cards-seed-data";
+import { STANDARD_CARDS } from "../../../../../prisma/gems-seed-data";
 
 function isAuthorized(request: Request): boolean {
   const expectedSecret = process.env.INTERNAL_WEBHOOK_SECRET;

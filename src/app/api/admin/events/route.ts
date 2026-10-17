@@ -3,8 +3,8 @@ import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptai
 import { prisma } from "@/lib/prisma";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
-import { generateGemsTournamentBossTeam } from "@/lib/battle-cards/gems-tournament";
-import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
+import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 

@@ -64,7 +64,7 @@
         "rule": "ai-color-palette",
         "value": "violet-500,fuchsia-400",
         "files": [
-          "src/components/battle-cards/CardCollectionBrowser.tsx"
+          "src/components/gems/CardCollectionBrowser.tsx"
         ],
         "createdAt": "2026-09-03T18:02:52.972Z",
         "reason": "Pre-existing code, not touched this session; violet/fuchsia is this app's documented 'Gaming Identity' brand palette (see globals.css --violet-glow, accent-violet, text-gradient-gaming), used consistently app-wide, not an ad-hoc AI-slop gradient"
@@ -73,7 +73,7 @@
         "rule": "gray-on-color",
         "value": "text-gray-400",
         "files": [
-          "src/components/battle-cards/LiveBattleView.tsx"
+          "src/components/gems/LiveBattleView.tsx"
         ],
         "createdAt": "2026-09-05T08:06:27.047Z",
         "reason": "pre-existing Auto-Kampf toggle button, unrelated to this edit; bg-white/[0.06] is near-transparent so text-gray-400 reads fine, not a real contrast issue"
@@ -82,7 +82,7 @@
         "rule": "ai-color-palette",
         "value": "*",
         "files": [
-          "src/components/battle-cards/CardCollectionBrowser.tsx"
+          "src/components/gems/CardCollectionBrowser.tsx"
         ],
         "createdAt": "2026-09-05T08:31:29.644Z",
         "reason": "violet/fuchsia is this codebase's established Battle-Cards accent color (matches CLASS_CONFIG, DuplicateProgress, PackOpener, admin panels), not incidental AI purple"
@@ -100,7 +100,7 @@
         "rule": "gray-on-color",
         "value": "*",
         "files": [
-          "src/components/battle-cards/LiveBattleView.tsx"
+          "src/components/gems/LiveBattleView.tsx"
         ],
         "createdAt": "2026-09-05T08:54:27.772Z",
         "reason": "pre-existing Auto-Kampf toggle button (bg-white/[0.06] text-gray-400), unrelated to session edits; specific-value ignore for text-gray-400 kept re-firing on this line across multiple edits, broadening to * for this file/rule to stop repeat false positives"
@@ -127,7 +127,7 @@
         "rule": "ai-color-palette",
         "value": "#8b5cf6",
         "files": [
-          "src/components/battle-cards/ChallengesList.tsx"
+          "src/components/gems/ChallengesList.tsx"
         ],
         "createdAt": "2026-09-05T19:09:39.491Z",
         "reason": "violet #8b5cf6 reused from existing app palette (Karten-tab accent + SUPPORT class color in BattleCardView.tsx), not a new AI-picked color"
@@ -226,7 +226,7 @@
         "rule": "gray-on-color",
         "value": "text-gray-300",
         "files": [
-          "src/components/battle-cards/HeroBuilderClient.tsx"
+          "src/components/gems/HeroBuilderClient.tsx"
         ],
         "createdAt": "2026-09-13T07:00:40.673Z",
         "reason": "false positive: text-gray-300 is the inactive-button branch of the ternary (paired with bg-white/[0.03], not the violet active background)"

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
-import { ensureGemsStarter } from "@/lib/battle-cards/auto-starter";
-import LineupEditor from "@/components/battle-cards/LineupEditor";
+import { toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
+import { ensureGemsStarter } from "@/lib/gems/auto-starter";
+import LineupEditor from "@/components/gems/LineupEditor";
 
 export const metadata = {
   title: "Startaufstellung | OMA Gems",

@@ -6,28 +6,28 @@
 //    "Spielen"  (Event-Turnier, Kampagne, Rangliste nach höchster Stufe),
 //    "Sammlung" (Startaufstellung + Karten),
 //    "Shop"     (Glücksrad, Packs öffnen und kaufen).
-//  Alte ?tab=-Werte landen über LEGACY_TABS in BattleCardsTabs im passenden Reiter.
+//  Alte ?tab=-Werte landen über LEGACY_TABS in GemsTabs im passenden Reiter.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureGemsStarter } from "@/lib/battle-cards/auto-starter";
-import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
-import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { ensureGemsStarter } from "@/lib/gems/auto-starter";
+import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/gems/packs";
+import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignLeaderboard } from "@/lib/battle-cards/leaderboard";
-import LeaderboardList from "@/components/battle-cards/LeaderboardList";
-import PackOpener from "@/components/battle-cards/PackOpener";
-import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
-import BattleCardsTabs from "./BattleCardsTabs";
+import { getCampaignLeaderboard } from "@/lib/gems/leaderboard";
+import LeaderboardList from "@/components/gems/LeaderboardList";
+import PackOpener from "@/components/gems/PackOpener";
+import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
+import GemsTabs from "./GemsTabs";
 import { Gem } from "@/components/icons";
-import LineupStrip from "@/components/battle-cards/LineupStrip";
-import CampaignMap from "@/components/battle-cards/CampaignMap";
-import GemsTournamentBanner from "@/components/battle-cards/GemsTournamentBanner";
+import LineupStrip from "@/components/gems/LineupStrip";
+import CampaignMap from "@/components/gems/CampaignMap";
+import GemsTournamentBanner from "@/components/gems/GemsTournamentBanner";
 import CoinIcon from "@/components/CoinIcon";
-import DailySpin from "@/components/battle-cards/shop/DailySpin";
-import BuyPack from "@/components/battle-cards/shop/BuyPack";
+import DailySpin from "@/components/gems/shop/DailySpin";
+import BuyPack from "@/components/gems/shop/BuyPack";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const LEADERBOARD_PREVIEW = 5;
@@ -167,7 +167,7 @@ export default async function GemsPage() {
         </div>
         <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Endlos-Turm und Turniere</p>
       </div>
-      <BattleCardsTabs
+      <GemsTabs
         spielenPanel={spielenPanel}
         sammlungPanel={sammlungPanel}
         ladenPanel={ladenPanel}

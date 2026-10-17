@@ -18,8 +18,8 @@ import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import InfoTooltip from "@/components/InfoTooltip";
-import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
-import { getClassConfig } from "@/components/battle-cards/BattleCardView";
+import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
+import { getClassConfig } from "@/components/gems/BattleCardView";
 import { fromDatetimeLocalBerlin, formatBerlinDateTime, formatBerlinDate } from "@/lib/time";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

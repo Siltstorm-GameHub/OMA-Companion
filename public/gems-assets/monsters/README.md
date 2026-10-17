@@ -4,7 +4,7 @@ Freistehende Gegner-Figuren für den Match-3-Kampfmodus (Empires-&-Puzzles-Stil:
 eine Figur pro Gegner über dem Spielfeld, keine Kartenausschnitte). Sobald eine
 Datei mit dem passenden Dateinamen hier abgelegt wird, zieht der Code sie
 automatisch — kein weiterer Code-Change nötig (siehe `monsterImagePath()` in
-`src/lib/battle-cards/monster-content.ts`). Fehlt eine Datei (noch), fällt die
+`src/lib/gems/monster-content.ts`). Fehlt eine Datei (noch), fällt die
 UI automatisch auf ein generisches Klassen-Icon zurück, es gibt also keinen
 Blocker: Dateien können nach und nach ergänzt werden.
 
@@ -20,7 +20,7 @@ Blocker: Dateien können nach und nach ergänzt werden.
 
 ## Benötigte Dateien
 
-### Schnellkampf-Gegner (`src/lib/battle-cards/puzzle-monsters.ts`) — haushaltsthemiert, humorvoll
+### Schnellkampf-Gegner (`src/lib/gems/puzzle-monsters.ts`) — haushaltsthemiert, humorvoll
 
 | Datei | Monster | Kurzbeschreibung |
 |---|---|---|
@@ -31,7 +31,7 @@ Blocker: Dateien können nach und nach ergänzt werden.
 | `oma-gisela.png` | Oma Gisela | Support, herzliche Rentnerin mit Kuchen/Keksen |
 | `formularfresser.png` | Formularfresser | Support, bürokratischer Papierkram-Golem |
 
-### Kampagnen-Gegner (`src/lib/battle-cards/campaign-monsters.ts`) — Gaming-Kultur-Humor
+### Kampagnen-Gegner (`src/lib/gems/campaign-monsters.ts`) — Gaming-Kultur-Humor
 
 | Datei | Monster | Kurzbeschreibung |
 |---|---|---|

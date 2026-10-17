@@ -26,7 +26,8 @@ const nextConfig: NextConfig = {
       { source: "/shop", destination: "/gems?tab=laden", permanent: true },
       // Alte Seiten-URLs von Battle Cards
       { source: "/battle-cards", destination: "/gems", permanent: true },
-      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest*", destination: "/gems/:page/:rest*", permanent: true },
+      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)", destination: "/gems/:page", permanent: true },
+      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest+", destination: "/gems/:page/:rest+", permanent: true },
       { source: "/battle-cards/:page(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
       // Alte Asset-URLs: Grafiken und Sounds lagen bis Phase 5 unter /battle-cards/ und wurden von
       // einer früheren Pauschal-Weiterleitung (308, von Browsern gecacht) auf /gems/… umgeleitet.
@@ -37,6 +38,11 @@ const nextConfig: NextConfig = {
       { source: "/oma-quest/:path*", destination: "/gems", permanent: true },
       { source: "/dnd/:path*", destination: "/gems", permanent: true },
       { source: "/gems/:sub(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
+      // Interne Umbenennung battle-cards → gems: Admin-Bereich dauerhaft, die Spiel-API nur
+      // vorübergehend (307 behält POST und Body), damit noch offene Tabs mit altem JS weiterlaufen.
+      { source: "/admin/battle-cards/:path*", destination: "/admin/gems/:path*", permanent: true },
+      { source: "/api/battle-cards/:path*", destination: "/api/gems/:path*", permanent: false },
+      { source: "/api/admin/battle-cards/:path*", destination: "/api/admin/gems/:path*", permanent: false },
     ];
   },
   images: {

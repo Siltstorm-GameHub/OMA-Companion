@@ -5,7 +5,7 @@
 -- Spieler, wie viele Münzen die Umstellung gutschreiben würde. Danach
 -- convert_card_levels_2_apply.sql ausführen, dann drop_oma_quest_duels_levels.sql.
 --
--- Erstattung je Karte (siehe lib/battle-cards/card-coins.ts):
+-- Erstattung je Karte (siehe lib/gems/card-coins.ts):
 --  - bezahlte Upgrade-Kosten für jede Stufe über 1 (Admin-Override aus BotConfig, sonst Standard)
 --  - 25 Münzen je überzähliger Kopie (Community-Karten: 50)
 

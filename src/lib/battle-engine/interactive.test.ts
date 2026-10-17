@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { advance, applyUltimateInterrupt, createInteractiveState } from "./interactive";
-import { puzzleMonsterRoster } from "../battle-cards/puzzle-monsters";
+import { puzzleMonsterRoster } from "../gems/puzzle-monsters";
 
 function newBattle() {
   const team = puzzleMonsterRoster(1).slice(0, 3);

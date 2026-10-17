@@ -7,7 +7,7 @@
 
 import { prisma } from "../prisma";
 import { computeSeasonResults, type MemberSeasonInput } from "./season-engine";
-import { ACTIVITY_TIER_RANK } from "../battle-cards/card-view";
+import { ACTIVITY_TIER_RANK } from "../gems/card-view";
 import { dispatchNotification } from "../notify-dispatch";
 
 const ACTIVITY_TIER_LABEL: Record<string, string> = {

@@ -13,7 +13,7 @@
  * --growth überschreiben testweise die Schwierigkeits-Konstanten.
  *
  * Läuft komplett ohne Datenbank: das Spieler-Team besteht aus 5 der 6 Standard-Karten
- * (prisma/battle-cards-seed-data.ts, je Kampf zufällig gewählt), die Gegner aus den
+ * (prisma/gems-seed-data.ts, je Kampf zufällig gewählt), die Gegner aus den
  * Kampagnen-Leveln. Gespielt wird über dieselbe Engine wie im echten Kampf
  * (lib/battle-engine/interactive.ts), mit einem einfachen automatischen Spieler:
  *  - löst jedes bereite Ultimate sofort aus,
@@ -22,14 +22,14 @@
  * eine vorsichtige Untergrenze.
  */
 import type { Card } from "@prisma/client";
-import { STANDARD_CARDS } from "../prisma/battle-cards-seed-data";
+import { STANDARD_CARDS } from "../prisma/gems-seed-data";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { advance, applyUltimateInterrupt, createInteractiveState, type InteractiveBattleState } from "@/lib/battle-engine/interactive";
 import { BOARD_COLS, BOARD_ROWS, ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import { resolveBoardSession, type SwapMove } from "@/lib/battle-engine/board-match3";
-import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/battle-cards/campaign-levels";
-import { buildCampaignEnemyTeam, computeStars } from "@/lib/battle-cards/campaign";
-import { ENDLESS_BASE_MULTIPLIER, ENDLESS_FIRST_STAGE, ENDLESS_GROWTH, generateEndlessLevel } from "@/lib/battle-cards/endless-levels";
+import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/gems/campaign-levels";
+import { buildCampaignEnemyTeam, computeStars } from "@/lib/gems/campaign";
+import { ENDLESS_BASE_MULTIPLIER, ENDLESS_FIRST_STAGE, ENDLESS_GROWTH, generateEndlessLevel } from "@/lib/gems/endless-levels";
 
 const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const BATTLES = Number(positional[0] ?? 40);

@@ -7,7 +7,7 @@ import {
   communityCardPoolSize,
   PACK_DAILY_PURCHASE_LIMIT,
   type PackKind,
-} from "@/lib/battle-cards/packs";
+} from "@/lib/gems/packs";
 import { getShopConfig } from "@/lib/shop-config";
 
 const VALID_KINDS: PackKind[] = ["STANDARD", "PREMIUM", "COMMUNITY"];

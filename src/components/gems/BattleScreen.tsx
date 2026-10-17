@@ -1,0 +1,798 @@
+"use client";
+
+// ============================================
+// Kampf-Screen — spielt einen battleLog ab
+// ============================================
+// Layout nach PROJECT_CONTEXT.md: Gegner oben, eigenes Team unten, je Karte
+// Mini-Portrait + HP-Balken (grün/gelb/rot) + Rage-Balken. Aktuell handelnde
+// Einheit + Ziel bekommen farbige Rahmen. Kompakter Event-Log unten.
+// Ultimate-Cutscene: abgedunkeltes Overlay, Skill-Name groß + Beschreibung.
+//
+// Reine Wiedergabe-Komponente — bekommt einen fertigen battleLog (siehe
+// BattleResult in lib/battle-engine) und spielt ihn zeitgesteuert ab. Führt
+// selbst keine Kampflogik aus (die läuft ausschließlich serverseitig).
+
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { BellOff, ChevronDown, ChevronRight, ChevronUp, Sparkles, Swords, Volume2 } from "@/components/icons";
+import { Play, Pause, RotateCcw } from "@/components/icons";
+import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
+import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/gems/sfx";
+import { isSoundMuted, setSoundMuted } from "@/lib/gems/sound-prefs";
+import { CLASS_CONFIG } from "@/lib/gems/class-config";
+import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
+import BattleFigure from "@/components/te-character/BattleFigure";
+
+// ---------- Skill-Effekt-Overlay ----------
+// Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
+// sofort auseinander, sobald der Skill-Pool sich ändert), wird der Effekt-Typ
+// direkt aus dem tatsächlich abgespielten BattleLogEntry abgeleitet. Da sich
+// die Skills im Pool bereits in Effekt-Art + Ziel (einzeln/Fläche, Schaden/
+// Heilung/Schild/Buff/Debuff/Rage) unterscheiden, ergibt sich pro Skill ganz
+// von selbst ein eigenes, zutreffendes visuelles Bild.
+//
+// Archetyp-Erweiterung: zusätzlich zur Effekt-Art fließt die Klasse des
+// AUSFÜHRENDEN Helden (casterClass, über sourceId/actorId aus dem Log
+// aufgelöst) in die Darstellung ein — ein Tank-Treffer wummst anders als ein
+// DPS-Schnitt, ein Support-Heal glimmt anders als ein Tank-Rally-Schrei.
+// Gleiche Matrix auf der Audio-Seite, siehe playHitSfxFor/playUltimateSfx in
+// lib/gems/sfx.ts.
+type VfxKind = "cast" | "damage" | "critDamage" | "heal" | "shield" | "buff" | "debuff" | "rage";
+
+interface VfxEvent {
+  kind: VfxKind;
+  targetId: string;
+  casterClass?: UnitClass;
+  /** Wechselt bei jedem neuen Log-Eintrag, erzwingt einen Animations-Replay. */
+  key: number;
+}
+
+function vfxForEntry(e: BattleLogEntry | undefined, step: number, classOf: (id: string) => UnitClass | undefined): VfxEvent | null {
+  if (!e) return null;
+  switch (e.type) {
+    case "action":
+      return e.actionType === "active"
+        ? { kind: "cast", targetId: e.actorId, casterClass: classOf(e.actorId), key: step }
+        : null;
+    case "damage":
+      return { kind: e.isCrit ? "critDamage" : "damage", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
+    case "heal":
+      return { kind: "heal", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
+    case "shieldApplied":
+      return { kind: "shield", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
+    case "statModifierApplied":
+      return {
+        kind: e.amount >= 0 ? "buff" : "debuff",
+        targetId: e.targetId,
+        casterClass: classOf(e.sourceId),
+        key: step,
+      };
+    case "rageChange":
+      return e.reason === "skillEffect" ? { kind: "rage", targetId: e.unitId, key: step } : null;
+    default:
+      return null;
+  }
+}
+
+function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
+  const casterColor = vfx.casterClass ? CLASS_CONFIG[vfx.casterClass].color : "#60a5fa";
+
+  switch (vfx.kind) {
+    case "cast":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{ boxShadow: `0 0 0 2px ${casterColor}e6` }}
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: [0, 1, 0], scale: 1.25 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        />
+      );
+    case "damage":
+    case "critDamage": {
+      const crit = vfx.kind === "critDamage";
+
+      // ── TANK: dumpfer Wuchtschlag — Boden-Schockwellenring statt Klingen-Motiv,
+      //    Ziel wird kurz "zusammengedrückt" statt seitlich zu wackeln. ──
+      if (vfx.casterClass === "TANK") {
+        return (
+          <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 0 2px ${casterColor}` }}
+              initial={{ opacity: 0.9, scale: 0.3 }}
+              animate={{ opacity: 0, scale: crit ? 1.6 : 1.3 }}
+              transition={{ duration: crit ? 0.5 : 0.4, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: `${casterColor}33` }}
+              initial={{ opacity: 0, scaleY: 1 }}
+              animate={{ opacity: [0, 1, 0], scaleY: [1, 0.82, 1] }}
+              transition={{ duration: crit ? 0.4 : 0.3, ease: "easeOut" }}
+            />
+            {crit && <Sparkles className="w-6 h-6 relative" style={{ color: casterColor }} />}
+          </motion.div>
+        );
+      }
+
+      // ── DAMAGE_DEALER: scharfer, diagonaler Klingen-/Schuss-Schnitt + Funken.
+      //    Nutzt das echte Slash-Sprite (Kenney Particle Pack, CC0, siehe
+      //    public/gems-assets/vfx/README.md) statt eines reinen CSS-Balkens —
+      //    per mask-image in die Klassenfarbe eingefärbt (das Sprite selbst ist
+      //    ein graustufiges Alpha-Silhouette, kein farbiges Bild). ──
+      if (vfx.casterClass === "DAMAGE_DEALER") {
+        return (
+          <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: casterColor,
+                maskImage: "url(/gems-assets/vfx/slash.png)",
+                WebkitMaskImage: "url(/gems-assets/vfx/slash.png)",
+                maskSize: "180% 180%",
+                WebkitMaskSize: "180% 180%",
+                maskRepeat: "no-repeat",
+                WebkitMaskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskPosition: "center",
+              }}
+              initial={{ opacity: 0, rotate: -30, scale: 0.7 }}
+              animate={{ opacity: [0, 1, 0], rotate: -30, scale: 1.15 }}
+              transition={{ duration: crit ? 0.35 : 0.28, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: `${casterColor}22` }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 0.3 }}
+            />
+            {crit && <Sparkles className="w-6 h-6 relative" style={{ color: "#facc15" }} />}
+          </motion.div>
+        );
+      }
+
+      // ── SUPPORT: arkaner Bolzen — einschlagender Lichtsplitter statt Wucht
+      //    oder Klinge: ein einwärts kollabierender Ring (Gegenrichtung zum
+      //    Tank-Schockwellenring) mit dem echten Magie-Sprite (Kenney Particle
+      //    Pack, CC0) statt eines generischen Lucide-Icons im Zentrum. ──
+      if (vfx.casterClass === "SUPPORT") {
+        return (
+          <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 0 2px ${casterColor}`, background: `${casterColor}22` }}
+              initial={{ opacity: 0, scale: crit ? 1.7 : 1.4 }}
+              animate={{ opacity: [0, 1, 0], scale: 0.35 }}
+              transition={{ duration: crit ? 0.42 : 0.34, ease: "easeIn" }}
+            />
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: casterColor,
+                maskImage: "url(/gems-assets/vfx/magic-bolt.png)",
+                WebkitMaskImage: "url(/gems-assets/vfx/magic-bolt.png)",
+                maskSize: "70% 70%",
+                WebkitMaskSize: "70% 70%",
+                maskRepeat: "no-repeat",
+                WebkitMaskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskPosition: "center",
+              }}
+              initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
+              animate={{ opacity: [0, 1, 0], scale: 1, rotate: crit ? 300 : 200 }}
+              transition={{ duration: crit ? 0.42 : 0.34, ease: "easeOut" }}
+            />
+            {crit && (
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ boxShadow: `0 0 0 1px ${casterColor}aa` }}
+                initial={{ opacity: 0.8, scale: 0.5 }}
+                animate={{ opacity: 0, scale: 1.5 }}
+                transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
+              />
+            )}
+          </motion.div>
+        );
+      }
+
+      // ── Fallback (unbekannte Klasse): generischer Treffer-Puls. ──
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 0], x: [0, crit ? -5 : -3, 5, -3, 0] }}
+          transition={{ duration: crit ? 0.5 : 0.4, ease: "easeOut" }}
+        >
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: crit ? "rgba(250,204,21,0.35)" : "rgba(239,68,68,0.3)" }}
+          />
+          {crit && <Sparkles className="w-6 h-6 relative" style={{ color: "#facc15" }} />}
+        </motion.div>
+      );
+    }
+    case "heal":
+      return (
+        <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ background: "rgba(52,211,153,0.3)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ boxShadow: "0 0 0 2px rgba(110,231,183,0.7)" }}
+            initial={{ opacity: 0, scale: 1.3, rotate: 0 }}
+            animate={{ opacity: [0, 0.8, 0], scale: 0.9, rotate: 90 }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+          />
+          <motion.span
+            className="absolute text-emerald-300 font-bold text-lg"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: [0, 1, 0], y: -14 }}
+            transition={{ duration: 0.5 }}
+          >
+            +
+          </motion.span>
+        </motion.div>
+      );
+    case "shield":
+      // TANK-Schild als eckiges Bollwerk (clip-path), Support/generisch als weiche Blase.
+      return vfx.casterClass === "TANK" ? (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `${casterColor}2a`,
+            boxShadow: `0 0 0 2px ${casterColor}`,
+            clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+          }}
+          initial={{ opacity: 0, scale: 0.75, rotate: -8 }}
+          animate={{ opacity: [0, 1, 0.5], scale: 1.1, rotate: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+        />
+      ) : (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{ boxShadow: `0 0 0 2px ${casterColor}e6`, background: `${casterColor}26` }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 1, 0.4], scale: 1.15 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+        />
+      );
+    case "buff":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ boxShadow: `0 0 0 2px ${casterColor}66, 0 0 0 4px rgba(74,222,128,0.7)` }}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: [0, 1, 0], scale: 1.2 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 0], y: -10 }} transition={{ duration: 0.5 }}>
+            <ChevronUp className="w-4 h-4" />
+          </motion.div>
+        </motion.div>
+      );
+    case "debuff":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ boxShadow: `0 0 0 2px ${casterColor}66, 0 0 0 4px rgba(244,63,94,0.7)` }}
+            initial={{ opacity: 0, scale: 1.15 }}
+            animate={{ opacity: [0, 1, 0], scale: 0.85 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 0], y: 10 }} transition={{ duration: 0.5 }}>
+            <ChevronDown className="w-4 h-4" />
+          </motion.div>
+        </motion.div>
+      );
+    case "rage":
+      return (
+        <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.7 }}
+            animate={{ opacity: [0, 1, 0], y: -12, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Swords className="w-5 h-5" />
+          </motion.div>
+        </motion.div>
+      );
+    default:
+      return null;
+  }
+}
+
+interface UnitRuntime {
+  currentHp: number;
+  maxHp: number;
+  rage: number;
+  alive: boolean;
+}
+
+interface DerivedState {
+  units: Map<string, UnitRuntime>;
+  activeUnitId: string | null;
+  targetIds: Set<string>;
+}
+
+function deriveState(log: BattleLogEntry[], upto: number, roster: RosterEntry[]): DerivedState {
+  const units = new Map<string, UnitRuntime>();
+  for (const r of roster) units.set(r.instanceId, { currentHp: r.maxHp, maxHp: r.maxHp, rage: 0, alive: true });
+
+  let activeUnitId: string | null = null;
+  let targetIds = new Set<string>();
+
+  for (let i = 0; i < upto; i++) {
+    const e = log[i];
+    switch (e.type) {
+      case "turnStart":
+        activeUnitId = e.unitId;
+        targetIds = new Set();
+        break;
+      case "damage": {
+        const u = units.get(e.targetId);
+        if (u) u.currentHp = e.remainingHp;
+        targetIds.add(e.targetId);
+        break;
+      }
+      case "heal": {
+        const u = units.get(e.targetId);
+        if (u) u.currentHp = e.newHp;
+        targetIds.add(e.targetId);
+        break;
+      }
+      case "rageChange": {
+        const u = units.get(e.unitId);
+        if (u) u.rage = e.newRage;
+        break;
+      }
+      case "death": {
+        const u = units.get(e.unitId);
+        if (u) u.alive = false;
+        break;
+      }
+      case "roundEnd":
+        activeUnitId = null;
+        targetIds = new Set();
+        break;
+      default:
+        break;
+    }
+  }
+
+  return { units, activeUnitId, targetIds };
+}
+
+function delayForEntry(e: BattleLogEntry | undefined): number {
+  if (!e) return 0;
+  switch (e.type) {
+    case "action":
+      return e.actionType === "ultimate" ? 1300 : 450;
+    case "damage":
+      return 500;
+    case "heal":
+      return 450;
+    case "death":
+      return 700;
+    case "battleEnd":
+      return 0;
+    case "roundStart":
+    case "roundEnd":
+    case "turnStart":
+      return 120;
+    default:
+      return 220;
+  }
+}
+
+function describeEntry(e: BattleLogEntry, nameOf: (id: string) => string): string | null {
+  switch (e.type) {
+    case "action":
+      return `${nameOf(e.actorId)} setzt ${e.skillName} ein.`;
+    case "damage":
+      return `${nameOf(e.targetId)} erleidet ${e.amount} Schaden${e.isCrit ? " (kritisch!)" : ""}.`;
+    case "heal":
+      return `${nameOf(e.targetId)} wird um ${e.amount} HP geheilt.`;
+    case "shieldApplied":
+      return `${nameOf(e.targetId)} erhält einen Schild (${e.amount}).`;
+    case "death":
+      return `${nameOf(e.unitId)} wurde besiegt.`;
+    case "suddenDeathStart":
+      return "Sudden Death! Der Schaden steigt ab jetzt jede Runde.";
+    case "battleEnd":
+      return e.winner === "DRAW" ? "Unentschieden!" : e.winner === "A" ? "Dein Team gewinnt!" : "Der Gegner gewinnt!";
+    default:
+      return null;
+  }
+}
+
+function hpBarColor(pct: number): string {
+  if (pct > 0.5) return "#10b981";
+  if (pct > 0.2) return "#f59e0b";
+  return "#ef4444";
+}
+
+function UnitTile({
+  roster,
+  runtime,
+  isActive,
+  isTarget,
+  isVictory,
+  vfx,
+  attackKey,
+  blockKey,
+}: {
+  roster: RosterEntry;
+  runtime: UnitRuntime;
+  isActive: boolean;
+  isTarget: boolean;
+  /** Kampf ist zu Ende UND diese Einheit steht im Gewinner-Team (siehe winner
+   *  in BattleScreen) — spielt die Victory-Animation statt Idle, falls vorhanden. */
+  isVictory: boolean;
+  vfx: VfxEvent | null;
+  /** Wechselt (= Log-Schritt), wenn diese Einheit gerade eine Handlung ausführt — startet die Angriffs-Animation. */
+  attackKey: number;
+  /** Wechselt, wenn diese Einheit gerade einen Schild erhält — startet die Block-Animation. */
+  blockKey: number;
+}) {
+  const config = CLASS_CONFIG[roster.class];
+  const hpPct = Math.max(0, runtime.currentHp / runtime.maxHp);
+
+  const attacking = vfx?.kind === "cast";
+  const hit = vfx?.kind === "damage" || vfx?.kind === "critDamage";
+
+  return (
+    <div
+      className={`w-24 sm:w-28 shrink-0 relative transition-all ${attacking ? "attack-lunge" : ""} ${hit ? "hit-shake" : ""}`}
+      style={{
+        opacity: runtime.alive ? 1 : 0.35,
+        filter: runtime.alive ? "none" : "grayscale(1)",
+      }}
+    >
+      {isActive && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
+          Am Zug
+        </span>
+      )}
+      {isTarget && !isActive && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
+          Ziel
+        </span>
+      )}
+
+      <div className="w-full aspect-square mb-1 flex items-end justify-center relative">
+        {(isActive || isTarget) && (
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: isActive
+                ? "radial-gradient(closest-side, rgba(20,184,166,0.35), transparent 70%)"
+                : "radial-gradient(closest-side, rgba(239,68,68,0.3), transparent 70%)",
+            }}
+          />
+        )}
+        {roster.teCharacter ? (
+          <BattleFigure
+            config={roster.teCharacter}
+            unitClass={roster.class}
+            team={roster.teamId}
+            attackKey={attackKey}
+            blockKey={blockKey}
+            alive={runtime.alive}
+            victory={isVictory}
+            title={roster.name}
+          />
+        ) : roster.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={roster.imageUrl}
+            alt={roster.name}
+            className="max-w-full max-h-full object-contain relative"
+            style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
+          />
+        ) : (
+          <div
+            className="w-full h-full rounded-md flex items-center justify-center relative"
+            style={{ background: `${config.color}22` }}
+          >
+            <img src={config.icon} alt="" aria-hidden className="w-6 h-6 object-contain" style={{ opacity: 0.6 }} />
+          </div>
+        )}
+        <AnimatePresence>{vfx && <SkillEffectOverlay vfx={vfx} />}</AnimatePresence>
+        {roster.avatarBadgeUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={roster.avatarBadgeUrl}
+            alt=""
+            title="Echtes Profilbild"
+            className="absolute bottom-0 right-0 w-5 h-5 rounded-full object-cover"
+            style={{ border: "1.5px solid rgba(255,255,255,0.85)", boxShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+          />
+        )}
+      </div>
+
+      <div className="flex items-center justify-center gap-1 mb-0.5">
+        <img src={config.icon} alt="" aria-hidden className="w-3 h-3 shrink-0 object-contain" />
+        <p className="text-[10px] font-semibold text-white text-center truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+          {roster.name}
+        </p>
+      </div>
+
+      <div className="h-1.5 rounded-full bg-black/40 border border-white/[0.08] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }}
+        />
+      </div>
+      <p className="text-[8px] text-gray-400 text-center tabular-nums mt-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+        {Math.max(0, runtime.currentHp)}/{runtime.maxHp}
+      </p>
+
+      <div className="mt-0.5 h-1 rounded-full bg-black/40 border border-white/[0.08] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{ width: `${Math.min(100, runtime.rage)}%`, background: "#60a5fa" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; log: BattleLogEntry[] }) {
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  // Geteilter Mute-Schalter mit dem Live-Kampf (LiveBattleView.tsx) — siehe
+  // sound-prefs.ts. Vorher hatte dieser Screen einen eigenen localStorage-Key
+  // ("battleCardsSoundOn"), wodurch "Ton aus" hier den Live-Kampf nicht
+  // mitstummschaltete (und umgekehrt).
+  const [soundOn, setSoundOn] = useState(true);
+
+  useEffect(() => {
+    setSoundOn(!isSoundMuted());
+  }, []);
+
+  function toggleSound() {
+    setSoundOn((prev) => {
+      const next = !prev;
+      setSoundMuted(!next);
+      return next;
+    });
+  }
+
+  const rosterById = useMemo(() => new Map(roster.map((r) => [r.instanceId, r])), [roster]);
+  const teamB = useMemo(() => roster.filter((r) => r.teamId === "B"), [roster]);
+  const teamA = useMemo(() => roster.filter((r) => r.teamId === "A"), [roster]);
+  const nameOf = (id: string) => rosterById.get(id)?.name ?? "?";
+
+  useEffect(() => {
+    if (!playing || step >= log.length) return;
+    const delay = delayForEntry(log[step]);
+    const t = setTimeout(() => setStep((s) => Math.min(s + 1, log.length)), delay);
+    return () => clearTimeout(t);
+  }, [playing, step, log]);
+
+  const derived = useMemo(() => deriveState(log, step, roster), [log, step, roster]);
+
+  const recentLines = useMemo(() => {
+    const lines: string[] = [];
+    for (let i = step - 1; i >= 0 && lines.length < 4; i--) {
+      const line = describeEntry(log[i], nameOf);
+      if (line) lines.unshift(line);
+    }
+    return lines;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [log, step, roster]);
+
+  const lastEntry = step > 0 ? log[step - 1] : undefined;
+  const classOf = (id: string) => rosterById.get(id)?.class;
+  const currentVfx = useMemo(() => vfxForEntry(lastEntry, step, classOf), [lastEntry, step, rosterById]);
+  // Wer schlägt gerade zu / bekommt gerade einen Schild? (Figuren spielen dazu Angriff bzw. Abwehr.)
+  const attackerId = lastEntry?.type === "action" ? lastEntry.actorId : null;
+  const blockedId = lastEntry?.type === "shieldApplied" ? lastEntry.targetId : null;
+  const cutsceneActor =
+    lastEntry?.type === "action" && lastEntry.actionType === "ultimate" ? rosterById.get(lastEntry.actorId) : null;
+
+  // currentVfx wird bei jedem step neu erzeugt (kein gecachtes Objekt), das
+  // reicht als Trigger, ein Ultimate-Cast dagegen setzt kein currentVfx —
+  // dafür wird direkt auf den Log-Eintrag selbst reagiert (step als Schlüssel,
+  // damit ein zweiter Ultimate-Einsatz derselben Karte erneut auslöst).
+  useEffect(() => {
+    if (!soundOn || !currentVfx) return;
+    switch (currentVfx.kind) {
+      case "damage":
+        playHitSfxFor(currentVfx.casterClass, false);
+        break;
+      case "critDamage":
+        playHitSfxFor(currentVfx.casterClass, true);
+        break;
+      case "heal":
+        playHealSfx();
+        break;
+      case "shield":
+        playShieldSfx();
+        break;
+      case "buff":
+        playBuffSfx();
+        break;
+      case "debuff":
+        playDebuffSfx();
+        break;
+      default:
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVfx, soundOn]);
+
+  useEffect(() => {
+    if (!soundOn) return;
+    if (lastEntry?.type === "action" && lastEntry.actionType === "ultimate") {
+      playUltimateSfx(rosterById.get(lastEntry.actorId)?.class);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, soundOn]);
+
+  const isFinished = step >= log.length;
+  /** Nur gesetzt, sobald der abgespielte Log so weit fortgeschritten ist, dass der
+   *  battleEnd-Eintrag bereits durchlaufen wurde — steuert die Victory-Pose. */
+  const winner = useMemo(() => {
+    const battleEnd = log.slice(0, step).find((e) => e.type === "battleEnd");
+    return battleEnd?.type === "battleEnd" ? battleEnd.winner : null;
+  }, [log, step]);
+
+  return (
+    <div
+      className="glass rounded-xl p-3 space-y-3 relative overflow-hidden"
+      style={{
+        backgroundColor: "#04061a",
+        backgroundImage: [
+          "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
+          "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
+          "linear-gradient(180deg, rgba(4,6,26,0.6) 0%, rgba(4,6,26,0.3) 35%, rgba(4,6,26,0.3) 65%, rgba(4,6,26,0.6) 100%)",
+          "url(/gems-assets/arena-bg.jpg)",
+        ].join(", "),
+        backgroundSize: "auto, auto, auto, cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {/* Gegner-Reihe */}
+      <div className="flex gap-2 justify-center flex-wrap relative">
+        {teamB.map((r) => {
+          const rt = derived.units.get(r.instanceId);
+          if (!rt) return null;
+          return (
+            <UnitTile
+              key={r.instanceId}
+              roster={r}
+              runtime={rt}
+              isActive={derived.activeUnitId === r.instanceId}
+              isTarget={derived.targetIds.has(r.instanceId)}
+              isVictory={winner === r.teamId && rt.alive}
+              vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
+              attackKey={attackerId === r.instanceId ? step : 0}
+              blockKey={blockedId === r.instanceId ? step : 0}
+            />
+          );
+        })}
+      </div>
+
+      <div className="border-t border-white/[0.06]" />
+
+      {/* Eigenes Team */}
+      <div className="flex gap-2 justify-center flex-wrap">
+        {teamA.map((r) => {
+          const rt = derived.units.get(r.instanceId);
+          if (!rt) return null;
+          return (
+            <UnitTile
+              key={r.instanceId}
+              roster={r}
+              runtime={rt}
+              isActive={derived.activeUnitId === r.instanceId}
+              isTarget={derived.targetIds.has(r.instanceId)}
+              isVictory={winner === r.teamId && rt.alive}
+              vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
+              attackKey={attackerId === r.instanceId ? step : 0}
+              blockKey={blockedId === r.instanceId ? step : 0}
+            />
+          );
+        })}
+      </div>
+
+      {/* Event-Log */}
+      <div className="rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5 bg-black/40 border border-white/[0.08]">
+        {recentLines.length === 0 ? (
+          <p className="text-[11px] text-gray-500 italic">Der Kampf beginnt…</p>
+        ) : (
+          recentLines.map((line, i) => (
+            <p key={i} className="text-[11px] text-gray-500 leading-snug">
+              {line}
+            </p>
+          ))
+        )}
+      </div>
+
+      {/* Steuerung */}
+      <div className="flex items-center justify-center gap-2">
+        {isFinished ? (
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.94 }}
+            onClick={() => {
+              setStep(0);
+              setPlaying(true);
+            }}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" /> Erneut ansehen
+          </motion.button>
+        ) : (
+          <>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              onClick={() => setPlaying((p) => !p)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+            >
+              {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {playing ? "Pause" : "Weiter"}
+            </motion.button>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.94 }}
+              onClick={() => {
+                setPlaying(false);
+                setStep(log.length);
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+              title="Zum Ergebnis springen"
+            >
+              <ChevronRight className="w-3.5 h-3.5" /> Überspringen
+            </motion.button>
+          </>
+        )}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleSound}
+          className="flex items-center justify-center w-7 h-7 rounded-md bg-white/[0.06] text-gray-400 hover:text-gray-200 hover:bg-white/[0.1] transition-colors"
+          title={soundOn ? "Ton aus" : "Ton an"}
+          aria-label={soundOn ? "Ton aus" : "Ton an"}
+        >
+          {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+        </motion.button>
+      </div>
+
+      {/* Ultimate-Cutscene — geteilte Komponente mit LiveBattleView, damit ein
+          Ultimate dort denselben klassen-eigenen Look bekommt (siehe
+          UltimateCutsceneOverlay). */}
+      <AnimatePresence>
+        {cutsceneActor && (
+          <UltimateCutsceneOverlay
+            actorName={cutsceneActor.name}
+            actorClass={cutsceneActor.class}
+            skillName={cutsceneActor.ultimateSkillName}
+            description={cutsceneActor.ultimateSkillDescription}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

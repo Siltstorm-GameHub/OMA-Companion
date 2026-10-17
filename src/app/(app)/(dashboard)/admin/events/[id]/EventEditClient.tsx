@@ -24,8 +24,8 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
-import { getClassConfig } from "@/components/battle-cards/BattleCardView";
+import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
+import { getClassConfig } from "@/components/gems/BattleCardView";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 
 /* ── Types ── */

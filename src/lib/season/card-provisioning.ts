@@ -12,7 +12,7 @@
 
 import { Prisma, type Card } from "@prisma/client";
 import { prisma } from "../prisma";
-import { getSkillTemplate } from "../battle-cards/skill-templates";
+import { getSkillTemplate } from "../gems/skill-templates";
 import { rollCommunityCardClass, rollCommunityCardStats } from "./community-card-stats";
 
 /** Vor der Saison-Neuberechnung geschützte Felder einer neu angelegten Community-Karte. */
@@ -56,7 +56,7 @@ export async function ensureCommunityCard(
           name: member.displayName,
           // Bewusst leer statt Klassen-Platzhalter ("Tank" etc.) — Untertitel/
           // Beschreibung sind persönlich, bleiben leer, bis Admin oder das
-          // Mitglied selbst etwas einträgt (siehe lib/battle-cards/card-content.ts).
+          // Mitglied selbst etwas einträgt (siehe lib/gems/card-content.ts).
           title: "",
           class: cardClass,
           rarity: "COMMUNITY",

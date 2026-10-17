@@ -5,8 +5,8 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { createPollsForEvent } from "@/lib/event-polls";
-import { generateGemsTournamentBossTeam } from "@/lib/battle-cards/gems-tournament";
-import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
+import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 // Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —

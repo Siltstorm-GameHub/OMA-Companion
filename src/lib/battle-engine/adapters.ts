@@ -17,7 +17,7 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
   RANDOM: "random",
 };
 
-import { effectiveTeCharacter } from "@/lib/battle-cards/standard-avatars";
+import { effectiveTeCharacter } from "@/lib/gems/standard-avatars";
 
 export function cardToBattleUnitDefinition(
   card: Card,

@@ -3,10 +3,10 @@ import Link from "next/link";
 import { ArrowLeft } from "@/components/icons";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isStoredBattleLog } from "@/lib/battle-cards/battle-log";
-import BattleScreen from "@/components/battle-cards/BattleScreen";
-import BattleResultBanner, { type BattleOutcome } from "@/components/battle-cards/BattleResultBanner";
-import BattleStatsPanel from "@/components/battle-cards/BattleStatsPanel";
+import { isStoredBattleLog } from "@/lib/gems/battle-log";
+import BattleScreen from "@/components/gems/BattleScreen";
+import BattleResultBanner, { type BattleOutcome } from "@/components/gems/BattleResultBanner";
+import BattleStatsPanel from "@/components/gems/BattleStatsPanel";
 
 export const metadata = {
   title: "Kampf-Replay | OMA Gems | OMA",

@@ -3,7 +3,7 @@
 // ============================================
 // Einmalig auszuführen: runSeasonUpdate() aktualisiert bei einem Klassen-
 // wechsel seit Kurzem auch Passiv/Aktiv/Ultimate-Skills (siehe
-// lib/battle-cards/skill-templates.ts) — vorher wurden nur Stats/Klasse
+// lib/gems/skill-templates.ts) — vorher wurden nur Stats/Klasse
 // aktualisiert, sodass bereits reklassifizierte Community-Karten seitdem
 // Skills der ALTEN Klasse an Stats der NEUEN Klasse hängen haben konnten.
 // Dieser Endpoint gleicht das für alle bestehenden Community-Karten einmalig
@@ -13,7 +13,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSkillTemplate } from "@/lib/battle-cards/skill-templates";
+import { getSkillTemplate } from "@/lib/gems/skill-templates";
 
 function isAuthorized(request: Request): boolean {
   const expectedSecret = process.env.INTERNAL_WEBHOOK_SECRET;

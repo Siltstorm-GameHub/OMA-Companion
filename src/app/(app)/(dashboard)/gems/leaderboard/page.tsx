@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "@/components/icons";
 import { auth } from "@/auth";
-import { getCampaignLeaderboard } from "@/lib/battle-cards/leaderboard";
-import LeaderboardList from "@/components/battle-cards/LeaderboardList";
+import { getCampaignLeaderboard } from "@/lib/gems/leaderboard";
+import LeaderboardList from "@/components/gems/LeaderboardList";
 
 export const metadata = {
   title: "Rangliste | OMA Gems | OMA",

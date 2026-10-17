@@ -138,6 +138,21 @@ Sounds unter `public/battle-cards` auf `/gems/...` um — in Production fehlten 
 jetzt unter `public/gems-assets`; die Weiterleitungen in `next.config.ts` unterscheiden Seiten
 (→ `/gems`) und Dateien (→ `/gems-assets`), auch für bereits im Browser gespeicherte 308-Ziele.
 
+**6. Interne Namen auf gems** — erledigt
+Für Spieler unsichtbar, aber der Code heißt jetzt wie das Spiel:
+- `src/lib/battle-cards` → `src/lib/gems`, `src/components/battle-cards` → `src/components/gems`
+- API `/api/battle-cards/*` → `/api/gems/*`, `/api/admin/battle-cards/*` → `/api/admin/gems/*`
+- Admin-Seite `/admin/battle-cards` → `/admin/gems` (Menüpunkt „OMA Gems“)
+- Cron `/api/cron/battle-cards-gems-tournament` → `/api/cron/gems-tournament` (`vercel.json`)
+- `prisma/battle-cards-seed-data.ts` → `prisma/gems-seed-data.ts`, `BattleCardsTabs` → `GemsTabs`
+- Übergang: `/api/battle-cards/*` und `/api/admin/battle-cards/*` leiten vorübergehend (307) auf die
+  neuen Pfade, damit offene Tabs mit altem JS weiterlaufen — nach ein paar Tagen entfernen.
+  `/admin/battle-cards` leitet dauerhaft um.
+
+Bleibt bewusst: Prisma-Modelle und Tabellen (`BattleCard`, `UserCard` …) — Umbenennen hieße
+Daten migrieren, ohne Nutzen. Ebenso der localStorage-Schlüssel der Brett-Legende und das Nav-Icon
+`public/icons/nav/battle-cards.png`.
+
 ## Geklärte Punkte
 
 1. **Einstieg: Auto-Startpaket.** Beim ersten Besuch bekommt jeder Spieler ohne Karten automatisch

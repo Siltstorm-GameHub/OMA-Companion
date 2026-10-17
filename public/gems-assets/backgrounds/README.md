@@ -2,7 +2,7 @@
 
 Breite Banner-Hintergründe für den Kopfbereich der Kampagnen-Karte
 (`CampaignMap.tsx`, siehe `CAMPAIGN_CHAPTER_BACKGROUND` in
-`src/lib/battle-cards/campaign-levels.ts`). Fehlt eine Datei (noch), fällt
+`src/lib/gems/campaign-levels.ts`). Fehlt eine Datei (noch), fällt
 die UI automatisch auf einen einfachen Verlaufshintergrund zurück
 (`onError`-Pattern, wie bei den Monster-Bildern) — kein Blocker.
 

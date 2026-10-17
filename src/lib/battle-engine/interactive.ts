@@ -5,7 +5,7 @@
 // jedem Zug einer Spieler-Einheit (Team A) anhält und auf einen Zug auf dem
 // Match-3-Brett wartet. Der komplette Zustand ist JSON-serialisierbar (siehe
 // InteractiveBattleState) — eine Anfrage pro Zug, dazwischen liegt der Zustand
-// in der DB (LiveBattle.stateJson, siehe lib/battle-cards/live-battle.ts).
+// in der DB (LiveBattle.stateJson, siehe lib/gems/live-battle.ts).
 //
 // Team A wird vom Spieler gesteuert, Team B (Monster) von der KI über
 // defaultDecideAction() + die eingebauten Zielregeln — exakt wie runBattle().

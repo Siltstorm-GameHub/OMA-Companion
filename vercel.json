@@ -37,7 +37,7 @@
       "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/battle-cards-gems-tournament",
+      "path": "/api/cron/gems-tournament",
       "schedule": "30 6 * * *"
     },
     {

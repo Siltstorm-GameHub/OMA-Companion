@@ -70,14 +70,14 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/users", "/admin/minigames", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs"],
+    prefixes: ["/admin/notifications", "/admin/users", "/admin/minigames", "/admin/shop", "/admin/gems", "/admin/community-jobs"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
-      { href: "/admin/battle-cards",  label: "Battle Cards",     icon: Swords,      minRole: "admin" },
+      { href: "/admin/gems",  label: "OMA Gems",         icon: Swords,      minRole: "admin" },
     ],
   },
 ];
