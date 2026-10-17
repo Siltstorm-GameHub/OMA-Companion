@@ -60,6 +60,7 @@ import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
 import { rankForWins, withRankBonus } from "@/lib/gems/card-ranks";
+import { heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
 import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
 import { getEquippedRelicIds, grantRelic } from "@/lib/gems/relic-store";
 import { recordTowerClear } from "@/lib/gems/tower-season";
@@ -119,6 +120,7 @@ export interface LiveUnitSnapshot {
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
   teCharacter?: TeCharacterConfig | null;
+  heroLook?: HeroLook | null;
   /** Aktive Stat-Buffs/-Debuffs (Angriff/Verteidigung/Speed) — für die
    *  Buff/Debuff-Icons auf der Heldenkarte, siehe UnitCard in LiveBattleView.tsx. */
   statModifiers: ActiveStatModifier[];
@@ -197,6 +199,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
     teCharacter: u.def.teCharacter ?? null,
+    heroLook: heroLookForUnit({ ...u.def, cardId: u.def.cardId }),
     statModifiers: u.statModifiers,
   };
 }
@@ -440,8 +443,10 @@ async function createLiveBattle(
   playerTeam: BattleUnitDefinition[],
   enemyTeam: BattleUnitDefinition[]
 ): Promise<LiveBattleSnapshot> {
-  // Ausgerüstete Relikte wirken in jedem Modus (siehe relics.ts).
-  const { teamA, teamB, startRage } = applyRelics(await getEquippedRelicIds(playerAId), playerTeam, enemyTeam);
+  // Ausgerüstete Relikte wirken in Kampagne, Turm und Tages-Herausforderung — im Event-Turnier
+  // nicht, dort kämpfen alle mit denselben Voraussetzungen (siehe loadPlayerTeam).
+  const relicIds = mode.startsWith(TOURNAMENT_MODE_PREFIX) ? [] : await getEquippedRelicIds(playerAId);
+  const { teamA, teamB, startRage } = applyRelics(relicIds, playerTeam, enemyTeam);
   const created = createInteractiveState(teamA, teamB);
   if (startRage > 0) for (const unit of created.unitsA) unit.rage = Math.min(100, unit.rage + startRage);
   const { state, pendingDecision } = advance(created, undefined);
@@ -466,8 +471,9 @@ async function createLiveBattle(
 
 /** Baut das Spieler-Team aus der Startaufstellung (sonst die ersten TEAM_SIZE eigenen Karten).
  *  Spielerkarten kämpfen mit ihren Basiswerten (Stufe 1) plus dem Rang-Bonus aus ihren bisherigen
- *  Siegen (siehe card-ranks.ts) — Stufen gibt es nur noch für Monster. */
-async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
+ *  Siegen (siehe card-ranks.ts, im Turnier ohne) — Stufen gibt es nur noch für Monster. */
+async function loadPlayerTeam(userId: string, options: { withRanks?: boolean } = {}): Promise<BattleUnitDefinition[]> {
+  const withRanks = options.withRanks ?? true;
   const userCards = await prisma.userCard.findMany({
     where: { userId },
     include: { card: true },
@@ -486,7 +492,7 @@ async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
         resolveCardImageUrl(uc.card, avatarByDiscordId),
         resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
       ),
-      rankForWins(uc.winsInLineup)
+      withRanks ? rankForWins(uc.winsInLineup) : 0
     )
   );
 }
@@ -567,7 +573,8 @@ export async function startLiveGemsTournamentBattle(
     throw new LiveBattleError(`Maximale Anzahl Versuche erreicht (${tournament.maxAttemptsPerUser}).`);
   }
 
-  const teamA = await loadPlayerTeam(userId);
+  // Turnier = gleiche Voraussetzungen für alle: Karten ohne Rang-Bonus, keine Relikte.
+  const teamA = await loadPlayerTeam(userId, { withRanks: false });
   const teamB = JSON.parse(tournament.bossTeamJson) as BattleUnitDefinition[];
   return createLiveBattle(tournamentModeFor(tournament.id), userId, teamA, teamB);
 }

@@ -13,8 +13,9 @@
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/gems/live-battle.ts).
 
-import BattleFigure from "@/components/te-character/BattleFigure";
+import HeroFigure from "./HeroFigure";
 import type { TeCharacterConfig } from "@/lib/te-character";
+import type { HeroLook } from "@/lib/gems/hero/look";
 import { Children, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -79,6 +80,7 @@ interface LiveUnit {
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
   teCharacter?: TeCharacterConfig | null;
+  heroLook?: HeroLook | null;
   statModifiers: ActiveStatModifier[];
 }
 
@@ -520,16 +522,16 @@ function UnitCard({
             }}
           />
         )}
-        {unit.teCharacter ? (
-          <BattleFigure
-            config={unit.teCharacter}
-            unitClass={unit.class}
-            team={unit.teamId}
+        {unit.heroLook ? (
+          <HeroFigure
+            look={unit.heroLook}
             attacking={!!isAttacking}
             blocking={(effects ?? []).some((e) => e.kind === "shield")}
             alive={unit.isAlive}
             victory={isVictory}
+            idle
             title={unit.name}
+            className="w-full h-full relative"
           />
         ) : showImage ? (
           // eslint-disable-next-line @next/next/no-img-element

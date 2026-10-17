@@ -10,10 +10,8 @@
 import { Lock } from "@/components/icons";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
-import TeCharacter from "@/components/te-character/TeCharacter";
-import CardBackdrop from "./CardBackdrop";
+import HeroFigure from "./HeroFigure";
 import { RankBadge } from "./CardRank";
-import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 
 export default function CardTile({
   card,
@@ -52,10 +50,9 @@ export default function CardTile({
           filter: locked ? "grayscale(0.9)" : undefined,
         }}
       >
-        {card.teCharacter?.bg && <div className={`absolute inset-x-0 bottom-12 overflow-hidden ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}><CardBackdrop config={card.teCharacter} /></div>}
         <div className={`absolute inset-x-0 bottom-12 flex items-center justify-center ${isCommunity(card.rarity) ? "top-6" : "top-3"}`}>
-          {card.teCharacter ? (
-            <TeCharacter config={card.teCharacter} anim={poseAnim(card.teCharacter)} dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={card.name} />
+          {card.heroLook ? (
+            <HeroFigure look={card.heroLook} title={card.name} className="h-full w-auto max-w-full" />
           ) : card.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />

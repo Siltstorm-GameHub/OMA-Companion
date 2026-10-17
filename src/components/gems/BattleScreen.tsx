@@ -21,7 +21,8 @@ import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx
 import { isSoundMuted, setSoundMuted } from "@/lib/gems/sound-prefs";
 import { CLASS_CONFIG } from "@/lib/gems/class-config";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
-import BattleFigure from "@/components/te-character/BattleFigure";
+import HeroFigure from "./HeroFigure";
+import { heroLookForUnit } from "@/lib/gems/hero/look";
 
 // ---------- Skill-Effekt-Overlay ----------
 // Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
@@ -454,6 +455,7 @@ function UnitTile({
   blockKey: number;
 }) {
   const config = CLASS_CONFIG[roster.class];
+  const rosterLook = heroLookForUnit(roster);
   const hpPct = Math.max(0, runtime.currentHp / runtime.maxHp);
 
   const attacking = vfx?.kind === "cast";
@@ -489,16 +491,16 @@ function UnitTile({
             }}
           />
         )}
-        {roster.teCharacter ? (
-          <BattleFigure
-            config={roster.teCharacter}
-            unitClass={roster.class}
-            team={roster.teamId}
+        {rosterLook ? (
+          <HeroFigure
+            look={rosterLook}
             attackKey={attackKey}
             blockKey={blockKey}
             alive={runtime.alive}
             victory={isVictory}
+            idle
             title={roster.name}
+            className="w-full h-full relative"
           />
         ) : roster.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

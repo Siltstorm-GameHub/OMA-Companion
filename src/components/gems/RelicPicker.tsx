@@ -51,8 +51,8 @@ export default function RelicPicker({ owned, equipped }: { owned: string[]; equi
           <Sparkles className="w-4 h-4 text-violet-300" /> Relikte
         </h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          Bis zu {RELIC_SLOTS} Relikte wirken in jedem Kampf. Jeder Turmwächter gibt beim ersten Sieg eins — wähle passend zur
-          Wochen-Regel.
+          Bis zu {RELIC_SLOTS} Relikte wirken in Kampagne, Turm und Tages-Herausforderung (nicht im Event-Turnier). Jeder
+          Turmwächter gibt beim ersten Sieg eins — wähle passend zur Wochen-Regel.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

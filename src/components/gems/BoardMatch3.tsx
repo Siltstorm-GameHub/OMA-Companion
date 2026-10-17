@@ -449,16 +449,12 @@ export default function BoardMatch3({
       await performSwap(selected, cell);
       return;
     }
+    // Sonder-Stein in zwei Schritten: der erste Tipp wählt ihn nur aus (dann erscheint der Hinweis
+    // „Nochmal tippen zum Zünden“), erst der zweite Tipp zündet ihn und verbraucht den Zug. Vorher
+    // zündete schon ein einzelner Tipp — wer ihn nur zum Tauschen auswählen wollte, verlor den Zug.
     if (selected === cell) {
       setSelected(null);
-      return;
-    }
-    // Ein Sonder-Stein wird per Tap IMMER direkt aktiviert, statt ihn nur
-    // auszuwählen — unabhängig davon, ob vorher schon eine andere (nicht
-    // angrenzende) Zelle ausgewählt war.
-    if (specials[cell]) {
-      setSelected(null);
-      await activateSpecial(cell);
+      if (specials[cell]) await activateSpecial(cell);
       return;
     }
     setSelected(cell);
@@ -531,7 +527,13 @@ export default function BoardMatch3({
         {/* Jeder erfolgreiche Swap löst sofort Rage + Angriff aus (siehe
             BOARD_MOVE_BUDGET_PER_TURN=1) — kein Zug-Budget-Zähler mehr nötig,
             das Brett sperrt sich nach dem Swap nur ganz kurz bis zum Nachladen. */}
-        {interactionLocked && <span className="text-teal-300">Angriff läuft …</span>}
+        {interactionLocked ? (
+          <span className="text-teal-300">Angriff läuft …</span>
+        ) : selected !== null && specials[selected] ? (
+          <span className="text-amber-300 normal-case tracking-normal text-[11px] font-semibold">
+            Nochmal tippen = zünden (kostet den Zug) · oder tauschen
+          </span>
+        ) : null}
       </div>
       {legendOpen && (
         <>
@@ -569,7 +571,7 @@ export default function BoardMatch3({
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={SPECIAL_ICON.AREA.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
-              <span>Steine zum Tauschen ziehen oder nacheinander antippen. Sonder-Stein antippen = sofort auslösen, angrenzende zünden mit.</span>
+              <span>Steine zum Tauschen ziehen oder nacheinander antippen. Sonder-Stein zweimal antippen = zünden (kostet den Zug), angrenzende zünden mit. Tauschen geht auch.</span>
             </div>
           </div>
         </>

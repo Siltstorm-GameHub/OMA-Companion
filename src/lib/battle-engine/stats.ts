@@ -72,6 +72,7 @@ export function buildRosterFromUnits(units: BattleUnitState[]): RosterEntry[] {
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
     teCharacter: u.def.teCharacter ?? null,
+    heroLook: u.def.heroLook ?? null,
   }));
 }
 

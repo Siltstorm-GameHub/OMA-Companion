@@ -14,9 +14,9 @@ import { motion } from "motion/react";
 import { Flame, RotateCcw, Swords, ThumbsDown, ThumbsUp } from "@/components/icons";
 import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/gems/class-config";
-import TeCharacter from "@/components/te-character/TeCharacter";
-import CardBackdrop from "./CardBackdrop";
-import { TE_CROP_FIGURE, poseAnim, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
+import HeroFigure from "./HeroFigure";
+import type { TeCharacterConfig } from "@/lib/te-character";
+import type { HeroLook } from "@/lib/gems/hero/look";
 
 export interface BattleCardSkill {
   name: string;
@@ -42,6 +42,8 @@ export interface BattleCardData {
   imageUrl?: string | null;
   /** Charakter des Mitglieds (Community-Karte) — hat als Hauptmotiv Vorrang vor imageUrl. */
   teCharacter?: TeCharacterConfig | null;
+  /** Held im Cartoon-Stil (siehe lib/gems/hero) — Hauptmotiv der Karte. */
+  heroLook?: HeroLook | null;
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork ist (siehe card-view.ts toCardData). */
   avatarBadgeUrl?: string | null;
@@ -115,11 +117,8 @@ export default function BattleCardView({
   card,
   dimmed = false,
   hidePassives = false,
-  characterDir = "down",
 }: {
   card: BattleCardData;
-  /** Blickrichtung des Charakters im Kartenmotiv (Editor: zum Prüfen aller Details drehbar). */
-  characterDir?: TeDir;
   dimmed?: boolean;
   /** OMA Duels: Passiv-Fähigkeiten feuern dort nie (keine Initiative-Runden-
    *  Trigger wie battleStart/turnStart/roundEnd), ihre Anzeige wäre also
@@ -194,9 +193,8 @@ export default function BattleCardView({
             className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
-            <CardBackdrop config={card.teCharacter} />
-            {card.teCharacter ? (
-              <TeCharacter config={card.teCharacter} anim={poseAnim(card.teCharacter)} dir={characterDir} crop={TE_CROP_FIGURE} scale={4} className="max-h-full w-auto" title={card.name} />
+            {card.heroLook ? (
+              <HeroFigure look={card.heroLook} title={card.name} className="h-full w-auto max-w-full" />
             ) : card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

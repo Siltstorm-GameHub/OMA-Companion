@@ -230,6 +230,86 @@ eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
 - Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
   Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
 
+**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — in Arbeit (10a erledigt)
+Entscheidung: Stil A (Cartoon mit Outline, Muster im Canvas „OMA Gems Helden-Stile“) und Option 3
+(feste Grundfiguren plus Kosmetik ohne Kampfvorteil). Ersetzt die Pixel-Figuren (Time Elements,
+`lib/te-character`, 15 MB unter `public/te`). Monster bleiben, wie sie sind.
+
+Leitidee — was alle Helden verbindet:
+- Ein Zeichenstil: dunkle Outline (#1b1326, 5 px), große Köpfe, flache Farben mit einer Schattenstufe,
+  gemeinsames Gerüst (Zeichenfläche 220×240, gleiche Ankerpunkte für Kopf, Hände, Brust, Rücken).
+- Klasse an der Silhouette erkennbar: Tank breit mit Schild, Damage Dealer schlank mit Klinge,
+  Support mit Robe und Stab. Die Klassenfarbe bleibt Rahmen und Kartenton.
+- Jeder Held trägt OMA-Ausrüstung mit Emblem auf der Brust — der gemeinsame Link der Community.
+
+Wer gestaltet was:
+- Die 9 Standard-Karten sind feste Charaktere: einmal fertig gestaltet, nicht veränderbar.
+- Jedes Mitglied gestaltet seine eigene Community-Karte („Mein Held“). Der Look ist für alle sichtbar,
+  die gesammelt haben — so wird die Karte zum Aushängeschild des Mitglieds.
+- Rahmen nach Rang (Rang 5 = Goldrahmen) zeigt jede eigene Karte automatisch, nur in der eigenen Sammlung.
+
+Slots für „Mein Held“ (frei = von Anfang an, sonst Freischaltung):
+| Slot | Auswahl zum Start | Weitere |
+|---|---|---|
+| Grundfigur | je Klasse 2 Körperbauten (Klasse der Karte steht fest) | — |
+| Gesicht und Ausdruck | 6 | — |
+| Hautton | 6 | — |
+| Frisur und Haarfarbe | 8 Frisuren, 8 Farben | weitere über Münzen |
+| Farbschema der Ausrüstung | OMA-Türkis | Münzen, Wächter, Saison |
+| Emblem | OMA-Juwel | Rang, Saison-Platz 1 |
+| Kopfbedeckung | keine, 2 klassenpassende | Münzen, Wächter |
+| Accessoire | keins | Headset, Umhang, Brille … |
+| Pose auf der Karte | Stehen | Angriff, Jubel (Rang) |
+| Titel unter dem Namen | keiner | Wächter, Saison, Ränge |
+
+Freischaltungen (Vorschlag, Zahlen nach Playtest anpassen):
+- Münzen (neuer Münz-Abfluss, bewusst hoch — Kosmetik ist ein Sparziel, kein Spontankauf): Frisuren und
+  Haarfarben 300, Accessoires und Kopfbedeckungen 600–1200, Farbschemata 900, Posen 800. Bei rund 1000
+  Münzen pro Woche also ein bis zwei Wochen pro größerem Teil.
+- Karten-Rang: Rang 3 → Emblem „Stern“, Rang 5 → Pose „Jubel“ und Titel „Veteran/in“.
+- Turmwächter (erster Sieg): Wächter 20 → Umhang, 30 → Farbschema „Glut“, 50 → Titel „Wächterbezwinger/in“.
+- Turm-Saison: Top 10 → Farbschema „Saison-Gold“ (je Saison eigener Name), Platz 1 → Emblem „Krone“.
+- Kosmetik gibt nie Kampfwerte. Bestehende Belohnungen (Packs, Relikte) bleiben.
+
+Technik:
+- `HeroFigure` (React, Inline-SVG): setzt Grundfigur und Teile auf dem gemeinsamen Gerüst zusammen;
+  Farben über eine Palette (main/dark/light/metal), Teile als SVG-Bausteine in `lib/gems/hero/parts`.
+  Animationen per CSS statt Sprite-Frames: Wippen (Leerlauf), Ausfall (Angriff), Schild hoch (Block),
+  Umfallen/Grau (K.O.), Hüpfer (Sieg) — ersetzt `BattleFigure`.
+- Daten: `Card.heroLook` (JSON, ersetzt `teCharacter`) mit `{ v: 2, base, face, skin, hair, hairColor,
+  scheme, emblem, headgear, accessory, pose, title }`. Fehlt er, wird ein stabiler Standard-Look aus
+  Karten-Id und Klasse erzeugt (wie heute `effectiveTeCharacter`). Standard-Karten: feste Looks im Code.
+- Inventar: neue Tabelle `UserCosmetic { userId, itemId, acquiredAt }`; Katalog im Code
+  (`lib/gems/cosmetics.ts`: id, Slot, Name, Freischaltung). Speichern prüft serverseitig, dass jedes
+  gewählte Teil frei oder freigeschaltet ist und die Karte dem Mitglied gehört (`linkedDiscordId`).
+- Freischaltungen hängen an bestehenden Stellen: Rangaufstieg (`recordLineupWin`), Wächter-Sieg
+  (`settleGemsBattle`), Saisonabschluss (`finalizeDueTowerSeasons`), Kauf (neue Shop-Route).
+- Nur Ergänzungen im Schema (`Card.heroLook`, `UserCosmetic`), `db push` ohne Datenverlust;
+  `teCharacter` wird erst nach dem Umbau entfernt (manuelles SQL wie in Phase 4).
+
+Umsetzung in Schritten (jeder Schritt einzeln deploybar):
+- 10a Figuren-System (erledigt — `lib/gems/hero/look.ts`, `parts.tsx`, `components/gems/HeroFigure.tsx`,
+  `Card.heroLook`, Gerüst-Vorgabe `docs/gems-helden-geruest.md`; alte Kämpfe zeigen abgeleitete Looks): `HeroFigure` mit Gerüst, 6 Grundfiguren, Gesichtern, Haaren, Paletten; feste
+  Looks für die 9 Standard-Karten, Standard-Looks für alle Community-Karten; überall einbauen
+  (Karten-Kachel, Kartenansicht, Aufstellung, Live-Kampf, Kampf-Replay, Ergebnis). Danach ist die App
+  komplett im neuen Stil, nur noch ohne Editor.
+- 10b „Mein Held“: Editor mit Live-Vorschau (wie das Kosmetik-Muster), nur für die eigene
+  Community-Karte, API zum Speichern; Admin kann Looks weiter überschreiben.
+- 10c Kosmetik-Katalog und Freischaltungen: Inventar, Shop-Bereich „Kosmetik“, Hinweise im
+  Ergebnisbildschirm („Neu: Umhang freigeschaltet“), Kosmetik-Teile als Saison-/Wächter-Belohnung.
+- 10d Aufräumen: Kartenhintergründe im neuen Stil (statt Pixel-Szenen), `lib/te-character`,
+  `TeCharacter`/`BattleFigure`, `public/te` und `teCharacter`-Spalte entfernen.
+- Optional 10e: Profi-Zeichnungen. Die Teile in 10a zeichne ich als einfache Vektorgrafik (Qualität wie
+  im Muster). Weil alle Teile auf demselben Gerüst sitzen, kann ein Zeichner sie später 1:1 ersetzen,
+  ohne Code-Änderung — dafür gibt es eine Gerüst-Vorgabe (Maße, Ankerpunkte, Ebenen, Farbslots).
+
+Entschieden:
+1. Kosmetik gibt es nur für die eigene Community-Karte; Standard-Karten bleiben fest.
+2. Münzpreise höher als zuerst vorgeschlagen (siehe Freischaltungen oben).
+3. Profi-Zeichnungen (10e) sind eingeplant. Deshalb liefert 10a neben den eigenen Vektorteilen eine
+   Gerüst-Vorgabe für den Zeichner (`docs/gems-helden-geruest.md`): Zeichenfläche, Ankerpunkte,
+   Ebenen-Reihenfolge, Farbslots der Palette, Outline-Stärke, Dateiformat und Benennung der Teile.
+
 ## Geklärte Punkte
 
 1. **Einstieg: Auto-Startpaket.** Beim ersten Besuch bekommt jeder Spieler ohne Karten automatisch

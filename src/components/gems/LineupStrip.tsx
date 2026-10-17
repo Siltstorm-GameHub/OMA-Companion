@@ -4,10 +4,8 @@ import { ChevronRight } from "@/components/icons";
 import Link from "next/link";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
-import TeCharacter from "@/components/te-character/TeCharacter";
-import CardBackdrop from "./CardBackdrop";
+import HeroFigure from "./HeroFigure";
 import { RankBadge } from "./CardRank";
-import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 
 const LINEUP_SIZE = 5;
 
@@ -41,10 +39,9 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                 boxShadow: rarityFrame(entry.card.rarity, borderColor, { glow: 6 }),
               }}
             >
-              {entry.card.teCharacter?.bg && <div className={`absolute inset-x-0 bottom-11 overflow-hidden ${isCommunity(entry.card.rarity) ? "top-4" : "top-1"}`}><CardBackdrop config={entry.card.teCharacter} /></div>}
               <div className={`absolute inset-x-0 bottom-11 flex items-center justify-center ${isCommunity(entry.card.rarity) ? "top-4" : "top-1"}`}>
-                {entry.card.teCharacter ? (
-                  <TeCharacter config={entry.card.teCharacter} anim={poseAnim(entry.card.teCharacter)} dir="down" crop={TE_CROP_FIGURE} scale={8} className="h-full w-auto max-w-full object-contain" title={entry.card.name} />
+                {entry.card.heroLook ? (
+                  <HeroFigure look={entry.card.heroLook} title={entry.card.name} className="h-full w-auto max-w-full" />
                 ) : entry.card.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={entry.card.imageUrl} alt={entry.card.name} className="w-full h-full object-cover" />

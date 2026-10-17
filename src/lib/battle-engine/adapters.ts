@@ -18,6 +18,7 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
 };
 
 import { effectiveTeCharacter } from "@/lib/gems/standard-avatars";
+import { effectiveHeroLook } from "@/lib/gems/hero/look";
 
 export function cardToBattleUnitDefinition(
   card: Card,
@@ -49,6 +50,7 @@ export function cardToBattleUnitDefinition(
     // ist resolvedImage das Discord-Bild) in das kleine Badge — wie bei einem Admin-Artwork.
     avatarBadgeUrl: avatarBadgeUrl ?? (card.linkedDiscordId ? resolvedImage ?? null : null),
     teCharacter,
+    heroLook: effectiveHeroLook(card),
     title: card.title,
     rarity: card.rarity,
     flavorText: card.flavorText,

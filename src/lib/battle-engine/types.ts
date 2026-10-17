@@ -9,6 +9,7 @@
 // Daten ergänzt werden, ohne die Engine anzufassen.
 
 import type { TeCharacterConfig } from "@/lib/te-character";
+import type { HeroLook } from "@/lib/gems/hero/look";
 
 export type UnitClass = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
@@ -140,6 +141,8 @@ export interface BattleUnitDefinition {
   /** Charakter der Community-Karte (siehe lib/te-character) — die Kampf-Ansichten zeigen
    *  ihn statt des Bildes und spielen Angriffs-/Block-Animationen. Rein Anzeige, keine Kampf-Logik. */
   teCharacter?: TeCharacterConfig | null;
+  /** Look im Cartoon-Stil (siehe lib/gems/hero) — die Kampf-Ansichten zeichnen den Helden daraus. */
+  heroLook?: HeroLook | null;
   /** Nur für Anzeige-Zwecke (z.B. Handkarten-Kacheln im OMA-Duels-Spielbrett,
    *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik.
    *  Bei älteren, bereits als JSON serialisierten Definitionen (z.B.
@@ -276,6 +279,8 @@ export interface RosterEntry {
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
   teCharacter?: TeCharacterConfig | null;
+  /** Look im Cartoon-Stil (siehe lib/gems/hero) — die Kampf-Ansichten zeichnen den Helden daraus. */
+  heroLook?: HeroLook | null;
 }
 
 export interface BattleResult {

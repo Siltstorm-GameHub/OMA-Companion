@@ -451,6 +451,29 @@ select.input-glass option { background: #0f1117; }
 .victory-hop { animation: victory-hop 1.4s infinite; }
 @media (prefers-reduced-motion: reduce) { .victory-hop { animation: none; } }
 
+/* ── Helden im Cartoon-Stil (HeroFigure): ganze Figur wird bewegt, Drehpunkt an den Füßen. ── */
+@keyframes hero-idle {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50%      { transform: translateY(-2px) scaleY(1.015); }
+}
+@keyframes hero-attack {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  30%  { transform: translate(6px, -14px) rotate(7deg); }
+  55%  { transform: translate(2px, -4px) rotate(-3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes hero-block {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(5px) scale(0.95, 0.92); }
+  100% { transform: translateY(0) scale(1); }
+}
+.hero-idle, .hero-attack, .hero-block, .hero-ko { transform-origin: 50% 94%; transform-box: fill-box; }
+.hero-idle { animation: hero-idle 2.6s ease-in-out infinite; }
+.hero-attack { animation: hero-attack 0.5s cubic-bezier(0.33, 1, 0.68, 1); }
+.hero-block { animation: hero-block 0.45s ease-out; }
+.hero-ko { transform: rotate(-78deg) translate(-6px, 10px); filter: grayscale(1) brightness(0.6) !important; opacity: 0.7; transition: transform 0.4s ease-in, opacity 0.4s; }
+@media (prefers-reduced-motion: reduce) { .hero-idle, .hero-attack, .hero-block { animation: none; } }
+
 /* ── Archetyp-Treffer-Ring — Farbe kommt von der Klasse des ausführenden
    Helden (--ring-color, siehe LiveBattleView UnitCard) statt fix zu sein,
    damit sichtbar wird WER zuschlägt, nicht nur DASS etwas passiert. ── */

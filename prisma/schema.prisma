@@ -1950,6 +1950,8 @@ model Card {
   // Pixel-Figur der Karte (Time-Elements-Baukasten, siehe src/lib/te-character). Shape:
   // TeCharacterConfig. null = keine eigene Figur (Standard-Figur bzw. Discord-Profilbild).
   teCharacter Json?
+  // Look im Cartoon-Stil (siehe lib/gems/hero/look.ts) — ersetzt teCharacter (wird in Phase 10d entfernt).
+  heroLook    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

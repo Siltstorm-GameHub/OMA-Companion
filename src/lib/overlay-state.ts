@@ -18,6 +18,7 @@ import {
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import { EMPTY_CONTROL } from "@/components/overlay/layout";
 import { buildDemoEventState, type DemoFormat } from "@/lib/overlay-demo";
+import { pickActiveEvent, runningEventWhere } from "@/lib/overlay-active-event";
 
 /**
  * Datenquelle aller OBS-Overlays (Event-, Profil- und Streamer-Stream sowie der Startzustand
@@ -418,34 +419,30 @@ export function invalidateStreamerConfig(userId: string) {
 const activeEventCache = createCache<string | null>();
 
 /**
- * Welches Event streamt dieser User gerade? Zeitfenster für alle Kandidaten:
- *   - Status "active" und innerhalb der letzten 24h gestartet (fängt vergessenes Beenden ab), oder
- *   - Status "open" mit Start zwischen vor 4h und in 30 min (Admin hat noch nicht auf aktiv gestellt).
- * Kandidaten sind Events, für die er
+ * Welches Event streamt dieser User gerade? Welche Events zeitlich in Frage kommen, regelt
+ * lib/overlay-active-event.ts (u.a. gestartete Turniere über tournamentStatus). Kandidaten sind
+ * Events, bei denen er
  *   a) als Streamer angemeldet ist (EventCommunityStreamer) — gilt sofort, auch vor Stream-Start, oder
- *   b) als Spieler angemeldet ist UND gerade auf Twitch live ist — wer ohnehin mitspielt und
- *      streamt, muss so nicht extra an die Streamer-Anmeldung denken.
- * Laufende Events haben Vorrang, sonst das zeitlich nächste. null → Profil-Modus.
+ *   b) mitspielt (Event-Anmeldung als Spieler, Turnier-Teilnehmer oder Team-Mitglied) UND gerade
+ *      auf Twitch live ist — wer ohnehin mitspielt und streamt, muss nicht an die Streamer-Anmeldung
+ *      denken.
+ * null → Profil-Modus.
  */
 export function getStreamerActiveEventId(userId: string): Promise<string | null> {
   return activeEventCache.get(userId, ACTIVE_EVENT_TTL_MS, async () => {
     const now = Date.now();
-    const event = {
-      OR: [
-        { status: "active", startAt: { gte: new Date(now - 24 * 3600_000) } },
-        { status: "open", startAt: { gte: new Date(now - 4 * 3600_000), lte: new Date(now + 30 * 60_000) } },
-      ],
-    };
-    const select = { event: { select: { id: true, status: true, startAt: true } } };
-    const [streaming, playing, live] = await Promise.all([
+    const event = runningEventWhere(now);
+    const select = { event: { select: { id: true, status: true, tournamentStatus: true, startAt: true } } };
+    const [streaming, registered, participant, teams, live] = await Promise.all([
       prisma.eventCommunityStreamer.findMany({ where: { userId, event }, select }),
       prisma.eventRegistration.findMany({ where: { userId, role: { not: "spectator" }, event }, select }),
+      prisma.tournamentParticipant.findMany({ where: { userId, event }, select }),
+      prisma.teamMember.findMany({ where: { userId, team: { event } }, select: { team: { select } } }),
       getCommunityLive(),
     ]);
-    const candidates = [...streaming, ...(live.has(userId) ? playing : [])].map(r => r.event).sort((a, b) =>
-      (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1)
-      || Math.abs(a.startAt.getTime() - now) - Math.abs(b.startAt.getTime() - now));
-    return candidates[0]?.id ?? null;
+    const playing = [...registered, ...participant, ...teams.map(t => t.team)];
+    const candidates = [...streaming, ...(live.has(userId) ? playing : [])].map(r => r.event);
+    return pickActiveEvent(candidates, now);
   });
 }
 
