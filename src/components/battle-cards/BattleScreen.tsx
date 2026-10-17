@@ -14,9 +14,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "@/components/icons";
+import { BellOff, ChevronDown, ChevronRight, ChevronUp, Sparkles, Swords, Volume2 } from "@/components/icons";
 import { Play, Pause, RotateCcw } from "@/components/icons";
-import MobaIcon from "./MobaIcon";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
@@ -120,7 +119,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
 
       // ── DAMAGE_DEALER: scharfer, diagonaler Klingen-/Schuss-Schnitt + Funken.
       //    Nutzt das echte Slash-Sprite (Kenney Particle Pack, CC0, siehe
-      //    public/battle-cards/vfx/README.md) statt eines reinen CSS-Balkens —
+      //    public/gems-assets/vfx/README.md) statt eines reinen CSS-Balkens —
       //    per mask-image in die Klassenfarbe eingefärbt (das Sprite selbst ist
       //    ein graustufiges Alpha-Silhouette, kein farbiges Bild). ──
       if (vfx.casterClass === "DAMAGE_DEALER") {
@@ -130,8 +129,8 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
               className="absolute inset-0"
               style={{
                 background: casterColor,
-                maskImage: "url(/battle-cards/vfx/slash.png)",
-                WebkitMaskImage: "url(/battle-cards/vfx/slash.png)",
+                maskImage: "url(/gems-assets/vfx/slash.png)",
+                WebkitMaskImage: "url(/gems-assets/vfx/slash.png)",
                 maskSize: "180% 180%",
                 WebkitMaskSize: "180% 180%",
                 maskRepeat: "no-repeat",
@@ -173,8 +172,8 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
               className="absolute inset-0"
               style={{
                 background: casterColor,
-                maskImage: "url(/battle-cards/vfx/magic-bolt.png)",
-                WebkitMaskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+                maskImage: "url(/gems-assets/vfx/magic-bolt.png)",
+                WebkitMaskImage: "url(/gems-assets/vfx/magic-bolt.png)",
                 maskSize: "70% 70%",
                 WebkitMaskSize: "70% 70%",
                 maskRepeat: "no-repeat",
@@ -282,7 +281,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             transition={{ duration: 0.5 }}
           />
           <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 0], y: -10 }} transition={{ duration: 0.5 }}>
-            <MobaIcon name="chevronUp" className="w-4 h-4" />
+            <ChevronUp className="w-4 h-4" />
           </motion.div>
         </motion.div>
       );
@@ -300,7 +299,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             transition={{ duration: 0.5 }}
           />
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 0], y: 10 }} transition={{ duration: 0.5 }}>
-            <MobaIcon name="chevronDown" className="w-4 h-4" />
+            <ChevronDown className="w-4 h-4" />
           </motion.div>
         </motion.div>
       );
@@ -312,7 +311,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             animate={{ opacity: [0, 1, 0], y: -12, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <MobaIcon name="attack" className="w-5 h-5" />
+            <Swords className="w-5 h-5" />
           </motion.div>
         </motion.div>
       );
@@ -537,7 +536,7 @@ function UnitTile({
         </p>
       </div>
 
-      <div className="h-1.5 rounded-full bg-black/40 border border-[color:var(--moba-accent-line)] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-black/40 border border-white/[0.08] overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }}
@@ -547,7 +546,7 @@ function UnitTile({
         {Math.max(0, runtime.currentHp)}/{runtime.maxHp}
       </p>
 
-      <div className="mt-0.5 h-1 rounded-full bg-black/40 border border-[color:var(--moba-accent-line)] overflow-hidden">
+      <div className="mt-0.5 h-1 rounded-full bg-black/40 border border-white/[0.08] overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${Math.min(100, runtime.rage)}%`, background: "#60a5fa" }}
@@ -660,14 +659,14 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
 
   return (
     <div
-      className="moba-panel rounded-xl p-3 space-y-3 relative overflow-hidden"
+      className="glass rounded-xl p-3 space-y-3 relative overflow-hidden"
       style={{
         backgroundColor: "#04061a",
         backgroundImage: [
           "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
           "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
           "linear-gradient(180deg, rgba(4,6,26,0.6) 0%, rgba(4,6,26,0.3) 35%, rgba(4,6,26,0.3) 65%, rgba(4,6,26,0.6) 100%)",
-          "url(/battle-cards/arena-bg.jpg)",
+          "url(/gems-assets/arena-bg.jpg)",
         ].join(", "),
         backgroundSize: "auto, auto, auto, cover",
         backgroundPosition: "center",
@@ -718,12 +717,12 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
       </div>
 
       {/* Event-Log */}
-      <div className="rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5 bg-black/40 border border-[color:var(--moba-accent-line)]">
+      <div className="rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5 bg-black/40 border border-white/[0.08]">
         {recentLines.length === 0 ? (
-          <p className="text-[11px] text-[color:var(--moba-ink-dim)] italic">Der Kampf beginnt…</p>
+          <p className="text-[11px] text-gray-500 italic">Der Kampf beginnt…</p>
         ) : (
           recentLines.map((line, i) => (
-            <p key={i} className="text-[11px] text-[color:var(--moba-ink-dim)] leading-snug">
+            <p key={i} className="text-[11px] text-gray-500 leading-snug">
               {line}
             </p>
           ))
@@ -765,7 +764,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
               title="Zum Ergebnis springen"
             >
-              <MobaIcon name="chevronRight" className="w-3.5 h-3.5" /> Überspringen
+              <ChevronRight className="w-3.5 h-3.5" /> Überspringen
             </motion.button>
           </>
         )}
@@ -777,7 +776,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
           title={soundOn ? "Ton aus" : "Ton an"}
           aria-label={soundOn ? "Ton aus" : "Ton an"}
         >
-          <MobaIcon name={soundOn ? "soundOn" : "soundOff"} className="w-3.5 h-3.5" />
+          {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
         </motion.button>
       </div>
 

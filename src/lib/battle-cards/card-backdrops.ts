@@ -1,7 +1,7 @@
 // ============================================
 // Kartenhintergründe — Himmel + Pixel-Boden (übernommen aus OMA Quest)
 // ============================================
-// Die Bodentexturen liegen in public/battle-cards/tex. Die Schlüssel entsprechen den bisher
+// Die Bodentexturen liegen in public/gems-assets/tex. Die Schlüssel entsprechen den bisher
 // gespeicherten Werten in Card.teCharacter.bg und dürfen sich deshalb nicht ändern.
 
 export type BackdropKey = "plains" | "forest" | "harbor" | "coast" | "mountain" | "ruins" | "village" | "cave" | "fortress" | "snow" | "swamp" | "desert";
@@ -9,7 +9,7 @@ export type BackdropKey = "plains" | "forest" | "harbor" | "coast" | "mountain" 
 export interface Backdrop {
   /** Himmel: oben → Horizont */
   sky: [string, string];
-  /** Bodentextur (Dateiname ohne Endung in public/battle-cards/tex) */
+  /** Bodentextur (Dateiname ohne Endung in public/gems-assets/tex) */
   ground: string;
   /** Abdunklung des Bodens (0–1), damit Figuren lesbar bleiben */
   dim: number;

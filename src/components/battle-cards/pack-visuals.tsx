@@ -2,7 +2,7 @@
 // Gemeinsame Pack-Cover-Optik — Shop & Pack-Öffnen
 // ============================================
 // Jede Pack-Sorte hat zwei per Canva generierte Bilder (siehe
-// public/battle-cards/packs/): eine abstrakte Foil-Textur als Untergrund
+// public/gems-assets/packs/): eine abstrakte Foil-Textur als Untergrund
 // und ein gemaltes Helden-Artwork (je Sorte ein anderer Charakter/Stimmung,
 // im Stil des OMA-Gems-Turnier-Covers). Das Artwork liegt per
 // mix-blend-mode "screen" über der Textur — sein dunkler Hintergrund wird
@@ -16,15 +16,15 @@
 export type PackVisualKind = "STANDARD" | "PREMIUM" | "COMMUNITY";
 
 export const PACK_TEXTURE: Record<PackVisualKind, string> = {
-  STANDARD: "/battle-cards/packs/standard-texture.png",
-  PREMIUM: "/battle-cards/packs/premium-texture.png",
-  COMMUNITY: "/battle-cards/packs/community-texture.png",
+  STANDARD: "/gems-assets/packs/standard-texture.png",
+  PREMIUM: "/gems-assets/packs/premium-texture.png",
+  COMMUNITY: "/gems-assets/packs/community-texture.png",
 };
 
 const PACK_ART: Record<PackVisualKind, string> = {
-  STANDARD: "/battle-cards/packs/standard-art.png",
-  PREMIUM: "/battle-cards/packs/premium-art.png",
-  COMMUNITY: "/battle-cards/packs/community-art.png",
+  STANDARD: "/gems-assets/packs/standard-art.png",
+  PREMIUM: "/gems-assets/packs/premium-art.png",
+  COMMUNITY: "/gems-assets/packs/community-art.png",
 };
 
 export const PACK_COVER_LABEL: Record<PackVisualKind, string> = {

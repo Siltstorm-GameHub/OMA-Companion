@@ -36,7 +36,7 @@
 // (CSS-Transition auf transform, siehe fallingCells) — statt nur stumpf das
 // Endergebnis einzublenden.
 
-import MobaIcon from "./MobaIcon";
+import { HelpCircle, Users } from "@/components/icons";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { UnitClass } from "@/lib/battle-engine/types";
@@ -522,7 +522,7 @@ export default function BoardMatch3({
             className="text-gray-500 hover:text-gray-300 transition-colors"
             aria-label={legendOpen ? "Erklärung ausblenden" : "Wie funktioniert das Brett?"}
           >
-            <MobaIcon name="help" className="w-3 h-3" />
+            <HelpCircle className="w-3 h-3" />
           </button>
         </span>
         {/* Jeder erfolgreiche Swap löst sofort Rage + Angriff aus (siehe
@@ -537,7 +537,7 @@ export default function BoardMatch3({
               die Legende schwebt bewusst ALS OVERLAY über dem Brett (position
               absolute), statt es nach unten zu verdrängen. */}
           <div className="fixed inset-0 z-10" onClick={toggleLegend} />
-          <div className="absolute top-5 left-0 right-0 z-20 rounded-lg bg-[#04061a] border border-[color:var(--moba-accent-line)] px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
+          <div className="absolute top-5 left-0 right-0 z-20 rounded-lg glass-heavy px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
             {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
               const icon = TILE_ICON[symbol];
               return (
@@ -551,7 +551,7 @@ export default function BoardMatch3({
               );
             })}
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
-              <MobaIcon name="friends" className="w-3.5 h-3.5 shrink-0" />
+              <Users className="w-3.5 h-3.5 shrink-0" />
               <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
             </div>
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
@@ -584,7 +584,7 @@ export default function BoardMatch3({
             transition={{ duration: (DESTROY_ANIM_MS + 450) / 1000, times: [0, 0.25, 0.75, 1] }}
           >
             <p
-              className="font-battle text-2xl uppercase tracking-wide whitespace-nowrap"
+              className="font-display text-2xl uppercase tracking-wide whitespace-nowrap"
               style={{
                 color: "#fde68a",
                 textShadow: "0 0 12px rgba(245,158,11,0.9), 0 0 28px rgba(245,158,11,0.6), 0 2px 4px rgba(0,0,0,0.8)",

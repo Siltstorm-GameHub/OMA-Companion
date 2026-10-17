@@ -7,5 +7,3 @@ as-is.
 
 - `slash.png` — DAMAGE_DEALER hit archetype (was `slash_04.png`, thin arc — read as an actual blade swipe, unlike the wider crescents `slash_01-03.png`)
 - `magic-bolt.png` — SUPPORT hit archetype (was `magic_03.png`)
-- `spark.png` — crit accent (was `spark_03.png`)
-- `flare.png` — unused placeholder, kept for future archetypes (was `flare_01.png`)

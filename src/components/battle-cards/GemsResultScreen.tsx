@@ -8,13 +8,13 @@
 //  - Kampagne  → Sterne (siehe campaignResult)
 //  - Turnier/Verlust/Unentschieden → kein Belohnungs-Block
 
+import { Button } from "@/components/ui/Button";
 import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Handshake } from "@/components/icons";
+import { Handshake, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
-import MobaIcon from "./MobaIcon";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
@@ -73,14 +73,14 @@ export default function GemsResultScreen({
             boxShadow: `0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 40px ${config.from}55`,
           }}
         >
-          {Icon ? <Icon className="w-9 h-9 text-black/70" strokeWidth={2.2} /> : <MobaIcon name="trophy" className="w-9 h-9" />}
+          {Icon ? <Icon className="w-9 h-9 text-black/70" strokeWidth={2.2} /> : <Trophy className="w-9 h-9" />}
         </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="font-battle text-2xl text-white uppercase tracking-wide"
+          className="font-display text-2xl text-white uppercase tracking-wide"
         >
           {config.label}
         </motion.p>
@@ -122,23 +122,11 @@ export default function GemsResultScreen({
           </motion.div>
         )}
 
-        <motion.button
-          type="button"
-          onClick={onExit}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          whileTap={{ scale: 0.95, y: 1 }}
-          className="moba-hex-button"
-          style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
-        >
-          <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
-            <div className="moba-hex-lattice" />
-          <div className="moba-hex-border" />
-          <div className="moba-hex-diamond left" />
-          <div className="moba-hex-diamond right" />
-          <span className="moba-button-label text-sm font-black">Fertig</span>
-        </motion.button>
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <Button onClick={onExit} className="min-w-40">
+            Fertig
+          </Button>
+        </motion.div>
       </div>
     </motion.div>
   );

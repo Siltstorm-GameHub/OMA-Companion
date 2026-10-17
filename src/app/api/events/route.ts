@@ -12,7 +12,7 @@ const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 // Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —
 // es gibt kein "Spiel-Cover" für OMA Gems (kein echtes Steam-Spiel), ohne das würde
 // sonst der generische OMA-Companion-Platzhalter (EventCoverDefault) angezeigt.
-const GEMS_TOURNAMENT_DEFAULT_COVER = "/battle-cards/gems-tournament-cover.png";
+const GEMS_TOURNAMENT_DEFAULT_COVER = "/gems-assets/gems-tournament-cover.png";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

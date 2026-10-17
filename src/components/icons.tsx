@@ -120,6 +120,7 @@ export const Monitor = make("display");
 export const Moon = make("moon");
 export const Move = make("direction");
 export const Music = make("music");
+export const Volume2 = make("audio");
 export const Newspaper = make("post");
 export const Package = make("bag");
 export const Pause = make("control-pause");

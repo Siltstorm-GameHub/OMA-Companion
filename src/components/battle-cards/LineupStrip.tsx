@@ -1,8 +1,8 @@
 "use client";
 
+import { ChevronRight } from "@/components/icons";
 import Link from "next/link";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
-import MobaIcon from "./MobaIcon";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import CardBackdrop from "./CardBackdrop";
@@ -17,7 +17,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData }
   return (
     <Link
       href="/gems/lineup"
-      className="flex items-center gap-3 moba-panel rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
+      className="flex items-center gap-3 glass rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
     >
       <div className="flex gap-1.5 flex-1 min-w-0">
         {slots.map((entry, i) => {
@@ -25,7 +25,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData }
             return (
               <div
                 key={i}
-                className="card-cut-sm moba-slot-empty flex-1 aspect-[3/4]"
+                className="card-cut-sm rounded-lg border border-dashed border-white/10 bg-white/[0.02] flex-1 aspect-[3/4]"
               />
             );
           }
@@ -57,9 +57,9 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData }
           );
         })}
       </div>
-      <div className="flex items-center gap-1 text-xs font-semibold text-[color:var(--moba-ink-dim)] shrink-0">
+      <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 shrink-0">
         {cards.length}/{LINEUP_SIZE}
-        <MobaIcon name="chevronRight" className="w-3.5 h-3.5" />
+        <ChevronRight className="w-3.5 h-3.5" />
       </div>
     </Link>
   );

@@ -4,7 +4,7 @@
 // Eigene, fest hinterlegte Gegner-Riege statt der zufällig gezogenen
 // Standard-Karten aus dem Auto-Kampf (siehe buildPveTeams in live-battle.ts)
 // — die Gegner in OMA Gems sollen wie augenzwinkernde Monster wirken,
-// nicht wie reguläre Spieler-Helden. `imageUrl` zeigt auf public/battle-cards/
+// nicht wie reguläre Spieler-Helden. `imageUrl` zeigt auf public/gems-assets/
 // monsters/<slug>.png (siehe monster-content.ts: monsterImagePath) — solange
 // die Datei dort noch nicht existiert, fällt die UI automatisch auf das
 // Klassen-Icon zurück (404-Fallback in LiveBattleView.tsx UnitCard), das Feld

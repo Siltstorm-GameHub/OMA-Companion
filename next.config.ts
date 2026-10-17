@@ -24,7 +24,15 @@ const nextConfig: NextConfig = {
     return [
       // Der Shop ist ein Reiter im Gems-Hub.
       { source: "/shop", destination: "/gems?tab=laden", permanent: true },
-      { source: "/battle-cards/:path*", destination: "/gems/:path*", permanent: true },
+      // Alte Seiten-URLs von Battle Cards
+      { source: "/battle-cards", destination: "/gems", permanent: true },
+      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest*", destination: "/gems/:page/:rest*", permanent: true },
+      { source: "/battle-cards/:page(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
+      // Alte Asset-URLs: Grafiken und Sounds lagen bis Phase 5 unter /battle-cards/ und wurden von
+      // einer früheren Pauschal-Weiterleitung (308, von Browsern gecacht) auf /gems/… umgeleitet.
+      // Sie liegen jetzt unter /gems-assets/ — beide Wege führen dorthin.
+      { source: "/battle-cards/:asset*", destination: "/gems-assets/:asset*", permanent: true },
+      { source: "/gems/:asset(.+\\.(?:png|jpe?g|webp|gif|svg|wav|ogg|mp3))", destination: "/gems-assets/:asset", permanent: true },
       // OMA Quest (vormals /dnd) und OMA Duels sind entfernt.
       { source: "/oma-quest/:path*", destination: "/gems", permanent: true },
       { source: "/dnd/:path*", destination: "/gems", permanent: true },

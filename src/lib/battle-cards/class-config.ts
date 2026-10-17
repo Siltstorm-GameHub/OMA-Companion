@@ -14,7 +14,7 @@ export type UnitClassKey = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 /** Avatar-RPG-Klassen-Icons (Paladin/Krieger-Schwert/Magier-Stab), auf die jeweilige
  *  Klassenfarbe umgefärbt — die Karten-Icons; die Gems auf dem Brett nutzen weiter
  *  die Genre-Icons (siehe TILE_ICON in BoardMatch3.tsx). */
-const CLASS_ICON_BASE = "/battle-cards/class-icons";
+const CLASS_ICON_BASE = "/gems-assets/class-icons";
 
 export const CLASS_CONFIG: Record<UnitClassKey, { label: string; color: string; icon: string }> = {
   TANK: { label: "Tank", color: "#14b8a6", icon: `${CLASS_ICON_BASE}/tank.png` },

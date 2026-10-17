@@ -2,10 +2,11 @@
 
 // Wählt bis zu 5 der eigenen Karten als aktive Startaufstellung.
 
+import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Loader2 } from "@/components/icons";
+import { Check } from "@/components/icons";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";
 
@@ -79,13 +80,13 @@ export default function LineupEditor({
               >
                 <div
                   className="rounded-xl transition-shadow"
-                  style={{ boxShadow: isSelected ? "0 0 0 3px #8b5cf6, 0 0 20px rgba(139,92,246,0.5)" : undefined }}
+                  style={{ boxShadow: isSelected ? "0 0 0 3px #14b8a6, 0 0 20px rgba(20,184,166,0.45)" : undefined }}
                 >
                   <BattleCardView card={card} />
                 </div>
               </button>
               {isSelected && (
-                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center pointer-events-none">
+                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center pointer-events-none">
                   <Check className="w-3 h-3 text-black" />
                 </span>
               )}
@@ -94,22 +95,9 @@ export default function LineupEditor({
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={submit}
-        disabled={selected.length === 0 || submitting}
-        className="moba-hex-button w-full disabled:opacity-30 disabled:cursor-not-allowed"
-        style={{ ["--hex-accent" as string]: "#c4b5fd", ["--hex-glow" as string]: "rgba(139,92,246,0.6)" }}
-      >
-        <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #c4b5fd 0%, #8b5cf6 55%, #5b21b6 100%)" }} />
-        <div className="moba-hex-lattice" />
-        <div className="moba-hex-border" />
-        <div className="moba-hex-diamond left" />
-        <div className="moba-hex-diamond right" />
-        <span className="moba-button-label text-sm font-black">
-          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Startaufstellung speichern"}
-        </span>
-      </button>
+      <Button onClick={submit} disabled={selected.length === 0} loading={submitting} className="w-full">
+        Startaufstellung speichern
+      </Button>
     </div>
   );
 }

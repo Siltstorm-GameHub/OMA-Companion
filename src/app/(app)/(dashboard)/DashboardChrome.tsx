@@ -30,13 +30,7 @@ export default function DashboardChrome({
   inviteUrl: string | null;
 }) {
   const pathname = usePathname();
-  // Battle Cards ist ein eigenständiger Spielmodus-Bereich — Partner-Footer,
-  // News-Ticker und der Header (OMA-Schriftzug/Logo + Profilbild) lenken dort
-  // nur ab. Die Navigation (BottomNav mobil, Nav-Links in der FloatingPill
-  // auf Desktop) bleibt bewusst erhalten, damit man den Bereich verlassen kann.
-  const isBattleCards = pathname === "/gems" || pathname.startsWith("/gems/");
-  const hideTicker = isBattleCards;
-  // Laufender Kampf (klassisch + OMA Duels) rendert sich selbst als
+  // Laufender OMA-Gems-Kampf rendert sich selbst als
   // Vollbild-Overlay mit eigenem "Verlassen"-Button (siehe LiveBattlePage) —
   // die mobile BottomNav braucht es dort nicht zum Verlassen, überlappt aber
   // (gleicher z-index 50, im DOM nach dem Kampf-Overlay) unten die Karten.
@@ -44,47 +38,33 @@ export default function DashboardChrome({
 
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
-    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
+    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
-      <AuroraBackground variant={isBattleCards ? "battle-cards" : "default"} />
+      <AuroraBackground />
 
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
-      {/* Battle Cards läuft ohne Ticker — CSS-Var --top-ticker oben zieht den
-          restlichen fixierten Chrome (MobileTopBar/FloatingPill) dann
-          automatisch mit nach oben, siehe deren top-Styles. */}
-      {!hideTicker && <TopNewsFeed items={newsItems} />}
+      <TopNewsFeed items={newsItems} />
 
       {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
-      {/* Auf Battle Cards bewusst ausgeblendet (Seiten-Titel + Profilbild) —
-          die mobile Navigation bleibt über BottomNav unten erhalten. */}
-      {!isBattleCards && <MobileTopBar />}
+      <MobileTopBar />
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill hideBrandAndProfile={isBattleCards} />
+        <FloatingPill />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
       {/* Mobile:  2.25rem Ticker + 3.5rem MobileTopBar = 5.75rem (ohne Ticker: 3.5rem) */}
       {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px (ohne Ticker: 72px)      */}
-      {isBattleCards ? (
-        <main
-          className="min-w-0 px-0 pb-24 lg:pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] lg:pt-[72px]"
-          style={{ position: "relative", zIndex: 2 }}
-        >
-          {children}
-        </main>
-      ) : (
-        <main
-          className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
-          style={{ position: "relative", zIndex: 2 }}
-        >
-          <GuestBanner />
-          {children}
-          {partnerFooter}
-        </main>
-      )}
+      <main
+        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
+        style={{ position: "relative", zIndex: 2 }}
+      >
+        <GuestBanner />
+        {children}
+        {partnerFooter}
+      </main>
 
       {/* Back to top */}
       <BackToTop />

@@ -62,7 +62,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
-    imageUrl: "/battle-cards/bastionella.png",
+    imageUrl: "/gems-assets/bastionella.png",
     teCharacter: STANDARD_AVATARS["Bastionella"],
     passivePositive: {
       name: "Schildwall",
@@ -145,7 +145,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 50,
     normalAttackTargetRule: null,
     flavorText: "Manche Mauern hält man für unüberwindbar. Betonbert ist eine davon.",
-    imageUrl: "/battle-cards/betonbert.png",
+    imageUrl: "/gems-assets/betonbert.png",
     teCharacter: STANDARD_AVATARS["Betonbert"],
     passivePositive: {
       name: "Steinhaut",
@@ -214,7 +214,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 85,
     normalAttackTargetRule: null,
     flavorText: "Scharf genug, jede Rüstung zu durchtrennen. Zerbrechlich genug, beim ersten Gegenschlag zu splittern.",
-    imageUrl: "/battle-cards/scherbe.png",
+    imageUrl: "/gems-assets/scherbe.png",
     teCharacter: STANDARD_AVATARS["Scherbe"],
     passivePositive: {
       name: "Scharfe Kante",
@@ -283,7 +283,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 78,
     normalAttackTargetRule: "HIGHEST_HP",
     flavorText: "Ein Ziel zu verfehlen, kommt für Fernrohr nicht infrage. Deckung zu suchen allerdings auch nicht.",
-    imageUrl: "/battle-cards/fernrohr.png",
+    imageUrl: "/gems-assets/fernrohr.png",
     teCharacter: STANDARD_AVATARS["Fernrohr"],
     passivePositive: {
       name: "Weitsicht",
@@ -352,7 +352,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 60,
     normalAttackTargetRule: null,
     flavorText: "Keine Schramme im Team ist zu klein, um sie zu übersehen. Die eigene Verletzlichkeit dagegen schon.",
-    imageUrl: "/battle-cards/pflaesterchen.png",
+    imageUrl: "/gems-assets/pflaesterchen.png",
     teCharacter: STANDARD_AVATARS["Pflästerchen"],
     passivePositive: {
       name: "Sanfte Hand",
@@ -429,7 +429,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 65,
     normalAttackTargetRule: null,
     flavorText: "Für jede Lage hat Kato_09 einen Plan. Nur nicht immer die Zeit, ihn rechtzeitig umzusetzen.",
-    imageUrl: "/battle-cards/kato-09.png",
+    imageUrl: "/gems-assets/kato-09.png",
     teCharacter: STANDARD_AVATARS["Kato_09"],
     passivePositive: {
       name: "Kühle Analyse",
@@ -510,7 +510,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 40,
     normalAttackTargetRule: null,
     flavorText: "Jeder Treffer, der auf ihm landet, lädt ihn nur weiter auf.",
-    imageUrl: "/battle-cards/kupferkurt.png",
+    imageUrl: "/gems-assets/kupferkurt.png",
     teCharacter: STANDARD_AVATARS["Kupferkurt"],
     passivePositive: {
       name: "Erdung",
@@ -589,7 +589,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 90,
     normalAttackTargetRule: "LOWEST_HP",
     flavorText: "Sie sucht sich nie den stärksten Gegner. Sie sucht sich den, der es zuerst nicht mehr überlebt.",
-    imageUrl: "/battle-cards/nachtklinge.png",
+    imageUrl: "/gems-assets/nachtklinge.png",
     teCharacter: STANDARD_AVATARS["Nachtklinge"],
     passivePositive: {
       name: "Blutzoll",
@@ -665,7 +665,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 62,
     normalAttackTargetRule: null,
     flavorText: "Sie muss ihr Team nicht stärker machen. Es reicht ihr, den Gegner schwächer zu machen.",
-    imageUrl: "/battle-cards/truebsal.png",
+    imageUrl: "/gems-assets/truebsal.png",
     teCharacter: STANDARD_AVATARS["Trübsal"],
     passivePositive: {
       name: "Zehrender Nebel",

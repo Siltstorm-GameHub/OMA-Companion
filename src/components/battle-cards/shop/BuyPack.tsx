@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Package } from "@/components/icons";
+import { Package, Lock } from "@/components/icons";
 import { Loader2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { PackKind, PackPrices } from "@/lib/shop-config";
@@ -84,29 +84,11 @@ function PackCard({
   }
 
   return (
-    <div className="group relative rounded-2xl overflow-hidden">
-      {/* MOBA-Kit-Shop-Karte statt generischer "glass"-Kachel (Assets/UI/MOBA
-          Style/PNG/DIALOGS/CARD & FRAME/shop & Character/item) — Rahmen
-          wechselt bei Hover auf die Gold-Glow-Variante, exakt das gleiche
-          Stretch-Muster (objectFit:"fill") wie MOBA_CARD_FRAME_IMAGE bei den
-          Battle-Cards selbst. */}
-      <img src="/battle-cards/moba/shop-card/bg.png" alt="" aria-hidden className="absolute inset-0 w-full h-full z-0" style={{ objectFit: "fill" }} />
-      <img
-        src="/battle-cards/moba/shop-card/frame.png"
-        alt=""
-        aria-hidden
-        className="absolute inset-0 w-full h-full z-10 pointer-events-none transition-opacity group-hover:opacity-0"
-        style={{ objectFit: "fill" }}
-      />
-      <img
-        src="/battle-cards/moba/shop-card/frame-hovered.png"
-        alt=""
-        aria-hidden
-        className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-0 transition-opacity group-hover:opacity-100"
-        style={{ objectFit: "fill" }}
-      />
+    <div className="glass relative rounded-2xl overflow-hidden transition-colors hover:border-teal-500/30">
       {limitReached && (
-        <img src="/battle-cards/moba/shop-card/locked.png" alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" style={{ objectFit: "fill" }} />
+        <span className="absolute top-3 right-3 z-40 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+          <Lock className="w-3 h-3" /> Tageslimit
+        </span>
       )}
 
       <div className="relative z-30 p-5 flex flex-col items-center gap-4 text-center">

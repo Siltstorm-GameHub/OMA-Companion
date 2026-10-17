@@ -19,13 +19,13 @@ export function curvePercent(base: number): number[] {
 export type MonsterTemplate = Omit<BattleUnitDefinition, "level" | "avatarBadgeUrl">;
 
 /** Erwartete Ablage für Monster-Artwork — freistehende Figuren (transparenter
- *  Hintergrund), nicht Karten-Ausschnitte, siehe public/battle-cards/monsters/README.md
+ *  Hintergrund), nicht Karten-Ausschnitte, siehe public/gems-assets/monsters/README.md
  *  für Stilvorgabe/Maße. Ein Monster ohne (noch) vorhandene Datei zeigt einfach
  *  weiter den Klassen-Icon-Platzhalter (UnitCard fällt bei einem 404 automatisch
  *  darauf zurück, siehe onError in LiveBattleView.tsx) — das Feld kann also schon
  *  jetzt überall gesetzt werden, ohne dass die Datei bereits existieren muss. */
 export function monsterImagePath(slug: string): string {
-  return `/battle-cards/monsters/${slug}.png`;
+  return `/gems-assets/monsters/${slug}.png`;
 }
 
 /** Wandelt ein Monster-Template in eine einsatzbereite BattleUnitDefinition um.

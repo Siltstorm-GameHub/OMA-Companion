@@ -20,9 +20,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, Swords } from "@/components/icons";
-import MobaIcon from "./MobaIcon";
-import MobaConfirmDialog from "./MobaConfirmDialog";
+import { BellOff, ChevronLeft, Loader2, Swords, Volume2 } from "@/components/icons";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import { enemySlotForColumn, pickEnemyForColumn, type BoardGrid, type SpecialGrid, type SwapMove } from "@/lib/battle-engine/board-match3";
@@ -50,7 +50,7 @@ import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
  *  nur Kapitel 1, siehe CAMPAIGN_CHAPTER_BACKGROUND), statt der generischen
  *  Arena — das ist der eigene Look der Kampagne. */
 function getArenaBackgroundStyle(mode: string | undefined): CSSProperties {
-  const backgroundUrl = mode?.startsWith("CAMPAIGN_") ? CAMPAIGN_CHAPTER_BACKGROUND : "/battle-cards/arena-bg.jpg";
+  const backgroundUrl = mode?.startsWith("CAMPAIGN_") ? CAMPAIGN_CHAPTER_BACKGROUND : "/gems-assets/arena-bg.jpg";
   return {
     backgroundColor: "#04061a",
     backgroundImage: [
@@ -390,7 +390,7 @@ function UnitCard({
           />
         ))}
       {/* Echte Sprite-Overlays (Kenney Particle Pack, CC0, siehe
-          public/battle-cards/vfx/README.md) — dasselbe Bild wie im Kampf-
+          public/gems-assets/vfx/README.md) — dasselbe Bild wie im Kampf-
           Replay (BattleScreen.tsx), per mask-image in die Klassenfarbe
           eingefärbt. Bisher gab's im Live-Kampf nur den Ring-Flash oben, kein
           Sprite — das war die eigentliche Lücke, die "keine sichtbare
@@ -403,8 +403,8 @@ function UnitCard({
             className="absolute inset-0 pointer-events-none z-30"
             style={{
               background: getClassConfig("DAMAGE_DEALER").color,
-              maskImage: "url(/battle-cards/vfx/slash.png)",
-              WebkitMaskImage: "url(/battle-cards/vfx/slash.png)",
+              maskImage: "url(/gems-assets/vfx/slash.png)",
+              WebkitMaskImage: "url(/gems-assets/vfx/slash.png)",
               maskSize: "180% 180%",
               WebkitMaskSize: "180% 180%",
               maskRepeat: "no-repeat",
@@ -425,8 +425,8 @@ function UnitCard({
             className="absolute inset-0 pointer-events-none z-30"
             style={{
               background: getClassConfig("SUPPORT").color,
-              maskImage: "url(/battle-cards/vfx/magic-bolt.png)",
-              WebkitMaskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+              maskImage: "url(/gems-assets/vfx/magic-bolt.png)",
+              WebkitMaskImage: "url(/gems-assets/vfx/magic-bolt.png)",
               maskSize: "70% 70%",
               WebkitMaskSize: "70% 70%",
               maskRepeat: "no-repeat",
@@ -573,7 +573,7 @@ function UnitCard({
           />
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-full left-0 mb-1 z-40 w-40 rounded-lg bg-[#04061a] border border-[color:var(--moba-accent-line)] shadow-xl px-2 py-1.5 space-y-1"
+            className="absolute bottom-full left-0 mb-1 z-40 w-40 rounded-lg glass-heavy shadow-xl px-2 py-1.5 space-y-1"
           >
             {unit.statModifiers.map((m, i) => (
               <div key={i} className="text-[10px] leading-snug">
@@ -605,7 +605,7 @@ function UnitCard({
         {Math.max(0, Math.round(shownHp))}/{unit.maxHp}
       </p>
       <div className="flex items-center gap-1 mt-0.5" title={`Rage: ${Math.round(unit.rage)}/100`}>
-        <MobaIcon name="attack" className="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" />
+        <Swords className="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" />
         <div className="flex-1 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
           <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
         </div>
@@ -658,7 +658,7 @@ export default function LiveBattleView({
   const pendingSnapshotRef = useRef<LiveSnapshot | null>(null);
   const [pendingHp, setPendingHp] = useState<Map<string, number> | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
-  // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
+  // Splash-Art für den Lade-Zustand (siehe public/gems-assets/splash.png) —
   // fehlt die Datei (noch nicht hochgeladen), fällt die Ansicht einfach auf
   // den reinen Spinner zurück (onError-Pattern, wie beim Logo/Hintergrund).
   const [splashFailed, setSplashFailed] = useState(false);
@@ -964,26 +964,22 @@ export default function LiveBattleView({
           <button
             type="button"
             onClick={() => (!snapshot || snapshot.status === "finished" ? handleExit() : setShowLeaveConfirm(true))}
-            className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
+            className="glass flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2.5 py-1.5 rounded-lg"
           >
-            <MobaIcon name="chevronLeft" className="w-4 h-4" /> Zurück
+            <ChevronLeft className="w-4 h-4" /> Zurück
           </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={toggleSoundMuted}
-              className="flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-md bg-black/30"
+              className="glass flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-lg"
               aria-label={soundMuted ? "Ton einschalten" : "Ton ausschalten"}
             >
-              <MobaIcon name={soundMuted ? "soundOff" : "soundOn"} className="w-4 h-4" />
+              {soundMuted ? <BellOff className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             {snapshot && (
               <span
-                className="font-battle text-sm text-amber-300 uppercase tracking-wide px-3 py-1.5 rounded-md"
-                style={{
-                  background: "linear-gradient(180deg, rgba(245,158,11,0.18) 0%, rgba(0,0,0,0.35) 100%)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(245,158,11,0.35), 0 0 12px rgba(245,158,11,0.25)",
-                }}
+                className="glass font-display text-sm font-bold text-teal-300 px-3 py-1.5 rounded-lg"
               >
                 Runde {snapshot.round}
               </span>
@@ -1001,7 +997,7 @@ export default function LiveBattleView({
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/battle-cards/splash.png"
+                  src="/gems-assets/splash.png"
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={() => setSplashFailed(true)}
@@ -1012,11 +1008,11 @@ export default function LiveBattleView({
             <div className="absolute top-6 left-0 right-0 flex items-center justify-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={BRAND_LOGO} alt="OMA" className="h-8 w-auto object-contain" />
-              <span className="font-battle text-base text-white uppercase tracking-wide">OMA Gems</span>
+              <span className="font-display text-base font-bold text-white">OMA Gems</span>
             </div>
             <div className="relative flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
-              <p className="font-battle text-[11px] text-gray-300 uppercase tracking-widest">Kampf wird geladen…</p>
+              <p className="text-xs text-gray-300">Kampf wird geladen…</p>
             </div>
           </div>
         ) : (
@@ -1039,18 +1035,22 @@ export default function LiveBattleView({
         )}
       </div>
 
-      <MobaConfirmDialog
-        open={showLeaveConfirm}
-        tone="warning"
-        title="Kampf verlassen?"
-        message="Dein Kampf läuft im Hintergrund weiter, bis er endet oder dein Zug per Timeout übersprungen wird."
-        confirmLabel="Verlassen"
-        onConfirm={() => {
-          setShowLeaveConfirm(false);
-          handleExit();
-        }}
-        onCancel={() => setShowLeaveConfirm(false)}
-      />
+      <Modal open={showLeaveConfirm} onClose={() => setShowLeaveConfirm(false)} title="Kampf verlassen?" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400">Dein Kampf bleibt gespeichert — du kannst ihn später an derselben Stelle fortsetzen.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowLeaveConfirm(false)}>Weiterspielen</Button>
+            <Button
+              onClick={() => {
+                setShowLeaveConfirm(false);
+                handleExit();
+              }}
+            >
+              Verlassen
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>,
     document.body
   );
@@ -1307,7 +1307,7 @@ function LiveBattleBody({
           // Der Vollbild-Ergebnisbildschirm (GemsResultScreen, s.o.) übernimmt die Anzeige.
           null
         ) : isMyDecision && snapshot.awaiting?.board ? (
-          <div className="moba-panel rounded-xl p-2.5 flex flex-col">
+          <div className="glass rounded-xl p-2.5 flex flex-col">
               <BoardMatch3
                 // Rundennummer mit in den Turn-Key aufnehmen: bleibt nur noch EINE
                 // eigene Einheit übrig, ist sie in jeder Runde die einzige, die für
@@ -1337,7 +1337,7 @@ function LiveBattleBody({
         ) : lastBoard ? (
           // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
           // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
-          <div className="moba-panel rounded-xl p-2.5 flex flex-col gap-1.5">
+          <div className="glass rounded-xl p-2.5 flex flex-col gap-1.5">
             <BoardMatch3
               grid={lastBoard.grid}
               specials={lastBoard.specials}
@@ -1381,7 +1381,7 @@ function LiveBattleBody({
         </div>
 
       {/* Text, was passiert — unterhalb der Entscheidung */}
-      <div className="shrink-0 rounded-md border border-[color:var(--moba-accent-line)] px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">
+      <div className="glass shrink-0 rounded-lg px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">
         {snapshot.recentLog
           .map((e) => describeLogEntry(e, nameOf))
           .filter((line): line is string => !!line)

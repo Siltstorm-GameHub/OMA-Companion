@@ -1,7 +1,7 @@
 // ============================================
 // OMA Gems — Sound: Klangliste + Wiedergabe im Browser
 // ============================================
-// Die Dateien liegen als kleine WAVs in public/battle-cards/sfx (übernommen aus OMA Quest). Lautstärke und
+// Die Dateien liegen als kleine WAVs in public/gems-assets/sfx (übernommen aus OMA Quest). Lautstärke und
 // Stummschaltung merkt sich der Browser (localStorage, Schlüssel unverändert "oq-sound", damit bestehende
 // Einstellungen erhalten bleiben). Browser erlauben Ton erst nach einer Bedienung (Klick/Tippen) — vorher
 // schlägt das Abspielen still fehl.
@@ -58,7 +58,7 @@ export function playSfx(key: Sfx, gain = 1): void {
   lastPlayed.set(key, now);
   try {
     let base = cache.get(key);
-    if (!base) { base = new Audio(`/battle-cards/sfx/${key}.wav`); base.preload = "auto"; cache.set(key, base); }
+    if (!base) { base = new Audio(`/gems-assets/sfx/${key}.wav`); base.preload = "auto"; cache.set(key, base); }
     const a = base.cloneNode() as HTMLAudioElement;
     a.volume = Math.min(1, s.volume * gain);
     void a.play().catch(() => {});

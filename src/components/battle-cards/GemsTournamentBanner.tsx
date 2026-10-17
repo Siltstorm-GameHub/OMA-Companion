@@ -7,15 +7,15 @@
 // Spiel "OMA Gems" angelegt hat (siehe EventSetupWizard.tsx / gems-tournament.ts).
 // Vor Turnierstart: Countdown. Während des Fensters: Kampf-Button + Rangliste.
 
+import { Button } from "@/components/ui/Button";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Loader2 } from "@/components/icons";
+import { Gem, Trophy } from "@/components/icons";
 import CountdownBadge from "@/components/CountdownBadge";
 import RankedAvatar from "@/components/RankedAvatar";
 import LiveBattleView from "./LiveBattleView";
-import MobaIcon from "./MobaIcon";
 
 interface TournamentData {
   id: string;
@@ -86,11 +86,11 @@ export default function GemsTournamentBanner() {
   const attemptsLeft = tournament.maxAttemptsPerUser - tournament.attemptsUsed;
 
   return (
-    <div className="moba-panel rounded-2xl p-4 space-y-3">
+    <div className="glass rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
-            <MobaIcon name="trophy" className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-white/[0.08] flex items-center justify-center shrink-0">
+            <Trophy className="w-5 h-5" />
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{tournament.title}</p>
@@ -111,21 +111,15 @@ export default function GemsTournamentBanner() {
                 : "Keine Versuche mehr übrig"}
             </p>
           </div>
-          <button
-            type="button"
+          <Button
             onClick={start}
-            disabled={starting || attemptsLeft <= 0}
-            className="moba-button w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
+            disabled={attemptsLeft <= 0}
+            loading={starting}
+            icon={<Gem className="w-3.5 h-3.5" />}
+            className="w-full"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/battle-cards/moba/buttons/btn10_normal.png" alt="" aria-hidden className="moba-img-fill" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/battle-cards/moba/buttons/btn10_hovered.png" alt="" aria-hidden className="moba-img-fill moba-img-fill-hover" />
-            <span className="moba-button-label relative flex items-center gap-1.5">
-              {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MobaIcon name="gem" className="w-3.5 h-3.5" />}
-              {starting ? "Startet…" : "Jetzt kämpfen"}
-            </span>
-          </button>
+            {starting ? "Startet…" : "Jetzt kämpfen"}
+          </Button>
 
           {tournament.topRows.length > 0 && (
             <div className="space-y-1.5 pt-1">

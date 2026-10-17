@@ -119,31 +119,24 @@ Spalten hat (`scripts/db-push.mjs` läuft ohne `--accept-data-loss`):
 Danach entfernt (nicht mehr gebraucht): TypeScript-Umstellungs-Skript, Erstattungslogik in
 `card-coins.ts` und tote Exporte aus den Spiel-Modulen (Sounds, Saison-/Elo-Setter, Taktik-Reste).
 
-**5. Design an den Rest der App angleichen** — offen
-Heute hat OMA Gems einen eigenen MOBA-Look: `battle-cards-moba.css` (472 Zeilen, Scope
-`.moba-skin`), eigene Schrift Metamorphous, 22 Rahmen-/Button-Grafiken in `public/battle-cards/moba`
-(1,7 MB), eigene Raster-Icons (`MobaIcon`, 26 Stellen) und Sonderbehandlung im App-Rahmen
-(`DashboardChrome` blendet Header/Ticker/Partner-Footer aus, `AuroraBackground` hat eine eigene
-Variante). Betroffen sind rund 20 Komponenten. Ziel: dieselbe Sprache wie der Rest der App
-(siehe PRODUCT.md) — dunkles Glas (`.glass`/`.glass-heavy`), Teal `#14b8a6` als Akzent, Space Grotesk,
-gemeinsame Bausteine aus `components/ui` (Button, Badge, Modal) und `components/admin/Tabs`.
-- 5a Rahmen: `/gems` wie jede andere Seite (Header, Ticker, Standard-Hintergrund), kein `.moba-skin`,
-  keine eigene Schrift, Logo-Komponente durch normale Seitenüberschrift ersetzen
-- 5b Hub, Sammlung, Shop, Kampagnen-Karte, Rangliste: `moba-panel` → `glass`, MOBA-Reiterleiste →
-  `Tabs`, Hex-/Bild-Buttons → `Button`, `MobaIcon` → `@/components/icons`
-- 5c Karten (`BattleCardView`, `CardTile`, `CardPlate`, `LineupStrip`): Rahmen-PNG durch CSS-Rahmen im
-  App-Stil ersetzen; Pixel-Figuren, Klassenfarben und Community-Kennzeichnung bleiben
-- 5d Kampf (`LiveBattleView`, `BoardMatch3`, `GemsResultScreen`, Bestätigungsdialog): Farben, Schrift,
-  Panels und Buttons angleichen
-- 5e Aufräumen: `battle-cards-moba.css`, `MobaIcon`/`moba-icons.ts`, `MobaConfirmDialog`,
-  `public/battle-cards/moba`, Aurora-Variante und Sonderfall in `DashboardChrome` entfernen
-- Prüfen: jede Gems-Seite mobil und am Desktop im Browser gegen eine andere App-Seite vergleichen
+**5. Design an den Rest der App angleichen** — erledigt
+Entschieden: Kampf bleibt Vollbild (nur Farben/Schrift/Bausteine angeglichen), Spielgrafik
+(Brett-Steine, Monster, Arena-/Kapitel-Hintergründe, Effekte) bleibt.
+- 5a Rahmen: `/gems` läuft wie jede andere Seite (Header, Ticker, Standard-Aurora, Partner-Footer);
+  `gems/layout.tsx` (`.moba-skin`, Metamorphous) und `BattleCardsLogo` entfernt, Seitenüberschrift
+  im Stil der Rangliste. Nur im Live-Kampf wird die untere Navigation ausgeblendet.
+- 5b Hub, Sammlung, Shop, Kampagnen-Karte, Rangliste: `glass`-Panels, Reiter über
+  `components/admin/Tabs`, `Button` statt Bild-/Hex-Buttons, `@/components/icons` statt `MobaIcon`
+- 5c Karten: Rahmen-PNG entfernt, Rahmen per CSS; Pixel-Figuren, Klassenfarben, Community-Kennzeichnung bleiben
+- 5d Kampf: Zurück/Ton/Runde als Glas-Bausteine in Teal, Verlassen-Dialog über `Modal` + `Button`
+- 5e Entfernt: `battle-cards-moba.css`, `MobaIcon`, `moba-icons.ts`, `MobaConfirmDialog`, Russo One /
+  `.font-battle`, Aurora-Variante, Sonderfälle in `DashboardChrome`/`FloatingPill`, MOBA-Grafiken und
+  ungenutzte Effekt-/Sound-Dateien
 
-Offene Fragen vor dem Start:
-1. Kampfansicht: als eigenes Vollbild behalten (nur Farben/Schrift/Bausteine angleichen) oder ins
-   normale Seitenlayout mit Navigation holen?
-2. Spielgrafik: Brett-Steine, Monsterbilder, Arena-/Kapitel-Hintergründe und Kampfeffekte bleiben
-   (Vorschlag), nur die Bedienoberfläche wird angeglichen?
+Nebenbei behoben (dringend): Seit Phase 1 leitete `/battle-cards/:path*` auch die Spielgrafiken und
+Sounds unter `public/battle-cards` auf `/gems/...` um — in Production fehlten alle Bilder. Assets liegen
+jetzt unter `public/gems-assets`; die Weiterleitungen in `next.config.ts` unterscheiden Seiten
+(→ `/gems`) und Dateien (→ `/gems-assets`), auch für bereits im Browser gespeicherte 308-Ziele.
 
 ## Geklärte Punkte
 

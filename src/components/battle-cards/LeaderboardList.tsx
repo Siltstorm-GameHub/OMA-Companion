@@ -1,8 +1,7 @@
 import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
-import MobaIcon from "./MobaIcon";
 import RankedAvatar from "@/components/RankedAvatar";
-import { Star } from "@/components/icons";
+import { Info, Star, Trophy } from "@/components/icons";
 import type { LeaderboardRow } from "@/lib/battle-cards/leaderboard";
 import { ENDLESS_FIRST_STAGE } from "@/lib/battle-cards/endless-levels";
 
@@ -31,7 +30,7 @@ function RankBadge({ place }: { place: number }) {
       style={{ background: style.gradient, boxShadow: `0 0 0 1px ${style.ring}88, 0 2px 4px rgba(0,0,0,0.4)` }}
       title={`Platz ${place}`}
     >
-      <MobaIcon name="trophy" className="w-3 h-3" />
+      <Trophy className="w-3 h-3" />
     </div>
   );
 }
@@ -40,7 +39,7 @@ function Row({ row, place, isViewer }: { row: LeaderboardRow; place: number; isV
   return (
     <Link
       href={`/profile/${row.userId}`}
-      className={`moba-corner-row p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
+      className={`glass rounded-xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
         isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
       }`}
     >
@@ -62,8 +61,8 @@ function Row({ row, place, isViewer }: { row: LeaderboardRow; place: number; isV
 export default function LeaderboardList({ rows, viewerId, limit }: { rows: LeaderboardRow[]; viewerId: string; limit?: number }) {
   if (rows.length === 0) {
     return (
-      <div className="moba-panel rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
-        <MobaIcon name="trophy" className="w-6 h-6 opacity-50" />
+      <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
+        <Trophy className="w-6 h-6 opacity-50" />
         <p className="text-sm text-gray-500">Noch hat niemand Sterne gesammelt — sei der Erste!</p>
       </div>
     );
@@ -76,7 +75,7 @@ export default function LeaderboardList({ rows, viewerId, limit }: { rows: Leade
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
-        <MobaIcon name="info" className="w-3 h-3 shrink-0" />
+        <Info className="w-3 h-3 shrink-0" />
         Sortiert nach höchster geschaffter Stufe, dann Sternen · bei Gleichstand zählt, wer zuerst dort war
       </p>
       {shown.map((row, i) => (

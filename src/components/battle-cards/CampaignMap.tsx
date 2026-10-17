@@ -16,8 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Star, Crown, Loader2 } from "@/components/icons";
-import MobaIcon from "./MobaIcon";
+import { Crown, Loader2, Lock, Star, Swords, Trophy } from "@/components/icons";
 import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import CoinIcon from "@/components/CoinIcon";
@@ -117,7 +116,7 @@ function LevelNode({
           }}
         >
           {locked ? (
-            <MobaIcon name="lock" className="w-6 h-6 opacity-50" />
+            <Lock className="w-6 h-6 opacity-50" />
           ) : level.isBoss ? (
             <Crown className="w-7 h-7 text-white" strokeWidth={2.2} />
           ) : (
@@ -237,8 +236,8 @@ export default function CampaignMap() {
         <p className="relative text-[9px] font-bold text-violet-300 uppercase tracking-widest">OMA Gems</p>
         <div className="relative flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <MobaIcon name="crossedSwords" className="w-4 h-4" />
-            <h2 className="font-battle text-sm text-white uppercase tracking-wide">{chapterName}</h2>
+            <Swords className="w-4 h-4" />
+            <h2 className="font-display text-sm text-white uppercase tracking-wide">{chapterName}</h2>
           </div>
           <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
             <CoinIcon size={10} /> 100 pro neuem Stern
@@ -255,26 +254,26 @@ export default function CampaignMap() {
         </div>
       ) : (
         <>
-          <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(chapterLevels)}</div>
+          <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(chapterLevels)}</div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <MobaIcon name="trophy" className="w-4 h-4" />
-                <h2 className="font-battle text-sm text-white uppercase tracking-wide">Endlos-Turm</h2>
+                <Trophy className="w-4 h-4" />
+                <h2 className="font-display text-sm text-white uppercase tracking-wide">Endlos-Turm</h2>
               </div>
               {bestEndlessStage > 0 && (
                 <span className="text-[11px] font-semibold text-amber-300">Beste Stufe: {bestEndlessStage}</span>
               )}
             </div>
             {endlessLevels.length === 0 ? (
-              <p className="moba-panel rounded-2xl px-4 py-4 text-xs text-gray-400">
+              <p className="glass rounded-2xl px-4 py-4 text-xs text-gray-400">
                 Schaffe Level 12, um den Endlos-Turm zu öffnen. Danach wird jede Stufe ein Stück schwerer — wie weit kommst du?
               </p>
             ) : (
               <>
                 <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Wie weit kommst du?</p>
-                <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
+                <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
               </>
             )}
           </div>

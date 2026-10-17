@@ -11,11 +11,9 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { ThumbsDown, Flame, RotateCcw } from "@/components/icons";
+import { Flame, RotateCcw, Swords, ThumbsDown, ThumbsUp } from "@/components/icons";
 import type { LucideIcon } from "lucide-react";
 import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
-import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
-import MobaIcon from "./MobaIcon";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import CardBackdrop from "./CardBackdrop";
 import { TE_CROP_FIGURE, poseAnim, type TeCharacterConfig, type TeDir } from "@/lib/te-character";
@@ -59,11 +57,6 @@ export const LEVEL_BORDER: Record<number, string> = {
   5: "#a855f7", // prismatisch (Basiston, Glow ergänzt Regenbogen-Effekt)
 };
 
-/** MOBA-Style-Kartenrahmen (echte Alpha-Transparenz, KEIN Schwarz-Hintergrund/
- *  screen-Blend wie die frühere Canva-Rahmen-Serie). LEVEL_BORDER färbt nur noch
- *  die Monster-Stufen im Kampf (siehe LiveBattleView) — Spielerkarten haben keine Stufen. */
-export const MOBA_CARD_FRAME_IMAGE = "/battle-cards/moba/card-frame.png";
-
 // Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
 // CARD_FLAVOR_TEXT_MAX_LENGTH = 100 Zeichen, lib/battle-cards/card-content.ts),
 // auch auf schmalen Karten (2-spaltiges Mobil-Grid). Kürzere Texte lassen
@@ -80,9 +73,9 @@ const ACTIVITY_TIER_ICON: Record<NonNullable<BattleCardData["activityTier"]>, st
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md px-2 py-1 flex-1 text-center bg-black/30 border border-[color:var(--moba-accent-line)]">
-      <p className="text-[9px] text-[color:var(--moba-ink-dim)] uppercase tracking-widest">{label}</p>
-      <p className="text-sm font-black tabular-nums text-[color:var(--moba-accent)]">{value}</p>
+    <div className="rounded-md px-2 py-1 flex-1 text-center bg-black/30 border border-white/[0.08]">
+      <p className="text-[9px] text-gray-500 uppercase tracking-widest">{label}</p>
+      <p className="text-sm font-black tabular-nums text-teal-300">{value}</p>
     </div>
   );
 }
@@ -92,20 +85,18 @@ function SkillRow({
   iconColor,
   skill,
 }: {
-  /** MOBA-Icon-Pfad (string) für Skills mit Kit-Entsprechung, sonst als
-   *  Ausnahme ein Lucide-Icon (z.B. Flame/ThumbsDown — kein Kit-Äquivalent). */
-  icon: string | LucideIcon;
+  icon: LucideIcon;
   iconColor: string;
   skill: BattleCardSkill;
 }) {
-  const Icon = typeof icon === "string" ? null : icon;
+  const Icon = icon;
   return (
     <div className="flex gap-2">
       <div
         className="shrink-0 w-6 h-6 rounded-md flex items-center justify-center mt-0.5"
         style={{ background: `${iconColor}22`, color: iconColor }}
       >
-        {Icon ? <Icon className="w-3.5 h-3.5" /> : <img src={icon as string} alt="" aria-hidden className="w-3.5 h-3.5 object-contain" />}
+        <Icon className="w-3.5 h-3.5" />
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -189,26 +180,14 @@ export default function BattleCardView({
       >
         {/* ── Vorderseite ── */}
         <div
-          className="card-cut moba-panel absolute inset-0 px-3.5 pt-9 pb-11 flex flex-col gap-2 overflow-hidden"
+          className="card-cut glass absolute inset-0 p-3.5 flex flex-col gap-2 overflow-hidden"
           style={{
             display: flipped ? "none" : undefined,
             boxShadow: cardFaceShadow,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={MOBA_CARD_FRAME_IMAGE}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none z-10"
-            style={{ objectFit: "fill" }}
-          />
-          {/* Name zentriert statt linksbündig — die Rahmen-Ornamentik (Canva-Artwork)
-              reicht an den Ecken tief in die Karte hinein (bei x=5-10% bis zu 35% der Höhe),
-              zur horizontalen Mitte hin aber nur ~2-6%. Zentrierter Text bleibt so unterhalb
-              der Ornamentik statt darunter/dahinter zu verschwinden. */}
           <div className="flex flex-col items-center text-center gap-0.5 shrink-0">
-            <p className="font-battle text-[13px] text-white leading-tight truncate max-w-full">{card.name}</p>
+            <p className="font-display text-[13px] text-white leading-tight truncate max-w-full">{card.name}</p>
           </div>
 
           <div
@@ -283,7 +262,7 @@ export default function BattleCardView({
           {!hidePassives && (
             <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06] shrink-0">
               <span className="flex items-center gap-1 text-[10px] text-emerald-400" title={card.passivePositive.name}>
-                <MobaIcon name="like" className="w-3 h-3" /> {card.passivePositive.name}
+                <ThumbsUp className="w-3 h-3" /> {card.passivePositive.name}
               </span>
               <span className="flex items-center gap-1 text-[10px] text-rose-400" title={card.passiveNegative.name}>
                 <ThumbsDown className="w-3 h-3" /> {card.passiveNegative.name}
@@ -294,22 +273,14 @@ export default function BattleCardView({
 
         {/* ── Rückseite ── */}
         <div
-          className="card-cut moba-panel absolute inset-0 px-4 pt-9 pb-6 flex flex-col gap-2 overflow-hidden"
+          className="card-cut glass absolute inset-0 p-4 flex flex-col gap-2 overflow-hidden"
           style={{
             display: flipped ? undefined : "none",
             boxShadow: cardFaceShadow,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={MOBA_CARD_FRAME_IMAGE}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none z-10"
-            style={{ objectFit: "fill" }}
-          />
           <div className="relative flex items-center justify-center shrink-0">
-            <p className="font-battle text-[11px] text-white uppercase tracking-wide truncate max-w-[80%]">{card.name}</p>
+            <p className="font-display text-[11px] text-white uppercase tracking-wide truncate max-w-[80%]">{card.name}</p>
             <RotateCcw className="absolute right-0 w-3 h-3 text-gray-600" />
           </div>
 
@@ -319,11 +290,11 @@ export default function BattleCardView({
           >
             {!hidePassives && (
               <>
-                <SkillRow icon={MOBA_ICON.like} iconColor="#34d399" skill={card.passivePositive} />
+                <SkillRow icon={ThumbsUp} iconColor="#34d399" skill={card.passivePositive} />
                 <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
               </>
             )}
-            <SkillRow icon={MOBA_ICON.attack} iconColor="#60a5fa" skill={card.activeSkill} />
+            <SkillRow icon={Swords} iconColor="#60a5fa" skill={card.activeSkill} />
             <SkillRow icon={Flame} iconColor="#fbbf24" skill={card.ultimateSkill} />
           </div>
         </div>

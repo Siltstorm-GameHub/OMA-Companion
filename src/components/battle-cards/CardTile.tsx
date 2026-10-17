@@ -7,8 +7,8 @@
 // Flip-Karte pro Eintrag. Antippen öffnet die volle Detailansicht
 // (BattleCardView) in einem Modal.
 
-import { getClassConfig, LEVEL_BORDER, MOBA_CARD_FRAME_IMAGE, type BattleCardData } from "./BattleCardView";
-import MobaIcon from "./MobaIcon";
+import { Lock } from "@/components/icons";
+import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import CardBackdrop from "./CardBackdrop";
@@ -56,22 +56,11 @@ export default function CardTile({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
           ) : locked ? (
-            <MobaIcon name="lock" className="w-6 h-6 opacity-50" />
+            <Lock className="w-6 h-6 opacity-50" />
           ) : (
             <img src={classConfig.icon} alt="" aria-hidden className="w-8 h-8 object-contain" style={{ opacity: 0.65 }} />
           )}
         </div>
-
-        {!locked && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={MOBA_CARD_FRAME_IMAGE}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ objectFit: "fill" }}
-          />
-        )}
 
         {/* Namensschild (Name, Klasse) und Community-Band */}
         {isCommunity(card.rarity) && <CommunityRibbon />}

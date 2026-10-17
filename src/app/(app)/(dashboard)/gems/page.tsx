@@ -21,7 +21,7 @@ import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
 import BattleCardsTabs from "./BattleCardsTabs";
-import BattleCardsLogo from "@/components/battle-cards/BattleCardsLogo";
+import { Gem } from "@/components/icons";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
 import GemsTournamentBanner from "@/components/battle-cards/GemsTournamentBanner";
@@ -88,13 +88,13 @@ export default async function GemsPage() {
       <GemsTournamentBanner />
 
       <div className="space-y-4">
-        <h1 className="text-lg font-black text-white">Kampagne</h1>
+        <h2 className="font-display text-lg font-bold text-white">Kampagne</h2>
         <CampaignMap />
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-lg font-black text-white">Rangliste</h1>
+          <h2 className="font-display text-lg font-bold text-white">Rangliste</h2>
           {leaderboardRows.length > LEADERBOARD_PREVIEW && (
             <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
               Alle anzeigen →
@@ -109,7 +109,7 @@ export default async function GemsPage() {
   const sammlungPanel = (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-black text-white">Deine Karten</h1>
+        <h2 className="font-display text-lg font-bold text-white">Deine Karten</h2>
         <p className="text-xs text-gray-500 mt-0.5">Antippen, um die Skill-Details auf der Rückseite zu sehen.</p>
       </div>
 
@@ -129,7 +129,7 @@ export default async function GemsPage() {
   const ladenPanel = (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-lg font-black text-white">Shop</h1>
+        <h2 className="font-display text-lg font-bold text-white">Shop</h2>
         <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400 tabular-nums"><CoinIcon size={16} /> {coins} Münzen</span>
       </div>
 
@@ -154,8 +154,19 @@ export default async function GemsPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      <BattleCardsLogo />
+    <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+      <div>
+        <div className="flex items-center gap-2.5 mb-1">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)", boxShadow: "0 0 20px rgba(20,184,166,0.10)" }}
+          >
+            <Gem className="w-4.5 h-4.5 text-teal-400" />
+          </div>
+          <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Gems</h1>
+        </div>
+        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Endlos-Turm und Turniere</p>
+      </div>
       <BattleCardsTabs
         spielenPanel={spielenPanel}
         sammlungPanel={sammlungPanel}

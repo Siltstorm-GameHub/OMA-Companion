@@ -51,7 +51,7 @@ export const poseAnim = (c: TeCharacterConfig | null | undefined): TeAnim => (c?
 
 /** Kartenhintergründe: Orte wie im Kampfbildschirm (Himmel + Boden aus lib/battle-cards/card-backdrops). */
 export const CARD_BGS_SCENES = ["plains", "forest", "harbor", "coast", "mountain", "ruins", "village", "cave", "fortress", "snow", "swamp", "desert"] as const;
-/** Pixel-Szenen als Bilddatei (public/battle-cards/bg/<Name>.webp) */
+/** Pixel-Szenen als Bilddatei (public/gems-assets/bg/<Name>.webp) */
 export const CARD_BGS_IMAGES = ["city-bright-tokyo", "city-dark-tokyo", "city-kanagawa", "city-osaka", "city-school", "night1", "night2", "night3", "night4", "night5", "night6", "night7", "night8", "night9", "night10", "rural1", "rural2", "rural3", "urban1", "urban2", "urban3", "urban4", "urban5", "urban-night1", "urban-night2"] as const;
 export const CARD_BGS = [...CARD_BGS_SCENES, ...CARD_BGS_IMAGES] as const;
 export const isImageBg = (b: string): boolean => (CARD_BGS_IMAGES as readonly string[]).includes(b);

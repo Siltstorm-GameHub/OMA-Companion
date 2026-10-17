@@ -40,7 +40,7 @@ export function CardPlate({ card, locked = false, compact = false }: { card: Pic
       className={`absolute inset-x-0 bottom-0 z-[6] text-center pointer-events-none ${compact ? "px-1 pb-1 pt-4" : "px-2 pb-1.5 pt-6"}`}
       style={{ background: community ? "linear-gradient(180deg, transparent, rgba(8,40,52,0.92) 45%, rgba(40,30,8,0.95))" : "linear-gradient(180deg, transparent, rgba(6,8,20,0.9) 50%)" }}
     >
-      <p className={`font-battle leading-tight truncate ${compact ? "text-[11px]" : "text-[12px]"} ${locked ? "text-gray-500" : community ? "text-amber-100" : "text-white"}`} style={{ textShadow: "0 1px 2px #000" }}>{card.name}</p>
+      <p className={`font-display leading-tight truncate ${compact ? "text-[11px]" : "text-[12px]"} ${locked ? "text-gray-500" : community ? "text-amber-100" : "text-white"}`} style={{ textShadow: "0 1px 2px #000" }}>{card.name}</p>
       <div className={`flex items-center justify-center gap-1.5 ${compact ? "mt-0.5" : "mt-1"}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={cls.icon} alt="" aria-hidden className={compact ? "w-3 h-3 object-contain" : "w-3.5 h-3.5 object-contain"} />
