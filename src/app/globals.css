@@ -96,6 +96,9 @@ html {
 
 /* ── Base ──────────────────────────────────────────────────────── */
 html, body { overflow-x: hidden; }
+/* clip schneidet genauso ab, macht html/body aber nicht zum Scroll-Container — sonst laufen
+   position: sticky-Elemente (z. B. die Vorschau in „Mein Held“) nirgends mit. */
+@supports (overflow-x: clip) { html, body { overflow-x: clip; } }
 
 /* ── Focus-visible: Keyboard-Navigation ────────────────────────── */
 /* Sichtbarer Fokus-Ring für alle interaktiven Elemente             */

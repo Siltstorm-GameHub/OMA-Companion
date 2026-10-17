@@ -25,13 +25,16 @@ import GemsPlayCard from "@/components/gems/GemsPlayCard";
 import PackOpener from "@/components/gems/PackOpener";
 import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
 import GemsTabs from "./GemsTabs";
-import { Gem } from "@/components/icons";
+import { ChevronRight, Gem } from "@/components/icons";
 import LineupStrip from "@/components/gems/LineupStrip";
 import CampaignMap from "@/components/gems/CampaignMap";
 import GemsTournamentBanner from "@/components/gems/GemsTournamentBanner";
 import CoinIcon from "@/components/CoinIcon";
 import DailySpin from "@/components/gems/shop/DailySpin";
 import BuyPack from "@/components/gems/shop/BuyPack";
+import HeroFigure from "@/components/gems/HeroFigure";
+import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
+import { effectiveHeroLook } from "@/lib/gems/hero/look";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const LEADERBOARD_PREVIEW = 5;
@@ -69,13 +72,14 @@ export default async function GemsPage() {
   const unopenedPacks = await countUnopenedPacks(userId);
   const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, equippedRelicIds] = await Promise.all([
+  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, equippedRelicIds, ownHeroCard] = await Promise.all([
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
     getCampaignLeaderboard(),
     getSeasonLeaderboard(),
     getEquippedRelicIds(userId),
+    getOwnCommunityCard(userId),
   ]);
 
   const ownedCards = ownedUserCards.map((uc) => ({
@@ -121,6 +125,23 @@ export default async function GemsPage() {
 
   const sammlungPanel = (
     <div className="space-y-4">
+      {ownHeroCard && (
+        <Link
+          href="/gems/held"
+          className="glass rounded-2xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors"
+        >
+          <span className="w-16 h-16 shrink-0">
+            <HeroFigure look={effectiveHeroLook(ownHeroCard)} title={ownHeroCard.name} className="w-full h-full" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-display text-base font-bold text-white">Mein Held gestalten</span>
+            <span className="block text-xs text-gray-400">
+              Gesicht, Frisur, Ausrüstung und Pose deiner Community-Karte — so sehen dich alle Sammler.
+            </span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+        </Link>
+      )}
       <div>
         <h2 className="font-display text-lg font-bold text-white">Deine Karten</h2>
         <p className="text-xs text-gray-500 mt-0.5">

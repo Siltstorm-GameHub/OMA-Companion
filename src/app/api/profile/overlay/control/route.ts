@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getStreamerConfig, getStreamerOverlayPayload, invalidateStreamerConfig } from "@/lib/overlay-state";
+import { getStreamerConfig, getStreamerOverlayPayload, invalidateStreamerConfig, explainStreamerEventMode, getStreamerEventCandidates } from "@/lib/overlay-state";
 import { parseOverlayControl, sanitizeControl, activeZoom, isEliminationFormat } from "@/components/overlay/layout";
 import {
   ELEMENT_LABELS, PROFILE_ELEMENT_LABELS, ZOOMABLE_ELEMENTS, ZOOMABLE_PROFILE_ELEMENTS, ELEMENT_KEYS, PROFILE_ELEMENT_KEYS,
@@ -80,12 +80,21 @@ export async function GET() {
   if (!payload) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   // Wie viele Clips der Loop gerade hat — damit leere Clip-Szenen in der Steuerung erklärbar sind.
-  const clipCount = (await getOverlayClips(userId, stored.config.clips.source).catch(() => [])).length;
-  return NextResponse.json({ ...describe(payload), ...controlResponse(stored.control), clipCount });
+  const [clips, eventReason, eventOptions] = await Promise.all([
+    getOverlayClips(userId, stored.config.clips.source).catch(() => []),
+    // Ohne Turniermodus: erklären, warum (läuft etwas, bei dem der User nicht dabei/nicht live ist?)
+    payload.mode === "profile" ? explainStreamerEventMode(userId).catch(() => null) : Promise.resolve(null),
+    // Laufende Events, bei denen der User dabei ist — mehrere = Auswahl in der Live-Steuerung.
+    getStreamerEventCandidates(userId).catch(() => []),
+  ]);
+  return NextResponse.json({
+    ...describe(payload), ...controlResponse(stored.control), clipCount: clips.length, eventReason,
+    eventOptions, activeEventId: payload.mode === "event" ? payload.eventId : null,
+  });
 }
 
 /**
- * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], scene?: OverlayScene, countdownMinutes?: number | null, skipClip?: true } — nur
+ * PUT { zoom?: key | null, zoomSeconds?: number | null, hidden?: key[], scene?: OverlayScene, countdownMinutes?: number | null, skipClip?: true, eventChoice?: string | null } — nur
  * mitgeschickte Felder ändern sich. zoomSeconds = automatisch nach so vielen Sekunden beenden
  * (null/fehlt = bis zum Zurücksetzen). Offene OBS-Quellen übernehmen die Änderung binnen ~2s.
  */
@@ -94,7 +103,7 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const userId = session.user.id;
 
-  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; scene?: unknown; countdownMinutes?: unknown; skipClip?: unknown } | null;
+  const body = await req.json().catch(() => null) as { zoom?: unknown; zoomSeconds?: unknown; hidden?: unknown; pause?: unknown; scene?: unknown; countdownMinutes?: unknown; skipClip?: unknown; eventChoice?: unknown } | null;
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { overlayControlJson: true } });
@@ -112,6 +121,8 @@ export async function PUT(req: NextRequest) {
   if ("pause" in body) control.scene = body.pause === true ? "pause" : "gameplay"; // älteres Format
   if (OVERLAY_SCENES.includes(body.scene as OverlayScene)) control.scene = body.scene as OverlayScene;
   if (body.skipClip === true) control.clipSkip = Date.now(); // Clip-Loop springt zum nächsten Clip
+  // Für welches Event streame ich? (Event-ID, "none" = kein Turniermodus, null = automatisch)
+  if ("eventChoice" in body) control.eventChoice = typeof body.eventChoice === "string" ? body.eventChoice : null;
   if ("countdownMinutes" in body) {
     // Intro-Countdown: Minuten ab jetzt, null/0 = beenden.
     const minutes = Number(body.countdownMinutes);

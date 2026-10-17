@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateStreamerActiveEvent } from "@/lib/overlay-state";
 
 /**
  * Anmeldung als Streamer eines Events (EventCommunityStreamer) — macht sichtbar, wer das Event
@@ -33,6 +34,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     update: {},
     include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } },
   });
+  invalidateStreamerActiveEvent(userId);
 
   return NextResponse.json(record);
 }
@@ -44,5 +46,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const userId = session.user.id;
 
   await prisma.eventCommunityStreamer.deleteMany({ where: { eventId, userId } });
+  invalidateStreamerActiveEvent(userId);
   return NextResponse.json({ ok: true });
 }

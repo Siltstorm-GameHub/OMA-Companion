@@ -5,10 +5,12 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Eye, EyeOff, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer, Swords, Moon, Rocket, Clapperboard, LogOut, LayoutGrid, Tv2,
-  ArrowRight as SkipForward,
+  ArrowRight as SkipForward, Trophy,
 } from "@/components/icons";
 import { SCENE_LABELS, type OverlayControl, type OverlayScene } from "@/components/overlay/types";
 import { OverlayConnectionStatus, useOverlayConnection } from "@/components/overlay/OverlayConnectionStatus";
+import EventModeHint from "@/components/overlay/EventModeHint";
+import type { EventModeReason } from "@/lib/overlay-state";
 
 type ElementInfo = { key: string; label: string; available: boolean; zoomable: boolean };
 type ControlState = {
@@ -19,6 +21,12 @@ type ControlState = {
   control: OverlayControl;
   /** Anzahl Clips im Community-Clip-Loop dieses Streamers. */
   clipCount: number;
+  /** Ohne Turniermodus: laufende Events und warum sie nicht greifen. */
+  eventReason: EventModeReason | null;
+  /** Laufende Events, bei denen der User dabei ist (das erste = automatische Wahl). */
+  eventOptions: { id: string; title: string }[];
+  /** Event, das der Turniermodus gerade zeigt (null = normales Streamen). */
+  activeEventId: string | null;
 };
 
 const SCENES: { key: OverlayScene; icon: typeof Swords; hint: string }[] = [
@@ -97,7 +105,7 @@ export default function LiveControl() {
   }, [countingDown]);
 
   async function update(
-    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; scene: OverlayScene; countdownMinutes: number | null; skipClip: true }>,
+    patch: Partial<{ zoom: string | null; zoomSeconds: number | null; hidden: string[]; scene: OverlayScene; countdownMinutes: number | null; skipClip: true; eventChoice: string | null }>,
     optimistic: Partial<OverlayControl>,
     optimisticRemaining?: number | null,
   ) {
@@ -149,6 +157,8 @@ export default function LiveControl() {
   const stopZoom = () => update({ zoom: null }, { zoom: null, zoomUntil: null }, null);
   const setScene = (scene: OverlayScene) => update({ scene }, { scene });
   const skipClip = () => update({ skipClip: true }, {});
+  // Event-Auswahl: der nächste Abruf (POLL_MS) bringt den neuen Modus samt Elementen mit.
+  const chooseEvent = (eventChoice: string | null) => update({ eventChoice }, { eventChoice }).then(load);
   const startCountdown = (minutes: number) => {
     setCountdown(minutes * 60);
     update({ countdownMinutes: minutes }, {});
@@ -176,7 +186,42 @@ export default function LiveControl() {
         </p>
         {error && <p className="text-xs text-amber-300 mt-1">{error}</p>}
         <div className="mt-2"><OverlayConnectionStatus connection={connection} compact /></div>
+        {state.mode === "profile" && <div className="mt-3"><EventModeHint reason={state.eventReason} onChanged={load} /></div>}
       </div>
+
+      {/* ── Für welches Event? (nur wenn es eine Wahl gibt) ── */}
+      {(state.eventOptions.length > 1 || control.eventChoice) && (
+        <div className="glass rounded-2xl p-4 space-y-3">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5" /> Für welches Event streamst du?
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {[
+              { key: null, label: "Automatisch", hint: state.eventOptions[0] ? `zeigt gerade: ${state.eventOptions[0].title}` : "kein laufendes Event" },
+              ...state.eventOptions.map(e => ({ key: e.id as string | null, label: e.title, hint: "Turniermodus für dieses Event" })),
+              { key: "none", label: "Kein Turnier", hint: "normales Overlay, auch wenn ein Event läuft" },
+            ].map(o => {
+              const active = (control.eventChoice ?? null) === o.key;
+              return (
+                <button
+                  key={o.key ?? "auto"}
+                  onClick={() => chooseEvent(o.key)}
+                  aria-pressed={active}
+                  className={`text-left rounded-xl px-3 py-3 border transition-all ${
+                    active ? "bg-teal-500/20 border-teal-400/60 text-teal-100" : "border-white/[0.08] text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/10"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold truncate">{o.label}</span>
+                  <span className="block text-[11px] text-gray-500 truncate">{o.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {control.eventChoice && control.eventChoice !== "none" && !state.eventOptions.some(e => e.id === control.eventChoice) && (
+            <p className="text-xs text-amber-300">Das gewählte Event läuft nicht mehr – dein Overlay wählt wieder automatisch.</p>
+          )}
+        </div>
+      )}
 
       {/* ── Szene ── */}
       <div className="glass rounded-2xl p-4 space-y-3">

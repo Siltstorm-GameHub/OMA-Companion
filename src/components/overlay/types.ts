@@ -278,6 +278,8 @@ export type OverlayControl = {
   countdownUntil: number | null;
   /** Zeitpunkt des letzten "Nächster Clip" (ms) — jede Änderung springt im Clip-Loop weiter. */
   clipSkip: number | null;
+  /** Welches laufende Event der Turniermodus zeigt: Event-ID, "none" = keins, null = automatisch. */
+  eventChoice: string | null;
 };
 
 export const ELEMENT_LABELS: Record<ElementKey, string> = {

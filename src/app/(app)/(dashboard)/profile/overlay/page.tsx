@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserOverlayToken, buildStreamerOverlayUrl } from "@/lib/overlay";
-import { getStreamerActiveEventId, getStreamerUpcomingEvents } from "@/lib/overlay-state";
+import { getStreamerActiveEventId, getStreamerUpcomingEvents, explainStreamerEventMode, getStreamerConfig } from "@/lib/overlay-state";
 import { parseStreamerConfig, defaultStreamerEventLayout, defaultProfileLayout } from "@/components/overlay/layout";
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
@@ -38,10 +38,11 @@ export default async function StreamerOverlaySettingsPage({ searchParams }: { se
 
   // Status: was zeigt der Link genau jetzt — und für welche kommenden Events ist der User als
   // Streamer angemeldet (die erscheinen dann automatisch, ohne hier etwas tun zu müssen)?
-  const [activeEventId, streamingEvents, presenceCount] = await Promise.all([
-    getStreamerActiveEventId(user.id),
+  const [activeEventId, streamingEvents, presenceCount, eventReason] = await Promise.all([
+    getStreamerConfig(user.id).then(s => getStreamerActiveEventId(user.id, s?.control.eventChoice)),
     getStreamerUpcomingEvents(user.id),
     prisma.overlayPresence.count({ where: { userId: user.id } }),
+    explainStreamerEventMode(user.id).catch(() => null),
   ]);
   const activeEvent = activeEventId
     ? await prisma.event.findUnique({ where: { id: activeEventId }, select: { id: true, title: true } })
@@ -63,6 +64,7 @@ export default async function StreamerOverlaySettingsPage({ searchParams }: { se
       activeEvent={activeEvent}
       streamingEvents={streamingEvents}
       everConnected={presenceCount > 0}
+      eventReason={activeEventId ? null : eventReason}
       initialSettingsTab={SETTINGS_TABS.includes(tab as SettingsTab) ? tab as SettingsTab : "look"}
     />
   );

@@ -11,6 +11,9 @@ import { OverlayConnectionStatus, useOverlayConnection } from "@/components/over
 import HelpTip from "@/components/overlay/HelpTip";
 import OverlaySetupWizard, { WIZARD_DONE_KEY } from "./OverlaySetupWizard";
 import LiveControlQr from "./LiveControlQr";
+import EventModeHint from "@/components/overlay/EventModeHint";
+import type { EventModeReason } from "@/lib/overlay-state";
+import { useRouter } from "next/navigation";
 import type { SettingsTab } from "./settingsTabs";
 import OverlayLayoutsEditor, { type OverlayLayouts, type LayoutTab } from "@/components/overlay/OverlayLayoutsEditor";
 import { PAUSE_TEXT_MAX } from "@/components/overlay/layout";
@@ -40,7 +43,7 @@ const CLIP_SOURCE_OPTIONS: { key: ClipSource; label: string; hint: string }[] = 
 
 export default function StreamerOverlaySettings({
   overlayUrl: initialUrl, initialLayouts, initialPauseText, initialLite, initialPauseBackground, initialClips, activeEvent, streamingEvents,
-  initialSettingsTab = "look", everConnected,
+  initialSettingsTab = "look", everConnected, eventReason,
 }: {
   overlayUrl: string;
   initialLayouts: OverlayLayouts;
@@ -55,10 +58,13 @@ export default function StreamerOverlaySettings({
   initialSettingsTab?: SettingsTab;
   /** Wurde der Link schon einmal geöffnet? Sonst startet der Einrichtungs-Assistent. */
   everConnected: boolean;
+  /** Ohne Turniermodus: laufende Events und warum sie nicht greifen. */
+  eventReason: EventModeReason | null;
 }) {
   const [overlayUrl, setOverlayUrl] = useState(initialUrl);
   const [tab, setTab] = useState<SettingsTab>(initialSettingsTab);
   const connection = useOverlayConnection(5000);
+  const router = useRouter();
   const [wizardOpen, setWizardOpen] = useState(false);
   // Assistent beim ersten Besuch: Link noch nie geöffnet und Assistent nicht schon geschlossen.
   useEffect(() => {
@@ -206,8 +212,9 @@ export default function StreamerOverlaySettings({
             <Radio className={`w-3.5 h-3.5 shrink-0 ${activeEvent ? "text-rose-400" : "text-gray-600"}`} />
             {activeEvent
               ? <>Gerade: <span className="text-gray-300">Turnier läuft · {activeEvent.title}</span> – dein Overlay zeigt die Turnier-Ansicht.</>
-              : <>Gerade: <span className="text-gray-300">Normales Streamen</span> – spielst du bei einem OMA-Turnier mit und bist live, wechselt dein Overlay automatisch in die Turnier-Ansicht.</>}
+              : <>Gerade: <span className="text-gray-300">Normales Streamen</span> – spielst du bei einem laufenden OMA-Turnier mit oder bist dort als Streamer angemeldet, wechselt dein Overlay automatisch in die Turnier-Ansicht.</>}
           </p>
+          {!activeEvent && <EventModeHint reason={eventReason} onChanged={() => setTimeout(() => router.refresh(), 1500)} />}
         </div>
 
         {/* ── Reiter ── */}

@@ -261,7 +261,7 @@ export function adaptEventLayout(layout: OverlayLayout<ElementKey>, format: stri
 // ── Live-Steuerung des eigenen Overlays ───────────────────────────────────────
 
 const CONTROL_KEYS = new Set<string>([...ELEMENT_KEYS, ...PROFILE_ELEMENT_KEYS]);
-export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null, clipSkip: null };
+export const EMPTY_CONTROL: OverlayControl = { hidden: [], zoom: null, zoomUntil: null, scene: "gameplay", countdownUntil: null, clipSkip: null, eventChoice: null };
 
 export function sanitizeControl(raw: unknown): OverlayControl {
   if (!raw || typeof raw !== "object") return { ...EMPTY_CONTROL };
@@ -278,6 +278,7 @@ export function sanitizeControl(raw: unknown): OverlayControl {
     scene: OVERLAY_SCENES.includes(r.scene as OverlayScene) ? r.scene as OverlayScene : r.pause === true ? "pause" : "gameplay",
     countdownUntil: r.countdownUntil != null && Number.isFinite(countdown) && countdown > 0 ? countdown : null,
     clipSkip: Number.isFinite(Number(r.clipSkip)) && Number(r.clipSkip) > 0 ? Number(r.clipSkip) : null,
+    eventChoice: typeof r.eventChoice === "string" && r.eventChoice.length > 0 && r.eventChoice.length <= 64 ? r.eventChoice : null,
   };
 }
 

@@ -18,7 +18,7 @@ import {
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import { EMPTY_CONTROL } from "@/components/overlay/layout";
 import { buildDemoEventState, type DemoFormat } from "@/lib/overlay-demo";
-import { pickActiveEvent, runningEventWhere } from "@/lib/overlay-active-event";
+import { chooseActiveEvent, rankActiveEvents, runningEventWhere } from "@/lib/overlay-active-event";
 
 /**
  * Datenquelle aller OBS-Overlays (Event-, Profil- und Streamer-Stream sowie der Startzustand
@@ -416,34 +416,71 @@ export function invalidateStreamerConfig(userId: string) {
   configCache.delete(userId);
 }
 
-const activeEventCache = createCache<string | null>();
+const activeEventCache = createCache<{ id: string; title: string }[]>();
+
+/** Nach Streamer-An-/Abmeldung: Turniermodus sofort neu bewerten statt nach Ablauf des Caches. */
+export function invalidateStreamerActiveEvent(userId: string) {
+  activeEventCache.delete(userId);
+}
 
 /**
  * Welches Event streamt dieser User gerade? Welche Events zeitlich in Frage kommen, regelt
  * lib/overlay-active-event.ts (u.a. gestartete Turniere über tournamentStatus). Kandidaten sind
- * Events, bei denen er
- *   a) als Streamer angemeldet ist (EventCommunityStreamer) — gilt sofort, auch vor Stream-Start, oder
- *   b) mitspielt (Event-Anmeldung als Spieler, Turnier-Teilnehmer oder Team-Mitglied) UND gerade
- *      auf Twitch live ist — wer ohnehin mitspielt und streamt, muss nicht an die Streamer-Anmeldung
- *      denken.
- * null → Profil-Modus.
+ * Events, bei denen er als Streamer angemeldet ist (EventCommunityStreamer) oder mitspielt
+ * (Event-Anmeldung als Spieler, Turnier-Teilnehmer oder Team-Mitglied) — jeweils unabhängig davon,
+ * ob er gerade live ist: Das Overlay sieht ohnehin nur, wer streamt, und so stimmt der Modus auch
+ * schon beim Einrichten. Sortiert: das erste ist die automatische Wahl.
  */
-export function getStreamerActiveEventId(userId: string): Promise<string | null> {
+export function getStreamerEventCandidates(userId: string): Promise<{ id: string; title: string }[]> {
   return activeEventCache.get(userId, ACTIVE_EVENT_TTL_MS, async () => {
     const now = Date.now();
     const event = runningEventWhere(now);
-    const select = { event: { select: { id: true, status: true, tournamentStatus: true, startAt: true } } };
-    const [streaming, registered, participant, teams, live] = await Promise.all([
+    const select = { event: { select: { id: true, title: true, status: true, tournamentStatus: true, startAt: true } } };
+    const [streaming, registered, participant, teams] = await Promise.all([
       prisma.eventCommunityStreamer.findMany({ where: { userId, event }, select }),
       prisma.eventRegistration.findMany({ where: { userId, role: { not: "spectator" }, event }, select }),
       prisma.tournamentParticipant.findMany({ where: { userId, event }, select }),
       prisma.teamMember.findMany({ where: { userId, team: { event } }, select: { team: { select } } }),
-      getCommunityLive(),
     ]);
-    const playing = [...registered, ...participant, ...teams.map(t => t.team)];
-    const candidates = [...streaming, ...(live.has(userId) ? playing : [])].map(r => r.event);
-    return pickActiveEvent(candidates, now);
+    const candidates = [...streaming, ...registered, ...participant, ...teams.map(t => t.team)].map(r => r.event);
+    return rankActiveEvents(candidates, now).map(e => ({ id: e.id, title: e.title }));
   });
+}
+
+/** Event im Turniermodus: Wahl aus der Live-Steuerung (falls noch gültig), sonst automatisch.
+ *  null → Profil-Modus. */
+export async function getStreamerActiveEventId(userId: string, choice?: string | null): Promise<string | null> {
+  const candidates = await getStreamerEventCandidates(userId);
+  return chooseActiveEvent(candidates.map(c => c.id), choice);
+}
+
+/** Warum zeigt das Overlay keinen Turniermodus? Für Live-Steuerung und Einstellungen: gerade
+ *  laufende Events, bei denen der User weder Streamer noch Spieler ist. */
+export type EventModeReason = {
+  running: { id: string; title: string }[];
+};
+
+export async function explainStreamerEventMode(userId: string): Promise<EventModeReason> {
+  const now = Date.now();
+  const [events] = await Promise.all([
+    prisma.event.findMany({
+      where: { ...runningEventWhere(now), hidden: false },
+      orderBy: { startAt: "asc" },
+      take: 5,
+      select: {
+        id: true, title: true,
+        communityStreamers: { where: { userId }, select: { id: true } },
+        registrations: { where: { userId, role: { not: "spectator" } }, select: { id: true } },
+        participants: { where: { userId }, select: { id: true } },
+        teams: { where: { members: { some: { userId } } }, select: { id: true } },
+      },
+    }),
+  ]);
+  return {
+    running: events
+      .filter(e => !e.communityStreamers.length && !e.registrations.length && !e.participants.length && !e.teams.length)
+      .map(e => ({ id: e.id, title: e.title })),
+  };
 }
 
 /** Komplette Payload des Streamer-Links — Event-Modus, wenn gerade ein Event gestreamt wird,
@@ -458,7 +495,11 @@ export async function getStreamerOverlayPayload(
   userId: string, config: StreamerOverlayConfig, liveControl: OverlayControl, preview?: OverlayPreview,
 ): Promise<StreamerOverlayPayload | null> {
   const control = preview ? { ...EMPTY_CONTROL } : liveControl;
-  const [realEventId, streamer] = await Promise.all([getStreamerActiveEventId(userId), getOverlayStreamer(userId)]);
+  // Vorschau: immer die automatische Wahl (unabhängig von der Event-Auswahl der Live-Steuerung).
+  const [realEventId, streamer] = await Promise.all([
+    getStreamerActiveEventId(userId, preview ? null : liveControl.eventChoice),
+    getOverlayStreamer(userId),
+  ]);
   if (!streamer) return null;
   const eventId = preview?.mode === "profile" ? null : realEventId;
   const common = {

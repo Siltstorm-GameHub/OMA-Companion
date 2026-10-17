@@ -230,7 +230,7 @@ eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
 - Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
   Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
 
-**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — in Arbeit (10a erledigt)
+**10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — in Arbeit (10a, 10b erledigt)
 Entscheidung: Stil A (Cartoon mit Outline, Muster im Canvas „OMA Gems Helden-Stile“) und Option 3
 (feste Grundfiguren plus Kosmetik ohne Kampfvorteil). Ersetzt die Pixel-Figuren (Time Elements,
 `lib/te-character`, 15 MB unter `public/te`). Monster bleiben, wie sie sind.
@@ -293,7 +293,8 @@ Umsetzung in Schritten (jeder Schritt einzeln deploybar):
   Looks für die 9 Standard-Karten, Standard-Looks für alle Community-Karten; überall einbauen
   (Karten-Kachel, Kartenansicht, Aufstellung, Live-Kampf, Kampf-Replay, Ergebnis). Danach ist die App
   komplett im neuen Stil, nur noch ohne Editor.
-- 10b „Mein Held“: Editor mit Live-Vorschau (wie das Kosmetik-Muster), nur für die eigene
+- 10b „Mein Held“ (erledigt — `/gems/held`, `HeroEditor`, `POST /api/gems/hero-look`, Freischalt-Regeln in
+  `lib/gems/hero/cosmetics.ts`; bis 10c sind nur freie Teile wählbar): Editor mit Live-Vorschau (wie das Kosmetik-Muster), nur für die eigene
   Community-Karte, API zum Speichern; Admin kann Looks weiter überschreiben.
 - 10c Kosmetik-Katalog und Freischaltungen: Inventar, Shop-Bereich „Kosmetik“, Hinweise im
   Ergebnisbildschirm („Neu: Umhang freigeschaltet“), Kosmetik-Teile als Saison-/Wächter-Belohnung.
