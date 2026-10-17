@@ -13,6 +13,7 @@ import { resolveAvatarsForCards } from "./card-view";
 import { resolveAvatarBadgeUrl, resolveCardImageUrl } from "./resolve-image";
 import {
   ENDLESS_BOSS_POWER,
+  ENDLESS_DEFENSE_MULTIPLIER,
   ENDLESS_MONSTER_LEVEL,
   endlessAttackMultiplier,
   endlessStatMultiplier,
@@ -51,7 +52,7 @@ export async function buildWeeklyGuardian(week: number, stage: number): Promise<
       name: `Wächter ${card.name}`,
       baseHp: Math.round(normalized.baseHp * multiplier),
       baseAttack: Math.round(normalized.baseAttack * attackMultiplier),
-      baseDefense: Math.round(normalized.baseDefense * multiplier),
+      baseDefense: Math.round(normalized.baseDefense * ENDLESS_DEFENSE_MULTIPLIER),
     },
     stage
   );

@@ -43,12 +43,13 @@ export interface CampaignLevelDef {
   monsters: MonsterTemplate[];
   level: number;
   statMultiplier: number;
-  /** Nur Kapitel: eigener Angriffs-Multiplikator (sonst wie statMultiplier). Hält einen
+  /** Eigener Angriffs-Multiplikator (sonst wie statMultiplier). Im Kapitel hält er einen
    *  einzelnen Gegnertreffer bei einem festen Anteil der Leben eines Helden (siehe
-   *  CHAPTER_HIT_TARGET in scripts/simulate-campaign-balance.ts). */
+   *  CHAPTER_HIT_TARGET in scripts/simulate-campaign-balance.ts), im Turm wächst er langsamer als die Leben. */
   attackMultiplier?: number;
-  /** Nur Kapitel: eigener Verteidigungs-Multiplikator (sonst wie statMultiplier). Steigt wie der
-   *  Angriff flach — sonst würde fast jeder Treffer des Spielers an der Panzerung abprallen. */
+  /** Eigener Verteidigungs-Multiplikator (sonst wie statMultiplier). Bleibt flach — die
+   *  Schadensformel zieht die halbe Verteidigung ab, sonst würde fast jeder Treffer des Spielers an der
+   *  Panzerung abprallen (nur noch Mindestschaden). */
   defenseMultiplier?: number;
   isBoss?: boolean;
   /** Turmwächter (jede 10. Endlos-Stufe ab 20, siehe tower-rules.ts). */
@@ -77,7 +78,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Zum Aufwärmen: noch nicht mal ein Boss-Balken.",
     monsters: [TUTORIAL_SLIME],
     level: 1,
-    statMultiplier: 29.3,
+    statMultiplier: 50,
     attackMultiplier: 1.86,
     defenseMultiplier: 1.86,
   },
@@ -88,7 +89,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Kurz offline, dann geht's weiter.",
     monsters: [TUTORIAL_SLIME, SESSION_TIMEOUT_ZOMBIE],
     level: 1,
-    statMultiplier: 7.6,
+    statMultiplier: 14,
     attackMultiplier: 1.3,
     defenseMultiplier: 1.3,
   },
@@ -132,8 +133,8 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "504 Gateway Timeout — und keine Gnade.",
     monsters: [SERVERABSTURZ_KRAKEN, LAG_SPIKE, LAG_SPIKE],
     level: 3,
-    statMultiplier: 27.4,
-    attackMultiplier: 1.4,
+    statMultiplier: 30,
+    attackMultiplier: 1.6,
     defenseMultiplier: 1.05,
     isBoss: true,
   },
@@ -155,7 +156,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Hier kauft man sich den Sieg. Fast.",
     monsters: [PAY2WIN_TRUHE, PAY2WIN_TRUHE, LOOT_GOBLIN, LOOT_GOBLIN],
     level: 3,
-    statMultiplier: 14.4,
+    statMultiplier: 18,
     attackMultiplier: 1.95,
     defenseMultiplier: 1.3,
   },
@@ -166,7 +167,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Noch drei Level bis zum nächsten Item. Ehrlich.",
     monsters: [SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, GRIEFER_IMP],
     level: 4,
-    statMultiplier: 9.1,
+    statMultiplier: 13,
     attackMultiplier: 1.82,
     defenseMultiplier: 1.37,
   },
@@ -199,8 +200,8 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "End of Season. Kein Extra-Leben mehr.",
     monsters: [SEASON_PASS_DRACHE, SERVERABSTURZ_KRAKEN, SERVERABSTURZ_KRAKEN],
     level: 5,
-    statMultiplier: 3.1,
-    attackMultiplier: 2.8,
+    statMultiplier: 5.2,
+    attackMultiplier: 1.7,
     defenseMultiplier: 1.5,
     isBoss: true,
   },

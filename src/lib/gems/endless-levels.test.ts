@@ -9,9 +9,10 @@ describe("Endlos-Turm: Stufen-Generator", () => {
     assert.deepEqual(generateEndlessLevel(21), generateEndlessLevel(21));
   });
 
-  test("Teamgröße 4, ab Stufe 16 dann 5, jede 5. Stufe ist ein Boss", () => {
+  test("Teamgröße 4 nur auf Stufe 13, danach 5, jede 5. Stufe ist ein Boss", () => {
     assert.equal(generateEndlessLevel(13).monsters.length, 4);
-    assert.equal(generateEndlessLevel(15).monsters.length, 4);
+    assert.equal(generateEndlessLevel(14).monsters.length, 5);
+    assert.equal(generateEndlessLevel(15).monsters.length, 5);
     assert.equal(generateEndlessLevel(16).monsters.length, 5);
     assert.equal(generateEndlessLevel(40).monsters.length, 5);
     assert.equal(generateEndlessLevel(15).isBoss, true);
@@ -19,7 +20,7 @@ describe("Endlos-Turm: Stufen-Generator", () => {
   });
 
   test("feste Rollen-Aufteilung, Boss ersetzt den ersten Tank", () => {
-    assert.deepEqual(generateEndlessLevel(14).monsters.map((m) => m.class), ["TANK", "DAMAGE_DEALER", "DAMAGE_DEALER", "SUPPORT"]);
+    assert.deepEqual(generateEndlessLevel(13).monsters.map((m) => m.class), ["TANK", "DAMAGE_DEALER", "DAMAGE_DEALER", "SUPPORT"]);
     assert.deepEqual(generateEndlessLevel(21).monsters.map((m) => m.class), ["TANK", "DAMAGE_DEALER", "DAMAGE_DEALER", "SUPPORT", "TANK"]);
     const boss = generateEndlessLevel(20).monsters[0];
     assert.ok(["Serverabsturz-Kraken", "Season-Pass-Drache"].includes(boss.name));

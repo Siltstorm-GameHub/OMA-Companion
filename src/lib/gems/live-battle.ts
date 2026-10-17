@@ -79,7 +79,7 @@ const CAMPAIGN_MODE_PREFIX = "CAMPAIGN_";
 const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
 const DAILY_MODE_PREFIX = "DAILY_";
 
-/** Ab hier ist die Tages-Herausforderung offen (Schwierigkeit wie Endlos-Stufe 16). */
+/** Ab hier ist die Tages-Herausforderung offen (Schwierigkeit wie Endlos-Stufe 22, DAILY_CHALLENGE_STAGE). */
 export const DAILY_CHALLENGE_UNLOCK_LEVEL_ID = "lvl-06";
 
 /** Nur Kampagne, Tages-Herausforderung und Turnier werden unterstützt — ältere, noch offene

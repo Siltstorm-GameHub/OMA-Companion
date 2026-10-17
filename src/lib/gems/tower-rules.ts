@@ -36,12 +36,12 @@ export const GUARDIAN_ABILITIES: GuardianAbility[] = [
   {
     id: "panzerung",
     name: "Panzerung",
-    description: "Startet mit stark erhöhter Verteidigung — Spezialsteine und Ultimates lohnen sich hier besonders.",
+    description: "Startet mit erhöhter Verteidigung — Spezialsteine und Ultimates lohnen sich hier besonders.",
     passive: {
       name: "Wächter: Panzerung",
-      description: "Verteidigung dauerhaft +40 %.",
+      description: "Verteidigung dauerhaft +25 %.",
       trigger: "battleStart",
-      effects: [{ type: "statModifier", target: { kind: "self" }, stat: "defense", mode: "percent", valuePerLevel: five(0.4), duration: "battle" }],
+      effects: [{ type: "statModifier", target: { kind: "self" }, stat: "defense", mode: "percent", valuePerLevel: five(0.25), duration: "battle" }],
     },
   },
   {
@@ -61,9 +61,9 @@ export const GUARDIAN_ABILITIES: GuardianAbility[] = [
     description: "Stärkt das ganze Gegner-Team — erst die Begleiter ausschalten kann sich lohnen.",
     passive: {
       name: "Wächter: Anführer",
-      description: "Angriff des ganzen Teams dauerhaft +20 %.",
+      description: "Angriff des ganzen Teams dauerhaft +12 %.",
       trigger: "battleStart",
-      effects: [{ type: "statModifier", target: { kind: "allAllies" }, stat: "attack", mode: "percent", valuePerLevel: five(0.2), duration: "battle" }],
+      effects: [{ type: "statModifier", target: { kind: "allAllies" }, stat: "attack", mode: "percent", valuePerLevel: five(0.12), duration: "battle" }],
     },
   },
   {
@@ -72,9 +72,9 @@ export const GUARDIAN_ABILITIES: GuardianAbility[] = [
     description: "Lädt sein Ultimate bei jedem Treffer schneller auf — wenige, starke Angriffe sind besser als viele kleine.",
     passive: {
       name: "Wächter: Zorn",
-      description: "Erhält bei jedem erlittenen Treffer 6 Rage.",
+      description: "Erhält bei jedem erlittenen Treffer 3 Rage.",
       trigger: "onTakeDamage",
-      effects: [{ type: "rageChange", target: { kind: "self" }, valuePerLevel: five(6) }],
+      effects: [{ type: "rageChange", target: { kind: "self" }, valuePerLevel: five(3) }],
     },
   },
 ];

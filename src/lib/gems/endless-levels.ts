@@ -5,19 +5,20 @@
 // rein aus ihrer Nummer erzeugt (deterministischer Zufall) — alle Spieler treffen auf
 // dieselben Gegner, die Rangliste bleibt fair, und es muss nichts gespeichert werden.
 //
-// Schwierigkeit: Monster immer auf Stufe 5, die Basiswerte wachsen je Stufe um
-// ENDLESS_GROWTH (exponentiell) — irgendwann ist eine Stufe praktisch nicht mehr zu
-// schaffen, das ist die natürliche Grenze des Turms. Leben/Verteidigung und Angriff haben
-// getrennte Startwerte (ENDLESS_BASE_MULTIPLIER / ENDLESS_ATTACK_BASE_MULTIPLIER): mehr
-// Leben hält die Kämpfe spannend lang, der flachere Angriff vermeidet Ein-Treffer-Kills. Damit die zufällige Auswahl die
+// Schwierigkeit: Monster immer auf Stufe 5, Leben wachsen je Stufe um ENDLESS_GROWTH, der Angriff
+// langsamer um ENDLESS_ATTACK_GROWTH (beides exponentiell) — irgendwann ist eine Stufe praktisch nicht
+// mehr zu schaffen, das ist die natürliche Grenze des Turms. Die Verteidigung bleibt fest
+// (ENDLESS_DEFENSE_MULTIPLIER): Die Schadensformel zieht die halbe Verteidigung ab — wüchse sie mit,
+// fiele der Heldenschaden ab etwa Stufe 30 schlagartig auf den Mindestschaden, und Karten-Ränge
+// oder Relikte könnten die Grenze kaum verschieben (Mauer statt Steigung). Damit die zufällige Auswahl die
 // Schwierigkeit nicht verzerrt, wird jedes Monster vorab auf dieselbe Stärke normiert
 // (normalizeMonster, Bosse etwas stärker), und jedes Team folgt derselben Rollen-Aufteilung
 // (TEAM_ROLES) — gezogen wird nur, WELCHES Monster eine Rolle füllt.
-// Teams haben 4, ab Stufe 16 dann 5 Monster, jede 5. Stufe ist eine Boss-Stufe (der Boss
+// Stufe 13 hat 4 Monster (Einstieg nach dem Kapitel), danach 5, jede 5. Stufe ist eine Boss-Stufe (der Boss
 // ersetzt den ersten Tank). Jede 10. Stufe ab 20 ist ein Turmwächter: Der Boss bekommt eine
 // eigene Fähigkeit (tower-rules.ts) und wird im Kampf durch die Community-Karte der Woche ersetzt.
 // Die Tages-Herausforderung nutzt denselben Aufbau mit einem Seed aus dem Datum.
-// Kalibriert mit scripts/simulate-campaign-balance.ts --endless.
+// Kalibriert mit scripts/simulate-campaign-balance.ts --endless (Balancing 2026-10, siehe docs/gems-reduktion-plan.md).
 
 import { createRng } from "@/lib/battle-engine/rng";
 import type { UnitClass } from "@/lib/battle-engine/types";
@@ -39,20 +40,24 @@ import { guardianAbilityFor, isGuardianStage, withGuardianAbility } from "./towe
 
 /** Erste Endlos-Stufe — direkt nach dem letzten Kampagnen-Level. */
 export const ENDLESS_FIRST_STAGE = 13;
-/** Basis-Multiplikator der ersten Endlos-Stufe und Wachstum je weiterer Stufe. */
-export const ENDLESS_BASE_MULTIPLIER = 1.4;
-export const ENDLESS_ATTACK_BASE_MULTIPLIER = 1.2;
-export const ENDLESS_GROWTH = 1.04;
+/** Multiplikatoren der ersten Endlos-Stufe und Wachstum je weiterer Stufe (Leben bzw. Angriff). */
+export const ENDLESS_BASE_MULTIPLIER = 2.5;
+export const ENDLESS_ATTACK_BASE_MULTIPLIER = 1.65;
+export const ENDLESS_GROWTH = 1.032;
+export const ENDLESS_ATTACK_GROWTH = 1.027;
+/** Feste Verteidigung aller Endlos-Stufen (siehe oben). */
+export const ENDLESS_DEFENSE_MULTIPLIER = 1.2;
 const ENDLESS_MONSTER_LEVEL = 5;
 const BOSS_EVERY = 5;
 /** Ziel-Stärke je Monster (√(HP × Angriff) der Basiswerte), Bosse mit Aufschlag. */
 const REFERENCE_POWER = 330;
-const BOSS_POWER_FACTOR = 1.4;
+const BOSS_POWER_FACTOR = 1.25;
 /** Stärke eines Boss-Monsters — auch Maßstab für den Community-Wächter (weekly-guardian.ts). */
 export const ENDLESS_BOSS_POWER = REFERENCE_POWER * BOSS_POWER_FACTOR;
 export { ENDLESS_MONSTER_LEVEL };
-/** Schwierigkeit der Tages-Herausforderung — entspricht Endlos-Stufe 16 (volles 5er-Team). */
-export const DAILY_CHALLENGE_STAGE = 16;
+/** Schwierigkeit der Tages-Herausforderung — entspricht Endlos-Stufe 22: Ein Spieler mit Karten auf
+ *  Rang 3 gewinnt sie im Simulator in etwa drei von vier Fällen (vorher Stufe 16, fast immer gewonnen). */
+export const DAILY_CHALLENGE_STAGE = 22;
 
 const ID_PREFIX = "endless-";
 
@@ -117,14 +122,29 @@ export function normalizeMonster<T extends BaseStats>(m: T, targetPower: number)
   };
 }
 
-/** Multiplikator für Leben und Verteidigung der Monster auf Stufe `stage`. */
+/** Multiplikator für die Leben der Monster auf Stufe `stage`. */
 export function endlessStatMultiplier(stage: number): number {
   return ENDLESS_BASE_MULTIPLIER * ENDLESS_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
 }
 
 /** Multiplikator für den Angriff der Monster auf Stufe `stage`. */
 export function endlessAttackMultiplier(stage: number): number {
-  return ENDLESS_ATTACK_BASE_MULTIPLIER * ENDLESS_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
+  return ENDLESS_ATTACK_BASE_MULTIPLIER * ENDLESS_ATTACK_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
+}
+
+/** Ausgleich für Monster, die trotz gleicher Werte-Stärke spürbar gefährlicher oder harmloser sind
+ *  (Fähigkeiten, Tempo). Gemessen mit festen Teams auf Stufe 31 (gleiche Rolle, sonst gleiche Gegner):
+ *  ohne Ausgleich lagen die Siegquoten je Monster zwischen 44 % und 99 %. */
+const POWER_ADJUST: Record<string, number> = {
+  "Loot-Goblin": 0.85,
+  Frittatus: 1.45,
+  "Pay2Win-Truhe": 0.95,
+  "Session-Timeout-Zombie": 1.05,
+};
+
+/** Ziel-Stärke eines normalen Turm-Monsters (mit Ausgleich). */
+export function endlessMonsterPower(m: { name: string }): number {
+  return REFERENCE_POWER * (POWER_ADJUST[m.name] ?? 1);
 }
 
 function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterTemplate[] {
@@ -132,7 +152,7 @@ function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterT
   return TEAM_ROLES[teamSize].map((role, slot) =>
     isBoss && slot === 0
       ? normalizeMonster(pick(BOSS_POOL), ENDLESS_BOSS_POWER)
-      : normalizeMonster(pick(REGULAR_POOL.filter((m) => m.class === role)), REFERENCE_POWER)
+      : ((m) => normalizeMonster(m, endlessMonsterPower(m)))(pick(REGULAR_POOL.filter((m) => m.class === role)))
   );
 }
 
@@ -141,7 +161,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /** Erzeugt die Endlos-Stufe `stage` — für dieselbe Nummer immer exakt dieselbe Stufe. */
 export function generateEndlessLevel(stage: number): CampaignLevelDef {
   const rng = createRng(0x9e3779b1 ^ stage);
-  const teamSize = stage - ENDLESS_FIRST_STAGE < 3 ? 4 : 5;
+  const teamSize = stage === ENDLESS_FIRST_STAGE ? 4 : 5;
   const isBoss = isEndlessBossStage(stage);
   const isGuardian = isGuardianStage(stage);
 
@@ -162,6 +182,7 @@ export function generateEndlessLevel(stage: number): CampaignLevelDef {
     level: ENDLESS_MONSTER_LEVEL,
     statMultiplier: round2(endlessStatMultiplier(stage)),
     attackMultiplier: round2(endlessAttackMultiplier(stage)),
+    defenseMultiplier: ENDLESS_DEFENSE_MULTIPLIER,
     isBoss,
     isGuardian,
   };
@@ -183,5 +204,6 @@ export function generateDailyChallengeLevel(dateKey: string): CampaignLevelDef {
     level: ENDLESS_MONSTER_LEVEL,
     statMultiplier: round2(endlessStatMultiplier(DAILY_CHALLENGE_STAGE)),
     attackMultiplier: round2(endlessAttackMultiplier(DAILY_CHALLENGE_STAGE)),
+    defenseMultiplier: ENDLESS_DEFENSE_MULTIPLIER,
   };
 }

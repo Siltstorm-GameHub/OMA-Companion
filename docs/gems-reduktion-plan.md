@@ -89,10 +89,10 @@ gewinnt Level 1–5 immer, danach fällt die Siegquote gleichmäßig von 90 % (e
 **3b. Endlos-Turm** — erledigt
 - Nach Level 12 folgen Endlos-Stufen 13, 14, … (`endless-levels.ts`), deterministisch aus der
   Stufennummer erzeugt (alle Spieler haben dieselben Gegner), ID `endless-<n>`
-- Teams mit fester Rollen-Aufteilung (Tank, 2× Schaden, Support, ab Stufe 16 zweiter Tank), jedes
-  Monster auf dieselbe Stärke normiert, jede 5. Stufe ein Boss
-- Schwierigkeit: Basis 1,15, +4 % je Stufe. Bot-Siegquote ≈ 100 % (13) → 70 % (20) → 35 % (25) →
-  0 % ab ≈ 34 (`simulate-campaign-balance.ts --endless`)
+- Teams mit fester Rollen-Aufteilung (Tank, 2× Schaden, Support, ab Stufe 14 zweiter Tank), jedes
+  Monster auf dieselbe Stärke normiert (mit gemessenem Ausgleich je Monster), jede 5. Stufe ein Boss
+- Schwierigkeit (neu kalibriert, siehe Balancing 2026-10 unten): Leben +3,2 %, Angriff +2,7 % je Stufe,
+  Verteidigung fest
 - Fortschritt, Sterne und Münzen wie in der Kampagne; Freischaltung der Reihe nach
 - Rangliste: höchste geschaffte Stufe, dann Sterne, dann wer früher dort war
 - Kampagnen-Karte: Abschnitt „Endlos-Turm“ mit den letzten 3 geschafften, der nächsten und 2
@@ -229,6 +229,24 @@ eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
 - Ranglisten: Saison (Standard), Bestwert (alle Saisons), Diese Woche, Heute.
 - Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
   Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
+
+**Balancing 2026-10 (Kampagne Kapitel 1 und Endlos-Turm)** — erledigt
+Befund: Im Turm wuchs die Gegner-Verteidigung mit. Weil die Schadensformel die halbe Verteidigung
+abzieht, fiel der Heldenschaden ab etwa Stufe 30 auf den Mindestschaden (5 %), während Gegnertreffer
+Helden sofort töteten — eine Mauer bei ~30–33 für alle, Karten-Rang 5 verschob sie nur um ~3 Stufen.
+Dazu: Stufen 13–19 leichter als Level 9–12, Wächter „Zorn“ (30) praktisch unschlagbar, Level 12 mit
+Ein-Treffer-Kills (143 % der Heldenleben), Tages-Herausforderung fast immer gewonnen.
+Umgesetzt (gemessen mit `scripts/simulate-campaign-balance.ts`, Bot ohne Relikte):
+- Turm: Verteidigung fest (`ENDLESS_DEFENSE_MULTIPLIER` 1,2), Leben 2,5 · 1,032ⁿ, Angriff 1,65 · 1,027ⁿ;
+  4er-Team nur noch auf Stufe 13; Boss-Aufschlag 1,4 → 1,25; Stärke-Ausgleich für Loot-Goblin,
+  Frittatus, Pay2Win-Truhe, Session-Timeout-Zombie (`POWER_ADJUST`, Spanne vorher 44–99 % je Monster).
+  Ergebnis 50 %-Grenze: Rang 0 ≈ Stufe 26, Rang 3 ≈ 33, Rang 5 ≈ 40, Rang 5 bis ≈ 55 noch 10–25 %.
+- Wächter: Panzerung +40 → +25 % Verteidigung, Anführer +20 → +12 % Angriff, Zorn 6 → 3 Rage je Treffer.
+- Kapitel: Level 1/2 mehr Leben (Kämpfe 2,6–2,8 statt 1,9 Züge), Level 6 Boss mit Angriff 1,6 und
+  Leben ×30, Level 8 ×18, Level 9 ×13, Level 12 Angriff 2,8 → 1,7 und Leben ×5,2 (höchster Treffer
+  85 % statt 143 %, Siegquote ≈ 70 %). Siegquoten 100 → 92 → 90 → 88 → 80 → 68 → 71 % (Level 6–12).
+- Tages-Herausforderung: Schwierigkeit Stufe 16 → 22 (Rang 3 ≈ 75 % Siege).
+- Simulator: neue Schalter `--agrowth`, `--dbase`, `--dgrowth` (Turm) und `--level=N --stat --atk --def`.
 
 **10. Neues Helden-Design: Cartoon-Stil mit Kosmetik** — erledigt (10e: Strecke für Zeichnungen steht, Zeichnungen selbst stehen aus)
 Entscheidung: Stil A (Cartoon mit Outline, Muster im Canvas „OMA Gems Helden-Stile“) und Option 3

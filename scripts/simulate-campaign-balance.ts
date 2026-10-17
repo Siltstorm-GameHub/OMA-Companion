@@ -3,7 +3,8 @@
  *
  *   npx tsx scripts/simulate-campaign-balance.ts [kämpfe-pro-level=40] [spieler-stufe=1]
  *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --calibrate
- *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --endless [--base=1.6] [--growth=1.06] [--to=35]
+ *   npx tsx scripts/simulate-campaign-balance.ts 200 1 --level=12 [--stat=3.1] [--atk=2.8] [--def=1.5]
+ *   npx tsx scripts/simulate-campaign-balance.ts 60 1 --endless [--base=1.6] [--growth=1.06] [--abase=1.2] [--agrowth=1.02] [--to=35]
  *
  * Mit --calibrate wird je Level zuerst der attackMultiplier gesucht, bei dem der härteste
  * einzelne Gegnertreffer CHAPTER_HIT_TARGET der Leben eines Starthelden nimmt, danach der
@@ -37,6 +38,8 @@ import {
   ENDLESS_ATTACK_BASE_MULTIPLIER,
   ENDLESS_BASE_MULTIPLIER,
   ENDLESS_FIRST_STAGE,
+  ENDLESS_ATTACK_GROWTH,
+  ENDLESS_DEFENSE_MULTIPLIER,
   ENDLESS_GROWTH,
   generateEndlessLevel,
 } from "@/lib/gems/endless-levels";
@@ -209,14 +212,20 @@ if (ENDLESS) {
   const base = flag("base", ENDLESS_BASE_MULTIPLIER);
   const growth = flag("growth", ENDLESS_GROWTH);
   const attackBase = flag("abase", ENDLESS_ATTACK_BASE_MULTIPLIER);
+  // --agrowth: eigenes Wachstum für den Angriff (sonst wie --growth) — testet flachere Schadenskurven.
+  const attackGrowth = flag("agrowth", ENDLESS_ATTACK_GROWTH);
+  // --dbase/--dgrowth: eigene Verteidigungs-Kurve (sonst wie Leben) — die Schadensformel zieht die
+  // halbe Verteidigung ab, zu viel Verteidigung drückt den Heldenschaden auf den Mindestschaden.
+  const defenseBase = flag("dbase", ENDLESS_DEFENSE_MULTIPLIER);
+  const defenseGrowth = flag("dgrowth", 1);
   const step = flag("step", 1);
   const to = flag("to", 35);
-  console.log(`Endlos-Turm: ${BATTLES} Kämpfe je Stufe, Basis ${base} (Angriff ${attackBase}), Wachstum ${growth}
+  console.log(`Endlos-Turm: ${BATTLES} Kämpfe je Stufe, Basis ${base} (Angriff ${attackBase}), Wachstum ${growth} (Angriff ${attackGrowth})
 `);
   console.log("Stufe          Gegner  Multiplikator  Siege   Ø Runden   Ø Züge");
   for (let stage = ENDLESS_FIRST_STAGE; stage <= to; stage += step) {
     const n = stage - ENDLESS_FIRST_STAGE;
-    const level = { ...generateEndlessLevel(stage), statMultiplier: base * growth ** n, attackMultiplier: attackBase * growth ** n };
+    const level = { ...generateEndlessLevel(stage), statMultiplier: base * growth ** n, attackMultiplier: attackBase * attackGrowth ** n, defenseMultiplier: defenseBase * defenseGrowth ** n };
     const r = simulate(level, BATTLES);
     console.log(
       `${String(stage).padStart(3)} ${level.isBoss ? "(Boss)" : "      "}    ${String(level.monsters.length).padStart(4)}  ${level.statMultiplier.toFixed(2).padStart(13)}  ${(r.winRate * 100).toFixed(0).padStart(4)} %   ${r.avgRounds.toFixed(1).padStart(7)}   ${r.avgMoves.toFixed(1).padStart(6)}`
@@ -232,8 +241,17 @@ console.log(
     ? "Level                              Treffer   attack   Züge   stat (bisher)   Siege (Ziel)"
     : "Level                              Siege   Ø Sterne   Ø Runden   Ø Züge   Treffer"
 );
+// --level=N: nur dieses Kapitel-Level; --stat/--atk/--def überschreiben testweise seine Multiplikatoren.
+const ONLY_LEVEL = flag("level", 0);
 for (let i = 0; i < CAMPAIGN_LEVELS.length; i++) {
-  const level = CAMPAIGN_LEVELS[i];
+  if (ONLY_LEVEL && i + 1 !== ONLY_LEVEL) continue;
+  const defined = CAMPAIGN_LEVELS[i];
+  const level: CampaignLevelDef = {
+    ...defined,
+    statMultiplier: flag("stat", defined.statMultiplier),
+    attackMultiplier: flag("atk", defined.attackMultiplier ?? defined.statMultiplier),
+    defenseMultiplier: flag("def", defined.defenseMultiplier ?? defined.statMultiplier),
+  };
   if (CALIBRATE) {
     const hitCapped = calibrateAttack(level, CHAPTER_HIT_TARGET[i]);
     const suggestion = calibrateMoves({ ...level, attackMultiplier: hitCapped, defenseMultiplier: hitCapped }, CHAPTER_MOVES_TARGET[i]);
