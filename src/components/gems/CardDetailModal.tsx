@@ -6,9 +6,12 @@
 
 import { Modal } from "@/components/ui/Modal";
 import BattleCardView, { type BattleCardData } from "./BattleCardView";
+import { RankProgress } from "./CardRank";
 
 export interface CardDetailSelection {
   card: BattleCardData;
+  /** Nur bei eigenen Karten — zeigt Rang und Fortschritt. */
+  winsInLineup?: number;
 }
 
 export default function CardDetailModal({
@@ -23,6 +26,7 @@ export default function CardDetailModal({
       {selection && (
         <div className="flex flex-col items-center gap-4">
           <BattleCardView card={selection.card} />
+          {selection.winsInLineup != null && <RankProgress wins={selection.winsInLineup} />}
         </div>
       )}
     </Modal>

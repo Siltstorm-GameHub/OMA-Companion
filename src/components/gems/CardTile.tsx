@@ -12,14 +12,18 @@ import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardV
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import CardBackdrop from "./CardBackdrop";
+import { RankBadge } from "./CardRank";
 import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 
 export default function CardTile({
   card,
   locked = false,
   isNew = false,
+  winsInLineup,
   onClick,
 }: {
+  /** Siege in der Startaufstellung — zeigt den Rang (nur eigene Karten). */
+  winsInLineup?: number;
   card: BattleCardData;
   locked?: boolean;
   /** Kürzlich erhalten — zeigt ein "NEU"-Ribbon in der oberen linken Ecke. */
@@ -64,6 +68,7 @@ export default function CardTile({
 
         {/* Namensschild (Name, Klasse) und Community-Band */}
         {isCommunity(card.rarity) && <CommunityRibbon />}
+        {!locked && winsInLineup != null && <RankBadge wins={winsInLineup} />}
         <CardPlate card={card} locked={locked} />
         {!locked && isNew && (
           <span

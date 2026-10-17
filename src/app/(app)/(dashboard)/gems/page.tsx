@@ -16,7 +16,9 @@ import { ensureGemsStarter } from "@/lib/gems/auto-starter";
 import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/gems/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignLeaderboard, toLeaderboardEntry } from "@/lib/gems/leaderboard";
+import { getCampaignLeaderboard, getSeasonLeaderboard, toSeasonEntry } from "@/lib/gems/leaderboard";
+import { getEquippedRelicIds } from "@/lib/gems/relic-store";
+import { relicById } from "@/lib/gems/relics";
 import { getPlayStatus } from "@/lib/gems/play-status";
 import LeaderboardList, { LEADERBOARD_TEXTS } from "@/components/gems/LeaderboardList";
 import GemsPlayCard from "@/components/gems/GemsPlayCard";
@@ -67,29 +69,36 @@ export default async function GemsPage() {
   const unopenedPacks = await countUnopenedPacks(userId);
   const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, leaderboardRows] = await Promise.all([
+  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, equippedRelicIds] = await Promise.all([
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
     getCampaignLeaderboard(),
+    getSeasonLeaderboard(),
+    getEquippedRelicIds(userId),
   ]);
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
     acquiredAt: uc.acquiredAt.toISOString(),
+    winsInLineup: uc.winsInLineup,
     card: toCardData(uc.card, avatarByDiscordId),
   }));
   const lineupCards = ownedUserCards
     .filter((uc) => uc.inLineup)
-    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId) }));
+    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), winsInLineup: uc.winsInLineup }));
 
   const coins = currentUser?.points ?? 0;
-  const playStatus = await getPlayStatus(userId, leaderboardRows);
-  const leaderboardEntries = leaderboardRows.map(toLeaderboardEntry);
+  const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);
+  const seasonEntries = seasonRows.map(toSeasonEntry);
+  const isLeader = playStatus.current.isEndless
+    ? seasonRows[0]?.userId === userId
+    : leaderboardRows[0]?.userId === userId;
+  const equippedRelics = equippedRelicIds.map((id) => relicById(id)!).filter(Boolean);
 
   const spielenPanel = (
     <div className="space-y-8">
-      <GemsPlayCard status={playStatus} isLeader={leaderboardRows[0]?.userId === userId} />
+      <GemsPlayCard status={playStatus} isLeader={isLeader} />
 
       <GemsTournamentBanner />
 
@@ -100,12 +109,12 @@ export default async function GemsPage() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-white">Rangliste</h2>
+          <h2 className="font-display text-lg font-bold text-white">Rangliste · Saison {playStatus.season.label}</h2>
           <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
             Woche, Heute, alle →
           </Link>
         </div>
-        <LeaderboardList rows={leaderboardEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.gesamt} />
+        <LeaderboardList rows={seasonEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.saison} />
       </div>
     </div>
   );
@@ -114,12 +123,22 @@ export default async function GemsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="font-display text-lg font-bold text-white">Deine Karten</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Antippen, um die Skill-Details auf der Rückseite zu sehen.</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Antippen für Details. Karten steigen durch Siege in deiner Startaufstellung im Rang auf und werden stärker.
+        </p>
       </div>
 
       <div className="space-y-2">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
         <LineupStrip cards={lineupCards} />
+        <p className="text-[11px] text-gray-500 px-0.5">
+          {equippedRelics.length > 0
+            ? `Relikte: ${equippedRelics.map((r) => r.name).join(", ")}`
+            : "Noch keine Relikte — die gibt es für Turmwächter (Endlos-Stufe 20, 30, …)."}{" "}
+          <Link href="/gems/lineup" className="font-semibold text-gray-400 hover:text-white">
+            Ändern →
+          </Link>
+        </p>
       </div>
 
       <CardCollectionBrowser

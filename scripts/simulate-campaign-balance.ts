@@ -32,6 +32,7 @@ import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/gems/campaign-leve
 import { buildCampaignEnemyTeam, computeStars } from "@/lib/gems/campaign";
 import { createTeamState } from "@/lib/battle-engine/stats";
 import { STARTER_CLASS_MIX } from "@/lib/gems/auto-starter";
+import { withRankBonus } from "@/lib/gems/card-ranks";
 import {
   ENDLESS_ATTACK_BASE_MULTIPLIER,
   ENDLESS_BASE_MULTIPLIER,
@@ -45,6 +46,9 @@ const BATTLES = Number(positional[0] ?? 40);
 const PLAYER_LEVEL = Number(positional[1] ?? 1);
 const CALIBRATE = process.argv.includes("--calibrate");
 const ENDLESS = process.argv.includes("--endless");
+/** --rank=N: alle Spielerkarten mit Karten-Rang N (siehe card-ranks.ts) — misst, wie weit Ränge die
+ *  Grenze im Endlos-Turm verschieben. */
+const CARD_RANK = Number(process.argv.find((a) => a.startsWith("--rank="))?.split("=")[1] ?? 0);
 const flag = (name: string, fallback: number) => {
   const raw = process.argv.find((a) => a.startsWith(`--${name}=`));
   return raw ? Number(raw.split("=")[1]) : fallback;
@@ -93,7 +97,7 @@ function playerTeam() {
   const picked = STARTER_CLASS_MIX.flatMap(([cls, count]) =>
     shuffle(standardCards.filter((c) => c.class === cls)).slice(0, count)
   );
-  return picked.slice(0, TEAM_SIZE).map((c) => cardToBattleUnitDefinition(c, PLAYER_LEVEL));
+  return picked.slice(0, TEAM_SIZE).map((c) => withRankBonus(cardToBattleUnitDefinition(c, PLAYER_LEVEL), CARD_RANK));
 }
 
 const heroStates = createTeamState(standardCards.map((c) => cardToBattleUnitDefinition(c, PLAYER_LEVEL)), "A");

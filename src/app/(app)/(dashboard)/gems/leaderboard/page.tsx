@@ -5,8 +5,10 @@ import { auth } from "@/auth";
 import {
   getCampaignLeaderboard,
   getDailyChallengeLeaderboard,
+  getSeasonLeaderboard,
   getWeeklyClimbLeaderboard,
   toLeaderboardEntry,
+  toSeasonEntry,
 } from "@/lib/gems/leaderboard";
 import LeaderboardList, { LEADERBOARD_TEXTS, type LeaderboardView } from "@/components/gems/LeaderboardList";
 
@@ -16,22 +18,24 @@ export const metadata = {
 
 const VIEWS = Object.keys(LEADERBOARD_TEXTS) as LeaderboardView[];
 
-// Vollständige Ranglisten (im Hub stehen nur die ersten Plätze der Gesamtliste):
-// Gesamt (höchste Stufe), Diese Woche (neu geschaffte Stufen), Heute (Tages-Herausforderung).
+// Vollständige Ranglisten (im Hub stehen nur die ersten Plätze der Saison): Saison (höchste
+// Endlos-Stufe im Monat), Bestwert (über alle Saisons), Diese Woche, Heute (Tages-Herausforderung).
 export default async function GemsLeaderboardPage({ searchParams }: { searchParams: Promise<{ ansicht?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login?notice=login_required&callbackUrl=/gems/leaderboard");
   }
   const { ansicht } = await searchParams;
-  const view: LeaderboardView = VIEWS.includes(ansicht as LeaderboardView) ? (ansicht as LeaderboardView) : "gesamt";
+  const view: LeaderboardView = VIEWS.includes(ansicht as LeaderboardView) ? (ansicht as LeaderboardView) : "saison";
 
   const rows =
     view === "woche"
       ? await getWeeklyClimbLeaderboard()
       : view === "heute"
         ? await getDailyChallengeLeaderboard()
-        : (await getCampaignLeaderboard()).map(toLeaderboardEntry);
+        : view === "gesamt"
+          ? (await getCampaignLeaderboard()).map(toLeaderboardEntry)
+          : (await getSeasonLeaderboard()).map(toSeasonEntry);
   const texts = LEADERBOARD_TEXTS[view];
 
   return (
@@ -44,7 +48,7 @@ export default async function GemsLeaderboardPage({ searchParams }: { searchPara
         {VIEWS.map((v) => (
           <Link
             key={v}
-            href={v === "gesamt" ? "/gems/leaderboard" : `/gems/leaderboard?ansicht=${v}`}
+            href={v === "saison" ? "/gems/leaderboard" : `/gems/leaderboard?ansicht=${v}`}
             aria-current={v === view ? "page" : undefined}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               v === view ? "bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-white"

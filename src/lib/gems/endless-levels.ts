@@ -154,7 +154,7 @@ export function generateEndlessLevel(stage: number): CampaignLevelDef {
     order: stage,
     name: isGuardian ? `Turmwächter · Stufe ${stage}` : isBoss ? `Boss-Stufe ${stage}` : `Endlos-Stufe ${stage}`,
     tagline: isGuardian
-      ? `Wächter mit ${guardianAbilityFor(stage).name}. Belohnung: ein Pack.`
+      ? `Wächter mit ${guardianAbilityFor(stage).name}. Belohnung: ein Pack, beim ersten Sieg ein Relikt.`
       : isBoss
         ? `${monsters[0].name} wartet ganz oben.`
         : tagline,

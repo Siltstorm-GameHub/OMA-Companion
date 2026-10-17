@@ -7,13 +7,15 @@
 // Fortschritt (updatedAt, siehe recordCampaignResult: ohne Verbesserung wird nicht geschrieben).
 //
 // Dazu zwei kurze Listen, in denen auch Neue vorn landen können:
-//  - „Diese Woche“: Stufen, die seit Montag zum ersten Mal geschafft wurden (completedAt)
+//  - „Saison“: höchste Endlos-Stufe in der laufenden Turm-Saison (siehe tower-season.ts)
+//  - „Diese Woche“: seit Montag geschaffte Stufen — Kapitel-Level zum ersten Mal, Turmstufen je Saison
 //  - „Heute“: beste Punktzahl in der Tages-Herausforderung (GemsDailyStats)
 
 import { prisma } from "@/lib/prisma";
 import { CAMPAIGN_LEVELS } from "./campaign-levels";
 import { ENDLESS_FIRST_STAGE, parseEndlessStage } from "./endless-levels";
 import { berlinDateKey, berlinWeekStart } from "./daily-rules";
+import { getSeasonRanking, seasonKey, type SeasonRankingRow } from "./tower-season";
 
 export interface LeaderboardRow {
   userId: string;
@@ -112,7 +114,7 @@ export function toLeaderboardEntry(row: LeaderboardRow): LeaderboardEntry {
 
 /** Rein, damit testbar: wer direkt vor dem Spieler liegt und wie viele Stufen fehlen. */
 export function rivalAhead(
-  rows: LeaderboardRow[],
+  rows: { userId: string; name: string; highestStage: number }[],
   viewerId: string
 ): { name: string; place: number; stageGap: number } | null {
   const index = rows.findIndex((r) => r.userId === viewerId);
@@ -124,24 +126,53 @@ export function rivalAhead(
 /** „Diese Woche“: seit Montag 00:00 (Berlin) zum ersten Mal geschaffte Stufen. Bei Gleichstand
  *  liegt vorn, wer seine letzte Stufe früher geschafft hat. */
 export async function getWeeklyClimbLeaderboard(): Promise<LeaderboardEntry[]> {
-  const grouped = await prisma.userCampaignProgress.groupBy({
-    by: ["userId"],
-    where: { completed: true, completedAt: { gte: berlinWeekStart() } },
-    _count: { _all: true },
-    _max: { completedAt: true },
-  });
-  if (grouped.length === 0) return [];
-  const userById = await usersById(grouped.map((g) => g.userId));
-  return grouped
-    .sort((a, b) => b._count._all - a._count._all || (a._max.completedAt?.getTime() ?? 0) - (b._max.completedAt?.getTime() ?? 0))
-    .map((g) => ({
-      userId: g.userId,
+  const since = berlinWeekStart();
+  const [chapter, tower] = await Promise.all([
+    prisma.userCampaignProgress.findMany({
+      where: { completed: true, completedAt: { gte: since }, levelId: { startsWith: "lvl-" } },
+      select: { userId: true, completedAt: true },
+    }),
+    prisma.gemsTowerClear.findMany({ where: { clearedAt: { gte: since } }, select: { userId: true, clearedAt: true } }),
+  ]);
+  const byUser = new Map<string, { count: number; last: number }>();
+  for (const { userId, at } of [
+    ...chapter.map((c) => ({ userId: c.userId, at: c.completedAt?.getTime() ?? 0 })),
+    ...tower.map((t) => ({ userId: t.userId, at: t.clearedAt.getTime() })),
+  ]) {
+    const cur = byUser.get(userId) ?? { count: 0, last: 0 };
+    byUser.set(userId, { count: cur.count + 1, last: Math.max(cur.last, at) });
+  }
+  if (byUser.size === 0) return [];
+  const userById = await usersById([...byUser.keys()]);
+  return [...byUser]
+    .sort(([, a], [, b]) => b.count - a.count || a.last - b.last)
+    .map(([userId, { count }]) => ({
+      userId,
       name: "Unbekannt",
       image: null,
-      ...userById.get(g.userId),
-      value: `${g._count._all} ${g._count._all === 1 ? "Stufe" : "Stufen"}`,
-      detail: "neu geschafft seit Montag",
+      ...userById.get(userId),
+      value: `${count} ${count === 1 ? "Stufe" : "Stufen"}`,
+      detail: "geschafft seit Montag",
     }));
+}
+
+/** „Saison“: höchste Endlos-Stufe der laufenden Turm-Saison als Ranglisten-Zeilen. */
+export async function getSeasonLeaderboard(season: string = seasonKey()): Promise<(SeasonRankingRow & { name: string; image: string | null })[]> {
+  const ranking = await getSeasonRanking(season);
+  if (ranking.length === 0) return [];
+  const userById = await usersById(ranking.map((r) => r.userId));
+  return ranking.map((r) => ({ name: "Unbekannt", image: null, ...userById.get(r.userId), ...r }));
+}
+
+export function toSeasonEntry(row: SeasonRankingRow & { name: string; image: string | null }): LeaderboardEntry {
+  const title = guardianTitle(row.highestStage);
+  return {
+    userId: row.userId,
+    name: row.name,
+    image: row.image,
+    value: stageLabel(row.highestStage),
+    detail: ["diese Saison", title].filter(Boolean).join(" · "),
+  };
 }
 
 /** „Heute“: beste Punktzahl in der Tages-Herausforderung, bei Gleichstand wer früher dort war. */

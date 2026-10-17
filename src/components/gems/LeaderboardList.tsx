@@ -105,15 +105,21 @@ export default function LeaderboardList({
 
 /** Texte der drei Ranglisten — Hub und Ranglisten-Seite nutzen dieselben. */
 export const LEADERBOARD_TEXTS = {
+  saison: {
+    label: "Saison",
+    note: "Höchste Endlos-Stufe in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
+    emptyText: "In dieser Saison hat noch niemand eine Turmstufe geschafft.",
+    absentText: "Schaffe eine Endlos-Stufe, um in der Saison-Rangliste zu erscheinen.",
+  },
   gesamt: {
-    label: "Gesamt",
-    note: "Sortiert nach höchster geschaffter Stufe, dann Sternen · bei Gleichstand zählt, wer zuerst dort war",
+    label: "Bestwert",
+    note: "Höchste je geschaffte Stufe über alle Saisons, dann Sterne · bei Gleichstand zählt, wer zuerst dort war",
     emptyText: "Noch hat niemand Sterne gesammelt — sei der Erste!",
     absentText: "Gewinne dein erstes Kampagnen-Level, um hier zu erscheinen.",
   },
   woche: {
     label: "Diese Woche",
-    note: "Seit Montag zum ersten Mal geschaffte Stufen · hier haben auch Neue eine Chance",
+    note: "Seit Montag geschaffte Stufen · hier haben auch Neue eine Chance",
     emptyText: "Diese Woche hat noch niemand eine neue Stufe geschafft.",
     absentText: "Schaffe diese Woche eine neue Stufe, um hier zu erscheinen.",
   },

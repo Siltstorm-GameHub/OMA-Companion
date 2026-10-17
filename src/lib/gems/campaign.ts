@@ -13,6 +13,7 @@ import type { InteractiveBattleState } from "@/lib/battle-engine/interactive";
 import { instantiateMonster } from "./monster-content";
 import { CAMPAIGN_LEVELS, getCampaignLevel, type CampaignLevelDef } from "./campaign-levels";
 import { ENDLESS_FIRST_STAGE, endlessLevelId, generateEndlessLevel, parseEndlessStage } from "./endless-levels";
+import { seasonClearedLevelIds } from "./tower-season";
 
 export { CAMPAIGN_LEVELS, getCampaignLevel };
 
@@ -84,12 +85,21 @@ export function currentLevelId(completedLevelIds: ReadonlySet<string>): string {
   return endlessLevelId((highestEndlessStage(completedLevelIds) ?? ENDLESS_FIRST_STAGE - 1) + 1);
 }
 
+/** Geschaffte Level für Freischaltung und Karte: Kapitel-Level aus dem Fortschritt (dauerhaft),
+ *  Endlos-Stufen nur aus der laufenden Turm-Saison (siehe tower-season.ts). */
+export async function getClearedLevelIds(userId: string): Promise<Set<string>> {
+  const [chapter, season] = await Promise.all([
+    prisma.userCampaignProgress.findMany({
+      where: { userId, completed: true, levelId: { startsWith: "lvl-" } },
+      select: { levelId: true },
+    }),
+    seasonClearedLevelIds(userId),
+  ]);
+  return new Set([...chapter.map((p) => p.levelId), ...season]);
+}
+
 export async function getCurrentLevel(userId: string): Promise<CampaignLevelDef> {
-  const completed = await prisma.userCampaignProgress.findMany({
-    where: { userId, completed: true },
-    select: { levelId: true },
-  });
-  return getCampaignLevel(currentLevelId(new Set(completed.map((p) => p.levelId))))!;
+  return getCampaignLevel(currentLevelId(await getClearedLevelIds(userId)))!;
 }
 
 /** Höchste geschaffte Endlos-Stufe, oder null. */
@@ -118,7 +128,7 @@ export function endlessStagesToShow(chapterCompleted: boolean, highest: number |
 export async function getCampaignBoard(userId: string): Promise<CampaignBoardLevel[]> {
   const progressRows = await prisma.userCampaignProgress.findMany({ where: { userId } });
   const progressByLevelId = new Map(progressRows.map((p) => [p.levelId, p]));
-  const completed = new Set(progressRows.filter((p) => p.completed).map((p) => p.levelId));
+  const completed = await getClearedLevelIds(userId);
 
   const toBoardLevel = (levelDef: CampaignLevelDef, section: CampaignBoardLevel["section"]): CampaignBoardLevel => {
     const progress = progressByLevelId.get(levelDef.id);
@@ -130,7 +140,7 @@ export async function getCampaignBoard(userId: string): Promise<CampaignBoardLev
       isBoss: levelDef.isBoss ?? false,
       isGuardian: levelDef.isGuardian ?? false,
       stars: progress?.stars ?? 0,
-      completed: progress?.completed ?? false,
+      completed: completed.has(levelDef.id),
       unlocked: isLevelUnlocked(levelDef.id, completed),
       section,
     };
@@ -145,11 +155,7 @@ export async function getCampaignBoard(userId: string): Promise<CampaignBoardLev
 }
 
 export async function isCampaignLevelUnlocked(userId: string, levelId: string): Promise<boolean> {
-  const completed = await prisma.userCampaignProgress.findMany({
-    where: { userId, completed: true },
-    select: { levelId: true },
-  });
-  return isLevelUnlocked(levelId, new Set(completed.map((p) => p.levelId)));
+  return isLevelUnlocked(levelId, await getClearedLevelIds(userId));
 }
 
 /** Aktualisiert den Fortschritt nach einem gewonnenen Kampf — die beste je

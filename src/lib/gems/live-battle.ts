@@ -59,6 +59,10 @@ import { grantGemsRewards, type GemsRewardSummary } from "@/lib/gems/daily";
 import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip, weeklyModifierFor } from "@/lib/gems/tower-rules";
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
+import { rankForWins, withRankBonus } from "@/lib/gems/card-ranks";
+import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
+import { getEquippedRelicIds, grantRelic } from "@/lib/gems/relic-store";
+import { recordTowerClear } from "@/lib/gems/tower-season";
 import { resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/gems/resolve-image";
 import { parseTournamentMode, tournamentModeFor } from "@/lib/gems/npc-battle-types";
@@ -167,6 +171,10 @@ export interface GemsBattleResult {
   retry: { kind: "campaign"; levelId: string } | { kind: "daily" };
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
+  /** Karten, die durch diesen Sieg einen neuen Rang erreicht haben (siehe card-ranks.ts). */
+  rankUps: { name: string; rank: number }[];
+  /** Relikt für den ersten Sieg überhaupt über diesen Turmwächter (siehe relics.ts). */
+  relicGranted: { name: string; description: string } | null;
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -279,6 +287,8 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
   // Monats-Quest "BATTLE_CARD_DUEL" zählt jeden beendeten Kampf (Sieg oder Niederlage).
   updateQuestProgress(live.playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
 
+  const rankUps = state.winner === "A" ? await recordLineupWin(live.playerAId, state) : [];
+
   const tournament = parseTournamentMode(live.mode);
   if (tournament) {
     const score = battleScore(state.winner === "A", hpShare(state.unitsA), state.round);
@@ -293,7 +303,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       });
     }
   } else {
-    const result = await settleGemsBattle(live, state);
+    const result = await settleGemsBattle(live, state, rankUps);
     // Ergebnis am Battle-Datensatz speichern, damit der Client es direkt im nächsten
     // Snapshot im Kampfende-Screen zeigen kann.
     await prisma.battle.update({
@@ -309,7 +319,8 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
  *  und ein Pack für einen zum ersten Mal besiegten Turmwächter. */
 async function settleGemsBattle(
   live: LiveBattle,
-  state: InteractiveBattleState
+  state: InteractiveBattleState,
+  rankUps: GemsBattleResult["rankUps"]
 ): Promise<{ campaignResult: LiveBattleSnapshot["campaignResult"]; gemsResult: GemsBattleResult }> {
   const userId = live.playerAId;
   const won = state.winner === "A";
@@ -322,6 +333,7 @@ async function settleGemsBattle(
   let packGranted = false;
   let next: GemsBattleResult["next"] = null;
   let challengeScore: number | null = null;
+  let relicGranted: GemsBattleResult["relicGranted"] = null;
 
   if (isDaily) {
     challengeScore = battleScore(won, hpShare(state.unitsA), state.round);
@@ -342,11 +354,20 @@ async function settleGemsBattle(
         uncapped: true,
       });
     }
-    if (stage !== null && firstClear) {
-      requests.push({ label: `Stufe ${stage} geschafft`, coins: endlessStageCoins(stage) });
-      if (isGuardianStage(stage)) {
-        await grantPack(userId, "GEMS_TOWER_GUARDIAN", "STANDARD");
-        packGranted = true;
+    if (stage !== null) {
+      // Turm-Saison: Münzen und Wächter-Pack gibt es für jede in dieser Saison neue Stufe (der Turm
+      // beginnt jeden Monat von vorn), das Relikt nur beim allerersten Sieg über den Wächter.
+      const newThisSeason = await recordTowerClear(userId, stage);
+      if (newThisSeason) {
+        requests.push({ label: `Stufe ${stage} geschafft`, coins: endlessStageCoins(stage) });
+        if (isGuardianStage(stage)) {
+          await grantPack(userId, "GEMS_TOWER_GUARDIAN", "STANDARD");
+          packGranted = true;
+        }
+      }
+      const relic = firstClear ? relicForGuardianStage(stage) : null;
+      if (relic && (await grantRelic(userId, relic))) {
+        relicGranted = { name: relic.name, description: relic.description };
       }
     }
     rewards = await grantGemsRewards(userId, { won: true, requests });
@@ -377,8 +398,27 @@ async function settleGemsBattle(
       retry: isDaily || !levelId ? { kind: "daily" } : { kind: "campaign", levelId },
       next,
       challengeScore,
+      rankUps,
+      relicGranted,
     },
   };
+}
+
+/** Zählt einen Sieg für jede Karte, die mitgekämpft hat (Team A), und meldet Rangaufstiege. */
+async function recordLineupWin(userId: string, state: InteractiveBattleState): Promise<GemsBattleResult["rankUps"]> {
+  const cardIds = [...new Set(state.unitsA.map((u) => u.def.cardId))];
+  const before = await prisma.userCard.findMany({
+    where: { userId, cardId: { in: cardIds } },
+    select: { cardId: true, winsInLineup: true, card: { select: { name: true } } },
+  });
+  if (before.length === 0) return [];
+  await prisma.userCard.updateMany({
+    where: { userId, cardId: { in: before.map((c) => c.cardId) } },
+    data: { winsInLineup: { increment: 1 } },
+  });
+  return before
+    .filter((c) => rankForWins(c.winsInLineup + 1) > rankForWins(c.winsInLineup))
+    .map((c) => ({ name: c.card.name, rank: rankForWins(c.winsInLineup + 1) }));
 }
 
 async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattleState) {
@@ -397,10 +437,13 @@ async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattl
 async function createLiveBattle(
   mode: string,
   playerAId: string,
-  teamA: BattleUnitDefinition[],
-  teamB: BattleUnitDefinition[]
+  playerTeam: BattleUnitDefinition[],
+  enemyTeam: BattleUnitDefinition[]
 ): Promise<LiveBattleSnapshot> {
+  // Ausgerüstete Relikte wirken in jedem Modus (siehe relics.ts).
+  const { teamA, teamB, startRage } = applyRelics(await getEquippedRelicIds(playerAId), playerTeam, enemyTeam);
   const created = createInteractiveState(teamA, teamB);
+  if (startRage > 0) for (const unit of created.unitsA) unit.rage = Math.min(100, unit.rage + startRage);
   const { state, pendingDecision } = advance(created, undefined);
 
   const live = await prisma.liveBattle.create({
@@ -422,7 +465,8 @@ async function createLiveBattle(
 }
 
 /** Baut das Spieler-Team aus der Startaufstellung (sonst die ersten TEAM_SIZE eigenen Karten).
- *  Spielerkarten kämpfen immer mit ihren Basiswerten (Stufe 1) — Stufen gibt es nur noch für Monster. */
+ *  Spielerkarten kämpfen mit ihren Basiswerten (Stufe 1) plus dem Rang-Bonus aus ihren bisherigen
+ *  Siegen (siehe card-ranks.ts) — Stufen gibt es nur noch für Monster. */
 async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
   const userCards = await prisma.userCard.findMany({
     where: { userId },
@@ -435,11 +479,14 @@ async function loadPlayerTeam(userId: string): Promise<BattleUnitDefinition[]> {
   const teamCards = (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
   const avatarByDiscordId = await resolveAvatarsForCards(teamCards.map((uc) => uc.card));
   return teamCards.map((uc) =>
-    cardToBattleUnitDefinition(
-      uc.card,
-      1,
-      resolveCardImageUrl(uc.card, avatarByDiscordId),
-      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+    withRankBonus(
+      cardToBattleUnitDefinition(
+        uc.card,
+        1,
+        resolveCardImageUrl(uc.card, avatarByDiscordId),
+        resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+      ),
+      rankForWins(uc.winsInLineup)
     )
   );
 }

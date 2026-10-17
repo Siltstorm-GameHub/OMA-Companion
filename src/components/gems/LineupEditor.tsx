@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check } from "@/components/icons";
 import type { BattleCardData } from "./BattleCardView";
+import { RankBadge } from "./CardRank";
 import BattleCardView from "./BattleCardView";
 
 const LINEUP_SIZE = 5;
@@ -15,6 +16,7 @@ const LINEUP_SIZE = 5;
 export interface LineupCard {
   cardId: string;
   card: BattleCardData;
+  winsInLineup: number;
 }
 
 export default function LineupEditor({
@@ -67,7 +69,7 @@ export default function LineupEditor({
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {cards.map(({ cardId, card }) => {
+        {cards.map(({ cardId, card, winsInLineup }) => {
           const isSelected = selected.includes(cardId);
           const isDisabled = !isSelected && selected.length >= LINEUP_SIZE;
           return (
@@ -84,6 +86,7 @@ export default function LineupEditor({
                 >
                   <BattleCardView card={card} />
                 </div>
+                <RankBadge wins={winsInLineup} className="top-2 left-2" />
               </button>
               {isSelected && (
                 <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center pointer-events-none">

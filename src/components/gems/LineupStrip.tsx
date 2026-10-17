@@ -6,12 +6,13 @@ import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardV
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import TeCharacter from "@/components/te-character/TeCharacter";
 import CardBackdrop from "./CardBackdrop";
+import { RankBadge } from "./CardRank";
 import { TE_CROP_FIGURE, poseAnim } from "@/lib/te-character";
 
 const LINEUP_SIZE = 5;
 
 /** Kompakte Deck-Vorschau oben im Kampf-Reiter — zeigt die aktuelle Startaufstellung, immer sichtbar. */
-export default function LineupStrip({ cards }: { cards: { card: BattleCardData }[] }) {
+export default function LineupStrip({ cards }: { cards: { card: BattleCardData; winsInLineup?: number }[] }) {
   const slots = Array.from({ length: LINEUP_SIZE }, (_, i) => cards[i] ?? null);
 
   return (
@@ -52,6 +53,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData }
                 )}
               </div>
               {isCommunity(entry.card.rarity) && <CommunityRibbon compact />}
+              <RankBadge wins={entry.winsInLineup ?? 0} className="top-0.5 right-0.5" />
               <CardPlate card={entry.card} compact />
             </div>
           );

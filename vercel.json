@@ -41,6 +41,10 @@
       "schedule": "30 6 * * *"
     },
     {
+      "path": "/api/cron/gems-tower-season",
+      "schedule": "45 6 * * *"
+    },
+    {
       "path": "/api/cron/community-job-payout",
       "schedule": "0 8 * * *"
     },

@@ -90,7 +90,8 @@ export function withGuardianAbility<T extends Pick<BattleUnitDefinition, "passiv
 
 // ---------- Wochen-Modifikator ----------
 
-type StatScale = Partial<Record<"hp" | "attack" | "defense" | "speed", number>>;
+export type StatScale = Partial<Record<"hp" | "attack" | "defense" | "speed", number>>;
+export type ScaleRule = { classes: UnitClass[] | "all"; scale: StatScale };
 
 export interface WeeklyModifier {
   id: string;
@@ -158,10 +159,8 @@ export function weeklyModifierFor(week: number): WeeklyModifier {
   return WEEKLY_MODIFIERS[((week % n) + n) % n];
 }
 
-function scaleUnits(
-  units: BattleUnitDefinition[],
-  rule: { classes: UnitClass[] | "all"; scale: StatScale } | null
-): BattleUnitDefinition[] {
+/** Skaliert die Basiswerte der Einheiten, auf die die Regel passt (Klasse oder alle). */
+export function scaleUnits(units: BattleUnitDefinition[], rule: ScaleRule | null): BattleUnitDefinition[] {
   if (!rule) return units;
   return units.map((u) => {
     if (rule.classes !== "all" && !rule.classes.includes(u.class)) return u;

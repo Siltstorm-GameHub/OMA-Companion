@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import CoinIcon from "@/components/CoinIcon";
-import { CalendarDays, Crown, Flame, Play, Shield, Sparkles, TrendingUp } from "@/components/icons";
+import { CalendarDays, Crown, Flame, Play, Shield, Sparkles, TrendingUp, Trophy } from "@/components/icons";
 import type { GemsPlayStatus } from "@/lib/gems/play-status";
 import { startGemsBattle, type GemsBattleTarget } from "@/lib/gems/start-battle-client";
 import ErrorNotice from "./ErrorNotice";
@@ -25,7 +25,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
   const router = useRouter();
   const [starting, setStarting] = useState<"campaign" | "daily" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { today, current, daily, week, rival, activeBattle } = status;
+  const { today, current, daily, week, rival, activeBattle, season } = status;
   const capPercent = Math.min(100, Math.round((today.coinsEarned / today.cap) * 100));
 
   async function start(target: GemsBattleTarget) {
@@ -114,6 +114,16 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
           </div>
         </div>
 
+        {current.isEndless && (
+          <p className="flex items-center gap-1.5 text-xs text-gray-300 border-t border-white/[0.06] pt-3">
+            <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            <span>
+              Turm-Saison {season.label} · noch {season.daysLeft} {season.daysLeft === 1 ? "Tag" : "Tage"}
+              {season.rank ? ` · Platz ${season.rank} von ${season.players} (Stufe ${season.best})` : " · noch keine Stufe geschafft"}
+            </span>
+          </p>
+        )}
+
         {(rival || isLeader) && (
           <p className="flex items-center gap-1.5 text-xs text-gray-300 border-t border-white/[0.06] pt-3">
             {isLeader ? (
@@ -180,7 +190,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
                 <Shield className="w-3.5 h-3.5 text-rose-300 shrink-0 mt-px" />
                 <span>
                   Turmwächter auf Stufe {week.guardianStage}
-                  {week.guardianName ? `: ${week.guardianName}` : ""} · {week.guardianAbility}. Erster Sieg bringt ein Pack.
+                  {week.guardianName ? `: ${week.guardianName}` : ""} · {week.guardianAbility}. Ein Sieg bringt ein Pack, der allererste ein Relikt.
                 </span>
               </p>
             )}

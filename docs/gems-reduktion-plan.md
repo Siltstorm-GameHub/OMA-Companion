@@ -214,6 +214,22 @@ keine Einführung; schwache Ultimates; überlappende Plaketten; langer Hub.
 Offen aus dem Playtest: Wartezeit pro Zug (6–13 s Animation), Spezialstein antippen beendet den Zug
 ohne Hinweis, wenig Sammelziel (13 Karten).
 
+**9. Sammlung verbessern: Ränge, Relikte, Turm-Saisons** — erledigt
+Problem: Die Teamstärke war nach dem Startpaket fest, der Turm wächst exponentiell — für alle gab es
+eine feste Grenze. Stufen, Duplikate und Synergien bleiben bewusst draußen.
+- A Karten-Ränge (`card-ranks.ts`): Siege in der Startaufstellung (`UserCard.winsInLineup`) heben
+  eine Karte nach 5/15/35/70/120 Siegen auf Rang 1–5, je Rang +5 % Leben und Angriff. Simulator
+  (`--rank=5`): Die Grenze des Bots rückt von etwa Stufe 34 auf 37, Stufe 22–31 werden deutlich leichter.
+- B Relikte (`relics.ts`, `relic-store.ts`): Turmwächter 20–90 geben beim ersten Sieg überhaupt je ein
+  festes Relikt (acht Stück). Zwei Plätze, Auswahl unter „Startaufstellung ändern“, wirken in jedem Kampf.
+- C Turm-Saisons (`tower-season.ts`): Kalendermonat = Saison, der Turm beginnt jeden Monat bei Stufe 13
+  (`GemsTowerClear` je Saison). Turm-Münzen und Wächter-Pack gibt es je Saison neu. Saison-Rangliste
+  im Hub, zum Monatsende Packs für die Top 10 (Platz 1 Community, 2–3 Premium, 4–10 Standard) über
+  `cron/gems-tower-season`. Die erste Saison (2026-10) übernimmt den bisherigen Turmstand aller Spieler.
+- Ranglisten: Saison (Standard), Bestwert (alle Saisons), Diese Woche, Heute.
+- Daten: `UserCard.winsInLineup`, neue Tabellen `UserRelic`, `GemsTowerClear`, `GemsTowerSeason`,
+  Pack-Quelle `GEMS_TOWER_SEASON` — nur Ergänzungen, `db push` ohne Datenverlust.
+
 ## Geklärte Punkte
 
 1. **Einstieg: Auto-Startpaket.** Beim ersten Besuch bekommt jeder Spieler ohne Karten automatisch

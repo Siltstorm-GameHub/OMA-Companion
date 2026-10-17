@@ -33,6 +33,8 @@ export interface OwnedCardEntry {
   id: string;
   /** ISO-Zeitstempel, wann die Karte erworben wurde — steuert das "Neu"-Ribbon. */
   acquiredAt: string;
+  /** Siege in der Startaufstellung — bestimmt den Rang (siehe card-ranks.ts). */
+  winsInLineup: number;
   card: BattleCardData & { id: string };
 }
 
@@ -138,7 +140,7 @@ export default function CardCollectionBrowser({
     if (selected.kind === "owned") {
       const oc = ownedCards.find((o) => o.id === selected.userCardId);
       if (!oc) return null;
-      return { card: oc.card };
+      return { card: oc.card, winsInLineup: oc.winsInLineup };
     }
     const card = otherCards.find((c) => c.id === selected.cardId);
     return card ? { card } : null;
@@ -191,6 +193,7 @@ export default function CardCollectionBrowser({
             <CardTile
               key={oc.id}
               card={oc.card}
+              winsInLineup={oc.winsInLineup}
               isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS && !viewedIds.has(oc.id)}
               onClick={() => {
                 setSelected({ kind: "owned", userCardId: oc.id });

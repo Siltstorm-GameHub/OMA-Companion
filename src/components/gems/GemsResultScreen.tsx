@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { ArrowRight, Gift, Handshake, Lightbulb, RotateCcw, Trophy } from "@/components/icons";
+import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { GemsBattleTarget } from "@/lib/gems/start-battle-client";
@@ -37,6 +37,9 @@ export interface GemsResultDetails {
   retry: GemsBattleTarget;
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
+  /** Fehlt bei Ergebnissen aus der Zeit vor den Karten-Rängen. */
+  rankUps?: { name: string; rank: number }[];
+  relicGranted?: { name: string; description: string } | null;
 }
 
 export default function GemsResultScreen({
@@ -194,6 +197,40 @@ export default function GemsResultScreen({
                 </span>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {details?.relicGranted && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.45 }}
+            className="w-full rounded-xl px-3 py-2.5 text-left bg-violet-500/10 ring-1 ring-violet-400/30"
+          >
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-200">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" /> Neues Relikt: {details.relicGranted.name}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {details.relicGranted.description} Verwalten unter „Startaufstellung ändern“ (2 Plätze).
+            </p>
+          </motion.div>
+        )}
+
+        {(details?.rankUps ?? []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="w-full rounded-xl px-3 py-2.5 space-y-1 text-left bg-teal-500/10 ring-1 ring-teal-500/30"
+          >
+            {details!.rankUps!.map((r) => (
+              <p key={r.name} className="flex items-center gap-1.5 text-xs text-teal-200">
+                <ArrowUp className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <span className="font-semibold text-white">{r.name}</span> erreicht Rang {r.rank} — mehr Leben und Angriff
+                </span>
+              </p>
+            ))}
           </motion.div>
         )}
 

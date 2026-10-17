@@ -13,6 +13,7 @@ import { getDailyChallengeLeaderboard, rivalAhead, type LeaderboardRow } from ".
 import { DAILY_CHALLENGE_UNLOCK_LEVEL_ID } from "./live-battle";
 import { guardianAbilityFor, nextGuardianStage, weeklyModifierFor } from "./tower-rules";
 import { weeklyGuardianName } from "./weekly-guardian";
+import { seasonDaysLeft, seasonKey, seasonLabel, type SeasonRankingRow } from "./tower-season";
 
 export interface GemsPlayStatus {
   activeBattle: { id: string; label: string } | null;
@@ -27,6 +28,8 @@ export interface GemsPlayStatus {
     guardianAbility: string;
   };
   rival: { name: string; place: number; stageGap: number } | null;
+  /** Laufende Turm-Saison (siehe tower-season.ts). */
+  season: { label: string; daysLeft: number; rank: number | null; best: number | null; players: number };
 }
 
 async function activeBattleFor(userId: string): Promise<GemsPlayStatus["activeBattle"]> {
@@ -41,7 +44,11 @@ async function activeBattleFor(userId: string): Promise<GemsPlayStatus["activeBa
   return { id: live.id, label: level?.name ?? "Kampagne" };
 }
 
-export async function getPlayStatus(userId: string, leaderboard: LeaderboardRow[]): Promise<GemsPlayStatus> {
+export async function getPlayStatus(
+  userId: string,
+  leaderboard: LeaderboardRow[],
+  seasonRows: (SeasonRankingRow & { name: string })[]
+): Promise<GemsPlayStatus> {
   const date = berlinDateKey();
   const week = weekIndex(date);
   const [activeBattle, current, today, dailyUnlock, dailyRows, guardianName] = await Promise.all([
@@ -57,6 +64,7 @@ export async function getPlayStatus(userId: string, leaderboard: LeaderboardRow[
   ]);
 
   const dailyIndex = dailyRows.findIndex((r) => r.userId === userId);
+  const seasonIndex = seasonRows.findIndex((r) => r.userId === userId);
   const guardianStage = nextGuardianStage(Math.max(current.order, ENDLESS_FIRST_STAGE));
   const modifier = weeklyModifierFor(week);
 
@@ -80,6 +88,14 @@ export async function getPlayStatus(userId: string, leaderboard: LeaderboardRow[
       guardianStage,
       guardianAbility: guardianAbilityFor(guardianStage).name,
     },
-    rival: rivalAhead(leaderboard, userId),
+    // Im Turm zählt die Saison, im Kapitel die Bestwert-Rangliste.
+    rival: current.order >= ENDLESS_FIRST_STAGE ? rivalAhead(seasonRows, userId) : rivalAhead(leaderboard, userId),
+    season: {
+      label: seasonLabel(seasonKey()),
+      daysLeft: seasonDaysLeft(),
+      rank: seasonIndex >= 0 ? seasonIndex + 1 : null,
+      best: seasonIndex >= 0 ? seasonRows[seasonIndex].highestStage : null,
+      players: seasonRows.length,
+    },
   };
 }

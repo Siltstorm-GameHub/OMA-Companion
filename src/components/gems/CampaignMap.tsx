@@ -303,7 +303,7 @@ export default function CampaignMap() {
                 <h2 className="font-display text-sm text-white uppercase tracking-wide">Endlos-Turm</h2>
               </div>
               {bestEndlessStage > 0 && (
-                <span className="text-[11px] font-semibold text-amber-300">Beste Stufe: {bestEndlessStage}</span>
+                <span className="text-[11px] font-semibold text-amber-300">Beste Stufe diese Saison: {bestEndlessStage}</span>
               )}
             </div>
             {endlessLevels.length === 0 ? (
@@ -312,7 +312,7 @@ export default function CampaignMap() {
               </p>
             ) : (
               <>
-                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Ab Stufe 20 bewacht alle 10 Stufen ein Turmwächter — der erste Sieg über ihn bringt ein Pack. Wie weit kommst du?</p>
+                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Ab Stufe 20 bewacht alle 10 Stufen ein Turmwächter — ein Sieg bringt ein Pack, der allererste zusätzlich ein Relikt. Jeden Monat beginnt eine neue Saison bei Stufe 13.</p>
                 <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
               </>
             )}
