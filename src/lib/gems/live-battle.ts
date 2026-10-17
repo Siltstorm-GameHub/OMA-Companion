@@ -6,10 +6,12 @@
 // das für den Client bestimmte Snapshot-Objekt. Sobald ein Kampf endet, wird er
 // als normales Battle persistiert (Replay-Seite).
 //
-// Seit der Reduktion auf OMA Gems gibt es nur noch zwei Modi, beide auf dem
-// Match-3-Brett gegen KI-gesteuerte Monster:
-//  - Kampagne ("CAMPAIGN_<levelId>", siehe campaign.ts)
+// Drei Modi, alle auf dem Match-3-Brett gegen KI-gesteuerte Monster:
+//  - Kampagne inkl. Endlos-Turm ("CAMPAIGN_<levelId>", siehe campaign.ts)
+//  - Tages-Herausforderung ("DAILY_<YYYY-MM-DD>", siehe endless-levels.ts / daily.ts)
 //  - Event-Turnier ("TOURNAMENT_<id>", siehe gems-tournament.ts)
+// Endlos-Turm und Tages-Herausforderung laufen mit dem Wochen-Modifikator (tower-rules.ts),
+// Wächter-Stufen mit der Community-Karte der Woche (weekly-guardian.ts).
 
 import type { TeCharacterConfig } from "@/lib/te-character";
 import { prisma } from "@/lib/prisma";
@@ -38,12 +40,18 @@ import type {
 import { serializeBattleLog } from "@/lib/gems/battle-log";
 import {
   buildCampaignEnemyTeam,
-  CAMPAIGN_COINS_PER_STAR,
   computeStars,
   getCampaignLevel,
   isCampaignLevelUnlocked,
+  nextLevelId,
   recordCampaignResult,
 } from "@/lib/gems/campaign";
+import { generateDailyChallengeLevel, parseEndlessStage } from "@/lib/gems/endless-levels";
+import { battleScore, berlinDateKey, CHAPTER_COINS_PER_STAR, endlessStageCoins, weekIndex } from "@/lib/gems/daily-rules";
+import { grantGemsRewards, type GemsRewardSummary } from "@/lib/gems/daily";
+import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip, weeklyModifierFor } from "@/lib/gems/tower-rules";
+import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
+import { grantPack } from "@/lib/gems/packs";
 import { resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/gems/resolve-image";
 import { parseTournamentMode, tournamentModeFor } from "@/lib/gems/npc-battle-types";
@@ -56,11 +64,21 @@ const TEAM_SIZE = 5;
 
 const CAMPAIGN_MODE_PREFIX = "CAMPAIGN_";
 const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
+const DAILY_MODE_PREFIX = "DAILY_";
 
-/** Nur Kampagne und Turnier werden noch unterstützt — ältere, noch offene Kämpfe aus
- *  abgeschalteten Modi (Duels, PvP, freies PvE) lassen sich nicht mehr fortsetzen. */
-function isSupportedMode(mode: string): boolean {
-  return mode.startsWith(CAMPAIGN_MODE_PREFIX) || mode.startsWith(TOURNAMENT_MODE_PREFIX);
+/** Ab hier ist die Tages-Herausforderung offen (Schwierigkeit wie Endlos-Stufe 16). */
+export const DAILY_CHALLENGE_UNLOCK_LEVEL_ID = "lvl-06";
+
+/** Nur Kampagne, Tages-Herausforderung und Turnier werden unterstützt — ältere, noch offene
+ *  Kämpfe aus abgeschalteten Modi (Duels, PvP, freies PvE) lassen sich nicht mehr fortsetzen. */
+export function isSupportedMode(mode: string): boolean {
+  return mode.startsWith(CAMPAIGN_MODE_PREFIX) || mode.startsWith(DAILY_MODE_PREFIX) || mode.startsWith(TOURNAMENT_MODE_PREFIX);
+}
+
+function hpShare(units: BattleUnitState[]): number {
+  const total = units.reduce((sum, u) => sum + u.maxHp, 0);
+  const left = units.reduce((sum, u) => sum + Math.max(0, u.currentHp), 0);
+  return total > 0 ? left / total : 0;
 }
 
 function toState(live: Pick<LiveBattle, "stateJson">): InteractiveBattleState {
@@ -126,6 +144,20 @@ export interface LiveBattleSnapshot {
    *  Kampfende-Screen mit Animation zeigt (neu hinzugekommene Sterne
    *  hervorgehoben). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
+  /** Kampagne und Tages-Herausforderung: Münzen, Tipp, Nochmal/Weiter (siehe GemsResultScreen). */
+  gemsResult: GemsBattleResult | null;
+}
+
+export interface GemsBattleResult {
+  rewards: GemsRewardSummary | null;
+  /** Turmwächter zum ersten Mal besiegt — ein Pack liegt im Shop. */
+  packGranted: boolean;
+  /** Rest-Leben der Gegner (0–1) — zeigt nach einer Niederlage, wie knapp es war. */
+  enemyHpPercent: number;
+  tip: string | null;
+  retry: { kind: "campaign"; levelId: string } | { kind: "daily" };
+  next: { levelId: string; name: string } | null;
+  challengeScore: number | null;
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -161,15 +193,20 @@ async function buildSnapshot(
     ? { ...pendingDecision, controlledByPlayerId: live.playerAId }
     : null;
 
-  // Sterne-Ergebnis der Kampagne wird am Battle-Datensatz gespeichert (siehe finalizeLiveBattle).
+  // Ergebnis von Kampagne und Tages-Herausforderung liegt am Battle-Datensatz (siehe finalizeLiveBattle).
   let campaignResult: LiveBattleSnapshot["campaignResult"] = null;
-  if (live.mode.startsWith(CAMPAIGN_MODE_PREFIX) && live.resultBattleId) {
+  let gemsResult: GemsBattleResult | null = null;
+  if (!live.mode.startsWith(TOURNAMENT_MODE_PREFIX) && live.resultBattleId) {
     const battle = await prisma.battle.findUnique({
       where: { id: live.resultBattleId },
       select: { teamSnapshot: true },
     });
-    const snapshotJson = battle?.teamSnapshot as { campaignResult?: LiveBattleSnapshot["campaignResult"] } | null;
+    const snapshotJson = battle?.teamSnapshot as {
+      campaignResult?: LiveBattleSnapshot["campaignResult"];
+      gemsResult?: GemsBattleResult;
+    } | null;
     campaignResult = snapshotJson?.campaignResult ?? null;
+    gemsResult = snapshotJson?.gemsResult ?? null;
   }
 
   return {
@@ -186,6 +223,7 @@ async function buildSnapshot(
     resultBattleId: live.resultBattleId,
     winner: state.winner,
     campaignResult,
+    gemsResult,
   };
 }
 
@@ -227,10 +265,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
 
   const tournament = parseTournamentMode(live.mode);
   if (tournament) {
-    const hpTotal = state.unitsA.reduce((sum, u) => sum + u.maxHp, 0);
-    const hpRemaining = state.unitsA.reduce((sum, u) => sum + Math.max(0, u.currentHp), 0);
-    const hpPercent = hpTotal > 0 ? hpRemaining / hpTotal : 0;
-    const score = Math.max(0, (state.winner === "A" ? 1000 : 0) + Math.round(hpPercent * 500) - state.round * 10);
+    const score = battleScore(state.winner === "A", hpShare(state.unitsA), state.round);
 
     const key = { tournamentId_userId: { tournamentId: tournament.gemsTournamentId, userId: live.playerAId } };
     const existing = await prisma.gemsTournamentAttempt.findUnique({ where: key });
@@ -241,35 +276,92 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         update: { bestScore: score },
       });
     }
-  } else if (state.winner === "A" && live.mode.startsWith(CAMPAIGN_MODE_PREFIX)) {
-    const levelId = live.mode.slice(CAMPAIGN_MODE_PREFIX.length);
-    const stars = computeStars(state);
-    const { starsGained } = await recordCampaignResult(live.playerAId, levelId, stars);
-    // Münz-Belohnung nur für NEU erreichte Sterne (CAMPAIGN_COINS_PER_STAR je
-    // Stern) — schon erreichte Sterne zahlen bei erneutem Sieg nicht nochmal
-    // aus, sonst ließe sich durch wiederholtes Replayen unbegrenzt farmen.
-    let coinsAwarded = 0;
-    if (starsGained > 0) {
-      const levelDef = getCampaignLevel(levelId);
-      coinsAwarded = starsGained * CAMPAIGN_COINS_PER_STAR;
-      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: coinsAwarded } } });
-      await prisma.pointTransaction.create({
-        data: {
-          userId: live.playerAId,
-          amount: coinsAwarded,
-          reason: `Kampagnen-Level: ${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} (${levelDef?.name ?? levelId})`,
-        },
-      });
-    }
-    // Sterne-Ergebnis am Battle-Datensatz speichern, damit der Client es direkt
-    // im nächsten Snapshot als Animation im Kampfende-Screen zeigen kann.
+  } else {
+    const result = await settleGemsBattle(live, state);
+    // Ergebnis am Battle-Datensatz speichern, damit der Client es direkt im nächsten
+    // Snapshot im Kampfende-Screen zeigen kann.
     await prisma.battle.update({
       where: { id: battle.id },
-      data: { teamSnapshot: { playerAId: live.playerAId, campaignResult: { levelId, stars, starsGained, coinsAwarded } } },
+      data: { teamSnapshot: JSON.parse(JSON.stringify({ playerAId: live.playerAId, ...result })) },
     });
   }
-
   return battle;
+}
+
+/** Belohnungen für Kampagne und Tages-Herausforderung (siehe daily-rules.ts): neue Sterne
+ *  im Kapitel, neue Endlos-Stufen, Tagesbonus, Herausforderung — alles im Tageslimit —
+ *  und ein Pack für einen zum ersten Mal besiegten Turmwächter. */
+async function settleGemsBattle(
+  live: LiveBattle,
+  state: InteractiveBattleState
+): Promise<{ campaignResult: LiveBattleSnapshot["campaignResult"]; gemsResult: GemsBattleResult }> {
+  const userId = live.playerAId;
+  const won = state.winner === "A";
+  const isDaily = live.mode.startsWith(DAILY_MODE_PREFIX);
+  const levelId = isDaily ? null : live.mode.slice(CAMPAIGN_MODE_PREFIX.length);
+  const stage = levelId ? parseEndlessStage(levelId) : null;
+
+  let campaignResult: LiveBattleSnapshot["campaignResult"] = null;
+  let rewards: GemsRewardSummary | null = null;
+  let packGranted = false;
+  let next: GemsBattleResult["next"] = null;
+  let challengeScore: number | null = null;
+
+  if (isDaily) {
+    challengeScore = battleScore(won, hpShare(state.unitsA), state.round);
+    rewards = await grantGemsRewards(userId, {
+      won,
+      requests: [],
+      challenge: { date: live.mode.slice(DAILY_MODE_PREFIX.length), score: challengeScore },
+    });
+  } else if (levelId && won) {
+    const stars = computeStars(state);
+    const { starsGained, firstClear } = await recordCampaignResult(userId, levelId, stars);
+    const levelDef = getCampaignLevel(levelId);
+    const requests: { label: string; coins: number }[] = [];
+    if (stage === null && starsGained > 0) {
+      requests.push({
+        label: `${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} · ${levelDef?.name ?? levelId}`,
+        coins: starsGained * CHAPTER_COINS_PER_STAR,
+      });
+    }
+    if (stage !== null && firstClear) {
+      requests.push({ label: `Stufe ${stage} geschafft`, coins: endlessStageCoins(stage) });
+      if (isGuardianStage(stage)) {
+        await grantPack(userId, "GEMS_TOWER_GUARDIAN", "STANDARD");
+        packGranted = true;
+      }
+    }
+    rewards = await grantGemsRewards(userId, { won: true, requests });
+    campaignResult = { levelId, stars, starsGained, coinsAwarded: rewards.coinsTotal };
+    const nextId = nextLevelId(levelId);
+    const nextDef = nextId ? getCampaignLevel(nextId) : undefined;
+    next = nextId && nextDef ? { levelId: nextId, name: nextDef.name } : null;
+  }
+
+  const enemyHpPercent = hpShare(state.unitsB);
+  const tip = won
+    ? null
+    : pickDefeatTip({
+        enemyHpPercent,
+        guardian: stage !== null && isGuardianStage(stage) ? guardianAbilityFor(stage) : null,
+        modifier: stage !== null || isDaily ? weeklyModifierFor(weekIndex(berlinDateKey())) : null,
+        lineupClasses: state.unitsA.map((u) => u.def.class),
+        seed: state.round + state.log.length,
+      });
+
+  return {
+    campaignResult,
+    gemsResult: {
+      rewards,
+      packGranted,
+      enemyHpPercent,
+      tip,
+      retry: isDaily || !levelId ? { kind: "daily" } : { kind: "campaign", levelId },
+      next,
+      challengeScore,
+    },
+  };
 }
 
 async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattleState) {
@@ -344,8 +436,43 @@ export async function startLiveCampaignBattle(userId: string, levelId: string): 
   const unlocked = await isCampaignLevelUnlocked(userId, levelId);
   if (!unlocked) throw new LiveBattleError("Dieses Level ist noch nicht freigeschaltet.");
 
-  const teamA = await loadPlayerTeam(userId);
-  return createLiveBattle(`${CAMPAIGN_MODE_PREFIX}${levelId}`, userId, teamA, buildCampaignEnemyTeam(levelDef));
+  const playerTeam = await loadPlayerTeam(userId);
+  const enemyTeam = buildCampaignEnemyTeam(levelDef);
+  const stage = parseEndlessStage(levelId);
+  if (stage === null) {
+    return createLiveBattle(`${CAMPAIGN_MODE_PREFIX}${levelId}`, userId, playerTeam, enemyTeam);
+  }
+
+  // Endlos-Turm: Wächter-Stufen mit der Community-Karte der Woche, dazu der Wochen-Modifikator.
+  const week = weekIndex(berlinDateKey());
+  if (levelDef.isGuardian) {
+    const guardian = await buildWeeklyGuardian(week, stage);
+    if (guardian) enemyTeam[0] = guardian;
+  }
+  const { teamA, teamB } = applyWeeklyModifier(weeklyModifierFor(week), playerTeam, enemyTeam);
+  return createLiveBattle(`${CAMPAIGN_MODE_PREFIX}${levelId}`, userId, teamA, teamB);
+}
+
+/** Startet die Tages-Herausforderung von heute — für alle Spieler dieselbe Stufe, beliebig oft
+ *  wiederholbar. Münzen gibt es einmal am Tag für den ersten Sieg, die Bestenliste zählt den
+ *  besten Versuch (siehe daily.ts). */
+export async function startLiveDailyChallenge(userId: string): Promise<LiveBattleSnapshot> {
+  const unlocked = await prisma.userCampaignProgress.findUnique({
+    where: { userId_levelId: { userId, levelId: DAILY_CHALLENGE_UNLOCK_LEVEL_ID } },
+    select: { completed: true },
+  });
+  if (!unlocked?.completed) {
+    throw new LiveBattleError("Die Tages-Herausforderung öffnet, sobald du Level 6 der Kampagne geschafft hast.");
+  }
+
+  const date = berlinDateKey();
+  const levelDef = generateDailyChallengeLevel(date);
+  const { teamA, teamB } = applyWeeklyModifier(
+    weeklyModifierFor(weekIndex(date)),
+    await loadPlayerTeam(userId),
+    buildCampaignEnemyTeam(levelDef)
+  );
+  return createLiveBattle(`${DAILY_MODE_PREFIX}${date}`, userId, teamA, teamB);
 }
 
 /** Startet einen Versuch in einem laufenden OMA-Gems-Turnier (Score-Attack

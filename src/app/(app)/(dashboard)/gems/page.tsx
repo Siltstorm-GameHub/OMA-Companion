@@ -3,7 +3,7 @@
 // ============================================
 // Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
 // Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
-//    "Spielen"  (Event-Turnier, Kampagne, Rangliste nach höchster Stufe),
+//    "Spielen"  („Weiter“-Karte mit Tageswerten, Event-Turnier, Kampagne, Rangliste),
 //    "Sammlung" (Startaufstellung + Karten),
 //    "Shop"     (Glücksrad, Packs öffnen und kaufen).
 //  Alte ?tab=-Werte landen über LEGACY_TABS in GemsTabs im passenden Reiter.
@@ -16,8 +16,10 @@ import { ensureGemsStarter } from "@/lib/gems/auto-starter";
 import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/gems/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignLeaderboard } from "@/lib/gems/leaderboard";
-import LeaderboardList from "@/components/gems/LeaderboardList";
+import { getCampaignLeaderboard, toLeaderboardEntry } from "@/lib/gems/leaderboard";
+import { getPlayStatus } from "@/lib/gems/play-status";
+import LeaderboardList, { LEADERBOARD_TEXTS } from "@/components/gems/LeaderboardList";
+import GemsPlayCard from "@/components/gems/GemsPlayCard";
 import PackOpener from "@/components/gems/PackOpener";
 import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
 import GemsTabs from "./GemsTabs";
@@ -82,9 +84,13 @@ export default async function GemsPage() {
     .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId) }));
 
   const coins = currentUser?.points ?? 0;
+  const playStatus = await getPlayStatus(userId, leaderboardRows);
+  const leaderboardEntries = leaderboardRows.map(toLeaderboardEntry);
 
   const spielenPanel = (
     <div className="space-y-8">
+      <GemsPlayCard status={playStatus} isLeader={leaderboardRows[0]?.userId === userId} />
+
       <GemsTournamentBanner />
 
       <div className="space-y-4">
@@ -95,13 +101,11 @@ export default async function GemsPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-lg font-bold text-white">Rangliste</h2>
-          {leaderboardRows.length > LEADERBOARD_PREVIEW && (
-            <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
-              Alle anzeigen →
-            </Link>
-          )}
+          <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+            Woche, Heute, alle →
+          </Link>
         </div>
-        <LeaderboardList rows={leaderboardRows} viewerId={userId} limit={LEADERBOARD_PREVIEW} />
+        <LeaderboardList rows={leaderboardEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.gesamt} />
       </div>
     </div>
   );

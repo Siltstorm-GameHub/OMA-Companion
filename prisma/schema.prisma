@@ -152,6 +152,8 @@ model User {
   liveBattlesAsB                   LiveBattle[]                 @relation("LiveBattlePlayerB")
   campaignProgress                 UserCampaignProgress[]
   gemsTournamentAttempts           GemsTournamentAttempt[]
+  gemsDailyStats                   GemsDailyStats[]
+  gemsPlayer                       GemsPlayer?
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1996,6 +1998,7 @@ enum CardPackSource {
   TUTORIAL
   GEMS_PVP_CHEST
   GEMS_TOURNAMENT_REWARD
+  GEMS_TOWER_GUARDIAN // Turmwächter (jede 10. Endlos-Stufe) zum ersten Mal besiegt
   QUEST_MILESTONE // nicht mehr vergeben (OMA Quest entfernt), bleibt für alte Pack-Datensätze
 }
 
@@ -2200,4 +2203,35 @@ model MatchResultSubmission {
 
   @@unique([matchId, userId])
   @@index([eventId, status])
+}
+
+// OMA Gems — Tageswerte je Spieler (Berlin-Kalendertag, "YYYY-MM-DD"), siehe lib/gems/daily.ts.
+// coinsEarned deckelt die Münzen aus OMA Gems pro Tag (GEMS_DAILY_COIN_CAP), dazu Tagesbonus
+// und Tages-Herausforderung (Modus "DAILY_<date>", beste Punktzahl für die Tages-Bestenliste).
+model GemsDailyStats {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               String
+  coinsEarned        Int      @default(0)
+  firstWinBonus      Boolean  @default(false)
+  challengeWon       Boolean  @default(false)
+  challengeBestScore Int      @default(0)
+  challengeAttempts  Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+// OMA Gems — Sieg-Serie (Tage mit mindestens einem Sieg, höchstens 7). Ein verpasster Tag zieht
+// einen Serientag ab, statt auf null zurückzusetzen (siehe nextStreak in lib/gems/daily.ts).
+model GemsPlayer {
+  userId      String  @id
+  streakDays  Int     @default(0)
+  lastWinDate String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

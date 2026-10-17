@@ -44,6 +44,8 @@ export interface CampaignLevelDef {
   level: number;
   statMultiplier: number;
   isBoss?: boolean;
+  /** Turmwächter (jede 10. Endlos-Stufe ab 20, siehe tower-rules.ts). */
+  isGuardian?: boolean;
 }
 
 export const CAMPAIGN_CHAPTER_NAME = "Kapitel 1: Server-Neustart";

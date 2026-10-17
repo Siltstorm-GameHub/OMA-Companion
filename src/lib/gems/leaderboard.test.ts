@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregateProgress, compareLeaderboardRows, stageOf } from "./leaderboard";
+import { aggregateProgress, compareLeaderboardRows, guardianTitle, rivalAhead, stageOf } from "./leaderboard";
 
 describe("Rangliste der Kampagne", () => {
   test("Stufennummern für Kapitel- und Endlos-Level", () => {
@@ -18,6 +18,20 @@ describe("Rangliste der Kampagne", () => {
       { id: "mehr-sterne", highestStage: 15, stars: 42, reachedAt: "2026-10-03T00:00:00.000Z" },
     ];
     assert.deepEqual(rows.sort(compareLeaderboardRows).map((r) => r.id), ["mehr-sterne", "frueh", "spaet", "viele-sterne"]);
+  });
+
+  test("wer direkt vorn liegt und wie viele Stufen fehlen", () => {
+    const row = (userId: string, highestStage: number) => ({ userId, name: userId, image: null, highestStage, stars: 0, reachedAt: "" });
+    const rows = [row("mira", 34), row("ich", 31), row("neu", 2)];
+    assert.deepEqual(rivalAhead(rows, "ich"), { name: "mira", place: 1, stageGap: 3 });
+    assert.equal(rivalAhead(rows, "mira"), null);
+    assert.equal(rivalAhead(rows, "fremd"), null);
+  });
+
+  test("Wächter-Titel ab Stufe 20", () => {
+    assert.equal(guardianTitle(19), null);
+    assert.equal(guardianTitle(20), "Wächter 20");
+    assert.equal(guardianTitle(37), "Wächter 30");
   });
 
   test("Fortschritt wird je Spieler zusammengefasst", () => {

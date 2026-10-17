@@ -12,7 +12,9 @@
 // (normalizeMonster, Bosse etwas stärker), und jedes Team folgt derselben Rollen-Aufteilung
 // (TEAM_ROLES) — gezogen wird nur, WELCHES Monster eine Rolle füllt.
 // Teams haben 4, ab Stufe 16 dann 5 Monster, jede 5. Stufe ist eine Boss-Stufe (der Boss
-// ersetzt den ersten Tank).
+// ersetzt den ersten Tank). Jede 10. Stufe ab 20 ist ein Turmwächter: Der Boss bekommt eine
+// eigene Fähigkeit (tower-rules.ts) und wird im Kampf durch die Community-Karte der Woche ersetzt.
+// Die Tages-Herausforderung nutzt denselben Aufbau mit einem Seed aus dem Datum.
 // Kalibriert mit scripts/simulate-campaign-balance.ts --endless.
 
 import { createRng } from "@/lib/battle-engine/rng";
@@ -31,6 +33,7 @@ import {
   SESSION_TIMEOUT_ZOMBIE,
 } from "./campaign-monsters";
 import { QUICKPLAY_MONSTER_TEMPLATES } from "./puzzle-monsters";
+import { guardianAbilityFor, isGuardianStage, withGuardianAbility } from "./tower-rules";
 
 /** Erste Endlos-Stufe — direkt nach dem letzten Kampagnen-Level. */
 export const ENDLESS_FIRST_STAGE = 13;
@@ -42,6 +45,11 @@ const BOSS_EVERY = 5;
 /** Ziel-Stärke je Monster (√(HP × Angriff) der Basiswerte), Bosse mit Aufschlag. */
 const REFERENCE_POWER = 330;
 const BOSS_POWER_FACTOR = 1.4;
+/** Stärke eines Boss-Monsters — auch Maßstab für den Community-Wächter (weekly-guardian.ts). */
+export const ENDLESS_BOSS_POWER = REFERENCE_POWER * BOSS_POWER_FACTOR;
+export { ENDLESS_MONSTER_LEVEL };
+/** Schwierigkeit der Tages-Herausforderung — entspricht Endlos-Stufe 16 (volles 5er-Team). */
+export const DAILY_CHALLENGE_STAGE = 16;
 
 const ID_PREFIX = "endless-";
 
@@ -89,12 +97,14 @@ export function isEndlessBossStage(stage: number): boolean {
   return stage % BOSS_EVERY === 0;
 }
 
-function monsterPower(m: MonsterTemplate): number {
+type BaseStats = { baseHp: number; baseAttack: number; baseDefense: number };
+
+function monsterPower(m: BaseStats): number {
   return Math.sqrt(m.baseHp * m.baseAttack);
 }
 
-/** Skaliert HP/Angriff/Verteidigung so, dass das Monster genau `targetPower` hat. */
-function normalizeMonster(m: MonsterTemplate, targetPower: number): MonsterTemplate {
+/** Skaliert HP/Angriff/Verteidigung so, dass die Einheit genau `targetPower` hat. */
+export function normalizeMonster<T extends BaseStats>(m: T, targetPower: number): T {
   const factor = targetPower / monsterPower(m);
   return {
     ...m,
@@ -108,27 +118,61 @@ export function endlessStatMultiplier(stage: number): number {
   return ENDLESS_BASE_MULTIPLIER * ENDLESS_GROWTH ** (stage - ENDLESS_FIRST_STAGE);
 }
 
+function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterTemplate[] {
+  const pick = <T>(items: T[]): T => items[Math.floor(rng() * items.length)];
+  return TEAM_ROLES[teamSize].map((role, slot) =>
+    isBoss && slot === 0
+      ? normalizeMonster(pick(BOSS_POOL), ENDLESS_BOSS_POWER)
+      : normalizeMonster(pick(REGULAR_POOL.filter((m) => m.class === role)), REFERENCE_POWER)
+  );
+}
+
+function roundedMultiplier(stage: number): number {
+  return Math.round(endlessStatMultiplier(stage) * 100) / 100;
+}
+
 /** Erzeugt die Endlos-Stufe `stage` — für dieselbe Nummer immer exakt dieselbe Stufe. */
 export function generateEndlessLevel(stage: number): CampaignLevelDef {
   const rng = createRng(0x9e3779b1 ^ stage);
-  const pick = <T>(items: T[]): T => items[Math.floor(rng() * items.length)];
   const teamSize = stage - ENDLESS_FIRST_STAGE < 3 ? 4 : 5;
   const isBoss = isEndlessBossStage(stage);
+  const isGuardian = isGuardianStage(stage);
 
-  const monsters = TEAM_ROLES[teamSize].map((role, slot) =>
-    isBoss && slot === 0
-      ? normalizeMonster(pick(BOSS_POOL), REFERENCE_POWER * BOSS_POWER_FACTOR)
-      : normalizeMonster(pick(REGULAR_POOL.filter((m) => m.class === role)), REFERENCE_POWER)
-  );
+  const monsters = rollTeam(rng, teamSize, isBoss);
+  if (isGuardian) monsters[0] = withGuardianAbility(monsters[0], stage);
+  const tagline = TAGLINES[Math.floor(rng() * TAGLINES.length)];
 
   return {
     id: endlessLevelId(stage),
     order: stage,
-    name: isBoss ? `Boss-Stufe ${stage}` : `Endlos-Stufe ${stage}`,
-    tagline: isBoss ? `${monsters[0].name} wartet ganz oben.` : pick(TAGLINES),
+    name: isGuardian ? `Turmwächter · Stufe ${stage}` : isBoss ? `Boss-Stufe ${stage}` : `Endlos-Stufe ${stage}`,
+    tagline: isGuardian
+      ? `Wächter mit ${guardianAbilityFor(stage).name}. Belohnung: ein Pack.`
+      : isBoss
+        ? `${monsters[0].name} wartet ganz oben.`
+        : tagline,
     monsters,
     level: ENDLESS_MONSTER_LEVEL,
-    statMultiplier: Math.round(endlessStatMultiplier(stage) * 100) / 100,
+    statMultiplier: roundedMultiplier(stage),
     isBoss,
+    isGuardian,
+  };
+}
+
+const DAILY_PREFIX = "daily-";
+
+/** Tages-Herausforderung zum Berliner Tag `dateKey` ("YYYY-MM-DD") — für alle Spieler gleich. */
+export function generateDailyChallengeLevel(dateKey: string): CampaignLevelDef {
+  const seed = Number(dateKey.replaceAll("-", ""));
+  const rng = createRng(0x85ebca6b ^ seed);
+  const [, month, day] = dateKey.split("-");
+  return {
+    id: `${DAILY_PREFIX}${dateKey}`,
+    order: DAILY_CHALLENGE_STAGE,
+    name: `Tages-Herausforderung ${Number(day)}.${Number(month)}.`,
+    tagline: "Für alle gleich — wer gewinnt mit den meisten Leben in den wenigsten Runden?",
+    monsters: rollTeam(rng, 5, false),
+    level: ENDLESS_MONSTER_LEVEL,
+    statMultiplier: roundedMultiplier(DAILY_CHALLENGE_STAGE),
   };
 }

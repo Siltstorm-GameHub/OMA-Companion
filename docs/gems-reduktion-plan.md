@@ -153,6 +153,44 @@ Bleibt bewusst: Prisma-Modelle und Tabellen (`BattleCard`, `UserCard` …) — U
 Daten migrieren, ohne Nutzen. Ebenso der localStorage-Schlüssel der Brett-Legende und das Nav-Icon
 `public/icons/nav/battle-cards.png`.
 
+**7. Handygame-Schleife: kurz reinschauen, ein paar Stufen versuchen** — erledigt
+Ziel: Jeder kurze Besuch bringt in unter drei Minuten ein Ergebnis, und es gibt immer einen
+Grund, morgen wiederzukommen. Kein Energie-System, keine Kartenstufen, kein Verpassens-Druck.
+
+Münzbudget: rund 1000 Münzen pro Woche. Umsetzung als **Tageslimit von 150 Münzen** aus OMA Gems
+(höchstens 1050 pro Woche). Danach zählt Fortschritt weiter, bringt aber keine Münzen mehr.
+| Quelle | Münzen |
+|---|---|
+| Erster Sieg des Tages | 20 + 5 je Serientag (Serie 1–7 → 25–55) |
+| Neuer Stern im Kapitel (Level 1–12) | 20 je Stern (vorher 100) |
+| Neue Endlos-Stufe | 10, je 10 Stufen über 13 hinaus +2 |
+| Tages-Herausforderung gewonnen (einmal am Tag) | 40 |
+| Turmwächter erstmals besiegt (Stufe 20, 30, …) | ein Standard-Pack, außerhalb des Limits |
+
+Serie: zählt Tage mit mindestens einem Sieg, höchstens 7. Ein verpasster Tag zieht einen
+Serientag ab, statt auf null zurückzusetzen.
+
+- 7a Kern: „Weiter“-Karte oben im Spielen-Reiter (laufenden Kampf fortsetzen oder nächste Stufe
+  mit einem Tipp starten), Ergebnisbildschirm mit „Nochmal“ und „Nächste Stufe“, bei Niederlage die
+  Rest-Lebenspunkte der Gegner und ein passender Tipp
+- 7b Turm: jede 10. Endlos-Stufe ist ein Turmwächter mit eigener Fähigkeit (Panzerung, Raserei,
+  Anführer, Zorn — reihum). Der Wächter ist die Community-Karte der Woche. Dazu ein
+  Wochen-Modifikator (je Kalenderwoche eine Regel, gilt für Endlos-Turm und Tages-Herausforderung)
+- 7c Tages-Herausforderung: eine feste Stufe pro Tag, für alle gleich, beliebig viele Versuche,
+  Bestenliste nach Punkten (Sieg, Rest-Leben, wenige Runden)
+- 7d Ranglisten: Gesamt (höchste Stufe), „Diese Woche“ (neu geschaffte Stufen seit Montag) und
+  „Heute“ (Tages-Herausforderung). Im Hub: wer direkt vor dir liegt und wie weit
+- Daten: neue Tabellen `GemsDailyStats` (Münzen, Tagesbonus, Herausforderung je Tag) und
+  `GemsPlayer` (Serie); neue Pack-Quelle `GEMS_TOWER_GUARDIAN`. Nur Ergänzungen, `db push` ohne Datenverlust
+- Später (nicht Teil von Phase 7): Discord-Bot-Meldungen, Push-Benachrichtigungen, PWA
+
+Umgesetzt in: `lib/gems/daily-rules.ts` (Zahlen, Serie, Tageslimit), `daily.ts` (Gutschrift),
+`tower-rules.ts` (Wächter, Wochen-Modifikator, Tipps), `weekly-guardian.ts`, `play-status.ts`,
+`GemsPlayCard`, `GemsResultScreen`, Ranglisten-Seite mit Gesamt/Woche/Heute, Route
+`POST /api/gems/daily-challenge`. Die Tages-Herausforderung öffnet nach Level 6.
+Balance (Simulator, automatischer Spieler): Wächter-Stufe 20 liegt bei rund 50 % Siegquote, die
+Stufen davor bei 70–95 % — eine spürbare Hürde, keine Wand.
+
 ## Geklärte Punkte
 
 1. **Einstieg: Auto-Startpaket.** Beim ersten Besuch bekommt jeder Spieler ohne Karten automatisch

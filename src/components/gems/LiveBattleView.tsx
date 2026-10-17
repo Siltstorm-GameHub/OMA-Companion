@@ -42,7 +42,8 @@ import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/gems/campaign-levels";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
-import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
+import GemsResultScreen, { type GemsResultDetails, type GemsReward } from "./GemsResultScreen";
+import { startGemsBattle, type GemsBattleTarget } from "@/lib/gems/start-battle-client";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für Turniere —
  *  Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -123,6 +124,8 @@ interface LiveSnapshot {
   /** Nur bei einem gewonnenen Kampagnen-Kampf gesetzt — Sterne-Ergebnis für die
    *  Animation im Kampfende-Screen (siehe computeStars in campaign.ts). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
+  /** Kampagne und Tages-Herausforderung: Münzen, Tipp, Nochmal/Weiter (siehe GemsResultScreen). */
+  gemsResult: GemsResultDetails | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -618,11 +621,14 @@ export default function LiveBattleView({
   liveBattleId,
   viewerId,
   onExit,
+  onBattleChange,
 }: {
   liveBattleId: string;
   viewerId: string;
   /** Fehlt dieser Handler, navigiert der eingebaute Zurück-Button zur Community-Übersicht. */
   onExit?: () => void;
+  /** „Nochmal“/„Weiter“ im Ergebnisbildschirm: neuer Kampf. Fehlt der Handler, wird zur Kampfseite navigiert. */
+  onBattleChange?: (liveBattleId: string) => void;
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<LiveSnapshot | null>(null);
@@ -681,6 +687,12 @@ export default function LiveBattleView({
   function handleExit() {
     if (onExit) onExit();
     else router.push("/gems");
+  }
+
+  async function handlePlay(target: GemsBattleTarget) {
+    const id = await startGemsBattle(target);
+    if (onBattleChange) onBattleChange(id);
+    else router.push(`/gems/live/${id}`);
   }
 
   async function fetchSnapshot() {
@@ -1031,6 +1043,7 @@ export default function LiveBattleView({
             ultimateCutscene={ultimateCutscene}
             ultimateBusy={ultimateBusy}
             onExit={handleExit}
+            onPlay={handlePlay}
           />
         )}
       </div>
@@ -1071,6 +1084,7 @@ function LiveBattleBody({
   ultimateCutscene,
   ultimateBusy,
   onExit,
+  onPlay,
 }: {
   snapshot: LiveSnapshot;
   viewerId: string;
@@ -1086,6 +1100,7 @@ function LiveBattleBody({
   ultimateCutscene: { name: string; class: UnitClass; skillName: string } | null;
   ultimateBusy: boolean;
   onExit: () => void;
+  onPlay: (target: GemsBattleTarget) => Promise<void>;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : null;
   const opponentTeam: TeamId = "B";
@@ -1264,7 +1279,9 @@ function LiveBattleBody({
         <GemsResultScreen
           outcome={snapshot.winner === null ? "draw" : snapshot.winner === myTeam ? "win" : "loss"}
           reward={computeGemsReward(snapshot)}
+          details={snapshot.gemsResult ?? null}
           onExit={onExit}
+          onPlay={snapshot.gemsResult ? onPlay : undefined}
         />
       )}
       <AnimatePresence>

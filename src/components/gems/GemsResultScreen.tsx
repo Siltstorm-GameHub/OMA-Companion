@@ -3,42 +3,81 @@
 // ============================================
 // OMA Gems — Ergebnisbildschirm (direkt, kein Zwischenschritt)
 // ============================================
-// Zeigt das Kampfergebnis direkt im Kampf-Overlay, ohne Umweg über die Replay-Seite,
-// je nach Kampf-Art mit der passenden Belohnung:
-//  - Kampagne  → Sterne (siehe campaignResult)
-//  - Turnier/Verlust/Unentschieden → kein Belohnungs-Block
+// Zeigt das Kampfergebnis direkt im Kampf-Overlay, ohne Umweg über die Replay-Seite:
+//  - Kampagne → Sterne, Münzen (mit Tageslimit) und „Nächste Stufe“
+//  - Tages-Herausforderung → Punktzahl und Münzen
+//  - Niederlage → wie knapp es war (Rest-Leben der Gegner), ein Tipp und „Nochmal“
+//  - Turnier → kein Belohnungs-Block (Belohnung erst bei Turnierende)
 
 import { Button } from "@/components/ui/Button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Handshake, Trophy } from "@/components/icons";
+import { ArrowRight, Gift, Handshake, Lightbulb, RotateCcw, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
+import type { GemsBattleTarget } from "@/lib/gems/start-battle-client";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
   | { kind: "none" };
 
+/** Spiegel von GemsBattleResult (lib/gems/live-battle.ts) für den Client. */
+export interface GemsResultDetails {
+  rewards: {
+    lines: { label: string; requested: number; coins: number }[];
+    coinsTotal: number;
+    capReached: boolean;
+    earnedToday: number;
+    cap: number;
+  } | null;
+  packGranted: boolean;
+  enemyHpPercent: number;
+  tip: string | null;
+  retry: GemsBattleTarget;
+  next: { levelId: string; name: string } | null;
+  challengeScore: number | null;
+}
+
 export default function GemsResultScreen({
   outcome,
   reward,
+  details,
   onExit,
+  onPlay,
 }: {
   outcome: "win" | "loss" | "draw";
   reward: GemsReward;
+  details: GemsResultDetails | null;
   onExit: () => void;
+  /** Startet einen neuen Kampf (Nochmal / Nächste Stufe) — fehlt bei Turnieren. */
+  onPlay?: (target: GemsBattleTarget) => Promise<void>;
 }) {
+  const [starting, setStarting] = useState<"retry" | "next" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (outcome === "win") {
       confetti({
         particleCount: 160,
         spread: 80,
         origin: { y: 0.35 },
-        colors: ["#a78bfa", "#7c3aed", "#fde68a", "#ffffff"],
+        colors: ["#2dd4bf", "#14b8a6", "#fde68a", "#ffffff"],
       });
     }
   }, [outcome]);
+
+  async function play(kind: "retry" | "next", target: GemsBattleTarget) {
+    if (!onPlay) return;
+    setStarting(kind);
+    setError(null);
+    try {
+      await onPlay(target);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kampf konnte nicht gestartet werden.");
+      setStarting(null);
+    }
+  }
 
   const config =
     outcome === "win"
@@ -48,19 +87,25 @@ export default function GemsResultScreen({
         : { icon: Handshake, label: "Unentschieden", from: "#9ca3af", to: "#4b5563" };
   const Icon = typeof config.icon === "string" ? null : config.icon;
 
+  const rewardLines = details?.rewards?.lines ?? [];
+  const cappedLines = rewardLines.filter((l) => l.coins < l.requested);
+  const enemyHpLeft = Math.round((details?.enemyHpPercent ?? 0) * 100);
+  const nextTarget: GemsBattleTarget | null = outcome === "win" && details?.next ? { kind: "campaign", levelId: details.next.levelId } : null;
+  const isDaily = details?.retry.kind === "daily";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/88 backdrop-blur-sm px-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/88 backdrop-blur-sm px-6 overflow-y-auto py-8"
     >
-      <div className="flex flex-col items-center gap-4 text-center max-w-xs">
+      <div className="flex flex-col items-center gap-4 text-center w-full max-w-xs">
         <motion.p
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[10px] font-bold text-sky-300 uppercase tracking-widest"
+          className="text-[10px] font-bold text-teal-300 uppercase tracking-widest"
         >
-          OMA Gems
+          {isDaily ? "Tages-Herausforderung" : "OMA Gems"}
         </motion.p>
 
         <motion.div
@@ -80,7 +125,7 @@ export default function GemsResultScreen({
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="font-display text-2xl text-white uppercase tracking-wide"
+          className="font-display text-2xl font-bold text-white"
         >
           {config.label}
         </motion.p>
@@ -90,41 +135,114 @@ export default function GemsResultScreen({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="flex flex-col items-center gap-1.5"
+            className="flex items-center gap-1"
           >
-            <div className="flex items-center gap-1">
-              {[1, 2, 3].map((n) => {
-                const earned = n <= reward.stars;
-                const isNew = earned && n > reward.stars - reward.starsGained;
-                return (
-                  <Star
-                    key={n}
-                    className={`w-7 h-7 animate-number-pop ${earned ? "text-amber-400" : "text-gray-700"} ${isNew ? "drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" : ""}`}
-                    style={{ animationDelay: `${n * 140}ms` }}
-                    fill={earned ? "currentColor" : "none"}
-                  />
-                );
-              })}
+            {[1, 2, 3].map((n) => {
+              const earned = n <= reward.stars;
+              const isNew = earned && n > reward.stars - reward.starsGained;
+              return (
+                <Star
+                  key={n}
+                  className={`w-7 h-7 animate-number-pop ${earned ? "text-amber-400" : "text-gray-700"} ${isNew ? "drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]" : ""}`}
+                  style={{ animationDelay: `${n * 140}ms` }}
+                  fill={earned ? "currentColor" : "none"}
+                />
+              );
+            })}
+          </motion.div>
+        )}
+
+        {details?.challengeScore != null && (
+          <p className="text-sm text-gray-300">
+            <span className="font-display text-lg font-bold text-white tabular-nums">{details.challengeScore}</span> Punkte
+          </p>
+        )}
+
+        {outcome !== "win" && details && enemyHpLeft > 0 && (
+          <div className="w-full space-y-1.5">
+            <p className="text-sm text-gray-300">
+              {enemyHpLeft <= 20 ? "Ganz knapp! " : ""}Die Gegner hatten noch {enemyHpLeft} % Leben.
+            </p>
+            <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+              <div className="h-full rounded-full bg-rose-500" style={{ width: `${enemyHpLeft}%` }} />
             </div>
-            {reward.starsGained > 0 && (
-              <span
-                className="flex items-center gap-1 text-sm font-semibold text-amber-300 animate-number-pop"
-                style={{ animationDelay: "560ms" }}
-              >
-                +{reward.starsGained} Stern{reward.starsGained === 1 ? "" : "e"}
-                {reward.coinsAwarded > 0 && (
-                  <span className="flex items-center gap-0.5 text-gray-400 font-normal">
-                    (+{reward.coinsAwarded} <CoinIcon size={13} />)
+          </div>
+        )}
+
+        {(rewardLines.some((l) => l.coins > 0) || details?.packGranted) && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="glass rounded-xl w-full px-3 py-2.5 space-y-1.5 text-left"
+          >
+            {rewardLines
+              .filter((l) => l.coins > 0)
+              .map((l) => (
+                <div key={l.label} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-gray-300 min-w-0 truncate">{l.label}</span>
+                  <span className="flex items-center gap-0.5 font-semibold text-amber-300 tabular-nums shrink-0">
+                    +{l.coins} <CoinIcon size={12} />
                   </span>
-                )}
-              </span>
+                </div>
+              ))}
+            {details?.packGranted && (
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-gray-300">Turmwächter besiegt</span>
+                <span className="flex items-center gap-1 font-semibold text-teal-300 shrink-0">
+                  <Gift className="w-3.5 h-3.5" /> 1 Pack im Shop
+                </span>
+              </div>
             )}
           </motion.div>
         )}
 
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <Button onClick={onExit} className="min-w-40">
-            Fertig
+        {details?.rewards && (cappedLines.length > 0 || details.rewards.capReached) && (
+          <p className="text-[11px] text-gray-500">
+            Tageslimit {details.rewards.earnedToday} / {details.rewards.cap} Münzen erreicht — Fortschritt zählt trotzdem.
+          </p>
+        )}
+
+        {details?.tip && (
+          <p className="glass rounded-xl w-full px-3 py-2.5 text-xs text-gray-300 text-left flex items-start gap-2">
+            <Lightbulb className="w-4 h-4 text-amber-300 shrink-0" />
+            <span>{details.tip}</span>
+          </p>
+        )}
+
+        {error && <p className="text-xs text-rose-300">{error}</p>}
+
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="flex flex-col gap-2 w-full"
+        >
+          {onPlay && details && nextTarget && (
+            <Button
+              onClick={() => play("next", nextTarget)}
+              loading={starting === "next"}
+              disabled={starting !== null}
+              icon={<ArrowRight className="w-4 h-4" />}
+              className="w-full py-2.5"
+            >
+              Weiter: {details.next!.name}
+            </Button>
+          )}
+          {onPlay && details && (
+            <Button
+              variant={nextTarget ? "ghost" : "primary"}
+              onClick={() => play("retry", details.retry)}
+              loading={starting === "retry"}
+              disabled={starting !== null}
+              icon={<RotateCcw className="w-4 h-4" />}
+              className="w-full py-2.5"
+            >
+              Nochmal
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onExit} disabled={starting !== null} className="w-full">
+            Zurück zum Hub
           </Button>
         </motion.div>
       </div>

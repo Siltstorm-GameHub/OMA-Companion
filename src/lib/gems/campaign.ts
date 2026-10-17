@@ -16,10 +16,6 @@ import { ENDLESS_FIRST_STAGE, endlessLevelId, generateEndlessLevel, parseEndless
 
 export { CAMPAIGN_LEVELS, getCampaignLevel };
 
-/** Münz-Belohnung je NEU erreichtem Stern (nicht je Level) — siehe
- *  recordCampaignResult: schon erreichte Sterne zahlen bei erneutem Sieg
- *  nicht nochmal aus, nur der Zuwachs gegenüber der bisherigen Bestleistung. */
-export const CAMPAIGN_COINS_PER_STAR = 100;
 
 export function buildCampaignEnemyTeam(levelDef: CampaignLevelDef): BattleUnitDefinition[] {
   return levelDef.monsters.map((m) => instantiateMonster(m, levelDef.level, levelDef.statMultiplier));
@@ -48,6 +44,7 @@ export interface CampaignBoardLevel {
   unlocked: boolean;
   /** "chapter" = die 12 festen Kampagnen-Level, "endless" = Endlos-Turm (siehe endless-levels.ts). */
   section: "chapter" | "endless";
+  isGuardian: boolean;
 }
 
 /** Wie viele schon geschaffte Endlos-Stufen und gesperrte Vorschau-Stufen die Karte zeigt. */
@@ -64,6 +61,33 @@ export function isLevelUnlocked(levelId: string, completedLevelIds: ReadonlySet<
   if (stage === null) return false;
   const previous = stage === ENDLESS_FIRST_STAGE ? CAMPAIGN_LEVELS[CAMPAIGN_LEVELS.length - 1].id : endlessLevelId(stage - 1);
   return completedLevelIds.has(previous);
+}
+
+/** Rein, damit testbar: die Stufe nach `levelId` — Kapitel-Level der Reihe nach, nach dem
+ *  letzten Kapitel-Level die erste Endlos-Stufe, danach immer die nächste Endlos-Stufe. */
+export function nextLevelId(levelId: string): string | null {
+  const chapterIndex = CAMPAIGN_LEVELS.findIndex((l) => l.id === levelId);
+  if (chapterIndex >= 0) {
+    return chapterIndex + 1 < CAMPAIGN_LEVELS.length ? CAMPAIGN_LEVELS[chapterIndex + 1].id : endlessLevelId(ENDLESS_FIRST_STAGE);
+  }
+  const stage = parseEndlessStage(levelId);
+  return stage !== null ? endlessLevelId(stage + 1) : null;
+}
+
+/** Rein, damit testbar: die Stufe, an der der Spieler gerade steht — das erste noch nicht
+ *  geschaffte Kapitel-Level, sonst die Endlos-Stufe nach der höchsten geschafften. */
+export function currentLevelId(completedLevelIds: ReadonlySet<string>): string {
+  const open = CAMPAIGN_LEVELS.find((l) => !completedLevelIds.has(l.id));
+  if (open) return open.id;
+  return endlessLevelId((highestEndlessStage(completedLevelIds) ?? ENDLESS_FIRST_STAGE - 1) + 1);
+}
+
+export async function getCurrentLevel(userId: string): Promise<CampaignLevelDef> {
+  const completed = await prisma.userCampaignProgress.findMany({
+    where: { userId, completed: true },
+    select: { levelId: true },
+  });
+  return getCampaignLevel(currentLevelId(new Set(completed.map((p) => p.levelId))))!;
 }
 
 /** Höchste geschaffte Endlos-Stufe, oder null. */
@@ -102,6 +126,7 @@ export async function getCampaignBoard(userId: string): Promise<CampaignBoardLev
       name: levelDef.name,
       tagline: levelDef.tagline,
       isBoss: levelDef.isBoss ?? false,
+      isGuardian: levelDef.isGuardian ?? false,
       stars: progress?.stars ?? 0,
       completed: progress?.completed ?? false,
       unlocked: isLevelUnlocked(levelDef.id, completed),
@@ -128,23 +153,24 @@ export async function isCampaignLevelUnlocked(userId: string, levelId: string): 
 /** Aktualisiert den Fortschritt nach einem gewonnenen Kampf — die beste je
  *  erzielte Sternebewertung bleibt erhalten, ein erneuter Sieg mit weniger
  *  Sternen verschlechtert nichts. Gibt zurück, wie viele Sterne NEU
- *  hinzugekommen sind (Differenz zur bisherigen Bestleistung) — nur dafür
- *  gibt live-battle.ts Münzen (CAMPAIGN_COINS_PER_STAR je neuem Stern);
- *  schon erreichte Sterne zahlen bei erneutem Sieg nicht nochmal aus, sonst
+ *  hinzugekommen sind (Differenz zur bisherigen Bestleistung) und ob die Stufe
+ *  zum ersten Mal geschafft wurde — nur dafür gibt live-battle.ts Münzen
+ *  (siehe daily-rules.ts); ein erneuter Sieg zahlt nichts nochmal aus, sonst
  *  ließe sich durch wiederholtes Replayen unbegrenzt farmen. */
 export async function recordCampaignResult(
   userId: string,
   levelId: string,
   stars: 1 | 2 | 3
-): Promise<{ starsGained: number }> {
+): Promise<{ starsGained: number; firstClear: boolean }> {
   const existing = await prisma.userCampaignProgress.findUnique({
     where: { userId_levelId: { userId, levelId } },
   });
   const previousBestStars = existing?.stars ?? 0;
   const starsGained = Math.max(0, stars - previousBestStars);
+  const firstClear = !existing?.completed;
   // Ohne Verbesserung nichts schreiben: updatedAt markiert so den Zeitpunkt des letzten
   // Sterne-Zuwachses und dient der Rangliste als Gleichstands-Regel (siehe leaderboard.ts).
-  if (existing?.completed && starsGained === 0) return { starsGained };
+  if (existing?.completed && starsGained === 0) return { starsGained, firstClear };
 
   await prisma.userCampaignProgress.upsert({
     where: { userId_levelId: { userId, levelId } },
@@ -156,5 +182,5 @@ export async function recordCampaignResult(
     },
   });
 
-  return { starsGained };
+  return { starsGained, firstClear };
 }

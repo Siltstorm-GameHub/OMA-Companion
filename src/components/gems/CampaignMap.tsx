@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Crown, Loader2, Lock, Star, Swords, Trophy } from "@/components/icons";
+import { Crown, Loader2, Lock, Shield, Star, Swords, Trophy } from "@/components/icons";
 import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import CoinIcon from "@/components/CoinIcon";
@@ -28,6 +28,7 @@ export interface CampaignBoardLevel {
   name: string;
   tagline: string;
   isBoss: boolean;
+  isGuardian: boolean;
   stars: number;
   completed: boolean;
   unlocked: boolean;
@@ -74,7 +75,7 @@ function LevelNode({
   onSelect: () => void;
 }) {
   const locked = !level.unlocked;
-  const accent = level.isBoss ? "#f43f5e" : level.completed ? "#34d399" : "#60a5fa";
+  const accent = level.isGuardian ? "#a855f7" : level.isBoss ? "#f43f5e" : level.completed ? "#34d399" : "#60a5fa";
 
   return (
     <motion.div
@@ -117,6 +118,8 @@ function LevelNode({
         >
           {locked ? (
             <Lock className="w-6 h-6 opacity-50" />
+          ) : level.isGuardian ? (
+            <Shield className="w-7 h-7 text-white" strokeWidth={2.2} />
           ) : level.isBoss ? (
             <Crown className="w-7 h-7 text-white" strokeWidth={2.2} />
           ) : (
@@ -192,7 +195,15 @@ export default function CampaignMap() {
   }
 
   if (liveBattleId && session?.user?.id) {
-    return <LiveBattleView liveBattleId={liveBattleId} viewerId={session.user.id} onExit={handleExitBattle} />;
+    return (
+      <LiveBattleView
+        key={liveBattleId}
+        liveBattleId={liveBattleId}
+        viewerId={session.user.id}
+        onExit={handleExitBattle}
+        onBattleChange={setLiveBattleId}
+      />
+    );
   }
 
   const nextUpLevelId = levels?.find((l) => l.unlocked && !l.completed)?.id;
@@ -240,7 +251,7 @@ export default function CampaignMap() {
             <h2 className="font-display text-sm text-white uppercase tracking-wide">{chapterName}</h2>
           </div>
           <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
-            <CoinIcon size={10} /> 100 pro neuem Stern
+            <CoinIcon size={10} /> Münzen für neue Sterne und Stufen
           </span>
         </div>
         {chapterIntro && <p className="relative text-xs text-gray-300 leading-relaxed">{chapterIntro}</p>}
@@ -272,7 +283,7 @@ export default function CampaignMap() {
               </p>
             ) : (
               <>
-                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Wie weit kommst du?</p>
+                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Ab Stufe 20 bewacht alle 10 Stufen ein Turmwächter — der erste Sieg über ihn bringt ein Pack. Wie weit kommst du?</p>
                 <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
               </>
             )}
