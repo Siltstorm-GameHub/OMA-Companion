@@ -182,28 +182,34 @@ export default function FfaView({
   // nie eine einzelne Stat-Spalte. Nur ohne Turnierpunkte-Konfiguration (reines ffa/avg_stats ohne
   // Punkte-Einstellungen) wird wie bisher lexikografisch nach den einzelnen Stat-Feldern sortiert.
   const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
-  const ranked = [...totals.values()]
-    .sort((a, b) => {
-      if (a.matchCount === 0 && b.matchCount === 0) return 0;
-      if (a.matchCount === 0) return 1;
-      if (b.matchCount === 0) return -1;
-      if (isAvg) {
-        const avgOf = (t: PlayerTotal) =>
-          statFields.length > 0
-            ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount)
-                .reduce((s, v) => s + v, 0) / statFields.length
-            : 0;
-        return avgOf(b) - avgOf(a);
-      }
-      if (hasTurnierpunkte) {
-        return (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
-      }
-      for (const f of statFields) {
-        const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
-        if (diff !== 0) return diff;
-      }
-      return 0;
-    });
+  const byStatFields = (a: PlayerTotal, b: PlayerTotal) => {
+    for (const f of statFields) {
+      const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  };
+  // Bestimmt die Platzierung — 0 = gleichauf (gleicher Platz).
+  const rankCompare = (a: PlayerTotal, b: PlayerTotal) => {
+    if (a.matchCount === 0 && b.matchCount === 0) return 0;
+    if (a.matchCount === 0) return 1;
+    if (b.matchCount === 0) return -1;
+    if (isAvg) {
+      const avgOf = (t: PlayerTotal) =>
+        statFields.length > 0
+          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount)
+              .reduce((s, v) => s + v, 0) / statFields.length
+          : 0;
+      return avgOf(b) - avgOf(a);
+    }
+    if (hasTurnierpunkte) {
+      return (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
+    }
+    return byStatFields(a, b);
+  };
+  // Gleichauf liegende Spieler teilen sich den Platz; innerhalb des Gleichstands nur zur Anzeige
+  // nach den Stat-Feldern geordnet.
+  const ranked = [...totals.values()].sort((a, b) => rankCompare(a, b) || byStatFields(a, b));
 
   // Sobald der Admin eine Endplatzierung bestätigt hat (finalRankingGroups), hat diese
   // Vorrang vor der statistischen Sortierung — die Zeilenreihenfolge folgt dann 1. bis
@@ -223,6 +229,25 @@ export default function FfaView({
       return pa - pb;
     });
   }
+
+  // Platz je Zeile: bestätigte Endplatzierung, sonst Wettkampf-Rangfolge (1, 1, 1, 4 bei Gleichstand).
+  const placeByUser = new Map<string, number>();
+  ranked.forEach((r, i) => {
+    const prev = ranked[i - 1];
+    const statPlace = prev && rankCompare(prev, r) === 0 ? placeByUser.get(prev.userId)! : i + 1;
+    placeByUser.set(r.userId, confirmedPlaceOf.get(r.userId) ?? statPlace);
+  });
+
+  // Farbe einer Stat-Zelle nach ihrem Wert innerhalb der Spalte (gleiche Werte = gleiche Farbe),
+  // nicht nach der Zeilenposition.
+  const RANK_TEXT = ["text-amber-300", "text-gray-300", "text-amber-700"];
+  const statRankCls = (f: string, val: number) => {
+    if (val <= 0) return "text-gray-400";
+    const higher = new Set(
+      ranked.filter(t => t.matchCount > 0 && (t.stats[f] ?? 0) > val).map(t => t.stats[f]),
+    ).size;
+    return RANK_TEXT[higher] ?? "text-gray-400";
+  };
 
   const playedMatches   = matches.filter(m => m.playedAt);
   const upcomingMatches = matches.filter(m => !m.playedAt);
@@ -281,8 +306,8 @@ export default function FfaView({
                     const combined = isAvg && statFields.length > 0 && r.matchCount > 0
                       ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
                       : null;
-                    // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
-                    const place = confirmedPlaceOf.get(r.userId) ?? (i + 1);
+                    // Bestätigte Endplatzierung bzw. geteilter Platz bei Gleichstand (siehe placeByUser)
+                    const place = placeByUser.get(r.userId) ?? (i + 1);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
                     const wonPollLabels = pollWinsByUser[r.userId] ?? [];
                     const eventLigapunkte = ligaPunkteByUser[r.userId] ?? 0;
@@ -354,9 +379,7 @@ export default function FfaView({
                           return (
                             <td key={f} className="px-3 py-3 text-center">
                               <div className="flex flex-col items-center gap-0">
-                                <span className={`tabular-nums font-semibold ${
-                                  i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
-                                }`}>
+                                <span className={`tabular-nums font-semibold ${statRankCls(f, val)}`}>
                                   {val > 0 ? val : "–"}
                                 </span>
                                 {pts > 0 && (
@@ -368,7 +391,7 @@ export default function FfaView({
                         })}
                         {isAvg && (
                           <td className={`px-3 py-3 text-center tabular-nums font-bold ${
-                            i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
+                            combined !== null ? RANK_TEXT[place - 1] ?? "text-gray-400" : "text-gray-400"
                           }`}>
                             {combined !== null ? combined.toFixed(2) : "–"}
                           </td>
