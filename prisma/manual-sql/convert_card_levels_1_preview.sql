@@ -1,7 +1,7 @@
 -- ============================================
 -- OMA Gems: Karten-Stufen und Duplikate → Münzen — 1) VORSCHAU (ändert nichts)
 -- ============================================
--- SQL-Variante von scripts/convert-card-levels.ts für den Supabase SQL-Editor. Zeigt je
+-- Für den Supabase SQL-Editor (in der Produktion am 2026-10-17 ausgeführt). Zeigt je
 -- Spieler, wie viele Münzen die Umstellung gutschreiben würde. Danach
 -- convert_card_levels_2_apply.sql ausführen, dann drop_oma_quest_duels_levels.sql.
 --

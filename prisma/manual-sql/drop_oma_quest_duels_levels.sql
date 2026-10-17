@@ -6,12 +6,11 @@
 -- erst danach kann der Production-Build (scripts/db-push.mjs, ohne --accept-data-loss) wieder
 -- durchlaufen.
 --
--- REIHENFOLGE — unbedingt einhalten:
+-- In der Produktion am 2026-10-17 ausgeführt. REIHENFOLGE — unbedingt einhalten:
 --   1. Sicherung ziehen (pg_dump der kompletten DB).
 --   2. Karten-Stufen und Duplikate in Münzen umwandeln — im SQL-Editor:
 --        convert_card_levels_1_preview.sql   (Vorschau, Summen prüfen)
 --        convert_card_levels_2_apply.sql     (anwenden)
---      oder lokal mit Produktions-DATABASE_URL: npx tsx scripts/convert-card-levels.ts [--apply]
 --      Es erstattet Karten-Stufen und Duplikate als Münzen. Danach stehen alle Karten auf
 --      Stufe 1 / 1 Kopie — genau das prüft dieses Skript unten und bricht sonst ab.
 --   3. Dieses Skript im Supabase SQL-Editor ausführen (kompletter Block).
@@ -34,7 +33,7 @@ BEGIN
     WHERE table_name = 'UserCard' AND column_name = 'level'
   ) THEN
     IF EXISTS (SELECT 1 FROM "UserCard" WHERE "level" > 1 OR "duplicates" > 1) THEN
-      RAISE EXCEPTION 'Es gibt noch Karten über Stufe 1 bzw. mit Duplikaten — zuerst scripts/convert-card-levels.ts --apply ausführen.';
+      RAISE EXCEPTION 'Es gibt noch Karten über Stufe 1 bzw. mit Duplikaten — zuerst convert_card_levels_2_apply.sql ausführen.';
     END IF;
   END IF;
 END $$;

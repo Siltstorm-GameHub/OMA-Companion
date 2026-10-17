@@ -56,7 +56,6 @@ export const CARD_BGS_IMAGES = ["city-bright-tokyo", "city-dark-tokyo", "city-ka
 export const CARD_BGS = [...CARD_BGS_SCENES, ...CARD_BGS_IMAGES] as const;
 export const isImageBg = (b: string): boolean => (CARD_BGS_IMAGES as readonly string[]).includes(b);
 export type CardBg = (typeof CARD_BGS)[number];
-export const CARD_BG_LABEL: Record<CardBg, string> = { plains: "Wiese", forest: "Wald", harbor: "Hafen", coast: "Küste", mountain: "Berge", ruins: "Ruinen", village: "Dorf", cave: "Höhle", fortress: "Festung", snow: "Schnee", swamp: "Sumpf", desert: "Wüste", "city-bright-tokyo": "Tokyo, hell", "city-dark-tokyo": "Tokyo, Gewitter", "city-kanagawa": "Kanagawa", "city-osaka": "Osaka", "city-school": "Schulweg", "night1": "Nacht 1", "night2": "Nacht 2", "night3": "Nacht 3", "night4": "Nacht 4", "night5": "Nacht 5", "night6": "Nacht 6", "night7": "Nacht 7", "night8": "Nacht 8", "night9": "Nacht 9", "night10": "Nacht 10", "rural1": "Bahnübergang", "rural2": "Weidezaun", "rural3": "Landstraße", "urban1": "Hinterhof", "urban2": "Flussufer", "urban3": "Abendrot", "urban4": "Tankstelle", "urban5": "Küstenstadt", "urban-night1": "Dunkle Gasse", "urban-night2": "Getränkeautomat" };
 
 export type TeAnim = "idle" | "walk" | "attack" | "cast" | "bow" | "crouch" | "block" | "jump" | "ko" | "pose_strike" | "pose_cast" | "pose_bow" | "pose_jump" | "pose_step";
 
@@ -81,7 +80,6 @@ export const TE_ANIMS: Record<TeAnim, { frames: number[]; fps: number; loop: boo
 };
 
 const CAT = new Map(TE_CATALOG.categories.map((c) => [c.id, c]));
-export function getTeCategory(id: string): TeCategory | undefined { return CAT.get(id); }
 
 function variantExists(catId: string, variant: string): boolean {
   return !!CAT.get(catId)?.items.some((i) => i.variants.includes(variant));
@@ -152,7 +150,6 @@ export function randomTeConfig(rand: () => number = Math.random): TeCharacterCon
 
 /** Ausschnitte der 48×48-Bilder (Figur steht bei x 17–30, y 7–32): Karten-Motiv/Kampf = ganze Figur eng, Kopf = Porträt. */
 export const TE_CROP_FIGURE = { x: 8, y: 2, w: 32, h: 34 } as const;
-export const TE_CROP_HEAD = { x: 12, y: 2, w: 24, h: 24 } as const;
 
 /** Angriffs-Animation passend zur Ausrüstung: Bogen → Bogen, sonst Support → Zauber, sonst Nahkampf. */
 export function attackAnimFor(config: TeCharacterConfig, unitClass?: "TANK" | "DAMAGE_DEALER" | "SUPPORT"): TeAnim {

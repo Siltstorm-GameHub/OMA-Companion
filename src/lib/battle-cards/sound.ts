@@ -17,12 +17,8 @@ export const playInvalidSwapSound = (): void => playSfx("error", 0.7);
 export const playMatchSound = (cascadeIndex = 0): void => playSfx(cascadeIndex === 0 ? "click" : "ping", 0.5 + Math.min(0.4, cascadeIndex * 0.1));
 export const playCommunityBonusSound = (): void => playSfx("reward", 0.8);
 
-// Kampf
-export const playDamageSound = (): void => playSfx("hit");
-export const playCritSound = (): void => playSfx("crit");
 export const playHealSound = (): void => playSfx("heal");
 export const playShieldSound = (): void => playSfx("block");
-export const playUltimateSound = (): void => playSfx("spell");
 export const playDamageSoundFor = (casterClass: UnitClass | undefined, crit: boolean): void => playSfx(sfxForClassHit(casterClass, crit));
 export const playUltimateSoundFor = (casterClass: UnitClass | undefined): void => playSfx(sfxForClassUltimate(casterClass));
 export const playVictorySound = (): void => playSfx("win");
@@ -33,7 +29,3 @@ export const playDefeatSound = (): void => playSfx("lose");
 export const playCardRevealSound = (): void => playSfx("menu", 0.9);
 /** Community-Karte gezogen — Stufenaufstiegs-Fanfare. */
 export const playRarePullSound = (): void => playSfx("level");
-/** Dringlicher Tick für die letzten Sekunden der Zug-Uhr (OMA Duels). */
-export const playTimerWarningSound = (): void => playSfx("error", 0.9);
-/** Ultimate einsatzbereit. */
-export const playUltimateReadySound = (): void => playSfx("buff");

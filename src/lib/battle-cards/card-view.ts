@@ -6,7 +6,6 @@ import type { Card, CardClass } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "./resolve-image";
-import { sanitizeTeConfig } from "@/lib/te-character";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
 export const ACTIVITY_TIER_RANK: Record<string, number> = {

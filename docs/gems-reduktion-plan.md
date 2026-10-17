@@ -74,8 +74,7 @@ vorerst temporär (307), in Phase 2 auf permanent umstellen.
   noch für Monster. Upgrade-System komplett entfernt (Logik, API, Admin-Panel, Kachel-Badges, Overlay)
 - Neue Duplikate werden beim Pack-Öffnen sofort zu Münzen (25 Standard / 50 Community,
   `DUPLICATE_COIN_VALUE` in `card-coins.ts`)
-- Umstellungs-Skript für Bestandsdaten: `scripts/convert-card-levels.ts` (Standard = Trockenlauf,
-  `--apply` schreibt). Muss einmal gegen die Produktions-DB laufen
+- Umstellung der Bestandsdaten (Stufen/Duplikate → Münzen): `prisma/manual-sql/convert_card_levels_*.sql`
 - Engine (`interactive.ts`) kennt nur noch das Brett: kein Auto-Kampf, kein Zug-Timeout, keine
   manuelle Aktions-/Zielwahl mehr. Dabei behoben: Ein Ultimate der gerade wartenden Einheit
   verbrauchte bisher deren Brett-Zug, ohne ausgelöst zu werden
@@ -99,7 +98,7 @@ gewinnt Level 1–5 immer, danach fällt die Siegquote gleichmäßig von 90 % (e
 - Kampagnen-Karte: Abschnitt „Endlos-Turm“ mit den letzten 3 geschafften, der nächsten und 2
   gesperrten Vorschau-Stufen
 
-**4. Datenbank aufräumen** — vorbereitet, Ausführung durch das Team
+**4. Datenbank aufräumen** — erledigt (Umstellung und Lösch-SQL am 2026-10-17 in der Produktion ausgeführt)
 - `prisma/schema.prisma` bereinigt: alle `Dnd*`-Modelle, `DuelDeck`, `TacticCard`, `UserTacticCard`,
   `BattleChallenge`, `BattleQueueEntry`, `UserTutorialProgress`; an `Card` alle `dnd*`-/Hero-/Reise-Felder
   und `cardUnlocks`; an `UserCard` `level`/`duplicates`; an `User` `elo*` und die Sieges-Serie
@@ -113,10 +112,38 @@ Reihenfolge — der Production-Build bricht ab, solange die DB noch Daten in den
 Spalten hat (`scripts/db-push.mjs` läuft ohne `--accept-data-loss`):
 1. Sicherung: `pg_dump` der Produktions-DB
 2. Umstellung im Supabase SQL-Editor: `prisma/manual-sql/convert_card_levels_1_preview.sql`
-   (Vorschau), dann `convert_card_levels_2_apply.sql` — oder lokal mit Produktions-`DATABASE_URL`
-   `npx tsx scripts/convert-card-levels.ts` (Trockenlauf), dann mit `--apply`
+   (Vorschau), dann `convert_card_levels_2_apply.sql`
 3. `drop_oma_quest_duels_levels.sql` im Supabase SQL-Editor ausführen
 4. Phase 4 committen und deployen
+
+Danach entfernt (nicht mehr gebraucht): TypeScript-Umstellungs-Skript, Erstattungslogik in
+`card-coins.ts` und tote Exporte aus den Spiel-Modulen (Sounds, Saison-/Elo-Setter, Taktik-Reste).
+
+**5. Design an den Rest der App angleichen** — offen
+Heute hat OMA Gems einen eigenen MOBA-Look: `battle-cards-moba.css` (472 Zeilen, Scope
+`.moba-skin`), eigene Schrift Metamorphous, 22 Rahmen-/Button-Grafiken in `public/battle-cards/moba`
+(1,7 MB), eigene Raster-Icons (`MobaIcon`, 26 Stellen) und Sonderbehandlung im App-Rahmen
+(`DashboardChrome` blendet Header/Ticker/Partner-Footer aus, `AuroraBackground` hat eine eigene
+Variante). Betroffen sind rund 20 Komponenten. Ziel: dieselbe Sprache wie der Rest der App
+(siehe PRODUCT.md) — dunkles Glas (`.glass`/`.glass-heavy`), Teal `#14b8a6` als Akzent, Space Grotesk,
+gemeinsame Bausteine aus `components/ui` (Button, Badge, Modal) und `components/admin/Tabs`.
+- 5a Rahmen: `/gems` wie jede andere Seite (Header, Ticker, Standard-Hintergrund), kein `.moba-skin`,
+  keine eigene Schrift, Logo-Komponente durch normale Seitenüberschrift ersetzen
+- 5b Hub, Sammlung, Shop, Kampagnen-Karte, Rangliste: `moba-panel` → `glass`, MOBA-Reiterleiste →
+  `Tabs`, Hex-/Bild-Buttons → `Button`, `MobaIcon` → `@/components/icons`
+- 5c Karten (`BattleCardView`, `CardTile`, `CardPlate`, `LineupStrip`): Rahmen-PNG durch CSS-Rahmen im
+  App-Stil ersetzen; Pixel-Figuren, Klassenfarben und Community-Kennzeichnung bleiben
+- 5d Kampf (`LiveBattleView`, `BoardMatch3`, `GemsResultScreen`, Bestätigungsdialog): Farben, Schrift,
+  Panels und Buttons angleichen
+- 5e Aufräumen: `battle-cards-moba.css`, `MobaIcon`/`moba-icons.ts`, `MobaConfirmDialog`,
+  `public/battle-cards/moba`, Aurora-Variante und Sonderfall in `DashboardChrome` entfernen
+- Prüfen: jede Gems-Seite mobil und am Desktop im Browser gegen eine andere App-Seite vergleichen
+
+Offene Fragen vor dem Start:
+1. Kampfansicht: als eigenes Vollbild behalten (nur Farben/Schrift/Bausteine angleichen) oder ins
+   normale Seitenlayout mit Navigation holen?
+2. Spielgrafik: Brett-Steine, Monsterbilder, Arena-/Kapitel-Hintergründe und Kampfeffekte bleiben
+   (Vorschlag), nur die Bedienoberfläche wird angeglichen?
 
 ## Geklärte Punkte
 

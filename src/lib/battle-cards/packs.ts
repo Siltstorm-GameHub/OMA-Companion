@@ -188,15 +188,3 @@ export async function openNextPack(
   const nextKind = await peekNextPackKind(userId);
   return { cards, remainingUnopened, kind: pack.kind as PackKind, nextKind };
 }
-
-/** Legt ein Pack an, das beim Öffnen garantiert `cardId` enthält (statt einer
- *  zufälligen Ziehung) — für das Tutorial-Community-Pack (garantiert die
- *  eigene Community-Karte). */
-export async function grantGuaranteedPack(
-  userId: string,
-  source: CardPackSource,
-  kind: PackKind,
-  cardId: string
-): Promise<void> {
-  await prisma.cardPack.create({ data: { userId, source, kind, guaranteedCardId: cardId } });
-}

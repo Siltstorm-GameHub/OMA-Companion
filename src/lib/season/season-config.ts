@@ -36,63 +36,10 @@ export async function getSeasonConfig(): Promise<SeasonConfig> {
   };
 }
 
-export async function setSeason1StartAt(dateIso: string | null): Promise<void> {
-  if (!dateIso) {
-    await prisma.botConfig.deleteMany({ where: { key: KEYS.season1StartAt } });
-    return;
-  }
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.season1StartAt },
-    create: { key: KEYS.season1StartAt, value: dateIso },
-    update: { value: dateIso },
-  });
-}
-
 export async function markPreSeasonRan(): Promise<void> {
   await prisma.botConfig.upsert({
     where: { key: KEYS.preSeasonRanAt },
     create: { key: KEYS.preSeasonRanAt, value: new Date().toISOString() },
-    update: { value: new Date().toISOString() },
-  });
-}
-
-export async function markSeason1Ran(): Promise<void> {
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.season1RanAt },
-    create: { key: KEYS.season1RanAt, value: new Date().toISOString() },
-    update: { value: new Date().toISOString() },
-  });
-}
-
-export async function setLastRewardedRankedSeason(seasonNumber: number): Promise<void> {
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.lastRewardedRankedSeason },
-    create: { key: KEYS.lastRewardedRankedSeason, value: String(seasonNumber) },
-    update: { value: String(seasonNumber) },
-  });
-}
-
-/** Setzt/löscht das geplante Hard-Reset-Datum. Löscht dabei immer den
- *  "ausgeführt am"-Marker — ein neu (oder erneut) gesetztes Datum soll den
- *  Cron beim nächsten Erreichen wieder auslösen können, auch wenn zuvor
- *  schon einmal ein Hard-Reset zu einem anderen Datum lief. */
-export async function setEloHardResetAt(dateIso: string | null): Promise<void> {
-  await prisma.botConfig.deleteMany({ where: { key: KEYS.eloHardResetRanAt } });
-  if (!dateIso) {
-    await prisma.botConfig.deleteMany({ where: { key: KEYS.eloHardResetAt } });
-    return;
-  }
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.eloHardResetAt },
-    create: { key: KEYS.eloHardResetAt, value: dateIso },
-    update: { value: dateIso },
-  });
-}
-
-export async function markEloHardResetRan(): Promise<void> {
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.eloHardResetRanAt },
-    create: { key: KEYS.eloHardResetRanAt, value: new Date().toISOString() },
     update: { value: new Date().toISOString() },
   });
 }

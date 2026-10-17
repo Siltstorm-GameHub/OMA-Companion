@@ -32,11 +32,6 @@ export async function loadTeLayers(config: TeCharacterConfig, dir: TeDir = "down
 
 /** Beide Reihenfolgen (Vorder-/Rückansicht) einmal laden — für Figuren, die sich im Spiel drehen. */
 export interface TeLayerSets { front: HTMLImageElement[]; back: HTMLImageElement[] }
-export async function loadTeLayerSets(config: TeCharacterConfig): Promise<TeLayerSets> {
-  const [front, back] = await Promise.all([loadTeLayers(config, "down"), loadTeLayers(config, "up")]);
-  return { front, back };
-}
-export const layersFor = (sets: TeLayerSets | undefined, dir: TeDir): HTMLImageElement[] => (sets ? (dir === "up" ? sets.back : sets.front) : []);
 
 export interface Crop { x: number; y: number; w: number; h: number }
 const FULL: Crop = { x: 0, y: 0, w: TE_FRAME, h: TE_FRAME };

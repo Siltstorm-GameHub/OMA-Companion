@@ -42,11 +42,6 @@ export function setSoundSettings(patch: Partial<SoundSettings>): void {
   listeners.forEach((l) => l());
 }
 
-export function subscribeSound(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => { listeners.delete(fn); };
-}
-
 // ── Wiedergabe ──────────────────────────────────────────────
 
 const cache = new Map<Sfx, HTMLAudioElement>();

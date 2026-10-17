@@ -57,17 +57,6 @@ function selectSingleAlly(
   }
 }
 
-/** Standard-Normalangriff-Ziel: niedrigste DEF im Gegnerteam, außer die Karte hat eine Sonderregel. */
-export function resolveNormalAttackTarget(
-  actor: BattleUnitState,
-  allUnits: BattleUnitState[],
-  rng: Rng
-): BattleUnitState | undefined {
-  const enemies = aliveUnits(allUnits).filter((u) => u.teamId !== actor.teamId);
-  const select = actor.def.normalAttackTarget ?? "lowestDefense";
-  return selectSingleEnemy(enemies, select, rng);
-}
-
 /** Löst ein EffectTarget zur Liste der tatsächlich betroffenen Einheiten auf.
  *  `forcedTargetId` (interaktive Kämpfe: vom Spieler gewähltes Ziel) überschreibt
  *  die automatische Auswahl bei "singleEnemy"/"singleAlly", sofern das Ziel noch

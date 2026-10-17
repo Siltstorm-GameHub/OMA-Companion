@@ -8,8 +8,6 @@
 import type { UnitClass } from "@/lib/battle-engine/types";
 import { playSfx, sfxForClassHit, sfxForClassUltimate } from "./game-sfx";
 
-export const playHitSfx = () => playSfx("hit");
-export const playCritSfx = () => playSfx("crit");
 export const playHealSfx = () => playSfx("heal");
 export const playShieldSfx = () => playSfx("block");
 export const playBuffSfx = () => playSfx("buff");
