@@ -929,7 +929,14 @@ export default function LiveBattleView({
   function applySnapshot(data: LiveSnapshot) {
     if (gemsHoldRef.current) {
       pendingSnapshotRef.current = data;
-      setPendingHp(new Map(data.units.map((u) => [u.instanceId, u.currentHp])));
+      const targetHp = new Map(data.units.map((u) => [u.instanceId, u.currentHp]));
+      // Last Stand: Hat dieser Zug die Welle geräumt, fehlen die Gegner der alten Welle im neuen Snapshot
+      // (an ihrer Stelle stehen neue). Sie sind gefallen — ihre Lebensanzeige läuft live auf 0, bis die
+      // neue Welle eingeblendet wird.
+      for (const unit of snapshot?.units ?? []) {
+        if (!targetHp.has(unit.instanceId)) targetHp.set(unit.instanceId, 0);
+      }
+      setPendingHp(targetHp);
     } else {
       setSnapshot(data);
     }
