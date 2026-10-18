@@ -10,7 +10,7 @@ import { RankProgress } from "./CardRank";
 
 export interface CardDetailSelection {
   card: BattleCardData;
-  /** Nur bei eigenen Karten — zeigt Rang und Fortschritt. */
+  /** Rang-Punkte — nur bei eigenen Karten, zeigt Rang und Fortschritt. */
   winsInLineup?: number;
 }
 
@@ -26,7 +26,7 @@ export default function CardDetailModal({
       {selection && (
         <div className="flex flex-col items-center gap-4">
           <BattleCardView card={selection.card} />
-          {selection.winsInLineup != null && <RankProgress wins={selection.winsInLineup} />}
+          {selection.winsInLineup != null && <RankProgress wins={selection.winsInLineup} baseHp={selection.card.baseHp} baseAttack={selection.card.baseAttack} />}
         </div>
       )}
     </Modal>

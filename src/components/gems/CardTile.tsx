@@ -12,7 +12,8 @@ import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardV
 import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlate";
 import HeroFigure from "./HeroFigure";
 import HeroBackdrop from "./HeroBackdrop";
-import { RankBadge } from "./CardRank";
+import { RankBadge, RankMiniBar } from "./CardRank";
+import { rankForWins, rankFrameColor } from "@/lib/gems/card-ranks";
 
 export default function CardTile({
   card,
@@ -21,7 +22,7 @@ export default function CardTile({
   winsInLineup,
   onClick,
 }: {
-  /** Siege in der Startaufstellung — zeigt den Rang (nur eigene Karten). */
+  /** Rang-Punkte aus der Startaufstellung — zeigt Rang und Fortschritt (nur eigene Karten). */
   winsInLineup?: number;
   card: BattleCardData;
   locked?: boolean;
@@ -30,7 +31,9 @@ export default function CardTile({
   onClick: () => void;
 }) {
   const classConfig = getClassConfig(card.class);
-  const borderColor = locked ? "rgba(255,255,255,0.1)" : LEVEL_BORDER[1];
+  // Meilenstein-Ränge (Veteran ab 3, Meister ab 5) bekommen einen eigenen Rahmen.
+  const rankFrame = !locked && winsInLineup != null ? rankFrameColor(rankForWins(winsInLineup)) : null;
+  const borderColor = locked ? "rgba(255,255,255,0.1)" : (rankFrame ?? LEVEL_BORDER[1]);
 
   return (
     <button
@@ -69,6 +72,7 @@ export default function CardTile({
         {isCommunity(card.rarity) && <CommunityRibbon />}
         {!locked && winsInLineup != null && <RankBadge wins={winsInLineup} />}
         <CardPlate card={card} locked={locked} />
+        {!locked && winsInLineup != null && <RankMiniBar wins={winsInLineup} />}
         {!locked && isNew && (
           <span
             className="absolute -left-6 top-2.5 z-[7] w-20 text-center text-[8px] font-black uppercase tracking-widest text-black py-0.5 shadow-md"

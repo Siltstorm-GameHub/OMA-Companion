@@ -11,12 +11,13 @@
 
 import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import confetti from "canvas-confetti";
 import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { GemsBattleTarget } from "@/lib/gems/start-battle-client";
+import { RankProgressCard } from "./CardRank";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
@@ -38,7 +39,17 @@ export interface GemsResultDetails {
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
   /** Fehlt bei Ergebnissen aus der Zeit vor den Karten-Rängen. */
-  rankUps?: { name: string; rank: number }[];
+  rankUps?: { name: string; rank: number; title?: string | null }[];
+  /** Rang-Punkte vor/nach dem Kampf pro mitgekämpfter Karte (siehe lib/gems/card-ranks.ts). */
+  cardProgress?: {
+    cardId: string;
+    name: string;
+    class: "TANK" | "DAMAGE_DEALER" | "SUPPORT";
+    imageUrl: string | null;
+    pointsBefore: number;
+    pointsAfter: number;
+    flawless: boolean;
+  }[];
   relicGranted?: { name: string; description: string } | null;
   cosmeticsUnlocked?: string[];
 }
@@ -60,7 +71,11 @@ export default function GemsResultScreen({
   const [starting, setStarting] = useState<"retry" | "next" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const reduceMotion = useReducedMotion();
+  const hasRankUp = (details?.rankUps ?? []).length > 0;
+
   useEffect(() => {
+    if (reduceMotion) return;
     if (outcome === "win") {
       confetti({
         particleCount: 160,
@@ -69,7 +84,21 @@ export default function GemsResultScreen({
         colors: ["#2dd4bf", "#14b8a6", "#fde68a", "#ffffff"],
       });
     }
-  }, [outcome]);
+    if (hasRankUp) {
+      // Rang-Aufstieg: goldener Sternenregen, wenn der Karten-Balken voll läuft (auch nach Niederlagen).
+      const timer = setTimeout(() => {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          startVelocity: 28,
+          origin: { y: 0.6 },
+          shapes: ["star"],
+          colors: ["#fbbf24", "#fde68a", "#ffffff"],
+        });
+      }, 1600);
+      return () => clearTimeout(timer);
+    }
+  }, [outcome, hasRankUp, reduceMotion]);
 
   async function play(kind: "retry" | "next", target: GemsBattleTarget) {
     if (!onPlay) return;
@@ -231,22 +260,39 @@ export default function GemsResultScreen({
           </motion.div>
         )}
 
-        {(details?.rankUps ?? []).length > 0 && (
-          <motion.div
+        {(details?.cardProgress ?? []).length > 0 && (
+          <motion.section
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5 }}
-            className="w-full rounded-xl px-3 py-2.5 space-y-1 text-left bg-teal-500/10 ring-1 ring-teal-500/30"
+            className="w-full glass rounded-xl px-3 py-2.5 space-y-2 text-left"
+            aria-label="Karten-Fortschritt"
           >
-            {details!.rankUps!.map((r) => (
-              <p key={r.name} className="flex items-center gap-1.5 text-xs text-teal-200">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Karten-Fortschritt</p>
+            <ul className="grid grid-cols-5 gap-1.5">
+              {details!.cardProgress!.map((c) => (
+                <RankProgressCard
+                  key={c.cardId}
+                  name={c.name}
+                  unitClass={c.class}
+                  imageUrl={c.imageUrl}
+                  pointsBefore={c.pointsBefore}
+                  pointsAfter={c.pointsAfter}
+                  flawless={c.flawless}
+                />
+              ))}
+            </ul>
+            {(details?.rankUps ?? []).map((r) => (
+              <p key={r.name} className="flex items-center gap-1.5 text-xs text-teal-200" role="status">
                 <ArrowUp className="w-3.5 h-3.5 shrink-0" />
                 <span>
                   <span className="font-semibold text-white">{r.name}</span> erreicht Rang {r.rank} — mehr Leben und Angriff
+                  {r.title ? <> · neuer Titel <span className="font-semibold text-amber-300">{r.title}</span></> : null}
                 </span>
               </p>
             ))}
-          </motion.div>
+            <p className="text-[10px] text-gray-500">Sieg +1 · makellos +1,5 ✦ · Niederlage +0,5</p>
+          </motion.section>
         )}
 
         {details?.rewards && (cappedLines.length > 0 || details.rewards.capReached) && (

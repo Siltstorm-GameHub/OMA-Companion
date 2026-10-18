@@ -58,7 +58,7 @@ import { grantGemsRewards, type GemsRewardSummary } from "@/lib/gems/daily";
 import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip, weeklyModifierFor } from "@/lib/gems/tower-rules";
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
-import { rankForWins, withRankBonus } from "@/lib/gems/card-ranks";
+import { LOSS_POINTS, rankForWins, rankPoints, rankTitle, withRankBonus } from "@/lib/gems/card-ranks";
 import { heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
 import { cosmeticsUnlockedBy } from "@/lib/gems/hero/cosmetics";
 import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
@@ -173,8 +173,18 @@ export interface GemsBattleResult {
   retry: { kind: "campaign"; levelId: string } | { kind: "daily" };
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
-  /** Karten, die durch diesen Sieg einen neuen Rang erreicht haben (siehe card-ranks.ts). */
-  rankUps: { name: string; rank: number }[];
+  /** Karten, die durch diesen Kampf einen neuen Rang erreicht haben; `title` bei neuem Meilenstein-Titel. */
+  rankUps: { name: string; rank: number; title: string | null }[];
+  /** Rang-Fortschritt jeder mitgekämpften Karte (Rang-Punkte vor/nach dem Kampf, siehe card-ranks.ts). */
+  cardProgress: {
+    cardId: string;
+    name: string;
+    class: BattleUnitDefinition["class"];
+    imageUrl: string | null;
+    pointsBefore: number;
+    pointsAfter: number;
+    flawless: boolean;
+  }[];
   /** Relikt für den ersten Sieg überhaupt über diesen Turmwächter (siehe relics.ts). */
   relicGranted: { name: string; description: string } | null;
   /** Kosmetik für „Mein Held“, die dieser Sieg neu freigeschaltet hat (Rang, Turmwächter). */
@@ -291,7 +301,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
   // Monats-Quest "BATTLE_CARD_DUEL" zählt jeden beendeten Kampf (Sieg oder Niederlage).
   updateQuestProgress(live.playerAId, "BATTLE_CARD_DUEL", 1).catch(() => {});
 
-  const rankUps = state.winner === "A" ? await recordLineupWin(live.playerAId, state) : [];
+  const { rankUps, cardProgress } = await recordLineupResult(live.playerAId, state, state.winner === "A");
 
   const tournament = parseTournamentMode(live.mode);
   if (tournament) {
@@ -307,7 +317,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       });
     }
   } else {
-    const result = await settleGemsBattle(live, state, rankUps);
+    const result = await settleGemsBattle(live, state, rankUps, cardProgress);
     // Ergebnis am Battle-Datensatz speichern, damit der Client es direkt im nächsten
     // Snapshot im Kampfende-Screen zeigen kann.
     await prisma.battle.update({
@@ -324,7 +334,8 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
 async function settleGemsBattle(
   live: LiveBattle,
   state: InteractiveBattleState,
-  rankUps: GemsBattleResult["rankUps"]
+  rankUps: GemsBattleResult["rankUps"],
+  cardProgress: GemsBattleResult["cardProgress"]
 ): Promise<{ campaignResult: LiveBattleSnapshot["campaignResult"]; gemsResult: GemsBattleResult }> {
   const userId = live.playerAId;
   const won = state.winner === "A";
@@ -405,8 +416,9 @@ async function settleGemsBattle(
       next,
       challengeScore,
       rankUps,
+      cardProgress,
       relicGranted,
-      cosmeticsUnlocked: won ? await newCosmeticUnlocks(userId, state, rankUps, guardianFirstStage) : [],
+      cosmeticsUnlocked: won ? await newCosmeticUnlocks(userId, rankUps, cardProgress, guardianFirstStage) : [],
     },
   };
 }
@@ -416,17 +428,24 @@ async function settleGemsBattle(
  *  Community-Karte — nur die können Kosmetik tragen. */
 async function newCosmeticUnlocks(
   userId: string,
-  state: InteractiveBattleState,
   rankUps: GemsBattleResult["rankUps"],
+  cardProgress: GemsBattleResult["cardProgress"],
   guardianFirstStage: number | null
 ): Promise<string[]> {
   if (rankUps.length === 0 && guardianFirstStage === null) return [];
   const labels: string[] = [];
   if (rankUps.length > 0) {
-    const lineup = new Set(state.unitsA.map((u) => u.def.cardId));
-    const cards = await prisma.userCard.findMany({ where: { userId }, select: { cardId: true, winsInLineup: true } });
-    const maxAfter = cards.reduce((m, c) => Math.max(m, rankForWins(c.winsInLineup)), 0);
-    const maxBefore = cards.reduce((m, c) => Math.max(m, rankForWins(c.winsInLineup - (lineup.has(c.cardId) ? 1 : 0))), 0);
+    const pointsBefore = new Map(cardProgress.map((c) => [c.cardId, c.pointsBefore]));
+    const cards = await prisma.userCard.findMany({
+      where: { userId },
+      select: { cardId: true, winsInLineup: true, rankBonusHalves: true },
+    });
+    const maxAfter = cards.reduce((m, c) => Math.max(m, rankForWins(rankPoints(c.winsInLineup, c.rankBonusHalves))), 0);
+    const maxBefore = cards.reduce(
+      (m, c) =>
+        Math.max(m, rankForWins(pointsBefore.get(c.cardId) ?? rankPoints(c.winsInLineup, c.rankBonusHalves))),
+      0
+    );
     for (let rank = maxBefore + 1; rank <= maxAfter; rank++) labels.push(...cosmeticsUnlockedBy({ rankReached: rank }).map((u) => u.label));
   }
   if (guardianFirstStage !== null) labels.push(...cosmeticsUnlockedBy({ guardianStage: guardianFirstStage }).map((u) => u.label));
@@ -434,21 +453,62 @@ async function newCosmeticUnlocks(
   return labels;
 }
 
-/** Zählt einen Sieg für jede Karte, die mitgekämpft hat (Team A), und meldet Rangaufstiege. */
-async function recordLineupWin(userId: string, state: InteractiveBattleState): Promise<GemsBattleResult["rankUps"]> {
+/** Schreibt den Rang-Fortschritt jeder mitgekämpften Karte (Team A) gut: Sieg 1 Punkt, makelloser Sieg
+ *  (die Karte überlebt) +0,5, Niederlage/Unentschieden 0,5. Meldet Rangaufstiege und den Fortschritt. */
+async function recordLineupResult(
+  userId: string,
+  state: InteractiveBattleState,
+  won: boolean
+): Promise<Pick<GemsBattleResult, "rankUps" | "cardProgress">> {
   const cardIds = [...new Set(state.unitsA.map((u) => u.def.cardId))];
   const before = await prisma.userCard.findMany({
     where: { userId, cardId: { in: cardIds } },
-    select: { cardId: true, winsInLineup: true, card: { select: { name: true } } },
+    select: { cardId: true, winsInLineup: true, rankBonusHalves: true, card: { select: { name: true } } },
   });
-  if (before.length === 0) return [];
-  await prisma.userCard.updateMany({
-    where: { userId, cardId: { in: before.map((c) => c.cardId) } },
-    data: { winsInLineup: { increment: 1 } },
+  if (before.length === 0) return { rankUps: [], cardProgress: [] };
+
+  const flawlessIds = new Set(
+    cardIds.filter((id) => state.unitsA.filter((u) => u.def.cardId === id).every((u) => u.isAlive))
+  );
+  const hasBonus = (cardId: string) => !won || flawlessIds.has(cardId);
+  const gain = (cardId: string) => (won ? 1 : 0) + (hasBonus(cardId) ? LOSS_POINTS : 0);
+
+  if (won) {
+    await prisma.userCard.updateMany({
+      where: { userId, cardId: { in: before.map((c) => c.cardId) } },
+      data: { winsInLineup: { increment: 1 } },
+    });
+  }
+  const bonusIds = before.filter((c) => hasBonus(c.cardId)).map((c) => c.cardId);
+  if (bonusIds.length > 0) {
+    await prisma.userCard.updateMany({
+      where: { userId, cardId: { in: bonusIds } },
+      data: { rankBonusHalves: { increment: 1 } },
+    });
+  }
+
+  const rankUps: GemsBattleResult["rankUps"] = [];
+  const cardProgress = before.map((c) => {
+    const pointsBefore = rankPoints(c.winsInLineup, c.rankBonusHalves);
+    const pointsAfter = pointsBefore + gain(c.cardId);
+    const rankBefore = rankForWins(pointsBefore);
+    const rankAfter = rankForWins(pointsAfter);
+    if (rankAfter > rankBefore) {
+      const title = rankTitle(rankAfter);
+      rankUps.push({ name: c.card.name, rank: rankAfter, title: title !== rankTitle(rankBefore) ? title : null });
+    }
+    const unit = state.unitsA.find((u) => u.def.cardId === c.cardId)!.def;
+    return {
+      cardId: c.cardId,
+      name: c.card.name,
+      class: unit.class,
+      imageUrl: unit.imageUrl ?? null,
+      pointsBefore,
+      pointsAfter,
+      flawless: won && flawlessIds.has(c.cardId),
+    };
   });
-  return before
-    .filter((c) => rankForWins(c.winsInLineup + 1) > rankForWins(c.winsInLineup))
-    .map((c) => ({ name: c.card.name, rank: rankForWins(c.winsInLineup + 1) }));
+  return { rankUps, cardProgress };
 }
 
 async function persistAndMaybeFinalize(live: LiveBattle, state: InteractiveBattleState) {
@@ -519,7 +579,7 @@ async function loadPlayerTeam(userId: string, options: { withRanks?: boolean } =
         resolveCardImageUrl(uc.card, avatarByDiscordId),
         resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
       ),
-      withRanks ? rankForWins(uc.winsInLineup) : 0
+      withRanks ? rankForWins(rankPoints(uc.winsInLineup, uc.rankBonusHalves)) : 0
     )
   );
 }
