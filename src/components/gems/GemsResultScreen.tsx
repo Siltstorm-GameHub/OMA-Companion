@@ -17,6 +17,7 @@ import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, T
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { GemsBattleTarget } from "@/lib/gems/start-battle-client";
+import { RankProgressRow } from "./CardRank";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
@@ -39,6 +40,7 @@ export interface GemsResultDetails {
   challengeScore: number | null;
   /** Fehlt bei Ergebnissen aus der Zeit vor den Karten-Rängen. */
   rankUps?: { name: string; rank: number }[];
+  cardProgress?: { name: string; winsBefore: number; winsAfter: number }[];
   relicGranted?: { name: string; description: string } | null;
   cosmeticsUnlocked?: string[];
 }
@@ -245,6 +247,20 @@ export default function GemsResultScreen({
                   <span className="font-semibold text-white">{r.name}</span> erreicht Rang {r.rank} — mehr Leben und Angriff
                 </span>
               </p>
+            ))}
+          </motion.div>
+        )}
+
+        {(details?.cardProgress ?? []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.55 }}
+            className="w-full glass rounded-xl px-3 py-2.5 space-y-2 text-left"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Karten-Fortschritt</p>
+            {details!.cardProgress!.map((c) => (
+              <RankProgressRow key={c.name} name={c.name} winsBefore={c.winsBefore} winsAfter={c.winsAfter} />
             ))}
           </motion.div>
         )}
