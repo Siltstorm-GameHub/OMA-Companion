@@ -39,7 +39,7 @@ import { computeInitiativeOrder } from "./initiative";
 import { triggerPassiveForUnit, triggerPassivesForAll } from "./passives";
 import { createRng, randomSeed } from "./rng";
 import { createTeamState } from "./stats";
-import type { ActionType, BattleLogEntry, BattleUnitDefinition, BattleUnitState, BattleWinner, TeamId } from "./types";
+import type { ActionType, BattleLogEntry, BattleUnitDefinition, BattleUnitState, BattleWinner, TeamId, UnitClass } from "./types";
 
 /** Vom Spieler gesteuertes Team — Team B sind immer KI-gesteuerte Monster. */
 const PLAYER_TEAM: TeamId = "A";
@@ -69,6 +69,10 @@ export interface InteractiveBattleState {
    *  `boardGrid`, genauso persistent über den gesamten Kampfverlauf. */
   boardSpecials: SpecialGrid | null;
   boardRngState: number;
+  /** Vom Spieler (Team A) im Kampf gematchte Steine je Klasse, inkl. Kaskaden und Sonder-Stein-Räumungen
+   *  — Grundlage der Karten-XP (siehe battleXp in lib/gems/card-ranks.ts). Fehlt bei Kämpfen aus der Zeit
+   *  davor. */
+  matchedGems?: Record<UnitClass, number>;
   /** Das Brett für den GERADE wartenden Spieler-Zug — Grid/RngState werden beim
    *  Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt) und beim
    *  Verarbeiten des Zugs wieder geleert. `appliedSwaps` hält den bisherigen
@@ -130,6 +134,7 @@ export function createInteractiveState(
     boardSpecials: initialBoard.specials,
     boardRngState: initialBoard.rngState,
     pendingBoard: null,
+    matchedGems: { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 },
   };
 }
 
@@ -186,6 +191,13 @@ function applyBoardRage(
   state.boardGrid = result.finalGrid;
   state.boardSpecials = result.finalSpecials;
   state.boardRngState = result.finalRngState;
+
+  if (teamId === PLAYER_TEAM) {
+    const matched = (state.matchedGems ??= { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
+    for (const grant of result.rawGrants) {
+      if (grant.targetClass !== "ALL" && grant.tileCount) matched[grant.targetClass] += grant.tileCount;
+    }
+  }
 
   let grants = result.rageGrants;
   if (result.totalRageGranted > MAX_BOARD_RAGE_PER_TURN && result.totalRageGranted > 0) {

@@ -7,7 +7,7 @@
 // RankMiniBar: schmaler Balken am Rand einer Kachel.
 // RankProgress: Rang, Titel, Bonus und Fortschritt zum nächsten Rang in der Detailansicht.
 // RankProgressCard: Karte im Kampfende-Screen mit animiertem Balken und Aufstiegs-Effekt.
-// Fortschritt wird in XP gezählt (Sieg 100, makelloser Sieg 150, Niederlage 50, siehe card-ranks.ts).
+// Fortschritt wird in XP gezählt (je gematchtem Gem der Klasse, siehe battleXp in card-ranks.ts).
 
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -138,7 +138,7 @@ export function RankProgress({ xp, baseHp, baseAttack }: { xp: number; baseHp?: 
         <>
           <ProgressBar share={progress.share} label={label} />
           <p className="text-[11px] text-gray-500">
-            {formatXp(xp)} XP · {label} (Sieg +100 XP, makelloser Sieg +150, Niederlage +50 — in der Startaufstellung).
+            {formatXp(xp)} XP · {label} (2 XP je gematchtem Gem der Klasse, Niederlage halb, makelloser Sieg +50 — in der Startaufstellung).
           </p>
         </>
       ) : (
@@ -157,6 +157,7 @@ export function RankProgressCard({
   heroLook,
   xpBefore,
   xpAfter,
+  gems,
   flawless,
   delay = 0.7,
 }: {
@@ -167,6 +168,8 @@ export function RankProgressCard({
   heroLook?: HeroLook;
   xpBefore: number;
   xpAfter: number;
+  /** Gematchte Gems der Klasse der Karte in diesem Kampf. */
+  gems: number;
   flawless: boolean;
   delay?: number;
 }) {
@@ -188,7 +191,7 @@ export function RankProgressCard({
   return (
     <motion.li
       className="relative flex flex-col items-center gap-1 min-w-0"
-      aria-label={`${caption}, ${formatXp(gained)} XP${flawless ? ", makelloser Sieg" : ""}`}
+      aria-label={`${caption}, ${formatXp(gained)} XP bei ${gems} gematchten Gems${flawless ? ", makelloser Sieg" : ""}`}
       animate={leveledUp && !reduceMotion ? { scale: [1, 1.08, 1] } : undefined}
       transition={{ duration: 0.5, delay: delay + 0.9 }}
     >
@@ -249,6 +252,9 @@ export function RankProgressCard({
       <span className={`text-[11px] font-bold tabular-nums ${flawless ? "text-teal-300" : "text-gray-400"}`} aria-hidden>
         +{formatXp(gained)} XP
         {flawless ? " ✦" : ""}
+      </span>
+      <span className="text-[10px] text-gray-500 tabular-nums -mt-0.5" aria-hidden>
+        {gems} Gems
       </span>
     </motion.li>
   );

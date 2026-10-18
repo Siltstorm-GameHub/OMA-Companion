@@ -30,7 +30,7 @@ export default async function LineupPage() {
 
   const cards = userCards.map((uc) => ({
     cardId: uc.cardId,
-    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves),
+    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves, uc.gemXp),
     card: toCardData(uc.card, avatarByDiscordId),
   }));
 

@@ -1,9 +1,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  battleXp,
   FLAWLESS_XP,
   formatXp,
-  LOSS_XP,
+  MAX_BATTLE_XP,
+  MIN_BATTLE_XP,
   MAX_RANK,
   nextRankProgress,
   rankBonusPercent,
@@ -12,7 +14,6 @@ import {
   rankMultiplier,
   cardXp,
   rankTitle,
-  WIN_XP,
   withRankBonus,
 } from "./card-ranks";
 
@@ -39,14 +40,26 @@ describe("Karten-Ränge", () => {
     assert.deepEqual(unit, { baseHp: 1100, baseAttack: 110, baseDefense: 50 });
   });
 
-  test("XP: Sieg 100, halbe Siege aus Niederlagen/makellosen Siegen je 50", () => {
+  test("Gesamt-XP: alter Stand (Sieg 100, halber Sieg 50) plus Gem-XP", () => {
     assert.equal(cardXp(4, 1), 450);
+    assert.equal(cardXp(4, 1, 60), 510);
     assert.equal(rankForXp(cardXp(4, 1)), 0);
     assert.equal(rankForXp(cardXp(4, 2)), 1);
     assert.equal(nextRankProgress(cardXp(2, 1))?.xpNeeded, 250);
     assert.equal(formatXp(250), "250");
-    assert.equal(WIN_XP + FLAWLESS_XP, 150);
-    assert.equal(LOSS_XP, 50);
+  });
+
+  test("Kampf-XP richten sich nach den gematchten Gems der Klasse", () => {
+    assert.equal(battleXp({ gems: 50, won: true, flawless: false }), 100);
+    assert.equal(battleXp({ gems: 20, won: true, flawless: false }), 40);
+    assert.ok(battleXp({ gems: 60, won: true, flawless: false }) > battleXp({ gems: 30, won: true, flawless: false }));
+    assert.equal(battleXp({ gems: 50, won: false, flawless: false }), 50);
+    assert.equal(battleXp({ gems: 50, won: true, flawless: true }), 100 + FLAWLESS_XP);
+    // flawless zählt nur bei einem Sieg
+    assert.equal(battleXp({ gems: 50, won: false, flawless: true }), 50);
+    // Minimum bei 0 Gems, Deckel bei sehr vielen
+    assert.equal(battleXp({ gems: 0, won: true, flawless: false }), MIN_BATTLE_XP);
+    assert.equal(battleXp({ gems: 10_000, won: true, flawless: false }), MAX_BATTLE_XP);
   });
 
   test("Meilenstein-Titel und Rahmen ab Rang 3 und 5", () => {

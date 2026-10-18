@@ -88,12 +88,12 @@ export default async function GemsPage() {
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
     acquiredAt: uc.acquiredAt.toISOString(),
-    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves),
+    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves, uc.gemXp),
     card: toCardData(uc.card, avatarByDiscordId),
   }));
   const lineupCards = ownedUserCards
     .filter((uc) => uc.inLineup)
-    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), xp: cardXp(uc.winsInLineup, uc.rankBonusHalves) }));
+    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), xp: cardXp(uc.winsInLineup, uc.rankBonusHalves, uc.gemXp) }));
 
   const coins = currentUser?.points ?? 0;
   const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);

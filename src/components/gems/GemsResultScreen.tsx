@@ -51,6 +51,7 @@ export interface GemsResultDetails {
     heroLook?: HeroLook;
     xpBefore: number;
     xpAfter: number;
+    gems: number;
     flawless: boolean;
   }[];
   relicGranted?: { name: string; description: string } | null;
@@ -284,6 +285,7 @@ export default function GemsResultScreen({
                   heroLook={c.heroLook}
                   xpBefore={c.xpBefore}
                   xpAfter={c.xpAfter}
+                  gems={c.gems}
                   flawless={c.flawless}
                 />
               ))}
@@ -297,7 +299,7 @@ export default function GemsResultScreen({
                 </span>
               </p>
             ))}
-            <p className="text-[10px] text-gray-500">Sieg +100 XP · makellos +150 ✦ · Niederlage +50</p>
+            <p className="text-[10px] text-gray-500">Je gematchtem Gem deiner Klasse +2 XP · Niederlage halb · makellos +50 ✦</p>
           </motion.section>
         )}
 

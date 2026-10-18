@@ -2,16 +2,25 @@
 // OMA Gems — Karten-Ränge durch Erfahrungspunkte (XP)
 // ============================================
 // Jede Karte sammelt in der Startaufstellung XP und steigt damit auf — keine Duplikate, keine
-// Münzen, kein Kaufen: Fortschritt entsteht nur durchs Spielen. Ein Sieg gibt WIN_XP, ein makelloser
-// Sieg (die Karte überlebt) zusätzlich FLAWLESS_XP, eine Niederlage oder ein Unentschieden LOSS_XP.
-// Gespeichert werden Siege (UserCard.winsInLineup) und halbe Siege (rankBonusHalves); die XP
-// leitet cardXp daraus ab, es gibt kein eigenes XP-Feld. Jeder Rang gibt der Karte
+// Münzen, kein Kaufen: Fortschritt entsteht nur durchs Spielen. Die XP eines Kampfes richten sich
+// danach, wie viele Gems der Klasse der Karte der Spieler gematcht hat (battleXp): XP_PER_GEM je
+// Gem, bei Niederlage die Hälfte, bei einem makellosen Sieg (die Karte überlebt) FLAWLESS_XP extra.
+// Karten einer Klasse bekommen dieselben XP; wer wenig für seine Klasse matcht, steigt langsamer
+// auf. UserCard.gemXp hält diese XP; winsInLineup/rankBonusHalves sind der alte Stand aus der Zeit
+// davor (Sieg 100, halber Sieg 50 XP) und zählen weiter mit (cardXp). Jeder Rang gibt der Karte
 // RANK_BONUS_PER_RANK mehr Leben und Angriff, höchstens MAX_RANK Ränge. Das verschiebt die Grenze
 // im Endlos-Turm (+4 % je Stufe) um etwa 5–6 Stufen.
 
-export const WIN_XP = 100;
-export const LOSS_XP = 50;
+export const XP_PER_GEM = 2;
+/** Niederlage/Unentschieden: dieser Anteil der Gem-XP. */
+export const LOSS_XP_FACTOR = 0.5;
+/** Zusatz-XP für einen Sieg, in dem die Karte überlebt hat. */
 export const FLAWLESS_XP = 50;
+/** Teilnahme-Minimum und Obergrenze der XP einer Karte pro Kampf. */
+export const MIN_BATTLE_XP = 10;
+export const MAX_BATTLE_XP = 250;
+/** Umrechnung des alten Systems (UserCard.winsInLineup / rankBonusHalves) in XP. */
+export const LEGACY_WIN_XP = 100;
 
 /** XP, ab denen Rang 1, 2, … erreicht ist (entspricht 5, 15, 35, 70 und 120 Siegen). */
 export const RANK_THRESHOLDS = [500, 1500, 3500, 7000, 12000] as const;
@@ -38,9 +47,16 @@ export function rankFrameColor(rank: number): string | null {
   return milestoneFor(rank)?.frame ?? null;
 }
 
-/** XP einer Karte aus Siegen und halben Siegen (UserCard.winsInLineup / rankBonusHalves). */
-export function cardXp(wins: number, bonusHalves: number): number {
-  return wins * WIN_XP + bonusHalves * (WIN_XP / 2);
+/** Gesamt-XP einer Karte: alter Stand aus Siegen/halben Siegen plus Gem-XP (UserCard). */
+export function cardXp(wins: number, bonusHalves: number, gemXp = 0): number {
+  return wins * LEGACY_WIN_XP + bonusHalves * (LEGACY_WIN_XP / 2) + gemXp;
+}
+
+/** XP einer Karte für einen Kampf: `gems` = vom Spieler gematchte Gems ihrer Klasse. */
+export function battleXp({ gems, won, flawless }: { gems: number; won: boolean; flawless: boolean }): number {
+  const base = Math.max(0, gems) * XP_PER_GEM * (won ? 1 : LOSS_XP_FACTOR);
+  const bonus = won && flawless ? FLAWLESS_XP : 0;
+  return Math.min(MAX_BATTLE_XP, Math.max(MIN_BATTLE_XP, Math.round(base))) + bonus;
 }
 
 /** XP als Text: „150“ (immer ganze Zahlen, aufgerundet). */
