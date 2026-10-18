@@ -1,21 +1,31 @@
 // ============================================
-// OMA Gems — Karten-Ränge durch Einsätze
+// OMA Gems — Karten-Ränge durch Erfahrungspunkte (XP)
 // ============================================
-// Jede Karte steigt durch Einsätze in der Startaufstellung auf — keine Duplikate, keine Münzen,
-// kein Kaufen: Fortschritt entsteht nur durchs Spielen. Ein Sieg zählt 1 Punkt, ein makelloser Sieg
-// (die Karte überlebt) 1,5, eine Niederlage oder ein Unentschieden 0,5 (UserCard.winsInLineup +
-// rankBonusHalves, siehe rankPoints). Jeder Rang gibt
-// der Karte RANK_BONUS_PER_RANK mehr Leben und Angriff, höchstens MAX_RANK Ränge. Das verschiebt
-// die Grenze im Endlos-Turm (+4 % je Stufe) um etwa 5–6 Stufen.
+// Jede Karte sammelt in der Startaufstellung XP und steigt damit auf — keine Duplikate, keine
+// Münzen, kein Kaufen: Fortschritt entsteht nur durchs Spielen. Die XP eines Kampfes richten sich
+// danach, wie viele Gems der Klasse der Karte der Spieler gematcht hat (battleXp): XP_PER_GEM je
+// Gem, bei Niederlage die Hälfte, bei einem makellosen Sieg (die Karte überlebt) FLAWLESS_XP extra.
+// Karten einer Klasse bekommen dieselben XP; wer wenig für seine Klasse matcht, steigt langsamer
+// auf. UserCard.gemXp hält diese XP; winsInLineup/rankBonusHalves sind der alte Stand aus der Zeit
+// davor (Sieg 100, halber Sieg 50 XP) und zählen weiter mit (cardXp). Jeder Rang gibt der Karte
+// RANK_BONUS_PER_RANK mehr Leben und Angriff, höchstens MAX_RANK Ränge. Das verschiebt die Grenze
+// im Endlos-Turm (+4 % je Stufe) um etwa 5–6 Stufen.
 
-/** Siege in der Startaufstellung, ab denen Rang 1, 2, … erreicht ist. */
-export const RANK_THRESHOLDS = [5, 15, 35, 70, 120] as const;
+export const XP_PER_GEM = 2;
+/** Niederlage/Unentschieden: dieser Anteil der Gem-XP. */
+export const LOSS_XP_FACTOR = 0.5;
+/** Zusatz-XP für einen Sieg, in dem die Karte überlebt hat. */
+export const FLAWLESS_XP = 50;
+/** Teilnahme-Minimum und Obergrenze der XP einer Karte pro Kampf. */
+export const MIN_BATTLE_XP = 10;
+export const MAX_BATTLE_XP = 250;
+/** Umrechnung des alten Systems (UserCard.winsInLineup / rankBonusHalves) in XP. */
+export const LEGACY_WIN_XP = 100;
+
+/** XP, ab denen Rang 1, 2, … erreicht ist (entspricht 5, 15, 35, 70 und 120 Siegen). */
+export const RANK_THRESHOLDS = [500, 1500, 3500, 7000, 12000] as const;
 export const MAX_RANK = RANK_THRESHOLDS.length;
 export const RANK_BONUS_PER_RANK = 0.05;
-
-/** Punkte für eine Niederlage/ein Unentschieden und Zusatz für einen makellosen Sieg (in Siegen). */
-export const LOSS_POINTS = 0.5;
-export const FLAWLESS_BONUS = 0.5;
 
 /** Meilenstein-Titel: ab diesem Rang trägt die Karte den Titel (und einen besonderen Rahmen). */
 const RANK_TITLES: { rank: number; title: string; frame: string }[] = [
@@ -37,15 +47,21 @@ export function rankFrameColor(rank: number): string | null {
   return milestoneFor(rank)?.frame ?? null;
 }
 
-/** Rang-Punkte aus Siegen und halben Punkten (UserCard.winsInLineup / rankBonusHalves). */
-export function rankPoints(wins: number, bonusHalves: number): number {
-  return wins + bonusHalves / 2;
+/** Gesamt-XP einer Karte: alter Stand aus Siegen/halben Siegen plus Gem-XP (UserCard). */
+export function cardXp(wins: number, bonusHalves: number, gemXp = 0): number {
+  return wins * LEGACY_WIN_XP + bonusHalves * (LEGACY_WIN_XP / 2) + gemXp;
 }
 
-/** „2“ oder „2,5“ — Punkte so, wie sie im Text stehen (halbe Punkte mit Komma). */
-export function formatPoints(points: number): string {
-  const halves = Math.ceil(points * 2 - 1e-9) / 2;
-  return Number.isInteger(halves) ? String(halves) : String(halves).replace(".", ",");
+/** XP einer Karte für einen Kampf: `gems` = vom Spieler gematchte Gems ihrer Klasse. */
+export function battleXp({ gems, won, flawless }: { gems: number; won: boolean; flawless: boolean }): number {
+  const base = Math.max(0, gems) * XP_PER_GEM * (won ? 1 : LOSS_XP_FACTOR);
+  const bonus = won && flawless ? FLAWLESS_XP : 0;
+  return Math.min(MAX_BATTLE_XP, Math.max(MIN_BATTLE_XP, Math.round(base))) + bonus;
+}
+
+/** XP als Text: „150“ (immer ganze Zahlen, aufgerundet). */
+export function formatXp(xp: number): string {
+  return String(Math.ceil(xp - 1e-9));
 }
 
 /** Bonus in Prozent, den ein Rang auf Leben und Angriff gibt. */
@@ -53,17 +69,17 @@ export function rankBonusPercent(rank: number): number {
   return Math.round((rankMultiplier(rank) - 1) * 100);
 }
 
-export function rankForWins(wins: number): number {
-  return RANK_THRESHOLDS.filter((t) => wins >= t).length;
+export function rankForXp(xp: number): number {
+  return RANK_THRESHOLDS.filter((t) => xp >= t).length;
 }
 
 /** Fortschritt zum nächsten Rang, oder null auf dem höchsten Rang. */
-export function nextRankProgress(wins: number): { nextRank: number; winsNeeded: number; share: number } | null {
-  const rank = rankForWins(wins);
+export function nextRankProgress(xp: number): { nextRank: number; xpNeeded: number; share: number } | null {
+  const rank = rankForXp(xp);
   if (rank >= MAX_RANK) return null;
   const from = rank === 0 ? 0 : RANK_THRESHOLDS[rank - 1];
   const to = RANK_THRESHOLDS[rank];
-  return { nextRank: rank + 1, winsNeeded: to - wins, share: (wins - from) / (to - from) };
+  return { nextRank: rank + 1, xpNeeded: to - xp, share: (xp - from) / (to - from) };
 }
 
 export function rankMultiplier(rank: number): number {

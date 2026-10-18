@@ -1963,12 +1963,15 @@ model UserCard {
   userId     String
   cardId     String
   inLineup   Boolean  @default(false) // Teil der aktuellen Startaufstellung (max. 5 pro User)
-  // Siege, in denen die Karte in der Startaufstellung mitgekämpft hat — bestimmt ihren Rang
+  // Siege, in denen die Karte in der Startaufstellung mitgekämpft hat — bis zum Gem-System Teil der XP, die ihren Rang bestimmen
   // (siehe lib/gems/card-ranks.ts).
   winsInLineup Int    @default(0)
-  // Halbe Rang-Punkte: +1 (= 0,5 Siege) je Niederlage/Unentschieden in der Startaufstellung und je
-  // makellosem Sieg (Karte überlebt). Rang-Punkte = winsInLineup + rankBonusHalves / 2.
+  // Halbe Siege (je 50 XP): früheres Punktesystem (Sieg 100, Niederlage/makellos 50), wird nicht mehr
+  // erhöht — der alte Stand bleibt als Start-XP erhalten.
   rankBonusHalves Int @default(0)
+  // XP aus den Kämpfen seit dem Gem-System: je gematchtem Gem der Klasse der Karte (siehe
+  // battleXp in lib/gems/card-ranks.ts). Karten-XP = winsInLineup * 100 + rankBonusHalves * 50 + gemXp (cardXp).
+  gemXp Int @default(0)
   acquiredAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])

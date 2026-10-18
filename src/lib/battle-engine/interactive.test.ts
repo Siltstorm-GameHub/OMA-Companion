@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { advance, applyUltimateInterrupt, createInteractiveState } from "./interactive";
+import { findHintMove } from "./board-match3";
 import { puzzleMonsterRoster } from "../gems/puzzle-monsters";
 
 function newBattle() {
@@ -47,5 +48,19 @@ describe("OMA Gems: Kampf-Stepper", () => {
     const monster = state.unitsB[0];
     monster.rage = 200;
     assert.equal(applyUltimateInterrupt(state, monster.instanceId).applied, false);
+  });
+
+  test("gematchte Steine werden je Klasse mitgezählt (Grundlage der Karten-XP)", () => {
+    const { state, pendingDecision } = newBattle();
+    assert.deepEqual(state.matchedGems, { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
+    const board = pendingDecision!.board!;
+    const move = findHintMove(board.grid, board.specials)!;
+    assert.ok(move, "Zug mit Match erwartet");
+    const gemClass = board.grid[move.fromCell];
+    const other = board.grid[move.toCell];
+    const next = advance(state, { boardSwaps: [move] });
+    const total = Object.values(next.state.matchedGems!).reduce((a, b) => a + b, 0);
+    assert.ok(total >= 3, "mindestens ein 3er-Match gezählt");
+    assert.ok(next.state.matchedGems![gemClass] + next.state.matchedGems![other] >= 3);
   });
 });

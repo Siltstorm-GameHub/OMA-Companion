@@ -7,16 +7,16 @@
 // RankMiniBar: schmaler Balken am Rand einer Kachel.
 // RankProgress: Rang, Titel, Bonus und Fortschritt zum nächsten Rang in der Detailansicht.
 // RankProgressCard: Karte im Kampfende-Screen mit animiertem Balken und Aufstiegs-Effekt.
-// Die „Siege“-Zahlen sind Rang-Punkte (Sieg 1, makelloser Sieg 1,5, Niederlage 0,5).
+// Fortschritt wird in XP gezählt (je gematchtem Gem der Klasse, siehe battleXp in card-ranks.ts).
 
 import { motion, useReducedMotion } from "motion/react";
 import {
-  formatPoints,
+  formatXp,
   MAX_RANK,
   nextRankProgress,
   RANK_THRESHOLDS,
   rankBonusPercent,
-  rankForWins,
+  rankForXp,
   rankTitle,
   withRankBonus,
 } from "@/lib/gems/card-ranks";
@@ -52,18 +52,18 @@ function ProgressBar({
   );
 }
 
-export function RankBadge({ wins, className = "top-1 right-1" }: { wins: number; className?: string }) {
-  const rank = rankForWins(wins);
+export function RankBadge({ xp, className = "top-1 right-1" }: { xp: number; className?: string }) {
+  const rank = rankForXp(xp);
   if (rank === 0) {
     // Noch kein Rang: dezent anzeigen, wie weit es bis Rang 1 ist („2/5“).
     const first = RANK_THRESHOLDS[0];
     return (
       <span
         className={`absolute z-[8] rounded-md bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-gray-400 tabular-nums pointer-events-none ${className}`}
-        title={`Noch kein Rang — ${Math.floor(wins)} von ${first} Punkten bis Rang 1`}
-        aria-label={`Noch kein Rang, ${Math.floor(wins)} von ${first} Punkten bis Rang 1`}
+        title={`Noch kein Rang — ${Math.floor(xp)} von ${first} XP bis Rang 1`}
+        aria-label={`Noch kein Rang, ${Math.floor(xp)} von ${first} XP bis Rang 1`}
       >
-        {Math.floor(wins)}/{first}
+        {Math.floor(xp)}/{first} XP
       </span>
     );
   }
@@ -82,10 +82,10 @@ export function RankBadge({ wins, className = "top-1 right-1" }: { wins: number;
 }
 
 /** Schmaler Fortschrittsbalken zum nächsten Rang am unteren Rand einer Karten-Kachel. */
-export function RankMiniBar({ wins }: { wins: number }) {
-  const progress = nextRankProgress(wins);
+export function RankMiniBar({ xp }: { xp: number }) {
+  const progress = nextRankProgress(xp);
   const label = progress
-    ? `Noch ${formatPoints(progress.winsNeeded)} Punkte bis Rang ${progress.nextRank}`
+    ? `Noch ${formatXp(progress.xpNeeded)} XP bis Rang ${progress.nextRank}`
     : "Höchster Rang erreicht";
   return (
     <div className="absolute inset-x-0 bottom-0 z-[9] pointer-events-none" title={label}>
@@ -96,13 +96,13 @@ export function RankMiniBar({ wins }: { wins: number }) {
 
 /** Rang, Titel, Bonus und Fortschritt in der Detailansicht. Mit `baseHp`/`baseAttack` auch die Werte
  *  mit dem aktuellen und dem nächsten Rang-Bonus. */
-export function RankProgress({ wins, baseHp, baseAttack }: { wins: number; baseHp?: number; baseAttack?: number }) {
-  const rank = rankForWins(wins);
-  const progress = nextRankProgress(wins);
+export function RankProgress({ xp, baseHp, baseAttack }: { xp: number; baseHp?: number; baseAttack?: number }) {
+  const rank = rankForXp(xp);
+  const progress = nextRankProgress(xp);
   const bonus = rankBonusPercent(rank);
   const title = rankTitle(rank);
   const label = progress
-    ? `Noch ${formatPoints(progress.winsNeeded)} Punkte bis Rang ${progress.nextRank}`
+    ? `Noch ${formatXp(progress.xpNeeded)} XP bis Rang ${progress.nextRank}`
     : "Höchster Rang erreicht";
   const showStats = baseHp != null && baseAttack != null;
   const now = showStats ? withRankBonus({ baseHp, baseAttack }, rank) : null;
@@ -138,7 +138,7 @@ export function RankProgress({ wins, baseHp, baseAttack }: { wins: number; baseH
         <>
           <ProgressBar share={progress.share} label={label} />
           <p className="text-[11px] text-gray-500">
-            {label} (Sieg 1, makelloser Sieg 1,5, Niederlage 0,5 — in der Startaufstellung).
+            {formatXp(xp)} XP · {label} (2 XP je gematchtem Gem der Klasse, Niederlage halb, makelloser Sieg +50 — in der Startaufstellung).
           </p>
         </>
       ) : (
@@ -148,15 +148,16 @@ export function RankProgress({ wins, baseHp, baseAttack }: { wins: number; baseH
   );
 }
 
-/** Karte im Kampfende-Screen: Bild, Punktegewinn und Balken, der von vorher nach nachher läuft.
+/** Karte im Kampfende-Screen: Bild, XP-Gewinn und Balken, der von vorher nach nachher läuft.
  *  Bei einem Aufstieg füllt sich der Balken, die Karte leuchtet und der neue Rang springt auf. */
 export function RankProgressCard({
   name,
   unitClass,
   imageUrl,
   heroLook,
-  pointsBefore,
-  pointsAfter,
+  xpBefore,
+  xpAfter,
+  gems,
   flawless,
   delay = 0.7,
 }: {
@@ -165,30 +166,32 @@ export function RankProgressCard({
   imageUrl: string | null;
   /** Cartoon-Held wie in Kampf und Sammlung; ohne ihn (alte Ergebnisse) das Bild bzw. Klassen-Icon. */
   heroLook?: HeroLook;
-  pointsBefore: number;
-  pointsAfter: number;
+  xpBefore: number;
+  xpAfter: number;
+  /** Gematchte Gems der Klasse der Karte in diesem Kampf. */
+  gems: number;
   flawless: boolean;
   delay?: number;
 }) {
   const reduceMotion = useReducedMotion();
-  const rankBefore = rankForWins(pointsBefore);
-  const rankAfter = rankForWins(pointsAfter);
+  const rankBefore = rankForXp(xpBefore);
+  const rankAfter = rankForXp(xpAfter);
   const leveledUp = rankAfter > rankBefore;
-  const from = nextRankProgress(pointsBefore);
-  const to = nextRankProgress(pointsAfter);
+  const from = nextRankProgress(xpBefore);
+  const to = nextRankProgress(xpAfter);
   const startShare = from?.share ?? 1;
   const endShare = leveledUp ? 1 : (to?.share ?? 1);
-  const gained = pointsAfter - pointsBefore;
+  const gained = xpAfter - xpBefore;
   const classConfig = getClassConfig(unitClass);
   const caption = leveledUp
     ? `${name} erreicht Rang ${rankAfter}`
     : to
-      ? `${name}: noch ${formatPoints(to.winsNeeded)} Punkte bis Rang ${to.nextRank}`
+      ? `${name}: noch ${formatXp(to.xpNeeded)} XP bis Rang ${to.nextRank}`
       : `${name}: höchster Rang`;
   return (
     <motion.li
       className="relative flex flex-col items-center gap-1 min-w-0"
-      aria-label={`${caption}, ${formatPoints(gained)} Punkte${flawless ? ", makelloser Sieg" : ""}`}
+      aria-label={`${caption}, ${formatXp(gained)} XP bei ${gems} gematchten Gems${flawless ? ", makelloser Sieg" : ""}`}
       animate={leveledUp && !reduceMotion ? { scale: [1, 1.08, 1] } : undefined}
       transition={{ duration: 0.5, delay: delay + 0.9 }}
     >
@@ -247,8 +250,11 @@ export function RankProgressCard({
         {name}
       </span>
       <span className={`text-[11px] font-bold tabular-nums ${flawless ? "text-teal-300" : "text-gray-400"}`} aria-hidden>
-        +{formatPoints(gained)}
+        +{formatXp(gained)} XP
         {flawless ? " ✦" : ""}
+      </span>
+      <span className="text-[10px] text-gray-500 tabular-nums -mt-0.5" aria-hidden>
+        {gems} Gems
       </span>
     </motion.li>
   );

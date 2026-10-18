@@ -11,7 +11,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { Card } from "@prisma/client";
-import { rankForWins, rankPoints } from "../card-ranks";
+import { rankForXp, cardXp } from "../card-ranks";
 import { parseEndlessStage } from "../endless-levels";
 import { earnedCosmetics, unavailableParts, unlockFor, type CosmeticSlot } from "./cosmetics";
 import { effectiveHeroLook, sanitizeHeroLook, type HeroClass, type HeroLook } from "./look";
@@ -27,7 +27,7 @@ export async function getOwnCommunityCard(userId: string): Promise<Card | null> 
 /** Fortschritt, aus dem erspielte Kosmetik abgeleitet wird. */
 async function cosmeticProgress(userId: string) {
   const [cards, guardians, seasons] = await Promise.all([
-    prisma.userCard.findMany({ where: { userId }, select: { winsInLineup: true, rankBonusHalves: true } }),
+    prisma.userCard.findMany({ where: { userId }, select: { winsInLineup: true, rankBonusHalves: true, gemXp: true } }),
     prisma.userCampaignProgress.findMany({
       where: { userId, completed: true, levelId: { startsWith: "endless-" } },
       select: { levelId: true },
@@ -48,7 +48,7 @@ async function cosmeticProgress(userId: string) {
     }
   }
   return {
-    maxCardRank: cards.reduce((max, c) => Math.max(max, rankForWins(rankPoints(c.winsInLineup, c.rankBonusHalves))), 0),
+    maxCardRank: cards.reduce((max, c) => Math.max(max, rankForXp(cardXp(c.winsInLineup, c.rankBonusHalves, c.gemXp))), 0),
     guardianStages,
     bestSeasonPlace,
   };
