@@ -4,6 +4,7 @@
 // Alles, was ein kurzer Besuch braucht: laufenden Kampf fortsetzen oder die nächste Stufe
 // starten, Münzen heute, Serie, Tages-Herausforderung, Wochen-Regel und wer direkt vor dir liegt.
 
+import { discardBattle, discardLegacyBattles, isStaleOpenBattle } from "@/lib/gems/battle-legacy";
 import { prisma } from "@/lib/prisma";
 import { getCampaignLevel, getCurrentLevel } from "./campaign";
 import { berlinDateKey, DAILY_CHALLENGE_COINS, weekIndex } from "./daily-rules";
@@ -33,12 +34,19 @@ export interface GemsPlayStatus {
 }
 
 async function activeBattleFor(userId: string): Promise<GemsPlayStatus["activeBattle"]> {
+  // Kämpfe aus älteren Spielversionen werden zurückgesetzt, statt „Kampf fortsetzen“ in einen Fehler laufen
+  // zu lassen (siehe battle-legacy.ts).
+  await discardLegacyBattles(userId);
   const live = await prisma.liveBattle.findFirst({
     where: { playerAId: userId, status: "active", OR: [{ mode: { startsWith: "CAMPAIGN_" } }, { mode: { startsWith: "DAILY_" } }] },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, mode: true },
+    select: { id: true, mode: true, status: true, updatedAt: true, stateJson: true },
   });
   if (!live) return null;
+  if (isStaleOpenBattle(live)) {
+    await discardBattle(live.id);
+    return null;
+  }
   if (live.mode.startsWith("DAILY_")) return { id: live.id, label: "Tages-Herausforderung" };
   const level = getCampaignLevel(live.mode.slice("CAMPAIGN_".length));
   return { id: live.id, label: level?.name ?? "Kampagne" };

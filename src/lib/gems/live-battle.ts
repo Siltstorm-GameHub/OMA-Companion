@@ -61,6 +61,7 @@ import { grantPack } from "@/lib/gems/packs";
 import { battleXp, rankForXp, cardXp, rankTitle, withRankBonus } from "@/lib/gems/card-ranks";
 import { effectiveHeroLook, heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
 import { cosmeticsUnlockedBy } from "@/lib/gems/hero/cosmetics";
+import { discardBattle, isStaleOpenBattle } from "@/lib/gems/battle-legacy";
 import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
 import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
 import { getEquippedRelicIds, grantRelic } from "@/lib/gems/relic-store";
@@ -279,6 +280,10 @@ async function requireAccess(liveBattleId: string, viewerId: string) {
   if (viewerId !== live.playerAId) throw new LiveBattleError("Kein Zugriff auf diesen Kampf.");
   if (!isSupportedMode(live.mode)) {
     throw new LiveBattleError("Dieser Kampf stammt aus einem abgeschalteten Spielmodus und lässt sich nicht mehr öffnen.");
+  }
+  if (isStaleOpenBattle(live)) {
+    await discardBattle(live.id);
+    throw new LiveBattleError("Dieser Kampf stammt aus einer älteren Version und wurde zurückgesetzt. Starte einen neuen Kampf.");
   }
   return live;
 }
