@@ -201,8 +201,11 @@ function applyBoardRage(
 
   if (teamId === PLAYER_TEAM) {
     const matched = (state.matchedGems ??= { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
-    for (const grant of result.rawGrants) {
-      if (grant.targetClass !== "ALL" && grant.tileCount) matched[grant.targetClass] += grant.tileCount;
+    // Gezählt wird, was tatsächlich zerstört wurde (pro Stein), nicht die Gruppengrößen der Grants:
+    // überlappende Gruppen (L-/T-Formen) und die stehenbleibende Zelle eines neuen Sonder-Steins würden
+    // sonst doppelt bzw. zu viel zählen.
+    for (const step of result.steps) {
+      for (const symbol of step.matchedClasses) matched[symbol] += 1;
     }
   }
 

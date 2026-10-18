@@ -138,7 +138,7 @@ export function RankProgress({ xp, baseHp, baseAttack }: { xp: number; baseHp?: 
         <>
           <ProgressBar share={progress.share} label={label} />
           <p className="text-[11px] text-gray-500">
-            {formatXp(xp)} XP · {label} (2 XP je gematchtem Gem der Klasse, Niederlage halb, makelloser Sieg +50 — in der Startaufstellung).
+            {formatXp(xp)} XP · {label} (1 XP je 4 zerstörten Gems der Klasse, Niederlage halb, Sieg +25, makellos +50 — in der Startaufstellung).
           </p>
         </>
       ) : (
@@ -191,7 +191,7 @@ export function RankProgressCard({
   return (
     <motion.li
       className="relative flex flex-col items-center gap-1 min-w-0"
-      aria-label={`${caption}, ${formatXp(gained)} XP bei ${gems} gematchten Gems${flawless ? ", makelloser Sieg" : ""}`}
+      aria-label={`${caption}, ${formatXp(gained)} XP bei ${gems} zerstörten Gems${flawless ? ", makelloser Sieg" : ""}`}
       animate={leveledUp && !reduceMotion ? { scale: [1, 1.08, 1] } : undefined}
       transition={{ duration: 0.5, delay: delay + 0.9 }}
     >

@@ -50,18 +50,23 @@ describe("OMA Gems: Kampf-Stepper", () => {
     assert.equal(applyUltimateInterrupt(state, monster.instanceId).applied, false);
   });
 
-  test("gematchte Steine werden je Klasse mitgezählt (Grundlage der Karten-XP)", () => {
-    const { state, pendingDecision } = newBattle();
-    assert.deepEqual(state.matchedGems, { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
-    const board = pendingDecision!.board!;
-    const move = findHintMove(board.grid, board.specials)!;
-    assert.ok(move, "Zug mit Match erwartet");
-    const gemClass = board.grid[move.fromCell];
-    const other = board.grid[move.toCell];
-    const next = advance(state, { boardSwaps: [move] });
-    const total = Object.values(next.state.matchedGems!).reduce((a, b) => a + b, 0);
-    assert.ok(total >= 3, "mindestens ein 3er-Match gezählt");
-    assert.ok(next.state.matchedGems![gemClass] + next.state.matchedGems![other] >= 3);
+  test("zerstörte Steine werden je Klasse gezählt (Grundlage der Karten-XP), ohne Doppelzählung", () => {
+    let current = newBattle();
+    assert.deepEqual(current.state.matchedGems, { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
+    let destroyed = 0;
+    for (let turn = 0; turn < 3 && !current.state.winner; turn++) {
+      const board = current.pendingDecision!.board!;
+      const move = findHintMove(board.grid, board.specials)!;
+      assert.ok(move, "Zug mit Match erwartet");
+      current = advance(current.state, { boardSwaps: [move] });
+      for (const step of current.state.lastBoardSteps!) {
+        assert.equal(step.matchedClasses.length, step.matchedCells.length);
+        destroyed += step.matchedCells.length;
+      }
+    }
+    const counted = Object.values(current.state.matchedGems!).reduce((a, b) => a + b, 0);
+    assert.ok(destroyed >= 3, "mindestens ein 3er-Match");
+    assert.equal(counted, destroyed, "gezählt = tatsächlich zerstört");
   });
 
   test("das Brett bleibt über die Züge bestehen: die Server-Schritte enden genau im nächsten Brett", () => {

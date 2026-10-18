@@ -82,6 +82,9 @@ export interface RageGrant {
  *  BoardMatch3.tsx), statt nur das Endergebnis zu zeigen. */
 export interface BoardAnimationStep {
   matchedCells: number[];
+  /** Klasse jedes zerstörten Steins (parallel zu `matchedCells`, aus dem Brett VOR dem Entfernen) —
+   *  Grundlage der Karten-XP (siehe applyBoardRage in interactive.ts). */
+  matchedClasses: TileClassSymbol[];
   gridAfter: BoardGrid;
   /** Sonder-Steine, die in DIESER Kaskaden-Runde neu entstanden sind (Zelle +
    *  Art) — ihre Zelle ist bewusst NICHT Teil von `matchedCells` (sie überlebt
@@ -461,9 +464,11 @@ function resolveCascades(
     }
 
     for (const [cell, kind] of specialsCreatedByCell) specials[cell] = kind;
+    const matchedClasses = [...matchedCells].map((cell) => grid[cell]);
     removeAndCascade(grid, specials, matchedCells, rng);
     steps.push({
       matchedCells: [...matchedCells],
+      matchedClasses,
       gridAfter: [...grid],
       specialsCreated: [...specialsCreatedByCell].map(([cell, kind]) => ({ cell, kind })),
       specialsActivated: activatedSpecialCells,
@@ -536,10 +541,12 @@ function resolveTapActivation(
     }
   }
 
+  const matchedClasses = [...destroyedCells].map((destroyed) => grid[destroyed]);
   removeAndCascade(grid, specials, destroyedCells, rng);
   const steps: BoardAnimationStep[] = [
     {
       matchedCells: [...destroyedCells],
+      matchedClasses,
       gridAfter: [...grid],
       specialsCreated: [],
       specialsActivated: activatedSpecialCells,

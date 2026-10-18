@@ -6,6 +6,7 @@ import {
   formatXp,
   MAX_BATTLE_XP,
   MIN_BATTLE_XP,
+  WIN_XP,
   MAX_RANK,
   nextRankProgress,
   rankBonusPercent,
@@ -49,17 +50,21 @@ describe("Karten-Ränge", () => {
     assert.equal(formatXp(250), "250");
   });
 
-  test("Kampf-XP richten sich nach den gematchten Gems der Klasse", () => {
-    assert.equal(battleXp({ gems: 50, won: true, flawless: false }), 100);
-    assert.equal(battleXp({ gems: 20, won: true, flawless: false }), 40);
-    assert.ok(battleXp({ gems: 60, won: true, flawless: false }) > battleXp({ gems: 30, won: true, flawless: false }));
-    assert.equal(battleXp({ gems: 50, won: false, flawless: false }), 50);
-    assert.equal(battleXp({ gems: 50, won: true, flawless: true }), 100 + FLAWLESS_XP);
-    // flawless zählt nur bei einem Sieg
-    assert.equal(battleXp({ gems: 50, won: false, flawless: true }), 50);
-    // Minimum bei 0 Gems, Deckel bei sehr vielen
-    assert.equal(battleXp({ gems: 0, won: true, flawless: false }), MIN_BATTLE_XP);
-    assert.equal(battleXp({ gems: 10_000, won: true, flawless: false }), MAX_BATTLE_XP);
+  test("Kampf-XP richten sich nach den zerstörten Gems der Klasse", () => {
+    // Sieg: 1 XP je 4 Gems + 25 Siegbonus
+    assert.equal(battleXp({ gems: 300, won: true, flawless: false }), 75 + WIN_XP);
+    assert.equal(battleXp({ gems: 300, won: true, flawless: true }), 75 + WIN_XP + FLAWLESS_XP);
+    assert.ok(battleXp({ gems: 400, won: true, flawless: false }) > battleXp({ gems: 300, won: true, flawless: false }));
+    // Niederlage: halbe Gem-XP, kein Siegbonus, kein flawless
+    assert.equal(battleXp({ gems: 400, won: false, flawless: false }), 50);
+    assert.equal(battleXp({ gems: 400, won: false, flawless: true }), 50);
+    // Zwei echte Kampfwerte aus dem Spiel (Niederlage) unterscheiden sich sichtbar
+    assert.notEqual(battleXp({ gems: 413, won: false, flawless: false }), battleXp({ gems: 476, won: false, flawless: false }));
+    // Minimum bei 0 Gems, Deckel der Gem-XP bei sehr vielen
+    assert.equal(battleXp({ gems: 0, won: false, flawless: false }), MIN_BATTLE_XP);
+    assert.equal(battleXp({ gems: 100_000, won: false, flawless: false }), MAX_BATTLE_XP);
+    // Ein schneller Sieg bringt nicht weniger als eine lange Niederlage
+    assert.ok(battleXp({ gems: 150, won: true, flawless: false }) >= battleXp({ gems: 430, won: false, flawless: false }));
   });
 
   test("Meilenstein-Titel und Rahmen ab Rang 3 und 5", () => {

@@ -299,7 +299,7 @@ export default function GemsResultScreen({
                 </span>
               </p>
             ))}
-            <p className="text-[10px] text-gray-500">Je gematchtem Gem deiner Klasse +2 XP · Niederlage halb · makellos +50 ✦</p>
+            <p className="text-[10px] text-gray-500">1 XP je 4 zerstörten Gems deiner Klasse · Niederlage halb · Sieg +25 · makellos +50 ✦</p>
           </motion.section>
         )}
 
