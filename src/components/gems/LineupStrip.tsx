@@ -11,7 +11,7 @@ import { RankBadge } from "./CardRank";
 const LINEUP_SIZE = 5;
 
 /** Kompakte Deck-Vorschau oben im Kampf-Reiter — zeigt die aktuelle Startaufstellung, immer sichtbar. */
-export default function LineupStrip({ cards }: { cards: { card: BattleCardData; winsInLineup?: number }[] }) {
+export default function LineupStrip({ cards }: { cards: { card: BattleCardData; xp?: number }[] }) {
   const slots = Array.from({ length: LINEUP_SIZE }, (_, i) => cards[i] ?? null);
 
   return (
@@ -52,7 +52,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
                 )}
               </div>
               {isCommunity(entry.card.rarity) && <CommunityRibbon compact />}
-              <RankBadge wins={entry.winsInLineup ?? 0} className="top-0.5 right-0.5" />
+              <RankBadge xp={entry.xp ?? 0} className="top-0.5 right-0.5" />
               <CardPlate card={entry.card} compact />
             </div>
           );

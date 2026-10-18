@@ -6,7 +6,7 @@ import { ensureGemsStarter } from "@/lib/gems/auto-starter";
 import LineupEditor from "@/components/gems/LineupEditor";
 import RelicPicker from "@/components/gems/RelicPicker";
 import { getOwnedRelics } from "@/lib/gems/relic-store";
-import { rankPoints } from "@/lib/gems/card-ranks";
+import { cardXp } from "@/lib/gems/card-ranks";
 
 export const metadata = {
   title: "Startaufstellung | OMA Gems",
@@ -30,7 +30,7 @@ export default async function LineupPage() {
 
   const cards = userCards.map((uc) => ({
     cardId: uc.cardId,
-    winsInLineup: rankPoints(uc.winsInLineup, uc.rankBonusHalves),
+    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves),
     card: toCardData(uc.card, avatarByDiscordId),
   }));
 

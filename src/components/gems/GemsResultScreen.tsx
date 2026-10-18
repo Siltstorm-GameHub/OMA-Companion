@@ -49,8 +49,8 @@ export interface GemsResultDetails {
     imageUrl: string | null;
     /** Fehlt bei Ergebnissen aus der Zeit vor dem Cartoon-Helden im Kartenfortschritt. */
     heroLook?: HeroLook;
-    pointsBefore: number;
-    pointsAfter: number;
+    xpBefore: number;
+    xpAfter: number;
     flawless: boolean;
   }[];
   relicGranted?: { name: string; description: string } | null;
@@ -75,6 +75,8 @@ export default function GemsResultScreen({
   const [error, setError] = useState<string | null>(null);
 
   const reduceMotion = useReducedMotion();
+  // Ältere gespeicherte Ergebnisse zählten noch in Rang-Punkten (pointsBefore) statt XP — nicht anzeigen.
+  const cardProgress = (details?.cardProgress ?? []).filter((c) => typeof c.xpBefore === "number");
   const hasRankUp = (details?.rankUps ?? []).length > 0;
 
   useEffect(() => {
@@ -263,7 +265,7 @@ export default function GemsResultScreen({
           </motion.div>
         )}
 
-        {(details?.cardProgress ?? []).length > 0 && (
+        {cardProgress.length > 0 && (
           <motion.section
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -273,15 +275,15 @@ export default function GemsResultScreen({
           >
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Karten-Fortschritt</p>
             <ul className="grid grid-cols-5 gap-1.5">
-              {details!.cardProgress!.map((c) => (
+              {cardProgress.map((c) => (
                 <RankProgressCard
                   key={c.cardId}
                   name={c.name}
                   unitClass={c.class}
                   imageUrl={c.imageUrl}
                   heroLook={c.heroLook}
-                  pointsBefore={c.pointsBefore}
-                  pointsAfter={c.pointsAfter}
+                  xpBefore={c.xpBefore}
+                  xpAfter={c.xpAfter}
                   flawless={c.flawless}
                 />
               ))}
@@ -295,7 +297,7 @@ export default function GemsResultScreen({
                 </span>
               </p>
             ))}
-            <p className="text-[10px] text-gray-500">Sieg +1 · makellos +1,5 ✦ · Niederlage +0,5</p>
+            <p className="text-[10px] text-gray-500">Sieg +100 XP · makellos +150 ✦ · Niederlage +50</p>
           </motion.section>
         )}
 

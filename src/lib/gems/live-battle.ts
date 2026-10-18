@@ -58,7 +58,7 @@ import { grantGemsRewards, type GemsRewardSummary } from "@/lib/gems/daily";
 import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip, weeklyModifierFor } from "@/lib/gems/tower-rules";
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
-import { LOSS_POINTS, rankForWins, rankPoints, rankTitle, withRankBonus } from "@/lib/gems/card-ranks";
+import { FLAWLESS_XP, LOSS_XP, WIN_XP, rankForXp, cardXp, rankTitle, withRankBonus } from "@/lib/gems/card-ranks";
 import { effectiveHeroLook, heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
 import { cosmeticsUnlockedBy } from "@/lib/gems/hero/cosmetics";
 import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
@@ -175,7 +175,7 @@ export interface GemsBattleResult {
   challengeScore: number | null;
   /** Karten, die durch diesen Kampf einen neuen Rang erreicht haben; `title` bei neuem Meilenstein-Titel. */
   rankUps: { name: string; rank: number; title: string | null }[];
-  /** Rang-Fortschritt jeder mitgekämpften Karte (Rang-Punkte vor/nach dem Kampf, siehe card-ranks.ts). */
+  /** Rang-Fortschritt jeder mitgekämpften Karte (XP vor/nach dem Kampf, siehe card-ranks.ts). */
   cardProgress: {
     cardId: string;
     name: string;
@@ -183,8 +183,8 @@ export interface GemsBattleResult {
     imageUrl: string | null;
     /** Der Cartoon-Held der Karte — derselbe wie im Kampf und in der Sammlung. */
     heroLook: HeroLook;
-    pointsBefore: number;
-    pointsAfter: number;
+    xpBefore: number;
+    xpAfter: number;
     flawless: boolean;
   }[];
   /** Relikt für den ersten Sieg überhaupt über diesen Turmwächter (siehe relics.ts). */
@@ -437,15 +437,15 @@ async function newCosmeticUnlocks(
   if (rankUps.length === 0 && guardianFirstStage === null) return [];
   const labels: string[] = [];
   if (rankUps.length > 0) {
-    const pointsBefore = new Map(cardProgress.map((c) => [c.cardId, c.pointsBefore]));
+    const xpBefore = new Map(cardProgress.map((c) => [c.cardId, c.xpBefore]));
     const cards = await prisma.userCard.findMany({
       where: { userId },
       select: { cardId: true, winsInLineup: true, rankBonusHalves: true },
     });
-    const maxAfter = cards.reduce((m, c) => Math.max(m, rankForWins(rankPoints(c.winsInLineup, c.rankBonusHalves))), 0);
+    const maxAfter = cards.reduce((m, c) => Math.max(m, rankForXp(cardXp(c.winsInLineup, c.rankBonusHalves))), 0);
     const maxBefore = cards.reduce(
       (m, c) =>
-        Math.max(m, rankForWins(pointsBefore.get(c.cardId) ?? rankPoints(c.winsInLineup, c.rankBonusHalves))),
+        Math.max(m, rankForXp(xpBefore.get(c.cardId) ?? cardXp(c.winsInLineup, c.rankBonusHalves))),
       0
     );
     for (let rank = maxBefore + 1; rank <= maxAfter; rank++) labels.push(...cosmeticsUnlockedBy({ rankReached: rank }).map((u) => u.label));
@@ -455,8 +455,8 @@ async function newCosmeticUnlocks(
   return labels;
 }
 
-/** Schreibt den Rang-Fortschritt jeder mitgekämpften Karte (Team A) gut: Sieg 1 Punkt, makelloser Sieg
- *  (die Karte überlebt) +0,5, Niederlage/Unentschieden 0,5. Meldet Rangaufstiege und den Fortschritt. */
+/** Schreibt den Rang-Fortschritt jeder mitgekämpften Karte (Team A) gut: Sieg 100 XP, makelloser Sieg
+ *  (die Karte überlebt) +50, Niederlage/Unentschieden 50. Meldet Rangaufstiege und den Fortschritt. */
 async function recordLineupResult(
   userId: string,
   state: InteractiveBattleState,
@@ -478,7 +478,7 @@ async function recordLineupResult(
     cardIds.filter((id) => state.unitsA.filter((u) => u.def.cardId === id).every((u) => u.isAlive))
   );
   const hasBonus = (cardId: string) => !won || flawlessIds.has(cardId);
-  const gain = (cardId: string) => (won ? 1 : 0) + (hasBonus(cardId) ? LOSS_POINTS : 0);
+  const gain = (cardId: string) => won ? WIN_XP + (flawlessIds.has(cardId) ? FLAWLESS_XP : 0) : LOSS_XP;
 
   if (won) {
     await prisma.userCard.updateMany({
@@ -496,10 +496,10 @@ async function recordLineupResult(
 
   const rankUps: GemsBattleResult["rankUps"] = [];
   const cardProgress = before.map((c) => {
-    const pointsBefore = rankPoints(c.winsInLineup, c.rankBonusHalves);
-    const pointsAfter = pointsBefore + gain(c.cardId);
-    const rankBefore = rankForWins(pointsBefore);
-    const rankAfter = rankForWins(pointsAfter);
+    const xpBefore = cardXp(c.winsInLineup, c.rankBonusHalves);
+    const xpAfter = xpBefore + gain(c.cardId);
+    const rankBefore = rankForXp(xpBefore);
+    const rankAfter = rankForXp(xpAfter);
     if (rankAfter > rankBefore) {
       const title = rankTitle(rankAfter);
       rankUps.push({ name: c.card.name, rank: rankAfter, title: title !== rankTitle(rankBefore) ? title : null });
@@ -511,8 +511,8 @@ async function recordLineupResult(
       class: unit.class,
       imageUrl: unit.imageUrl ?? null,
       heroLook: effectiveHeroLook(c.card),
-      pointsBefore,
-      pointsAfter,
+      xpBefore,
+      xpAfter,
       flawless: won && flawlessIds.has(c.cardId),
     };
   });
@@ -587,7 +587,7 @@ async function loadPlayerTeam(userId: string, options: { withRanks?: boolean } =
         resolveCardImageUrl(uc.card, avatarByDiscordId),
         resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
       ),
-      withRanks ? rankForWins(rankPoints(uc.winsInLineup, uc.rankBonusHalves)) : 0
+      withRanks ? rankForXp(cardXp(uc.winsInLineup, uc.rankBonusHalves)) : 0
     )
   );
 }

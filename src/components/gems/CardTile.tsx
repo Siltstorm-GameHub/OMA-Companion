@@ -13,17 +13,17 @@ import { CardPlate, CommunityRibbon, isCommunity, rarityFrame } from "./CardPlat
 import HeroFigure from "./HeroFigure";
 import HeroBackdrop from "./HeroBackdrop";
 import { RankBadge, RankMiniBar } from "./CardRank";
-import { rankForWins, rankFrameColor } from "@/lib/gems/card-ranks";
+import { rankForXp, rankFrameColor } from "@/lib/gems/card-ranks";
 
 export default function CardTile({
   card,
   locked = false,
   isNew = false,
-  winsInLineup,
+  xp,
   onClick,
 }: {
-  /** Rang-Punkte aus der Startaufstellung — zeigt Rang und Fortschritt (nur eigene Karten). */
-  winsInLineup?: number;
+  /** XP aus der Startaufstellung — zeigt Rang und Fortschritt (nur eigene Karten). */
+  xp?: number;
   card: BattleCardData;
   locked?: boolean;
   /** Kürzlich erhalten — zeigt ein "NEU"-Ribbon in der oberen linken Ecke. */
@@ -32,7 +32,7 @@ export default function CardTile({
 }) {
   const classConfig = getClassConfig(card.class);
   // Meilenstein-Ränge (Veteran ab 3, Meister ab 5) bekommen einen eigenen Rahmen.
-  const rankFrame = !locked && winsInLineup != null ? rankFrameColor(rankForWins(winsInLineup)) : null;
+  const rankFrame = !locked && xp != null ? rankFrameColor(rankForXp(xp)) : null;
   const borderColor = locked ? "rgba(255,255,255,0.1)" : (rankFrame ?? LEVEL_BORDER[1]);
 
   return (
@@ -70,9 +70,9 @@ export default function CardTile({
 
         {/* Namensschild (Name, Klasse) und Community-Band */}
         {isCommunity(card.rarity) && <CommunityRibbon />}
-        {!locked && winsInLineup != null && <RankBadge wins={winsInLineup} />}
+        {!locked && xp != null && <RankBadge xp={xp} />}
         <CardPlate card={card} locked={locked} />
-        {!locked && winsInLineup != null && <RankMiniBar wins={winsInLineup} />}
+        {!locked && xp != null && <RankMiniBar xp={xp} />}
         {!locked && isNew && (
           <span
             className="absolute -left-6 top-2.5 z-[7] w-20 text-center text-[8px] font-black uppercase tracking-widest text-black py-0.5 shadow-md"

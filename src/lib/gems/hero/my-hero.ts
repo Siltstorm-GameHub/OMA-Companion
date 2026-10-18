@@ -11,7 +11,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { Card } from "@prisma/client";
-import { rankForWins, rankPoints } from "../card-ranks";
+import { rankForXp, cardXp } from "../card-ranks";
 import { parseEndlessStage } from "../endless-levels";
 import { earnedCosmetics, unavailableParts, unlockFor, type CosmeticSlot } from "./cosmetics";
 import { effectiveHeroLook, sanitizeHeroLook, type HeroClass, type HeroLook } from "./look";
@@ -48,7 +48,7 @@ async function cosmeticProgress(userId: string) {
     }
   }
   return {
-    maxCardRank: cards.reduce((max, c) => Math.max(max, rankForWins(rankPoints(c.winsInLineup, c.rankBonusHalves))), 0),
+    maxCardRank: cards.reduce((max, c) => Math.max(max, rankForXp(cardXp(c.winsInLineup, c.rankBonusHalves))), 0),
     guardianStages,
     bestSeasonPlace,
   };

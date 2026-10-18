@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "@/components/icons";
 import { CLASS_CONFIG } from "@/lib/gems/class-config";
-import { nextRankProgress, rankForWins } from "@/lib/gems/card-ranks";
+import { nextRankProgress, rankForXp } from "@/lib/gems/card-ranks";
 import CardTile from "./CardTile";
 import CardDetailModal, { type CardDetailSelection } from "./CardDetailModal";
 import type { BattleCardData } from "./BattleCardView";
@@ -34,8 +34,8 @@ export interface OwnedCardEntry {
   id: string;
   /** ISO-Zeitstempel, wann die Karte erworben wurde — steuert das "Neu"-Ribbon. */
   acquiredAt: string;
-  /** Rang-Punkte aus der Startaufstellung — bestimmt den Rang (siehe card-ranks.ts, rankPoints). */
-  winsInLineup: number;
+  /** XP aus der Startaufstellung — bestimmt den Rang (siehe card-ranks.ts, cardXp). */
+  xp: number;
   card: BattleCardData & { id: string };
 }
 
@@ -47,12 +47,12 @@ const SORTS: { key: OwnedSort; label: string }[] = [
   { key: "NEXT_RANK", label: "Nächster Aufstieg" },
 ];
 
-/** „Fast aufgestiegen“: höchstens so viele Punkte bis zum nächsten Rang. */
-const ALMOST_RANK_UP_POINTS = 2;
+/** „Fast aufgestiegen“: höchstens so viele XP bis zum nächsten Rang. */
+const ALMOST_RANK_UP_XP = 200;
 
-function pointsToNextRank(wins: number): number {
+function xpToNextRank(wins: number): number {
   // Karten auf dem höchsten Rang sortieren ans Ende.
-  return nextRankProgress(wins)?.winsNeeded ?? Number.POSITIVE_INFINITY;
+  return nextRankProgress(wins)?.xpNeeded ?? Number.POSITIVE_INFINITY;
 }
 
 const NEW_CARD_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
@@ -117,11 +117,11 @@ export default function CardCollectionBrowser({
   }
 
   const classOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
-  const filteredOwned = classOwned.filter((oc) => !almostOnly || pointsToNextRank(oc.winsInLineup) <= ALMOST_RANK_UP_POINTS);
+  const filteredOwned = classOwned.filter((oc) => !almostOnly || xpToNextRank(oc.xp) <= ALMOST_RANK_UP_XP);
   if (sort === "RANK") {
-    filteredOwned.sort((a, b) => rankForWins(b.winsInLineup) - rankForWins(a.winsInLineup) || b.winsInLineup - a.winsInLineup);
+    filteredOwned.sort((a, b) => rankForXp(b.xp) - rankForXp(a.xp) || b.xp - a.xp);
   } else if (sort === "NEXT_RANK") {
-    filteredOwned.sort((a, b) => pointsToNextRank(a.winsInLineup) - pointsToNextRank(b.winsInLineup));
+    filteredOwned.sort((a, b) => xpToNextRank(a.xp) - xpToNextRank(b.xp));
   }
   // otherTotal ist bereits auf denselben Filter gescoped (siehe fetchPage) —
   // gesammelt+fehlend ergibt so direkt die Gesamtzahl im aktuell sichtbaren Filter.
@@ -165,7 +165,7 @@ export default function CardCollectionBrowser({
     if (selected.kind === "owned") {
       const oc = ownedCards.find((o) => o.id === selected.userCardId);
       if (!oc) return null;
-      return { card: oc.card, winsInLineup: oc.winsInLineup };
+      return { card: oc.card, xp: oc.xp };
     }
     const card = otherCards.find((c) => c.id === selected.cardId);
     return card ? { card } : null;
@@ -248,7 +248,7 @@ export default function CardCollectionBrowser({
             <CardTile
               key={oc.id}
               card={oc.card}
-              winsInLineup={oc.winsInLineup}
+              xp={oc.xp}
               isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS && !viewedIds.has(oc.id)}
               onClick={() => {
                 setSelected({ kind: "owned", userCardId: oc.id });
