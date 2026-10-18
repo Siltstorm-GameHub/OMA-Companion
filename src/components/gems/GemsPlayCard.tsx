@@ -23,7 +23,7 @@ function stageTitle(current: GemsPlayStatus["current"]): string {
 
 export default function GemsPlayCard({ status, isLeader }: { status: GemsPlayStatus; isLeader: boolean }) {
   const router = useRouter();
-  const [starting, setStarting] = useState<"campaign" | "daily" | null>(null);
+  const [starting, setStarting] = useState<GemsBattleTarget["kind"] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { today, current, daily, week, rival, activeBattle, season } = status;
   const capPercent = Math.min(100, Math.round((today.coinsEarned / today.cap) * 100));
@@ -184,7 +184,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
               <Sparkles className="w-4 h-4 text-teal-300" />
               <h3 className="font-display text-sm font-bold text-white">Diese Woche: {week.modifierName}</h3>
             </div>
-            <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Aufstieg und in der Tages-Herausforderung.</p>
+            <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Aufstieg, in Last Stand und in der Tages-Herausforderung.</p>
             {current.isEndless && (
               <p className="text-xs text-gray-300 flex items-start gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-rose-300 shrink-0 mt-px" />

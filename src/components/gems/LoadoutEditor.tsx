@@ -303,7 +303,7 @@ export default function LoadoutEditor({
       ) : (
         <div className="space-y-3" role="tabpanel">
           <p className="text-xs text-gray-500">
-            Bis zu {RELIC_SLOTS} Relikte wirken in Kampagne, Turm und Tages-Herausforderung (nicht im Event-Turnier). Jeder
+            Bis zu {RELIC_SLOTS} Relikte wirken in Kampagne, Aufstieg, Last Stand und Tages-Herausforderung (nicht im Event-Turnier). Jeder
             Wächter gibt beim ersten Sieg eins — wähle passend zur Wochen-Regel.
           </p>
           <ul className="space-y-2">

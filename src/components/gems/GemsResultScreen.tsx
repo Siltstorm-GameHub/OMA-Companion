@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import confetti from "canvas-confetti";
-import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, Trophy } from "@/components/icons";
+import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, Swords, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import type { HeroLook } from "@/lib/gems/hero/look";
@@ -56,6 +56,8 @@ export interface GemsResultDetails {
   }[];
   relicGranted?: { name: string; description: string } | null;
   cosmeticsUnlocked?: string[];
+  /** Nur im Last Stand: besiegte Wellen dieses Laufs und Stand in der Saison-Rangliste. */
+  lastStand?: { wavesCleared: number; best: number; isNewBest: boolean; rank: number | null; players: number; seasonLabel: string };
 }
 
 export default function GemsResultScreen({
@@ -118,8 +120,10 @@ export default function GemsResultScreen({
     }
   }
 
-  const config =
-    outcome === "win"
+  const lastStand = details?.lastStand;
+  const config = lastStand
+    ? { icon: Swords, label: "Last Stand beendet", from: "#99f6e4", to: "#0f766e" }
+    : outcome === "win"
       ? { icon: "trophy" as const, label: "Sieg!", from: "#fde68a", to: "#d97706" }
       : outcome === "loss"
         ? { icon: Skull, label: "Niederlage", from: "#fca5a5", to: "#b91c1c" }
@@ -144,7 +148,7 @@ export default function GemsResultScreen({
           animate={{ opacity: 1, y: 0 }}
           className="text-[10px] font-bold text-teal-300 uppercase tracking-widest"
         >
-          {isDaily ? "Tages-Herausforderung" : "OMA Gems"}
+          {isDaily ? "Tages-Herausforderung" : lastStand ? "Last Stand" : "OMA Gems"}
         </motion.p>
 
         <motion.div
@@ -191,13 +195,33 @@ export default function GemsResultScreen({
           </motion.div>
         )}
 
+        {lastStand && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="w-full glass rounded-xl px-3 py-3 space-y-1.5"
+          >
+            <p className="font-display text-4xl font-black text-white tabular-nums">{lastStand.wavesCleared}</p>
+            <p className="text-sm text-gray-300">
+              {lastStand.wavesCleared === 1 ? "Welle besiegt" : "Wellen besiegt"}
+              {lastStand.isNewBest && lastStand.wavesCleared > 0 && <span className="text-amber-300 font-semibold"> · neue Bestleistung!</span>}
+            </p>
+            <p className="text-xs text-gray-500">
+              {lastStand.rank
+                ? `Saison ${lastStand.seasonLabel}: Platz ${lastStand.rank} von ${lastStand.players} (Bestleistung ${lastStand.best})`
+                : `Saison ${lastStand.seasonLabel}: Besiege eine Welle, um in der Rangliste zu erscheinen.`}
+            </p>
+          </motion.div>
+        )}
+
         {details?.challengeScore != null && (
           <p className="text-sm text-gray-300">
             <span className="font-display text-lg font-bold text-white tabular-nums">{details.challengeScore}</span> Punkte
           </p>
         )}
 
-        {outcome !== "win" && details && enemyHpLeft > 0 && (
+        {outcome !== "win" && !lastStand && details && enemyHpLeft > 0 && (
           <div className="w-full space-y-1.5">
             <p className="text-sm text-gray-300">
               {enemyHpLeft <= 20 ? "Ganz knapp! " : ""}Die Gegner hatten noch {enemyHpLeft} % Leben.

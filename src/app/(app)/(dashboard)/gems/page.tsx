@@ -3,7 +3,7 @@
 // ============================================
 // Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
 // Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
-//    "Spielen"  („Weiter“-Karte mit Tageswerten, Event-Turnier, Kampagne, Rangliste),
+//    "Spielen"  („Weiter“-Karte mit Tageswerten, Event-Turnier, Spielmodi: Kampagne / Der Aufstieg / Last Stand mit Ranglisten),
 //    "Sammlung" (Startaufstellung + Karten),
 //    "Shop"     (Glücksrad, Packs öffnen und kaufen).
 //  Alte ?tab=-Werte landen über LEGACY_TABS in GemsTabs im passenden Reiter.
@@ -16,7 +16,8 @@ import { ensureGemsStarter } from "@/lib/gems/auto-starter";
 import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/gems/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignLeaderboard, getSeasonLeaderboard, toSeasonEntry } from "@/lib/gems/leaderboard";
+import { getCampaignLeaderboard, getSeasonLeaderboard, getWaveLeaderboard, toSeasonEntry, toWaveEntry } from "@/lib/gems/leaderboard";
+import { LAST_STAND_COINS_PER_WAVE } from "@/lib/gems/daily-rules";
 import { getEquippedRelicIds } from "@/lib/gems/relic-store";
 import { relicById } from "@/lib/gems/relics";
 import { getPlayStatus } from "@/lib/gems/play-status";
@@ -27,7 +28,7 @@ import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
 import GemsTabs from "./GemsTabs";
 import { ChevronRight, Gem } from "@/components/icons";
 import LineupStrip from "@/components/gems/LineupStrip";
-import CampaignMap from "@/components/gems/CampaignMap";
+import PlayModes from "@/components/gems/PlayModes";
 import GemsTournamentBanner from "@/components/gems/GemsTournamentBanner";
 import CoinIcon from "@/components/CoinIcon";
 import DailySpin from "@/components/gems/shop/DailySpin";
@@ -75,12 +76,13 @@ export default async function GemsPage() {
   const unopenedPacks = await countUnopenedPacks(userId);
   const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, equippedRelicIds, ownHeroCard] = await Promise.all([
+  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, waveRows, equippedRelicIds, ownHeroCard] = await Promise.all([
     getShopConfig(),
     countPacksPurchasedToday(userId),
     prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
     getCampaignLeaderboard(),
     getSeasonLeaderboard(),
+    getWaveLeaderboard(),
     getEquippedRelicIds(userId),
     getOwnCommunityCard(userId),
   ]);
@@ -99,6 +101,7 @@ export default async function GemsPage() {
   const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);
   const ownedCosmetics = ownHeroCard ? await getOwnedCosmetics(userId) : new Set<string>();
   const seasonEntries = seasonRows.map(toSeasonEntry);
+  const waveEntries = waveRows.map(toWaveEntry);
   const isLeader = playStatus.current.isEndless
     ? seasonRows[0]?.userId === userId
     : leaderboardRows[0]?.userId === userId;
@@ -110,20 +113,36 @@ export default async function GemsPage() {
 
       <GemsTournamentBanner />
 
-      <div className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-white">Kampagne</h2>
-        <CampaignMap />
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold text-white">Rangliste · Saison {playStatus.season.label}</h2>
-          <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
-            Woche, Heute, alle →
-          </Link>
-        </div>
-        <LeaderboardList rows={seasonEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.saison} />
-      </div>
+      <PlayModes
+        defaultMode={playStatus.current.isEndless ? "aufstieg" : "campaign"}
+        aufstiegUnlocked={playStatus.aufstieg.unlocked}
+        lastStand={playStatus.lastStand}
+        seasonLabel={playStatus.season.label}
+        seasonDaysLeft={playStatus.season.daysLeft}
+        coinsPerWave={LAST_STAND_COINS_PER_WAVE}
+        aufstiegExtras={
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-bold text-white">Rangliste · Aufstieg · {playStatus.season.label}</h2>
+              <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                Alle Ranglisten →
+              </Link>
+            </div>
+            <LeaderboardList rows={seasonEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.saison} />
+          </div>
+        }
+        lastStandExtras={
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-bold text-white">Rangliste · Last Stand · {playStatus.season.label}</h2>
+              <Link href="/gems/leaderboard?ansicht=laststand" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
+                Alle Plätze →
+              </Link>
+            </div>
+            <LeaderboardList rows={waveEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.laststand} />
+          </div>
+        }
+      />
     </div>
   );
 
@@ -223,7 +242,7 @@ export default async function GemsPage() {
           </div>
           <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Gems</h1>
         </div>
-        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Aufstieg und Turniere</p>
+        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Aufstieg, Last Stand und Turniere</p>
       </div>
       <GemsTabs
         spielenPanel={spielenPanel}

@@ -101,6 +101,8 @@ interface FloatingEffect {
 }
 
 interface LiveSnapshot {
+  /** Nur im Last Stand: die Welle, in der der Kampf gerade steht. */
+  wave?: number | null;
   /** Auflösungsschritte des zuletzt eingereichten Zugs (Server), siehe BoardMatch3. */
   boardSteps?: BoardAnimationStep[] | null;
   id: string;
@@ -164,6 +166,29 @@ function computeGemsReward(snapshot: LiveSnapshot): GemsReward {
     };
   }
   return { kind: "none" };
+}
+
+/** Last Stand: kurzer Schriftzug, sobald eine neue Welle beginnt (über `key` bei jeder Welle neu). */
+function WaveBanner({ wave }: { wave: number }) {
+  const boss = wave % 5 === 0;
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center"
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: [0, 1, 1, 0], scale: [0.85, 1, 1, 1.06] }}
+      transition={{ duration: 2, times: [0, 0.18, 0.72, 1], ease: "easeOut" }}
+      aria-live="polite"
+    >
+      <div className="text-center drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+        <p className={`font-display text-4xl font-black ${boss ? "text-rose-300" : "text-amber-300"}`}>
+          {boss ? `Boss-Welle ${wave}` : `Welle ${wave}`}
+        </p>
+        <p className="text-xs font-semibold text-white/80 mt-1">
+          {wave === 1 ? "Halte durch, so lange du kannst." : "Neue Gegner! Lebende Helden erholen sich etwas."}
+        </p>
+      </div>
+    </motion.div>
+  );
 }
 
 function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id: string) => string): string | null {
@@ -1013,6 +1038,11 @@ export default function LiveBattleView({
             >
               {soundMuted ? <BellOff className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+            {snapshot?.wave != null && (
+              <span className="glass font-display text-sm font-bold text-amber-300 px-3 py-1.5 rounded-lg">
+                Welle {snapshot.wave}
+              </span>
+            )}
             {snapshot && (
               <span
                 className="glass font-display text-sm font-bold text-teal-300 px-3 py-1.5 rounded-lg"
@@ -1315,6 +1345,7 @@ function LiveBattleBody({
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
       <GemBeamOverlay beams={beams} />
+      {snapshot.wave != null && snapshot.status === "active" && <WaveBanner key={snapshot.wave} wave={snapshot.wave} />}
       {/* Kampfende: direkt der Vollbild-Ergebnisbildschirm. */}
       {snapshot.status === "finished" && (
         <GemsResultScreen
