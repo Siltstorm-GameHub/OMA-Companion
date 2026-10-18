@@ -46,7 +46,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold text-teal-300 uppercase tracking-widest">
-              {activeBattle ? "Kampf läuft" : current.isGuardian ? "Turmwächter" : "Als Nächstes"}
+              {activeBattle ? "Kampf läuft" : current.isGuardian ? "Wächter" : "Als Nächstes"}
             </p>
             <h2 className="font-display text-xl font-bold text-white truncate">{activeBattle ? activeBattle.label : current.name}</h2>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -118,7 +118,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
           <p className="flex items-center gap-1.5 text-xs text-gray-300 border-t border-white/[0.06] pt-3">
             <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
             <span>
-              Turm-Saison {season.label} · noch {season.daysLeft} {season.daysLeft === 1 ? "Tag" : "Tage"}
+              Aufstiegs-Saison {season.label} · noch {season.daysLeft} {season.daysLeft === 1 ? "Tag" : "Tage"}
               {season.rank ? ` · Platz ${season.rank} von ${season.players} (Stufe ${season.best})` : " · noch keine Stufe geschafft"}
             </span>
           </p>
@@ -147,7 +147,7 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
       {error && <ErrorNotice message={error} />}
 
       {/* Für Neue nichts, was noch nicht zählt: Herausforderung und Wochen-Regel erst ab Level 6
-          (dort öffnet die Herausforderung, für die die Wochen-Regel gilt), Turmwächter erst im Turm. */}
+          (dort öffnet die Herausforderung, für die die Wochen-Regel gilt), Wächter erst im Turm. */}
       {daily.unlocked && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="glass rounded-2xl p-4 space-y-2.5">
@@ -184,12 +184,12 @@ export default function GemsPlayCard({ status, isLeader }: { status: GemsPlaySta
               <Sparkles className="w-4 h-4 text-teal-300" />
               <h3 className="font-display text-sm font-bold text-white">Diese Woche: {week.modifierName}</h3>
             </div>
-            <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Endlos-Turm und in der Tages-Herausforderung.</p>
+            <p className="text-xs text-gray-400">{week.modifierDescription} Gilt im Aufstieg und in der Tages-Herausforderung.</p>
             {current.isEndless && (
               <p className="text-xs text-gray-300 flex items-start gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-rose-300 shrink-0 mt-px" />
                 <span>
-                  Turmwächter auf Stufe {week.guardianStage}
+                  Wächter auf Stufe {week.guardianStage}
                   {week.guardianName ? `: ${week.guardianName}` : ""} · {week.guardianAbility}. Ein Sieg bringt ein Pack, der allererste ein Relikt.
                 </span>
               </p>

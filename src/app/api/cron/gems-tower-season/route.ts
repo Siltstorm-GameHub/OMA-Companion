@@ -1,5 +1,5 @@
 // ============================================
-// Cron: schließt abgelaufene Turm-Saisons ab und vergibt die Platzierungs-Packs
+// Cron: schließt abgelaufene Aufstiegs- und Last-Stand-Saisons ab und vergibt die Platzierungs-Packs
 // ============================================
 // Läuft täglich (siehe vercel.json) — wirkt nur beim ersten Lauf nach einem Monatswechsel, danach
 // ist die Saison über GemsTowerSeason als abgeschlossen markiert (idempotent, siehe
@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { finalizeDueTowerSeasons } from "@/lib/gems/tower-season";
+import { finalizeDueWaveSeasons } from "@/lib/gems/wave-season";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await finalizeDueTowerSeasons();
-  return NextResponse.json({ ok: true, ...result });
+  const [tower, waves] = await Promise.all([finalizeDueTowerSeasons(), finalizeDueWaveSeasons()]);
+  return NextResponse.json({ ok: true, ...tower, lastStandFinalized: waves.finalized });
 }

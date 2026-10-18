@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { packForPlace, previousSeason, rankSeason, seasonDaysLeft, seasonKey, seasonLabel } from "./tower-season";
 
-describe("Turm-Saisons", () => {
+describe("Aufstiegs-Saisons", () => {
   test("Saison = Berliner Kalendermonat", () => {
     assert.equal(seasonKey(new Date("2026-10-17T12:00:00Z")), "2026-10");
     // 31.10. 23:30 UTC ist in Berlin schon der 1. November

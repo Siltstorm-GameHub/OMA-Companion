@@ -106,10 +106,16 @@ export default function LeaderboardList({
 /** Texte der drei Ranglisten — Hub und Ranglisten-Seite nutzen dieselben. */
 export const LEADERBOARD_TEXTS = {
   saison: {
-    label: "Saison",
-    note: "Höchste Endlos-Stufe in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
-    emptyText: "In dieser Saison hat noch niemand eine Turmstufe geschafft.",
-    absentText: "Schaffe eine Endlos-Stufe, um in der Saison-Rangliste zu erscheinen.",
+    label: "Aufstieg",
+    note: "Höchste Stufe in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
+    emptyText: "In dieser Saison hat noch niemand eine Aufstiegs-Stufe geschafft.",
+    absentText: "Schaffe eine Stufe, um in der Saison-Rangliste zu erscheinen.",
+  },
+  laststand: {
+    label: "Last Stand",
+    note: "Meiste besiegte Wellen in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
+    emptyText: "In dieser Saison hat noch niemand eine Last-Stand-Welle besiegt.",
+    absentText: "Besiege eine Welle im Last Stand, um in der Saison-Rangliste zu erscheinen.",
   },
   gesamt: {
     label: "Bestwert",

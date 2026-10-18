@@ -7,10 +7,10 @@
 // als normales Battle persistiert (Replay-Seite).
 //
 // Drei Modi, alle auf dem Match-3-Brett gegen KI-gesteuerte Monster:
-//  - Kampagne inkl. Endlos-Turm ("CAMPAIGN_<levelId>", siehe campaign.ts)
+//  - Kampagne inkl. Aufstieg ("CAMPAIGN_<levelId>", siehe campaign.ts)
 //  - Tages-Herausforderung ("DAILY_<YYYY-MM-DD>", siehe endless-levels.ts / daily.ts)
 //  - Event-Turnier ("TOURNAMENT_<id>", siehe gems-tournament.ts)
-// Endlos-Turm und Tages-Herausforderung laufen mit dem Wochen-Modifikator (tower-rules.ts),
+// Aufstieg und Tages-Herausforderung laufen mit dem Wochen-Modifikator (tower-rules.ts),
 // Wächter-Stufen mit der Community-Karte der Woche (weekly-guardian.ts).
 
 import { prisma } from "@/lib/prisma";
@@ -42,6 +42,7 @@ import {
   computeStars,
   getCampaignLevel,
   isCampaignLevelUnlocked,
+  LAST_STAND_UNLOCK_LEVEL_ID,
   nextLevelId,
   recordCampaignResult,
 } from "@/lib/gems/campaign";
@@ -51,6 +52,7 @@ import {
   berlinDateKey,
   CHAPTER_COINS_PER_STAR,
   endlessStageCoins,
+  LAST_STAND_COINS_PER_WAVE,
   weekIndex,
   type RewardRequest,
 } from "@/lib/gems/daily-rules";
@@ -65,7 +67,9 @@ import { discardBattle, isStaleOpenBattle } from "@/lib/gems/battle-legacy";
 import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
 import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
 import { getEquippedRelicIds, grantRelic } from "@/lib/gems/relic-store";
-import { recordTowerClear } from "@/lib/gems/tower-season";
+import { recordTowerClear, seasonKey, seasonLabel } from "@/lib/gems/tower-season";
+import { getWaveSeasonRanking, recordWaveRun } from "@/lib/gems/wave-season";
+import { buildWaveEnemies, WAVE_HEAL_SHARE, WAVE_ROUND_LIMIT } from "@/lib/gems/wave-levels";
 import { resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/gems/resolve-image";
 import { parseTournamentMode, tournamentModeFor } from "@/lib/gems/npc-battle-types";
@@ -79,14 +83,22 @@ const TEAM_SIZE = 5;
 const CAMPAIGN_MODE_PREFIX = "CAMPAIGN_";
 const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
 const DAILY_MODE_PREFIX = "DAILY_";
+const LAST_STAND_MODE_PREFIX = "LASTSTAND_";
+/** Last Stand ist ein einzelner, fortlaufender Lauf — der Modus trägt nur ein festes Kennzeichen. */
+export const LAST_STAND_MODE = `${LAST_STAND_MODE_PREFIX}RUN`;
 
-/** Ab hier ist die Tages-Herausforderung offen (Schwierigkeit wie Endlos-Stufe 22, DAILY_CHALLENGE_STAGE). */
+/** Ab hier ist die Tages-Herausforderung offen (Schwierigkeit wie Stufe 22, DAILY_CHALLENGE_STAGE). */
 export const DAILY_CHALLENGE_UNLOCK_LEVEL_ID = "lvl-06";
 
-/** Nur Kampagne, Tages-Herausforderung und Turnier werden unterstützt — ältere, noch offene
+/** Nur Kampagne (inkl. Aufstieg), Tages-Herausforderung, Last Stand und Turnier werden unterstützt — ältere, noch offene
  *  Kämpfe aus abgeschalteten Modi (Duels, PvP, freies PvE) lassen sich nicht mehr fortsetzen. */
 export function isSupportedMode(mode: string): boolean {
-  return mode.startsWith(CAMPAIGN_MODE_PREFIX) || mode.startsWith(DAILY_MODE_PREFIX) || mode.startsWith(TOURNAMENT_MODE_PREFIX);
+  return (
+    mode.startsWith(CAMPAIGN_MODE_PREFIX) ||
+    mode.startsWith(DAILY_MODE_PREFIX) ||
+    mode.startsWith(TOURNAMENT_MODE_PREFIX) ||
+    mode.startsWith(LAST_STAND_MODE_PREFIX)
+  );
 }
 
 function hpShare(units: BattleUnitState[]): number {
@@ -101,6 +113,17 @@ function toState(live: Pick<LiveBattle, "stateJson">): InteractiveBattleState {
 
 function toJson(state: InteractiveBattleState) {
   return JSON.parse(JSON.stringify(state));
+}
+
+/** Last Stand: Hält die Gegner der nächsten Welle bereit, bevor die Engine weiterläuft — sie ersetzt damit
+ *  sofort die gefallenen Gegner, sobald der Spieler eine Welle besiegt hat. Relikte und Wochen-Regel
+ *  wirken auf jede Welle wie auf die erste. */
+function ensureWaveQueued(state: InteractiveBattleState): void {
+  const wm = state.waveMode;
+  if (!wm || wm.queued) return;
+  const context = wm.context ?? { relicIds: [], week: 0 };
+  const enemies = applyRelics(context.relicIds, [], buildWaveEnemies(wm.wave + 1)).teamB;
+  wm.queued = applyWeeklyModifier(weeklyModifierFor(context.week), [], enemies).teamB;
 }
 
 // ---------- Snapshot (Client-Antwortformat) ----------
@@ -162,6 +185,8 @@ export interface LiveBattleSnapshot {
   gemsResult: GemsBattleResult | null;
   /** Name der Stufe für die Kopfzeile im Kampf, z.B. „Ping-Trouble-Pass“. */
   title: string | null;
+  /** Nur im Last Stand: die Welle, in der der Kampf gerade steht. */
+  wave: number | null;
   /** Auflösungsschritte des zuletzt eingereichten Zugs (autoritativ vom Server, siehe
    *  InteractiveBattleState.lastBoardSteps) — der Client animiert genau diese. */
   boardSteps: BoardAnimationStep[] | null;
@@ -169,12 +194,14 @@ export interface LiveBattleSnapshot {
 
 export interface GemsBattleResult {
   rewards: GemsRewardSummary | null;
-  /** Turmwächter zum ersten Mal besiegt — ein Pack liegt im Shop. */
+  /** Wächter zum ersten Mal besiegt — ein Pack liegt im Shop. */
   packGranted: boolean;
   /** Rest-Leben der Gegner (0–1) — zeigt nach einer Niederlage, wie knapp es war. */
   enemyHpPercent: number;
   tip: string | null;
-  retry: { kind: "campaign"; levelId: string } | { kind: "daily" };
+  retry: { kind: "campaign"; levelId: string } | { kind: "daily" } | { kind: "lastStand" };
+  /** Nur im Last Stand: Ergebnis des Laufs und Stand in der Saison-Rangliste. */
+  lastStand?: { wavesCleared: number; best: number; isNewBest: boolean; rank: number | null; players: number; seasonLabel: string };
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
   /** Karten, die durch diesen Kampf einen neuen Rang erreicht haben; `title` bei neuem Meilenstein-Titel. */
@@ -193,9 +220,9 @@ export interface GemsBattleResult {
     gems: number;
     flawless: boolean;
   }[];
-  /** Relikt für den ersten Sieg überhaupt über diesen Turmwächter (siehe relics.ts). */
+  /** Relikt für den ersten Sieg überhaupt über diesen Wächter (siehe relics.ts). */
   relicGranted: { name: string; description: string } | null;
-  /** Kosmetik für „Mein Held“, die dieser Sieg neu freigeschaltet hat (Rang, Turmwächter). */
+  /** Kosmetik für „Mein Held“, die dieser Sieg neu freigeschaltet hat (Rang, Wächter). */
   cosmeticsUnlocked?: string[];
 }
 
@@ -225,6 +252,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
 
 function battleTitle(mode: string): string | null {
   if (mode.startsWith(DAILY_MODE_PREFIX)) return "Tages-Herausforderung";
+  if (mode.startsWith(LAST_STAND_MODE_PREFIX)) return "Last Stand";
   if (mode.startsWith(CAMPAIGN_MODE_PREFIX)) return getCampaignLevel(mode.slice(CAMPAIGN_MODE_PREFIX.length))?.name ?? null;
   return null;
 }
@@ -271,6 +299,7 @@ async function buildSnapshot(
     gemsResult,
     title: battleTitle(live.mode),
     boardSteps: state.lastBoardSteps ?? null,
+    wave: state.waveMode?.wave ?? null,
   };
 }
 
@@ -342,8 +371,8 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
 }
 
 /** Belohnungen für Kampagne und Tages-Herausforderung (siehe daily-rules.ts): neue Sterne
- *  im Kapitel, neue Endlos-Stufen, Tagesbonus, Herausforderung — alles im Tageslimit —
- *  und ein Pack für einen zum ersten Mal besiegten Turmwächter. */
+ *  im Kapitel, neue Aufstiegs-Stufen, Tagesbonus, Herausforderung — alles im Tageslimit —
+ *  und ein Pack für einen zum ersten Mal besiegten Wächter. */
 async function settleGemsBattle(
   live: LiveBattle,
   state: InteractiveBattleState,
@@ -351,6 +380,7 @@ async function settleGemsBattle(
   cardProgress: GemsBattleResult["cardProgress"]
 ): Promise<{ campaignResult: LiveBattleSnapshot["campaignResult"]; gemsResult: GemsBattleResult }> {
   const userId = live.playerAId;
+  if (live.mode.startsWith(LAST_STAND_MODE_PREFIX)) return settleLastStand(userId, state, rankUps, cardProgress);
   const won = state.winner === "A";
   const isDaily = live.mode.startsWith(DAILY_MODE_PREFIX);
   const levelId = isDaily ? null : live.mode.slice(CAMPAIGN_MODE_PREFIX.length);
@@ -384,7 +414,7 @@ async function settleGemsBattle(
       });
     }
     if (stage !== null) {
-      // Turm-Saison: Münzen und Wächter-Pack gibt es für jede in dieser Saison neue Stufe (der Turm
+      // Aufstiegs-Saison: Münzen und Wächter-Pack gibt es für jede in dieser Saison neue Stufe (der Turm
       // beginnt jeden Monat von vorn), das Relikt nur beim allerersten Sieg über den Wächter.
       const newThisSeason = await recordTowerClear(userId, stage);
       if (newThisSeason) {
@@ -436,8 +466,57 @@ async function settleGemsBattle(
   };
 }
 
+/** Ergebnis eines Last-Stand-Laufs: besiegte Wellen in die Saison-Rangliste eintragen, Münzen für in der
+ *  Saison neu erreichte Wellen (im Tageslimit) und den Stand in der Rangliste melden. */
+async function settleLastStand(
+  userId: string,
+  state: InteractiveBattleState,
+  rankUps: GemsBattleResult["rankUps"],
+  cardProgress: GemsBattleResult["cardProgress"]
+): Promise<{ campaignResult: LiveBattleSnapshot["campaignResult"]; gemsResult: GemsBattleResult }> {
+  const wave = state.waveMode?.wave ?? 1;
+  // Die laufende Welle zählt nicht mit, außer der Kampf endet unerwartet mit einem Sieg (siehe spawnNextWave).
+  const wavesCleared = state.winner === "A" ? wave : Math.max(0, wave - 1);
+  const run = await recordWaveRun(userId, wavesCleared);
+  const newWaves = run.isNewBest ? run.best - run.previousBest : 0;
+  const rewards = await grantGemsRewards(userId, {
+    won: false,
+    requests:
+      newWaves > 0
+        ? [{ label: `${newWaves} neue ${newWaves === 1 ? "Welle" : "Wellen"} · Last Stand`, coins: newWaves * LAST_STAND_COINS_PER_WAVE }]
+        : [],
+  });
+  const ranking = await getWaveSeasonRanking();
+  const index = ranking.findIndex((r) => r.userId === userId);
+
+  return {
+    campaignResult: null,
+    gemsResult: {
+      rewards,
+      packGranted: false,
+      enemyHpPercent: hpShare(state.unitsB),
+      tip: null,
+      retry: { kind: "lastStand" },
+      next: null,
+      challengeScore: null,
+      rankUps,
+      cardProgress,
+      relicGranted: null,
+      cosmeticsUnlocked: await newCosmeticUnlocks(userId, rankUps, cardProgress, null),
+      lastStand: {
+        wavesCleared,
+        best: run.best,
+        isNewBest: run.isNewBest,
+        rank: index >= 0 ? index + 1 : null,
+        players: ranking.length,
+        seasonLabel: seasonLabel(seasonKey()),
+      },
+    },
+  };
+}
+
 /** Kosmetik, die dieser Sieg erstmals freischaltet: ein neuer höchster Karten-Rang (über alle eigenen
- *  Karten) oder ein zum ersten Mal besiegter Turmwächter. Nur für Mitglieder mit eigener
+ *  Karten) oder ein zum ersten Mal besiegter Wächter. Nur für Mitglieder mit eigener
  *  Community-Karte — nur die können Kosmetik tragen. */
 async function newCosmeticUnlocks(
   userId: string,
@@ -542,13 +621,20 @@ async function createLiveBattle(
   mode: string,
   playerAId: string,
   playerTeam: BattleUnitDefinition[],
-  enemyTeam: BattleUnitDefinition[]
+  enemyTeam: BattleUnitDefinition[],
+  options: { waves?: { week: number } } = {}
 ): Promise<LiveBattleSnapshot> {
   // Ausgerüstete Relikte wirken in Kampagne, Turm und Tages-Herausforderung — im Event-Turnier
   // nicht, dort kämpfen alle mit denselben Voraussetzungen (siehe loadPlayerTeam).
   const relicIds = mode.startsWith(TOURNAMENT_MODE_PREFIX) ? [] : await getEquippedRelicIds(playerAId);
   const { teamA, teamB, startRage } = applyRelics(relicIds, playerTeam, enemyTeam);
-  const created = createInteractiveState(teamA, teamB);
+  const created = createInteractiveState(
+    teamA,
+    teamB,
+    options.waves ? { waves: { healShare: WAVE_HEAL_SHARE, roundsPerWave: WAVE_ROUND_LIMIT } } : {}
+  );
+  if (created.waveMode && options.waves) created.waveMode.context = { relicIds, week: options.waves.week };
+  ensureWaveQueued(created);
   if (startRage > 0) for (const unit of created.unitsA) unit.rage = Math.min(100, unit.rage + startRage);
   const { state, pendingDecision } = advance(created, undefined);
 
@@ -614,7 +700,7 @@ export async function startLiveCampaignBattle(userId: string, levelId: string): 
     return createLiveBattle(`${CAMPAIGN_MODE_PREFIX}${levelId}`, userId, playerTeam, enemyTeam);
   }
 
-  // Endlos-Turm: Wächter-Stufen mit der Community-Karte der Woche, dazu der Wochen-Modifikator.
+  // Aufstieg: Wächter-Stufen mit der Community-Karte der Woche, dazu der Wochen-Modifikator.
   const week = weekIndex(berlinDateKey());
   if (levelDef.isGuardian) {
     const guardian = await buildWeeklyGuardian(week, stage);
@@ -644,6 +730,23 @@ export async function startLiveDailyChallenge(userId: string): Promise<LiveBattl
     buildCampaignEnemyTeam(levelDef)
   );
   return createLiveBattle(`${DAILY_MODE_PREFIX}${date}`, userId, teamA, teamB);
+}
+
+/** Startet einen Last-Stand-Lauf (Wellenmodus): fünf Gegner nach dem anderen, bis die eigenen Helden
+ *  gefallen sind. Offen nach Level 12 der Kampagne; die Saison-Rangliste zählt die besiegten Wellen
+ *  (siehe wave-season.ts), Münzen gibt es für in der Saison neu erreichte Wellen. */
+export async function startLiveLastStand(userId: string): Promise<LiveBattleSnapshot> {
+  const unlocked = await prisma.userCampaignProgress.findUnique({
+    where: { userId_levelId: { userId, levelId: LAST_STAND_UNLOCK_LEVEL_ID } },
+    select: { completed: true },
+  });
+  if (!unlocked?.completed) {
+    throw new LiveBattleError("Last Stand öffnet, sobald du Level 12 der Kampagne geschafft hast.");
+  }
+
+  const week = weekIndex(berlinDateKey());
+  const { teamA, teamB } = applyWeeklyModifier(weeklyModifierFor(week), await loadPlayerTeam(userId), buildWaveEnemies(1));
+  return createLiveBattle(LAST_STAND_MODE, userId, teamA, teamB, { waves: { week } });
 }
 
 /** Startet einen Versuch in einem laufenden OMA-Gems-Turnier (Score-Attack
@@ -690,6 +793,7 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   // Einheit (sollte nach advance() nicht vorkommen) wird hier weitergeführt.
   const stalled = !state.winner && !state.awaitingUnitId;
   if (live.status === "active" && stalled) {
+    ensureWaveQueued(state);
     const { state: newState, pendingDecision } = advance(state, undefined);
     const updated = await persistAndMaybeFinalize(live, newState);
     return buildSnapshot(updated, newState, pendingDecision);
@@ -715,6 +819,7 @@ export async function submitBoardMove(
   if (!unit) throw new LiveBattleError("Aktive Einheit nicht gefunden.");
   if (unit.teamId !== "A") throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
+  ensureWaveQueued(state);
   const { state: newState, pendingDecision } = advance(state, { boardSwaps });
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
@@ -736,6 +841,7 @@ export async function submitUltimateInterrupt(
   if (!caster) throw new LiveBattleError("Einheit nicht gefunden.");
   if (caster.teamId !== "A") throw new LiveBattleError("Das ist nicht deine Einheit.");
 
+  ensureWaveQueued(state);
   const { state: newState, pendingDecision, applied } = applyUltimateInterrupt(state, casterId, targetId);
   if (!applied) throw new LiveBattleError("Ultimate ist gerade nicht verfügbar (Rage zu niedrig?).");
 

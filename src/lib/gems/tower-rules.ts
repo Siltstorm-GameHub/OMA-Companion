@@ -1,16 +1,16 @@
 // ============================================
-// OMA Gems — Turmwächter, Wochen-Modifikator, Tipps (rein, ohne DB)
+// OMA Gems — Wächter, Wochen-Modifikator, Tipps (rein, ohne DB)
 // ============================================
-// - Turmwächter: jede 10. Endlos-Stufe (20, 30, …). Der Boss der Stufe bekommt reihum eine
+// - Wächter: jede 10. Stufe (20, 30, …). Der Boss der Stufe bekommt reihum eine
 //   eigene Fähigkeit (GUARDIAN_ABILITIES) — als Passive, die Engine braucht dafür nichts Neues.
 //   Im echten Kampf ist der Wächter die Community-Karte der Woche (siehe weekly-guardian.ts).
-// - Wochen-Modifikator: je Kalenderwoche eine Regel für Endlos-Turm und Tages-Herausforderung.
+// - Wochen-Modifikator: je Kalenderwoche eine Regel für Aufstieg und Tages-Herausforderung.
 //   Wirkt direkt auf die Basiswerte der Einheiten beim Kampfstart.
 // - Tipps: ein kurzer Hinweis nach einer Niederlage.
 
 import type { BattleUnitDefinition, PassiveSkillData, UnitClass } from "@/lib/battle-engine/types";
 const GUARDIAN_EVERY = 10;
-/** Erste Wächter-Stufe — Stufe 10 gehört noch zum Kapitel, der Endlos-Turm beginnt bei 13. */
+/** Erste Wächter-Stufe — Stufe 10 gehört noch zum Kapitel, der Aufstieg beginnt bei 13. */
 const FIRST_GUARDIAN_STAGE = 20;
 
 export function isGuardianStage(stage: number): boolean {
@@ -202,7 +202,7 @@ export function pickDefeatTip(input: {
   lineupClasses: UnitClass[];
   seed: number;
 }): string {
-  if (input.guardian) return `Turmwächter mit ${input.guardian.name}: ${input.guardian.description}`;
+  if (input.guardian) return `Wächter mit ${input.guardian.name}: ${input.guardian.description}`;
   const favored = input.modifier?.favoredClass;
   if (favored && input.lineupClasses.filter((c) => c === favored).length < 2) {
     return `${input.modifier!.name}: Diese Woche helfen ${CLASS_LABEL[favored]} besonders — nimm mehr davon in deine Startaufstellung.`;

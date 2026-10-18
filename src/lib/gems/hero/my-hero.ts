@@ -6,7 +6,7 @@
 // freigeschaltet ist (cosmetics.ts); Standard-Karten bleiben fest.
 //
 // Besitz = gekaufte Teile (UserCosmetic) plus erspielte Teile. Erspielte Teile (Karten-Rang,
-// Turmwächter, Turm-Saison) werden bei jedem Zugriff aus dem Fortschritt abgeleitet — so gelten auch
+// Wächter, Aufstiegs-Saison) werden bei jedem Zugriff aus dem Fortschritt abgeleitet — so gelten auch
 // Erfolge von vor der Einführung der Kosmetik, ohne Nachtrags-Skript.
 
 import { prisma } from "@/lib/prisma";

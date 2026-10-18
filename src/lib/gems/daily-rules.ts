@@ -16,6 +16,8 @@ const FIRST_WIN_BASE_COINS = 20;
 const FIRST_WIN_COINS_PER_STREAK_DAY = 5;
 export const CHAPTER_COINS_PER_STAR = 20;
 export const DAILY_CHALLENGE_COINS = 40;
+/** Last Stand: Münzen für jede in der Saison neu erreichte Welle (zählt ins Tageslimit). */
+export const LAST_STAND_COINS_PER_WAVE = 4;
 const ENDLESS_STAGE_BASE_COINS = 10;
 const ENDLESS_STAGE_COINS_PER_TEN = 2;
 
@@ -81,7 +83,7 @@ export function firstWinBonusCoins(streakDays: number): number {
   return FIRST_WIN_BASE_COINS + FIRST_WIN_COINS_PER_STREAK_DAY * Math.min(STREAK_MAX_DAYS, Math.max(1, streakDays));
 }
 
-/** Münzen für eine zum ersten Mal geschaffte Endlos-Stufe. */
+/** Münzen für eine zum ersten Mal geschaffte Stufe. */
 export function endlessStageCoins(stage: number): number {
   return ENDLESS_STAGE_BASE_COINS + ENDLESS_STAGE_COINS_PER_TEN * Math.floor(Math.max(0, stage - ENDLESS_FIRST_STAGE) / 10);
 }

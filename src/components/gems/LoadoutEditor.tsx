@@ -304,7 +304,7 @@ export default function LoadoutEditor({
         <div className="space-y-3" role="tabpanel">
           <p className="text-xs text-gray-500">
             Bis zu {RELIC_SLOTS} Relikte wirken in Kampagne, Turm und Tages-Herausforderung (nicht im Event-Turnier). Jeder
-            Turmwächter gibt beim ersten Sieg eins — wähle passend zur Wochen-Regel.
+            Wächter gibt beim ersten Sieg eins — wähle passend zur Wochen-Regel.
           </p>
           <ul className="space-y-2">
             {ownedRelicDefs.map((relic) => {
@@ -337,7 +337,7 @@ export default function LoadoutEditor({
           </ul>
           {ownedRelicDefs.length === 0 && (
             <p className="glass rounded-xl px-3.5 py-3 text-sm text-gray-400">
-              Du hast noch kein Relikt. Besiege einen Turmwächter (Endlos-Turm, ab Stufe 20), um das erste zu bekommen.
+              Du hast noch kein Relikt. Besiege einen Wächter (Aufstieg, ab Stufe 20), um das erste zu bekommen.
             </p>
           )}
           {lockedRelicDefs.length > 0 && (
@@ -361,7 +361,7 @@ export default function LoadoutEditor({
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-white">{relic.name}</span>
                         <span className="block text-xs text-gray-400">
-                          Turmwächter auf Stufe {guardianStageForRelic(relic.id)}
+                          Wächter auf Stufe {guardianStageForRelic(relic.id)}
                         </span>
                       </span>
                     </li>

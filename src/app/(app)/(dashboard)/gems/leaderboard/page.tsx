@@ -6,9 +6,11 @@ import {
   getCampaignLeaderboard,
   getDailyChallengeLeaderboard,
   getSeasonLeaderboard,
+  getWaveLeaderboard,
   getWeeklyClimbLeaderboard,
   toLeaderboardEntry,
   toSeasonEntry,
+  toWaveEntry,
 } from "@/lib/gems/leaderboard";
 import LeaderboardList, { LEADERBOARD_TEXTS, type LeaderboardView } from "@/components/gems/LeaderboardList";
 
@@ -18,8 +20,9 @@ export const metadata = {
 
 const VIEWS = Object.keys(LEADERBOARD_TEXTS) as LeaderboardView[];
 
-// Vollständige Ranglisten (im Hub stehen nur die ersten Plätze der Saison): Saison (höchste
-// Endlos-Stufe im Monat), Bestwert (über alle Saisons), Diese Woche, Heute (Tages-Herausforderung).
+// Vollständige Ranglisten (im Hub stehen nur die ersten Plätze): Aufstieg (höchste Stufe im Monat),
+// Last Stand (meiste besiegte Wellen im Monat), Bestwert (Kampagne, über alle Saisons), Diese Woche,
+// Heute (Tages-Herausforderung).
 export default async function GemsLeaderboardPage({ searchParams }: { searchParams: Promise<{ ansicht?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -35,7 +38,9 @@ export default async function GemsLeaderboardPage({ searchParams }: { searchPara
         ? await getDailyChallengeLeaderboard()
         : view === "gesamt"
           ? (await getCampaignLeaderboard()).map(toLeaderboardEntry)
-          : (await getSeasonLeaderboard()).map(toSeasonEntry);
+          : view === "laststand"
+            ? (await getWaveLeaderboard()).map(toWaveEntry)
+            : (await getSeasonLeaderboard()).map(toSeasonEntry);
   const texts = LEADERBOARD_TEXTS[view];
 
   return (
@@ -44,13 +49,13 @@ export default async function GemsLeaderboardPage({ searchParams }: { searchPara
         <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu OMA Gems
       </Link>
       <h1 className="font-display text-lg font-black text-white">Rangliste</h1>
-      <nav className="flex gap-1 glass rounded-xl p-1 w-fit" aria-label="Ranglisten-Ansicht">
+      <nav className="flex gap-1 glass rounded-xl p-1 w-fit max-w-full overflow-x-auto" aria-label="Ranglisten-Ansicht">
         {VIEWS.map((v) => (
           <Link
             key={v}
             href={v === "saison" ? "/gems/leaderboard" : `/gems/leaderboard?ansicht=${v}`}
             aria-current={v === view ? "page" : undefined}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               v === view ? "bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-white"
             }`}
           >

@@ -268,7 +268,7 @@ export default function HeroEditor({
           </Button>
         </div>
         <p className="hidden md:block text-[11px] text-gray-500">
-          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison.
+          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Wächter und die Aufstiegs-Saison.
           Kosmetik verändert keine Kampfwerte.
         </p>
       </div>
@@ -299,7 +299,7 @@ export default function HeroEditor({
 
       <div className="space-y-6">
         <p className="md:hidden text-[11px] text-gray-500">
-          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Turmwächter und die Turm-Saison.
+          Gesperrte Teile kannst du anprobieren. Du bekommst sie über Münzen, Karten-Ränge, Wächter und die Aufstiegs-Saison.
           Kosmetik verändert keine Kampfwerte.
         </p>
         {swatchRow(

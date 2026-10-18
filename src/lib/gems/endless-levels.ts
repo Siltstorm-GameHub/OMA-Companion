@@ -1,7 +1,7 @@
 // ============================================
-// OMA Gems — Endlos-Turm: Stufen nach dem Kampagnen-Kapitel
+// OMA Gems — Aufstieg: Stufen nach dem Kampagnen-Kapitel
 // ============================================
-// Nach Level 12 geht die Kampagne mit Endlos-Stufen 13, 14, 15 … weiter. Jede Stufe wird
+// Nach Level 12 geht die Kampagne mit Aufstiegs-Stufen 13, 14, 15 … weiter. Jede Stufe wird
 // rein aus ihrer Nummer erzeugt (deterministischer Zufall) — alle Spieler treffen auf
 // dieselben Gegner, die Rangliste bleibt fair, und es muss nichts gespeichert werden.
 //
@@ -15,7 +15,7 @@
 // (normalizeMonster, Bosse etwas stärker), und jedes Team folgt derselben Rollen-Aufteilung
 // (TEAM_ROLES) — gezogen wird nur, WELCHES Monster eine Rolle füllt.
 // Stufe 13 hat 4 Monster (Einstieg nach dem Kapitel), danach 5, jede 5. Stufe ist eine Boss-Stufe (der Boss
-// ersetzt den ersten Tank). Jede 10. Stufe ab 20 ist ein Turmwächter: Der Boss bekommt eine
+// ersetzt den ersten Tank). Jede 10. Stufe ab 20 ist ein Wächter: Der Boss bekommt eine
 // eigene Fähigkeit (tower-rules.ts) und wird im Kampf durch die Community-Karte der Woche ersetzt.
 // Die Tages-Herausforderung nutzt denselben Aufbau mit einem Seed aus dem Datum.
 // Kalibriert mit scripts/simulate-campaign-balance.ts --endless (Balancing 2026-10, siehe docs/gems-reduktion-plan.md).
@@ -38,14 +38,14 @@ import {
 import { QUICKPLAY_MONSTER_TEMPLATES } from "./puzzle-monsters";
 import { guardianAbilityFor, isGuardianStage, withGuardianAbility } from "./tower-rules";
 
-/** Erste Endlos-Stufe — direkt nach dem letzten Kampagnen-Level. */
+/** Erste Stufe — direkt nach dem letzten Kampagnen-Level. */
 export const ENDLESS_FIRST_STAGE = 13;
-/** Multiplikatoren der ersten Endlos-Stufe und Wachstum je weiterer Stufe (Leben bzw. Angriff). */
+/** Multiplikatoren der ersten Stufe und Wachstum je weiterer Stufe (Leben bzw. Angriff). */
 export const ENDLESS_BASE_MULTIPLIER = 2.5;
 export const ENDLESS_ATTACK_BASE_MULTIPLIER = 1.65;
 export const ENDLESS_GROWTH = 1.032;
 export const ENDLESS_ATTACK_GROWTH = 1.027;
-/** Feste Verteidigung aller Endlos-Stufen (siehe oben). */
+/** Feste Verteidigung aller Aufstiegs-Stufen (siehe oben). */
 export const ENDLESS_DEFENSE_MULTIPLIER = 1.2;
 const ENDLESS_MONSTER_LEVEL = 5;
 const BOSS_EVERY = 5;
@@ -55,7 +55,7 @@ const BOSS_POWER_FACTOR = 1.25;
 /** Stärke eines Boss-Monsters — auch Maßstab für den Community-Wächter (weekly-guardian.ts). */
 export const ENDLESS_BOSS_POWER = REFERENCE_POWER * BOSS_POWER_FACTOR;
 export { ENDLESS_MONSTER_LEVEL };
-/** Schwierigkeit der Tages-Herausforderung — entspricht Endlos-Stufe 22: Ein Spieler mit Karten auf
+/** Schwierigkeit der Tages-Herausforderung — entspricht Stufe 22: Ein Spieler mit Karten auf
  *  Rang 3 gewinnt sie im Simulator in etwa drei von vier Fällen (vorher Stufe 16, fast immer gewonnen). */
 export const DAILY_CHALLENGE_STAGE = 22;
 
@@ -147,7 +147,7 @@ export function endlessMonsterPower(m: { name: string }): number {
   return REFERENCE_POWER * (POWER_ADJUST[m.name] ?? 1);
 }
 
-function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterTemplate[] {
+export function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterTemplate[] {
   const pick = <T>(items: T[]): T => items[Math.floor(rng() * items.length)];
   return TEAM_ROLES[teamSize].map((role, slot) =>
     isBoss && slot === 0
@@ -156,9 +156,9 @@ function rollTeam(rng: () => number, teamSize: 4 | 5, isBoss: boolean): MonsterT
   );
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+export const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Erzeugt die Endlos-Stufe `stage` — für dieselbe Nummer immer exakt dieselbe Stufe. */
+/** Erzeugt die Stufe `stage` — für dieselbe Nummer immer exakt dieselbe Stufe. */
 export function generateEndlessLevel(stage: number): CampaignLevelDef {
   const rng = createRng(0x9e3779b1 ^ stage);
   const teamSize = stage === ENDLESS_FIRST_STAGE ? 4 : 5;
@@ -172,7 +172,7 @@ export function generateEndlessLevel(stage: number): CampaignLevelDef {
   return {
     id: endlessLevelId(stage),
     order: stage,
-    name: isGuardian ? `Turmwächter · Stufe ${stage}` : isBoss ? `Boss-Stufe ${stage}` : `Endlos-Stufe ${stage}`,
+    name: isGuardian ? `Wächter · Stufe ${stage}` : isBoss ? `Boss-Stufe ${stage}` : `Aufstieg · Stufe ${stage}`,
     tagline: isGuardian
       ? `Wächter mit ${guardianAbilityFor(stage).name}. Belohnung: ein Pack, beim ersten Sieg ein Relikt.`
       : isBoss

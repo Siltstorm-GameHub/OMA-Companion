@@ -11,6 +11,9 @@
  * statMultiplier (Leben/Verteidigung) für die Ziel-Siegquote aus TARGET_WIN_RATE (jeweils
  * Bisektion) — Vorschlagswerte zum Eintragen in campaign-levels.ts.
  *
+ * Mit --laststand werden komplette Läufe des Wellenmodus (siehe wave-levels.ts) simuliert und die
+ * Verteilung der besiegten Wellen ausgegeben; --wfirst/--wstep/--heal überschreiben testweise die Kurve.
+ *
  * Mit --endless werden die Endlos-Stufen ab 13 simuliert (siehe endless-levels.ts); --base und
  * --growth überschreiben testweise die Schwierigkeits-Konstanten.
  *
@@ -32,6 +35,8 @@ import { resolveBoardSession, type SwapMove } from "@/lib/battle-engine/board-ma
 import { CAMPAIGN_LEVELS, type CampaignLevelDef } from "@/lib/gems/campaign-levels";
 import { buildCampaignEnemyTeam, computeStars } from "@/lib/gems/campaign";
 import { createTeamState } from "@/lib/battle-engine/stats";
+import { instantiateMonster } from "@/lib/gems/monster-content";
+import { generateWave, WAVE_FIRST_STAGE, WAVE_HEAL_SHARE, WAVE_ROUND_LIMIT, WAVE_STAGE_STEP } from "@/lib/gems/wave-levels";
 import { STARTER_CLASS_MIX } from "@/lib/gems/auto-starter";
 import { withRankBonus } from "@/lib/gems/card-ranks";
 import {
@@ -41,6 +46,8 @@ import {
   ENDLESS_ATTACK_GROWTH,
   ENDLESS_DEFENSE_MULTIPLIER,
   ENDLESS_GROWTH,
+  endlessAttackMultiplier,
+  endlessStatMultiplier,
   generateEndlessLevel,
 } from "@/lib/gems/endless-levels";
 
@@ -49,6 +56,7 @@ const BATTLES = Number(positional[0] ?? 40);
 const PLAYER_LEVEL = Number(positional[1] ?? 1);
 const CALIBRATE = process.argv.includes("--calibrate");
 const ENDLESS = process.argv.includes("--endless");
+const LAST_STAND = process.argv.includes("--laststand");
 /** --rank=N: alle Spielerkarten mit Karten-Rang N (siehe card-ranks.ts) — misst, wie weit Ränge die
  *  Grenze im Endlos-Turm verschieben. */
 const CARD_RANK = Number(process.argv.find((a) => a.startsWith("--rank="))?.split("=")[1] ?? 0);
@@ -206,6 +214,56 @@ function calibrateMoves(level: CampaignLevelDef, targetMoves: number): number {
     else high = mid;
   }
   return Math.round(((low + high) / 2) * 100) / 100;
+}
+
+/** Last Stand: ein kompletter Lauf — Wellen, bis alle Helden gefallen sind. Liefert die besiegten Wellen. */
+function simulateLastStandRun(first: number, step: number, heal: number): { waves: number; moves: number } {
+  const enemiesFor = (wave: number) => {
+    const level = generateWave(wave);
+    const stage = first + (wave - 1) * step;
+    return level.monsters.map((m) =>
+      instantiateMonster(m, level.level, round2(endlessStatMultiplier(stage)), round2(endlessAttackMultiplier(stage)), level.defenseMultiplier)
+    );
+  };
+  const created = createInteractiveState(playerTeam(), enemiesFor(1), { waves: { healShare: heal, roundsPerWave: WAVE_ROUND_LIMIT } });
+  const refill = (s: InteractiveBattleState) => {
+    if (s.waveMode && !s.waveMode.queued) s.waveMode.queued = enemiesFor(s.waveMode.wave + 1);
+  };
+  refill(created);
+  let { state, pendingDecision } = advance(created);
+  let moves = 0;
+  let guard = 0;
+  while (!state.winner && pendingDecision && guard++ < 4000) {
+    refill(state);
+    fireReadyUltimates(state);
+    if (state.winner) break;
+    refill(state);
+    ({ state, pendingDecision } = advance(state, { boardSwaps: [bestSwap(state)] }));
+    moves++;
+  }
+  return { waves: state.winner === "A" ? state.waveMode!.wave : state.waveMode!.wave - 1, moves };
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+if (LAST_STAND) {
+  const first = flag("wfirst", WAVE_FIRST_STAGE);
+  const step = flag("wstep", WAVE_STAGE_STEP);
+  const heal = flag("heal", WAVE_HEAL_SHARE);
+  const runs: number[] = [];
+  let moveSum = 0;
+  for (let i = 0; i < BATTLES; i++) {
+    const r = simulateLastStandRun(first, step, heal);
+    runs.push(r.waves);
+    moveSum += r.moves;
+  }
+  runs.sort((a, b) => a - b);
+  const pct = (p: number) => runs[Math.min(runs.length - 1, Math.floor(runs.length * p))];
+  console.log(
+    `Last Stand: ${BATTLES} Läufe, Rang ${CARD_RANK}, Welle 1 ≙ Stufe ${first}, +${step} je Welle, Heilung ${(heal * 100).toFixed(0)} %\n` +
+      `besiegte Wellen: Ø ${(runs.reduce((a, b) => a + b, 0) / runs.length).toFixed(1)} · P10 ${pct(0.1)} · Median ${pct(0.5)} · P90 ${pct(0.9)} · max ${runs[runs.length - 1]} · Ø Züge ${(moveSum / BATTLES).toFixed(0)}`
+  );
+  process.exit(0);
 }
 
 if (ENDLESS) {

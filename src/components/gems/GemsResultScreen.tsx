@@ -227,7 +227,7 @@ export default function GemsResultScreen({
               ))}
             {details?.packGranted && (
               <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-gray-300">Turmwächter besiegt</span>
+                <span className="text-gray-300">Wächter besiegt</span>
                 <span className="flex items-center gap-1 font-semibold text-teal-300 shrink-0">
                   <Gift className="w-3.5 h-3.5" /> 1 Pack im Shop
                 </span>

@@ -160,7 +160,7 @@ export default async function GemsPage() {
         <p className="text-[11px] text-gray-500 px-0.5">
           {equippedRelics.length > 0
             ? `Relikte: ${equippedRelics.map((r) => r.name).join(", ")}`
-            : "Noch keine Relikte — die gibt es für Turmwächter (Endlos-Stufe 20, 30, …)."}{" "}
+            : "Noch keine Relikte — die gibt es für Wächter (Stufe 20, 30, …)."}{" "}
           <Link href="/gems/lineup" className="font-semibold text-gray-400 hover:text-white">
             Ändern →
           </Link>
@@ -223,7 +223,7 @@ export default async function GemsPage() {
           </div>
           <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Gems</h1>
         </div>
-        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Endlos-Turm und Turniere</p>
+        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Aufstieg und Turniere</p>
       </div>
       <GemsTabs
         spielenPanel={spielenPanel}

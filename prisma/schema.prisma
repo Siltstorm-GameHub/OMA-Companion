@@ -156,6 +156,7 @@ model User {
   gemsPlayer                       GemsPlayer?
   gemsRelics                       UserRelic[]
   gemsTowerClears                  GemsTowerClear[]
+  gemsWaveBests                    GemsWaveBest[]
   gemsCosmetics                    UserCosmetic[]
 }
 
@@ -2011,7 +2012,8 @@ enum CardPackSource {
   GEMS_PVP_CHEST
   GEMS_TOURNAMENT_REWARD
   GEMS_TOWER_GUARDIAN // Turmwächter (jede 10. Endlos-Stufe) zum ersten Mal besiegt
-  GEMS_TOWER_SEASON // Platzierung am Ende einer Turm-Saison (siehe lib/gems/tower-season.ts)
+  GEMS_TOWER_SEASON // Platzierung am Ende einer Aufstiegs-Saison (siehe lib/gems/tower-season.ts)
+  GEMS_WAVE_SEASON // Platzierung am Ende einer Last-Stand-Saison (siehe lib/gems/wave-season.ts)
   QUEST_MILESTONE // nicht mehr vergeben (OMA Quest entfernt), bleibt für alte Pack-Datensätze
 }
 
@@ -2266,7 +2268,7 @@ model UserRelic {
 }
 
 // OMA Gems — geschaffte Endlos-Stufen je Turm-Saison (Kalendermonat "YYYY-MM", siehe
-// lib/gems/tower-season.ts). Jede Saison beginnt der Turm wieder bei Stufe 13.
+// lib/gems/tower-season.ts). Jede Saison beginnt der Aufstieg wieder bei Stufe 13.
 model GemsTowerClear {
   id        String   @id @default(cuid())
   userId    String
@@ -2280,8 +2282,31 @@ model GemsTowerClear {
   @@index([season, stage])
 }
 
-// OMA Gems — abgeschlossene Turm-Saisons (Belohnungen ausgezahlt, siehe cron/gems-tower-season).
+// OMA Gems — abgeschlossene Aufstiegs-Saisons (Belohnungen ausgezahlt, siehe cron/gems-tower-season).
 model GemsTowerSeason {
+  season      String   @id
+  finalizedAt DateTime @default(now())
+  rankingJson String
+}
+
+// OMA Gems — Last Stand (Wellenmodus, siehe lib/gems/wave-levels.ts und wave-season.ts): beste Zahl
+// besiegter Wellen je Spieler und Saison (Kalendermonat "YYYY-MM"). reachedAt = wann dieser Bestwert
+// erreicht wurde (bei Gleichstand liegt vorn, wer früher dort war).
+model GemsWaveBest {
+  id        String   @id @default(cuid())
+  userId    String
+  season    String
+  bestWaves Int
+  reachedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, season])
+  @@index([season, bestWaves])
+}
+
+// OMA Gems — abgeschlossene Last-Stand-Saisons (Belohnungen ausgezahlt, siehe cron/gems-tower-season).
+model GemsWaveSeason {
   season      String   @id
   finalizedAt DateTime @default(now())
   rankingJson String

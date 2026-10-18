@@ -1,14 +1,14 @@
 // ============================================
-// OMA Gems — Rangliste der Kampagne (inkl. Endlos-Turm)
+// OMA Gems — Rangliste der Kampagne (inkl. Aufstieg)
 // ============================================
-// Sortiert nach der höchsten geschafften Stufe (Kapitel-Level 1–12, danach Endlos-Stufen
+// Sortiert nach der höchsten geschafften Stufe (Kapitel-Level 1–12, danach Aufstiegs-Stufen
 // 13, 14, …), dann nach der Summe der besten Sterne über alle Stufen. Bei Gleichstand
 // liegt vorn, wer seinen Stand zuerst erreicht hat — maßgeblich ist der letzte
 // Fortschritt (updatedAt, siehe recordCampaignResult: ohne Verbesserung wird nicht geschrieben).
 //
 // Dazu zwei kurze Listen, in denen auch Neue vorn landen können:
-//  - „Saison“: höchste Endlos-Stufe in der laufenden Turm-Saison (siehe tower-season.ts)
-//  - „Diese Woche“: seit Montag geschaffte Stufen — Kapitel-Level zum ersten Mal, Turmstufen je Saison
+//  - „Saison“: höchste Stufe in der laufenden Aufstiegs-Saison (siehe tower-season.ts)
+//  - „Diese Woche“: seit Montag geschaffte Stufen — Kapitel-Level zum ersten Mal, Aufstiegs-Stufen je Saison
 //  - „Heute“: beste Punktzahl in der Tages-Herausforderung (GemsDailyStats)
 
 import { prisma } from "@/lib/prisma";
@@ -16,12 +16,13 @@ import { CAMPAIGN_LEVELS } from "./campaign-levels";
 import { ENDLESS_FIRST_STAGE, parseEndlessStage } from "./endless-levels";
 import { berlinDateKey, berlinWeekStart } from "./daily-rules";
 import { getSeasonRanking, seasonKey, type SeasonRankingRow } from "./tower-season";
+import { getWaveSeasonRanking, type WaveRankingRow } from "./wave-season";
 
 export interface LeaderboardRow {
   userId: string;
   name: string;
   image: string | null;
-  /** Höchste geschaffte Stufe (1–12 Kapitel, ab 13 Endlos-Turm). */
+  /** Höchste geschaffte Stufe (1–12 Kapitel, ab 13 Aufstieg). */
   highestStage: number;
   stars: number;
   reachedAt: string;
@@ -85,17 +86,17 @@ export interface LeaderboardEntry {
   userId: string;
   name: string;
   image: string | null;
-  /** Rechts in der Zeile, z.B. „Endlos-Stufe 34“ oder „7 Stufen“. */
+  /** Rechts in der Zeile, z.B. „Stufe 34“ oder „7 Stufen“. */
   value: string;
   /** Unter dem Namen, z.B. „42 Sterne · Wächter 30“. */
   detail: string;
 }
 
 export function stageLabel(stage: number): string {
-  return stage >= ENDLESS_FIRST_STAGE ? `Endlos-Stufe ${stage}` : `Level ${stage} von 12`;
+  return stage >= ENDLESS_FIRST_STAGE ? `Aufstieg · Stufe ${stage}` : `Level ${stage} von 12`;
 }
 
-/** Höchster besiegter Turmwächter als Titel, z.B. „Wächter 30“ (erst ab Stufe 20). */
+/** Höchster besiegter Wächter als Titel, z.B. „Wächter 30“ (erst ab Stufe 20). */
 export function guardianTitle(highestStage: number): string | null {
   const beaten = Math.floor(highestStage / 10) * 10;
   return beaten >= 20 ? `Wächter ${beaten}` : null;
@@ -156,7 +157,7 @@ export async function getWeeklyClimbLeaderboard(): Promise<LeaderboardEntry[]> {
     }));
 }
 
-/** „Saison“: höchste Endlos-Stufe der laufenden Turm-Saison als Ranglisten-Zeilen. */
+/** „Saison“: höchste Stufe der laufenden Aufstiegs-Saison als Ranglisten-Zeilen. */
 export async function getSeasonLeaderboard(season: string = seasonKey()): Promise<(SeasonRankingRow & { name: string; image: string | null })[]> {
   const ranking = await getSeasonRanking(season);
   if (ranking.length === 0) return [];
@@ -173,6 +174,22 @@ export function toSeasonEntry(row: SeasonRankingRow & { name: string; image: str
     value: stageLabel(row.highestStage),
     detail: ["diese Saison", title].filter(Boolean).join(" · "),
   };
+}
+
+/** „Last Stand“: meiste besiegte Wellen der laufenden Saison als Ranglisten-Zeilen. */
+export async function getWaveLeaderboard(season: string = seasonKey()): Promise<(WaveRankingRow & { name: string; image: string | null })[]> {
+  const ranking = await getWaveSeasonRanking(season);
+  if (ranking.length === 0) return [];
+  const userById = await usersById(ranking.map((r) => r.userId));
+  return ranking.map((r) => ({ name: "Unbekannt", image: null, ...userById.get(r.userId), ...r }));
+}
+
+export function waveLabel(waves: number): string {
+  return `${waves} ${waves === 1 ? "Welle" : "Wellen"}`;
+}
+
+export function toWaveEntry(row: WaveRankingRow & { name: string; image: string | null }): LeaderboardEntry {
+  return { userId: row.userId, name: row.name, image: row.image, value: waveLabel(row.bestWaves), detail: "besiegt in dieser Saison" };
 }
 
 /** „Heute“: beste Punktzahl in der Tages-Herausforderung, bei Gleichstand wer früher dort war. */

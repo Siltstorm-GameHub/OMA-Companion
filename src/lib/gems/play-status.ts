@@ -6,7 +6,7 @@
 
 import { discardBattle, discardLegacyBattles, isStaleOpenBattle } from "@/lib/gems/battle-legacy";
 import { prisma } from "@/lib/prisma";
-import { getCampaignLevel, getCurrentLevel } from "./campaign";
+import { AUFSTIEG_UNLOCK_LEVEL_ID, getCampaignLevel, getCurrentLevel, LAST_STAND_UNLOCK_LEVEL_ID } from "./campaign";
 import { berlinDateKey, DAILY_CHALLENGE_COINS, weekIndex } from "./daily-rules";
 import { getTodayStatus, type GemsTodayStatus } from "./daily";
 import { ENDLESS_FIRST_STAGE } from "./endless-levels";
@@ -15,6 +15,7 @@ import { DAILY_CHALLENGE_UNLOCK_LEVEL_ID } from "./live-battle";
 import { guardianAbilityFor, nextGuardianStage, weeklyModifierFor } from "./tower-rules";
 import { weeklyGuardianName } from "./weekly-guardian";
 import { seasonDaysLeft, seasonKey, seasonLabel, type SeasonRankingRow } from "./tower-season";
+import { getWaveSeasonRanking } from "./wave-season";
 
 export interface GemsPlayStatus {
   activeBattle: { id: string; label: string } | null;
@@ -29,7 +30,11 @@ export interface GemsPlayStatus {
     guardianAbility: string;
   };
   rival: { name: string; place: number; stageGap: number } | null;
-  /** Laufende Turm-Saison (siehe tower-season.ts). */
+  /** Der Aufstieg (früher Endlos-Turm) öffnet nach Kampagnen-Level 5. */
+  aufstieg: { unlocked: boolean };
+  /** Last Stand (Wellenmodus) öffnet nach Kampagnen-Level 12; Stand in der laufenden Saison. */
+  lastStand: { unlocked: boolean; best: number; rank: number | null; players: number };
+  /** Laufende Aufstiegs-Saison (siehe tower-season.ts). */
   season: { label: string; daysLeft: number; rank: number | null; best: number | null; players: number };
 }
 
@@ -38,7 +43,11 @@ async function activeBattleFor(userId: string): Promise<GemsPlayStatus["activeBa
   // zu lassen (siehe battle-legacy.ts).
   await discardLegacyBattles(userId);
   const live = await prisma.liveBattle.findFirst({
-    where: { playerAId: userId, status: "active", OR: [{ mode: { startsWith: "CAMPAIGN_" } }, { mode: { startsWith: "DAILY_" } }] },
+    where: {
+      playerAId: userId,
+      status: "active",
+      OR: [{ mode: { startsWith: "CAMPAIGN_" } }, { mode: { startsWith: "DAILY_" } }, { mode: { startsWith: "LASTSTAND_" } }],
+    },
     orderBy: { updatedAt: "desc" },
     select: { id: true, mode: true, status: true, updatedAt: true, stateJson: true },
   });
@@ -48,6 +57,7 @@ async function activeBattleFor(userId: string): Promise<GemsPlayStatus["activeBa
     return null;
   }
   if (live.mode.startsWith("DAILY_")) return { id: live.id, label: "Tages-Herausforderung" };
+  if (live.mode.startsWith("LASTSTAND_")) return { id: live.id, label: "Last Stand" };
   const level = getCampaignLevel(live.mode.slice("CAMPAIGN_".length));
   return { id: live.id, label: level?.name ?? "Kampagne" };
 }
@@ -59,7 +69,7 @@ export async function getPlayStatus(
 ): Promise<GemsPlayStatus> {
   const date = berlinDateKey();
   const week = weekIndex(date);
-  const [activeBattle, current, today, dailyUnlock, dailyRows, guardianName] = await Promise.all([
+  const [activeBattle, current, today, dailyUnlock, dailyRows, guardianName, unlockRows, waveRows] = await Promise.all([
     activeBattleFor(userId),
     getCurrentLevel(userId),
     getTodayStatus(userId),
@@ -69,7 +79,13 @@ export async function getPlayStatus(
     }),
     getDailyChallengeLeaderboard(date),
     weeklyGuardianName(week),
+    prisma.userCampaignProgress.findMany({
+      where: { userId, completed: true, levelId: { in: [AUFSTIEG_UNLOCK_LEVEL_ID, LAST_STAND_UNLOCK_LEVEL_ID] } },
+      select: { levelId: true },
+    }),
+    getWaveSeasonRanking(),
   ]);
+  const waveIndex = waveRows.findIndex((r) => r.userId === userId);
 
   const dailyIndex = dailyRows.findIndex((r) => r.userId === userId);
   const seasonIndex = seasonRows.findIndex((r) => r.userId === userId);
@@ -88,6 +104,13 @@ export async function getPlayStatus(
       isEndless: current.order >= ENDLESS_FIRST_STAGE,
     },
     today,
+    aufstieg: { unlocked: unlockRows.some((r) => r.levelId === AUFSTIEG_UNLOCK_LEVEL_ID) },
+    lastStand: {
+      unlocked: unlockRows.some((r) => r.levelId === LAST_STAND_UNLOCK_LEVEL_ID),
+      best: waveIndex >= 0 ? waveRows[waveIndex].bestWaves : 0,
+      rank: waveIndex >= 0 ? waveIndex + 1 : null,
+      players: waveRows.length,
+    },
     daily: { unlocked: dailyUnlock?.completed ?? false, rank: dailyIndex >= 0 ? dailyIndex + 1 : null, players: dailyRows.length, winCoins: DAILY_CHALLENGE_COINS },
     week: {
       modifierName: modifier.name,

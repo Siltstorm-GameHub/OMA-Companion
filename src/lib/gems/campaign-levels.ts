@@ -52,7 +52,7 @@ export interface CampaignLevelDef {
    *  Panzerung abprallen (nur noch Mindestschaden). */
   defenseMultiplier?: number;
   isBoss?: boolean;
-  /** Turmwächter (jede 10. Endlos-Stufe ab 20, siehe tower-rules.ts). */
+  /** Wächter (jede 10. Stufe ab 20, siehe tower-rules.ts). */
   isGuardian?: boolean;
 }
 
@@ -207,7 +207,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
   },
 ];
 
-/** Kapitel-Level oder (nach Level 12) eine Endlos-Stufe, siehe endless-levels.ts. */
+/** Kapitel-Level oder (nach Level 12) eine Stufe, siehe endless-levels.ts. */
 export function getCampaignLevel(levelId: string): CampaignLevelDef | undefined {
   const chapterLevel = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
   if (chapterLevel) return chapterLevel;
