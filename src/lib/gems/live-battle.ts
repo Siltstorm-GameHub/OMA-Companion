@@ -59,7 +59,7 @@ import { applyWeeklyModifier, guardianAbilityFor, isGuardianStage, pickDefeatTip
 import { buildWeeklyGuardian } from "@/lib/gems/weekly-guardian";
 import { grantPack } from "@/lib/gems/packs";
 import { LOSS_POINTS, rankForWins, rankPoints, rankTitle, withRankBonus } from "@/lib/gems/card-ranks";
-import { heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
+import { effectiveHeroLook, heroLookForUnit, type HeroLook } from "@/lib/gems/hero/look";
 import { cosmeticsUnlockedBy } from "@/lib/gems/hero/cosmetics";
 import { getOwnCommunityCard } from "@/lib/gems/hero/my-hero";
 import { applyRelics, relicForGuardianStage } from "@/lib/gems/relics";
@@ -181,6 +181,8 @@ export interface GemsBattleResult {
     name: string;
     class: BattleUnitDefinition["class"];
     imageUrl: string | null;
+    /** Der Cartoon-Held der Karte — derselbe wie im Kampf und in der Sammlung. */
+    heroLook: HeroLook;
     pointsBefore: number;
     pointsAfter: number;
     flawless: boolean;
@@ -463,7 +465,12 @@ async function recordLineupResult(
   const cardIds = [...new Set(state.unitsA.map((u) => u.def.cardId))];
   const before = await prisma.userCard.findMany({
     where: { userId, cardId: { in: cardIds } },
-    select: { cardId: true, winsInLineup: true, rankBonusHalves: true, card: { select: { name: true } } },
+    select: {
+      cardId: true,
+      winsInLineup: true,
+      rankBonusHalves: true,
+      card: { select: { id: true, name: true, rarity: true, class: true, heroLook: true } },
+    },
   });
   if (before.length === 0) return { rankUps: [], cardProgress: [] };
 
@@ -503,6 +510,7 @@ async function recordLineupResult(
       name: c.card.name,
       class: unit.class,
       imageUrl: unit.imageUrl ?? null,
+      heroLook: effectiveHeroLook(c.card),
       pointsBefore,
       pointsAfter,
       flawless: won && flawlessIds.has(c.cardId),

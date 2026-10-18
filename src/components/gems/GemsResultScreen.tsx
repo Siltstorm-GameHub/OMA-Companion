@@ -16,6 +16,7 @@ import confetti from "canvas-confetti";
 import { ArrowRight, ArrowUp, Gift, Handshake, Lightbulb, RotateCcw, Sparkles, Trophy } from "@/components/icons";
 import { Skull, Star } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
+import type { HeroLook } from "@/lib/gems/hero/look";
 import type { GemsBattleTarget } from "@/lib/gems/start-battle-client";
 import { RankProgressCard } from "./CardRank";
 
@@ -46,6 +47,8 @@ export interface GemsResultDetails {
     name: string;
     class: "TANK" | "DAMAGE_DEALER" | "SUPPORT";
     imageUrl: string | null;
+    /** Fehlt bei Ergebnissen aus der Zeit vor dem Cartoon-Helden im Kartenfortschritt. */
+    heroLook?: HeroLook;
     pointsBefore: number;
     pointsAfter: number;
     flawless: boolean;
@@ -276,6 +279,7 @@ export default function GemsResultScreen({
                   name={c.name}
                   unitClass={c.class}
                   imageUrl={c.imageUrl}
+                  heroLook={c.heroLook}
                   pointsBefore={c.pointsBefore}
                   pointsAfter={c.pointsAfter}
                   flawless={c.flawless}

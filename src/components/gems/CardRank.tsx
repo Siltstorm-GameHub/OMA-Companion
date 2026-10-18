@@ -22,6 +22,9 @@ import {
 } from "@/lib/gems/card-ranks";
 import { getClassConfig, type UnitClassKey } from "@/lib/gems/class-config";
 import { Star } from "@/components/icons";
+import HeroFigure from "./HeroFigure";
+import HeroBackdrop from "./HeroBackdrop";
+import type { HeroLook } from "@/lib/gems/hero/look";
 
 function ProgressBar({
   share,
@@ -151,6 +154,7 @@ export function RankProgressCard({
   name,
   unitClass,
   imageUrl,
+  heroLook,
   pointsBefore,
   pointsAfter,
   flawless,
@@ -159,6 +163,8 @@ export function RankProgressCard({
   name: string;
   unitClass: UnitClassKey;
   imageUrl: string | null;
+  /** Cartoon-Held wie in Kampf und Sammlung; ohne ihn (alte Ergebnisse) das Bild bzw. Klassen-Icon. */
+  heroLook?: HeroLook;
   pointsBefore: number;
   pointsAfter: number;
   flawless: boolean;
@@ -195,7 +201,14 @@ export function RankProgressCard({
             : "0 0 0 1px rgba(255,255,255,0.12)",
         }}
       >
-        {imageUrl ? (
+        {heroLook ? (
+          <>
+            <HeroBackdrop id={heroLook.backdrop} />
+            <div className="absolute inset-x-0 top-1 bottom-2 flex items-center justify-center">
+              <HeroFigure look={heroLook} title={name} className="h-full w-auto max-w-full" />
+            </div>
+          </>
+        ) : imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
