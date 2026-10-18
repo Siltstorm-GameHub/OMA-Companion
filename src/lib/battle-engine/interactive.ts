@@ -18,6 +18,7 @@ import {
   pickEnemyForColumn,
   hasAnyValidMove,
   resolveBoardSession,
+  type BoardAnimationStep,
   type BoardGrid,
   type SpecialGrid,
   type SwapMove,
@@ -73,6 +74,11 @@ export interface InteractiveBattleState {
    *  — Grundlage der Karten-XP (siehe battleXp in lib/gems/card-ranks.ts). Fehlt bei Kämpfen aus der Zeit
    *  davor. */
   matchedGems?: Record<UnitClass, number>;
+  /** Auflösungsschritte (Match, Schwerkraft, nachgefüllte Steine, Kaskaden) des zuletzt eingereichten
+   *  Spieler-Zugs, wie der Server sie berechnet hat. Der Client spielt GENAU diese Schritte ab, damit das
+   *  Brett nach der Animation dem persistenten Server-Brett entspricht (kein lokal erfundenes Nachfüllen,
+   *  das beim nächsten Zug durch das Server-Brett ersetzt würde). */
+  lastBoardSteps?: BoardAnimationStep[];
   /** Das Brett für den GERADE wartenden Spieler-Zug — Grid/RngState werden beim
    *  Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt) und beim
    *  Verarbeiten des Zugs wieder geleert. `appliedSwaps` hält den bisherigen
@@ -191,6 +197,7 @@ function applyBoardRage(
   state.boardGrid = result.finalGrid;
   state.boardSpecials = result.finalSpecials;
   state.boardRngState = result.finalRngState;
+  state.lastBoardSteps = result.steps;
 
   if (teamId === PLAYER_TEAM) {
     const matched = (state.matchedGems ??= { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 });
@@ -413,6 +420,7 @@ function stepOnce(
  *  Kampf endet. `playerMove` wird — falls vorhanden — nur EINMAL auf die zuvor
  *  pausierte Einheit angewendet (siehe awaitingUnitId), niemals auf spätere Einheiten. */
 export function advance(state: InteractiveBattleState, playerMove?: PlayerMove): AdvanceResult {
+  if (playerMove) state.lastBoardSteps = undefined;
   const rng = createRng(state.rngState);
   const allUnits = [...state.unitsA, ...state.unitsB];
 

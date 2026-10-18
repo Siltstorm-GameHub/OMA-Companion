@@ -146,6 +146,10 @@ function advanceIds(
   return { ids: next, entering };
 }
 
+function sameBoard(a: BoardGrid, aSpecials: SpecialGrid, b: BoardGrid, bSpecials: SpecialGrid): boolean {
+  return a.length === b.length && a.every((symbol, i) => symbol === b[i] && (aSpecials[i] ?? null) === (bSpecials[i] ?? null));
+}
+
 export default function BoardMatch3({
   grid: initialGrid,
   specials: initialSpecials,
@@ -157,6 +161,7 @@ export default function BoardMatch3({
   onProgress,
   onGemsDestroyed,
   onAnimationEnd,
+  onStepsReady,
   hintDelayMs = HINT_DELAY_MS,
 }: {
   grid: BoardGrid;
@@ -186,7 +191,10 @@ export default function BoardMatch3({
    *  parallel zur Animation starten kann (der Schaden lässt sich so Treffer für
    *  Treffer anzeigen). `columns` sind die Spalten ALLER in diesem Zug zerstörten
    *  Steine (über alle Kaskaden-Runden). */
-  onConfirm: (swaps: SwapMove[], meta: { columns: number[] }) => void;
+  onConfirm: (swaps: SwapMove[], meta: { columns: number[] }) => void | Promise<BoardAnimationStep[] | null>;
+  /** Feuert, sobald feststeht, welche Steine der Zug zerstört (Spalten über alle Kaskaden-Runden) — bei
+   *  einer Server-Auswertung erst nach deren Antwort, direkt vor der Animation. */
+  onStepsReady?: (columns: number[]) => void;
   /** Feuert, wenn die Animation des Zugs vollständig durchgelaufen ist. */
   onAnimationEnd?: () => void;
   /** Fire-and-forget nach jedem bestätigten Swap — sichert den Fortschritt
@@ -251,16 +259,21 @@ export default function BoardMatch3({
   // bei einem Reload mitten im Zug die bereits bestätigten Swaps dagegen nach,
   // und setzt den restlichen Zug-UI-Zustand für den neuen Zug zurück.
   useEffect(() => {
+    let keepIds = false;
     if (initialSwaps && initialSwaps.length > 0) {
       const result = resolveBoardSession(initialGrid, initialSpecials, rngStateRef.current, initialSwaps, initialSwaps.length);
       setBoard(result.finalGrid);
       setSpecials(result.finalSpecials);
       rngStateRef.current = result.finalRngState;
+    } else if (sameBoard(board, specials, initialGrid, initialSpecials)) {
+      // Das Brett ist bereits das des Servers (die Animation hat genau dessen Schritte gespielt):
+      // Steine und IDs bleiben, nichts wird neu gesetzt.
+      keepIds = true;
     } else {
       setBoard(initialGrid);
       setSpecials(initialSpecials);
     }
-    setIds(freshIds());
+    if (!keepIds) setIds(freshIds());
     setEntering(new Map());
     setSwaps(initialSwaps ?? []);
     setSelected(null);
@@ -376,13 +389,26 @@ export default function BoardMatch3({
     // Animationsende zurückgehalten, siehe onAnimationEnd). Nur bei einem
     // Zwischenstand (Budget > 1) wird der Fortschritt separat gesichert — sonst
     // könnte dieser Fire-and-forget-Request NACH der Zug-Auswertung landen.
+    // Die Auflösung (nachgefüllte Steine, Kaskaden) entscheidet der Server mit seinem Zufallszustand — der
+    // Client kennt ihn bewusst nicht. Deshalb wird nicht die lokale Vorschau abgespielt, sondern die
+    // Schritte aus der Server-Antwort: So sieht man genau das Brett, das danach bestehen bleibt, statt dass
+    // es beim nächsten Zug durch das Server-Brett ersetzt wird. Nur ohne Server-Antwort (Fehler) bleibt die
+    // lokale Vorschau als Rückfall.
+    let steps = result.steps;
     if (newSwaps.length >= moveBudget) {
-      onConfirm(newSwaps, { columns: result.steps.flatMap((step) => step.matchedCells.map((cell) => cell % BOARD_COLS)) });
+      const pending = onConfirm(newSwaps, {
+        columns: result.steps.flatMap((step) => step.matchedCells.map((cell) => cell % BOARD_COLS)),
+      });
+      if (pending) {
+        const serverSteps = await pending;
+        if (serverSteps && serverSteps.length > 0) steps = serverSteps;
+      }
     } else {
       onProgress?.(newSwaps);
     }
+    onStepsReady?.(steps.flatMap((step) => step.matchedCells.map((cell) => cell % BOARD_COLS)));
 
-    await playSteps(result.steps, startGrid, startIds);
+    await playSteps(steps, startGrid, startIds);
     setAnimating(false);
     onAnimationEnd?.();
   }
