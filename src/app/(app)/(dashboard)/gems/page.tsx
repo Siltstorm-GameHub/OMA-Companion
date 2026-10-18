@@ -35,6 +35,7 @@ import BuyPack from "@/components/gems/shop/BuyPack";
 import HeroFigure from "@/components/gems/HeroFigure";
 import HeroBackdrop from "@/components/gems/HeroBackdrop";
 import { getOwnCommunityCard, getOwnedCosmetics } from "@/lib/gems/hero/my-hero";
+import { rankPoints } from "@/lib/gems/card-ranks";
 import CosmeticShop from "@/components/gems/shop/CosmeticShop";
 import { effectiveHeroLook, type HeroClass } from "@/lib/gems/hero/look";
 
@@ -87,12 +88,12 @@ export default async function GemsPage() {
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
     acquiredAt: uc.acquiredAt.toISOString(),
-    winsInLineup: uc.winsInLineup,
+    winsInLineup: rankPoints(uc.winsInLineup, uc.rankBonusHalves),
     card: toCardData(uc.card, avatarByDiscordId),
   }));
   const lineupCards = ownedUserCards
     .filter((uc) => uc.inLineup)
-    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), winsInLineup: uc.winsInLineup }));
+    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), winsInLineup: rankPoints(uc.winsInLineup, uc.rankBonusHalves) }));
 
   const coins = currentUser?.points ?? 0;
   const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);

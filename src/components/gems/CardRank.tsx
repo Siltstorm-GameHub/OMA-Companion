@@ -1,20 +1,76 @@
+"use client";
+
 // ============================================
 // OMA Gems — Rang einer Karte (siehe lib/gems/card-ranks.ts)
 // ============================================
-// RankBadge: kleine Plakette auf Karten-Kacheln (erst ab Rang 1 sichtbar).
-// RankProgress: Rang, Bonus und Fortschritt zum nächsten Rang in der Detailansicht.
+// RankBadge: kleine Plakette auf Karten-Kacheln (Rang, vor dem ersten Rang der Fortschritt x/5).
+// RankMiniBar: schmaler Balken am Rand einer Kachel.
+// RankProgress: Rang, Titel, Bonus und Fortschritt zum nächsten Rang in der Detailansicht.
+// RankProgressCard: Karte im Kampfende-Screen mit animiertem Balken und Aufstiegs-Effekt.
+// Die „Siege“-Zahlen sind Rang-Punkte (Sieg 1, makelloser Sieg 1,5, Niederlage 0,5).
 
-import { MAX_RANK, nextRankProgress, RANK_BONUS_PER_RANK, rankForWins } from "@/lib/gems/card-ranks";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import {
+  formatPoints,
+  MAX_RANK,
+  nextRankProgress,
+  RANK_THRESHOLDS,
+  rankBonusPercent,
+  rankForWins,
+  rankTitle,
+  withRankBonus,
+} from "@/lib/gems/card-ranks";
+import { getClassConfig, type UnitClassKey } from "@/lib/gems/class-config";
 import { Star } from "@/components/icons";
+
+function ProgressBar({
+  share,
+  label,
+  className = "h-1.5",
+  barClassName = "bg-amber-400",
+}: {
+  share: number;
+  label: string;
+  className?: string;
+  barClassName?: string;
+}) {
+  const percent = Math.round(share * 100);
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent}
+      className={`rounded-full bg-white/[0.06] overflow-hidden ${className}`}
+    >
+      <div className={`h-full rounded-full ${barClassName}`} style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
 
 export function RankBadge({ wins, className = "top-1 right-1" }: { wins: number; className?: string }) {
   const rank = rankForWins(wins);
-  if (rank === 0) return null;
+  if (rank === 0) {
+    // Noch kein Rang: dezent anzeigen, wie weit es bis Rang 1 ist („2/5“).
+    const first = RANK_THRESHOLDS[0];
+    return (
+      <span
+        className={`absolute z-[8] rounded-md bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-gray-400 tabular-nums pointer-events-none ${className}`}
+        title={`Noch kein Rang — ${Math.floor(wins)} von ${first} Punkten bis Rang 1`}
+        aria-label={`Noch kein Rang, ${Math.floor(wins)} von ${first} Punkten bis Rang 1`}
+      >
+        {Math.floor(wins)}/{first}
+      </span>
+    );
+  }
+  const bonus = rankBonusPercent(rank);
+  const title = rankTitle(rank);
   return (
     <span
-      className={`absolute z-[8] flex items-center gap-0.5 rounded-md bg-black/75 px-1 py-0.5 text-[9px] font-bold text-amber-300 tabular-nums pointer-events-none ${className}`}
-      title={`Rang ${rank}`}
+      className={`absolute z-[8] flex items-center gap-0.5 rounded-md bg-black/75 px-1 py-0.5 text-[11px] font-bold text-amber-300 tabular-nums pointer-events-none ${className}`}
+      title={`Rang ${rank}${title ? ` · ${title}` : ""} · +${bonus} % Leben und Angriff`}
+      aria-label={`Rang ${rank}${title ? `, ${title}` : ""}, plus ${bonus} Prozent Leben und Angriff`}
     >
       <Star className="w-2.5 h-2.5" fill="currentColor" />
       {rank}
@@ -22,53 +78,32 @@ export function RankBadge({ wins, className = "top-1 right-1" }: { wins: number;
   );
 }
 
-/** Schmaler Fortschrittsbalken zum nächsten Rang für Karten-Kacheln der Sammlung. */
+/** Schmaler Fortschrittsbalken zum nächsten Rang am unteren Rand einer Karten-Kachel. */
 export function RankMiniBar({ wins }: { wins: number }) {
   const progress = nextRankProgress(wins);
+  const label = progress
+    ? `Noch ${formatPoints(progress.winsNeeded)} Punkte bis Rang ${progress.nextRank}`
+    : "Höchster Rang erreicht";
   return (
-    <div
-      className="absolute inset-x-0 bottom-0 z-[9] h-1 bg-black/60 pointer-events-none"
-      title={progress ? `Noch ${progress.winsNeeded} bis Rang ${progress.nextRank}` : "Höchster Rang"}
-    >
-      <div className="h-full bg-amber-400" style={{ width: `${Math.round((progress?.share ?? 1) * 100)}%` }} />
+    <div className="absolute inset-x-0 bottom-0 z-[9] pointer-events-none" title={label}>
+      <ProgressBar share={progress?.share ?? 1} label={label} className="h-1 rounded-none bg-black/60" />
     </div>
   );
 }
 
-/** Zeile im Ergebnis-Screen: Balken animiert von winsBefore nach winsAfter, bei Aufstieg über die Rang-Grenze. */
-export function RankProgressRow({ name, winsBefore, winsAfter }: { name: string; winsBefore: number; winsAfter: number }) {
-  const rankBefore = rankForWins(winsBefore);
-  const rankAfter = rankForWins(winsAfter);
-  const leveledUp = rankAfter > rankBefore;
-  // Bei Aufstieg füllt sich der Balken bis voll, danach zeigt er den neuen Rang.
-  const from = nextRankProgress(winsBefore);
-  const to = nextRankProgress(winsAfter);
-  const startShare = from?.share ?? 1;
-  const endShare = leveledUp ? 1 : (to?.share ?? 1);
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="font-semibold text-white truncate">{name}</span>
-        <span className="text-gray-400 shrink-0">
-          {leveledUp ? `Rang ${rankAfter} erreicht!` : to ? `Noch ${to.winsNeeded} bis Rang ${to.nextRank}` : "Höchster Rang"}
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <motion.div
-          className={`h-full rounded-full ${leveledUp ? "bg-teal-400" : "bg-amber-400"}`}
-          initial={{ width: `${Math.round(startShare * 100)}%` }}
-          animate={{ width: `${Math.round(endShare * 100)}%` }}
-          transition={{ duration: 0.9, delay: 0.7, ease: "easeOut" }}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function RankProgress({ wins }: { wins: number }) {
+/** Rang, Titel, Bonus und Fortschritt in der Detailansicht. Mit `baseHp`/`baseAttack` auch die Werte
+ *  mit dem aktuellen und dem nächsten Rang-Bonus. */
+export function RankProgress({ wins, baseHp, baseAttack }: { wins: number; baseHp?: number; baseAttack?: number }) {
   const rank = rankForWins(wins);
   const progress = nextRankProgress(wins);
-  const bonus = Math.round(rank * RANK_BONUS_PER_RANK * 100);
+  const bonus = rankBonusPercent(rank);
+  const title = rankTitle(rank);
+  const label = progress
+    ? `Noch ${formatPoints(progress.winsNeeded)} Punkte bis Rang ${progress.nextRank}`
+    : "Höchster Rang erreicht";
+  const showStats = baseHp != null && baseAttack != null;
+  const now = showStats ? withRankBonus({ baseHp, baseAttack }, rank) : null;
+  const next = showStats && progress ? withRankBonus({ baseHp, baseAttack }, progress.nextRank) : null;
   return (
     <div className="w-full glass rounded-xl px-3 py-2.5 space-y-1.5">
       <div className="flex items-center justify-between gap-2 text-xs">
@@ -80,18 +115,128 @@ export function RankProgress({ wins }: { wins: number }) {
         </span>
         <span className="text-gray-400">{bonus > 0 ? `+${bonus} % Leben und Angriff` : "noch kein Bonus"}</span>
       </div>
+      {title && (
+        <p className="text-[11px] font-semibold text-amber-300">
+          Titel: {title}
+        </p>
+      )}
+      {now && (
+        <p className="text-[11px] text-gray-300 tabular-nums">
+          Leben {now.baseHp} · Angriff {now.baseAttack}
+          {next && (
+            <span className="text-gray-500">
+              {" "}
+              → Rang {progress!.nextRank}: {next.baseHp} / {next.baseAttack}
+            </span>
+          )}
+        </p>
+      )}
       {progress ? (
         <>
-          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.round(progress.share * 100)}%` }} />
-          </div>
+          <ProgressBar share={progress.share} label={label} />
           <p className="text-[11px] text-gray-500">
-            Noch {progress.winsNeeded} {progress.winsNeeded === 1 ? "Sieg" : "Siege"} in der Startaufstellung bis Rang {progress.nextRank}.
+            {label} (Sieg 1, makelloser Sieg 1,5, Niederlage 0,5 — in der Startaufstellung).
           </p>
         </>
       ) : (
         <p className="text-[11px] text-gray-500">Höchster Rang erreicht.</p>
       )}
     </div>
+  );
+}
+
+/** Karte im Kampfende-Screen: Bild, Punktegewinn und Balken, der von vorher nach nachher läuft.
+ *  Bei einem Aufstieg füllt sich der Balken, die Karte leuchtet und der neue Rang springt auf. */
+export function RankProgressCard({
+  name,
+  unitClass,
+  imageUrl,
+  pointsBefore,
+  pointsAfter,
+  flawless,
+  delay = 0.7,
+}: {
+  name: string;
+  unitClass: UnitClassKey;
+  imageUrl: string | null;
+  pointsBefore: number;
+  pointsAfter: number;
+  flawless: boolean;
+  delay?: number;
+}) {
+  const reduceMotion = useReducedMotion();
+  const rankBefore = rankForWins(pointsBefore);
+  const rankAfter = rankForWins(pointsAfter);
+  const leveledUp = rankAfter > rankBefore;
+  const from = nextRankProgress(pointsBefore);
+  const to = nextRankProgress(pointsAfter);
+  const startShare = from?.share ?? 1;
+  const endShare = leveledUp ? 1 : (to?.share ?? 1);
+  const gained = pointsAfter - pointsBefore;
+  const classConfig = getClassConfig(unitClass);
+  const caption = leveledUp
+    ? `${name} erreicht Rang ${rankAfter}`
+    : to
+      ? `${name}: noch ${formatPoints(to.winsNeeded)} Punkte bis Rang ${to.nextRank}`
+      : `${name}: höchster Rang`;
+  return (
+    <motion.li
+      className="relative flex flex-col items-center gap-1 min-w-0"
+      aria-label={`${caption}, ${formatPoints(gained)} Punkte${flawless ? ", makelloser Sieg" : ""}`}
+      animate={leveledUp && !reduceMotion ? { scale: [1, 1.08, 1] } : undefined}
+      transition={{ duration: 0.5, delay: delay + 0.9 }}
+    >
+      <div
+        className="relative w-full aspect-[3/4] overflow-hidden rounded-lg"
+        style={{
+          background: `linear-gradient(160deg, ${classConfig.color}3a, rgba(12,12,16,0.92))`,
+          boxShadow: leveledUp
+            ? "0 0 0 2px #fbbf24, 0 0 14px rgba(251,191,36,0.55)"
+            : "0 0 0 1px rgba(255,255,255,0.12)",
+        }}
+      >
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={classConfig.icon} alt="" aria-hidden className="absolute inset-0 m-auto w-6 h-6 object-contain opacity-70" />
+        )}
+        <div
+          role="progressbar"
+          aria-label={caption}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(endShare * 100)}
+          className="absolute inset-x-0 bottom-0 h-1 bg-black/60"
+        >
+          <motion.div
+            className={`h-full ${leveledUp ? "bg-teal-300" : "bg-amber-400"}`}
+            initial={{ width: `${Math.round(startShare * 100)}%` }}
+            animate={{ width: `${Math.round(endShare * 100)}%` }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.9, delay, ease: "easeOut" }}
+          />
+        </div>
+        {leveledUp && (
+          <motion.span
+            className="absolute inset-0 flex items-center justify-center bg-black/45 text-amber-300 font-black text-lg"
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={reduceMotion ? { duration: 0 } : { type: "spring", delay: delay + 0.9, stiffness: 260, damping: 14 }}
+            aria-hidden
+          >
+            <Star className="w-4 h-4 mr-0.5" fill="currentColor" />
+            {rankAfter}
+          </motion.span>
+        )}
+      </div>
+      <span className="text-[10px] font-semibold text-gray-300 truncate max-w-full" aria-hidden>
+        {name}
+      </span>
+      <span className={`text-[11px] font-bold tabular-nums ${flawless ? "text-teal-300" : "text-gray-400"}`} aria-hidden>
+        +{formatPoints(gained)}
+        {flawless ? " ✦" : ""}
+      </span>
+    </motion.li>
   );
 }

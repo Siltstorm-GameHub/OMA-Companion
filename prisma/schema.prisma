@@ -1966,6 +1966,9 @@ model UserCard {
   // Siege, in denen die Karte in der Startaufstellung mitgekämpft hat — bestimmt ihren Rang
   // (siehe lib/gems/card-ranks.ts).
   winsInLineup Int    @default(0)
+  // Halbe Rang-Punkte: +1 (= 0,5 Siege) je Niederlage/Unentschieden in der Startaufstellung und je
+  // makellosem Sieg (Karte überlebt). Rang-Punkte = winsInLineup + rankBonusHalves / 2.
+  rankBonusHalves Int @default(0)
   acquiredAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])

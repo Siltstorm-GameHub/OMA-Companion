@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "@/components/icons";
 import { CLASS_CONFIG } from "@/lib/gems/class-config";
+import { nextRankProgress, rankForWins } from "@/lib/gems/card-ranks";
 import CardTile from "./CardTile";
 import CardDetailModal, { type CardDetailSelection } from "./CardDetailModal";
 import type { BattleCardData } from "./BattleCardView";
@@ -33,9 +34,25 @@ export interface OwnedCardEntry {
   id: string;
   /** ISO-Zeitstempel, wann die Karte erworben wurde — steuert das "Neu"-Ribbon. */
   acquiredAt: string;
-  /** Siege in der Startaufstellung — bestimmt den Rang (siehe card-ranks.ts). */
+  /** Rang-Punkte aus der Startaufstellung — bestimmt den Rang (siehe card-ranks.ts, rankPoints). */
   winsInLineup: number;
   card: BattleCardData & { id: string };
+}
+
+type OwnedSort = "DEFAULT" | "RANK" | "NEXT_RANK";
+
+const SORTS: { key: OwnedSort; label: string }[] = [
+  { key: "DEFAULT", label: "Standard" },
+  { key: "RANK", label: "Höchster Rang" },
+  { key: "NEXT_RANK", label: "Nächster Aufstieg" },
+];
+
+/** „Fast aufgestiegen“: höchstens so viele Punkte bis zum nächsten Rang. */
+const ALMOST_RANK_UP_POINTS = 2;
+
+function pointsToNextRank(wins: number): number {
+  // Karten auf dem höchsten Rang sortieren ans Ende.
+  return nextRankProgress(wins)?.winsNeeded ?? Number.POSITIVE_INFINITY;
 }
 
 const NEW_CARD_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
@@ -56,6 +73,8 @@ export default function CardCollectionBrowser({
   initialOtherTotal: number;
 }) {
   const [filter, setFilter] = useState<CardClassFilter>("ALL");
+  const [sort, setSort] = useState<OwnedSort>("DEFAULT");
+  const [almostOnly, setAlmostOnly] = useState(false);
   const [otherCards, setOtherCards] = useState(initialOtherCards);
   const [otherTotal, setOtherTotal] = useState(initialOtherTotal);
   const [loading, setLoading] = useState(false);
@@ -97,11 +116,17 @@ export default function CardCollectionBrowser({
     });
   }
 
-  const filteredOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
+  const classOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
+  const filteredOwned = classOwned.filter((oc) => !almostOnly || pointsToNextRank(oc.winsInLineup) <= ALMOST_RANK_UP_POINTS);
+  if (sort === "RANK") {
+    filteredOwned.sort((a, b) => rankForWins(b.winsInLineup) - rankForWins(a.winsInLineup) || b.winsInLineup - a.winsInLineup);
+  } else if (sort === "NEXT_RANK") {
+    filteredOwned.sort((a, b) => pointsToNextRank(a.winsInLineup) - pointsToNextRank(b.winsInLineup));
+  }
   // otherTotal ist bereits auf denselben Filter gescoped (siehe fetchPage) —
   // gesammelt+fehlend ergibt so direkt die Gesamtzahl im aktuell sichtbaren Filter.
-  const totalInFilter = filteredOwned.length + otherTotal;
-  const collectedPct = totalInFilter > 0 ? Math.round((filteredOwned.length / totalInFilter) * 100) : 0;
+  const totalInFilter = classOwned.length + otherTotal;
+  const collectedPct = totalInFilter > 0 ? Math.round((classOwned.length / totalInFilter) * 100) : 0;
 
   async function fetchPage(nextFilter: CardClassFilter, offset: number) {
     const params = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) });
@@ -169,6 +194,34 @@ export default function CardCollectionBrowser({
         </div>
       </div>
 
+      {/* Sortierung und „Fast aufgestiegen“ für eigene Karten */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="inline-flex items-center gap-1.5 text-xs text-gray-400">
+          Sortieren
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as OwnedSort)}
+            className="rounded-lg bg-white/[0.06] px-2 py-1.5 text-xs font-semibold text-white"
+          >
+            {SORTS.map(({ key, label }) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          aria-pressed={almostOnly}
+          onClick={() => setAlmostOnly((v) => !v)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            almostOnly ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25" : "hover:bg-white/[0.06]"
+          }`}
+        >
+          Fast aufgestiegen
+        </button>
+      </div>
+
       {/* Sammel-Fortschritt — kontextuell zum aktuellen Klassenfilter */}
       {totalInFilter > 0 && (
         <div className="flex items-center gap-2.5">
@@ -179,14 +232,16 @@ export default function CardCollectionBrowser({
             />
           </div>
           <span className="text-[11px] font-semibold text-gray-400 tabular-nums shrink-0">
-            {filteredOwned.length}/{totalInFilter} gesammelt
+            {classOwned.length}/{totalInFilter} gesammelt
           </span>
         </div>
       )}
 
       {/* Eigene Karten */}
       {filteredOwned.length === 0 ? (
-        <p className="text-sm text-gray-500">Keine eigenen Karten in dieser Klasse.</p>
+        <p className="text-sm text-gray-500">
+          {almostOnly ? "Keine Karte kurz vor dem nächsten Rang." : "Keine eigenen Karten in dieser Klasse."}
+        </p>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {filteredOwned.map((oc) => (
