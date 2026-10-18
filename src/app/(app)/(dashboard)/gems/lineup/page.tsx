@@ -3,8 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
 import { ensureGemsStarter } from "@/lib/gems/auto-starter";
-import LineupEditor from "@/components/gems/LineupEditor";
-import RelicPicker from "@/components/gems/RelicPicker";
+import LoadoutEditor from "@/components/gems/LoadoutEditor";
 import { getOwnedRelics } from "@/lib/gems/relic-store";
 import { cardXp } from "@/lib/gems/card-ranks";
 
@@ -38,20 +37,20 @@ export default async function LineupPage() {
   const relics = await getOwnedRelics(session.user.id);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-5xl mx-auto px-4 py-4 space-y-3">
       <div>
-        <h1 className="text-lg font-black text-white">Startaufstellung ändern</h1>
+        <h1 className="text-lg font-black text-white">Aufstellung &amp; Relikte</h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          Wähle bis zu 5 Karten, mit denen du kämpfst. Jeder Sieg bringt den Karten in der Aufstellung Rang-Fortschritt.
+          Wähle bis zu 5 Karten für den Kampf. Karten in der Aufstellung sammeln XP — je mehr Gems ihrer Klasse du
+          zerstörst, desto mehr.
         </p>
       </div>
-      <LineupEditor cards={cards} initialLineup={initialLineup} />
-      <div className="pt-4">
-        <RelicPicker
-          owned={relics.map((r) => r.relicId)}
-          equipped={relics.filter((r) => r.equipped).map((r) => r.relicId)}
-        />
-      </div>
+      <LoadoutEditor
+        cards={cards}
+        initialLineup={initialLineup}
+        ownedRelics={relics.map((r) => r.relicId)}
+        equippedRelics={relics.filter((r) => r.equipped).map((r) => r.relicId)}
+      />
     </div>
   );
 }
