@@ -63,4 +63,22 @@ describe("OMA Gems: Kampf-Stepper", () => {
     assert.ok(total >= 3, "mindestens ein 3er-Match gezählt");
     assert.ok(next.state.matchedGems![gemClass] + next.state.matchedGems![other] >= 3);
   });
+
+  test("das Brett bleibt über die Züge bestehen: die Server-Schritte enden genau im nächsten Brett", () => {
+    let current = newBattle();
+    for (let turn = 0; turn < 4 && !current.state.winner; turn++) {
+      const board = current.pendingDecision!.board!;
+      const move = findHintMove(board.grid, board.specials)!;
+      const next = advance(current.state, { boardSwaps: [move] });
+      const steps = next.state.lastBoardSteps!;
+      assert.ok(steps.length > 0, "Auflösungsschritte vorhanden");
+      const last = steps[steps.length - 1];
+      assert.deepEqual(next.state.boardGrid, last.gridAfter, "persistentes Brett = Ende der Animation");
+      assert.deepEqual(next.state.boardSpecials, last.specialsAfter);
+      if (next.pendingDecision?.board) {
+        assert.deepEqual(next.pendingDecision.board.grid, last.gridAfter, "nächster Zug startet auf demselben Brett");
+      }
+      current = next;
+    }
+  });
 });

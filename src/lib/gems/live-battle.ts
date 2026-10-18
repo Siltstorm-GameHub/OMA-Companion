@@ -26,7 +26,7 @@ import {
 } from "@/lib/battle-engine/interactive";
 import { buildRosterFromUnits } from "@/lib/battle-engine/stats";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
-import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
+import type { BoardAnimationStep, BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type {
   ActiveStatModifier,
@@ -161,6 +161,9 @@ export interface LiveBattleSnapshot {
   gemsResult: GemsBattleResult | null;
   /** Name der Stufe für die Kopfzeile im Kampf, z.B. „Ping-Trouble-Pass“. */
   title: string | null;
+  /** Auflösungsschritte des zuletzt eingereichten Zugs (autoritativ vom Server, siehe
+   *  InteractiveBattleState.lastBoardSteps) — der Client animiert genau diese. */
+  boardSteps: BoardAnimationStep[] | null;
 }
 
 export interface GemsBattleResult {
@@ -266,6 +269,7 @@ async function buildSnapshot(
     campaignResult,
     gemsResult,
     title: battleTitle(live.mode),
+    boardSteps: state.lastBoardSteps ?? null,
   };
 }
 

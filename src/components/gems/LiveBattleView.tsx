@@ -25,7 +25,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
-import { enemySlotForColumn, pickEnemyForColumn, type BoardGrid, type SpecialGrid, type SwapMove } from "@/lib/battle-engine/board-match3";
+import { enemySlotForColumn, pickEnemyForColumn, type BoardAnimationStep, type BoardGrid, type SpecialGrid, type SwapMove } from "@/lib/battle-engine/board-match3";
 import { BOARD_COLS } from "@/lib/battle-engine/constants";
 import type { ActiveStatModifier, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import {
@@ -101,6 +101,8 @@ interface FloatingEffect {
 }
 
 interface LiveSnapshot {
+  /** Auflösungsschritte des zuletzt eingereichten Zugs (Server), siehe BoardMatch3. */
+  boardSteps?: BoardAnimationStep[] | null;
   id: string;
   mode: string;
   status: "active" | "finished";
@@ -922,8 +924,9 @@ export default function LiveBattleView({
     if (pending) setSnapshot(pending);
   }
 
-  async function submitMove(boardSwaps: SwapMove[]) {
-    if (busy) return;
+  /** Reicht den Zug ein und liefert die vom Server berechneten Auflösungsschritte (oder null bei einem Fehler). */
+  async function submitMove(boardSwaps: SwapMove[]): Promise<BoardAnimationStep[] | null> {
+    if (busy) return null;
     setBusy(true);
     try {
       const res = await fetch(`/api/gems/live/${liveBattleId}/action`, {
@@ -934,11 +937,13 @@ export default function LiveBattleView({
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Zug fehlgeschlagen.");
-        return;
+        return null;
       }
       applySnapshot(data);
+      return (data as LiveSnapshot).boardSteps ?? null;
     } catch {
       toast.error("Netzwerkfehler");
+      return null;
     } finally {
       setBusy(false);
     }
@@ -1148,8 +1153,12 @@ function LiveBattleBody({
    *  applyBoardRage — nur wird hier der Lebend-Zustand VOR dem Zug benutzt). */
   /** Zugbeginn: Server-Antwort zurückhalten und je Gegner zählen, wie viele
    *  Steine dieses Zuges ihn treffen werden (gleiche Spalten-Regel wie der Server). */
-  function handleMoveStart(columns: number[]) {
+  function handleMoveStart() {
     beginGemsHold();
+  }
+
+  /** Steht fest, welche Steine der Zug zerstört (Server-Schritte), zählt je Gegner die Treffer. */
+  function handleStepsReady(columns: number[]) {
     const enemies = unitsByTeam(opponentTeam);
     const alive = enemies.map((u) => u.isAlive);
     const next = new Map<string, { hits: number; total: number }>();
@@ -1396,11 +1405,12 @@ function LiveBattleBody({
                 initialSwaps={snapshot.awaiting.board.appliedSwaps}
                 // Sobald das Zug-Budget aufgebraucht ist, wird der Zug abgeschickt —
                 // zusätzlich greift der Spieler nur per Ultimate-Klick an.
-                onConfirm={(swaps, meta) => {
-                  handleMoveStart(meta.columns);
-                  submitMove(swaps);
+                onConfirm={(swaps) => {
+                  handleMoveStart();
                   setMovesMade((n) => n + 1);
+                  return submitMove(swaps);
                 }}
+                onStepsReady={handleStepsReady}
                 hintDelayMs={isTutorial && movesMade === 0 ? 400 : undefined}
                 onAnimationEnd={handleAnimationEnd}
                 onProgress={saveBoardProgress}
