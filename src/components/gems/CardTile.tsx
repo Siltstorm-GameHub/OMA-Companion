@@ -20,6 +20,10 @@ export default function CardTile({
   locked = false,
   isNew = false,
   xp,
+  selected = false,
+  selectionIndex,
+  dimmed = false,
+  ariaLabel,
   onClick,
 }: {
   /** XP aus der Startaufstellung — zeigt Rang und Fortschritt (nur eigene Karten). */
@@ -28,6 +32,13 @@ export default function CardTile({
   locked?: boolean;
   /** Kürzlich erhalten — zeigt ein "NEU"-Ribbon in der oberen linken Ecke. */
   isNew?: boolean;
+  /** Auswahl-Modus (Startaufstellung): markiert die Kachel mit Rahmen und Reihenfolge-Nummer. */
+  selected?: boolean;
+  selectionIndex?: number;
+  /** Abgeblendet, z. B. wenn keine weitere Karte mehr gewählt werden kann. */
+  dimmed?: boolean;
+  /** Ersetzt das Standard-Label „Details ansehen“ (im Auswahl-Modus: „… auswählen“). */
+  ariaLabel?: string;
   onClick: () => void;
 }) {
   const classConfig = getClassConfig(card.class);
@@ -40,9 +51,26 @@ export default function CardTile({
       type="button"
       onClick={onClick}
       className="flex flex-col items-center gap-1.5 w-full text-left"
-      aria-label={`${card.name} — Details ansehen`}
+      aria-label={ariaLabel ?? `${card.name} — Details ansehen`}
+      aria-pressed={ariaLabel ? selected : undefined}
     >
-      <div className="relative w-full">
+      <div className={`relative w-full transition-opacity ${dimmed ? "opacity-45" : ""}`}>
+        {selected && (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -inset-0.5 z-[11] rounded-lg ring-2 ring-teal-400 shadow-[0_0_14px_rgba(20,184,166,0.55)]"
+            />
+            {selectionIndex != null && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-1.5 -left-1.5 z-[12] flex h-5 w-5 items-center justify-center rounded-full bg-teal-400 text-[11px] font-black text-black"
+              >
+                {selectionIndex}
+              </span>
+            )}
+          </>
+        )}
       <div
         className="card-cut-sm relative w-full aspect-[3/4] overflow-hidden"
         style={{
