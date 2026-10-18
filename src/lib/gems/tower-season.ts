@@ -1,7 +1,7 @@
 // ============================================
-// OMA Gems — Turm-Saisons
+// OMA Gems — Aufstiegs-Saisons
 // ============================================
-// Jeder Kalendermonat (Berliner Zeit, "YYYY-MM") ist eine Saison. Der Endlos-Turm beginnt jede
+// Jeder Kalendermonat (Berliner Zeit, "YYYY-MM") ist eine Saison. Der Aufstieg beginnt jede
 // Saison wieder bei Stufe 13 — Kapitel, Karten-Ränge und Relikte bleiben. So wird aus der festen
 // Grenze im Turm ein monatliches Rennen, in dem man durch Ränge und Relikte jedes Mal etwas weiter
 // kommt. Geschaffte Stufen liegen in GemsTowerClear; zum Monatswechsel vergibt der Cron
@@ -90,14 +90,14 @@ async function backfillFirstSeason(userId: string, season: string): Promise<void
   if (data.length > 0) await prisma.gemsTowerClear.createMany({ data, skipDuplicates: true });
 }
 
-/** In der laufenden Saison geschaffte Endlos-Stufen als Level-IDs ("endless-N"). */
+/** In der laufenden Saison geschaffte Aufstiegs-Stufen als Level-IDs ("endless-N"). */
 export async function seasonClearedLevelIds(userId: string, season: string = seasonKey()): Promise<string[]> {
   await backfillFirstSeason(userId, season);
   const clears = await prisma.gemsTowerClear.findMany({ where: { userId, season }, select: { stage: true } });
   return clears.map((c) => endlessLevelId(c.stage));
 }
 
-/** Trägt eine geschaffte Endlos-Stufe für die laufende Saison ein. true = in dieser Saison neu. */
+/** Trägt eine geschaffte Stufe für die laufende Saison ein. true = in dieser Saison neu. */
 export async function recordTowerClear(userId: string, stage: number): Promise<boolean> {
   const season = seasonKey();
   await backfillFirstSeason(userId, season);
@@ -160,8 +160,8 @@ export async function finalizeDueTowerSeasons(now: Date = new Date()): Promise<{
       await grantPack(ranking[i].userId, "GEMS_TOWER_SEASON", kind);
       await createNotification(ranking[i].userId, {
         type: "event_result",
-        title: `Turm-Saison ${seasonLabel(season)}: Platz ${place}`,
-        body: `Du hast Endlos-Stufe ${ranking[i].highestStage} erreicht. Dein Pack liegt im OMA-Gems-Shop${
+        title: `Aufstiegs-Saison ${seasonLabel(season)}: Platz ${place}`,
+        body: `Du hast Stufe ${ranking[i].highestStage} erreicht. Dein Pack liegt im OMA-Gems-Shop${
           place === 1 ? ", dazu Farbschema „Saison-Gold“ und Emblem „Krone“ für deinen Helden" : ", dazu Farbschema „Saison-Gold“ für deinen Helden"
         }.`,
         url: "/gems?tab=laden",

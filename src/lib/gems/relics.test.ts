@@ -10,7 +10,7 @@ function unit(cls: BattleUnitDefinition["class"]): BattleUnitDefinition {
 }
 
 describe("Relikte", () => {
-  test("ein Relikt je Turmwächter von Stufe 20 bis 90, danach keine mehr", () => {
+  test("ein Relikt je Wächter von Stufe 20 bis 90, danach keine mehr", () => {
     assert.equal(relicForGuardianStage(20)?.id, RELICS[0].id);
     assert.equal(relicForGuardianStage(90)?.id, RELICS[7].id);
     assert.equal(relicForGuardianStage(100), null);

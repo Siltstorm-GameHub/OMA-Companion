@@ -61,7 +61,7 @@ describe("OMA Gems: Münzen", () => {
     assert.equal(firstWinBonusCoins(12), 55);
   });
 
-  test("Endlos-Stufen bringen je 10 Stufen etwas mehr", () => {
+  test("Aufstiegs-Stufen bringen je 10 Stufen etwas mehr", () => {
     assert.equal(endlessStageCoins(13), 10);
     assert.equal(endlessStageCoins(22), 10);
     assert.equal(endlessStageCoins(23), 12);

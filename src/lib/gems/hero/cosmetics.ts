@@ -2,7 +2,7 @@
 // OMA Gems — Kosmetik für „Mein Held“: was frei ist und wie man den Rest bekommt
 // ============================================
 // Jedes wählbare Teil eines Helden-Looks (look.ts) hat eine Freischalt-Regel. Frei sind die Teile
-// zum Start; alle anderen kommen über Münzen, Karten-Ränge, Turmwächter oder die Turm-Saison
+// zum Start; alle anderen kommen über Münzen, Karten-Ränge, Wächter oder die Aufstiegs-Saison
 // (Besitz und Vergabe: Phase 10c). Kosmetik gibt nie Kampfwerte. Rein, ohne DB.
 
 import { basesForClass, type HeroClass, type HeroLook } from "./look";
@@ -101,7 +101,7 @@ export function unlockLabel(unlock: Unlock): string {
     case "rank":
       return `Karte auf Rang ${unlock.rank}`;
     case "guardian":
-      return `Turmwächter ${unlock.stage}`;
+      return `Wächter ${unlock.stage}`;
     case "season":
       return unlock.place === "first" ? "Saison-Platz 1" : "Saison Top 10";
   }
@@ -130,9 +130,9 @@ export function allCosmetics(): { slot: CosmeticSlot; id: string; itemId: string
 export interface CosmeticProgress {
   /** Höchster Rang irgendeiner eigenen Karte (card-ranks.ts). */
   maxCardRank: number;
-  /** Je geschaffte Wächter-Stufen (Endlos-Stufe 20, 30, …). */
+  /** Je geschaffte Wächter-Stufen (Stufe 20, 30, …). */
   guardianStages: ReadonlySet<number>;
-  /** Beste Platzierung in einer abgeschlossenen Turm-Saison, oder null. */
+  /** Beste Platzierung in einer abgeschlossenen Aufstiegs-Saison, oder null. */
   bestSeasonPlace: number | null;
 }
 

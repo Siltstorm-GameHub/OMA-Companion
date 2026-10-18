@@ -32,8 +32,8 @@ function unit(cls: BattleUnitDefinition["class"]): BattleUnitDefinition {
   };
 }
 
-describe("Turmwächter", () => {
-  test("jede 10. Endlos-Stufe ab 20", () => {
+describe("Wächter", () => {
+  test("jede 10. Stufe ab 20", () => {
     assert.equal(isGuardianStage(10), false);
     assert.equal(isGuardianStage(20), true);
     assert.equal(isGuardianStage(25), false);
@@ -78,14 +78,14 @@ describe("Wochen-Modifikator", () => {
 });
 
 describe("Kampagne: nächste und aktuelle Stufe", () => {
-  test("nach Level 12 kommt die erste Endlos-Stufe", () => {
+  test("nach Level 12 kommt die erste Stufe", () => {
     assert.equal(nextLevelId("lvl-03"), "lvl-04");
-    assert.equal(nextLevelId("lvl-12"), "endless-13");
+    assert.equal(nextLevelId("lvl-12"), null, "nach dem letzten Kampagnen-Level folgt nichts — der Aufstieg ist ein eigener Modus");
     assert.equal(nextLevelId("endless-41"), "endless-42");
     assert.equal(nextLevelId("quatsch"), null);
   });
 
-  test("aktuelle Stufe: erstes offenes Kapitel-Level, sonst nach der höchsten Endlos-Stufe", () => {
+  test("aktuelle Stufe: erstes offenes Kapitel-Level, sonst nach der höchsten Stufe", () => {
     assert.equal(currentLevelId(new Set()), "lvl-01");
     assert.equal(currentLevelId(new Set(["lvl-01", "lvl-02"])), "lvl-03");
     const chapter = Array.from({ length: 12 }, (_, i) => `lvl-${String(i + 1).padStart(2, "0")}`);
@@ -98,7 +98,7 @@ describe("Tipp nach einer Niederlage", () => {
   const base = { enemyHpPercent: 0.5, guardian: null, modifier: null, lineupClasses: [], seed: 3 };
 
   test("Wächter-Fähigkeit geht vor", () => {
-    assert.match(pickDefeatTip({ ...base, guardian: guardianAbilityFor(20) }), /Turmwächter/);
+    assert.match(pickDefeatTip({ ...base, guardian: guardianAbilityFor(20) }), /Wächter/);
   });
 
   test("Wochen-Regel, wenn kaum passende Klasse im Lineup", () => {

@@ -45,7 +45,7 @@ describe("Kosmetik für Mein Held", () => {
 
   test("Texte für die Freischaltung", () => {
     assert.equal(unlockLabel(unlockFor("accessory", "headset", "TANK")), "1200 Münzen");
-    assert.equal(unlockLabel(unlockFor("accessory", "umhang", "TANK")), "Turmwächter 20");
+    assert.equal(unlockLabel(unlockFor("accessory", "umhang", "TANK")), "Wächter 20");
     assert.equal(unlockLabel(unlockFor("pose", "jubel", "TANK")), "Karte auf Rang 5");
     assert.equal(unlockLabel(unlockFor("scheme", "gold", "TANK")), "Saison Top 10");
   });
@@ -62,10 +62,10 @@ describe("Kosmetik für Mein Held", () => {
     assert.ok(top10.includes("scheme:gold") && !top10.includes("emblem:krone") && !top10.includes("pose:jubel"));
   });
 
-  test("Kartenhintergründe: drei frei, Vulkan über Turmwächter 40", () => {
+  test("Kartenhintergründe: drei frei, Vulkan über Wächter 40", () => {
     assert.equal(unlockFor("backdrop", "wald", "SUPPORT").kind, "free");
     assert.equal(coinPrice("backdrop:burg"), 700);
-    assert.equal(unlockLabel(unlockFor("backdrop", "vulkan", "TANK")), "Turmwächter 40");
+    assert.equal(unlockLabel(unlockFor("backdrop", "vulkan", "TANK")), "Wächter 40");
     assert.ok(earnedCosmetics({ maxCardRank: 0, guardianStages: new Set([40]), bestSeasonPlace: null }).includes("backdrop:vulkan"));
     assert.deepEqual(cosmeticsUnlockedBy({ guardianStage: 40 }).map((u) => u.label), ["Hintergrund Vulkan"]);
     assert.deepEqual(unavailableParts({ ...defaultLook("TANK"), backdrop: "nacht" }, "TANK", none), ["backdrop:nacht"]);

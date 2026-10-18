@@ -1,7 +1,7 @@
 // ============================================
 // OMA Gems — Relikte
 // ============================================
-// Jeder Turmwächter (Endlos-Stufe 20, 30, … 90) gibt beim ersten Sieg überhaupt ein festes Relikt —
+// Jeder Wächter (Stufe 20, 30, … 90) gibt beim ersten Sieg überhaupt ein festes Relikt —
 // acht Stück, danach ist die Sammlung komplett. Bis zu RELIC_SLOTS Relikte sind ausgerüstet und
 // wirken in jedem Kampf: als Bonus auf Basiswerte (wie der Wochen-Modifikator, siehe tower-rules.ts)
 // oder als Start-Rage. Die Auswahl passend zur Wochen-Regel ist die eigentliche Entscheidung.

@@ -11,8 +11,9 @@
 // GET /api/gems/campaign neu geladen, damit neue Sterne/Freischaltungen
 // sofort sichtbar sind.
 //
-// Unter dem Kapitel folgt der Endlos-Turm (siehe endless-levels.ts): ein Ausschnitt
-// aus den letzten geschafften Stufen, der nächsten spielbaren und zwei Vorschau-Stufen.
+// Kampagne (Level 1–12, die Einführung) und Der Aufstieg (siehe endless-levels.ts: ein Ausschnitt aus den
+// letzten geschafften Stufen, der nächsten spielbaren und zwei Vorschau-Stufen) sind getrennte Ansichten
+// (`view`); beide laden dasselbe Brett von /api/gems/campaign.
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -37,6 +38,8 @@ export interface CampaignBoardLevel {
 
 /** So viele Kapitel-Level zeigt die Karte auf einmal (aktuelles Level, eins davor, drei danach). */
 const CHAPTER_WINDOW = 5;
+/** Kampagnen-Level, nach dem der Aufstieg öffnet (siehe AUFSTIEG_UNLOCK_LEVEL_ID in campaign.ts). */
+const AUFSTIEG_UNLOCK_LEVEL = 5;
 
 // Leichter Zickzack-Versatz je Knoten, für das "gewundene Pfad"-Gefühl einer
 // Kampagnen-Karte — rein optisch, keine funktionale Bedeutung.
@@ -139,7 +142,7 @@ function LevelNode({
   );
 }
 
-export default function CampaignMap() {
+export default function CampaignMap({ view = "chapter" }: { view?: "chapter" | "aufstieg" }) {
   const { data: session } = useSession();
   const [chapterName, setChapterName] = useState<string>("Kampagne");
   const [chapterIntro, setChapterIntro] = useState<string>("");
@@ -210,9 +213,9 @@ export default function CampaignMap() {
     );
   }
 
-  const nextUpLevelId = levels?.find((l) => l.unlocked && !l.completed)?.id;
   const chapterLevels = levels?.filter((l) => l.section === "chapter") ?? [];
   const endlessLevels = levels?.filter((l) => l.section === "endless") ?? [];
+  const nextUpLevelId = (view === "chapter" ? chapterLevels : endlessLevels).find((l) => l.unlocked && !l.completed)?.id;
   const bestEndlessStage = endlessLevels.filter((l) => l.completed).reduce((best, l) => Math.max(best, l.order), 0);
   // Kapitel-Karte kompakt: nur ein Ausschnitt um das aktuelle Level (die 12 Knoten allein waren
   // mobil fast zwei Bildschirme lang), nach geschafftem Kapitel nur noch eine Zusammenfassung.
@@ -234,6 +237,7 @@ export default function CampaignMap() {
 
   return (
     <div className="space-y-4">
+      {view === "chapter" && (
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -268,6 +272,7 @@ export default function CampaignMap() {
         </div>
         {chapterIntro && <p className="relative text-xs text-gray-300 leading-relaxed">{chapterIntro}</p>}
       </motion.div>
+      )}
 
       {error && <ErrorNotice message={error} />}
 
@@ -277,46 +282,59 @@ export default function CampaignMap() {
         </div>
       ) : (
         <>
-          {visibleChapter.length > 0 && (
-            <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(visibleChapter)}</div>
-          )}
-          {chapterDone && !showAllChapter && (
-            <p className="glass rounded-2xl px-4 py-3 text-xs text-gray-300 flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" />
-              Kapitel geschafft · {chapterStars} von {chapterLevels.length * 3} Sternen. Fehlende Sterne bringen noch Münzen.
-            </p>
-          )}
-          {(hiddenCount > 0 || showAllChapter) && (
-            <button
-              type="button"
-              onClick={() => setShowAllChapter((v) => !v)}
-              className="w-full text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            >
-              {showAllChapter ? "Weniger anzeigen" : `Alle ${chapterLevels.length} Level anzeigen`}
-            </button>
+          {view === "chapter" && (
+            <>
+              {visibleChapter.length > 0 && (
+                <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(visibleChapter)}</div>
+              )}
+              {chapterDone && !showAllChapter && (
+                <p className="glass rounded-2xl px-4 py-3 text-xs text-gray-300 flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" />
+                  Kampagne geschafft · {chapterStars} von {chapterLevels.length * 3} Sternen. Fehlende Sterne bringen noch Münzen.
+                </p>
+              )}
+              {(hiddenCount > 0 || showAllChapter) && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllChapter((v) => !v)}
+                  className="w-full text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  {showAllChapter ? "Weniger anzeigen" : `Alle ${chapterLevels.length} Level anzeigen`}
+                </button>
+              )}
+            </>
           )}
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4" />
-                <h2 className="font-display text-sm text-white uppercase tracking-wide">Endlos-Turm</h2>
+          {view === "aufstieg" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4" />
+                  <h2 className="font-display text-sm text-white uppercase tracking-wide">Der Aufstieg</h2>
+                </div>
+                {bestEndlessStage > 0 && (
+                  <span className="text-[11px] font-semibold text-amber-300">Beste Stufe diese Saison: {bestEndlessStage}</span>
+                )}
               </div>
-              {bestEndlessStage > 0 && (
-                <span className="text-[11px] font-semibold text-amber-300">Beste Stufe diese Saison: {bestEndlessStage}</span>
+              {endlessLevels.length === 0 ? (
+                <p className="glass rounded-2xl px-4 py-4 text-xs text-gray-400 flex items-start gap-2">
+                  <Lock className="w-4 h-4 shrink-0 mt-px" />
+                  <span>
+                    Schaffe Level {AUFSTIEG_UNLOCK_LEVEL} der Kampagne, um den Aufstieg zu öffnen. Danach wird jede Stufe ein Stück
+                    schwerer — wie weit kommst du?
+                  </span>
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-400">
+                    Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Ab Stufe 20 bewacht alle 10 Stufen ein Wächter — ein
+                    Sieg bringt ein Pack, der allererste zusätzlich ein Relikt. Jeden Monat beginnt eine neue Saison bei Stufe 13.
+                  </p>
+                  <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
+                </>
               )}
             </div>
-            {endlessLevels.length === 0 ? (
-              <p className="glass rounded-2xl px-4 py-4 text-xs text-gray-400">
-                Schaffe Level 12, um den Endlos-Turm zu öffnen. Danach wird jede Stufe ein Stück schwerer — wie weit kommst du?
-              </p>
-            ) : (
-              <>
-                <p className="text-xs text-gray-400">Jede Stufe wird ein Stück schwerer, jede 5. ist eine Boss-Stufe. Ab Stufe 20 bewacht alle 10 Stufen ein Turmwächter — ein Sieg bringt ein Pack, der allererste zusätzlich ein Relikt. Jeden Monat beginnt eine neue Saison bei Stufe 13.</p>
-                <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">{renderNodes(endlessLevels)}</div>
-              </>
-            )}
-          </div>
+          )}
         </>
       )}
     </div>

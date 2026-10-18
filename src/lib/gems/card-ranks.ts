@@ -10,7 +10,7 @@
 // auf. UserCard.gemXp hält diese XP; winsInLineup/rankBonusHalves sind der alte Stand aus der Zeit
 // davor (Sieg 100, halber Sieg 50 XP) und zählen weiter mit (cardXp). Jeder Rang gibt der Karte
 // RANK_BONUS_PER_RANK mehr Leben und Angriff, höchstens MAX_RANK Ränge. Das verschiebt die Grenze
-// im Endlos-Turm (+4 % je Stufe) um etwa 5–6 Stufen.
+// im Aufstieg (+4 % je Stufe) um etwa 5–6 Stufen.
 
 /** Ein Zug zerstört oft 60–80 Steine (Kaskaden, Sonder-Steine), ein Kampf kommt je Klasse auf rund
  *  150–500 Gems — daher wenig XP je Gem: etwa 100 XP für einen Sieg, 50 für eine Niederlage. */

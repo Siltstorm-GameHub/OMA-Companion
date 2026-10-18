@@ -4,7 +4,7 @@ import { ENDLESS_FIRST_STAGE, generateEndlessLevel, parseEndlessStage } from "./
 import { getCampaignLevel } from "./campaign-levels";
 import { endlessStagesToShow, highestEndlessStage, isLevelUnlocked } from "./campaign";
 
-describe("Endlos-Turm: Stufen-Generator", () => {
+describe("Aufstieg: Stufen-Generator", () => {
   test("gleiche Stufe → exakt gleiche Gegner", () => {
     assert.deepEqual(generateEndlessLevel(21), generateEndlessLevel(21));
   });
@@ -41,12 +41,13 @@ describe("Endlos-Turm: Stufen-Generator", () => {
   });
 });
 
-describe("Endlos-Turm: Freischaltung und Kartenausschnitt", () => {
-  test("erste Endlos-Stufe braucht Level 12, danach jeweils die Vorgängerin", () => {
+describe("Aufstieg: Freischaltung und Kartenausschnitt", () => {
+  test("erste Stufe braucht Level 12, danach jeweils die Vorgängerin", () => {
     assert.equal(isLevelUnlocked("lvl-01", new Set()), true);
     assert.equal(isLevelUnlocked("lvl-02", new Set()), false);
-    assert.equal(isLevelUnlocked("endless-13", new Set(["lvl-11"])), false);
-    assert.equal(isLevelUnlocked("endless-13", new Set(["lvl-12"])), true);
+    assert.equal(isLevelUnlocked("endless-13", new Set(["lvl-04"])), false, "der Aufstieg braucht Level 5");
+    assert.equal(isLevelUnlocked("endless-13", new Set(["lvl-05"])), true);
+    assert.equal(isLevelUnlocked("endless-13", new Set(["lvl-12"])), false, "Level 12 allein genügt nicht, Level 5 zählt");
     assert.equal(isLevelUnlocked("endless-15", new Set(["lvl-12", "endless-13"])), false);
     assert.equal(isLevelUnlocked("endless-15", new Set(["endless-14"])), true);
   });

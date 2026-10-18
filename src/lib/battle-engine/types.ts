@@ -256,6 +256,8 @@ export type BattleLogEntry =
   | { type: "death"; round: number; unitId: string }
   | { type: "roundEnd"; round: number }
   | { type: "suddenDeathStart"; round: number }
+  /** Wellenmodus (Last Stand): ein neues Gegner-Team ist erschienen. */
+  | { type: "waveStart"; round: number; wave: number }
   | { type: "battleEnd"; winner: TeamId | "DRAW"; round: number };
 
 export type BattleWinner = TeamId | "DRAW";

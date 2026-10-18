@@ -39,11 +39,27 @@ import { checkWinner, defaultDecideAction, grantRage, performAction } from "./en
 import { computeInitiativeOrder } from "./initiative";
 import { triggerPassiveForUnit, triggerPassivesForAll } from "./passives";
 import { createRng, randomSeed } from "./rng";
-import { createTeamState } from "./stats";
+import { createBattleUnitState, createTeamState } from "./stats";
 import type { ActionType, BattleLogEntry, BattleUnitDefinition, BattleUnitState, BattleWinner, TeamId, UnitClass } from "./types";
 
 /** Vom Spieler gesteuertes Team — Team B sind immer KI-gesteuerte Monster. */
 const PLAYER_TEAM: TeamId = "A";
+
+/** Wellenmodus (Last Stand): Sobald alle Gegner besiegt sind, erscheint das nächste Team, bis das Team
+ *  des Spielers gefallen ist. Die Gegner einer Welle liefert die Aufrufer-Seite in `queued` (siehe
+ *  wave-levels.ts / live-battle.ts) — die Engine kennt keine Level-Inhalte. */
+export interface WaveModeState {
+  /** Aktuelle Welle, beginnt bei 1. */
+  wave: number;
+  /** Anteil der Max-Leben, den lebende Helden nach einer besiegten Welle zurückbekommen. */
+  healShare: number;
+  /** Runden je Welle, bevor der Sudden-Death-Schaden beginnt (der Zähler startet mit jeder Welle neu). */
+  roundsPerWave: number;
+  /** Gegner der nächsten Welle — muss vor jedem advance() gesetzt sein. */
+  queued: BattleUnitDefinition[] | null;
+  /** Vom Aufrufer mitgegeben, damit spätere Wellen wie die erste verändert werden (Relikte, Wochen-Regel). */
+  context?: { relicIds: string[]; week: number };
+}
 
 export interface InteractiveBattleState {
   seed: number;
@@ -79,6 +95,8 @@ export interface InteractiveBattleState {
    *  Brett nach der Animation dem persistenten Server-Brett entspricht (kein lokal erfundenes Nachfüllen,
    *  das beim nächsten Zug durch das Server-Brett ersetzt würde). */
   lastBoardSteps?: BoardAnimationStep[];
+  /** Nur im Wellenmodus gesetzt, siehe WaveModeState. */
+  waveMode?: WaveModeState;
   /** Das Brett für den GERADE wartenden Spieler-Zug — Grid/RngState werden beim
    *  Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt) und beim
    *  Verarbeiten des Zugs wieder geleert. `appliedSwaps` hält den bisherigen
@@ -110,7 +128,7 @@ export interface PlayerMove {
 export function createInteractiveState(
   teamA: BattleUnitDefinition[],
   teamB: BattleUnitDefinition[],
-  options: { seed?: number; roundLimit?: number } = {}
+  options: { seed?: number; roundLimit?: number; waves?: { healShare: number; roundsPerWave: number } } = {}
 ): InteractiveBattleState {
   const seed = options.seed ?? randomSeed();
   const rng = createRng(seed);
@@ -128,7 +146,7 @@ export function createInteractiveState(
     seed,
     rngState: rng.getState(),
     round: 0,
-    roundLimit: options.roundLimit ?? ROUND_LIMIT,
+    roundLimit: options.waves?.roundsPerWave ?? options.roundLimit ?? ROUND_LIMIT,
     unitsA,
     unitsB,
     log,
@@ -141,7 +159,43 @@ export function createInteractiveState(
     boardRngState: initialBoard.rngState,
     pendingBoard: null,
     matchedGems: { TANK: 0, DAMAGE_DEALER: 0, SUPPORT: 0 },
+    ...(options.waves ? { waveMode: { wave: 1, healShare: options.waves.healShare, roundsPerWave: options.waves.roundsPerWave, queued: null } } : {}),
   };
+}
+
+/** Wellenmodus: Hat der Spieler alle Gegner besiegt, ersetzt das vorbereitete Team die gefallenen, lebende
+ *  Helden werden etwas geheilt und der Sudden-Death-Zähler beginnt neu. `allUnits` wird an Ort und Stelle
+ *  ersetzt (die Schritt-Funktionen halten dieselbe Liste). false = kein Wellenmodus oder keine nächste Welle
+ *  vorbereitet — dann gilt der Sieg als Kampfende. */
+function spawnNextWave(
+  state: InteractiveBattleState,
+  allUnits: BattleUnitState[],
+  rng: ReturnType<typeof createRng>
+): boolean {
+  const wm = state.waveMode;
+  if (!wm || !wm.queued || wm.queued.length === 0) return false;
+
+  wm.wave += 1;
+  const fresh = wm.queued.map((def, index) => createBattleUnitState(def, "B", `B${wm.wave}-${index}-${def.cardId}`));
+  wm.queued = null;
+
+  for (const unit of state.unitsA) {
+    if (!unit.isAlive) continue;
+    const amount = Math.min(unit.maxHp - unit.currentHp, Math.round(unit.maxHp * wm.healShare));
+    if (amount <= 0) continue;
+    unit.currentHp += amount;
+    state.log.push({ type: "heal", round: state.round, sourceId: unit.instanceId, targetId: unit.instanceId, amount, newHp: unit.currentHp });
+  }
+
+  state.unitsB = fresh;
+  allUnits.splice(0, allUnits.length, ...state.unitsA, ...state.unitsB);
+  state.log.push({ type: "waveStart", round: state.round, wave: wm.wave });
+  for (const unit of fresh) triggerPassiveForUnit("battleStart", unit, allUnits, rng, state.round, state.log);
+
+  state.roundLimit = state.round + wm.roundsPerWave;
+  // Die laufende Runde endet; die neuen Gegner steigen mit der nächsten Initiative-Reihenfolge ein.
+  state.orderIndex = Math.max(state.orderIndex, state.order.length);
+  return true;
 }
 
 /** Zieht ein neues, garantiert spielbares Brett (mindestens ein Swap ergäbe ein
@@ -334,6 +388,10 @@ function stepOnce(
 
   function finishIfDecided(): StepStatus {
     state.winner = checkWinner(state.unitsA, state.unitsB);
+    if (state.winner === "A" && spawnNextWave(state, allUnits, rng)) {
+      state.winner = null;
+      return "continue";
+    }
     if (state.winner) {
       log.push({ type: "battleEnd", winner: state.winner, round: state.round });
       return "finished";
@@ -550,9 +608,9 @@ export function applyUltimateInterrupt(
     undefined,
     PLAYER_ULTIMATE_MAX_HP_SHARE
   );
-  state.rngState = rng.getState();
-
   state.winner = checkWinner(state.unitsA, state.unitsB);
+  if (state.winner === "A" && spawnNextWave(state, allUnits, rng)) state.winner = null;
+  state.rngState = rng.getState();
   if (state.winner) {
     state.log.push({ type: "battleEnd", winner: state.winner, round: state.round });
   }

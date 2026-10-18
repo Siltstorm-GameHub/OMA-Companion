@@ -4,7 +4,7 @@
 // OMA Gems — Shop-Bereich „Kosmetik“ für „Mein Held“
 // ============================================
 // Zeigt jedes nicht freie Teil am eigenen Helden: kaufbare mit Preis und Kauf-Bestätigung, erspielbare
-// mit ihrer Quelle (Rang, Turmwächter, Saison). Gekauftes legt man im Editor an (/gems/held).
+// mit ihrer Quelle (Rang, Wächter, Saison). Gekauftes legt man im Editor an (/gems/held).
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
