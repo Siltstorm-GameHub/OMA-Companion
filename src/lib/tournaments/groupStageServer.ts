@@ -29,6 +29,7 @@ export async function runGroupStageAction(
       format: true,
       groupStageJson: true,
       participants: { select: { userId: true, groupIndex: true, seed: true }, orderBy: { seed: "asc" } },
+      registrations: { where: { role: { not: "spectator" } }, select: { userId: true }, orderBy: { joinedAt: "asc" } },
       matches: { select: { id: true, groupIndex: true, playedAt: true, resultConfirmed: true, player1Id: true, player2Id: true, winnerId: true, score1: true, score2: true } },
     },
   });
@@ -45,13 +46,22 @@ export async function runGroupStageAction(
       throw new ApplyMatchResultError("Es existieren bereits Matches. Zuerst die Auslosung zurücksetzen.", 409);
     }
     const cfg: GroupStageConfig = { groupCount: Number(input.groupCount), advancePerGroup: Number(input.advancePerGroup) };
-    const ids = event.participants.map(p => p.userId);
+    // Ausgelost werden alle angemeldeten Spieler (ohne Zuschauer) plus bereits eingetragene
+    // Turnier-Teilnehmer. Beim Anlegen des Turniers im Event-Reiter "Turnier" entstehen keine
+    // Teilnehmer-Einträge — die Anmeldungen allein reichen, fehlende Einträge werden hier angelegt.
+    const known = new Set(event.participants.map(p => p.userId));
+    const missing = [...new Set(event.registrations.map(r => r.userId))].filter(id => !known.has(id));
+    const ids = [...known, ...missing];
     const error = validateGroupStageConfig(ids.length, cfg);
     if (error) throw new ApplyMatchResultError(error, 400);
 
     const groups = drawGroups(ids, cfg.groupCount);
     const matches = generateGroupMatches(groups, eventId);
     await prisma.$transaction([
+      ...(missing.length ? [prisma.tournamentParticipant.createMany({
+        data: missing.map((userId, i) => ({ eventId, userId, seed: known.size + i + 1 })),
+        skipDuplicates: true,
+      })] : []),
       ...groups.flatMap((members, groupIndex) => members.length
         ? [prisma.tournamentParticipant.updateMany({ where: { eventId, userId: { in: members } }, data: { groupIndex } })]
         : []),

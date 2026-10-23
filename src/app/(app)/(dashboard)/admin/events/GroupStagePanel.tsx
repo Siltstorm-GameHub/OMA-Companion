@@ -25,7 +25,8 @@ export default function GroupStagePanel({
   /** Touch-Ansicht: Tabellen ohne Tore-Spalte */
   compact?: boolean;
 }) {
-  const participantCount = tournament.participants.length;
+  // Ausgelost werden Turnier-Teilnehmer UND angemeldete Spieler (allUsers) — siehe groupStageServer
+  const participantCount = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
   const [groupCount, setGroupCount] = useState(() => suggestedGroupCount(participantCount));
   const [advancePerGroup, setAdvancePerGroup] = useState(DEFAULT_ADVANCE_PER_GROUP);
 
