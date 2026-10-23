@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { generateRoundRobin } from "@/app/api/tournaments/route";
+import { generateRoundRobin } from "@/lib/tournaments/generate";
 import { resolveEventPredictions } from "@/lib/predictions";
+import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
+import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/groupStageServer";
 
 // Gesamtranking für FFA/coop_stats/avg_stats berechnen
 async function calcFfaRanking(eventId: string, statFields: string[], format: string) {
@@ -101,6 +103,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
   const { status, format, pointsConfig, statFields, statConfig, generateMatches, finalRanking, finalRankingNote } = body;
+
+  // Gruppenphase + K.O.: Gruppen auslosen / K.O.-Runde erzeugen / jeweils zurücksetzen
+  if (GROUP_STAGE_ACTIONS.includes(generateMatches)) {
+    try {
+      return NextResponse.json(await runGroupStageAction(eventId, generateMatches, body));
+    } catch (err) {
+      if (err instanceof ApplyMatchResultError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
+      throw err;
+    }
+  }
 
   // Auto-generate round-robin (bzw. liga = Hin-/Rückrunde) matches
   if (generateMatches === "round_robin" || generateMatches === "liga") {

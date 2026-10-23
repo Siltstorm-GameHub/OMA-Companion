@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints, revokePointsByReason } from "@/lib/points";
+import { GROUP_KNOCKOUT_FORMAT } from "./groupStage";
 
 // Begründungen der Finale-Belohnungen — enthalten die eventId, damit eine Korrektur genau
 // die Vergabe dieses einen Turniers zurückbucht und nicht die eines gleichnamigen anderen.
@@ -13,6 +14,15 @@ function loserOf(
 ): string | null {
   if (!winnerId) return null;
   return (m.player1Id === winnerId ? m.player2Id : m.player1Id) ?? null;
+}
+
+/**
+ * Match im K.O.-Baum (Sieger rückt ins Folgematch auf, Finale zahlt Turnierbelohnung): jedes Match
+ * bei single_elimination, bei group_knockout nur die Matches der K.O.-Runde (ohne Gruppe).
+ */
+export function isKnockoutMatch(format: string | null | undefined, groupIndex: number | null | undefined): boolean {
+  if (format === "single_elimination") return true;
+  return format === GROUP_KNOCKOUT_FORMAT && groupIndex == null;
 }
 
 /**
@@ -75,11 +85,13 @@ export async function applyMatchResult({
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new ApplyMatchResultError("Nicht gefunden", 404);
 
-    if (event?.format === "single_elimination" && match.winnerId) {
+    if (isKnockoutMatch(event?.format, match.groupIndex) && match.winnerId) {
       const nextRound    = match.round + 1;
       const nextPosition = Math.ceil(match.position / 2);
       const nextMatch = await prisma.match.findFirst({
-        where: { eventId, round: nextRound, position: nextPosition },
+        // groupIndex: null — bei group_knockout liegen Gruppenspiele mit gleichen Runden-/Positions-
+        // nummern daneben, das Folgematch ist immer eines der K.O.-Runde.
+        where: { eventId, round: nextRound, position: nextPosition, groupIndex: null },
       });
       if (nextMatch) {
         const isFirstSlot = match.position % 2 === 1;
@@ -145,7 +157,7 @@ export async function applyMatchResult({
   // Read existing match state before update (for idempotency / reversal)
   const existingMatch = await prisma.match.findUnique({
     where: { id: matchId },
-    select: { playedAt: true, winnerId: true, player1Id: true, player2Id: true, resultConfirmed: true },
+    select: { playedAt: true, winnerId: true, player1Id: true, player2Id: true, resultConfirmed: true, groupIndex: true },
   });
   // Nur bestätigte Ergebnisse haben Punkte ausgelöst, die bei einer Korrektur zurückgebucht werden müssen.
   const wasAlreadyPlayed = !!existingMatch?.playedAt && existingMatch.resultConfirmed;
@@ -161,13 +173,13 @@ export async function applyMatchResult({
     },
   });
 
-  const isBracket = event?.format === "single_elimination";
+  const isBracket = isKnockoutMatch(event?.format, existingMatch?.groupIndex);
 
   if (isBracket) {
     const nextRound    = match.round + 1;
     const nextPosition = Math.ceil(match.position / 2);
     const nextMatch = await prisma.match.findFirst({
-      where: { eventId, round: nextRound, position: nextPosition },
+      where: { eventId, round: nextRound, position: nextPosition, groupIndex: null },
     });
 
     if (nextMatch) {

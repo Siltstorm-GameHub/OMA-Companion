@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 
   // Turnier-Einstellungen aus dem Wizard (Einzel-Event): Format, Stat-Felder und Punkte je Stat.
   // Bei Events in einer Reihe mit festem Format gewinnt die Reihe (siehe oben).
-  const VALID_FORMATS = ["single_elimination", "round_robin", "liga", "coop_stats", "avg_stats", "ffa"];
+  const VALID_FORMATS = ["single_elimination", "group_knockout", "round_robin", "liga", "coop_stats", "avg_stats", "ffa"];
   const eventFormat = seriesFormat ?? (typeof bodyFormat === "string" && VALID_FORMATS.includes(bodyFormat) ? bodyFormat : null);
   let eventStatFields = seriesStatFields;
   let eventStatConfigJson: string | null = null;

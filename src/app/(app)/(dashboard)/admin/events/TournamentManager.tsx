@@ -12,7 +12,9 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import { GROUP_KNOCKOUT_FORMAT, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 import TournamentManagerMobile from "./TournamentManagerMobile";
+import GroupStagePanel, { type GroupStageActionBody } from "./GroupStagePanel";
 import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -26,12 +28,16 @@ export type Match = {
   player1Id: string | null; player2Id: string | null;
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: MatchEntry[];
+  resultConfirmed?: boolean;
+  /** Nur group_knockout: Gruppe des Gruppenspiels, null = K.O.-Runde */
+  groupIndex?: number | null;
 };
-export type Participant = { userId: string; user: User };
+export type Participant = { userId: string; user: User; groupIndex?: number | null };
 export type Tournament = {
   id: string; status: string; format: string;
   pointsConfig: string | null; statFields: string | null;
   finalRankingJson: string | null; finalRankingNote: string | null;
+  groupStageJson?: string | null;
   participants: Participant[]; matches: Match[];
 };
 type Event = { id: string };
@@ -368,6 +374,15 @@ export default function TournamentManager({
 }) {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
+  // Nach router.refresh() kommen neue Server-Daten als Prop — dann den lokalen Stand ersetzen
+  // (z.B. frisch ausgeloste Gruppen). Verglichen werden die Arrays, nicht das Wrapper-Objekt, das
+  // die Eltern bei jedem Render neu bauen.
+  const [syncedFrom, setSyncedFrom] = useState(initial);
+  if (initial && (initial.matches !== syncedFrom?.matches || initial.participants !== syncedFrom?.participants
+      || initial.groupStageJson !== syncedFrom?.groupStageJson || initial.status !== syncedFrom?.status)) {
+    setSyncedFrom(initial);
+    setTournament(initial);
+  }
   const [loading, setLoading] = useState(false);
   const { confirm, ConfirmDialogElement } = useConfirm();
 
@@ -477,6 +492,19 @@ export default function TournamentManager({
   const isLiga = tournament.format === "liga";
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
+  const isGroupKnockout = tournament.format === GROUP_KNOCKOUT_FORMAT;
+  // Gruppenphase + K.O.: Gruppenspiele (nach Gruppe, Spieltag) vor der K.O.-Runde
+  const groupMatches    = isGroupKnockout
+    ? tournament.matches.filter(m => m.groupIndex != null)
+        .sort((a, b) => a.groupIndex! - b.groupIndex! || a.round - b.round || a.position - b.position)
+    : [];
+  const knockoutMatches = isGroupKnockout ? tournament.matches.filter(m => m.groupIndex == null) : [];
+  const knockoutRounds  = knockoutMatches.length ? Math.max(...knockoutMatches.map(m => m.round)) : 0;
+  const groupIndexes    = [...new Set(groupMatches.map(m => m.groupIndex!))];
+  /** Label für Match-Listen: Gruppe + Spieltag bzw. K.O.-Runde (nur group_knockout). */
+  const groupKnockoutLabel = (m: Match) => m.groupIndex != null
+    ? `${groupLabel(m.groupIndex)} · Spieltag ${m.round}`
+    : knockoutRoundLabel(m.round, knockoutRounds);
   const statFields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
   // Filter out winner stat keys — they're auto-set by event completion, not entered per round
   const visibleStatFields = statFields.filter(f => !winnerStatKeys.includes(f));
@@ -538,6 +566,30 @@ export default function TournamentManager({
       const e = await res.json();
       toast.error(e.error ?? "Fehler beim Generieren");
     }
+    router.refresh();
+  }
+
+  /** Gruppenphase + K.O.: auslosen, K.O.-Runde erstellen bzw. jeweils zurücksetzen. */
+  async function groupStageAction(body: GroupStageActionBody) {
+    if (!tournament) return;
+    const prompts: Record<GroupStageActionBody["generateMatches"], { title: string; description: string; variant?: "danger" }> = {
+      groups:         { title: "Gruppen auslosen", description: "Teilnehmer zufällig auf die Gruppen verteilen und alle Gruppenspiele anlegen?" },
+      reset_groups:   { title: "Neu auslosen", description: "Gruppen und alle Gruppenspiele löschen, um neu auszulosen?", variant: "danger" },
+      knockout:       { title: "K.O.-Runde erstellen", description: "Die K.O.-Runde aus den aktuellen Gruppentabellen erstellen? Danach zählen Korrekturen in der Gruppenphase nicht mehr automatisch." },
+      reset_knockout: { title: "K.O.-Runde verwerfen", description: "Alle Matches der K.O.-Runde löschen? Die Gruppenphase bleibt erhalten.", variant: "danger" },
+    };
+    if (!(await confirm(prompts[body.generateMatches]))) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setLoading(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
+    if (data.generated) toast.success(`${data.generated} Matches erstellt`);
+    else if (data.deleted !== undefined) toast.success(`${data.deleted} Matches gelöscht`);
     router.refresh();
   }
 
@@ -814,9 +866,109 @@ export default function TournamentManager({
     u => !tournament.participants.some(p => p.userId === u.id)
   );
 
-  // ═══════════════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════════════
+  /** 1v1-Match-Karte (Ergebnis-Eingabe). allowDraw: "Unentschieden"-Button anzeigen. */
+  function renderDuelCard(match: Match, allowDraw: boolean) {
+    const p1 = allUsers.find(u => u.id === match.player1Id);
+    const p2 = allUsers.find(u => u.id === match.player2Id);
+    const isPlayed  = !!match.winnerId || !!match.playedAt;
+    const isDraw    = !!match.playedAt && !match.winnerId;
+    const isPending = !!p1 && !!p2 && !isPlayed;
+    return (
+      <div key={match.id}
+        className={`rounded-lg border overflow-hidden ${
+          isPlayed ? "border-gray-700 opacity-80" : "border-gray-600"
+        }`}>
+        {/* Match header */}
+        <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
+          <span className="text-xs text-gray-400 truncate">
+            {match.title || (match.groupIndex != null ? `Spieltag ${match.round}` : `Match ${match.position}`)}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {match.scheduledAt && (
+              <span className="text-xs text-gray-600 flex items-center gap-1">
+                <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
+              </span>
+            )}
+            {isPlayed && (
+              <button onClick={() => resetMatch(match.id)} disabled={loading}
+                title="Ergebnis zurücksetzen"
+                className="p-2.5 -m-1 text-gray-600 hover:text-amber-500 transition-colors">
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button onClick={() => deleteMatch(match.id)} disabled={loading}
+              className="p-2.5 -m-1 text-gray-600 hover:text-red-500 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Draw badge */}
+        {isDraw && (
+          <div className="px-3 py-1 bg-amber-900/20 border-b border-gray-700 text-center">
+            <span className="text-xs text-amber-400 font-medium">Unentschieden</span>
+          </div>
+        )}
+
+        {/* Players */}
+        {[
+          { player: p1, score: match.score1, id: match.player1Id, key: "s1" },
+          { player: p2, score: match.score2, id: match.player2Id, key: "s2" },
+        ].map(({ player, score, id, key }, idx) => (
+          <div key={idx}
+            className={`flex items-center justify-between px-3 py-2 text-sm ${
+              idx === 0 ? "border-b border-gray-700" : ""
+            } ${match.winnerId === id ? "bg-green-900/20" : isDraw ? "bg-amber-900/10" : ""}`}>
+            <span className={
+              match.winnerId === id                    ? "text-white font-medium" :
+              match.winnerId && match.winnerId !== id  ? "text-gray-600"          :
+              isDraw                                   ? "text-amber-200"          :
+              player                                   ? "text-white"              :
+                                                         "text-gray-600 italic"
+            }>
+              {player ? userName(player) : "TBD"}
+            </span>
+            {isPending ? (
+              <input type="number" placeholder="0" min={0}
+                value={scores1v1[match.id]?.[key as "s1" | "s2"] ?? ""}
+                onChange={e => setScores1v1(prev => ({
+                  ...prev, [match.id]: { ...prev[match.id], [key]: e.target.value },
+                }))}
+                className="w-14 text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-center"
+              />
+            ) : (
+              <span className="text-gray-400 font-mono text-xs">{score ?? "–"}</span>
+            )}
+          </div>
+        ))}
+
+        {/* Win buttons */}
+        {isPending && (
+          <div className="flex gap-1 p-2 bg-gray-800/50">
+            <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
+              className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+              {p1 ? userName(p1) : "?"} gewinnt
+            </button>
+            {allowDraw && (
+              <button onClick={() => submit1v1(match.id, null, true)} disabled={loading}
+                className="shrink-0 text-xs bg-gray-700 hover:bg-amber-700 text-amber-300 rounded px-2 py-1.5 transition-colors">
+                Unentschieden
+              </button>
+            )}
+            <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
+              className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+              {p2 ? userName(p2) : "?"} gewinnt
+            </button>
+          </div>
+        )}
+
+        {match.notes && (
+          <p className="px-3 py-1.5 text-xs text-gray-600 bg-gray-800/30">{match.notes}</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="tm-root space-y-4" data-tm-view={viewMode}>
 
@@ -838,7 +990,14 @@ export default function TournamentManager({
           ══════════════════════════════════════════════════════════════ */}
       <div className="tm-touch-only">
         <TournamentManagerMobile
-          tournament={tournament}
+          tournament={isGroupKnockout
+            ? { ...tournament, matches: [...groupMatches, ...[...knockoutMatches].sort((a, b) => a.round - b.round || a.position - b.position)] }
+            : tournament}
+          groupStage={isGroupKnockout ? {
+            panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact />,
+            roundLabel: groupKnockoutLabel,
+            allowDraw: m => m.groupIndex != null,
+          } : undefined}
           allUsers={allUsers}
           loading={loading}
           isFfa={isFfa}
@@ -927,6 +1086,29 @@ export default function TournamentManager({
         </button>
       )}
 
+      {/* ── Gruppenphase + K.O.: Auslosung/Tabellen, Gruppenspiele (mit Unentschieden), K.O.-Runde ── */}
+      {isGroupKnockout && (
+        <div className="space-y-4">
+          <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} />
+          {groupIndexes.map(gi => (
+            <div key={`g${gi}`}>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {groupMatches.filter(m => m.groupIndex === gi).map(m => renderDuelCard(m, true))}
+              </div>
+            </div>
+          ))}
+          {Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
+            <div key={`ko${round}`}>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
+              <div className="space-y-2">
+                {knockoutMatches.filter(m => m.round === round).sort((a, b) => a.position - b.position).map(m => renderDuelCard(m, false))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── Match list ───────────────────────────────────────────────── */}
       {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
       {!is1v1 && expanded.size > 0 && (
@@ -935,6 +1117,7 @@ export default function TournamentManager({
           <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
         </button>
       )}
+      {!isGroupKnockout && (
       <div className="space-y-2">
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
@@ -958,107 +1141,7 @@ export default function TournamentManager({
                 <div key={round}>
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{rLabel}</p>
                   <div className="space-y-2">
-                    {rMatches.map(match => {
-                      const p1 = allUsers.find(u => u.id === match.player1Id);
-                      const p2 = allUsers.find(u => u.id === match.player2Id);
-                      const isPlayed  = !!match.winnerId || !!match.playedAt;
-                      const isDraw    = !!match.playedAt && !match.winnerId;
-                      const isPending = !!p1 && !!p2 && !isPlayed;
-                      return (
-                        <div key={match.id}
-                          className={`rounded-lg border overflow-hidden ${
-                            isPlayed ? "border-gray-700 opacity-80" : "border-gray-600"
-                          }`}>
-                          {/* Match header */}
-                          <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-400 truncate">
-                              {match.title || `Match ${match.position}`}
-                            </span>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {match.scheduledAt && (
-                                <span className="text-xs text-gray-600 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
-                                </span>
-                              )}
-                              {isPlayed && (
-                                <button onClick={() => resetMatch(match.id)} disabled={loading}
-                                  title="Ergebnis zurücksetzen"
-                                  className="p-2.5 -m-1 text-gray-600 hover:text-amber-500 transition-colors">
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              <button onClick={() => deleteMatch(match.id)} disabled={loading}
-                                className="p-2.5 -m-1 text-gray-600 hover:text-red-500 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Draw badge */}
-                          {isDraw && (
-                            <div className="px-3 py-1 bg-amber-900/20 border-b border-gray-700 text-center">
-                              <span className="text-xs text-amber-400 font-medium">Unentschieden</span>
-                            </div>
-                          )}
-
-                          {/* Players */}
-                          {[
-                            { player: p1, score: match.score1, id: match.player1Id, key: "s1" },
-                            { player: p2, score: match.score2, id: match.player2Id, key: "s2" },
-                          ].map(({ player, score, id, key }, idx) => (
-                            <div key={idx}
-                              className={`flex items-center justify-between px-3 py-2 text-sm ${
-                                idx === 0 ? "border-b border-gray-700" : ""
-                              } ${match.winnerId === id ? "bg-green-900/20" : isDraw ? "bg-amber-900/10" : ""}`}>
-                              <span className={
-                                match.winnerId === id                    ? "text-white font-medium" :
-                                match.winnerId && match.winnerId !== id  ? "text-gray-600"          :
-                                isDraw                                   ? "text-amber-200"          :
-                                player                                   ? "text-white"              :
-                                                                           "text-gray-600 italic"
-                              }>
-                                {player ? userName(player) : "TBD"}
-                              </span>
-                              {isPending ? (
-                                <input type="number" placeholder="0" min={0}
-                                  value={scores1v1[match.id]?.[key as "s1" | "s2"] ?? ""}
-                                  onChange={e => setScores1v1(prev => ({
-                                    ...prev, [match.id]: { ...prev[match.id], [key]: e.target.value },
-                                  }))}
-                                  className="w-14 text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-center"
-                                />
-                              ) : (
-                                <span className="text-gray-400 font-mono text-xs">{score ?? "–"}</span>
-                              )}
-                            </div>
-                          ))}
-
-                          {/* Win buttons */}
-                          {isPending && (
-                            <div className="flex gap-1 p-2 bg-gray-800/50">
-                              <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
-                                className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
-                                {p1 ? userName(p1) : "?"} gewinnt
-                              </button>
-                              {supportsDraw && (
-                                <button onClick={() => submit1v1(match.id, null, true)} disabled={loading}
-                                  className="shrink-0 text-xs bg-gray-700 hover:bg-amber-700 text-amber-300 rounded px-2 py-1.5 transition-colors">
-                                  Unentschieden
-                                </button>
-                              )}
-                              <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
-                                className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
-                                {p2 ? userName(p2) : "?"} gewinnt
-                              </button>
-                            </div>
-                          )}
-
-                          {match.notes && (
-                            <p className="px-3 py-1.5 text-xs text-gray-600 bg-gray-800/30">{match.notes}</p>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {rMatches.map(match => renderDuelCard(match, supportsDraw))}
                   </div>
                 </div>
               );
@@ -1312,9 +1395,11 @@ export default function TournamentManager({
               );
             })}
       </div>
+      )}
 
       {/* ── Add Match ────────────────────────────────────────────────── */}
-      {!showAdd ? (
+      {/* Gruppenphase + K.O.: Matches entstehen nur über Auslosung bzw. K.O.-Runde */}
+      {!isGroupKnockout && (!showAdd ? (
         <button onClick={() => {
           setMScheduled(nowForDatetimeLocal());
           // Bei Stat-basierten Formaten (FFA/coop_stats/avg_stats) standardmäßig alle Teilnehmer der
@@ -1407,7 +1492,7 @@ export default function TournamentManager({
             <Plus className="w-4 h-4" /> Match erstellen
           </button>
         </div>
-      )}
+      ))}
       </div>
       {ConfirmDialogElement}
     </div>

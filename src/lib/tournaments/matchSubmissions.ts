@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
+import { applyMatchResult, ApplyMatchResultError, isKnockoutMatch } from "@/lib/tournaments/applyMatchResult";
 
 export const MAX_SCREENSHOTS = 4;
 export const MAX_NOTE_LENGTH = 500;
@@ -121,7 +121,7 @@ async function planFor(eventId: string, subjectUserId: string, matchId: string, 
       throw new ApplyMatchResultError("Match hat noch nicht beide Spieler", 400);
     }
     const isDraw = v.score1 === v.score2;
-    if (isDraw && event?.format === "single_elimination") {
+    if (isDraw && isKnockoutMatch(event?.format, match.groupIndex)) {
       throw new ApplyMatchResultError("Im K.-o.-Baum ist kein Unentschieden möglich", 400);
     }
     const winnerId = isDraw ? null : v.score1 > v.score2 ? match.player1Id : match.player2Id;

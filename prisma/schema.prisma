@@ -326,6 +326,8 @@ model Event {
   // von Event zu Event ändern). JSON: { stats: [{ field, pointsPer }], winnerStatKeys?: string[],
   // matchWinStatKeys?: string[] } — nur gesetzte, nicht-leere Arrays überschreiben die Reihen-Werte.
   statConfigJson        String?
+  // Nur Format group_knockout (Gruppenphase + K.O.-Runde): JSON { groupCount, advancePerGroup }
+  groupStageJson        String?
   finalRankingJson      String? // JSON: ["userId1","userId2"]
   finalRankingNote      String?
   // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
@@ -589,6 +591,8 @@ model TournamentParticipant {
   seed       Int?
   eliminated Boolean @default(false)
   finalRank  Int?
+  // Nur group_knockout: Gruppe des Teilnehmers (0 = Gruppe A, 1 = Gruppe B, …)
+  groupIndex Int?
   event      Event   @relation(fields: [eventId], references: [id])
   user       User    @relation(fields: [userId], references: [id])
 
@@ -666,6 +670,9 @@ model Match {
   playedAt    DateTime?
   // false = vorläufiges Ergebnis (von Teilnehmern gemeldet, sofort sichtbar, noch keine Punkte) bis ein Admin es bestätigt
   resultConfirmed Boolean  @default(true)
+  // Nur group_knockout: gesetzt = Gruppenspiel dieser Gruppe (0 = A), null = Match der K.O.-Runde.
+  // round ist bei Gruppenspielen der Spieltag, bei K.O.-Matches die K.O.-Runde (1 = erste K.O.-Runde).
+  groupIndex  Int?
   event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]

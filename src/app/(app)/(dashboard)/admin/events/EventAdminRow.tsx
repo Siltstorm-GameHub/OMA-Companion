@@ -25,7 +25,7 @@ type MatchEntry = { id: string; userId: string | null; teamId: string | null; pl
 type Match = { id: string; round: number; position: number; title: string | null; scheduledAt: string | Date | null; notes: string | null; player1Id: string | null; player2Id: string | null; winnerId: string | null; score1: number | null; score2: number | null; playedAt: string | Date | null; entries: MatchEntry[] };
 type Participant = { userId: string; seed: number | null; eliminated: boolean; user: User };
 type Registration = { userId: string };
-type Tournament = { id: string; status: string; format: string; pointsConfig: string | null; statFields: string | null; finalRankingJson: string | null; finalRankingNote: string | null; participants: Participant[]; matches: Match[] };
+type Tournament = { id: string; status: string; format: string; pointsConfig: string | null; statFields: string | null; finalRankingJson: string | null; finalRankingNote: string | null; groupStageJson?: string | null; participants: Participant[]; matches: Match[] };
 type Series = { id: string; name: string; _count: { events: number } };
 type Event = {
   id: string; title: string; description: string | null; status: string; game: string | null;
@@ -43,6 +43,7 @@ type Event = {
   statFields: string | null;
   finalRankingJson: string | null;
   finalRankingNote: string | null;
+  groupStageJson?: string | null;
   participants: Participant[];
   matches: Match[];
 };
@@ -52,6 +53,7 @@ const STATUS_OPTIONS = ["open", "active", "closed", "finished"];
 
 const TMT_FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
+  { value: "group_knockout",     label: "Gruppenphase + K.O.",  desc: "Wie bei der WM: Gruppen, dann K.O.-Runde bis zum Finale" },
   { value: "round_robin",        label: "Liga-Modus",           desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
   { value: "coop_stats",         label: "Skill-Index Modus",    desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Bester Schnitt gewinnt" },
@@ -296,6 +298,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         statFields:       event.statFields,
         finalRankingJson: event.finalRankingJson,
         finalRankingNote: event.finalRankingNote,
+        groupStageJson:   event.groupStageJson ?? null,
         participants:     event.participants,
         matches:          event.matches,
       }
@@ -779,6 +782,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             className={inputCls}>
                             <option value="">– Kein festes Format (wechselt) –</option>
                             <option value="single_elimination">Single Elimination</option>
+                            <option value="group_knockout">Gruppenphase + K.O.</option>
                             <option value="round_robin">Liga-Modus</option>
                             <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
                             <option value="coop_stats">Skill-Index Modus</option>

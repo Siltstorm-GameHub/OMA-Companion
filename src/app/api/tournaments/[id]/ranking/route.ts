@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { GROUP_KNOCKOUT_FORMAT, groupKnockoutRanking } from "@/lib/tournaments/groupStage";
 
 // Berechnet die Endplatzierung als Vorschau (ohne Punkte zu vergeben)
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -80,6 +81,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         label:  fields[0] ? `${t.stats[fields[0]] ?? 0} ${fields[0]}` : `Platz ${i + 1}`,
       }));
     }
+
+  } else if (format === GROUP_KNOCKOUT_FORMAT) {
+    ranking = groupKnockoutRanking(event.participants, event.matches, event.groupStageJson);
 
   } else if (format === "single_elimination") {
     const wins = new Map<string, number>();

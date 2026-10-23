@@ -686,7 +686,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
         // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
         // gewinnt am Ende schlicht, wer die meisten Rangpunkte gesammelt hat.
-        ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination")
+        ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination" || event.format === "group_knockout")
           ? [{ key: "series" as TabKey, label: "Reihe" }]
           : []),
       ];
@@ -727,6 +727,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     statFields: event.statFields,
     finalRankingJson: event.finalRankingJson,
     finalRankingNote: event.finalRankingNote,
+    groupStageJson: event.groupStageJson,
     participants: event.participants,
     matches: event.matches,
   } : null;
@@ -1823,7 +1824,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
       {/* ── Tab: Reihe ── */}
       {activeTab === "series" && event.series &&
-        (event.format === "single_elimination" || event.format === "double_elimination") && (
+        (event.format === "single_elimination" || event.format === "double_elimination" || event.format === "group_knockout") && (
         <div className="space-y-4">
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-4">
             <div>

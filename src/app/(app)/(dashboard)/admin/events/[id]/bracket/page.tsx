@@ -72,6 +72,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     statFields: event.statFields,
     finalRankingJson: event.finalRankingJson,
     finalRankingNote: event.finalRankingNote,
+    groupStageJson: event.groupStageJson,
     participants: event.participants,
     matches: event.matches,
   } : null;

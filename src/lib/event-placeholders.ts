@@ -4,6 +4,7 @@
 export const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "K.O.-System",
   double_elimination: "Double Elimination",
+  group_knockout:     "Gruppenphase + K.O.",
   round_robin:        "Liga-Modus",
   liga:                "Liga-Modus (Hin-/Rückrunde)",
   ffa:                 "Free for All (Legacy)",

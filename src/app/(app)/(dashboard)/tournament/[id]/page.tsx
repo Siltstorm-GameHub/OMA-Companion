@@ -45,6 +45,8 @@ import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
+import GroupKnockoutView from "./GroupKnockoutView";
+import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, groupMembers, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
@@ -64,6 +66,7 @@ const STATUS_STYLES: Record<string, { label: string; style: string; dot: string 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "K.O.-System",
   double_elimination: "Double Elimination",
+  group_knockout:     "Gruppenphase + K.O.",
   round_robin:        "Liga-Modus",
   liga:               "Liga-Modus (Hin-/Rückrunde)",
   ffa:                "Free for All (Legacy)",
@@ -347,6 +350,10 @@ export default async function TournamentDetailPage({
   const isElimination = format === "single_elimination" || format === "double_elimination";
   const isRoundRobin  = format === "round_robin";
   const isLiga        = format === "liga";
+  const isGroupKnockout = format === GROUP_KNOCKOUT_FORMAT;
+  // Bei Gruppenphase + K.O. zählt für Sieger/Finale nur die K.O.-Runde (Matches ohne Gruppe)
+  const bracketMatches = isGroupKnockout ? event.matches.filter(m => m.groupIndex == null) : event.matches;
+  const groupStageCfg = parseGroupStageConfig(event.groupStageJson);
 
   const userName = (u: { name: string | null; username: string | null }) =>
     u.username ?? u.name ?? "Unbekannt";
@@ -354,9 +361,9 @@ export default async function TournamentDetailPage({
   // Turnersieger ermitteln
   let winner: { name: string | null; username: string | null; image: string | null } | null = null;
   if (hasTournament) {
-    if (isElimination) {
-      const maxRound = event.matches.length ? Math.max(...event.matches.map(m => m.round)) : 0;
-      const finalMatch = event.matches.find(m => m.round === maxRound);
+    if (isElimination || isGroupKnockout) {
+      const maxRound = bracketMatches.length ? Math.max(...bracketMatches.map(m => m.round)) : 0;
+      const finalMatch = bracketMatches.find(m => m.round === maxRound);
       winner = finalMatch?.winnerId
         ? (mergedParticipants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
         : null;
@@ -608,7 +615,7 @@ export default async function TournamentDetailPage({
 
   // Stats für Header
   const playedMatches = event.matches.filter(m =>
-    isElimination ? !!m.winnerId : !!m.playedAt
+    isElimination || (isGroupKnockout && m.groupIndex == null) ? !!m.winnerId : !!m.playedAt
   ).length;
   const totalMatches = event.matches.length;
 
@@ -1198,6 +1205,16 @@ export default async function TournamentDetailPage({
               <BracketView
                 matches={event.matches as Parameters<typeof BracketView>[0]["matches"]}
                 participants={mergedParticipants}
+                userId={userId}
+                holders={holdersList}
+              />
+            )}
+            {isGroupKnockout && (
+              <GroupKnockoutView
+                matches={event.matches}
+                participants={mergedParticipants}
+                members={groupMembers(event.participants, resolveGroupCount(groupStageCfg, event.participants))}
+                advancePerGroup={groupStageCfg?.advancePerGroup ?? DEFAULT_ADVANCE_PER_GROUP}
                 userId={userId}
                 holders={holdersList}
               />

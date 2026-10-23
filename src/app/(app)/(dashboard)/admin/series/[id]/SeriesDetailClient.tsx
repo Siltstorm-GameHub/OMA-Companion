@@ -652,6 +652,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                 <option value="">– Kein festes Format –</option>
                 <option value="single_elimination">Single Elimination</option>
+                <option value="group_knockout">Gruppenphase + K.O.</option>
                 <option value="round_robin">Liga-Modus</option>
                 <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
                 <option value="coop_stats">Skill-Index Modus</option>

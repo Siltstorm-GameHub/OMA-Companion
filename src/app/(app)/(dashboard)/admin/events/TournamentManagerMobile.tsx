@@ -120,6 +120,13 @@ interface Props {
   mFfaIds: string[];
   setMFfaIds: React.Dispatch<React.SetStateAction<string[]>>;
   addMatch: () => Promise<void>;
+  /** Nur Gruppenphase + K.O.: Auslosung/Tabellen oben, Labels und Unentschieden je Match.
+   *  Matches entstehen dort nur über Auslosung bzw. K.O.-Runde — kein "Match hinzufügen". */
+  groupStage?: {
+    panel: React.ReactNode;
+    roundLabel: (m: Match) => string;
+    allowDraw: (m: Match) => boolean;
+  };
 }
 
 export default function TournamentManagerMobile({
@@ -130,7 +137,7 @@ export default function TournamentManagerMobile({
   teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
   validateTeamAssignment, submit1v1, submitFfa, changeMatchPlayer, resetMatch, deleteMatch, generateRoundRobinMatches,
   showAdd, setShowAdd, mTitle, setMTitle, mScheduled, setMScheduled, mNotes, setMNotes,
-  mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, addMatch,
+  mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, addMatch, groupStage,
 }: Props) {
   const matches = tournament.matches;
 
@@ -146,6 +153,10 @@ export default function TournamentManagerMobile({
   const focused = hasMatches ? matches[Math.max(0, Math.min(focusIdx, matches.length - 1))] : null;
   const isPlayed1v1 = !!focused?.winnerId || !!focused?.playedAt;
   const isPlayedFfa = !!focused?.playedAt;
+
+  function matchLabel(m: Match) {
+    return groupStage ? groupStage.roundLabel(m) : roundLabel(m.round);
+  }
 
   function roundLabel(round: number) {
     if (isLiga) return `Spieltag ${round}`;
@@ -198,6 +209,8 @@ export default function TournamentManagerMobile({
         <span className="text-gray-600 ml-auto">{matches.filter(m => is1v1 ? (m.winnerId || m.playedAt) : m.playedAt).length}/{matches.length} gespielt</span>
       </div>
 
+      {groupStage?.panel}
+
       {(isRoundRobin || isLiga) && tournament.participants.length >= 2 && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-900/20 border border-blue-900/40 rounded-lg px-3 py-2.5 w-full justify-center">
@@ -205,7 +218,7 @@ export default function TournamentManagerMobile({
         </button>
       )}
 
-      {!hasMatches && (
+      {!hasMatches && !groupStage && (
         <div className="text-center py-8 text-gray-500 text-sm space-y-2 border border-dashed border-gray-700 rounded-xl bg-gray-800/50">
           <Swords className="w-7 h-7 mx-auto text-gray-700" />
           <p>{(isRoundRobin || isLiga)
@@ -222,7 +235,7 @@ export default function TournamentManagerMobile({
             <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400">
               {(is1v1 ? !isPlayed1v1 : !isPlayedFfa) ? "Jetzt dran" : "Zuletzt angesehen"}
             </span>
-            <span className="text-[11px] text-gray-400">{roundLabel(focused.round)}</span>
+            <span className="text-[11px] text-gray-400">{matchLabel(focused)}</span>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => goto(-1)} disabled={focusIdx === 0}
@@ -243,7 +256,7 @@ export default function TournamentManagerMobile({
             match={focused}
             allUsers={allUsers}
             isPlayed={isPlayed1v1}
-            supportsDraw={supportsDraw}
+            supportsDraw={groupStage ? groupStage.allowDraw(focused) : supportsDraw}
             scores1v1={scores1v1}
             setScores1v1={setScores1v1}
             onResult={handle1v1Result}
@@ -296,7 +309,7 @@ export default function TournamentManagerMobile({
                       ? `${m.player1Id ? userName(allUsers.find(u => u.id === m.player1Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"} vs. ${m.player2Id ? userName(allUsers.find(u => u.id === m.player2Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"}`
                       : (m.title || `Match ${m.position}`)}
                   </p>
-                  <p className="text-[10px] text-gray-500">{roundLabel(m.round)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>
+                  <p className="text-[10px] text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>
                 </div>
                 {is1v1 && played && (
                   <span className="text-[10px] text-teal-400 shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
@@ -316,7 +329,7 @@ export default function TournamentManagerMobile({
       )}
 
       {/* ── Match hinzufügen ── */}
-      {!showAdd ? (
+      {groupStage ? null : !showAdd ? (
         <button onClick={() => {
           setMScheduled(nowForDatetimeLocal());
           if (isFfa) setMFfaIds(tournament.participants.map(p => p.userId));

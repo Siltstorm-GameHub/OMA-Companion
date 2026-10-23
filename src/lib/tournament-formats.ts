@@ -9,10 +9,11 @@
  * als intern gespeicherter Wert auf. SeriesAdminRow bietet es aus Kompatibilitätsgründen weiterhin
  * direkt als Auswahlpunkt an, siehe LEGACY_LIGA_OPTION unten.
  */
-export type TournamentFormatValue = "single_elimination" | "round_robin" | "coop_stats" | "avg_stats";
+export type TournamentFormatValue = "single_elimination" | "group_knockout" | "round_robin" | "coop_stats" | "avg_stats";
 
 export const TOURNAMENT_FORMATS: { value: TournamentFormatValue; label: string; desc: string }[] = [
   { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
+  { value: "group_knockout",     label: "Gruppenphase + K.O.", desc: "Wie bei der WM: Gruppen, dann K.O.-Runde bis zum Finale" },
   { value: "round_robin",        label: "Liga-Modus",          desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
   { value: "coop_stats",         label: "Skill-Index Modus",   desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },

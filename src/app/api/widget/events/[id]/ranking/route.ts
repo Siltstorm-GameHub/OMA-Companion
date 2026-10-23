@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
+import { GROUP_KNOCKOUT_FORMAT, groupKnockoutRanking } from "@/lib/tournaments/groupStage";
 
 type UserLite = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 
@@ -141,6 +142,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         stats: t.stats,
       }));
     }
+  } else if (format === GROUP_KNOCKOUT_FORMAT) {
+    ranking = groupKnockoutRanking(event.participants, event.matches, event.groupStageJson);
   } else if (format === "single_elimination") {
     const wins = new Map<string, number>();
     for (const match of event.matches) {
