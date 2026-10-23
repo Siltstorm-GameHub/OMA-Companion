@@ -30,6 +30,7 @@ type SeriesOption = {
   category: EventCategory | null;
   genre: EventGenre | null;
   placementRewardsJson: string | null;
+  fixedFormat?: string | null;
   _count: { events: number };
 };
 
@@ -174,7 +175,6 @@ export default function EventSetupWizard({
   const [endAt, setEndAt]             = useState("");
   const [game, setGame]               = useState("");
   const [genre, setGenre]             = useState<EventGenre | null>(null);
-  const [platforms, setPlatforms]     = useState<string[]>([]);
   const [maxPlayers, setMaxPlayers]   = useState("");
   const [description, setDescription] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState("");
@@ -255,7 +255,9 @@ export default function EventSetupWizard({
   // fest aus der Gesamttabellen-Konfiguration der Reihe, nicht aus den Event-Belohnungen hier.
   const belongsToSeries = isSeriesMode || (isEventMode && seriesMode !== "none");
   const selectedSeries = series.find(s => s.id === selectedSeriesId);
-  const formatObj  = FORMATS.find(f => f.value === format);
+  // Bestehende Reihe mit festem Turnierformat: das Format der Reihe gilt (der Server überschreibt es)
+  const seriesFixedFormat = seriesMode === "existing" ? (selectedSeries?.fixedFormat ?? null) : null;
+  const formatObj  = FORMATS.find(f => f.value === (seriesFixedFormat ?? format));
   const hasStat    = formatObj?.hasStat ?? false;
 
   const monthlyDescriptions = useMemo(() => {
@@ -296,7 +298,8 @@ export default function EventSetupWizard({
   // Event mode: skip tournament step if community ODER OMA Gems (Format/Bracket
   // sind dort irrelevant — die Turnier-Einstellungen kommen stattdessen aus dem
   // eigenen Block in renderStepEventData, siehe isGemsTournament oben).
-  const eventStepComponents = eventType === "tournament" && !isGemsTournament
+  const showsTournamentStep = eventType === "tournament" && !isGemsTournament;
+  const eventStepComponents = showsTournamentStep
     ? [renderStepCategory, renderStepEventData, renderStepTournament, renderStepRewards, renderStepEventSummary]
     : [renderStepCategory, renderStepEventData, renderStepRewards, renderStepEventSummary];
 
@@ -304,11 +307,23 @@ export default function EventSetupWizard({
 
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
+  /** Warum es im Schritt "Grunddaten" nicht weitergeht (null = alles ok) — als Hinweis unter dem Formular. */
+  function eventDataProblem(): string | null {
+    if (!title.trim()) return "Titel fehlt.";
+    if (!startAt) return "Start-Datum fehlt.";
+    if (isGemsTournament && !endAt) return "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss).";
+    if (endAt && fromDatetimeLocalBerlin(endAt) <= fromDatetimeLocalBerlin(startAt)) return "Das Ende muss nach dem Start liegen.";
+    if (maxPlayers && (!Number.isInteger(Number(maxPlayers)) || Number(maxPlayers) < 2)) return "Max. Spieler muss eine ganze Zahl ab 2 sein.";
+    if (seriesMode === "existing" && !selectedSeriesId) return "Bitte eine bestehende Eventreihe auswählen — oder „Einzelevent“ wählen.";
+    if (seriesMode === "new" && !newSeriesName.trim()) return "Bitte einen Namen für die neue Eventreihe eingeben.";
+    return null;
+  }
+
   function canProceed(): boolean {
     if (wizardMode === "select") return false;
     if (isEventMode) {
       if (step === 0) return true;
-      if (step === 1) return title.trim().length > 0 && startAt.length > 0;
+      if (step === 1) return eventDataProblem() === null;
       return true;
     }
     if (step === 0) return true;
@@ -341,21 +356,16 @@ export default function EventSetupWizard({
 
   // ── Submit handlers ──────────────────────────────────────────────────────────
   async function handleSubmitEvent() {
-    if (!title || !startAt) return;
+    const problem = eventDataProblem();
+    if (problem) { toast.error(problem); return; }
     setLoading(true);
 
-    let seriesId: string | null = null;
-    if (seriesMode === "existing" && selectedSeriesId) {
-      seriesId = selectedSeriesId;
-    } else if (seriesMode === "new" && newSeriesName.trim()) {
-      const sRes = await fetch("/api/events/series", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newSeriesName.trim(), description: newSeriesDesc.trim() || null, category }),
-      });
-      if (!sRes.ok) { toast.error("Fehler beim Erstellen der Eventreihe"); setLoading(false); return; }
-      seriesId = (await sRes.json()).id;
-    }
+    // Neue Reihe wird serverseitig zusammen mit dem Event angelegt (eine Transaktion), damit bei einem
+    // Fehler keine leere Reihe zurückbleibt.
+    const seriesId = seriesMode === "existing" ? selectedSeriesId : null;
+    const newSeries = seriesMode === "new"
+      ? { name: newSeriesName.trim(), description: newSeriesDesc.trim() || null }
+      : null;
 
     const effectiveParticipationRankPts = eventType === "community" ? 0 : participationRankPts;
     const effectivePlacementsBase = eventType === "community"
@@ -374,12 +384,12 @@ export default function EventSetupWizard({
       endAt: endAt ? fromDatetimeLocalBerlin(endAt).toISOString() : null,
       game: game || null,
       genre: genre || null,
-      platform: platforms.length > 0 ? platforms.join(", ") : null,
       category,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       description: description || null,
       type: eventType,
       seriesId,
+      newSeries,
       discordChannelId: discordChannelId || null,
       hidden: eventHidden,
       registrationLocked: eventRegistrationLocked,
@@ -396,7 +406,7 @@ export default function EventSetupWizard({
     };
 
     if (eventType === "tournament") {
-      body.format = format;
+      body.format = seriesFixedFormat ?? format;
       if (hasStat) {
         body.statFields = JSON.stringify(statFields);
         const stats = statFields
@@ -418,7 +428,11 @@ export default function EventSetupWizard({
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (!res.ok) { toast.error("Fehler beim Erstellen"); return; }
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      toast.error(e.error ?? "Fehler beim Erstellen");
+      return;
+    }
     const event = await res.json();
     toast.success("Event erfolgreich erstellt!");
     router.push(`/admin/events/${event.id}`);
@@ -490,7 +504,11 @@ export default function EventSetupWizard({
     });
 
     setLoading(false);
-    if (!res.ok) { toast.error("Fehler beim Erstellen der Eventreihe"); return; }
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      toast.error(e.error ?? "Fehler beim Erstellen der Eventreihe");
+      return;
+    }
     const created = await res.json();
     toast.success(
       (seasonPrefill ? `Saison „${seriesName}" gestartet` : `Eventreihe „${seriesName}" erstellt`) +
@@ -533,7 +551,7 @@ export default function EventSetupWizard({
   // ── Render: Step Indicator ────────────────────────────────────────────────────
   function StepIndicator() {
     const base = isEventMode ? STEP_LABELS_EVENT : STEP_LABELS_SERIES;
-    const labels = isEventMode && eventType !== "tournament"
+    const labels = isEventMode && !showsTournamentStep
       ? base.filter((_, i) => i !== 2)
       : base;
     return (
@@ -641,7 +659,7 @@ export default function EventSetupWizard({
               className={inputCls} style={inputStyle} />
           </div>
           <div>
-            <label className={labelCls}>Ende (optional)</label>
+            <label className={labelCls}>{isGemsTournament ? "Ende (Turnierschluss) *" : "Ende (optional)"}</label>
             <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
               className={inputCls} style={inputStyle} />
           </div>
@@ -747,24 +765,6 @@ export default function EventSetupWizard({
         )}
 
         <div>
-          <label className={labelCls}>Plattform</label>
-          <div className="flex gap-2 flex-wrap">
-            {PLATFORMS.map(p => {
-              const active = platforms.includes(p.value);
-              return (
-                <button key={p.value} type="button"
-                  onClick={() => setPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
-                    active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
-                  }`}>
-                  <span>{p.icon}</span> {p.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
           <label className={labelCls}>Beschreibung (optional)</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)}
             rows={2} placeholder="Wird in Discord angezeigt"
@@ -848,6 +848,10 @@ export default function EventSetupWizard({
             </div>
           )}
         </div>
+
+        {eventDataProblem() && (title || startAt) && (
+          <p className="text-xs text-amber-400">{eventDataProblem()}</p>
+        )}
       </div>
     );
   }
@@ -856,6 +860,15 @@ export default function EventSetupWizard({
   function renderStepTournament() {
     return (
       <div className="space-y-6">
+        {seriesFixedFormat ? (
+        <div>
+          <h2 className="text-base font-semibold text-white mb-1">Format</h2>
+          <p className="text-sm text-amber-300">{formatObj?.label ?? seriesFixedFormat}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Festgelegt durch die Eventreihe „{selectedSeries?.name}“ — alle Turniere dieser Reihe nutzen dieses Format.
+          </p>
+        </div>
+        ) : (
         <div>
           <h2 className="text-base font-semibold text-white mb-1">Format</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -870,8 +883,9 @@ export default function EventSetupWizard({
             ))}
           </div>
         </div>
+        )}
 
-        {hasStat && (
+        {hasStat && !seriesFixedFormat && (
           <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
             <p className="text-sm font-medium text-amber-300 mb-3">Stat-Felder</p>
             <StatFieldEditor fields={statFields} onChange={setStatFields} />
@@ -891,7 +905,14 @@ export default function EventSetupWizard({
           </div>
         )}
 
-        {format === "round_robin" && (
+        {(seriesFixedFormat ?? format) === "group_knockout" && (
+          <p className="text-xs text-gray-500">
+            Gruppenanzahl und Weiterkommende pro Gruppe legst du nach dem Erstellen im Reiter „Turnier“ des
+            Events fest — dort werden die angemeldeten Spieler auch ausgelost.
+          </p>
+        )}
+
+        {!seriesFixedFormat && format === "round_robin" && (
           <p className="text-xs text-gray-500">
             Hin-/Rückrunde und Punktemodus (Platzierung vs. Sieg/Unentschieden-Münzen) lassen sich nach dem
             Erstellen im Reiter „Turnier" des Events konfigurieren.

@@ -23,6 +23,7 @@ export default async function NewEventPage({
         category: true,
         genre: true,
         placementRewardsJson: true,
+        fixedFormat: true,
         _count: { select: { events: true } },
       },
     }),

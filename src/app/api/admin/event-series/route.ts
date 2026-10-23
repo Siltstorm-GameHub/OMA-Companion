@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 /**
@@ -72,6 +73,8 @@ export async function PATCH(req: NextRequest) {
     const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
     if (!fields.squadId || !captainedSquadIds.includes(fields.squadId)) delete fields.squadId;
   }
+  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
+  if (!hasMinRole(currentUser.role, "moderator")) Object.assign(fields, capCaptainRewardFields(fields));
 
   // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
   const oldSeries = fields.name !== undefined

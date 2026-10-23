@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
+import { CAPTAIN_REWARD_LIMITS, capParticipationCoins, capPlacements } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
@@ -211,6 +212,22 @@ async function completeEvent(req: NextRequest, eventId: string) {
      *  Zustand nichts ändert; es werden nur Finale Platzierung/Begründung/Ausschluss gespeichert. */
     keepPollOpen?: boolean;
   };
+
+  // Squad-Captains: Beträge aus dem Request (Überschreibungen der Event-Konfiguration) auf die
+  // Standard-Obergrenzen kappen, siehe captain-reward-limits.ts
+  if (!hasMinRole(currentUser.role, "moderator")) {
+    if (body.participationCoins !== undefined) body.participationCoins = capParticipationCoins(body.participationCoins);
+    if (Array.isArray(body.placements)) body.placements = capPlacements(body.placements);
+    if (body.pollBonusCoins !== undefined) body.pollBonusCoins = Math.min(Math.max(0, Number(body.pollBonusCoins) || 0), CAPTAIN_REWARD_LIMITS.pollBonusCoins);
+    if (body.pollBonusRankPoints !== undefined) body.pollBonusRankPoints = Math.min(Math.max(0, Number(body.pollBonusRankPoints) || 0), CAPTAIN_REWARD_LIMITS.pollBonusRankPoints);
+    if (Array.isArray(body.pollResults)) {
+      body.pollResults = body.pollResults.map(r => ({
+        ...r,
+        coins: Math.min(Math.max(0, Number(r.coins) || 0), CAPTAIN_REWARD_LIMITS.pollWinnerCoins),
+        rankPoints: Math.min(Math.max(0, Number(r.rankPoints) || 0), CAPTAIN_REWARD_LIMITS.pollWinnerRankPoints),
+      }));
+    }
+  }
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },

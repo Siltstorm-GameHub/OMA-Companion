@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, hasMinRole } from "@/lib/roles";
+import { getCaptainedSquadIds, getSessionUser, hasMinRole } from "@/lib/roles";
+import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
+import { EventCategory, EventGenre } from "@prisma/client";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { createPollsForEvent } from "@/lib/event-polls";
@@ -41,37 +43,71 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     title, description, game, genre, category, startAt, endAt, maxPlayers, type, seriesId,
-    discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
-    placementRewardsJson, hidden, registrationLocked, squadId,
+    discordChannelId, spectatorMode, hidden, registrationLocked, squadId,
     gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
     format: bodyFormat, statFields: bodyStatFields, statConfig: bodyStatConfig,
   } = body;
+
+  const series = seriesId
+    ? await prisma.eventSeries.findUnique({
+        where: { id: seriesId },
+        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, coverImageUrl: true, squadId: true },
+      })
+    : null;
+  if (seriesId && !series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 400 });
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
   // wenn das Event direkt auf ihr eigenes Squad beschränkt wird (squadId gesetzt + sie sind dessen
   // Captain) — ein Community-weites Event ohne Squad-Bindung bleibt Moderatoren/Admins vorbehalten.
   const currentUser = await getSessionUser();
   if (!currentUser) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  if (!hasMinRole(currentUser.role, "moderator")) {
-    // Bei Anhängen an eine bestehende Reihe zählt deren Squad-Bindung, sonst die des Events selbst.
-    const relevantSquadId = squadId || (seriesId
-      ? (await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { squadId: true } }))?.squadId
-      : null);
-    if (!relevantSquadId) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
-    const membership = await prisma.squadMembership.findUnique({
-      where: { squadId_userId: { squadId: relevantSquadId, userId: currentUser.id } },
-    });
-    if (membership?.role !== "captain") return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+  const isModerator = hasMinRole(currentUser.role, "moderator");
+  if (!isModerator) {
+    // Event-Squad UND (falls angehängt) Reihen-Squad müssen eigene Squads sein — sonst könnte ein
+    // Captain sein Event mit eigener squadId in die Reihe eines fremden Squads hängen.
+    const captained = await getCaptainedSquadIds(currentUser.id);
+    if (squadId && !captained.includes(squadId)) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+    if (series && (!series.squadId || !captained.includes(series.squadId))) {
+      return NextResponse.json({ error: "Keine Berechtigung für diese Eventreihe" }, { status: 403 });
+    }
+    if (!squadId && !series?.squadId) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  if (!title || !startAt) {
+  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
+  const { spectatorRewardJson, pollsConfigJson, placementRewardsJson } = isModerator ? body : capCaptainRewardFields(body);
+
+  if (typeof title !== "string" || !title.trim() || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
   }
 
   const startDate = new Date(startAt);
   const endDate = endAt ? new Date(endAt) : null;
+  if (isNaN(startDate.getTime()) || (endDate && isNaN(endDate.getTime()))) {
+    return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
+  }
   if (endDate && endDate <= startDate) {
     return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
+  }
+  const maxPlayersValue = maxPlayers === null || maxPlayers === undefined || maxPlayers === "" ? null : Number(maxPlayers);
+  if (maxPlayersValue !== null && (!Number.isInteger(maxPlayersValue) || maxPlayersValue < 2)) {
+    return NextResponse.json({ error: "Max. Spieler muss eine ganze Zahl ab 2 sein" }, { status: 400 });
+  }
+  if (category && !(Object.values(EventCategory) as string[]).includes(category)) {
+    return NextResponse.json({ error: "Unbekannte Kategorie" }, { status: 400 });
+  }
+  if (genre && !(Object.values(EventGenre) as string[]).includes(genre)) {
+    return NextResponse.json({ error: "Unbekanntes Genre" }, { status: 400 });
+  }
+  const newSeriesName = typeof body.newSeries?.name === "string" ? body.newSeries.name.trim() : "";
+  const newSeriesDescription = typeof body.newSeries?.description === "string" ? body.newSeries.description.trim() || null : null;
+  if (body.newSeries && !newSeriesName) {
+    return NextResponse.json({ error: "Name der neuen Eventreihe fehlt" }, { status: 400 });
+  }
+  if (newSeriesName && seriesId) {
+    return NextResponse.json({ error: "Entweder bestehende oder neue Eventreihe angeben, nicht beides" }, { status: 400 });
+  }
+  if (game === "OMA Gems" && !endDate) {
+    return NextResponse.json({ error: "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss)" }, { status: 400 });
   }
 
   // Inherit tournament settings from series if linking to one
@@ -79,11 +115,7 @@ export async function POST(req: NextRequest) {
   let seriesPointsConfig: string | null = null;
   let seriesStatFields: string | null = null;
   let seriesCoverImageUrl: string | null = null;
-  if (seriesId) {
-    const series = await prisma.eventSeries.findUnique({
-      where: { id: seriesId },
-      select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, coverImageUrl: true },
-    });
+  if (series) {
     seriesCoverImageUrl = series?.coverImageUrl ?? null;
     if (series?.fixedFormat) seriesFormat = series.fixedFormat;
     if (series?.placementRewardsJson && series.fixedFormat !== "liga") {
@@ -139,21 +171,36 @@ export async function POST(req: NextRequest) {
   const rewardsData = placementRewardsJson
     ? JSON.stringify(placementRewardsJson)
     : seriesId
-      ? (await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { placementRewardsJson: true } }))?.placementRewardsJson ?? null
+      ? series?.placementRewardsJson ?? null
       : JSON.stringify({ participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, { place: 2, coins: 250, rankPoints: 2 }, { place: 3, coins: 100, rankPoints: 1 }] });
 
-  const event = await prisma.event.create({
+  // "Neue Reihe" aus dem Wizard: Reihe und Event entstehen gemeinsam in einer Transaktion. Vorher legte
+  // der Wizard die Reihe vorab separat an — scheiterte danach das Event, blieb eine leere Reihe zurück,
+  // und jeder weitere Versuch erzeugte eine weitere.
+  const event = await prisma.$transaction(async (tx) => {
+    const createdSeriesId = newSeriesName
+      ? (await tx.eventSeries.create({
+          data: {
+            name: newSeriesName,
+            description: newSeriesDescription,
+            category: category || "casual",
+            // Captains brauchen die Squad-Bindung, um die Reihe später selbst verwalten zu können
+            squadId: isModerator ? null : (squadId || null),
+          },
+        })).id
+      : null;
+    return tx.event.create({
     data: {
-      title,
+      title: title.trim(),
       description,
       game,
       genre:           genre || null,
       category:        category || "casual",
       startAt: startDate,
       endAt: endDate,
-      maxPlayers: maxPlayers ? Number(maxPlayers) : null,
+      maxPlayers: maxPlayersValue,
       type:            type ?? "community",
-      seriesId:        seriesId || null,
+      seriesId:        seriesId || createdSeriesId,
       discordChannelId: discordChannelId || null,
       hidden:          hidden ? true : false,
       registrationLocked: registrationLocked ? true : false,
@@ -168,6 +215,7 @@ export async function POST(req: NextRequest) {
       ...(eventStatFields    && { statFields:   eventStatFields }),
       ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),
     },
+    });
   });
 
   await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
@@ -206,7 +254,7 @@ export async function POST(req: NextRequest) {
   if (!event.hidden) {
     // Discord Scheduled Event automatisch anlegen
     const discordEventId = await createDiscordScheduledEvent({
-      title,
+      title: title.trim(),
       startAt:     startDate,
       description: description ?? null,
       game:        game ?? null,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole, requireModeratorOrSquadCaptain } from "@/lib/roles";
+import { requireRole, requireModeratorOrSquadCaptain, hasMinRole } from "@/lib/roles";
+import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
@@ -15,7 +16,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const rawBody = await req.json();
+  // Moderator/Admin dürfen immer. Reine Squad-Captains nur, wenn die neue Reihe direkt auf ihr
+  // eigenes Squad beschränkt wird — eine offene Community-Reihe bleibt Moderatoren/Admins vorbehalten.
+  const currentUser = rawBody.squadId ? await requireModeratorOrSquadCaptain(rawBody.squadId) : await requireRole("moderator");
+  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
+  const body = hasMinRole(currentUser.role, "moderator") ? rawBody : capCaptainRewardFields(rawBody);
   const {
     name, description,
     category, genre, fixedGame, fixedFormat, discordChannelId,
@@ -25,11 +31,6 @@ export async function POST(req: NextRequest) {
     spectatorMode, spectatorRewardJson,
     groupId, seasonNumber,
   } = body;
-
-  // Moderator/Admin dürfen immer. Reine Squad-Captains nur, wenn die neue Reihe direkt auf ihr
-  // eigenes Squad beschränkt wird — eine offene Community-Reihe bleibt Moderatoren/Admins vorbehalten.
-  if (squadId) await requireModeratorOrSquadCaptain(squadId);
-  else await requireRole("moderator");
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
   if (startDate && firstEventEndAt && new Date(firstEventEndAt) <= new Date(startDate)) {

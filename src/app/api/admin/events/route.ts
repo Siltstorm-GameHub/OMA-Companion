@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
@@ -30,18 +31,31 @@ export async function PATCH(req: NextRequest) {
   // Captains dürfen die Squad-Bindung ihres Events nur auf ein Squad setzen, das sie selbst
   // captainen (nicht entfernen oder auf ein fremdes Squad umbiegen) — sonst könnten sie die
   // Anmeldebeschränkung faktisch aufheben oder ein fremdes Team betreffen.
-  if (!hasMinRole(currentUser.role, "moderator") && "squadId" in data) {
+  const isModerator = hasMinRole(currentUser.role, "moderator");
+  if (!isModerator && "squadId" in data) {
     const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
     if (!data.squadId || !captainedSquadIds.includes(data.squadId)) delete data.squadId;
   }
+  // Ebenso darf ein Captain sein Event nur in eine Reihe eines eigenen Squads verschieben.
+  if (!isModerator && "seriesId" in data && data.seriesId) {
+    const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
+    const target = await prisma.eventSeries.findUnique({ where: { id: data.seriesId }, select: { squadId: true } });
+    if (!target?.squadId || !captainedSquadIds.includes(target.squadId)) delete data.seriesId;
+  }
+
+  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
+  const rewards = isModerator
+    ? { spectatorRewardJson, pollsConfigJson }
+    : capCaptainRewardFields({ spectatorRewardJson, pollsConfigJson });
+  if (!isModerator) Object.assign(data, capCaptainRewardFields(data));
 
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
   if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;
   if (category !== undefined) data.category = category;
   if (genre !== undefined) data.genre = genre || null;
   if (spectatorMode !== undefined) data.spectatorMode = spectatorMode;
-  if (spectatorRewardJson !== undefined) data.spectatorRewardJson = spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null;
-  if (pollsConfigJson !== undefined) data.pollsConfigJson = pollsConfigJson ? JSON.stringify(pollsConfigJson) : null;
+  if (spectatorRewardJson !== undefined) data.spectatorRewardJson = rewards.spectatorRewardJson ? JSON.stringify(rewards.spectatorRewardJson) : null;
+  if (pollsConfigJson !== undefined) data.pollsConfigJson = rewards.pollsConfigJson ? JSON.stringify(rewards.pollsConfigJson) : null;
   if (seriesEventConfigJson !== undefined) data.seriesEventConfigJson = seriesEventConfigJson || null;
 
   // Teilnehmer aus Event entfernen (Moderator-Aktion)
