@@ -22,7 +22,10 @@ export const GROUP_STAGE_ACTIONS: GroupStageAction[] = ["groups", "reset_groups"
 export async function runGroupStageAction(
   eventId: string,
   action: GroupStageAction,
-  input: { groupCount?: unknown; advancePerGroup?: unknown; thirdPlaceMatch?: unknown },
+  input: {
+    groupCount?: unknown; advancePerGroup?: unknown; thirdPlaceMatch?: unknown;
+    groupLegs?: unknown; knockoutLegs?: unknown; singleLegFinal?: unknown;
+  },
 ): Promise<{ generated?: number; deleted?: number }> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -49,6 +52,9 @@ export async function runGroupStageAction(
       groupCount: Number(input.groupCount),
       advancePerGroup: Number(input.advancePerGroup),
       thirdPlaceMatch: input.thirdPlaceMatch === true,
+      groupLegs: input.groupLegs === 2 ? 2 : 1,
+      knockoutLegs: input.knockoutLegs === 2 ? 2 : 1,
+      singleLegFinal: input.singleLegFinal !== false,
     };
     // Ausgelost werden die angemeldeten Spieler (bei aktivem Check-in nur Eingecheckte) plus von
     // Admins direkt eingetragene Teilnehmer — gemeinsame Quelle aller Generatoren, siehe participants.ts
@@ -62,7 +68,7 @@ export async function runGroupStageAction(
     }
 
     const groups = drawGroups(ids, cfg.groupCount);
-    const matches = generateGroupMatches(groups, eventId);
+    const matches = generateGroupMatches(groups, eventId, cfg.groupLegs);
     await prisma.$transaction([
       ...groups.flatMap((members, groupIndex) => members.length
         ? [prisma.tournamentParticipant.updateMany({ where: { eventId, userId: { in: members } }, data: { groupIndex } })]
@@ -103,7 +109,10 @@ export async function runGroupStageAction(
     if (standings.reduce((n, g) => n + Math.min(g.length, advancePerGroup), 0) < 2) {
       throw new ApplyMatchResultError("Mindestens 2 Spieler müssen die K.O.-Runde erreichen.", 400);
     }
-    const matches = generateKnockoutMatches(standings, advancePerGroup, eventId, cfg?.thirdPlaceMatch ?? false);
+    const matches = generateKnockoutMatches(standings, advancePerGroup, eventId, cfg?.thirdPlaceMatch ?? false, {
+      legs: cfg?.knockoutLegs ?? 1,
+      singleLegFinal: cfg?.singleLegFinal ?? true,
+    });
     await prisma.match.createMany({ data: matches });
     return { generated: matches.length };
   }

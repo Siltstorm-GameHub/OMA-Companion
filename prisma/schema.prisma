@@ -688,6 +688,10 @@ model Match {
   // Spiel um Platz 3 (K.O.-Runde, Verlierer der Halbfinals) — liegt in der Final-Runde neben dem Finale,
   // rückt nirgends hin auf und beendet das Turnier nicht.
   isThirdPlace Boolean @default(false)
+  // K.O.-Runde mit Hin- und Rückspiel (group_knockout): 1 = Hinspiel, 2 = Rückspiel, null = Einzelspiel.
+  // Beide Spiele einer Paarung teilen round/position; im Rückspiel ist das Heimrecht getauscht
+  // (player1/player2 vertauscht). winnerId des Rückspiels = wer nach Gesamtergebnis weiterkommt.
+  leg          Int?
   event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]

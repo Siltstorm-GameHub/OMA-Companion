@@ -49,7 +49,7 @@ import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import { placementRewardFor } from "@/lib/placement-rewards";
-import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, groupMembers, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
+import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, groupMembers, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
@@ -347,7 +347,8 @@ export default async function TournamentDetailPage({
   const isGroupKnockout = format === GROUP_KNOCKOUT_FORMAT;
   // Bei Gruppenphase + K.O. zählt für Sieger/Finale nur die K.O.-Runde (Matches ohne Gruppe)
   // Spiel um Platz 3 liegt in der Final-Runde, ist aber nie das Finale
-  const bracketMatches = (isGroupKnockout ? event.matches.filter(m => m.groupIndex == null) : event.matches)
+  // Hin-/Rückspiel: Paarungen zusammengefasst (Sieger = wer nach Gesamtergebnis weiterkommt)
+  const bracketMatches = aggregateKnockoutTies(isGroupKnockout ? event.matches.filter(m => m.groupIndex == null) : event.matches)
     .filter(m => !m.isThirdPlace);
   const groupStageCfg = parseGroupStageConfig(event.groupStageJson);
 
@@ -594,7 +595,7 @@ export default async function TournamentDetailPage({
 
   // Stats für Header
   const playedMatches = event.matches.filter(m =>
-    isElimination || (isGroupKnockout && m.groupIndex == null) ? !!m.winnerId : !!m.playedAt
+    isElimination || (isGroupKnockout && m.groupIndex == null && !m.leg) ? !!m.winnerId : !!m.playedAt
   ).length;
   const totalMatches = event.matches.length;
 

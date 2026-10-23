@@ -11,6 +11,8 @@ export type GeneratedMatch = {
   winnerId:   string | null;
   groupIndex?: number | null;
   isThirdPlace?: boolean;
+  /** K.O.-Runde mit Hin- und Rückspiel: 1 = Hinspiel, 2 = Rückspiel (sonst nicht gesetzt) */
+  leg?: number | null;
 };
 
 // Standard round-robin scheduling algorithm (circle method)

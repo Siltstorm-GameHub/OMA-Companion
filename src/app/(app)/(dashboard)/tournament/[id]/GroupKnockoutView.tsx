@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LayoutGrid, Swords } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
-import { computeGroupStandings, groupLabel } from "@/lib/tournaments/groupStage";
+import { aggregateKnockoutTies, computeGroupStandings, groupLabel } from "@/lib/tournaments/groupStage";
 import BracketView from "./BracketView";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
@@ -17,6 +17,7 @@ type Match = {
   playedAt: string | Date | null; entries: unknown[];
   groupIndex: number | null;
   isThirdPlace?: boolean;
+  leg?: number | null;
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "TBD";
@@ -37,8 +38,11 @@ export default function GroupKnockoutView({
   holders?: WanderpocalHolder[];
 }) {
   const groupMatches    = matches.filter(m => m.groupIndex != null);
-  const knockoutMatches = matches.filter(m => m.groupIndex == null && !m.isThirdPlace);
-  const thirdPlace = matches.find(m => m.groupIndex == null && m.isThirdPlace) ?? null;
+  // Hin- und Rückspiel als eine Paarung mit Gesamtergebnis zeigen (siehe aggregateKnockoutTies)
+  const ties = aggregateKnockoutTies(matches.filter(m => m.groupIndex == null));
+  const knockoutMatches = ties.filter(m => !m.isThirdPlace);
+  const thirdPlace = ties.find(m => m.isThirdPlace) ?? null;
+  const hasTwoLegs = ties.some(t => t.legs?.second);
   const standings = computeGroupStandings(members, groupMatches);
   const findUser = (id: string | null) => (id ? participants.find(p => p.userId === id)?.user : undefined);
 
@@ -142,6 +146,9 @@ export default function GroupKnockoutView({
       {knockoutMatches.length > 0 ? (
         <div className="space-y-4">
           <BracketView matches={knockoutMatches} participants={participants} userId={userId} holders={holders} />
+          {hasTwoLegs && (
+            <p className="text-[11px] text-gray-600 -mt-2 px-1">Hin- und Rückspiel: angezeigt ist das Gesamtergebnis beider Spiele.</p>
+          )}
           {thirdPlace && (
             <div>
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Spiel um Platz 3</h2>

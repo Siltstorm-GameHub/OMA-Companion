@@ -121,7 +121,10 @@ async function planFor(eventId: string, subjectUserId: string, matchId: string, 
       throw new ApplyMatchResultError("Match hat noch nicht beide Spieler", 400);
     }
     const isDraw = v.score1 === v.score2;
-    if (isDraw && isKnockoutMatch(event?.format, match.groupIndex)) {
+    // Einzelspiele im K.O.-Baum brauchen einen Sieger. Bei Hin-/Rückspiel ist ein Unentschieden im
+    // einzelnen Spiel möglich — im Rückspiel entscheidet das Gesamtergebnis (bei Gleichstand nach
+    // beiden Spielen lehnt applyMatchResult ab, dann entscheidet ein Admin).
+    if (isDraw && isKnockoutMatch(event?.format, match.groupIndex) && !match.leg) {
       throw new ApplyMatchResultError("Im K.-o.-Baum ist kein Unentschieden möglich", 400);
     }
     const winnerId = isDraw ? null : v.score1 > v.score2 ? match.player1Id : match.player2Id;

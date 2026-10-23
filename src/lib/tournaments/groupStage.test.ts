@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches, seedKnockout,
-  validateGroupStageConfig, groupLetter, groupKnockoutRanking, type GroupMatchLike,
+  validateGroupStageConfig, groupLetter, groupKnockoutRanking, groupMatchCount, aggregateKnockoutTies, type GroupMatchLike,
 } from "./groupStage";
 
 /** Gruppe, in der der erste Spieler alle schlägt, der zweite alle außer dem ersten usw. */
@@ -124,6 +124,64 @@ describe("Gruppenphase + K.O.", () => {
     assert.deepEqual(ranking.slice(0, 4).map(r => r.userId), ["a1", "b1", "a2", "b2"]);
     assert.match(ranking[0].label, /^Sieger/);
     assert.match(ranking[2].label, /^Platz 3/);
+  });
+
+  test("Gruppenphase mit Hin- und Rückspiel: jede Paarung zweimal, Heimrecht getauscht, Spieltage fortlaufend", () => {
+    const matches = generateGroupMatches([["a", "b", "c", "d"]], "e", 2);
+    assert.equal(matches.length, 12);
+    const firstLegRounds = Math.max(...matches.slice(0, 6).map(m => m.round));
+    for (const m of matches.slice(0, 6)) {
+      const back = matches.find(x => x.player1Id === m.player2Id && x.player2Id === m.player1Id);
+      assert.ok(back, "Rückspiel mit getauschtem Heimrecht existiert");
+      assert.ok(back!.round > firstLegRounds);
+    }
+    assert.equal(groupMatchCount([4, 3], 2), (6 + 3) * 2);
+  });
+
+  test("K.O. mit Hin- und Rückspiel: zwei Spiele je Paarung, Finale einfach, Freilose einfach", () => {
+    const groups = ["a", "b", "c"].map(g => [1, 2, 3].map(n => `${g}${n}`));
+    const standings = computeGroupStandings(groups, groups.flatMap((g, i) => playedGroup(i, g)));
+    const ko = generateKnockoutMatches(standings, 2, "e", true, { legs: 2, singleLegFinal: true });
+    const totalRounds = Math.max(...ko.map(m => m.round));
+    // Freilose (Runde 1, nur ein Spieler) bleiben Einzelspiele
+    assert.ok(ko.filter(m => m.round === 1 && m.winnerId).every(m => !m.leg));
+    // Echte Paarungen der ersten Runde: Hinspiel + Rückspiel mit getauschtem Heimrecht
+    const realR1 = ko.filter(m => m.round === 1 && !m.winnerId);
+    assert.equal(realR1.length, 4);
+    const leg1 = realR1.find(m => m.leg === 1)!;
+    const leg2 = realR1.find(m => m.leg === 2 && m.position === leg1.position)!;
+    assert.equal(leg2.player1Id, leg1.player2Id);
+    assert.equal(leg2.player2Id, leg1.player1Id);
+    // Finale und Spiel um Platz 3 einfach
+    assert.ok(ko.filter(m => m.round === totalRounds).every(m => !m.leg));
+    const both = generateKnockoutMatches(standings, 2, "e", false, { legs: 2, singleLegFinal: false });
+    assert.equal(both.filter(m => m.round === totalRounds).length, 2);
+  });
+
+  test("Gesamtergebnis: Hin- und Rückspiel werden zu einer Paarung zusammengefasst", () => {
+    const base = { round: 1, position: 1, groupIndex: null, isThirdPlace: false };
+    const now = new Date();
+    const first = { ...base, id: "h", leg: 1, player1Id: "a", player2Id: "b", winnerId: "a", score1: 2, score2: 1, playedAt: now };
+    const second = { ...base, id: "r", leg: 2, player1Id: "b", player2Id: "a", winnerId: "b", score1: 3, score2: 1, playedAt: now };
+    const [tie] = aggregateKnockoutTies([first, second]);
+    assert.equal(tie.player1Id, "a");
+    assert.equal(tie.score1, 3); // a: 2 + 1
+    assert.equal(tie.score2, 4); // b: 1 + 3
+    assert.equal(tie.winnerId, "b");
+    // Nur Hinspiel gespielt: noch nicht entschieden
+    const [open] = aggregateKnockoutTies([first, { ...second, winnerId: null, score1: null, score2: null, playedAt: null }]);
+    assert.equal(open.playedAt, null);
+    assert.equal(open.winnerId, null);
+    assert.equal(open.score1, 2);
+
+    // Ranking zählt die Paarung, nicht die einzelnen Spiele (a gewinnt das Hinspiel, scheidet aber aus)
+    const ranking = groupKnockoutRanking(
+      [{ userId: "a", groupIndex: 0 }, { userId: "b", groupIndex: 1 }],
+      [first, second],
+      JSON.stringify({ groupCount: 2, advancePerGroup: 1 }),
+    );
+    assert.equal(ranking[0].userId, "b");
+    assert.match(ranking[0].label, /^Sieger/);
   });
 
   test("Konfigurationsprüfung", () => {

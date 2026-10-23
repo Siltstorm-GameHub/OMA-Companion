@@ -11,6 +11,9 @@
 //     derselben Gruppe landen möglichst weit auseinander im Baum (bei 2 Gruppen à 2 Weiterkommenden:
 //     A1–B2 und B1–A2, A1 und A2 können sich erst im Finale wiedersehen). Optional mit Spiel um
 //     Platz 3 zwischen den Halbfinal-Verlierern (Match.isThirdPlace).
+//  4. Optional Hin- und Rückspiel — in der Gruppenphase (jede Paarung zweimal, Heimrecht getauscht)
+//     und/oder in der K.O.-Runde (Gesamtergebnis entscheidet, bei Gleichstand wählt der Admin beim
+//     Rückspiel, wer weiterkommt; Finale wahlweise als Einzelspiel).
 //
 // Rein funktional (kein Prisma), damit Server (Generierung) und Client (Tabellen) dieselbe
 // Berechnung verwenden.
@@ -18,7 +21,17 @@ import { bracketFromSlots, generateRoundRobin, shuffle, type GeneratedMatch } fr
 
 export const GROUP_KNOCKOUT_FORMAT = "group_knockout";
 
-export type GroupStageConfig = { groupCount: number; advancePerGroup: number; thirdPlaceMatch?: boolean };
+export type GroupStageConfig = {
+  groupCount: number;
+  advancePerGroup: number;
+  thirdPlaceMatch?: boolean;
+  /** 2 = Gruppenspiele mit Hin- und Rückspiel */
+  groupLegs?: 1 | 2;
+  /** 2 = K.O.-Paarungen mit Hin- und Rückspiel */
+  knockoutLegs?: 1 | 2;
+  /** Bei knockoutLegs = 2: Finale trotzdem als Einzelspiel (Standard) */
+  singleLegFinal?: boolean;
+};
 
 export const DEFAULT_ADVANCE_PER_GROUP = 2;
 
@@ -33,6 +46,9 @@ export function parseGroupStageConfig(json: string | null | undefined): GroupSta
       groupCount,
       advancePerGroup: Number.isInteger(advancePerGroup) && advancePerGroup >= 1 ? advancePerGroup : DEFAULT_ADVANCE_PER_GROUP,
       thirdPlaceMatch: raw.thirdPlaceMatch === true,
+      groupLegs: raw.groupLegs === 2 ? 2 : 1,
+      knockoutLegs: raw.knockoutLegs === 2 ? 2 : 1,
+      singleLegFinal: raw.singleLegFinal !== false,
     };
   } catch { return null; }
 }
@@ -79,11 +95,23 @@ export function drawGroups(participantIds: string[], groupCount: number): string
   return groups;
 }
 
-/** Jeder-gegen-jeden innerhalb jeder Gruppe. Spieltag-Nummern laufen je Gruppe ab 1. */
-export function generateGroupMatches(groups: string[][], eventId: string): GeneratedMatch[] {
-  return groups.flatMap((ids, groupIndex) =>
-    generateRoundRobin(ids, eventId).map(m => ({ ...m, groupIndex })),
-  );
+/**
+ * Jeder-gegen-jeden innerhalb jeder Gruppe. Spieltag-Nummern laufen je Gruppe ab 1. Mit legs = 2
+ * folgt eine Rückrunde: dieselben Paarungen mit getauschtem Heimrecht, Spieltage fortlaufend.
+ */
+export function generateGroupMatches(groups: string[][], eventId: string, legs: 1 | 2 = 1): GeneratedMatch[] {
+  return groups.flatMap((ids, groupIndex) => {
+    const first = generateRoundRobin(ids, eventId).map(m => ({ ...m, groupIndex }));
+    if (legs === 1) return first;
+    const rounds = first.length ? Math.max(...first.map(m => m.round)) : 0;
+    const second = first.map(m => ({ ...m, round: m.round + rounds, player1Id: m.player2Id, player2Id: m.player1Id }));
+    return [...first, ...second];
+  });
+}
+
+/** Anzahl Gruppenspiele für Gruppengrößen (für Vorschauen in der Oberfläche). */
+export function groupMatchCount(groupSizes: number[], legs: 1 | 2 = 1): number {
+  return groupSizes.reduce((n, size) => n + (size * (size - 1)) / 2, 0) * legs;
 }
 
 // ── Tabellen ──────────────────────────────────────────────────────────────────
@@ -267,8 +295,81 @@ export function seedKnockout(standings: GroupStanding[][], advancePerGroup: numb
 /** Komplette K.O.-Runde (alle Runden, Freilose bereits aufgerückt) als Match-Daten. */
 export function generateKnockoutMatches(
   standings: GroupStanding[][], advancePerGroup: number, eventId: string, thirdPlaceMatch = false,
+  options: { legs?: 1 | 2; singleLegFinal?: boolean } = {},
 ): GeneratedMatch[] {
-  return bracketFromSlots(seedKnockout(standings, advancePerGroup), eventId, null, thirdPlaceMatch);
+  const matches = bracketFromSlots(seedKnockout(standings, advancePerGroup), eventId, null, thirdPlaceMatch);
+  return options.legs === 2 ? expandToTwoLegs(matches, options.singleLegFinal !== false) : matches;
+}
+
+/**
+ * Macht aus jeder K.O.-Paarung Hin- und Rückspiel (gleiche round/position, im Rückspiel Heimrecht
+ * getauscht). Einzelspiele bleiben: Freilose, das Spiel um Platz 3 und — wenn gewünscht — das Finale.
+ */
+function expandToTwoLegs(matches: GeneratedMatch[], singleLegFinal: boolean): GeneratedMatch[] {
+  const totalRounds = Math.max(0, ...matches.filter(m => !m.isThirdPlace).map(m => m.round));
+  return matches.flatMap(m => {
+    const isBye = !!m.winnerId && (!m.player1Id || !m.player2Id);
+    const isFinal = !m.isThirdPlace && m.round === totalRounds;
+    if (m.isThirdPlace || isBye || (isFinal && singleLegFinal)) return [m];
+    return [
+      { ...m, leg: 1 },
+      { ...m, leg: 2, player1Id: m.player2Id, player2Id: m.player1Id },
+    ];
+  });
+}
+
+// ── Hin- und Rückspiel zusammenfassen ─────────────────────────────────────────
+
+export type TieMatchLike = {
+  id: string; round: number; position: number;
+  groupIndex?: number | null; isThirdPlace?: boolean; leg?: number | null;
+  player1Id: string | null; player2Id: string | null;
+  winnerId: string | null; score1: number | null; score2: number | null;
+  playedAt: string | Date | null;
+};
+
+export type AggregatedTie<T extends TieMatchLike> = T & {
+  /** Hin- und Rückspiel, falls die Paarung zweibeinig ist */
+  legs?: { first: T; second: T | null };
+};
+
+/**
+ * Fasst jede K.O.-Paarung mit Hin- und Rückspiel zu EINEM Eintrag zusammen (Spieler aus Sicht des
+ * Hinspiels, Tore = Gesamtergebnis, Sieger = wer weiterkommt, playedAt erst nach dem Rückspiel).
+ * Gruppenspiele und Einzelspiele werden unverändert durchgereicht — so funktionieren Turnierbaum,
+ * Overlay und Ranking mit Hin-/Rückspiel ohne eigene Sonderlogik.
+ */
+export function aggregateKnockoutTies<T extends TieMatchLike>(matches: T[]): AggregatedTie<T>[] {
+  const out: AggregatedTie<T>[] = [];
+  const legsByTie = new Map<string, { first?: T; second?: T }>();
+  for (const m of matches) {
+    if (m.groupIndex != null || !m.leg) { out.push(m); continue; }
+    const key = `${m.round}:${m.position}:${m.isThirdPlace ? 1 : 0}`;
+    const tie = legsByTie.get(key) ?? {};
+    if (m.leg === 2) tie.second = m; else tie.first = m;
+    if (!legsByTie.has(key)) { legsByTie.set(key, tie); out.push(m); } // Platzhalter, wird unten ersetzt
+  }
+  return out.map(m => {
+    if (m.groupIndex != null || !m.leg) return m;
+    const tie = legsByTie.get(`${m.round}:${m.position}:${m.isThirdPlace ? 1 : 0}`)!;
+    const first = tie.first ?? tie.second!;
+    const second = tie.first ? tie.second ?? null : null;
+    const goals = (uid: string | null) => {
+      if (!uid || !first.playedAt) return null;
+      let sum = uid === first.player1Id ? first.score1 ?? 0 : first.score2 ?? 0;
+      if (second?.playedAt) sum += uid === second.player1Id ? second.score1 ?? 0 : second.score2 ?? 0;
+      return sum;
+    };
+    const decided = !!second?.playedAt;
+    return {
+      ...first,
+      score1: goals(first.player1Id),
+      score2: goals(first.player2Id),
+      winnerId: decided ? second!.winnerId : null,
+      playedAt: decided ? second!.playedAt : null,
+      legs: { first, second },
+    };
+  });
 }
 
 /**
@@ -278,20 +379,23 @@ export function generateKnockoutMatches(
  */
 export function groupKnockoutRanking(
   participants: { userId: string; groupIndex?: number | null }[],
-  matches: (GroupMatchLike & { groupIndex?: number | null; round: number })[],
+  matches: (GroupMatchLike & { groupIndex?: number | null; round: number; position?: number; leg?: number | null; id?: string })[],
   groupStageJson: string | null | undefined,
 ): { userId: string; score: number; label: string }[] {
   const groupCount = resolveGroupCount(parseGroupStageConfig(groupStageJson), participants);
   const standings = new Map(
     computeGroupStandings(groupMembers(participants, groupCount), matches).flat().map(s => [s.userId, s]),
   );
-  const knockout = matches.filter(m => m.groupIndex == null && m.playedAt && m.player1Id && m.player2Id);
+  // Hin-/Rückspiel als eine Paarung werten; eine Paarung zählt als "erreicht", sobald ihr erstes
+  // Spiel gespielt ist, als gewonnen erst, wenn sie entschieden ist
+  const knockout = aggregateKnockoutTies(matches.map((m, i) => ({ id: String(i), position: 0, ...m })))
+    .filter(m => m.groupIndex == null && m.player1Id && m.player2Id && (m.playedAt || m.legs?.first.playedAt));
   const totalRounds = knockout.length ? Math.max(...knockout.map(m => m.round)) : 0;
-  // Stufen-Wert: je Match (Runde·2 + gewonnen); Spiel um Platz 3 zählt zwischen Finale und Halbfinale
+  // Stufen-Wert: je Paarung (Runde·2 + gewonnen); Spiel um Platz 3 zählt zwischen Finale und Halbfinale
   const stage = new Map<string, { value: number; label: string }>();
   for (const m of knockout) {
     for (const uid of [m.player1Id!, m.player2Id!]) {
-      const won = m.winnerId === uid;
+      const won = !!m.playedAt && m.winnerId === uid;
       const isFinal = !m.isThirdPlace && m.round === totalRounds;
       const value = m.isThirdPlace ? 2 * totalRounds - (won ? 0.5 : 1.5) : 2 * m.round + (won ? 1 : 0);
       const label = isFinal ? (won ? "Sieger" : "Finale")

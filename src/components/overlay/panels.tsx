@@ -5,7 +5,7 @@
  */
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
-import { GROUP_KNOCKOUT_FORMAT, computeGroupStandings, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
+import { GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeGroupStandings, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 import { PanelShell } from "./tiles";
 import {
   displayName, PANEL_LIST_HEIGHT, PANEL_LIST_HEIGHT_COMPACT,
@@ -16,8 +16,10 @@ import {
 export function BracketPanel({ matches: allMatches, userOf }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined }) {
   // Nur K.O.-Matches (bei "Gruppenphase + K.O." stehen die Gruppenspiele in der Tabelle);
   // das Spiel um Platz 3 bekommt einen eigenen Abschnitt nach dem Finale.
-  const matches = allMatches.filter(m => m.groupIndex == null && !m.isThirdPlace);
-  const thirdPlace = allMatches.filter(m => m.groupIndex == null && m.isThirdPlace);
+  // Hin- und Rückspiel als eine Paarung mit Gesamtergebnis (siehe aggregateKnockoutTies)
+  const ties = aggregateKnockoutTies(allMatches.filter(m => m.groupIndex == null));
+  const matches = ties.filter(m => !m.isThirdPlace);
+  const thirdPlace = ties.filter(m => m.isThirdPlace);
   const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
   const totalRounds = rounds.length ? rounds[rounds.length - 1] : 0;
   const sections = [

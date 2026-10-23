@@ -2,13 +2,16 @@
 import { useState } from "react";
 import { Dices, LayoutGrid, RotateCcw, Swords } from "@/components/icons";
 import {
-  DEFAULT_ADVANCE_PER_GROUP, computeGroupStandings, groupLabel, groupMembers, parseGroupStageConfig,
+  DEFAULT_ADVANCE_PER_GROUP, computeGroupStandings, groupLabel, groupMatchCount, groupMembers, parseGroupStageConfig,
   resolveGroupCount, suggestedGroupCount, validateGroupStageConfig,
 } from "@/lib/tournaments/groupStage";
 import { userName, type Tournament, type User } from "./TournamentManager";
 
 export type GroupStageActionBody =
-  | { generateMatches: "groups"; groupCount: number; advancePerGroup: number; thirdPlaceMatch: boolean }
+  | {
+      generateMatches: "groups"; groupCount: number; advancePerGroup: number; thirdPlaceMatch: boolean;
+      groupLegs: 1 | 2; knockoutLegs: 1 | 2; singleLegFinal: boolean;
+    }
   | { generateMatches: "reset_groups" | "knockout" | "reset_knockout" };
 
 /**
@@ -30,6 +33,9 @@ export default function GroupStagePanel({
   const [groupCount, setGroupCount] = useState(() => suggestedGroupCount(participantCount));
   const [advancePerGroup, setAdvancePerGroup] = useState(DEFAULT_ADVANCE_PER_GROUP);
   const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
+  const [groupLegs, setGroupLegs] = useState<1 | 2>(1);
+  const [knockoutLegs, setKnockoutLegs] = useState<1 | 2>(1);
+  const [singleLegFinal, setSingleLegFinal] = useState(true);
 
   const cfg = parseGroupStageConfig(tournament.groupStageJson);
   const groupMatches    = tournament.matches.filter(m => m.groupIndex != null);
@@ -43,7 +49,7 @@ export default function GroupStagePanel({
     const minSize = Math.floor(participantCount / Math.max(groupCount, 1));
     const maxSize = Math.ceil(participantCount / Math.max(groupCount, 1));
     const sizes = Array.from({ length: groupCount }, (_, i) => (i < participantCount % groupCount ? maxSize : minSize));
-    const groupMatchCount = sizes.reduce((n, s) => n + (s * (s - 1)) / 2, 0);
+    const plannedGroupMatches = groupMatchCount(sizes, groupLegs);
     const qualifiers = groupCount * advancePerGroup;
     return (
       <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-4 space-y-3">
@@ -71,6 +77,20 @@ export default function GroupStagePanel({
           </label>
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
+          <input type="checkbox" checked={groupLegs === 2} onChange={e => setGroupLegs(e.target.checked ? 2 : 1)} className="rounded" />
+          Gruppenphase mit Hin- und Rückspiel (jede Paarung zweimal, Heimrecht getauscht)
+        </label>
+        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
+          <input type="checkbox" checked={knockoutLegs === 2} onChange={e => setKnockoutLegs(e.target.checked ? 2 : 1)} className="rounded" />
+          K.O.-Runde mit Hin- und Rückspiel (Gesamtergebnis entscheidet)
+        </label>
+        {knockoutLegs === 2 && (
+          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none pl-6">
+            <input type="checkbox" checked={singleLegFinal} onChange={e => setSingleLegFinal(e.target.checked)} className="rounded" />
+            Finale trotzdem als Einzelspiel
+          </label>
+        )}
+        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
           <input type="checkbox" checked={thirdPlaceMatch} onChange={e => setThirdPlaceMatch(e.target.checked)} className="rounded" />
           Spiel um Platz 3 (Verlierer der Halbfinals)
         </label>
@@ -79,12 +99,13 @@ export default function GroupStagePanel({
         ) : (
           <p className="text-[11px] text-gray-500">
             → {groupCount} {groupCount === 1 ? "Gruppe" : "Gruppen"} à {minSize === maxSize ? minSize : `${minSize}–${maxSize}`} Spieler
-            · {groupMatchCount} Gruppenspiele · {qualifiers} Spieler in der K.O.-Runde
+            · {plannedGroupMatches} Gruppenspiele{groupLegs === 2 ? " (Hin & Rück)" : ""} · {qualifiers} Spieler in der K.O.-Runde
+            {knockoutLegs === 2 ? (singleLegFinal ? " (Hin & Rück, Finale einfach)" : " (Hin & Rück)") : ""}
             {qualifiers & (qualifiers - 1) ? " (Freilose für die besten Gruppensieger)" : ""}
           </p>
         )}
         <button type="button" disabled={loading || !!error}
-          onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup, thirdPlaceMatch })}
+          onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup, thirdPlaceMatch, groupLegs, knockoutLegs, singleLegFinal })}
           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
           <Dices className="w-3.5 h-3.5" /> Gruppen auslosen &amp; Spielplan erstellen
         </button>
@@ -106,6 +127,8 @@ export default function GroupStagePanel({
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
           <LayoutGrid className="w-3.5 h-3.5" /> Gruppenphase · {advance} pro Gruppe weiter
+          {cfg?.groupLegs === 2 && " · Hin & Rück"}
+          {cfg?.knockoutLegs === 2 && ` · K.O. Hin & Rück${cfg.singleLegFinal ? " (Finale einfach)" : ""}`}
         </p>
         {!anyPlayed && (
           <button type="button" disabled={loading} onClick={() => onAction({ generateMatches: "reset_groups" })}

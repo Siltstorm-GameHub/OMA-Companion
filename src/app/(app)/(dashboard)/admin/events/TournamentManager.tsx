@@ -30,6 +30,8 @@ export type Match = {
   groupIndex?: number | null;
   /** Spiel um Platz 3 (K.O.-Runde) */
   isThirdPlace?: boolean;
+  /** K.O.-Runde mit Hin- und Rückspiel: 1 = Hinspiel, 2 = Rückspiel */
+  leg?: number | null;
 };
 export type Participant = { userId: string; user: User; groupIndex?: number | null };
 export type Tournament = {
@@ -220,13 +222,17 @@ export default function TournamentManager({
     ? tournament.matches.filter(m => m.groupIndex != null)
         .sort((a, b) => a.groupIndex! - b.groupIndex! || a.round - b.round || a.position - b.position)
     : [];
-  const knockoutMatches = isGroupKnockout ? tournament.matches.filter(m => m.groupIndex == null) : [];
+  const knockoutMatches = isGroupKnockout
+    ? tournament.matches.filter(m => m.groupIndex == null)
+        .sort((a, b) => a.round - b.round || Number(!!a.isThirdPlace) - Number(!!b.isThirdPlace) || a.position - b.position || (a.leg ?? 0) - (b.leg ?? 0))
+    : [];
   const knockoutRounds  = knockoutMatches.length ? Math.max(...knockoutMatches.map(m => m.round)) : 0;
   const groupIndexes    = [...new Set(groupMatches.map(m => m.groupIndex!))];
   /** Label für Match-Listen: Gruppe + Spieltag bzw. K.O.-Runde (nur group_knockout). */
   const groupKnockoutLabel = (m: Match) => m.groupIndex != null
     ? `${groupLabel(m.groupIndex)} · Spieltag ${m.round}`
-    : m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, knockoutRounds);
+    : (m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, knockoutRounds))
+      + (m.leg === 1 ? " · Hinspiel" : m.leg === 2 ? " · Rückspiel" : "");
   const statFields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
   // Filter out winner stat keys — they're auto-set by event completion, not entered per round
   const visibleStatFields = statFields.filter(f => !winnerStatKeys.includes(f));
@@ -589,6 +595,19 @@ export default function TournamentManager({
     const isPlayed  = !!match.winnerId || !!match.playedAt;
     const isDraw    = !!match.playedAt && !match.winnerId;
     const isPending = !!p1 && !!p2 && !isPlayed;
+    // Rückspiel einer K.O.-Paarung: Gesamtergebnis aus Hinspiel + (eingegebenem) Rückspiel
+    const firstLeg = match.leg === 2
+      ? tournament!.matches.find(m => m.groupIndex == null && m.leg === 1 && m.round === match.round
+          && m.position === match.position && !!m.isThirdPlace === !!match.isThirdPlace)
+      : undefined;
+    const aggregate = (() => {
+      if (!firstLeg?.playedAt) return null;
+      const entered = scores1v1[match.id];
+      const own1 = isPending ? Number(entered?.s1 || 0) : match.score1 ?? 0;
+      const own2 = isPending ? Number(entered?.s2 || 0) : match.score2 ?? 0;
+      const fromFirst = (uid: string | null) => (uid === firstLeg.player1Id ? firstLeg.score1 ?? 0 : firstLeg.score2 ?? 0);
+      return { g1: fromFirst(match.player1Id) + own1, g2: fromFirst(match.player2Id) + own2, first: firstLeg };
+    })();
     return (
       <div key={match.id}
         className={`rounded-lg border overflow-hidden ${
@@ -598,6 +617,7 @@ export default function TournamentManager({
         <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
           <span className="text-xs text-gray-400 truncate">
             {match.title || (match.isThirdPlace ? "Spiel um Platz 3" : match.groupIndex != null ? `Spieltag ${match.round}` : `Match ${match.position}`)}
+            {match.leg === 1 && " · Hinspiel"}{match.leg === 2 && " · Rückspiel"}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {match.scheduledAt && (
@@ -658,8 +678,41 @@ export default function TournamentManager({
           </div>
         ))}
 
+        {/* Rückspiel: Gesamtergebnis */}
+        {match.leg === 2 && (
+          <div className="px-3 py-1.5 bg-gray-800/40 border-t border-gray-700 text-[11px] text-gray-400">
+            {aggregate
+              ? <>Hinspiel {aggregate.first.score1 ?? 0}:{aggregate.first.score2 ?? 0} · <span className="text-white font-medium">Gesamt {userName(p1 ?? { id: "", name: "?", username: null, image: null })} {aggregate.g1}:{aggregate.g2} {userName(p2 ?? { id: "", name: "?", username: null, image: null })}</span>
+                  {isPlayed && match.winnerId && <> · weiter: {userName((match.winnerId === match.player1Id ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })}</>}</>
+              : "Erst das Hinspiel eintragen — danach entscheidet das Gesamtergebnis."}
+          </div>
+        )}
+
+        {/* Rückspiel: Gesamtergebnis entscheidet, bei Gleichstand Auswahl, wer weiterkommt */}
+        {isPending && match.leg === 2 && (
+          <div className="flex gap-1 p-2 bg-gray-800/50">
+            {!aggregate ? null : aggregate.g1 !== aggregate.g2 ? (
+              <button onClick={() => submit1v1(match.id, aggregate.g1 > aggregate.g2 ? match.player1Id! : match.player2Id!)} disabled={loading}
+                className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                Ergebnis speichern — {userName((aggregate.g1 > aggregate.g2 ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })} kommt weiter
+              </button>
+            ) : (
+              <>
+                <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
+                  className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                  {p1 ? userName(p1) : "?"} kommt weiter (n.E.)
+                </button>
+                <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
+                  className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                  {p2 ? userName(p2) : "?"} kommt weiter (n.E.)
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Win buttons */}
-        {isPending && (
+        {isPending && match.leg !== 2 && (
           <div className="flex gap-1 p-2 bg-gray-800/50">
             <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
               className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
@@ -707,12 +760,13 @@ export default function TournamentManager({
       <div className="tm-touch-only">
         <TournamentManagerMobile
           tournament={isGroupKnockout
-            ? { ...tournament, matches: [...groupMatches, ...[...knockoutMatches].sort((a, b) => a.round - b.round || a.position - b.position)] }
+            ? { ...tournament, matches: [...groupMatches, ...knockoutMatches] }
             : tournament}
           groupStage={isGroupKnockout ? {
             panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact />,
             roundLabel: groupKnockoutLabel,
-            allowDraw: m => m.groupIndex != null,
+            // Gruppenspiele und Hinspiele dürfen unentschieden enden; das Rückspiel entscheidet per Gesamtergebnis
+            allowDraw: m => m.groupIndex != null || m.leg === 1,
           } : undefined}
           allUsers={allUsers}
           loading={loading}
@@ -820,7 +874,7 @@ export default function TournamentManager({
             <div key={`ko${round}`}>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
               <div className="space-y-2">
-                {knockoutMatches.filter(m => m.round === round).sort((a, b) => a.position - b.position).map(m => renderDuelCard(m, false))}
+                {knockoutMatches.filter(m => m.round === round).map(m => renderDuelCard(m, m.leg === 1))}
               </div>
             </div>
           ))}

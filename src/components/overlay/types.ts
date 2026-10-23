@@ -31,6 +31,8 @@ export type OverlayMatch = {
   groupIndex?: number | null;
   /** Spiel um Platz 3 (K.O.-Runde) */
   isThirdPlace?: boolean;
+  /** K.O.-Runde mit Hin- und Rückspiel: 1 = Hinspiel, 2 = Rückspiel */
+  leg?: number | null;
 };
 
 export type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
