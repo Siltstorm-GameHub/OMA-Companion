@@ -291,6 +291,17 @@ model Event {
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
   registrationLocked  Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  // Check-in vor Turnierstart: Fenster öffnet checkInMinutes vor startAt und schließt mit der Auslosung.
+  // Ist es aktiv, werden nur eingecheckte Spieler (EventRegistration.checkedInAt) ausgelost.
+  checkInEnabled      Boolean       @default(false)
+  checkInMinutes      Int           @default(30)
+  // Geplante Veröffentlichung: unsichtbare Events (hidden) werden zu diesem Zeitpunkt per Cron sichtbar
+  // geschaltet und angekündigt (Discord, Push). null = keine Planung.
+  publishAt           DateTime?
+  // Stand der Veröffentlichungs-Schritte (Discord-Event, Ankündigung, Push) — JSON:
+  // { notifiedAt?: string, errors: [{ step, message, at }] }. Fehler sieht der Admin und kann sie
+  // erneut ausführen; erfolgreiche Schritte laufen nie doppelt (siehe lib/event-publish.ts).
+  publishStateJson    String?
   // Wenn gesetzt (oder über die Reihe geerbt): Spieler-Selbst-Anmeldung nur für Mitglieder dieses
   // Squads. Event bleibt für alle sichtbar, Zuschauer-Anmeldung bleibt offen.
   squadId             String?
@@ -578,6 +589,7 @@ model EventRegistration {
   joinedAt DateTime @default(now())
   attended Boolean  @default(false)
   role     String   @default("player") // "player" | "spectator"
+  checkedInAt DateTime? // Check-in vor Turnierstart (nur relevant bei Event.checkInEnabled)
   user     User     @relation(fields: [userId], references: [id])
   event    Event    @relation(fields: [eventId], references: [id])
 
@@ -673,6 +685,9 @@ model Match {
   // Nur group_knockout: gesetzt = Gruppenspiel dieser Gruppe (0 = A), null = Match der K.O.-Runde.
   // round ist bei Gruppenspielen der Spieltag, bei K.O.-Matches die K.O.-Runde (1 = erste K.O.-Runde).
   groupIndex  Int?
+  // Spiel um Platz 3 (K.O.-Runde, Verlierer der Halbfinals) — liegt in der Final-Runde neben dem Finale,
+  // rückt nirgends hin auf und beendet das Turnier nicht.
+  isThirdPlace Boolean @default(false)
   event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]

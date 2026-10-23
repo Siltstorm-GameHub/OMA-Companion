@@ -66,7 +66,8 @@ export default function EventOverlayView({
     brand: true,
     liveinfo: !!(ticker || state.status === "active" || state.game),
     ticker: !!ticker,
-    bracket: matches.length > 0,
+    // Gruppenphase + K.O.: der Baum hat erst mit der K.O.-Runde Inhalt (Gruppenspiele zeigt die Tabelle)
+    bracket: matches.some(m => m.groupIndex == null),
     table: matches.length > 0 || state.participants.length > 0,
     seriesTable: (state.seriesTable?.ranking.length ?? 0) > 0,
     participants: state.participants.length > 0,

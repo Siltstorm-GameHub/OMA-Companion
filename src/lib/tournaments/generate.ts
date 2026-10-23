@@ -10,6 +10,7 @@ export type GeneratedMatch = {
   player2Id:  string | null;
   winnerId:   string | null;
   groupIndex?: number | null;
+  isThirdPlace?: boolean;
 };
 
 // Standard round-robin scheduling algorithm (circle method)
@@ -106,8 +107,12 @@ export function generateBracket(participantIds: string[], eventId: string): Gene
 /**
  * K.O.-Baum aus einer fertig gesetzten Slot-Liste bauen (Länge = Zweierpotenz, null = Freilos).
  * Slot 2p−1 und 2p bilden Match p der ersten Runde. Ein Match darf höchstens ein Freilos haben.
+ * thirdPlaceMatch: zusätzliches Spiel um Platz 3 (Final-Runde, Position 2) — nur ab 4 Slots,
+ * sonst gibt es keine Halbfinals.
  */
-export function bracketFromSlots(slots: (string | null)[], eventId: string, groupIndex: number | null = null): GeneratedMatch[] {
+export function bracketFromSlots(
+  slots: (string | null)[], eventId: string, groupIndex: number | null = null, thirdPlaceMatch = false,
+): GeneratedMatch[] {
   const round1: GeneratedMatch[] = [];
   for (let position = 1; position <= slots.length / 2; position++) {
     const player1Id = slots[2 * position - 2] ?? null;
@@ -119,5 +124,12 @@ export function bracketFromSlots(slots: (string | null)[], eventId: string, grou
       groupIndex,
     });
   }
-  return withLaterRounds(round1, slots.length, eventId);
+  const matches = withLaterRounds(round1, slots.length, eventId);
+  if (thirdPlaceMatch && slots.length >= 4) {
+    matches.push({
+      eventId, round: Math.log2(slots.length), position: 2, player1Id: null, player2Id: null, winnerId: null,
+      groupIndex, isThirdPlace: true,
+    });
+  }
+  return matches;
 }

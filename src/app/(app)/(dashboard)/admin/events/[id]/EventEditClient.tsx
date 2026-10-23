@@ -11,7 +11,7 @@ import Link from "next/link";
 import { UserMinus } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { Repeat } from "@/components/icons";
-import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
+import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, Copy, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
 import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -23,6 +23,8 @@ import ImageUploadField from "@/components/ImageUploadField";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import { DEFAULT_CHECK_IN_MINUTES, MAX_CHECK_IN_MINUTES, sanitizeCheckInMinutes } from "@/lib/checkin";
+import PublishStatusPanel from "./PublishStatusPanel";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
 import { getClassConfig } from "@/components/gems/BattleCardView";
@@ -69,34 +71,17 @@ const CATEGORIES: { value: EventCategory; label: string; emoji: string }[] = [
   { value: "special",         label: "Special",    emoji: "⭐" },
 ];
 
+/** Sieg/Unentschieden-Münzen pro Match (Liga-Modus "Sieg/Unentschieden-Münzen") aus pointsConfig.
+ *  Platzierungsbelohnungen stehen NICHT mehr in pointsConfig, sondern im Reiter "Belohnungen"
+ *  (placementRewardsJson, siehe lib/placement-rewards.ts). */
 function parseTmtConfig(pc: string | null) {
-  const d = { coins1: 200, coins2: 100, coins3: 50, pts1: 100, pts2: 50, pts3: 25, win: 30, draw: 10 };
+  const d = { win: 30, draw: 10 };
   if (!pc) return d;
   try {
-    const p = JSON.parse(pc) as Record<string, number | { coins?: number; points?: number }>;
-    const c = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
-      v == null ? fb : typeof v === "number" ? v : (v.coins ?? fb);
-    const r = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
-      v == null ? fb : typeof v === "number" ? v : (v.points ?? v.coins ?? fb);
-    return { coins1: c(p["1"],200), coins2: c(p["2"],100), coins3: c(p["3"],50),
-             pts1: r(p["1"],100), pts2: r(p["2"],50), pts3: r(p["3"],25),
-             win: c(p["win"],30), draw: c(p["draw"],10) };
+    const p = JSON.parse(pc) as Record<string, unknown>;
+    const n = (v: unknown, fb: number) => (typeof v === "number" ? v : fb);
+    return { win: n(p["win"], 30), draw: n(p["draw"], 10) };
   } catch { return d; }
-}
-
-/** Leitet pointsConfig (im selben Shape wie parseTmtConfig erwartet) aus den
- * Eventreihen-Wizard-Einstellungen (placementRewardsJson) ab. */
-function derivePointsConfigFromSeries(series: { placementRewardsJson?: string | null } | null | undefined): string | null {
-  if (!series?.placementRewardsJson) return null;
-  try {
-    const { placements } = JSON.parse(series.placementRewardsJson) as {
-      placements: { place: number; coins: number; rankPoints: number }[];
-    };
-    if (!placements?.length) return null;
-    const cfg: Record<string, { coins: number; points: number }> = {};
-    for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
-    return JSON.stringify(cfg);
-  } catch { return null; }
 }
 
 /** Leitet die Statistik-Felder aus den Eventreihen-Wizard-Einstellungen (seriesStatConfig) ab. */
@@ -298,7 +283,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [tmtPlayHomeAway, setTmtPlayHomeAway] = useState<boolean>(initialTmtFormat === "liga");
   const [tmtPointsMode, setTmtPointsMode] = useState<"placement" | "matchResult">(initialTmtFormat === "liga" ? "matchResult" : "placement");
   const [tmtPoints, setTmtPoints]       = useState(() =>
-    parseTmtConfig(event.pointsConfig ?? derivePointsConfigFromSeries(event.series))
+    parseTmtConfig(event.pointsConfig)
   );
   const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
     if (event.statFields) {
@@ -346,10 +331,51 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     setHiddenBusy(false);
     if (res.ok) {
       setHidden(next);
-      toast.success(next ? "Event ausgeblendet" : "Event wieder sichtbar");
+      toast.success(next ? "Event ausgeblendet" : "Event sichtbar — Ankündigung auf Discord/Push läuft");
+      router.refresh();
     } else {
       toast.error("Fehler");
     }
+  }
+
+  // ── Check-in vor Turnierstart ──
+  const [checkInEnabled, setCheckInEnabled] = useState<boolean>(event.checkInEnabled ?? false);
+  const [checkInMinutes, setCheckInMinutes] = useState<number>(event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
+  const [checkInBusy, setCheckInBusy] = useState(false);
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(() => new Set(
+    (event.registrations as { userId: string; checkedInAt?: string | Date | null }[])
+      .filter(r => r.checkedInAt).map(r => r.userId),
+  ));
+
+  async function saveCheckInSettings(enabled: boolean, minutes: number) {
+    setCheckInBusy(true);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, checkInEnabled: enabled, checkInMinutes: minutes }),
+    });
+    setCheckInBusy(false);
+    if (res.ok) {
+      setCheckInEnabled(enabled);
+      toast.success(enabled ? `Check-in aktiv (${minutes} Min. vor Start)` : "Check-in deaktiviert");
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Speichern");
+    }
+  }
+
+  async function setPlayerCheckIn(userId: string, checkedIn: boolean) {
+    const res = await fetch(`/api/events/${event.id}/checkin`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, checkedIn }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler"); return; }
+    setCheckedInIds(prev => {
+      const next = new Set(prev);
+      if (checkedIn) next.add(userId); else next.delete(userId);
+      return next;
+    });
   }
 
   async function toggleRegistrationLocked() {
@@ -519,11 +545,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   /** startStatus: "pending" legt das Turnier nur an (noch nicht gestartet), "active" startet es direkt. */
   async function saveTmtSettings(startStatus: "pending" | "active" = "active") {
     setTmtLoading(true);
-    const config = usesMatchResultPoints
-      ? { win: tmtPoints.win, draw: tmtPoints.draw }
-      : { "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
-          "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
-          "3": { coins: tmtPoints.coins3, points: tmtPoints.pts3 } };
+    // pointsConfig nur noch für Sieg/Unentschieden-Münzen pro Match — Platzierungen zahlt der
+    // Event-Abschluss aus dem Reiter "Belohnungen"
+    const config = usesMatchResultPoints ? { win: tmtPoints.win, draw: tmtPoints.draw } : null;
     // Event-eigene Stat-Punkte-Konfiguration nur bei coop_stats — überschreibt für dieses Event die
     // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
@@ -802,8 +826,22 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
           </Link>
+          <Link href={`/admin/events/new?from=${event.id}`}
+            title="Neues Event mit denselben Einstellungen und Belohnungen anlegen (ohne Teilnehmer/Ergebnisse)"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
+            <Copy className="w-3.5 h-3.5" /> Duplizieren
+          </Link>
         </div>
       </div>
+
+      {/* Veröffentlichung: Planung (unsichtbar) bzw. fehlgeschlagene Discord-/Push-Schritte (sichtbar) */}
+      <PublishStatusPanel
+        eventId={event.id}
+        hidden={hidden}
+        publishAt={event.publishAt ?? null}
+        publishStateJson={event.publishStateJson ?? null}
+        startAt={event.startAt}
+      />
 
       {/* Abschließen-CTA — nicht mehr editierbar, wenn das Event bereits beendet ist;
           dafür muss der Status erst wieder auf aktiv gesetzt werden (Status-Buttons unten) */}
@@ -1421,6 +1459,36 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       {/* ── Tab: Turnier ── */}
       {activeTab === "tournament" && (
         <div className="space-y-4">
+          {/* Check-in vor Turnierstart — nur Eingecheckte werden ausgelost */}
+          <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={checkInEnabled} disabled={checkInBusy}
+                onChange={e => saveCheckInSettings(e.target.checked, checkInMinutes)}
+                className="rounded shrink-0" />
+              <span className="text-sm text-white">Check-in vor Turnierstart</span>
+            </label>
+            <p className="text-[11px] text-gray-500">
+              Spieler checken selbst auf der Event-Seite ein. Das Fenster öffnet vor dem Start und schließt mit der
+              Auslosung. Ist der Check-in aktiv, werden nur eingecheckte Spieler ausgelost — Admins können im Reiter
+              „Teilnehmer“ manuell ein- und auschecken.
+            </p>
+            {checkInEnabled && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Öffnet</span>
+                <input type="number" min={5} max={MAX_CHECK_IN_MINUTES} value={checkInMinutes}
+                  onChange={e => setCheckInMinutes(Number(e.target.value))}
+                  className="w-20 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1 text-center" />
+                <span className="text-xs text-gray-400">Min. vor Start</span>
+                <button type="button" disabled={checkInBusy || checkInMinutes === (event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES)}
+                  onClick={() => saveCheckInSettings(true, sanitizeCheckInMinutes(checkInMinutes))}
+                  className="text-xs text-teal-300 border border-teal-700/60 rounded-lg px-2.5 py-1 hover:bg-teal-900/20 disabled:opacity-40">
+                  Speichern
+                </button>
+                <span className="text-xs text-gray-500 ml-auto">{checkedInIds.size}/{registeredIds.size} eingecheckt</span>
+              </div>
+            )}
+          </div>
+
           {!hasTournament && (
           <div>
             <label className={labelCls}>Format</label>
@@ -1468,6 +1536,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           )}
 
           {/* Belohnungen pro Platzierung werden zentral im Reiter "Belohnungen" gepflegt */}
+          <p className="text-[11px] text-gray-500">
+            Platzierungsbelohnungen (Münzen/Rang-Punkte je Platz) kommen ausschließlich aus dem Reiter
+            {event.series ? " der Eventreihe" : " „Belohnungen“"} und werden beim Abschluss des Events ausgezahlt.
+            {usesMatchResultPoints && " Die Münzen pro Match-Ergebnis unten kommen zusätzlich, direkt beim Eintragen."}
+          </p>
           {usesMatchResultPoints && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
               <label className="text-xs text-gray-500 block mb-3">Münzen pro Match-Ergebnis</label>
@@ -1692,6 +1765,17 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       : <div className="w-7 h-7 rounded-full bg-emerald-900/40 flex items-center justify-center text-xs font-semibold text-emerald-400 shrink-0">{userName(u)[0].toUpperCase()}</div>
                     }
                     <span className="flex-1 text-sm text-emerald-300 truncate font-medium">{userName(u)}</span>
+                    {checkInEnabled && (
+                      <button type="button" onClick={() => setPlayerCheckIn(u.id, !checkedInIds.has(u.id))}
+                        className={`shrink-0 text-[10px] font-semibold rounded-full px-2 py-0.5 border transition-colors ${
+                          checkedInIds.has(u.id)
+                            ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                            : "border-gray-700 text-gray-500 hover:text-gray-300"
+                        }`}
+                        title={checkedInIds.has(u.id) ? "Auschecken" : "Manuell einchecken"}>
+                        {checkedInIds.has(u.id) ? "✓ eingecheckt" : "nicht eingecheckt"}
+                      </button>
+                    )}
                     <button onClick={() => removeUser(u.id, userName(u))} disabled={loading}
                       className="shrink-0 text-gray-600 hover:text-red-400 p-1.5 rounded transition-colors disabled:opacity-50">
                       <UserMinus className="w-3.5 h-3.5" />

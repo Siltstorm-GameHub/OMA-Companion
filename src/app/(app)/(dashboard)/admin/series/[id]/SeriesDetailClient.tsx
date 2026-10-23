@@ -20,6 +20,7 @@ import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMo
 import { resolveSeriesColor } from "@/lib/series-icons";
 import IconPicker from "@/components/IconPicker";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
+import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -651,12 +652,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             <Field label={<><Swords className="w-3 h-3" /> Festes Turnierformat</>}>
               <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                 <option value="">– Kein festes Format –</option>
-                <option value="single_elimination">Single Elimination</option>
-                <option value="group_knockout">Gruppenphase + K.O.</option>
-                <option value="round_robin">Liga-Modus</option>
-                <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
-                <option value="coop_stats">Skill-Index Modus</option>
-                <option value="avg_stats">Durchschnittswerte</option>
+                {SERIES_FORMAT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </Field>
             <Field label="Genre">

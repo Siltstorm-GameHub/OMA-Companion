@@ -5,6 +5,7 @@
  */
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
+import { GROUP_KNOCKOUT_FORMAT, computeGroupStandings, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 import { PanelShell } from "./tiles";
 import {
   displayName, PANEL_LIST_HEIGHT, PANEL_LIST_HEIGHT_COMPACT,
@@ -12,18 +13,27 @@ import {
 } from "./types";
 
 /* ── Bracket-Panel: Runden nebeneinander, kompakt für Elimination-Formate ── */
-export function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined }) {
+export function BracketPanel({ matches: allMatches, userOf }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined }) {
+  // Nur K.O.-Matches (bei "Gruppenphase + K.O." stehen die Gruppenspiele in der Tabelle);
+  // das Spiel um Platz 3 bekommt einen eigenen Abschnitt nach dem Finale.
+  const matches = allMatches.filter(m => m.groupIndex == null && !m.isThirdPlace);
+  const thirdPlace = allMatches.filter(m => m.groupIndex == null && m.isThirdPlace);
   const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
+  const totalRounds = rounds.length ? rounds[rounds.length - 1] : 0;
+  const sections = [
+    ...rounds.map(round => ({ key: `r${round}`, label: knockoutRoundLabel(round, totalRounds), items: matches.filter(m => m.round === round) })),
+    ...(thirdPlace.length ? [{ key: "third", label: "Spiel um Platz 3", items: thirdPlace }] : []),
+  ];
   return (
     <PanelShell title="Turnierbaum">
       <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT} gap={8}>
-        {rounds.map(round => (
-          <div key={round} style={{ width: "100%" }}>
+        {sections.map(section => (
+          <div key={section.key} style={{ width: "100%" }}>
             <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 3px" }}>
-              Runde {round}
+              {section.label}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {matches.filter(m => m.round === round).map(m => (
+              {section.items.map(m => (
                 <BracketRow key={m.id} match={m} userOf={userOf} />
               ))}
             </div>
@@ -80,6 +90,7 @@ export function TablePanel({
    *  Feld statt nur des kombinierten Durchschnitts, und nutzt die groessere Listenhoehe. */
   compact?: boolean;
 }) {
+  if (format === GROUP_KNOCKOUT_FORMAT) return <GroupTablesPanel matches={matches} participants={participants} compact={compact} />;
   const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
   const ranked = isFfaFamily
@@ -119,6 +130,47 @@ export function TablePanel({
                 </span>
               )}
             </div>
+          </div>
+        ))}
+      </AutoScrollViewport>
+    </PanelShell>
+  );
+}
+
+/** "Gruppenphase + K.O.": eine kompakte Tabelle je Gruppe (gleiche Berechnung wie Turnierseite/Admin,
+ *  siehe lib/tournaments/groupStage.ts). Die Gruppen-Mitglieder ergeben sich aus den Gruppenspielen —
+ *  dafür braucht das Overlay keine eigenen Teilnehmer-Gruppendaten. */
+function GroupTablesPanel({ matches, participants, compact }: { matches: OverlayMatch[]; participants: OverlayParticipant[]; compact: boolean }) {
+  const groupMatches = matches.filter(m => m.groupIndex != null);
+  const groupCount = groupMatches.reduce((n, m) => Math.max(n, (m.groupIndex ?? 0) + 1), 0);
+  const members: string[][] = Array.from({ length: groupCount }, () => []);
+  for (const m of groupMatches) {
+    for (const uid of [m.player1Id, m.player2Id]) {
+      if (uid && !members[m.groupIndex!].includes(uid)) members[m.groupIndex!].push(uid);
+    }
+  }
+  const standings = computeGroupStandings(members, groupMatches);
+  const userById = new Map(participants.map(p => [p.userId, p.user]));
+  return (
+    <PanelShell title="Gruppen">
+      <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={8}>
+        {standings.map((table, gi) => (
+          <div key={gi} style={{ width: "100%" }}>
+            <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 3px" }}>
+              {groupLabel(gi)}
+            </p>
+            {table.map((s, i) => {
+              const user = userById.get(s.userId);
+              return (
+                <div key={s.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 8px", borderRadius: 7, background: i === 0 ? "rgba(20,184,166,0.06)" : "transparent" }}>
+                  <span style={{ width: 18, fontSize: 14, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+                  <RankedAvatar badge={null} userId={user?.id} src={user?.image} alt={displayName(user)} size={24} />
+                  <span style={{ flex: 1, fontSize: 16 }}>{displayName(user)}</span>
+                  <span style={{ fontSize: 13, opacity: 0.5, whiteSpace: "nowrap" }}>{s.scored}:{s.conceded}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, minWidth: 52, textAlign: "right", whiteSpace: "nowrap" }}>{s.pts} Pkt.</span>
+                </div>
+              );
+            })}
           </div>
         ))}
       </AutoScrollViewport>

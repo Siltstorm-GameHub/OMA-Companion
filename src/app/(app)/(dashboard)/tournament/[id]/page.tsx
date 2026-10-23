@@ -20,6 +20,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
+import { FORMAT_LABELS } from "@/lib/tournament-formats";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -32,6 +33,7 @@ import EventJobPackage from "@/components/EventJobPackage";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
+import CheckInButton from "./CheckInButton";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
@@ -46,6 +48,7 @@ import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
+import { placementRewardFor } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, groupMembers, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
@@ -63,15 +66,6 @@ const STATUS_STYLES: Record<string, { label: string; style: string; dot: string 
   finished: { label: "Beendet",         style: "bg-gray-800 text-gray-500",      dot: "bg-gray-600" },
 };
 
-const FORMAT_LABELS: Record<string, string> = {
-  single_elimination: "K.O.-System",
-  double_elimination: "Double Elimination",
-  group_knockout:     "Gruppenphase + K.O.",
-  round_robin:        "Liga-Modus",
-  liga:               "Liga-Modus (Hin-/Rückrunde)",
-  ffa:                "Free for All (Legacy)",
-  coop_stats:         "Skill-Index Modus",
-};
 
 export async function generateMetadata({
   params,
@@ -128,7 +122,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
@@ -352,7 +346,9 @@ export default async function TournamentDetailPage({
   const isLiga        = format === "liga";
   const isGroupKnockout = format === GROUP_KNOCKOUT_FORMAT;
   // Bei Gruppenphase + K.O. zählt für Sieger/Finale nur die K.O.-Runde (Matches ohne Gruppe)
-  const bracketMatches = isGroupKnockout ? event.matches.filter(m => m.groupIndex == null) : event.matches;
+  // Spiel um Platz 3 liegt in der Final-Runde, ist aber nie das Finale
+  const bracketMatches = (isGroupKnockout ? event.matches.filter(m => m.groupIndex == null) : event.matches)
+    .filter(m => !m.isThirdPlace);
   const groupStageCfg = parseGroupStageConfig(event.groupStageJson);
 
   const userName = (u: { name: string | null; username: string | null }) =>
@@ -564,7 +560,8 @@ export default async function TournamentDetailPage({
     } catch { return {}; }
   })();
 
-  // Punkte pro Platzierung aus pointsConfig
+  // pointsConfig trägt nur noch die Sieg/Unentschieden-Münzen pro Match (Liga-Modus) —
+  // Platzierungsbelohnungen kommen aus placementRewardsJson (siehe lib/placement-rewards.ts)
   type PcVal = number | { coins?: number; points?: number };
   const pcRaw: Record<string, PcVal> = (() => {
     try { return event.pointsConfig ? JSON.parse(event.pointsConfig) : {}; } catch { return {}; }
@@ -573,17 +570,6 @@ export default async function TournamentDetailPage({
   // (win/draw-Keys), nicht mehr allein am Format-String — round_robin kann jetzt ebenfalls mit
   // Sieg/Unentschieden-Münzen laufen (siehe TournamentManager "Punktemodus").
   const supportsDraw = isLiga || "win" in pcRaw || "draw" in pcRaw;
-  function placementCoins(place: number): number {
-    const v = pcRaw[String(place)];
-    if (!v) return 0;
-    return typeof v === "number" ? v : (v.coins ?? 0);
-  }
-  function placementRankPts(place: number): number {
-    if (place > 3) return 0;
-    const v = pcRaw[String(place)];
-    if (!v) return 0;
-    return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
-  }
 
   // Genre + Streaming-Partner + Community-Streamer + 1st-place reward
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
@@ -598,17 +584,10 @@ export default async function TournamentDetailPage({
   const canStreamRegister = canRegister && !isPartnerStreamer;
   const partnerUserIds = new Set(streamingPartners.map(sp => sp.partner.user?.id).filter(Boolean));
   const filteredCommunityStreamers = communityStreamers.filter(cs => !partnerUserIds.has(cs.user.id));
-  const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
-    const raw = (event as unknown as Record<string, unknown>).placementRewardsJson;
-    if (!raw) return null;
-    try { return (typeof raw === "string" ? JSON.parse(raw) : raw) as { placements?: { place: number; coins: number; rankPoints: number }[] }; } catch { return null; }
-  })();
-  const firstPlace = rewardsData?.placements?.find(p => p.place === 1) ?? null;
-  // Turnier-Formate (ffa/coop_stats/avg_stats/…) speichern ihre Platzierungsbelohnungen in
-  // pointsConfig statt placementRewardsJson — hier beide Quellen zusammenführen, damit die
-  // Hero-Section für jedes Turnierformat den echten 1.-Platz-Preis zeigt.
-  const heroFirstPlaceCoins    = firstPlace?.coins      ?? placementCoins(1);
-  const heroFirstPlaceRankPts  = firstPlace?.rankPoints ?? placementRankPts(1);
+  // 1.-Platz-Preis genau so, wie der Event-Abschluss ihn auszahlt (Event-, sonst Reihen-Konfiguration)
+  const firstPlace = placementRewardFor(1, event.placementRewardsJson, event.series?.placementRewardsJson);
+  const heroFirstPlaceCoins    = firstPlace.coins;
+  const heroFirstPlaceRankPts  = firstPlace.rankPoints;
   const hasHeroFirstPlace      = heroFirstPlaceCoins > 0 || heroFirstPlaceRankPts > 0;
   const date = new Date(event.startAt);
   const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
@@ -857,6 +836,15 @@ export default async function TournamentDetailPage({
           <div className="mt-4 flex items-center gap-3 flex-wrap">
             {canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember)) && (
               <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl} />
+            )}
+            {isRegistered && event.checkInEnabled && event.status !== "finished" && (
+              <CheckInButton
+                eventId={event.id}
+                startAt={event.startAt.toISOString()}
+                checkInMinutes={event.checkInMinutes}
+                drawn={event.matches.length > 0}
+                checkedIn={!!myReg?.checkedInAt}
+              />
             )}
             {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !isRegistrationLocked) && (
               <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />

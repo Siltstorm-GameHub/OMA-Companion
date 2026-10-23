@@ -16,6 +16,7 @@ type Match = {
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: unknown[];
   groupIndex: number | null;
+  isThirdPlace?: boolean;
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "TBD";
@@ -36,7 +37,8 @@ export default function GroupKnockoutView({
   holders?: WanderpocalHolder[];
 }) {
   const groupMatches    = matches.filter(m => m.groupIndex != null);
-  const knockoutMatches = matches.filter(m => m.groupIndex == null);
+  const knockoutMatches = matches.filter(m => m.groupIndex == null && !m.isThirdPlace);
+  const thirdPlace = matches.find(m => m.groupIndex == null && m.isThirdPlace) ?? null;
   const standings = computeGroupStandings(members, groupMatches);
   const findUser = (id: string | null) => (id ? participants.find(p => p.userId === id)?.user : undefined);
 
@@ -138,7 +140,28 @@ export default function GroupKnockoutView({
       </div>
 
       {knockoutMatches.length > 0 ? (
-        <BracketView matches={knockoutMatches} participants={participants} userId={userId} holders={holders} />
+        <div className="space-y-4">
+          <BracketView matches={knockoutMatches} participants={participants} userId={userId} holders={holders} />
+          {thirdPlace && (
+            <div>
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Spiel um Platz 3</h2>
+              <div className="glass rounded-xl border border-white/10 divide-y divide-white/5 max-w-xs">
+                {([[thirdPlace.player1Id, thirdPlace.score1], [thirdPlace.player2Id, thirdPlace.score2]] as const).map(([id, score], i) => {
+                  const u = findUser(id);
+                  const won = !!thirdPlace.winnerId && thirdPlace.winnerId === id;
+                  return (
+                    <div key={i} className={`flex items-center justify-between px-3 py-2 text-sm ${won ? "bg-amber-900/20" : ""}`}>
+                      <span className={`truncate ${won ? "text-amber-300 font-semibold" : u ? "text-white" : "text-gray-600 italic"}`}>
+                        {won && "🥉 "}{uname(u)}{id === userId ? " (du)" : ""}
+                      </span>
+                      <span className="font-mono text-xs text-gray-400">{score ?? "–"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">
           <Swords className="w-6 h-6 mx-auto mb-2 text-gray-700" />

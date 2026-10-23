@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApplyMatchResultError } from "./applyMatchResult";
+import { prepareTournamentPool } from "./participants";
 import {
   GROUP_KNOCKOUT_FORMAT, computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches,
   groupMembers, parseGroupStageConfig, resolveGroupCount, validateGroupStageConfig, type GroupStageConfig,
@@ -21,7 +22,7 @@ export const GROUP_STAGE_ACTIONS: GroupStageAction[] = ["groups", "reset_groups"
 export async function runGroupStageAction(
   eventId: string,
   action: GroupStageAction,
-  input: { groupCount?: unknown; advancePerGroup?: unknown },
+  input: { groupCount?: unknown; advancePerGroup?: unknown; thirdPlaceMatch?: unknown },
 ): Promise<{ generated?: number; deleted?: number }> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -29,7 +30,6 @@ export async function runGroupStageAction(
       format: true,
       groupStageJson: true,
       participants: { select: { userId: true, groupIndex: true, seed: true }, orderBy: { seed: "asc" } },
-      registrations: { where: { role: { not: "spectator" } }, select: { userId: true }, orderBy: { joinedAt: "asc" } },
       matches: { select: { id: true, groupIndex: true, playedAt: true, resultConfirmed: true, player1Id: true, player2Id: true, winnerId: true, score1: true, score2: true } },
     },
   });
@@ -45,23 +45,25 @@ export async function runGroupStageAction(
     if (event.matches.length > 0) {
       throw new ApplyMatchResultError("Es existieren bereits Matches. Zuerst die Auslosung zurücksetzen.", 409);
     }
-    const cfg: GroupStageConfig = { groupCount: Number(input.groupCount), advancePerGroup: Number(input.advancePerGroup) };
-    // Ausgelost werden alle angemeldeten Spieler (ohne Zuschauer) plus bereits eingetragene
-    // Turnier-Teilnehmer. Beim Anlegen des Turniers im Event-Reiter "Turnier" entstehen keine
-    // Teilnehmer-Einträge — die Anmeldungen allein reichen, fehlende Einträge werden hier angelegt.
-    const known = new Set(event.participants.map(p => p.userId));
-    const missing = [...new Set(event.registrations.map(r => r.userId))].filter(id => !known.has(id));
-    const ids = [...known, ...missing];
+    const cfg: GroupStageConfig = {
+      groupCount: Number(input.groupCount),
+      advancePerGroup: Number(input.advancePerGroup),
+      thirdPlaceMatch: input.thirdPlaceMatch === true,
+    };
+    // Ausgelost werden die angemeldeten Spieler (bei aktivem Check-in nur Eingecheckte) plus von
+    // Admins direkt eingetragene Teilnehmer — gemeinsame Quelle aller Generatoren, siehe participants.ts
+    const { ids, notCheckedIn } = await prepareTournamentPool(eventId);
     const error = validateGroupStageConfig(ids.length, cfg);
-    if (error) throw new ApplyMatchResultError(error, 400);
+    if (error) {
+      throw new ApplyMatchResultError(
+        notCheckedIn > 0 ? `${error} (${notCheckedIn} angemeldete Spieler sind nicht eingecheckt.)` : error,
+        400,
+      );
+    }
 
     const groups = drawGroups(ids, cfg.groupCount);
     const matches = generateGroupMatches(groups, eventId);
     await prisma.$transaction([
-      ...(missing.length ? [prisma.tournamentParticipant.createMany({
-        data: missing.map((userId, i) => ({ eventId, userId, seed: known.size + i + 1 })),
-        skipDuplicates: true,
-      })] : []),
       ...groups.flatMap((members, groupIndex) => members.length
         ? [prisma.tournamentParticipant.updateMany({ where: { eventId, userId: { in: members } }, data: { groupIndex } })]
         : []),
@@ -101,7 +103,7 @@ export async function runGroupStageAction(
     if (standings.reduce((n, g) => n + Math.min(g.length, advancePerGroup), 0) < 2) {
       throw new ApplyMatchResultError("Mindestens 2 Spieler müssen die K.O.-Runde erreichen.", 400);
     }
-    const matches = generateKnockoutMatches(standings, advancePerGroup, eventId);
+    const matches = generateKnockoutMatches(standings, advancePerGroup, eventId, cfg?.thirdPlaceMatch ?? false);
     await prisma.match.createMany({ data: matches });
     return { generated: matches.length };
   }

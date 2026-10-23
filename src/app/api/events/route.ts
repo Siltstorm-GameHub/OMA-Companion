@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getCaptainedSquadIds, getSessionUser, hasMinRole } from "@/lib/roles";
-import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
+import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
+import { sanitizeCheckInMinutes } from "@/lib/checkin";
+import { VALID_FORMAT_VALUES } from "@/lib/tournament-formats";
 import { EventCategory, EventGenre } from "@prisma/client";
-import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
-import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { publishEvent } from "@/lib/event-publish";
 import { createPollsForEvent } from "@/lib/event-polls";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
 import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
   const series = seriesId
     ? await prisma.eventSeries.findUnique({
         where: { id: seriesId },
-        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, coverImageUrl: true, squadId: true },
+        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true },
       })
     : null;
   if (seriesId && !series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 400 });
@@ -106,30 +107,25 @@ export async function POST(req: NextRequest) {
   if (newSeriesName && seriesId) {
     return NextResponse.json({ error: "Entweder bestehende oder neue Eventreihe angeben, nicht beides" }, { status: 400 });
   }
+  // Geplante Veröffentlichung: Event bleibt bis publishAt unsichtbar und wird dann angekündigt
+  const publishAtDate = body.publishAt ? new Date(body.publishAt) : null;
+  if (publishAtDate && isNaN(publishAtDate.getTime())) {
+    return NextResponse.json({ error: "Ungültiger Veröffentlichungszeitpunkt" }, { status: 400 });
+  }
+  if (publishAtDate && publishAtDate >= startDate) {
+    return NextResponse.json({ error: "Die Veröffentlichung muss vor dem Event-Start liegen" }, { status: 400 });
+  }
+  // Nur ein zukünftiger Zeitpunkt plant etwas — ein vergangener heißt "sofort veröffentlichen"
+  const scheduledPublishAt = publishAtDate && publishAtDate > new Date() ? publishAtDate : null;
   if (game === "OMA Gems" && !endDate) {
     return NextResponse.json({ error: "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss)" }, { status: 400 });
   }
 
   // Inherit tournament settings from series if linking to one
   let seriesFormat: string | null = null;
-  let seriesPointsConfig: string | null = null;
   let seriesStatFields: string | null = null;
-  let seriesCoverImageUrl: string | null = null;
   if (series) {
-    seriesCoverImageUrl = series?.coverImageUrl ?? null;
     if (series?.fixedFormat) seriesFormat = series.fixedFormat;
-    if (series?.placementRewardsJson && series.fixedFormat !== "liga") {
-      try {
-        const { placements } = JSON.parse(series.placementRewardsJson) as {
-          placements: { place: number; coins: number; rankPoints: number }[];
-        };
-        if (placements?.length) {
-          const cfg: Record<string, { coins: number; points: number }> = {};
-          for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
-          seriesPointsConfig = JSON.stringify(cfg);
-        }
-      } catch { /* skip */ }
-    }
     if (series?.seriesStatConfig) {
       try {
         const { stats, eventStatFields } = JSON.parse(series.seriesStatConfig) as {
@@ -148,8 +144,7 @@ export async function POST(req: NextRequest) {
 
   // Turnier-Einstellungen aus dem Wizard (Einzel-Event): Format, Stat-Felder und Punkte je Stat.
   // Bei Events in einer Reihe mit festem Format gewinnt die Reihe (siehe oben).
-  const VALID_FORMATS = ["single_elimination", "group_knockout", "round_robin", "liga", "coop_stats", "avg_stats", "ffa"];
-  const eventFormat = seriesFormat ?? (typeof bodyFormat === "string" && VALID_FORMATS.includes(bodyFormat) ? bodyFormat : null);
+  const eventFormat = seriesFormat ?? (typeof bodyFormat === "string" && VALID_FORMAT_VALUES.includes(bodyFormat) ? bodyFormat : null);
   let eventStatFields = seriesStatFields;
   let eventStatConfigJson: string | null = null;
   if (!seriesFormat && eventFormat) {
@@ -166,6 +161,17 @@ export async function POST(req: NextRequest) {
       if (stats.length) eventStatConfigJson = JSON.stringify({ stats });
     }
   }
+
+  // Liga-Modus mit Sieg/Unentschieden-Münzen pro Match (pointsConfig { win, draw }) — Platzierungs-
+  // belohnungen stehen ausschließlich in placementRewardsJson, siehe lib/placement-rewards.ts
+  const matchResultPoints = (eventFormat === "round_robin" || eventFormat === "liga")
+    && body.matchResultPoints && typeof body.matchResultPoints === "object"
+    ? {
+        win:  Math.max(0, Math.floor(Number(body.matchResultPoints.win)  || 0)),
+        draw: Math.max(0, Math.floor(Number(body.matchResultPoints.draw) || 0)),
+      }
+    : null;
+  const cappedMatchResultPoints = isModerator ? matchResultPoints : capMatchResultPoints(matchResultPoints);
 
   // Derive participation coin default (10) from placementRewardsJson or series config
   const rewardsData = placementRewardsJson
@@ -189,7 +195,7 @@ export async function POST(req: NextRequest) {
           },
         })).id
       : null;
-    return tx.event.create({
+    const created = await tx.event.create({
     data: {
       title: title.trim(),
       description,
@@ -202,7 +208,8 @@ export async function POST(req: NextRequest) {
       type:            type ?? "community",
       seriesId:        seriesId || createdSeriesId,
       discordChannelId: discordChannelId || null,
-      hidden:          hidden ? true : false,
+      // Mit geplanter Veröffentlichung in der Zukunft immer erst unsichtbar
+      hidden:          hidden || scheduledPublishAt ? true : false,
       registrationLocked: registrationLocked ? true : false,
       squadId:         squadId || null,
       spectatorMode:   spectatorMode ? true : false,
@@ -211,95 +218,50 @@ export async function POST(req: NextRequest) {
       placementRewardsJson: rewardsData,
       ...(game === "OMA Gems" && { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER }),
       ...(eventFormat        && { format:       eventFormat }),
-      ...(seriesPointsConfig && { pointsConfig: seriesPointsConfig }),
       ...(eventStatFields    && { statFields:   eventStatFields }),
       ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),
+      ...(scheduledPublishAt && { publishAt: scheduledPublishAt }),
+      ...(cappedMatchResultPoints && { pointsConfig: JSON.stringify(cappedMatchResultPoints) }),
+      ...(body.checkInEnabled === true && {
+        checkInEnabled: true,
+        checkInMinutes: sanitizeCheckInMinutes(body.checkInMinutes),
+      }),
     },
     });
+
+    // OMA-Gems-Turnier: automatisch angehängt, sobald game === "OMA Gems" gewählt wurde (ein Ende ist
+    // dann Pflicht, siehe Validierung oben). Das Boss-Team wird EINMALIG erzeugt und persistiert, damit
+    // alle Teilnehmer exakt dasselbe Gegner-Team bekommen. Gleiche Transaktion wie das Event — sonst
+    // bliebe bei einem Fehler ein Gems-Event ohne Turnier zurück.
+    if (game === "OMA Gems" && endDate) {
+      const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
+      const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
+      const monsterCardIds: string[] | undefined =
+        Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
+          ? gemsMonsterIds
+          : undefined;
+      await tx.gemsTournament.create({
+        data: {
+          eventId: created.id,
+          // GemsTournament.endAt bewusst NICHT gesetzt (deprecated) — das Turnierende liegt
+          // jetzt auf Event.endAt (siehe endDate oben).
+          difficulty,
+          maxAttemptsPerUser,
+          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
+          monsterCardIdsJson: monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null,
+        },
+      });
+    }
+    return created;
   });
 
   await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
 
-  // OMA-Gems-Turnier: automatisch angehängt, sobald game === "OMA Gems" gewählt wurde und ein
-  // Turnierende mitgeschickt wurde (siehe EventSetupWizard.tsx). Das Boss-Team wird EINMALIG
-  // erzeugt und persistiert, damit alle Teilnehmer exakt dasselbe Gegner-Team bekommen.
-  if (game === "OMA Gems" && endDate) {
-    const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
-    const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
-    const monsterCardIds: string[] | undefined =
-      Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
-        ? gemsMonsterIds
-        : undefined;
-    await prisma.gemsTournament.create({
-      data: {
-        eventId: event.id,
-        // GemsTournament.endAt bewusst NICHT gesetzt (deprecated) — das Turnierende liegt
-        // jetzt auf Event.endAt (siehe endDate oben).
-        difficulty,
-        maxAttemptsPerUser,
-        bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
-        monsterCardIdsJson: monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null,
-      },
-    });
-  }
-
-  let participationCoins = 10;
-  try {
-    const parsedRewards = rewardsData ? JSON.parse(rewardsData) as { participationCoins?: number } : null;
-    if (parsedRewards?.participationCoins != null) participationCoins = parsedRewards.participationCoins;
-  } catch { /* skip */ }
-
-  // Unsichtbar erstellte Events sind noch nicht veröffentlicht — keine Discord-Ankündigung/
-  // Scheduled Event/Push-Benachrichtigung, bis der Admin sie sichtbar schaltet.
-  if (!event.hidden) {
-    // Discord Scheduled Event automatisch anlegen
-    const discordEventId = await createDiscordScheduledEvent({
-      title: title.trim(),
-      startAt:     startDate,
-      description: description ?? null,
-      game:        game ?? null,
-      coverImageUrl:       event.coverImageUrl,
-      seriesCoverImageUrl,
-    });
-    if (discordEventId) {
-      await prisma.event.update({
-        where: { id: event.id },
-        data: { discordEventId },
-      });
-      event.discordEventId = discordEventId;
-    }
-
-    // Discord-Ankündigung — Message-ID speichern für späteres Löschen
-    const discordMessageId = await announceNewEvent({
-      eventId:          event.id,
-      title:            event.title,
-      game:             event.game,
-      format:           event.format,
-      genre:            event.genre,
-      startAt:          event.startAt,
-      maxPlayers:       event.maxPlayers,
-      pointReward:      participationCoins,
-      teilnehmer:       0,
-      discordChannelId: event.discordChannelId,
-    });
-    if (discordMessageId) {
-      await prisma.event.update({
-        where: { id: event.id },
-        data:  { discordMessageId },
-      });
-      event.discordMessageId = discordMessageId;
-    }
-
-    // Push + In-App + Discord-DM (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
-    dispatchEventNotification("event_new", { id: event.id }, {
-      placeholders: {
-        "{eventName}": event.title,
-        "{game}":      event.game ?? "–",
-        "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
-      },
-      skipDiscordChannel: true,
-    }).catch(() => {});
-  }
+  // Unsichtbar erstellte (bzw. geplante) Events sind noch nicht veröffentlicht — keine Discord-
+  // Ankündigung/Scheduled Event/Push, bis sie sichtbar geschaltet werden (manuell oder per publishAt).
+  // Die Veröffentlichung läuft nach der Antwort (after), damit ein langsamer Push-Versand das Anlegen
+  // nicht ins Timeout treibt; Fehler protokolliert publishEvent je Schritt (siehe lib/event-publish.ts).
+  if (!event.hidden) after(() => publishEvent(event.id));
 
   return NextResponse.json(event, { status: 201 });
 }

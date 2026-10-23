@@ -1,107 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
+import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
-import { generateRoundRobin } from "@/lib/tournaments/generate";
-import { resolveEventPredictions } from "@/lib/predictions";
+import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate";
+import { prepareTournamentPool } from "@/lib/tournaments/participants";
 import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/groupStageServer";
-
-// Gesamtranking für FFA/coop_stats/avg_stats berechnen
-async function calcFfaRanking(eventId: string, statFields: string[], format: string) {
-  const matches = await prisma.match.findMany({
-    where: { eventId, playedAt: { not: null } },
-    include: { entries: true },
-  });
-
-  const totals = new Map<string, { userId: string; stats: Record<string, number>; rounds: number }>();
-  for (const match of matches) {
-    for (const entry of match.entries) {
-      if (!entry.userId) continue;
-      if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {}, rounds: 0 });
-      const t = totals.get(entry.userId)!;
-      t.rounds += 1;
-      if (entry.statsJson) {
-        const s = JSON.parse(entry.statsJson) as Record<string, number>;
-        for (const [k, v] of Object.entries(s)) {
-          t.stats[k] = (t.stats[k] ?? 0) + v;
-        }
-      }
-    }
-  }
-
-  if (format === "avg_stats") {
-    return [...totals.values()]
-      .map(t => {
-        const fieldAvgs = statFields.map(f => (t.rounds > 0 ? (t.stats[f] ?? 0) / t.rounds : 0));
-        const combined  = statFields.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length : 0;
-        return { userId: t.userId, stats: t.stats, rounds: t.rounds, combined };
-      })
-      .sort((a, b) => b.combined - a.combined);
-  }
-
-  return [...totals.values()].sort((a, b) => {
-    for (const f of statFields) {
-      const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
-      if (diff !== 0) return diff;
-    }
-    return 0;
-  });
-}
-
-/** Punkte-Konfiguration parsen → { coins, rankPts } pro Platzierung */
-function parsePlacementPts(
-  cfg: Record<string, number | { coins: number; points: number }> | null,
-  placement: number
-): { coins: number; rankPts: number } {
-  const raw = cfg?.[String(placement)];
-  if (!raw) return { coins: 0, rankPts: 0 };
-  if (typeof raw === "number") return { coins: raw, rankPts: raw };
-  return { coins: raw.coins ?? 0, rankPts: raw.points ?? 0 };
-}
-
-/** Punkte für eine Reihenfolge von UserIds vergeben (increment) */
-async function awardPoints(
-  ranking: string[],
-  cfg: Record<string, number | { coins: number; points: number }> | null,
-  eventLabel: string,
-  direction: 1 | -1 = 1
-) {
-  for (let i = 0; i < ranking.length; i++) {
-    const userId    = ranking[i];
-    const placement = i + 1;
-    const { coins, rankPts } = parsePlacementPts(cfg, placement);
-    if (coins <= 0 && rankPts <= 0) continue;
-
-    const deltaCoins = coins   * direction;
-    const deltaRank  = rankPts * direction;
-
-    const baseReason = direction === 1
-      ? `Platz ${placement} beim Turnier (${eventLabel})`
-      : `Korrektur Platz ${placement} – Turnier (${eventLabel})`;
-
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          ...(deltaCoins !== 0 && { points:     { increment: deltaCoins } }),
-          ...(deltaRank  !== 0 && { rankPoints: { increment: deltaRank  } }),
-        },
-      }),
-      ...(deltaCoins !== 0 ? [prisma.pointTransaction.create({
-        data: { userId, amount: deltaCoins, reason: `[Münzen] ${baseReason}` },
-      })] : []),
-      ...(deltaRank !== 0 ? [prisma.pointTransaction.create({
-        data: { userId, amount: deltaRank, reason: `[Rang-Punkte] ${baseReason}` },
-      })] : []),
-    ]);
-  }
-}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // [id] ist jetzt die Event.id
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
+  // Squad-Captains: Münzen pro Match-Ergebnis auf die Obergrenze kappen (captain-reward-limits.ts)
+  if (!hasMinRole(currentUser.role, "moderator")) body.pointsConfig = capMatchResultPoints(body.pointsConfig);
   const { status, format, pointsConfig, statFields, statConfig, generateMatches, finalRanking, finalRankingNote } = body;
 
   // Gruppenphase + K.O.: Gruppen auslosen / K.O.-Runde erzeugen / jeweils zurücksetzen
@@ -116,22 +28,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  // Auto-generate round-robin (bzw. liga = Hin-/Rückrunde) matches
-  if (generateMatches === "round_robin" || generateMatches === "liga") {
+  // Auto-generate: K.O.-Baum, Liga (round_robin) bzw. Hin-/Rückrunde (liga). Ausgelost werden die
+  // angemeldeten Spieler (bei aktivem Check-in nur Eingecheckte) + direkt eingetragene Teilnehmer.
+  if (generateMatches === "single_elimination" || generateMatches === "round_robin" || generateMatches === "liga") {
     const existing = await prisma.match.count({ where: { eventId } });
     if (existing > 0) {
       return NextResponse.json({ error: "Es existieren bereits Matches. Zuerst alle löschen." }, { status: 409 });
     }
-    const participants = await prisma.tournamentParticipant.findMany({
-      where: { eventId },
-      select: { userId: true },
-    });
-    if (participants.length < 2) {
-      return NextResponse.json({ error: "Mindestens 2 Teilnehmer benötigt." }, { status: 400 });
+    const { ids: participantIds, notCheckedIn } = await prepareTournamentPool(eventId);
+    if (participantIds.length < 2) {
+      return NextResponse.json({
+        error: "Mindestens 2 Teilnehmer benötigt." + (notCheckedIn > 0 ? ` (${notCheckedIn} angemeldete Spieler sind nicht eingecheckt.)` : ""),
+      }, { status: 400 });
     }
-    const participantIds = participants.map(p => p.userId);
     let matchData;
-    if (generateMatches === "liga") {
+    if (generateMatches === "single_elimination") {
+      matchData = generateBracket(participantIds, eventId);
+    } else if (generateMatches === "liga") {
       const hinrunde   = generateRoundRobin(participantIds, eventId);
       const maxRound   = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
       const rueckrunde = generateRoundRobin([...participantIds].reverse(), eventId).map(m => ({
@@ -146,20 +59,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ generated: matchData.length });
   }
 
-  // Aktuellen DB-Zustand VORHER lesen
-  const existing = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: {
-      format:           true,
-      statFields:       true,
-      pointsConfig:     true,
-      tournamentStatus: true,
-      finalRankingJson: true,
-      title:            true,
-      game:             true,
-      discordChannelId: true,
-    },
-  });
+  // Event muss existieren
+  const existing = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
   if (!existing) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   // Event updaten (Turnier-Felder)
@@ -176,56 +77,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
-  // ── Punkte-Logik ────────────────────────────────────────────────────────────
-  const newRanking: string[] | null =
-    finalRanking && Array.isArray(finalRanking) ? finalRanking : null;
-
-  const isBecomingFinished  = status === "finished" && existing.tournamentStatus !== "finished";
-  const isAlreadyFinished   = existing.tournamentStatus === "finished";
-  // Only award placement points when:
-  // • becoming finished for the first time, OR
-  // • re-editing an already-confirmed ranking (reverse old + award new)
-  // NOT when finalRankingJson is null but tournamentStatus is already finished
-  // (single_elimination auto-awards TOURNAMENT_WIN via the matches handler)
-  const hasExistingRanking  = existing.finalRankingJson !== null;
-
-  if (newRanking && (isBecomingFinished || (isAlreadyFinished && hasExistingRanking))) {
-    const eventTitle = existing.title ?? eventId;
-
-    const cfgRaw: Record<string, number | { coins: number; points: number }> | null =
-      pointsConfig
-        ? (typeof pointsConfig === "string" ? JSON.parse(pointsConfig) : pointsConfig)
-        : existing.pointsConfig
-          ? JSON.parse(existing.pointsConfig)
-          : null;
-
-    // Zurückgebucht wird immer mit der Konfiguration, die bei der ursprünglichen Vergabe galt.
-    // Wird im selben Speichervorgang sowohl die Punkte-Konfiguration als auch das Ranking
-    // geändert, würde cfgRaw (= die neue Konfiguration) sonst falsche Beträge abziehen.
-    const oldCfgRaw: Record<string, number | { coins: number; points: number }> | null =
-      existing.pointsConfig ? JSON.parse(existing.pointsConfig) : null;
-
-    let oldWinnerId: string | null = null;
-    if (isAlreadyFinished && existing.finalRankingJson) {
-      const oldRanking = JSON.parse(existing.finalRankingJson) as string[];
-      oldWinnerId = oldRanking[0] ?? null;
-      await awardPoints(oldRanking, oldCfgRaw, eventTitle, -1);
-    }
-
-    await awardPoints(newRanking, cfgRaw, eventTitle, 1);
-
-    const newWinnerId = newRanking[0] ?? null;
-
-    // Vorhersagen auswerten — beim ersten Abschluss, oder erneut beim Re-Edit, falls sich der
-    // Sieger nachträglich geändert hat (Pott wird automatisch zurückgebucht und neu verteilt).
-    if (isBecomingFinished || (isAlreadyFinished && hasExistingRanking && oldWinnerId !== newWinnerId)) {
-      try {
-        await resolveEventPredictions(eventId, newWinnerId);
-      } catch (err) {
-        console.error("[Predictions] Auswertung fehlgeschlagen:", err);
-      }
-    }
-  }
-
+  // Platzierungsbelohnungen und Tipp-Auswertung laufen ausschließlich über den Event-Abschluss
+  // (/api/admin/events/[id]/complete, Event.placementRewardsJson) — hier wird bewusst nichts
+  // ausgezahlt, damit es nur eine Belohnungsquelle gibt.
   return NextResponse.json(event);
 }

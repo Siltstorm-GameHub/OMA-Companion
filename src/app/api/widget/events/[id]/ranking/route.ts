@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { placementRewardFor } from "@/lib/placement-rewards";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
 import { GROUP_KNOCKOUT_FORMAT, groupKnockoutRanking } from "@/lib/tournaments/groupStage";
@@ -29,14 +30,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     include: {
       participants: { include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } } },
       matches: { include: { entries: true }, where: { playedAt: { not: null } } },
-      series: { select: { seriesStatConfig: true } },
+      series: { select: { seriesStatConfig: true, placementRewardsJson: true } },
     },
   });
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-  const cfg: Record<string, number | { coins: number; points: number }> = event.pointsConfig
-    ? JSON.parse(event.pointsConfig)
-    : {};
   const format = event.format ?? "single_elimination";
   const userMap = new Map<string, UserLite>(event.participants.map((p) => [p.userId, p.user]));
 
@@ -199,9 +197,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const result = ranking.map((r, i) => {
     const placement = i + 1;
-    const raw = cfg[String(placement)];
-    const coins = raw === undefined ? 0 : typeof raw === "number" ? raw : raw.coins ?? 0;
-    const rankPts = raw === undefined ? 0 : typeof raw === "number" ? 0 : raw.points ?? 0;
+    // Vorschau der Belohnung, die der Event-Abschluss für diesen Platz auszahlen würde
+    const { coins, rankPoints: rankPts } = placementRewardFor(placement, event.placementRewardsJson, event.series?.placementRewardsJson);
     const user = userMap.get(r.userId);
     const rawTurnierpunkte = turnierpunkteByUser[r.userId];
     return {

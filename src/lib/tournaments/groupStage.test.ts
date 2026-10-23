@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches, seedKnockout,
-  validateGroupStageConfig, groupLetter, type GroupMatchLike,
+  validateGroupStageConfig, groupLetter, groupKnockoutRanking, type GroupMatchLike,
 } from "./groupStage";
 
 /** Gruppe, in der der erste Spieler alle schlägt, der zweite alle außer dem ersten usw. */
@@ -78,6 +78,52 @@ describe("Gruppenphase + K.O.", () => {
       assert.notEqual(m.player1Id![0], m.player2Id![0], "keine Gruppen-Revanche in Runde 1");
     }
     assert.ok(matches.every(m => m.groupIndex === null));
+  });
+
+  test("Direkter Vergleich entscheidet bei Gleichstand nach Punkten, Tordifferenz und Toren", () => {
+    const now = new Date();
+    // b und c: je 3 Punkte, Tordifferenz 0, je 2 Tore — b hat c direkt geschlagen; a hat nur 1 Tor
+    const [table] = computeGroupStandings([["c", "b", "a"]], [
+      { groupIndex: 0, player1Id: "a", player2Id: "b", winnerId: "a", score1: 1, score2: 0, playedAt: now },
+      { groupIndex: 0, player1Id: "b", player2Id: "c", winnerId: "b", score1: 2, score2: 1, playedAt: now },
+      { groupIndex: 0, player1Id: "c", player2Id: "a", winnerId: "c", score1: 1, score2: 0, playedAt: now },
+    ]);
+    assert.deepEqual(table.map(s => s.userId), ["b", "c", "a"]);
+
+    // a und b: je 3 Punkte, 2:2 Tore (x hat mehr Tore und steht vorn) — a hat b direkt geschlagen,
+    // obwohl b in der Auslosung vor a steht
+    const [table2] = computeGroupStandings([["b", "a", "x"]], [
+      { groupIndex: 0, player1Id: "a", player2Id: "b", winnerId: "a", score1: 1, score2: 0, playedAt: now },
+      { groupIndex: 0, player1Id: "x", player2Id: "a", winnerId: "x", score1: 2, score2: 1, playedAt: now },
+      { groupIndex: 0, player1Id: "b", player2Id: "x", winnerId: "b", score1: 2, score2: 1, playedAt: now },
+    ]);
+    assert.deepEqual(table2.map(s => s.userId), ["x", "a", "b"]);
+  });
+
+  test("Spiel um Platz 3: wird in der Final-Runde angelegt und zählt im Ranking zwischen Finale und Halbfinale", () => {
+    const groups = ["a", "b"].map(g => [1, 2, 3].map(n => `${g}${n}`));
+    const standings = computeGroupStandings(groups, groups.flatMap((g, i) => playedGroup(i, g)));
+    const ko = generateKnockoutMatches(standings, 2, "e", true);
+    const third = ko.filter(m => m.isThirdPlace);
+    assert.equal(third.length, 1);
+    assert.equal(third[0].round, 2);
+    assert.equal(third[0].position, 2);
+    assert.equal(ko.filter(m => m.round === 2 && !m.isThirdPlace).length, 1);
+
+    // Ranking: Finale a1 schlägt b1, Platz 3: a2 schlägt b2
+    const now = new Date();
+    const played = [
+      ...groups.flatMap((g, i) => playedGroup(i, g)).map(m => ({ ...m, round: 1 })),
+      { groupIndex: null, round: 1, player1Id: "a1", player2Id: "b2", winnerId: "a1", score1: 1, score2: 0, playedAt: now },
+      { groupIndex: null, round: 1, player1Id: "b1", player2Id: "a2", winnerId: "b1", score1: 1, score2: 0, playedAt: now },
+      { groupIndex: null, round: 2, player1Id: "a1", player2Id: "b1", winnerId: "a1", score1: 2, score2: 1, playedAt: now },
+      { groupIndex: null, round: 2, isThirdPlace: true, player1Id: "b2", player2Id: "a2", winnerId: "a2", score1: 0, score2: 3, playedAt: now },
+    ];
+    const participants = groups.flatMap((g, gi) => g.map(userId => ({ userId, groupIndex: gi })));
+    const ranking = groupKnockoutRanking(participants, played, JSON.stringify({ groupCount: 2, advancePerGroup: 2 }));
+    assert.deepEqual(ranking.slice(0, 4).map(r => r.userId), ["a1", "b1", "a2", "b2"]);
+    assert.match(ranking[0].label, /^Sieger/);
+    assert.match(ranking[2].label, /^Platz 3/);
   });
 
   test("Konfigurationsprüfung", () => {

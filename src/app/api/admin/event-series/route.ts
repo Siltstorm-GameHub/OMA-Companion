@@ -130,28 +130,13 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3) Turnier-Einstellungen auf alle noch offenen Events übertragen (Format + Punkte)
+  // 3) Turnierformat auf alle noch offenen Events übertragen. Platzierungsbelohnungen werden nicht
+  //    mehr in Event.pointsConfig kopiert — sie kommen beim Abschluss aus placementRewardsJson
+  //    (Event, sonst Reihe), siehe lib/placement-rewards.ts.
   if (fields.fixedFormat) {
-    // Convert placementRewardsJson → pointsConfig shape
-    let pointsConfigJson: string | null = null;
-    if (fields.fixedFormat !== "liga" && fields.placementRewardsJson) {
-      try {
-        const { placements } = JSON.parse(fields.placementRewardsJson) as {
-          placements: { place: number; coins: number; rankPoints: number }[];
-        };
-        if (placements?.length) {
-          const cfg: Record<string, { coins: number; points: number }> = {};
-          for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
-          pointsConfigJson = JSON.stringify(cfg);
-        }
-      } catch { /* skip */ }
-    }
     await prisma.event.updateMany({
       where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
-      data:  {
-        format: fields.fixedFormat,
-        ...(pointsConfigJson !== null && { pointsConfig: pointsConfigJson }),
-      },
+      data:  { format: fields.fixedFormat },
     });
   }
 

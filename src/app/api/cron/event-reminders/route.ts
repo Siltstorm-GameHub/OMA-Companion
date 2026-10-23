@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getNotificationRule, dispatchEventNotification } from "@/lib/notify-dispatch";
 import { fmtDateDE } from "@/lib/discord-rest";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
+import { publishDueScheduledEvents } from "@/lib/event-publish";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,10 @@ export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Fallback für geplante Veröffentlichungen an Tagen ohne Seitenaufrufe (sonst lazy, siehe
+  // syncDueEventActivations) — läuft unabhängig davon, ob eine Erinnerungs-Regel existiert.
+  await publishDueScheduledEvents();
 
   const rule  = await getNotificationRule("event_reminder");
   if (!rule) return NextResponse.json({ ok: true, skipped: "no rule configured" });

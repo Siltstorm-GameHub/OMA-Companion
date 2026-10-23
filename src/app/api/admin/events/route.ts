@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
+import { sanitizeCheckInMinutes } from "@/lib/checkin";
+import { publishEvent } from "@/lib/event-publish";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
@@ -48,6 +50,29 @@ export async function PATCH(req: NextRequest) {
     ? { spectatorRewardJson, pollsConfigJson }
     : capCaptainRewardFields({ spectatorRewardJson, pollsConfigJson });
   if (!isModerator) Object.assign(data, capCaptainRewardFields(data));
+
+  // Sichtbarkeit / geplante Veröffentlichung
+  if ("publishAt" in data) {
+    const at = data.publishAt ? new Date(data.publishAt) : null;
+    if (at && isNaN(at.getTime())) return NextResponse.json({ error: "Ungültiger Veröffentlichungszeitpunkt" }, { status: 400 });
+    data.publishAt = at;
+  }
+  if ("hidden" in data) {
+    data.hidden = data.hidden === true;
+    if (!data.hidden) {
+      const current = await prisma.event.findUnique({ where: { id: eventId }, select: { hidden: true } });
+      if (current?.hidden) {
+        // Unsichtbar → sichtbar: jetzt ankündigen (Discord-Event, Kanal-Post, Push) — vorher passierte
+        // beim nachträglichen Sichtbarschalten gar nichts. Läuft nach der Antwort; publishEvent prüft
+        // selbst, ob das Event dann wirklich sichtbar ist, und überspringt bereits erledigte Schritte.
+        data.publishAt = null;
+        after(() => publishEvent(eventId));
+      }
+    }
+  }
+
+  if ("checkInEnabled" in data) data.checkInEnabled = data.checkInEnabled === true;
+  if ("checkInMinutes" in data) data.checkInMinutes = sanitizeCheckInMinutes(data.checkInMinutes);
 
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
   if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;

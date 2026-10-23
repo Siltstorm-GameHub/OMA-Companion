@@ -21,6 +21,7 @@ import { computeEventPoints, computeStatStandings, resolveWinnerTargetKeys, type
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import EventPokalWinners from "@/components/EventPokalWinners";
 import PokalPreview from "@/components/PokalPreview";
+import { FORMAT_LABELS } from "@/lib/tournament-formats";
 
 type ArchivedSeason = {
   id: string; name: string; status: string; seasonNumber: number | null;
@@ -77,16 +78,6 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
   );
 }
 
-const FORMAT_LABELS: Record<string, string> = {
-  single_elimination: "Single Elimination",
-  double_elimination: "Double Elimination",
-  group_knockout:     "Gruppenphase + K.O.",
-  round_robin:        "Liga-Modus",
-  liga:               "Liga-Modus (Hin-/Rückrunde)",
-  ffa:                "Free for All (Legacy)",
-  coop_stats:         "Skill-Index Modus",
-  avg_stats:          "Durchschnittswerte",
-};
 
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 

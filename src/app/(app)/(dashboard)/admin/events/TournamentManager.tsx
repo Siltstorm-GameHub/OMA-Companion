@@ -1,17 +1,14 @@
 "use client";
-import PlaceMedal from "@/components/PlaceMedal";
 import { useState, useSyncExternalStore } from "react";
 import CoinIcon from "@/components/CoinIcon";
-import RankPointsIcon from "@/components/RankPointsIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw } from "@/components/icons";
-import StatFieldEditor from "@/components/StatFieldEditor";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
-import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import { formatLabel as centralFormatLabel } from "@/lib/tournament-formats";
 import { GROUP_KNOCKOUT_FORMAT, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 import TournamentManagerMobile from "./TournamentManagerMobile";
 import GroupStagePanel, { type GroupStageActionBody } from "./GroupStagePanel";
@@ -31,6 +28,8 @@ export type Match = {
   resultConfirmed?: boolean;
   /** Nur group_knockout: Gruppe des Gruppenspiels, null = K.O.-Runde */
   groupIndex?: number | null;
+  /** Spiel um Platz 3 (K.O.-Runde) */
+  isThirdPlace?: boolean;
 };
 export type Participant = { userId: string; user: User; groupIndex?: number | null };
 export type Tournament = {
@@ -43,10 +42,6 @@ export type Tournament = {
 type Event = { id: string };
 
 
-
-// Punkt 3: FORMATS kommt jetzt zentral aus @/lib/tournament-formats (siehe dort) statt hier,
-// in EventEditClient.tsx und in EventSetupWizard.tsx dreifach unabhängig gepflegt zu werden.
-const FORMATS = TOURNAMENT_FORMATS;
 
 const STATUS_OPTIONS = ["active", "finished", "pending"];
 
@@ -76,284 +71,6 @@ function readViewMode(): ViewMode {
  *  Wanduhrzeit) — Basis für die Vorbelegung "Datum & Uhrzeit" beim Öffnen von "Match hinzufügen". */
 export function nowForDatetimeLocal(): string {
   return toDatetimeLocalBerlin(new Date());
-}
-
-// ─── Creation Form ────────────────────────────────────────────────────────────
-function CreationForm({
-  event, allUsers, onCreated,
-}: {
-  event: Event;
-  allUsers: User[];
-  onCreated: (t: Tournament) => void;
-}) {
-  const [format, setFormat]           = useState("single_elimination");
-  // Münzen pro Platz
-  const [coins1, setCoins1]           = useState(200);
-  const [coins2, setCoins2]           = useState(100);
-  const [coins3, setCoins3]           = useState(50);
-  // Punkte (rankPoints) pro Platz — nur 1./2./3. geben Punkte
-  const [pts1, setPts1]               = useState(100);
-  const [pts2, setPts2]               = useState(50);
-  const [pts3, setPts3]               = useState(25);
-  // Round-Robin-Zusatzparameter (ersetzt das ehemals eigenständige Format "liga")
-  const [playHomeAway, setPlayHomeAway] = useState(false);
-  const [pointsMode, setPointsMode]     = useState<"placement" | "matchResult">("placement");
-  const [coinsWin, setCoinsWin]       = useState(30);
-  const [coinsDraw, setCoinsDraw]     = useState(10);
-  const [statFields, setStatFields]   = useState<string[]>(["Kills", "Assists", "Punkte"]);
-  const [autoGenerate, setAutoGenerate] = useState(false);
-  const [selected, setSelected]       = useState<string[]>([]);
-  const [loading, setLoading]         = useState(false);
-
-  const isRoundRobinFamily = format === "round_robin";
-  const usesMatchResultPoints = isRoundRobinFamily && pointsMode === "matchResult";
-  // "liga" bleibt intern der gespeicherte Wert für Hin-/Rückrunde — die Backend-Logik
-  // (Match-Generierung, Ranking) unterscheidet weiterhin nach diesem String.
-  const resolvedFormat = isRoundRobinFamily && playHomeAway ? "liga" : format;
-  const supportsAutoGenerate = format === "single_elimination" || isRoundRobinFamily;
-
-  const AUTO_LABEL: Record<string, string> = {
-    single_elimination: "KO-Baum automatisch aus Teilnehmern generieren",
-    round_robin: playHomeAway
-      ? "Spielplan (Hin- & Rückrunde) automatisch generieren"
-      : "Alle Paarungen (Liga-Modus) automatisch generieren",
-  };
-
-  const AUTO_DESC: Record<string, string> = {
-    single_elimination: "Zufällige Auslosung · BYE-Freilose werden automatisch vergeben",
-    round_robin: playHomeAway
-      ? "Alle Spieltage werden als Hin- & Rückrunde angelegt"
-      : "Jeder spielt gegen jeden anderen genau einmal",
-  };
-
-  async function create() {
-    setLoading(true);
-    const config = usesMatchResultPoints
-      ? { win: coinsWin, draw: coinsDraw }
-      : {
-          "1": { coins: coins1, points: pts1 },
-          "2": { coins: coins2, points: pts2 },
-          "3": { coins: coins3, points: pts3 },
-        };
-    const fields = (format === "ffa" || format === "coop_stats" || format === "avg_stats")
-      ? statFields
-      : null;
-    const res = await fetch("/api/tournaments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        eventId: event.id, format: resolvedFormat, pointsConfig: config, statFields: fields,
-        participantIds: selected.length ? selected : undefined,
-        autoGenerate,
-      }),
-    });
-    setLoading(false);
-    if (res.ok) { toast.success("Turnier erstellt"); onCreated(await res.json()); }
-    else { const e = await res.json(); toast.error(e.error ?? "Fehler beim Erstellen"); }
-  }
-
-  return (
-    <div className="space-y-5">
-      {/* Format */}
-      <div>
-        <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">Format</label>
-        <div className="grid grid-cols-2 gap-2">
-          {FORMATS.map(f => (
-            <button key={f.value} onClick={() => setFormat(f.value)}
-              className={`text-left p-3 rounded-lg border transition-colors ${
-                format === f.value
-                  ? "border-rose-500 bg-rose-900/20 text-white"
-                  : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
-              }`}>
-              <p className="text-sm font-medium">{f.label}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus) */}
-      {isRoundRobinFamily && (
-        <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-3 space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={playHomeAway}
-              onChange={e => setPlayHomeAway(e.target.checked)}
-              className="rounded shrink-0" />
-            <span className="text-sm text-white">Hin- und Rückrunde spielen</span>
-          </label>
-          <div>
-            <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Punktemodus</label>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setPointsMode("placement")}
-                className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
-                  pointsMode === "placement" ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
-                }`}>
-                Platzierungspunkte
-              </button>
-              <button type="button" onClick={() => setPointsMode("matchResult")}
-                className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
-                  pointsMode === "matchResult" ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
-                }`}>
-                Sieg/Unentschieden-Münzen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Points */}
-      <div>
-        <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-          {usesMatchResultPoints ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
-        </label>
-        {usesMatchResultPoints ? (
-          <div className="flex gap-3">
-            {([["🏆 Sieg", coinsWin, setCoinsWin], ["🤝 Unentschieden", coinsDraw, setCoinsDraw]] as const).map(
-              ([label, val, set]) => (
-                <div key={label} className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">{label}</label>
-                  <input type="number" value={val} min={0}
-                    onChange={e => (set as (v: number) => void)(Number(e.target.value))}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
-                  />
-                  <p className="flex items-center justify-center gap-0.5 text-[10px] text-gray-600 mt-1">nur <CoinIcon size={11} /> Münzen</p>
-                </div>
-              )
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Spalten-Header */}
-            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
-              <span>Platz</span>
-              <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
-              <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
-            </div>
-            {([
-              ["1. Platz", coins1, setCoins1, pts1, setPts1],
-              ["2. Platz", coins2, setCoins2, pts2, setPts2],
-              ["3. Platz", coins3, setCoins3, pts3, setPts3],
-            ] as const).map(([label, cVal, cSet, pVal, pSet]) => (
-              <div key={label} className="grid grid-cols-3 gap-2 items-center">
-                <span className="text-xs text-gray-300 font-medium flex items-center gap-1"><PlaceMedal place={parseInt(label)} /> {label}</span>
-                <input type="number" value={cVal} min={0}
-                  onChange={e => (cSet as (v: number) => void)(Number(e.target.value))}
-                  className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"
-                />
-                <input type="number" value={pVal} min={0}
-                  onChange={e => (pSet as (v: number) => void)(Number(e.target.value))}
-                  className="text-sm bg-gray-800 border border-gray-700 text-teal-300 rounded-lg px-2 py-1.5 text-center w-full"
-                />
-              </div>
-            ))}
-            <p className="text-[10px] text-gray-600 pt-1">Münzen gehen an alle Platzierten · Punkte nur an 1./2./3.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Stat fields */}
-      {(format === "ffa" || format === "coop_stats" || format === "avg_stats") && (
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-            Statistik-Felder
-          </label>
-          <StatFieldEditor
-            fields={statFields}
-            onChange={setStatFields}
-            isAvg={format === "avg_stats"}
-          />
-        </div>
-      )}
-
-      {/* Auto-generate bracket / schedule */}
-      {supportsAutoGenerate && (
-        <div className={`rounded-xl border p-4 transition-colors ${
-          autoGenerate ? "border-rose-500/40 bg-rose-950/20" : "border-gray-700 bg-gray-800/30"
-        }`}>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoGenerate}
-              onChange={e => {
-                setAutoGenerate(e.target.checked);
-                if (e.target.checked && selected.length === 0) {
-                  // Alle registrierten Teilnehmer vorauswählen
-                  setSelected(allUsers.map(u => u.id));
-                }
-              }}
-              className="rounded mt-0.5 shrink-0"
-            />
-            <div>
-              <p className="text-sm font-medium text-white">{AUTO_LABEL[format]}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{AUTO_DESC[format]}</p>
-            </div>
-          </label>
-
-          {autoGenerate && (
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-400">
-                  Teilnehmer auswählen
-                  <span className="text-rose-400 font-semibold ml-1">({selected.length} von {allUsers.length})</span>
-                </p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setSelected(allUsers.map(u => u.id))}
-                    className="text-[11px] text-gray-500 hover:text-white transition-colors">
-                    Alle
-                  </button>
-                  <span className="text-gray-700">·</span>
-                  <button type="button" onClick={() => setSelected([])}
-                    className="text-[11px] text-gray-500 hover:text-white transition-colors">
-                    Keine
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto pr-1">
-                {allUsers.map(u => (
-                  <label key={u.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs transition-colors ${
-                    selected.includes(u.id) ? "bg-rose-900/30 border border-rose-800/50" : "bg-gray-800 hover:bg-gray-700 border border-transparent"
-                  }`}>
-                    <input type="checkbox"
-                      checked={selected.includes(u.id)}
-                      onChange={e => setSelected(e.target.checked
-                        ? [...selected, u.id]
-                        : selected.filter(id => id !== u.id)
-                      )}
-                      className="rounded shrink-0"
-                    />
-                    <span className="text-white truncate">{userName(u)}</span>
-                  </label>
-                ))}
-              </div>
-              {selected.length >= 2 && isRoundRobinFamily && !playHomeAway && (
-                <p className="text-[11px] text-gray-600">
-                  → {selected.length} Spieler · {(selected.length * (selected.length - 1)) / 2} Matches
-                </p>
-              )}
-              {selected.length >= 2 && isRoundRobinFamily && playHomeAway && (
-                <p className="text-[11px] text-gray-600">
-                  → {selected.length} Spieler · {selected.length * (selected.length - 1)} Matches ({(selected.length - 1)} Spieltage)
-                </p>
-              )}
-              {selected.length >= 2 && format === "single_elimination" && (
-                <p className="text-[11px] text-gray-600">
-                  → {selected.length} Spieler · {Math.ceil(Math.log2(selected.length))} Runden
-                </p>
-              )}
-              {selected.length < 2 && (
-                <p className="text-[11px] text-amber-600">Mindestens 2 Teilnehmer auswählen.</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <button onClick={create} disabled={loading}
-        className="flex items-center gap-2 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg px-4 py-2">
-        <Trophy className="w-4 h-4" /> Turnier erstellen
-      </button>
-    </div>
-  );
 }
 
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
@@ -493,6 +210,11 @@ export default function TournamentManager({
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
   const isGroupKnockout = tournament.format === GROUP_KNOCKOUT_FORMAT;
+  const isBracketFormat = tournament.format === "single_elimination";
+  // Wer ausgelost werden kann: angemeldete Spieler (allUsers) + direkt eingetragene Teilnehmer.
+  // Bei aktivem Check-in filtert der Server zusätzlich auf Eingecheckte.
+  const poolSize = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
+  const canGenerate = poolSize >= 2 && ((isRoundRobin || isLiga) || (isBracketFormat && tournament.matches.length === 0));
   // Gruppenphase + K.O.: Gruppenspiele (nach Gruppe, Spieltag) vor der K.O.-Runde
   const groupMatches    = isGroupKnockout
     ? tournament.matches.filter(m => m.groupIndex != null)
@@ -504,36 +226,26 @@ export default function TournamentManager({
   /** Label für Match-Listen: Gruppe + Spieltag bzw. K.O.-Runde (nur group_knockout). */
   const groupKnockoutLabel = (m: Match) => m.groupIndex != null
     ? `${groupLabel(m.groupIndex)} · Spieltag ${m.round}`
-    : knockoutRoundLabel(m.round, knockoutRounds);
+    : m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, knockoutRounds);
   const statFields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
   // Filter out winner stat keys — they're auto-set by event completion, not entered per round
   const visibleStatFields = statFields.filter(f => !winnerStatKeys.includes(f));
-  // pointsConfig kann zwei Formate haben:
-  //   Erstellung: {"1": {coins: 200, points: 100}, ...} oder {"win": 30, "draw": 10}
-  //   Einstellungen: {"1": 100, ...} (nur Punkte)
+  // pointsConfig trägt nur noch Sieg/Unentschieden-Münzen pro Match ({"win": 30, "draw": 10}).
+  // Ältere Events haben dort evtl. noch Platzierungswerte ("1", "2", …) — die werden ignoriert,
+  // Platzierungen kommen ausschließlich aus placementRewardsJson (siehe lib/placement-rewards.ts).
   const pointsConfigRaw: Record<string, number | { coins: number; points: number }> =
     tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
-  // Normalisierung: extrahiert immer eine Zahl (bei Objekt: points-Wert)
-  const getConfigVal = (key: string): number => {
-    const v = pointsConfigRaw[key];
-    if (v == null) return 0;
-    return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
-  };
   const getCoinsVal = (key: string): number => {
     const v = pointsConfigRaw[key];
     if (v == null) return 0;
     return typeof v === "number" ? v : (v.coins ?? 0);
   };
-  // Für Anzeige im Header (Münzen oder Punkte)
-  const pointsConfig = pointsConfigRaw as Record<string, number>;
   // Draw-Eingabe hängt am tatsächlich konfigurierten Punktemodus (win/draw-Keys), nicht mehr
   // am Format-String — round_robin kann jetzt ebenfalls mit Sieg/Unentschieden-Münzen laufen.
   const supportsDraw = "win" in pointsConfigRaw || "draw" in pointsConfigRaw;
   const rounds = tournament.matches.length ? Math.max(...tournament.matches.map(m => m.round)) : 0;
-  // "liga" ist kein eigenständiger Formateintrag mehr (siehe FORMATS oben) — eigenes Label nötig.
-  const formatLabel = isLiga
-    ? "Liga-Modus (Hin-/Rückrunde)"
-    : FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format;
+  // Label (inkl. gespeichertem Altwert "liga") aus der zentralen Format-Liste
+  const formatLabel = centralFormatLabel(tournament.format);
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
@@ -546,17 +258,21 @@ export default function TournamentManager({
     router.refresh();
   }
 
+  /** Spielplan aus den angemeldeten Spielern erzeugen (bei aktivem Check-in nur Eingecheckte):
+   *  K.O.-Baum (Einzel-Eliminierung) bzw. Paarungen/Spieltage (Liga). */
   async function generateRoundRobinMatches() {
     if (!tournament) return;
-    const desc = isLiga
-      ? "Alle Spieltage (Hin- & Rückrunde) automatisch aus den aktuellen Teilnehmern generieren?"
-      : "Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?";
-    if (!(await confirm({ title: "Paarungen generieren", description: desc }))) return;
+    const desc = isBracketFormat
+      ? "Den K.O.-Baum jetzt zufällig aus den angemeldeten Spielern auslosen? Bei aktivem Check-in werden nur eingecheckte Spieler berücksichtigt."
+      : isLiga
+      ? "Alle Spieltage (Hin- & Rückrunde) aus den angemeldeten Spielern generieren? Bei aktivem Check-in nur eingecheckte Spieler."
+      : "Alle Paarungen aus den angemeldeten Spielern generieren? Bei aktivem Check-in nur eingecheckte Spieler.";
+    if (!(await confirm({ title: isBracketFormat ? "K.O.-Baum auslosen" : "Paarungen generieren", description: desc }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ generateMatches: isLiga ? "liga" : "round_robin" }),
+      body: JSON.stringify({ generateMatches: isBracketFormat ? "single_elimination" : isLiga ? "liga" : "round_robin" }),
     });
     setLoading(false);
     if (res.ok) {
@@ -881,7 +597,7 @@ export default function TournamentManager({
         {/* Match header */}
         <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
           <span className="text-xs text-gray-400 truncate">
-            {match.title || (match.groupIndex != null ? `Spieltag ${match.round}` : `Match ${match.position}`)}
+            {match.title || (match.isThirdPlace ? "Spiel um Platz 3" : match.groupIndex != null ? `Spieltag ${match.round}` : `Match ${match.position}`)}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {match.scheduledAt && (
@@ -1029,6 +745,8 @@ export default function TournamentManager({
           resetMatch={resetMatch}
           deleteMatch={deleteMatch}
           generateRoundRobinMatches={generateRoundRobinMatches}
+          canGenerate={canGenerate}
+          isBracketFormat={isBracketFormat}
           showAdd={showAdd}
           setShowAdd={setShowAdd}
           mTitle={mTitle}
@@ -1064,10 +782,8 @@ export default function TournamentManager({
             tournament.status === "finished" ? "bg-gray-800 text-gray-500"      :
                                                "bg-amber-900/40 text-amber-300"
           }`}>{tournament.status}</span>
-          {Object.keys(pointsConfigRaw).length > 0 && (
-            tournament.format === "liga"
-              ? <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /></span>
-              : <span className="text-xs text-gray-500"><PlaceMedal place={1} />{getConfigVal("1")} <PlaceMedal place={2} />{getConfigVal("2")} <PlaceMedal place={3} />{getConfigVal("3")} Pts</span>
+          {supportsDraw && (
+            <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /> pro Match</span>
           )}
           {visibleStatFields.length > 0 && (
             <span className="text-xs text-gray-600">Stats: {visibleStatFields.join(", ")}</span>
@@ -1075,14 +791,16 @@ export default function TournamentManager({
         </div>
       </div>
 
-      {/* Round Robin / Liga auto-generate (direkt sichtbar wenn relevant) */}
-      {(isRoundRobin || isLiga) && tournament.participants.length >= 2 && (
+      {/* K.O.-Baum / Liga aus den angemeldeten Spielern generieren (direkt sichtbar wenn relevant) */}
+      {canGenerate && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
           <RefreshCw className="w-3.5 h-3.5" />
-          {isLiga
-            ? `Alle Spieltage generieren (${tournament.participants.length} Spieler → ${tournament.participants.length * (tournament.participants.length - 1)} Matches)`
-            : `Alle Paarungen generieren (${tournament.participants.length} Spieler → ${(tournament.participants.length * (tournament.participants.length - 1)) / 2} Matches)`}
+          {isBracketFormat
+            ? `K.O.-Baum auslosen (bis zu ${poolSize} Spieler)`
+            : isLiga
+            ? `Alle Spieltage generieren (bis zu ${poolSize} Spieler)`
+            : `Alle Paarungen generieren (bis zu ${poolSize} Spieler)`}
         </button>
       )}
 
@@ -1122,7 +840,9 @@ export default function TournamentManager({
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
             {(isRoundRobin || isLiga)
-              ? 'Füge Teilnehmer im Reiter "Teilnehmer" hinzu, dann hier auf "Paarungen generieren" klicken.'
+              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann hier auf "Paarungen generieren" klicken.'
+              : isBracketFormat
+              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann oben auf "K.O.-Baum auslosen" klicken — oder Matches unten von Hand anlegen.'
               : 'Noch keine Matches. Klicke unten auf "Match hinzufügen".'}
           </div>
         )}

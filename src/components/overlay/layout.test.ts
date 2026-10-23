@@ -39,6 +39,10 @@ describe("Overlay-Layout", () => {
     assert.ok(adaptEventLayout(base, "liga").elements.table);
     assert.ok(!adaptEventLayout(base, "single_elimination").elements.table);
     assert.ok(!adaptEventLayout(base, null).elements.table);
+    // Gruppenphase + K.O.: Gruppentabellen UND K.O.-Baum
+    assert.ok(adaptEventLayout(base, "group_knockout").elements.table);
+    assert.ok(adaptEventLayout(base, "group_knockout").elements.bracket);
+    assert.ok(adaptEventLayout(base, "single_elimination").elements.bracket);
   });
 
   test("gespeicherte Einstellungen: entfernte Elemente fallen still heraus", () => {

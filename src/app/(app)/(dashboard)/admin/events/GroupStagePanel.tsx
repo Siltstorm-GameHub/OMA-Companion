@@ -8,7 +8,7 @@ import {
 import { userName, type Tournament, type User } from "./TournamentManager";
 
 export type GroupStageActionBody =
-  | { generateMatches: "groups"; groupCount: number; advancePerGroup: number }
+  | { generateMatches: "groups"; groupCount: number; advancePerGroup: number; thirdPlaceMatch: boolean }
   | { generateMatches: "reset_groups" | "knockout" | "reset_knockout" };
 
 /**
@@ -29,6 +29,7 @@ export default function GroupStagePanel({
   const participantCount = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
   const [groupCount, setGroupCount] = useState(() => suggestedGroupCount(participantCount));
   const [advancePerGroup, setAdvancePerGroup] = useState(DEFAULT_ADVANCE_PER_GROUP);
+  const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
 
   const cfg = parseGroupStageConfig(tournament.groupStageJson);
   const groupMatches    = tournament.matches.filter(m => m.groupIndex != null);
@@ -51,7 +52,8 @@ export default function GroupStagePanel({
           <p className="text-sm font-medium text-white">Gruppen auslosen</p>
         </div>
         <p className="text-xs text-gray-500">
-          Die {participantCount} Teilnehmer werden zufällig auf die Gruppen verteilt. In jeder Gruppe spielt
+          Bis zu {participantCount} angemeldete Spieler werden zufällig auf die Gruppen verteilt (bei aktivem
+          Check-in nur Eingecheckte). In jeder Gruppe spielt
           jeder gegen jeden (Sieg 3, Unentschieden 1 Punkt), die Besten jeder Gruppe ziehen in die K.O.-Runde ein.
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -68,6 +70,10 @@ export default function GroupStagePanel({
               className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
           </label>
         </div>
+        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
+          <input type="checkbox" checked={thirdPlaceMatch} onChange={e => setThirdPlaceMatch(e.target.checked)} className="rounded" />
+          Spiel um Platz 3 (Verlierer der Halbfinals)
+        </label>
         {error ? (
           <p className="text-[11px] text-amber-500">{error}</p>
         ) : (
@@ -78,7 +84,7 @@ export default function GroupStagePanel({
           </p>
         )}
         <button type="button" disabled={loading || !!error}
-          onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup })}
+          onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup, thirdPlaceMatch })}
           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
           <Dices className="w-3.5 h-3.5" /> Gruppen auslosen &amp; Spielplan erstellen
         </button>

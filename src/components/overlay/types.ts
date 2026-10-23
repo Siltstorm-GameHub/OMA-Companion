@@ -27,6 +27,10 @@ export type OverlayMatch = {
   score2: number | null;
   playedAt: string | null;
   entries: OverlayEntry[];
+  /** Nur "Gruppenphase + K.O.": Gruppe des Gruppenspiels, null = K.O.-Runde */
+  groupIndex?: number | null;
+  /** Spiel um Platz 3 (K.O.-Runde) */
+  isThirdPlace?: boolean;
 };
 
 export type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };

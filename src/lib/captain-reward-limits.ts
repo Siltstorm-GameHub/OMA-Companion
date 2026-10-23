@@ -27,6 +27,9 @@ export const CAPTAIN_REWARD_LIMITS = {
   /** Veraltetes Event.pointReward (Teilnahme-Münzen alter Events) */
   pointReward: 50,
   dominionCoins: 0,
+  /** Liga-Modus "Sieg/Unentschieden-Münzen": Münzen pro gewonnenem bzw. unentschiedenem Match */
+  matchWinCoins: 30,
+  matchDrawCoins: 10,
 } as const;
 
 const L = CAPTAIN_REWARD_LIMITS;
@@ -104,6 +107,14 @@ export function capSeriesStatConfig(input: unknown): unknown {
     ...(v.transferToGlobalRanking !== undefined && { transferToGlobalRanking: false }),
     ...(v.dominionBonus && { dominionBonus: { ...v.dominionBonus, coins: cap(v.dominionBonus.coins, L.dominionCoins) } }),
   }));
+}
+
+/** pointsConfig { win, draw } (Münzen pro Match-Ergebnis im Liga-Modus) — andere Formen unverändert. */
+export function capMatchResultPoints<T>(pointsConfig: T): T {
+  if (!pointsConfig || typeof pointsConfig !== "object") return pointsConfig;
+  const pc = pointsConfig as Record<string, unknown>;
+  if (!("win" in pc) && !("draw" in pc)) return pointsConfig;
+  return { ...pc, win: cap(pc.win, L.matchWinCoins), draw: cap(pc.draw, L.matchDrawCoins) } as T;
 }
 
 /**

@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { awardPoints, revokePointsByReason } from "@/lib/points";
+import { revokePointsByReason } from "@/lib/points";
 import { GROUP_KNOCKOUT_FORMAT } from "./groupStage";
 
-// Begründungen der Finale-Belohnungen — enthalten die eventId, damit eine Korrektur genau
-// die Vergabe dieses einen Turniers zurückbucht und nicht die eines gleichnamigen anderen.
+// Begründungen der früheren automatischen Finale-Prämien (werden nicht mehr vergeben, siehe Finale
+// unten) — enthalten die eventId, damit eine Korrektur genau die Vergabe dieses einen Turniers
+// zurückbucht und nicht die eines gleichnamigen anderen.
 const finalWinReason      = (eventId: string) => `Turniersieg 🏆 – Turnier ${eventId}`;
 const finalFinalistReason = (eventId: string) => `Turnierfinale erreicht – Turnier ${eventId}`;
 
@@ -57,7 +58,7 @@ export type ApplyMatchResultInput = {
 
 /**
  * Kernlogik "Match-Ergebnis eintragen/zurücksetzen" — Bracket-Aufrücken, Punktevergabe/
- * -rückbuchung via awardPoints/revokePointsByReason, Reset-Aktion. Extrahiert aus dem
+ * -rückbuchung via revokePointsByReason, Reset-Aktion. Extrahiert aus dem
  * PATCH-Handler von /api/tournaments/[id]/matches, damit die Logik nicht dupliziert wird
  * (z.B. für die Widget-API). Enthält KEINE Auth/Rollenprüfung — die bleibt Sache des
  * jeweiligen Route-Handlers, der diese Funktion aufruft.
@@ -85,14 +86,29 @@ export async function applyMatchResult({
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new ApplyMatchResultError("Nicht gefunden", 404);
 
-    if (isKnockoutMatch(event?.format, match.groupIndex) && match.winnerId) {
+    // Spiel um Platz 3: rückt nirgends hin auf und ist nicht das Finale — nur das Ergebnis zurücksetzen
+    if (isKnockoutMatch(event?.format, match.groupIndex) && match.winnerId && !match.isThirdPlace) {
       const nextRound    = match.round + 1;
       const nextPosition = Math.ceil(match.position / 2);
       const nextMatch = await prisma.match.findFirst({
         // groupIndex: null — bei group_knockout liegen Gruppenspiele mit gleichen Runden-/Positions-
-        // nummern daneben, das Folgematch ist immer eines der K.O.-Runde.
-        where: { eventId, round: nextRound, position: nextPosition, groupIndex: null },
+        // nummern daneben, das Folgematch ist immer eines der K.O.-Runde (nie das Spiel um Platz 3).
+        where: { eventId, round: nextRound, position: nextPosition, groupIndex: null, isThirdPlace: false },
       });
+      // Halbfinale: der Verlierer war ins Spiel um Platz 3 eingezogen — dort wieder austragen
+      const semiLoserId = loserOf(match, match.winnerId);
+      const thirdPlace = nextMatch && semiLoserId
+        ? await prisma.match.findFirst({ where: { eventId, round: nextRound, groupIndex: null, isThirdPlace: true } })
+        : null;
+      if (thirdPlace) {
+        const slot = match.position % 2 === 1 ? "player1Id" : "player2Id";
+        if (thirdPlace[slot] === semiLoserId) {
+          await prisma.match.update({
+            where: { id: thirdPlace.id },
+            data: { [slot]: null, winnerId: null, score1: null, score2: null, playedAt: null },
+          });
+        }
+      }
       if (nextMatch) {
         const isFirstSlot = match.position % 2 === 1;
         if (isFirstSlot && nextMatch.player1Id === match.winnerId) {
@@ -107,9 +123,8 @@ export async function applyMatchResult({
           });
         }
       } else if (match.resultConfirmed) {
-        // Kein Folgematch = das zurückgesetzte Match war das Finale. Die dort vergebenen
-        // Turnier-Belohnungen müssen mit zurück, sonst bleiben sie nach dem Zurücksetzen
-        // stehen und werden beim erneuten Eintragen ein zweites Mal ausgezahlt.
+        // Kein Folgematch = das zurückgesetzte Match war das Finale. Früher dort automatisch
+        // vergebene Turniersieg-/Finalisten-Prämien (Altbestand) werden zurückgebucht.
         await revokePointsByReason(match.winnerId, finalWinReason(eventId));
         const loserId = loserOf(match, match.winnerId);
         if (loserId) await revokePointsByReason(loserId, finalFinalistReason(eventId));
@@ -175,11 +190,12 @@ export async function applyMatchResult({
 
   const isBracket = isKnockoutMatch(event?.format, existingMatch?.groupIndex);
 
-  if (isBracket) {
+  // Spiel um Platz 3: weder Aufrücken noch Finale-Logik
+  if (isBracket && !match.isThirdPlace) {
     const nextRound    = match.round + 1;
     const nextPosition = Math.ceil(match.position / 2);
     const nextMatch = await prisma.match.findFirst({
-      where: { eventId, round: nextRound, position: nextPosition, groupIndex: null },
+      where: { eventId, round: nextRound, position: nextPosition, groupIndex: null, isThirdPlace: false },
     });
 
     if (nextMatch) {
@@ -190,25 +206,29 @@ export async function applyMatchResult({
         where: { id: nextMatch.id },
         data: isFirstSlot ? { player1Id: winnerId ?? null } : { player2Id: winnerId ?? null },
       });
+      // Halbfinale mit Spiel um Platz 3: der Verlierer zieht dort ein (gleiche Seite wie im Finale)
+      const thirdPlace = await prisma.match.findFirst({
+        where: { eventId, round: nextRound, groupIndex: null, isThirdPlace: true },
+      });
+      if (thirdPlace) {
+        const loserId = winnerId ? loserOf(match, winnerId) : null;
+        await prisma.match.update({
+          where: { id: thirdPlace.id },
+          data: isFirstSlot ? { player1Id: loserId } : { player2Id: loserId },
+        });
+      }
     } else if (!skipPoints) {
-      // Finale. Die Belohnung hängt am Sieger, nicht am Speichervorgang: bei unverändertem
-      // Sieger passiert nichts (sonst zahlt jede Korrektur erneut aus), bei geändertem Sieger
-      // wird die alte Vergabe exakt zurückgebucht und danach neu ausgezahlt.
+      // Finale. Früher zahlte das Finale automatisch eine Turniersieg-/Finalisten-Prämie
+      // ZUSÄTZLICH zur Platzierungsbelohnung des Event-Abschlusses. Das entfällt — es gibt nur noch
+      // die eine Platzierungsbelohnung (Event.placementRewardsJson). Bereits früher ausgezahlte
+      // Prämien bleiben bestehen, werden aber bei einem Sieger-Wechsel weiterhin zurückgebucht.
       const oldWinnerId = existingMatch?.resultConfirmed ? existingMatch.winnerId ?? null : null;
       const newWinnerId = winnerId ?? null;
 
-      if (oldWinnerId !== newWinnerId) {
-        if (oldWinnerId && existingMatch) {
-          await revokePointsByReason(oldWinnerId, finalWinReason(eventId));
-          const oldLoserId = loserOf(existingMatch, oldWinnerId);
-          if (oldLoserId) await revokePointsByReason(oldLoserId, finalFinalistReason(eventId));
-        }
-        if (newWinnerId) {
-          await awardPoints(newWinnerId, "TOURNAMENT_WIN", finalWinReason(eventId));
-          // Der Verlierer des Finales ist der Finalist (2. Platz) — nicht Top-3.
-          const loserId = loserOf(match, newWinnerId);
-          if (loserId) await awardPoints(loserId, "TOURNAMENT_FINALIST", finalFinalistReason(eventId));
-        }
+      if (oldWinnerId && existingMatch && oldWinnerId !== newWinnerId) {
+        await revokePointsByReason(oldWinnerId, finalWinReason(eventId));
+        const oldLoserId = loserOf(existingMatch, oldWinnerId);
+        if (oldLoserId) await revokePointsByReason(oldLoserId, finalFinalistReason(eventId));
       }
       await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "finished" } });
     }

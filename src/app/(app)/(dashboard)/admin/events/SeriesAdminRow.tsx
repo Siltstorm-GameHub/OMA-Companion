@@ -12,7 +12,7 @@ import GameNameInput from "@/components/GameNameInput";
 import EventAdminRow from "./EventAdminRow";
 import { formatBerlinDate } from "@/lib/time";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
-import { TOURNAMENT_FORMATS, LEGACY_LIGA_OPTION } from "@/lib/tournament-formats";
+import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 
@@ -233,8 +233,7 @@ export default function SeriesAdminRow({
                   </label>
                   <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                     <option value="">– Kein festes Format –</option>
-                    {TOURNAMENT_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                    <option value={LEGACY_LIGA_OPTION.value}>{LEGACY_LIGA_OPTION.label}</option>
+                    {SERIES_FORMAT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                     <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-teal-500" />

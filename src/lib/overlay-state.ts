@@ -122,6 +122,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
         select: {
           id: true, round: true, position: true, title: true,
           player1Id: true, player2Id: true, winnerId: true, score1: true, score2: true, playedAt: true,
+          groupIndex: true, isThirdPlace: true,
           entries: { select: { id: true, userId: true, teamId: true, placement: true, score: true, statsJson: true } },
         },
       },

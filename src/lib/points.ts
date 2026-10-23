@@ -188,19 +188,26 @@ export async function everAwarded(userId: string, rule: PointRule): Promise<bool
  * Gibt zurück, wie viel tatsächlich zurückgebucht wurde.
  */
 export async function revokePointsByReason(userId: string, baseReason: string) {
+  const correctionReason = `[Korrektur] ${baseReason}`;
+  // Netto rechnen: frühere Korrekturen derselben Vergabe abziehen. Sonst würde eine schon einmal
+  // zurückgebuchte Vergabe bei jedem weiteren Aufruf (z.B. mehrfacher Sieger-Wechsel) erneut abgezogen.
   const txns = await prisma.pointTransaction.findMany({
     where: {
       userId,
-      amount: { gt: 0 },
-      reason: { in: [...reasonVariants(COIN_PREFIX, baseReason), ...reasonVariants(RANK_PREFIX, baseReason)] },
+      OR: [
+        { amount: { gt: 0 }, reason: { in: [...reasonVariants(COIN_PREFIX, baseReason), ...reasonVariants(RANK_PREFIX, baseReason)] } },
+        { amount: { lt: 0 }, reason: { in: [`${COIN_PREFIX} ${correctionReason}`, `${RANK_PREFIX} ${correctionReason}`] } },
+      ],
     },
     select: { amount: true, reason: true },
   });
   if (txns.length === 0) return { coins: 0, rankPoints: 0 };
 
-  const { coins, rankPoints } = sumByCurrency(txns);
+  const net = sumByCurrency(txns);
+  const coins = Math.max(0, net.coins);
+  const rankPoints = Math.max(0, net.rankPoints);
+  if (coins === 0 && rankPoints === 0) return { coins: 0, rankPoints: 0 };
 
-  const correctionReason = `[Korrektur] ${baseReason}`;
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },

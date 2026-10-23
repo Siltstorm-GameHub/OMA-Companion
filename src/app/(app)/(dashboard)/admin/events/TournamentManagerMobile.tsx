@@ -103,6 +103,9 @@ interface Props {
   resetMatch: (matchId: string) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
   generateRoundRobinMatches: () => Promise<void>;
+  /** Spielplan (K.O.-Baum/Liga) kann aus den angemeldeten Spielern generiert werden */
+  canGenerate: boolean;
+  isBracketFormat: boolean;
   showAdd: boolean;
   setShowAdd: React.Dispatch<React.SetStateAction<boolean>>;
   mTitle: string;
@@ -135,7 +138,7 @@ export default function TournamentManagerMobile({
   visibleStatFields, placementPoints, supportsDraw, rounds,
   scores1v1, setScores1v1, ffaEdits, setFfaField,
   teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
-  validateTeamAssignment, submit1v1, submitFfa, changeMatchPlayer, resetMatch, deleteMatch, generateRoundRobinMatches,
+  validateTeamAssignment, submit1v1, submitFfa, changeMatchPlayer, resetMatch, deleteMatch, generateRoundRobinMatches, canGenerate, isBracketFormat,
   showAdd, setShowAdd, mTitle, setMTitle, mScheduled, setMScheduled, mNotes, setMNotes,
   mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, addMatch, groupStage,
 }: Props) {
@@ -211,18 +214,18 @@ export default function TournamentManagerMobile({
 
       {groupStage?.panel}
 
-      {(isRoundRobin || isLiga) && tournament.participants.length >= 2 && (
+      {canGenerate && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-900/20 border border-blue-900/40 rounded-lg px-3 py-2.5 w-full justify-center">
-          <RefreshCw className="w-3.5 h-3.5" /> Paarungen generieren
+          <RefreshCw className="w-3.5 h-3.5" /> {isBracketFormat ? "K.O.-Baum auslosen" : "Paarungen generieren"}
         </button>
       )}
 
       {!hasMatches && !groupStage && (
         <div className="text-center py-8 text-gray-500 text-sm space-y-2 border border-dashed border-gray-700 rounded-xl bg-gray-800/50">
           <Swords className="w-7 h-7 mx-auto text-gray-700" />
-          <p>{(isRoundRobin || isLiga)
-            ? 'Teilnehmer im Reiter „Teilnehmer" hinzufügen, dann Paarungen generieren.'
+          <p>{(isRoundRobin || isLiga || isBracketFormat)
+            ? 'Spieler im Reiter „Teilnehmer" anmelden, dann Spielplan generieren.'
             : 'Noch keine Matches — unten anlegen.'}</p>
         </div>
       )}

@@ -42,11 +42,18 @@ export const DEFAULT_PROFILE_POSITIONS: Record<ProfileElementKey, { x: number; y
 
 const ELIMINATION_FORMATS = ["single_elimination", "double_elimination"];
 export const isEliminationFormat = (format: string | null | undefined) => !!format && ELIMINATION_FORMATS.includes(format);
+/** Turnierbaum-Element sinnvoll? Reine K.O.-Formate und die K.O.-Runde von "Gruppenphase + K.O." */
+export const showsBracket = (format: string | null | undefined) => isEliminationFormat(format) || format === "group_knockout";
+/** Tabellen-Element sinnvoll? Alle Formate außer reinem K.O. ("Gruppenphase + K.O.": Gruppentabellen) */
+export const showsTable = (format: string | null | undefined) => !!format && !isEliminationFormat(format);
+/** Standard-Panels je Format: K.O. → Baum, Gruppenphase + K.O. → Gruppen + Baum, sonst Tabelle */
+const defaultPanelsFor = (format: string | null): ElementKey[] =>
+  format === "group_knockout" ? ["table", "bracket"] : [isEliminationFormat(format) ? "bracket" : "table"];
 
 /** Standard-Layout fürs Event-Overlay, wenn nichts eingestellt ist: alle fürs Format relevanten
  *  Elemente aktiv. Gehört das Event zu einer Reihe, rotiert die Gesamttabelle mit Tabelle/Teilnehmern. */
 export function defaultEventLayout(format: string | null, hasSeries: boolean): OverlayLayout<ElementKey> {
-  const keys: ElementKey[] = ["brand", "liveinfo", "ticker", isEliminationFormat(format) ? "bracket" : "table", "participants"];
+  const keys: ElementKey[] = ["brand", "liveinfo", "ticker", ...defaultPanelsFor(format), "participants"];
   if (hasSeries) keys.push("seriesTable");
   return { elements: Object.fromEntries(keys.map(k => [k, { ...DEFAULT_EVENT_POSITIONS[k] }])), rotateSeconds: DEFAULT_ROTATE_SECONDS };
 }
@@ -220,7 +227,7 @@ export function legacyParamsToLayout(
   const requested = params.panels
     ? params.panels.split(",").filter((p): p is (typeof LEGACY_PANELS)[number] => (LEGACY_PANELS as readonly string[]).includes(p))
     : [];
-  const panels: ElementKey[] = requested.length ? requested : [isEliminationFormat(format) ? "bracket" : "table", "participants"];
+  const panels: ElementKey[] = requested.length ? requested : [...defaultPanelsFor(format), "participants"];
   const corner: Corner = params.pos && (CORNERS as string[]).includes(params.pos) ? (params.pos as Corner) : "top-right";
 
   // Gemeinsame Position für alle Panels (sie rotierten auch früher an genau einer Stelle). Breite
@@ -253,8 +260,8 @@ export function legacyParamsToLayout(
  */
 export function adaptEventLayout(layout: OverlayLayout<ElementKey>, format: string | null): OverlayLayout<ElementKey> {
   const elements = { ...layout.elements };
-  if (!isEliminationFormat(format)) delete elements.bracket;
-  if (!format || isEliminationFormat(format)) delete elements.table;
+  if (!showsBracket(format)) delete elements.bracket;
+  if (!showsTable(format)) delete elements.table;
   return { ...layout, elements };
 }
 

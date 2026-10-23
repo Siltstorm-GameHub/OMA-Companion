@@ -55,5 +55,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const { id: eventId } = await params;
   await prisma.eventRegistration.deleteMany({ where: { userId: session.user.id, eventId } });
+  // Noch nicht ausgelost: auch einen evtl. schon angelegten Turnier-Teilnehmer-Eintrag entfernen,
+  // sonst würde der Abgemeldete wie ein von Admins eingetragener Teilnehmer mit ausgelost.
+  if ((await prisma.match.count({ where: { eventId } })) === 0) {
+    await prisma.tournamentParticipant.deleteMany({ where: { userId: session.user.id, eventId } });
+  }
   return NextResponse.json({ success: true });
 }

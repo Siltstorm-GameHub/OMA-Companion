@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getStreamerConfig, getStreamerOverlayPayload, invalidateStreamerConfig, explainStreamerEventMode, getStreamerEventCandidates } from "@/lib/overlay-state";
-import { parseOverlayControl, sanitizeControl, activeZoom, isEliminationFormat } from "@/components/overlay/layout";
+import { parseOverlayControl, sanitizeControl, activeZoom, showsBracket, showsTable } from "@/components/overlay/layout";
 import {
   ELEMENT_LABELS, PROFILE_ELEMENT_LABELS, ZOOMABLE_ELEMENTS, ZOOMABLE_PROFILE_ELEMENTS, ELEMENT_KEYS, PROFILE_ELEMENT_KEYS,
   OVERLAY_SCENES, type StreamerOverlayPayload, type OverlayControl, type OverlayScene,
@@ -26,8 +26,9 @@ function describe(payload: StreamerOverlayPayload) {
       brand: true,
       liveinfo: true,
       ticker: e.matches.some(m => m.playedAt || m.player1Id || m.entries.length > 0),
-      bracket: hasMatches && isEliminationFormat(e.format),
-      table: !!e.format && !isEliminationFormat(e.format) && (hasMatches || e.participants.length > 0),
+      // Gruppenphase + K.O.: Baum erst, wenn es K.O.-Matches gibt
+      bracket: showsBracket(e.format) && e.matches.some(m => m.groupIndex == null),
+      table: showsTable(e.format) && (hasMatches || e.participants.length > 0),
       seriesTable: (e.seriesTable?.ranking.length ?? 0) > 0,
       participants: e.participants.length > 0,
     };

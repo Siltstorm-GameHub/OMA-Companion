@@ -9,6 +9,7 @@
 // nächsten Aufruf erneut geprüft — kein Cleanup nötig, das ist gewünschtes Verhalten.
 
 import { prisma } from "@/lib/prisma";
+import { publishDueScheduledEvents } from "@/lib/event-publish";
 
 /**
  * Setzt alle fälligen ("open" + startAt <= jetzt) Events mit mindestens einer Spieler-
@@ -17,6 +18,9 @@ import { prisma } from "@/lib/prisma";
  * groupBy statt Einzelabfrage pro Event.
  */
 export async function syncDueEventActivations(): Promise<void> {
+  // Geplante Veröffentlichungen (Event.publishAt) — gleicher Lazy-Mechanismus, siehe event-publish.ts
+  await publishDueScheduledEvents();
+
   const dueEvents = await prisma.event.findMany({
     where: { status: "open", startAt: { lte: new Date() } },
     select: { id: true },

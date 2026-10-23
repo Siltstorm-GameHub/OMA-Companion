@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { placementRewardFor } from "@/lib/placement-rewards";
 import { GROUP_KNOCKOUT_FORMAT, groupKnockoutRanking } from "@/lib/tournaments/groupStage";
 
 // Berechnet die Endplatzierung als Vorschau (ohne Punkte zu vergeben)
@@ -14,13 +15,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     include: {
       participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
       matches: { include: { entries: true }, where: { playedAt: { not: null } } },
+      series: { select: { placementRewardsJson: true } },
     },
   });
 
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-  const cfg: Record<string, number | { coins: number; points: number }> =
-    event.pointsConfig ? JSON.parse(event.pointsConfig) : {};
 
   const format = event.format ?? "single_elimination";
 
@@ -138,9 +138,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const result = ranking.map((r, i) => {
     const placement = i + 1;
-    const raw     = cfg[String(placement)];
-    const coins   = raw === undefined ? 0 : typeof raw === "number" ? raw : (raw.coins  ?? 0);
-    const rankPts = raw === undefined ? 0 : typeof raw === "number" ? 0  : (raw.points ?? 0);
+    // Vorschau der Belohnung, die der Event-Abschluss für diesen Platz auszahlen würde
+    const { coins, rankPoints: rankPts } = placementRewardFor(placement, event.placementRewardsJson, event.series?.placementRewardsJson);
     const user    = userMap.get(r.userId);
     return {
       placement,

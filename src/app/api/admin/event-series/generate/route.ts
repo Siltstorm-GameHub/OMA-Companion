@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
-import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
-import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { publishEvent } from "@/lib/event-publish";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 /**
@@ -37,30 +36,6 @@ export async function POST(req: NextRequest) {
   function nextTitle(lastTitle: string): string {
     const m = lastTitle.match(/^(.*#)(\d+)(\s*)$/);
     return m ? `${m[1]}${Number(m[2]) + 1}${m[3]}` : lastTitle;
-  }
-
-  // Convert series placementRewardsJson → event pointsConfig shape
-  function derivedPointsConfig(): string | null {
-    if (series?.fixedFormat === "liga") return null; // liga uses win/draw, not placements
-    if (!series?.placementRewardsJson) return null;
-    try {
-      const { placements } = JSON.parse(series.placementRewardsJson) as {
-        placements: { place: number; coins: number; rankPoints: number }[];
-      };
-      if (!placements?.length) return null;
-      const cfg: Record<string, { coins: number; points: number }> = {};
-      for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
-      return JSON.stringify(cfg);
-    } catch { return null; }
-  }
-
-  // Participation-Münzen für die Discord-Ankündigung (aus der Reihen-Konfiguration, sonst Fallback 10)
-  function derivedParticipationCoins(): number {
-    if (!series?.placementRewardsJson) return 10;
-    try {
-      const { participationCoins } = JSON.parse(series.placementRewardsJson) as { participationCoins?: number };
-      return participationCoins ?? 10;
-    } catch { return 10; }
   }
 
   // Extract stat field names from seriesStatConfig
@@ -138,7 +113,6 @@ export async function POST(req: NextRequest) {
       spectatorRewardJson:   lastEvent?.spectatorRewardJson ?? null,
       ...(lastEvent?.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
       ...(series.fixedFormat && { format: series.fixedFormat }),
-      ...(derivedPointsConfig() !== null && { pointsConfig: derivedPointsConfig() }),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),
       ...(pollsConfigJson && { pollsConfigJson }),
     },
@@ -148,49 +122,9 @@ export async function POST(req: NextRequest) {
   // die Konfiguration, aber keine Umfrage, auf die tatsächlich abgestimmt werden könnte.
   await createPollsForEvent(newEvent.id, newEvent.startAt, parsePollsConfigJson(pollsConfigJson));
 
-  // Discord Scheduled Event + Kanal-Ankündigung (mit Coverbild)
-  const [discordEventId, discordMessageId] = await Promise.all([
-    createDiscordScheduledEvent({
-      title:       newEvent.title,
-      startAt:     newEvent.startAt,
-      description: null,
-      game,
-      seriesCoverImageUrl: series.coverImageUrl,
-    }),
-    announceNewEvent({
-      eventId:          newEvent.id,
-      title:            newEvent.title,
-      game,
-      format:           newEvent.format,
-      genre,
-      startAt:          newEvent.startAt,
-      maxPlayers:       newEvent.maxPlayers,
-      pointReward:      derivedParticipationCoins(),
-      teilnehmer:       0,
-      discordChannelId,
-    }),
-  ]);
-
-  // IDs zurückschreiben
-  if (discordEventId || discordMessageId) {
-    await prisma.event.update({
-      where: { id: newEvent.id },
-      data: {
-        ...(discordEventId   && { discordEventId }),
-        ...(discordMessageId && { discordMessageId }),
-      },
-    });
-  }
-
-  // Push + In-App + Discord-DM (Discord-Kanal-Post übernimmt bereits announceNewEvent oben)
-  dispatchEventNotification("event_new", { id: newEvent.id }, {
-    placeholders: {
-      "{eventName}": newEvent.title,
-      "{game}":      game ?? "–",
-      "{date}":      newEvent.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
-    },
-    skipDiscordChannel: true,
-  }).catch(() => {});
+  // Discord Scheduled Event + Kanal-Ankündigung + Push — gemeinsamer, fehlertoleranter Ablauf
+  // (siehe lib/event-publish.ts), läuft nach der Antwort
+  after(() => publishEvent(newEvent.id));
 
   return NextResponse.json({ ok: true, event: newEvent });
 }

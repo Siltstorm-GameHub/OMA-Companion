@@ -3,11 +3,14 @@
 // Ablauf:
 //  1. Gruppen auslosen: Teilnehmer werden zufällig auf groupCount Gruppen verteilt, jede Gruppe
 //     spielt jeder-gegen-jeden (Match.groupIndex = Gruppe, Match.round = Spieltag).
-//  2. Tabelle je Gruppe: Sieg 3, Unentschieden 1, Niederlage 0 · danach Tordifferenz, Tore, Siege.
+//  2. Tabelle je Gruppe: Sieg 3, Unentschieden 1, Niederlage 0 · danach Tordifferenz, Tore; bei
+//     weiterhin Gleichstand der direkte Vergleich (Punkte, Tordifferenz, Tore nur aus den Spielen der
+//     Gleichplatzierten untereinander), dann Siege, zuletzt die Auslosungsreihenfolge (Losentscheid).
 //  3. K.O.-Runde: die besten advancePerGroup jeder Gruppe ziehen in einen K.O.-Baum ein
 //     (Match.groupIndex = null). Gruppensieger werden vor Gruppenzweiten gesetzt, und Spieler aus
 //     derselben Gruppe landen möglichst weit auseinander im Baum (bei 2 Gruppen à 2 Weiterkommenden:
-//     A1–B2 und B1–A2, A1 und A2 können sich erst im Finale wiedersehen).
+//     A1–B2 und B1–A2, A1 und A2 können sich erst im Finale wiedersehen). Optional mit Spiel um
+//     Platz 3 zwischen den Halbfinal-Verlierern (Match.isThirdPlace).
 //
 // Rein funktional (kein Prisma), damit Server (Generierung) und Client (Tabellen) dieselbe
 // Berechnung verwenden.
@@ -15,7 +18,7 @@ import { bracketFromSlots, generateRoundRobin, shuffle, type GeneratedMatch } fr
 
 export const GROUP_KNOCKOUT_FORMAT = "group_knockout";
 
-export type GroupStageConfig = { groupCount: number; advancePerGroup: number };
+export type GroupStageConfig = { groupCount: number; advancePerGroup: number; thirdPlaceMatch?: boolean };
 
 export const DEFAULT_ADVANCE_PER_GROUP = 2;
 
@@ -29,6 +32,7 @@ export function parseGroupStageConfig(json: string | null | undefined): GroupSta
     return {
       groupCount,
       advancePerGroup: Number.isInteger(advancePerGroup) && advancePerGroup >= 1 ? advancePerGroup : DEFAULT_ADVANCE_PER_GROUP,
+      thirdPlaceMatch: raw.thirdPlaceMatch === true,
     };
   } catch { return null; }
 }
@@ -86,6 +90,7 @@ export function generateGroupMatches(groups: string[][], eventId: string): Gener
 
 export type GroupMatchLike = {
   groupIndex?: number | null;
+  isThirdPlace?: boolean;
   player1Id: string | null; player2Id: string | null;
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null;
@@ -137,8 +142,47 @@ export function computeGroupStandings(members: string[][], matches: GroupMatchLi
       }
     }
     const order = new Map(ids.map((id, i) => [id, i]));
-    return [...map.values()].sort((a, b) => compareStandings(a, b) || (order.get(a.userId)! - order.get(b.userId)!));
+    const primary = (a: GroupStanding, b: GroupStanding) =>
+      (b.pts - a.pts) || ((b.scored - b.conceded) - (a.scored - a.conceded)) || (b.scored - a.scored);
+    const sorted = [...map.values()].sort((a, b) => primary(a, b) || (order.get(a.userId)! - order.get(b.userId)!));
+
+    // Gleichstand nach Punkten/Tordifferenz/Toren: direkter Vergleich unter genau diesen Spielern
+    const result: GroupStanding[] = [];
+    for (let i = 0; i < sorted.length;) {
+      let j = i + 1;
+      while (j < sorted.length && primary(sorted[i], sorted[j]) === 0) j++;
+      const tied = sorted.slice(i, j);
+      if (tied.length > 1) {
+        const h2h = headToHead(tied.map(t => t.userId), matches, groupIndex);
+        tied.sort((a, b) => {
+          const ha = h2h.get(a.userId)!, hb = h2h.get(b.userId)!;
+          return (hb.pts - ha.pts) || (hb.diff - ha.diff) || (hb.scored - ha.scored)
+            || (b.w - a.w) || (order.get(a.userId)! - order.get(b.userId)!);
+        });
+      }
+      result.push(...tied);
+      i = j;
+    }
+    return result;
   });
+}
+
+/** Mini-Tabelle nur aus den Gruppenspielen der übergebenen Spieler untereinander. */
+function headToHead(userIds: string[], matches: GroupMatchLike[], groupIndex: number) {
+  const set = new Set(userIds);
+  const table = new Map(userIds.map(id => [id, { pts: 0, diff: 0, scored: 0 }]));
+  for (const m of matches) {
+    if (m.groupIndex !== groupIndex || !m.playedAt || !m.player1Id || !m.player2Id) continue;
+    if (!set.has(m.player1Id) || !set.has(m.player2Id)) continue;
+    const a = table.get(m.player1Id)!, b = table.get(m.player2Id)!;
+    const s1 = m.score1 ?? 0, s2 = m.score2 ?? 0;
+    a.scored += s1; a.diff += s1 - s2;
+    b.scored += s2; b.diff += s2 - s1;
+    if (!m.winnerId) { a.pts += 1; b.pts += 1; }
+    else if (m.winnerId === m.player1Id) a.pts += 3;
+    else b.pts += 3;
+  }
+  return table;
 }
 
 /** Gruppen-Mitglieder aus den Teilnehmern ableiten (Teilnehmer ohne Gruppe fallen heraus). */
@@ -221,35 +265,49 @@ export function seedKnockout(standings: GroupStanding[][], advancePerGroup: numb
 }
 
 /** Komplette K.O.-Runde (alle Runden, Freilose bereits aufgerückt) als Match-Daten. */
-export function generateKnockoutMatches(standings: GroupStanding[][], advancePerGroup: number, eventId: string): GeneratedMatch[] {
-  return bracketFromSlots(seedKnockout(standings, advancePerGroup), eventId, null);
+export function generateKnockoutMatches(
+  standings: GroupStanding[][], advancePerGroup: number, eventId: string, thirdPlaceMatch = false,
+): GeneratedMatch[] {
+  return bracketFromSlots(seedKnockout(standings, advancePerGroup), eventId, null, thirdPlaceMatch);
 }
 
 /**
- * Vorläufiges Gesamtranking (Ranking-Vorschau/Widget): zuerst nach Siegen in der K.O.-Runde,
- * bei Gleichstand nach dem Abschneiden in der Gruppenphase (Punkte, Tordifferenz, Tore).
+ * Vorläufiges Gesamtranking (Ranking-Vorschau/Widget): nach erreichter Stufe der K.O.-Runde
+ * (Sieger > Finalist > Platz 3 > Platz 4 > Halbfinale > … ), Ausgeschiedene der Gruppenphase danach;
+ * Gleichstand innerhalb einer Stufe nach dem Abschneiden in der Gruppenphase.
  */
 export function groupKnockoutRanking(
   participants: { userId: string; groupIndex?: number | null }[],
-  matches: (GroupMatchLike & { groupIndex?: number | null })[],
+  matches: (GroupMatchLike & { groupIndex?: number | null; round: number })[],
   groupStageJson: string | null | undefined,
 ): { userId: string; score: number; label: string }[] {
   const groupCount = resolveGroupCount(parseGroupStageConfig(groupStageJson), participants);
   const standings = new Map(
     computeGroupStandings(groupMembers(participants, groupCount), matches).flat().map(s => [s.userId, s]),
   );
-  const koWins = new Map<string, number>();
-  for (const m of matches) {
-    if (m.groupIndex == null && m.playedAt && m.winnerId) koWins.set(m.winnerId, (koWins.get(m.winnerId) ?? 0) + 1);
+  const knockout = matches.filter(m => m.groupIndex == null && m.playedAt && m.player1Id && m.player2Id);
+  const totalRounds = knockout.length ? Math.max(...knockout.map(m => m.round)) : 0;
+  // Stufen-Wert: je Match (Runde·2 + gewonnen); Spiel um Platz 3 zählt zwischen Finale und Halbfinale
+  const stage = new Map<string, { value: number; label: string }>();
+  for (const m of knockout) {
+    for (const uid of [m.player1Id!, m.player2Id!]) {
+      const won = m.winnerId === uid;
+      const isFinal = !m.isThirdPlace && m.round === totalRounds;
+      const value = m.isThirdPlace ? 2 * totalRounds - (won ? 0.5 : 1.5) : 2 * m.round + (won ? 1 : 0);
+      const label = isFinal ? (won ? "Sieger" : "Finale")
+        : m.isThirdPlace ? (won ? "Platz 3" : "Platz 4")
+        : won ? knockoutRoundLabel(m.round + 1, totalRounds) : knockoutRoundLabel(m.round, totalRounds);
+      if ((stage.get(uid)?.value ?? -1) < value) stage.set(uid, { value, label });
+    }
   }
   const empty = (userId: string): GroupStanding => ({ userId, groupIndex: -1, played: 0, w: 0, d: 0, l: 0, scored: 0, conceded: 0, pts: 0 });
   return participants
-    .map(p => ({ userId: p.userId, wins: koWins.get(p.userId) ?? 0, s: standings.get(p.userId) ?? empty(p.userId) }))
-    .sort((a, b) => (b.wins - a.wins) || compareStandings(a.s, b.s))
+    .map(p => ({ userId: p.userId, st: stage.get(p.userId), s: standings.get(p.userId) ?? empty(p.userId) }))
+    .sort((a, b) => ((b.st?.value ?? 0) - (a.st?.value ?? 0)) || compareStandings(a.s, b.s))
     .map(r => ({
       userId: r.userId,
-      score: r.wins,
-      label: r.wins > 0 ? `${r.wins} K.O.-Siege · ${r.s.pts} Pkt.` : `${r.s.pts} Pkt. (Gruppe)`,
+      score: r.st?.value ?? 0,
+      label: r.st ? `${r.st.label} · ${r.s.pts} Pkt.` : `${r.s.pts} Pkt. (Gruppe)`,
     }));
 }
 

@@ -34,8 +34,7 @@ async function resolveCoverSource(source: CoverSource): Promise<string | null> {
 
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
-/** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen). */
-export async function announceNewEvent(event: {
+export type NewEventAnnouncement = {
   eventId: string;
   title: string;
   game: string | null;
@@ -46,11 +45,11 @@ export async function announceNewEvent(event: {
   pointReward: number;
   teilnehmer?: number;
   discordChannelId?: string | null;
-}): Promise<string | null> {
-  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
-  const botToken  = process.env.DISCORD_BOT_TOKEN;
-  if (!channelId || !botToken) return null;
+};
 
+/** Baut das Embed der Event-Ankündigung — auch für die Vorschau im Event-Wizard genutzt, damit
+ *  Vorschau und tatsächliche Discord-Nachricht garantiert identisch sind. */
+export async function buildNewEventEmbed(event: NewEventAnnouncement) {
   const startFormatted = event.startAt.toLocaleString("de-DE", {
     weekday: "long", day: "2-digit", month: "long",
     hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
@@ -85,7 +84,17 @@ export async function announceNewEvent(event: {
     footer:    { text: "OMA Companion · Events" },
     timestamp: new Date().toISOString(),
   };
+  return embed;
+}
 
+/** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen).
+ *  null = nicht konfiguriert oder fehlgeschlagen (Fehler wird geloggt). */
+export async function announceNewEvent(event: NewEventAnnouncement): Promise<string | null> {
+  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+  const botToken  = process.env.DISCORD_BOT_TOKEN;
+  if (!channelId || !botToken) return null;
+
+  const embed = await buildNewEventEmbed(event);
   try {
     const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
       method:  "POST",

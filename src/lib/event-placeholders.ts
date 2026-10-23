@@ -1,16 +1,10 @@
+import { FORMAT_LABELS, formatLabel as centralFormatLabel } from "@/lib/tournament-formats";
+
 /** Menschenlesbare Labels für Event-Felder, die als Platzhalter in
  *  Benachrichtigungs-Vorlagen (NotificationRule) verwendet werden. */
 
-export const FORMAT_LABELS: Record<string, string> = {
-  single_elimination: "K.O.-System",
-  double_elimination: "Double Elimination",
-  group_knockout:     "Gruppenphase + K.O.",
-  round_robin:        "Liga-Modus",
-  liga:                "Liga-Modus (Hin-/Rückrunde)",
-  ffa:                 "Free for All (Legacy)",
-  coop_stats:          "Skill-Index Modus",
-  avg_stats:           "Durchschnitts-Statistiken",
-};
+// Format-Labels kommen aus der zentralen Format-Liste (lib/tournament-formats.ts)
+export { FORMAT_LABELS };
 
 export const GENRE_LABELS: Record<string, string> = {
   arcade:      "Arcade",
@@ -26,7 +20,7 @@ export const GENRE_LABELS: Record<string, string> = {
 
 export function formatLabel(format: string | null | undefined): string {
   if (!format) return "–";
-  return FORMAT_LABELS[format] ?? format;
+  return centralFormatLabel(format);
 }
 
 export function genreLabel(genre: string | null | undefined): string {

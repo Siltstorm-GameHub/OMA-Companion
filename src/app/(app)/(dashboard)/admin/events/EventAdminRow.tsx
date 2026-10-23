@@ -1,5 +1,4 @@
 "use client";
-import PlaceMedal from "@/components/PlaceMedal";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -16,8 +15,8 @@ import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
-import RankPointsIcon from "@/components/RankPointsIcon";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { TOURNAMENT_FORMATS, SERIES_FORMAT_OPTIONS, formatLabel } from "@/lib/tournament-formats";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -51,35 +50,26 @@ type Event = {
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const STATUS_OPTIONS = ["open", "active", "closed", "finished"];
 
-const TMT_FORMATS = [
-  { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
-  { value: "group_knockout",     label: "Gruppenphase + K.O.",  desc: "Wie bei der WM: Gruppen, dann K.O.-Runde bis zum Finale" },
-  { value: "round_robin",        label: "Liga-Modus",           desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "coop_stats",         label: "Skill-Index Modus",    desc: "Individuelle Stats, optional Team-Match-Win" },
-  { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Bester Schnitt gewinnt" },
-] as const;
+// Formatliste und Labels zentral aus lib/tournament-formats.ts
+const TMT_FORMATS = TOURNAMENT_FORMATS;
 /** "liga" ist kein eigenständiger TMT_FORMATS-Auswahlwert mehr, bleibt aber als gespeicherter
  * Format-String für Hin-/Rückrunde-Turniere bestehen — für Labels/Vergleiche extra behandeln. */
 function tmtFormatLabel(format: string): string {
-  if (format === "liga") return "Liga-Modus (Hin-/Rückrunde)";
-  return TMT_FORMATS.find(f => f.value === format)?.label ?? format;
+  return formatLabel(format);
 }
 
+/** Sieg/Unentschieden-Münzen pro Match (Liga-Modus) aus pointsConfig. Platzierungsbelohnungen stehen
+ *  nicht mehr in pointsConfig, sondern in placementRewardsJson (Event-Seite → Reiter "Belohnungen"). */
 function parseTmtConfig(pointsConfig: string | null) {
-  const defaults = { coins1: 200, coins2: 100, coins3: 50, pts1: 100, pts2: 50, pts3: 25, win: 30, draw: 10 };
+  const defaults = { win: 30, draw: 10 };
   if (!pointsConfig) return defaults;
   try {
-    const pc = JSON.parse(pointsConfig) as Record<string, number | { coins?: number; points?: number }>;
-    const c = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
-      v == null ? fb : typeof v === "number" ? v : (v.coins ?? fb);
-    const p = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
-      v == null ? fb : typeof v === "number" ? v : (v.points ?? v.coins ?? fb);
-    return {
-      coins1: c(pc["1"], 200), coins2: c(pc["2"], 100), coins3: c(pc["3"], 50),
-      pts1: p(pc["1"], 100), pts2: p(pc["2"], 50), pts3: p(pc["3"], 25),
-      win: c(pc["win"], 30), draw: c(pc["draw"], 10),
-    };
-  } catch { return defaults; }
+    const pc = JSON.parse(pointsConfig) as Record<string, unknown>;
+    const n = (v: unknown, fb: number) => (typeof v === "number" ? v : fb);
+    return { win: n(pc["win"], 30), draw: n(pc["draw"], 10) };
+  } catch {
+    return defaults;
+  }
 }
 const STATUS_STYLES: Record<string, string> = {
   open: "bg-blue-900/50 text-blue-300", active: "bg-green-900/50 text-green-300",
@@ -412,13 +402,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     const usesMatchResultPoints = isRoundRobinFamily && tmtPointsMode === "matchResult";
     const resolvedTmtFormat = isLiga ? "liga" : tmtFormat;
     const hasStat = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
-    const config = usesMatchResultPoints
-      ? { win: tmtPoints.win, draw: tmtPoints.draw }
-      : {
-          "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
-          "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
-          "3": { coins: tmtPoints.coins3, points: tmtPoints.pts3 },
-        };
+    // pointsConfig nur noch für Sieg/Unentschieden-Münzen pro Match (Platzierungen: placementRewardsJson)
+    const config = usesMatchResultPoints ? { win: tmtPoints.win, draw: tmtPoints.draw } : null;
     if (!tournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST",
@@ -781,11 +766,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             onChange={e => setSeriesFixedFormat(e.target.value)}
                             className={inputCls}>
                             <option value="">– Kein festes Format (wechselt) –</option>
-                            <option value="single_elimination">Single Elimination</option>
-                            <option value="group_knockout">Gruppenphase + K.O.</option>
-                            <option value="round_robin">Liga-Modus</option>
-                            <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
-                            <option value="coop_stats">Skill-Index Modus</option>
+                            {SERIES_FORMAT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                           </select>
                           <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                             <input type="checkbox" checked={propagateFormat}
@@ -1189,31 +1170,11 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                               ))}
                             </div>
                           ) : (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
-                                <span>Platz</span>
-                                <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
-                                <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
-                              </div>
-                              {([
-                                ["1.", "coins1", "pts1"],
-                                ["2.", "coins2", "pts2"],
-                                ["3.", "coins3", "pts3"],
-                              ] as const).map(([label, ck, pk]) => (
-                                <div key={label} className="grid grid-cols-3 gap-2 items-center">
-                                  <span className="text-xs text-gray-300 font-medium flex items-center gap-1"><PlaceMedal place={parseInt(label)} /> {label}</span>
-                                  <input type="number" min={0} value={tmtPoints[ck]}
-                                    onChange={e => setTmtPoints(p => ({ ...p, [ck]: Number(e.target.value) }))}
-                                    className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"
-                                  />
-                                  <input type="number" min={0} value={tmtPoints[pk]}
-                                    onChange={e => setTmtPoints(p => ({ ...p, [pk]: Number(e.target.value) }))}
-                                    className="text-sm bg-gray-800 border border-gray-700 text-teal-300 rounded-lg px-2 py-1.5 text-center w-full"
-                                  />
-                                </div>
-                              ))}
-                              <p className="text-[10px] text-gray-600 pt-1">Münzen an alle · Punkte nur an 1./2./3.</p>
-                            </div>
+                            <p className="text-xs text-gray-500">
+                              Platzierungsbelohnungen (Münzen/Rang-Punkte je Platz) legst du auf der Event-Seite im
+                              Reiter <a href={`/admin/events/${event.id}`} className="text-amber-400 hover:underline">„Belohnungen“</a> fest —
+                              genau diese werden beim Abschluss ausgezahlt.
+                            </p>
                           )}
                         </div>
                       );
