@@ -95,7 +95,7 @@ export type CommunityItem =
   | { kind: "wanderpokal"; holders: { title: string; name: string; image: string | null; winCount: number }[] };
 
 /** Ein gerade live streamendes Community-Mitglied (Raid-Tipp). */
-export type LiveMember = { userId: string; name: string; image: string | null; twitchLogin: string; game: string; viewers: number };
+export type LiveMember = { userId: string; name: string; image: string | null; twitchLogin: string; game: string; viewers: number; title: string };
 
 /** Inhalt des persönlichen Profil-Overlays (kein Turnierkontext). */
 export type ProfileOverlayState = {

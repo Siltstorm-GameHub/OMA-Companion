@@ -235,7 +235,7 @@ export function getCommunityLive(): Promise<Map<string, LiveMember>> {
       if (!u) continue;
       live.set(u.id, {
         userId: u.id, name: u.username ?? u.name ?? s.user_name, image: u.image,
-        twitchLogin: u.twitchLogin!, game: s.game_name, viewers: s.viewer_count,
+        twitchLogin: u.twitchLogin!, game: s.game_name, viewers: s.viewer_count, title: s.title,
       });
     }
     return live;

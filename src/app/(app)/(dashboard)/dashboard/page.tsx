@@ -13,6 +13,7 @@ import Image from "next/image";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
+import WatchTogetherTeaser from "@/components/watch/WatchTogetherTeaser";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
@@ -596,6 +597,8 @@ export default async function DashboardPage() {
 
       {/* ── Live-Streams (Partner & Community) ───────────────────── */}
       <LiveStreamsBanner />
+      {/* ── Mehrere Community-Streams gleichzeitig (/zusammen) ── */}
+      <WatchTogetherTeaser />
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
