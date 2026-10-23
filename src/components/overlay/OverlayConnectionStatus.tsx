@@ -11,7 +11,7 @@ export type OverlayConnection = {
 };
 
 const SCENE_NAMES: Record<string, string> = {
-  auto: "Hauptlink", gameplay: "Spiel", pause: "Pause", intro: "Intro", clips: "Clips", outro: "Outro",
+  auto: "Hauptlink", gameplay: "Spiel", pause: "Pause", intro: "Intro", clips: "Clips", outro: "Outro", chat: "Chat",
 };
 
 /** Fragt regelmäßig ab, ob das eigene Overlay gerade irgendwo (am besten in OBS) geöffnet ist. */

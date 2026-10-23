@@ -25,6 +25,7 @@ export default function PauseView({ payload }: { payload: StreamerOverlayPayload
   const text = payload.pauseText ?? DEFAULT_PAUSE_TEXT;
   const event = payload.mode === "event" ? eventContent(payload) : null;
   const profile = payload.mode === "profile" ? payload.profile : null;
+  const together = payload.togetherHint && payload.together?.partners.length ? payload.together : null;
   const sized = (key: PauseElementKey, node: React.ReactNode) => <div style={{ width: PAUSE_ELEMENT_SIZE[key].width }}>{node}</div>;
 
   const render = (key: PauseElementKey): React.ReactNode => {
@@ -72,7 +73,10 @@ export default function PauseView({ payload }: { payload: StreamerOverlayPayload
       case "footer":
         return (
           <div style={{ width: PAUSE_ELEMENT_SIZE.footer.width, textAlign: "center", fontSize: 18, fontWeight: 600, letterSpacing: "0.08em", color: "#5eead4" }}>
-            OLD MASTERS ALLY · www.oma-app.de
+            {/* Gemeinsames Streamen: In der Pause lohnt der Blick zu den anderen Perspektiven. */}
+            {together
+              ? <>GEMEINSAM MIT {together.partners.join(" & ").toUpperCase()} · ALLE STREAMS AUF {together.link}</>
+              : <>OLD MASTERS ALLY · www.oma-app.de</>}
           </div>
         );
     }

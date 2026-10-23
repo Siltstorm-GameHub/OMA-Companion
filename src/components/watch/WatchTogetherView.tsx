@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, ExternalLink, LayoutGrid, Maximize2, Volume2 } from "@/components/icons";
 import type { WatchMember } from "@/lib/watch-together";
+import { CHANNEL_COLORS } from "@/lib/twitch-irc";
 import TwitchLivePlayer from "./TwitchLivePlayer";
 import MultiChatPanel, { type ChatChannel } from "./MultiChatPanel";
 
 const MAX_TILES = 4;
 const REFRESH_MS = 60_000;
-/** Kanal-Farben im gemeinsamen Chat und an den Kacheln. */
-const CHANNEL_COLORS = ["#2dd4bf", "#a78bfa", "#fbbf24", "#f472b6"];
 
 /**
  * Bis zu 4 Streams gleichzeitig mit gemeinsamem Chat. Raster (2 nebeneinander, 3–4 als 2×2) oder

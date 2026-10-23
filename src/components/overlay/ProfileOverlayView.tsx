@@ -14,7 +14,7 @@ import { AutoScrollViewport } from "./AutoScrollViewport";
 import {
   PROFILE_ELEMENT_SIZE, PROFILE_STACKABLE, CARD_BODY_HEIGHT,
   type ProfileElementKey, type ProfileOverlayState, type OverlayLayout, type OverlayStreamer,
-  type UpcomingEvent, type CommunityItem, type LiveMember,
+  type UpcomingEvent, type CommunityItem, type LiveMember, type OverlayTogether,
 } from "./types";
 
 /**
@@ -23,13 +23,15 @@ import {
  * kommen per Props.
  */
 export default function ProfileOverlayView({
-  state, layout, lite = false, control,
+  state, layout, lite = false, control, together,
 }: {
   state: ProfileOverlayState;
   layout: OverlayLayout<ProfileElementKey>;
   lite?: boolean;
   /** Live-Steuerung des Streamers (/profile/overlay/live) — fehlt bei Profil-Links ohne Steuerung. */
   control?: { hidden: ProfileElementKey[]; zoom: ProfileElementKey | null };
+  /** Gemeinsames Streamen (Hinweis in der Marken-Kachel) — nur beim festen Streamer-Link. */
+  together?: OverlayTogether | null;
 }) {
   const streamer: OverlayStreamer = {
     id: state.id, name: state.name, username: state.username, image: state.image,
@@ -51,7 +53,7 @@ export default function ProfileOverlayView({
 
   const tile = (key: ProfileElementKey, visible: boolean, hasCycle: boolean) => {
     switch (key) {
-      case "brand":       return <IdentityFlipTile streamer={streamer} />;
+      case "brand":       return <IdentityFlipTile streamer={streamer} together={together} />;
       case "rank":        return <RankTile rankLabel={state.rankLabel} userId={state.id} image={state.image} name={state.username ?? state.name ?? "Unbekannt"} />;
       case "nextEvent":   return <NextEventTile events={state.upcomingEvents} rotateSeconds={layout.rotateSeconds} isVisible={visible} hasCycle={hasCycle} />;
       case "community":   return <CommunityTile items={state.community} rotateSeconds={layout.rotateSeconds} isVisible={visible} hasCycle={hasCycle} />;

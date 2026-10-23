@@ -3,7 +3,10 @@
  * React/Browser-APIs, damit testbar. Verbindung und Zustand: components/watch/useMultiChat.ts.
  */
 
-export type IrcLine = { tags: Record<string, string>; prefix: string | null; command: string; params: string[] };
+/** Kanal-Farben im gemeinsamen Chat (Zuschauer-Seite und OBS-Chat-Quelle) — Reihenfolge der Kanäle. */
+export const CHANNEL_COLORS = ["#2dd4bf", "#a78bfa", "#fbbf24", "#f472b6"];
+
+export type IrcLine ={ tags: Record<string, string>; prefix: string | null; command: string; params: string[] };
 
 /** Werte in IRC-Tags sind maskiert (\s = Leerzeichen, \: = Semikolon …). */
 function unescapeTag(v: string): string {

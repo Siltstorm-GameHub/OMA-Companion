@@ -163,6 +163,8 @@ export type StreamerOverlayConfig = {
   /** Eigene Layouts der Pausen- bzw. Clip-Szenen, null = Standard (siehe sceneLayouts.ts). */
   pauseLayout: OverlayLayout<PauseElementKey> | null;
   clipLayout: OverlayLayout<ClipElementKey> | null;
+  /** Hinweis "Gemeinsam mit …" in der Marken-Kachel, solange gemeinsam gestreamt wird. */
+  togetherHint: boolean;
 };
 
 export const DEFAULT_CLIP_CONFIG: ClipSceneConfig = { source: "all", muted: true, introText: null, outroText: null };
@@ -186,10 +188,10 @@ export function sanitizePauseText(raw: unknown): string | null {
 }
 
 export function parseStreamerConfig(json: string | null | undefined): StreamerOverlayConfig {
-  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND, clips: { ...DEFAULT_CLIP_CONFIG }, pauseLayout: null, clipLayout: null };
+  const empty: StreamerOverlayConfig = { event: null, profile: null, pauseText: null, lite: false, pauseBackground: DEFAULT_PAUSE_BACKGROUND, clips: { ...DEFAULT_CLIP_CONFIG }, pauseLayout: null, clipLayout: null, togetherHint: true };
   if (!json) return empty;
   try {
-    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown; pauseLayout?: unknown; clipLayout?: unknown };
+    const parsed = JSON.parse(json) as { event?: unknown; profile?: unknown; pauseText?: unknown; lite?: unknown; pauseBackground?: unknown; clips?: unknown; pauseLayout?: unknown; clipLayout?: unknown; togetherHint?: unknown };
     return {
       // Unbekannte Element-Schlüssel (z.B. entfernte wie "favorites") fallen hier still heraus.
       event: sanitizeLayout(parsed.event, ELEMENT_KEYS),
@@ -200,6 +202,7 @@ export function parseStreamerConfig(json: string | null | undefined): StreamerOv
       clips: sanitizeClipConfig(parsed.clips),
       pauseLayout: sanitizeLayout(parsed.pauseLayout, PAUSE_ELEMENT_KEYS),
       clipLayout: sanitizeLayout(parsed.clipLayout, CLIP_ELEMENT_KEYS),
+      togetherHint: parsed.togetherHint !== false,
     };
   } catch {
     return empty;

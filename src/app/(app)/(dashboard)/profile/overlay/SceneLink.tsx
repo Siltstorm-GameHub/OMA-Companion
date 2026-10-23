@@ -6,11 +6,11 @@ import { Tv2, Copy, Check, ExternalLink, Move } from "@/components/icons";
 
 /** OBS übernimmt beim Hineinziehen eines Links diese Parameter für die neue Browser-Quelle
  *  (Name und Größe) — die Overlay-Seite selbst ignoriert sie. */
-export function obsDragUrl(url: string, name: string) {
+export function obsDragUrl(url: string, name: string, size: { width: number; height: number } = { width: 1920, height: 1080 }) {
   const u = new URL(url);
   u.searchParams.set("layer-name", name);
-  u.searchParams.set("layer-width", "1920");
-  u.searchParams.set("layer-height", "1080");
+  u.searchParams.set("layer-width", String(size.width));
+  u.searchParams.set("layer-height", String(size.height));
   return u.toString();
 }
 

@@ -59,6 +59,7 @@ export default async function StreamerOverlaySettingsPage({ searchParams }: { se
       }}
       initialPauseText={config.pauseText}
       initialLite={config.lite}
+      initialTogetherHint={config.togetherHint}
       initialPauseBackground={config.pauseBackground}
       initialClips={config.clips}
       activeEvent={activeEvent}

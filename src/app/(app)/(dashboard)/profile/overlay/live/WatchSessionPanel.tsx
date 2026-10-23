@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Loader2, Search, Users, X, Check } from "@/components/icons";
+import Link from "next/link";
 import type { SessionPerson, SessionView } from "@/lib/watch-sessions";
 import type { WatchMember } from "@/lib/watch-together";
 
@@ -112,21 +113,27 @@ export default function WatchSessionPanel() {
 }
 
 function ShareLink({ slug }: { slug: string }) {
-  const [url, setUrl] = useState(`/zusammen?s=${slug}`);
-  useEffect(() => { const t = setTimeout(() => setUrl(`${window.location.origin}/zusammen?s=${slug}`), 0); return () => clearTimeout(t); }, [slug]);
+  // Kurzlink (/z/… leitet auf /zusammen?s=… weiter) — derselbe, den das Overlay einblendet.
+  const [url, setUrl] = useState(`/z/${slug}`);
+  useEffect(() => { const t = setTimeout(() => setUrl(`${window.location.origin}/z/${slug}`), 0); return () => clearTimeout(t); }, [slug]);
   return (
-    <div className="flex items-center gap-2">
-      <code className="flex-1 min-w-0 truncate text-xs text-gray-300 bg-black/40 border border-white/[0.08] rounded-lg px-2.5 py-2">{url}</code>
-      <button
-        onClick={async () => { try { await navigator.clipboard.writeText(url); toast.success("Link kopiert"); } catch { toast.message(url); } }}
-        title="Link kopieren"
-        className="shrink-0 p-2 rounded-lg border border-teal-500/40 text-teal-300 hover:bg-teal-500/15"
-      >
-        <Copy className="w-4 h-4" />
-      </button>
-      <a href={url} target="_blank" rel="noopener noreferrer" title="Öffnen" className="shrink-0 p-2 rounded-lg border border-white/[0.08] text-gray-400 hover:text-teal-300">
-        <ExternalLink className="w-4 h-4" />
-      </a>
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <code className="flex-1 min-w-0 truncate text-xs text-gray-300 bg-black/40 border border-white/[0.08] rounded-lg px-2.5 py-2">{url}</code>
+        <button
+          onClick={async () => { try { await navigator.clipboard.writeText(url); toast.success("Link kopiert"); } catch { toast.message(url); } }}
+          title="Link kopieren"
+          className="shrink-0 p-2 rounded-lg border border-teal-500/40 text-teal-300 hover:bg-teal-500/15"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+        <a href={url} target="_blank" rel="noopener noreferrer" title="Öffnen" className="shrink-0 p-2 rounded-lg border border-white/[0.08] text-gray-400 hover:text-teal-300">
+          <ExternalLink className="w-4 h-4" />
+        </a>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        Dein Overlay blendet den Link ein, sobald die anderen live sind; die <Link href="/profile/overlay" className="text-teal-300 hover:underline">Chat-Quelle für OBS</Link> zeigt dann alle Chats.
+      </p>
     </div>
   );
 }

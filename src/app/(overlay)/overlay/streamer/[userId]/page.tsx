@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import StreamerOverlayClient from "@/components/overlay/StreamerOverlayClient";
 import { getStreamerConfig, getStreamerOverlayPayload } from "@/lib/overlay-state";
+import { withTogether } from "@/lib/overlay-together";
 import { OVERLAY_SCENES, type OverlayScene } from "@/components/overlay/types";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,9 @@ export default async function StreamerOverlayPage({
   const previewOpt = preview
     ? { mode: preview === "event" ? "event" as const : "profile" as const, demo: demo === "ko" ? "ko" as const : "liga" as const }
     : undefined;
-  const initial = await getStreamerOverlayPayload(userId, stored.config, stored.control, previewOpt);
-  if (!initial) notFound();
+  const payload = await getStreamerOverlayPayload(userId, stored.config, stored.control, previewOpt);
+  if (!payload) notFound();
+  const initial = await withTogether(payload, userId, !!previewOpt);
 
   // Ohne (gültiges) `&scene=` folgt der Link der Szene aus der Live-Steuerung.
   const validScene: OverlayScene | null = OVERLAY_SCENES.includes(scene as OverlayScene) ? scene as OverlayScene : null;

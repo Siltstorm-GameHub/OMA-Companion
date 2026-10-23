@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Tv2, Check, RefreshCw, Save, Loader2, Radio, Move, Zap,
-  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid, Sparkles, Settings, Wand2,
+  Clapperboard, Moon, Smartphone, Rocket, LogOut, Music, Timer, LayoutGrid, Sparkles, Settings, Wand2, Users, MessageCircle,
 } from "@/components/icons";
 import { OverlayConnectionStatus, useOverlayConnection } from "@/components/overlay/OverlayConnectionStatus";
 import HelpTip from "@/components/overlay/HelpTip";
@@ -42,13 +42,14 @@ const CLIP_SOURCE_OPTIONS: { key: ClipSource; label: string; hint: string }[] = 
 
 
 export default function StreamerOverlaySettings({
-  overlayUrl: initialUrl, initialLayouts, initialPauseText, initialLite, initialPauseBackground, initialClips, activeEvent, streamingEvents,
+  overlayUrl: initialUrl, initialLayouts, initialPauseText, initialLite, initialTogetherHint, initialPauseBackground, initialClips, activeEvent, streamingEvents,
   initialSettingsTab = "look", everConnected, eventReason,
 }: {
   overlayUrl: string;
   initialLayouts: OverlayLayouts;
   initialPauseText: string | null;
   initialLite: boolean;
+  initialTogetherHint: boolean;
   initialPauseBackground: string;
   initialClips: ClipSceneConfig;
   activeEvent: { id: string; title: string } | null;
@@ -79,15 +80,16 @@ export default function StreamerOverlaySettings({
   const initialTab: LayoutTab = activeEvent || streamingEvents.length > 0 ? "event" : "profile";
   const [pauseText, setPauseText] = useState(initialPauseText ?? "");
   const [lite, setLite] = useState(initialLite);
+  const [togetherHint, setTogetherHint] = useState(initialTogetherHint);
   const [pauseBackground, setPauseBackground] = useState(initialPauseBackground);
   const [clipSource, setClipSource] = useState<ClipSource>(initialClips.source);
   const [clipsMuted, setClipsMuted] = useState(initialClips.muted);
   const [introText, setIntroText] = useState(initialClips.introText ?? "");
   const [outroText, setOutroText] = useState(initialClips.outroText ?? "");
   const clipsBody = () => ({ source: clipSource, muted: clipsMuted, introText: introText.trim() || null, outroText: outroText.trim() || null });
-  const snapshot = () => JSON.stringify({ pauseText: pauseText.trim(), lite, pauseBackground, clips: clipsBody() });
+  const snapshot = () => JSON.stringify({ pauseText: pauseText.trim(), lite, togetherHint, pauseBackground, clips: clipsBody() });
   const [saved, setSaved] = useState(() => JSON.stringify({
-    pauseText: initialPauseText ?? "", lite: initialLite, pauseBackground: initialPauseBackground,
+    pauseText: initialPauseText ?? "", lite: initialLite, togetherHint: initialTogetherHint, pauseBackground: initialPauseBackground,
     clips: { source: initialClips.source, muted: initialClips.muted, introText: initialClips.introText, outroText: initialClips.outroText },
   }));
   const [saving, setSaving] = useState(false);
@@ -99,6 +101,8 @@ export default function StreamerOverlaySettings({
   const introUrl = sceneUrl("intro");
   const clipsUrl = sceneUrl("clips");
   const outroUrl = sceneUrl("outro");
+  // Chat-Quelle: eigener Pfad mit demselben Token (siehe overlay/streamer/[userId]/chat).
+  const chatUrl = (() => { const u = new URL(overlayUrl); u.pathname = `${u.pathname.replace(/\/$/, "")}/chat`; return u.toString(); })();
 
   async function save() {
     setSaving(true);
@@ -106,7 +110,7 @@ export default function StreamerOverlaySettings({
       const res = await fetch("/api/profile/overlay", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pauseText: pauseText.trim() || null, lite, pauseBackground, clips: clipsBody() }),
+        body: JSON.stringify({ pauseText: pauseText.trim() || null, lite, togetherHint, pauseBackground, clips: clipsBody() }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
@@ -248,6 +252,35 @@ export default function StreamerOverlaySettings({
                   </span>
                 </span>
               </label>
+            </div>
+
+            <div className="glass rounded-2xl p-5 space-y-4">
+              <div>
+                <h2 className={`${sectionTitle} flex items-center gap-1.5`}>
+                  Gemeinsam streamen
+                  <HelpTip text="Gilt, wenn du in der Live-Steuerung eine Session mit anderen Streamern hast – oder bei einem Turnier, in dem weitere Teilnehmer live sind." />
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Zuschauer sehen alle Streams nebeneinander auf der „Zusammen ansehen“-Seite der App.
+                </p>
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={togetherHint} onChange={e => setTogetherHint(e.target.checked)} className="accent-teal-400 mt-1" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-sm text-gray-200 font-medium"><Users className="w-3.5 h-3.5 text-teal-300" /> Hinweis im Overlay</span>
+                  <span className="block text-xs text-gray-500">
+                    Die Logo-Kachel zeigt abwechselnd „Gemeinsam live mit …“ und den Link zu allen Streams, die Pause-Szene
+                    unten ebenfalls.
+                  </span>
+                </span>
+              </label>
+              <div>
+                <SceneLink icon={MessageCircle} label="Chat für OBS" hint="eigene Quelle, Größe frei wählbar" url={chatUrl} dragUrl={obsDragUrl(chatUrl, "OMA Chat", { width: 420, height: 640 })} />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Zeigt deinen Twitch-Chat und beim gemeinsamen Streamen automatisch die Chats aller Beteiligten – mit
+                  farbiger Markierung, aus welchem Kanal eine Nachricht kommt. Durchsichtig, neue Nachrichten unten.
+                </p>
+              </div>
             </div>
 
             <div className="glass rounded-2xl p-5 space-y-3">

@@ -509,6 +509,8 @@ export async function getStreamerOverlayPayload(
     clips: preview ? { ...config.clips, muted: true } : config.clips,
     countdownUntil: control.countdownUntil, clipSkip: control.clipSkip,
     pauseLayout: config.pauseLayout ?? defaultPauseLayout(), clipLayout: config.clipLayout ?? defaultClipLayout(),
+    // Ergänzt lib/overlay-together.ts (withTogether) — dort, weil watch-together dieses Modul nutzt.
+    together: null, togetherHint: config.togetherHint,
   };
   const zoom = activeZoom(control);
 

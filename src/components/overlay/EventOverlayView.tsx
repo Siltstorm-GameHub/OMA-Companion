@@ -8,7 +8,7 @@ import { BracketPanel, TablePanel, SeriesTablePanel, ParticipantsPanel } from ".
 import {
   ELEMENT_SIZE, STACKABLE_ELEMENTS,
   type ElementKey, type EventOverlayState, type OverlayLayout, type OverlayMatch, type OverlayUser,
-  type OverlayParticipant, type OverlayStreamer, type SeriesTable,
+  type OverlayParticipant, type OverlayStreamer, type SeriesTable, type OverlayTogether,
 } from "./types";
 
 /** 1920×1080-Bühne, auf der alle Overlay-Arten ihre Kacheln absolut positionieren.
@@ -38,12 +38,14 @@ export function OverlayStage({ children, lite = false }: { children: React.React
  * per Props (EventOverlayClient bzw. StreamerOverlayClient öffnen den jeweiligen Stream).
  */
 export default function EventOverlayView({
-  eventId, state, layout, lite = false,
+  eventId, state, layout, lite = false, together,
 }: {
   eventId: string;
   state: EventOverlayState;
   layout: OverlayLayout<ElementKey>;
   lite?: boolean;
+  /** Gemeinsames Streamen (Hinweis in der Marken-Kachel) — nur beim festen Streamer-Link. */
+  together?: OverlayTogether | null;
 }) {
   const userByUserId = new Map(state.participants.map(p => [p.userId, p.user]));
   const userOf = (userId: string | null): OverlayUser | undefined => (userId ? userByUserId.get(userId) : undefined);
@@ -78,6 +80,7 @@ export default function EventOverlayView({
       elementKey={key} matches={matches} userOf={userOf} format={state.format} statFields={state.statFields}
       participants={state.participants} streamer={state.streamer} eventTitle={state.title} game={state.game}
       isLive={isLive} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} compact={compact}
+      together={together}
     />
   );
 
@@ -162,7 +165,7 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 export function ElementContent({
   elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
-  seriesTable, compact = true,
+  seriesTable, compact = true, together,
 }: {
   elementKey: ElementKey;
   matches: OverlayMatch[];
@@ -180,9 +183,10 @@ export function ElementContent({
    *  Stats statt nur der jeweils entscheidenden — in der kleinen, stapelbaren Standardkachel
    *  waere das zu viel Text fuer den verfuegbaren Platz. */
   compact?: boolean;
+  together?: OverlayTogether | null;
 }) {
   switch (elementKey) {
-    case "brand":        return <IdentityFlipTile streamer={streamer} />;
+    case "brand":        return <IdentityFlipTile streamer={streamer} together={together} />;
     case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
     case "ticker": {
       const match = pickTickerMatch(matches);

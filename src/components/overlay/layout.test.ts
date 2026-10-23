@@ -56,7 +56,10 @@ describe("Overlay-Layout", () => {
     assert.equal(cfg.pauseText, "Gleich zurück");
     assert.equal(cfg.lite, true);
     assert.equal(cfg.pauseBackground, "dark");
-    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false, pauseBackground: "dark", clips: DEFAULT_CLIP_CONFIG, pauseLayout: null, clipLayout: null });
+    assert.deepEqual(parseStreamerConfig("kaputt"), { event: null, profile: null, pauseText: null, lite: false, pauseBackground: "dark", clips: DEFAULT_CLIP_CONFIG, pauseLayout: null, clipLayout: null, togetherHint: true });
+    // Hinweis "Gemeinsam live mit …": Standard an, nur ein ausdrückliches false schaltet ab.
+    assert.equal(cfg.togetherHint, true);
+    assert.equal(parseStreamerConfig(JSON.stringify({ togetherHint: false })).togetherHint, false);
     assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "space" })).pauseBackground, "space");
     assert.equal(parseStreamerConfig(JSON.stringify({ pauseBackground: "gibtsnicht" })).pauseBackground, "dark");
     assert.equal(sanitizeLayout({ elements: {} }, ELEMENT_KEYS), null);

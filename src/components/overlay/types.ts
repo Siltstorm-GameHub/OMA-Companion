@@ -224,6 +224,20 @@ export type StreamerOverlayPayload = (
   /** Layouts der Pausen- und der Clip-Szenen (gespeichert oder Standard). */
   pauseLayout: OverlayLayout<PauseElementKey>;
   clipLayout: OverlayLayout<ClipElementKey>;
+  /** "Zusammen ansehen": laufende Einladungs-Session oder Mitstreamer im selben Event (null = keins). */
+  together: OverlayTogether | null;
+  /** Hinweis "Gemeinsam mit …" in der Marken-Kachel zeigen (Einstellung, Standard an). */
+  togetherHint: boolean;
+};
+
+/** Gemeinsames Streamen — Grundlage für den Overlay-Hinweis und die OBS-Chat-Quelle. */
+export type OverlayTogether = {
+  /** Mitstreamer, die gerade live sind — leer = kein Hinweis im Overlay. */
+  partners: string[];
+  /** Kanäle des gemeinsamen Chats, der eigene zuerst. */
+  channels: { login: string; name: string }[];
+  /** Link für Zuschauer ohne https://, z.B. "oma-app.de/z/abcd2345". */
+  link: string;
 };
 
 /** Szenen des festen Streamer-Links (`&scene=…`) — je OBS-Szene eine eigene Browser-Quelle. */

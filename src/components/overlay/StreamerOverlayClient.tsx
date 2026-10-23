@@ -34,9 +34,12 @@ export default function StreamerOverlayClient({
   }
   if (active === "pause") return <PauseView payload={payload} />;
 
+  // Hinweis "Gemeinsam live mit …" in der Marken-Kachel (abschaltbar in den Einstellungen).
+  const together = payload.togetherHint ? payload.together : null;
+
   // key: beim Moduswechsel (oder Wechsel auf ein anderes Event) frisch mounten — Rotation und
   // Zoom-Zustand des vorherigen Inhalts sollen nicht in den neuen hineinlaufen.
   return payload.mode === "event"
-    ? <EventOverlayView key={`event:${payload.eventId}`} eventId={payload.eventId} state={payload.event} layout={payload.layout} lite={payload.lite} />
-    : <ProfileOverlayView key="profile" state={payload.profile} layout={payload.layout} lite={payload.lite} control={payload.profileControl} />;
+    ? <EventOverlayView key={`event:${payload.eventId}`} eventId={payload.eventId} state={payload.event} layout={payload.layout} lite={payload.lite} together={together} />
+    : <ProfileOverlayView key="profile" state={payload.profile} layout={payload.layout} lite={payload.lite} control={payload.profileControl} together={together} />;
 }

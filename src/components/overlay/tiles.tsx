@@ -7,10 +7,11 @@
 import { useEffect, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import RankedAvatar from "@/components/RankedAvatar";
+import { Users } from "@/components/icons";
 import { AutoScrollViewport } from "./AutoScrollViewport";
 import {
   displayName, ELEMENT_SIZE, TICKER_ENTRIES_WIDTH,
-  type OverlayMatch, type OverlayUser, type OverlayStreamer,
+  type OverlayMatch, type OverlayUser, type OverlayStreamer, type OverlayTogether,
 } from "./types";
 
 export function parseStatFields(json: string | null | undefined): string[] {
@@ -59,12 +60,16 @@ export const FLIP_HEIGHT = ELEMENT_SIZE.brand.height;
  *  des Streamers, der diesen Link erzeugt hat. Ohne bekannten Streamer (sehr alte Links, oder
  *  wenn der User seither gelöscht wurde) bleibt sie als einzelne, nicht drehende OMA-Fläche
  *  stehen — ein Flip auf eine leere Rückseite wäre sinnlos. */
-export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | null }) {
-  const [flipped, setFlipped] = useState(false);
+export function IdentityFlipTile({ streamer, together }: { streamer: OverlayStreamer | null; together?: OverlayTogether | null }) {
+  const [flips, setFlips] = useState(0);
+  const flipped = flips % 2 === 1;
+  // Gemeinsames Streamen: Die Vorderseite wechselt jede zweite Runde zwischen OMA und "Gemeinsam
+  // live mit …" — getauscht wird beim Zurückdrehen, solange sie noch abgewandt ist.
+  const showTogether = !!together?.partners.length && Math.floor(flips / 2) % 2 === 1;
 
   useEffect(() => {
     if (!streamer) return;
-    const t = setInterval(() => setFlipped(f => !f), FLIP_INTERVAL_MS);
+    const t = setInterval(() => setFlips(f => f + 1), FLIP_INTERVAL_MS);
     return () => clearInterval(t);
   }, [streamer]);
 
@@ -103,7 +108,7 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
         }}
       >
-        {omaFace}
+        {showTogether ? <TogetherFace together={together!} /> : omaFace}
         <FlipFace back>
           <RankedAvatar badge={null} userId={streamer.id} src={streamer.image} alt={name} size={48} />
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
@@ -120,6 +125,29 @@ export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | nul
         </FlipFace>
       </div>
     </div>
+  );
+}
+
+/** "Gemeinsam live mit A & B" plus Link zur gemeinsamen Ansicht — Zuschauer finden so alle
+ *  Perspektiven, ohne dass der Streamer den Link nennen muss. */
+function TogetherFace({ together }: { together: OverlayTogether }) {
+  const names = together.partners;
+  const joined = names.length > 1 ? `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}` : names[0];
+  return (
+    <FlipFace>
+      <Users size={34} style={{ color: "#5eead4", flexShrink: 0, filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)" }}>
+          Gemeinsam live mit
+        </span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {joined}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "#5eead4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          Alle Streams: {together.link}
+        </span>
+      </div>
+    </FlipFace>
   );
 }
 
