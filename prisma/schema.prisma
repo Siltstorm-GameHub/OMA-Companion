@@ -431,6 +431,33 @@ model OverlayClipBlock {
 // zu sehen. Twitch nennt die Freigabe nicht je Clip; erkannt wird sie an der automatischen
 // Kennzeichnung "MatureGame" laufender Community-Kanäle (source "twitch") oder von Moderatoren
 // gesetzt (source "admin"). Siehe src/lib/overlay-clips.ts.
+// "Zusammen ansehen" — Sessions, zu denen ein Streamer andere Mitglieder einlädt (Live-Steuerung).
+// Fester, teilbarer Link /zusammen?s=<slug>; gezeigt werden die bestätigten Mitglieder. Endet durch
+// den Host oder automatisch nach 12h (siehe src/lib/watch-sessions.ts). Lose Referenzen auf User-IDs.
+model WatchSession {
+  id         String               @id @default(cuid())
+  slug       String               @unique // kurzer Link-Teil
+  title      String?
+  hostUserId String
+  createdAt  DateTime             @default(now())
+  endedAt    DateTime?
+  members    WatchSessionMember[]
+
+  @@index([hostUserId])
+}
+
+model WatchSessionMember {
+  id        String       @id @default(cuid())
+  sessionId String
+  userId    String
+  status    String // "invited" | "accepted" | "declined"
+  createdAt DateTime     @default(now())
+  session   WatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
 // Lebenszeichen offener Streamer-Overlays — für "In OBS verbunden ✓" in Einstellungen und
 // Live-Steuerung. Je User und Quelle (scene = feste Szene aus dem Link oder "auto") eine Zeile,
 // alle ~30s aktualisiert, solange der SSE-Stream läuft. Vorschauen in der App zählen nicht.

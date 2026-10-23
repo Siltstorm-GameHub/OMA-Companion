@@ -10,6 +10,7 @@ import {
 import { SCENE_LABELS, type OverlayControl, type OverlayScene } from "@/components/overlay/types";
 import { OverlayConnectionStatus, useOverlayConnection } from "@/components/overlay/OverlayConnectionStatus";
 import EventModeHint from "@/components/overlay/EventModeHint";
+import WatchSessionPanel from "./WatchSessionPanel";
 import type { EventModeReason } from "@/lib/overlay-state";
 
 type ElementInfo = { key: string; label: string; available: boolean; zoomable: boolean };
@@ -265,6 +266,9 @@ export default function LiveControl() {
             : <>Gilt für deinen OBS-Link ohne feste Szene. {state.clipCount > 0 && <>{state.clipCount} Community-Clips bereit.</>}</>}
         </p>
       </div>
+
+      {/* ── Gemeinsam streamen (Zusammen ansehen) ── */}
+      <WatchSessionPanel />
 
       {/* ── Intro-Countdown ── */}
       <div className="glass rounded-2xl p-4 space-y-3">

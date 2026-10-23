@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, Radio, Trophy, Users } from "@/components/icons";
+import { Eye, Radio, Trophy, Users, Tv2 } from "@/components/icons";
+import { watchGroupHref } from "@/lib/watch-group-href";
 import type { WatchGroup, WatchMember, WatchOverview as Overview } from "@/lib/watch-together";
 
 const MAX = 4;
-const watchUrl = (members: WatchMember[]) => `/zusammen?c=${members.map(m => m.twitchLogin).join(",")}`;
 
 /**
  * Übersicht von /zusammen: automatisch erkannte Gruppen (gleiches Spiel), laufende Events mit
@@ -29,6 +29,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
         </p>
       </div>
 
+      {(data.sessions?.length ?? 0) > 0 && <GroupList icon={Tv2} title="Streamen gerade gemeinsam" groups={data.sessions!} />}
       {data.events.length > 0 && <GroupList icon={Trophy} title="Laufende Events" groups={data.events} />}
       {data.auto.length > 0 && <GroupList icon={Radio} title="Spielen gerade dasselbe" groups={data.auto} />}
 
@@ -86,7 +87,7 @@ function GroupList({ icon: Icon, title, groups }: { icon: typeof Users; title: s
         {groups.map(g => (
           <Link
             key={g.key}
-            href={g.key.startsWith("event:") ? `/zusammen?event=${g.key.slice(6)}` : watchUrl(g.members)}
+            href={watchGroupHref(g)}
             className="glass rounded-2xl p-4 hover:border-teal-500/40 border border-white/[0.06] transition-all"
           >
             <span className="block text-sm font-semibold text-white truncate">{g.label}</span>

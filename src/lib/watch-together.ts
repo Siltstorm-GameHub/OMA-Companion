@@ -25,9 +25,9 @@ export type WatchMember = {
 
 export type WatchGroup = { key: string; label: string; game: string | null; members: WatchMember[] };
 
-type UserRow = { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null };
+export type UserRow = { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null };
 
-async function toMembers(users: UserRow[]): Promise<WatchMember[]> {
+export async function toMembers(users: UserRow[]): Promise<WatchMember[]> {
   const live = await getCommunityLive();
   return users
     .filter(u => u.twitchLogin)
@@ -46,7 +46,7 @@ async function toMembers(users: UserRow[]): Promise<WatchMember[]> {
     });
 }
 
-const memberSelect = { id: true, name: true, username: true, image: true, twitchLogin: true } as const;
+export const memberSelect = { id: true, name: true, username: true, image: true, twitchLogin: true } as const;
 
 /** Kanäle aus der URL (?c=a,b) — nur Community-Mitglieder, Reihenfolge wie angefragt, max. 4. */
 export async function resolveWatchChannels(logins: string[]): Promise<WatchMember[]> {
@@ -89,7 +89,7 @@ export async function resolveEventWatch(eventId: string): Promise<{ title: strin
  *   - events: laufende Events mit mindestens 2 live streamenden Beteiligten,
  *   - live:   alle Live-Mitglieder (zum Selbst-Zusammenstellen).
  */
-export type WatchOverview = { auto: WatchGroup[]; events: WatchGroup[]; live: WatchMember[] };
+export type WatchOverview = { auto: WatchGroup[]; events: WatchGroup[]; live: WatchMember[]; sessions?: WatchGroup[] };
 const overviewCache = createCache<WatchOverview>();
 const OVERVIEW_TTL_MS = 60_000;
 

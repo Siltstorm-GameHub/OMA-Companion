@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users } from "@/components/icons";
 import type { WatchGroup, WatchOverview } from "@/lib/watch-together";
+import { watchGroupHref } from "@/lib/watch-group-href";
 
 /**
  * Dashboard-Hinweis auf "Zusammen ansehen": zeigt Gruppen, die gerade gemeinsam (gleiches Spiel
@@ -16,7 +17,7 @@ export default function WatchTogetherTeaser() {
     let cancelled = false;
     fetch("/api/zusammen", { cache: "no-store" })
       .then(r => (r.ok ? r.json() : null))
-      .then((d: WatchOverview | null) => { if (!cancelled && d) setGroups([...d.events, ...d.auto].slice(0, 3)); })
+      .then((d: WatchOverview | null) => { if (!cancelled && d) setGroups([...(d.sessions ?? []), ...d.events, ...d.auto].slice(0, 3)); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -31,7 +32,7 @@ export default function WatchTogetherTeaser() {
         {groups.map(g => (
           <Link
             key={g.key}
-            href={g.key.startsWith("event:") ? `/zusammen?event=${g.key.slice(6)}` : `/zusammen?c=${g.members.map(m => m.twitchLogin).join(",")}`}
+            href={watchGroupHref(g)}
             className="text-sm text-gray-200 hover:text-teal-300 truncate"
           >
             <span className="font-semibold">{g.members.map(m => m.name).join(" + ")}</span>
