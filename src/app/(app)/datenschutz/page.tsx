@@ -104,7 +104,12 @@ export default function DatenschutzPage() {
         </li>
         <li>
           <strong>Twitch</strong> (USA) — eingebettete Streams und Clips werden direkt von Twitch geladen; dabei
-          erhält Twitch deine IP-Adresse. Live-Status wird über die Twitch-Schnittstelle abgefragt.
+          erhält Twitch deine IP-Adresse. Live-Status wird über die Twitch-Schnittstelle abgefragt. Bei „Zusammen
+          ansehen“ wird der Chat der gezeigten Kanäle direkt von deinem Browser bei Twitch abgerufen. Meldest du
+          dich dort freiwillig mit Twitch an, um mitzuschreiben, erhalten wir von Twitch deinen Twitch-Namen und
+          ein Zugangs-Token, das ausschließlich das Senden von Chat-Nachrichten in deinem Namen erlaubt. Es wird
+          nicht in unserer Datenbank, sondern verschlüsselt in einem Cookie auf deinem Gerät gespeichert und beim
+          Abmelden gelöscht und bei Twitch widerrufen.
         </li>
         <li>
           Spiele-Plattformen (z. B. Steam, Epic, Xbox) — Cover-Bilder und Spielinfos werden von deren Servern

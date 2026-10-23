@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, Loader2, MessageCircle } from "@/components/icons";
 import type { ChatMessage } from "@/lib/twitch-irc";
 import { useMultiChat } from "./useMultiChat";
+import ChatComposer from "./ChatComposer";
 
 export type ChatChannel = { login: string; name: string; color: string };
 
 /**
  * Chat-Spalte von "Zusammen ansehen": Reiter "Gemeinsam" (alle Kanäle in einer Liste, je Kanal
- * eine Farbe) plus je Kanal Twitchs eigener Chat — dort kann schreiben, wer im Browser bei Twitch
- * angemeldet ist (bis das Schreiben direkt in "Gemeinsam" per Twitch-Login kommt).
+ * eine Farbe; mitschreiben per Twitch-Login über ChatComposer) plus je Kanal Twitchs eigener Chat.
  */
-export default function MultiChatPanel({ channels }: { channels: ChatChannel[] }) {
+export default function MultiChatPanel({ channels, activeChannel = null }: { channels: ChatChannel[]; /** Stream mit Ton — Standard-Ziel beim Schreiben. */ activeChannel?: string | null }) {
   const [tab, setTab] = useState<string>("all");
   const { messages, status } = useMultiChat(channels.map(c => c.login));
   const byLogin = new Map(channels.map(c => [c.login, c]));
@@ -41,7 +41,10 @@ export default function MultiChatPanel({ channels }: { channels: ChatChannel[] }
             Der gemeinsame Chat ist gerade nicht erreichbar. Oben findest du den Twitch-Chat jedes Kanals.
           </div>
         ) : (
-          <CombinedChat messages={messages} byLogin={byLogin} status={status} />
+          <>
+            <CombinedChat messages={messages} byLogin={byLogin} status={status} />
+            <ChatComposer channels={channels} activeChannel={activeChannel} />
+          </>
         )
       ) : (
         <div className="flex-1 min-h-0">

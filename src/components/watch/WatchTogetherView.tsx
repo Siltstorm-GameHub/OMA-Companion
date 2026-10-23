@@ -186,7 +186,7 @@ export default function WatchTogetherView({
 
           {/* Gemeinsamer Chat */}
           <div className="lg:w-[340px] shrink-0 h-[420px] lg:h-auto lg:min-h-[480px] lg:max-h-[calc(100dvh-90px)]">
-            <MultiChatPanel channels={chatChannels} />
+            <MultiChatPanel channels={chatChannels} activeChannel={mobile ? mobileLogin : audioLogin} />
           </div>
         </div>
       )}
