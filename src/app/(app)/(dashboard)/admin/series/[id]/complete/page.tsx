@@ -2,23 +2,8 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesCompleteClient from "./SeriesCompleteClient";
-
-type StatConfig = {
-  participationPoints: number;
-  stats: { field: string; pointsPer: number }[];
-  mvpStatField?: string;
-  winnerStatKeys?: string[];
-  winnerSeriesStatKey?: string;
-  matchWinStatKeys?: string[];
-};
-
-function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
-  if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
-  if (cfg.winnerSeriesStatKey) return [cfg.winnerSeriesStatKey];
-  if (seriesWinnerTargetField) return [seriesWinnerTargetField];
-  return [];
-}
-type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
+import { computeStatStandings, type LegacyStandingRow, type StatConfig } from "@/lib/series-event-points";
+import { isOpenSeasonEvent } from "@/lib/series-seasons";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -35,79 +20,6 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
   try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
 }
 
-function computeStandings(
-  events: {
-    id: string; status: string; completionData: string | null;
-    registrations: { userId: string }[];
-    matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
-    finalRankingJson: string | null;
-  }[],
-  cfg: StatConfig,
-  legacy: LegacyRow[],
-) {
-  const evPart: Record<string, number> = {};
-  const evStats: Record<string, Record<string, number>> = {};
-
-  for (const ev of events) {
-    if (!ev.completionData) continue;
-    let cd: { gamePhaseComplete?: boolean; mvpUserId?: string; eventWinnerId?: string; eventWinnerIds?: string[]; seriesWinnerTargetField?: string } = {};
-    try { cd = JSON.parse(ev.completionData); } catch { continue; }
-    if (!cd.gamePhaseComplete) continue;
-
-    for (const { userId: uid } of ev.registrations) {
-      evPart[uid] = (evPart[uid] ?? 0) + 1;
-    }
-    const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
-    for (const match of ev.matches) {
-      for (const entry of match.entries) {
-        if (!entry.userId || !entry.statsJson) continue;
-        let s: Record<string, number> = {};
-        try { s = JSON.parse(entry.statsJson); } catch { continue; }
-        for (const { field } of cfg.stats) {
-          const v = matchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
-          if (v) { if (!evStats[entry.userId]) evStats[entry.userId] = {}; evStats[entry.userId][field] = (evStats[entry.userId][field] ?? 0) + v; }
-        }
-      }
-    }
-    if (cd.mvpUserId && cfg.mvpStatField) {
-      const uid = cd.mvpUserId;
-      if (!evStats[uid]) evStats[uid] = {};
-      evStats[uid][cfg.mvpStatField] = (evStats[uid][cfg.mvpStatField] ?? 0) + 1;
-    }
-    const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-    const winnerTargetKeys = resolveWinnerTargetKeys(cfg, cd.seriesWinnerTargetField);
-    if (winnerIds.length > 0 && winnerTargetKeys.length > 0) {
-      for (const uid of winnerIds) {
-        if (!evStats[uid]) evStats[uid] = {};
-        for (const key of winnerTargetKeys) evStats[uid][key] = (evStats[uid][key] ?? 0) + 1;
-      }
-    }
-  }
-
-  const legPts: Record<string, number> = {};
-  const legPart: Record<string, number> = {};
-  const legStat: Record<string, Record<string, number>> = {};
-  for (const row of legacy) {
-    legPts[row.userId] = (legPts[row.userId] ?? 0) + row.points;
-    legPart[row.userId] = (legPart[row.userId] ?? 0) + row.participations;
-    if (!legStat[row.userId]) legStat[row.userId] = {};
-    for (const [f, v] of Object.entries(row.stats ?? {})) {
-      legStat[row.userId][f] = (legStat[row.userId][f] ?? 0) + v;
-    }
-  }
-
-  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(legPts)]);
-  return [...allUids].map(uid => {
-    const ep = evPart[uid] ?? 0;
-    const es = evStats[uid] ?? {};
-    let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints;
-    for (const { field, pointsPer } of cfg.stats) totalPoints += (es[field] ?? 0) * pointsPer;
-    const displayStats: Record<string, number> = { ...(legStat[uid] ?? {}) };
-    for (const [f, v] of Object.entries(es)) displayStats[f] = (displayStats[f] ?? 0) + v;
-    return { userId: uid, totalPoints, participations: (legPart[uid] ?? 0) + ep, stats: displayStats };
-  }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
-}
-
 export default async function SeriesCompletePage({ params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;
@@ -118,7 +30,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
       events: {
         orderBy: { startAt: "asc" },
         include: {
-          registrations: { select: { userId: true } },
+          registrations: { select: { userId: true, role: true } },
           matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
         },
       },
@@ -131,11 +43,15 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
   })() ?? { participationPoints: 0, stats: [] };
 
-  const legacyRows: LegacyRow[] = (() => {
+  const legacyRows: LegacyStandingRow[] = (() => {
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  const standings = computeStandings(series.events as Parameters<typeof computeStandings>[0], statCfg, legacyRows);
+  // Dieselbe Berechnung wie die öffentliche Gesamttabelle der Reihe (eingefrorene Event-Konfiguration,
+  // Ausschlüsse, Umfrage- und Dominion-Punkte) — sonst würde die vorgeschlagene Endrangliste von der
+  // Tabelle abweichen, die die Spieler sehen. Reine Zuschauer erhalten keine Endplatzierung.
+  const { rows } = computeStatStandings(series.events, statCfg, legacyRows);
+  const standings = rows.filter(r => r.participations > 0 || r.spectatorParticipations === 0);
 
   // Collect all participants (unique) in order of standings
   const allParticipantIds = standings.map(r => r.userId);
@@ -151,7 +67,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
   // userStats: userId → { totalPoints, participations, ...stats }
   const userStats: Record<string, Record<string, number>> = {};
   for (const row of standings) {
-    userStats[row.userId] = { totalPoints: row.totalPoints, participations: row.participations, ...row.stats };
+    userStats[row.userId] = { ...row.stats, totalPoints: row.totalPoints, participations: row.participations };
   }
 
   const isReEdit = series.status === "archived";
@@ -160,6 +76,12 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
   })();
   const pollPhaseComplete = existingCompletion.pollPhaseComplete === true;
   const rewardsConfig = parseRewards(series.placementRewardsJson);
+
+  // Noch offene Termine — beim ersten Abschluss fragt der Assistent, was mit ihnen passiert
+  const openEvents = isReEdit ? [] : series.events
+    .filter(isOpenSeasonEvent)
+    .map(e => ({ id: e.id, title: e.title, startAt: e.startAt.toISOString(), registrations: e.registrations.length }));
+  const isTournamentSeries = series.events[0]?.type === "tournament";
 
   return (
     <SeriesCompleteClient
@@ -173,6 +95,8 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
       isReEdit={isReEdit}
       pollPhaseComplete={pollPhaseComplete}
       initialData={isReEdit ? existingCompletion : null}
+      openEvents={openEvents}
+      isTournamentSeries={isTournamentSeries}
     />
   );
 }

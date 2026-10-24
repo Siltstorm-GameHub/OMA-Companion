@@ -9,6 +9,7 @@ import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import { GEMS_MONSTER_CATALOG } from "@/lib/gems/gems-monster-catalog";
 import { fromDatetimeLocalBerlin } from "@/lib/time";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
+import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
 import { clearDraft, useInitialDraft, writeDraft } from "./draft";
 import { FORMATS, type EventTemplate, type SeriesOption, type SquadOption, type PollConfig, type PlacementReward, type StatRow, type SeasonPrefill } from "./shared";
 
@@ -137,6 +138,8 @@ export function useEventWizard({
   const [spectatorCoins, setSpectatorCoins]     = useState(seasonPrefill?.spectatorCoins ?? tpl?.spectatorCoins ?? 5);
   const [spectatorRankPts, setSpectatorRankPts] = useState(seasonPrefill?.spectatorRankPts ?? tpl?.spectatorRankPts ?? 0);
   const [polls, setPolls] = useState<PollConfig[]>(seasonPrefill?.polls ?? tpl?.polls ?? []);
+  // Turniervorlage der Reihe (nur Reihen-Modus) — neue Termine übernehmen sie, siehe lib/series-seasons.ts
+  const [tournamentTemplate, setTournamentTemplate] = useState<TournamentTemplate>(seasonPrefill?.tournamentTemplate ?? {});
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const isEventMode  = wizardMode === "event";
@@ -349,6 +352,21 @@ export function useEventWizard({
     const t = setTimeout(() => writeDraft(JSON.parse(draftJson)), 600);
     return () => clearTimeout(t);
   }, [draftJson, draftEnabled, pendingDraft, wizardMode]);
+
+  // Reihe gewählt: Check-in und Punktemodus aus ihrer Turniervorlage vorbelegen (bleiben änderbar)
+  function chooseSeries(id: string) {
+    setSelectedSeriesId(id);
+    const t = parseTournamentTemplate(series.find(s => s.id === id)?.tournamentTemplateJson);
+    if (t.checkInEnabled) {
+      setCheckInEnabled(true);
+      setCheckInMinutes(t.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
+    }
+    if (t.matchResultPoints) {
+      setPointsMode("matchResult");
+      setCoinsWin(t.matchResultPoints.win);
+      setCoinsDraw(t.matchResultPoints.draw);
+    }
+  }
 
   function restoreDraft() {
     if (!pendingDraft) return;
@@ -568,7 +586,7 @@ export function useEventWizard({
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         groupId: seasonPrefill?.groupId,
-        seasonNumber: seasonPrefill?.seasonNumber,
+        tournamentTemplateJson: eventType === "tournament" ? tournamentTemplate : null,
       }),
     });
 
@@ -583,7 +601,8 @@ export function useEventWizard({
     clearDraft();
     toast.success(
       (seasonPrefill ? `Saison „${seriesName}" gestartet` : `Eventreihe „${seriesName}" erstellt`) +
-      (created.eventsCreated > 0 ? ` – ${created.eventsCreated} Termine angelegt` : "") + "!"
+      (created.eventsCreated > 0 ? ` – ${created.eventsCreated} Termine angelegt` : "") +
+      (created.movedEvents > 0 ? ` – ${created.movedEvents} offene Termine aus der Vorsaison übernommen` : "") + "!"
     );
     router.push(`/admin/series/${created.id}`);
   }
@@ -600,6 +619,7 @@ export function useEventWizard({
     initialSquadId,
     initialMode,
     seasonPrefill,
+    tournamentTemplate, setTournamentTemplate,
     router,
     wizardMode,
     setWizardMode,
@@ -632,7 +652,7 @@ export function useEventWizard({
     seriesMode,
     setSeriesMode,
     selectedSeriesId,
-    setSelectedSeriesId,
+    setSelectedSeriesId: chooseSeries,
     newSeriesName,
     setNewSeriesName,
     newSeriesDesc,

@@ -1,16 +1,28 @@
 "use client";
 import { Check, Plus } from "@/components/icons";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 4 (Series): Event-Einstellungen ─────────────────────────────────────
 export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
-  const { spectatorMode, variousGames, statRows, polls, eventStatFields, setEventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints } = w;
+  const { eventType, seriesFormat, tournamentTemplate, setTournamentTemplate, spectatorMode, variousGames, statRows, polls, eventStatFields, setEventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints } = w;
   const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
   const matchWinStatKeys = statRows.filter(r => r.isMatchWinStat).map(r => r.field);
   return (
     <div className="space-y-6">
+      {eventType === "tournament" && (
+        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-teal-200">Turniervorlage</p>
+            <p className="text-xs text-gray-500">
+              Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
+            </p>
+          </div>
+          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} />
+        </div>
+      )}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">📋</span>

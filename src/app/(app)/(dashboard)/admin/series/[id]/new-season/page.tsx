@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { randomUUID } from "crypto";
 import EventSetupWizard from "../../../events/new/EventSetupWizard";
 import type { EventCategory, EventGenre } from "@prisma/client";
+import { parseTournamentTemplate } from "@/lib/series-seasons";
 
 type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -66,6 +67,15 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     redirect(`/admin/series/${id}/complete`);
   }
 
+  // Pro Saison-Gruppe darf nur eine Saison aktiv sein — läuft schon eine (z.B. nach Doppelklick oder
+  // beim Aufruf aus einer älteren Saison), direkt dorthin statt eine zweite anzulegen.
+  const groupSeasons = series.groupId
+    ? await prisma.eventSeries.findMany({ where: { groupId: series.groupId }, select: { id: true, status: true, seasonNumber: true } })
+    : [];
+  const activeSeason = groupSeasons.find(s => s.status === "active");
+  if (activeSeason) redirect(`/admin/series/${activeSeason.id}`);
+  const nextSeasonNumber = Math.max(series.seasonNumber ?? 1, ...groupSeasons.map(s => s.seasonNumber ?? 1)) + 1;
+
   // Repräsentatives Event der alten Saison, um Zuschauer-Modus & Event-Typ (Community/Turnier) abzuleiten —
   // diese Werte werden nicht direkt auf der EventSeries gespeichert.
   const sampleEvent = await prisma.event.findFirst({
@@ -101,8 +111,8 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     oldSeriesId: series.id,
     oldSeriesName: series.name,
     groupId,
-    seasonNumber: (series.seasonNumber ?? 1) + 1,
-    name: suggestNextSeasonName(series.name, series.seasonNumber ?? 1),
+    seasonNumber: nextSeasonNumber,
+    name: suggestNextSeasonName(series.name, nextSeasonNumber - 1),
     description: series.description ?? "",
     category: (series.category ?? "casual") as EventCategory,
     eventType: (sampleEvent?.type === "tournament" ? "tournament" : "community") as "community" | "tournament",
@@ -134,6 +144,7 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
       { place: 3, coins: 100, rankPoints: 1 },
     ],
     polls,
+    tournamentTemplate: parseTournamentTemplate(series.tournamentTemplateJson),
     dominion: {
       enabled: statCfg.dominionBonus?.enabled ?? false,
       triggerStats: statCfg.dominionBonus?.triggerStats ?? [],

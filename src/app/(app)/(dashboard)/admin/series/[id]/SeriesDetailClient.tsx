@@ -21,6 +21,8 @@ import { resolveSeriesColor } from "@/lib/series-icons";
 import IconPicker from "@/components/IconPicker";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
+import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
+import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -179,11 +181,30 @@ function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SquadOption = { id: string; name: string };
 
-export default function SeriesDetailClient({ series, allUsers, squads = [], hasActiveSibling = true, isModerator = true }: { series: any; allUsers: User[]; squads?: SquadOption[]; hasActiveSibling?: boolean; isModerator?: boolean }) {
+export default function SeriesDetailClient({
+  series, allUsers, squads = [], hasActiveSibling = true, isModerator = true,
+  isAdmin = false, canUndoCompletion = false, seasonCount = 1, groupStatFields = [],
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  series: any; allUsers: User[]; squads?: SquadOption[]; hasActiveSibling?: boolean; isModerator?: boolean;
+  isAdmin?: boolean;
+  /** Archivierte Saison ohne spätere Saison — der Abschluss kann noch aufgehoben werden */
+  canUndoCompletion?: boolean;
+  /** Anzahl Saisons der Saison-Gruppe (inkl. dieser) */
+  seasonCount?: number;
+  /** Alle Stat-Felder der Saison-Gruppe (für das Zusammenführen in der All-Time-Tabelle) */
+  groupStatFields?: string[];
+}) {
   const router = useRouter();
+  // Abgeschlossene Saison: Punkteregeln, Belohnungen, Umfragen, Legacy, Spiel und Format sind gesperrt
+  const isArchived = series.status === "archived";
+  const isTournamentSeries = (series.events as { type?: string }[]).some(e => e.type === "tournament");
+  const [tournamentTemplate, setTournamentTemplate] = useState<TournamentTemplate>(() => parseTournamentTemplate(series.tournamentTemplateJson));
+  const [statAliases, setStatAliases] = useState<StatAliases>(() => parseStatAliases(series.statAliasesJson));
+  const [undoConfirm, setUndoConfirm] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabKey>("general");
   const [generatingNext, setGeneratingNext] = useState(false);
@@ -323,6 +344,10 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         icon:                 icon || null,
         coverImageUrl:        coverImageUrl.trim() || null,
         category:             category || null,
+        ...(isTournamentSeries && { tournamentTemplateJson: JSON.stringify(tournamentTemplate) }),
+        ...(seasonCount > 1 && { statAliasesJson: JSON.stringify(statAliases) }),
+        // Abgeschlossene Saison: gesperrte Felder gar nicht erst mitschicken (der Server ignoriert sie ohnehin)
+        ...(!isArchived && {
         fixedGame:            fixedGame.trim() || null,
         fixedFormat:          fixedFormat || null,
         discordChannelId:     discordChannelId.trim() || null,
@@ -355,11 +380,12 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
+        }),
       }),
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
+      toast.success(isArchived ? "Saison gespeichert" : "Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -445,6 +471,59 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
       toast.error(err.error ?? "Fehler beim Erstellen");
     }
   }
+
+  async function undoCompletion() {
+    setUndoing(true);
+    try {
+      const res = await fetch(`/api/admin/series/${series.id}/complete`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(data.error ?? "Fehler beim Aufheben"); return; }
+      toast.success("Abschluss aufgehoben — die Saison ist wieder aktiv");
+      setUndoConfirm(false);
+      router.refresh();
+    } finally {
+      setUndoing(false);
+    }
+  }
+
+  // Hinweis über gesperrten Einstellungen einer abgeschlossenen Saison
+  const lockedNotice = isArchived ? (
+    <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 border border-amber-500/20 bg-amber-500/[0.06]">
+      <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+      <p className="text-[11px] text-amber-200/80">
+        Diese Saison ist abgeschlossen. Punkteregeln, Belohnungen, Umfragen, Spiel und Format sind gesperrt, damit Endtabelle und
+        Auszahlung stimmen. Korrekturen laufen über „Abschluss bearbeiten“.
+      </p>
+    </div>
+  ) : null;
+
+  // All-Time-Tabelle: Stat-Felder verschiedener Saisons zusammenführen (gilt für die ganze Saison-Gruppe)
+  const aliasSection = seasonCount > 1 && groupStatFields.length > 1 ? (
+    <Section title="All-Time: Stat-Felder zusammenführen">
+      <p className="text-[11px] text-gray-500">
+        Wurde ein Stat zwischen den Saisons umbenannt, kannst du hier festlegen, dass er in der All-Time-Tabelle als ein Feld zählt.
+        Gilt für alle Saisons dieser Reihe.
+      </p>
+      <div className="space-y-1.5">
+        {groupStatFields.map(field => (
+          <div key={field} className="flex items-center gap-2 text-xs">
+            <span className="flex-1 text-gray-300 truncate">{field}</span>
+            <span className="text-gray-600">zählt als</span>
+            <select value={statAliases[field] ?? ""}
+              onChange={e => setStatAliases(prev => {
+                const next = { ...prev };
+                if (e.target.value) next[field] = e.target.value; else delete next[field];
+                return next;
+              })}
+              className="w-40 rounded-lg px-2 py-1 text-xs text-white outline-none bg-gray-800 border border-gray-700">
+              <option value="">– eigenes Feld –</option>
+              {groupStatFields.filter(o => o !== field && statAliases[o] !== field).map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </Section>
+  ) : null;
 
   async function deleteSeries() {
     setDeleting(true);
@@ -645,6 +724,8 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           </Section>
 
           {/* Spiel & Format */}
+          {lockedNotice}
+          <fieldset disabled={isArchived} className="min-w-0 border-0 p-0 m-0">
           <Section title="Spiel & Format">
             <Field label={<><Gamepad2 className="w-3 h-3" /> Festes Spiel</>}>
               <GameNameInput value={fixedGame} onChange={setFixedGame} placeholder="Leer = verschiedene Spiele" className={inputCls} />
@@ -685,6 +766,18 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               </div>
             </Field>
           </Section>
+          </fieldset>
+
+          {/* Turniervorlage für neue Termine */}
+          {isTournamentSeries && (
+            <Section title="Turniervorlage für neue Termine">
+              <p className="text-[11px] text-gray-500">
+                Jeder neu angelegte Termin der Reihe übernimmt diese Einstellungen — bestehende Termine bleiben unverändert.
+                Eine neue Saison übernimmt die Vorlage automatisch.
+              </p>
+              <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} disabled={isArchived} />
+            </Section>
+          )}
 
           {/* Discord & Wiederholung */}
           <Section title="Discord & Wiederholung">
@@ -725,6 +818,8 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           {/* ── Tab: Belohnungen ── */}
           {activeSettingsTab === "rewards" && (
           <>
+          {lockedNotice}
+          <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
           {/* Belohnungen */}
           <Section title="Belohnungen (Endplatzierung der Eventreihe)">
             <div className="space-y-3">
@@ -818,12 +913,15 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               dessen eigene Platzierung vergeben, unabhängig von der Endplatzierung der gesamten Reihe.
             </p>
           </Section>
+          </fieldset>
           </>
           )}
 
           {/* ── Tab: Umfragen ── */}
           {activeSettingsTab === "polls" && (
           <>
+          {lockedNotice}
+          <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
           {/* Poll-Konfiguration */}
           <Section title="Umfragen">
             <div className="space-y-2">
@@ -959,12 +1057,15 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               )}
             </div>
           </Section>
+          </fieldset>
           </>
           )}
 
           {/* ── Tab: Stats & Bonus ── */}
           {activeSettingsTab === "stats" && (
           <>
+          {lockedNotice}
+          <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
           {/* Stats */}
           <Section title="Stats">
             <div className="space-y-1.5">
@@ -1116,12 +1217,16 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               )}
             </Section>
           )}
+          </fieldset>
+          {aliasSection}
           </>
           )}
 
           {/* ── Tab: Legacy ── */}
           {activeSettingsTab === "legacy" && (
           <>
+          {lockedNotice}
+          <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
           {/* Legacy-Stand */}
           <Section title="Legacy-Stand" overflowVisible>
             <p className="text-xs text-gray-600">Historische Werte vor App-Einführung</p>
@@ -1231,6 +1336,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               })()}
             </div>
           </Section>
+          </fieldset>
           </>
           )}
         </div>
@@ -1241,6 +1347,11 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
               Events dieser Reihe
             </h2>
+            {isArchived ? (
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                <Lock className="w-3 h-3" /> Saison abgeschlossen — keine neuen Termine
+              </span>
+            ) : (
             <button
               onClick={openGenerateModal} disabled={generatingNext}
               className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
@@ -1248,6 +1359,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               <CalendarPlus className="w-3.5 h-3.5" />
               {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
             </button>
+            )}
           </div>
 
           {series.events.length === 0 ? (
@@ -1316,6 +1428,44 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
       {isModerator && (
       <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
         <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
+
+        {isAdmin && isArchived && (
+          <div className="space-y-2 pb-3 border-b border-red-900/30">
+            {!undoConfirm ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-300 font-medium">Abschluss rückgängig machen</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {canUndoCompletion
+                      ? "Die Saison wird wieder aktiv, Endplatzierungs- und Abstimmungs-Belohnungen werden zurückgebucht, der Eventreihen-Pokal entfällt."
+                      : "Nicht mehr möglich — es gibt bereits eine spätere Saison."}
+                  </p>
+                </div>
+                <button onClick={() => setUndoConfirm(true)} disabled={!canUndoCompletion}
+                  className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none">
+                  <RefreshCw className="w-3.5 h-3.5" /> Aufheben
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-red-300">
+                  Abschluss von <span className="font-semibold text-white">„{series.name}“</span> wirklich aufheben? Alle Münzen und Rang-Punkte aus
+                  Endplatzierung und Saison-Abstimmung werden den Usern wieder abgezogen. Beim Abschluss gelöschte Termine kommen nicht zurück.
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button onClick={() => setUndoConfirm(false)} disabled={undoing}
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors">
+                    Abbrechen
+                  </button>
+                  <button onClick={undoCompletion} disabled={undoing}
+                    className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+                    {undoing ? "Wird aufgehoben…" : "Ja, Abschluss aufheben"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {!deleteConfirm ? (
           <div className="flex items-center justify-between gap-4">

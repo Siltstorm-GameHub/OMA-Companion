@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCaptainedSquadIds, getSessionUser, hasMinRole } from "@/lib/roles";
 import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { sanitizeCheckInMinutes } from "@/lib/checkin";
+import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { VALID_FORMAT_VALUES } from "@/lib/tournament-formats";
 import { EventCategory, EventGenre } from "@prisma/client";
 import { publishEvent } from "@/lib/event-publish";
@@ -52,10 +53,13 @@ export async function POST(req: NextRequest) {
   const series = seriesId
     ? await prisma.eventSeries.findUnique({
         where: { id: seriesId },
-        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true },
+        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true, status: true, tournamentTemplateJson: true },
       })
     : null;
   if (seriesId && !series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 400 });
+  if (series?.status === "archived") {
+    return NextResponse.json({ error: "Diese Saison ist abgeschlossen — neue Termine gehören in die aktuelle Saison." }, { status: 409 });
+  }
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
   // wenn das Event direkt auf ihr eigenes Squad beschränkt wird (squadId gesetzt + sie sind dessen
@@ -173,6 +177,10 @@ export async function POST(req: NextRequest) {
     : null;
   const cappedMatchResultPoints = isModerator ? matchResultPoints : capMatchResultPoints(matchResultPoints);
 
+  // Check-in und Punktemodus füllt der Wizard aus der Vorlage vor (der Admin kann sie dort ändern), die
+  // Gruppenphase übernimmt der Server direkt
+  const templateGroupStageJson = templateEventFields(parseTournamentTemplate(series?.tournamentTemplateJson), eventFormat).groupStageJson;
+
   // Derive participation coin default (10) from placementRewardsJson or series config
   const rewardsData = placementRewardsJson
     ? JSON.stringify(placementRewardsJson)
@@ -221,6 +229,8 @@ export async function POST(req: NextRequest) {
       ...(eventStatFields    && { statFields:   eventStatFields }),
       ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),
       ...(scheduledPublishAt && { publishAt: scheduledPublishAt }),
+      // Gruppenphase aus der Turniervorlage der Reihe (der Wizard fragt sie nicht ab)
+      ...(templateGroupStageJson && { groupStageJson: templateGroupStageJson }),
       ...(cappedMatchResultPoints && { pointsConfig: JSON.stringify(cappedMatchResultPoints) }),
       ...(body.checkInEnabled === true && {
         checkInEnabled: true,

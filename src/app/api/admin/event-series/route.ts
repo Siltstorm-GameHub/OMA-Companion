@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
+import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
+import { parseStatAliases, parseTournamentTemplate, serializeTournamentTemplate } from "@/lib/series-seasons";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 /**
@@ -60,6 +61,7 @@ export async function GET(req: NextRequest) {
  * automatisch auf alle noch offenen Events der Reihe übertragen (nicht "finished"/"closed").
  */
 const OPEN_EVENT_STATUS_FILTER = { notIn: ["finished", "closed"] };
+const SEASON_LOCKED_FIELDS = ["seriesStatConfig", "legacyStandings", "placementRewardsJson", "pollsConfigJson", "fixedGame", "fixedFormat"] as const;
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -76,10 +78,35 @@ export async function PATCH(req: NextRequest) {
   // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
   if (!hasMinRole(currentUser.role, "moderator")) Object.assign(fields, capCaptainRewardFields(fields));
 
+  const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true } });
+  if (!current) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+
+  // Abgeschlossene Saison: Punkteregeln, Altstand, Belohnungen, Umfragen, Spiel und Format sind
+  // eingefroren (die Endtabelle und Auszahlung beruhen darauf). Name, Texte und Aussehen bleiben änderbar.
+  if (current.status === "archived") {
+    for (const key of SEASON_LOCKED_FIELDS) delete fields[key];
+  }
+
+  // Turniervorlage für neue Termine — normalisiert, für Captains auf die Standard-Obergrenzen gekappt
+  if (fields.tournamentTemplateJson !== undefined) {
+    const t = parseTournamentTemplate(fields.tournamentTemplateJson);
+    if (!hasMinRole(currentUser.role, "moderator") && t.matchResultPoints) t.matchResultPoints = capMatchResultPoints(t.matchResultPoints);
+    fields.tournamentTemplateJson = serializeTournamentTemplate(t);
+  }
+
+  // Stat-Aliase der All-Time-Tabelle gelten für die ganze Saison-Gruppe
+  if (fields.statAliasesJson !== undefined) {
+    const aliases = parseStatAliases(fields.statAliasesJson);
+    const json = Object.keys(aliases).length > 0 ? JSON.stringify(aliases) : null;
+    await prisma.eventSeries.updateMany({
+      where: current.groupId ? { groupId: current.groupId } : { id: seriesId },
+      data: { statAliasesJson: json },
+    });
+    delete fields.statAliasesJson;
+  }
+
   // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
-  const oldSeries = fields.name !== undefined
-    ? await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true } })
-    : null;
+  const oldSeries = fields.name !== undefined ? current : null;
 
   // 1) Reihe selbst aktualisieren
   const series = await prisma.eventSeries.update({
@@ -105,6 +132,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
       ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
       ...(fields.squadId               !== undefined && { squadId:               fields.squadId || null }),
+      ...(fields.tournamentTemplateJson !== undefined && { tournamentTemplateJson: fields.tournamentTemplateJson }),
     },
   });
 

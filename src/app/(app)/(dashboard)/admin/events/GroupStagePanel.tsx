@@ -30,14 +30,15 @@ export default function GroupStagePanel({
 }) {
   // Ausgelost werden Turnier-Teilnehmer UND angemeldete Spieler (allUsers) — siehe groupStageServer
   const participantCount = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
-  const [groupCount, setGroupCount] = useState(() => suggestedGroupCount(participantCount));
-  const [advancePerGroup, setAdvancePerGroup] = useState(DEFAULT_ADVANCE_PER_GROUP);
-  const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
-  const [groupLegs, setGroupLegs] = useState<1 | 2>(1);
-  const [knockoutLegs, setKnockoutLegs] = useState<1 | 2>(1);
-  const [singleLegFinal, setSingleLegFinal] = useState(true);
-
+  // Vor der Auslosung kann groupStageJson schon aus der Turniervorlage der Reihe stammen — dann als Vorbelegung
   const cfg = parseGroupStageConfig(tournament.groupStageJson);
+  const [groupCount, setGroupCount] = useState(() => cfg?.groupCount ?? suggestedGroupCount(participantCount));
+  const [advancePerGroup, setAdvancePerGroup] = useState(cfg?.advancePerGroup ?? DEFAULT_ADVANCE_PER_GROUP);
+  const [thirdPlaceMatch, setThirdPlaceMatch] = useState(cfg?.thirdPlaceMatch ?? false);
+  const [groupLegs, setGroupLegs] = useState<1 | 2>(cfg?.groupLegs ?? 1);
+  const [knockoutLegs, setKnockoutLegs] = useState<1 | 2>(cfg?.knockoutLegs ?? 1);
+  const [singleLegFinal, setSingleLegFinal] = useState(cfg?.singleLegFinal ?? true);
+
   const groupMatches    = tournament.matches.filter(m => m.groupIndex != null);
   const knockoutMatches = tournament.matches.filter(m => m.groupIndex == null);
   const findUser = (id: string) =>

@@ -4,15 +4,38 @@ import AppIcon from "@/components/AppIcon";
 import { fromDatetimeLocalBerlin, formatBerlinDateTime, formatBerlinDate } from "@/lib/time";
 import { CATEGORIES, FORMATS, RECURRENCE_OPTS } from "../shared";
 import type { EventWizard } from "../useEventWizard";
+import { seasonChanges } from "../seasonDiff";
 
 // ── Step 4 (Series): Zusammenfassung ──────────────────────────────────────────
 export default function StepSeriesSummary({ w }: { w: EventWizard }) {
-  const { squads, category, eventType, spectatorMode, seriesName, fixedGame, fixedGenre, seriesDiscordId, seriesFormat, seriesStartDate, seriesEndDate, recurrenceType, statRows, seriesHidden, seriesRegistrationLocked, seriesSquadId, eventStatFields, winnerStatField, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, isSeriesMode, previewDates } = w;
+  const { seasonPrefill, variousGames, statParticipationPts, statSpectatorParticipationPts, dominionEnabled, dominionTriggerStats, dominionThreshold, dominionCoins, dominionSeriesPoints, tournamentTemplate, squads, category, eventType, spectatorMode, seriesName, fixedGame, fixedGenre, seriesDiscordId, seriesFormat, seriesStartDate, seriesEndDate, recurrenceType, statRows, seriesHidden, seriesRegistrationLocked, seriesSquadId, eventStatFields, winnerStatField, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, isSeriesMode, previewDates } = w;
   const catCfg   = CATEGORIES.find(c => c.value === category);
   const genreCfg = fixedGenre ? GENRES.find(g => g.value === fixedGenre) : null;
   const recLabel = RECURRENCE_OPTS.find(r => r.value === recurrenceType)?.label ?? "Keine";
+  // Neue Saison: was ist anders als in der Vorsaison?
+  const changes = seasonPrefill ? seasonChanges(seasonPrefill, {
+    name: seriesName, category, eventType, variousGames, fixedGame, seriesFormat, recurrenceType, spectatorMode,
+    statParticipationPts, statSpectatorParticipationPts, statRows, eventStatFields, winnerStatField,
+    participationCoins, placements, polls,
+    dominion: { enabled: dominionEnabled, triggerStats: dominionTriggerStats, threshold: dominionThreshold, coins: dominionCoins, seriesPoints: dominionSeriesPoints },
+    seriesHidden, seriesRegistrationLocked, seriesSquadId, tournamentTemplate,
+  }) : [];
   return (
     <div className="space-y-4">
+      {seasonPrefill && (
+        <div className={`rounded-xl p-4 border text-sm space-y-1.5 ${changes.length > 0 ? "border-amber-500/30 bg-amber-500/[0.05]" : "border-white/8 bg-white/2"}`}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-amber-300">
+            Gegenüber „{seasonPrefill.oldSeriesName}“ {changes.length > 0 ? `geändert (${changes.length})` : "unverändert"}
+          </p>
+          {changes.length === 0 ? (
+            <p className="text-xs text-gray-500">Alle Einstellungen werden 1:1 aus der Vorsaison übernommen.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {changes.map((c, i) => <li key={i} className="text-xs text-gray-300">• {c}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
       <div className={`rounded-2xl p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-2xl">🔁</span>

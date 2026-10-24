@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   applyEventStatOverride, computeEventPoints, computeLiveLigaPunkte, computeStatStandings, computeTurnierpunkte,
-  extractPlacementPoints, type EventCompletionData, type StatConfig,
+  extractPlacementPoints, mergeStandingRows, type EventCompletionData, type StatConfig,
 } from "./series-event-points";
 
 const baseCfg: StatConfig = {
@@ -137,5 +137,25 @@ describe("computeLiveLigaPunkte", () => {
     assert.deepEqual(r.pointsByUser, { a: 12, b: 10 });
     assert.deepEqual(r.projectedWinnerIds.sort(), ["a", "b"]);
     assert.deepEqual(r.projectedWinnerBonusByUser, { a: 25, b: 25 });
+  });
+});
+
+describe("mergeStandingRows (All-Time)", () => {
+  const row = (userId: string, totalPoints: number, participations: number, stats: Record<string, number>) => ({
+    userId, totalPoints, participations, spectatorParticipations: 0, stats, hasLegacy: false, disqualifiedEventCount: 0,
+  });
+  test("summiert je User über die Saisons und sortiert nach Punkten", () => {
+    const merged = mergeStandingRows([
+      [row("a", 30, 2, { Kills: 3 }), row("b", 10, 1, {})],
+      [row("b", 50, 3, { Siege: 2 }), row("c", 5, 1, {})],
+    ]);
+    assert.deepEqual(merged.map(r => [r.userId, r.totalPoints, r.participations]), [["b", 60, 4], ["a", 30, 2], ["c", 5, 1]]);
+    assert.deepEqual(merged[0].stats, { Siege: 2 });
+  });
+  test("verändert die Saison-Zeilen nicht", () => {
+    const s1 = [row("a", 1, 1, { Kills: 1 })];
+    mergeStandingRows([s1, [row("a", 2, 1, { Kills: 2 })]]);
+    assert.equal(s1[0].totalPoints, 1);
+    assert.equal(s1[0].stats.Kills, 1);
   });
 });

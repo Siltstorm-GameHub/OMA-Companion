@@ -2,6 +2,7 @@ import { requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
+import { parseSeriesCompletion, parseStatConfig } from "@/lib/series-seasons";
 
 export default async function AdminSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,7 +17,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         events: {
           orderBy: { startAt: "desc" },
           select: {
-            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true,
+            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true, type: true,
             _count: { select: { registrations: true } },
           },
         },
@@ -35,9 +36,31 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
 
   if (!series) notFound();
 
+  const groupSeasons = series.groupId
+    ? await prisma.eventSeries.findMany({
+        where: { groupId: series.groupId },
+        select: { id: true, status: true, seasonNumber: true, seriesStatConfig: true, seriesCompletionData: true },
+      })
+    : [];
   const hasActiveSibling = series.status === "archived" && series.groupId
-    ? (await prisma.eventSeries.count({ where: { groupId: series.groupId, status: "active" } })) > 0
+    ? groupSeasons.some(g => g.status === "active")
     : true;
+  // Abschluss rückgängig machen: nur ohne spätere Saison (siehe DELETE /api/admin/series/[id]/complete)
+  const canUndoCompletion = series.status === "archived" && !groupSeasons.some(g =>
+    g.id !== series.id && (g.status === "active" || (g.seasonNumber ?? 1) > (series.seasonNumber ?? 1)));
 
-  return <SeriesDetailClient series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator} />;
+  // Alle Stat-Felder der Saison-Gruppe — Auswahl für "Stat-Felder zusammenführen" (All-Time-Tabelle)
+  const groupStatFields = [...new Set(groupSeasons.flatMap(g => {
+    const cfg = parseStatConfig(g.seriesStatConfig);
+    const snapshotFields = (parseSeriesCompletion(g.seriesCompletionData).finalStandings?.rows ?? []).flatMap(r => Object.keys(r.stats));
+    return [...cfg.stats.map(st => st.field), ...(cfg.eventStatFields ?? []), ...snapshotFields];
+  }))].filter(fld => fld && !fld.startsWith("_streak_")).sort((a, b) => a.localeCompare(b, "de"));
+
+  return (
+    <SeriesDetailClient
+      series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
+      isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
+      seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
+    />
+  );
 }

@@ -51,7 +51,7 @@ const getGlobalDashboardData = unstable_cache(
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
-        where: { hidden: false, events: { some: { status: { in: ["open", "active", "closed"] } } } },
+        where: { hidden: false, status: "active", events: { some: { status: { in: ["open", "active", "closed"] } } } },
         select: {
           id: true, name: true, icon: true, fixedGame: true, category: true,
           seriesStatConfig: true, legacyStandings: true,

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { publishEvent } from "@/lib/event-publish";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 
 /**
  * POST /api/admin/event-series/generate
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
         select: {
           startAt: true, endAt: true, title: true, maxPlayers: true, pointReward: true, type: true,
           discordChannelId: true, game: true, pollsConfigJson: true, category: true, genre: true,
-          spectatorMode: true, spectatorRewardJson: true, seriesEventConfigJson: true,
+          spectatorMode: true, spectatorRewardJson: true, seriesEventConfigJson: true, format: true,
         },
       },
     },
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (!series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 404 });
+  if (series.status === "archived") {
+    return NextResponse.json({ error: "Diese Saison ist abgeschlossen — neue Termine gehören in die aktuelle Saison." }, { status: 409 });
+  }
   if (!series.recurrenceType && !overrideDate) return NextResponse.json({ error: "Keine Wiederholung konfiguriert — bitte Datum angeben" }, { status: 400 });
 
   const hasEvents      = series.events.length > 0;
@@ -113,6 +117,8 @@ export async function POST(req: NextRequest) {
       spectatorRewardJson:   lastEvent?.spectatorRewardJson ?? null,
       ...(lastEvent?.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
       ...(series.fixedFormat && { format: series.fixedFormat }),
+      // Turniervorlage der Reihe (Gruppenphase, Check-in, Punktemodus) — siehe lib/series-seasons.ts
+      ...templateEventFields(parseTournamentTemplate(series.tournamentTemplateJson), series.fixedFormat ?? lastEvent?.format),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),
       ...(pollsConfigJson && { pollsConfigJson }),
     },

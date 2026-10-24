@@ -91,6 +91,7 @@ export default async function NewEventPage({
         genre: true,
         placementRewardsJson: true,
         fixedFormat: true,
+        tournamentTemplateJson: true,
         _count: { select: { events: true } },
       },
     }),

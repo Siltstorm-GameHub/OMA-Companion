@@ -266,8 +266,14 @@ model EventSeries {
   squad                 Squad?        @relation(fields: [squadId], references: [id])
   seasonNumber          Int? // 1, 2, 3 …
   archivedAt            DateTime?
-  // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
+  // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt, finalStandings)
   seriesCompletionData  String?
+  // All-Time-Tabelle der Saison-Gruppe: Stat-Felder zusammenführen, JSON { "Eliminierungen": "Kills" }
+  // (Alias → Zielfeld). Gilt für die ganze Gruppe und wird auf allen Saisons gleich gespeichert.
+  statAliasesJson       String?
+  // Turniervorlage für neue Termine der Reihe, JSON: { groupStage?: GroupStageConfig,
+  // checkInEnabled?: boolean, checkInMinutes?: number, matchResultPoints?: { win, draw } }
+  tournamentTemplateJson String?
   createdAt             DateTime      @default(now())
   events                Event[]
   lulSeason             LulSeason?

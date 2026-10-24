@@ -18,16 +18,22 @@ import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
 import { computeEventPoints, computeStatStandings, resolveWinnerTargetKeys, type StatConfig } from "@/lib/series-event-points";
+import {
+  ALL_TIME_COLS, buildAllTimeStandings, parseSeriesCompletion, parseStatAliases, parseStatConfig, previousSeasonBadges,
+  resolveStatAlias, seasonPlacements, seasonStandings,
+} from "@/lib/series-seasons";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import EventPokalWinners from "@/components/EventPokalWinners";
 import PokalPreview from "@/components/PokalPreview";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
 
 type ArchivedSeason = {
-  id: string; name: string; status: string; seasonNumber: number | null;
-  archivedAt: Date | null; seriesCompletionData: string | null; createdAt: Date;
-  events: { startAt: Date }[]; _count: { events: number };
+  id: string; name: string; seasonNumber: number | null; archivedAt: Date | null;
+  firstEventAt: Date | null; eventCount: number;
+  podium: { place: number; user: { id: string; name: string | null; username: string | null; image: string | null } }[];
 };
+
+const PODIUM_RING = ["ring-amber-400/70", "ring-gray-300/60", "ring-orange-500/60"];
 
 function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archivedSeasons: ArchivedSeason[] }) {
   if (!archivedSeasons.length) return null;
@@ -37,44 +43,84 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
         <Archive className="w-3.5 h-3.5 text-gray-600" /> Vergangene Saisons
       </h2>
       <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-        {archivedSeasons.map(s => {
-          const cd: { overallWinnerIds?: string[] | null } = (() => {
-            try { return s.seriesCompletionData ? JSON.parse(s.seriesCompletionData) : {}; } catch { return {}; }
-          })();
-          const firstEventDate = s.events[0]?.startAt;
-          return (
-            <Link key={s.id} href={`/events/series/${s.id}`}
-              className={`flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group ${s.id === currentId ? "bg-white/[0.03]" : ""}`}>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                <Archive className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
-                  {s.name}
-                  {s.id === currentId && <span className="ml-2 text-[10px] text-gray-600">(diese Saison)</span>}
-                </p>
-                <p className="text-[10px] text-gray-600 mt-0.5">
-                  {firstEventDate
-                    ? new Date(firstEventDate).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
-                    : "–"}
-                  {" · "}
-                  {s._count.events} Events
-                  {s.archivedAt && (
-                    <> · abgeschlossen {new Date(s.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Berlin" })}</>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
-                  Saison {s.seasonNumber ?? "–"}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
-              </div>
-            </Link>
-          );
-        })}
+        {archivedSeasons.map(s => (
+          <Link key={s.id} href={`/events/series/${s.id}`}
+            className={`flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group ${s.id === currentId ? "bg-white/[0.03]" : ""}`}>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Archive className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
+                {s.name}
+                {s.id === currentId && <span className="ml-2 text-[10px] text-gray-600">(diese Saison)</span>}
+              </p>
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                {s.firstEventAt
+                  ? new Date(s.firstEventAt).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
+                  : "–"}
+                {" · "}
+                {s.eventCount} Events
+                {s.archivedAt && (
+                  <> · abgeschlossen {new Date(s.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Berlin" })}</>
+                )}
+              </p>
+              {s.podium.length > 0 && (
+                <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                  {s.podium.map(({ place, user }) => (
+                    <span key={user.id} className={`flex items-center gap-1 text-[11px] ${place === 1 ? "text-amber-300 font-semibold" : "text-gray-400"}`}>
+                      {place === 1 && <Crown className="w-3 h-3 text-amber-400" />}
+                      {user.image
+                        ? <img src={user.image} alt="" className={`w-4 h-4 rounded-full object-cover ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />
+                        : <span className={`w-4 h-4 rounded-full bg-gray-700 ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />}
+                      <span className="text-gray-600">{place}.</span> {user.username ?? user.name ?? "?"}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                Saison {s.seasonNumber ?? "–"}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
+  );
+}
+
+/** Umschalter zwischen den Saisons einer Reihe und der All-Time-Tabelle */
+function SeasonSwitcher({ currentId, seasons, showAllTime }: {
+  currentId: string;
+  seasons: { id: string; name: string; seasonNumber: number | null; status: string }[];
+  showAllTime: boolean;
+}) {
+  if (seasons.length < 2) return null;
+  return (
+    <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1" aria-label="Saisons">
+      {seasons.map((s, i) => {
+        const current = s.id === currentId;
+        return (
+          <Link key={s.id} href={`/events/series/${s.id}`} title={s.name} aria-current={current ? "page" : undefined}
+            className={`shrink-0 text-xs rounded-full px-3 py-1.5 border transition-colors whitespace-nowrap ${
+              current
+                ? "bg-teal-500/15 border-teal-500/40 text-teal-200 font-semibold"
+                : "border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20"
+            }`}>
+            Saison {s.seasonNumber ?? i + 1}
+            {s.status === "active" && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 align-middle" title="Aktuelle Saison" />}
+          </Link>
+        );
+      })}
+      {showAllTime && (
+        <a href="#all-time"
+          className="shrink-0 flex items-center gap-1 text-xs rounded-full px-3 py-1.5 border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 transition-colors whitespace-nowrap">
+          <Crown className="w-3 h-3" /> All-Time
+        </a>
+      )}
+    </nav>
   );
 }
 
@@ -182,7 +228,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  const { rows: standings, evStatFieldsSeen } = computeStatStandings(series.events, statCfg, legacyRows);
+  // Abgeschlossene Saison: die beim Abschluss gespeicherte Endtabelle (spätere Korrekturen an einzelnen
+  // Events verändern sie nicht mehr). Ältere Abschlüsse ohne gespeicherte Tabelle werden live berechnet.
+  const snapshotRows = series.status === "archived"
+    ? parseSeriesCompletion(series.seriesCompletionData).finalStandings?.rows ?? null
+    : null;
+  const live = snapshotRows ? null : computeStatStandings(series.events, statCfg, legacyRows);
+  const standings = snapshotRows ?? live!.rows;
+  const evStatFieldsSeen = live?.evStatFieldsSeen ?? new Set(snapshotRows!.flatMap(r => Object.keys(r.stats)));
 
   // ── Hero Stats ─────────────────────────────────────────────────────────────
   const gamePhaseCompleteCount = series.events.filter(e => {
@@ -304,7 +357,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const lastEventDelta: Record<string, DeltaInfo> = {};
 
-  if (gamePhaseCompleteEvents.length > 0) {
+  if (!snapshotRows && gamePhaseCompleteEvents.length > 0) {
     const lastEv = gamePhaseCompleteEvents[0];
     const { pointsByUser: lastEvPoints, participationsByUser: lastEvPart, statsByUser: lastEvStats } =
       computeEventPoints(lastEv, statCfg);
@@ -403,32 +456,64 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
 
-  // ── All-Time Leaderboard (alle Saisons der Gruppe) ────────────────────────
+  // ── Saisons der Gruppe ─────────────────────────────────────────────────────
+  // Grundlage für All-Time-Tabelle, Saison-Umschalter, Archiv und Titelverteidiger-Abzeichen
+  const groupSeasons = series.groupId
+    ? await prisma.eventSeries.findMany({
+        where: { groupId: series.groupId },
+        select: {
+          id: true, name: true, status: true, seasonNumber: true, archivedAt: true, createdAt: true,
+          seriesStatConfig: true, legacyStandings: true, seriesCompletionData: true,
+          events: {
+            orderBy: { startAt: "asc" },
+            select: {
+              id: true, status: true, startAt: true, completionData: true, finalRankingJson: true, spectatorMode: true,
+              registrations: { select: { userId: true, role: true } },
+              matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+            },
+          },
+        },
+        orderBy: [{ seasonNumber: { sort: "asc", nulls: "first" } }, { createdAt: "asc" }],
+      })
+    : [];
+  const placementsBySeason = new Map(groupSeasons.map(g => [
+    g.id, g.status === "archived" ? seasonPlacements(parseSeriesCompletion(g.seriesCompletionData)) : null,
+  ]));
+
+  // ── All-Time Leaderboard (erst ab zwei Saisons — vorher wäre es die normale Tabelle) ──
+  const showAllTime = groupSeasons.length >= 2;
+  const statAliases = parseStatAliases(series.statAliasesJson);
   let allTimeStandings: (typeof standings) = [];
   let allTimeUsers: typeof standingUsers = [];
   let allTimeHasSpectatorTracking = false;
-  if (series.groupId) {
-    const allSeasonEvents = await prisma.event.findMany({
-      where: { series: { groupId: series.groupId } },
-      select: {
-        id: true, status: true, completionData: true, finalRankingJson: true, spectatorMode: true, statConfigJson: true,
-        registrations: { select: { userId: true, role: true } },
-        matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
-      },
-    });
-    // Collect legacy standings from all archived seasons in the group
-    const allSiblingData = await prisma.eventSeries.findMany({
-      where: { groupId: series.groupId, id: { not: id }, status: "archived" },
-      select: { legacyStandings: true },
-    });
-    const allLegacy: LegacyRow[] = [
-      ...legacyRows,
-      ...allSiblingData.flatMap(s => {
-        try { return s.legacyStandings ? JSON.parse(s.legacyStandings) : []; } catch { return []; }
-      }),
-    ];
-    ({ rows: allTimeStandings } = computeStatStandings(allSeasonEvents, statCfg, allLegacy));
-    allTimeHasSpectatorTracking = allSeasonEvents.some(e => e.spectatorMode);
+  let allTimeStatCols: StatConfig["stats"] = [];
+  let allTimeExtraCols: string[] = [];
+  if (showAllTime) {
+    // Jede Saison mit ihrer EIGENEN Konfiguration (bzw. ihrer gespeicherten Endtabelle) — erst danach
+    // zusammengezählt. Spalten: alle Stat-Felder, die in irgendeiner Saison konfiguriert waren
+    // (umbenannte Felder über die Stat-Aliase der Reihe zusammengeführt).
+    const colsByField = new Map<string, { field: string; pointsPer: number }>();
+    for (const g of groupSeasons) {
+      const cfg = g.id === id ? statCfg : parseStatConfig(g.seriesStatConfig);
+      for (const st of cfg.stats) {
+        const field = resolveStatAlias(st.field, statAliases);
+        if (!colsByField.has(field) || g.id === id) colsByField.set(field, { field, pointsPer: st.pointsPer });
+      }
+    }
+    allTimeStandings = buildAllTimeStandings(
+      groupSeasons.map(g => ({ rows: g.id === id ? standings : seasonStandings(g), placements: placementsBySeason.get(g.id) ?? null })),
+      statAliases,
+    );
+    allTimeStatCols = [...colsByField.values()];
+    const statColFields = new Set(allTimeStatCols.map(c => c.field));
+    const hiddenAllTimeFields = new Set(["Dominion Bonus Punkte", ...(statCfg.winnerStatKeys ?? [])]);
+    const seenFields = [...new Set(allTimeStandings.flatMap(r => Object.keys(r.stats)))]
+      .filter(fld => !ALL_TIME_COLS.includes(fld) && !statColFields.has(fld) && !reservedFields.has(fld)
+        && !isInternalField(fld) && !hiddenAllTimeFields.has(fld)
+        && allTimeStandings.some(r => (r.stats[fld] ?? 0) > 0))
+      .sort((x, y) => x.localeCompare(y, "de"));
+    allTimeExtraCols = [...ALL_TIME_COLS, ...seenFields];
+    allTimeHasSpectatorTracking = groupSeasons.some(g => g.events.some(e => e.spectatorMode));
     const allTimeIds = allTimeStandings.map(r => r.userId);
     allTimeUsers = allTimeIds.length > 0
       ? await prisma.user.findMany({
@@ -437,25 +522,39 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         })
       : [];
   }
-  const showAllTime = allTimeStandings.length > 0 && !!series.groupId;
 
   // ── Saison-Gruppe (verwandte Saisons) ─────────────────────────────────────
-  const siblingSeasons = series.groupId
-    ? await prisma.eventSeries.findMany({
-        where: { groupId: series.groupId, id: { not: id } },
-        select: {
-          id: true, name: true, status: true, seasonNumber: true,
-          archivedAt: true, seriesCompletionData: true, createdAt: true,
-          events: { select: { startAt: true }, orderBy: { startAt: "asc" }, take: 1 },
-          _count: { select: { events: true } },
-        },
-        orderBy: { seasonNumber: "asc" },
-      })
-    : [];
-
+  const siblingSeasons = groupSeasons.filter(g => g.id !== id);
   const isArchived = series.status === "archived";
   const activeSibling = siblingSeasons.find(s => s.status === "active");
-  const archivedSiblings = siblingSeasons.filter(s => s.status === "archived");
+
+  // Vergangene Saisons inkl. Podium (Platz 1–3 aus dem Saison-Abschluss)
+  const podiumIds = new Set<string>();
+  for (const pl of placementsBySeason.values()) for (const [uid, place] of pl ?? []) if (place <= 3) podiumIds.add(uid);
+  const podiumUsers = podiumIds.size > 0
+    ? await prisma.user.findMany({ where: { id: { in: [...podiumIds] } }, select: { id: true, name: true, username: true, image: true } })
+    : [];
+  const archivedSeasons: ArchivedSeason[] = groupSeasons
+    .filter(g => g.status === "archived")
+    .map(g => ({
+      id: g.id, name: g.name, seasonNumber: g.seasonNumber, archivedAt: g.archivedAt,
+      firstEventAt: g.events[0]?.startAt ?? null, eventCount: g.events.length,
+      podium: [...(placementsBySeason.get(g.id) ?? [])]
+        .filter(([, place]) => place <= 3)
+        .sort((x, y) => x[1] - y[1])
+        .flatMap(([uid, place]) => {
+          const u = podiumUsers.find(pu => pu.id === uid);
+          return u ? [{ place, user: u }] : [];
+        }),
+    }))
+    .reverse();
+
+  // Titelverteidiger: Platz 1–3 der direkten Vorsaison als Abzeichen in der Tabelle der aktiven Saison
+  const previousSeason = isArchived ? null : [...siblingSeasons]
+    .filter(g => g.status === "archived" && (g.seasonNumber ?? 1) < (series.seasonNumber ?? Number.MAX_SAFE_INTEGER))
+    .sort((x, y) => (y.seasonNumber ?? 1) - (x.seasonNumber ?? 1))[0] ?? null;
+  const standingBadges = previousSeason ? previousSeasonBadges(placementsBySeason.get(previousSeason.id) ?? new Map()) : {};
+
 
   // Parse overall winner for current archived series
   type CompletionSummary = {
@@ -505,6 +604,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           </Link>
         )}
       </div>
+
+      {/* ── Saison-Umschalter ─────────────────────────────────────────────────── */}
+      <SeasonSwitcher
+        currentId={id}
+        seasons={groupSeasons.map(g => ({ id: g.id, name: g.name, seasonNumber: g.seasonNumber, status: g.status }))}
+        showAllTime={showAllTime}
+      />
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────────── */}
       {series.hidden && isMod && (
@@ -725,6 +831,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               dominionStreaks={dominionStreaks}
               dominionThreshold={statCfg.dominionBonus?.threshold}
               fallbackStatField={fallbackStatField}
+              badges={standingBadges}
               mode="compact"
             />
             {standings.length === 0 && (
@@ -751,21 +858,22 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           hasSpectatorTracking={hasSpectatorTracking}
           dominionStreaks={dominionStreaks}
           dominionThreshold={statCfg.dominionBonus?.threshold}
+          badges={standingBadges}
         />
       )}
 
       {/* ── All-Time Leaderboard ─────────────────────────────────────────────── */}
       {showAllTime && (
-        <div className="space-y-3">
+        <div id="all-time" className="space-y-3 scroll-mt-24">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
             <Crown className="w-3.5 h-3.5 text-amber-400" /> All-Time Leaderboard
-            <span className="text-[10px] text-gray-600 normal-case tracking-normal font-normal">· alle Saisons zusammengezählt</span>
+            <span className="text-[10px] text-gray-600 normal-case tracking-normal font-normal">· {groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</span>
           </h2>
           <FullStandingsToggle
             rows={allTimeStandings}
             users={allTimeUsers}
-            statCols={statCfg.stats}
-            extraCols={fullExtraCols}
+            statCols={allTimeStatCols}
+            extraCols={allTimeExtraCols}
             currentUserId={userId}
             showPoints={showPoints}
             hasSpectatorTracking={allTimeHasSpectatorTracking}
@@ -775,14 +883,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       )}
 
       {/* ── Vergangene Saisons ────────────────────────────────────────────────── */}
-      {(archivedSiblings.length > 0 || (!isArchived && siblingSeasons.some(s => s.status === "archived"))) && (
-        <SaisonArchiv
-          currentId={id}
-          archivedSeasons={[
-            ...archivedSiblings,
-            ...(isArchived ? [] : siblingSeasons.filter(s => s.status === "archived")),
-          ]}
-        />
+      {archivedSeasons.length > 0 && (
+        <SaisonArchiv currentId={id} archivedSeasons={archivedSeasons} />
       )}
 
     </div>

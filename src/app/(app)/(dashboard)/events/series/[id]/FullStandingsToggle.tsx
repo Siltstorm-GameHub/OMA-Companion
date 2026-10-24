@@ -37,6 +37,8 @@ interface Props {
   /** Aktueller Dominion-Streak je User (öffentlich, nicht nur der eigene) — nur für die aktuelle Saison. */
   dominionStreaks?: Record<string, number>;
   dominionThreshold?: number;
+  /** Abzeichen je User (z.B. Titelverteidiger) */
+  badges?: Record<string, string>;
 }
 
 export default function FullStandingsToggle({ defaultExpanded, ...props }: Props) {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronDown, ChevronUp } from "@/components/icons";
-import { Medal, Minus, Flame } from "@/components/icons";
+import { Medal, Minus, Flame, Crown } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 
 type StandingRow = {
@@ -58,6 +58,8 @@ interface Props {
    *  typischerweise der konfigurierte Gewinner-Stat der Reihe. Ohne Angabe bleibt der bisherige
    *  Fallback auf "Events"/Teilnahmen bestehen. */
   fallbackStatField?: string;
+  /** Abzeichen je User neben dem Namen, z.B. "Titelverteidiger" (Platz 1–3 der Vorsaison) */
+  badges?: Record<string, string>;
 }
 
 const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
@@ -142,10 +144,23 @@ function PointsCell({ value, rank, delta }: { value: number; rank: number; delta
   );
 }
 
+/** Abzeichen aus der Vorsaison (Titelverteidiger bzw. Platz 2/3) */
+function SeasonBadge({ label }: { label: string }) {
+  const champion = label === "Titelverteidiger";
+  return (
+    <span title={champion ? "Gesamtsieger der Vorsaison" : `${label.replace("Vorsaison ", "Platz ")} der Vorsaison`}
+      className={`ml-1.5 shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${
+        champion ? "text-amber-300 bg-amber-500/10 border-amber-500/30" : "text-gray-400 bg-white/5 border-white/10"
+      }`}>
+      {champion && <Crown className="w-2.5 h-2.5" />}{label}
+    </span>
+  );
+}
+
 export default function SeriesStandingsTable({
   rows, users, statCols, extraCols, currentUserId, showPoints, lastEventDelta, lastEventTitle,
   participationPoints, mode = "auto", hasSpectatorTracking = false, dominionStreaks, dominionThreshold,
-  fallbackStatField,
+  fallbackStatField, badges,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
@@ -253,6 +268,7 @@ export default function SeriesStandingsTable({
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
                   {name}<JobBadge userId={row.userId} variant="compact" className="ml-1" />
                   {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
                   {row.disqualifiedEventCount > 0 && (
                     <span
@@ -382,6 +398,7 @@ export default function SeriesStandingsTable({
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
                   {name}<JobBadge userId={row.userId} variant="compact" className="ml-1" />
                   {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.disqualifiedEventCount > 0 && (
                     <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>
                       <Ban className="w-3 h-3 text-gray-500" />

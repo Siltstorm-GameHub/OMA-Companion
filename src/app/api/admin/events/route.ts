@@ -45,6 +45,15 @@ export async function PATCH(req: NextRequest) {
     if (!target?.squadId || !captainedSquadIds.includes(target.squadId)) delete data.seriesId;
   }
 
+  // Abgeschlossene Saisons nehmen keine weiteren Termine auf
+  if ("seriesId" in data && data.seriesId) {
+    const target = await prisma.eventSeries.findUnique({ where: { id: data.seriesId }, select: { status: true } });
+    const current = await prisma.event.findUnique({ where: { id: eventId }, select: { seriesId: true } });
+    if (target?.status === "archived" && current?.seriesId !== data.seriesId) {
+      return NextResponse.json({ error: "Diese Saison ist abgeschlossen — Termine können nicht mehr hinzugefügt werden." }, { status: 409 });
+    }
+  }
+
   // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
   const rewards = isModerator
     ? { spectatorRewardJson, pollsConfigJson }

@@ -27,7 +27,13 @@ interface Props {
   isReEdit: boolean;
   pollPhaseComplete: boolean;
   initialData: Record<string, unknown> | null;
+  /** Noch offene Termine der Saison (nur beim ersten Abschluss) */
+  openEvents: { id: string; title: string; startAt: string; registrations: number }[];
+  /** Turnier-Reihe: der Gesamtsieger bekommt einen Eventreihen-Pokal */
+  isTournamentSeries: boolean;
 }
+
+type OpenEventsAction = "move" | "delete" | "keep";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -66,7 +72,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function SeriesCompleteClient({
   seriesId, seriesName, seriesIcon, statFields, participants, userStats, rewardsConfig,
-  isReEdit, pollPhaseComplete, initialData,
+  isReEdit, pollPhaseComplete, initialData, openEvents, isTournamentSeries,
 }: Props) {
   const router = useRouter();
 
@@ -117,6 +123,12 @@ export default function SeriesCompleteClient({
   /* ── Neue Saison ── */
   const [startNewSeason, setStartNewSeason] = useState(!isReEdit);
 
+  /* ── Offene Termine ── */
+  const [openEventsAction, setOpenEventsAction] = useState<OpenEventsAction>("move");
+
+  /* ── Zusammenfassung vor dem Bestätigen ── */
+  const [confirmPollOnly, setConfirmPollOnly] = useState<boolean | null>(null);
+
   const [loading, setLoading] = useState(false);
 
   /* ── Derived ── */
@@ -129,6 +141,26 @@ export default function SeriesCompleteClient({
     if (maxVotes <= 0) return [];
     return pollEligible.filter(u => (pollVotes[u.id] ?? 0) === maxVotes).map(u => u.id);
   }, [pollEligible, pollVotes]);
+
+  // Wer bekommt was — dieselbe Regel wie die Abschluss-Route (Gleichstand = gleicher Platz)
+  function payoutPreview(pollOnly: boolean) {
+    const rows: { uid: string; place: number | null; coins: number; rankPoints: number; poll: boolean }[] = [];
+    // Auch beim Nachtragen der Abstimmung wird die Endplatzierung (unverändert) neu gebucht
+    for (const group of rankingGroups) {
+      const place = placementMap.get(group[0]) ?? 0;
+      const reward = rewardsConfig.placements.find(p => p.place === place);
+      if (!reward || (reward.coins <= 0 && reward.rankPoints <= 0)) continue;
+      for (const uid of group) rows.push({ uid, place, coins: Math.max(0, reward.coins), rankPoints: Math.max(0, reward.rankPoints), poll: false });
+    }
+    if (!pollOnly && pollEnabled && pollWinners.length > 0) {
+      for (const uid of pollWinners) {
+        const existing = rows.find(r => r.uid === uid);
+        if (existing) { existing.coins += Math.max(0, pollCoins); existing.rankPoints += Math.max(0, pollRankPts); existing.poll = true; }
+        else rows.push({ uid, place: null, coins: Math.max(0, pollCoins), rankPoints: Math.max(0, pollRankPts), poll: true });
+      }
+    }
+    return rows;
+  }
 
   /* ── Ranking helpers ── */
   function autoSort() {
@@ -187,6 +219,9 @@ export default function SeriesCompleteClient({
     setDragIdx(idx);
   }
 
+  // "Verschieben" setzt eine neue Saison voraus — ohne sie bleiben die Termine in dieser Saison
+  const effectiveOpenEventsAction: OpenEventsAction = openEventsAction === "move" && !startNewSeason ? "keep" : openEventsAction;
+
   /* ── Submit ── */
   async function handleConfirm(pollOnly = false) {
     setLoading(true);
@@ -204,11 +239,13 @@ export default function SeriesCompleteClient({
           pollBonusRankPoints: pollEnabled ? pollRankPts : undefined,
           pollExcludedUserIds: pollEnabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
           startNewSeason:      !isReEdit && startNewSeason ? true : undefined,
+          openEvents:          openEvents.length > 0 ? effectiveOpenEventsAction : undefined,
         }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error((err as { error?: string }).error ?? "Fehler beim Abschließen");
+        setConfirmPollOnly(null);
         return;
       }
       const data = await res.json() as { startNewSeason?: boolean };
@@ -503,6 +540,49 @@ export default function SeriesCompleteClient({
             </div>
           )}
 
+          {/* Offene Termine */}
+          {openEvents.length > 0 && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-semibold text-amber-300">
+                  {openEvents.length} offene{openEvents.length === 1 ? "r" : ""} Termin{openEvents.length === 1 ? "" : "e"} in dieser Saison
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {openEvents.map(ev => (
+                  <li key={ev.id} className="text-[11px] text-gray-400 flex items-center gap-2">
+                    <span className="truncate flex-1">{ev.title}</span>
+                    <span className="text-gray-600 shrink-0">
+                      {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}
+                      {ev.registrations > 0 && ` · ${ev.registrations} Anm.`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="space-y-1.5">
+                {([
+                  ["move", "In die neue Saison verschieben", startNewSeason
+                    ? "Die Termine wandern mit allen Anmeldungen in die neue Saison, sobald du sie im Saison-Assistenten anlegst."
+                    : "Nur mit „Neue Saison starten“ möglich — sonst bleiben die Termine in dieser Saison."],
+                  ["delete", "Löschen", "Die Termine werden samt Anmeldungen und Discord-Ankündigung entfernt."],
+                  ["keep", "In dieser Saison lassen", "Sie bleiben in der archivierten Saison und zählen nicht in die gespeicherte Endtabelle, solange du den Abschluss nicht erneut speicherst."],
+                ] as [OpenEventsAction, string, string][]).map(([value, label, hint]) => (
+                  <label key={value} className={`flex items-start gap-2 cursor-pointer ${value === "move" && !startNewSeason ? "opacity-50" : ""}`}>
+                    <input type="radio" name="openEvents" className="mt-0.5 accent-amber-500"
+                      checked={effectiveOpenEventsAction === value}
+                      disabled={value === "move" && !startNewSeason}
+                      onChange={() => setOpenEventsAction(value)} />
+                    <span>
+                      <span className="text-xs text-white">{label}</span>
+                      <span className="block text-[10px] text-gray-500">{hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Gesamtsieger-Vorschau */}
           {!isPollOnly && rankingOrder.length > 0 && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.15)" }}>
@@ -536,7 +616,7 @@ export default function SeriesCompleteClient({
           {/* Buttons */}
           <div className="space-y-2">
             <button
-              onClick={() => handleConfirm(false)}
+              onClick={() => setConfirmPollOnly(false)}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50"
             >
@@ -549,7 +629,7 @@ export default function SeriesCompleteClient({
 
             {!isReEdit && pollEnabled && pollWinners.length === 0 && (
               <button
-                onClick={() => handleConfirm(true)}
+                onClick={() => setConfirmPollOnly(true)}
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-gray-400 border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:text-gray-200 transition-colors disabled:opacity-50"
               >
@@ -558,6 +638,92 @@ export default function SeriesCompleteClient({
               </button>
             )}
           </div>
+
+          {/* Zusammenfassung vor dem endgültigen Bestätigen */}
+          {confirmPollOnly !== null && (() => {
+            const preview = payoutPreview(confirmPollOnly);
+            const totalCoins = preview.reduce((sum, r) => sum + r.coins, 0);
+            const totalRank = preview.reduce((sum, r) => sum + r.rankPoints, 0);
+            const pokalIds = isTournamentSeries ? (rankingGroups[0] ?? []) : [];
+            const nameOf = (uid: string) => { const u = participants.find(p => p.id === uid); return u ? userName(u) : uid.slice(0, 8); };
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => !loading && setConfirmPollOnly(null)}>
+                <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-gray-900 border border-white/10 p-5 space-y-4" onClick={e => e.stopPropagation()}>
+                  <h2 className="text-base font-bold text-white">
+                    {isReEdit ? "Änderungen speichern?" : "Saison abschließen?"}
+                  </h2>
+
+                  {isReEdit && (
+                    <p className="text-[11px] text-amber-300/80 rounded-lg px-3 py-2 bg-amber-500/10 border border-amber-500/20">
+                      Die bisherige Vergabe wird vollständig zurückgebucht und durch die folgende ersetzt.
+                    </p>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Auszahlung</p>
+                    {preview.length === 0 ? (
+                      <p className="text-xs text-gray-500">Keine Münzen oder Rang-Punkte.</p>
+                    ) : (
+                      <>
+                        {preview.map(r => (
+                          <div key={r.uid} className="flex items-center gap-2 text-xs">
+                            <span className="w-6 text-gray-500 text-center">{r.place ? `${r.place}.` : "–"}</span>
+                            <span className="flex-1 text-white truncate">
+                              {nameOf(r.uid)}
+                              {r.poll && <span className="ml-1.5 text-[10px] text-violet-400">Abstimmung</span>}
+                            </span>
+                            {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">+{r.coins} <CoinIcon size={11} /></span>}
+                            {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">+{r.rankPoints} <RankPointsIcon size={11} /></span>}
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-2 text-xs border-t border-white/10 pt-1.5">
+                          <span className="flex-1 text-gray-400">Summe</span>
+                          <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">{totalCoins} <CoinIcon size={11} /></span>
+                          <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">{totalRank} <RankPointsIcon size={11} /></span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {pokalIds.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Eventreihen-Pokal</p>
+                      <p className="text-xs text-amber-200 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-amber-400" /> {pokalIds.map(nameOf).join(", ")}</p>
+                    </div>
+                  )}
+
+                  {openEvents.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Offene Termine</p>
+                      <p className="text-xs text-gray-300">
+                        {openEvents.length} Termin{openEvents.length === 1 ? "" : "e"}: {effectiveOpenEventsAction === "move"
+                          ? "werden in die neue Saison verschoben"
+                          : effectiveOpenEventsAction === "delete" ? "werden gelöscht" : "bleiben in dieser Saison"}
+                      </p>
+                    </div>
+                  )}
+
+                  {!isReEdit && (
+                    <p className="text-[11px] text-gray-500">
+                      Danach ist die Saison gesperrt: keine neuen Termine und keine Änderungen an Punkteregeln oder Belohnungen mehr.
+                      {startNewSeason ? " Anschließend richtest du die neue Saison ein." : ""}
+                    </p>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setConfirmPollOnly(null)} disabled={loading}
+                      className="flex-1 rounded-xl py-2.5 text-xs font-medium text-gray-300 border border-white/10 hover:bg-white/5 disabled:opacity-50">
+                      Zurück
+                    </button>
+                    <button type="button" onClick={() => handleConfirm(confirmPollOnly)} disabled={loading}
+                      className="flex-1 rounded-xl py-2.5 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50">
+                      {loading ? "Wird gespeichert…" : "Bestätigen"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Hinweis neue Saison */}
           {!isReEdit && startNewSeason && (

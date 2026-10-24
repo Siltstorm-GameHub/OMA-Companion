@@ -2,6 +2,7 @@
 import { EventCategory, EventGenre } from "@prisma/client";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
+import type { TournamentTemplate } from "@/lib/series-seasons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,8 @@ export type SeriesOption = {
   genre: EventGenre | null;
   placementRewardsJson: string | null;
   fixedFormat?: string | null;
+  /** Turniervorlage der Reihe (siehe lib/series-seasons.ts) — füllt Check-in und Punktemodus vor */
+  tournamentTemplateJson?: string | null;
   _count: { events: number };
 };
 
@@ -68,6 +71,8 @@ export type SeasonPrefill = {
   participationRankPts: number;
   placements: PlacementReward[];
   polls: PollConfig[];
+  /** Turniervorlage der Vorsaison (Gruppenphase, Check-in, Punktemodus) */
+  tournamentTemplate: TournamentTemplate;
   dominion: {
     enabled: boolean;
     triggerStats: string[];
