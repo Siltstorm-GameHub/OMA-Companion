@@ -13,7 +13,6 @@ interface Props {
   done: {
     bio: boolean;
     birthday: boolean;
-    banner: boolean;
     twitch: boolean;
     favoriteGames: boolean;
   };

@@ -58,7 +58,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.githubusercontent.com" },
       // Twitch (Partner-Logos, Stream-Thumbnails)
       { protocol: "https", hostname: "static-cdn.jtvnw.net" },
-      // Vercel Blob (Event-Cover, Profil-Banner, Abzeichen — siehe /api/upload)
+      // Vercel Blob (Event-Cover, Abzeichen — siehe /api/upload)
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
   },

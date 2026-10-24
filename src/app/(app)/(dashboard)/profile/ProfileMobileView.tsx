@@ -30,7 +30,6 @@ import ProfileJobBadge from "./ProfileJobBadge";
 
 interface Props {
   // Hero
-  bannerUrl:         string | null;
   displayName:       string;
   avatarUrl:         string | null;
   rankPoints:        number;
@@ -41,7 +40,6 @@ interface Props {
   editorBirthday:    string | null;
   editorBio:         string | null;
   editorTwitchLogin: string | null;
-  editorBannerUrl:   string | null;
 
   // Profil-Reiter
   userId:                   string;
@@ -61,7 +59,6 @@ interface Props {
   profileCompletionDone: {
     bio:           boolean;
     birthday:      boolean;
-    banner:        boolean;
     twitch:        boolean;
     favoriteGames: boolean;
   };
@@ -96,8 +93,8 @@ const TABS: { key: Tab; label: string; icon: typeof User }[] = [
  */
 export default function ProfileMobileView(props: Props) {
   const {
-    bannerUrl, displayName, avatarUrl, rankPoints, rankLabel, rankColor, memberSince, totalPoints,
-    editorBirthday, editorBio, editorTwitchLogin, editorBannerUrl,
+    displayName, avatarUrl, rankPoints, rankLabel, rankColor, memberSince, totalPoints,
+    editorBirthday, editorBio, editorTwitchLogin,
     userId, eventCount, eventWins, pollMasterCount, pokaleCount, topGames, favoriteGames,
     voiceHours, messageCount, coinsEarned, coinsSpent,
     questsWithProgress, tournamentParticipations, squads, profileCompletionDone, rewardPerItem, reviewYears,
@@ -111,13 +108,6 @@ export default function ProfileMobileView(props: Props) {
     <div className="space-y-4">
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-        {bannerUrl && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-/Fremd-Host */}
-            <img src={bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/65 to-black/40 pointer-events-none" />
-          </>
-        )}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-teal-900/10 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
 
@@ -152,7 +142,6 @@ export default function ProfileMobileView(props: Props) {
             birthday={editorBirthday}
             bio={editorBio}
             twitchLogin={editorTwitchLogin}
-            bannerUrl={editorBannerUrl}
           />
         </div>
       </div>

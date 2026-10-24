@@ -10,7 +10,7 @@ import { resolveStoreId } from "@/lib/blob-store";
  *
  * Erwartet multipart/form-data mit den Feldern:
  *   file  — die Bilddatei
- *   kind  — "event-cover" | "profile-banner" | "battle-card-avatar" | "tactic-card-art" | "community-job-asset"
+ *   kind  — "event-cover" | "battle-card-avatar" | "tactic-card-art" | "community-job-asset"
  *
  * Antwort: { url: string }
  *
@@ -61,7 +61,6 @@ function checkBlobToken(): { ok: true } | { ok: false; reason: string } {
  *  im Blob-Pfad, ein freier String wäre ein Path-Traversal-Vektor. */
 const KINDS = {
   "event-cover":         { minRole: "moderator", maxBytes: 4_000_000 },
-  "profile-banner":      { minRole: "user",      maxBytes: 3_000_000 },
   "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
   "tactic-card-art":     { minRole: "admin",     maxBytes: 8_000_000 },
   "match-proof":         { minRole: "user",      maxBytes: 4_000_000 }, // Ergebnis-Nachweis (Screenshots) für Match-Meldungen

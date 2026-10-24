@@ -54,7 +54,7 @@ export default async function ProfilePage() {
       Promise.all([
         prisma.user.findUnique({
           where:  { id: userId },
-          select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, bannerUrl: true, voiceMinutesTotal: true, messagesTotal: true },
+          select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, voiceMinutesTotal: true, messagesTotal: true },
         }),
         prisma.eventRegistration.findMany({
           where:   { userId },
@@ -159,7 +159,6 @@ export default async function ProfilePage() {
   const profileCompletionDone = {
     bio:           !!user.bio,
     birthday:      !!user.birthday,
-    banner:        !!user.bannerUrl,
     twitch:        !!user.twitchLogin,
     favoriteGames: favoriteGames.length > 0,
   };
@@ -213,20 +212,6 @@ export default async function ProfilePage() {
 
         {/* ── Hero ────────────────────────────────────────────────────── */}
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-          {/* Eigenes Banner — liegt unter den Gradient-Overlays, damit der
-              bestehende Look erhalten bleibt und der Text lesbar bleibt. */}
-          {user.bannerUrl && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-/Fremd-Host, next/image bräuchte je Host ein remotePattern */}
-              <img
-                src={user.bannerUrl}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-              />
-              {/* Scrim: ohne den verschwindet heller Text auf hellen Bannern */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/65 to-black/40 pointer-events-none" />
-            </>
-          )}
           <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-teal-900/10 pointer-events-none" />
           <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
@@ -270,7 +255,6 @@ export default async function ProfilePage() {
                   birthday={editorBirthday}
                   bio={user.bio ?? null}
                   twitchLogin={user.twitchLogin ?? null}
-                  bannerUrl={user.bannerUrl ?? null}
                 />
               </div>
             </div>
@@ -407,7 +391,6 @@ export default async function ProfilePage() {
           ══════════════════════════════════════════════════════════════ */}
       <div className="lg:hidden">
         <ProfileMobileView
-          bannerUrl={user.bannerUrl ?? null}
           displayName={displayName}
           avatarUrl={user.image}
           rankPoints={rankPoints}
@@ -418,7 +401,6 @@ export default async function ProfilePage() {
           editorBirthday={editorBirthday}
           editorBio={user.bio ?? null}
           editorTwitchLogin={user.twitchLogin ?? null}
-          editorBannerUrl={user.bannerUrl ?? null}
           userId={userId}
           eventCount={eventCount}
           eventWins={eventWins}
