@@ -117,6 +117,16 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/",
   },
   {
+    key: "match_ready",
+    label: "Turnier: Dein Match ist bereit",
+    description: "Wenn beide Gegner eines Turnier-Matches feststehen (z.B. nach dem Aufrücken im K.O.-Baum oder beim Erstellen der K.O.-Runde). Geht an beide Spieler.",
+    category: "tournaments",
+    pushEnabled: true, inAppEnabled: true, discordDmEnabled: true, discordChanEnabled: false,
+    titleTemplate: "⚔️ Dein Match ist bereit",
+    bodyTemplate: "{round} bei {eventName}: Du spielst gegen {opponent}. Viel Erfolg!",
+    urlTemplate: "/events",
+  },
+  {
     key: "duel_challenge",
     label: "Münzen-Duell-Herausforderung",
     description: "Wenn ein Nutzer zu einem Münzen-Duell herausgefordert wird.",

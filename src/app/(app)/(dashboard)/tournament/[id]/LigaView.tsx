@@ -6,6 +6,7 @@ import { Trophy, Clock, StickyNote } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
+import { computeLeagueStandings } from "@/lib/tournaments/groupStage";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -15,6 +16,7 @@ type Match = {
   player1Id: string | null; player2Id: string | null;
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: unknown[];
+  startedAt?: string | Date | null;
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "Unbekannt";
@@ -30,57 +32,16 @@ type Standing = {
   scored: number;
   conceded: number;
   played: number;
+  /** Platz nur per Los entschieden (siehe computeGroupStandings) */
+  decidedByLot?: boolean;
 };
 
+/** Tabelle — gemeinsame Berechnung mit Overlay, Ranking und Siegerermittlung (computeLeagueStandings). */
 function buildStandings(participants: Participant[], matches: Match[]): Standing[] {
-  const map = new Map<string, Standing>();
-  for (const p of participants) {
-    map.set(p.userId, {
-      userId: p.userId, user: p.user,
-      w: 0, d: 0, l: 0, pts: 0, scored: 0, conceded: 0, played: 0,
-    });
-  }
-
-  for (const m of matches) {
-    const played = !!m.playedAt;
-    if (!played) continue;
-    const isDraw = !m.winnerId;
-    const loserId = m.winnerId
-      ? (m.player1Id === m.winnerId ? m.player2Id : m.player1Id)
-      : null;
-
-    if (isDraw) {
-      for (const uid of [m.player1Id, m.player2Id]) {
-        if (!uid) continue;
-        const s = map.get(uid);
-        if (s) { s.d += 1; s.pts += 1; s.played += 1; }
-      }
-    } else {
-      if (m.winnerId) {
-        const w = map.get(m.winnerId);
-        if (w) { w.w += 1; w.pts += 3; w.played += 1; }
-      }
-      if (loserId) {
-        const l = map.get(loserId);
-        if (l) { l.l += 1; l.played += 1; }
-      }
-    }
-
-    if (m.player1Id && m.score1 != null) {
-      const s = map.get(m.player1Id);
-      if (s) { s.scored += m.score1; s.conceded += m.score2 ?? 0; }
-    }
-    if (m.player2Id && m.score2 != null) {
-      const s = map.get(m.player2Id);
-      if (s) { s.scored += m.score2; s.conceded += m.score1 ?? 0; }
-    }
-  }
-
-  return [...map.values()].sort((a, b) =>
-    b.pts !== a.pts ? b.pts - a.pts :
-    b.w   !== a.w   ? b.w   - a.w   :
-    (b.scored - b.conceded) - (a.scored - a.conceded)
-  );
+  const userById = new Map(participants.map(p => [p.userId, p.user]));
+  return computeLeagueStandings(participants.map(p => p.userId), matches)
+    .filter(s => userById.has(s.userId))
+    .map(s => ({ ...s, user: userById.get(s.userId)! }));
 }
 
 export default function LigaView({
@@ -108,6 +69,8 @@ export default function LigaView({
 
   const playedCount   = matches.filter(m => m.playedAt).length;
   const pendingCount  = matches.length - playedCount;
+  // "Los"-Hinweis erst, wenn alle Spiele gespielt sind — vorher ist ein Gleichstand nur vorläufig
+  const leagueComplete = matches.length > 0 && pendingCount === 0;
 
   return (
     <div className="space-y-6">
@@ -168,6 +131,12 @@ export default function LigaView({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      {leagueComplete && s.decidedByLot && (
+                        <span className="mr-1.5 text-[9px] font-medium text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded"
+                          title="Punkte, Tore, direkter Vergleich und Siege gleich — entschieden per Losentscheid (Anmelde-Reihenfolge)">
+                          Los
+                        </span>
+                      )}
                       <span className="font-bold text-white text-base">{s.pts}</span>
                     </td>
                   </tr>
@@ -226,6 +195,7 @@ export default function LigaView({
                     const played  = !!match.playedAt;
                     const isDraw  = played && !match.winnerId;
                     const isMyMatch = match.player1Id === userId || match.player2Id === userId;
+                    const isLive = !!match.startedAt && !played;
 
                     return (
                       <div key={match.id}
@@ -276,7 +246,9 @@ export default function LigaView({
                                 </span>
                               )
                             ) : (
-                              <span className="text-xs text-gray-600 font-medium">vs</span>
+                              isLive
+                                ? <span className="text-xs text-red-400 font-bold animate-pulse">LIVE</span>
+                                : <span className="text-xs text-gray-600 font-medium">vs</span>
                             )}
                           </div>
 

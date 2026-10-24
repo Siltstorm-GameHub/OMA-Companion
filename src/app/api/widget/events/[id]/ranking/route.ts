@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { placementRewardFor } from "@/lib/placement-rewards";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
-import { GROUP_KNOCKOUT_FORMAT, groupKnockoutRanking } from "@/lib/tournaments/groupStage";
+import { GROUP_KNOCKOUT_FORMAT, computeLeagueStandings, groupKnockoutRanking, leagueMemberIds } from "@/lib/tournaments/groupStage";
 
 type UserLite = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 
@@ -156,27 +156,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .map((uid) => ({ userId: uid, score: wins.get(uid) ?? 0, label: `${wins.get(uid) ?? 0} Siege` }))
       .sort((a, b) => b.score - a.score);
   } else if (format === "round_robin" || format === "liga") {
-    const pts = new Map<string, number>();
-    for (const match of event.matches) {
-      const p1 = match.player1Id;
-      const p2 = match.player2Id;
-      if (!p1 || !p2) continue;
-      if (!pts.has(p1)) pts.set(p1, 0);
-      if (!pts.has(p2)) pts.set(p2, 0);
-      if (!userMap.has(p1)) userMap.set(p1, { id: p1, name: null, username: null, image: null, rankPoints: 0 });
-      if (!userMap.has(p2)) userMap.set(p2, { id: p2, name: null, username: null, image: null, rankPoints: 0 });
-      if (match.winnerId === p1) {
-        pts.set(p1, pts.get(p1)! + 3);
-      } else if (match.winnerId === p2) {
-        pts.set(p2, pts.get(p2)! + 3);
-      } else if (match.score1 !== null && match.score2 !== null && match.score1 === match.score2) {
-        pts.set(p1, pts.get(p1)! + 1);
-        pts.set(p2, pts.get(p2)! + 1);
-      }
-    }
-    ranking = [...userMap.keys()]
-      .map((uid) => ({ userId: uid, score: pts.get(uid) ?? 0, label: `${pts.get(uid) ?? 0} Pkt.` }))
-      .sort((a, b) => b.score - a.score);
+    // Gleiche Tabelle wie auf der Turnierseite (inkl. Unentschieden ohne Tore, Tordifferenz,
+    // direktem Vergleich), siehe computeLeagueStandings
+    // Alle Turnier-Teilnehmer (auch ohne gespieltes Match) plus alle Spieler aus Matches
+    const ids = [...new Set([...userMap.keys(), ...leagueMemberIds(event.matches, [...userMap.keys()])])];
+    for (const uid of ids) if (!userMap.has(uid)) userMap.set(uid, { id: uid, name: null, username: null, image: null, rankPoints: 0 });
+    ranking = computeLeagueStandings(ids, event.matches)
+      .map(s => ({ userId: s.userId, score: s.pts, label: `${s.pts} Pkt.` }));
+
   } else {
     ranking = [...userMap.keys()].map((uid) => ({ userId: uid, score: 0, label: "–" }));
   }

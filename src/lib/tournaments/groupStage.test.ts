@@ -2,7 +2,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches, seedKnockout,
-  validateGroupStageConfig, groupLetter, groupKnockoutRanking, groupMatchCount, aggregateKnockoutTies, type GroupMatchLike,
+  validateGroupStageConfig, groupLetter, groupKnockoutRanking, groupMatchCount, aggregateKnockoutTies,
+  computeLeagueStandings, leagueMemberIds, type GroupMatchLike,
 } from "./groupStage";
 
 /** Gruppe, in der der erste Spieler alle schlägt, der zweite alle außer dem ersten usw. */
@@ -182,6 +183,33 @@ describe("Gruppenphase + K.O.", () => {
     );
     assert.equal(ranking[0].userId, "b");
     assert.match(ranking[0].label, /^Sieger/);
+  });
+
+  test("Liga-Tabelle: Unentschieden ohne Tore zählt, nur Spieler aus Matches stehen drin", () => {
+    const now = new Date();
+    const matches = [
+      { player1Id: "a", player2Id: "b", winnerId: null, score1: null, score2: null, playedAt: now },
+      { player1Id: "a", player2Id: "c", winnerId: "a", score1: 2, score2: 0, playedAt: now },
+      { player1Id: "b", player2Id: "c", winnerId: null, score1: null, score2: null, playedAt: null },
+    ];
+    // "zuschauer" ist angemeldet, steht aber in keinem Match
+    const ids = leagueMemberIds(matches, ["zuschauer", "c", "b", "a"]);
+    assert.deepEqual(ids, ["c", "b", "a"]);
+    const table = computeLeagueStandings(ids, matches);
+    assert.deepEqual(table.map(s => [s.userId, s.pts, s.d]), [["a", 4, 1], ["b", 1, 1], ["c", 0, 0]]);
+    // ohne Matches: die Kandidaten selbst
+    assert.deepEqual(leagueMemberIds([], ["x", "y"]), ["x", "y"]);
+  });
+
+  test("Losentscheid wird markiert, wenn alle sportlichen Kriterien gleich sind", () => {
+    const now = new Date();
+    // a und b spielen 1:1, beide schlagen c mit 1:0 → komplett gleich
+    const [table] = computeGroupStandings([["b", "a", "c"]], [
+      { groupIndex: 0, player1Id: "a", player2Id: "b", winnerId: null, score1: 1, score2: 1, playedAt: now },
+      { groupIndex: 0, player1Id: "a", player2Id: "c", winnerId: "a", score1: 1, score2: 0, playedAt: now },
+      { groupIndex: 0, player1Id: "b", player2Id: "c", winnerId: "b", score1: 1, score2: 0, playedAt: now },
+    ]);
+    assert.deepEqual(table.map(s => [s.userId, !!s.decidedByLot]), [["b", true], ["a", true], ["c", false]]);
   });
 
   test("Konfigurationsprüfung", () => {

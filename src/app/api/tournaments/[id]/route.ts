@@ -4,6 +4,8 @@ import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
 import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate";
 import { prepareTournamentPool } from "@/lib/tournaments/participants";
+import { notifyKnockoutCreated } from "@/lib/tournaments/matchNotifications";
+import { planSchedule } from "@/lib/tournaments/schedule";
 import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/groupStageServer";
 
@@ -26,6 +28,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       throw err;
     }
+  }
+
+  // Terminplanung: Startzeit + Abstand je Spieltag/Runde → alle (noch nicht terminierten) Matches
+  if (generateMatches === "schedule") {
+    const startAt = new Date(body.startAt);
+    const interval = Math.round(Number(body.intervalMinutes));
+    if (isNaN(startAt.getTime())) return NextResponse.json({ error: "Ungültige Startzeit" }, { status: 400 });
+    if (!Number.isFinite(interval) || interval < 5 || interval > 7 * 24 * 60) {
+      return NextResponse.json({ error: "Abstand muss zwischen 5 Minuten und 7 Tagen liegen" }, { status: 400 });
+    }
+    const matches = await prisma.match.findMany({
+      where: { eventId },
+      select: {
+        id: true, round: true, groupIndex: true, leg: true, player1Id: true, player2Id: true, winnerId: true,
+        scheduledAt: true, _count: { select: { entries: true } },
+      },
+    });
+    const plan = planSchedule(
+      matches.map(m => ({ ...m, entryCount: m._count.entries })), startAt, interval, body.overwrite === true,
+    );
+    await prisma.$transaction(plan.map(p => prisma.match.update({ where: { id: p.id }, data: { scheduledAt: p.scheduledAt } })));
+    return NextResponse.json({ scheduled: plan.length });
   }
 
   // Auto-generate: K.O.-Baum, Liga (round_robin) bzw. Hin-/Rückrunde (liga). Ausgelost werden die
@@ -56,6 +80,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       matchData = generateRoundRobin(participantIds, eventId);
     }
     await prisma.match.createMany({ data: matchData });
+    // K.O.-Baum: Spieler der ersten Runde erfahren ihren Gegner
+    if (generateMatches === "single_elimination") await notifyKnockoutCreated(eventId);
     return NextResponse.json({ generated: matchData.length });
   }
 

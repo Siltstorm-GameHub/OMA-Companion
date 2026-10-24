@@ -1,14 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { ApplyMatchResultError } from "./applyMatchResult";
 import { prepareTournamentPool } from "./participants";
+import { notifyKnockoutCreated } from "./matchNotifications";
 import {
   GROUP_KNOCKOUT_FORMAT, computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches,
   groupMembers, parseGroupStageConfig, resolveGroupCount, validateGroupStageConfig, type GroupStageConfig,
 } from "./groupStage";
 
-export type GroupStageAction = "groups" | "reset_groups" | "knockout" | "reset_knockout";
+export type GroupStageAction = "groups" | "reset_groups" | "knockout" | "reset_knockout" | "rebuild_knockout";
 
-export const GROUP_STAGE_ACTIONS: GroupStageAction[] = ["groups", "reset_groups", "knockout", "reset_knockout"];
+export const GROUP_STAGE_ACTIONS: GroupStageAction[] = ["groups", "reset_groups", "knockout", "reset_knockout", "rebuild_knockout"];
 
 /**
  * Admin-Aktionen des Formats group_knockout (aufgerufen aus PATCH /api/tournaments/[id] mit
@@ -18,6 +19,8 @@ export const GROUP_STAGE_ACTIONS: GroupStageAction[] = ["groups", "reset_groups"
  *  - reset_groups:   Auslosung verwerfen (nur solange noch kein Match ein Ergebnis hat)
  *  - knockout:       K.O.-Runde aus den Abschlusstabellen erzeugen (alle Gruppenspiele bestätigt)
  *  - reset_knockout: K.O.-Runde verwerfen (nur solange dort noch kein Match gespielt wurde)
+ *  - rebuild_knockout: beides nacheinander — nach Korrekturen in der Gruppenphase die Setzung neu
+ *                    aus den aktuellen Tabellen erzeugen
  */
 export async function runGroupStageAction(
   eventId: string,
@@ -27,6 +30,16 @@ export async function runGroupStageAction(
     groupLegs?: unknown; knockoutLegs?: unknown; singleLegFinal?: unknown;
   },
 ): Promise<{ generated?: number; deleted?: number }> {
+  if (action === "rebuild_knockout") {
+    // Erst prüfen, ob das Neuerstellen klappen würde — sonst wäre die alte K.O.-Runde schon weg
+    const open = await prisma.match.count({
+      where: { eventId, groupIndex: { not: null }, OR: [{ playedAt: null }, { resultConfirmed: false }] },
+    });
+    if (open > 0) throw new ApplyMatchResultError(`Noch ${open} Gruppenspiel${open === 1 ? "" : "e"} ohne bestätigtes Ergebnis.`, 400);
+    const { deleted } = await runGroupStageAction(eventId, "reset_knockout", input);
+    const { generated } = await runGroupStageAction(eventId, "knockout", input);
+    return { deleted, generated };
+  }
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
@@ -114,6 +127,7 @@ export async function runGroupStageAction(
       singleLegFinal: cfg?.singleLegFinal ?? true,
     });
     await prisma.match.createMany({ data: matches });
+    await notifyKnockoutCreated(eventId);
     return { generated: matches.length };
   }
 

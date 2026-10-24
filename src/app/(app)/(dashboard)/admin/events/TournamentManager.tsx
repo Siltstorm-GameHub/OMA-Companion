@@ -4,7 +4,7 @@ import CoinIcon from "@/components/CoinIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "@/components/icons";
-import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw } from "@/components/icons";
+import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw, Pencil, History, Play, Square, CalendarClock } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
@@ -32,6 +32,15 @@ export type Match = {
   isThirdPlace?: boolean;
   /** K.O.-Runde mit Hin- und Rückspiel: 1 = Hinspiel, 2 = Rückspiel */
   leg?: number | null;
+  /** "Läuft gerade" (vom Admin markiert) */
+  startedAt?: string | Date | null;
+};
+
+/** Eintrag im Änderungsprotokoll eines Matches (GET /api/tournaments/[id]/matches?matchId=…) */
+type MatchLogEntry = {
+  id: string; action: string; actor: string; createdAt: string;
+  before: { played: boolean; winnerId: string | null; score1: number | null; score2: number | null } | null;
+  after:  { played: boolean; winnerId: string | null; score1: number | null; score2: number | null } | null;
 };
 export type Participant = { userId: string; user: User; groupIndex?: number | null };
 export type Tournament = {
@@ -133,6 +142,15 @@ export default function TournamentManager({
   const [scores1v1, setScores1v1] = useState<Record<string, { s1: string; s2: string }>>({});
   const [ffaEdits, setFfaEdits]   = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [expanded, setExpanded]   = useState<Set<string>>(new Set());
+  // Bereits gespielte 1v1-Matches im Bearbeiten-Modus (Ergebnis korrigieren statt zurücksetzen)
+  const [editing, setEditing]     = useState<Set<string>>(new Set());
+  // Geöffnete Änderungsprotokolle je Match
+  const [logs, setLogs]           = useState<Record<string, MatchLogEntry[] | "loading">>({});
+  // Terminplanung
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleStart, setScheduleStart] = useState("");
+  const [scheduleInterval, setScheduleInterval] = useState(30);
+  const [scheduleOverwrite, setScheduleOverwrite] = useState(false);
   // Team-Zuordnung pro Spieler (nur coop_stats): Match Win wird pro Team, nicht pro Match vergeben
   const [teamAssign, setTeamAssign] = useState<Record<string, Record<string, "A" | "B" | undefined>>>(() => {
     const init: Record<string, Record<string, "A" | "B" | undefined>> = {};
@@ -299,6 +317,7 @@ export default function TournamentManager({
       reset_groups:   { title: "Neu auslosen", description: "Gruppen und alle Gruppenspiele löschen, um neu auszulosen?", variant: "danger" },
       knockout:       { title: "K.O.-Runde erstellen", description: "Die K.O.-Runde aus den aktuellen Gruppentabellen erstellen? Danach zählen Korrekturen in der Gruppenphase nicht mehr automatisch." },
       reset_knockout: { title: "K.O.-Runde verwerfen", description: "Alle Matches der K.O.-Runde löschen? Die Gruppenphase bleibt erhalten.", variant: "danger" },
+      rebuild_knockout: { title: "K.O.-Runde neu erstellen", description: "Die bestehende K.O.-Runde löschen und aus den aktuellen Gruppentabellen neu setzen? Termine und Live-Markierungen der K.O.-Matches gehen dabei verloren.", variant: "danger" },
     };
     if (!(await confirm(prompts[body.generateMatches]))) return;
     setLoading(true);
@@ -371,8 +390,21 @@ export default function TournamentManager({
     }
   }
 
-  async function submit1v1(matchId: string, winnerId: string | null, isDraw = false) {
-    if (!tournament) return;
+  /** Gruppenspiel ändern, obwohl die K.O.-Runde schon steht? Die Setzung ändert sich dadurch nicht mit. */
+  async function confirmGroupChangeAfterKnockout(matchId: string): Promise<boolean> {
+    if (!tournament) return false;
+    const match = tournament.matches.find(m => m.id === matchId);
+    const knockoutExists = tournament.matches.some(m => m.groupIndex == null);
+    if (!match || match.groupIndex == null || !knockoutExists) return true;
+    return confirm({
+      title: "K.O.-Runde besteht bereits",
+      description: "Dieses Gruppenspiel zu ändern kann die Tabelle verändern — die bereits erstellte K.O.-Runde wird dabei NICHT automatisch neu gesetzt. Danach erscheint in der Gruppenübersicht ein Hinweis, falls die Setzung nicht mehr passt.",
+    });
+  }
+
+  async function submit1v1(matchId: string, winnerId: string | null, isDraw = false): Promise<boolean> {
+    if (!tournament) return false;
+    if (!(await confirmGroupChangeAfterKnockout(matchId))) return false;
     const s = scores1v1[matchId];
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
@@ -385,12 +417,74 @@ export default function TournamentManager({
       }),
     });
     setLoading(false);
-    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return false; }
+    setEditing(prev => { const n = new Set(prev); n.delete(matchId); return n; });
+    setLogs(prev => { const n = { ...prev }; delete n[matchId]; return n; });
+    router.refresh();
+    return true;
+  }
+
+  /** Bearbeiten: Ergebnis-Eingabe mit den aktuellen Werten öffnen (statt erst zurückzusetzen). */
+  function startEdit(match: Match) {
+    setScores1v1(prev => ({
+      ...prev,
+      [match.id]: { s1: match.score1 != null ? String(match.score1) : "", s2: match.score2 != null ? String(match.score2) : "" },
+    }));
+    setEditing(prev => new Set(prev).add(match.id));
+  }
+  function cancelEdit(matchId: string) {
+    setEditing(prev => { const n = new Set(prev); n.delete(matchId); return n; });
+  }
+
+  /** "Läuft gerade" setzen bzw. beenden */
+  async function setLive(matchId: string, start: boolean) {
+    if (!tournament) return;
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, action: start ? "start" : "stop" }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler"); return; }
+    const updated = await res.json();
+    setTournament(prev => prev ? { ...prev, matches: prev.matches.map(m => m.id === matchId ? { ...m, startedAt: updated.startedAt } : m) } : prev);
+    router.refresh();
+  }
+
+  /** Änderungsprotokoll eines Matches ein-/ausblenden */
+  async function toggleLog(matchId: string) {
+    if (!tournament) return;
+    if (logs[matchId]) { setLogs(prev => { const n = { ...prev }; delete n[matchId]; return n; }); return; }
+    setLogs(prev => ({ ...prev, [matchId]: "loading" }));
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches?matchId=${encodeURIComponent(matchId)}`);
+    const data = res.ok ? await res.json() : [];
+    setLogs(prev => ({ ...prev, [matchId]: data }));
+  }
+
+  /** Alle Matches terminieren: Startzeit + Abstand je Spieltag/Runde */
+  async function scheduleMatches() {
+    if (!tournament || !scheduleStart) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        generateMatches: "schedule",
+        startAt: fromDatetimeLocalBerlin(scheduleStart).toISOString(),
+        intervalMinutes: scheduleInterval,
+        overwrite: scheduleOverwrite,
+      }),
+    });
+    setLoading(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast.error(data.error ?? "Fehler bei der Terminplanung"); return; }
+    toast.success(`${data.scheduled} Matches terminiert`);
+    setShowSchedule(false);
     router.refresh();
   }
 
   async function resetMatch(matchId: string) {
     if (!tournament || !(await confirm({ title: "Ergebnis zurücksetzen", description: "Ergebnis dieses Matches zurücksetzen?", variant: "danger" }))) return;
+    if (!(await confirmGroupChangeAfterKnockout(matchId))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
@@ -535,7 +629,17 @@ export default function TournamentManager({
   }
 
   async function deleteMatch(matchId: string) {
-    if (!tournament || !(await confirm({ title: "Match löschen", description: "Match löschen?", variant: "danger" }))) return;
+    if (!tournament) return;
+    const match = tournament.matches.find(m => m.id === matchId);
+    const inBracket = !!match && (tournament.format === "single_elimination" || (isGroupKnockout && match.groupIndex == null));
+    const ok = await confirm(inBracket
+      ? {
+          title: "⚠️ Match aus dem K.O.-Baum löschen?",
+          description: "Achtung: Das zerstört die Struktur des Turnierbaums. Sieger dieses Matches können danach nicht mehr aufrücken, und Paarungen der nächsten Runde bleiben unvollständig. Das lässt sich nicht rückgängig machen. Um ein falsches Ergebnis zu korrigieren, nutze stattdessen „Bearbeiten“ oder „Zurücksetzen“. Wirklich löschen?",
+          variant: "danger",
+        }
+      : { title: "Match löschen", description: "Match löschen?", variant: "danger" });
+    if (!ok) return;
     setLoading(true);
     await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "DELETE",
@@ -594,7 +698,13 @@ export default function TournamentManager({
     const p2 = allUsers.find(u => u.id === match.player2Id);
     const isPlayed  = !!match.winnerId || !!match.playedAt;
     const isDraw    = !!match.playedAt && !match.winnerId;
-    const isPending = !!p1 && !!p2 && !isPlayed;
+    const isEditing = editing.has(match.id);
+    // Eingabe offen: noch kein Ergebnis — oder Bearbeiten-Modus eines gespielten Matches
+    const isPending = !!p1 && !!p2 && (!isPlayed || isEditing);
+    const isLive = !!match.startedAt && !match.playedAt;
+    const matchLog = logs[match.id];
+    // Freilos: nur ein Spieler, Sieger stand beim Erzeugen fest — nicht zurücksetzbar
+    const isByeMatch = !!match.winnerId && (!match.player1Id || !match.player2Id);
     // Rückspiel einer K.O.-Paarung: Gesamtergebnis aus Hinspiel + (eingegebenem) Rückspiel
     const firstLeg = match.leg === 2
       ? tournament!.matches.find(m => m.groupIndex == null && m.leg === 1 && m.round === match.round
@@ -611,7 +721,8 @@ export default function TournamentManager({
     return (
       <div key={match.id}
         className={`rounded-lg border overflow-hidden ${
-          isPlayed ? "border-gray-700 opacity-80" : "border-gray-600"
+          isLive ? "border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.15)]"
+          : isPlayed && !isEditing ? "border-gray-700 opacity-80" : "border-gray-600"
         }`}>
         {/* Match header */}
         <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
@@ -625,7 +736,37 @@ export default function TournamentManager({
                 <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
               </span>
             )}
-            {isPlayed && (
+            {isByeMatch && <span className="text-[10px] text-gray-500">Freilos</span>}
+            {isLive && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LIVE</span>}
+            {!isPlayed && p1 && p2 && (
+              <button onClick={() => setLive(match.id, !isLive)} disabled={loading}
+                title={isLive ? "Live-Markierung beenden" : "Als „läuft gerade“ markieren (Turnierseite & Overlay)"}
+                className={`p-2.5 -m-1 transition-colors ${isLive ? "text-red-400 hover:text-gray-400" : "text-gray-600 hover:text-red-400"}`}>
+                {isLive ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              </button>
+            )}
+            {isPlayed && !isByeMatch && !isEditing && (
+              <button onClick={() => startEdit(match)} disabled={loading}
+                title="Ergebnis bearbeiten"
+                className="p-2.5 -m-1 text-gray-600 hover:text-teal-400 transition-colors">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {isEditing && (
+              <button onClick={() => cancelEdit(match.id)} disabled={loading}
+                title="Bearbeiten abbrechen"
+                className="p-2.5 -m-1 text-teal-400 hover:text-gray-400 transition-colors">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {!isByeMatch && (
+              <button onClick={() => toggleLog(match.id)} disabled={loading}
+                title="Änderungsprotokoll"
+                className={`p-2.5 -m-1 transition-colors ${matchLog ? "text-teal-400" : "text-gray-600 hover:text-gray-300"}`}>
+                <History className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {isPlayed && !isByeMatch && (
               <button onClick={() => resetMatch(match.id)} disabled={loading}
                 title="Ergebnis zurücksetzen"
                 className="p-2.5 -m-1 text-gray-600 hover:text-amber-500 transition-colors">
@@ -733,6 +874,30 @@ export default function TournamentManager({
 
         {match.notes && (
           <p className="px-3 py-1.5 text-xs text-gray-600 bg-gray-800/30">{match.notes}</p>
+        )}
+
+        {/* Änderungsprotokoll */}
+        {matchLog && (
+          <div className="px-3 py-2 bg-gray-900/60 border-t border-gray-700 space-y-1">
+            {matchLog === "loading" ? (
+              <p className="text-[11px] text-gray-500">Lädt…</p>
+            ) : matchLog.length === 0 ? (
+              <p className="text-[11px] text-gray-500">Noch keine Einträge.</p>
+            ) : matchLog.map(entry => {
+              const describe = (st: MatchLogEntry["after"]) => {
+                if (!st || !st.played) return "offen";
+                const winner = st.winnerId ? allUsers.find(u => u.id === st.winnerId) : null;
+                const score = st.score1 != null || st.score2 != null ? `${st.score1 ?? "–"}:${st.score2 ?? "–"}` : "";
+                return [score, winner ? `Sieger ${userName(winner)}` : "Unentschieden"].filter(Boolean).join(" · ");
+              };
+              return (
+                <p key={entry.id} className="text-[11px] text-gray-400">
+                  <span className="text-gray-500">{fmtDate(entry.createdAt)}</span> · {entry.actor} ·{" "}
+                  {entry.action === "reset" ? "zurückgesetzt" : `${describe(entry.before)} → ${describe(entry.after)}`}
+                </p>
+              );
+            })}
+          </div>
         )}
       </div>
     );
@@ -844,6 +1009,44 @@ export default function TournamentManager({
           )}
         </div>
       </div>
+
+      {/* Terminplanung: Startzeit + Abstand je Spieltag/Runde */}
+      {is1v1 && tournament.matches.length > 0 && (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/30">
+          <button type="button" onClick={() => {
+            if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal());
+            setShowSchedule(v => !v);
+          }}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-300">
+            <span className="flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Termine planen</span>
+            {showSchedule ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          {showSchedule && (
+            <div className="px-3 pb-3 space-y-2">
+              <p className="text-[11px] text-gray-500">
+                Jeder Spieltag bzw. jede K.O.-Runde bekommt ein eigenes Zeitfenster (Gruppen spielen gleichzeitig,
+                Hin- und Rückspiel getrennt). Freilose werden nicht terminiert.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
+                  className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
+                <span className="text-xs text-gray-400">alle</span>
+                <input type="number" min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
+                  className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
+                <span className="text-xs text-gray-400">Minuten</span>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                <input type="checkbox" checked={scheduleOverwrite} onChange={e => setScheduleOverwrite(e.target.checked)} className="rounded" />
+                Vorhandene Termine überschreiben
+              </label>
+              <button type="button" onClick={scheduleMatches} disabled={loading || !scheduleStart || scheduleInterval < 5}
+                className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+                Termine setzen
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* K.O.-Baum / Liga aus den angemeldeten Spielern generieren (direkt sichtbar wenn relevant) */}
       {canGenerate && (

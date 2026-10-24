@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Dices, LayoutGrid, RotateCcw, Swords } from "@/components/icons";
 import {
   DEFAULT_ADVANCE_PER_GROUP, computeGroupStandings, groupLabel, groupMatchCount, groupMembers, parseGroupStageConfig,
-  resolveGroupCount, suggestedGroupCount, validateGroupStageConfig,
+  resolveGroupCount, seedKnockout, suggestedGroupCount, validateGroupStageConfig,
 } from "@/lib/tournaments/groupStage";
 import { userName, type Tournament, type User } from "./TournamentManager";
 
@@ -12,7 +12,7 @@ export type GroupStageActionBody =
       generateMatches: "groups"; groupCount: number; advancePerGroup: number; thirdPlaceMatch: boolean;
       groupLegs: 1 | 2; knockoutLegs: 1 | 2; singleLegFinal: boolean;
     }
-  | { generateMatches: "reset_groups" | "knockout" | "reset_knockout" };
+  | { generateMatches: "reset_groups" | "knockout" | "reset_knockout" | "rebuild_knockout" };
 
 /**
  * Gruppenphase + K.O. (Format group_knockout) im Turnier-Manager: Auslosung, Gruppentabellen und
@@ -121,6 +121,16 @@ export default function GroupStagePanel({
   const anyPlayed = tournament.matches.some(m => m.playedAt);
   const knockoutPlayed = knockoutMatches.some(m => m.playedAt);
   const withoutGroup = tournament.participants.filter(p => p.groupIndex == null);
+  // Passt die bestehende K.O.-Runde noch zu den Tabellen? (z.B. nach einer Korrektur in der Gruppe)
+  const seedingOutdated = (() => {
+    if (knockoutMatches.length === 0 || openGroupMatches > 0) return false;
+    const expected = seedKnockout(standings, advance);
+    const firstRound = knockoutMatches
+      .filter(m => m.round === 1 && !m.isThirdPlace && m.leg !== 2)
+      .sort((a, b) => a.position - b.position);
+    const actual = firstRound.flatMap(m => [m.player1Id ?? null, m.player2Id ?? null]);
+    return expected.length !== actual.length || expected.some((id, i) => id !== actual[i]);
+  })();
 
   return (
     <div className="space-y-3">
@@ -182,6 +192,25 @@ export default function GroupStagePanel({
         <p className="text-[11px] text-amber-500">
           Ohne Gruppe (nach der Auslosung hinzugefügt, spielen nicht mit): {withoutGroup.map(p => userName(p.user)).join(", ")}
         </p>
+      )}
+
+      {seedingOutdated && (
+        <div className="rounded-lg border border-amber-600/50 bg-amber-900/20 px-3 py-2 space-y-1.5">
+          <p className="text-xs text-amber-300">
+            ⚠️ Die Gruppentabellen haben sich seit dem Erstellen der K.O.-Runde geändert — die Setzung im
+            K.O.-Baum passt nicht mehr zu den aktuellen Platzierungen.
+          </p>
+          {knockoutPlayed ? (
+            <p className="text-[11px] text-gray-400">
+              In der K.O.-Runde wurden schon Ergebnisse eingetragen. Zum Neu-Setzen erst diese zurücksetzen.
+            </p>
+          ) : (
+            <button type="button" disabled={loading} onClick={() => onAction({ generateMatches: "rebuild_knockout" })}
+              className="text-xs text-amber-200 border border-amber-600/60 rounded-lg px-3 py-1 hover:bg-amber-900/30">
+              K.O.-Runde aus den aktuellen Tabellen neu erstellen
+            </button>
+          )}
+        </div>
       )}
 
       {knockoutMatches.length === 0 ? (

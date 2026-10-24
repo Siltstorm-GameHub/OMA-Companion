@@ -5,7 +5,7 @@
  */
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
-import { GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeGroupStandings, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
+import { GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeGroupStandings, computeLeagueStandings, groupLabel, knockoutRoundLabel, leagueMemberIds } from "@/lib/tournaments/groupStage";
 import { PanelShell } from "./tiles";
 import {
   displayName, PANEL_LIST_HEIGHT, PANEL_LIST_HEIGHT_COMPACT,
@@ -82,7 +82,7 @@ type RankedRow = {
  *  zugrunde liegenden Datenfelder unterschiedlich sind: Liga/Round-Robin tragen Sieger in
  *  `Match.winnerId`, FFA/Coop/Avg-Stats dagegen in `MatchEntry.placement`/`statsJson` — ein
  *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
- *  die Logik aus LigaView/RoundRobinView/FfaView, nur kompakter fürs Overlay. */
+ *  die Logik aus LigaView/FfaView, nur kompakter fürs Overlay. */
 export function TablePanel({
   matches, participants, format, statFields, ligaPunkteByUser, compact = true,
 }: {
@@ -250,50 +250,23 @@ export function SeriesTablePanel({
   );
 }
 
-/** Liga (mit Unentschieden) / Round-Robin (ohne) — Sieg=3, Unentschieden=1, sortiert nach
- *  Punkten, dann Siegen, dann Tordifferenz. Identische Punktelogik wie LigaView/RoundRobinView. */
+/** Liga-Tabelle (mit und ohne Hin-/Rückrunde) — gemeinsame Berechnung mit Turnierseite und Ranking,
+ *  siehe computeLeagueStandings. Unentschieden zählen immer (gespielt ohne Sieger). */
 function buildMatchRanking(
-  matches: OverlayMatch[], participants: OverlayParticipant[], format: string | null, ligaPunkteByUser: Record<string, number>,
+  matches: OverlayMatch[], participants: OverlayParticipant[], _format: string | null, ligaPunkteByUser: Record<string, number>,
 ): RankedRow[] {
-  const supportsDraw = format === "liga";
-  type Acc = { w: number; d: number; l: number; pts: number; scored: number; conceded: number };
-  const map = new Map<string, Acc>(participants.map(p => [p.userId, { w: 0, d: 0, l: 0, pts: 0, scored: 0, conceded: 0 }]));
-
-  for (const m of matches) {
-    const isDraw = supportsDraw && !!m.playedAt && !m.winnerId;
-    if (!m.winnerId && !isDraw) continue;
-
-    if (isDraw) {
-      for (const uid of [m.player1Id, m.player2Id]) {
-        const s = uid ? map.get(uid) : undefined;
-        if (s) { s.d += 1; s.pts += 1; }
-      }
-    } else if (m.winnerId) {
-      const w = map.get(m.winnerId);
-      if (w) { w.w += 1; w.pts += 3; }
-      const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
-      const l = loserId ? map.get(loserId) : undefined;
-      if (l) l.l += 1;
-    }
-
-    if (m.player1Id && m.score1 != null) {
-      const s = map.get(m.player1Id);
-      if (s) { s.scored += m.score1; s.conceded += m.score2 ?? 0; }
-    }
-    if (m.player2Id && m.score2 != null) {
-      const s = map.get(m.player2Id);
-      if (s) { s.scored += m.score2; s.conceded += m.score1 ?? 0; }
-    }
-  }
-
-  return participants
-    .map(p => {
-      const s = map.get(p.userId)!;
-      const secondary = supportsDraw ? `${s.w}S · ${s.d}U · ${s.l}N` : `${s.w}S · ${s.l}N`;
-      const ligaPunkte = ligaPunkteByUser[p.userId];
-      return { userId: p.userId, user: p.user, s, secondary, primary: `${s.pts} Pkt.`, ligaPunkte: ligaPunkte ? Math.round(ligaPunkte) : undefined };
-    })
-    .sort((a, b) => b.s.pts - a.s.pts || b.s.w - a.s.w || (b.s.scored - b.s.conceded) - (a.s.scored - a.s.conceded));
+  const userById = new Map(participants.map(p => [p.userId, p.user]));
+  const ids = leagueMemberIds(matches, participants.map(p => p.userId));
+  return computeLeagueStandings(ids, matches)
+    .filter(s => userById.has(s.userId))
+    .map(s => {
+      const ligaPunkte = ligaPunkteByUser[s.userId];
+      return {
+        userId: s.userId, user: userById.get(s.userId)!,
+        secondary: `${s.w}S · ${s.d}U · ${s.l}N`, primary: `${s.pts} Pkt.`,
+        ligaPunkte: ligaPunkte ? Math.round(ligaPunkte) : undefined,
+      };
+    });
 }
 
 /** FFA / Coop-Stats / Avg-Stats — Sieger stecken in MatchEntry, nicht in Match.winnerId.

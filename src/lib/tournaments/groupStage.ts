@@ -129,6 +129,9 @@ export type GroupStanding = {
   groupIndex: number;
   played: number; w: number; d: number; l: number;
   scored: number; conceded: number; pts: number;
+  /** Platz gegenüber einem Nachbarn nur per Los (Auslosungsreihenfolge) entschieden — alle
+   *  sportlichen Kriterien inkl. direktem Vergleich und Siegen waren gleich. */
+  decidedByLot?: boolean;
 };
 
 /** Reihenfolge innerhalb einer Tabelle (und beim Vergleich Gleichplatzierter verschiedener Gruppen). */
@@ -182,11 +185,14 @@ export function computeGroupStandings(members: string[][], matches: GroupMatchLi
       const tied = sorted.slice(i, j);
       if (tied.length > 1) {
         const h2h = headToHead(tied.map(t => t.userId), matches, groupIndex);
-        tied.sort((a, b) => {
+        const sporting = (a: GroupStanding, b: GroupStanding) => {
           const ha = h2h.get(a.userId)!, hb = h2h.get(b.userId)!;
-          return (hb.pts - ha.pts) || (hb.diff - ha.diff) || (hb.scored - ha.scored)
-            || (b.w - a.w) || (order.get(a.userId)! - order.get(b.userId)!);
-        });
+          return (hb.pts - ha.pts) || (hb.diff - ha.diff) || (hb.scored - ha.scored) || (b.w - a.w);
+        };
+        tied.sort((a, b) => sporting(a, b) || (order.get(a.userId)! - order.get(b.userId)!));
+        for (let k = 1; k < tied.length; k++) {
+          if (sporting(tied[k - 1], tied[k]) === 0) tied[k - 1].decidedByLot = tied[k].decidedByLot = true;
+        }
       }
       result.push(...tied);
       i = j;
@@ -211,6 +217,30 @@ function headToHead(userIds: string[], matches: GroupMatchLike[], groupIndex: nu
     else b.pts += 3;
   }
   return table;
+}
+
+/**
+ * Tabelle einer Liga (Liga-Modus, auch mit Hin-/Rückrunde) — exakt dieselben Regeln wie eine
+ * Gruppentabelle: Sieg 3, Unentschieden 1 (gespielt ohne Sieger), dann Tordifferenz, Tore, direkter
+ * Vergleich, Siege, Reihenfolge von memberIds. Einzige Tabellenlogik für Turnierseite, Overlay,
+ * Ranking-Vorschau und Siegerermittlung, damit diese nie voneinander abweichen.
+ */
+export function computeLeagueStandings(memberIds: string[], matches: GroupMatchLike[]): GroupStanding[] {
+  return computeGroupStandings([memberIds], matches.map(m => ({ ...m, groupIndex: 0 })))[0];
+}
+
+/**
+ * Wer gehört in die Liga-Tabelle: alle Spieler, die in einem Match stehen (in Anmelde-Reihenfolge
+ * von candidates, danach Unbekannte). Ohne Matches die Kandidaten selbst — so tauchen Zuschauer oder
+ * nicht ausgeloste Anmeldungen nicht mit 0 Spielen in der Tabelle auf.
+ */
+export function leagueMemberIds(
+  matches: { player1Id: string | null; player2Id: string | null }[],
+  candidates: string[],
+): string[] {
+  const inMatches = new Set(matches.flatMap(m => [m.player1Id, m.player2Id]).filter((id): id is string => !!id));
+  if (inMatches.size === 0) return candidates;
+  return [...candidates.filter(id => inMatches.has(id)), ...[...inMatches].filter(id => !candidates.includes(id))];
 }
 
 /** Gruppen-Mitglieder aus den Teilnehmern ableiten (Teilnehmer ohne Gruppe fallen heraus). */
@@ -326,6 +356,7 @@ export type TieMatchLike = {
   player1Id: string | null; player2Id: string | null;
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null;
+  startedAt?: string | Date | null;
 };
 
 export type AggregatedTie<T extends TieMatchLike> = T & {
@@ -367,6 +398,8 @@ export function aggregateKnockoutTies<T extends TieMatchLike>(matches: T[]): Agg
       score2: goals(first.player2Id),
       winnerId: decided ? second!.winnerId : null,
       playedAt: decided ? second!.playedAt : null,
+      // Live ist die Paarung, solange gerade das Hin- oder das Rückspiel läuft
+      startedAt: second?.startedAt ?? (first.playedAt ? null : first.startedAt ?? null),
       legs: { first, second },
     };
   });

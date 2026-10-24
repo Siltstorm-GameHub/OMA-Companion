@@ -33,6 +33,8 @@ export type OverlayMatch = {
   isThirdPlace?: boolean;
   /** K.O.-Runde mit Hin- und Rückspiel: 1 = Hinspiel, 2 = Rückspiel */
   leg?: number | null;
+  /** Vom Admin als "läuft gerade" markiert */
+  startedAt?: string | Date | null;
 };
 
 export type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };

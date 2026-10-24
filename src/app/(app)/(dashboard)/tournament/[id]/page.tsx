@@ -44,12 +44,12 @@ import { EventCategory } from "@prisma/client";
 
 import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
-import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import { placementRewardFor } from "@/lib/placement-rewards";
-import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, groupMembers, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
+import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
+import NextMatches, { type UpcomingMatch } from "./NextMatches";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
@@ -230,6 +230,16 @@ export default async function TournamentDetailPage({
   const mySubmissionRows = canReportResults
     ? await prisma.matchResultSubmission.findMany({ where: { eventId, userId } })
     : [];
+  // Offene Meldungen des Gegners in eigenen 1v1-Matches — können mit einem Klick bestätigt werden
+  const myDuelMatchIds = event.matches
+    .filter(m => m.entries.length === 0 && (m.player1Id === userId || m.player2Id === userId))
+    .map(m => m.id);
+  const opponentReportRows = canReportResults && myDuelMatchIds.length > 0
+    ? await prisma.matchResultSubmission.findMany({
+        where: { eventId, matchId: { in: myDuelMatchIds }, userId: { not: userId }, forUserId: "", status: "pending" },
+        select: { matchId: true, userId: true, score1: true, score2: true },
+      })
+    : [];
   const userById = new Map<string, { id: string; name: string | null; username: string | null }>([
     ...event.registrations.map(r => [r.userId, r.user] as const),
     ...event.participants.map(p => [p.userId, p.user] as const),
@@ -255,6 +265,11 @@ export default async function TournamentDetailPage({
             players: isDuel ? [] : m.entries.flatMap(e => { const u = toU(e.userId); return u ? [u] : []; }),
             played: !!m.playedAt,
             mine: m.player1Id === userId || m.player2Id === userId || m.entries.some(e => e.userId === userId),
+            opponentReport: (() => {
+              const opp = isDuel ? (m.player1Id === userId ? m.player2Id : m.player2Id === userId ? m.player1Id : null) : null;
+              const r = opp ? opponentReportRows.find(x => x.matchId === m.id && x.userId === opp) : null;
+              return r ? { score1: r.score1, score2: r.score2, reporterName: nm(toU(r.userId)) } : null;
+            })(),
           };
         })
     : [];
@@ -355,31 +370,11 @@ export default async function TournamentDetailPage({
   const userName = (u: { name: string | null; username: string | null }) =>
     u.username ?? u.name ?? "Unbekannt";
 
-  // Turnersieger ermitteln
-  let winner: { name: string | null; username: string | null; image: string | null } | null = null;
-  if (hasTournament) {
-    if (isElimination || isGroupKnockout) {
-      const maxRound = bracketMatches.length ? Math.max(...bracketMatches.map(m => m.round)) : 0;
-      const finalMatch = bracketMatches.find(m => m.round === maxRound);
-      winner = finalMatch?.winnerId
-        ? (mergedParticipants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
-        : null;
-    } else if (isLiga || isRoundRobin) {
-      const winsMap = new Map<string, number>();
-      for (const m of event.matches) {
-        if (m.winnerId) winsMap.set(m.winnerId, (winsMap.get(m.winnerId) ?? 0) + 1);
-      }
-      const topId = [...winsMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      winner = topId ? (mergedParticipants.find(p => p.userId === topId)?.user ?? null) : null;
-    } else if (isFfa) {
-      const winnerEntry = event.matches
-        .flatMap(m => m.entries)
-        .find(e => e.placement === 1);
-      winner = winnerEntry?.userId
-        ? (mergedParticipants.find(p => p.userId === winnerEntry.userId)?.user ?? null)
-        : null;
-    }
-  }
+  // Liga-Tabelle: nur Spieler aus den Matches (ohne Matches: angemeldete Spieler, keine Zuschauer)
+  const leagueParticipants = (() => {
+    const ids = leagueMemberIds(event.matches, mergedParticipants.filter(p => p.role !== "spectator").map(p => p.userId));
+    return ids.flatMap(id => mergedParticipants.find(p => p.userId === id) ?? []);
+  })();
 
   // Completion-Daten (Poll-Gewinner etc.)
   type CompletionData = {
@@ -410,6 +405,66 @@ export default async function TournamentDetailPage({
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
   const excludedUserIds     = new Set(completionData.excludedUserIds ?? []);
+
+  // Anstehende Spiele mit feststehenden Gegnern (für "Dein nächstes Match" / "Nächste Spiele")
+  const upcomingMatches: UpcomingMatch[] = (() => {
+    if (!hasTournament) return [];
+    const userOf = (id: string | null) => (id ? mergedParticipants.find(p => p.userId === id)?.user ?? null : null);
+    const koRounds = Math.max(0, ...event.matches.filter(m => m.groupIndex == null && !m.isThirdPlace).map(m => m.round));
+    const label = (m: (typeof event.matches)[number]) => {
+      if (m.title) return m.title;
+      if (isGroupKnockout && m.groupIndex != null) return `Gruppe ${groupLetter(m.groupIndex)} · Spieltag ${m.round}`;
+      if (isLiga || isRoundRobin) return `Spieltag ${m.round}`;
+      if (isFfa) return `Runde ${m.round}`;
+      return (m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, koRounds))
+        + (m.leg === 1 ? " · Hinspiel" : m.leg === 2 ? " · Rückspiel" : "");
+    };
+    return event.matches
+      .filter(m => !m.playedAt && !m.winnerId)
+      .map(m => {
+        const ids = m.entries.length > 0 ? m.entries.map(e => e.userId) : [m.player1Id, m.player2Id];
+        const players = ids.map(userOf).filter((u): u is NonNullable<typeof u> => !!u);
+        const complete = m.entries.length > 0 ? players.length > 0 : players.length === 2;
+        return complete ? {
+          id: m.id, label: label(m), scheduledAt: m.scheduledAt, live: !!m.startedAt, players,
+          mine: ids.includes(userId), round: m.round, position: m.position, leg: m.leg ?? 0,
+        } : null;
+      })
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .sort((a, b) =>
+        Number(b.live) - Number(a.live)
+        || (a.scheduledAt ? new Date(a.scheduledAt).getTime() : Infinity) - (b.scheduledAt ? new Date(b.scheduledAt).getTime() : Infinity)
+        || a.round - b.round || a.leg - b.leg || a.position - b.position)
+      .map(({ round: _r, position: _p, leg: _l, ...m }) => { void _r; void _p; void _l; return m; });
+  })();
+
+  // Turniersieger — nur wenn er wirklich feststeht:
+  //  1. nach dem Abschluss die festgelegte Endplatzierung (inkl. Korrekturen/Disqualifikationen)
+  //  2. K.O.-Formate: sobald das Finale entschieden ist
+  //  3. Liga: erst wenn alle Spiele gespielt sind, dann der Tabellenerste (gleiche Tabelle wie unten)
+  //  Stat-Formate haben vor dem Abschluss keinen eindeutigen Sieger.
+  const winner: { name: string | null; username: string | null; image: string | null } | null = (() => {
+    if (!hasTournament) return null;
+    const userOf = (id: string | null | undefined) =>
+      id && !excludedUserIds.has(id) ? (mergedParticipants.find(p => p.userId === id)?.user ?? null) : null;
+    if (gamePhaseComplete && event.finalRankingJson) {
+      try {
+        const ranking = JSON.parse(event.finalRankingJson) as string[];
+        const first = ranking.find(id => !excludedUserIds.has(id));
+        if (first) return userOf(first);
+      } catch { /* weiter mit den Live-Daten */ }
+    }
+    if (isElimination || isGroupKnockout) {
+      const maxRound = bracketMatches.length ? Math.max(...bracketMatches.map(m => m.round)) : 0;
+      return userOf(bracketMatches.find(m => m.round === maxRound)?.winnerId);
+    }
+    if ((isLiga || isRoundRobin) && event.matches.length > 0 && event.matches.every(m => m.playedAt)) {
+      const table = computeLeagueStandings(leagueParticipants.map(p => p.userId), event.matches)
+        .filter(st => !excludedUserIds.has(st.userId));
+      return userOf(table[0]?.userId);
+    }
+    return null;
+  })();
 
   // Umfragen fürs Rendern aufbereiten: Stimmenzahl, eigene Stimme, Kandidatenliste sowie das
   // Ergebnis — offiziell vom Admin bestätigt (rewardsPaid + winnerIds), sonst sobald die Umfrage
@@ -561,16 +616,8 @@ export default async function TournamentDetailPage({
     } catch { return {}; }
   })();
 
-  // pointsConfig trägt nur noch die Sieg/Unentschieden-Münzen pro Match (Liga-Modus) —
-  // Platzierungsbelohnungen kommen aus placementRewardsJson (siehe lib/placement-rewards.ts)
-  type PcVal = number | { coins?: number; points?: number };
-  const pcRaw: Record<string, PcVal> = (() => {
-    try { return event.pointsConfig ? JSON.parse(event.pointsConfig) : {}; } catch { return {}; }
-  })();
-  // Draw-Anzeige (LigaView statt RoundRobinView) hängt am tatsächlich konfigurierten Punktemodus
-  // (win/draw-Keys), nicht mehr allein am Format-String — round_robin kann jetzt ebenfalls mit
-  // Sieg/Unentschieden-Münzen laufen (siehe TournamentManager "Punktemodus").
-  const supportsDraw = isLiga || "win" in pcRaw || "draw" in pcRaw;
+  // Liga-Tabellen zählen Unentschieden immer (LigaView) — unabhängig davon, ob pointsConfig
+  // zusätzlich Sieg/Unentschieden-Münzen pro Match vergibt.
 
   // Genre + Streaming-Partner + Community-Streamer + 1st-place reward
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
@@ -594,10 +641,12 @@ export default async function TournamentDetailPage({
   const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
 
   // Stats für Header
-  const playedMatches = event.matches.filter(m =>
+  // Freilose (nur ein Spieler) sind keine echten Spiele — weder gespielt noch offen
+  const realMatches = event.matches.filter(m => m.entries.length > 0 || !(m.winnerId && (!m.player1Id || !m.player2Id)));
+  const playedMatches = realMatches.filter(m =>
     isElimination || (isGroupKnockout && m.groupIndex == null && !m.leg) ? !!m.winnerId : !!m.playedAt
   ).length;
-  const totalMatches = event.matches.length;
+  const totalMatches = realMatches.length;
 
   // Umfragen ohne (bestätigtes oder abgeleitetes) Ergebnis fürs Voting-Widget aufbereiten —
   // Umfragen mit Ergebnis laufen bereits oben in die Gewinner-Karte (completedPolls)
@@ -1183,6 +1232,7 @@ export default async function TournamentDetailPage({
 
           {/* Format-spezifische Ansicht */}
           <div className="lg:col-span-3">
+            <NextMatches upcoming={upcomingMatches} canReport={reportMatches.length > 0} />
             {!hasTournament && (
               <div className="glass rounded-2xl p-10 text-center">
                 <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
@@ -1208,19 +1258,10 @@ export default async function TournamentDetailPage({
                 holders={holdersList}
               />
             )}
-            {isRoundRobin && !supportsDraw && (
-              <RoundRobinView
-                matches={event.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
-                participants={mergedParticipants}
-                userId={userId}
-                finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
-                excludedUserIds={[...excludedUserIds]}
-              />
-            )}
-            {(isLiga || (isRoundRobin && supportsDraw)) && (
+            {(isLiga || isRoundRobin) && (
               <LigaView
                 matches={event.matches as Parameters<typeof LigaView>[0]["matches"]}
-                participants={mergedParticipants}
+                participants={leagueParticipants}
                 userId={userId}
                 finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
                 excludedUserIds={[...excludedUserIds]}
@@ -1255,6 +1296,7 @@ export default async function TournamentDetailPage({
             )}
             {/* Erst der Tabellenstand, darunter das (eingeklappte) Melden von Ergebnissen */}
             {reportMatches.length > 0 && (
+              <div id="ergebnis-melden" className="scroll-mt-24">
               <MatchResultSubmit
                 eventId={event.id}
                 userId={userId}
@@ -1263,6 +1305,7 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 locked={isParticipantEditLocked(event)}
               />
+              </div>
             )}
           </div>
         </div>

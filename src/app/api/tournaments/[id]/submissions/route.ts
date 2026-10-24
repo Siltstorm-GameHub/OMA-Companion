@@ -35,8 +35,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
   }
 
-  const urls: unknown = body.screenshotUrls;
-  if (!Array.isArray(urls) || urls.length < 1 || urls.length > MAX_SCREENSHOTS || !urls.every(isProofUrl)) {
+  // "Bestätigen": der Gegner übernimmt eine vorhandene Meldung des anderen Spielers ohne eigenen Screenshot
+  const isConfirm = body.confirm === true;
+  const urls: unknown = isConfirm ? [] : body.screenshotUrls;
+  if (!isConfirm && (!Array.isArray(urls) || urls.length < 1 || urls.length > MAX_SCREENSHOTS || !urls.every(isProofUrl))) {
     return NextResponse.json(
       { error: `Mindestens 1, höchstens ${MAX_SCREENSHOTS} Screenshots als Nachweis erforderlich` },
       { status: 400 },
@@ -82,6 +84,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { matchId_userId_forUserId: { matchId: match.id, userId: user.id, forUserId } },
   });
 
+  // 1v1: Meldung des Gegners (der jeweils andere Spieler des Matches), falls vorhanden
+  const opponentId = isDuel && (match.player1Id === user.id || match.player2Id === user.id)
+    ? (match.player1Id === user.id ? match.player2Id : match.player1Id)
+    : null;
+  const opponentSub = opponentId
+    ? await prisma.matchResultSubmission.findUnique({
+        where: { matchId_userId_forUserId: { matchId: match.id, userId: opponentId, forUserId: "" } },
+      })
+    : null;
+  if (isConfirm) {
+    if (!opponentSub || opponentSub.status !== "pending") {
+      return NextResponse.json({ error: "Es gibt keine offene Meldung deines Gegners zum Bestätigen" }, { status: 400 });
+    }
+    body.score1 = opponentSub.score1;
+    body.score2 = opponentSub.score2;
+    body.note = "Ergebnis des Gegners bestätigt";
+  }
+
   try {
     const data = {
       eventId,
@@ -122,9 +142,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const fresh = await prisma.match.findUnique({ where: { id: match.id }, select: { resultConfirmed: true, playedAt: true } });
     const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed;
     if (!adminConfirmed) {
-      await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true);
+      await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true, { id: user.id, label: "Spieler-Meldung" });
     }
-    return NextResponse.json({ ...submission, visible: !adminConfirmed }, { status: existing ? 200 : 201 });
+
+    // Beide Spieler haben übereinstimmend gemeldet → ohne Admin endgültig übernehmen (mit Punkten).
+    // Weichen die Meldungen ab oder hat ein Admin das Match schon bestätigt, bleibt es bei der Prüfung.
+    let confirmedByBoth = false;
+    if (!adminConfirmed && opponentSub && opponentSub.status === "pending"
+        && opponentSub.score1 === values.score1 && opponentSub.score2 === values.score2) {
+      try {
+        await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, false, { id: null, label: "Beide Spieler" });
+        await prisma.matchResultSubmission.updateMany({
+          where: { id: { in: [submission.id, opponentSub.id] }, status: "pending" },
+          data: { status: "approved", reviewedAt: new Date(), reviewNote: "Von beiden Spielern übereinstimmend gemeldet" },
+        });
+        confirmedByBoth = true;
+      } catch (err) {
+        // z.B. Folgespiel schon gespielt — dann entscheidet ein Admin wie bisher
+        if (!(err instanceof ApplyMatchResultError)) throw err;
+      }
+    }
+    return NextResponse.json({ ...submission, visible: !adminConfirmed, confirmedByBoth }, { status: existing ? 200 : 201 });
   } catch (err) {
     return fail(err);
   }
@@ -162,7 +200,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let data: Record<string, unknown>;
 
     if (body.action === "reject") {
-      if (sub.applied) await revertProvisional(eventId, submissionSubject(sub), sub.matchId);
+      if (sub.applied) await revertProvisional(eventId, submissionSubject(sub), sub.matchId, { id: reviewer.id, label: "Prüfung" });
       data = { ...base, status: "rejected", applied: false };
     } else {
       const original = {
@@ -180,7 +218,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             }
           : original;
 
-      await applySubmissionValues(eventId, sub.id, submissionSubject(sub), sub.matchId, values);
+      await applySubmissionValues(eventId, sub.id, submissionSubject(sub), sub.matchId, values, false, { id: reviewer.id, label: "Prüfung" });
 
       data = {
         ...base,

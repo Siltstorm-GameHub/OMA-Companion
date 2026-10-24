@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
-import { RotateCcw, Trash2, Check, Minus, Plus as PlusIcon, RefreshCw, Swords, X } from "@/components/icons";
+import { RotateCcw, Trash2, Check, Minus, Plus as PlusIcon, RefreshCw, Swords, X, Pencil } from "@/components/icons";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { userName, fmtDate, nowForDatetimeLocal, type User, type Match, type MatchEntry, type Tournament } from "./TournamentManager";
 
@@ -97,7 +97,8 @@ interface Props {
   matchWinAll: Record<string, boolean>;
   setMatchWinAll: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   validateTeamAssignment: (matchId: string, entries: MatchEntry[]) => string | null;
-  submit1v1: (matchId: string, winnerId: string | null, isDraw?: boolean) => Promise<void>;
+  /** true = gespeichert */
+  submit1v1: (matchId: string, winnerId: string | null, isDraw?: boolean) => Promise<boolean>;
   submitFfa: (matchId: string, entries: MatchEntry[], opts?: { silent?: boolean }) => Promise<boolean>;
   changeMatchPlayer: (matchId: string, userId: string, action: "add" | "remove") => Promise<void>;
   resetMatch: (matchId: string) => Promise<void>;
@@ -154,7 +155,9 @@ export default function TournamentManagerMobile({
   // Math.min hält den Fokus gültig, falls ein Match gelöscht wurde, seit focusIdx zuletzt gesetzt
   // wurde — ohne dafür einen zusätzlichen Effekt zu brauchen (goto() clamped beim Navigieren genauso).
   const focused = hasMatches ? matches[Math.max(0, Math.min(focusIdx, matches.length - 1))] : null;
-  const isPlayed1v1 = !!focused?.winnerId || !!focused?.playedAt;
+  // Bearbeiten eines gespielten Matches: Eingabe wie bei einem offenen Match, mit den bisherigen Werten
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const isPlayed1v1 = (!!focused?.winnerId || !!focused?.playedAt) && editingId !== focused?.id;
   const isPlayedFfa = !!focused?.playedAt;
 
   function matchLabel(m: Match) {
@@ -179,8 +182,12 @@ export default function TournamentManagerMobile({
   async function handle1v1Result(winnerId: string | null, isDraw = false) {
     if (!focused) return;
     const label = isDraw ? "Unentschieden" : `${userName(allUsers.find(u => u.id === winnerId) ?? { id: "", name: "?", username: null, image: null })} gewinnt`;
-    await submit1v1(focused.id, winnerId, isDraw);
-    setSnackbar({ text: `Gespeichert: ${label}`, matchId: focused.id });
+    const wasEdit = editingId === focused.id;
+    const ok = await submit1v1(focused.id, winnerId, isDraw);
+    if (!ok) return;
+    setEditingId(null);
+    // "Rückgängig" setzt zurück — bei einer Korrektur wäre das nicht der vorige Stand, daher dort kein Snackbar
+    if (!wasEdit) setSnackbar({ text: `Gespeichert: ${label}`, matchId: focused.id });
     goto(1);
   }
 
@@ -264,6 +271,13 @@ export default function TournamentManagerMobile({
             setScores1v1={setScores1v1}
             onResult={handle1v1Result}
             onReset={() => resetMatch(focused.id)}
+            onEdit={() => {
+              setScores1v1(prev => ({
+                ...prev,
+                [focused.id]: { s1: String(focused.score1 ?? 0), s2: String(focused.score2 ?? 0) },
+              }));
+              setEditingId(focused.id);
+            }}
           />
         ) : (
           <FocusedFfaCard
@@ -497,7 +511,7 @@ function AddMatchForm({
 
 /* ── 1v1 / Bracket / Liga: Duell-Karte mit Score-Steppern ── */
 function FocusedDuelCard({
-  match, allUsers, isPlayed, supportsDraw, scores1v1, setScores1v1, onResult, onReset,
+  match, allUsers, isPlayed, supportsDraw, scores1v1, setScores1v1, onResult, onReset, onEdit,
 }: {
   match: Match;
   allUsers: User[];
@@ -507,6 +521,8 @@ function FocusedDuelCard({
   setScores1v1: React.Dispatch<React.SetStateAction<Record<string, { s1: string; s2: string }>>>;
   onResult: (winnerId: string | null, isDraw?: boolean) => void;
   onReset: () => void;
+  /** Ergebnis bearbeiten (Eingabe mit den bisherigen Werten öffnen) */
+  onEdit: () => void;
 }) {
   const p1 = allUsers.find(u => u.id === match.player1Id);
   const p2 = allUsers.find(u => u.id === match.player2Id);
@@ -530,9 +546,18 @@ function FocusedDuelCard({
           </div>
         </div>
         {isDraw && <p className="text-center text-xs text-amber-400 font-medium">Unentschieden</p>}
-        <button onClick={onReset} className="w-full flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-xl py-2">
-          <RotateCcw className="w-3.5 h-3.5" /> Ergebnis zurücksetzen
-        </button>
+        {/* Freilos (nur ein Spieler): kein Zurücksetzen, sonst fiele der Spieler aus dem Baum */}
+        {canPlay && (
+          <div className="flex gap-2">
+            <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-teal-300 border border-teal-900/50 bg-teal-950/20 rounded-xl py-2">
+              <Pencil className="w-3.5 h-3.5" /> Bearbeiten
+            </button>
+            <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-xl py-2">
+              <RotateCcw className="w-3.5 h-3.5" /> Zurücksetzen
+            </button>
+          </div>
+        )}
+        {!canPlay && <p className="text-center text-xs text-gray-500">Freilos — kommt automatisch weiter</p>}
       </div>
     );
   }

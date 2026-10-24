@@ -719,10 +719,14 @@ model Match {
   // Beide Spiele einer Paarung teilen round/position; im Rückspiel ist das Heimrecht getauscht
   // (player1/player2 vertauscht). winnerId des Rückspiels = wer nach Gesamtergebnis weiterkommt.
   leg          Int?
+  // "Läuft gerade": vom Admin gesetzt, solange das Match gespielt wird (Turnierseite/Overlay heben es
+  // hervor). Ein Match gilt als live, solange startedAt gesetzt und playedAt leer ist.
+  startedAt    DateTime?
   event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]
   submissions MatchResultSubmission[]
+  resultLogs  MatchResultLog[]
 }
 
 // Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches
@@ -2242,6 +2246,23 @@ model PromotionRequest {
 // Jeder Teilnehmer eines Matches kann sein Ergebnis samt Screenshots melden.
 // Admins/Moderatoren prüfen die Meldung anhand der Screenshots und übernehmen sie
 // (approved), übernehmen sie mit eigenen Werten (corrected) oder lehnen sie ab (rejected).
+// Änderungsprotokoll je Match: jede Ergebnis-Eintragung, Korrektur und jedes Zurücksetzen — wer, wann,
+// vorher/nachher. Für Rückfragen nach dem Turnier ("das war 3:2, nicht 2:3").
+model MatchResultLog {
+  id         String   @id @default(cuid())
+  eventId    String
+  matchId    String
+  actorId    String? // null = System (z.B. Stream-Widget)
+  actorLabel String // "Admin" | "Spieler-Meldung" | "Prüfung" | "Beide Spieler" | "Stream-Widget"
+  action     String // "result" | "reset"
+  beforeJson String? // JSON: { winnerId, score1, score2, played } bzw. Stats je Spieler
+  afterJson  String?
+  createdAt  DateTime @default(now())
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([matchId, createdAt])
+}
+
 model MatchResultSubmission {
   id             String    @id @default(cuid())
   eventId        String

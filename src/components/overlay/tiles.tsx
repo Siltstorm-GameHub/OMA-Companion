@@ -45,6 +45,9 @@ export function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
   const pending = matches
     .filter(m => (m.player1Id || m.player2Id || m.entries.length > 0) && !m.winnerId && !m.playedAt)
     .sort((a, b) => a.round - b.round || a.position - b.position);
+  // Vom Admin als "läuft gerade" markiert → hat Vorrang vor dem nächsten offenen Match
+  const live = pending.find(m => m.startedAt);
+  if (live) return live;
   if (pending.length > 0) return pending[0];
   const played = [...matches].filter(m => m.playedAt).sort((a, b) =>
     new Date(b.playedAt!).getTime() - new Date(a.playedAt!).getTime()

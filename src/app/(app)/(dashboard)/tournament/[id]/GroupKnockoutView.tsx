@@ -18,6 +18,7 @@ type Match = {
   groupIndex: number | null;
   isThirdPlace?: boolean;
   leg?: number | null;
+  startedAt?: string | Date | null;
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "TBD";
@@ -66,6 +67,8 @@ export default function GroupKnockoutView({
               .filter(m => m.groupIndex === gi)
               .sort((a, b) => a.round - b.round || a.position - b.position);
             const played = gMatches.filter(m => m.playedAt).length;
+            // "Los"-Hinweis erst bei abgeschlossener Gruppe — vorher ist ein Gleichstand nur vorläufig
+            const groupComplete = gMatches.length > 0 && played === gMatches.length;
             return (
               <div key={gi} className="glass rounded-2xl overflow-hidden">
                 <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
@@ -108,7 +111,15 @@ export default function GroupKnockoutView({
                               ({diff > 0 ? "+" : ""}{diff})
                             </span>
                           </td>
-                          <td className="text-right px-3 py-2 font-bold text-white tabular-nums">{s.pts}</td>
+                          <td className="text-right px-3 py-2 font-bold text-white tabular-nums">
+                            {groupComplete && s.decidedByLot && (
+                              <span className="mr-1.5 text-[9px] font-medium text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded"
+                                title="Punkte, Tore, direkter Vergleich und Siege gleich — entschieden per Losentscheid (Auslosungsreihenfolge)">
+                                Los
+                              </span>
+                            )}
+                            {s.pts}
+                          </td>
                         </tr>
                       );
                     })}
@@ -120,11 +131,12 @@ export default function GroupKnockoutView({
                     const p2 = findUser(m.player2Id);
                     const isDraw = !!m.playedAt && !m.winnerId;
                     const isMine = m.player1Id === userId || m.player2Id === userId;
+                    const isLive = !!m.startedAt && !m.playedAt;
                     const nameCls = (id: string | null) =>
                       m.winnerId === id ? "text-emerald-300" : m.winnerId ? "text-gray-600" : isDraw ? "text-amber-200" : "text-gray-300";
                     return (
                       <div key={m.id} className={`flex items-center gap-2 px-4 py-1.5 text-xs ${isMine ? "bg-rose-950/20" : ""}`}>
-                        <span className="text-[10px] text-gray-700 w-6 shrink-0">{m.round}.</span>
+                        <span className={`text-[10px] w-6 shrink-0 ${isLive ? "text-red-400 font-bold animate-pulse" : "text-gray-700"}`}>{isLive ? "LIVE" : `${m.round}.`}</span>
                         <span className={`flex-1 truncate text-right ${nameCls(m.player1Id)}`}>{uname(p1)}</span>
                         <span className={`w-12 text-center shrink-0 tabular-nums font-semibold ${isDraw ? "text-amber-400" : "text-white"}`}>
                           {m.playedAt ? `${m.score1 ?? "–"}:${m.score2 ?? "–"}` : <span className="text-gray-600 font-normal">vs</span>}
@@ -139,7 +151,7 @@ export default function GroupKnockoutView({
           })}
         </div>
         <p className="text-[11px] text-gray-700 mt-1.5 px-1">
-          Sieg = 3 Pkt · Unentschieden = 1 Pkt · danach Tordifferenz und Tore · die Top {advancePerGroup} jeder Gruppe (grün) erreichen die K.O.-Runde
+          Sieg = 3 Pkt · Unentschieden = 1 Pkt · danach Tordifferenz, Tore, direkter Vergleich · die Top {advancePerGroup} jeder Gruppe (grün) erreichen die K.O.-Runde
         </p>
       </div>
 

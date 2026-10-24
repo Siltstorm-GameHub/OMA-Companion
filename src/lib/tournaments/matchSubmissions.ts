@@ -154,13 +154,14 @@ export async function applySubmissionValues(
   matchId: string,
   v: SubmissionValues,
   provisional = false,
+  actor?: { id: string | null; label: string },
 ) {
   const { plan } = await planFor(eventId, subjectUserId, matchId, v);
 
   if (plan.kind === "duel") {
     await applyMatchResult({
       eventId, matchId, winnerId: plan.winnerId, score1: plan.score1, score2: plan.score2,
-      isDraw: plan.isDraw, skipPoints: provisional,
+      isDraw: plan.isDraw, skipPoints: provisional, actor,
     });
   } else {
     await prisma.$transaction([
@@ -183,11 +184,13 @@ export async function applySubmissionValues(
 }
 
 /** Macht ein vorläufig eingetragenes Ergebnis rückgängig (abgelehnte Meldung). Bestätigte Ergebnisse bleiben unberührt. */
-export async function revertProvisional(eventId: string, subjectUserId: string, matchId: string) {
+export async function revertProvisional(
+  eventId: string, subjectUserId: string, matchId: string, actor?: { id: string | null; label: string },
+) {
   const match = await prisma.match.findFirst({ where: { id: matchId, eventId }, include: { entries: true } });
   if (!match || match.resultConfirmed) return;
   if (isDuelMatch(match)) {
-    await applyMatchResult({ eventId, matchId, action: "reset" });
+    await applyMatchResult({ eventId, matchId, action: "reset", actor });
   } else {
     const entry = match.entries.find((e) => e.userId === subjectUserId);
     if (entry) await prisma.matchEntry.update({ where: { id: entry.id }, data: { placement: null, score: null, statsJson: null } });

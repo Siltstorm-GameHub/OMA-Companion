@@ -18,6 +18,8 @@ export type ReportMatch = {
   played: boolean;
   /** Der aktuelle User spielt in diesem Match mit */
   mine: boolean;
+  /** 1v1: offene Meldung des Gegners — der User kann sie mit einem Klick bestätigen */
+  opponentReport?: { score1: number | null; score2: number | null; reporterName: string } | null;
 };
 export type MySubmission = {
   matchId: string;
@@ -68,6 +70,24 @@ function MatchForm({
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(!s);
 
+  /** Ergebnis des Gegners bestätigen — stimmen beide Meldungen überein, gilt es sofort (ohne Admin) */
+  async function confirmOpponent() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/tournaments/${eventId}/submissions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: m.id, confirm: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return toast.error(data.error ?? "Bestätigen fehlgeschlagen");
+      toast.success(data.confirmedByBoth ? "Bestätigt — das Ergebnis gilt jetzt endgültig" : "Bestätigung gemeldet — ein Admin prüft das Ergebnis");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit() {
     if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
     setBusy(true);
@@ -106,7 +126,23 @@ function MatchForm({
         )}
       </div>
 
-      {s?.reviewNote && <p className="text-xs text-gray-400">Admin: {s.reviewNote}</p>}
+      {s?.reviewNote && <p className="text-xs text-gray-400">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Admin: ${s.reviewNote}`}</p>}
+
+      {/* Gegner hat schon gemeldet: mit einem Klick bestätigen (kein eigener Screenshot nötig) */}
+      {!locked && m.isDuel && m.opponentReport && s?.status !== "approved" && s?.status !== "corrected" && (
+        <div className="rounded-lg border border-teal-700/40 bg-teal-900/15 px-3 py-2 space-y-1.5">
+          <p className="text-xs text-teal-200">
+            {m.opponentReport.reporterName} hat gemeldet: {uname(m.player1)} {m.opponentReport.score1 ?? "–"} : {m.opponentReport.score2 ?? "–"} {uname(m.player2)}
+          </p>
+          <div className="flex items-center gap-3">
+            <button onClick={confirmOpponent} disabled={busy}
+              className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium disabled:opacity-50">
+              Stimmt — bestätigen
+            </button>
+            <span className="text-[11px] text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Admin entscheidet.</span>
+          </div>
+        </div>
+      )}
 
       {locked && <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>}
       {!locked && (s?.status === "approved" || s?.status === "corrected") && !open && (

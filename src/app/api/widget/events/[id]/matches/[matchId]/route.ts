@@ -47,6 +47,7 @@ export async function PATCH(
       isDraw,
       entries,
       action,
+      actor: { id: null, label: "Stream-Widget" },
     });
   } catch (err) {
     if (err instanceof ApplyMatchResultError) {

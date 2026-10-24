@@ -42,12 +42,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  const user = await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
   const { matchId, winnerId, score1, score2, isDraw, entries, action } = body;
 
+  // "Läuft gerade" markieren bzw. beenden (Turnierseite/Overlay heben das Match hervor)
+  if (action === "start" || action === "stop") {
+    const match = await prisma.match.findFirst({ where: { id: matchId, eventId }, select: { id: true, playedAt: true } });
+    if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+    if (action === "start" && match.playedAt) {
+      return NextResponse.json({ error: "Das Match hat schon ein Ergebnis" }, { status: 400 });
+    }
+    const updated = await prisma.match.update({
+      where: { id: match.id },
+      data: { startedAt: action === "start" ? new Date() : null },
+    });
+    return NextResponse.json(updated);
+  }
+
   try {
-    const result = await applyMatchResult({ eventId, matchId, winnerId, score1, score2, isDraw, entries, action });
+    const result = await applyMatchResult({
+      eventId, matchId, winnerId, score1, score2, isDraw, entries, action,
+      actor: { id: user.id, label: "Admin" },
+    });
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof ApplyMatchResultError) {
@@ -55,6 +72,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     throw err;
   }
+}
+
+/** Änderungsprotokoll eines Matches (neueste zuerst): ?matchId=… */
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
+  const matchId = req.nextUrl.searchParams.get("matchId");
+  if (!matchId) return NextResponse.json({ error: "matchId fehlt" }, { status: 400 });
+  const logs = await prisma.matchResultLog.findMany({
+    where: { eventId, matchId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+  const actorIds = [...new Set(logs.map(l => l.actorId).filter((id): id is string => !!id))];
+  const actors = new Map((await prisma.user.findMany({
+    where: { id: { in: actorIds } },
+    select: { id: true, username: true, name: true },
+  })).map(u => [u.id, u.username ?? u.name ?? "?"]));
+  return NextResponse.json(logs.map(l => ({
+    id: l.id,
+    action: l.action,
+    actor: l.actorId ? `${actors.get(l.actorId) ?? "?"} (${l.actorLabel})` : l.actorLabel,
+    before: l.beforeJson ? JSON.parse(l.beforeJson) : null,
+    after: l.afterJson ? JSON.parse(l.afterJson) : null,
+    createdAt: l.createdAt,
+  })));
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -44,6 +44,7 @@ const RULE_TYPE: Record<string, NotificationType> = {
   quest_new:          "quest",
   prediction_result:  "coins",
   duel_challenge:     "coins",
+  match_ready:        "event_start",
   duel_result:        "coins",
   battle_challenge:   "coins",
   battle_result:      "coins",
