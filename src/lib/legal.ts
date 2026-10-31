@@ -7,13 +7,13 @@
  * Postfach reicht nicht.
  */
 export const LEGAL = {
-  operatorName: "[Vor- und Nachname]",
-  street:       "[Straße Hausnummer]",
-  city:         "[PLZ Ort]",
+  operatorName: "Sebastian Horn",
+  street:       "Brechtelstraße 5",
+  city:         "69126 Heidelberg",
   country:      "Deutschland",
-  email:        "[kontakt@oma-app.de]",
+  email:        "[horn.sebastian@yahoo.de]",
   /** Inhaltlich Verantwortlicher nach § 18 Abs. 2 MStV — meist dieselbe Person. */
-  contentResponsible: "[Vor- und Nachname, Anschrift wie oben]",
+  contentResponsible: "Sebastian Horn, Brechtelstr. 5, 69126 Heidelberg",
   /** Stand der Datenschutzerklärung. Bei inhaltlichen Änderungen anpassen. */
   privacyUpdated: "15.10.2026",
 } as const;
