@@ -3,6 +3,11 @@
       "target": {
         "namespace": "android_app",
         "package_name": "de.oma_app.www.twa",
-        "sha256_cert_fingerprints": ["03:08:BA:B9:32:FA:C0:63:29:DB:95:96:8F:F6:03:5B:D1:DE:8D:F4:B0:CD:F0:65:9E:EC:15:90:BC:AC:13:F0"]
+        "sha256_cert_fingerprints": [
+          "03:08:BA:B9:32:FA:C0:63:29:DB:95:96:8F:F6:03:5B:D1:DE:8D:F4:B0:CD:F0:65:9E:EC:15:90:BC:AC:13:F0",
+          "28:79:13:0F:BC:C0:73:DA:26:6F:40:F8:E5:AA:FA:CB:4D:13:67:A8:62:2D:3F:88:C7:E3:5E:11:B1:D7:6B:AB",
+          "C5:CC:F6:74:89:C9:AB:45:6D:4A:C4:E1:A8:E7:8D:BB:C2:22:5A:1F:01:CC:A5:DE:8B:A4:47:1E:E1:A8:42:8D",
+          "6E:A5:77:F0:66:99:F8:88:A6:CB:F8:FC:AB:76:DE:53:13:9C:19:C4:73:5E:4F:D7:73:87:38:07:2B:36:90:0F"
+        ]
       }
     }]
