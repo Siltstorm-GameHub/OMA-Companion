@@ -6,6 +6,7 @@ import {
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, checkpointVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
 import { prisma } from "@/lib/prisma";
+import { attachBlocksServer, getBlocksStats } from "../blocks-server/server";
 
 console.log(`🚀 Bot-Prozess startet (pid ${process.pid}, Node ${process.version})…`);
 
@@ -289,9 +290,14 @@ const server = http.createServer((req, res) => {
     uptime:  Math.floor(process.uptime()),
     ping:    client.ws.ping,
     guilds:  client.guilds.cache.size,
+    blocks:  blocksVersus ? getBlocksStats() : null,
     ts:      new Date().toISOString(),
   }));
 });
+
+// OMA Blocks Versus: WebSocket unter wss://<bot-host>/blocks (nur mit BLOCKS_MP_SECRET, siehe docs/oma-blocks.md).
+// Hängt am selben Port wie der Health-Check — kein zusätzlicher Render-Dienst nötig.
+const blocksVersus = attachBlocksServer(server);
 
 server.listen(PORT, () => {
   console.log(`🌍 Health-Check Server läuft auf Port ${PORT}`);

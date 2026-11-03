@@ -1,6 +1,6 @@
 "use client";
 // ============================================
-// OMA Blocks — Versus (Echtzeit-Multiplayer über den Railway-WebSocket-Server)
+// OMA Blocks — Versus (Echtzeit-Multiplayer über den WebSocket-Server im Bot auf Render)
 // ============================================
 // Anmeldung: Token von /api/blocks/mp-token holen → WebSocket öffnen → "hello". Danach Räume:
 // Schnelles Spiel (öffentlicher Raum), privater Raum mit Code/Einladungslink. Alle Spieler einer

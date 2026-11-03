@@ -7,6 +7,8 @@
 
 import type { SpinKind } from "./engine";
 
+/** Pfad, unter dem der Versus-WebSocket erreichbar ist (wss://<host>/blocks). */
+export const BLOCKS_WS_PATH = "/blocks";
 export const MAX_ROOM_PLAYERS = 8;
 export const COUNTDOWN_MS = 3000;
 export const ROOM_CODE_LENGTH = 5;

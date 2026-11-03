@@ -2,11 +2,11 @@
 // OMA Blocks — signierte Tokens zwischen App und Multiplayer-Server
 // ============================================
 // Die App (Vercel) stellt eingeloggten Nutzern ein kurzlebiges Token aus (/api/blocks/mp-token), mit
-// dem sie sich beim Multiplayer-Server (Railway, src/blocks-server) anmelden — dort gibt es kein
+// dem sie sich beim Multiplayer-Server (src/blocks-server, läuft im Bot-Prozess auf Render) anmelden — dort gibt es kein
 // eigenes Login. Umgekehrt signiert der Server seine Rundenergebnisse, bevor er sie an
 // /api/blocks/match-result schickt. Beide Seiten teilen sich dafür BLOCKS_MP_SECRET.
 //
-// Nur node:crypto — läuft in Next-Route-Handlern (Node-Runtime) und im Railway-Prozess (tsx).
+// Nur node:crypto — läuft in Next-Route-Handlern (Node-Runtime) und im Bot-Prozess auf Render (tsx).
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
