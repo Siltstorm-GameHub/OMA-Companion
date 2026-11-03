@@ -26,7 +26,9 @@ import { hmac, verifyMpToken, SIGNATURE_HEADER, type MatchResultPayload } from "
 
 const SECRET = process.env.BLOCKS_MP_SECRET ?? "";
 const APP_URL = (process.env.APP_URL ?? "").replace(/\/$/, "");
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+/** Erlaubte Browser-Origins (ohne abschließenden Schrägstrich, Groß-/Kleinschreibung egal). Leer = alle. */
+const normalizeOrigin = (o: string) => o.trim().replace(/\/+$/, "").toLowerCase();
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "").split(",").map(normalizeOrigin).filter(Boolean);
 
 
 const HELLO_TIMEOUT_MS = 10_000;
@@ -292,6 +294,7 @@ function handle(c: Client, msg: ClientMessage): void {
   if (msg.t === "hello") {
     const p = verifyMpToken(SECRET, msg.token);
     if (!p) {
+      console.warn("⚠ OMA Blocks Versus: ungültiges Token (abgelaufen oder BLOCKS_MP_SECRET passt nicht zur App)");
       send(c, { t: "error", message: "Anmeldung abgelaufen — bitte Seite neu laden." });
       c.ws.close(4001, "auth");
       return;
@@ -398,7 +401,11 @@ export function attachBlocksServer(server: http.Server): boolean {
     server,
     path: BLOCKS_WS_PATH,
     maxPayload: MAX_MESSAGE_BYTES,
-    verifyClient: ({ origin }: { origin: string }) => ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin),
+    verifyClient: ({ origin }: { origin: string }) => {
+      if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(normalizeOrigin(origin ?? ""))) return true;
+      console.warn(`⚠ OMA Blocks Versus: Verbindung von ${origin} abgelehnt (nicht in ALLOWED_ORIGINS)`);
+      return false;
+    },
   });
 
   const alive = new WeakMap<WebSocket, boolean>();

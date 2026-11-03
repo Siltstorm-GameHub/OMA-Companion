@@ -197,18 +197,40 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
         }
         ws = new WebSocket(data.url);
         wsRef.current = ws;
-        ws.onopen = () => ws?.send(JSON.stringify({ t: "hello", token: data.token } satisfies ClientMessage));
+        let opened = false;
+        let welcomed = false;
+        let host = String(data.url);
+        try {
+          host = new URL(data.url).host;
+        } catch {
+          /* Rohwert anzeigen */
+        }
+        ws.onopen = () => {
+          opened = true;
+          ws?.send(JSON.stringify({ t: "hello", token: data.token } satisfies ClientMessage));
+        };
         ws.onmessage = (ev) => {
           try {
-            onMessage(JSON.parse(String(ev.data)) as ServerMessage);
+            const parsed = JSON.parse(String(ev.data)) as ServerMessage;
+            if (parsed.t === "welcome") welcomed = true;
+            onMessage(parsed);
           } catch {
             /* ungültige Nachricht ignorieren */
           }
         };
-        ws.onclose = () => {
+        ws.onclose = (ev) => {
           if (cancelled) return;
           setStatus("closed");
-          setStatusText("Verbindung zum Versus-Server getrennt.");
+          // Möglichst genau sagen, woran es liegt — hilft beim Einrichten (siehe docs/oma-blocks.md).
+          if (!opened) {
+            setStatusText(`Versus-Server nicht erreichbar (${host}). Läuft der Bot, und ist dort BLOCKS_MP_SECRET gesetzt?`);
+          } else if (ev.code === 4001 && !welcomed) {
+            setStatusText("Anmeldung am Versus-Server abgelehnt — BLOCKS_MP_SECRET muss in Vercel und Render identisch sein.");
+          } else if (ev.code === 4002) {
+            setStatusText("OMA Blocks Versus ist in einem anderen Tab geöffnet.");
+          } else {
+            setStatusText(`Verbindung zum Versus-Server getrennt (Code ${ev.code}).`);
+          }
           setRunning(false);
         };
       } catch {
