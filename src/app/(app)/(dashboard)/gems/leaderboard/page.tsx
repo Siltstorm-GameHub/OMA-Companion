@@ -46,7 +46,7 @@ export default async function GemsLeaderboardPage({ searchParams }: { searchPara
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <Link href="/gems" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu OMA Gems
+        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu Games
       </Link>
       <h1 className="font-display text-lg font-black text-white">Rangliste</h1>
       <nav className="flex gap-1 glass rounded-xl p-1 w-fit max-w-full overflow-x-auto" aria-label="Ranglisten-Ansicht">

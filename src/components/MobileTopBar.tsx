@@ -14,7 +14,7 @@ import { createPortal } from "react-dom";
 const ROUTE_TITLES: Record<string, string> = {
   "/dashboard":  "Dashboard",
   "/events":     "Events",
-  "/gems":       "OMA Gems",
+  "/gems":       "Games",
   "/shop":       "Shop",
   "/tournament": "Turnier-Details",
   "/leaderboard":"Rangliste",

@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
   // leiten dauerhaft (308) weiter.
   async redirects() {
     return [
+      // Der Games-Hub (OMA Gems + OMA Blocks) liegt unter /gems.
+      { source: "/games", destination: "/gems", permanent: false },
+      { source: "/blocks", destination: "/gems/blocks", permanent: false },
       // Der Shop ist ein Reiter im Gems-Hub.
       { source: "/shop", destination: "/gems?tab=laden", permanent: true },
       // Alte Seiten-URLs von Battle Cards

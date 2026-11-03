@@ -33,7 +33,7 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
         href="/gems"
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu OMA Gems
+        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu Games
       </Link>
       <BattleResultBanner outcome={outcome} />
       <BattleScreen roster={battle.battleLog.roster} log={battle.battleLog.log} />

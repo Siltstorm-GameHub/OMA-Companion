@@ -1,6 +1,7 @@
 // ============================================
-// /gems — Hub von OMA Gems (3 Reiter: Spielen, Sammlung, Shop)
+// /gems — Games-Hub: OMA Gems und OMA Blocks (Umschalter oben, ?spiel=blocks öffnet OMA Blocks)
 // ============================================
+// OMA Gems hat 3 Reiter (Spielen, Sammlung, Shop), OMA Blocks siehe components/blocks/BlocksHubPanel.
 // Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
 // Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
 //    "Spielen"  („Weiter“-Karte mit Tageswerten, Event-Turnier, Spielmodi: Kampagne / Der Aufstieg / Last Stand mit Ranglisten),
@@ -26,7 +27,9 @@ import GemsPlayCard from "@/components/gems/GemsPlayCard";
 import PackOpener from "@/components/gems/PackOpener";
 import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
 import GemsTabs from "./GemsTabs";
-import { ChevronRight, Gem } from "@/components/icons";
+import { ChevronRight, Gamepad2 } from "@/components/icons";
+import GamesSwitcher from "./GamesSwitcher";
+import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
 import LineupStrip from "@/components/gems/LineupStrip";
 import PlayModes from "@/components/gems/PlayModes";
 import GemsTournamentBanner from "@/components/gems/GemsTournamentBanner";
@@ -44,7 +47,7 @@ const OTHER_CARDS_PAGE_SIZE = 12;
 const LEADERBOARD_PREVIEW = 5;
 
 export const metadata = {
-  title: "OMA Gems | OMA",
+  title: "Games | OMA",
 };
 
 export default async function GemsPage() {
@@ -238,17 +241,22 @@ export default async function GemsPage() {
             className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)", boxShadow: "0 0 20px rgba(20,184,166,0.10)" }}
           >
-            <Gem className="w-4.5 h-4.5 text-teal-400" />
+            <Gamepad2 className="w-4.5 h-4.5 text-teal-400" />
           </div>
-          <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Gems</h1>
+          <h1 className="font-display text-2xl font-black text-white tracking-tight">Games</h1>
         </div>
-        <p className="text-xs text-gray-500 ml-11">Match-3-Kämpfe mit den Karten der Community · Kampagne, Aufstieg, Last Stand und Turniere</p>
+        <p className="text-xs text-gray-500 ml-11">Die Community-Spiele · OMA Gems und OMA Blocks mit Ranglisten und Monatswertungen</p>
       </div>
-      <GemsTabs
-        spielenPanel={spielenPanel}
-        sammlungPanel={sammlungPanel}
-        ladenPanel={ladenPanel}
-        ladenBadge={unopenedPacks}
+      <GamesSwitcher
+        gems={
+          <GemsTabs
+            spielenPanel={spielenPanel}
+            sammlungPanel={sammlungPanel}
+            ladenPanel={ladenPanel}
+            ladenBadge={unopenedPacks}
+          />
+        }
+        blocks={<BlocksHubPanel userId={userId} />}
       />
     </div>
   );
