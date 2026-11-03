@@ -48,7 +48,7 @@ model User {
   // Abmeldung vom Community-Clip-Loop: Clips des eigenen Twitch-Kanals laufen standardmäßig in den
   // Intro-/Clip-/Outro-Szenen anderer Streamer — true = nicht mehr. Siehe src/lib/overlay-clips.ts.
   overlayClipsOptOut Boolean   @default(false)
-  birthday           DateTime? // Nur Datum relevant (month/day)
+  birthday        DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
   bannerUrl          String? // Eigenes Profil-Banner (Vercel Blob), 1200×300 empfohlen
@@ -60,14 +60,14 @@ model User {
   // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | null }.
   // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
   // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
-  vitrineSlotsJson  String?
+  vitrineSlotsJson   String?
   // Zeitpunkt der letzten Vitrinen-Änderung (Fach gesetzt/geleert/auf Auto zurückgestellt) —
   // treibt den "zuletzt aktualisiert"-Hinweis für Besucher (siehe VitrineModal.tsx).
-  vitrineUpdatedAt  DateTime?
+  vitrineUpdatedAt   DateTime?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
-  favoriteGamesJson String?
+  favoriteGamesJson  String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
-  notificationPrefs String    @default("{}")
+  notificationPrefs  String    @default("{}")
 
   accounts                         Account[]
   sessions                         Session[]
@@ -77,7 +77,7 @@ model User {
   teamMemberships                  TeamMember[]
   squadMemberships                 SquadMembership[]
   matchEntries                     MatchEntry[]
-  matchResultSubmissions           MatchResultSubmission[]      @relation("MatchResultSubmitter")
+  matchResultSubmissions           MatchResultSubmission[] @relation("MatchResultSubmitter")
   questProgress                    UserQuestProgress[]
   lulEntries                       LulEntry[]
   lulLegacyEntries                 LulLegacyEntry[]
@@ -231,55 +231,55 @@ model VerificationToken {
 }
 
 model EventSeries {
-  id                     String        @id @default(cuid())
-  name                   String
-  description            String?
-  rules                  String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
-  icon                   String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
-  coverImageUrl          String? // Eigenes Reihen-Bild (Vercel Blob); Events der Reihe erben es, wenn sie keins haben
-  fixedGame              String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
-  fixedFormat            String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
-  discordChannelId       String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
-  category               EventCategory @default(casual)
-  genre                  EventGenre?
-  platform               String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
-  recurrenceType         String? // "weekly" | "biweekly" | "monthly"
-  recurrenceMonthlyMode  String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
+  id                    String        @id @default(cuid())
+  name                  String
+  description           String?
+  rules                 String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
+  icon                  String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
+  coverImageUrl         String? // Eigenes Reihen-Bild (Vercel Blob); Events der Reihe erben es, wenn sie keins haben
+  fixedGame             String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
+  fixedFormat           String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
+  discordChannelId      String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
+  category              EventCategory @default(casual)
+  genre                 EventGenre?
+  platform              String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
+  recurrenceType        String? // "weekly" | "biweekly" | "monthly"
+  recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2, isWinnerStat?, isMatchWinStat? }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege", winnerStatKeys?: string[], matchWinStatKeys?: string[] }
-  seriesStatConfig       String?
+  seriesStatConfig      String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
-  legacyStandings        String?
+  legacyStandings       String?
   // JSON: { lastUpdated, processedEventIds: string[], raw: { userId: { participations, Kills, MVP, Siege, ... } } }
-  seriesStandingsJson    String?
+  seriesStandingsJson   String?
   // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
-  placementRewardsJson   String?
+  placementRewardsJson  String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
-  pollConfigJson         String?
+  pollConfigJson        String?
   // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
-  pollsConfigJson        String?
+  pollsConfigJson       String?
   // Saison-Archiv
-  groupId                String? // verbindet alle Saisons derselben Reihe
-  status                 String        @default("active") // "active" | "archived"
-  hidden                 Boolean       @default(false) // true = nur im Admin sichtbar
-  registrationLocked     Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  groupId               String? // verbindet alle Saisons derselben Reihe
+  status                String        @default("active") // "active" | "archived"
+  hidden                Boolean       @default(false) // true = nur im Admin sichtbar
+  registrationLocked    Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
   // Wenn gesetzt: sichtbar für alle, Spieler-Selbst-Anmeldung nur für Mitglieder dieses Squads
   // (Zuschauer-Anmeldung bleibt für alle offen). Unabhängig von registrationLocked — beide Felder
   // können kombiniert sein (dann sperrt registrationLocked ausnahmslos alle, auch Squad-Mitglieder).
-  squadId                String?
-  squad                  Squad?        @relation(fields: [squadId], references: [id])
-  seasonNumber           Int? // 1, 2, 3 …
-  archivedAt             DateTime?
+  squadId               String?
+  squad                 Squad?        @relation(fields: [squadId], references: [id])
+  seasonNumber          Int? // 1, 2, 3 …
+  archivedAt            DateTime?
   // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt, finalStandings)
-  seriesCompletionData   String?
+  seriesCompletionData  String?
   // All-Time-Tabelle der Saison-Gruppe: Stat-Felder zusammenführen, JSON { "Eliminierungen": "Kills" }
   // (Alias → Zielfeld). Gilt für die ganze Gruppe und wird auf allen Saisons gleich gespeichert.
-  statAliasesJson        String?
+  statAliasesJson       String?
   // Turniervorlage für neue Termine der Reihe, JSON: { groupStage?: GroupStageConfig,
   // checkInEnabled?: boolean, checkInMinutes?: number, matchResultPoints?: { win, draw } }
   tournamentTemplateJson String?
-  createdAt              DateTime      @default(now())
-  events                 Event[]
-  lulSeason              LulSeason?
+  createdAt             DateTime      @default(now())
+  events                Event[]
+  lulSeason             LulSeason?
 }
 
 model Event {
@@ -619,15 +619,15 @@ model EventCommunityStreamer {
 }
 
 model EventRegistration {
-  id          String    @id @default(cuid())
-  userId      String
-  eventId     String
-  joinedAt    DateTime  @default(now())
-  attended    Boolean   @default(false)
-  role        String    @default("player") // "player" | "spectator"
+  id       String   @id @default(cuid())
+  userId   String
+  eventId  String
+  joinedAt DateTime @default(now())
+  attended Boolean  @default(false)
+  role     String   @default("player") // "player" | "spectator"
   checkedInAt DateTime? // Check-in vor Turnierstart (nur relevant bei Event.checkInEnabled)
-  user        User      @relation(fields: [userId], references: [id])
-  event       Event     @relation(fields: [eventId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  event    Event    @relation(fields: [eventId], references: [id])
 
   @@unique([userId, eventId])
 }
@@ -702,40 +702,40 @@ model TeamMember {
 }
 
 model Match {
-  id              String                  @id @default(cuid())
-  eventId         String
-  round           Int
-  position        Int
-  title           String?
-  scheduledAt     DateTime?
-  notes           String?
+  id          String       @id @default(cuid())
+  eventId     String
+  round       Int
+  position    Int
+  title       String?
+  scheduledAt DateTime?
+  notes       String?
   // 1v1 / single_elimination: player1Id/player2Id/score1/score2/winnerId
-  player1Id       String?
-  player2Id       String?
-  winnerId        String?
-  score1          Int?
-  score2          Int?
-  playedAt        DateTime?
+  player1Id   String?
+  player2Id   String?
+  winnerId    String?
+  score1      Int?
+  score2      Int?
+  playedAt    DateTime?
   // false = vorläufiges Ergebnis (von Teilnehmern gemeldet, sofort sichtbar, noch keine Punkte) bis ein Admin es bestätigt
-  resultConfirmed Boolean                 @default(true)
+  resultConfirmed Boolean  @default(true)
   // Nur group_knockout: gesetzt = Gruppenspiel dieser Gruppe (0 = A), null = Match der K.O.-Runde.
   // round ist bei Gruppenspielen der Spieltag, bei K.O.-Matches die K.O.-Runde (1 = erste K.O.-Runde).
-  groupIndex      Int?
+  groupIndex  Int?
   // Spiel um Platz 3 (K.O.-Runde, Verlierer der Halbfinals) — liegt in der Final-Runde neben dem Finale,
   // rückt nirgends hin auf und beendet das Turnier nicht.
-  isThirdPlace    Boolean                 @default(false)
+  isThirdPlace Boolean @default(false)
   // K.O.-Runde mit Hin- und Rückspiel (group_knockout): 1 = Hinspiel, 2 = Rückspiel, null = Einzelspiel.
   // Beide Spiele einer Paarung teilen round/position; im Rückspiel ist das Heimrecht getauscht
   // (player1/player2 vertauscht). winnerId des Rückspiels = wer nach Gesamtergebnis weiterkommt.
-  leg             Int?
+  leg          Int?
   // "Läuft gerade": vom Admin gesetzt, solange das Match gespielt wird (Turnierseite/Overlay heben es
   // hervor). Ein Match gilt als live, solange startedAt gesetzt und playedAt leer ist.
-  startedAt       DateTime?
-  event           Event                   @relation(fields: [eventId], references: [id])
+  startedAt    DateTime?
+  event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
-  entries         MatchEntry[]
-  submissions     MatchResultSubmission[]
-  resultLogs      MatchResultLog[]
+  entries     MatchEntry[]
+  submissions MatchResultSubmission[]
+  resultLogs  MatchResultLog[]
 }
 
 // Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches
@@ -1233,22 +1233,22 @@ model PushSubscription {
 // ── Community-Gameserver ─────────────────────────────────────────────────────
 
 model GameServer {
-  id               String   @id @default(cuid())
-  name             String
-  game             String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
-  description      String?
-  joinInstructions String? // Freitext vom Admin: "So trittst du bei" (z.B. Steam Direct-Connect, Minecraft-Menüpfad)
-  host             String // IP/Domain – nur für genehmigte User sichtbar
-  port             String?
-  password         String? // Server-Passwort – nur für genehmigte User sichtbar
-  maxSlots         Int
+  id                  String   @id @default(cuid())
+  name                String
+  game                String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
+  description         String?
+  joinInstructions    String? // Freitext vom Admin: "So trittst du bei" (z.B. Steam Direct-Connect, Minecraft-Menüpfad)
+  host                String // IP/Domain – nur für genehmigte User sichtbar
+  port                String?
+  password            String? // Server-Passwort – nur für genehmigte User sichtbar
+  maxSlots            Int
   // Vom Admin per Schalter gesetzt: true = als online angezeigt, false = als offline. Es gibt keine
   // automatische Status-Abfrage mehr. Spalte heißt aus historischen Gründen weiterhin "isActive".
-  isOnline         Boolean  @default(true) @map("isActive")
-  openAccess       Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
-  createdBy        String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isOnline            Boolean  @default(true) @map("isActive")
+  openAccess          Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   applications ServerApplication[]
 
@@ -2014,10 +2014,10 @@ model Card {
   isAutoGenerated  Boolean   @default(false) // true = durch Pipeline erzeugt/zuletzt aktualisiert
   lastGeneratedAt  DateTime?
 
-  imageUrl String?
+  imageUrl    String?
   // Look im Cartoon-Stil (siehe lib/gems/hero/look.ts). null = Standard-Look (fest für Standard-Karten,
   // sonst stabil aus der Karten-Id). Die frühere Pixel-Figur (teCharacter) ist seit Phase 10d entfernt.
-  heroLook Json?
+  heroLook    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2026,20 +2026,20 @@ model Card {
 }
 
 model UserCard {
-  id              String   @id @default(cuid())
-  userId          String
-  cardId          String
-  inLineup        Boolean  @default(false) // Teil der aktuellen Startaufstellung (max. 5 pro User)
+  id         String   @id @default(cuid())
+  userId     String
+  cardId     String
+  inLineup   Boolean  @default(false) // Teil der aktuellen Startaufstellung (max. 5 pro User)
   // Siege, in denen die Karte in der Startaufstellung mitgekämpft hat — bis zum Gem-System Teil der XP, die ihren Rang bestimmen
   // (siehe lib/gems/card-ranks.ts).
-  winsInLineup    Int      @default(0)
+  winsInLineup Int    @default(0)
   // Halbe Siege (je 50 XP): früheres Punktesystem (Sieg 100, Niederlage/makellos 50), wird nicht mehr
   // erhöht — der alte Stand bleibt als Start-XP erhalten.
-  rankBonusHalves Int      @default(0)
+  rankBonusHalves Int @default(0)
   // XP aus den Kämpfen seit dem Gem-System: je gematchtem Gem der Klasse der Karte (siehe
   // battleXp in lib/gems/card-ranks.ts). Karten-XP = winsInLineup * 100 + rankBonusHalves * 50 + gemXp (cardXp).
-  gemXp           Int      @default(0)
-  acquiredAt      DateTime @default(now())
+  gemXp Int @default(0)
+  acquiredAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
   card Card @relation(fields: [cardId], references: [id])
