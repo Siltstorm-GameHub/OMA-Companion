@@ -15,7 +15,7 @@ export const LEGAL = {
   /** Inhaltlich Verantwortlicher nach § 18 Abs. 2 MStV — meist dieselbe Person. */
   contentResponsible: "Sebastian Horn, Brechtelstr. 5, 69126 Heidelberg",
   /** Stand der Datenschutzerklärung. Bei inhaltlichen Änderungen anpassen. */
-  privacyUpdated: "15.10.2026",
+  privacyUpdated: "03.11.2026",
 } as const;
 
 export function isPlaceholder(value: string): boolean {

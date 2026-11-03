@@ -96,7 +96,11 @@ export default function DatenschutzPage() {
       <ul>
         <li><strong>Vercel Inc.</strong> (USA) — Hosting der App und Speicherung hochgeladener Bilder</li>
         <li><strong>Supabase</strong> — Datenbank</li>
-        <li><strong>Railway</strong> — Betrieb des Discord-Bots</li>
+        <li>
+          <strong>Render Services, Inc.</strong> (USA) — Betrieb des Discord-Bots und des Echtzeit-Servers für den
+          Versus-Modus von OMA Blocks (dabei werden Benutzer-ID, Benutzername, Profilbild und der Spielverlauf der
+          laufenden Runde verarbeitet, aber nicht dauerhaft gespeichert)
+        </li>
         <li><strong>Discord Inc.</strong> (USA) — Login, Server-Anbindung, Benachrichtigungen per Discord</li>
         <li>
           <strong>Google (Gemini)</strong> — Admins können Event-Berichte automatisch formulieren lassen; dabei
