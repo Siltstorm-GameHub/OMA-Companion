@@ -11,7 +11,7 @@ export const NAV_GLYPHS = {
   home:        "/icons/nav/home.png",
   events:      "/icons/nav/events.png",
   shop:        "/icons/nav/shop.png",
-  battleCards: "/icons/nav/battle-cards.png",
+  games:       "/icons/nav/games.png",
   donations:   "/icons/nav/donations.png",
   leaderboard: "/icons/nav/leaderboard.png",
   profile:     "/icons/nav/profile.png",
