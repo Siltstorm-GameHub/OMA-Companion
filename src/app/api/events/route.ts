@@ -11,6 +11,7 @@ import { publishEvent } from "@/lib/event-publish";
 import { createPollsForEvent } from "@/lib/event-polls";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
 import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
+import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 // Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —
@@ -124,6 +125,11 @@ export async function POST(req: NextRequest) {
   if (game === "OMA Gems" && !endDate) {
     return NextResponse.json({ error: "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss)" }, { status: 400 });
   }
+  // OMA Blocks: Live-Turnier oder Community-Challenge (siehe lib/blocks/event-config.ts)
+  const blocks = game === BLOCKS_GAME ? sanitizeBlocksEventConfig(body.blocks, !isModerator) : null;
+  if (blocks?.kind === "challenge" && !endDate) {
+    return NextResponse.json({ error: "Eine OMA-Blocks-Challenge braucht ein Ende" }, { status: 400 });
+  }
 
   // Inherit tournament settings from series if linking to one
   let seriesFormat: string | null = null;
@@ -162,7 +168,9 @@ export async function POST(req: NextRequest) {
             .filter(r => typeof r.field === "string" && fields.includes(r.field) && Number.isFinite(Number(r.pointsPer)) && Number(r.pointsPer) !== 0)
             .map(r => ({ field: r.field as string, pointsPer: Number(r.pointsPer) }))
         : [];
-      if (stats.length) eventStatConfigJson = JSON.stringify({ stats });
+      // avg_stats: "niedrigster Ø gewinnt" schon ab Event-Erstellung, siehe resolveAvgDirection
+      const avgDirection = eventFormat === "avg_stats" && bodyStatConfig?.avgDirection === "low" ? "low" : undefined;
+      if (stats.length || avgDirection) eventStatConfigJson = JSON.stringify({ stats, ...(avgDirection && { avgDirection }) });
     }
   }
 
@@ -259,6 +267,28 @@ export async function POST(req: NextRequest) {
           maxAttemptsPerUser,
           bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
           monsterCardIdsJson: monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null,
+        },
+      });
+    }
+    // OMA Blocks: Turnier bzw. Challenge gleich mit anlegen (gleiche Transaktion wie das Event)
+    if (blocks?.kind === "tournament") {
+      await tx.blocksTournament.create({
+        data: {
+          eventId: created.id,
+          groupRounds: blocks.groupRounds,
+          finalRounds: blocks.finalRounds,
+          advancePerGroup: blocks.advancePerGroup,
+        },
+      });
+    } else if (blocks?.kind === "challenge") {
+      await tx.blocksChallenge.create({
+        data: {
+          eventId: created.id,
+          metric: blocks.metric,
+          goal: blocks.goal,
+          minContribution: blocks.minContribution,
+          rewardCoins: blocks.rewardCoins,
+          rewardRankPoints: blocks.rewardRankPoints,
         },
       });
     }

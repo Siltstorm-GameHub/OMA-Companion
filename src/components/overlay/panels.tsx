@@ -7,6 +7,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
 import { GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeGroupStandings, computeLeagueStandings, groupLabel, knockoutRoundLabel, leagueMemberIds } from "@/lib/tournaments/groupStage";
 import { PanelShell } from "./tiles";
+import { compareAvg, computeAvgTotals, type AvgDirection } from "@/lib/avg-stats";
 import {
   displayName, PANEL_LIST_HEIGHT, PANEL_LIST_HEIGHT_COMPACT,
   type OverlayMatch, type OverlayUser, type OverlayParticipant, type SeriesTable,
@@ -84,9 +85,11 @@ type RankedRow = {
  *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
  *  die Logik aus LigaView/FfaView, nur kompakter fürs Overlay. */
 export function TablePanel({
-  matches, participants, format, statFields, ligaPunkteByUser, compact = true,
+  matches, participants, format, statFields, avgDirection = "high", ligaPunkteByUser, compact = true,
 }: {
   matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null;
+  /** Nur avg_stats: höchster oder niedrigster Ø vorn */
+  avgDirection?: AvgDirection;
   ligaPunkteByUser: Record<string, number>;
   /** false in der Vollbild-Zoom-Ansicht: zeigt bei avg_stats zusaetzlich jedes einzelne Stat-
    *  Feld statt nur des kombinierten Durchschnitts, und nutzt die groessere Listenhoehe. */
@@ -96,7 +99,7 @@ export function TablePanel({
   const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
   const ranked = isFfaFamily
-    ? buildFfaRanking(matches, participants, format, statFields, ligaPunkteByUser, compact)
+    ? buildFfaRanking(matches, participants, format, statFields, ligaPunkteByUser, compact, avgDirection)
     : buildMatchRanking(matches, participants, format, ligaPunkteByUser);
 
   return (
@@ -274,7 +277,7 @@ function buildMatchRanking(
  *  ffa die Summe des ersten (primären) Stat-Felds — identische Sortierlogik wie FfaView. */
 function buildFfaRanking(
   matches: OverlayMatch[], participants: OverlayParticipant[], format: string, statFieldsJson: string | null,
-  ligaPunkteByUser: Record<string, number>, compact: boolean = true,
+  ligaPunkteByUser: Record<string, number>, compact: boolean = true, avgDirection: AvgDirection = "high",
 ): RankedRow[] {
   let statFields: string[] = [];
   try { statFields = statFieldsJson ? JSON.parse(statFieldsJson) : []; } catch { /* ignore */ }
@@ -294,7 +297,8 @@ function buildFfaRanking(
       if (e.statsJson) {
         try {
           const s = JSON.parse(e.statsJson) as Record<string, number>;
-          for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+          // Nur Zahlen — interne Marker wie "_team" ("A"/"B") sind keine Stats
+          for (const [k, v] of Object.entries(s)) if (typeof v === "number") t.stats[k] = (t.stats[k] ?? 0) + v;
         } catch { /* ignore */ }
       }
     }
@@ -305,6 +309,9 @@ function buildFfaRanking(
   // eingetragenen Stat-Felder, nicht ein Sieg-Zähler. Das Ranking selbst behandelt coop_stats
   // deshalb identisch zu ffa; nur avg_stats (Durchschnitt statt Summe) bleibt ein Sonderfall.
   const nonCoopStatFields = statFields.filter(f => f !== "Match Win");
+  // avg_stats: gleiche Ø-Regeln wie Turnierseite (nur gespielte Runden, leere Felder ≠ 0)
+  const avgTotals = isAvg ? computeAvgTotals(matches, nonCoopStatFields) : null;
+  const fmt1 = (v: number | null | undefined) => (v === null || v === undefined ? "–" : v.toFixed(1));
 
   return participants
     .map(p => {
@@ -317,14 +324,12 @@ function buildFfaRanking(
       if (isCoop) statLines.push(`${t.stats["Match Win"] ?? 0} Siege`);
 
       if (isAvg) {
-        const avg = nonCoopStatFields.length > 0 && t.matchCount > 0
-          ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / nonCoopStatFields.length
-          : 0;
-        primary = t.matchCount > 0 ? `Ø ${avg.toFixed(1)}` : "–";
+        const avg = avgTotals?.get(p.userId);
+        primary = avg?.combined != null ? `Ø ${fmt1(avg.combined)}` : "–";
         // Vollbild-Ansicht: zusaetzlich zum kombinierten Durchschnitt (primary) auch den
         // Durchschnitt je einzelnem Stat-Feld auflisten, statt nur die eine Zahl zu zeigen.
-        if (!compact && nonCoopStatFields.length > 1 && t.matchCount > 0) {
-          statLines.push(...nonCoopStatFields.map(f => `Ø ${((t.stats[f] ?? 0) / t.matchCount).toFixed(1)} ${f}`));
+        if (!compact && nonCoopStatFields.length > 1 && avg?.combined != null) {
+          statLines.push(...nonCoopStatFields.map(f => `Ø ${fmt1(avg.fieldAvgs[f])} ${f}`));
         }
       } else if (nonCoopStatFields.length > 0) {
         // Jedes konfigurierte Feld bekommt seine eigene Zeile, statt alles in einen einzigen
@@ -343,15 +348,11 @@ function buildFfaRanking(
       };
     })
     .sort((a, b) => {
+      // avg_stats: Richtung wie auf der Turnierseite, ohne Ø-Wert immer ans Ende
+      if (avgTotals) return compareAvg(avgTotals.get(a.userId)?.combined, avgTotals.get(b.userId)?.combined, avgDirection);
       if (a.t.matchCount === 0 && b.t.matchCount === 0) return 0;
       if (a.t.matchCount === 0) return 1;
       if (b.t.matchCount === 0) return -1;
-      if (isAvg) {
-        const avgOf = (t: typeof a.t) => nonCoopStatFields.length > 0
-          ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((s, v) => s + v, 0) / nonCoopStatFields.length
-          : 0;
-        return avgOf(b.t) - avgOf(a.t);
-      }
       for (const f of nonCoopStatFields) {
         const diff = (b.t.stats[f] ?? 0) - (a.t.stats[f] ?? 0);
         if (diff !== 0) return diff;

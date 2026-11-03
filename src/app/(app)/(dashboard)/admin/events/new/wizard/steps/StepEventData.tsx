@@ -4,6 +4,8 @@ import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
 import { getClassConfig } from "@/components/gems/BattleCardView";
+import { BLOCKS_GAME } from "@/lib/blocks/event-config";
+import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
@@ -45,9 +47,20 @@ export default function StepEventData({ w }: { w: EventWizard }) {
 
       <div>
         <label className={labelCls}>Spiel</label>
-        <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === "OMA Gems") setEventType("tournament"); }}
+        <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === "OMA Gems" || v === BLOCKS_GAME) setEventType("tournament"); }}
           placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
       </div>
+
+      {w.isBlocksEvent && (
+        <BlocksEventSettings
+          value={w.blocks}
+          onChange={w.setBlocks}
+          checkIn={{ enabled: w.checkInEnabled, setEnabled: w.setCheckInEnabled, minutes: w.checkInMinutes, setMinutes: w.setCheckInMinutes }}
+          inputCls={inputCls}
+          labelCls={labelCls}
+          inputStyle={inputStyle}
+        />
+      )}
 
       {isGemsTournament && (
         <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>

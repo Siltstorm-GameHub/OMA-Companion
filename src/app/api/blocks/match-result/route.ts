@@ -3,12 +3,14 @@
 // ============================================
 // Nur der Multiplayer-Server (src/blocks-server) ruft das auf: der Body ist mit BLOCKS_MP_SECRET
 // signiert (Header x-blocks-signature = HMAC-SHA256 über den Roh-Body). Doppelte Meldungen derselben
-// Runde werden über den Unique-Index (roomCode, round, startedAt) ignoriert.
+// Runde werden über den Unique-Index (roomCode, round, startedAt) ignoriert. Turnier-Runden tragen
+// zusätzlich Event/Phase/Gruppe und können die nächste Turnierphase auslösen (lib/blocks/tournament.ts).
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hmac, safeEqual, SIGNATURE_HEADER } from "@/lib/blocks/mp-token";
 import { seasonKey } from "@/lib/gems/tower-season";
+import { advanceTournament } from "@/lib/blocks/tournament";
 
 export const runtime = "nodejs";
 
@@ -18,6 +20,7 @@ const schema = z.object({
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   placements: z.array(z.object({ userId: z.string().min(1), place: z.number().int().min(1) })).min(2).max(16),
+  tournament: z.object({ ev: z.string().min(1), st: z.enum(["group", "final"]), g: z.number().int().min(0) }).optional(),
 });
 
 export async function POST(req: Request) {
@@ -52,11 +55,13 @@ export async function POST(req: Request) {
         startedAt: new Date(data.startedAt),
         endedAt,
         winnerId: placements.find((p) => p.place === 1)?.userId ?? null,
+        ...(data.tournament && { eventId: data.tournament.ev, stage: data.tournament.st, groupNo: data.tournament.g }),
         players: { create: placements.map((p) => ({ userId: p.userId, place: p.place })) },
       },
     });
   } catch {
     return Response.json({ ok: true, duplicate: true });
   }
+  if (data.tournament) await advanceTournament(data.tournament.ev);
   return Response.json({ ok: true });
 }

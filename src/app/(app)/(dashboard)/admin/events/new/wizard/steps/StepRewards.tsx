@@ -10,6 +10,14 @@ import type { EventWizard } from "../useEventWizard";
 // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
 export default function StepRewards({ w }: { w: EventWizard }) {
   const { eventType, spectatorMode, seriesMode, gemsParticipationPack, setGemsParticipationPack, gemsPlacementPacks, setGemsPlacementPacks, isGemsTournament, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, setStatRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
+  if (w.isBlocksChallenge) {
+    return (
+      <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm text-gray-300">
+        Bei einer OMA-Blocks-Challenge gibt es keine Platzierungen — die Belohnung für alle mit Mindestbeitrag
+        hast du schon in den Grunddaten festgelegt. Sie wird nach dem Ende automatisch ausgezahlt, wenn das Ziel erreicht ist.
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">

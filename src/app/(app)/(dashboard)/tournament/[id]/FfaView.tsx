@@ -9,6 +9,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
+import { compareAvg, computeAvgTotals, entryAvg, parseEntryStats, readStatValue, roundWinnerIds, type AvgTotals } from "@/lib/avg-stats";
 
 /** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen (1 statt 1.00, 1.5 statt 1.50). */
 function fmtUpTo2(n: number): string {
@@ -29,14 +30,6 @@ type Match = {
 
 const uname  = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
 const MEDAL  = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
-
-/** Durchschnitt aller Stat-Werte eines Eintrags (für avg_stats) */
-function calcEntryAvg(statsJson: string | null, statFields: string[]): number | null {
-  if (!statsJson || statFields.length === 0) return null;
-  const s = JSON.parse(statsJson) as Record<string, number>;
-  const vals = statFields.map(f => s[f] ?? 0);
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
-}
 
 export default function FfaView({
   matches,
@@ -62,6 +55,7 @@ export default function FfaView({
   externalVoters = [],
   finalRankingNote = null,
   excludedUserIds = [],
+  avgWinnerDirection = "high",
 }: {
   matches: Match[];
   participants: Participant[];
@@ -111,6 +105,9 @@ export default function FfaView({
   /** Ausgeschlossene (disqualifizierte) User — werden mit „Ungewertet"-Badge markiert, zählen aber
    *  weiterhin mit ihren Stats in der Tabelle */
   excludedUserIds?: string[];
+  /** Nur avg_stats: ob der höchste oder der niedrigste Ø gewinnt (completionData.avgWinnerDirection) —
+   *  bestimmt Rundensieger, Sortierung je Runde und das Gesamtranking. */
+  avgWinnerDirection?: "high" | "low";
 }) {
   const excludedSet = new Set(excludedUserIds);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -122,6 +119,8 @@ export default function FfaView({
     });
 
   const isAvg    = format === "avg_stats";
+  // avg_stats: Ø je Feld/kombiniert nach den gemeinsamen Regeln (nur gespielte Runden, leere Felder ≠ 0)
+  const avgTotals = isAvg ? computeAvgTotals(matches, statFields) : new Map<string, AvgTotals>();
   const findUser = (uid: string | null) =>
     uid ? participants.find(p => p.userId === uid)?.user : null;
   const votedSet = new Set(votedUserIds);
@@ -159,10 +158,11 @@ export default function FfaView({
         totals.set(e.userId, t);
       }
       t.matchCount += 1;
-      if (e.statsJson) {
-        const s = JSON.parse(e.statsJson) as Record<string, number>;
+      const s = parseEntryStats(e.statsJson) as Record<string, number> | null;
+      if (s) {
+        // Nur Zahlen aufsummieren — interne Marker wie "_team" ("A"/"B") sind keine Stats
         for (const [k, v] of Object.entries(s)) {
-          t.stats[k] = (t.stats[k] ?? 0) + v;
+          if (typeof v === "number") t.stats[k] = (t.stats[k] ?? 0) + v;
         }
         if (s[PLACEMENT_STAT_KEY] != null) {
           t.placementRounds += 1;
@@ -173,16 +173,17 @@ export default function FfaView({
     }
   }
 
-  // Für avg_stats: Durchschnitt pro Feld über alle Runden, dann Ø aller Felder. Teilnehmer, die noch
-  // keine einzige Runde gespielt haben, bleiben in der Tabelle sichtbar (matchCount 0), landen aber
-  // immer ganz unten und bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte
-  // "0" bei niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
+  // Für avg_stats: kombinierter Ø aus avgTotals in der gewählten Richtung. Teilnehmer ohne einen
+  // einzigen eingetragenen Wert bleiben in der Tabelle sichtbar, landen aber immer ganz unten und
+  // bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte "0" bei
+  // niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
   // Ist eine Turnierpunkte-Konfiguration aktiv (Punkte pro Stat und/oder Platzierungspunkte, siehe
   // computeTurnierpunkte), bestimmt AUSSCHLIESSLICH die kombinierte Gesamtpunktzahl die Reihenfolge —
   // nie eine einzelne Stat-Spalte. Nur ohne Turnierpunkte-Konfiguration (reines ffa/avg_stats ohne
   // Punkte-Einstellungen) wird wie bisher lexikografisch nach den einzelnen Stat-Feldern sortiert.
   const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
   const byStatFields = (a: PlayerTotal, b: PlayerTotal) => {
+    if (isAvg) return 0; // Summen sind bei Ø-Wertung kein sinnvoller Tiebreaker
     for (const f of statFields) {
       const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
       if (diff !== 0) return diff;
@@ -195,12 +196,7 @@ export default function FfaView({
     if (a.matchCount === 0) return 1;
     if (b.matchCount === 0) return -1;
     if (isAvg) {
-      const avgOf = (t: PlayerTotal) =>
-        statFields.length > 0
-          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount)
-              .reduce((s, v) => s + v, 0) / statFields.length
-          : 0;
-      return avgOf(b) - avgOf(a);
+      return compareAvg(avgTotals.get(a.userId)?.combined, avgTotals.get(b.userId)?.combined, avgWinnerDirection);
     }
     if (hasTurnierpunkte) {
       return (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
@@ -248,6 +244,17 @@ export default function FfaView({
     ).size;
     return RANK_TEXT[higher] ?? "text-gray-400";
   };
+  // Dasselbe für die Ø-Spalten bei avg_stats — "besser" richtet sich nach der gewählten Richtung.
+  const avgRankCls = (val: number | null | undefined, valueOf: (uid: string) => number | null | undefined) => {
+    if (val === null || val === undefined) return "text-gray-400";
+    const better = new Set(
+      ranked.map(t => valueOf(t.userId)).filter(v => v != null && compareAvg(v, val, avgWinnerDirection) < 0),
+    ).size;
+    return RANK_TEXT[better] ?? "text-gray-400";
+  };
+  const fmtAvg = (v: number | null | undefined) => (v === null || v === undefined ? "–" : fmtUpTo2(v));
+  // Ø je Feld als eigene Spalten — bei nur einem Feld wäre das identisch mit "Ø Gesamt"
+  const showAvgFieldCols = isAvg && statFields.length > 1;
 
   const playedMatches   = matches.filter(m => m.playedAt);
   const upcomingMatches = matches.filter(m => !m.playedAt);
@@ -278,8 +285,8 @@ export default function FfaView({
                   <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
-                    {!isAvg && statFields.map(f => (
-                      <th key={f} className="text-center px-3 py-2.5 font-medium">{f}</th>
+                    {(!isAvg || showAvgFieldCols) && statFields.map(f => (
+                      <th key={f} className="text-center px-3 py-2.5 font-medium">{isAvg ? `Ø ${f}` : f}</th>
                     ))}
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
@@ -300,12 +307,8 @@ export default function FfaView({
                 <tbody className="divide-y divide-white/5">
                   {ranked.map((r, i) => {
                     const isMe   = r.userId === userId;
-                    const fieldAvgs = statFields.map(f =>
-                      r.matchCount > 0 ? (r.stats[f] ?? 0) / r.matchCount : 0
-                    );
-                    const combined = isAvg && statFields.length > 0 && r.matchCount > 0
-                      ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
-                      : null;
+                    const avgT     = avgTotals.get(r.userId);
+                    const combined = avgT?.combined ?? null;
                     // Bestätigte Endplatzierung bzw. geteilter Platz bei Gleichstand (siehe placeByUser)
                     const place = placeByUser.get(r.userId) ?? (i + 1);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
@@ -389,6 +392,16 @@ export default function FfaView({
                             </td>
                           );
                         })}
+                        {showAvgFieldCols && statFields.map(f => {
+                          const val = avgT?.fieldAvgs[f];
+                          return (
+                            <td key={f} className={`px-3 py-3 text-center tabular-nums font-semibold ${
+                              avgRankCls(val, uid => avgTotals.get(uid)?.fieldAvgs[f])
+                            }`}>
+                              {fmtAvg(val)}
+                            </td>
+                          );
+                        })}
                         {isAvg && (
                           <td className={`px-3 py-3 text-center tabular-nums font-bold ${
                             combined !== null ? RANK_TEXT[place - 1] ?? "text-gray-400" : "text-gray-400"
@@ -443,7 +456,7 @@ export default function FfaView({
           </div>
           <p className="text-[10px] text-gray-600 mt-1.5 px-1">
             {isAvg
-              ? <>Sortiert nach kombiniertem Durchschnitt aller Felder</>
+              ? <>Sortiert nach kombiniertem Durchschnitt aller Felder ({avgWinnerDirection === "low" ? "niedrigster" : "höchster"} Ø gewinnt) · nicht eingetragene Werte zählen nicht als 0</>
               : hasTurnierpunkte
                 ? <>Sortiert nach Turnierpunkte</>
                 : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
@@ -520,25 +533,18 @@ export default function FfaView({
               const isExp   = expanded.has(match.id);
               const myEntry = match.entries.find(e => e.userId === userId);
 
-              // Für avg_stats: Gewinner dieses Matches bestimmen
-              let matchWinnerId: string | null = null;
-              if (isAvg && statFields.length > 0) {
-                let best = -Infinity;
-                for (const e of match.entries) {
-                  const avg = calcEntryAvg(e.statsJson, statFields);
-                  if (avg !== null && avg > best) { best = avg; matchWinnerId = e.userId; }
-                }
-              }
+              // Für avg_stats: Rundensieger nach Ø des Eintrags in der gewählten Richtung — bei
+              // Gleichstand alle Gleichauf-Liegenden
+              const matchWinnerIds = isAvg && statFields.length > 0
+                ? new Set(roundWinnerIds(match.entries, statFields, avgWinnerDirection))
+                : new Set<string>();
 
               // Für coop_stats: "Match Win"-Haken dieser Runde auslesen (gilt für alle Spieler der Runde)
               let matchWin: boolean | null = null;
               if (trackMatchWin) {
-                const entryWithFlag = match.entries.find(e => {
-                  if (!e.statsJson) return false;
-                  try { return "Match Win" in (JSON.parse(e.statsJson) as Record<string, number>); } catch { return false; }
-                });
-                if (entryWithFlag?.statsJson) {
-                  matchWin = Number((JSON.parse(entryWithFlag.statsJson) as Record<string, number>)["Match Win"]) > 0;
+                for (const e of match.entries) {
+                  const v = readStatValue(parseEntryStats(e.statsJson), "Match Win");
+                  if (v !== null) { matchWin = v > 0; break; }
                 }
               }
 
@@ -558,10 +564,10 @@ export default function FfaView({
                           {formatBerlinDate(match.playedAt, { day: "2-digit", month: "2-digit" })}
                         </span>
                       )}
-                      {isAvg && matchWinnerId && (
-                        <span className="text-xs text-amber-400 flex items-center gap-1 shrink-0">
-                          <Trophy className="w-3 h-3" />
-                          {uname(findUser(matchWinnerId))}
+                      {isAvg && matchWinnerIds.size > 0 && (
+                        <span className="text-xs text-amber-400 flex items-center gap-1 min-w-0">
+                          <Trophy className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{[...matchWinnerIds].map(id => uname(findUser(id))).join(", ")}</span>
                         </span>
                       )}
                       {trackMatchWin && matchWin !== null && (
@@ -583,7 +589,7 @@ export default function FfaView({
                         <thead>
                           <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider bg-white/[0.02]">
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
-                            {!isAvg && statFields.map(f => (
+                            {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>
                             ))}
                             {isAvg && (
@@ -593,18 +599,16 @@ export default function FfaView({
                         </thead>
                         <tbody className="divide-y divide-white/5">
                           {[...match.entries]
-                            .sort((a, b) => {
-                              if (!isAvg) return 0;
-                              const aAvg = calcEntryAvg(a.statsJson, statFields) ?? -Infinity;
-                              const bAvg = calcEntryAvg(b.statsJson, statFields) ?? -Infinity;
-                              return bAvg - aAvg;
-                            })
+                            .sort((a, b) => isAvg
+                              // Richtung wie im Gesamtranking, Einträge ohne Werte immer ans Ende
+                              ? compareAvg(entryAvg(a.statsJson, statFields), entryAvg(b.statsJson, statFields), avgWinnerDirection)
+                              : 0)
                             .map(e => {
                               const u      = findUser(e.userId);
-                              const stats  = e.statsJson ? JSON.parse(e.statsJson) as Record<string, number> : {};
+                              const stats  = parseEntryStats(e.statsJson) ?? {};
                               const isMe   = e.userId === userId;
-                              const isWinner = isAvg && e.userId === matchWinnerId;
-                              const avg    = isAvg ? calcEntryAvg(e.statsJson, statFields) : null;
+                              const isWinner = isAvg && !!e.userId && matchWinnerIds.has(e.userId);
+                              const avg    = isAvg ? entryAvg(e.statsJson, statFields) : null;
                               return (
                                 <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-white/[0.02]"}`}>
                                   <td className="px-4 py-2.5">
@@ -616,14 +620,14 @@ export default function FfaView({
                                       </span>
                                     </div>
                                   </td>
-                                  {!isAvg && statFields.map(f => (
+                                  {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                                     <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
-                                      {stats[f] ?? "–"}
+                                      {readStatValue(stats, f) ?? "–"}
                                     </td>
                                   ))}
                                   {isAvg && (
                                     <td className={`px-3 py-2.5 text-center tabular-nums font-bold ${isWinner ? "text-amber-300" : "text-gray-400"}`}>
-                                      {avg !== null ? avg.toFixed(2) : "–"}
+                                      {fmtAvg(avg)}
                                     </td>
                                   )}
                                 </tr>

@@ -25,7 +25,7 @@ async function loadTemplate(eventId: string, captainedSquadIds: string[] | null)
   const rewards = parseJson<{ participationCoins?: number; participationRankPts?: number; placements?: PlacementReward[] }>(e.placementRewardsJson, {});
   const spectator = parseJson<{ coins?: number; rankPoints?: number }>(e.spectatorRewardJson, {});
   const pointsConfig = parseJson<Record<string, unknown>>(e.pointsConfig, {});
-  const statConfig = parseJson<{ stats?: { field: string; pointsPer: number }[] }>(e.statConfigJson, {});
+  const statConfig = parseJson<{ stats?: { field: string; pointsPer: number }[]; avgDirection?: unknown }>(e.statConfigJson, {});
   const duration = e.endAt ? e.endAt.getTime() - e.startAt.getTime() : null;
   // Vorschlag: gleicher Wochentag/Uhrzeit, eine Woche nach dem Original (bzw. nach heute, falls das
   // Original schon länger zurückliegt)
@@ -64,6 +64,7 @@ async function loadTemplate(eventId: string, captainedSquadIds: string[] | null)
       : null,
     statFields: parseJson<string[]>(e.statFields, []),
     statPointsByField: Object.fromEntries((statConfig.stats ?? []).map(s => [s.field, s.pointsPer])),
+    avgDirection: statConfig.avgDirection === "low" ? "low" : "high",
     checkInEnabled: e.checkInEnabled,
     checkInMinutes: e.checkInMinutes,
   };

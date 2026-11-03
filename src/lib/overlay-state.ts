@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
+import { resolveAvgDirection } from "@/lib/avg-stats";
 import { loadSeriesRanking } from "@/lib/seriesRanking";
 import { getGameCoverUrl } from "@/lib/game-cover";
 import { getLiveStreamsForLogins } from "@/lib/twitch";
@@ -173,6 +174,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
   const state = plain<EventStateWithoutStreamer>({
     id: event.id, title: event.title, status: event.status, format: event.format,
     tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
+    avgDirection: resolveAvgDirection(event.completionData, event.statConfigJson),
     matches: event.matches, participants, ligaPunkteByUser, seriesTable,
     control: parseOverlayControl(event.overlayControlJson),
   });

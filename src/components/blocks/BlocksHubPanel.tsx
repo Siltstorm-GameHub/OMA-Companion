@@ -12,6 +12,10 @@ import type { LeaderboardEntry } from "@/lib/gems/leaderboard";
 import { ChevronRight, Crown, Play, Swords, Trophy } from "@/components/icons";
 import BlocksRankingTabs from "./BlocksRankingTabs";
 import { getBlocksRewards, rewardLabel } from "@/lib/blocks/rewards-config";
+import { getActiveChallenges } from "@/lib/blocks/challenge";
+import { getActiveTournaments } from "@/lib/blocks/tournament";
+import ChallengeCard from "./ChallengeCard";
+import TournamentTeaser from "./TournamentTeaser";
 
 const PREVIEW = 10;
 const fmt = (n: number) => n.toLocaleString("de-DE");
@@ -23,7 +27,7 @@ function toEntry(r: BlocksRankingRow): LeaderboardEntry {
 export default async function BlocksHubPanel({ userId }: { userId: string }) {
   const season = seasonKey();
   const label = seasonLabel(season);
-  const [monthRows, allRows, monthPlace, allPlace, finished, versus, rewards] = await Promise.all([
+  const [monthRows, allRows, monthPlace, allPlace, finished, versus, rewards, challenges, tournaments] = await Promise.all([
     getBlocksRanking(season, 100),
     getBlocksRanking(ALL_TIME, 100),
     getBlocksPlace(userId, season),
@@ -31,6 +35,8 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
     getFinishedBlocksSeasons(6),
     getVersusWins(season, 10),
     getBlocksRewards(),
+    getActiveChallenges(userId),
+    getActiveTournaments(),
   ]);
   const rewardRows = rewards.map((r, i) => ({ place: i + 1, label: rewardLabel(r) })).filter((r) => r.label);
   const daysLeft = seasonDaysLeft();
@@ -43,6 +49,14 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-8">
+      {/* Laufende / anstehende Events */}
+      {(tournaments.length > 0 || challenges.length > 0) && (
+        <div className="grid gap-3">
+          {tournaments.map((t) => <TournamentTeaser key={t.eventId} t={t} />)}
+          {challenges.map((c) => <ChallengeCard key={c.eventId} p={c} compact />)}
+        </div>
+      )}
+
       {/* Spielmodi */}
       <div className="grid sm:grid-cols-2 gap-3">
         <Link href="/gems/blocks" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">

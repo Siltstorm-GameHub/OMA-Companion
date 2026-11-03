@@ -1,12 +1,13 @@
 "use client";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import StatPointsTable from "@/components/StatPointsTable";
+import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import { FORMATS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 2 (Event): Turnier ───────────────────────────────────────────────────
 export default function StepTournament({ w }: { w: EventWizard }) {
-  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes } = w;
+  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, avgDirection, setAvgDirection, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes } = w;
   return (
     <div className="space-y-6">
       {seriesFixedFormat ? (
@@ -37,7 +38,12 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       {hasStat && !seriesFixedFormat && (
         <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
           <p className="text-sm font-medium text-amber-300 mb-3">Stat-Felder</p>
-          <StatFieldEditor fields={statFields} onChange={setStatFields} />
+          <StatFieldEditor fields={statFields} onChange={setStatFields} isAvg={format === "avg_stats"} />
+          {format === "avg_stats" && (
+            <div className="mt-3">
+              <AvgDirectionToggle value={avgDirection} onChange={setAvgDirection} />
+            </div>
+          )}
           {statFields.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-sm font-medium text-amber-300">Punkte pro Statistik</p>

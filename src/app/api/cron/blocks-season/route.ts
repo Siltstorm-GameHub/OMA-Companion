@@ -3,10 +3,12 @@
 // ============================================
 // Läuft täglich (siehe vercel.json) — wirkt nur beim ersten Lauf nach einem Monatswechsel, danach
 // ist der Monat über BlocksSeason als abgeschlossen markiert (idempotent, siehe
-// finalizeDueBlocksSeasons in lib/blocks/scores.ts). Räumt nebenbei nie eingereichte Läufe auf.
+// finalizeDueBlocksSeasons in lib/blocks/scores.ts). Räumt nebenbei nie eingereichte Läufe auf und rechnet
+// abgelaufene Community-Challenges ab (lib/blocks/challenge.ts — passiert sonst beim nächsten Aufruf der Seite).
 
 import { NextRequest, NextResponse } from "next/server";
 import { finalizeDueBlocksSeasons } from "@/lib/blocks/scores";
+import { finalizeDueBlocksChallenges } from "@/lib/blocks/challenge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,5 +22,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const result = await finalizeDueBlocksSeasons();
-  return NextResponse.json({ ok: true, ...result });
+  const challenges = await finalizeDueBlocksChallenges();
+  return NextResponse.json({ ok: true, ...result, challenges: challenges.finalized });
 }

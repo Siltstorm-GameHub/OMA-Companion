@@ -150,6 +150,8 @@ export type EventTemplate = {
   matchResultPoints: { win: number; draw: number } | null;
   statFields: string[];
   statPointsByField: Record<string, number>;
+  /** Nur avg_stats: höchster oder niedrigster Ø gewinnt */
+  avgDirection?: "high" | "low";
   checkInEnabled: boolean;
   checkInMinutes: number;
 };

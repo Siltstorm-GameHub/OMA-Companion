@@ -67,6 +67,8 @@ export type EventOverlayState = {
   tournamentStatus: string | null;
   game: string | null;
   statFields: string | null;
+  /** Nur avg_stats: höchster oder niedrigster Ø gewinnt (siehe resolveAvgDirection) — fehlt = "high" */
+  avgDirection?: "high" | "low";
   matches: OverlayMatch[];
   participants: OverlayParticipant[];
   /** Profildaten des Streamers, dem dieses Overlay gehört — null bei Event-Links ohne

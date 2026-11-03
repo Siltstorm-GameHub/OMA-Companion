@@ -8,6 +8,7 @@ import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
 import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
+import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
@@ -16,7 +17,7 @@ export async function PATCH(req: NextRequest) {
   const {
     eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson,
     pollsConfigJson, twitchClipUrl, seriesEventConfigJson, endAt, gemsDifficulty, gemsMaxAttempts,
-    gemsMonsterIds, ...data
+    gemsMonsterIds, blocks: blocksBody, ...data
   } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
@@ -139,7 +140,55 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  // OMA Blocks: Challenge braucht ein Ende — vor dem Speichern prüfen (siehe Block unten)
+  const blocks = blocksBody !== undefined ? sanitizeBlocksEventConfig(blocksBody, !isModerator) : null;
+  if (blocks?.kind === "challenge") {
+    const effectiveEnd = endAt !== undefined ? data.endAt : (await prisma.event.findUnique({ where: { id: eventId }, select: { endAt: true } }))?.endAt;
+    if (!effectiveEnd) return NextResponse.json({ error: "Eine OMA-Blocks-Challenge braucht ein Ende" }, { status: 400 });
+  }
+
   const event = await prisma.event.update({ where: { id: eventId }, data });
+
+  // OMA-Blocks-Einstellungen (nur bei game "OMA Blocks", siehe EventEditClient.tsx). Die Art lässt sich
+  // nicht wechseln; ein Turnier ist nur vor dem Start änderbar, eine Challenge bis zur Abrechnung.
+  if (blocks && event.game === BLOCKS_GAME) {
+    const [tournament, challenge] = await Promise.all([
+      prisma.blocksTournament.findUnique({ where: { eventId }, select: { id: true } }),
+      prisma.blocksChallenge.findUnique({ where: { eventId }, select: { id: true } }),
+    ]);
+    if (tournament) {
+      await prisma.blocksTournament.updateMany({
+        where: { id: tournament.id, stage: "pending" },
+        data: { groupRounds: blocks.groupRounds, finalRounds: blocks.finalRounds, advancePerGroup: blocks.advancePerGroup },
+      });
+    } else if (challenge) {
+      await prisma.blocksChallenge.updateMany({
+        where: { id: challenge.id, finalizedAt: null },
+        data: {
+          metric: blocks.metric,
+          goal: blocks.goal,
+          minContribution: blocks.minContribution,
+          rewardCoins: blocks.rewardCoins,
+          rewardRankPoints: blocks.rewardRankPoints,
+        },
+      });
+    } else if (blocks.kind === "tournament") {
+      await prisma.blocksTournament.create({
+        data: { eventId, groupRounds: blocks.groupRounds, finalRounds: blocks.finalRounds, advancePerGroup: blocks.advancePerGroup },
+      });
+    } else {
+      await prisma.blocksChallenge.create({
+        data: {
+          eventId,
+          metric: blocks.metric,
+          goal: blocks.goal,
+          minContribution: blocks.minContribution,
+          rewardCoins: blocks.rewardCoins,
+          rewardRankPoints: blocks.rewardRankPoints,
+        },
+      });
+    }
+  }
 
   // OMA-Gems-Turnier-Einstellungen (nur relevant, wenn dieses Event game === "OMA Gems" ist,
   // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich Schwierigkeit oder

@@ -6,6 +6,7 @@
 // über K.o.-Reihenfolge und Sieger; die Clients simulieren ihr eigenes Feld.
 
 import type { SpinKind } from "./engine";
+import type { TournamentStage } from "./mp-token";
 
 /** Pfad, unter dem der Versus-WebSocket erreichbar ist (wss://<host>/blocks). */
 export const BLOCKS_WS_PATH = "/blocks";
@@ -29,12 +30,28 @@ export interface RoomPlayer {
   wins: number;
 }
 
+/** Turnier-Raum (Live-Turnier eines Events): Runden laufen automatisch, kein Host. */
+export interface TournamentRoomInfo {
+  eventId: string;
+  stage: TournamentStage;
+  group: number;
+  /** Runden dieser Phase insgesamt */
+  rounds: number;
+  /** Spieler-IDs, die in diesen Raum gehören */
+  roster: string[];
+  /** Alle Runden gespielt */
+  done: boolean;
+  /** Wann die nächste Runde automatisch startet (Unix-ms), null = wartet auf Spieler */
+  startsAt: number | null;
+}
+
 export interface RoomState {
   code: string;
   isPublic: boolean;
   phase: RoomPhase;
   players: RoomPlayer[];
   round: number;
+  tour?: TournamentRoomInfo;
 }
 
 /** Öffentlicher Raum in der Raumliste (für Spieler, die noch in keinem Raum sind). */
@@ -60,6 +77,8 @@ export type ClientMessage =
   | { t: "quick" }
   | { t: "create"; isPublic?: boolean }
   | { t: "join"; code: string }
+  /** Turnier-Raum betreten (Ticket von /api/blocks/tournaments/[eventId]/ticket). */
+  | { t: "tjoin"; ticket: string }
   | { t: "leave" }
   | { t: "start" }
   /** Eigenes sichtbares Feld (200 Zeichen, siehe encodeVisibleBoard) + wartende Garbage. */

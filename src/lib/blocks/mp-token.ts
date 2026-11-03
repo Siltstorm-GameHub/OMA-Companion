@@ -54,6 +54,54 @@ export function verifyMpToken(secret: string, token: unknown, now = Date.now()):
   }
 }
 
+// ── Turnier-Tickets ──
+// Für Live-Turniere (lib/blocks/tournament.ts) stellt die App zusätzlich ein Ticket aus: Welche Gruppe,
+// wie viele Runden, wer gehört dazu. Der Server baut daraus den Turnier-Raum — ohne eigene Datenbank.
+// Eigener Signatur-Präfix, damit ein Anmelde-Token nie als Ticket durchgeht (und umgekehrt).
+
+export type TournamentStage = "group" | "final";
+
+export interface TournamentTicket {
+  uid: string;
+  /** Event-ID */
+  ev: string;
+  st: TournamentStage;
+  /** Gruppe (0-basiert, Finale = 0) */
+  g: number;
+  /** Runden dieser Phase insgesamt */
+  n: number;
+  /** Bereits gewertete Runden (nach einem Server-Neustart geht es dort weiter) */
+  done: number;
+  /** Spieler-IDs der Gruppe bzw. des Finales */
+  roster: string[];
+  exp: number;
+}
+
+const TICKET_PREFIX = "ticket.";
+
+export function signTicket(secret: string, payload: Omit<TournamentTicket, "exp">, now = Date.now()): string {
+  const full: TournamentTicket = { ...payload, exp: Math.floor(now / 1000) + TOKEN_TTL_SECONDS };
+  const body = b64url(JSON.stringify(full));
+  return `${body}.${hmac(secret, TICKET_PREFIX + body)}`;
+}
+
+export function verifyTicket(secret: string, token: unknown, now = Date.now()): TournamentTicket | null {
+  if (typeof token !== "string" || token.length > 4096) return null;
+  const [body, sig] = token.split(".");
+  if (!body || !sig || !safeEqual(sig, hmac(secret, TICKET_PREFIX + body))) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as TournamentTicket;
+    if (typeof p.uid !== "string" || typeof p.ev !== "string" || typeof p.exp !== "number") return null;
+    if (p.st !== "group" && p.st !== "final") return null;
+    if (!Array.isArray(p.roster) || !p.roster.every((r) => typeof r === "string") || p.roster.length > 8) return null;
+    if (!Number.isInteger(p.g) || !Number.isInteger(p.n) || !Number.isInteger(p.done) || p.n < 1 || p.n > 20) return null;
+    if (p.exp * 1000 < now) return null;
+    return p;
+  } catch {
+    return null;
+  }
+}
+
 /** Header-Name für signierte Server→App-Nachrichten (Signatur = hmac(secret, rawBody)). */
 export const SIGNATURE_HEADER = "x-blocks-signature";
 
@@ -64,4 +112,6 @@ export interface MatchResultPayload {
   startedAt: string;
   endedAt: string;
   placements: { userId: string; place: number }[];
+  /** Nur bei Turnier-Runden. */
+  tournament?: { ev: string; st: TournamentStage; g: number };
 }

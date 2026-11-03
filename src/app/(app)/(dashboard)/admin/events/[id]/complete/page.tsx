@@ -2,7 +2,8 @@ import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
-import { applyEventStatOverride, computeTurnierpunkte } from "@/lib/series-event-points";
+import { applyEventStatOverride, computeTurnierpunkte, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
+import { computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -115,23 +116,16 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
 
   // Für "Durchschnittswerte" (avg_stats): kombinierter Durchschnitt pro Runde über alle Stat-Felder
   // (nicht die Summe) je Spieler — Grundlage für die Gewinner-Ermittlung "höchster/niedrigster Ø".
+  // Gleiche Regeln wie Turnierseite/Abschluss-Route, siehe avg-stats.ts (nur gespielte Runden,
+  // nicht eingetragene Felder zählen nicht als 0).
   const userAvgScore: Record<string, number> = {};
   if (event.format === "avg_stats") {
-    const userRounds: Record<string, number> = {};
-    for (const match of event.matches) {
-      if (!match.playedAt) continue;
-      for (const entry of match.entries) {
-        if (!entry.userId) continue;
-        userRounds[entry.userId] = (userRounds[entry.userId] ?? 0) + 1;
-      }
-    }
-    for (const uid of Object.keys(userStats)) {
-      const rounds = userRounds[uid] ?? 0;
-      if (rounds === 0) continue;
-      const fieldAvgs = tournamentStatFields.map(f => (userStats[uid][f] ?? 0) / rounds);
-      userAvgScore[uid] = fieldAvgs.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length : 0;
+    for (const [uid, t] of computeAvgTotals(event.matches, tournamentStatFields)) {
+      if (t.combined !== null) userAvgScore[uid] = t.combined;
     }
   }
+  // Vorbelegung "höchster/niedrigster Ø gewinnt" aus den Turnier-Einstellungen des Events
+  const defaultAvgDirection = resolveAvgDirection(null, event.statConfigJson);
 
   // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — wird 1:1 als seriesStatConfig-Prop an
   // den Client durchgereicht und bestimmt dort u.a. die Optionen im Dropdown "Sieg in Gesamttabelle
@@ -161,10 +155,10 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   if (hasTurnierpunkteOption) {
     const turnierpunkteByUser = computeTurnierpunkte(event.matches, turnierpunkteCfg, event.format ?? undefined);
     for (const uid of Object.keys(userStats)) {
-      userStats[uid]["Turnierpunkte"] = turnierpunkteByUser[uid] ?? 0;
+      userStats[uid][TURNIERPUNKTE_STAT] = turnierpunkteByUser[uid] ?? 0;
     }
   }
-  const winnerStatFieldOptions = hasTurnierpunkteOption ? [...tournamentStatFields, "Turnierpunkte"] : tournamentStatFields;
+  const winnerStatFieldOptions = hasTurnierpunkteOption ? [...tournamentStatFields, TURNIERPUNKTE_STAT] : tournamentStatFields;
 
   // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle
   // (seriesStandingsJson), damit Moderatoren beim Ausfüllen sehen, wer bereits auf eine Serie
@@ -243,6 +237,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       userStats={userStats}
       format={event.format}
       userAvgScore={userAvgScore}
+      defaultAvgDirection={defaultAvgDirection}
       currentDominionStreaks={currentDominionStreaks}
       seriesStatConfig={rawSeriesStatConfig}
       rewardsConfig={rewardsConfig}

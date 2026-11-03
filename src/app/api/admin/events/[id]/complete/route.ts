@@ -14,6 +14,8 @@ import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
+import { applyEventStatOverride, computeTurnierpunkte, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
+import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -336,7 +338,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
       try { parsed = JSON.parse(entry.statsJson); } catch { continue; }
       if (!userStats[entry.userId]) userStats[entry.userId] = {};
       for (const [field, val] of Object.entries(parsed)) {
-        userStats[entry.userId][field] = (userStats[entry.userId][field] ?? 0) + Number(val);
+        // Nur Zahlen — interne Marker wie "_team" ("A"/"B") würden sonst als NaN landen
+        const n = Number(val);
+        if (Number.isFinite(n)) userStats[entry.userId][field] = (userStats[entry.userId][field] ?? 0) + n;
       }
     }
   }
@@ -359,31 +363,29 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   } else if (effectiveWinnerMode === "stat" && event.format === "avg_stats") {
     // Durchschnittswerte: kombinierter Ø pro Runde über alle Stat-Felder entscheidet (nicht die Summe)
+    // — gleiche Regeln wie Turnierseite/Vorschau, siehe avg-stats.ts
     const fields: string[] = event.statFields ? JSON.parse(event.statFields) : [];
-    const direction = body.avgWinnerDirection ?? "high";
-    const rounds: Record<string, number> = {};
-    for (const match of event.matches) {
-      for (const entry of match.entries) {
-        if (!entry.userId) continue;
-        rounds[entry.userId] = (rounds[entry.userId] ?? 0) + 1;
-      }
-    }
-    let bestVal: number | null = null;
-    for (const [uid, stats] of Object.entries(userStats)) {
-      const r = rounds[uid] ?? 0;
-      if (r === 0) continue;
-      const fieldAvgs = fields.map(f => (stats[f] ?? 0) / r);
-      const combined = fieldAvgs.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length : 0;
-      const better = bestVal === null || (direction === "high" ? combined > bestVal : combined < bestVal);
-      if (better) { bestVal = combined; eventWinnerId = uid; eventWinnerIds = [uid]; }
-      else if (combined === bestVal) { eventWinnerIds.push(uid); }
-    }
+    const direction = parseAvgDirection(body.avgWinnerDirection) ?? resolveAvgDirection(null, event.statConfigJson);
+    eventWinnerIds = bestAvgIds(
+      [...computeAvgTotals(event.matches, fields)].map(([uid, t]) => [uid, t.combined] as [string, number | null]),
+      direction,
+    );
+    eventWinnerId = eventWinnerIds[0];
   } else if (effectiveWinnerMode === "stat") {
     const statField = seriesEventCfg?.winnerStatField ?? body.winnerStatField;
     if (statField) {
+      // "Turnierpunkte" ist als Gewinner-Stat wählbar (siehe complete/page.tsx) und steht nicht in den
+      // Rohwerten — hier genauso berechnen, sonst hätten alle 0 und ohne mitgeschickte Rangliste wären
+      // alle Teilnehmer "Sieger".
+      const turnierpunkte = statField === TURNIERPUNKTE_STAT
+        ? (() => {
+            const cfg = applyEventStatOverride(statCfg, event.statConfigJson);
+            return computeTurnierpunkte(event.matches, { ...cfg, stats: cfg.stats ?? [] }, event.format ?? undefined);
+          })()
+        : null;
       let maxVal = -Infinity;
       for (const [uid, stats] of Object.entries(userStats)) {
-        const val = stats[statField] ?? 0;
+        const val = turnierpunkte ? (turnierpunkte[uid] ?? 0) : (stats[statField] ?? 0);
         if (val > maxVal) { maxVal = val; eventWinnerId = uid; eventWinnerIds = [uid]; }
         else if (val === maxVal && maxVal > -Infinity) { eventWinnerIds.push(uid); }
       }

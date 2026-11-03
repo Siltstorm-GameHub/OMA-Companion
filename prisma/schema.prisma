@@ -373,6 +373,8 @@ model Event {
   polls              EventPoll[]
   winnerPredictions  EventWinnerPrediction[]
   gemsTournament     GemsTournament?
+  blocksTournament   BlocksTournament?
+  blocksChallenge    BlocksChallenge?
   jobReports         JobReport[]
   jobMediaAssets     JobMediaAsset[]
   jobMediaAlbums     JobMediaAlbum[]
@@ -2468,11 +2470,16 @@ model BlocksMatch {
   startedAt DateTime
   endedAt   DateTime
   winnerId  String?
+  // Nur bei Turnier-Runden (siehe BlocksTournament): Event, Phase ("group" | "final") und Gruppe (0-basiert)
+  eventId   String?
+  stage     String?
+  groupNo   Int?
 
   players BlocksMatchPlayer[]
 
   @@unique([roomCode, round, startedAt])
   @@index([season])
+  @@index([eventId, stage, groupNo])
 }
 
 model BlocksMatchPlayer {
@@ -2486,4 +2493,42 @@ model BlocksMatchPlayer {
 
   @@unique([matchId, userId])
   @@index([userId])
+}
+
+// Live-Versus-Turnier als Event (game "OMA Blocks", siehe lib/blocks/tournament.ts): Vorrunde in Gruppen
+// (max. 8 je Raum), die Besten jeder Gruppe spielen das Finale. Punkte je Runde nach Platz. Die Runden
+// spielt der Versus-Server automatisch; die Ergebnisse landen als BlocksMatch mit eventId/stage/groupNo.
+model BlocksTournament {
+  id              String    @id @default(cuid())
+  eventId         String    @unique
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  groupRounds     Int       @default(3)
+  finalRounds     Int       @default(3)
+  advancePerGroup Int       @default(2)
+  // pending (noch nicht ausgelost) | groups | final | done
+  stage           String    @default("pending")
+  // JSON: string[][] — Spieler-IDs je Gruppe (Vorrunde)
+  groupsJson      String?
+  // JSON: string[] — Finalisten
+  finalistsJson   String?
+  startedAt       DateTime?
+  finalizedAt     DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// Community-Challenge als Event (game "OMA Blocks"): Alle Solo-Läufe im Event-Zeitraum zählen auf ein
+// gemeinsames Ziel (Linien oder Punkte). Wird es erreicht, bekommen alle mit Mindestbeitrag die Belohnung.
+model BlocksChallenge {
+  id               String    @id @default(cuid())
+  eventId          String    @unique
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  // "lines" | "score"
+  metric           String    @default("lines")
+  goal             Int
+  minContribution  Int       @default(1)
+  rewardCoins      Int       @default(0)
+  rewardRankPoints Int       @default(0)
+  succeeded        Boolean?
+  finalizedAt      DateTime?
+  createdAt        DateTime  @default(now())
 }

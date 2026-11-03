@@ -22,7 +22,7 @@ import {
   BLOCKS_WS_PATH, COUNTDOWN_MS, MAX_ROOM_PLAYERS, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, isRoomCode,
   type ClientMessage, type PublicRoomInfo, type RoomPhase, type RoomState, type ServerMessage,
 } from "../lib/blocks/protocol";
-import { hmac, verifyMpToken, SIGNATURE_HEADER, type MatchResultPayload } from "../lib/blocks/mp-token";
+import { hmac, verifyMpToken, verifyTicket, SIGNATURE_HEADER, type MatchResultPayload, type TournamentStage } from "../lib/blocks/mp-token";
 
 const SECRET = process.env.BLOCKS_MP_SECRET ?? "";
 const APP_URL = (process.env.APP_URL ?? "").replace(/\/$/, "");
@@ -37,6 +37,9 @@ const RESULTS_MS = 5_000;
 const MAX_MESSAGE_BYTES = 4096;
 const MAX_MSGS_PER_SECOND = 60;
 const MAX_ATTACK_PER_SECOND = 40;
+/** Turnier-Räume: Start, sobald alle da sind — sonst spätestens so lange nach dem zweiten Spieler. */
+const TOUR_ALL_PRESENT_DELAY_MS = 5_000;
+const TOUR_WAIT_MS = 90_000;
 /** Raumliste wird gebündelt verschickt (viele Änderungen kurz hintereinander = eine Nachricht). */
 const ROOM_LIST_DEBOUNCE_MS = 300;
 
@@ -62,6 +65,21 @@ interface Member {
   lastAttacker: string | null;
 }
 
+/** Live-Turnier (Event): Raum je Gruppe bzw. Finale, Runden starten automatisch, kein Host-Start. */
+interface TourInfo {
+  key: string;
+  ev: string;
+  st: TournamentStage;
+  g: number;
+  /** Runden insgesamt (room.round zählt die gespielten) */
+  n: number;
+  roster: Set<string>;
+  /** Zeitpunkt, ab dem mindestens zwei Spieler da waren */
+  readySince: number | null;
+  startsAt: number | null;
+  startTimer: ReturnType<typeof setTimeout> | null;
+}
+
 interface Room {
   code: string;
   isPublic: boolean;
@@ -70,9 +88,12 @@ interface Room {
   members: Map<string, Member>;
   roundStartedAt: Date | null;
   timer: ReturnType<typeof setTimeout> | null;
+  tour: TourInfo | null;
 }
 
 const rooms = new Map<string, Room>();
+/** Turnier-Schlüssel (Event:Phase:Gruppe) → Raum */
+const tourRooms = new Map<string, Room>();
 /** userId → aktive Verbindung (eine Verbindung je Nutzer; eine neue ersetzt die alte). */
 const clientsByUser = new Map<string, Client>();
 
@@ -91,11 +112,23 @@ function broadcast(room: Room, msg: ServerMessage, exceptUserId?: string): void 
 }
 
 function roomState(room: Room): RoomState {
+  const t = room.tour;
   return {
     code: room.code,
     isPublic: room.isPublic,
     phase: room.phase,
     round: room.round,
+    ...(t && {
+      tour: {
+        eventId: t.ev,
+        stage: t.st,
+        group: t.g,
+        rounds: t.n,
+        roster: [...t.roster],
+        done: room.round >= t.n && room.phase === "lobby",
+        startsAt: t.startsAt,
+      },
+    }),
     players: [...room.members.entries()].map(([id, m]) => ({
       id,
       name: m.client.name,
@@ -156,7 +189,7 @@ function newCode(): string {
 
 function createRoom(isPublic: boolean): Room {
   const room: Room = {
-    code: newCode(), isPublic, phase: "lobby", round: 0, members: new Map(), roundStartedAt: null, timer: null,
+    code: newCode(), isPublic, phase: "lobby", round: 0, members: new Map(), roundStartedAt: null, timer: null, tour: null,
   };
   rooms.set(room.code, room);
   return room;
@@ -187,6 +220,10 @@ function leaveRoom(c: Client): void {
   send(c, { t: "left" });
   if (room.members.size === 0) {
     if (room.timer) clearTimeout(room.timer);
+    if (room.tour) {
+      if (room.tour.startTimer) clearTimeout(room.tour.startTimer);
+      tourRooms.delete(room.tour.key);
+    }
     rooms.delete(room.code);
     scheduleRoomList();
     return;
@@ -196,20 +233,78 @@ function leaveRoom(c: Client): void {
     if (next) next.host = true;
   }
   checkRoundEnd(room);
+  scheduleTourStart(room);
+  pushRoom(room);
+}
+
+// ── Turnier-Räume ──
+
+function tourKey(ev: string, st: TournamentStage, g: number): string {
+  return `${ev}:${st}:${g}`;
+}
+
+/** Plant den automatischen Rundenstart eines Turnier-Raums neu (nach Beitritt, Verlassen, Rundenende). */
+function scheduleTourStart(room: Room): void {
+  const t = room.tour;
+  if (!t) return;
+  if (t.startTimer) clearTimeout(t.startTimer);
+  t.startTimer = null;
+  t.startsAt = null;
+  if (room.phase !== "lobby" || room.round >= t.n) return;
+  const present = [...room.members.keys()].filter((id) => t.roster.has(id)).length;
+  if (present < 2) {
+    t.readySince = null;
+    return;
+  }
+  const now = Date.now();
+  t.readySince ??= now;
+  const at = present >= t.roster.size ? now + TOUR_ALL_PRESENT_DELAY_MS : Math.max(now + TOUR_ALL_PRESENT_DELAY_MS, t.readySince + TOUR_WAIT_MS);
+  t.startsAt = at;
+  t.startTimer = setTimeout(() => {
+    t.startTimer = null;
+    t.startsAt = null;
+    if (room.phase === "lobby" && room.round < t.n && rooms.get(room.code) === room) startRound(room);
+  }, at - now);
+}
+
+function joinTournament(c: Client, ticket: unknown): void {
+  if (!c.userId) return;
+  const tk = verifyTicket(SECRET, ticket);
+  if (!tk || tk.uid !== c.userId || !tk.roster.includes(c.userId)) {
+    return send(c, { t: "error", message: "Turnier-Ticket ungültig — bitte Seite neu laden." });
+  }
+  const key = tourKey(tk.ev, tk.st, tk.g);
+  let room = tourRooms.get(key);
+  if (!room) {
+    room = createRoom(false);
+    room.round = tk.done;
+    room.tour = {
+      key, ev: tk.ev, st: tk.st, g: tk.g, n: tk.n, roster: new Set(tk.roster), readySince: null, startsAt: null, startTimer: null,
+    };
+    tourRooms.set(key, room);
+  } else if (room.phase === "lobby" && tk.done > room.round) {
+    // Die App hat schon mehr Runden gewertet (z.B. nach einem Server-Neustart) — dort weitermachen.
+    room.round = tk.done;
+  }
+  joinRoom(c, room);
+  scheduleTourStart(room);
   pushRoom(room);
 }
 
 // ── Runden ──
 
 function startRound(room: Room): void {
-  const players = [...room.members.keys()];
+  const players = [...room.members.keys()].filter((id) => !room.tour || room.tour.roster.has(id));
   if (players.length < 2) return;
+  if (room.tour?.startTimer) clearTimeout(room.tour.startTimer);
+  if (room.tour) room.tour.startsAt = null;
   room.round++;
   room.phase = "countdown";
   room.roundStartedAt = new Date(Date.now() + COUNTDOWN_MS);
-  for (const m of room.members.values()) {
-    m.inRound = true;
-    m.alive = true;
+  for (const [uid, m] of room.members) {
+    const plays = players.includes(uid);
+    m.inRound = plays;
+    m.alive = plays;
     m.place = null;
     m.lastAttacker = null;
   }
@@ -270,6 +365,7 @@ function checkRoundEnd(room: Room): void {
       m.inRound = false;
       m.alive = false;
     }
+    scheduleTourStart(room);
     pushRoom(room);
   }, RESULTS_MS);
 }
@@ -294,6 +390,7 @@ async function reportResult(room: Room, placements: { userId: string; place: num
     startedAt: room.roundStartedAt.toISOString(),
     endedAt: new Date().toISOString(),
     placements,
+    ...(room.tour && { tournament: { ev: room.tour.ev, st: room.tour.st, g: room.tour.g } }),
   };
   const body = JSON.stringify(payload);
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -365,15 +462,18 @@ function handle(c: Client, msg: ClientMessage): void {
     case "join": {
       const code = typeof msg.code === "string" ? msg.code.toUpperCase() : "";
       const target = isRoomCode(code) ? rooms.get(code) : undefined;
-      if (!target) return send(c, { t: "error", message: "Raum nicht gefunden." });
+      if (!target || target.tour) return send(c, { t: "error", message: "Raum nicht gefunden." });
       joinRoom(c, target);
       return;
     }
+    case "tjoin":
+      joinTournament(c, msg.ticket);
+      return;
     case "leave":
       leaveRoom(c);
       return;
     case "start":
-      if (!room || !me?.host) return;
+      if (!room || !me?.host || room.tour) return;
       if (room.phase !== "lobby") return;
       if (room.members.size < 2) return send(c, { t: "error", message: "Mindestens 2 Spieler nötig." });
       startRound(room);

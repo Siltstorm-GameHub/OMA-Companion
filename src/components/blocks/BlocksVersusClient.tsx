@@ -5,6 +5,8 @@
 // Anmeldung: Token von /api/blocks/mp-token holen → WebSocket öffnen → "hello". Danach Räume:
 // Schnelles Spiel (öffentlicher Raum), privater Raum mit Code/Einladungslink. Alle Spieler einer
 // Runde bekommen denselben Seed. Eigene Angriffe gehen an den Server, der Ziel und Lücke wählt.
+// Turnier-Modus (tournamentEventId, Seite /gems/blocks/turnier/[eventId]): Statt Räume zu wählen, holt der
+// Client ein Ticket und betritt damit den Raum seiner Gruppe bzw. das Finale — Runden starten automatisch.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -21,6 +23,8 @@ import type { BlocksRunner } from "./runner";
 import { Button, Modal } from "@/components/ui";
 import { ArrowLeft, Copy, Crown, Loader2, LogOut, Play, RefreshCw, Settings, Skull, Users, Zap } from "@/components/icons";
 import { toast } from "sonner";
+import { groupLabel } from "@/lib/blocks/tournament-shared";
+import TournamentStandings, { PHASE_LABEL, useTournamentState } from "./TournamentStandings";
 
 type ConnStatus = "connecting" | "ready" | "closed" | "unavailable";
 
@@ -85,7 +89,9 @@ function MiniBoard({
   );
 }
 
-export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCode: string | null }) {
+export default function BlocksVersusClient({
+  initialRoomCode, tournamentEventId = null,
+}: { initialRoomCode: string | null; tournamentEventId?: string | null }) {
   const [settings, saveSettings] = useBlocksSettings();
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -108,6 +114,13 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
   const deadSentRef = useRef(false);
   const lastBoardRef = useRef("");
   const pendingJoinRef = useRef<string | null>(initialRoomCode);
+  const tourMode = !!tournamentEventId;
+  const [tourState, reloadTour] = useTournamentState(tournamentEventId, 5000);
+  const [tourError, setTourError] = useState<string | null>(null);
+  const [tourJoining, setTourJoining] = useState(false);
+  /** Für welche Phase/Gruppe schon automatisch beigetreten wurde (nach dem Verlassen nicht erneut hineinziehen) */
+  const autoJoinRef = useRef<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const countdownTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const send = useCallback((msg: ClientMessage) => {
@@ -121,6 +134,7 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
         myIdRef.current = msg.userId;
         setMyId(msg.userId);
         setStatus("ready");
+        autoJoinRef.current = null;
         if (pendingJoinRef.current) {
           send({ t: "join", code: pendingJoinRef.current });
           pendingJoinRef.current = null;
@@ -274,6 +288,49 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
     send({ t: "board", b, g: engine.pendingGarbageTotal });
   }, [send]);
 
+  // ── Turnier: Ticket holen und Raum betreten ──
+  const joinTournament = useCallback(async () => {
+    if (!tournamentEventId) return;
+    setTourJoining(true);
+    try {
+      const res = await fetch(`/api/blocks/tournaments/${tournamentEventId}/ticket`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTourError(data.error ?? "Kein Zugang zum Turnier-Raum.");
+        return;
+      }
+      setTourError(null);
+      send({ t: "tjoin", ticket: data.ticket });
+    } catch {
+      setTourError("Turnier-Raum gerade nicht erreichbar.");
+    } finally {
+      setTourJoining(false);
+    }
+  }, [tournamentEventId, send]);
+
+  // Automatisch beitreten, sobald man spielen darf — auch nach der Vorrunde ins Finale wechseln.
+  useEffect(() => {
+    if (!tourMode || status !== "ready" || !tourState?.me.canPlay) return;
+    if (room && !room.tour?.done) return;
+    const key = `${tourState.phase}:${tourState.me.group ?? "f"}`;
+    if (autoJoinRef.current === key) return;
+    autoJoinRef.current = key;
+    void joinTournament();
+  }, [tourMode, status, tourState, room, joinTournament]);
+
+  // Stand nach jeder Runde sofort neu laden
+  useEffect(() => {
+    if (tourMode && end) void reloadTour();
+  }, [tourMode, end, reloadTour]);
+
+  // Countdown bis zum automatischen Rundenstart
+  const tourStartsAt = room?.tour?.startsAt ?? null;
+  useEffect(() => {
+    if (!tourStartsAt) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [tourStartsAt]);
+
   const me = room?.players.find((p) => p.id === myId) ?? null;
   const isHost = !!me?.host;
   const inGame = !!room && room.phase !== "lobby";
@@ -297,8 +354,11 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
 
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <Link href="/gems?spiel=blocks" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
-        <ArrowLeft className="w-4 h-4" /> OMA Blocks
+      <Link
+        href={tourMode ? `/tournament/${tournamentEventId}` : "/gems?spiel=blocks"}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white"
+      >
+        <ArrowLeft className="w-4 h-4" /> {tourMode ? "Zum Event" : "OMA Blocks"}
       </Link>
       <div className="flex items-center gap-1">
         {room && !inGame && (
@@ -331,6 +391,34 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
           </Button>
         )}
         <Link href="/gems/blocks" className="text-xs text-gray-400 hover:text-white">Solange Solo spielen →</Link>
+      </div>
+    );
+  } else if (tourMode && !room) {
+    // Turnier: noch in keinem Raum
+    let text = tourError;
+    if (!text && tourState) {
+      if (tourState.phase === "pending") text = "Das Turnier wurde noch nicht gestartet — diese Seite tritt automatisch bei, sobald es losgeht.";
+      else if (tourState.phase === "done") text = "Das Turnier ist beendet.";
+      else if (!tourState.me.canPlay) {
+        text = tourState.phase === "groups" && tourState.me.group !== null
+          ? `${groupLabel(tourState.me.group)} ist fertig — sobald das Finale beginnt, geht es hier weiter.`
+          : "Du spielst in dieser Phase nicht mit — unten siehst du den Stand.";
+      }
+    }
+    body = (
+      <div className="space-y-4">
+        <div className="glass rounded-2xl p-5 space-y-3 text-center">
+          <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">{tourState ? PHASE_LABEL[tourState.phase] : "Turnier"}</p>
+          {text ? <p className="text-sm text-gray-300">{text}</p> : <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />}
+          {tourState?.me.canPlay && (
+            <Button onClick={() => void joinTournament()} loading={tourJoining} icon={<Play className="w-4 h-4" />}>
+              Turnier-Raum betreten
+            </Button>
+          )}
+        </div>
+        {tourState && tourState.phase !== "pending" && (
+          <div className="glass rounded-2xl p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>
+        )}
       </div>
     );
   } else if (!room) {
@@ -424,6 +512,57 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
             </ul>
           )}
         </div>
+      </div>
+    );
+  } else if (!inGame && room.tour) {
+    // Turnier-Warteraum
+    const tour = room.tour;
+    const present = new Set(room.players.map((p) => p.id));
+    const knownRows = [...(tourState?.groups.flatMap((g) => g.rows) ?? []), ...(tourState?.final?.rows ?? [])];
+    const rosterNames = new Map(knownRows.map((r) => [r.userId, r.name]));
+    const secs = tour.startsAt ? Math.max(0, Math.ceil((tour.startsAt - now) / 1000)) : null;
+    body = (
+      <div className="space-y-4">
+        <div className="glass rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">{tourState?.title ?? "Live-Turnier"}</p>
+              <p className="font-display text-2xl font-black text-white">{tour.stage === "final" ? "Finale" : groupLabel(tour.group)}</p>
+            </div>
+            <p className="text-sm font-bold text-white tabular-nums">
+              {tour.done ? "Alle Runden gespielt" : `Runde ${room.round + 1} von ${tour.rounds}`}
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-1.5">
+            {tour.roster.map((id) => {
+              const p = playerById.get(id);
+              const name = p?.name ?? rosterNames.get(id) ?? "Spieler";
+              return (
+                <div key={id} className={`flex items-center gap-3 rounded-xl px-3 py-2 bg-white/[0.03] ${id === myId ? "ring-1 ring-teal-500/40" : ""} ${present.has(id) ? "" : "opacity-40"}`}>
+                  <Avatar src={p?.image ?? null} name={name} />
+                  <span className="flex-1 min-w-0 truncate text-sm font-semibold text-white">{name}</span>
+                  <span className={`text-[11px] ${present.has(id) ? "text-teal-300" : "text-gray-500"}`}>{present.has(id) ? "da" : "fehlt"}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {tour.done ? (
+            <p className="text-center text-sm text-gray-300">
+              {tour.stage === "final"
+                ? "Das Finale ist gespielt — der Endstand steht unten."
+                : "Deine Gruppe ist fertig. Wer weiterkommt, wechselt automatisch ins Finale, sobald alle Gruppen durch sind."}
+            </p>
+          ) : secs !== null ? (
+            <p className="text-center text-sm text-white">Nächste Runde startet in <span className="font-black tabular-nums">{secs}</span> s</p>
+          ) : (
+            <p className="text-center text-xs text-gray-400">
+              Wartet auf Mitspieler — die Runde startet automatisch, sobald alle da sind (spätestens 90 Sekunden nachdem der zweite Spieler da ist).
+            </p>
+          )}
+        </div>
+        {tourState && <div className="glass rounded-2xl p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>}
       </div>
     );
   } else if (!inGame) {
@@ -564,8 +703,12 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
     <div className="space-y-4">
       {header}
       <div className={fullscreen ? "hidden" : undefined}>
-        <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Blocks · Versus</h1>
-        <p className="text-xs text-gray-500">Echtzeit gegen bis zu 7 andere — abgeräumte Linien landen als Garbage beim Gegner.</p>
+        <h1 className="font-display text-2xl font-black text-white tracking-tight">{tourMode ? `OMA Blocks · ${tourState?.title ?? "Turnier"}` : "OMA Blocks · Versus"}</h1>
+        <p className="text-xs text-gray-500">
+          {tourMode
+            ? "Live-Turnier: Punkte je Runde nach Platz, die Besten jeder Gruppe kommen ins Finale."
+            : "Echtzeit gegen bis zu 7 andere — abgeräumte Linien landen als Garbage beim Gegner."}
+        </p>
       </div>
       {body}
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Einstellungen">

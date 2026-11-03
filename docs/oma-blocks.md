@@ -13,7 +13,8 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
 | Browser (Canvas, Steuerung, Solo, Versus) | `src/components/blocks/*` |
 | Seiten | `/gems/blocks` (Solo), `/gems/blocks/versus` (Versus, `?raum=CODE`) |
 | API | `/api/blocks/runs`, `/api/blocks/runs/[id]`, `/api/blocks/mp-token`, `/api/blocks/match-result` |
-| Cron (Monatsabschluss, täglich) | `/api/cron/blocks-season` |
+| Cron (Monatsabschluss + Challenges, täglich) | `/api/cron/blocks-season` |
+| Events: Live-Turnier / Community-Challenge | `src/lib/blocks/tournament.ts`, `src/lib/blocks/challenge.ts`, Seite `/gems/blocks/turnier/[eventId]` |
 | Versus-Server (hängt am Discord-Bot auf Render) | `src/blocks-server/server.ts`, eingebunden in `src/bot/index.ts` |
 
 ## Highscores
@@ -39,6 +40,33 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
 - **Vollbild:** Während einer Runde legt sich das Spiel auf Handys über die ganze App (`FullscreenShell.tsx`). Auf Android
   wird zusätzlich echtes Browser-Vollbild angefordert (einmal pro Runde — wer es verlässt, bleibt draußen); iPhones
   unterstützen das nicht, dort bleibt es beim Overlay. In Versus stehen die Gegner dann als schmale Leiste über dem Feld.
+
+## Events
+
+Im Event-Assistenten als Spiel „OMA Blocks“ wählen, dann die Art festlegen. Im Event-Editor (Admin) lassen sich die Werte später ändern — die Art bleibt fest, ein Turnier
+ist nur vor dem Start änderbar, eine Challenge bis zur Abrechnung.
+
+**Live-Turnier (Gruppen + Finale)** — `BlocksTournament`
+- Spieler melden sich ganz normal am Event an (optional mit Check-in).
+- Zur Startzeit drückt die Turnierleitung auf der Event-Seite „Turnier starten“: Alle angemeldeten bzw. eingecheckten
+  Spieler werden zufällig auf Gruppen à max. 8 verteilt. Bei bis zu 8 Spielern geht es direkt ins Finale.
+- Die Spieler kommen über „Zum Turnier-Raum“ auf `/gems/blocks/turnier/[eventId]`. Die App stellt dort ein signiertes
+  Ticket aus (Gruppe, Rundenzahl, Teilnehmer), mit dem der Versus-Server den Raum baut — er braucht weiter keine Datenbank.
+- Runden starten automatisch: 5 s nachdem alle da sind, sonst spätestens 90 s nachdem der zweite Spieler da ist.
+  Wer zu spät kommt, spielt ab der nächsten Runde mit. Punkte je Runde: 10/7/5/3/2/1 (Gleichstand: Siege, dann
+  Durchschnittsplatz). Gezählt werden je Gruppe nur die ersten N Runden.
+- Sind alle Gruppen fertig, steigen die Besten jeder Gruppe ins Finale auf (max. 8 insgesamt) und wechseln automatisch
+  in den Finalraum. Nach dem Finale steht die Endrangliste in `Event.finalRankingJson`; der Admin schließt das Event
+  wie gewohnt ab (Belohnungen aus dem Schritt „Belohnungen“, Pokale usw.).
+- Hängt eine Gruppe (Spieler fehlen), kann die Turnierleitung die Phase mit dem aktuellen Stand beenden.
+- Startet der Bot neu, fängt ein Turnier-Raum bei den Runden an, die die App schon gewertet hat.
+
+**Community-Challenge (gemeinsames Ziel)** — `BlocksChallenge`
+- Zwischen Start und Ende zählen alle gewerteten Solo-Läufe auf ein gemeinsames Ziel (Linien oder Punkte), ohne
+  Anmeldung. Versus-Runden zählen nicht (sie werden nicht nachgespielt).
+- Fortschritt auf der Event-Seite und im Blocks-Bereich des Games-Hubs.
+- Nach dem Ende rechnet der Cron (bzw. der nächste Seitenaufruf) ab: Ziel erreicht → jeder mit Mindestbeitrag bekommt
+  die Belohnung (Münzen/Rang-Punkte), alle Beitragenden werden benachrichtigt. Squad-Captains sind auf 50 Münzen begrenzt.
 
 ## Versus-Server einrichten (Render, im Bot-Prozess)
 

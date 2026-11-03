@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { placementRewardFor } from "@/lib/placement-rewards";
+import { compareAvg, computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 import { GROUP_KNOCKOUT_FORMAT, computeLeagueStandings, groupKnockoutRanking, leagueMemberIds } from "@/lib/tournaments/groupStage";
 
 // Berechnet die Endplatzierung als Vorschau (ohne Punkte zu vergeben)
@@ -43,27 +44,28 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         if (entry.statsJson) {
           try {
             const s = JSON.parse(entry.statsJson) as Record<string, number>;
-            for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+            // Nur Zahlen — interne Marker wie "_team" ("A"/"B") sind keine Stats
+            for (const [k, v] of Object.entries(s)) if (typeof v === "number") t.stats[k] = (t.stats[k] ?? 0) + v;
           } catch { /* skip malformed entry */ }
         }
       }
     }
 
     if (format === "avg_stats") {
-      const averaged = [...totals.values()].map(t => {
-        const fieldAvgs = fields.map(f => (t.rounds > 0 ? (t.stats[f] ?? 0) / t.rounds : 0));
-        const combined  = fields.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fields.length : 0;
-        return { userId: t.userId, combined, rounds: t.rounds };
-      });
+      // Gemeinsame Ø-Regeln + Richtung (Abschluss bzw. Event-Einstellung), siehe avg-stats.ts
+      const direction = resolveAvgDirection(event.completionData, event.statConfigJson);
+      const avgTotals = computeAvgTotals(event.matches, fields);
+      const sorted = [...totals.values()]
+        .map(t => ({ userId: t.userId, avg: avgTotals.get(t.userId) }))
+        .sort((a, b) => compareAvg(a.avg?.combined, b.avg?.combined, direction));
 
-      const sorted = averaged.sort((a, b) => b.combined - a.combined);
-
-      ranking = sorted.map(t => {
-        const display = t.combined % 1 === 0 ? String(t.combined) : t.combined.toFixed(2);
+      ranking = sorted.map(({ userId, avg }) => {
+        const combined = avg?.combined ?? null;
+        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : combined.toFixed(2);
         return {
-          userId: t.userId,
-          score:  Math.round(t.combined * 100) / 100,
-          label:  `Ø ${display} (${t.rounds}R)`,
+          userId,
+          score:  combined === null ? 0 : Math.round(combined * 100) / 100,
+          label:  `Ø ${display} (${avg?.rounds ?? 0}R)`,
         };
       });
     } else {

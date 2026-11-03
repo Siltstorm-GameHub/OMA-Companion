@@ -78,7 +78,7 @@ export default function EventOverlayView({
   const content = (key: ElementKey, compact = true) => (
     <ElementContent
       elementKey={key} matches={matches} userOf={userOf} format={state.format} statFields={state.statFields}
-      participants={state.participants} streamer={state.streamer} eventTitle={state.title} game={state.game}
+      avgDirection={state.avgDirection} participants={state.participants} streamer={state.streamer} eventTitle={state.title} game={state.game}
       isLive={isLive} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} compact={compact}
       together={together}
     />
@@ -164,7 +164,7 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
 /** Dispatcher fürs neue, vollständig generalisierte Stapel-System — analog zu PanelContent,
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 export function ElementContent({
-  elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
+  elementKey, matches, userOf, format, statFields, avgDirection, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
   seriesTable, compact = true, together,
 }: {
   elementKey: ElementKey;
@@ -172,6 +172,7 @@ export function ElementContent({
   userOf: (id: string | null) => OverlayUser | undefined;
   format: string | null;
   statFields: string | null;
+  avgDirection?: "high" | "low";
   participants: OverlayParticipant[];
   streamer: OverlayStreamer | null;
   eventTitle: string;
@@ -193,7 +194,7 @@ export function ElementContent({
       return match ? <MatchTicker match={match} userOf={userOf} format={format} statFields={statFields} /> : null;
     }
     case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
-    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} ligaPunkteByUser={ligaPunkteByUser} compact={compact} />;
+    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} avgDirection={avgDirection} ligaPunkteByUser={ligaPunkteByUser} compact={compact} />;
     case "seriesTable":  return seriesTable ? <SeriesTablePanel seriesTable={seriesTable} compact={compact} /> : null;
     case "participants": return <ParticipantsPanel participants={participants} />;
     default:              return null;

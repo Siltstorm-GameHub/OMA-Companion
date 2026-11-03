@@ -17,6 +17,8 @@ import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import StatPointsTable from "@/components/StatPointsTable";
+import AvgDirectionToggle from "@/components/AvgDirectionToggle";
+import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
@@ -28,6 +30,8 @@ import PublishStatusPanel from "./PublishStatusPanel";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
 import { getClassConfig } from "@/components/gems/BattleCardView";
+import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
+import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 
 /* ── Types ── */
@@ -113,12 +117,15 @@ type EventStatConfigForm = {
    *  pro Platz — unabhängig von den laufend erfassten Stats, wird beim Event-Abschluss eingetragen. */
   placementEnabled: boolean;
   placementPoints: PlacementPointRow[];
+  /** Nur avg_stats: höchster oder niedrigster Ø gewinnt — gilt schon live, nicht erst beim Abschluss */
+  avgDirection: AvgDirection;
 };
 
 const EMPTY_EVENT_STAT_CONFIG: EventStatConfigForm = {
   pointsByField: {},
   placementEnabled: false,
   placementPoints: [{ place: 1, points: 10 }, { place: 2, points: 6 }, { place: 3, points: 3 }],
+  avgDirection: "high",
 };
 
 /** Parst die Event-eigene Stat-Konfiguration (statConfigJson) für die Bearbeitungsform — siehe
@@ -129,6 +136,7 @@ function parseEventStatConfig(json: string | null | undefined): EventStatConfigF
     const cfg = JSON.parse(json) as {
       stats?: { field: string; pointsPer: number }[];
       placementPoints?: Record<string, number>;
+      avgDirection?: unknown;
     };
     const pointsByField: Record<string, number> = {};
     for (const s of cfg.stats ?? []) pointsByField[s.field] = s.pointsPer;
@@ -139,15 +147,17 @@ function parseEventStatConfig(json: string | null | undefined): EventStatConfigF
           .map(([place, points]) => ({ place: Number(place), points }))
           .sort((a, b) => a.place - b.place)
       : EMPTY_EVENT_STAT_CONFIG.placementPoints;
-    return { pointsByField, placementEnabled, placementPoints };
+    return { pointsByField, placementEnabled, placementPoints, avgDirection: parseAvgDirection(cfg.avgDirection) ?? "high" };
   } catch { return EMPTY_EVENT_STAT_CONFIG; }
 }
 
 /** Baut statConfigJson (siehe schema.prisma) aus der Bearbeitungsform. Gibt null zurück, wenn weder
- * Stat-Punkte noch Platzierungspunkte gesetzt sind — dann gilt weiter die Reihen-Konfiguration. */
-function buildEventStatConfig(fields: string[], form: EventStatConfigForm): {
+ * Stat-Punkte noch Platzierungspunkte noch "niedrigster Ø gewinnt" gesetzt sind — dann gilt weiter
+ * die Reihen-Konfiguration. */
+function buildEventStatConfig(fields: string[], form: EventStatConfigForm, isAvg: boolean): {
   stats: { field: string; pointsPer: number }[];
   placementPoints: Record<string, number>;
+  avgDirection?: AvgDirection;
 } | null {
   const stats = fields
     .filter(f => (form.pointsByField[f] ?? 0) !== 0)
@@ -158,8 +168,9 @@ function buildEventStatConfig(fields: string[], form: EventStatConfigForm): {
       if (row.place > 0) placementPoints[String(row.place)] = row.points;
     }
   }
-  if (stats.length === 0 && Object.keys(placementPoints).length === 0) return null;
-  return { stats, placementPoints };
+  const avgDirection = isAvg ? form.avgDirection : undefined;
+  if (stats.length === 0 && Object.keys(placementPoints).length === 0 && avgDirection !== "low") return null;
+  return { stats, placementPoints, ...(avgDirection && { avgDirection }) };
 }
 
 const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
@@ -243,6 +254,33 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [maxPlayers, setMaxPlayers]   = useState<string>(event.maxPlayers?.toString() ?? "");
   const [discordChannelId, setDiscordChannelId] = useState<string>(event.discordChannelId ?? "");
   const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
+
+  /* ── OMA Blocks (nur bei game === "OMA Blocks"): Live-Turnier oder Community-Challenge ── */
+  const isBlocksEvent = game === BLOCKS_GAME;
+  const [blocks, setBlocks] = useState<BlocksEventConfig>(() => ({
+    ...DEFAULT_BLOCKS_EVENT,
+    ...(event.blocksTournament && {
+      kind: "tournament" as const,
+      groupRounds: event.blocksTournament.groupRounds,
+      finalRounds: event.blocksTournament.finalRounds,
+      advancePerGroup: event.blocksTournament.advancePerGroup,
+    }),
+    ...(event.blocksChallenge && {
+      kind: "challenge" as const,
+      metric: event.blocksChallenge.metric === "score" ? ("score" as const) : ("lines" as const),
+      goal: event.blocksChallenge.goal,
+      minContribution: event.blocksChallenge.minContribution,
+      rewardCoins: event.blocksChallenge.rewardCoins,
+      rewardRankPoints: event.blocksChallenge.rewardRankPoints,
+    }),
+  }));
+  const blocksKindLocked = !!(event.blocksTournament || event.blocksChallenge);
+  const blocksLockedReason: string | null =
+    event.blocksTournament && event.blocksTournament.stage !== "pending"
+      ? "Das Turnier läuft bereits — Runden und Aufsteiger sind festgeschrieben."
+      : event.blocksChallenge?.finalizedAt
+        ? "Die Challenge ist abgerechnet — die Einstellungen sind festgeschrieben."
+        : null;
 
   /* ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ── */
   const isGemsTournament = game === "OMA Gems";
@@ -525,6 +563,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         twitchClipUrl: twitchClipUrl.trim() || null,
         coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
+        ...(isBlocksEvent && !blocksLockedReason && { blocks }),
         ...(isGemsTournament && endAt && {
           gemsDifficulty,
           gemsMaxAttempts: Number(gemsMaxAttempts) || 3,
@@ -552,7 +591,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
     const statConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
-      ? buildEventStatConfig(tmtStatFields, tmtStatConfig) : null;
+      ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats") : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1062,6 +1101,17 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
           </div>
 
+          {isBlocksEvent && (
+            <BlocksEventSettings
+              value={blocks}
+              onChange={setBlocks}
+              kindLocked={blocksKindLocked}
+              lockedReason={blocksLockedReason}
+              inputCls={inputCls}
+              labelCls={labelCls}
+            />
+          )}
+
           {isGemsTournament && (
             <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
               <p className="text-xs font-semibold text-violet-300">OMA Gems Turnier-Einstellungen</p>
@@ -1561,6 +1611,14 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
               <label className={labelCls}>Statistik-Felder</label>
               <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+              {tmtFormat === "avg_stats" && (
+                <div className="mt-3">
+                  <AvgDirectionToggle
+                    value={tmtStatConfig.avgDirection}
+                    onChange={v => setTmtStatConfig(c => ({ ...c, avgDirection: v }))}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1680,6 +1738,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 allUsers={bracketRegisteredUsers}
                 winnerStatKeys={bracketWinnerStatKeys}
                 matchWinStatKeys={bracketMatchWinStatKeys}
+                standaloneEvent={!event.series}
                 placementPoints={bracketPlacementPoints}
               />
             </div>
@@ -1695,6 +1754,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           allUsers={bracketRegisteredUsers}
           winnerStatKeys={bracketWinnerStatKeys}
           matchWinStatKeys={bracketMatchWinStatKeys}
+          standaloneEvent={!event.series}
           placementPoints={bracketPlacementPoints}
         />
       )}

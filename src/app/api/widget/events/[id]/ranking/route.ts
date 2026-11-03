@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { placementRewardFor } from "@/lib/placement-rewards";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
+import { compareAvg, computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 import { GROUP_KNOCKOUT_FORMAT, computeLeagueStandings, groupKnockoutRanking, leagueMemberIds } from "@/lib/tournaments/groupStage";
 
 type UserLite = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
@@ -109,21 +110,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     if (format === "avg_stats") {
-      const averaged = [...totals.values()].map((t) => {
-        const fieldAvgs = fields.map((f) => (t.rounds > 0 ? (t.stats[f] ?? 0) / t.rounds : 0));
-        const combined = fields.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fields.length : 0;
-        return { userId: t.userId, combined, rounds: t.rounds };
-      });
-      const sorted = averaged.sort((a, b) => b.combined - a.combined);
-      ranking = sorted.map((t) => {
-        const display = t.combined % 1 === 0 ? String(t.combined) : t.combined.toFixed(2);
-        const totalsForUser = totals.get(t.userId)!;
+      // Gemeinsame Ø-Regeln + Richtung (Abschluss bzw. Event-Einstellung), siehe avg-stats.ts
+      const direction = resolveAvgDirection(event.completionData, event.statConfigJson);
+      const avgTotals = computeAvgTotals(event.matches, fields);
+      const sorted = [...totals.values()]
+        .map((t) => ({ userId: t.userId, avg: avgTotals.get(t.userId) }))
+        .sort((a, b) => compareAvg(a.avg?.combined, b.avg?.combined, direction));
+      ranking = sorted.map(({ userId, avg }) => {
+        const combined = avg?.combined ?? null;
+        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : combined.toFixed(2);
         const statsAvg: Record<string, number> = {};
         for (const f of fields) {
-          const avg = totalsForUser.rounds > 0 ? (totalsForUser.stats[f] ?? 0) / totalsForUser.rounds : 0;
-          statsAvg[f] = Math.round(avg * 100) / 100;
+          const v = avg?.fieldAvgs[f];
+          if (v !== null && v !== undefined) statsAvg[f] = Math.round(v * 100) / 100;
         }
-        return { userId: t.userId, score: Math.round(t.combined * 100) / 100, label: `Ø ${display} (${t.rounds}R)`, stats: statsAvg };
+        return { userId, score: combined === null ? 0 : Math.round(combined * 100) / 100, label: `Ø ${display} (${avg?.rounds ?? 0}R)`, stats: statsAvg };
       });
     } else {
       const sorted = [...totals.values()].sort((a, b) => {

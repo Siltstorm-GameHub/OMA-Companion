@@ -8,6 +8,8 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import LivePollsPanel from "./LivePollsPanel";
+import AvgDirectionToggle from "@/components/AvgDirectionToggle";
+import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import { GripVertical } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
@@ -60,6 +62,8 @@ interface Props {
   format: string | null;
   /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
   userAvgScore: Record<string, number>;
+  /** Vorbelegung der Ø-Richtung aus den Turnier-Einstellungen des Events (statConfigJson.avgDirection) */
+  defaultAvgDirection?: AvgDirection;
   /** Aktueller Dominion-Streak je User VOR diesem Event (aus der Reihen-Rohtabelle) — nur User mit
    *  Streak > 0 sind enthalten. Zeigt Moderatoren beim Ausfüllen, wer bereits auf den Bonus zusteuert. */
   currentDominionStreaks: Record<string, number>;
@@ -123,7 +127,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
-  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, userStats, format, userAvgScore,
+  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, userStats, format, userAvgScore, defaultAvgDirection = "high",
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
   isAdmin, isMod, isReEdit, status,
@@ -152,8 +156,8 @@ export default function EventCompleteClient({
   const [winnerStatField, setWinnerStatField] = useState<string>(
     (initialData?.winnerStatField as string) ?? seriesStatConfig?.defaultWinnerStatField ?? ""
   );
-  const [avgDirection, setAvgDirection] = useState<"high" | "low">(
-    (initialData?.avgWinnerDirection as "high" | "low") ?? "high"
+  const [avgDirection, setAvgDirection] = useState<AvgDirection>(
+    parseAvgDirection(initialData?.avgWinnerDirection) ?? defaultAvgDirection
   );
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(
     (initialData?.seriesWinnerTargetField as string) ?? seriesStatConfig?.defaultWinnerTargetField ?? ""
@@ -336,15 +340,19 @@ export default function EventCompleteClient({
   function scoreOf(uid: string, field: string): number {
     return isAvgFormat ? (userAvgScore[uid] ?? 0) : (userStats[uid]?.[field] ?? 0);
   }
-  function autoSort(field = winnerStatField) {
+  // direction explizit übergebbar: direkt nach setAvgDirection() hält avgDirection noch den alten Wert
+  function autoSort(field = winnerStatField, direction = avgDirection) {
     if (!isAvgFormat && !field) return;
-    const dirMul = isAvgFormat && avgDirection === "low" ? 1 : -1;
+    const dirMul = isAvgFormat && direction === "low" ? 1 : -1;
+    // avg_stats: Spieler ohne gespielte Runde (kein Ø) immer ans Ende — sonst würde ihre fiktive 0
+    // bei "niedrigster Ø gewinnt" ganz oben landen.
+    const unscored = (uid: string) => isAvgFormat && userAvgScore[uid] === undefined;
     const sorted = [...rankingOrder].sort(
-      (a, b) => dirMul * (scoreOf(a, field) - scoreOf(b, field))
+      (a, b) => (Number(unscored(a)) - Number(unscored(b))) || dirMul * (scoreOf(a, field) - scoreOf(b, field))
     );
     const newTied = new Set<string>();
     for (let i = 1; i < sorted.length; i++) {
-      if (scoreOf(sorted[i], field) === scoreOf(sorted[i - 1], field)) {
+      if (unscored(sorted[i]) === unscored(sorted[i - 1]) && scoreOf(sorted[i], field) === scoreOf(sorted[i - 1], field)) {
         newTied.add(sorted[i]);
       }
     }
@@ -569,32 +577,16 @@ export default function EventCompleteClient({
               )}
               {isAvgFormat ? (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">Wer gewinnt beim Durchschnittswert?</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { value: "high", label: "Höchster Ø gewinnt" },
-                      { value: "low",  label: "Niedrigster Ø gewinnt" },
-                    ] as const).map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        disabled={winnerLocked}
-                        onClick={() => {
-                          setAvgDirection(opt.value);
-                          if (!rankingManuallyEdited) autoSort();
-                        }}
-                        className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors disabled:cursor-not-allowed ${
-                          avgDirection === opt.value
-                            ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
-                            : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <AvgDirectionToggle
+                    value={avgDirection}
+                    disabled={winnerLocked}
+                    onChange={v => {
+                      setAvgDirection(v);
+                      if (!rankingManuallyEdited) autoSort(winnerStatField, v);
+                    }}
+                  />
                   <p className="text-[10px] text-gray-600 mt-1">
-                    Bewertet wird der kombinierte Durchschnitt pro Runde über alle Stat-Felder (nicht die Summe).
+                    Bewertet wird der kombinierte Durchschnitt pro Runde über alle Stat-Felder (nicht die Summe). Vorbelegt aus den Turnier-Einstellungen.
                   </p>
                 </div>
               ) : (

@@ -86,7 +86,7 @@ export function nowForDatetimeLocal(): string {
 
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
-  event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints,
+  event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints, standaloneEvent = false,
 }: {
   event: Event;
   tournament: Tournament | null;
@@ -99,6 +99,9 @@ export default function TournamentManager({
   /** Punkte je Platz (Event-eigene statConfigJson, siehe EventEditClient "Turnier"-Reiter, coop_stats) —
    *  nur wenn gesetzt, wird die Platzierungs-Spalte pro Runde angezeigt (Schritt 4). */
   placementPoints?: Record<string, number> | null;
+  /** Event gehört zu keiner Reihe — dann gibt es keine matchWinStatKeys, Match Win/Teams sollen beim
+   *  Skill-Index trotzdem erfassbar sein (Beschreibung "optional Team-Match-Win"). */
+  standaloneEvent?: boolean;
 }) {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
@@ -220,9 +223,10 @@ export default function TournamentManager({
   // ── Derived ──────────────────────────────────────────────────────────
   const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats";
   const isCoop = tournament.format === "coop_stats";
-  // Match Win/Team-Zuordnung nur anzeigen und erfassen, wenn die Reihe tatsächlich einen Stat darauf
-  // aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst unnötig für jedes Kooperativ-Turnier.
-  const trackMatchWin = isCoop && matchWinStatKeys.length > 0;
+  // Match Win/Team-Zuordnung in einer Reihe nur anzeigen und erfassen, wenn die Reihe tatsächlich einen
+  // Stat darauf aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst unnötig. Ohne Reihe immer
+  // erfassbar; die Turnierseite zeigt es erst, sobald eine Runde gewonnen wurde.
+  const trackMatchWin = isCoop && (matchWinStatKeys.length > 0 || standaloneEvent);
   // Platzierungs-Spalte pro Runde nur anzeigen, wenn für dieses Event Punkte je Platz konfiguriert
   // sind (Reiter "Turnier" → Format Kooperativ (Stats), siehe EventEditClient) — sonst unnötig.
   const trackPlacement = isCoop && !!placementPoints && Object.keys(placementPoints).length > 0;

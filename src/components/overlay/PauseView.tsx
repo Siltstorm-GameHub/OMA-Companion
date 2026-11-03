@@ -101,7 +101,7 @@ function eventContent(payload: Extract<StreamerOverlayPayload, { mode: "event" }
   const content = (key: Parameters<typeof ElementContent>[0]["elementKey"]) => (
     <ElementContent
       elementKey={key} matches={event.matches} userOf={userOf} format={event.format} statFields={event.statFields}
-      participants={event.participants} streamer={event.streamer} eventTitle={event.title} game={event.game}
+      avgDirection={event.avgDirection} participants={event.participants} streamer={event.streamer} eventTitle={event.title} game={event.game}
       isLive={isLive} ligaPunkteByUser={event.ligaPunkteByUser} seriesTable={event.seriesTable} compact={false}
     />
   );

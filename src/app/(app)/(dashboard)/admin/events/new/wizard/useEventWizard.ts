@@ -7,8 +7,10 @@ import { EventCategory, EventGenre } from "@prisma/client";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import { GEMS_MONSTER_CATALOG } from "@/lib/gems/gems-monster-catalog";
+import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
 import { fromDatetimeLocalBerlin } from "@/lib/time";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
+import type { AvgDirection } from "@/lib/avg-stats";
 import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
 import { clearDraft, useInitialDraft, writeDraft } from "./draft";
 import { FORMATS, type EventTemplate, type SeriesOption, type SquadOption, type PollConfig, type PlacementReward, type StatRow, type SeasonPrefill } from "./shared";
@@ -67,6 +69,7 @@ export function useEventWizard({
   const [format, setFormat]           = useState(tpl?.format ?? "single_elimination");
   const [statFields, setStatFields]   = useState<string[]>(tpl?.statFields ?? []);
   const [statPointsByField, setStatPointsByField] = useState<Record<string, number>>(tpl?.statPointsByField ?? {});
+  const [avgDirection, setAvgDirection] = useState<AvgDirection>(tpl?.avgDirection ?? "high");
   // Veröffentlichung: sofort (sichtbar + angekündigt), unsichtbar, oder geplant zu publishAt
   const [publishMode, setPublishMode] = useState<"now" | "hidden" | "scheduled">("now");
   const [publishAt, setPublishAt]     = useState("");
@@ -90,6 +93,11 @@ export function useEventWizard({
   const [gemsParticipationPack, setGemsParticipationPack] = useState<"" | "STANDARD" | "PREMIUM" | "COMMUNITY">("");
   const [gemsPlacementPacks, setGemsPlacementPacks] = useState<("" | "STANDARD" | "PREMIUM" | "COMMUNITY")[]>(["", "", ""]);
   const isGemsTournament = game === "OMA Gems";
+
+  // ── OMA Blocks (nur bei game === "OMA Blocks"): Live-Turnier oder Community-Challenge ──────────
+  const [blocks, setBlocks] = useState<BlocksEventConfig>(DEFAULT_BLOCKS_EVENT);
+  const isBlocksEvent = game === BLOCKS_GAME;
+  const isBlocksChallenge = isBlocksEvent && blocks.kind === "challenge";
 
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
@@ -192,7 +200,7 @@ export function useEventWizard({
   // Event mode: skip tournament step if community ODER OMA Gems (Format/Bracket
   // sind dort irrelevant — die Turnier-Einstellungen kommen stattdessen aus dem
   // eigenen Block in renderStepEventData, siehe isGemsTournament oben).
-  const showsTournamentStep = eventType === "tournament" && !isGemsTournament;
+  const showsTournamentStep = eventType === "tournament" && !isGemsTournament && !isBlocksEvent;
   // Start in der Vergangenheit: Anmeldung wäre sofort geschlossen, die Ankündigung käme zu spät
   const startInPast = !!startAt && fromDatetimeLocalBerlin(startAt) < new Date();
 
@@ -226,6 +234,7 @@ export function useEventWizard({
     format,
     statFields,
     statPointsByField,
+    avgDirection,
     publishMode,
     publishAt,
     playHomeAway,
@@ -241,6 +250,7 @@ export function useEventWizard({
     gemsMonsterIds,
     gemsParticipationPack,
     gemsPlacementPacks,
+    blocks,
     seriesName,
     seriesDesc,
     variousGames,
@@ -296,6 +306,7 @@ export function useEventWizard({
     format: setFormat,
     statFields: setStatFields,
     statPointsByField: setStatPointsByField,
+    avgDirection: setAvgDirection,
     publishMode: setPublishMode,
     publishAt: setPublishAt,
     playHomeAway: setPlayHomeAway,
@@ -311,6 +322,7 @@ export function useEventWizard({
     gemsMonsterIds: setGemsMonsterIds,
     gemsParticipationPack: setGemsParticipationPack,
     gemsPlacementPacks: setGemsPlacementPacks,
+    blocks: setBlocks,
     seriesName: setSeriesName,
     seriesDesc: setSeriesDesc,
     variousGames: setVariousGames,
@@ -383,6 +395,8 @@ export function useEventWizard({
     if (!title.trim()) return "Titel fehlt.";
     if (!startAt) return "Start-Datum fehlt.";
     if (isGemsTournament && !endAt) return "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss).";
+    if (isBlocksChallenge && !endAt) return "Eine OMA-Blocks-Challenge braucht ein Ende.";
+    if (isBlocksChallenge && !(blocks.goal > 0)) return "Bitte ein Ziel für die Challenge angeben.";
     if (endAt && fromDatetimeLocalBerlin(endAt) <= fromDatetimeLocalBerlin(startAt)) return "Das Ende muss nach dem Start liegen.";
     if (maxPlayers && (!Number.isInteger(Number(maxPlayers)) || Number(maxPlayers) < 2)) return "Max. Spieler muss eine ganze Zahl ab 2 sein.";
     if (seriesMode === "existing" && !selectedSeriesId) return "Bitte eine bestehende Eventreihe auswählen — oder „Einzelevent“ wählen.";
@@ -483,7 +497,7 @@ export function useEventWizard({
       pollsConfigJson: polls.length > 0 ? polls : null,
     };
 
-    if (eventType === "tournament") {
+    if (eventType === "tournament" && !isBlocksEvent) {
       const chosenFormat = seriesFixedFormat ?? format;
       // "liga" bleibt intern der gespeicherte Wert für Liga mit Hin-/Rückrunde
       body.format = !seriesFixedFormat && format === "round_robin" && playHomeAway ? "liga" : chosenFormat;
@@ -497,7 +511,17 @@ export function useEventWizard({
         const stats = statFields
           .filter(f => (statPointsByField[f] ?? 0) !== 0)
           .map(f => ({ field: f, pointsPer: statPointsByField[f] }));
-        if (stats.length) body.statConfig = { stats };
+        // avg_stats: "niedrigster Ø gewinnt" muss schon während des Events gelten, nicht erst beim Abschluss
+        const avgDir = (seriesFixedFormat ?? format) === "avg_stats" && avgDirection === "low" ? avgDirection : undefined;
+        if (stats.length || avgDir) body.statConfig = { stats, ...(avgDir && { avgDirection: avgDir }) };
+      }
+    }
+
+    if (isBlocksEvent) {
+      body.blocks = blocks;
+      if (blocks.kind === "tournament" && checkInEnabled) {
+        body.checkInEnabled = true;
+        body.checkInMinutes = checkInMinutes;
       }
     }
 
@@ -663,6 +687,8 @@ export function useEventWizard({
     setStatFields,
     statPointsByField,
     setStatPointsByField,
+    avgDirection,
+    setAvgDirection,
     eventRegistrationLocked,
     setEventRegistrationLocked,
     eventSquadId,
@@ -680,6 +706,10 @@ export function useEventWizard({
     gemsPlacementPacks,
     setGemsPlacementPacks,
     isGemsTournament,
+    blocks,
+    setBlocks,
+    isBlocksEvent,
+    isBlocksChallenge,
     seriesName,
     setSeriesName,
     seriesDesc,

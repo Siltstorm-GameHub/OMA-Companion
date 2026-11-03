@@ -47,6 +47,7 @@ import BracketView from "./BracketView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
+import BlocksEventSection from "@/components/blocks/BlocksEventSection";
 import { placementRewardFor } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import NextMatches, { type UpcomingMatch } from "./NextMatches";
@@ -56,6 +57,7 @@ import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
 import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
+import { bestAvgIds, computeAvgTotals, parseEntryStats, readStatValue, resolveAvgDirection } from "@/lib/avg-stats";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -124,6 +126,8 @@ export default async function TournamentDetailPage({
     include: {
       series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
+      blocksTournament: { select: { stage: true } },
+      blocksChallenge: { select: { id: true } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
         include: {
@@ -203,7 +207,8 @@ export default async function TournamentDetailPage({
   const isRegistered  = !!myReg && myReg.role !== "spectator";
   const isSpectator    = !!myReg && myReg.role === "spectator";
   const isFullEvent    = !!(event.maxPlayers && event.registrations.filter(r => r.role !== "spectator").length >= event.maxPlayers);
-  const canRegister    = event.status === "open" || event.status === "active";
+  // OMA-Blocks-Challenge: Jeder trägt automatisch mit Solo-Läufen bei — keine Anmeldung nötig.
+  const canRegister    = (event.status === "open" || event.status === "active") && !event.blocksChallenge;
   const isRegistrationLocked = event.registrationLocked || event.series?.registrationLocked || false;
   const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
   const isSquadMember = restrictedSquadId
@@ -582,11 +587,26 @@ export default async function TournamentDetailPage({
   // klar als vorläufig markiert (isLigaPunkteLive), siehe computeLiveLigaPunkte. Beide nutzen bewusst
   // rawSeriesStatCfg, nicht turnierpunkteCfg — siehe dessen Kommentar oben.
   const isLigaPunkteLive = !gamePhaseComplete;
+  // Skill-Index ohne Reihe: Match Win/Team-Zuordnung ist dort immer erfassbar (TournamentManager) —
+  // Spalte und Sieg/Niederlage-Anzeige erst, sobald tatsächlich eine Runde gewonnen wurde.
+  const standaloneMatchWinUsed = !event.series && format === "coop_stats" && event.matches.some(m =>
+    m.entries.some(e => (readStatValue(parseEntryStats(e.statsJson), "Match Win") ?? 0) > 0));
+  // avg_stats: Richtung aus Abschluss bzw. Event-Einstellung; der Führende ergibt sich aus dem Ø in
+  // dieser Richtung, nicht aus den (immer "höher = besser") Turnierpunkten.
+  const avgDirection = resolveAvgDirection(event.completionData, event.statConfigJson);
+  const avgLeaderIds = format === "avg_stats"
+    ? bestAvgIds(
+        [...computeAvgTotals(event.matches, event.statFields ? JSON.parse(event.statFields) : [])]
+          .map(([uid, t]) => [uid, t.combined] as [string, number | null]),
+        avgDirection,
+      )
+    : undefined;
   const liveLigaPunkte = event.series && isLigaPunkteLive
     ? computeLiveLigaPunkte(
         { registrations: event.registrations, matches: event.matches },
         rawSeriesStatCfg,
         turnierpunkteByUser,
+        avgLeaderIds,
       )
     : null;
   const ligaPunkteByUser: Record<string, number> = event.series
@@ -715,6 +735,17 @@ export default async function TournamentDetailPage({
 
       {/* ── Regelwerk (über dem Punktesystem) ─────────────────────────────── */}
       <RulesSection rules={event.rules} className="mb-5" />
+
+      {/* ── OMA Blocks: Live-Turnier bzw. Community-Challenge ──────────────── */}
+      {(event.blocksTournament || event.blocksChallenge) && (
+        <BlocksEventSection
+          eventId={event.id}
+          viewerId={userId}
+          isMod={isMod}
+          hasTournament={!!event.blocksTournament}
+          hasChallenge={!!event.blocksChallenge}
+        />
+      )}
 
       {/* Pokale gibt es nur für Standalone-Events — Events innerhalb einer Eventreihe
           werden stattdessen mit dem Eventreihen-Pokal auf der Reihen-Seite ausgezeichnet. */}
@@ -892,7 +923,7 @@ export default async function TournamentDetailPage({
                 eventId={event.id}
                 startAt={event.startAt.toISOString()}
                 checkInMinutes={event.checkInMinutes}
-                drawn={event.matches.length > 0}
+                drawn={event.matches.length > 0 || (!!event.blocksTournament && event.blocksTournament.stage !== "pending")}
                 checkedIn={!!myReg?.checkedInAt}
               />
             )}
@@ -1283,9 +1314,10 @@ export default async function TournamentDetailPage({
                 dominionThreshold={rawSeriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
                 format={format}
-                trackMatchWin={(rawSeriesStatCfg.matchWinStatKeys ?? []).length > 0}
+                trackMatchWin={(rawSeriesStatCfg.matchWinStatKeys ?? []).length > 0 || standaloneMatchWinUsed}
                 finalRankingGroups={rankingGroups}
                 excludedUserIds={[...excludedUserIds]}
+                avgWinnerDirection={avgDirection}
                 pollWinnerIds={pollWinnerIds}
                 pollLabel={pollLabel}
                 pollWinsByUser={pollWinsByUser}

@@ -33,6 +33,12 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
               {isRoundRobinFamily && pointsMode === "matchResult" && ` · ${coinsWin} Münzen/Sieg, ${coinsDraw}/Unentschieden`}</p>
           )}
           {eventType === "tournament" && !isGemsTournament && checkInEnabled && <p>✅ Check-in {checkInMinutes} Min. vor Start</p>}
+          {w.isBlocksEvent && w.blocks.kind === "tournament" && (
+            <p>🧱 Live-Turnier · Vorrunde {w.blocks.groupRounds} Runden · Finale {w.blocks.finalRounds} Runden · Top {w.blocks.advancePerGroup} je Gruppe ins Finale{checkInEnabled ? ` · Check-in ${checkInMinutes} Min. vor Start` : ""}</p>
+          )}
+          {w.isBlocksChallenge && (
+            <p>🧱 Challenge · gemeinsam {w.blocks.goal.toLocaleString("de-DE")} {w.blocks.metric === "score" ? "Punkte" : "Linien"} · Belohnung ab {w.blocks.minContribution.toLocaleString("de-DE")}: {w.blocks.rewardCoins} Münzen{w.blocks.rewardRankPoints ? ` + ${w.blocks.rewardRankPoints} Rang-Punkte` : ""}</p>
+          )}
           {isGemsTournament && endAt && (
             <p>💎 Turnier bis {formatBerlinDateTime(fromDatetimeLocalBerlin(endAt), { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
           )}

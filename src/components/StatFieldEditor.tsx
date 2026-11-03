@@ -60,7 +60,7 @@ export default function StatFieldEditor({
       </div>
       {isAvg && fields.length > 0 && (
         <p className="text-[11px] text-blue-400/80">
-          Alle Felder werden pro Runde gemittelt und zu einem Gesamtdurchschnitt zusammengerechnet — der beste Wert gewinnt.
+          Alle Felder werden pro Runde gemittelt und zu einem Gesamtdurchschnitt zusammengerechnet. Nicht eingetragene Felder zählen nicht als 0, sondern werden ausgelassen.
         </p>
       )}
       {fields.length === 0 && (

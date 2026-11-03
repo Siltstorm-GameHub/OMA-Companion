@@ -113,6 +113,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         allUsers={registeredUsers}
         winnerStatKeys={winnerStatKeys}
         matchWinStatKeys={matchWinStatKeys}
+        standaloneEvent={!event.series}
         placementPoints={placementPoints}
       />
     </div>
