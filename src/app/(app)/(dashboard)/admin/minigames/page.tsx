@@ -1,10 +1,12 @@
 import { requireRole } from "@/lib/roles";
 import { getMinigamesConfig } from "@/lib/minigames-config";
+import { getBlocksRewards } from "@/lib/blocks/rewards-config";
 import { MinigamesConfigPanel } from "./MinigamesConfigPanel";
+import { BlocksRewardsPanel } from "./BlocksRewardsPanel";
 
 export default async function AdminMinigamesPage() {
   await requireRole("admin");
-  const config = await getMinigamesConfig();
+  const [config, blocksRewards] = await Promise.all([getMinigamesConfig(), getBlocksRewards()]);
 
   return (
     <div className="space-y-10 max-w-2xl">
@@ -13,6 +15,12 @@ export default async function AdminMinigamesPage() {
           🎮 Minigames
         </h2>
         <MinigamesConfigPanel initial={config} />
+      </section>
+      <section>
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+          🧱 OMA Blocks · Monatssieger-Belohnung
+        </h2>
+        <BlocksRewardsPanel initial={blocksRewards} />
       </section>
     </div>
   );

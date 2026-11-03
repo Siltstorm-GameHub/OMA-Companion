@@ -11,6 +11,7 @@ import LeaderboardList from "@/components/gems/LeaderboardList";
 import type { LeaderboardEntry } from "@/lib/gems/leaderboard";
 import { ChevronRight, Crown, Play, Swords, Trophy } from "@/components/icons";
 import BlocksRankingTabs from "./BlocksRankingTabs";
+import { getBlocksRewards, rewardLabel } from "@/lib/blocks/rewards-config";
 
 const PREVIEW = 10;
 const fmt = (n: number) => n.toLocaleString("de-DE");
@@ -22,14 +23,16 @@ function toEntry(r: BlocksRankingRow): LeaderboardEntry {
 export default async function BlocksHubPanel({ userId }: { userId: string }) {
   const season = seasonKey();
   const label = seasonLabel(season);
-  const [monthRows, allRows, monthPlace, allPlace, finished, versus] = await Promise.all([
+  const [monthRows, allRows, monthPlace, allPlace, finished, versus, rewards] = await Promise.all([
     getBlocksRanking(season, 100),
     getBlocksRanking(ALL_TIME, 100),
     getBlocksPlace(userId, season),
     getBlocksPlace(userId, ALL_TIME),
     getFinishedBlocksSeasons(6),
     getVersusWins(season, 10),
+    getBlocksRewards(),
   ]);
+  const rewardRows = rewards.map((r, i) => ({ place: i + 1, label: rewardLabel(r) })).filter((r) => r.label);
   const daysLeft = seasonDaysLeft();
 
   const versusEntries: LeaderboardEntry[] = versus.map((v) => ({
@@ -78,6 +81,23 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {/* Monatsbelohnung */}
+      {rewardRows.length > 0 && (
+        <div className="glass rounded-2xl p-4 space-y-2">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Belohnung zum Monatsende · {label}</p>
+          <div className="grid sm:grid-cols-3 gap-2">
+            {rewardRows.map((r) => (
+              <div key={r.place} className="flex items-center gap-2 text-xs">
+                <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-[11px] text-black shrink-0" style={{ background: ["#fbbf24", "#d1d5db", "#f0a868"][r.place - 1] }}>
+                  {r.place}
+                </span>
+                <span className="text-white font-semibold">{r.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Ranglisten */}
       <BlocksRankingTabs
         monthLabel={label}
@@ -86,7 +106,7 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
             rows={monthRows.map(toEntry)}
             viewerId={userId}
             limit={PREVIEW}
-            note={`Höchster Score im ${label} · am Monatsende wird die Wertung eingefroren und beginnt neu`}
+            note={`Höchster Score im ${label} · am Monatsende gibt es Belohnungen für die Top 3, danach beginnt die Wertung neu`}
             emptyText="In diesem Monat hat noch niemand gespielt — hol dir Platz 1!"
             absentText="Spiel eine Solo-Runde, um in der Monatswertung zu erscheinen."
           />

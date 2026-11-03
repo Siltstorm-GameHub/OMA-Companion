@@ -23,7 +23,11 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
   ein Lauf kann außerdem nicht schneller als in Echtzeit gespielt worden sein.
 - `BlocksBest` hält je Spieler den Bestwert pro Monat (`season = "YYYY-MM"`, Berliner Zeit) und All-Time (`season = "all"`).
 - Monatlicher Reset: Ab dem 1. zählt automatisch die neue Monatszeile, gelöscht wird nichts. Der Cron friert danach den
-  Endstand des Vormonats in `BlocksSeason` ein (Anzeige „Monatssieger“) und benachrichtigt die Top 3.
+  Endstand des Vormonats in `BlocksSeason` ein (Anzeige „Monatssieger“), zahlt Platz 1–3 ihre Belohnung aus und
+  benachrichtigt sie.
+- Belohnungen (Münzen und Rang-Punkte je Platz 1–3) stellt ein Admin unter **Admin → Tools → Minigames** ein
+  (`src/lib/blocks/rewards-config.ts`, gespeichert in `BotConfig`). Die Auszahlung erscheint als `PointTransaction`
+  mit dem Grund „OMA Blocks: Platz X im <Monat>“.
 
 ## Versus-Server auf Railway einrichten
 

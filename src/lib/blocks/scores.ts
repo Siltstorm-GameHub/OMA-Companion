@@ -4,11 +4,14 @@
 // Bestwerte liegen in BlocksBest: season "YYYY-MM" (Berliner Kalendermonat, wie die Gems-Saisons)
 // und "all" für All-Time. Die Monatswertung "setzt sich zurück", indem ab dem 1. einfach die neue
 // season-Zeile zählt — nichts wird gelöscht. Der Cron (cron/blocks-season) friert danach den Endstand
-// des Vormonats in BlocksSeason ein und benachrichtigt die Top 3.
+// des Vormonats in BlocksSeason ein, zahlt Platz 1–3 die im Adminbereich eingestellte Belohnung
+// (Münzen + Rang-Punkte, siehe rewards-config.ts) aus und benachrichtigt sie.
 
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
 import { seasonKey, seasonLabel } from "@/lib/gems/tower-season";
+import { COIN_PREFIX, RANK_PREFIX } from "@/lib/points";
+import { getBlocksRewards, rewardLabel, type BlocksPlaceReward } from "./rewards-config";
 import type { EngineStats } from "./engine";
 
 export const ALL_TIME = "all";
@@ -146,11 +149,17 @@ export async function finalizeDueBlocksSeasons(now: Date = new Date()): Promise<
       .catch(() => false);
     if (!claimed) continue;
     finalized.push(season);
+    const rewards = await getBlocksRewards();
     for (let i = 0; i < Math.min(3, ranking.length); i++) {
+      const reward = rewards[i];
+      await payReward(ranking[i].userId, i + 1, season, reward);
+      const label = rewardLabel(reward);
       await createNotification(ranking[i].userId, {
         type: "badge",
         title: `OMA Blocks: Platz ${i + 1} im ${seasonLabel(season)}`,
-        body: `Mit ${ranking[i].score.toLocaleString("de-DE")} Punkten bist du auf Platz ${i + 1} der Monatswertung gelandet.`,
+        body:
+          `Mit ${ranking[i].score.toLocaleString("de-DE")} Punkten bist du auf Platz ${i + 1} der Monatswertung gelandet.` +
+          (label ? ` Deine Belohnung: ${label}.` : ""),
         url: "/gems?spiel=blocks",
       });
     }
@@ -161,6 +170,23 @@ export async function finalizeDueBlocksSeasons(now: Date = new Date()): Promise<
     where: { finishedAt: null, createdAt: { lt: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
   });
   return { finalized, cleanedRuns: count };
+}
+
+/** Bucht die Belohnung eines Monatssiegers (Münzen und/oder Rang-Punkte) inkl. Transaktions-Einträgen. */
+async function payReward(userId: string, place: number, season: string, reward: BlocksPlaceReward): Promise<void> {
+  if (reward.coins <= 0 && reward.rankPoints <= 0) return;
+  const reason = `OMA Blocks: Platz ${place} im ${seasonLabel(season)}`;
+  await prisma.$transaction([
+    ...(reward.coins > 0 ? [prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `${COIN_PREFIX} ${reason}` } })] : []),
+    ...(reward.rankPoints > 0 ? [prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `${RANK_PREFIX} ${reason}` } })] : []),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(reward.coins > 0 && { points: { increment: reward.coins } }),
+        ...(reward.rankPoints > 0 && { rankPoints: { increment: reward.rankPoints } }),
+      },
+    }),
+  ]);
 }
 
 // ── Versus ──
