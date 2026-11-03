@@ -33,8 +33,18 @@ function capture(e: ReactPointerEvent<HTMLElement>): void {
   }
 }
 
-/** Ab dieser Geschwindigkeit (px/ms) gilt eine Bewegung als Wisch. */
-const FLICK_SPEED = 0.9;
+/** Empfindlichkeit 1 (träge) … 5 (sehr empfindlich): Zugweg pro Zelle (× Zellbreite) und
+ *  Mindest-Geschwindigkeit (px/ms), ab der eine Bewegung als Wisch zählt. */
+export const SENSITIVITY_MIN = 1;
+export const SENSITIVITY_MAX = 5;
+export const SENSITIVITY_DEFAULT = 3;
+const STEP_FACTOR = [1.4, 1.15, 0.95, 0.8, 0.65];
+const FLICK_SPEED = [1.3, 1.1, 0.9, 0.75, 0.6];
+
+function tuning(sensitivity: number, cssCell: number): { step: number; flick: number } {
+  const i = Math.max(SENSITIVITY_MIN, Math.min(SENSITIVITY_MAX, Math.round(sensitivity))) - 1;
+  return { step: Math.max(12, cssCell * STEP_FACTOR[i]), flick: FLICK_SPEED[i] };
+}
 /** Maximale Dauer eines Taps. */
 const TAP_MS = 260;
 
@@ -54,7 +64,9 @@ interface Gesture {
  * Pointer-Handler für Gesten auf dem Spielfeld. `cssCell` = Kantenlänge einer Zelle in CSS-Pixeln,
  * `boardLeft` = linker Rand des Feldes (in Zellen) innerhalb des Canvas-Layouts.
  */
-export function useBoardGestures(runner: RunnerRef, cssCell: number, boardLeft: number, enabled: boolean, haptics: boolean) {
+export function useBoardGestures(
+  runner: RunnerRef, cssCell: number, boardLeft: number, enabled: boolean, haptics: boolean, sensitivity = SENSITIVITY_DEFAULT,
+) {
   const g = useRef<Gesture | null>(null);
 
   const tapMove = (action: "left" | "right") => {
@@ -89,7 +101,7 @@ export function useBoardGestures(runner: RunnerRef, cssCell: number, boardLeft: 
     while (gest.samples.length > 2 && t - gest.samples[0].t > 90) gest.samples.shift();
 
     // Horizontal: pro Zelle Zugweg ein Schritt
-    const step = Math.max(14, cssCell * 0.95);
+    const { step } = tuning(sensitivity, cssCell);
     let dx = e.clientX - gest.anchorX;
     while (Math.abs(dx) >= step) {
       const dir = dx > 0 ? 1 : -1;
@@ -125,10 +137,10 @@ export function useBoardGestures(runner: RunnerRef, cssCell: number, boardLeft: 
     const vx = (e.clientX - first.x) / span;
     const dy = e.clientY - gest.startY;
     const dist = Math.hypot(e.clientX - gest.startX, dy);
-    const step = Math.max(14, cssCell * 0.95);
+    const { step, flick } = tuning(sensitivity, cssCell);
 
     // Wisch nach unten = Hard Drop, nach oben = Hold
-    if (Math.abs(vy) > FLICK_SPEED && Math.abs(vy) > Math.abs(vx) * 1.2 && Math.abs(dy) > step) {
+    if (Math.abs(vy) > flick && Math.abs(vy) > Math.abs(vx) * 1.2 && Math.abs(dy) > step) {
       if (vy > 0) runner.current?.press("hard");
       else runner.current?.press("hold");
       buzz(haptics, 14);

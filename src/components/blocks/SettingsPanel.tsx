@@ -80,6 +80,14 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
       {settings.gestures && (
         <div>
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Gesten (Touch)</p>
+          <div className="mb-3">
+            <Slider
+              label="Wisch-Empfindlichkeit" hint="Höher = kürzere Wege pro Zelle und schon leichte Wischer lösen Hard Drop / Hold aus."
+              value={settings.gestureSensitivity} min={1} max={5}
+              format={(v) => ["sehr träge", "träge", "normal", "empfindlich", "sehr empfindlich"][v - 1] ?? String(v)}
+              onChange={(gestureSensitivity) => onChange({ ...settings, gestureSensitivity })}
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
             {[
               ["Ziehen links/rechts", "Teil verschieben"],

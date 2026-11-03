@@ -35,8 +35,10 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
 - **Wischgesten** direkt auf dem Feld (`src/components/blocks/TouchControls.tsx`, abschaltbar): ziehen = Teil zellgenau
   verschieben, nach unten ziehen = Soft Drop, nach unten wischen = Hard Drop, nach oben wischen = Hold, tippen links/rechts
   = drehen ↺/↻, tippen auf die Hold-Box = Hold. Gesten laufen über dieselben Eingaben wie Tasten — Replays bleiben gültig.
+  Die Wisch-Empfindlichkeit (Stufe 1–5) steuert Zugweg pro Zelle und Mindesttempo für Wischer.
 - **Vollbild:** Während einer Runde legt sich das Spiel auf Handys über die ganze App (`FullscreenShell.tsx`). Auf Android
-  wird zusätzlich echtes Browser-Vollbild angefordert; iPhones unterstützen das nicht, dort bleibt es beim Overlay.
+  wird zusätzlich echtes Browser-Vollbild angefordert (einmal pro Runde — wer es verlässt, bleibt draußen); iPhones
+  unterstützen das nicht, dort bleibt es beim Overlay. In Versus stehen die Gegner dann als schmale Leiste über dem Feld.
 
 ## Versus-Server einrichten (Render, im Bot-Prozess)
 

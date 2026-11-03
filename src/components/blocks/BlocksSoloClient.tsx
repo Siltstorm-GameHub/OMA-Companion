@@ -275,6 +275,7 @@ export default function BlocksSoloClient({
         ghost={settings.ghost}
         touchControls={settings.touchControls}
         gestures={settings.gestures}
+        gestureSensitivity={settings.gestureSensitivity}
         haptics={settings.haptics}
         running={phase === "playing"}
         runnerRef={runnerRef}

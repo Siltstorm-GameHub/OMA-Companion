@@ -7,7 +7,7 @@
 // wird — wo der Browser es erlaubt (Android) — beim ersten Antippen echtes Browser-Vollbild angefordert.
 // iPhones kennen kein Element-Vollbild; dort bleibt es beim Overlay ohne App-Navigation.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /** Handy = grobe Zeigereingabe und kurze Bildschirmseite unter 640 px (einmal beim Mount bestimmt). */
@@ -37,11 +37,21 @@ function exitFullscreen(): void {
 }
 
 export default function FullscreenShell({ active, children }: { active: boolean; children: ReactNode }) {
+  // Browser-Vollbild nur einmal je aktiver Phase anfordern — wer es selbst verlässt, wird nicht bei
+  // jedem Antippen wieder hineingeholt. (Solo fordert zusätzlich bei jedem Rundenstart an.)
+  const asked = useRef(false);
+
   useEffect(() => {
     if (!active) return;
+    asked.current = !!document.fullscreenElement;
+    const onChange = () => {
+      if (document.fullscreenElement) asked.current = true;
+    };
+    document.addEventListener("fullscreenchange", onChange);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      document.removeEventListener("fullscreenchange", onChange);
       document.body.style.overflow = prev;
       exitFullscreen();
     };
@@ -58,7 +68,11 @@ export default function FullscreenShell({ active, children }: { active: boolean;
         paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)",
       }}
       // pointerup (nicht pointerdown) zählt bei Touch als Nutzer-Geste
-      onPointerUpCapture={requestPhoneFullscreen}
+      onPointerUpCapture={() => {
+        if (asked.current) return;
+        asked.current = true;
+        requestPhoneFullscreen();
+      }}
     >
       <div className="px-3 max-w-3xl mx-auto">{children}</div>
     </div>,

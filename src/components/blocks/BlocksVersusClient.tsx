@@ -52,7 +52,9 @@ function Avatar({ src, name, size = 28 }: { src: string | null; name: string; si
   return <Image src={src} alt={name} width={size} height={size} className="rounded-full shrink-0" />;
 }
 
-function MiniBoard({ board, garbage, dead, place, name }: { board: string | null; garbage: number; dead: boolean; place: number | null; name: string }) {
+function MiniBoard({
+  board, garbage, dead, place, name, compact = false,
+}: { board: string | null; garbage: number; dead: boolean; place: number | null; name: string; compact?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current;
@@ -68,17 +70,17 @@ function MiniBoard({ board, garbage, dead, place, name }: { board: string | null
     if (ctx) drawMiniBoard(ctx, board, garbage, dead);
   }, [board, garbage, dead]);
   return (
-    <div className="space-y-1">
+    <div className={compact ? "space-y-0.5" : "space-y-1"}>
       <div className="relative">
         <canvas ref={ref} className="block w-full aspect-[1/2]" />
         {dead && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-            <Skull className="w-5 h-5 text-red-400" />
-            {place && <span className="text-xs font-black text-white">#{place}</span>}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/40">
+            <Skull className={compact ? "w-3.5 h-3.5 text-red-400" : "w-5 h-5 text-red-400"} />
+            {place && <span className={`${compact ? "text-[10px]" : "text-xs"} font-black text-white`}>#{place}</span>}
           </div>
         )}
       </div>
-      <p className="text-[11px] text-center text-gray-300 truncate font-semibold">{name}</p>
+      <p className={`${compact ? "text-[9px]" : "text-[11px]"} text-center text-gray-300 truncate font-semibold`}>{name}</p>
     </div>
   );
 }
@@ -280,9 +282,9 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
   const fullscreen = isPhone && inGame && iPlay;
   const playerById = new Map((room?.players ?? []).map((p) => [p.id, p]));
 
-  const copyInvite = async () => {
-    if (!room) return;
-    const url = `${window.location.origin}/gems/blocks/versus?raum=${room.code}`;
+  const copyInvite = async (code = room?.code) => {
+    if (!code) return;
+    const url = `${window.location.origin}/gems/blocks/versus?raum=${code}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Einladungslink kopiert");
@@ -404,6 +406,15 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
                         )}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => void copyInvite(r.code)}
+                      title="Einladungslink kopieren"
+                      aria-label="Einladungslink kopieren"
+                      className="shrink-0 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                     <Button size="sm" variant={r.phase === "lobby" ? "primary" : "outline"} disabled={full} onClick={() => send({ t: "join", code: r.code })}>
                       {full ? "Voll" : "Beitreten"}
                     </Button>
@@ -424,7 +435,7 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
             <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{room.isPublic ? "Öffentlicher Raum" : "Privater Raum"}</p>
             <p className="font-mono text-2xl font-black text-white tracking-[0.3em]">{room.code}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={copyInvite} icon={<Copy className="w-4 h-4" />}>
+          <Button variant="outline" size="sm" onClick={() => void copyInvite()} icon={<Copy className="w-4 h-4" />}>
             Einladungslink
           </Button>
         </div>
@@ -488,8 +499,36 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
       );
     }
 
+    const opponentBoards = (compact: boolean) =>
+      opponents.map((id) => {
+        const p = playerById.get(id);
+        const board = (
+          <MiniBoard
+            key={id}
+            board={boards[id]?.b ?? null}
+            garbage={boards[id]?.g ?? 0}
+            dead={kos[id] != null || !p}
+            place={kos[id] ?? null}
+            name={p?.name ?? "Weg"}
+            compact={compact}
+          />
+        );
+        return compact ? <div key={id} className="w-9 shrink-0">{board}</div> : board;
+      });
+    const aliveCount = opponents.filter((id) => kos[id] == null && playerById.has(id)).length;
+
     body = (
       <div className="flex flex-col lg:flex-row gap-4 items-start">
+        {/* Handy-Vollbild: Gegner als schmale Leiste über dem eigenen Feld */}
+        {fullscreen && opponents.length > 0 && (
+          <div className="w-full flex items-start gap-2 -mb-2">
+            <div className="shrink-0 pt-1 text-center">
+              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest">Gegner</p>
+              <p className="text-sm font-black text-white tabular-nums">{aliveCount}<span className="text-gray-500">/{opponents.length}</span></p>
+            </div>
+            <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto pb-1">{opponentBoards(true)}</div>
+          </div>
+        )}
         <div className="w-full lg:flex-1">
           {iPlay && game ? (
             <BlocksPlayfield
@@ -500,33 +539,22 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
               ghost={settings.ghost}
               touchControls={settings.touchControls}
               gestures={settings.gestures}
+              gestureSensitivity={settings.gestureSensitivity}
               haptics={settings.haptics}
               running={running}
               runnerRef={runnerRef}
               onEvents={onEvents}
               onSync={onSync}
-              reserveHeight={fullscreen ? 90 : 180}
+              reserveHeight={fullscreen ? 190 : 180}
               overlay={overlay}
             />
           ) : (
             <div className="glass rounded-2xl p-6 text-center text-sm text-gray-400">Diese Runde läuft schon — du bist in der nächsten dabei.</div>
           )}
         </div>
-        <div className="w-full lg:w-[360px] grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-3">
-          {opponents.map((id) => {
-            const p = playerById.get(id);
-            return (
-              <MiniBoard
-                key={id}
-                board={boards[id]?.b ?? null}
-                garbage={boards[id]?.g ?? 0}
-                dead={kos[id] != null || !p}
-                place={kos[id] ?? null}
-                name={p?.name ?? "Weg"}
-              />
-            );
-          })}
-        </div>
+        {!fullscreen && (
+          <div className="w-full lg:w-[360px] grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-3">{opponentBoards(false)}</div>
+        )}
       </div>
     );
   }

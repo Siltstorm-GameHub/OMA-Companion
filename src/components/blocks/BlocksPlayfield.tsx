@@ -21,6 +21,8 @@ export interface PlayfieldProps {
   touchControls: "auto" | "on" | "off";
   /** Wischgesten auf dem Feld (nur bei Touch-Eingabe). */
   gestures?: boolean;
+  /** Wisch-Empfindlichkeit 1–5. */
+  gestureSensitivity?: number;
   /** Vibration bei Touch-Eingaben. */
   haptics?: boolean;
   /** Platz, der unter/über dem Feld frei bleiben soll (Kopfzeile, Touch-Buttons). */
@@ -75,7 +77,7 @@ function useIsTouch(): boolean {
 
 export default function BlocksPlayfield(props: PlayfieldProps) {
   const {
-    seed, mode, handling, ghost, running, touchControls, gestures = true, haptics = true, reserveHeight = 200, maxCell = 32,
+    seed, mode, handling, ghost, running, touchControls, gestures = true, gestureSensitivity, haptics = true, reserveHeight = 200, maxCell = 32,
     runnerRef: externalRef, overlay,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,7 +88,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
   const [callout, setCallout] = useState<Callout | null>(null);
   const isTouch = useIsTouch();
   const showTouch = touchControls === "on" || (touchControls === "auto" && isTouch);
-  const gestureHandlers = useBoardGestures(internalRef, cssCell, BOARD_LEFT, gestures, haptics);
+  const gestureHandlers = useBoardGestures(internalRef, cssCell, BOARD_LEFT, gestures, haptics, gestureSensitivity);
 
   useEffect(() => {
     callbacksRef.current = props;
