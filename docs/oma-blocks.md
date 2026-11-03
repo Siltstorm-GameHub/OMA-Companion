@@ -29,6 +29,15 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
   (`src/lib/blocks/rewards-config.ts`, gespeichert in `BotConfig`). Die Auszahlung erscheint als `PointTransaction`
   mit dem Grund „OMA Blocks: Platz X im <Monat>“.
 
+## Steuerung auf Handys
+
+- **Gamepad** unter dem Feld (Einstellung „Touch-Buttons“: automatisch/immer/nie), mit Vibration (abschaltbar).
+- **Wischgesten** direkt auf dem Feld (`src/components/blocks/TouchControls.tsx`, abschaltbar): ziehen = Teil zellgenau
+  verschieben, nach unten ziehen = Soft Drop, nach unten wischen = Hard Drop, nach oben wischen = Hold, tippen links/rechts
+  = drehen ↺/↻, tippen auf die Hold-Box = Hold. Gesten laufen über dieselben Eingaben wie Tasten — Replays bleiben gültig.
+- **Vollbild:** Während einer Runde legt sich das Spiel auf Handys über die ganze App (`FullscreenShell.tsx`). Auf Android
+  wird zusätzlich echtes Browser-Vollbild angefordert; iPhones unterstützen das nicht, dort bleibt es beim Overlay.
+
 ## Versus-Server einrichten (Render, im Bot-Prozess)
 
 Vercel kann keine dauerhaften WebSocket-Verbindungen halten. Der Versus-Server hängt sich deshalb an den HTTP-Server
@@ -56,6 +65,8 @@ Lokal ohne Bot: `BLOCKS_MP_SECRET=dev APP_URL=http://localhost:3000 npm run bloc
 ## Versus-Regeln
 
 - Räume für 2–8 Spieler: „Schnelles Spiel“ (öffentlich) oder privater Raum mit Code/Einladungslink. Der Host startet.
+- Öffentliche Räume erscheinen für alle, die noch in keinem Raum sind, unter „Offene Räume“ (Server-Nachricht `rooms`)
+  und lassen sich direkt betreten. Läuft dort gerade eine Runde, schaut man zu und spielt ab der nächsten mit.
 - Alle bekommen pro Runde denselben Seed (gleiche Teile-Reihenfolge). Das Tempo steigt alle 30 Sekunden.
 - Angriffe: Double 1, Triple 2, Quad 4, T-Spin Single/Double/Triple 2/4/6, Back-to-Back +1, Combo-Bonus, Perfect Clear +10.
   Eigene Angriffe verrechnen zuerst wartende Garbage. Der Server prüft jeden Angriff gegen diese Tabelle und wählt ein

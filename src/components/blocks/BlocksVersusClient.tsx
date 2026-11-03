@@ -10,10 +10,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { encodeVisibleBoard, type BlocksEngine, type EngineEvent } from "@/lib/blocks/engine";
-import type { ClientMessage, RoomState, ServerMessage } from "@/lib/blocks/protocol";
-import { ROOM_CODE_LENGTH } from "@/lib/blocks/protocol";
+import type { ClientMessage, PublicRoomInfo, RoomState, ServerMessage } from "@/lib/blocks/protocol";
+import { MAX_ROOM_PLAYERS, ROOM_CODE_LENGTH } from "@/lib/blocks/protocol";
 import BlocksPlayfield from "./BlocksPlayfield";
 import SettingsPanel from "./SettingsPanel";
+import FullscreenShell, { useIsPhone } from "./FullscreenShell";
 import { drawMiniBoard } from "./render";
 import { useBlocksSettings } from "./settings";
 import type { BlocksRunner } from "./runner";
@@ -88,6 +89,7 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
   const [statusText, setStatusText] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomState | null>(null);
+  const [publicRooms, setPublicRooms] = useState<PublicRoomInfo[]>([]);
   const [game, setGame] = useState<Game | null>(null);
   const [running, setRunning] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -124,6 +126,9 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
         break;
       case "room":
         setRoom(msg.room);
+        break;
+      case "rooms":
+        setPublicRooms(msg.rooms);
         break;
       case "left":
         setRoom(null);
@@ -271,6 +276,8 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
   const isHost = !!me?.host;
   const inGame = !!room && room.phase !== "lobby";
   const iPlay = !!game && !!myId && !!me?.inRound && game.players.includes(myId);
+  const isPhone = useIsPhone();
+  const fullscreen = isPhone && inGame && iPlay;
   const playerById = new Map((room?.players ?? []).map((p) => [p.id, p]));
 
   const copyInvite = async () => {
@@ -364,6 +371,48 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
             </Button>
           </form>
         </div>
+
+        <div className="glass rounded-2xl p-5 space-y-3 sm:col-span-2">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-bold text-white">Offene Räume</h2>
+            <span className="text-[11px] text-gray-500 tabular-nums">{publicRooms.length}</span>
+          </div>
+          {publicRooms.length === 0 ? (
+            <p className="text-xs text-gray-500">Gerade ist kein Raum offen — eröffne einen über „Mitspielen“, dann sehen ihn alle hier.</p>
+          ) : (
+            <ul className="space-y-2">
+              {publicRooms.map((r) => {
+                const full = r.playerCount >= MAX_ROOM_PLAYERS;
+                const host = r.players[0]?.name ?? "Spieler";
+                return (
+                  <li key={r.code} className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2">
+                    <div className="flex -space-x-2 shrink-0">
+                      {r.players.map((p, i) => (
+                        <span key={i} className="rounded-full ring-2 ring-[#0b0f17]">
+                          <Avatar src={p.image} name={p.name} size={26} />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-white truncate">Raum von {host}</p>
+                      <p className="text-[11px] text-gray-500">
+                        <span className="tabular-nums">{r.playerCount}/{MAX_ROOM_PLAYERS}</span> Spieler ·{" "}
+                        {r.phase === "lobby" ? (
+                          <span className="text-teal-300">wartet auf Spieler</span>
+                        ) : (
+                          <span className="text-amber-300">Runde läuft — du spielst ab der nächsten mit</span>
+                        )}
+                      </p>
+                    </div>
+                    <Button size="sm" variant={r.phase === "lobby" ? "primary" : "outline"} disabled={full} onClick={() => send({ t: "join", code: r.code })}>
+                      {full ? "Voll" : "Beitreten"}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     );
   } else if (!inGame) {
@@ -450,11 +499,13 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
               handling={settings.handling}
               ghost={settings.ghost}
               touchControls={settings.touchControls}
+              gestures={settings.gestures}
+              haptics={settings.haptics}
               running={running}
               runnerRef={runnerRef}
               onEvents={onEvents}
               onSync={onSync}
-              reserveHeight={180}
+              reserveHeight={fullscreen ? 90 : 180}
               overlay={overlay}
             />
           ) : (
@@ -481,9 +532,10 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
   }
 
   return (
+    <FullscreenShell active={fullscreen}>
     <div className="space-y-4">
       {header}
-      <div>
+      <div className={fullscreen ? "hidden" : undefined}>
         <h1 className="font-display text-2xl font-black text-white tracking-tight">OMA Blocks · Versus</h1>
         <p className="text-xs text-gray-500">Echtzeit gegen bis zu 7 andere — abgeräumte Linien landen als Garbage beim Gegner.</p>
       </div>
@@ -493,5 +545,6 @@ export default function BlocksVersusClient({ initialRoomCode }: { initialRoomCod
         <p className="text-[11px] text-gray-500 mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
       </Modal>
     </div>
+    </FullscreenShell>
   );
 }

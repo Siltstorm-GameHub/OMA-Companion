@@ -47,10 +47,14 @@ export interface BlocksSettings {
   handling: HandlingSettings;
   ghost: boolean;
   touchControls: "auto" | "on" | "off";
+  /** Wischen/Tippen direkt auf dem Spielfeld (nur bei Touch-Eingabe aktiv). */
+  gestures: boolean;
+  /** Kurzes Vibrieren bei Touch-Eingaben (falls das Gerät es kann). */
+  haptics: boolean;
 }
 
 const STORAGE_KEY = "oma-blocks-settings";
-const DEFAULTS: BlocksSettings = { handling: DEFAULT_HANDLING, ghost: true, touchControls: "auto" };
+const DEFAULTS: BlocksSettings = { handling: DEFAULT_HANDLING, ghost: true, touchControls: "auto", gestures: true, haptics: true };
 
 function load(): BlocksSettings {
   try {
@@ -61,6 +65,8 @@ function load(): BlocksSettings {
       handling: clampHandling(p.handling),
       ghost: p.ghost !== false,
       touchControls: p.touchControls === "on" || p.touchControls === "off" ? p.touchControls : "auto",
+      gestures: p.gestures !== false,
+      haptics: p.haptics !== false,
     };
   } catch {
     return DEFAULTS;

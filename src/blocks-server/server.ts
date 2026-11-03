@@ -20,7 +20,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { attackFor, isValidBoardString, MAX_ATTACK_PER_CLEAR, WIDTH } from "../lib/blocks/engine";
 import {
   BLOCKS_WS_PATH, COUNTDOWN_MS, MAX_ROOM_PLAYERS, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, isRoomCode,
-  type ClientMessage, type RoomPhase, type RoomState, type ServerMessage,
+  type ClientMessage, type PublicRoomInfo, type RoomPhase, type RoomState, type ServerMessage,
 } from "../lib/blocks/protocol";
 import { hmac, verifyMpToken, SIGNATURE_HEADER, type MatchResultPayload } from "../lib/blocks/mp-token";
 
@@ -37,6 +37,8 @@ const RESULTS_MS = 5_000;
 const MAX_MESSAGE_BYTES = 4096;
 const MAX_MSGS_PER_SECOND = 60;
 const MAX_ATTACK_PER_SECOND = 40;
+/** Raumliste wird gebündelt verschickt (viele Änderungen kurz hintereinander = eine Nachricht). */
+const ROOM_LIST_DEBOUNCE_MS = 300;
 
 interface Client {
   ws: WebSocket;
@@ -109,6 +111,39 @@ function roomState(room: Room): RoomState {
 
 function pushRoom(room: Room): void {
   broadcast(room, { t: "room", room: roomState(room) });
+  scheduleRoomList();
+}
+
+// ── Raumliste (öffentliche Räume, z.B. über „Schnelles Spiel“ eröffnet) ──
+
+function publicRooms(): PublicRoomInfo[] {
+  return [...rooms.values()]
+    .filter((r) => r.isPublic && r.members.size > 0)
+    .map((r) => {
+      const members = [...r.members.values()].sort((a, b) => Number(b.host) - Number(a.host));
+      return {
+        code: r.code,
+        phase: r.phase,
+        playerCount: r.members.size,
+        players: members.slice(0, 4).map((m) => ({ name: m.client.name, image: m.client.image })),
+      };
+    })
+    // offene Lobbys zuerst, dann nach Spielerzahl
+    .sort((a, b) => Number(b.phase === "lobby") - Number(a.phase === "lobby") || b.playerCount - a.playerCount)
+    .slice(0, 20);
+}
+
+let roomListTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleRoomList(): void {
+  if (roomListTimer) return;
+  roomListTimer = setTimeout(() => {
+    roomListTimer = null;
+    const data = JSON.stringify({ t: "rooms", rooms: publicRooms() } satisfies ServerMessage);
+    for (const c of clientsByUser.values()) {
+      if (!c.room && c.ws.readyState === WebSocket.OPEN) c.ws.send(data);
+    }
+  }, ROOM_LIST_DEBOUNCE_MS);
 }
 
 function newCode(): string {
@@ -153,6 +188,7 @@ function leaveRoom(c: Client): void {
   if (room.members.size === 0) {
     if (room.timer) clearTimeout(room.timer);
     rooms.delete(room.code);
+    scheduleRoomList();
     return;
   }
   if (member.host) {
@@ -309,7 +345,8 @@ function handle(c: Client, msg: ClientMessage): void {
     c.name = p.name;
     c.image = p.img;
     clientsByUser.set(p.uid, c);
-    return send(c, { t: "welcome", userId: p.uid });
+    send(c, { t: "welcome", userId: p.uid });
+    return send(c, { t: "rooms", rooms: publicRooms() });
   }
 
   if (!c.userId) return;

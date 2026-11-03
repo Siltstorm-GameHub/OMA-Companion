@@ -8,8 +8,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { BlocksEngine, EngineEvent, GameMode, HandlingSettings } from "@/lib/blocks/engine";
 import { BlocksRunner, type RunnerResult } from "./runner";
-import { LAYOUT_COLS, LAYOUT_ROWS } from "./render";
-import { actionForKey, type Action } from "./settings";
+import { BOARD_LEFT, LAYOUT_COLS, LAYOUT_ROWS } from "./render";
+import { actionForKey } from "./settings";
+import { PAD_HEIGHT, TouchPad, useBoardGestures } from "./TouchControls";
 
 export interface PlayfieldProps {
   seed: number;
@@ -18,6 +19,10 @@ export interface PlayfieldProps {
   ghost: boolean;
   running: boolean;
   touchControls: "auto" | "on" | "off";
+  /** Wischgesten auf dem Feld (nur bei Touch-Eingabe). */
+  gestures?: boolean;
+  /** Vibration bei Touch-Eingaben. */
+  haptics?: boolean;
   /** Platz, der unter/über dem Feld frei bleiben soll (Kopfzeile, Touch-Buttons). */
   reserveHeight?: number;
   /** Maximale Zellgröße in CSS-Pixeln. */
@@ -68,28 +73,9 @@ function useIsTouch(): boolean {
   return touch;
 }
 
-function TouchButton({ action, label, runner, className = "" }: { action: Action; label: string; runner: { current: BlocksRunner | null }; className?: string }) {
-  return (
-    <button
-      type="button"
-      className={`select-none touch-none rounded-xl bg-white/[0.07] active:bg-teal-500/30 border border-white/10 text-white font-bold text-sm h-14 ${className}`}
-      onPointerDown={(e) => {
-        e.preventDefault();
-        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-        runner.current?.press(action);
-      }}
-      onPointerUp={() => runner.current?.release(action)}
-      onPointerCancel={() => runner.current?.release(action)}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function BlocksPlayfield(props: PlayfieldProps) {
   const {
-    seed, mode, handling, ghost, running, touchControls, reserveHeight = 200, maxCell = 32,
+    seed, mode, handling, ghost, running, touchControls, gestures = true, haptics = true, reserveHeight = 200, maxCell = 32,
     runnerRef: externalRef, overlay,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +86,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
   const [callout, setCallout] = useState<Callout | null>(null);
   const isTouch = useIsTouch();
   const showTouch = touchControls === "on" || (touchControls === "auto" && isTouch);
+  const gestureHandlers = useBoardGestures(internalRef, cssCell, BOARD_LEFT, gestures, haptics);
 
   useEffect(() => {
     callbacksRef.current = props;
@@ -153,7 +140,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
     if (!el) return;
     const update = () => {
       const width = el.clientWidth;
-      const height = window.innerHeight - reserveHeight - (showTouch ? 130 : 0);
+      const height = window.innerHeight - reserveHeight - (showTouch ? PAD_HEIGHT : 0);
       const cell = Math.max(10, Math.min(maxCell, Math.floor(Math.min(width / LAYOUT_COLS, height / LAYOUT_ROWS))));
       setCssCell(cell);
     };
@@ -229,7 +216,12 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
 
   return (
     <div ref={containerRef} className="w-full flex flex-col items-center gap-3">
-      <div className="relative" style={{ width: cssWidth, height: cssHeight }}>
+      <div
+        className={`relative ${gestures && isTouch ? "touch-none select-none" : ""}`}
+        style={{ width: cssWidth, height: cssHeight, WebkitTouchCallout: "none" }}
+        {...gestureHandlers}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <canvas ref={canvasRef} style={{ width: cssWidth, height: cssHeight }} className="block" />
         {callout && (
           <div
@@ -247,16 +239,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
       </div>
 
       {showTouch && (
-        <div className="w-full max-w-md grid grid-cols-4 gap-2 px-1">
-          <TouchButton action="hold" label="Hold" runner={internalRef} />
-          <TouchButton action="ccw" label="↺" runner={internalRef} />
-          <TouchButton action="r180" label="180°" runner={internalRef} />
-          <TouchButton action="cw" label="↻" runner={internalRef} />
-          <TouchButton action="left" label="◀" runner={internalRef} />
-          <TouchButton action="soft" label="▼" runner={internalRef} />
-          <TouchButton action="right" label="▶" runner={internalRef} />
-          <TouchButton action="hard" label="⤓" runner={internalRef} className="bg-teal-500/20" />
-        </div>
+        <TouchPad runner={internalRef} haptics={haptics} />
       )}
     </div>
   );

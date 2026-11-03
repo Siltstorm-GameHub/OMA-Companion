@@ -1,5 +1,5 @@
 "use client";
-// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons) + Tastenübersicht
+// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons/Gesten) + Tastenübersicht
 
 import { HANDLING_LIMITS, SDF_INSTANT, FPS } from "@/lib/blocks/engine";
 import { ACTION_LABELS, DEFAULT_KEYS, type Action, type BlocksSettings } from "./settings";
@@ -67,7 +67,36 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
             <option value="off">nie</option>
           </select>
         </label>
+        <label className="flex items-center gap-2 text-white">
+          <input type="checkbox" checked={settings.gestures} onChange={(e) => onChange({ ...settings, gestures: e.target.checked })} className="accent-teal-400" />
+          Wischgesten
+        </label>
+        <label className="flex items-center gap-2 text-white">
+          <input type="checkbox" checked={settings.haptics} onChange={(e) => onChange({ ...settings, haptics: e.target.checked })} className="accent-teal-400" />
+          Vibration
+        </label>
       </div>
+
+      {settings.gestures && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Gesten (Touch)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            {[
+              ["Ziehen links/rechts", "Teil verschieben"],
+              ["Tippen links / rechts", "Drehen ↺ / ↻"],
+              ["Nach unten ziehen", "Soft Drop"],
+              ["Nach unten wischen", "Hard Drop"],
+              ["Nach oben wischen", "Hold"],
+              ["Tippen auf Hold-Box", "Hold"],
+            ].map(([g, a]) => (
+              <div key={g} className="flex justify-between gap-2">
+                <span className="text-gray-400">{g}</span>
+                <span className="text-white font-semibold">{a}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Tasten</p>

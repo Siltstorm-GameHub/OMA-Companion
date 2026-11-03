@@ -37,6 +37,15 @@ export interface RoomState {
   round: number;
 }
 
+/** Öffentlicher Raum in der Raumliste (für Spieler, die noch in keinem Raum sind). */
+export interface PublicRoomInfo {
+  code: string;
+  phase: RoomPhase;
+  /** Bis zu 4 Spieler (Host zuerst) für die Vorschau. */
+  players: { name: string; image: string | null }[];
+  playerCount: number;
+}
+
 export interface ClearReport {
   lines: number;
   spin: SpinKind;
@@ -65,6 +74,8 @@ export type ServerMessage =
   | { t: "welcome"; userId: string }
   | { t: "room"; room: RoomState }
   | { t: "left" }
+  /** Offene öffentliche Räume — geht an alle Verbundenen ohne Raum, bei jeder Änderung. */
+  | { t: "rooms"; rooms: PublicRoomInfo[] }
   | { t: "start"; seed: number; round: number; countdownMs: number; players: string[] }
   | { t: "board"; id: string; b: string; g: number }
   | { t: "garbage"; lines: number; hole: number; from: string }

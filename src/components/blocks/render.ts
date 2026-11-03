@@ -15,6 +15,8 @@ const FRAME = "rgba(255,255,255,0.16)";
 
 /** Spalten des Gesamtlayouts: Hold (4.5) | Feld (10) | Vorschau (4.5) — plus Garbage-Leiste. */
 export const LAYOUT_COLS = 4.5 + 0.6 + WIDTH + 0.5 + 4.5;
+/** Linker Rand des Spielfelds im Layout (in Zellen). */
+export const BOARD_LEFT = 4.5 + 0.6;
 /** Zeilen: sichtbares Feld + 2 Pufferzeilen oben. */
 export const LAYOUT_ROWS = VISIBLE_ROWS + 2.8;
 
@@ -57,7 +59,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, e: BlocksEngine, o: Draw
   const H = ctx.canvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  const boardX = (4.5 + 0.6) * s;
+  const boardX = BOARD_LEFT * s;
   const boardY = 2.5 * s;
   const boardW = WIDTH * s;
   const boardH = VISIBLE_ROWS * s;

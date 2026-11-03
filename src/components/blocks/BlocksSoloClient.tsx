@@ -11,6 +11,7 @@ import type { BlocksEngine, EngineStats } from "@/lib/blocks/engine";
 import { FPS } from "@/lib/blocks/engine";
 import BlocksPlayfield from "./BlocksPlayfield";
 import SettingsPanel from "./SettingsPanel";
+import FullscreenShell, { requestPhoneFullscreen, useIsPhone } from "./FullscreenShell";
 import { useBlocksSettings } from "./settings";
 import type { BlocksRunner, RunnerResult } from "./runner";
 import { Button, Modal } from "@/components/ui";
@@ -64,12 +65,15 @@ export default function BlocksSoloClient({
   const [showSettings, setShowSettings] = useState(false);
   const [bests, setBests] = useState({ month: initialMonthBest, all: initialAllTimeBest });
   const runnerRef = useRef<BlocksRunner | null>(null);
+  const isPhone = useIsPhone();
+  const fullscreen = isPhone && phase !== "idle";
   const runRef = useRef(run);
   useEffect(() => {
     runRef.current = run;
   }, [run]);
 
   const start = useCallback(async () => {
+    if (isPhone) requestPhoneFullscreen();
     setPhase("loading");
     setError(null);
     setResult(null);
@@ -86,7 +90,7 @@ export default function BlocksSoloClient({
       setError(e instanceof Error ? e.message : "Konnte keine Runde starten.");
       setPhase("idle");
     }
-  }, []);
+  }, [isPhone]);
 
   // Countdown 3-2-1
   useEffect(() => {
@@ -223,6 +227,7 @@ export default function BlocksSoloClient({
   }
 
   return (
+    <FullscreenShell active={fullscreen}>
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <Link href="/gems?spiel=blocks" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
@@ -269,13 +274,15 @@ export default function BlocksSoloClient({
         handling={settings.handling}
         ghost={settings.ghost}
         touchControls={settings.touchControls}
+        gestures={settings.gestures}
+        haptics={settings.haptics}
         running={phase === "playing"}
         runnerRef={runnerRef}
         onSync={onSync}
         onGameOver={(r) => void submit(r)}
         onPauseKey={togglePause}
         onRestartKey={restart}
-        reserveHeight={250}
+        reserveHeight={fullscreen ? 175 : 250}
         overlay={overlay}
       />
 
@@ -289,5 +296,6 @@ export default function BlocksSoloClient({
         <p className="text-[11px] text-gray-500 mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
       </Modal>
     </div>
+    </FullscreenShell>
   );
 }
