@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -376,7 +377,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
           sub={projected ? `Max. ${projected.maxCoinsAwarded}` : undefined} />
         <DashTile tone={projected && projected.voteBonusMultiplier < 1 ? "red" : projected && projected.voteBonusMultiplier > 1 ? "emerald" : "gray"}
           icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus"
-          value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"}
+          value={projected ? `×${formatFixed(projected.voteBonusMultiplier, 1)}` : "…"}
           valueClassName={projected ? (
             projected.voteBonusMultiplier < 1 ? "text-red-400"
               : projected.voteBonusMultiplier > 1 ? "text-emerald-400"
@@ -653,7 +654,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                           } />
                           <span className={`absolute top-3 whitespace-nowrap text-[10px] ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
                             style={{ transform: `translateX(${labelAnchor})` }}>
-                            ×{t.multiplier.toFixed(1)}
+                            ×{formatFixed(t.multiplier, 1)}
                           </span>
                         </div>
                       );
@@ -662,7 +663,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 )}
                 <p className="text-[10px] text-gray-500">
                   {nextTier
-                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{nextTier.multiplier.toFixed(1)})</>
+                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{formatFixed(nextTier.multiplier, 1)})</>
                     : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
                 </p>
               </div>
@@ -689,7 +690,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                   <p className="text-[10px] text-gray-600">
                     {p.tierLabel ?? "Keine Bewertung"} · Score {p.rawScore}
                     {p.baseCoins > 0 && <> · Basis {p.baseCoins}</>}
-                    {" · "}Bonus ×{p.voteBonusMultiplier.toFixed(1)}
+                    {" · "}Bonus ×{formatFixed(p.voteBonusMultiplier, 1)}
                   </p>
                 </div>
               );
@@ -1395,7 +1396,7 @@ function CoachRatingsReceived() {
         <>
           <p className="text-xs text-gray-300 flex items-center gap-1">
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            <span className="font-semibold">{average.toFixed(1)}</span>
+            <span className="font-semibold">{formatFixed(average, 1)}</span>
             <span className="text-gray-600">· {items.length} {items.length === 1 ? "Bewertung" : "Bewertungen"}</span>
           </p>
           <div className="space-y-1">

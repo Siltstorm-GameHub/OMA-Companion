@@ -1,4 +1,5 @@
-import { computeCommunityGoalProgress, goalPace, parseCommunityGoal } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace } from "@/lib/community-goal";
+import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/auth";
@@ -72,12 +73,12 @@ const getGlobalNewsData = unstable_cache(
       const ev = await prisma.event.findFirst({
         where: {
           hidden: false, format: "coop_stats", status: { in: ["open", "active"] }, startAt: { lte: new Date() },
-          statConfigJson: { contains: "\"goal\"" }, OR: [{ seriesId: null }, { series: { hidden: false } }],
+          AND: [mayHaveGoalWhere, { OR: [{ seriesId: null }, { series: { hidden: false } }] }],
         },
         orderBy: { startAt: "desc" },
-        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, matches: { select: { entries: { select: { userId: true, statsJson: true } } } } },
+        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true, series: { select: { tournamentTemplateJson: true } }, matches: { select: { entries: { select: { userId: true, statsJson: true } } } } },
       });
-      const goal = parseCommunityGoal(ev?.statConfigJson);
+      const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;
       const progress = computeCommunityGoalProgress(ev.matches, goal);
       const pace = ev.endAt && isPeriodEvent(ev) ? goalPace(progress.main.percent, periodInfo({ startAt: ev.startAt, endAt: ev.endAt }).progress) : null;

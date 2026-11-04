@@ -1,7 +1,6 @@
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
-import { sanitizeCommunityGoal } from "@/lib/community-goal";
-import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
+import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
@@ -89,7 +88,7 @@ export async function PATCH(req: NextRequest) {
     if (fields.coverImageUrl && !isPresetCover(fields.coverImageUrl)) delete fields.coverImageUrl;
   }
 
-  const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true } });
+  const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true, tournamentTemplateJson: true } });
   if (!current) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   // Abgeschlossene Saison: Punkteregeln, Altstand, Belohnungen, Umfragen, Spiel und Format sind
@@ -161,29 +160,41 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // 1c) Community-Ziel der Turniervorlage in die noch offenen Termine übernehmen (nur auf Nachfrage,
-  // siehe SeriesDetailClient) — ersetzt dort ein einzeln angepasstes Ziel bzw. entfernt es, wenn die
-  // Vorlage keins mehr hat. Nur Termine im Format Punktewertung; Felder, die ein Termin nicht erfasst,
-  // fallen heraus (sanitizeCommunityGoal).
-  if (fields.applyGoalToOpenEvents === true) {
-    const templateGoal = parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null;
-    const seriesFields = seriesEventStatFieldsFromConfig(series.seriesStatConfig);
-    const openEvents = await prisma.event.findMany({
-      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER, format: "coop_stats" },
-      select: { id: true, statFields: true, statConfigJson: true },
+  // 1c) Community-Ziel der Reihe — Termine erben es live (lib/event-goal.ts).
+  //   - Wird ein bestehendes Reihen-Ziel geändert oder entfernt, behalten bereits GESTARTETE Termine,
+  //     die bisher geerbt haben, ihr bisheriges Ziel (wird dort als eigenes Ziel eingefroren) — nur
+  //     kommende Termine übernehmen das neue. Kommt ein Ziel neu hinzu (vorher keins), gilt es sofort
+  //     für alle Termine, auch für laufende.
+  //   - applyGoalToOpenEvents (Knopf in den Reihen-Einstellungen): Abweichungen bei allen noch nicht
+  //     gestarteten Terminen entfernen → sie folgen wieder dem Ziel der Reihe.
+  const oldTemplateGoal = parseTournamentTemplate(current.tournamentTemplateJson).communityGoal ?? null;
+  const newTemplateGoal = parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null;
+  const goalNow = new Date();
+  if (oldTemplateGoal && JSON.stringify(oldTemplateGoal) !== JSON.stringify(newTemplateGoal)) {
+    const started = await prisma.event.findMany({
+      where: { seriesId, format: "coop_stats", startAt: { lte: goalNow } },
+      select: { id: true, statConfigJson: true },
     });
-    for (const ev of openEvents) {
-      let cfg: Record<string, unknown> = {};
-      try { cfg = ev.statConfigJson ? JSON.parse(ev.statConfigJson) : {}; } catch { cfg = {}; }
-      let evFields: string[] = seriesFields;
-      try { if (ev.statFields) evFields = [...new Set([...seriesFields, ...(JSON.parse(ev.statFields) as string[])])]; } catch { /* Reihen-Felder */ }
-      const goal = templateGoal ? sanitizeCommunityGoal(templateGoal, evFields) : null;
-      const rest = { ...cfg };
-      delete rest.goal;
-      const next = goal ? { ...rest, goal } : rest;
+    for (const ev of started) {
+      const own = parseOwnGoalConfig(ev.statConfigJson);
+      if (own.goal || own.off) continue; // hat schon eine eigene Einstellung
       await prisma.event.update({
         where: { id: ev.id },
-        data: { statConfigJson: Object.keys(next).length > 0 ? JSON.stringify(next) : null },
+        data: { statConfigJson: withGoalMode(ev.statConfigJson, "override", oldTemplateGoal) },
+      });
+    }
+  }
+  if (fields.applyGoalToOpenEvents === true) {
+    const upcoming = await prisma.event.findMany({
+      where: { seriesId, format: "coop_stats", startAt: { gt: goalNow }, status: OPEN_EVENT_STATUS_FILTER },
+      select: { id: true, statConfigJson: true },
+    });
+    for (const ev of upcoming) {
+      const own = parseOwnGoalConfig(ev.statConfigJson);
+      if (!own.goal && !own.off) continue;
+      await prisma.event.update({
+        where: { id: ev.id },
+        data: { statConfigJson: withGoalMode(ev.statConfigJson, "inherit", null) },
       });
     }
   }

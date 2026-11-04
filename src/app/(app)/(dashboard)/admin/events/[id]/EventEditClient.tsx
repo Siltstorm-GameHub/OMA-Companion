@@ -38,6 +38,7 @@ import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
+import { resolveEventGoal } from "@/lib/event-goal";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -370,6 +371,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [tmtStatConfig, setTmtStatConfig] = useState<EventStatConfigForm>(() => parseEventStatConfig(event.statConfigJson));
   /* Community-Ziel (nur Skill-Index / coop_stats) — liegt ebenfalls in statConfigJson, siehe lib/community-goal.ts */
   const [tmtGoal, setTmtGoal] = useState<CommunityGoalForm>(() => goalToForm(parseCommunityGoal(event.statConfigJson)));
+  // Ziel eines Reihen-Termins: eigenes, geerbtes oder abgeschaltetes (lib/event-goal.ts)
+  const resolvedGoal = resolveEventGoal({ format: event.format, statConfigJson: event.statConfigJson, series: event.series });
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
@@ -628,9 +631,20 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     // Event-eigene Stat-Punkte-Konfiguration nur bei coop_stats — überschreibt für dieses Event die
     // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
-    const statConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
+    const builtStatConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
       ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats",
-          tmtFormat === "coop_stats" ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
+          tmtFormat === "coop_stats" && !event.series ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
+    // Termin einer Reihe: Ziel-Abweichung (eigenes Ziel / "kein Ziel") gehört dem Ziel-Panel und darf
+    // beim Speichern der Turnier-Einstellungen nicht verloren gehen (lib/event-goal.ts)
+    const keptGoalKeys: Record<string, unknown> = event.series && tmtFormat === "coop_stats"
+      ? {
+          ...(resolvedGoal.ownGoal && resolvedGoal.source === "event" && { goal: resolvedGoal.ownGoal }),
+          ...(resolvedGoal.source === "off" && { goalOff: true }),
+        }
+      : {};
+    const statConfig = builtStatConfig || Object.keys(keptGoalKeys).length > 0
+      ? { ...(builtStatConfig ?? { stats: [], placementPoints: {} }), ...keptGoalKeys }
+      : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1697,11 +1711,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           )}
 
-          {tmtFormat === "coop_stats" && (
+          {tmtFormat === "coop_stats" && (event.series ? (
+            // Termin einer Reihe: Ziel wird von der Reihe geerbt, hier nur übernehmen/überschreiben/abschalten
+            <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
+              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
+          ) : (
             <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
               <CommunityGoalEditor value={tmtGoal} onChange={setTmtGoal} statFields={tmtStatFields} />
             </div>
-          )}
+          ))}
 
           {/* Event-eigene Stat-Punkte-Konfiguration (Eventpunkte) — für alle Stats-Formate (ffa,
               coop_stats, avg_stats): legt fest, wie viele Punkte jeder Stat gibt, und optional wie
@@ -1835,7 +1853,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           {/* Termine einer Reihe mit festem Spiel haben keinen "Turnier"-Reiter — das Ziel des
               Termins lässt sich deshalb hier anpassen (nur Punktewertung) */}
           {isSeriesEvent && event.format === "coop_stats" && (
-            <EventGoalPanel eventId={event.id} initialGoal={parseCommunityGoal(event.statConfigJson)} statFields={tmtStatFields} />
+            <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
+              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
           )}
           <TournamentManager
             event={{ id: event.id }}

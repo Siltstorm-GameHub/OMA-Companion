@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import { TrendingUp } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
@@ -55,7 +56,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
         <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Veröffentlicht" value={String(stats.published)} sub={stats.drafts > 0 ? `+ ${stats.drafts} Entwürfe` : undefined} />
-            <Tile label="Ø Daumen/Bericht" value={stats.averageVotes.toFixed(1)} />
+            <Tile label="Ø Daumen/Bericht" value={formatFixed(stats.averageVotes, 1)} />
             <Tile label="Ergänzungen erhalten" value={String(stats.contributionsReceived)} />
             <Tile label="Meine Ergänzungen" value={String(stats.contributionsWritten)} sub={`${stats.contributionVotes} 👍 darauf`} />
           </div>

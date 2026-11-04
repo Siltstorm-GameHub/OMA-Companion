@@ -128,18 +128,12 @@ describe("Turniervorlage", () => {
     assert.ok(templateEventFields(t, "group_knockout").groupStageJson);
     assert.equal(templateEventFields(t, "liga").pointsConfig, JSON.stringify({ win: 20, draw: 5 }));
   });
-  test("Community-Ziel: nur bei Punktewertung, nur mit vorhandenen Stat-Feldern", () => {
+  test("Community-Ziel: wird eingelesen, aber nicht in Termine kopiert (Termine erben es)", () => {
     const t = parseTournamentTemplate(JSON.stringify({
       communityGoal: { fields: ["Schritte", "Minuten"], target: 1_000_000, scope: "community", unit: "Schritte" },
     }));
     assert.deepEqual(t.communityGoal?.fields, ["Schritte", "Minuten"]);
-    assert.equal(templateEventFields(t, "single_elimination").statConfigJson, undefined);
-    const ev = templateEventFields(t, "coop_stats", ["Schritte"]);
-    assert.deepEqual(JSON.parse(ev.statConfigJson!), {
-      goal: { fields: ["Schritte"], target: 1_000_000, scope: "community", unit: "Schritte" },
-    });
-    // Kein passendes Stat-Feld im Termin → kein Ziel
-    assert.equal(templateEventFields(t, "coop_stats", ["Kills"]).statConfigJson, undefined);
+    assert.equal("statConfigJson" in templateEventFields(t, "coop_stats", ["Schritte"]), false);
     // Unvollständiges Ziel wird beim Einlesen verworfen
     assert.equal(parseTournamentTemplate(JSON.stringify({ communityGoal: { fields: [], target: 5 } })).communityGoal, undefined);
   });

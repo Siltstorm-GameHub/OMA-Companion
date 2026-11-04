@@ -154,7 +154,7 @@ export default function TournamentTemplateEditor({
           {anyFormat && <p className="text-[11px] text-gray-600">Community-Ziel greift nur bei Terminen im Format „Punktewertung“.</p>}
           <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={statFields} />
           <p className="text-[10px] text-gray-500">
-            Jeder neue Termin übernimmt das Ziel als Vorbelegung — im einzelnen Event (Reiter „Turnier“) kannst du es anpassen.
+            Gilt automatisch für alle Termine der Reihe. Einzelne Termine können es in ihren Einstellungen überschreiben oder abschalten.
           </p>
         </div>
       )}

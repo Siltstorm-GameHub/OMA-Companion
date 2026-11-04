@@ -5,6 +5,7 @@
 // Ablauf: Start → Server vergibt Seed (/api/blocks/runs) → Countdown → Spiel → beim Game Over werden
 // Eingaben + Frames eingereicht (/api/blocks/runs/[id]); der Server spielt nach und wertet.
 
+import { formatFixed } from "@/lib/format-number";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { BlocksEngine, EngineStats } from "@/lib/blocks/engine";
@@ -171,7 +172,7 @@ export default function BlocksSoloClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, start, showSettings]);
 
-  const pps = hud.frame > 0 ? (hud.pieces / (hud.frame / FPS)).toFixed(2) : "0.00";
+  const pps = hud.frame > 0 ? formatFixed((hud.pieces / (hud.frame / FPS)), 2) : "0,00";
   const finalStats = result ?? (localStats ? { score: localStats.score, lines: localStats.lines, level: localStats.level } : null);
 
   let overlay: React.ReactNode = null;

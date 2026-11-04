@@ -1,4 +1,5 @@
 "use client";
+import { formatDecimal, formatFixed } from "@/lib/format-number";
 import PlaceMedal from "@/components/PlaceMedal";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -632,7 +633,7 @@ export default function EventCompleteClient({
                       <p key={uid} className="text-xs text-amber-400 flex items-center gap-1.5">
                         <Trophy className="w-3.5 h-3.5 shrink-0" />
                         <strong>{u ? userName(u) : uid}</strong>
-                        {" "}({isAvgFormat ? `Ø ${(userAvgScore[uid] ?? 0).toFixed(2)}` : `${userStats[uid]?.[winnerStatField] ?? 0} ${statDisplayName(winnerStatField)}`})
+                        {" "}({isAvgFormat ? `Ø ${formatFixed((userAvgScore[uid] ?? 0), 2)}` : `${formatDecimal(userStats[uid]?.[winnerStatField] ?? 0)} ${statDisplayName(winnerStatField)}`})
                       </p>
                     );
                   })}
@@ -675,7 +676,7 @@ export default function EventCompleteClient({
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                       {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
                         <span className="text-xs text-gray-500 tabular-nums shrink-0">
-                          {userStats[u.id][winnerStatField]} {statDisplayName(winnerStatField)}
+                          {formatDecimal(userStats[u.id][winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
                         </span>
                       )}
                     </label>
@@ -1127,12 +1128,12 @@ export default function EventCompleteClient({
                         )}
                         {isAvgFormat && userAvgScore[uid] != null && (
                           <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                            Ø {userAvgScore[uid].toFixed(2)}
+                            Ø {formatFixed(userAvgScore[uid], 2)}
                           </span>
                         )}
                         {!isAvgFormat && winnerStatField && userStats[uid]?.[winnerStatField] != null && (
                           <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                            {userStats[uid][winnerStatField]} {statDisplayName(winnerStatField)}
+                            {formatDecimal(userStats[uid][winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
                           </span>
                         )}
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">

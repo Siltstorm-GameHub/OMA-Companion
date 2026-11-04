@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -53,7 +54,7 @@ export function PointsChart({ data }: Props) {
           tick={{ fontSize: 10, fill: "#4b5563" }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
+          tickFormatter={(v) => v >= 1000 ? `${formatFixed((v / 1000), 1)}k` : v}
         />
         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(244,63,94,0.2)", strokeWidth: 1 }} />
         <Area

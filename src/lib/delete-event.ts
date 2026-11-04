@@ -1,3 +1,4 @@
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
@@ -24,7 +25,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
       seriesId: true, completionData: true,
       registrations: { select: { userId: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
-      series: { select: { seriesStandingsJson: true, seriesStatConfig: true } },
+      series: { select: { seriesStandingsJson: true, seriesStatConfig: true, discordChannelId: true } },
     },
   });
   if (!event) return;
@@ -115,7 +116,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
 
   // Discord-Nachricht löschen (nach DB-Delete, Fehler ignorieren)
   if (event.discordMessageId) {
-    const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+    const channelId = resolveEventChannelId(event) ?? process.env.DISCORD_NEWS_CHANNEL_ID;
     if (channelId) {
       await deleteDiscordMessage(channelId, event.discordMessageId);
     }

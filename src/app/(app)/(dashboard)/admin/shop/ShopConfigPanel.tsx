@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Plus, Trash2 } from "@/components/icons";
@@ -120,7 +121,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
 
         <div className="space-y-2">
           {prizes.map((prize) => {
-            const chance = totalWeight > 0 ? ((prize.weight / totalWeight) * 100).toFixed(1) : "0.0";
+            const chance = totalWeight > 0 ? formatFixed(((prize.weight / totalWeight) * 100), 1) : "0,0";
             return (
               <div key={prize.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                 <select

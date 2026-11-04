@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "@/components/icons";
@@ -21,7 +22,7 @@ function IdeaRow({ item }: { item: Item }) {
           </span>
         </span>
         <span className="shrink-0 text-[11px] text-gray-500 flex items-center gap-1">
-          {item.count > 0 ? <>{item.average.toFixed(1)}<Star className="w-3 h-3 text-amber-400 fill-amber-400" /></> : "–"}
+          {item.count > 0 ? <>{formatFixed(item.average, 1)}<Star className="w-3 h-3 text-amber-400 fill-amber-400" /></> : "–"}
         </span>
       </Link>
     </li>
@@ -70,7 +71,7 @@ export default async function RoadmapPage() {
                   <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{g.name}
                 </a>
                 <span className="shrink-0 text-[11px] text-gray-500">
-                  {g.votes > 0 ? `Ø ${g.average.toFixed(1)} ★ · ${g.votes} Stimmen` : "noch keine Stimmen"}{g.participants > 0 ? ` · ${g.participants} dabei` : ""}
+                  {g.votes > 0 ? `Ø ${formatFixed(g.average, 1)} ★ · ${g.votes} Stimmen` : "noch keine Stimmen"}{g.participants > 0 ? ` · ${g.participants} dabei` : ""}
                 </span>
               </li>
             ))}
@@ -89,7 +90,7 @@ export default async function RoadmapPage() {
                     <Link href={`/community-board/idea/${t.id}`} className="block text-sm text-gray-100 hover:text-teal-300 transition-colors truncate">
                       <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{t.title}
                     </Link>
-                    <span className="block text-[11px] text-gray-500 pl-5">Ø {t.average.toFixed(1)} ★ · {t.votes} Stimmen · {t.author}</span>
+                    <span className="block text-[11px] text-gray-500 pl-5">Ø {formatFixed(t.average, 1)} ★ · {t.votes} Stimmen · {t.author}</span>
                   </li>
                 ))}
               </ol>

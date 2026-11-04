@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         amount: coins,
-        reason: `Spende ${Number(amount).toFixed(2)} € (${month}/${year})`,
+        reason: `Spende ${formatFixed(Number(amount), 2)} € (${month}/${year})`,
       },
     });
   }

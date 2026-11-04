@@ -2,6 +2,7 @@
 // K.O.-Baum oder beim Erstellen der K.O.-Runde), bekommen beide Spieler eine Benachrichtigung über die
 // Regel "match_ready" (Push / In-App / Discord-DM im Admin konfigurierbar).
 
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dispatchNotification } from "@/lib/notify-dispatch";
@@ -12,7 +13,7 @@ const displayName = (u: { username: string | null; name: string | null } | null)
 async function send(eventId: string, matchIds: string[]) {
   if (matchIds.length === 0) return;
   const [event, matches] = await Promise.all([
-    prisma.event.findUnique({ where: { id: eventId }, select: { title: true } }),
+    prisma.event.findUnique({ where: { id: eventId }, select: { title: true, discordChannelId: true, series: { select: { discordChannelId: true } } } }),
     prisma.match.findMany({
       where: { id: { in: matchIds }, eventId, playedAt: null },
       select: { id: true, round: true, groupIndex: true, isThirdPlace: true, player1Id: true, player2Id: true },
@@ -43,6 +44,8 @@ async function send(eventId: string, matchIds: string[]) {
           "{round}": stage,
         },
         urlOverride: `/tournament/${eventId}`,
+        // Falls der Kanal-Post dieser Regel aktiviert ist: im Kanal des Events bzw. der Reihe
+        discordChannelIdOverride: resolveEventChannelId(event) ?? undefined,
       });
     }
   }

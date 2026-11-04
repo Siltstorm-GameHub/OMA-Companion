@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import { TrendingUp } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
@@ -70,7 +71,7 @@ export function MarketingStatsBlock({ refreshKey }: { refreshKey?: number }) {
         <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Posts" value={String(stats.total)} sub={`${stats.eventsPromoted} ${stats.eventsPromoted === 1 ? "Event" : "Events"} beworben`} />
-            <Tile label="Ø Daumen/Post" value={stats.averageVotes.toFixed(1)} />
+            <Tile label="Ø Daumen/Post" value={formatFixed(stats.averageVotes, 1)} />
             <Tile label="Mit Bild" value={stats.total > 0 ? `${Math.round((stats.withImage / stats.total) * 100)} %` : "–"} sub={`${stats.withImage} von ${stats.total}`} />
             <Tile label="Extern bestätigt" value={stats.total > 0 ? `${Math.round((stats.confirmed / stats.total) * 100)} %` : "–"} sub={`${stats.confirmed} von ${stats.total}`} />
           </div>
@@ -102,7 +103,7 @@ export function MarketingStatsBlock({ refreshKey }: { refreshKey?: number }) {
             <div className="space-y-1">
               <p className={LABEL}>Anmeldungen: mit vs. ohne Werbung</p>
               <p className="text-[11px] text-gray-300">
-                Events mit Werbe-Post: Ø {reach.promotedAvg.toFixed(1)} ({reach.promotedCount}) · ohne: Ø {reach.unpromotedAvg.toFixed(1)} ({reach.unpromotedCount})
+                Events mit Werbe-Post: Ø {formatFixed(reach.promotedAvg, 1)} ({reach.promotedCount}) · ohne: Ø {formatFixed(reach.unpromotedAvg, 1)} ({reach.unpromotedCount})
               </p>
               <p className="text-[10px] text-gray-600">Nur eine grobe Orientierung (letzte 90 Tage, alle Marketing Manager) — Spiel, Uhrzeit und Beliebtheit spielen ebenfalls mit.</p>
             </div>

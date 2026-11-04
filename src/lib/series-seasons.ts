@@ -234,7 +234,6 @@ export function templateEventFields(t: TournamentTemplate, format: string | null
   checkInEnabled?: boolean;
   checkInMinutes?: number;
   pointsConfig?: string;
-  statConfigJson?: string;
 } {
   const out: ReturnType<typeof templateEventFields> = {};
   if (format === "group_knockout" && t.groupStage) out.groupStageJson = JSON.stringify(t.groupStage);
@@ -245,9 +244,8 @@ export function templateEventFields(t: TournamentTemplate, format: string | null
   if ((format === "round_robin" || format === "liga") && t.matchResultPoints) {
     out.pointsConfig = JSON.stringify(t.matchResultPoints);
   }
-  if (format === "coop_stats" && t.communityGoal) {
-    const goal = sanitizeCommunityGoal(t.communityGoal, statFields);
-    if (goal) out.statConfigJson = JSON.stringify({ goal });
-  }
+  // Community-Ziel wird NICHT kopiert: Termine erben es live aus der Vorlage (lib/event-goal.ts) und
+  // speichern nur Abweichungen. statFields bleibt als Parameter für Aufrufer erhalten.
+  void statFields;
   return out;
 }

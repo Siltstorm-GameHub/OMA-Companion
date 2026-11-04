@@ -215,12 +215,7 @@ export async function POST(req: NextRequest) {
     (() => { try { return eventStatFields ? JSON.parse(eventStatFields) as string[] : []; } catch { return []; } })(),
   );
   const templateGroupStageJson = templateFields.groupStageJson;
-  // Community-Ziel aus der Turniervorlage der Reihe — nur, wenn der Wizard für diesen Termin kein
-  // eigenes Ziel mitgeschickt hat (das Event kann es später im Reiter "Turnier" anpassen)
-  if (templateFields.statConfigJson) {
-    const own = (() => { try { return eventStatConfigJson ? JSON.parse(eventStatConfigJson) as Record<string, unknown> : {}; } catch { return {}; } })();
-    if (!own.goal) eventStatConfigJson = JSON.stringify({ ...own, goal: JSON.parse(templateFields.statConfigJson).goal });
-  }
+  // Community-Ziel der Reihe wird nicht kopiert — der Termin erbt es (lib/event-goal.ts)
 
   // Derive participation coin default (10) from placementRewardsJson or series config
   const rawRewardsData = placementRewardsJson

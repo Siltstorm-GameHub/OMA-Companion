@@ -3,6 +3,7 @@
 /**
  * Listen-Panels des Event-Overlays: Turnierbaum, Tabelle, Reihentabelle, Teilnehmer.
  */
+import { formatFixed } from "@/lib/format-number";
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
 import { GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeGroupStandings, computeLeagueStandings, groupLabel, knockoutRoundLabel, leagueMemberIds } from "@/lib/tournaments/groupStage";
@@ -311,7 +312,7 @@ function buildFfaRanking(
   const nonCoopStatFields = statFields.filter(f => f !== "Match Win");
   // avg_stats: gleiche Ø-Regeln wie Turnierseite (nur gespielte Runden, leere Felder ≠ 0)
   const avgTotals = isAvg ? computeAvgTotals(matches, nonCoopStatFields) : null;
-  const fmt1 = (v: number | null | undefined) => (v === null || v === undefined ? "–" : v.toFixed(1));
+  const fmt1 = (v: number | null | undefined) => (v === null || v === undefined ? "–" : formatFixed(v, 1));
 
   return participants
     .map(p => {

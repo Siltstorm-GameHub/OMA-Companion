@@ -1,3 +1,4 @@
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
@@ -1269,7 +1270,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // oben) — nicht bei jedem erneuten Speichern während bereits laufender Umfragephase.
   if (event.status === "active" && hasPendingPollPhase && !isEventHidden(event)) {
     dispatchEventNotification("event_poll_started", { id: eventId }, {
-      discordChannelIdOverride: event.discordChannelId,
+      discordChannelIdOverride: resolveEventChannelId(event),
       discordColor: DISCORD_COLORS.eventPoll,
     }).catch((err) => console.error("[Discord] Umfrage-Start-Post fehlgeschlagen:", err));
   }
@@ -1294,7 +1295,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
         format:           event.format,
         genre:            event.genre,
         teilnehmer:       event.registrations.filter(r => r.role === "player").length,
-        discordChannelId: event.discordChannelId,
+        discordChannelId: resolveEventChannelId(event),
         resultsPath:      resultUrl,
         winnerNames:      winners.map(w => w.username ?? w.name ?? "?"),
         note:             body.finalRankingNote?.trim() || null,

@@ -341,15 +341,26 @@ export default function SeriesDetailClient({
     return participations * statParticipationPts + statPts + pollPts + dominionPts;
   }
 
+  // Community-Ziel: Termine erben das Ziel der Reihe automatisch (lib/event-goal.ts). Dieser Knopf
+  // entfernt nur einzelne Abweichungen bei noch nicht gestarteten Terminen, damit alle kommenden
+  // Termine wieder dem Ziel der Reihe folgen.
+  const upcomingTermineCount = (series.events as { status: string; startAt: string | Date }[])
+    .filter(e => e.status !== "finished" && e.status !== "closed" && new Date(e.startAt).getTime() > Date.now()).length;
+  const [applyingGoal, setApplyingGoal] = useState(false);
+  async function applyGoalNow() {
+    if (!window.confirm(`Bei ${upcomingTermineCount} kommenden Terminen einzeln angepasste Ziele entfernen? Sie folgen danach wieder dem Ziel der Reihe.`)) return;
+    setApplyingGoal(true);
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, tournamentTemplateJson: JSON.stringify(tournamentTemplate), applyGoalToOpenEvents: true }),
+    });
+    setApplyingGoal(false);
+    if (res.ok) { toast.success("Kommende Termine folgen wieder dem Ziel der Reihe"); router.refresh(); }
+    else toast.error("Fehler beim Zurücksetzen");
+  }
+
   async function saveSettings() {
-    // Community-Ziel der Vorlage geändert? Dann fragen, ob es auch in die noch offenen Termine soll
-    // (neue Termine übernehmen es ohnehin) — einzeln angepasste Ziele würden dabei überschrieben.
-    const openCoopEvents = (series.events as { status: string; type?: string }[])
-      .filter(e => e.status !== "finished" && e.status !== "closed").length;
-    const goalChanged = isTournamentSeries
-      && JSON.stringify(tournamentTemplate.communityGoal ?? null) !== JSON.stringify(parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null);
-    const applyGoalToOpenEvents = goalChanged && openCoopEvents > 0
-      && window.confirm(`Community-Ziel auch für die ${openCoopEvents} noch offenen Termine übernehmen? Dort einzeln angepasste Ziele werden dabei ersetzt.`);
     setSaving(true);
     const res = await fetch("/api/admin/event-series", {
       method: "PATCH",
@@ -363,7 +374,6 @@ export default function SeriesDetailClient({
         coverImageUrl:        coverImageUrl.trim() || null,
         category:             category || null,
         ...(isTournamentSeries && { tournamentTemplateJson: JSON.stringify(tournamentTemplate) }),
-        ...(applyGoalToOpenEvents && { applyGoalToOpenEvents: true }),
         ...(seasonCount > 1 && { statAliasesJson: JSON.stringify(statAliases) }),
         // Abgeschlossene Saison: gesperrte Felder gar nicht erst mitschicken (der Server ignoriert sie ohnehin)
         ...(!isArchived && {
@@ -797,6 +807,25 @@ export default function SeriesDetailClient({
                 Eine neue Saison übernimmt die Vorlage automatisch.
               </p>
               <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} />
+              {(fixedFormat === "coop_stats" || !fixedFormat) && (
+                <p className="text-[11px] text-teal-300/80 mt-2">
+                  🎯 Das Community-Ziel gilt automatisch für alle Termine der Reihe. Änderst du es, während ein Termin
+                  schon läuft, behalten laufende und vergangene Termine ihr bisheriges Ziel — alle kommenden
+                  übernehmen das neue. Einzelne Termine können es in ihren Einstellungen überschreiben.
+                </p>
+              )}
+              {!isArchived && upcomingTermineCount > 0 && (fixedFormat === "coop_stats" || !fixedFormat) && (
+                <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-white/[0.06]">
+                  <p className="text-[11px] text-gray-500 flex-1 min-w-[200px]">
+                    Einzelne kommende Termine haben ein eigenes Ziel oder keins? Hier setzt du alle {upcomingTermineCount}
+                    {" "}kommenden Termine auf das Ziel der Reihe zurück.
+                  </p>
+                  <button type="button" onClick={applyGoalNow} disabled={applyingGoal}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 transition-colors disabled:opacity-50">
+                    {applyingGoal ? "Setzt zurück…" : "Abweichungen zurücksetzen"}
+                  </button>
+                </div>
+              )}
             </Section>
           )}
 

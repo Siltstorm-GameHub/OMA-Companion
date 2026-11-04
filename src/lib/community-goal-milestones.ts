@@ -14,7 +14,6 @@ import { prisma } from "@/lib/prisma";
 import {
   computeCommunityGoalProgress,
   goalUnit,
-  parseCommunityGoal,
   type CommunityGoal,
   type CommunityGoalProgress,
 } from "@/lib/community-goal";
@@ -22,6 +21,7 @@ import { getCommunityLimits } from "@/lib/community-event-limits";
 import { capValue } from "@/lib/captain-reward-limits";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { parseEntryStats } from "@/lib/avg-stats";
+import { resolveEventGoal } from "@/lib/event-goal";
 
 export const GOAL_MILESTONES = [25, 50, 75, 100] as const;
 
@@ -105,9 +105,10 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
   try {
     const peek = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { format: true, statConfigJson: true, status: true },
+      select: { format: true, statConfigJson: true, status: true, series: { select: { tournamentTemplateJson: true } } },
     });
-    if (!peek || peek.format !== "coop_stats" || !peek.statConfigJson?.includes("\"goal\"")) return;
+    // Eigenes oder von der Reihe geerbtes Ziel (lib/event-goal.ts)
+    if (!peek || !resolveEventGoal(peek).goal) return;
     if (peek.status === "finished" || peek.status === "closed") return;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -116,12 +117,12 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
       const ev = await tx.event.findUnique({
         where: { id: eventId },
         select: {
-          title: true, statConfigJson: true, goalStateJson: true, approvalStatus: true, seriesId: true,
-          series: { select: { approvalStatus: true } },
+          title: true, format: true, statConfigJson: true, goalStateJson: true, approvalStatus: true, seriesId: true,
+          series: { select: { approvalStatus: true, tournamentTemplateJson: true } },
           matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
         },
       });
-      const goal = parseCommunityGoal(ev?.statConfigJson);
+      const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;
       const progress = computeCommunityGoalProgress(ev.matches, goal);
       const state = parseGoalState(ev.goalStateJson);

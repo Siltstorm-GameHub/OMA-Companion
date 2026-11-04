@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
@@ -61,7 +62,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
       ranking = sorted.map(({ userId, avg }) => {
         const combined = avg?.combined ?? null;
-        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : combined.toFixed(2);
+        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : formatFixed(combined, 2);
         return {
           userId,
           score:  combined === null ? 0 : Math.round(combined * 100) / 100,

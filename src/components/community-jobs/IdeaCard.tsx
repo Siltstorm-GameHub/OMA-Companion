@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -33,7 +34,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 function StarRow({ value }: { value: number }) {
   return (
-    <span className="inline-flex" aria-label={`${value.toFixed(1)} von 5 Sternen`}>
+    <span className="inline-flex" aria-label={`${formatFixed(value, 1)} von 5 Sternen`}>
       {[1, 2, 3, 4, 5].map(n => (
         <Star key={n} className={`w-3.5 h-3.5 ${n <= Math.round(value) ? "text-amber-400 fill-amber-400" : "text-gray-700"}`} />
       ))}
@@ -49,7 +50,7 @@ function Result({ entry }: { entry: IdeaEntry }) {
   return (
     <div className="flex items-center gap-3">
       <div className="text-center shrink-0">
-        <p className="text-lg font-bold text-white tabular-nums leading-none">{(entry.avgStars ?? 0).toFixed(1)}</p>
+        <p className="text-lg font-bold text-white tabular-nums leading-none">{formatFixed((entry.avgStars ?? 0), 1)}</p>
         <StarRow value={entry.avgStars ?? 0} />
         <p className="text-[10px] text-gray-500 mt-0.5">{count} {count === 1 ? "Stimme" : "Stimmen"}</p>
       </div>

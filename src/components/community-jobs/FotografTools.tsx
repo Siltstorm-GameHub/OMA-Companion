@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { TrendingUp } from "@/components/icons";
@@ -132,7 +133,7 @@ export function FotografStatsBlock({ refreshKey }: { refreshKey?: number }) {
         <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Hochgeladen" value={String(stats.total)} />
-            <Tile label="Ø Daumen/Bild" value={stats.averageVotes.toFixed(1)} />
+            <Tile label="Ø Daumen/Bild" value={formatFixed(stats.averageVotes, 1)} />
             <Tile label="Nutzungen" value={String(stats.usesTotal)} sub="als Titelbild / im Post" />
             <Tile label="Genutzte Bilder" value={String(stats.usedAssets)} sub={stats.total > 0 ? `${Math.round((stats.usedAssets / stats.total) * 100)} %` : undefined} />
           </div>

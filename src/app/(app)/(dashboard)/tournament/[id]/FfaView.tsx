@@ -1,4 +1,5 @@
 "use client";
+import { formatDecimal, formatFixed } from "@/lib/format-number";
 import PlaceMedal from "@/components/PlaceMedal";
 import { useState } from "react";
 import Link from "next/link";
@@ -11,9 +12,9 @@ import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/ti
 import { compareAvg, computeAvgTotals, entryAvg, parseEntryStats, readStatValue, roundWinnerIds, type AvgTotals } from "@/lib/avg-stats";
 import { sortStatRounds, statRoundLabel, statRoundNote } from "@/lib/tournaments/stat-rounds";
 
-/** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen (1 statt 1.00, 1.5 statt 1.50). */
+/** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen, mit Komma (1 statt 1,00, 1,5 statt 1,50). */
 function fmtUpTo2(n: number): string {
-  return parseFloat(n.toFixed(2)).toString();
+  return formatDecimal(n, 2);
 }
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
@@ -384,10 +385,10 @@ export default function FfaView({
                             <td key={f} className="px-3 py-3 text-center">
                               <div className="flex flex-col items-center gap-0">
                                 <span className={`tabular-nums font-semibold ${statRankCls(f, val)}`}>
-                                  {val > 0 ? val : "–"}
+                                  {val > 0 ? fmtUpTo2(val) : "–"}
                                 </span>
                                 {pts > 0 && (
-                                  <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{pts} Pkt.</span>
+                                  <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{fmtUpTo2(pts)} Pkt.</span>
                                 )}
                               </div>
                             </td>
@@ -407,7 +408,7 @@ export default function FfaView({
                           <td className={`px-3 py-3 text-center tabular-nums font-bold ${
                             combined !== null ? RANK_TEXT[place - 1] ?? "text-gray-400" : "text-gray-400"
                           }`}>
-                            {combined !== null ? combined.toFixed(2) : "–"}
+                            {combined !== null ? formatFixed(combined, 2) : "–"}
                           </td>
                         )}
                         {!!placementPoints && (
@@ -417,7 +418,7 @@ export default function FfaView({
                                 {r.placementRounds > 0 ? fmtUpTo2((r.stats[PLACEMENT_STAT_KEY] ?? 0) / r.placementRounds) : "–"}
                               </span>
                               {r.placementPointsSum > 0 && (
-                                <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{r.placementPointsSum} Pkt.</span>
+                                <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{fmtUpTo2(r.placementPointsSum)} Pkt.</span>
                               )}
                             </div>
                           </td>
@@ -429,7 +430,7 @@ export default function FfaView({
                         )}
                         {hasTurnierpunkte && (
                           <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-300">
-                            {turnierpunkteByUser[r.userId] ?? 0}
+                            {fmtUpTo2(turnierpunkteByUser[r.userId] ?? 0)}
                           </td>
                         )}
                         <td className="px-3 py-3 text-center">
@@ -437,7 +438,7 @@ export default function FfaView({
                             {eventLigapunkte > 0
                               ? <span className={`tabular-nums font-bold inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
                                   title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
-                                  {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={13} />
+                                  {isLigaPunkteLive && "~"}+{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />
                                 </span>
                               : <span className="text-sm text-gray-600">–</span>}
                             {winnerBonusIfWon > 0 && (

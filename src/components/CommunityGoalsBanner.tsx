@@ -5,10 +5,10 @@ import {
   goalPace,
   goalUnit,
   type GoalPace,
-  parseCommunityGoal,
   type CommunityGoalProgress,
 } from "@/lib/community-goal";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
+import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { ChevronRight, Target } from "@/components/icons";
 
 const fmt = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 0 });
@@ -39,20 +39,21 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
       format: "coop_stats",
       status: { in: ["open", "active"] },
       startAt: { lte: new Date() },
-      statConfigJson: { contains: "\"goal\"" },
-      OR: [{ seriesId: null }, { series: { hidden: false } }],
+      // Eigenes oder von der Reihe geerbtes Ziel (Feinprüfung per resolveEventGoal)
+      AND: [mayHaveGoalWhere, { OR: [{ seriesId: null }, { series: { hidden: false } }] }],
     },
     orderBy: { startAt: "desc" },
-    take: 3,
+    take: 8, // etwas mehr laden: Termine mit "kein Ziel" fallen erst bei der Feinprüfung raus
     select: {
-      id: true, title: true, startAt: true, endAt: true, statConfigJson: true,
+      id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true,
+      series: { select: { tournamentTemplateJson: true } },
       registrations: userId ? { where: { userId }, select: { userId: true } } : { take: 0, select: { userId: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
     },
   });
 
   const items: GoalItem[] = events.flatMap(ev => {
-    const goal = parseCommunityGoal(ev.statConfigJson);
+    const goal = resolveEventGoal(ev).goal;
     if (!goal) return [];
     const progress = computeCommunityGoalProgress(ev.matches, goal);
     const period = ev.endAt && isPeriodEvent(ev) ? periodInfo({ startAt: ev.startAt, endAt: ev.endAt }) : null;
@@ -67,6 +68,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
     }];
   });
   if (items.length === 0) return null;
+  items.splice(3);
 
   return (
     <div className="space-y-2">

@@ -3,6 +3,7 @@
  * (admin-editierbar über /admin/notifications) und verteilt an alle aktivierten
  * Kanäle: Push, In-App, Discord-DM, Discord-Kanal.
  */
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import type { NotificationRule } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUsers, type PushPayload } from "@/lib/push";
@@ -221,11 +222,15 @@ export async function dispatchEventNotification(
     where:  { id: event.id },
     select: {
       title: true, game: true, format: true, genre: true, startAt: true,
-      hidden: true, series: { select: { hidden: true } },
+      hidden: true, discordChannelId: true, series: { select: { hidden: true, discordChannelId: true } },
       _count: { select: { registrations: { where: { role: "player" } } } },
     },
   });
   if (!eventRow || isEventHidden(eventRow)) return;
+
+  // Discord-Kanal: ausdrücklich übergebener Kanal → Kanal des Events → Kanal der Reihe → Regel-/Standardkanal.
+  // Damit landen ALLE Nachrichten eines Events mit eigenem (oder Reihen-)Kanal immer dort.
+  const eventChannelId = opts.discordChannelIdOverride?.trim() || resolveEventChannelId(eventRow) || undefined;
 
   const users = rule.isEventNotification && rule.eventAudience === "participants"
     ? await resolveEventParticipantIds(event.id)
@@ -248,6 +253,7 @@ export async function dispatchEventNotification(
     users,
     urlOverride: rule.isEventNotification ? `/tournament/${event.id}` : undefined,
     ...opts,
+    discordChannelIdOverride: eventChannelId,
     placeholders: { ...autoPlaceholders, ...opts.placeholders },
   });
 }

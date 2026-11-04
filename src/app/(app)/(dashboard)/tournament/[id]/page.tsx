@@ -47,7 +47,8 @@ import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import FfaView from "./FfaView";
 import CommunityGoalCard from "./CommunityGoalCard";
-import { computeCommunityGoalProgress, goalPace, parseCommunityGoal } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace } from "@/lib/community-goal";
+import { resolveEventGoal } from "@/lib/event-goal";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import BlocksEventSection from "@/components/blocks/BlocksEventSection";
@@ -128,7 +129,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       blocksTournament: { select: { stage: true } },
       blocksChallenge: { select: { id: true } },
@@ -606,7 +607,8 @@ export default async function TournamentDetailPage({
   // Skill-Index ohne Reihe: Match Win/Team-Zuordnung ist dort immer erfassbar (TournamentManager) —
   // Spalte und Sieg/Niederlage-Anzeige erst, sobald tatsächlich eine Runde gewonnen wurde.
   // Skill-Index mit Community-Ziel: Zähler über alle Runden bis zur Zielmarke, siehe lib/community-goal.ts
-  const communityGoal = format === "coop_stats" ? parseCommunityGoal(event.statConfigJson) : null;
+  // Eigenes Ziel des Termins oder geerbt aus der Eventreihe (lib/event-goal.ts)
+  const communityGoal = resolveEventGoal({ format, statConfigJson: event.statConfigJson, series: event.series }).goal;
   const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
   // Tempo: Ziel-Fortschritt im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events mit Ende)
   const communityGoalPace = communityGoalProgress && event.endAt && isPeriodEvent(event) && event.status !== "finished"

@@ -10,6 +10,7 @@
 // Event.publishStateJson protokolliert; ein erneuter Aufruf ("Erneut versuchen") holt genau die
 // fehlenden Schritte nach.
 
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { announceNewEvent, createDiscordScheduledEvent } from "@/lib/discord-events";
@@ -38,7 +39,7 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
 export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true } } },
+    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true } } },
   });
   if (!event || event.hidden) return parsePublishState(event?.publishStateJson);
   // Community-Events (von normalen Usern angelegt) werden erst nach Mod-Freigabe angekündigt —
@@ -75,7 +76,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   }
 
   // 2) Ankündigung im Discord-Kanal
-  if (!event.discordMessageId && discordConfigured && (event.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID)) {
+  if (!event.discordMessageId && discordConfigured && (resolveEventChannelId(event) || process.env.DISCORD_NEWS_CHANNEL_ID)) {
     try {
       const discordMessageId = await announceNewEvent({
         eventId: event.id,
@@ -87,7 +88,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
         maxPlayers: event.maxPlayers,
         pointReward: announcedParticipationCoins(event.placementRewardsJson ?? event.series?.placementRewardsJson ?? null),
         teilnehmer: 0,
-        discordChannelId: event.discordChannelId,
+        discordChannelId: resolveEventChannelId(event),
       });
       if (discordMessageId) {
         await prisma.event.update({ where: { id: eventId }, data: { discordMessageId } });

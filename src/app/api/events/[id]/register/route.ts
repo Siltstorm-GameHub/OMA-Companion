@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 import { isPeriodEvent } from "@/lib/event-period";
+import { addLateJoinerToCurrentRound } from "@/lib/tournaments/late-join";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -49,6 +50,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (existing) return NextResponse.json({ error: "Bereits registriert" }, { status: 400 });
 
   const registration = await prisma.eventRegistration.create({ data: { userId, eventId, role } });
+
+  // Nachmeldung nach dem Start (nur Zeitraum-Events): Spieler gleich in die laufende Runde aufnehmen,
+  // damit er sofort Ergebnisse melden kann (nur Punktewertung/Durchschnittswerte, siehe late-join.ts)
+  if (role === "player" && lateJoinAllowed && event.startAt <= now) {
+    await addLateJoinerToCurrentRound(eventId, userId, event.format);
+  }
 
   await updateQuestProgress(userId, "EVENT_ATTEND", 1);
   return NextResponse.json(registration, { status: 201 });

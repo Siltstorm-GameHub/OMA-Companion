@@ -1,4 +1,5 @@
 "use client";
+import { formatDecimal } from "@/lib/format-number";
 import PlaceMedal from "@/components/PlaceMedal";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -602,7 +603,7 @@ export default function SeriesCompleteClient({
                           <Avatar u={u} size={5} />
                           <span className="text-sm text-amber-200 font-semibold">{userName(u)}</span>
                           <span className="text-[10px] text-amber-400/70 tabular-nums">
-                            {userStats[uid]?.totalPoints ?? 0} Pkt.
+                            {formatDecimal(userStats[uid]?.totalPoints ?? 0)} Pkt.
                           </span>
                         </div>
                       );

@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import { prisma } from "./prisma";
 import { getWeekBounds } from "./community-job-service";
 import { getCurrentSteamSales, getRecentSteamReleases, type SteamFeedItem } from "./steam-feed";
@@ -414,7 +415,7 @@ async function visionaerRecommendationsFor(userId: string): Promise<EventRecomme
     if (avg < 4) continue;
     recs.push({
       eventId: `visionaer-good-${i.id}`, title: i.title, startAt: i.createdAt, url: `/community-board/idea/${i.id}`, noCreate: true,
-      reason: `Sehr gut bewertet (Ø ${avg.toFixed(1)} ★, ${i.votes.length} Stimmen) — noch ohne Status. Schlage sie dem Team vor.`,
+      reason: `Sehr gut bewertet (Ø ${formatFixed(avg, 1)} ★, ${i.votes.length} Stimmen) — noch ohne Status. Schlage sie dem Team vor.`,
     });
   }
   for (const e of finished) {

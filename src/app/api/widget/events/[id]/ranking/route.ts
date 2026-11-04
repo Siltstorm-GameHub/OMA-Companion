@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { placementRewardFor } from "@/lib/placement-rewards";
@@ -118,7 +119,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         .sort((a, b) => compareAvg(a.avg?.combined, b.avg?.combined, direction));
       ranking = sorted.map(({ userId, avg }) => {
         const combined = avg?.combined ?? null;
-        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : combined.toFixed(2);
+        const display = combined === null ? "–" : combined % 1 === 0 ? String(combined) : formatFixed(combined, 2);
         const statsAvg: Record<string, number> = {};
         for (const f of fields) {
           const v = avg?.fieldAvgs[f];

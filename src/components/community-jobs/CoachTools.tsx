@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown } from "@/components/icons";
@@ -138,8 +139,8 @@ export function CoachStatsBlock() {
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0"
-                    title={`${formatBerlinDate(w.weekStart)}: Ø ${w.average.toFixed(1)} (${w.count})`}>
-                    <span className="text-[9px] text-gray-500">{w.average.toFixed(1)}</span>
+                    title={`${formatBerlinDate(w.weekStart)}: Ø ${formatFixed(w.average, 1)} (${w.count})`}>
+                    <span className="text-[9px] text-gray-500">{formatFixed(w.average, 1)}</span>
                     <div className="w-full rounded-t bg-amber-400/70" style={{ height: `${Math.max(6, (w.average / 5) * 40)}px` }} />
                     <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
@@ -157,7 +158,7 @@ export function CoachStatsBlock() {
                 <span className="text-gray-500 shrink-0">
                   {s.unmarked > 0 ? <span className="text-amber-400">{s.unmarked} offen · </span> : null}
                   {s.attended}/{s.signups} da
-                  {s.ratingAverage !== null && <> · ★ {s.ratingAverage.toFixed(1)} ({s.ratingCount})</>}
+                  {s.ratingAverage !== null && <> · ★ {formatFixed(s.ratingAverage, 1)} ({s.ratingCount})</>}
                 </span>
               </div>
             ))}

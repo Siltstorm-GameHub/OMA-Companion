@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import { ChevronDown } from "@/components/icons";
 import { Scale } from "@/components/icons";
@@ -16,7 +17,7 @@ interface Week {
   next: { label: string; missing: number } | null; paid: { coins: number; tierLabel: string | null } | null;
 }
 
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+const fmt = (n: number) => (Number.isInteger(n) ? String(n) : formatFixed(n, 1));
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
 const TAB_ON = "border-teal-500/50 text-teal-300 bg-teal-500/10";
 const TAB_OFF = "border-white/10 text-gray-400 hover:text-white";

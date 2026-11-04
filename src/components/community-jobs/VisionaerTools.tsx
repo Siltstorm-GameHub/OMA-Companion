@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingUp } from "@/components/icons";
@@ -45,7 +46,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-300 flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
-          {stats.total} {stats.total === 1 ? "Idee" : "Ideen"} · {stats.votes > 0 ? `Ø ${stats.average.toFixed(1)} ★` : "noch keine Bewertung"} · diese Woche {stats.starsThisWeek} ★
+          {stats.total} {stats.total === 1 ? "Idee" : "Ideen"} · {stats.votes > 0 ? `Ø ${formatFixed(stats.average, 1)} ★` : "noch keine Bewertung"} · diese Woche {stats.starsThisWeek} ★
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
           className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
@@ -58,7 +59,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Ideen" value={String(stats.total)} />
             <Tile label="Bewertungen" value={String(stats.votes)} />
-            <Tile label="Ø Sterne" value={stats.votes > 0 ? stats.average.toFixed(1) : "–"} />
+            <Tile label="Ø Sterne" value={stats.votes > 0 ? formatFixed(stats.average, 1) : "–"} />
             <Tile label="Umgesetzt" value={stats.total > 0 ? `${Math.round(stats.implementedShare * 100)} %` : "–"} sub={`${lifecycle.done} von ${stats.total}`} />
           </div>
 
@@ -74,7 +75,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.best && (
             <p className="text-[11px] text-gray-400">
               Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-gray-200 hover:text-teal-300 transition-colors">{stats.best.title}</Link>{" "}
-              <span className="text-gray-600">(Ø {stats.best.average.toFixed(1)} ★ · {stats.best.count} Stimmen)</span>
+              <span className="text-gray-600">(Ø {formatFixed(stats.best.average, 1)} ★ · {stats.best.count} Stimmen)</span>
             </p>
           )}
 

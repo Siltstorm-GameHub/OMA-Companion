@@ -1,4 +1,5 @@
 "use client";
+import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -72,7 +73,7 @@ export default function IdeasBoardClient() {
                     {i.author}{ideaCategoryLabel(i.category) ? ` · ${ideaCategoryLabel(i.category)}` : ""}{i.game ? ` · ${i.game}` : ""}
                   </p>
                   <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                    {i.votes > 0 ? <>{i.average.toFixed(1)}<Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> · {i.votes}</> : "keine Stimmen"}
+                    {i.votes > 0 ? <>{formatFixed(i.average, 1)}<Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> · {i.votes}</> : "keine Stimmen"}
                     {(i.participants + i.helpers) > 0 && <span> · 🙋 {i.participants}/{i.helpers}</span>}
                   </p>
                   {i.draftEventId && <Link href={`/admin/events/${i.draftEventId}`} className="block text-[10px] text-teal-400 hover:text-teal-300">Event-Entwurf →</Link>}

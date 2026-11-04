@@ -1,3 +1,4 @@
+import { formatFixed } from "@/lib/format-number";
 import { prisma } from "./prisma";
 import { isGameCoverUrl } from "./game-cover-url";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
@@ -242,7 +243,7 @@ async function notifyIdeaVote(ideaId: string, authorId: string, title: string, s
   if (!VOTE_MILESTONES.includes(all.length)) return;
   const { average } = summarizeStars(all.map(v => v.stars));
   await dispatchNotification("idea_votes_milestone", {
-    users: [authorId], placeholders: { "{count}": String(all.length), "{title}": title, "{average}": average.toFixed(1), "{url}": ideaPath(ideaId) },
+    users: [authorId], placeholders: { "{count}": String(all.length), "{title}": title, "{average}": formatFixed(average, 1), "{url}": ideaPath(ideaId) },
   });
 }
 
@@ -259,7 +260,7 @@ export async function closeExpiredIdeas(): Promise<{ closed: number }> {
     closed += 1;
     await dispatchNotification("idea_voting_ended", {
       users: [idea.authorId],
-      placeholders: { "{title}": idea.title, "{count}": String(count), "{average}": count > 0 ? average.toFixed(1) : "–", "{url}": ideaPath(idea.id) },
+      placeholders: { "{title}": idea.title, "{count}": String(count), "{average}": count > 0 ? formatFixed(average, 1) : "–", "{url}": ideaPath(idea.id) },
     }).catch(() => {});
   }
   return { closed };
@@ -453,7 +454,7 @@ export async function postIdeaDigests(): Promise<{ posted: string[] }> {
     if (await prisma.ideaDigest.findUnique({ where: { period: p.key } })) continue;
     const top = await topIdeasBetween(p.start, p.end, p.take);
     if (top.length === 0) { await prisma.ideaDigest.create({ data: { period: p.key } }); continue; }
-    const lines = top.map((t, i) => `${i + 1}. **${t.title}** \u2014 \u00d8 ${t.average.toFixed(1)} \u2605 (${t.votes} Stimmen) \u00b7 ${t.author}\n${BASE_URL}${ideaPath(t.id)}`);
+    const lines = top.map((t, i) => `${i + 1}. **${t.title}** \u2014 \u00d8 ${formatFixed(t.average, 1)} \u2605 (${t.votes} Stimmen) \u00b7 ${t.author}\n${BASE_URL}${ideaPath(t.id)}`);
     const messageId = await announceCommunityJobContent({
       title: p.title, description: lines.join("\n\n"), authorName: "OMA Visionäre",
       jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "\u{1F4A1}", channelId, url: `${BASE_URL}/community-board/roadmap`,
