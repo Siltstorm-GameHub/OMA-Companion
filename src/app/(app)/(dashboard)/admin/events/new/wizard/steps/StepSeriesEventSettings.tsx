@@ -90,7 +90,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
               Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
             </p>
           </div>
-          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} />
+          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} />
         </div>
       )}
 

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import { createPollsForEvent } from "@/lib/event-polls";
+import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 
 export async function GET() {
   const series = await prisma.eventSeries.findMany({
@@ -68,7 +69,9 @@ export async function POST(req: NextRequest) {
   );
   if (limits && template.matchResultPoints) template.matchResultPoints = capMatchResultPoints(template.matchResultPoints, limits.seriesEvent);
   const templateJson = serializeTournamentTemplate(template);
-  const templateFields = body.eventType === "tournament" ? templateEventFields(template, fixedFormat) : {};
+  const templateFields = body.eventType === "tournament"
+    ? templateEventFields(template, fixedFormat, seriesEventStatFieldsFromConfig(typeof seriesStatConfig === "string" ? seriesStatConfig : seriesStatConfig ? JSON.stringify(seriesStatConfig) : null))
+    : {};
 
   try {
     // Neue Saison einer bestehenden Saison-Gruppe: höchstens EINE aktive Saison je Gruppe, Saisonnummer

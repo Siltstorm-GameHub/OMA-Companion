@@ -14,3 +14,15 @@ export function deriveEventStatFields(rows: SeriesStatRowLike[]): string[] {
     .filter(Boolean);
   return [...new Set(fields)];
 }
+
+/** Stat-Felder, die ein Termin einer Reihe erfasst — aus der gespeicherten seriesStatConfig
+ *  (abgeleitet aus stats, plus Altbestand eventStatFields). */
+export function seriesEventStatFieldsFromConfig(seriesStatConfig: string | null | undefined): string[] {
+  if (!seriesStatConfig) return [];
+  try {
+    const cfg = JSON.parse(seriesStatConfig) as { stats?: SeriesStatRowLike[]; eventStatFields?: string[] };
+    const fields = deriveEventStatFields(cfg.stats ?? []);
+    for (const f of cfg.eventStatFields ?? []) if (typeof f === "string" && f.trim() && !fields.includes(f.trim())) fields.push(f.trim());
+    return fields;
+  } catch { return []; }
+}

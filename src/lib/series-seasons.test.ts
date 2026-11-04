@@ -128,4 +128,19 @@ describe("Turniervorlage", () => {
     assert.ok(templateEventFields(t, "group_knockout").groupStageJson);
     assert.equal(templateEventFields(t, "liga").pointsConfig, JSON.stringify({ win: 20, draw: 5 }));
   });
+  test("Community-Ziel: nur bei Punktewertung, nur mit vorhandenen Stat-Feldern", () => {
+    const t = parseTournamentTemplate(JSON.stringify({
+      communityGoal: { fields: ["Schritte", "Minuten"], target: 1_000_000, scope: "community", unit: "Schritte" },
+    }));
+    assert.deepEqual(t.communityGoal?.fields, ["Schritte", "Minuten"]);
+    assert.equal(templateEventFields(t, "single_elimination").statConfigJson, undefined);
+    const ev = templateEventFields(t, "coop_stats", ["Schritte"]);
+    assert.deepEqual(JSON.parse(ev.statConfigJson!), {
+      goal: { fields: ["Schritte"], target: 1_000_000, scope: "community", unit: "Schritte" },
+    });
+    // Kein passendes Stat-Feld im Termin → kein Ziel
+    assert.equal(templateEventFields(t, "coop_stats", ["Kills"]).statConfigJson, undefined);
+    // Unvollständiges Ziel wird beim Einlesen verworfen
+    assert.equal(parseTournamentTemplate(JSON.stringify({ communityGoal: { fields: [], target: 5 } })).communityGoal, undefined);
+  });
 });

@@ -8,6 +8,7 @@ import {
 } from "./series-event-points";
 import { parseGroupStageConfig, type GroupStageConfig } from "./tournaments/groupStage";
 import { sanitizeCheckInMinutes } from "./checkin";
+import { sanitizeCommunityGoal, type CommunityGoal } from "./community-goal";
 
 /** Beim Abschluss gespeicherte Endtabelle der Saison (seriesCompletionData.finalStandings). */
 export type SeasonSnapshot = {
@@ -191,6 +192,9 @@ export type TournamentTemplate = {
   checkInEnabled?: boolean;
   checkInMinutes?: number;
   matchResultPoints?: { win: number; draw: number } | null;
+  /** Community-Ziel (nur Format "coop_stats"/Punktewertung) — jeder neue Termin übernimmt es als
+   *  Vorbelegung in seine statConfigJson und kann es dort anpassen, siehe lib/community-goal.ts */
+  communityGoal?: CommunityGoal | null;
 };
 
 export function parseTournamentTemplate(json: string | null | undefined): TournamentTemplate {
@@ -212,6 +216,8 @@ export function parseTournamentTemplate(json: string | null | undefined): Tourna
         draw: Math.max(0, Math.floor(Number(mrp.draw) || 0)),
       };
     }
+    const goal = sanitizeCommunityGoal(raw.communityGoal);
+    if (goal) out.communityGoal = goal;
     return out;
   } catch { return {}; }
 }
@@ -221,12 +227,14 @@ export function serializeTournamentTemplate(t: TournamentTemplate): string | nul
   return Object.keys(clean).length > 0 ? JSON.stringify(clean) : null;
 }
 
-/** Event-Felder, die ein neuer Termin aus der Vorlage übernimmt (nur passend zum Format). */
-export function templateEventFields(t: TournamentTemplate, format: string | null | undefined): {
+/** Event-Felder, die ein neuer Termin aus der Vorlage übernimmt (nur passend zum Format).
+ *  statFields: Stat-Felder des Termins — das Community-Ziel übernimmt nur Felder, die es dort gibt. */
+export function templateEventFields(t: TournamentTemplate, format: string | null | undefined, statFields?: string[]): {
   groupStageJson?: string;
   checkInEnabled?: boolean;
   checkInMinutes?: number;
   pointsConfig?: string;
+  statConfigJson?: string;
 } {
   const out: ReturnType<typeof templateEventFields> = {};
   if (format === "group_knockout" && t.groupStage) out.groupStageJson = JSON.stringify(t.groupStage);
@@ -236,6 +244,10 @@ export function templateEventFields(t: TournamentTemplate, format: string | null
   }
   if ((format === "round_robin" || format === "liga") && t.matchResultPoints) {
     out.pointsConfig = JSON.stringify(t.matchResultPoints);
+  }
+  if (format === "coop_stats" && t.communityGoal) {
+    const goal = sanitizeCommunityGoal(t.communityGoal, statFields);
+    if (goal) out.statConfigJson = JSON.stringify({ goal });
   }
   return out;
 }

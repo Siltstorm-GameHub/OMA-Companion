@@ -1,7 +1,9 @@
 "use client";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tournaments/groupStage";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
+import { useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
+import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 
 const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50";
 
@@ -11,15 +13,25 @@ const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-g
  * gezeigt — sie greifen dann nur bei Terminen mit dem passenden Format.
  */
 export default function TournamentTemplateEditor({
-  format, value, onChange, disabled = false,
+  format, value, onChange, disabled = false, statFields = [],
 }: {
   /** Festes Format der Reihe (leer = verschiedene Formate) */
   format: string | null | undefined;
   value: TournamentTemplate;
   onChange: (next: TournamentTemplate) => void;
   disabled?: boolean;
+  /** Stat-Felder der Reihe — Auswahl für das Community-Ziel */
+  statFields?: string[];
 }) {
   const anyFormat = !format;
+  const showGoal = anyFormat || format === "coop_stats";
+  // Lokaler Formularzustand: ein unvollständiges Ziel (z.B. noch kein Feld gewählt) ergibt in der
+  // Vorlage null, darf das Formular aber nicht zurücksetzen
+  const [goalForm, setGoalForm] = useState<CommunityGoalForm>(() => goalToForm(value.communityGoal ?? null));
+  const changeGoal = (form: CommunityGoalForm) => {
+    setGoalForm(form);
+    onChange({ ...value, communityGoal: formToGoal(form, statFields) });
+  };
   const showGroups = anyFormat || format === GROUP_KNOCKOUT_FORMAT;
   const showPoints = anyFormat || format === "round_robin" || format === "liga";
   const gs = value.groupStage ?? null;
@@ -121,6 +133,16 @@ export default function TournamentTemplateEditor({
               </label>
             </div>
           )}
+        </div>
+      )}
+
+      {showGoal && (
+        <div className="space-y-1">
+          {anyFormat && <p className="text-[11px] text-gray-600">Community-Ziel greift nur bei Terminen im Format „Punktewertung“.</p>}
+          <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={statFields} />
+          <p className="text-[10px] text-gray-500">
+            Jeder neue Termin übernimmt das Ziel als Vorbelegung — im einzelnen Event (Reiter „Turnier“) kannst du es anpassen.
+          </p>
         </div>
       )}
     </fieldset>

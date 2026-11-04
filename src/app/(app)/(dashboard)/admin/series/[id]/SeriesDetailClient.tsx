@@ -786,7 +786,7 @@ export default function SeriesDetailClient({
                 Jeder neu angelegte Termin der Reihe übernimmt diese Einstellungen — bestehende Termine bleiben unverändert.
                 Eine neue Saison übernimmt die Vorlage automatisch.
               </p>
-              <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} disabled={isArchived} />
+              <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} />
             </Section>
           )}
 

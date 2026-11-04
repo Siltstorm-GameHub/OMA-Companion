@@ -1,3 +1,4 @@
+import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 import { NextRequest, NextResponse, after } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
       ...(lastEvent?.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
       ...(series.fixedFormat && { format: series.fixedFormat }),
       // Turniervorlage der Reihe (Gruppenphase, Check-in, Punktemodus) — siehe lib/series-seasons.ts
-      ...templateEventFields(parseTournamentTemplate(series.tournamentTemplateJson), series.fixedFormat ?? lastEvent?.format),
+      ...templateEventFields(parseTournamentTemplate(series.tournamentTemplateJson), series.fixedFormat ?? lastEvent?.format, seriesEventStatFieldsFromConfig(series.seriesStatConfig)),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),
       ...(pollsConfigJson && { pollsConfigJson }),
     },
