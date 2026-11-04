@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import type { VoteEvent } from "./score-engine";
 import { registerOwnVoteCounter } from "./community-job-service";
+import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 
 /**
@@ -14,14 +15,12 @@ export const GUIDE_TITLE_MAX = 120;
 export const GUIDE_BODY_MAX = 6000;
 const GUIDE_GAME_MAX = 40;
 
+/** Offene Jobs: jeder (nicht gelöschte) User darf diesen Job ausüben. */
 async function requireActiveCoach(userId: string): Promise<boolean> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  return !!member;
+  return canWorkCommunityJobs(userId);
 }
 
-export type CreateGuideResult = { ok: true; guideId: string } | { error: string };
+export type CreateGuideResult = { ok: true; guideId: string; notice?: string } | { error: string };
 export type MutationResult = { ok: true } | { error: string };
 export type VoteResult = { ok: true } | { error: string };
 
@@ -36,18 +35,15 @@ function validate(data: { title: string; bodyMarkdown: string; game?: string | n
 export async function createGuide(
   authorId: string, data: { title: string; bodyMarkdown: string; game?: string },
 ): Promise<CreateGuideResult> {
-  if (!(await requireActiveCoach(authorId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const invalid = validate(data);
   if (invalid) return { error: invalid };
 
   const guide = await prisma.coachGuide.create({
     data: { authorId, title: data.title.trim(), bodyMarkdown: data.bodyMarkdown, game: data.game?.trim() || null },
   });
-  await prisma.communityJobMember.updateMany({
-    where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
-  return { ok: true, guideId: guide.id };
+  const booked = await recordContribution(authorId, JOB_KEY, "guide", [guide.id]);
+  return { ok: true, guideId: guide.id, notice: overLimitNotice(booked) };
 }
 
 /** Autor ODER Admin darf bearbeiten. */
@@ -99,7 +95,7 @@ export async function unvoteGuide(voterId: string, guideId: string): Promise<Vot
 export async function guideVoteEvents(userId: string, weekStart: Date, weekEnd: Date): Promise<VoteEvent[]> {
   const votes = await prisma.coachGuideVote.findMany({
     where: {
-      guide: { authorId: userId, hiddenByAdminAt: null }, createdAt: { gte: weekStart, lt: weekEnd },
+      guide: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: { gte: weekStart, lt: weekEnd },
       OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
     },
     select: { voterId: true, guideId: true, createdAt: true },
@@ -111,7 +107,7 @@ export async function guideVoteEvents(userId: string, weekStart: Date, weekEnd: 
 export async function countGuideVoteScore(userId: string, weekStart: Date, weekEnd: Date): Promise<number> {
   return prisma.coachGuideVote.count({
     where: {
-      guide: { authorId: userId, hiddenByAdminAt: null }, createdAt: { gte: weekStart, lt: weekEnd },
+      guide: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: { gte: weekStart, lt: weekEnd },
       OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
     },
   });

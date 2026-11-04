@@ -34,6 +34,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Fehlgeschlagen");
+  // Offene Community-Jobs: Beitrag über dem Tageslimit — veröffentlicht, zählt aber nicht fürs Gehalt.
+  if (typeof data?.notice === "string" && data.notice) toast.warning(data.notice);
   return data as T;
 }
 
@@ -272,7 +274,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
             </>
           )}
         </div>
-        <PhotoRequestButton eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
+        <PhotoRequestButton requesterJob="visionaer" eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
         {panel === "cover" && (
           <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-2">
             <GameCoverPicker value={pickedCover} onChange={setPickedCover} />

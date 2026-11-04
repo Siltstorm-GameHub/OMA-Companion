@@ -4,13 +4,12 @@ import { Users } from "@/components/icons";
 import { Check } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getActiveMembership } from "@/lib/community-job-service";
 import { getCommunityJob } from "@/lib/community-jobs";
 
 /**
  * "Event-Team": Übersicht auf der Turnierseite, welche Community-Jobs sich schon um dieses Event gekümmert haben
- * und was noch fehlt — vor dem Event Werbung/Training/Fotos, danach Bericht/Fotos/Idee. Wer den passenden Job hat,
- * sieht, wo sein Beitrag noch fehlt.
+ * und was noch fehlt — vor dem Event Werbung/Training/Fotos, danach Bericht/Fotos/Idee. Offene Jobs: jeder
+ * eingeloggte User kann jede offene Aufgabe direkt im Büro übernehmen.
  */
 
 interface Row { jobKey: string; what: string; count: number; names: string[] }
@@ -33,7 +32,6 @@ export default async function EventJobPackage({ eventId }: { eventId: string }) 
     prisma.coachTrainingSession.findMany({ where: { eventId }, select: { coach: author } }),
     getSessionUser(),
   ]);
-  const membership = user ? await getActiveMembership(user.id) : null;
 
   const rows: Row[] = finished
     ? [
@@ -58,19 +56,18 @@ export default async function EventJobPackage({ eventId }: { eventId: string }) 
       <ul className="space-y-1.5">
         {rows.map(r => {
           const job = getCommunityJob(r.jobKey);
-          const mine = membership?.jobKey === r.jobKey;
+          const canTakeOver = !!user;
           return (
             <li key={r.jobKey} className="flex items-center justify-between gap-3 text-sm">
               <span className="flex items-center gap-2 min-w-0">
                 <JobIcon jobKey={job?.key} className="w-4 h-4" />
                 <span className="text-gray-200 truncate">{r.what}</span>
-                {mine && <span className="shrink-0 text-[10px] text-teal-300 border border-teal-500/30 rounded-full px-1.5">dein Job</span>}
               </span>
               <span className="shrink-0 text-[11px] flex items-center gap-1.5">
                 {r.count > 0
                   ? <span className="text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" />{r.count}× · {r.names.join(", ")}</span>
-                  : mine
-                    ? <Link href="/profile" className="text-amber-400 hover:text-amber-300 transition-colors">fehlt noch — im Büro übernehmen →</Link>
+                  : canTakeOver
+                    ? <Link href={`/profile?job=${r.jobKey}`} className="text-amber-400 hover:text-amber-300 transition-colors">fehlt noch — im Büro übernehmen →</Link>
                     : <span className="text-amber-400/90">fehlt noch</span>}
               </span>
             </li>

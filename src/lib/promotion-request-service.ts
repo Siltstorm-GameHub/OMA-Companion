@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
+import { canWorkCommunityJobs, getRecentJobContributors } from "./community-job-access";
 
 /**
  * Werbe-Anfragen: Ein Coach bittet die Marketing Manager, einen seiner Trainings-Termine zu bewerben.
@@ -12,8 +13,7 @@ const MAX_OPEN_PER_COACH = 3;
 export type PromotionResult = { ok: true } | { error: string };
 
 export async function createPromotionRequest(requesterId: string, data: { trainingSessionId: string; note?: string }): Promise<PromotionResult> {
-  const coach = await prisma.communityJobMember.findFirst({ where: { userId: requesterId, jobKey: "coach", status: { in: ["ACTIVE", "WARNED"] } } });
-  if (!coach) return { error: "Nur aktive Coaches können Werbung für ihre Trainings anfragen" };
+  if (!(await canWorkCommunityJobs(requesterId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
 
   const session = await prisma.coachTrainingSession.findUnique({ where: { id: data.trainingSessionId } });
   if (!session || session.coachId !== requesterId) return { error: "Termin nicht gefunden" };
@@ -32,7 +32,8 @@ export async function createPromotionRequest(requesterId: string, data: { traini
   await prisma.promotionRequest.create({ data: { requesterId, trainingSessionId: session.id, note } });
 
   const [managers, user] = await Promise.all([
-    prisma.communityJobMember.findMany({ where: { jobKey: "marketing_manager", status: { in: ["ACTIVE", "WARNED"] } }, select: { userId: true } }),
+    // Benachrichtigt wird, wer in den letzten 30 Tagen als Marketing Manager beigetragen hat.
+    getRecentJobContributors("marketing_manager").then(ids => ids.filter(id => id !== requesterId).map(userId => ({ userId }))),
     prisma.user.findUnique({ where: { id: requesterId }, select: { username: true, name: true } }),
   ]);
   if (managers.length > 0) {

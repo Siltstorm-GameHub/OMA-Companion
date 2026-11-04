@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
+import { canWorkCommunityJobs, getRecentJobContributors } from "./community-job-access";
 
 /**
  * Bildwünsche: Journalisten bitten die Fotografen um ein Bild zu einem Event. Offene Wünsche erscheinen im
@@ -14,11 +15,9 @@ const MAX_PER_DAY = 5;
 /** Jobs, die Bildwünsche an die Fotografen stellen dürfen (der Fotograf selbst lädt ja hoch). */
 const REQUESTER_JOBS = ["journalist", "marketing_manager", "coach", "visionaer"];
 
-async function activeRequesterJob(userId: string): Promise<string | null> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: { in: REQUESTER_JOBS }, status: { in: ["ACTIVE", "WARNED"] } }, select: { jobKey: true },
-  });
-  return member?.jobKey ?? null;
+/** Offene Jobs: jeder darf anfragen; der Job, aus dem heraus angefragt wurde, wird nur zur Anzeige gespeichert. */
+function normalizeRequesterJob(jobKey: string | undefined): string | null {
+  return jobKey && REQUESTER_JOBS.includes(jobKey) ? jobKey : null;
 }
 async function nameOf(userId: string): Promise<string> {
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { username: true, name: true } }).catch(() => null);
@@ -27,9 +26,9 @@ async function nameOf(userId: string): Promise<string> {
 
 export type PhotoRequestResult = { ok: true } | { error: string };
 
-export async function createPhotoRequest(requesterId: string, data: { eventId?: string; description: string }): Promise<PhotoRequestResult> {
-  const requesterJob = await activeRequesterJob(requesterId);
-  if (!requesterJob) return { error: "Bilder anfragen können aktive Journalisten, Marketing Manager, Coaches und Visionäre" };
+export async function createPhotoRequest(requesterId: string, data: { eventId?: string; description: string; requesterJob?: string }): Promise<PhotoRequestResult> {
+  if (!(await canWorkCommunityJobs(requesterId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
+  const requesterJob = normalizeRequesterJob(data.requesterJob);
   const description = data.description.trim();
   if (!description) return { error: "Bitte beschreibe kurz, welches Bild du brauchst" };
   if (description.length > DESCRIPTION_MAX) return { error: `Beschreibung ist zu lang (max. ${DESCRIPTION_MAX} Zeichen)` };
@@ -50,12 +49,11 @@ export async function createPhotoRequest(requesterId: string, data: { eventId?: 
 
   await prisma.photoRequest.create({ data: { requesterId, eventId: data.eventId || null, description, requesterJob } });
 
-  const fotografen = await prisma.communityJobMember.findMany({
-    where: { jobKey: "fotograf", status: { in: ["ACTIVE", "WARNED"] } }, select: { userId: true },
-  });
+  // Benachrichtigt wird, wer in den letzten 30 Tagen als Fotograf beigetragen hat.
+  const fotografen = (await getRecentJobContributors("fotograf")).filter(id => id !== requesterId);
   if (fotografen.length > 0) {
     dispatchNotification("photo_request", {
-      users: fotografen.map(f => f.userId),
+      users: fotografen,
       placeholders: { "{requesterName}": await nameOf(requesterId), "{eventTitle}": eventTitle, "{description}": description },
     }).catch(() => {});
   }

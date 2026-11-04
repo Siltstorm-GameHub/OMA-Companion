@@ -38,7 +38,8 @@ import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
 import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "@/lib/trophy-models";
 import { loadWanderpokalStatus } from "@/lib/wanderpokal-status";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ job?: string }> }) {
+  const openCommunityJobs = !!(await searchParams).job;
   const me = await getSessionUser();
   if (!me) redirect("/login");
 
@@ -314,7 +315,7 @@ export default async function ProfilePage() {
         <JournalistPortfolio userId={userId} />
 
         {/* ── Haupt-Inhalt (Übersicht/Community-Jobs als eigene Reiter) ─── */}
-        <DesktopProfileTabs communityJobs={<CommunityJobsPanel />} overview={
+        <DesktopProfileTabs openCommunityJobs={openCommunityJobs} communityJobs={<CommunityJobsPanel />} overview={
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* ── Linke Spalte ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
@@ -391,6 +392,7 @@ export default async function ProfilePage() {
           ══════════════════════════════════════════════════════════════ */}
       <div className="lg:hidden">
         <ProfileMobileView
+          openCommunityJobs={openCommunityJobs}
           displayName={displayName}
           avatarUrl={user.image}
           rankPoints={rankPoints}

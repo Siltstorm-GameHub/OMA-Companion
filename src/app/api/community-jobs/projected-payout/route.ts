@@ -1,18 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
 import { getSessionUser } from "@/lib/roles";
-import { getActiveMembership, getProjectedPayout } from "@/lib/community-job-service";
+import { getProjectedPayout } from "@/lib/community-job-service";
+import { getDailyContributionUsage, jobKeyFromRequest } from "@/lib/community-job-access";
 
 export const dynamic = "force-dynamic";
 
-/** Live-Vorschau fürs Büro: voraussichtliches Gehalt dieser (laufenden) Woche + theoretisches Maximum. */
-export async function GET() {
+/** GET ?jobKey= — Live-Vorschau fürs Büro: voraussichtliches Gehalt dieser Woche im gewählten Job + Tageslimit-Stand. */
+export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const member = await getActiveMembership(user.id);
-  if (!member) return NextResponse.json({ error: "Du hast gerade keinen aktiven Community-Job" }, { status: 400 });
+  const jobKey = jobKeyFromRequest(req);
+  if (!jobKey) return NextResponse.json({ error: "Gültiger jobKey erforderlich" }, { status: 400 });
 
-  const projected = await getProjectedPayout(member);
-  return NextResponse.json(projected);
+  const [projected, dailyContributions] = await Promise.all([
+    getProjectedPayout(user.id, jobKey),
+    getDailyContributionUsage(user.id),
+  ]);
+  return NextResponse.json({ ...projected, dailyContributions });
 }

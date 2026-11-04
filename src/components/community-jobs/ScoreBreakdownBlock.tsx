@@ -21,15 +21,15 @@ const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
 const TAB_ON = "border-teal-500/50 text-teal-300 bg-teal-500/10";
 const TAB_OFF = "border-white/10 text-gray-400 hover:text-white";
 
-export default function ScoreBreakdownBlock() {
+export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   const [weeks, setWeeks] = useState<Week[] | null>(null);
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/community-jobs/score-breakdown").then(r => (r.ok ? r.json() : null))
+    fetch(`/api/community-jobs/score-breakdown?jobKey=${encodeURIComponent(jobKey)}`).then(r => (r.ok ? r.json() : null))
       .then((d: { weeks: Week[] } | null) => setWeeks(d?.weeks ?? [])).catch(() => setWeeks([]));
-  }, []);
+  }, [jobKey]);
 
   if (!weeks || weeks.length === 0) return null;
   const week = weeks[selected] ?? weeks[0];

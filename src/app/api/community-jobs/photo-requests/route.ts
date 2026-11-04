@@ -14,15 +14,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ requests: await listOpenPhotoRequests() });
 }
 
-/** POST { eventId?, description } — Bildwunsch an die Fotografen (nur aktive Journalisten). */
+/** POST { eventId?, description } — Bildwunsch an die Fotografen (jeder User; requesterJob = Job-Tab, aus dem angefragt wurde). */
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { eventId, description } = await req.json().catch(() => ({}));
+  const { eventId, description, requesterJob } = await req.json().catch(() => ({}));
   if (typeof description !== "string") return NextResponse.json({ error: "description erforderlich" }, { status: 400 });
 
-  const result = await createPhotoRequest(user.id, { eventId: typeof eventId === "string" && eventId ? eventId : undefined, description });
+  const result = await createPhotoRequest(user.id, { eventId: typeof eventId === "string" && eventId ? eventId : undefined, description, requesterJob: typeof requesterJob === "string" ? requesterJob : undefined });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);
 }

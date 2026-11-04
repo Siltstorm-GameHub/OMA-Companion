@@ -5,8 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 
 /** "Bild anfragen": kurzer Wunsch an die Fotografen (für Werbe-Posts, Anleitungen, Ideen …). Der Fotograf erfüllt ihn per Upload. */
-export default function PhotoRequestButton({ eventId, defaultText = "", label = "Bild bei den Fotografen anfragen" }: {
+export default function PhotoRequestButton({ eventId, defaultText = "", label = "Bild bei den Fotografen anfragen", requesterJob }: {
   eventId?: string; defaultText?: string; label?: string;
+  /** Job-Tab, aus dem heraus angefragt wird (nur zur Anzeige beim Fotografen). */
+  requesterJob?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(defaultText);
@@ -16,7 +18,7 @@ export default function PhotoRequestButton({ eventId, defaultText = "", label = 
     setBusy(true);
     try {
       const res = await fetch("/api/community-jobs/photo-requests", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: eventId || undefined, description: text }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: eventId || undefined, description: text, requesterJob }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "Fehlgeschlagen");

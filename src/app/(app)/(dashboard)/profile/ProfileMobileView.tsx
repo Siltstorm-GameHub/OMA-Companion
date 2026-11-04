@@ -29,6 +29,7 @@ import CommunityJobsPanel from "./CommunityJobsPanel";
 import ProfileJobBadge from "./ProfileJobBadge";
 
 interface Props {
+  openCommunityJobs?: boolean;
   // Hero
   displayName:       string;
   avatarUrl:         string | null;
@@ -102,7 +103,8 @@ export default function ProfileMobileView(props: Props) {
     wanderpokalItems, eventPokalItems, wanderpocalTrophies, wanderpocalStats, wanderpocalRankMap, wanderpocalHolders,
   } = props;
 
-  const [tab, setTab] = useState<Tab>("profil");
+  // Deep-Link "/profile?job=<jobKey>" (z.B. vom Event-Team auf der Turnierseite) öffnet direkt die Community-Jobs.
+  const [tab, setTab] = useState<Tab>(props.openCommunityJobs ? "community_jobs" : "profil");
 
   return (
     <div className="space-y-4">

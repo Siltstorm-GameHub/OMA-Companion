@@ -1,14 +1,13 @@
 "use client";
-import JobIcon from "@/components/JobIcon";
 import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { TrendingUp, Crop } from "@/components/icons";
-import { Users, Sparkles, ImagePlus } from "@/components/icons";
+import { Sparkles, ImagePlus } from "@/components/icons";
 import { ChevronRight, ChevronDown } from "@/components/icons";
 import { Server as ServerIcon } from "@/components/icons";
-import { Briefcase, Coins, Clock, ThumbsUp, Send, LogOut, RefreshCw, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, X, Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, BookOpen, AlertTriangle, Star, Copy } from "@/components/icons";
+import { Briefcase, Coins, ThumbsUp, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, X, Wrench, Wallet, CalendarDays, Tag, Rocket, BookOpen, Star, Copy } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -54,18 +53,13 @@ const JOB_ICONS: Record<string, typeof Newspaper> = {
   coach: GraduationCap, visionaer: Lightbulb,
 };
 
-interface CatalogHolder { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil?: string | null }
+interface DailyContributions { used: number; limit: number; remaining: number }
+interface CoachSelf { availableUntil: string | null; specialties: string[] }
 interface CatalogEntry {
   key: string; label: string; emoji: string; description: string; officeGuideMarkdown?: string;
-  maxSlots: number; filledSlots: number; holders: CatalogHolder[]; waitlistCount: number;
+  holders: { userId: string; username: string | null; availableUntil: string | null; specialties: string[] }[];
 }
-interface Membership {
-  id: string; jobKey: string; status: string;
-  contractStartAt: string; contractEndAt: string;
-  warnedAt?: string | null; warningReason?: string | null; lastContributionAt?: string | null; assignedAt?: string; availableUntil?: string | null; specialties?: string[];
-}
-interface Application { id: string; jobKey: string; status: string; appliedAt: string }
-interface Overview { catalog: CatalogEntry[]; activeMembership: Membership | null; myApplications: Application[] }
+interface Overview { catalog: CatalogEntry[]; dailyContributions: DailyContributions; coachSelf: CoachSelf }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -74,18 +68,39 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Etwas ist schiefgelaufen");
+  // Offene Jobs: Beiträge über dem Tageslimit werden veröffentlicht, zählen aber nicht fürs Gehalt.
+  if (typeof data?.notice === "string" && data.notice) toast.warning(data.notice);
   return data as T;
 }
 
+const JOB_TAB_STORAGE_KEY = "oma.communityJobs.lastJob";
+
+function initialJobKey(): string {
+  if (typeof window === "undefined") return COMMUNITY_JOBS[0].key;
+  const fromUrl = new URLSearchParams(window.location.search).get("job");
+  if (fromUrl && COMMUNITY_JOBS.some(j => j.key === fromUrl)) return fromUrl;
+  try {
+    const stored = window.localStorage.getItem(JOB_TAB_STORAGE_KEY);
+    if (stored && COMMUNITY_JOBS.some(j => j.key === stored)) return stored;
+  } catch { /* privater Modus o.ä. */ }
+  return COMMUNITY_JOBS[0].key;
+}
+
+/**
+ * Offene Community-Jobs: jeder User kann alle Jobs ausüben. Statt Bewerbung/Vertrag
+ * gibt es ein Büro mit einem Reiter pro Job; das Tageslimit gilt über alle Jobs.
+ */
 export default function CommunityJobsPanel() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
       const data = await api<Overview>("/api/community-jobs");
       setOverview(data);
+      // Beim ersten Laden: Job aus "?job=" bzw. dem zuletzt gewählten Reiter übernehmen.
+      setSelectedJob(prev => prev ?? initialJobKey());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Konnte Community-Jobs nicht laden");
     } finally {
@@ -95,32 +110,9 @@ export default function CommunityJobsPanel() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  async function apply(jobKey: string) {
-    setBusy(true);
-    try {
-      const result = await api<{ status: string }>("/api/community-jobs/apply", {
-        method: "POST", body: JSON.stringify({ jobKey }),
-      });
-      toast.success(result.status === "WAITLISTED" ? "Auf die Warteliste gesetzt" : "Job automatisch angenommen — willkommen!");
-      await reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Bewerbung fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function withdraw(applicationId: string) {
-    setBusy(true);
-    try {
-      await api(`/api/community-jobs/applications/${applicationId}/withdraw`, { method: "POST" });
-      toast.success("Bewerbung zurückgezogen");
-      await reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
+  function selectJob(key: string) {
+    setSelectedJob(key);
+    try { window.localStorage.setItem(JOB_TAB_STORAGE_KEY, key); } catch { /* egal */ }
   }
 
   if (loading) {
@@ -132,90 +124,45 @@ export default function CommunityJobsPanel() {
   }
   if (!overview) return null;
 
+  const daily = overview.dailyContributions;
+  const jobKey = selectedJob ?? COMMUNITY_JOBS[0].key;
   return (
     <section className="space-y-3">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-        <Briefcase className="w-3 h-3" /> Community-Jobs
-      </h2>
-      {overview.activeMembership ? (
-        <OfficeView membership={overview.activeMembership} guide={overview.catalog.find(j => j.key === overview.activeMembership?.jobKey)?.officeGuideMarkdown} onChanged={reload} />
-      ) : (
-        <CatalogView
-          catalog={overview.catalog}
-          myApplications={overview.myApplications}
-          busy={busy}
-          onApply={apply}
-          onWithdraw={withdraw}
-        />
-      )}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+          <Briefcase className="w-3 h-3" /> Community-Jobs
+        </h2>
+        <span className={`text-[11px] ${daily.remaining > 0 ? "text-gray-400" : "text-amber-400"}`}
+          title="Pro Tag zählen so viele Beiträge über alle Jobs zusammen fürs Gehalt. Weitere Beiträge sind erlaubt, zählen aber nicht.">
+          Heute gezählt: {daily.used}/{daily.limit} Beiträge
+        </span>
+      </div>
+
+      <div className="flex gap-1 overflow-x-auto bg-gray-900 border border-white/5 rounded-xl p-1" role="tablist" aria-label="Job auswählen">
+        {overview.catalog.map(job => {
+          const Icon = JOB_ICONS[job.key] ?? Briefcase;
+          const active = job.key === jobKey;
+          return (
+            <button key={job.key} role="tab" aria-selected={active} onClick={() => selectJob(job.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
+              }`}>
+              <Icon className={`w-3.5 h-3.5 ${active ? "text-teal-400" : "text-gray-600"}`} />
+              {job.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <OfficeView key={jobKey} jobKey={jobKey}
+        guide={overview.catalog.find(j => j.key === jobKey)?.officeGuideMarkdown}
+        description={overview.catalog.find(j => j.key === jobKey)?.description}
+        coachSelf={overview.coachSelf} onChanged={reload} />
     </section>
   );
 }
 
-// ── Katalog (kein aktiver Job) ────────────────────────────────────────────────
-
-function CatalogView({
-  catalog, myApplications, busy, onApply, onWithdraw,
-}: {
-  catalog: CatalogEntry[]; myApplications: Application[]; busy: boolean;
-  onApply: (jobKey: string) => void; onWithdraw: (id: string) => void;
-}) {
-  return (
-    <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-      {catalog.map(job => {
-        const Icon = JOB_ICONS[job.key] ?? Briefcase;
-        const myApp = myApplications.find(a => a.jobKey === job.key);
-        const full = job.filledSlots >= job.maxSlots;
-        return (
-          <div key={job.key} className="p-4 space-y-2.5">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4 text-teal-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-white"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</p>
-                  <Badge tone={full ? "warning" : "success"}>
-                    <Users className="w-2.5 h-2.5" /> {job.filledSlots}/{job.maxSlots}
-                  </Badge>
-                  {job.waitlistCount > 0 && <Badge tone="info">{job.waitlistCount} auf Warteliste</Badge>}
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">{job.description}</p>
-              </div>
-            </div>
-
-            {job.holders.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pl-12">
-                {job.holders.map(h => (
-                  <span key={h.userId} className="text-[10px] text-gray-500 bg-white/[0.03] rounded-full px-2 py-0.5">
-                    {h.availableUntil && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 align-middle" title="Gerade verfügbar" />}
-                    {h.username ?? "?"}<JobBadge userId={h.userId} variant="compact" className="ml-1" />{h.lastPayoutCoins != null && ` · ${h.lastPayoutCoins} Münzen`}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="pl-12">
-              {myApp ? (
-                <div className="flex items-center gap-2">
-                  <Badge tone="info">{myApp.status === "WAITLISTED" ? "Auf Warteliste" : "Bewerbung offen"}</Badge>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => onWithdraw(myApp.id)}>Zurückziehen</Button>
-                </div>
-              ) : (
-                <Button size="sm" variant={full ? "outline" : "primary"} disabled={busy} icon={<Send className="w-3.5 h-3.5" />}
-                  onClick={() => onApply(job.key)}>
-                  {full ? "Auf Warteliste bewerben" : "Bewerben"}
-                </Button>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Büro (aktiver Job) ────────────────────────────────────────────────────────
+// ── Büro (ein Reiter je Job) ────────────────────────────────────────────────────────
 
 /** Vorbelegung für einen Beitrag zu einem Steam-Spiel; `link` wird beim Absenden automatisch angehängt, falls er im Text fehlt. */
 interface PostPrefill {
@@ -289,18 +236,17 @@ interface Recommendations {
   gamePassLeaving?: FeedItem[];
 }
 interface Payout { id: string; weekStart: string; weekEnd: string; rawScore: number; tierLabel: string | null; baseCoins: number; coinsAwarded: number; voteBonusMultiplier: number }
-interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
 interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
 interface ServerSummary { id: string; name: string; game: string; online: boolean }
 
-function OfficeView({ membership, guide, onChanged }: { membership: Membership; guide?: string; onChanged: () => void }) {
+function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
+  jobKey: string; guide?: string; description?: string; coachSelf: CoachSelf; onChanged: () => void;
+}) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
-  const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
   const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
@@ -309,7 +255,6 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
   const [feedTab, setFeedTab] = useState<FeedTab>("steam-sales");
   const [tab, setTab] = useState<"work" | "pay">("work");
   const [guideOpen, setGuideOpen] = useState(false);
-  const { confirm, ConfirmDialogElement } = useConfirm();
   const rootRef = useRef<HTMLDivElement>(null);
   const inViewRef = useRef(true);
 
@@ -322,13 +267,13 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
   /** Blendet eine Empfehlung dauerhaft aus (optimistisch entfernt, Request läuft im Hintergrund). */
   function dismissRecommendation(itemKey: string) {
     setRecs(r => (r ? { ...r, events: r.events.filter(e => e.eventId !== itemKey) } : r));
-    api("/api/community-jobs/recommendations/dismiss", { method: "POST", body: JSON.stringify({ itemKey }) }).catch(() => {});
+    api("/api/community-jobs/recommendations/dismiss", { method: "POST", body: JSON.stringify({ jobKey, itemKey }) }).catch(() => {});
   }
 
   useEffect(() => {
-    api<Recommendations>("/api/community-jobs/recommendations").then(setRecs).catch(() => {});
-    api<{ payouts: Payout[] }>("/api/community-jobs/payouts").then(d => setPayouts(d.payouts)).catch(() => {});
-    api<{ waitlist: WaitlistEntry[] }>(`/api/community-jobs/${membership.jobKey}/waitlist`).then(d => setWaitlist(d.waitlist)).catch(() => {});
+    const q = `jobKey=${encodeURIComponent(jobKey)}`;
+    api<Recommendations>(`/api/community-jobs/recommendations?${q}`).then(setRecs).catch(() => {});
+    api<{ payouts: Payout[] }>(`/api/community-jobs/payouts?${q}`).then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
     api<ServerSummary[]>("/api/servers").then(setServers).catch(() => {});
 
@@ -347,7 +292,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
     // versteckter, aber gemounteter Reiter fragt sonst dauerhaft umsonst ab.
     function reloadProjected() {
       if (document.hidden || !inViewRef.current) return;
-      api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
+      api<ProjectedPayout>(`/api/community-jobs/projected-payout?jobKey=${encodeURIComponent(jobKey)}`).then(setProjected).catch(() => {});
     }
     reloadProjected();
     const interval = setInterval(reloadProjected, 15_000);
@@ -368,93 +313,28 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
       document.removeEventListener("visibilitychange", reloadProjected);
       window.removeEventListener("focus", reloadProjected);
     };
-  }, [membership.jobKey]);
+  }, [jobKey]);
 
   const onlineServers = servers.filter(s => s.online);
 
-  const contractEnd = new Date(membership.contractEndAt);
-  const renewOpensAt = new Date(new Date(membership.contractStartAt).setMonth(new Date(membership.contractStartAt).getMonth() + 2));
-  const canRenew = new Date() >= renewOpensAt && new Date() <= contractEnd && membership.status === "ACTIVE";
-  const Icon = JOB_ICONS[membership.jobKey] ?? Briefcase;
+  const Icon = JOB_ICONS[jobKey] ?? Briefcase;
   const latestPayout = payouts[0];
 
-  async function quit() {
-    const ok = await confirm({
-      title: "Job kündigen?",
-      description: "Du scheidest sofort aus: das Gehalt der laufenden Woche entfällt und die Discord-Rolle wird entfernt. Der Slot wird frei — bewirbst du dich später neu, landest du ggf. auf der Warteliste.",
-      confirmLabel: "Kündigen", variant: "danger",
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/quit", { method: "POST" });
-      toast.success("Job gekündigt");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function renew() {
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/renew", { method: "POST" });
-      toast.success("Vertrag verlängert");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Verlängerung fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handoff(targetApplicationId: string, applicantName: string) {
-    const ok = await confirm({
-      title: `Job an ${applicantName} übergeben?`,
-      description: `${applicantName} übernimmt sofort deinen Job. Du scheidest aus, das Gehalt der laufenden Woche entfällt.`,
-      confirmLabel: "Übergeben", variant: "danger",
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/handoff", { method: "POST", body: JSON.stringify({ targetApplicationId }) });
-      toast.success("Job übergeben");
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Übergabe fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const jobGuide = guide ?? COMMUNITY_JOBS.find(j => j.key === membership.jobKey)?.officeGuideMarkdown;
-  const lastActivity = new Date(membership.lastContributionAt ?? membership.assignedAt ?? membership.contractStartAt);
-  const daysSinceContribution = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
+  const jobGuide = guide ?? COMMUNITY_JOBS.find(j => j.key === jobKey)?.officeGuideMarkdown;
   const recCount = recs ? recs.events.length : 0;
   // Journalist (Bericht), Visionär (Idee) und Marketing Manager (Werbe-Post) können direkt zu einem Steam-Spiel posten.
-  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(membership.jobKey);
+  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(jobKey);
 
   return (
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/[0.04] flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-            <Icon className="w-4 h-4 text-teal-400" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Büro</p>
-            <p className="text-[11px] text-gray-500">
-              Vertrag bis {formatBerlinDate(contractEnd)}
-              {membership.status === "WARNED" && <span className="text-amber-400"> · Verwarnt</span>}
-            </p>
-          </div>
+      <div className="p-4 border-b border-white/[0.04] flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-teal-400" />
         </div>
-        <div className="flex items-center gap-1.5">
-          {canRenew && <Button size="sm" variant="accent" disabled={busy} icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={renew}>Verlängern</Button>}
-          <Button size="sm" variant="outline" disabled={busy} icon={<LogOut className="w-3.5 h-3.5" />} onClick={quit}>Kündigen</Button>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white">Büro · {COMMUNITY_JOBS.find(j => j.key === jobKey)?.label ?? jobKey}</p>
+          {description && <p className="text-[11px] text-gray-500">{description}</p>}
         </div>
       </div>
 
@@ -477,37 +357,13 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
           sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"}` : undefined} />
       </div>
 
-      {/* Verwarnung / Inaktivitäts-Hinweis */}
-      {membership.status === "WARNED" && (
-        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.06] flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-amber-300">
-              Verwarnt{membership.warnedAt ? ` seit ${formatBerlinDate(new Date(membership.warnedAt))}` : ""}
-            </p>
-            <p className="text-[11px] text-gray-400">
-              {membership.warningReason ?? "Inaktivität: keine neuen Beiträge"}. Ein neuer Beitrag hebt die Verwarnung auf
-              (wird täglich geprüft). Bis dahin kannst du den Vertrag nicht verlängern.
-            </p>
-          </div>
-        </div>
-      )}
-      {membership.status === "ACTIVE" && daysSinceContribution >= 7 && (
-        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.03] flex items-start gap-2.5">
-          <Clock className="w-4 h-4 text-amber-500/70 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-gray-400">
-            Dein letzter Beitrag ist {daysSinceContribution} Tage her. Nach 14 Tagen ohne Beitrag erhältst du eine Verwarnung.
-          </p>
-        </div>
-      )}
-
       {/* Anleitung */}
       {jobGuide && (
         <div className="border-b border-white/[0.04]">
           <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
             className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-white/[0.02] transition-colors">
             <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
-              <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dein Job
+              <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dieser Job
             </span>
             <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
           </button>
@@ -517,9 +373,8 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
               <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500">
                 <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
-                <li>Der Vertrag läuft 3 Monate, Verlängern ist ab dem 3. Monat möglich.</li>
-                <li>Nach 14 Tagen ohne Beitrag gibt es eine Verwarnung; sie hebt sich auf, sobald du wieder beiträgst.</li>
-                <li>Dein Ansehen (Stufe 1–4, aus deinen Wochenergebnissen) erscheint als Abzeichen hinter deinem Namen und kann auch sinken.</li>
+                <li>Du kannst alle Jobs gleichzeitig ausüben, ohne Bewerbung oder Vertrag. Jeder Job zahlt sein eigenes Wochengehalt.</li>
+                <li>Pro Tag zählen deine ersten Beiträge über alle Jobs zusammen fürs Gehalt (Anzeige oben). Weitere Beiträge sind erlaubt, Stimmen darauf zählen aber nicht. Ein Mehrfach-Upload oder eine Termin-Serie zählt als ein Beitrag.</li>
                 <li>Beiträge, die das Team wegen eines Regelverstoßes ausblendet, zählen nicht fürs Gehalt.</li>
                 <li>Pro Woche zählen deine 6 besten Beiträge, und von derselben Person zählen höchstens 5 Stimmen. Unter „Gehalt“ siehst du, wie sich dein Score zusammensetzt.</li>
                 <li>Greifen andere Jobs deinen Beitrag auf (Titelbild, Werbe-Post, Anleitung, Bericht oder Idee), gibt es einen kleinen Zusammenarbeits-Bonus: höchstens 3× pro Woche, und nur, wenn du diese Woche schon Bewertungen bekommen hast.</li>
@@ -555,7 +410,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
             const hiddenCount = recs.events.length - visibleEvents.length;
             // Nur Journalist/Fotograf/Marketing-Manager-Empfehlungen zeigen auf ein echtes Event —
             // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
-            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(membership.jobKey);
+            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(jobKey);
             // Coach-Empfehlung "neue Spieler": kein Event, aber ein sinnvoller Vorschlag fürs Formular.
             const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
@@ -660,7 +515,7 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
                       {canPostAboutSteam && (
                         <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
                           <Button size="sm" variant="outline" className="w-full justify-center"
-                            onClick={() => openCreateForm(undefined, storePrefill(activeTab, membership.jobKey, s))}>
+                            onClick={() => openCreateForm(undefined, storePrefill(activeTab, jobKey, s))}>
                             Beitrag dazu
                           </Button>
                         </div>
@@ -701,28 +556,15 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
       <div className="p-4 border-b border-white/[0.04] space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
           action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
-        <JobToolContent key={toolsKey} jobKey={membership.jobKey} membership={membership} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
+        <JobToolContent key={toolsKey} jobKey={jobKey} coachSelf={coachSelf} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
       </div>
-
-      {/* Warteliste */}
-      {waitlist.length > 0 && (
-        <div className="p-4 border-b border-white/[0.04] bg-orange-500/[0.025] space-y-2">
-          <SectionHeader tone="orange" icon={<UserPlus className="w-3.5 h-3.5" />} title={`${waitlist.length} ${waitlist.length === 1 ? "Bewerber wartet" : "Bewerber warten"}`} />
-          {waitlist.map(w => (
-            <div key={w.id} className="flex items-center justify-between gap-2 bg-white/[0.03] rounded-lg px-2.5 py-1.5">
-              <span className="text-xs text-gray-300">{w.user.username ?? w.user.name}<JobBadge userId={w.user.id} variant="compact" className="ml-1" /></span>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => handoff(w.id, w.user.username ?? w.user.name ?? "dem Bewerber")}>Job übergeben</Button>
-            </div>
-          ))}
-        </div>
-      )}
 
       </>
       )}
 
       {tab === "pay" && (
       <>
-      <ScoreBreakdownBlock />
+      <ScoreBreakdownBlock jobKey={jobKey} />
       {bonusTiers.length > 0 && (() => {
         const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
         const ownVotes = projected?.ownVotes ?? 0;
@@ -815,10 +657,9 @@ function OfficeView({ membership, guide, onChanged }: { membership: Membership; 
       </>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={membership.jobKey === "journalist" ? "lg" : "md"}>
-        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={jobKey === "journalist" ? "lg" : "md"}>
+        <CreateContentForm jobKey={jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
       </Modal>
-      {ConfirmDialogElement}
     </div>
   );
 }
@@ -869,13 +710,13 @@ function SectionHeader({
 
 // ── Job-spezifische Werkzeuge ─────────────────────────────────────────────────
 
-function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onDuplicate: (prefill: PostPrefill) => void }) {
+function CoachToolbox({ coachSelf, onDuplicate }: { coachSelf: CoachSelf; onDuplicate: (prefill: PostPrefill) => void }) {
   const [menteeKey, setMenteeKey] = useState(0);
   return (
     <div className="space-y-4">
       <CoachHelpInbox />
-      <CoachAvailability initialUntil={membership.availableUntil} />
-      <CoachSpecialties initial={membership.specialties} />
+      <CoachAvailability initialUntil={coachSelf.availableUntil} />
+      <CoachSpecialties initial={coachSelf.specialties} />
       <CoachStatsBlock />
       <TrainingSessionList onDuplicate={onDuplicate} />
       <CoachAttendance onMenteeAdded={() => setMenteeKey(k => k + 1)} />
@@ -888,8 +729,8 @@ function CoachToolbox({ membership, onDuplicate }: { membership: Membership; onD
   );
 }
 
-function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
-  jobKey: string; membership: Membership; onDuplicate: (prefill: PostPrefill) => void;
+function JobToolContent({ jobKey, coachSelf, onDuplicate, onCompose }: {
+  jobKey: string; coachSelf: CoachSelf; onDuplicate: (prefill: PostPrefill) => void;
   onCompose: (eventId?: string, prefill?: PostPrefill) => void;
 }) {
   if (jobKey === "journalist") return <ReportList onCompose={onCompose} />;
@@ -914,7 +755,7 @@ function JobToolContent({ jobKey, membership, onDuplicate, onCompose }: {
       </div>
     );
   }
-  if (jobKey === "coach") return <CoachToolbox membership={membership} onDuplicate={onDuplicate} />;
+  if (jobKey === "coach") return <CoachToolbox coachSelf={coachSelf} onDuplicate={onDuplicate} />;
   if (jobKey === "visionaer") {
     return (
       <div className="space-y-4">
@@ -1677,7 +1518,7 @@ function GuideForm({ onDone }: { onDone: () => void }) {
         <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
           <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
         </button>
-        <PhotoRequestButton defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
+        <PhotoRequestButton requesterJob="coach" defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
       </div>
       {picker && <MediaPickerPanel onPick={insertImage} onClose={() => setPicker(false)} />}
       <div className="flex justify-end gap-2">
@@ -2114,7 +1955,7 @@ function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: {
         <Button size="sm" variant={imageMode === "game" ? "primary" : "outline"} onClick={() => setImageMode("game")}>Spiel-Cover</Button>
       </div>
 
-      <PhotoRequestButton eventId={eventId || undefined} defaultText={facts ? `Bild für: ${facts.title}` : ""} />
+      <PhotoRequestButton requesterJob="marketing_manager" eventId={eventId || undefined} defaultText={facts ? `Bild für: ${facts.title}` : ""} />
 
       {imageMode === "library" && (
         <div className="space-y-1.5">

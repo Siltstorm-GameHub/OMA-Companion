@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
-import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck, runBadgeLevelUpdate } from "@/lib/community-job-service";
+import { runWeeklyPayout, runBadgeLevelUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
 import { closeExpiredIdeas, postIdeaDigests } from "@/lib/visionaer-service";
 import { recordCronRun } from "@/lib/community-admin-overview";
@@ -18,9 +18,8 @@ function isAuthorized(req: NextRequest): boolean {
  * vercel.json) — runWeeklyPayout ist idempotent (eine Zeile pro Nutzer/Job/Woche),
  * ein tägliches Antriggern schadet also nicht und fängt verspätete erste Läufe ab.
  *
- * Reihenfolge wichtig (siehe Plan): erst Payout, DANN Vertragsablauf/Inaktivität —
- * sonst verliert ein User mit genau in dieser Woche endendem Vertrag sein bereits
- * verdientes anteiliges Gehalt.
+ * Offene Community-Jobs: Verträge, Vertragsablauf, Verlängerungs-Erinnerung und
+ * Inaktivitäts-Verwarnung entfallen — es gibt keine Mitgliedschaft mehr.
  *
  * Jeder Schritt läuft isoliert: wirft einer, laufen die übrigen trotzdem, und die
  * Antwort enthält den Fehler statt eines pauschalen 500.
@@ -41,19 +40,15 @@ export async function GET(req: NextRequest) {
 
   const startedAt = Date.now();
   const payout = await step("payout", () => runWeeklyPayout());
-  // Direkt nach dem Payout, damit die neue Woche schon in die Stufe einfließt — und vor dem Vertragsablauf,
-  // damit auslaufende Verträge ihre letzte Stufe (fürs "Ehem."-Zeichen) festhalten.
+  // Direkt nach dem Payout, damit die neue Woche schon in die Stufe einfließt.
   const badges = await step("badges", () => runBadgeLevelUpdate());
-  const expiry = await step("expiry", () => runContractExpiryCheck());
-  const inactivity = await step("inactivity", () => runInactivityCheck());
-  const reminder = await step("reminder", () => runContractReminderCheck());
   const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
   const ideas = await step("ideas", () => closeExpiredIdeas());
   const ideaDigests = await step("ideaDigests", () => postIdeaDigests());
 
-  const hasError = [payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests].some(r => "error" in r)
+  const hasError = [payout, badges, coachReminders, ideas, ideaDigests].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  const result = { payout, badges, expiry, inactivity, reminder, coachReminders, ideas, ideaDigests };
+  const result = { payout, badges, coachReminders, ideas, ideaDigests };
   await recordCronRun(Date.now() - startedAt, hasError, result);
   return NextResponse.json(result, { status: hasError ? 500 : 200 });
 }

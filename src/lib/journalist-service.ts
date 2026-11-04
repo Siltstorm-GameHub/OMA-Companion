@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { isGameCoverUrl } from "./game-cover-url";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
 import { collabBonuses } from "./collab-bonus";
-import { commentVoteEvents } from "./community-board-comment-service";
+import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
 import { registerScoreBreakdown } from "./community-job-service";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
@@ -56,11 +56,9 @@ async function validateSeries(authorId: string, seriesId: string | null | undefi
 
 const JOB_KEY = "journalist";
 
+/** Offene Jobs: jeder (nicht gelöschte) User darf als Journalist schreiben. */
 async function requireActiveJournalist(userId: string): Promise<boolean> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  return !!member;
+  return canWorkCommunityJobs(userId);
 }
 
 interface ReportInput {
@@ -96,14 +94,14 @@ async function validateReportRefs(data: Partial<ReportInput>): Promise<string | 
   return null;
 }
 
-export type CreateReportResult = { ok: true; reportId: string } | { error: string };
+export type CreateReportResult = { ok: true; reportId: string; notice?: string } | { error: string };
 
 /** `draft: true` speichert nur einen Entwurf (kein Discord-Post, zählt nicht als Beitrag für die Aktivität). */
 export async function createReport(
   authorId: string,
   data: ReportInput & { draft?: boolean },
 ): Promise<CreateReportResult> {
-  if (!(await requireActiveJournalist(authorId))) return { error: "Du bist gerade kein aktiver Journalist" };
+  if (!(await requireActiveJournalist(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const invalid = (await validateReportRefs(data)) ?? (await validateSeries(authorId, data.seriesId));
   if (invalid) return { error: invalid };
 
@@ -117,19 +115,17 @@ export async function createReport(
       category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true,
     },
   });
-  if (!data.draft) await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
+  const notice = data.draft ? undefined : await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
   if (data.coverAssetId && !data.gameCoverUrl && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", data.title.trim(), reportPath(report.id)).catch(() => {});
-  return { ok: true, reportId: report.id };
+  return { ok: true, reportId: report.id, notice };
 }
 
-/** Gemeinsam für "direkt veröffentlicht" und "Entwurf veröffentlicht": Aktivität zählen + Discord-Ankündigung. */
-async function afterPublish(reportId: string, authorId: string, title: string, body: string, category: string | null): Promise<void> {
-  await prisma.communityJobMember.updateMany({
-    where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
+/** Gemeinsam für "direkt veröffentlicht" und "Entwurf veröffentlicht": Tageslimit buchen + Discord-Ankündigung. Gibt ggf. einen Limit-Hinweis zurück. */
+async function afterPublish(reportId: string, authorId: string, title: string, body: string, category: string | null): Promise<string | undefined> {
+  const booked = await recordContribution(authorId, JOB_KEY, "report", [reportId]);
   announceAndStore(reportId, authorId, title, body, category).catch(() => {});
   notifyMentions(reportId, authorId, title, body).catch(() => {});
+  return overLimitNotice(booked);
 }
 
 async function announceAndStore(reportId: string, authorId: string, title: string, body: string, category: string | null): Promise<void> {
@@ -153,11 +149,11 @@ export async function publishReport(authorId: string, reportId: string, opts: { 
   if (!report) return { error: "Bericht nicht gefunden" };
   if (report.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Bericht zu veröffentlichen" };
   if (!report.isDraft) return { error: "Bericht ist bereits veröffentlicht" };
-  if (!(await requireActiveJournalist(report.authorId))) return { error: "Der Autor ist gerade kein aktiver Journalist" };
+  if (!(await requireActiveJournalist(report.authorId))) return { error: "Community-Jobs sind für dieses Konto nicht verfügbar" };
 
   await prisma.jobReport.update({ where: { id: reportId }, data: { isDraft: false, publishedAt: new Date() } });
-  await afterPublish(reportId, report.authorId, report.title, report.bodyMarkdown, report.category);
-  return { ok: true };
+  const notice = await afterPublish(reportId, report.authorId, report.title, report.bodyMarkdown, report.category);
+  return { ok: true, notice };
 }
 
 /** Für den Lese-Ansicht/Bearbeiten-Abruf: Entwürfe nur für Autor bzw. Admin. */
@@ -171,13 +167,13 @@ export async function getReportForViewer(viewerId: string, reportId: string, opt
   return report;
 }
 
-export type ContributeResult = { ok: true; contributionId: string } | { error: string };
+export type ContributeResult = { ok: true; contributionId: string; notice?: string } | { error: string };
 
 /** Jeder aktive Journalist darf frei, ohne Freigabe des Original-Autors, ergänzen. */
 export async function addContribution(
   authorId: string, reportId: string, bodyMarkdown: string,
 ): Promise<ContributeResult> {
-  if (!(await requireActiveJournalist(authorId))) return { error: "Du bist gerade kein aktiver Journalist" };
+  if (!(await requireActiveJournalist(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (!bodyMarkdown.trim()) return { error: "Text erforderlich" };
   if (bodyMarkdown.length > CONTRIBUTION_MAX) return { error: `Ergänzung ist zu lang (max. ${CONTRIBUTION_MAX} Zeichen)` };
 
@@ -187,10 +183,7 @@ export async function addContribution(
   const contribution = await prisma.jobReportContribution.create({
     data: { reportId, authorId, bodyMarkdown: bodyMarkdown.trim() },
   });
-  await prisma.communityJobMember.updateMany({
-    where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
+  const booked = await recordContribution(authorId, JOB_KEY, "contribution", [contribution.id]);
 
   // Autor benachrichtigen + in der Ergänzung genannte Personen (der Autor selbst bekommt nur die Ergänzungs-Nachricht).
   const authorName = await userDisplayName(authorId);
@@ -201,10 +194,10 @@ export async function addContribution(
     const existing = await prisma.user.findMany({ where: { id: { in: mentioned } }, select: { id: true } });
     if (existing.length > 0) dispatchNotification("report_mention", { users: existing.map(u => u.id), placeholders }).catch(() => {});
   }
-  return { ok: true, contributionId: contribution.id };
+  return { ok: true, contributionId: contribution.id, notice: overLimitNotice(booked) };
 }
 
-export type MutationResult = { ok: true } | { error: string };
+export type MutationResult = { ok: true; notice?: string } | { error: string };
 
 /**
  * Autor ODER Admin (isAdmin) darf bearbeiten. `bodyMarkdown` ist bewusst optional
@@ -392,22 +385,20 @@ export async function getJournalistStats(userId: string) {
 async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
   const week = { gte: weekStart, lt: weekEnd };
   const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
-  const [reportVotes, contributionVotes, comments] = await Promise.all([
+  // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Inhalte innerhalb des Tageslimits (countsForScore) zählen.
+  const [reportVotes, contributionVotes] = await Promise.all([
     prisma.jobReportVote.findMany({
-      where: { report: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
+      where: { report: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: week, ...valid },
       select: { voterId: true, reportId: true, createdAt: true },
     }),
     prisma.jobReportContributionVote.findMany({
-      where: { contribution: { authorId: userId, report: { hiddenByAdminAt: null } }, createdAt: week, ...valid },
+      where: { contribution: { authorId: userId, countsForScore: true, report: { hiddenByAdminAt: null } }, createdAt: week, ...valid },
       select: { voterId: true, contributionId: true, createdAt: true },
     }),
-    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend, siehe community-board-comment-service.ts.
-    commentVoteEvents(userId, weekStart, weekEnd),
   ]);
   const scored = scoreStreams([
     { key: "reports", label: "Daumen auf Berichte", unit: "thumb", events: reportVotes.map(v => ({ voterId: v.voterId, itemKey: `report:${v.reportId}`, points: 1, createdAt: v.createdAt })) },
     { key: "contributions", label: "Daumen auf Ergänzungen", unit: "thumb", events: contributionVotes.map(v => ({ voterId: v.voterId, itemKey: `contribution:${v.contributionId}`, points: 1, createdAt: v.createdAt })) },
-    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
   ]);
   const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
   return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
@@ -446,7 +437,7 @@ export async function listMySeries(authorId: string) {
 }
 
 export async function createSeries(authorId: string, title: string): Promise<{ ok: true; seriesId: string } | { error: string }> {
-  if (!(await requireActiveJournalist(authorId))) return { error: "Du bist gerade kein aktiver Journalist" };
+  if (!(await requireActiveJournalist(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const t = title.trim();
   if (!t) return { error: "Titel erforderlich" };
   if (t.length > SERIES_TITLE_MAX) return { error: `Titel ist zu lang (max. ${SERIES_TITLE_MAX} Zeichen)` };

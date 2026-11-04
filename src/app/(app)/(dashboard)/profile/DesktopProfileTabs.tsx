@@ -11,8 +11,9 @@ type Tab = "overview" | "community_jobs";
  * kommen als bereits gerenderte Server-Component-Bäume rein (page.tsx bleibt
  * ein Server Component) — nur das Umschalten passiert clientseitig.
  */
-export default function DesktopProfileTabs({ overview, communityJobs }: { overview: ReactNode; communityJobs: ReactNode }) {
-  const [tab, setTab] = useState<Tab>("overview");
+export default function DesktopProfileTabs({ overview, communityJobs, openCommunityJobs = false }: { overview: ReactNode; communityJobs: ReactNode; openCommunityJobs?: boolean }) {
+  // Deep-Link "/profile?job=<jobKey>" (z.B. vom Event-Team auf der Turnierseite) öffnet direkt die Community-Jobs.
+  const [tab, setTab] = useState<Tab>(openCommunityJobs ? "community_jobs" : "overview");
 
   const tabs: { key: Tab; label: string; icon: typeof LayoutGrid }[] = [
     { key: "overview", label: "Übersicht", icon: LayoutGrid },

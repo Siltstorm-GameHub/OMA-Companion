@@ -12,6 +12,8 @@ import { formatBerlinDate } from "./time";
 import {
   BADGE_WINDOW_WEEKS, levelFromPoints, weeklyBadgePoints, type JobBadgeData,
 } from "./job-badges";
+import { getPayoutCandidates, getRecentJobContributors, listKnownCoaches } from "./community-job-access";
+import { COMMUNITY_JOBS } from "./community-jobs";
 
 /** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
 async function syncDiscordRoleForUser(userId: string, jobKey: string | null): Promise<void> {
@@ -134,47 +136,32 @@ export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadg
 
 export interface CommunityJobCatalogEntry {
   key: string; label: string; emoji: string; description: string; officeGuideMarkdown: string;
-  maxSlots: number; filledSlots: number;
-  holders: { userId: string; username: string | null; status: string; lastPayoutCoins: number | null; availableUntil: string | null; specialties: string[] }[];
-  waitlistCount: number;
+  /** Wer in den letzten 30 Tagen in diesem Job beigetragen hat (beim Coach: alle auffindbaren Coaches). */
+  holders: { userId: string; username: string | null; availableUntil: string | null; specialties: string[] }[];
 }
 
-/** Öffentlicher Katalog: Slots, aktuelle Inhaber + letztes Gehalt (Transparenz-Anforderung). */
+/**
+ * Öffentlicher Katalog der offenen Community-Jobs: Texte + wer gerade aktiv ist.
+ * Keine Slots/Warteliste mehr — jeder darf jeden Job ausüben.
+ */
 export async function getCommunityJobCatalog(): Promise<CommunityJobCatalogEntry[]> {
   const jobs = await getEffectiveCommunityJobs();
-  const entries: CommunityJobCatalogEntry[] = [];
-
-  for (const job of jobs) {
-    const members = await prisma.communityJobMember.findMany({
-      where: { jobKey: job.key, status: { in: ["ACTIVE", "WARNED"] } },
-      include: { user: { select: { id: true, username: true, name: true } } },
-    });
-    const waitlistCount = await prisma.communityJobApplication.count({
-      where: { jobKey: job.key, status: "WAITLISTED" },
-    });
-
-    const holders = await Promise.all(members.map(async m => {
-      const last = await prisma.communityJobWeeklyPayout.findFirst({
-        where: { userId: m.userId, jobKey: job.key },
-        orderBy: { weekStart: "desc" },
+  return Promise.all(jobs.map(async job => {
+    let holders: CommunityJobCatalogEntry["holders"];
+    if (job.key === "coach") {
+      holders = await listKnownCoaches();
+    } else {
+      const ids = await getRecentJobContributors(job.key);
+      const users = await prisma.user.findMany({
+        where: { id: { in: ids }, deletedAt: null }, select: { id: true, username: true, name: true },
       });
-      return {
-        userId: m.userId,
-        username: m.user.username ?? m.user.name,
-        status: m.status,
-        lastPayoutCoins: last?.coinsAwarded ?? null,
-        // Nur solange die Verfügbarkeit ("Ich helfe gerade") noch läuft.
-        availableUntil: m.availableUntil && m.availableUntil > new Date() ? m.availableUntil.toISOString() : null,
-        specialties: m.specialties,
-      };
-    }));
-
-    entries.push({
-      key: job.key, label: job.label, emoji: job.emoji, description: job.description, officeGuideMarkdown: job.officeGuideMarkdown,
-      maxSlots: job.maxSlots, filledSlots: members.length, holders, waitlistCount,
-    });
-  }
-  return entries;
+      holders = users.map(u => ({ userId: u.id, username: u.username ?? u.name, availableUntil: null, specialties: [] }));
+    }
+    return {
+      key: job.key, label: job.label, emoji: job.emoji, description: job.description,
+      officeGuideMarkdown: job.officeGuideMarkdown, holders,
+    };
+  }));
 }
 
 // ── Bewerbung ────────────────────────────────────────────────────────────────
@@ -465,16 +452,14 @@ export interface ProjectedPayout {
  * countOwnVotes liefern also automatisch nur den bis jetzt aufgelaufenen Stand.
  * Wird nirgends gespeichert, rein zur Anzeige.
  */
-export async function getProjectedPayout(
-  member: { userId: string; jobKey: string; contractStartAt: Date },
-): Promise<ProjectedPayout> {
+export async function getProjectedPayout(userId: string, jobKey: string): Promise<ProjectedPayout> {
   const { weekStart, weekEnd } = getWeekBounds(new Date());
-  const outcome = await computeWeeklyPayout(member, weekStart, weekEnd);
+  // Offene Jobs: kein Vertragsbeginn mehr — es wird immer die volle Woche gerechnet.
+  const outcome = await computeWeeklyPayout({ userId, jobKey, contractStartAt: weekStart }, weekStart, weekEnd);
 
-  const [tiers, bonusTiers] = await Promise.all([getPayoutTiers(member.jobKey), getVoteBonusTiers()]);
-  const maxTierCoins = tiers.reduce((max, t) => Math.max(max, t.coinsAwarded), 0);
+  const [tiers, bonusTiers] = await Promise.all([getPayoutTiers(jobKey), getVoteBonusTiers()]);
+  const maxBaseCoins = tiers.reduce((max, t) => Math.max(max, t.coinsAwarded), 0);
   const maxBonusMultiplier = bonusTiers.reduce((max, t) => Math.max(max, t.multiplier), 1);
-  const maxBaseCoins = prorateForMidWeekStart(maxTierCoins, member.contractStartAt, weekStart, weekEnd);
 
   return {
     rawScore: outcome.rawScore, tierLabel: outcome.tierLabel, ownVotes: outcome.ownVotes,
@@ -486,18 +471,21 @@ export async function getProjectedPayout(
 /**
  * Wöchentlicher Payout-Lauf: zahlt die zuletzt ABGESCHLOSSENE Woche vor
  * `referenceDate` aus (nicht die laufende — deren Bewertungen wären am Montag
- * früh noch fast leer). Idempotent — überspringt Mitglieder, für die diese
- * Woche schon eine Zeile existiert. Ein Fehler bei einem Mitglied bricht den
- * Lauf nicht ab, sondern wird gezählt und geloggt.
+ * früh noch fast leer). Offene Jobs: Es gibt keine Mitgliedschaft mehr — für
+ * jeden Job wird jeder gerechnet, der dort je beigetragen hat; jeder Job zahlt
+ * seine Stufe voll. Wer in einem Job Score 0 hat, bekommt keine Zeile.
+ * Idempotent — überspringt User/Job-Paare, für die diese Woche schon eine Zeile
+ * existiert. Ein Fehler bei einem User bricht den Lauf nicht ab.
  */
 export async function runWeeklyPayout(referenceDate: Date = new Date()): Promise<{ paid: number; skipped: number; failed: number }> {
   const { weekStart, weekEnd } = getWeekBounds(new Date(referenceDate.getTime() - 7 * 86_400_000));
-  const members = await prisma.communityJobMember.findMany({
-    where: { status: { in: ["ACTIVE", "WARNED"] }, contractStartAt: { lt: weekEnd } },
-  });
+  const pairs: { userId: string; jobKey: string; contractStartAt: Date }[] = [];
+  for (const job of COMMUNITY_JOBS) {
+    for (const userId of await getPayoutCandidates(job.key)) pairs.push({ userId, jobKey: job.key, contractStartAt: weekStart });
+  }
 
   let paid = 0, skipped = 0, failed = 0;
-  for (const member of members) {
+  for (const member of pairs) {
     try {
       const existing = await prisma.communityJobWeeklyPayout.findUnique({
         where: { userId_jobKey_weekStart: { userId: member.userId, jobKey: member.jobKey, weekStart } },
@@ -505,6 +493,7 @@ export async function runWeeklyPayout(referenceDate: Date = new Date()): Promise
       if (existing) { skipped++; continue; }
 
       const outcome = await computeWeeklyPayout(member, weekStart, weekEnd);
+      if (outcome.rawScore <= 0 && outcome.coinsAwarded <= 0) { skipped++; continue; }
 
       await prisma.$transaction(async tx => {
         await tx.communityJobWeeklyPayout.create({

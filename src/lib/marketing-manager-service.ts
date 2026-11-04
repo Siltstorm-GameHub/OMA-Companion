@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
 import { collabBonuses } from "./collab-bonus";
-import { commentVoteEvents } from "./community-board-comment-service";
+import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
 import { registerScoreBreakdown } from "./community-job-service";
 import { notifyAssetUsed } from "./fotograf-service";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
@@ -24,20 +24,18 @@ import { fulfillPromotionRequests } from "./promotion-request-service";
 
 const JOB_KEY = "marketing_manager";
 
+/** Offene Jobs: jeder (nicht gelöschte) User darf diesen Job ausüben. */
 async function requireActiveMarketingManager(userId: string): Promise<boolean> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  return !!member;
+  return canWorkCommunityJobs(userId);
 }
 
-export type CreatePostResult = { ok: true; postId: string } | { error: string };
+export type CreatePostResult = { ok: true; postId: string; notice?: string } | { error: string };
 
 export async function createMarketingPost(
   authorId: string,
   data: { eventId?: string; trainingSessionId?: string; caption: string; assetId?: string; imageUrl?: string; campaignId?: string; kind?: string },
 ): Promise<CreatePostResult> {
-  if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
+  if (!(await requireActiveMarketingManager(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   // Event bzw. Trainings-Termin sind optional: allgemeine Posts (z.B. zu Steam-/Xbox-Angeboten) haben keinen Bezug.
   if (data.eventId && !(await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } }))) return { error: "Event nicht gefunden" };
   if (data.imageUrl && !isAllowedPostImageUrl(data.imageUrl)) return { error: "Ungültiges Bild (erlaubt: eigener Upload oder Spiel-Cover)" };
@@ -59,15 +57,12 @@ export async function createMarketingPost(
       campaignId: data.campaignId ?? null, kind: isMarketingTemplate(data.kind) ? data.kind : null,
     },
   });
-  await prisma.communityJobMember.updateMany({
-    where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
+  const booked = await recordContribution(authorId, JOB_KEY, "marketing_post", [post.id]);
 
   announceAndStore(post.id, authorId, data.caption).catch(() => {});
   if (data.trainingSessionId) fulfillPromotionRequests(data.trainingSessionId, post.id).catch(() => {});
   if (data.assetId) notifyAssetUsed(data.assetId, authorId, "marketing", data.caption, "/community-board").catch(() => {});
-  return { ok: true, postId: post.id };
+  return { ok: true, postId: post.id, notice: overLimitNotice(booked) };
 }
 
 async function announceAndStore(postId: string, authorId: string, caption: string): Promise<void> {
@@ -203,7 +198,7 @@ export async function getMarketingTrainingFacts(sessionId: string) {
 }
 
 export async function createCampaign(authorId: string, data: { eventId: string; title?: string }): Promise<{ ok: true; campaignId: string } | { error: string }> {
-  if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
+  if (!(await requireActiveMarketingManager(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const event = await prisma.event.findUnique({ where: { id: data.eventId }, select: { title: true, startAt: true, hidden: true } });
   if (!event || event.hidden) return { error: "Event nicht gefunden" };
   if (event.startAt.getTime() < Date.now()) return { error: "Das Event hat schon begonnen" };
@@ -287,16 +282,13 @@ export async function getMarketingStats(userId: string) {
 async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
   const week = { gte: weekStart, lt: weekEnd };
   const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
-  const [postVotes, comments] = await Promise.all([
-    prisma.marketingPostVote.findMany({
-      where: { post: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
-      select: { voterId: true, postId: true, createdAt: true },
-    }),
-    commentVoteEvents(userId, weekStart, weekEnd),
-  ]);
+  // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Inhalte innerhalb des Tageslimits (countsForScore) zählen.
+  const postVotes = await prisma.marketingPostVote.findMany({
+    where: { post: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: week, ...valid },
+    select: { voterId: true, postId: true, createdAt: true },
+  });
   const scored = scoreStreams([
     { key: "posts", label: "Daumen auf Werbe-Posts", unit: "thumb", events: postVotes.map(v => ({ voterId: v.voterId, itemKey: `post:${v.postId}`, points: 1, createdAt: v.createdAt })) },
-    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
   ]);
   const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
   return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);

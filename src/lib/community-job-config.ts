@@ -202,6 +202,27 @@ export async function getAnnouncementChannel(jobKey: string): Promise<string | n
   return overrides[jobKey] ?? process.env.DISCORD_COMMUNITY_JOBS_CHANNEL_ID ?? null;
 }
 
+// ── Tageslimit für gezählte Beiträge ─────────────────────────────────────────
+// Wie viele Beiträge pro Berliner Kalendertag (über ALLE Jobs zusammen) fürs
+// Gehalt zählen. Weitere Beiträge sind erlaubt, Stimmen darauf zählen aber nicht.
+
+const DAILY_LIMIT_KEY = "community_job_daily_contribution_limit";
+export const DEFAULT_DAILY_CONTRIBUTION_LIMIT = 5;
+
+export async function getDailyContributionLimit(): Promise<number> {
+  const row = await prisma.botConfig.findUnique({ where: { key: DAILY_LIMIT_KEY } }).catch(() => null);
+  const n = row ? Number(row.value) : NaN;
+  return Number.isInteger(n) && n >= 0 ? n : DEFAULT_DAILY_CONTRIBUTION_LIMIT;
+}
+
+export async function setDailyContributionLimit(limit: number): Promise<void> {
+  await prisma.botConfig.upsert({
+    where: { key: DAILY_LIMIT_KEY },
+    create: { key: DAILY_LIMIT_KEY, value: String(limit) },
+    update: { value: String(limit) },
+  });
+}
+
 // ── Admin-Testmodus ──────────────────────────────────────────────────────────
 // Global ein-/ausschaltbar im Admin-Bereich. Gilt NUR für User mit Admin-Rolle
 // (per-Route-Check, nicht hier) — erlaubt ihnen, Community-Jobs ohne Sperrfrist

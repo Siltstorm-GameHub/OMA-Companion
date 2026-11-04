@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
-import { getCommunityJobCatalog, getActiveMembership } from "@/lib/community-job-service";
+import { getCommunityJobCatalog } from "@/lib/community-job-service";
+import { getDailyContributionUsage } from "@/lib/community-job-access";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** Community-Jobs-Katalog + eigener Bewerbungs-/Mitgliedsstatus. */
+/** Offene Community-Jobs: Katalog (Texte + wer gerade aktiv ist) + eigener Tageslimit-Stand. */
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const [catalog, activeMembership, myApplications] = await Promise.all([
+  const [catalog, dailyContributions, me] = await Promise.all([
     getCommunityJobCatalog(),
-    getActiveMembership(user.id),
-    prisma.communityJobApplication.findMany({
-      where: { userId: user.id, status: { in: ["PENDING", "WAITLISTED"] } },
-    }),
+    getDailyContributionUsage(user.id),
+    prisma.user.findUnique({ where: { id: user.id }, select: { coachAvailableUntil: true, coachSpecialties: true } }),
   ]);
-
-  return NextResponse.json({ catalog, activeMembership, myApplications });
+  const until = me?.coachAvailableUntil && me.coachAvailableUntil > new Date() ? me.coachAvailableUntil.toISOString() : null;
+  return NextResponse.json({ catalog, dailyContributions, coachSelf: { availableUntil: until, specialties: me?.coachSpecialties ?? [] } });
 }

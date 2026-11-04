@@ -18,6 +18,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Fehlgeschlagen");
+  // Offene Community-Jobs: Beitrag über dem Tageslimit — veröffentlicht, zählt aber nicht fürs Gehalt.
+  if (typeof data?.notice === "string" && data.notice) toast.warning(data.notice);
   return data as T;
 }
 

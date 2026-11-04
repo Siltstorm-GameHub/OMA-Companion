@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
+import { canWorkCommunityJobs } from "./community-job-access";
 import { mentionToken } from "./report-mentions";
 
 /**
@@ -24,10 +25,7 @@ function parseList(json: string | null): string[] {
 export type InterviewResult = { ok: true; id?: string } | { error: string };
 
 export async function createInterview(journalistId: string, intervieweeId: string, questions: string[]): Promise<InterviewResult> {
-  const isJournalist = await prisma.communityJobMember.findFirst({
-    where: { userId: journalistId, jobKey: "journalist", status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  if (!isJournalist) return { error: "Nur aktive Journalisten können Interviews anfragen" };
+  if (!(await canWorkCommunityJobs(journalistId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (intervieweeId === journalistId) return { error: "Du kannst dich nicht selbst interviewen" };
   if (!(await prisma.user.findUnique({ where: { id: intervieweeId }, select: { id: true } }))) return { error: "Person nicht gefunden" };
 

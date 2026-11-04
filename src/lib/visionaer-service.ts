@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { isGameCoverUrl } from "./game-cover-url";
 import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
 import { collabBonuses } from "./collab-bonus";
-import { commentVoteEvents } from "./community-board-comment-service";
+import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
 import { registerScoreBreakdown } from "./community-job-service";
 import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
@@ -31,14 +31,12 @@ const MAX_VOTING_DAYS = 90;
 
 export function ideaPath(id: string): string { return `/community-board/idea/${id}`; }
 
+/** Offene Jobs: jeder (nicht gelöschte) User darf diesen Job ausüben. */
 async function requireActiveVisionaer(userId: string): Promise<boolean> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  return !!member;
+  return canWorkCommunityJobs(userId);
 }
 
-export type SubmitIdeaResult = { ok: true; ideaId: string } | { error: string };
+export type SubmitIdeaResult = { ok: true; ideaId: string; notice?: string } | { error: string };
 
 interface IdeaInput {
   title: string; description: string; category?: string | null; votingEndsAt?: Date | null;
@@ -70,7 +68,7 @@ function validateIdea(data: { title?: string; description?: string; category?: s
 }
 
 export async function submitIdea(authorId: string, data: IdeaInput): Promise<SubmitIdeaResult> {
-  if (!(await requireActiveVisionaer(authorId))) return { error: "Du bist gerade kein aktiver Visionär" };
+  if (!(await requireActiveVisionaer(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const invalid = validateIdea(data);
   if (invalid) return { error: invalid };
 
@@ -83,13 +81,10 @@ export async function submitIdea(authorId: string, data: IdeaInput): Promise<Sub
       imageUrls: data.imageUrls ?? [], gameAppId: data.gameAppId && game ? data.gameAppId : null, gameName: game?.name ?? null,
     },
   });
-  await prisma.communityJobMember.updateMany({
-    where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
+  const booked = await recordContribution(authorId, JOB_KEY, "idea", [idea.id]);
   announceAndStore(idea.id, authorId, idea.title, idea.description, idea.imageUrls[0]).catch(() => {});
   notifyMentions(idea.id, authorId, idea.title, idea.description).catch(() => {});
-  return { ok: true, ideaId: idea.id };
+  return { ok: true, ideaId: idea.id, notice: overLimitNotice(booked) };
 }
 
 async function announceAndStore(ideaId: string, authorId: string, title: string, description: string, imageUrl?: string): Promise<void> {
@@ -478,17 +473,14 @@ export async function postIdeaDigests(): Promise<{ posted: string[] }> {
 async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
   const week = { gte: weekStart, lt: weekEnd };
   const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
-  const [ideaVotes, comments] = await Promise.all([
-    prisma.communityIdeaVote.findMany({
-      where: { idea: { authorId: userId, hiddenByAdminAt: null }, createdAt: week, ...valid },
-      select: { voterId: true, ideaId: true, stars: true, createdAt: true },
-    }),
-    commentVoteEvents(userId, weekStart, weekEnd),
-  ]);
+  // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Ideen innerhalb des Tageslimits (countsForScore) zählen.
+  const ideaVotes = await prisma.communityIdeaVote.findMany({
+    where: { idea: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: week, ...valid },
+    select: { voterId: true, ideaId: true, stars: true, createdAt: true },
+  });
   // Sterne werden umgerechnet: 4–5 Sterne = +1, 3 = 0, 1–2 = −1.
   const scored = scoreStreams([
     { key: "ideas", label: "Bewertungen deiner Ideen", unit: "stars", events: ideaVotes.map(v => ({ voterId: v.voterId, itemKey: `idea:${v.ideaId}`, points: starsToPoints(v.stars), createdAt: v.createdAt })) },
-    { key: "comments", label: "Daumen auf Kommentare", unit: "thumb", events: comments },
   ]);
   const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
   return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);

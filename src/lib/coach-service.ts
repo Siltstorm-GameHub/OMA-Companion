@@ -9,6 +9,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { sendDiscordMessage } from "./discord-rest";
 import { DISCORD_COLORS } from "./discord-colors";
 import { formatBerlinDateTime } from "./time";
+import { canWorkCommunityJobs, recordContribution, overLimitNotice, listKnownCoaches } from "./community-job-access";
 
 /**
  * Coach/Manager: erstellt Trainings-Termine für neue/unerfahrene Spieler und
@@ -20,14 +21,18 @@ import { formatBerlinDateTime } from "./time";
 const JOB_KEY = "coach";
 const AD_HOC_COOLDOWN_HOURS = 24;
 
+/** Offene Jobs: jeder (nicht gelöschte) User darf diesen Job ausüben. */
 async function requireActiveCoach(userId: string): Promise<boolean> {
-  const member = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-  });
-  return !!member;
+  return canWorkCommunityJobs(userId);
 }
 
-export type CreateSessionResult = { ok: true; sessionId: string; sessionIds: string[] } | { error: string };
+/** Kann dieser User als Coach gefunden/bewertet/um Hilfe gebeten werden? (Spezialgebiete, verfügbar oder kürzlich als Coach aktiv.) */
+async function isKnownCoach(userId: string): Promise<boolean> {
+  const coaches = await listKnownCoaches();
+  return coaches.some(c => c.userId === userId);
+}
+
+export type CreateSessionResult = { ok: true; sessionId: string; sessionIds: string[]; notice?: string } | { error: string };
 
 const MAX_SERIES_WEEKS = 8;
 
@@ -60,7 +65,7 @@ export async function createTrainingSession(
     repeatWeeks?: number;
   },
 ): Promise<CreateSessionResult> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (!data.title.trim()) return { error: "Titel erforderlich" };
   if (Number.isNaN(data.startAt.getTime()) || data.startAt.getTime() < Date.now()) return { error: "Termin muss in der Zukunft liegen" };
   if (data.capacity != null && (!Number.isInteger(data.capacity) || data.capacity < 1)) return { error: "Kapazität muss mindestens 1 sein" };
@@ -80,10 +85,8 @@ export async function createTrainingSession(
       },
     }));
   }
-  await prisma.communityJobMember.updateMany({
-    where: { userId: coachId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { lastContributionAt: new Date() },
-  });
+  // Eine Termin-Serie zählt als EIN Beitrag gegen das Tageslimit.
+  const booked = await recordContribution(coachId, JOB_KEY, "training", sessions.map(s => s.id));
 
   // Anders als die anderen Jobs bekommt der Coach keinen festen Admin-Kanal
   // (siehe Discord-Anbindung im Plan — Coach nutzt Sterne-Bewertung statt
@@ -103,7 +106,7 @@ export async function createTrainingSession(
     }).catch(() => {});
   }
 
-  return { ok: true, sessionId: sessions[0].id, sessionIds: sessions.map(s => s.id) };
+  return { ok: true, sessionId: sessions[0].id, sessionIds: sessions.map(s => s.id), notice: overLimitNotice(booked) };
 }
 
 export type SignupResult = { ok: true } | { error: string };
@@ -375,6 +378,7 @@ export async function rateAfterTraining(
 export async function rateAdHoc(raterId: string, coachId: string, stars: number, reason: string): Promise<RateResult> {
   const validation = validateRatingInput(raterId, coachId, stars, reason);
   if (validation) return validation;
+  if (!(await isKnownCoach(coachId))) return { error: "Dieser Nutzer ist gerade kein aktiver Coach" };
 
   const cooldownSince = new Date(Date.now() - AD_HOC_COOLDOWN_HOURS * 3_600_000);
   const recent = await prisma.coachRating.findFirst({
@@ -412,12 +416,16 @@ async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): P
     prisma.coachRating.findMany({
       where: {
         coachId: userId, createdAt: { gte: weekStart, lt: weekEnd },
-        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+        AND: [
+          { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }] },
+          // Bewertungen zu Terminen über dem Tageslimit zählen nicht; Ad-hoc-Bewertungen (ohne Termin) schon.
+          { OR: [{ trainingSessionId: null }, { trainingSession: { countsForScore: true } }] },
+        ],
       },
       select: { raterId: true, trainingSessionId: true, stars: true, createdAt: true },
     }),
     prisma.coachTrainingSignup.count({
-      where: { attended: true, session: { coachId: userId, startAt: { gte: weekStart, lt: weekEnd } } },
+      where: { attended: true, session: { coachId: userId, countsForScore: true, startAt: { gte: weekStart, lt: weekEnd } } },
     }),
     guideVoteEvents(userId, weekStart, weekEnd),
   ]);
@@ -492,16 +500,13 @@ export async function markAttendance(
 export async function setAvailability(
   coachId: string, minutes: number | null, discordChannelId?: string,
 ): Promise<{ ok: true; availableUntil: string | null } | { error: string }> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (minutes !== null && (!Number.isInteger(minutes) || minutes < 15 || minutes > 480)) {
     return { error: "Dauer muss zwischen 15 Minuten und 8 Stunden liegen" };
   }
 
   const availableUntil = minutes === null ? null : new Date(Date.now() + minutes * 60_000);
-  await prisma.communityJobMember.updateMany({
-    where: { userId: coachId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
-    data: { availableUntil },
-  });
+  await prisma.user.update({ where: { id: coachId }, data: { coachAvailableUntil: availableUntil } });
 
   if (availableUntil && discordChannelId) {
     const name = await coachDisplayName(coachId);
@@ -534,7 +539,7 @@ export async function listMentees(coachId: string) {
 }
 
 export async function addMentee(coachId: string, menteeId: string, note?: string): Promise<MutationResult> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (menteeId === coachId) return { error: "Du kannst dich nicht selbst als Mentee hinzufügen" };
   const user = await prisma.user.findUnique({ where: { id: menteeId }, select: { id: true } });
   if (!user) return { error: "Spieler nicht gefunden" };
@@ -636,7 +641,7 @@ export async function createHelpRequest(requesterId: string, coachId: string, me
   if (!text) return { error: "Bitte beschreibe kurz, wobei du Hilfe brauchst" };
   if (text.length > HELP_MESSAGE_MAX) return { error: `Nachricht ist zu lang (max. ${HELP_MESSAGE_MAX} Zeichen)` };
   if (requesterId === coachId) return { error: "Du kannst dich nicht selbst um Hilfe bitten" };
-  if (!(await requireActiveCoach(coachId))) return { error: "Dieser Nutzer ist gerade kein aktiver Coach" };
+  if (!(await isKnownCoach(coachId))) return { error: "Dieser Nutzer ist gerade kein aktiver Coach" };
 
   if (await prisma.coachHelpRequest.findFirst({ where: { requesterId, coachId, status: "OPEN" } })) {
     return { error: "Du hast bei diesem Coach bereits eine offene Anfrage" };
@@ -745,7 +750,7 @@ async function recordOutreach(coachId: string, userId: string, kind: string): Pr
 }
 
 export async function sendWelcome(coachId: string, userId: string, message?: string): Promise<MutationResult> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   if (userId === coachId) return { error: "Ungültiger Empfänger" };
   if (!(await prisma.user.findUnique({ where: { id: userId }, select: { id: true } }))) return { error: "Spieler nicht gefunden" };
   const text = message?.trim() || "Schön, dass du da bist! Ich helfe beim Einstieg — wenn du Fragen hast, nutze im Community-Board einfach „Hilfe anfragen“.";
@@ -759,7 +764,7 @@ export async function sendWelcome(coachId: string, userId: string, message?: str
 }
 
 export async function inviteToSession(coachId: string, userId: string, sessionId: string): Promise<MutationResult> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const session = await prisma.coachTrainingSession.findUnique({ where: { id: sessionId } });
   if (!session || session.coachId !== coachId) return { error: "Termin nicht gefunden" };
   if (session.startAt.getTime() < Date.now()) return { error: "Termin hat bereits begonnen" };
@@ -776,7 +781,7 @@ const SPECIALTIES_MAX = 6;
 const SPECIALTY_LENGTH_MAX = 30;
 
 export async function setSpecialties(coachId: string, list: string[]): Promise<{ ok: true; specialties: string[] } | { error: string }> {
-  if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
+  if (!(await requireActiveCoach(coachId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const seen = new Set<string>();
   const specialties: string[] = [];
   for (const raw of list) {
@@ -788,8 +793,6 @@ export async function setSpecialties(coachId: string, list: string[]): Promise<{
   }
   if (specialties.length > SPECIALTIES_MAX) return { error: `Höchstens ${SPECIALTIES_MAX} Spezialgebiete möglich` };
 
-  await prisma.communityJobMember.updateMany({
-    where: { userId: coachId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } }, data: { specialties },
-  });
+  await prisma.user.update({ where: { id: coachId }, data: { coachSpecialties: specialties } });
   return { ok: true, specialties };
 }

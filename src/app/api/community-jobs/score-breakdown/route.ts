@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
 import { getSessionUser } from "@/lib/roles";
-import { getActiveMembership, getScoreBreakdown, getWeekBounds } from "@/lib/community-job-service";
+import { getScoreBreakdown, getWeekBounds } from "@/lib/community-job-service";
+import { jobKeyFromRequest } from "@/lib/community-job-access";
 import { getPayoutTiers, resolveTier } from "@/lib/community-job-config";
 import { prisma } from "@/lib/prisma";
 
@@ -14,11 +15,12 @@ const WEEKS = 4;
  * Stimmen je Quelle, Deckel, Boni, erreichte Stufe und was bis zur nächsten fehlt. Frühere Wochen werden mit dem
  * heutigen Stand der Bewertungen neu gerechnet (nachträglich gestrichene Stimmen fehlen also).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  const member = await getActiveMembership(user.id);
-  if (!member) return NextResponse.json({ error: "Du hast gerade keinen aktiven Community-Job" }, { status: 400 });
+  const jobKey = jobKeyFromRequest(req);
+  if (!jobKey) return NextResponse.json({ error: "Gültiger jobKey erforderlich" }, { status: 400 });
+  const member = { jobKey };
 
   const tiers = [...(await getPayoutTiers(member.jobKey))].sort((a, b) => a.minScore - b.minScore);
   const current = getWeekBounds(new Date());
