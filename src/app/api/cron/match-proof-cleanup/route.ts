@@ -1,3 +1,4 @@
+import { isProofExpired } from "@/lib/tournaments/proof-retention";
 import { NextRequest, NextResponse } from "next/server";
 import { list, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
@@ -5,8 +6,6 @@ import { resolveStoreId } from "@/lib/blob-store";
 import {
   PROOF_ORPHAN_MAX_AGE_DAYS,
   PROOF_PREFIX,
-  PROOF_RETENTION_DAYS_AFTER_PHASE,
-  PROOF_RETENTION_DAYS_MAX,
   parseScreenshotUrls,
 } from "@/lib/tournaments/matchSubmissions";
 
@@ -37,10 +36,11 @@ function phaseClosedAt(completionData: string | null): Date | null {
  * nur die Bilder verschwinden.
  *
  *  1. PROOF_RETENTION_DAYS_AFTER_PHASE Tage nach Abschluss der aktiven Eventphase
- *  2. spätestens PROOF_RETENTION_DAYS_MAX Tage nach der Meldung (Event nie abgeschlossen)
+ *  2. spätestens PROOF_RETENTION_DAYS_MAX Tage nach der Meldung (Event nie abgeschlossen) — bei
+ *     Zeitraum-Events frühestens PROOF_RETENTION_DAYS_MAX Tage nach dem Event-Ende
  *  3. verwaiste Uploads (hochgeladen, nie abgeschickt) nach PROOF_ORPHAN_MAX_AGE_DAYS Tagen
  *
- * Läuft täglich (siehe vercel.json). Fristen: 7 Tage nach Phasenabschluss, max. 14 Tage.
+ * Läuft täglich (siehe vercel.json). Fristen: 7 Tage nach Phasenabschluss, max. 14 Tage (Zeitraum-Events: ab Ende).
  */
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,13 +52,14 @@ export async function GET(req: NextRequest) {
   // 1 + 2: Meldungen mit noch vorhandenen Bildern
   const subs = await prisma.matchResultSubmission.findMany({
     where: { NOT: { screenshotUrls: "[]" } },
-    select: { id: true, screenshotUrls: true, createdAt: true, updatedAt: true, match: { select: { event: { select: { completionData: true } } } } },
+    select: { id: true, screenshotUrls: true, createdAt: true, updatedAt: true, match: { select: { event: { select: { completionData: true, startAt: true, endAt: true } } } } },
   });
-  const expired = subs.filter((s) => {
-    const closed = phaseClosedAt(s.match.event.completionData);
-    if (closed && now - closed.getTime() > PROOF_RETENTION_DAYS_AFTER_PHASE * DAY) return true;
-    return now - s.updatedAt.getTime() > PROOF_RETENTION_DAYS_MAX * DAY;
-  });
+  // Fristen siehe lib/tournaments/proof-retention.ts (bei Zeitraum-Events zählt die Höchstfrist ab Event-Ende)
+  const expired = subs.filter((s) => isProofExpired(
+    s,
+    { startAt: s.match.event.startAt, endAt: s.match.event.endAt, phaseClosedAt: phaseClosedAt(s.match.event.completionData) },
+    now,
+  ));
   // Sammelmeldungen teilen sich einen Screenshot über mehrere Meldungen — ein Bild erst löschen, wenn
   // keine noch nicht abgelaufene Meldung es mehr verwendet
   const expiredIds = new Set(expired.map((s) => s.id));
