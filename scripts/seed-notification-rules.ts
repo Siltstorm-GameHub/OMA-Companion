@@ -68,12 +68,12 @@ const RULES: RuleSeed[] = [
   {
     key: "event_goal_milestone",
     label: "Community-Ziel: Meilenstein",
-    description: "Wenn ein Community-Ziel 25 %, 50 %, 75 % oder 100 % erreicht (Punktewertung mit Ziel).",
+    description: "Wenn ein Community-Ziel 25 %, 50 %, 75 % oder 100 % erreicht (Punktewertung mit Ziel). Geht an alle User — jeder soll mitbekommen, dass wir gemeinsam ein Ziel verfolgen.",
     category: "events",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: true,
     titleTemplate: "🎯 {goalTitle}: {percent} %",
     bodyTemplate: "🎯 **{goalTitle}** — {milestoneText}\n{current} von {target} {unit} geschafft. Weiter so!",
-    isEventNotification: true, eventAudience: "participants",
+    isEventNotification: true, eventAudience: "all",
   },
   {
     key: "event_ending_soon",

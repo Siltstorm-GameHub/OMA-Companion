@@ -26,6 +26,7 @@ import ImageUploadField from "@/components/ImageUploadField";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
+import EventGoalPanel from "./EventGoalPanel";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { DEFAULT_CHECK_IN_MINUTES, MAX_CHECK_IN_MINUTES, sanitizeCheckInMinutes } from "@/lib/checkin";
 import PublishStatusPanel from "./PublishStatusPanel";
@@ -1830,15 +1831,22 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
       {/* ── Tab: Turnierbaum (Reihen-Event: reduzierte Ansicht ohne Turnier-Einstellungen) ── */}
       {activeTab === "bracket" && bracketTournament && (
-        <TournamentManager
-          event={{ id: event.id }}
-          tournament={bracketTournament}
-          allUsers={bracketRegisteredUsers}
-          winnerStatKeys={bracketWinnerStatKeys}
-          matchWinStatKeys={bracketMatchWinStatKeys}
-          standaloneEvent={!event.series}
-          placementPoints={bracketPlacementPoints}
-        />
+        <div className="space-y-4">
+          {/* Termine einer Reihe mit festem Spiel haben keinen "Turnier"-Reiter — das Ziel des
+              Termins lässt sich deshalb hier anpassen (nur Punktewertung) */}
+          {isSeriesEvent && event.format === "coop_stats" && (
+            <EventGoalPanel eventId={event.id} initialGoal={parseCommunityGoal(event.statConfigJson)} statFields={tmtStatFields} />
+          )}
+          <TournamentManager
+            event={{ id: event.id }}
+            tournament={bracketTournament}
+            allUsers={bracketRegisteredUsers}
+            winnerStatKeys={bracketWinnerStatKeys}
+            matchWinStatKeys={bracketMatchWinStatKeys}
+            standaloneEvent={!event.series}
+            placementPoints={bracketPlacementPoints}
+          />
+        </div>
       )}
 
       {/* ── Tab: Teilnehmer ── */}

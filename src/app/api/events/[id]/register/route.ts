@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
+import { isPeriodEvent } from "@/lib/event-period";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -24,7 +25,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
   // Serverseitige Durchsetzung der Registrierungssperre bei Event-Start — unabhängig davon, ob
   // der Lazy-Sync (syncDueEventActivations, "open" → "active") für dieses Event schon gelaufen ist.
-  if (event.registrationLocked || event.series?.registrationLocked || event.startAt <= new Date())
+  // Ausnahme Zeitraum-Events (> 24 h mit Ende, lib/event-period.ts): Einstieg bis zum Ende möglich.
+  const now = new Date();
+  const lateJoinAllowed = isPeriodEvent(event) && !!event.endAt && event.endAt > now;
+  if (event.registrationLocked || event.series?.registrationLocked || (event.startAt <= now && !lateJoinAllowed))
     return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
   // Squad-Beschränkung gilt nur für Spieler, nicht für Zuschauer (siehe Event.squadId-Kommentar im Schema).
   const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
