@@ -167,6 +167,23 @@ export default async function TournamentDetailPage({
   const canManage = await canManageEvent(me, eventId);
   // Offene Ergebnis-Meldungen zum Prüfen (nur Verwalter) — auch eigene Meldungen, siehe ResultReviewClient
   const reviewData = canManage && event.format ? await loadReviewData(eventId, { onlyPending: true }) : null;
+  // Bestätigte Nachweis-Screenshots: sichtbar für Teilnehmer des Events (Spieler) und Verwalter — nicht
+  // öffentlich (können persönliche Daten enthalten, z.B. aus Fitness-Apps). Schlüssel "matchId:userId".
+  const canSeeProofs = canManage || event.registrations.some(r => r.userId === userId && r.role !== "spectator")
+    || event.participants.some(p => p.userId === userId);
+  const proofsByEntry: Record<string, string[]> = {};
+  if (canSeeProofs && event.format) {
+    const confirmed = await prisma.matchResultSubmission.findMany({
+      where: { eventId, status: { in: ["approved", "corrected"] } },
+      select: { matchId: true, userId: true, forUserId: true, screenshotUrls: true },
+    });
+    for (const s of confirmed) {
+      const urls = parseScreenshotUrls(s.screenshotUrls);
+      if (urls.length === 0) continue;
+      const key = `${s.matchId}:${submissionSubject(s)}`;
+      proofsByEntry[key] = [...new Set([...(proofsByEntry[key] ?? []), ...urls])];
+    }
+  }
   const isHidden = event.hidden || !!event.series?.hidden;
   if (isHidden && !isMod && !canManage) notFound();
 
@@ -1370,6 +1387,7 @@ export default async function TournamentDetailPage({
             {isFfa && (
               <FfaView
                 matches={event.matches as Parameters<typeof FfaView>[0]["matches"]}
+                proofsByEntry={proofsByEntry}
                 participants={mergedParticipants}
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 statPointsPer={statPointsPer}

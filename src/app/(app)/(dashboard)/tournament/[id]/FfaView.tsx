@@ -4,7 +4,7 @@ import PlaceMedal from "@/components/PlaceMedal";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "@/components/icons";
-import { Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame } from "@/components/icons";
+import { Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame, Camera } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
@@ -57,7 +57,11 @@ export default function FfaView({
   finalRankingNote = null,
   excludedUserIds = [],
   avgWinnerDirection = "high",
+  proofsByEntry = {},
 }: {
+  /** Bestätigte Nachweis-Screenshots je Runde und Spieler (Schlüssel "matchId:userId") — nur für
+   *  angemeldete Teilnehmer bzw. Verwalter gefüllt, siehe tournament/[id]/page.tsx */
+  proofsByEntry?: Record<string, string[]>;
   matches: Match[];
   participants: Participant[];
   statFields: string[];
@@ -621,11 +625,18 @@ export default function FfaView({
                                       <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-rose-300" : "text-white"}`}>
                                         {u ? <>{uname(u)}</> : "?"}{isMe && " (du)"}
                                       </span>
+                                      {(proofsByEntry[`${match.id}:${e.userId}`] ?? []).map((url, i, all) => (
+                                        <a key={url} href={url} target="_blank" rel="noopener noreferrer"
+                                          title={`Nachweis${all.length > 1 ? ` ${i + 1}` : ""} ansehen (vom Admin bestätigt)`}
+                                          className="inline-flex items-center gap-0.5 text-gray-500 hover:text-teal-300 transition-colors">
+                                          <Camera className="w-3.5 h-3.5" />{all.length > 1 && <span className="text-[9px]">{i + 1}</span>}
+                                        </a>
+                                      ))}
                                     </div>
                                   </td>
                                   {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                                     <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
-                                      {readStatValue(stats, f) ?? "–"}
+                                      {(() => { const v = readStatValue(stats, f); return v === null ? "–" : fmtUpTo2(v); })()}
                                     </td>
                                   ))}
                                   {isAvg && (

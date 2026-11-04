@@ -59,7 +59,11 @@ export async function GET(req: NextRequest) {
     if (closed && now - closed.getTime() > PROOF_RETENTION_DAYS_AFTER_PHASE * DAY) return true;
     return now - s.updatedAt.getTime() > PROOF_RETENTION_DAYS_MAX * DAY;
   });
-  const urls = expired.flatMap((s) => parseScreenshotUrls(s.screenshotUrls));
+  // Sammelmeldungen teilen sich einen Screenshot über mehrere Meldungen — ein Bild erst löschen, wenn
+  // keine noch nicht abgelaufene Meldung es mehr verwendet
+  const expiredIds = new Set(expired.map((s) => s.id));
+  const stillUsed = new Set(subs.filter((s) => !expiredIds.has(s.id)).flatMap((s) => parseScreenshotUrls(s.screenshotUrls)));
+  const urls = [...new Set(expired.flatMap((s) => parseScreenshotUrls(s.screenshotUrls)))].filter((u) => !stillUsed.has(u));
   if (urls.length) await del(urls, opts);
   if (expired.length) {
     await prisma.matchResultSubmission.updateMany({ where: { id: { in: expired.map((s) => s.id) } }, data: { screenshotUrls: "[]" } });

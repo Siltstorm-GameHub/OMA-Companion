@@ -211,6 +211,118 @@ function MatchForm({
   );
 }
 
+/** Wert für "Spieler" in der Auswahl: Sammelmeldung für mehrere Spieler mit einem gemeinsamen Screenshot */
+const MULTI = "__multi__";
+
+/**
+ * Sammelmeldung (FFA/Coop): ein Screenshot zeigt die Werte mehrerer Spieler — einmal hochladen, für
+ * jeden Spieler die Werte eintragen. Technisch entsteht je Spieler eine eigene Meldung (mit demselben
+ * Nachweis), damit Prüfung, Korrektur und Anzeige pro Spieler unverändert funktionieren. Leere Zeilen
+ * werden übersprungen.
+ */
+function MultiForm({
+  eventId, m, userId, submissions, statFields, locked,
+}: {
+  eventId: string;
+  m: ReportMatch;
+  userId: string;
+  submissions: MySubmission[];
+  statFields: string[];
+  locked: boolean;
+}) {
+  const router = useRouter();
+  // Vorbelegung mit eigenen bisherigen Meldungen für diese Spieler
+  const [rows, setRows] = useState<Record<string, Record<string, string>>>(() => Object.fromEntries(
+    m.players.map(p => {
+      const s = submissions.find(x => x.matchId === m.id && x.subjectId === p.id);
+      const st: Record<string, number> = s?.statsJson ? JSON.parse(s.statsJson) : {};
+      return [p.id, Object.fromEntries(Object.entries(st).map(([k, v]) => [k, String(v)]))];
+    }),
+  ));
+  const [urls, setUrls] = useState<string[]>([]);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const filled = m.players.filter(p => statFields.some(f => (rows[p.id]?.[f] ?? "").trim() !== ""));
+
+  async function submit() {
+    if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
+    if (filled.length === 0) return toast.error("Bitte für mindestens einen Spieler Werte eintragen");
+    setBusy(true);
+    let ok = 0;
+    const failed: string[] = [];
+    try {
+      // Nacheinander — jede Meldung wird serverseitig einzeln geprüft und eingetragen
+      for (const p of filled) {
+        const stats = Object.fromEntries(Object.entries(rows[p.id] ?? {}).filter(([, v]) => v.trim() !== ""));
+        const res = await fetch(`/api/tournaments/${eventId}/submissions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matchId: m.id, statsJson: stats, forUserId: p.id, note, screenshotUrls: urls }),
+        });
+        if (res.ok) ok++;
+        else {
+          const data = await res.json().catch(() => ({}));
+          failed.push(`${uname(p)}: ${data.error ?? "Fehler"}`);
+        }
+      }
+      if (ok > 0) toast.success(`${ok} ${ok === 1 ? "Ergebnis" : "Ergebnisse"} eingetragen — ein Admin prüft sie anhand des Screenshots`);
+      if (failed.length > 0) toast.error(failed.join(" · "));
+      if (ok > 0) router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (locked) return <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>;
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
+      <p className="text-sm font-medium text-white">{m.label} · Sammelmeldung</p>
+      <p className="text-[11px] text-gray-500">
+        Ein Screenshot zeigt die Ergebnisse mehrerer Spieler? Trag hier die Werte aller sichtbaren Spieler ein —
+        leere Zeilen werden übersprungen. Jeder Spieler bekommt eine eigene Meldung mit diesem Nachweis.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-[10px] text-gray-500 uppercase tracking-wider">
+              <th className="text-left py-1 pr-2 font-medium">Spieler</th>
+              {statFields.map(f => <th key={f} className="text-left py-1 px-1 font-medium">{f}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {m.players.map(p => (
+              <tr key={p.id}>
+                <td className="py-1 pr-2 text-gray-300 whitespace-nowrap">{uname(p)}{p.id === userId ? " (du)" : ""}</td>
+                {statFields.map(f => (
+                  <td key={f} className="py-1 px-1 min-w-[80px]">
+                    <input type="number" min={0} value={rows[p.id]?.[f] ?? ""}
+                      onChange={e => setRows(prev => ({ ...prev, [p.id]: { ...prev[p.id], [f]: e.target.value } }))}
+                      className={inputCls} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-400 mb-1">Nachweis (Screenshots, max. 4) — gilt für alle eingetragenen Spieler</p>
+        <ProofUploader value={urls} onChange={setUrls} />
+      </div>
+
+      <input value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Anmerkung (optional)" className={inputCls} />
+
+      <button onClick={submit} disabled={busy}
+        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium disabled:opacity-50">
+        {busy ? "Sende…" : filled.length > 0 ? `Für ${filled.length} Spieler melden` : "Ergebnisse melden"}
+      </button>
+    </div>
+  );
+}
+
 export default function MatchResultSubmit({
   eventId,
   userId,
@@ -237,7 +349,8 @@ export default function MatchResultSubmit({
 
   if (!match) return null;
 
-  const subject = match.isDuel ? null : match.players.find((p) => p.id === subjectId) ?? match.players[0] ?? null;
+  const isMulti = !match.isDuel && subjectId === MULTI && match.players.length > 1;
+  const subject = match.isDuel || isMulti ? null : match.players.find((p) => p.id === subjectId) ?? match.players[0] ?? null;
   const submission =
     submissions.find((x) => x.matchId === match.id && (match.isDuel || x.subjectId === subject?.id)) ?? null;
   const pendingCount = submissions.filter((x) => x.status === "pending" || x.status === "processing").length;
@@ -264,7 +377,7 @@ export default function MatchResultSubmit({
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
           <p className="text-xs text-gray-500">
-            Trage dein Ergebnis oder das eines anderen Spielers ein und lade Screenshots als Nachweis hoch. Das Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Screenshots werden nach einiger Zeit automatisch gelöscht.
+            Trage dein Ergebnis oder das eines anderen Spielers ein und lade Screenshots als Nachweis hoch. Das Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Nach der Bestätigung können die anderen Teilnehmer dieses Events deine Screenshots sehen — achte darauf, dass keine privaten Daten darauf stehen. Screenshots werden nach einiger Zeit automatisch gelöscht.
           </p>
 
           <div className={`grid gap-2 ${match.isDuel ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
@@ -288,26 +401,41 @@ export default function MatchResultSubmit({
             {!match.isDuel && (
               <label className="text-xs text-gray-400 space-y-1">
                 Spieler
-                <select value={subject?.id ?? ""} onChange={(e) => setSubjectId(e.target.value)} className={inputCls}>
+                <select value={isMulti ? MULTI : subject?.id ?? ""} onChange={(e) => setSubjectId(e.target.value)} className={inputCls}>
                   {match.players.map((p) => (
                     <option key={p.id} value={p.id} className="bg-gray-900">
                       {uname(p)}{p.id === userId ? " (du)" : ""}
                     </option>
                   ))}
+                  {match.players.length > 1 && (
+                    <option value={MULTI} className="bg-gray-900">Mehrere Spieler (ein Screenshot)</option>
+                  )}
                 </select>
               </label>
             )}
           </div>
 
-          <MatchForm
-            key={`${match.id}:${subject?.id ?? ""}`}
-            eventId={eventId}
-            m={match}
-            subject={subject}
-            s={submission}
-            statFields={statFields}
-            locked={locked}
-          />
+          {isMulti ? (
+            <MultiForm
+              key={`${match.id}:${MULTI}`}
+              eventId={eventId}
+              m={match}
+              userId={userId}
+              submissions={submissions}
+              statFields={statFields}
+              locked={locked}
+            />
+          ) : (
+            <MatchForm
+              key={`${match.id}:${subject?.id ?? ""}`}
+              eventId={eventId}
+              m={match}
+              subject={subject}
+              s={submission}
+              statFields={statFields}
+              locked={locked}
+            />
+          )}
         </div>
       )}
     </div>
