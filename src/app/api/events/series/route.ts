@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import { createPollsForEvent } from "@/lib/event-polls";
+import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 
 export async function GET() {
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
+  const coverUrl = allowedCoverUrl(rawBody.coverImageUrl, isModerator);
   if (startDate && firstEventEndAt && new Date(firstEventEndAt) <= new Date(startDate)) {
     return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
   }
@@ -136,6 +138,8 @@ export async function POST(req: NextRequest) {
           groupId: season?.groupId ?? null,
           seasonNumber: season?.seasonNumber ?? null,
           ...(season && { icon: season.icon, coverImageUrl: season.coverImageUrl, rules: season.rules, statAliasesJson: season.statAliasesJson }),
+          // Eigenes Reihen-Bild aus dem Wizard (Vorlage, Upload oder URL) — sonst das der Vorsaison
+          ...(coverUrl && { coverImageUrl: coverUrl }),
           tournamentTemplateJson: templateJson,
         },
       });

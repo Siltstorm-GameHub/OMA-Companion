@@ -1,3 +1,4 @@
+import { supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
@@ -142,7 +143,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
   const isCoop = event.format === "coop_stats";
   const coopConfig = {
-    trackMatchWin: isCoop && matchWinStatKeys.length > 0,
+    trackMatchWin: supportsMatchWin(event.format) && matchWinStatKeys.length > 0,
     trackPlacement: isCoop && !!placementPoints,
     placementPoints,
   };

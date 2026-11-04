@@ -36,3 +36,11 @@ export function sortStatRounds<T extends { position: number }>(matches: T[]): T[
 export function nextStatRoundNumber(matches: { position: number }[]): number {
   return matches.reduce((max, m) => Math.max(max, m.position), 0) + 1;
 }
+
+/** Formate, in denen pro Runde ein "Match Win" (alle zusammen oder Team A/B) erfasst werden kann:
+ *  Punktewertung (coop_stats) und Durchschnittswerte (avg_stats — dort ergibt sich im Ø die Siegquote). */
+export const MATCH_WIN_FORMATS = ["coop_stats", "avg_stats"] as const;
+
+export function supportsMatchWin(format: string | null | undefined): boolean {
+  return !!format && (MATCH_WIN_FORMATS as readonly string[]).includes(format);
+}

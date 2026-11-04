@@ -1,4 +1,6 @@
 "use client";
+import ImageUploadField from "@/components/ImageUploadField";
+import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -22,6 +24,17 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
           rows={2} placeholder="Kurze Beschreibung der Reihe"
           className={`${inputCls} resize-none`} style={inputStyle} />
       </div>
+
+      <ImageUploadField
+        value={w.seriesCoverUrl}
+        onChange={w.setSeriesCoverUrl}
+        kind="event-cover"
+        presetsOnly={w.isCommunity}
+        presets={EVENT_COVER_PRESETS}
+        label="Reihen-Bild (optional)"
+        hint={w.isCommunity ? "Gilt für alle Termine der Reihe, die kein eigenes Bild haben. Wähle eine Vorlage." : "Gilt für alle Termine der Reihe, die kein eigenes Bild haben. Vorlage wählen, hochladen oder URL einfügen. Empfohlen: 1200×630."}
+        previewAspect="1200/630"
+      />
 
       <div>
         <label className={labelCls}>Spiel</label>

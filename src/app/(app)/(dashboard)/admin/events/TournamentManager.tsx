@@ -13,7 +13,7 @@ import { GROUP_KNOCKOUT_FORMAT, groupLabel, knockoutRoundLabel } from "@/lib/tou
 import TournamentManagerMobile from "./TournamentManagerMobile";
 import GroupStagePanel, { type GroupStageActionBody } from "./GroupStagePanel";
 import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
-import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote } from "@/lib/tournaments/stat-rounds";
+import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -228,7 +228,7 @@ export default function TournamentManager({
   // Match Win/Team-Zuordnung in einer Reihe nur anzeigen und erfassen, wenn die Reihe tatsächlich einen
   // Stat darauf aufbaut (⚔️ in der Reihentabellen-Konfiguration) — sonst unnötig. Ohne Reihe immer
   // erfassbar; die Turnierseite zeigt es erst, sobald eine Runde gewonnen wurde.
-  const trackMatchWin = isCoop && (matchWinStatKeys.length > 0 || standaloneEvent);
+  const trackMatchWin = supportsMatchWin(tournament.format) && (matchWinStatKeys.length > 0 || standaloneEvent);
   // Platzierungs-Spalte pro Runde nur anzeigen, wenn für dieses Event Punkte je Platz konfiguriert
   // sind (Reiter "Turnier" → Format Kooperativ (Stats), siehe EventEditClient) — sonst unnötig.
   const trackPlacement = isCoop && !!placementPoints && Object.keys(placementPoints).length > 0;

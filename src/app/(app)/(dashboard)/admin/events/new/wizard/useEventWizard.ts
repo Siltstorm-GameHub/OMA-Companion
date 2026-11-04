@@ -68,6 +68,8 @@ export function useEventWizard({
   const [genre, setGenre]             = useState<EventGenre | null>(tpl?.genre ?? null);
   const [maxPlayers, setMaxPlayers]   = useState(tpl?.maxPlayers ?? "");
   const [description, setDescription] = useState(tpl?.description ?? "");
+  // Eigenes Cover (Upload, URL oder Vorlage aus EVENT_COVER_PRESETS) — leer = Spiel-Cover bzw. Standard-Motiv
+  const [eventCoverUrl, setEventCoverUrl] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState(tpl?.discordChannelId ?? "");
   const [seriesMode, setSeriesMode]   = useState<"none" | "existing" | "new">(tpl?.seriesId && series.some(s => s.id === tpl.seriesId) ? "existing" : "none");
   const [selectedSeriesId, setSelectedSeriesId] = useState(tpl?.seriesId && series.some(s => s.id === tpl.seriesId) ? tpl.seriesId : "");
@@ -111,6 +113,7 @@ export function useEventWizard({
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
   const [seriesDesc, setSeriesDesc]     = useState(seasonPrefill?.description ?? "");
+  const [seriesCoverUrl, setSeriesCoverUrl] = useState("");
   const [variousGames, setVariousGames] = useState(seasonPrefill?.variousGames ?? false);
   const [fixedGame, setFixedGame]       = useState(seasonPrefill?.fixedGame ?? "");
   const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(seasonPrefill?.fixedGenre ?? null);
@@ -243,6 +246,7 @@ export function useEventWizard({
     genre,
     maxPlayers,
     description,
+    eventCoverUrl,
     discordChannelId,
     seriesMode,
     selectedSeriesId,
@@ -271,6 +275,7 @@ export function useEventWizard({
     blocks,
     seriesName,
     seriesDesc,
+    seriesCoverUrl,
     variousGames,
     fixedGame,
     fixedGenre,
@@ -315,6 +320,7 @@ export function useEventWizard({
     genre: setGenre,
     maxPlayers: setMaxPlayers,
     description: setDescription,
+    eventCoverUrl: setEventCoverUrl,
     discordChannelId: setDiscordChannelId,
     seriesMode: setSeriesMode,
     selectedSeriesId: setSelectedSeriesId,
@@ -343,6 +349,7 @@ export function useEventWizard({
     blocks: setBlocks,
     seriesName: setSeriesName,
     seriesDesc: setSeriesDesc,
+    seriesCoverUrl: setSeriesCoverUrl,
     variousGames: setVariousGames,
     fixedGame: setFixedGame,
     fixedGenre: setFixedGenre,
@@ -495,6 +502,7 @@ export function useEventWizard({
       category,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       description: description || null,
+      ...(eventCoverUrl.trim() && { coverImageUrl: eventCoverUrl.trim() }),
       type: eventType,
       seriesId,
       newSeries,
@@ -607,6 +615,7 @@ export function useEventWizard({
       body: JSON.stringify({
         name: seriesName.trim(),
         description: seriesDesc.trim() || null,
+        ...(seriesCoverUrl.trim() && { coverImageUrl: seriesCoverUrl.trim() }),
         category,
         genre: fixedGenre || null,
         platform: fixedPlatforms.length > 0 ? fixedPlatforms.join(", ") : null,
@@ -690,6 +699,8 @@ export function useEventWizard({
     setMaxPlayers,
     description,
     setDescription,
+    eventCoverUrl,
+    setEventCoverUrl,
     discordChannelId,
     setDiscordChannelId,
     seriesMode,
@@ -735,6 +746,8 @@ export function useEventWizard({
     setSeriesName,
     seriesDesc,
     setSeriesDesc,
+    seriesCoverUrl,
+    setSeriesCoverUrl,
     variousGames,
     setVariousGames,
     fixedGame,

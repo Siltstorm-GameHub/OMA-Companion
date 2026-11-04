@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { requireEventManager, hasMinRole, getCaptainedSquadIds, canManageSeries } from "@/lib/roles";
 import { getCommunityLimits } from "@/lib/community-event-limits";
+import { isPresetCover } from "@/lib/event-cover-presets";
 import { prisma } from "@/lib/prisma";
 import { capCaptainRewardFields, capMatchResultPoints, type RewardLimits } from "@/lib/captain-reward-limits";
 import { sanitizeCheckInMinutes } from "@/lib/checkin";
@@ -51,6 +52,8 @@ export async function PATCH(req: NextRequest) {
   }
   // Ankündigungskanal und Legacy-Feld pointReward legen nur Mods fest
   if (!isModerator) delete data.pointReward;
+  // Cover: Nicht-Moderatoren nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
+  if (!isModerator && "coverImageUrl" in data && data.coverImageUrl && !isPresetCover(data.coverImageUrl)) delete data.coverImageUrl;
 
   // Abgeschlossene Saisons nehmen keine weiteren Termine auf
   if ("seriesId" in data && data.seriesId) {

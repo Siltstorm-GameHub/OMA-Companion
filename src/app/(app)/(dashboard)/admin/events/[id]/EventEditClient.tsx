@@ -256,6 +256,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const router        = useRouter();
   const { data: session } = useSession();
   const isAdmin       = session?.user?.role === "admin";
+  // Community-Ersteller und Squad-Captains (keine Mod-Rolle) wählen Cover nur aus den Vorlagen
+  const isModerator   = session?.user?.role === "moderator" || isAdmin;
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -1027,6 +1029,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             value={coverImageUrl}
             onChange={setCoverImageUrl}
             kind="event-cover"
+            presetsOnly={!isModerator}
             presets={EVENT_COVER_PRESETS}
             label="Eigenes Event-Bild"
             hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
@@ -1286,6 +1289,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             value={coverImageUrl}
             onChange={setCoverImageUrl}
             kind="event-cover"
+            presetsOnly={!isModerator}
             presets={EVENT_COVER_PRESETS}
             label="Eigenes Event-Bild"
             hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."

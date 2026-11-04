@@ -60,7 +60,7 @@ import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
 import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseEntryStats, readStatValue, resolveAvgDirection } from "@/lib/avg-stats";
-import { statRoundLabel } from "@/lib/tournaments/stat-rounds";
+import { statRoundLabel, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -605,7 +605,7 @@ export default async function TournamentDetailPage({
   // Skill-Index mit Community-Ziel: Zähler über alle Runden bis zur Zielmarke, siehe lib/community-goal.ts
   const communityGoal = format === "coop_stats" ? parseCommunityGoal(event.statConfigJson) : null;
   const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
-  const standaloneMatchWinUsed = !event.series && format === "coop_stats" && event.matches.some(m =>
+  const standaloneMatchWinUsed = !event.series && supportsMatchWin(format) && event.matches.some(m =>
     m.entries.some(e => (readStatValue(parseEntryStats(e.statsJson), "Match Win") ?? 0) > 0));
   // avg_stats: Richtung aus Abschluss bzw. Event-Einstellung; der Führende ergibt sich aus dem Ø in
   // dieser Richtung, nicht aus den (immer "höher = besser") Eventpunkten.

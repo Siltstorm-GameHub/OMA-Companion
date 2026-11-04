@@ -17,6 +17,8 @@ interface ImageUploadFieldProps {
   previewAspect?: string;
   /** Vorlagen zur Auswahl (z.B. EVENT_COVER_PRESETS) — Klick übernimmt deren Pfad als Wert. */
   presets?: EventCoverPreset[];
+  /** Nur Vorlagen wählbar (kein Upload, keine eigene URL) — für Community-Ersteller ohne Mod-Rolle. */
+  presetsOnly?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export default function ImageUploadField({
   hint,
   previewAspect = "16/9",
   presets,
+  presetsOnly = false,
 }: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
@@ -72,6 +75,11 @@ export default function ImageUploadField({
       <label className="block text-xs font-medium text-gray-400">{label}</label>
 
       <div className="flex gap-2">
+        {presetsOnly ? (
+          <span className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-gray-400 truncate">
+            {activePreset ? activePreset.label : value ? "Eigenes Bild" : "Kein Bild — Spiel-Cover bzw. Standard-Motiv"}
+          </span>
+        ) : (<>
         <input
           type="text"
           inputMode="url"
@@ -91,6 +99,7 @@ export default function ImageUploadField({
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Lädt…</>
             : <><Upload className="w-3.5 h-3.5" /> Hochladen</>}
         </button>
+        </>)}
 
         {presets && presets.length > 0 && (
           <button

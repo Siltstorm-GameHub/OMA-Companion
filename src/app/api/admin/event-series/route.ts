@@ -1,4 +1,5 @@
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
+import { isPresetCover } from "@/lib/event-cover-presets";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
@@ -82,6 +83,8 @@ export async function PATCH(req: NextRequest) {
   if (limits) {
     Object.assign(fields, capCaptainRewardFields(fields, seriesConfigLimits(limits)));
     delete fields.discordChannelId;
+    // Cover: nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
+    if (fields.coverImageUrl && !isPresetCover(fields.coverImageUrl)) delete fields.coverImageUrl;
   }
 
   const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true } });

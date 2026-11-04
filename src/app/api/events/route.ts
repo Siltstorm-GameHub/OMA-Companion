@@ -10,6 +10,7 @@ import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seaso
 import { VALID_FORMAT_VALUES } from "@/lib/tournament-formats";
 import { EventCategory, EventGenre } from "@prisma/client";
 import { publishEvent } from "@/lib/event-publish";
+import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { createPollsForEvent } from "@/lib/event-polls";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
 import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
@@ -274,7 +275,9 @@ export async function POST(req: NextRequest) {
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,
       placementRewardsJson: rewardsData,
-      ...(game === "OMA Gems" && { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER }),
+      ...(allowedCoverUrl(body.coverImageUrl, isModerator)
+        ? { coverImageUrl: allowedCoverUrl(body.coverImageUrl, isModerator) }
+        : game === "OMA Gems" ? { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER } : {}),
       ...(eventFormat        && { format:       eventFormat }),
       ...(eventStatFields    && { statFields:   eventStatFields }),
       ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),

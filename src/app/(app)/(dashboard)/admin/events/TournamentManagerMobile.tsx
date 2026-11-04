@@ -756,7 +756,7 @@ function FocusedFfaCard({
               <div className="flex items-center gap-2">
                 <Avatar u={user} tone={entryTeam === "B" ? "b" : "a"} />
                 <span className="text-sm text-white flex-1 truncate">{user ? userName(user) : "?"}</span>
-                {isCoop && trackMatchWin && (
+                {trackMatchWin && (
                   <div className="flex gap-1 shrink-0">
                     {(["A", "B"] as const).map(team => (
                       <button key={team} disabled={!entry.userId}

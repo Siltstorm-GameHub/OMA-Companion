@@ -727,6 +727,7 @@ export default function SeriesDetailClient({
               value={coverImageUrl}
               onChange={setCoverImageUrl}
               kind="event-cover"
+              presetsOnly={!isModerator}
               presets={EVENT_COVER_PRESETS}
               label="Eigenes Reihen-Bild"
               hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Events der Reihe ohne eigenes Bild erben dieses. Ohne Reihen-Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."

@@ -46,3 +46,28 @@ export const EVENT_COVER_PRESETS: EventCoverPreset[] = [...LOGO_PRESETS, ...MOTI
 export function coverHasOwnLogo(url: string | null | undefined): boolean {
   return !!url && url.startsWith("/event-covers/logo-");
 }
+
+/** Cover-URL aus einem Erstell-Request prüfen: nur Vorlagen-Pfade unter /event-covers/ oder
+ *  https-URLs (Uploads im Blob-Store bzw. eingefügte Links). Alles andere → null. */
+export function sanitizeCoverUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const url = raw.trim();
+  if (!url || url.length > 500) return null;
+  if (/^\/event-covers\/[a-z0-9-]+\.(jpg|svg|png|webp)$/.test(url)) return url;
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ist die URL eine der Vorlagen? Normale User (ohne Mod-Rolle) dürfen nur Vorlagen als Cover setzen. */
+export function isPresetCover(url: string | null | undefined): boolean {
+  return !!url && EVENT_COVER_PRESETS.some(p => p.url === url);
+}
+
+/** Cover aus einem Request für die Rolle des Aufrufers: Mods alles Gültige, sonst nur Vorlagen. */
+export function allowedCoverUrl(raw: unknown, isModerator: boolean): string | null {
+  const url = sanitizeCoverUrl(raw);
+  return url && (isModerator || isPresetCover(url)) ? url : null;
+}
