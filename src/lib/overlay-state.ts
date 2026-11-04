@@ -27,7 +27,7 @@ import { chooseActiveEvent, rankActiveEvents, runningEventWhere } from "@/lib/ov
  *
  * Kosten-Hintergrund: Jede offene OBS-Quelle hält einen SSE-Stream offen, der regelmäßig nach
  * Änderungen fragt. Früher lud jeder Stream jede Sekunde den kompletten Event-Baum samt
- * Gesamttabelle der Reihe — obwohl sich die Daten nur bei einem eingetragenen Ergebnis ändern.
+ * Reihentabelle — obwohl sich die Daten nur bei einem eingetragenen Ergebnis ändern.
  * Jetzt:
  *   1. Ein einzelner, billiger Fingerprint (md5 über die relevanten Zeilen, in der DB berechnet)
  *      entscheidet, ob überhaupt neu geladen werden muss.
@@ -130,7 +130,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
       participants: {
         select: { userId: true, user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
       },
-      // Alle Rollen: Zuschauer zählen für die Ligapunkte (Teilnahmepunkte), nicht aber als Teilnehmer.
+      // Alle Rollen: Zuschauer zählen für die Tabellenpunkte (Teilnahmepunkte), nicht aber als Teilnehmer.
       registrations: {
         select: { userId: true, role: true, user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
       },
@@ -147,8 +147,8 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
     ...event.registrations.filter(r => r.role !== "spectator" && !seen.has(r.userId)).map(r => ({ userId: r.userId, user: r.user })),
   ];
 
-  // Ligapunkte, die dieses Event je Spieler zur Eventreihe beisteuert — identische Berechnung
-  // wie in der Gesamttabelle der Eventreihe (siehe tournament/[id]/page.tsx). Leer, solange das
+  // Tabellenpunkte, die dieses Event je Spieler zur Eventreihe beisteuert — identische Berechnung
+  // wie in der Reihentabelle (siehe tournament/[id]/page.tsx). Leer, solange das
   // Event keiner Reihe angehört oder die Spielphase noch nicht abgeschlossen ist.
   let ligaPunkteByUser: Record<string, number> = {};
   if (event.series?.seriesStatConfig) {
@@ -164,7 +164,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
     ).pointsByUser;
   }
 
-  // Gesamttabelle der Eventreihe — über loadSeriesRanking() (dieselbe Funktion wie das
+  // Reihentabelle — über loadSeriesRanking() (dieselbe Funktion wie das
   // Widget-Ranking), damit hier keine zweite Punkteberechnung entsteht. Teuer (lädt alle Events
   // der Reihe), daher eigener Cache; bei einer Änderung an DIESEM Event wird er vorher verworfen.
   const seriesTable = event.seriesId
@@ -202,7 +202,7 @@ export async function getEventOverlayState(eventId: string): Promise<EventStateW
         cached.checkedAt = now;
         return cached;
       }
-      // Ergebnis/Anmeldung an diesem Event geändert → die Gesamttabelle der Reihe ändert sich mit.
+      // Ergebnis/Anmeldung an diesem Event geändert → die Reihentabelle ändert sich mit.
       if (cached?.seriesId && cached.fp !== fp) seriesCache.delete(cached.seriesId);
       const loaded = fp === null ? null : await loadEventOverlayState(eventId);
       const entry: EventEntry = { value: loaded?.state ?? null, fp, loadedAt: now, checkedAt: now, seriesId: loaded?.seriesId ?? null };

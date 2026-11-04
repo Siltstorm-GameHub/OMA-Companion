@@ -23,7 +23,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
     ? [StepCategory, StepEventData, StepTournament, StepRewards, StepEventSummary]
     : [StepCategory, StepEventData, StepRewards, StepEventSummary];
   // Statistiken (StepSeriesEventSettings) vor den Belohnungen: erst festlegen, was erfasst wird und wie
-  // viele Punkte es gibt — die Gesamttabelle in StepRewards baut darauf auf.
+  // viele Punkte es gibt — die Reihentabelle in StepRewards baut darauf auf.
   const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepSeriesEventSettings, StepRewards, StepSeriesSummary];
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
@@ -77,7 +77,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
             <span className="text-4xl">🔁</span>
             <div>
               <p className="text-base font-semibold text-violet-300">Neue Eventreihe</p>
-              <p className="text-xs text-gray-500 mt-1">Wiederkehrende Reihe mit Gesamttabelle und gemeinsamen Belohnungen</p>
+              <p className="text-xs text-gray-500 mt-1">Wiederkehrende Reihe mit Reihentabelle und gemeinsamen Belohnungen</p>
             </div>
           </button>
 

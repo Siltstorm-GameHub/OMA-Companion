@@ -56,7 +56,7 @@ export interface GemsResultDetails {
   }[];
   relicGranted?: { name: string; description: string } | null;
   cosmeticsUnlocked?: string[];
-  /** Nur im Last Stand: besiegte Wellen dieses Laufs und Stand in der Saison-Rangliste. */
+  /** Nur im Last Stand: besiegte Wellen dieses Laufs und Stand in der Reihentabelle. */
   lastStand?: { wavesCleared: number; best: number; isNewBest: boolean; rank: number | null; players: number; seasonLabel: string };
 }
 

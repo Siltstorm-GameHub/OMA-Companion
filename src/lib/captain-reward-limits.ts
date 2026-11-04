@@ -121,7 +121,7 @@ export function capPollsConfigJson(input: unknown, L: RewardLimits = DEFAULT): u
     : polls);
 }
 
-/** seriesStatConfig — nur die Münz-Anteile; Reihen-Punkte bleiben Sache der Reihe, fließen aber
+/** seriesStatConfig — nur die Münz-Anteile; Tabellenpunkte bleiben Sache der Reihe, fließen aber
  *  für User-Reihen nicht ins globale Ranking (transferToGlobalRanking). */
 export function capSeriesStatConfig(input: unknown, L: RewardLimits = DEFAULT): unknown {
   return mapJson<Record<string, unknown> & { dominionBonus?: Record<string, unknown> }>(input, v => ({

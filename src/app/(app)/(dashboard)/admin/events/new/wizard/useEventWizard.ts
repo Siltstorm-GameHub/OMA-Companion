@@ -14,6 +14,7 @@ import type { AvgDirection } from "@/lib/avg-stats";
 import { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
+import { TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { clearDraft, useInitialDraft, writeDraft } from "./draft";
 import { FORMATS, type EventTemplate, type SeriesOption, type SquadOption, type PollConfig, type PlacementReward, type StatRow, type SeasonPrefill } from "./shared";
 
@@ -131,7 +132,7 @@ export function useEventWizard({
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(seasonPrefill?.statPtsToGlobalRanking ?? false);
   // Statistiken der Reihe: EINE Liste. Was je Event erfasst wird (eventStatFields), wird daraus
   // abgeleitet — vorher eine zweite, von Hand gleichnamig zu pflegende Liste. Event-only-Felder einer
-  // Vorsaison bleiben als Zeilen mit 0 Punkten erhalten (zählen nicht für die Gesamttabelle).
+  // Vorsaison bleiben als Zeilen mit 0 Punkten erhalten (zählen nicht für die Reihentabelle).
   const [statRows, setStatRows]         = useState<StatRow[]>(() => {
     const rows = seasonPrefill?.statRows ?? [];
     const known = new Set(rows.map(r => r.field));
@@ -169,7 +170,7 @@ export function useEventWizard({
   const isEventMode  = wizardMode === "event";
   const isSeriesMode = wizardMode === "series";
   // Wird dieses Event Teil einer Reihe? Dann kommen Teilnahme-/Zuschauer-Münzen seriesweit
-  // fest aus der Gesamttabellen-Konfiguration der Reihe, nicht aus den Event-Belohnungen hier.
+  // fest aus der Reihentabellen-Konfiguration der Reihe, nicht aus den Event-Belohnungen hier.
   const belongsToSeries = isSeriesMode || (isEventMode && seriesMode !== "none");
   const selectedSeries = series.find(s => s.id === selectedSeriesId);
   // Bestehende Reihe mit festem Turnierformat: das Format der Reihe gilt (der Server überschreibt es)
@@ -585,7 +586,7 @@ export function useEventWizard({
           transferToGlobalRanking: statPtsToGlobalRanking,
           stats: statRows.filter(r => r.field.trim()).map(r => ({ ...r, field: r.field.trim() })),
           ...(eventStatFields.length > 0 && { eventStatFields }),
-          ...(winnerStatField && eventStatFields.includes(winnerStatField) && { winnerStatField }),
+          ...(winnerStatField && (eventStatFields.includes(winnerStatField) || winnerStatField === TURNIERPUNKTE_STAT) && { winnerStatField }),
           ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
           ...(matchWinStatKeys.length > 0 && { matchWinStatKeys }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {

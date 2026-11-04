@@ -14,6 +14,7 @@ import { GripVertical } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
+import { statDisplayName } from "@/lib/series-event-points";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -53,11 +54,13 @@ interface Props {
   /** Alle User der Plattform — für Umfragen mit voterEligibility "all" im Live-Umfragen-Panel */
   allUsers: User[];
   tournamentStatFields: string[];
-  /** Auswahloptionen für den Gewinner-Stat-Dropdown — wie tournamentStatFields, plus "Turnierpunkte"
+  /** Auswahloptionen für den Gewinner-Stat-Dropdown — wie tournamentStatFields, plus "Eventpunkte"
    *  (berechnete Gesamtpunktzahl dieses Events aus Stats × Punkte-pro-Stat + Platzierungspunkte),
-   *  wenn dafür eine Punkte-Konfiguration existiert. KEINE Ligapunkte — nur zur Sieger-Ermittlung
+   *  wenn dafür eine Punkte-Konfiguration existiert. KEINE Tabellenpunkte — nur zur Sieger-Ermittlung
    *  dieses einzelnen Events. Fällt ohne Prop auf tournamentStatFields zurück. */
   winnerStatFieldOptions?: string[];
+  /** Vorbelegter Gewinner-Stat (Event → Reihe → Altfeld), siehe page.tsx */
+  defaultWinnerStatField?: string;
   userStats: Record<string, Record<string, number>>;
   format: string | null;
   /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
@@ -127,7 +130,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
-  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, userStats, format, userAvgScore, defaultAvgDirection = "high",
+  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField, userStats, format, userAvgScore, defaultAvgDirection = "high",
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
   isAdmin, isMod, isReEdit, status,
@@ -154,7 +157,7 @@ export default function EventCompleteClient({
 
   /* ── Gewinner-Stat ── */
   const [winnerStatField, setWinnerStatField] = useState<string>(
-    (initialData?.winnerStatField as string) ?? seriesStatConfig?.defaultWinnerStatField ?? ""
+    (initialData?.winnerStatField as string) ?? defaultWinnerStatField ?? seriesStatConfig?.defaultWinnerStatField ?? ""
   );
   const [avgDirection, setAvgDirection] = useState<AvgDirection>(
     parseAvgDirection(initialData?.avgWinnerDirection) ?? defaultAvgDirection
@@ -223,7 +226,7 @@ export default function EventCompleteClient({
   const [rankingDirty, setRankingDirty] = useState(false);
 
   /* ── Ausschluss (Disqualifikation) ── */
-  // Ausgeschlossene User bleiben in Stats/Tabellen sichtbar, erhalten aber keine Münzen/Ligapunkte/
+  // Ausgeschlossene User bleiben in Stats/Tabellen sichtbar, erhalten aber keine Münzen/Tabellenpunkte/
   // Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein. Auch nachträglich (Re-Edit)
   // änderbar. Die Begründung trägt der Admin im bereits vorhandenen Notiz-Feld ein.
   const [excludedUsers, setExcludedUsers] = useState<Set<string>>(() =>
@@ -321,7 +324,7 @@ export default function EventCompleteClient({
   const pollPhasePending = canDeferPoll || (!isReEdit && openEventPolls.length > 0);
 
   // Teilnahme-/Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
-  // Gesamttabellen-Konfiguration, sonst aus den Event-eigenen Belohnungen
+  // Reihentabellen-Konfiguration, sonst aus den Event-eigenen Belohnungen
   const effectiveParticipationCoins = seriesId ? (seriesStatConfig?.participationCoins ?? 0) : rewardsConfig.participationCoins;
   const effectiveSpectatorCoins = seriesId ? (seriesStatConfig?.spectatorParticipationCoins ?? 0) : (spectatorRewardJson?.coins ?? 0);
 
@@ -511,7 +514,7 @@ export default function EventCompleteClient({
         <div className="flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-300">
           <Vote className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen, Gesamttabelle und der Event-Gewinner
+            Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen, Reihentabelle und der Event-Gewinner
             wurden bereits festgelegt und sind nicht mehr änderbar. Umfrageergebnisse unten einsehen bzw. Stimmen
             nachtragen und Finale Platzierung bei Bedarf anpassen (z.B. Disqualifikation). Beim Speichern wird
             {isMod ? " die Umfragephase beendet und das Event komplett abgeschlossen." : " die Umfragephase abgeschlossen, sobald alle Umfragen abgelaufen sind."}
@@ -535,7 +538,7 @@ export default function EventCompleteClient({
             {openEventPolls.map(p => `„${p.label}" bis ${new Date(p.endAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
             {" "}{isPollOnly && isMod
               ? "Als Moderator/Admin wird sie beim Speichern hier trotzdem sofort zwangsweise beendet und mit abgeschlossen."
-              : <>Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Ligapunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.</>}
+              : <>Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Tabellenpunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.</>}
           </span>
         </div>
       )}
@@ -602,13 +605,13 @@ export default function EventCompleteClient({
                     className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     <option value="">– kein Gewinner-Stat –</option>
-                    {(winnerStatFieldOptions ?? tournamentStatFields).map(f => <option key={f} value={f}>{f}</option>)}
+                    {(winnerStatFieldOptions ?? tournamentStatFields).map(f => <option key={f} value={f}>{statDisplayName(f)}</option>)}
                   </select>
                 </div>
               )}
               {seriesStatFields.length > 0 && (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">…Sieg in Gesamttabelle tracken als</label>
+                  <label className="text-[11px] text-gray-500 block mb-1">…Sieg in Reihentabelle tracken als</label>
                   <select
                     value={seriesWinnerTargetField}
                     disabled={winnerLocked}
@@ -629,7 +632,7 @@ export default function EventCompleteClient({
                       <p key={uid} className="text-xs text-amber-400 flex items-center gap-1.5">
                         <Trophy className="w-3.5 h-3.5 shrink-0" />
                         <strong>{u ? userName(u) : uid}</strong>
-                        {" "}({isAvgFormat ? `Ø ${(userAvgScore[uid] ?? 0).toFixed(2)}` : `${userStats[uid]?.[winnerStatField] ?? 0} ${winnerStatField}`})
+                        {" "}({isAvgFormat ? `Ø ${(userAvgScore[uid] ?? 0).toFixed(2)}` : `${userStats[uid]?.[winnerStatField] ?? 0} ${statDisplayName(winnerStatField)}`})
                       </p>
                     );
                   })}
@@ -645,7 +648,7 @@ export default function EventCompleteClient({
                 <RankPointsIcon size={14} />
                 <span className="text-xs font-semibold text-teal-300">
                   MVP{" "}
-                  <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}" in Gesamttabelle)</span>
+                  <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}" in Reihentabelle)</span>
                 </span>
               </div>
               {isFinishedSummary ? (
@@ -672,7 +675,7 @@ export default function EventCompleteClient({
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                       {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
                         <span className="text-xs text-gray-500 tabular-nums shrink-0">
-                          {userStats[u.id][winnerStatField]} {winnerStatField}
+                          {userStats[u.id][winnerStatField]} {statDisplayName(winnerStatField)}
                         </span>
                       )}
                     </label>
@@ -1015,7 +1018,7 @@ export default function EventCompleteClient({
               <span className="text-xs font-semibold text-blue-300">Finale Platzierung</span>
               {!rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
                 <span className="text-[10px] text-gray-600">
-                  — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : winnerStatField}"
+                  — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : statDisplayName(winnerStatField)}"
                 </span>
               )}
               {rankingManuallyEdited && (
@@ -1042,7 +1045,7 @@ export default function EventCompleteClient({
 
             {seriesId && (
               <p className="text-[10px] text-gray-600">
-                Fließt in die Gesamttabelle der Reihe ein. Die volle Platzierungs-Belohnung („Belohnungen
+                Fließt in die Reihentabelle ein. Die volle Platzierungs-Belohnung („Belohnungen
                 (Endplatzierung der Eventreihe)") wird erst bei Abschluss der gesamten Eventreihe anhand der
                 finalen Gesamtplatzierung vergeben — zusätzliche, seriesweit konfigurierte Platzierungs-Münzen
                 für dieses einzelne Event (falls eingestellt) werden direkt hier vergeben.
@@ -1129,7 +1132,7 @@ export default function EventCompleteClient({
                         )}
                         {!isAvgFormat && winnerStatField && userStats[uid]?.[winnerStatField] != null && (
                           <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                            {userStats[uid][winnerStatField]} {winnerStatField}
+                            {userStats[uid][winnerStatField]} {statDisplayName(winnerStatField)}
                           </span>
                         )}
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">

@@ -57,9 +57,9 @@ export function seasonChanges(prev: SeasonPrefill, cur: SeasonState): string[] {
   changed("Wiederholung", prev.recurrenceType, cur.recurrenceType);
   if (prev.spectatorMode !== cur.spectatorMode) out.push(`Zuschauer-Modus: ${yesNo(prev.spectatorMode)} → ${yesNo(cur.spectatorMode)}`);
 
-  // Punkte der Gesamttabelle
-  changed("Ligapunkte je Teilnahme", prev.statParticipationPts, cur.statParticipationPts);
-  if (cur.spectatorMode) changed("Ligapunkte je Zuschauer-Teilnahme", prev.statSpectatorParticipationPts, cur.statSpectatorParticipationPts);
+  // Punkte der Reihentabelle
+  changed("Tabellenpunkte je Teilnahme", prev.statParticipationPts, cur.statParticipationPts);
+  if (cur.spectatorMode) changed("Tabellenpunkte je Zuschauer-Teilnahme", prev.statSpectatorParticipationPts, cur.statSpectatorParticipationPts);
   const prevStats = new Map(prev.statRows.filter(r => r.field).map(r => [r.field, r]));
   const curStats = new Map(cur.statRows.filter(r => r.field).map(r => [r.field, r]));
   for (const [field, r] of curStats) {
@@ -93,7 +93,7 @@ export function seasonChanges(prev: SeasonPrefill, cur: SeasonState): string[] {
   if (prev.dominion.enabled !== cur.dominion.enabled) out.push(`Dominion Bonus: ${yesNo(prev.dominion.enabled)} → ${yesNo(cur.dominion.enabled)}`);
   else if (cur.dominion.enabled) {
     changed("Dominion-Schwelle", prev.dominion.threshold, cur.dominion.threshold);
-    changed("Dominion-Ligapunkte", prev.dominion.seriesPoints, cur.dominion.seriesPoints);
+    changed("Dominion-Tabellenpunkte", prev.dominion.seriesPoints, cur.dominion.seriesPoints);
     changed("Dominion-Münzen", prev.dominion.coins, cur.dominion.coins);
   }
 

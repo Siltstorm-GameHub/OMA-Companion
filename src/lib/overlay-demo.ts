@@ -3,7 +3,7 @@ import type { EventOverlayState, OverlayMatch, OverlayParticipant, OverlayStream
 /**
  * Beispieldaten für die Layout-Vorschau: So sieht das Turnier-Overlay aus, auch wenn gerade kein
  * Event läuft. Rein erfunden (Spieler "Spieler 1" …), wird nie gespeichert.
- *   - "liga": Liga mit Tabelle, laufendem Match und Gesamttabelle einer Reihe,
+ *   - "liga": Liga mit Tabelle, laufendem Match und Reihentabelle einer Reihe,
  *   - "ko":   K.-o.-Turnier mit Turnierbaum.
  */
 export type DemoFormat = "liga" | "ko";

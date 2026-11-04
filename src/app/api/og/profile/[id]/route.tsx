@@ -77,7 +77,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               {displayName.length > 22 ? displayName.slice(0, 21).trimEnd() + "…" : displayName}
             </div>
             <div style={{ display: "flex", fontSize: 32, fontWeight: 600, color: BRAND.tealLight, marginTop: 8 }}>
-              {user.rankPoints.toLocaleString("de-DE")} Rangpunkte
+              {user.rankPoints.toLocaleString("de-DE")} Rang-Punkte
             </div>
           </div>
         </div>

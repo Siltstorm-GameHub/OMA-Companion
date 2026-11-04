@@ -158,7 +158,7 @@ function PollCard({
                   )}
                   {poll.participationCoins > 0 && poll.participationSeriesPoints > 0 && " + "}
                   {poll.participationSeriesPoints > 0 && (
-                    <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Reihenpunkte</span>
+                    <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>
                   )}
                 </span>
               )}
@@ -171,7 +171,7 @@ function PollCard({
                   )}
                   {poll.winnerCoins > 0 && poll.winnerRankPoints > 0 && " + "}
                   {poll.winnerRankPoints > 0 && (
-                    <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rangpunkte</span>
+                    <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rang-Punkte</span>
                   )}
                 </span>
               )}

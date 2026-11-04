@@ -282,11 +282,11 @@ export default function SeriesAdminRow({
                   })()}
                 </div>
 
-                {/* Gesamttabellen-Konfiguration */}
+                {/* Reihentabellen-Konfiguration */}
                 <div className="space-y-3">
                   <label className="text-xs text-gray-500 flex items-center gap-1.5">
                     <BarChart2 className="w-3 h-3" />
-                    Gesamttabellen-Konfiguration
+                    Reihentabellen-Konfiguration
                     <span className="text-gray-600">(Punkte aus Event-Statistiken)</span>
                   </label>
 

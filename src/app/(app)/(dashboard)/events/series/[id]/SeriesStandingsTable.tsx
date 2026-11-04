@@ -16,7 +16,7 @@ type StandingRow = {
   stats: Record<string, number>;
   hasLegacy: boolean;
   /** Anzahl Events, in denen der User ausgeschlossen (disqualifiziert) war — seine Teilnahme/Stats
-   *  fließen trotzdem in die Tabelle ein, nur ohne die dafür sonst üblichen Ligapunkte. */
+   *  fließen trotzdem in die Tabelle ein, nur ohne die dafür sonst üblichen Tabellenpunkte. */
   disqualifiedEventCount: number;
 };
 type StandingUser = {
@@ -53,7 +53,7 @@ interface Props {
   dominionStreaks?: Record<string, number>;
   dominionThreshold?: number;
   /** Feldname eines Stats (z.B. "Wochensieg"), der in der Kompakt-Ansicht anstelle der reinen
-   *  Teilnahmezahl angezeigt wird, solange noch niemand Ligapunkte hat (showPoints === false) —
+   *  Teilnahmezahl angezeigt wird, solange noch niemand Tabellenpunkte hat (showPoints === false) —
    *  typischerweise der konfigurierte Gewinner-Stat der Reihe. Ohne Angabe bleibt der bisherige
    *  Fallback auf "Events"/Teilnahmen bestehen. */
   fallbackStatField?: string;
@@ -272,7 +272,7 @@ export default function SeriesStandingsTable({
                   {row.disqualifiedEventCount > 0 && (
                     <span
                       className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
-                      title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Ligapunkte`}
+                      title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Tabellenpunkte`}
                     >
                       <Ban className="w-2.5 h-2.5" /> {row.disqualifiedEventCount}
                     </span>

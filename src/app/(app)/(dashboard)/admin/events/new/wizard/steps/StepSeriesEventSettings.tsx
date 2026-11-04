@@ -2,13 +2,14 @@
 import { Check } from "@/components/icons";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
+import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 3 (Series): Statistiken & Events ────────────────────────────────────
 // EINE Statistik-Liste für die ganze Reihe: Was hier steht, wird in jedem Event erfasst, zählt mit
 // den Punkten für den Skill-Index im Event und — gleich oder mit ⇄ abweichend — für die
-// Gesamttabelle. Einzelne Events können im Reiter "Turnier" eigene Zusatz-Stats ergänzen.
+// Reihentabelle. Einzelne Events können im Reiter "Turnier" eigene Zusatz-Stats ergänzen.
 export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
   const { eventType, seriesFormat, tournamentTemplate, setTournamentTemplate, spectatorMode, variousGames, statRows, setStatRows, polls, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints } = w;
   const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
@@ -29,20 +30,20 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         <p className="text-sm font-medium text-amber-300">Statistiken</p>
         <p className="text-[11px] text-gray-500">
           Diese Werte trägst du <strong className="text-gray-400">in jedem Event</strong> ein. Die Punkte pro Einheit
-          gelten für den Skill-Index im Event <em>und</em> für die Gesamttabelle der Reihe — mit ⇄ kannst du für die
-          Gesamttabelle einen eigenen Wert festlegen. „Teilnahme“ wird automatisch gezählt.
+          gelten für die Eventpunkte im Event <em>und</em> für die Reihentabelle — mit ⇄ kannst du für die
+          Reihentabelle einen eigenen Wert festlegen. „Teilnahme“ wird automatisch gezählt.
         </p>
         {variousGames && (
           <p className="text-[11px] text-blue-300/90 rounded-lg px-3 py-2 border border-blue-500/20 bg-blue-500/5">
             Bei wechselnden Spielen: Lege hier nur Stats an, die es in jedem Spiel gibt. Spielspezifische Stats ergänzt
-            du im jeweiligen Event (Reiter „Turnier“) — die zählen dann nur im Event, nicht für die Gesamttabelle.
+            du im jeweiligen Event (Reiter „Turnier“) — die zählen dann nur im Event, nicht für die Reihentabelle.
           </p>
         )}
         <StatRowsEditor
           rows={statRows}
           onChange={rows => {
             setStatRows(rows);
-            if (winnerStatField && !rows.some(r => r.field === winnerStatField && !r.isWinnerStat && !r.isMatchWinStat)) setWinnerStatField("");
+            if (winnerStatField && winnerStatField !== TURNIERPUNKTE_STAT && !rows.some(r => r.field === winnerStatField && !r.isWinnerStat && !r.isMatchWinStat)) setWinnerStatField("");
           }}
           showWinnerToggle={eventType === "tournament"}
           showMatchWinToggle={eventType === "tournament"}
@@ -65,6 +66,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
               className={inputCls} style={inputStyle}>
               <option value="">– Kein / manuell festlegen –</option>
               {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+              <option value={TURNIERPUNKTE_STAT}>{EVENTPUNKTE_LABEL} (Summe der Stat-Punkte im Event)</option>
             </select>
           </div>
           {winnerStatKeys.length > 0 && (
@@ -160,7 +162,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                   className={inputCls} style={inputStyle} />
               </div>
               <div>
-                <label className={labelCls}>Bonus — Ligapunkte</label>
+                <label className={labelCls}>Bonus — Tabellenpunkte</label>
                 <input type="number" min="0" value={dominionSeriesPoints}
                   onChange={e => setDominionSeriesPoints(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
@@ -168,7 +170,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
             </div>
             {dominionTriggerStats.length > 0 && (
               <p className="text-[10px] text-yellow-600">
-                Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Ligapunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Ligatabelle als „Dominion Bonus" gezählt.
+                Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Tabellenpunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Reihentabelle als „Dominion Bonus" gezählt.
               </p>
             )}
           </div>

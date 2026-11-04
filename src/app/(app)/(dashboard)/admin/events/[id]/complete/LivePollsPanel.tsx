@@ -314,7 +314,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                       Teilnahme:{" "}
                       {poll.participationCoins > 0 && <span className="text-amber-400 font-medium">{poll.participationCoins} Münzen</span>}
                       {poll.participationCoins > 0 && poll.participationSeriesPoints > 0 && " + "}
-                      {poll.participationSeriesPoints > 0 && <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Reihenpunkte</span>}
+                      {poll.participationSeriesPoints > 0 && <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>}
                     </span>
                   )}
                   {(poll.winnerCoins > 0 || poll.winnerRankPoints > 0) && (
@@ -323,7 +323,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                       Gewinner:{" "}
                       {poll.winnerCoins > 0 && <span className="text-amber-400 font-medium">{poll.winnerCoins} Münzen</span>}
                       {poll.winnerCoins > 0 && poll.winnerRankPoints > 0 && " + "}
-                      {poll.winnerRankPoints > 0 && <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rangpunkte</span>}
+                      {poll.winnerRankPoints > 0 && <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rang-Punkte</span>}
                     </span>
                   )}
                 </div>

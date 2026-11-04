@@ -23,7 +23,7 @@ const USER_SELECT = { id: true, name: true, username: true, image: true, rankPoi
  * GET /api/widget/events/[id]
  *
  * Voller Event-Zustand fürs Touchscreen-Widget: Registrierungen + Matches (inkl. Spieler-
- * Namen, Profilbild, Rangpunkten und Entries). `player1Id`/`player2Id` auf Match sind rohe
+ * Namen, Profilbild, Rang-Punkten und Entries). `player1Id`/`player2Id` auf Match sind rohe
  * User-IDs (keine eigene FK-Relation im Schema) — Namen/Bilder werden über eine Map aufgelöst.
  *
  * "Teilnehmende" basiert auf EventRegistration (An-/Abmeldung, Rolle player|spectator) —

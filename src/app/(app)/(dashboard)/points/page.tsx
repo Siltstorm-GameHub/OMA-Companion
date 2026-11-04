@@ -74,9 +74,9 @@ export default async function PointsPage() {
             {/* Divider */}
             <div className="w-px h-12 bg-white/[0.06] hidden sm:block" />
 
-            {/* Rangpunkte */}
+            {/* Rang-Punkte */}
             <div className="flex-1 min-w-[140px]">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rangpunkte</p>
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rang-Punkte</p>
               <div className="flex items-center gap-2">
                 <RankPointsIcon size={16} />
                 <span className="text-sm font-bold text-teal-300 tabular-nums">{myRankPts.toLocaleString("de-DE")}</span>

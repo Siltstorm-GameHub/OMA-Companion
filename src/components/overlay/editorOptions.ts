@@ -14,7 +14,7 @@ export const EVENT_EDITOR_OPTIONS: EditorElementOption<ElementKey>[] = [
   { key: "ticker",       label: "Aktuelles Match",      icon: Swords },
   { key: "bracket",      label: "Turnierbaum",          icon: LayoutGrid, hint: "nur K.-o.-Turniere" },
   { key: "table",        label: "Tabelle",              icon: Table2,     hint: "Liga, Runden, FFA" },
-  { key: "seriesTable",  label: "Gesamttabelle",        icon: Trophy,     hint: "nur Eventreihen" },
+  { key: "seriesTable",  label: "Reihentabelle",        icon: Trophy,     hint: "nur Eventreihen" },
   { key: "participants", label: "Teilnehmer",           icon: Users },
 ];
 
@@ -31,7 +31,7 @@ export const PAUSE_EDITOR_OPTIONS: EditorElementOption<PauseElementKey>[] = [
   { key: "main",      label: "Turnier / Events",     icon: LayoutGrid,   hint: "Tabelle bzw. Turnierbaum, ohne Event: nächste Events" },
   { key: "info",      label: "Live / Event / Spiel", icon: Tv2,          hint: "nur während Events" },
   { key: "match",     label: "Aktuelles Match",      icon: Swords,       hint: "nur während Events" },
-  { key: "series",    label: "Gesamttabelle",        icon: Trophy,       hint: "nur Eventreihen" },
+  { key: "series",    label: "Reihentabelle",        icon: Trophy,       hint: "nur Eventreihen" },
   { key: "community", label: "Clips",                icon: Clapperboard, hint: "nur ohne Event" },
   { key: "live",      label: "Gerade live",          icon: Radio,        hint: "nur ohne Event" },
   { key: "footer",    label: "Link zur App",         icon: Link2 },

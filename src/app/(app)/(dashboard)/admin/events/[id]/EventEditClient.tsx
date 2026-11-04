@@ -784,7 +784,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         // Turnier-Einstellungen und Turnierbaum sind ein gemeinsamer Reiter
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
         // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
-        // gewinnt am Ende schlicht, wer die meisten Rangpunkte gesammelt hat.
+        // gewinnt am Ende schlicht, wer die meisten Rang-Punkte gesammelt hat.
         ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination" || event.format === "group_knockout")
           ? [{ key: "series" as TabKey, label: "Reihe" }]
           : []),
@@ -1516,7 +1516,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Belohnung Abstimmung — Ligapunkte</label>
+                    <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
                     <input type="number" min={0} value={poll.participationSeriesPoints}
                       onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })} className={inputCls} />
                   </div>
@@ -1528,7 +1528,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Sieger-Belohnung — Ligapunkte</label>
+                    <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>
                     <input type="number" min={0} value={poll.winnerRankPoints}
                       onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })} className={inputCls} />
                   </div>
@@ -1659,7 +1659,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       ))}
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1">
-                      Werden in jedem Event der Reihe erfasst und zählen für den Skill-Index und die Gesamttabelle.
+                      Werden in jedem Event der Reihe erfasst und zählen für die Eventpunkte und die Reihentabelle.
                       Ändern kannst du sie in den Einstellungen der Eventreihe.
                     </p>
                   </div>
@@ -1671,7 +1671,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       isAvg={tmtFormat === "avg_stats"}
                     />
                     <p className="text-[10px] text-gray-500 mt-1">
-                      Zählen nur im Skill-Index dieses Events, nicht für die Gesamttabelle der Reihe.
+                      Zählen nur für die Eventpunkte dieses Events, nicht für die Reihentabelle.
                     </p>
                   </div>
                 </div>
@@ -1698,7 +1698,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           )}
 
-          {/* Event-eigene Stat-Punkte-Konfiguration (Turnierpunkte) — für alle Stats-Formate (ffa,
+          {/* Event-eigene Stat-Punkte-Konfiguration (Eventpunkte) — für alle Stats-Formate (ffa,
               coop_stats, avg_stats): legt fest, wie viele Punkte jeder Stat gibt, und optional wie
               viele Punkte welche Endplatzierung gibt. Für Reihen ohne festes Format/Spiel überschreibt
               das die Reihen-weite Konfiguration nur für dieses eine Event. */}
@@ -1709,7 +1709,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 <p className="text-[11px] text-gray-500 -mt-1 mb-2">
                   {seriesStatRows.length > 0
                     ? "Punkte für die Zusatz-Stats dieses Events. Die Statistiken der Reihe bringen ihre Punkte aus der Reihe mit."
-                    : "Wie viele Punkte gibt jede Einheit einer Statistik in diesem Event (Skill-Index)?"}
+                    : "Wie viele Punkte gibt jede Einheit einer Statistik in diesem Event (Eventpunkte)?"}
                 </p>
               </div>
 
@@ -1734,8 +1734,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 <p className="text-[10px] text-gray-500 -mt-2">
                   Im Reiter „Turnier" kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
                   hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
-                  Turnierpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
-                  Events, nicht die Ligapunkte der Reihe.
+                  Eventpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
+                  Events, nicht die Tabellenpunkte der Reihe.
                 </p>
 
                 {tmtStatConfig.placementEnabled && (

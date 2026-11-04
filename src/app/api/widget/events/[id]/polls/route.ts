@@ -7,7 +7,7 @@ import { requireWidgetKey } from "@/lib/widgetAuth";
  *
  * Live-Umfrage-Status fürs Widget (Stimmenzahl pro Antwortoption) — Aggregation identisch
  * zu /api/events/[id]/polls/route.ts, ohne die dortige "myVote"-Auflösung (kein Session-User
- * am Touchscreen) und mit Avatar/Rangpunkten statt nur Name.
+ * am Touchscreen) und mit Avatar/Rang-Punkten statt nur Name.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = requireWidgetKey(req);

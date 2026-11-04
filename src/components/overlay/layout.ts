@@ -17,7 +17,7 @@ import { DEFAULT_PAUSE_BACKGROUND, isPauseBackground, type PauseBackgroundKey } 
 import { PAUSE_ELEMENT_KEYS, CLIP_ELEMENT_KEYS, type PauseElementKey, type ClipElementKey } from "./sceneLayouts";
 
 /** Ausgangspositionen (Prozent von 1920×1080). Alle Kacheln sind gleich breit (TILE_WIDTH):
- *  Turnierbaum, Tabelle, Teilnehmer und Gesamttabelle stapeln sich oben rechts zu einer
+ *  Turnierbaum, Tabelle, Teilnehmer und Reihentabelle stapeln sich oben rechts zu einer
  *  rotierenden Gruppe (rechtsbündig mit EDGE_MARGIN: (1920 − 460 − 28) / 1920 × 100 = 74.6),
  *  die drei Leisten stehen unten nebeneinander (y = (1080 − 90 − 28) / 1080 × 100 = 89.1). */
 export const DEFAULT_EVENT_POSITIONS: Record<ElementKey, { x: number; y: number }> = {
@@ -51,7 +51,7 @@ const defaultPanelsFor = (format: string | null): ElementKey[] =>
   format === "group_knockout" ? ["table", "bracket"] : [isEliminationFormat(format) ? "bracket" : "table"];
 
 /** Standard-Layout fürs Event-Overlay, wenn nichts eingestellt ist: alle fürs Format relevanten
- *  Elemente aktiv. Gehört das Event zu einer Reihe, rotiert die Gesamttabelle mit Tabelle/Teilnehmern. */
+ *  Elemente aktiv. Gehört das Event zu einer Reihe, rotiert die Reihentabelle mit Tabelle/Teilnehmern. */
 export function defaultEventLayout(format: string | null, hasSeries: boolean): OverlayLayout<ElementKey> {
   const keys: ElementKey[] = ["brand", "liveinfo", "ticker", ...defaultPanelsFor(format), "participants"];
   if (hasSeries) keys.push("seriesTable");
@@ -59,7 +59,7 @@ export function defaultEventLayout(format: string | null, hasSeries: boolean): O
 }
 
 /** Standard-Event-Layout des festen Streamer-Links: gilt für jedes Event, enthält deshalb
- *  Turnierbaum UND Tabelle sowie die Gesamttabelle — adaptEventLayout und die Inhaltsprüfung im
+ *  Turnierbaum UND Tabelle sowie die Reihentabelle — adaptEventLayout und die Inhaltsprüfung im
  *  Overlay blenden je Event aus, was nicht passt. */
 export function defaultStreamerEventLayout(): OverlayLayout<ElementKey> {
   const keys: ElementKey[] = ["brand", "liveinfo", "ticker", "bracket", "table", "seriesTable", "participants"];

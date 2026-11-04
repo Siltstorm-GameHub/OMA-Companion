@@ -42,8 +42,8 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
       };
 
       if (standings.processedEventIds.includes(eventId)) {
-        // Event-eigene statConfigJson fließt bewusst nicht ein — sie bestimmt nur die Turnierpunkte
-        // dieses Events, nicht die echten Ligapunkte der Reihe, siehe complete/route.ts.
+        // Event-eigene statConfigJson fließt bewusst nicht ein — sie bestimmt nur die Eventpunkte
+        // dieses Events, nicht die echten Tabellenpunkte der Reihe, siehe complete/route.ts.
         const statCfg = event.series.seriesStatConfig
           ? JSON.parse(event.series.seriesStatConfig) as {
               stats: { field: string; pointsPer: number }[];
@@ -64,7 +64,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
         for (const { userId } of event.registrations) sub(userId, "participations", 1);
 
         // Stat-Beiträge aus Match-Einträgen abziehen (Platzierung fließt bewusst nicht ein — sie ist
-        // keine Ligapunkte-Quelle, siehe computeTurnierpunkte)
+        // keine Tabellenpunkte-Quelle, siehe computeTurnierpunkte)
         for (const match of event.matches) {
           for (const entry of match.entries) {
             if (!entry.userId || !entry.statsJson) continue;

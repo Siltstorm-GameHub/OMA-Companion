@@ -128,27 +128,27 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   const defaultAvgDirection = resolveAvgDirection(null, event.statConfigJson);
 
   // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — wird 1:1 als seriesStatConfig-Prop an
-  // den Client durchgereicht und bestimmt dort u.a. die Optionen im Dropdown "Sieg in Gesamttabelle
+  // den Client durchgereicht und bestimmt dort u.a. die Optionen im Dropdown "Sieg in Reihentabelle
   // tracken als …" (seriesStatFields in EventCompleteClient.tsx). Dort sollen ausschließlich die
-  // seriesweiten Gesamttabellen-Stats erscheinen — NIE die Event-eigenen Stat-Felder dieses einzelnen
-  // Events (deren Sieger erkennt man dort schon an der Turnierpunkte-basierten Platzierung).
+  // seriesweiten Reihentabellen-Stats erscheinen — NIE die Event-eigenen Stat-Felder dieses einzelnen
+  // Events (deren Sieger erkennt man dort schon an der Eventpunkte-basierten Platzierung).
   const rawSeriesStatConfig: SeriesStatConfig | null = (() => {
     try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { return null; }
   })();
 
   // Mit der Event-eigenen statConfigJson zusammengeführte Konfiguration — ausschließlich für die
-  // Turnierpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events), siehe computeTurnierpunkte.
+  // Eventpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events), siehe computeTurnierpunkte.
   // NIE als seriesStatConfig-Prop verwenden (s.o.).
   const turnierpunkteCfg: SeriesStatConfig = applyEventStatOverride(
     rawSeriesStatConfig ?? { participationPoints: 0, stats: [] }, event.statConfigJson,
   );
 
-  // Turnierpunkte-Vorschau je User (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
+  // Eventpunkte-Vorschau je User (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
   // computeTurnierpunkte) — als zusätzliche, auswählbare "Gewinner-Stat"-Option (winnerStatField),
   // damit bei coop_stats-Events der Sieger auch nach der berechneten Gesamtpunktzahl dieses Events
-  // statt nach einem einzelnen rohen Stat-Feld bestimmt werden kann. KEINE Ligapunkte — die bleiben
+  // statt nach einem einzelnen rohen Stat-Feld bestimmt werden kann. KEINE Tabellenpunkte — die bleiben
   // ausschließlich Sache der Eventreihen-Einstellungen (Teilnahme, Sieger-Ziel-Feld, …); der so
-  // ermittelte Sieger erhält seine Ligapunkte ganz normal über den bestehenden Weg. Direkt in
+  // ermittelte Sieger erhält seine Tabellenpunkte ganz normal über den bestehenden Weg. Direkt in
   // userStats injiziert, damit die bestehende Sortier-/Anzeige-Logik (userStats[uid]?.[winnerStatField])
   // sie ohne weitere Änderungen mitbenutzt.
   const hasTurnierpunkteOption = (turnierpunkteCfg.stats?.length ?? 0) > 0 || !!turnierpunkteCfg.placementPoints;
@@ -159,6 +159,19 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     }
   }
   const winnerStatFieldOptions = hasTurnierpunkteOption ? [...tournamentStatFields, TURNIERPUNKTE_STAT] : tournamentStatFields;
+
+  // Vorbelegung des Gewinner-Stats: Event-eigene Einstellung (Reiter "Reihe" im Event) → Sieger-
+  // Ermittlung der Reihe (winnerStatField, Wizard/Reihen-Einstellungen) → Altfeld defaultWinnerStatField.
+  // Vorher wurde nur das Altfeld gelesen, die Sieger-Ermittlung der Reihe kam beim Abschluss nie an.
+  const defaultWinnerStatField = (() => {
+    const eventCfg = (() => {
+      try { return event.seriesEventConfigJson ? JSON.parse(event.seriesEventConfigJson) as { winnerStatField?: string } : null; }
+      catch { return null; }
+    })();
+    const seriesCfg = rawSeriesStatConfig as { winnerStatField?: string; defaultWinnerStatField?: string } | null;
+    const candidates = [eventCfg?.winnerStatField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField];
+    return candidates.find((f): f is string => !!f && winnerStatFieldOptions.includes(f)) ?? "";
+  })();
 
   // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle
   // (seriesStandingsJson), damit Moderatoren beim Ausfüllen sehen, wer bereits auf eine Serie
@@ -234,6 +247,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       allUsers={allUsers}
       tournamentStatFields={tournamentStatFields}
       winnerStatFieldOptions={winnerStatFieldOptions}
+      defaultWinnerStatField={defaultWinnerStatField}
       userStats={userStats}
       format={event.format}
       userAvgScore={userAvgScore}

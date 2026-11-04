@@ -75,18 +75,18 @@ type SeriesStandings = {
  *   konfigurierte Legacy-/Multi-Umfrage ohne Sieger) noch offen ist, sonst → "finished"
  * - Speichert completionData am Event
  * - Vergabe von Teilnahme-Münzen (nur beim ersten Abschluss) — bei Events innerhalb einer Reihe
- *   landen die daraus resultierenden Ligapunkte sofort in der Ligatabelle der Eventreihe, auch wenn
+ *   landen die daraus resultierenden Tabellenpunkte sofort in der Reihentabelle, auch wenn
  *   die Umfrage noch läuft. Platzierungs-Münzen/-Rang-Punkte ("Belohnungen (Endplatzierung der
  *   Eventreihe)") werden bei Events innerhalb einer Reihe NICHT hier vergeben, sondern erst bei
  *   Abschluss der gesamten Eventreihe anhand von deren Endplatzierung (siehe
  *   /api/admin/series/[id]/complete) — nur eigenständige Events ohne Reihe erhalten sie direkt hier.
  *   Events innerhalb einer Reihe erhalten hier stattdessen ggf. die seriesweit fix konfigurierten
  *   zusätzlichen Platzierungs-Münzen je Einzel-Event (statCfg.eventPlacementCoins, siehe
- *   "Gesamttabellen-Konfiguration" der Reihe) — nur Münzen, keine Rang-Punkte, unabhängig von der
+ *   "Reihentabellen-Konfiguration" der Reihe) — nur Münzen, keine Rang-Punkte, unabhängig von der
  *   Endplatzierung der gesamten Reihe.
  * - Poll-Gewinner-Belohnung (auch beim Re-Edit, mit Rückbuchung); EventPoll-Umfragen werden erst
- *   ausgewertet, sobald ihr Abstimmungsfenster (endAt) vorbei ist — die zusätzlichen Ligapunkte des
- *   Umfrage-Gewinners kommen erst dann (mit Abschluss der Umfrage) in die Ligatabelle
+ *   ausgewertet, sobald ihr Abstimmungsfenster (endAt) vorbei ist — die zusätzlichen Tabellenpunkte des
+ *   Umfrage-Gewinners kommen erst dann (mit Abschluss der Umfrage) in die Reihentabelle
  * - Aktualisiert seriesStandingsJson (falls Event in einer Reihe ist)
  * - Speichert finalRankingJson + finalRankingNote
  */
@@ -207,7 +207,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     /** Moderator/Admin: noch offene EventPolls sofort schließen (endAt -> jetzt) und mit abschließen */
     closeOpenPolls?: boolean;
     /** Nachträglich/beim Abschluss ausgeschlossene User (z.B. Disqualifikation): bleiben in den Stats
-     *  und Tabellen sichtbar, erhalten aber keine Münzen, Ligapunkte oder Rang-Punkte aus diesem Event. */
+     *  und Tabellen sichtbar, erhalten aber keine Münzen, Tabellenpunkte oder Rang-Punkte aus diesem Event. */
     excludedUserIds?: string[];
     /** Erzwingt, dass die Umfragephase nach diesem Speichern (Status "umfrage") aktiv bleibt — auch wenn
      *  alle zugrunde liegenden Umfragen ihr Abstimmungsfenster technisch schon überschritten haben.
@@ -270,10 +270,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
-  // Gesamttabellen-Konfiguration der Reihe (Ligapunkte + Teilnahme-Münzen, seriesweit fix) — die
+  // Reihentabellen-Konfiguration der Reihe (Tabellenpunkte + Teilnahme-Münzen, seriesweit fix) — die
   // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats) fließt hier BEWUSST NICHT ein: sie
-  // bestimmt nur die Turnierpunkte (Sieger-Ermittlung dieses Events), nicht die echten Ligapunkte der
-  // Reihe. Sonst würden rotierende Spiele mit ihren eigenen Punktewerten die seriesweite Ligatabelle
+  // bestimmt nur die Eventpunkte (Sieger-Ermittlung dieses Events), nicht die echten Tabellenpunkte der
+  // Reihe. Sonst würden rotierende Spiele mit ihren eigenen Punktewerten die seriesweite Reihentabelle
   // verzerren, siehe computeTurnierpunkte.
   const statCfg: SeriesStatConfig = (() => {
     try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
@@ -385,7 +385,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   } else if (effectiveWinnerMode === "stat") {
     const statField = seriesEventCfg?.winnerStatField ?? body.winnerStatField;
     if (statField) {
-      // "Turnierpunkte" ist als Gewinner-Stat wählbar (siehe complete/page.tsx) und steht nicht in den
+      // "Eventpunkte" ist als Gewinner-Stat wählbar (siehe complete/page.tsx) und steht nicht in den
       // Rohwerten — hier genauso berechnen, sonst hätten alle 0 und ohne mitgeschickte Rangliste wären
       // alle Teilnehmer "Sieger".
       const turnierpunkte = statField === TURNIERPUNKTE_STAT
@@ -415,7 +415,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
 
   // Ausgeschlossene User (z.B. Disqualifikation): bleiben in Stats/Tabellen sichtbar, erhalten aber
-  // keinerlei Münzen/Ligapunkte/Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein.
+  // keinerlei Münzen/Tabellenpunkte/Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein.
   // Die Begründung dafür trägt der Admin im bereits vorhandenen Feld "Finale-Platzierung-Notiz" ein.
   const excludedSet = new Set((body.excludedUserIds ?? []).filter(id => registeredSet.has(id)));
 
@@ -457,7 +457,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   };
 
   // Teilnahme-Münzen für alle (nicht ausgeschlossenen) Spieler — bei Events innerhalb einer Reihe kommt
-  // der Betrag seriesweit fix aus der Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
+  // der Betrag seriesweit fix aus der Reihentabellen-Konfiguration, sonst aus den Event-Belohnungen
   const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
   const newParticipationCoins: Record<string, number> = {};
   if (effectiveParticipationCoins > 0) {
@@ -482,7 +482,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       catch { return 0; }
     })();
     // Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
-    // Gesamttabellen-Konfiguration, sonst aus der Event-eigenen Zuschauer-Belohnung
+    // Reihentabellen-Konfiguration, sonst aus der Event-eigenen Zuschauer-Belohnung
     const spectatorCoins = event.seriesId
       ? (statCfg.spectatorParticipationCoins ?? 0)
       : (() => {
@@ -664,7 +664,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
     for (const old of oldPollRewards) {
       const txns: Prisma.PrismaPromise<unknown>[] = [];
-      // Reverse winner coins (Ligapunkte-Rollback läuft über series standings)
+      // Reverse winner coins (Tabellenpunkte-Rollback läuft über series standings)
       if (old.winnerCoins > 0) {
         for (const uid of old.winnerIds) {
           txns.push(
@@ -697,7 +697,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   // Fetch polls with rewardsPaid=false (includes re-opened ones from re-edit).
   // Nur Umfragen, deren Abstimmungsfenster (endAt) bereits vorbei ist, werden jetzt final ausgewertet —
-  // noch laufende Umfragen bleiben unbezahlt, bis das Event erneut abgeschlossen wird (Ligapunkte des
+  // noch laufende Umfragen bleiben unbezahlt, bis das Event erneut abgeschlossen wird (Tabellenpunkte des
   // Umfrage-Gewinners kommen dann erst mit Abschluss der Umfrage dazu, nicht vorher).
   const now = new Date();
   let allUnpaidPolls = event.polls ?? [];
@@ -847,7 +847,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
     // Mitspieler-Teilnahmen (participations) + reguläre Stat-Felder → Serien-Rohtabelle. Läuft bei
     // jedem Speichern (Diff gegen completionData.seriesContrib), damit z.B. ein nachträglicher
-    // Ausschluss (Disqualifikation) bereits gutgeschriebene Ligapunkte/Rang-Punkte sauber zurückbucht.
+    // Ausschluss (Disqualifikation) bereits gutgeschriebene Tabellenpunkte/Rang-Punkte sauber zurückbucht.
     const oldSeriesContrib = (oldCompletion.seriesContrib ?? {}) as {
       participations?: string[];
       statFieldsByUser?: Record<string, Record<string, number>>;
@@ -907,11 +907,11 @@ async function completeEvent(req: NextRequest, eventId: string) {
     {
       const oldMap = oldSeriesContrib.transferredSpectatorPoints ?? {};
       for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredSpectatorPoints)])) {
-        await applyRankDelta(userId, (newTransferredSpectatorPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Zuschauer: ${event.title}`);
+        await applyRankDelta(userId, (newTransferredSpectatorPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Reihentabelle Zuschauer: ${event.title}`);
       }
     }
 
-    // Teilnahme-Ligapunkte → globale Rangliste
+    // Teilnahme-Tabellenpunkte → globale Rangliste
     const newTransferredParticipationPoints: Record<string, number> = {};
     if (statCfg.transferToGlobalRanking && statCfg.participationPoints > 0) {
       for (const userId of newParticipations) newTransferredParticipationPoints[userId] = statCfg.participationPoints;
@@ -919,7 +919,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     {
       const oldMap = oldSeriesContrib.transferredParticipationPoints ?? {};
       for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredParticipationPoints)])) {
-        await applyRankDelta(userId, (newTransferredParticipationPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Teilnahme: ${event.title}`);
+        await applyRankDelta(userId, (newTransferredParticipationPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Reihentabelle Teilnahme: ${event.title}`);
       }
     }
 
@@ -939,7 +939,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     {
       const oldMap = oldSeriesContrib.transferredStatPoints ?? {};
       for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredStatPoints)])) {
-        await applyRankDelta(userId, (newTransferredStatPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Stats: ${event.title}`);
+        await applyRankDelta(userId, (newTransferredStatPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Reihentabelle Stats: ${event.title}`);
       }
     }
 
@@ -1038,7 +1038,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       for (const uid of oldEventVoterSet) {
         addToUser(uid, "Umfrage-Teilnahmen", -1);
       }
-      // Alte, einmalige Teilnahme-Ligapunkte-Belohnung zurückbuchen (Betrag = höchster konfigurierter
+      // Alte, einmalige Teilnahme-Tabellenpunkte-Belohnung zurückbuchen (Betrag = höchster konfigurierter
       // Wert unter den Umfragen, an denen teilgenommen wurde — nicht je Umfrage, siehe unten).
       // Fallback für Alt-Daten (vor diesem Dedup-Fix gespeichert, ohne pollParticipationSeriesReward):
       // dort wurden die Punkte noch je Umfrage einzeln vergeben.
@@ -1064,7 +1064,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
         }
       }
     }
-    // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Ligapunkte;
+    // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Tabellenpunkte;
     // bei forcePollPhase noch nicht eintragen (siehe forcePollPhase oben)
     if (!forcePollPhase) {
       for (const poll of (body.pollResults ?? [])) {
@@ -1078,12 +1078,12 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
 
     // EventPoll series points: Abstimmungs-Tracking + Punkte pro Voter/Sieger (ausgeschlossene User
-    // erhalten keine Ligapunkte/Rang-Punkte, bleiben aber als Abstimmende unangetastet)
+    // erhalten keine Tabellenpunkte/Rang-Punkte, bleiben aber als Abstimmende unangetastet)
     const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
-    // Umfrage-Teilnahme-Ligapunkte werden — wie die Teilnahme-Münzen weiter oben — einmalig pro Event
+    // Umfrage-Teilnahme-Tabellenpunkte werden — wie die Teilnahme-Münzen weiter oben — einmalig pro Event
     // vergeben, nicht je Umfrage: über alle Umfragen dieses Events hinweg bekommt jeder Voter die
     // Punkte nur einmal, in Höhe des höchsten konfigurierten Betrags unter den Umfragen, an denen er
-    // teilgenommen hat. Sieger-Ligapunkte dagegen gibt es je Umfragesieg (mehrere Siege in
+    // teilgenommen hat. Sieger-Rang-Punkte dagegen gibt es je Umfragesieg (mehrere Siege in
     // verschiedenen Umfragen desselben Events zählen jeweils).
     const participationSeriesPointsByVoter: Record<string, number> = {};
     for (const ep of eventPollRewards) {
@@ -1111,7 +1111,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     for (const uid of eventVoterSet) {
       addToUser(uid, "Umfrage-Teilnahmen", 1);
     }
-    // Einmalige Teilnahme-Ligapunkte pro Event auszahlen (Betrag = höchster konfigurierter Wert
+    // Einmalige Teilnahme-Tabellenpunkte pro Event auszahlen (Betrag = höchster konfigurierter Wert
     // unter den Umfragen, an denen der jeweilige User teilgenommen hat)
     for (const [uid, pts] of Object.entries(participationSeriesPointsByVoter)) {
       if (pts <= 0) continue;
@@ -1148,8 +1148,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // ── Completion-Daten speichern ───────────────────────────────────────────────
   // Solange eine Umfrage noch läuft (EventPoll mit offenem Abstimmungsfenster, oder die konfigurierte
   // Legacy-Einzel-Umfrage noch keinen Sieger hat) bleibt das Event in der Umfragephase — auch wenn die
-  // Spielergebnisse (und damit die Ligapunkte daraus) bereits final sind. Erst wenn die Umfrage
-  // abgeschlossen ist, wechselt der Status auf "finished" (zusammen mit den Umfrage-Ligapunkten).
+  // Spielergebnisse (und damit die Tabellenpunkte daraus) bereits final sind. Erst wenn die Umfrage
+  // abgeschlossen ist, wechselt der Status auf "finished" (zusammen mit den Umfrage-Tabellenpunkten).
   // Echte DB-Umfragen (EventPoll) werden ausschließlich über hasOpenEventPoll erkannt.
   const legacyPollResolved = !legacyPollConfigured || newPollWinners.length > 0;
   const hasPendingPollPhase = hasOpenEventPoll || !legacyPollResolved;
@@ -1190,7 +1190,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
     // Freeze: friert die gerade für die Punkte-Vergabe oben verwendete Reihen-Konfiguration ein,
-    // damit spätere Änderungen an EventSeries.seriesStatConfig nicht rückwirkend die Ligapunkte/
+    // damit spätere Änderungen an EventSeries.seriesStatConfig nicht rückwirkend die Tabellenpunkte/
     // Standings dieses Events verändern (siehe computeEventPoints in series-event-points.ts).
     frozenStatConfig:        statCfg,
     pollPhaseComplete,

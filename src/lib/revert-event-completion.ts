@@ -98,14 +98,14 @@ type RevertOptions = {
  * Umfrage-Belohnungen (legacy + Multi-Poll + DB-Umfragen), Dominion-Bonus,
  * sowie die Reihen-Standings (Teilnahmen, Stats, MVP, Sieger-Stats, Umfrage-Felder,
  * Dominion-Streak). Wird aufgerufen, wenn ein Event von "finished"/"umfrage"
- * zurück auf "active" gesetzt wird, damit die Liga-Tabelle das Event nicht
+ * zurück auf "active" gesetzt wird, damit die Reihentabelle das Event nicht
  * mehr zählt (computeStatStandings prüft nur completionData.gamePhaseComplete).
  *
  * Die Reihen-Standings-Bereinigung läuft immer, unabhängig von den revert-Flags,
- * da das Event so oder so nicht mehr in der Liga-Tabelle auftauchen soll.
+ * da das Event so oder so nicht mehr in der Reihentabelle auftauchen soll.
  *
  * Mit `includeBaseRewards: true` werden zusätzlich Teilnahme-/Platzierungs-/
- * Zuschauer-Basis-Münzen und -Rangpunkte zurückgebucht. Grundlage dafür ist der beim
+ * Zuschauer-Basis-Münzen und -Rang-Punkte zurückgebucht. Grundlage dafür ist der beim
  * Abschluss geschriebene `completionData.rewardLedger` mit den tatsächlich gebuchten
  * Beträgen pro User — eine zwischenzeitliche Änderung der Belohnungs-Konfiguration
  * verfälscht die Rückbuchung dadurch nicht.
@@ -172,7 +172,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     }
   }
 
-  // DB-basierte EventPoll-Belohnungen (Sieger-Münzen + Ligapunkte je Umfragesieg)
+  // DB-basierte EventPoll-Belohnungen (Sieger-Münzen + Tabellenpunkte je Umfragesieg)
   for (const ep of cd.eventPollRewards ?? []) {
     for (const userId of ep.winnerIds ?? []) {
       reverse(userId, ep.winnerCoins ?? 0, ep.winnerRankPoints ?? 0);
@@ -184,7 +184,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     reverse(pr.userId, pr.coins ?? 0, 0);
   }
 
-  // Einmalige, event-weite Umfrage-Teilnahme-Ligapunkte (nicht pro Umfrage, siehe complete/route.ts).
+  // Einmalige, event-weite Umfrage-Teilnahme-Tabellenpunkte (nicht pro Umfrage, siehe complete/route.ts).
   // Fallback für Alt-Daten (vor dem Dedup-Fix): dort wurden die Punkte noch je Umfrage einzeln vergeben.
   if (cd.pollParticipationSeriesReward) {
     for (const pr of cd.pollParticipationSeriesReward) {
@@ -229,7 +229,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     })();
 
     // Teilnahme-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
-    // Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
+    // Reihentabellen-Konfiguration, sonst aus den Event-Belohnungen
     const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
     if (effectiveParticipationCoins > 0) {
       for (const { userId, role } of event.registrations) {
@@ -307,7 +307,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     }
   }
 
-  // Ligapunkte, die direkt auf die globale Rangliste übertragen wurden (Teilnahme + Stats + Zuschauer,
+  // Tabellenpunkte, die direkt auf die globale Rangliste übertragen wurden (Teilnahme + Stats + Zuschauer,
   // siehe statCfg.transferToGlobalRanking in /api/admin/events/[id]/complete): exakt anhand des dort
   // gespeicherten Ledgers zurückbuchen — der enthält bereits keine ausgeschlossenen User, da für sie
   // beim Abschluss nie etwas übertragen wurde.
@@ -415,7 +415,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           }
         }
         for (const uid of pollVoterSet) sub(uid, "Umfrage-Teilnahmen", 1);
-        // Einmalige Teilnahme-Ligapunkte (nicht pro Umfrage); Fallback für Alt-Daten vor dem Dedup-Fix
+        // Einmalige Teilnahme-Tabellenpunkte (nicht pro Umfrage); Fallback für Alt-Daten vor dem Dedup-Fix
         if (cd.pollParticipationSeriesReward) {
           for (const { userId, points } of cd.pollParticipationSeriesReward) {
             sub(userId, "Umfrage-Teilnahmepunkte", points);
@@ -462,7 +462,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     console.error("[Predictions] Rücksetzen fehlgeschlagen:", err);
   }
 
-  // completionData löschen, damit die Liga-Tabelle (computeStatStandings) das Event
+  // completionData löschen, damit die Reihentabelle (computeStatStandings) das Event
   // nicht mehr zählt — die Anzeige liest ausschließlich aus event.completionData.
   await prisma.event.update({ where: { id: eventId }, data: { completionData: null } });
 

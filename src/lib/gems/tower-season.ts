@@ -108,7 +108,7 @@ export async function recordTowerClear(userId: string, stage: number): Promise<b
 }
 
 /** Erste Saison: übernimmt den bisherigen Turmstand ALLER Spieler (auch derer, die OMA Gems seit dem
- *  Deploy noch nicht geöffnet haben), damit die Saison-Rangliste vollständig ist. Doppelte überspringt
+ *  Deploy noch nicht geöffnet haben), damit die Reihentabelle vollständig ist. Doppelte überspringt
  *  die Datenbank (unique userId+season+stage). */
 async function backfillFirstSeasonForAll(season: string): Promise<void> {
   if (season !== FIRST_TOWER_SEASON) return;

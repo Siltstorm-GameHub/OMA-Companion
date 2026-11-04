@@ -17,7 +17,7 @@ import SceneLayout from "./SceneLayout";
  * Pausen-Szene des festen Streamer-Links — für "Gleich zurück"-/Pausen-Szenen in OBS. Deckt das
  * Bild komplett ab; die Bausteine (Titel, Turnier bzw. nächste Events, Match, Clips-Kachel …)
  * stehen dort, wo der Streamer sie im Layout der Pausen-Szene platziert hat.
- *   - Event-Modus: Tabelle bzw. Turnierbaum, Live-Info, nächstes Match, Gesamttabelle.
+ *   - Event-Modus: Tabelle bzw. Turnierbaum, Live-Info, nächstes Match, Reihentabelle.
  *   - Profil-Modus: kommende Community-Events, Clips-Kachel, gerade live streamende Mitglieder.
  */
 export default function PauseView({ payload }: { payload: StreamerOverlayPayload }) {

@@ -4,7 +4,7 @@
 // Last Stand ist der Wellenmodus nach der Kampagne: Sind die fünf Gegner besiegt, erscheinen fünf neue —
 // so lange, bis die eigenen Helden gefallen sind. Jede Welle wird rein aus ihrer Nummer erzeugt
 // (deterministischer Zufall wie im Aufstieg, siehe endless-levels.ts): alle Spieler treffen auf dieselben
-// Wellen, die Saison-Rangliste bleibt fair, und es muss nichts gespeichert werden.
+// Wellen, die Reihentabelle bleibt fair, und es muss nichts gespeichert werden.
 //
 // Die Stärke folgt den Kurven des Aufstiegs (gleiche Monster-Normierung, endlessStatMultiplier und
 // endlessAttackMultiplier), nur eigenständig kalibriert: Welle w hat die Stärke der (gedachten)

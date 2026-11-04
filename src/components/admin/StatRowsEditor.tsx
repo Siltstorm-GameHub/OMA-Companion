@@ -1,17 +1,17 @@
 "use client";
 import { Plus, Trash2 } from "@/components/icons";
 
-/** pointsPer = Punkte in der Gesamttabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
+/** pointsPer = Punkte in der Reihentabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
 export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 
 /**
  * Gemeinsamer Editor für die Statistiken einer Eventreihe (Wizard + Reihen-Bearbeitung): Feldname,
  * Punkte pro Einheit, 🏆 Sieger-Stat / ⚔️ Match-Win-Stat und — optional — abweichende Punkte für die
- * Gesamttabelle.
+ * Reihentabelle.
  *
- * Datenmodell (siehe StatConfig in lib/series-event-points.ts): pointsPer zählt für die Gesamttabelle,
+ * Datenmodell (siehe StatConfig in lib/series-event-points.ts): pointsPer zählt für die Reihentabelle,
  * eventPointsPer (falls gesetzt) für den Skill-Index im Event. Die UI zeigt "Punkte" als den Wert, der
- * im Event gilt; erst mit "Gesamttabelle abweichend" erscheint ein zweites Feld für die Gesamttabelle.
+ * im Event gilt; erst mit "Reihentabelle abweichend" erscheint ein zweites Feld für die Reihentabelle.
  */
 export default function StatRowsEditor({
   rows,
@@ -27,7 +27,7 @@ export default function StatRowsEditor({
   onChange: (rows: StatRow[]) => void;
   showWinnerToggle?: boolean;
   showMatchWinToggle?: boolean;
-  /** Pro Zeile "Gesamttabelle abweichend" anbieten (nur sinnvoll bei Eventreihen) */
+  /** Pro Zeile "Reihentabelle abweichend" anbieten (nur sinnvoll bei Eventreihen) */
   showLeagueOverride?: boolean;
   accentClassName?: string;
   inputClassName?: string;
@@ -71,7 +71,7 @@ export default function StatRowsEditor({
           Feldname → Punkte pro Einheit
           {showWinnerToggle && " — 🏆 = +1 bei Event-Sieg"}
           {showMatchWinToggle && " — ⚔️ = +1 pro Match Win aus einzelnen Runden"}
-          {showLeagueOverride && " — ⇄ = eigene Punkte für die Gesamttabelle"}
+          {showLeagueOverride && " — ⇄ = eigene Punkte für die Reihentabelle"}
         </p>
       )}
       {rows.map((row, i) => (
@@ -97,7 +97,7 @@ export default function StatRowsEditor({
                 onChange={e => setEventPoints(i, Number(e.target.value))}
                 placeholder="Pkt./Einheit"
                 aria-label="Punkte pro Einheit"
-                title={isDivergent(row) ? "Punkte im Event (Skill-Index)" : "Punkte im Event und in der Gesamttabelle"}
+                title={isDivergent(row) ? "Punkte im Event (Eventpunkte)" : "Punkte im Event und in der Reihentabelle"}
                 className={`${inputClassName} w-full text-center`}
                 style={inputStyle}
               />
@@ -120,7 +120,7 @@ export default function StatRowsEditor({
             )}
             {showLeagueOverride && (
               <button type="button"
-                title={isDivergent(row) ? "Gesamttabelle wieder mit denselben Punkten wie im Event" : "Eigene Punkte für die Gesamttabelle festlegen"}
+                title={isDivergent(row) ? "Reihentabelle wieder mit denselben Punkten wie im Event" : "Eigene Punkte für die Reihentabelle festlegen"}
                 aria-pressed={isDivergent(row)}
                 onClick={() => toggleDivergent(i)}
                 className={`shrink-0 text-sm font-semibold transition-colors ${isDivergent(row) ? "text-indigo-300" : "text-gray-600 hover:text-gray-400"}`}>
@@ -135,14 +135,14 @@ export default function StatRowsEditor({
           {showLeagueOverride && isDivergent(row) && (
             <div className="flex items-center gap-2 pl-3">
               <span className="flex-1 text-[11px] text-indigo-300/80 text-right">
-                Punkte in der Gesamttabelle
+                Punkte in der Reihentabelle
               </span>
               <div className="w-20 shrink-0">
                 <input
                   type="number"
                   value={row.pointsPer}
                   onChange={e => update(i, { pointsPer: Number(e.target.value) })}
-                  aria-label="Punkte in der Gesamttabelle"
+                  aria-label="Punkte in der Reihentabelle"
                   className={`${inputClassName} w-full text-center`}
                   style={inputStyle}
                 />

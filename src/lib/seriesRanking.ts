@@ -14,9 +14,9 @@ export type SeriesRankingRow = {
 };
 
 /**
- * Live-Gesamttabelle einer Event-Reihe — zentrale Stelle für computeStatStandings() plus
+ * Live-Reihentabelle einer Event-Reihe — zentrale Stelle für computeStatStandings() plus
  * Nutzer-Auflösung. Sowohl das Widget-Ranking (api/widget/series/[seriesId]/ranking) als auch
- * die Overlay-Gesamttabelle (api/overlay/[id]/stream) rufen diese eine Funktion auf, damit
+ * die Overlay-Reihentabelle (api/overlay/[id]/stream) rufen diese eine Funktion auf, damit
  * beide Ansichten garantiert dieselben Zahlen zeigen statt zweier potenziell abweichender
  * Berechnungen.
  */

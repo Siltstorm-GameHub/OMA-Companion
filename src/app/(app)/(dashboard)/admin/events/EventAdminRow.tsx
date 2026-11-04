@@ -186,7 +186,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   // Felder aus der Reihen-Konfiguration, die dieses Panel nicht editiert (eventStatFields,
   // transferToGlobalRanking, winnerStatField, matchWinStatKeys, dominionBonus, ...) — beim
   // Speichern unverändert zurückschreiben, statt sie durch eine unvollständige Rekonstruktion
-  // zu verlieren (führte dazu, dass z.B. Match-Win-Stats/Ligapunkt-Übertragung verschwanden).
+  // zu verlieren (führte dazu, dass z.B. Match-Win-Stats/Tabellenpunkt-Übertragung verschwanden).
   const [statCfgRest, setStatCfgRest]                         = useState<Record<string, unknown>>({});
   const statConfigInitialized = useRef(false);
 
@@ -837,11 +837,11 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           })()}
                         </div>
 
-                        {/* ── Gesamttabellen-Statistiken ── */}
+                        {/* ── Reihentabellen-Statistiken ── */}
                         <div className="space-y-3 pt-1">
                           <label className="text-xs text-gray-500 flex items-center gap-1.5">
                             <BarChart2 className="w-3 h-3" />
-                            Gesamttabellen-Konfiguration
+                            Reihentabellen-Konfiguration
                             <span className="text-gray-600">(Punkte aus Event-Statistiken)</span>
                           </label>
 
@@ -1260,7 +1260,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           <p className="text-xs text-gray-600 mt-0.5">
                             {event.completionData
                               ? "MVP, Umfrage oder Endplatzierung nachträglich anpassen."
-                              : "Überträgt Teilnahmen und Stats in die Gesamttabelle der Reihe."}
+                              : "Überträgt Teilnahmen und Stats in die Reihentabelle."}
                           </p>
                         </div>
                         <Link

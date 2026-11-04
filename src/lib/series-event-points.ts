@@ -1,17 +1,17 @@
 import { readStatValue } from "./avg-stats";
 
-// Gemeinsame Logik zur Berechnung der Ligapunkte, die ein einzelnes Event zur Eventreihe
+// Gemeinsame Logik zur Berechnung der Tabellenpunkte, die ein einzelnes Event zur Eventreihe
 // beisteuert (Teilnahme + Stats + Sieger-Zielfeld + MVP + Umfrage-Belohnungen, alt & neu).
-// Wird sowohl von der Gesamttabelle der Eventreihe als auch vom Gesamtranking des Einzelevents
+// Wird sowohl von der Reihentabelle als auch vom Gesamtranking des Einzelevents
 // genutzt, damit beide Ansichten exakt dieselben Zahlen zeigen.
 
 export type StatConfig = {
   participationPoints: number;
-  /** Ligapunkte pro Event für anwesende (nicht ausgeschlossene) Zuschauer — unabhängig von
+  /** Tabellenpunkte pro Event für anwesende (nicht ausgeschlossene) Zuschauer — unabhängig von
    *  participationPoints (das gilt nur für Mitspieler), siehe complete/route.ts. */
   spectatorParticipationPoints?: number;
-  /** pointsPer = Punkte in der Gesamttabelle der Reihe. eventPointsPer (optional) = abweichende Punkte
-   *  im einzelnen Event (Skill-Index/Turnierpunkte); fehlt es, gilt pointsPer für beides. */
+  /** pointsPer = Punkte in der Reihentabelle. eventPointsPer (optional) = abweichende Punkte
+   *  im einzelnen Event (Skill-Index/Eventpunkte); fehlt es, gilt pointsPer für beides. */
   stats: { field: string; pointsPer: number; eventPointsPer?: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
@@ -63,8 +63,8 @@ export function applyEventStatOverride<T extends { stats?: { field: string; poin
   seriesCfg: T,
   overrideJson: string | null | undefined,
 ): T {
-  // Reihen-Stats mit abweichenden Event-Punkten (eventPointsPer): im Event (Skill-Index/Turnierpunkte)
-  // gilt eventPointsPer, pointsPer bleibt der Wert für die Gesamttabelle der Reihe.
+  // Reihen-Stats mit abweichenden Event-Punkten (eventPointsPer): im Event (Skill-Index/Eventpunkte)
+  // gilt eventPointsPer, pointsPer bleibt der Wert für die Reihentabelle.
   const cfg: T = seriesCfg.stats?.some(s => typeof s.eventPointsPer === "number")
     ? { ...seriesCfg, stats: seriesCfg.stats.map(s => typeof s.eventPointsPer === "number" ? { ...s, pointsPer: s.eventPointsPer } : s) }
     : seriesCfg;
@@ -95,14 +95,21 @@ export function extractPlacementPoints(stats: Record<string, unknown>, placement
   return placementPoints[String(place)];
 }
 
-/** Name der berechneten Gewinner-Stat-Option "Turnierpunkte" beim Event-Abschluss (kein echtes Stat-Feld). */
+/** Name der berechneten Gewinner-Stat-Option "Eventpunkte" beim Event-Abschluss (kein echtes Stat-Feld). */
 export const TURNIERPUNKTE_STAT = "Turnierpunkte";
+/** Angezeigter Name für TURNIERPUNKTE_STAT. Der gespeicherte Wert bleibt "Turnierpunkte" (steht so in
+ *  completionData.winnerStatField und Reihen-Konfigurationen), in der UI heißt er "Eventpunkte". */
+export const EVENTPUNKTE_LABEL = "Eventpunkte";
+/** Anzeigename eines Stat-Felds (übersetzt nur den berechneten Eventpunkte-Schlüssel). */
+export function statDisplayName(field: string): string {
+  return field === TURNIERPUNKTE_STAT ? EVENTPUNKTE_LABEL : field;
+}
 
-/** Berechnet die "Turnierpunkte" eines Events je User — Stats × Punkte-pro-Stat + Platzierungspunkte
+/** Berechnet die "Eventpunkte" eines Events je User — Stats × Punkte-pro-Stat + Platzierungspunkte
  *  pro Runde (siehe PLACEMENT_STAT_KEY/extractPlacementPoints). Dient AUSSCHLIESSLICH dazu, innerhalb
  *  dieses einen Events eine Endplatzierung/einen Sieger zu ermitteln (z.B. als Gewinner-Stat-Option
  *  beim Event-Abschluss, oder als Live-Zwischenstand auf der öffentlichen Event-Seite) — KEINE
- *  Ligapunkte-Quelle: die echten Ligapunkte der Reihe werden ausschließlich über die
+ *  Tabellenpunkte-Quelle: die echten Tabellenpunkte der Reihe werden ausschließlich über die
  *  Eventreihen-Einstellungen vergeben (Teilnahme, Sieger-Ziel-Feld, Stats mit eigenem pointsPer, …),
  *  siehe computeEventPoints. Winner-Stat-Felder (cfg.winnerStatKeys) werden ausgeklammert, da sie
  *  erst durch die Sieger-Wahl selbst entstehen (sonst zirkulär). */
@@ -176,23 +183,23 @@ export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField
 }
 
 export type LiveLigaPunkteResult = {
-  /** Ligapunkte-Vorschau je User — NUR was schon sicher ist: Teilnahme + bisher erfasste Stats mit
+  /** Tabellenpunkte-Vorschau je User — NUR was schon sicher ist: Teilnahme + bisher erfasste Stats mit
    *  eigenem pointsPer. Enthält bewusst NICHT den Sieger-Bonus (siehe projectedWinnerBonusByUser) —
    *  der ist nur eine Momentaufnahme und würde die Summe sonst so aussehen lassen, als stünde er
    *  schon fest. Nur eine Live-Vorschau, keine echte Vergabe (die passiert erst beim Event-Abschluss). */
   pointsByUser: Record<string, number>;
-  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen — falls mehrere gleichauf, alle. */
+  /** User-IDs, die aktuell (nach Eventpunkten) in Führung liegen — falls mehrere gleichauf, alle. */
   projectedWinnerIds: string[];
-  /** Zusätzliche Ligapunkte, die projectedWinnerIds bekämen, WENN das Event jetzt mit dieser
+  /** Zusätzliche Tabellenpunkte, die projectedWinnerIds bekämen, WENN das Event jetzt mit dieser
    *  Platzierung enden würde (Sieger-Ziel-Feld × dessen pointsPer) — separat von pointsByUser, damit
    *  die Live-Anzeige klar zwischen "schon sicher" und "nur falls Sieger" unterscheiden kann. */
   projectedWinnerBonusByUser: Record<string, number>;
 };
 
-/** Live-Vorschau der Ligapunkte, die dieses Event bislang beisteuert — nutzbar SOLANGE das Event noch
+/** Live-Vorschau der Tabellenpunkte, die dieses Event bislang beisteuert — nutzbar SOLANGE das Event noch
  *  läuft (anders als computeEventPoints, das auf completionData.gamePhaseComplete wartet). cfg ist
  *  bewusst die REINE Reihen-Konfiguration (kein applyEventStatOverride!) — Event-eigene Stat-Punkte
- *  bestimmen nur die Turnierpunkte, nie die echten Ligapunkte, siehe computeEventPoints. Enthält daher
+ *  bestimmen nur die Eventpunkte, nie die echten Tabellenpunkte, siehe computeEventPoints. Enthält daher
  *  nur: Teilnahme (Mitspieler + Zuschauer, live als "alle Angemeldeten nehmen teil" geschätzt) und
  *  Stats mit eigenem seriesweitem pointsPer. Der Sieger-Bonus (falls ein Sieger-Ziel-Feld konfiguriert
  *  ist) wird SEPARAT als projectedWinnerBonusByUser ausgewiesen, nicht in pointsByUser eingerechnet —
@@ -200,7 +207,7 @@ export type LiveLigaPunkteResult = {
  *  Stat-Konfiguration berechnet, siehe computeTurnierpunkte) bestimmt dabei nur, WER aktuell führt.
  *  KEIN MVP-/Umfrage-/Dominion-Bonus (die stehen erst beim Abschluss fest) und keine ausgeschlossenen
  *  User (die gibt es vor dem Abschluss nicht). leaderIds ersetzt die Führenden-Ermittlung über die
- *  Turnierpunkte — bei avg_stats entscheidet der Ø (inkl. Richtung), nicht die höchsten Punkte. */
+ *  Eventpunkte — bei avg_stats entscheidet der Ø (inkl. Richtung), nicht die höchsten Punkte. */
 export function computeLiveLigaPunkte(
   ev: {
     registrations: { userId: string; role?: string }[];
@@ -245,7 +252,7 @@ export function computeLiveLigaPunkte(
   }
 
   // Aktuell führender Spieler (nach den — mit der Event-eigenen Konfiguration berechneten —
-  // Turnierpunkten) — Grundlage für den projizierten Sieger-Bonus.
+  // Eventpunkten) — Grundlage für den projizierten Sieger-Bonus.
   const winnerTargetKeys = resolveWinnerTargetKeys(cfg);
   let projectedWinnerIds: string[] = [];
   if (winnerTargetKeys.length > 0 && leaderIds) {
@@ -314,17 +321,17 @@ export type EventCompletionData = {
   /** Dominion-Bonus-Ergebnis dieses Events je User (siehe complete/route.ts) — nur User mit
    *  bonusAwarded fließen als "Dominion Bonus"-Stat in die Tabelle ein. */
   dominionChanges?: Record<string, { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number }> | null;
-  /** Ausgeschlossene User (Disqualifikation): tragen nichts zu den Ligapunkten dieses Events bei */
+  /** Ausgeschlossene User (Disqualifikation): tragen nichts zu den Tabellenpunkten dieses Events bei */
   excludedUserIds?: string[] | null;
   /** Freeze: Snapshot der zum Abschlusszeitpunkt gültigen Reihen-Konfiguration (EventSeries.
    *  seriesStatConfig), siehe computeEventPoints. Verhindert, dass spätere Änderungen an der
-   *  Reihen-Konfiguration rückwirkend die Ligapunkte/Standings dieses bereits abgeschlossenen
+   *  Reihen-Konfiguration rückwirkend die Tabellenpunkte/Standings dieses bereits abgeschlossenen
    *  Events verändern. Wird bei jedem (Re-)Abschluss neu gesetzt (complete/route.ts). */
   frozenStatConfig?: StatConfig | null;
 };
 
 export type EventPointsResult = {
-  /** Gesamte Ligapunkte, die dieses Event je User beigesteuert hat (Teilnahme + Stats + Umfragen) —
+  /** Gesamte Tabellenpunkte, die dieses Event je User beigesteuert hat (Teilnahme + Stats + Umfragen) —
    *  für ausgeschlossene User immer 0, siehe excludedFromPointsUserIds */
   pointsByUser: Record<string, number>;
   participationsByUser: Record<string, number>;
@@ -332,7 +339,7 @@ export type EventPointsResult = {
   spectatorParticipationsByUser: Record<string, number>;
   statsByUser: Record<string, Record<string, number>>;
   /** User, die für dieses Event ausgeschlossen (disqualifiziert) wurden: ihre Teilnahme/Stats werden
-   *  weiterhin oben getrackt (participationsByUser/statsByUser), tragen aber keine Ligapunkte bei. */
+   *  weiterhin oben getrackt (participationsByUser/statsByUser), tragen aber keine Tabellenpunkte bei. */
   excludedFromPointsUserIds: string[];
 };
 
@@ -340,7 +347,7 @@ const EMPTY_RESULT: EventPointsResult = {
   pointsByUser: {}, participationsByUser: {}, spectatorParticipationsByUser: {}, statsByUser: {}, excludedFromPointsUserIds: [],
 };
 
-/** Berechnet die Ligapunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
+/** Berechnet die Tabellenpunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
  *  Spielphase des Events noch nicht abgeschlossen ist (gamePhaseComplete). */
 export type LegacyStandingRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 export type SeriesEventForStandings = EventForPoints & { id: string; status: string; finalRankingJson: string | null };
@@ -355,7 +362,7 @@ export type SeriesStandingRow = {
   disqualifiedEventCount: number;
 };
 
-/** Aggregiert die Ligapunkte aller Events einer Reihe (+ Legacy-Stand) zu einer Gesamttabelle
+/** Aggregiert die Tabellenpunkte aller Events einer Reihe (+ Legacy-Stand) zu einer Reihentabelle
  *  pro User. Enthält Teilnahme (Mitspieler + separat Zuschauer), Stats, Umfrage-Siege und Dominion-
  *  Bonus-Treffer (als Stat-Felder "Dominion Bonus"/"Dominion Bonus Punkte") — NICHT die Endplatzierungs-
  *  Belohnung der Gesamtreihe (separat in seriesCompletionData.placementRewards, erst bei
@@ -439,7 +446,7 @@ export function computeStatStandings(
   return { rows, evStatFieldsSeen };
 }
 
-/** Fasst die Gesamttabellen mehrerer Saisons zu einer saisonübergreifenden (All-Time-)Tabelle
+/** Fasst die Reihentabellen mehrerer Saisons zu einer saisonübergreifenden (All-Time-)Tabelle
  *  zusammen. Jede Saison wird vorher mit IHRER eigenen Reihen-Konfiguration und ihrem eigenen
  *  Altstand berechnet (computeStatStandings) — so zählen alte Saisons nach ihren damaligen Regeln. */
 export function mergeStandingRows(seasons: SeriesStandingRow[][]): SeriesStandingRow[] {
@@ -462,10 +469,10 @@ export function mergeStandingRows(seasons: SeriesStandingRow[][]): SeriesStandin
 export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPointsResult {
   if (!ev.completionData) return EMPTY_RESULT;
   // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats) fließt bewusst NICHT hier ein: die
-  // echten Ligapunkte der Reihe hängen ausschließlich an den Eventreihen-Einstellungen (Teilnahme,
+  // echten Tabellenpunkte der Reihe hängen ausschließlich an den Eventreihen-Einstellungen (Teilnahme,
   // Sieger-Ziel-Feld, Dominion, …). Die Event-eigene Stat-Konfiguration bestimmt nur die
-  // Turnierpunkte (siehe computeTurnierpunkte) — sonst würden rotierende Spiele mit ihren eigenen
-  // Punktewerten die seriesweite Ligatabelle verzerren.
+  // Eventpunkte (siehe computeTurnierpunkte) — sonst würden rotierende Spiele mit ihren eigenen
+  // Punktewerten die seriesweite Reihentabelle verzerren.
   let cd: EventCompletionData;
   try { cd = JSON.parse(ev.completionData); } catch { return EMPTY_RESULT; }
   if (!cd.gamePhaseComplete) return EMPTY_RESULT;
@@ -474,14 +481,14 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // completionData.frozenStatConfig gespeichert (siehe complete/route.ts). Für bereits
   // abgeschlossene Events wird diese eingefrorene Konfiguration verwendet statt der aktuellen
   // (möglicherweise seither geänderten) cfg — sonst würden spätere Config-Änderungen an der Reihe
-  // rückwirkend die Ligapunkte/Standings längst abgeschlossener Events verändern. Events ohne
+  // rückwirkend die Tabellenpunkte/Standings längst abgeschlossener Events verändern. Events ohne
   // Snapshot (vor Einführung dieses Mechanismus abgeschlossen) fallen weiterhin auf die aktuelle
   // cfg zurück — bewusst kein rückwirkendes Neu-Einfrieren alter Events.
   const effectiveCfg = cd.frozenStatConfig ?? cfg;
 
   // Ausgeschlossene User (Disqualifikation, siehe EventCompleteClient): ihre Teilnahme und Stats
-  // werden weiterhin normal getrackt (sichtbar in der Gesamttabelle der Reihe), sie erhalten aus
-  // diesem Event aber keine Ligapunkte (weder aus Teilnahme/Stats noch aus Umfrage-/MVP-/Sieger-
+  // werden weiterhin normal getrackt (sichtbar in der Reihentabelle), sie erhalten aus
+  // diesem Event aber keine Tabellenpunkte (weder aus Teilnahme/Stats noch aus Umfrage-/MVP-/Sieger-
   // Boni) — analog zur tatsächlichen Münzen-/Rang-Punkte-Vergabe in /api/admin/events/[id]/complete,
   // die für sie ebenfalls nichts gutschreibt.
   const excludedSet = new Set(cd.excludedUserIds ?? []);
@@ -516,8 +523,8 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     ...effectiveCfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f) && !matchWinStatSet.has(f)),
     ...(effectiveCfg.eventStatFields ?? []),
   ]);
-  // Platzierung (PLACEMENT_STAT_KEY) fließt bewusst NICHT hier ein — sie ist keine Ligapunkte-Quelle,
-  // sondern nur Grundlage der Turnierpunkte (siehe computeTurnierpunkte), die ausschließlich die
+  // Platzierung (PLACEMENT_STAT_KEY) fließt bewusst NICHT hier ein — sie ist keine Tabellenpunkte-Quelle,
+  // sondern nur Grundlage der Eventpunkte (siehe computeTurnierpunkte), die ausschließlich die
   // Endplatzierung/den Sieger dieses einzelnen Events bestimmen.
   for (const match of ev.matches) {
     for (const entry of match.entries) {
@@ -568,13 +575,13 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     }
   }
 
-  // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte (Abstimmungs-Zähler selbst
+  // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Tabellenpunkte (Abstimmungs-Zähler selbst
   // bleiben auch für ausgeschlossene User als Stat sichtbar, nur die Punkte-Boni werden ausgelassen)
   const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
-  // Umfrage-Teilnahme-Ligapunkte gibt es nur einmal pro Event, nicht je Umfrage: über alle Umfragen
+  // Umfrage-Teilnahme-Tabellenpunkte gibt es nur einmal pro Event, nicht je Umfrage: über alle Umfragen
   // des Events hinweg zählt nur der höchste konfigurierte Betrag unter den Umfragen, an denen
   // teilgenommen wurde (sonst würden mehrere Umfragen desselben Events die Teilnahmepunkte
-  // mehrfach vergeben). Sieger-Ligapunkte gibt es dagegen je Umfragesieg — mehrere Siege in
+  // mehrfach vergeben). Sieger-Rang-Punkte gibt es dagegen je Umfragesieg — mehrere Siege in
   // verschiedenen Umfragen desselben Events zählen jeweils.
   const participationSeriesPointsByVoter: Record<string, number> = {};
   for (const ep of cd.eventPollRewards ?? []) {

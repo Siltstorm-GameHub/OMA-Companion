@@ -180,7 +180,7 @@ export function ElementContent({
   isLive: boolean;
   ligaPunkteByUser: Record<string, number>;
   seriesTable?: SeriesTable | null;
-  /** false nur in der Vollbild-Zoom-Ansicht: zeigt bei Tabelle/Gesamttabelle alle getrackten
+  /** false nur in der Vollbild-Zoom-Ansicht: zeigt bei Tabelle/Reihentabelle alle getrackten
    *  Stats statt nur der jeweils entscheidenden — in der kleinen, stapelbaren Standardkachel
    *  waere das zu viel Text fuer den verfuegbaren Platz. */
   compact?: boolean;

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Listen-Panels des Event-Overlays: Turnierbaum, Tabelle, Gesamttabelle der Eventreihe, Teilnehmer.
+ * Listen-Panels des Event-Overlays: Turnierbaum, Tabelle, Reihentabelle, Teilnehmer.
  */
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
@@ -74,7 +74,7 @@ type RankedRow = {
    *  statt alles in `secondary` zusammenzuquetschen und dabei Felder faktisch unsichtbar
    *  werden zu lassen. */
   statLines?: string[];
-  /** Ligapunkte, die dieses Event dem User zur Eventreihe beigesteuert hat — unabhängig vom
+  /** Tabellenpunkte, die dieses Event dem User zur Eventreihe beigesteuert hat — unabhängig vom
    *  Turnierformat, sichtbar sobald das Event zu einer Reihe gehört. */
   ligaPunkte?: number;
 };
@@ -131,7 +131,7 @@ export function TablePanel({
               ))}
               {p.ligaPunkte != null && (
                 <span style={{ fontSize: 13, color: "#5eead4", opacity: 0.85, whiteSpace: "nowrap" }}>
-                  +{p.ligaPunkte} Ligapunkte
+                  +{p.ligaPunkte} Tabellenpunkte
                 </span>
               )}
             </div>
@@ -189,7 +189,7 @@ function formatStatLabel(key: string): string {
   return key.replace(/_/g, " ");
 }
 
-/** Gesamttabelle der Eventreihe — separat von TablePanel (das zeigt nur dieses eine Event).
+/** Reihentabelle — separat von TablePanel (das zeigt nur dieses eine Event).
  *  Nutzt die vom Server per loadSeriesRanking() (src/lib/seriesRanking.ts) fertig berechneten
  *  Zeilen, keine eigene Punktelogik hier. */
 export function SeriesTablePanel({
@@ -201,7 +201,7 @@ export function SeriesTablePanel({
   compact?: boolean;
 }) {
   return (
-    <PanelShell title={`Gesamttabelle · ${seriesTable.seriesName}`}>
+    <PanelShell title={`Reihentabelle · ${seriesTable.seriesName}`}>
       <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={compact ? 2 : 8}>
         {seriesTable.ranking.map((r, i) => {
           const statEntries = Object.entries(r.stats);

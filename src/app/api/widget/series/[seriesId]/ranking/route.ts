@@ -5,8 +5,8 @@ import { loadSeriesRanking } from "@/lib/seriesRanking";
 /**
  * GET /api/widget/series/[seriesId]/ranking
  *
- * Live-Gesamttabelle einer Event-Reihe fürs Widget — reine Auth-Huelle um loadSeriesRanking()
- * (src/lib/seriesRanking.ts), die auch die Overlay-Gesamttabelle nutzt, damit beide Ansichten
+ * Live-Reihentabelle einer Event-Reihe fürs Widget — reine Auth-Huelle um loadSeriesRanking()
+ * (src/lib/seriesRanking.ts), die auch die Overlay-Reihentabelle nutzt, damit beide Ansichten
  * exakt dieselben Zahlen zeigen.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ seriesId: string }> }) {

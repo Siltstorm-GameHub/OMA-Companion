@@ -108,13 +108,13 @@ export const LEADERBOARD_TEXTS = {
     label: "Aufstieg",
     note: "Höchste Stufe in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
     emptyText: "In dieser Saison hat noch niemand eine Aufstiegs-Stufe geschafft.",
-    absentText: "Schaffe eine Stufe, um in der Saison-Rangliste zu erscheinen.",
+    absentText: "Schaffe eine Stufe, um in der Reihentabelle zu erscheinen.",
   },
   laststand: {
     label: "Last Stand",
     note: "Meiste besiegte Wellen in diesem Monat · zum Monatsende gibt es Packs für die Top 10",
     emptyText: "In dieser Saison hat noch niemand eine Last-Stand-Welle besiegt.",
-    absentText: "Besiege eine Welle im Last Stand, um in der Saison-Rangliste zu erscheinen.",
+    absentText: "Besiege eine Welle im Last Stand, um in der Reihentabelle zu erscheinen.",
   },
   gesamt: {
     label: "Bestwert",

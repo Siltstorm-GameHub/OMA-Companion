@@ -200,7 +200,7 @@ export interface GemsBattleResult {
   enemyHpPercent: number;
   tip: string | null;
   retry: { kind: "campaign"; levelId: string } | { kind: "daily" } | { kind: "lastStand" };
-  /** Nur im Last Stand: Ergebnis des Laufs und Stand in der Saison-Rangliste. */
+  /** Nur im Last Stand: Ergebnis des Laufs und Stand in der Reihentabelle. */
   lastStand?: { wavesCleared: number; best: number; isNewBest: boolean; rank: number | null; players: number; seasonLabel: string };
   next: { levelId: string; name: string } | null;
   challengeScore: number | null;
@@ -466,7 +466,7 @@ async function settleGemsBattle(
   };
 }
 
-/** Ergebnis eines Last-Stand-Laufs: besiegte Wellen in die Saison-Rangliste eintragen, Münzen für in der
+/** Ergebnis eines Last-Stand-Laufs: besiegte Wellen in die Reihentabelle eintragen, Münzen für in der
  *  Saison neu erreichte Wellen (im Tageslimit) und den Stand in der Rangliste melden. */
 async function settleLastStand(
   userId: string,
@@ -733,7 +733,7 @@ export async function startLiveDailyChallenge(userId: string): Promise<LiveBattl
 }
 
 /** Startet einen Last-Stand-Lauf (Wellenmodus): fünf Gegner nach dem anderen, bis die eigenen Helden
- *  gefallen sind. Offen nach Level 12 der Kampagne; die Saison-Rangliste zählt die besiegten Wellen
+ *  gefallen sind. Offen nach Level 12 der Kampagne; die Reihentabelle zählt die besiegten Wellen
  *  (siehe wave-season.ts), Münzen gibt es für in der Saison neu erreichte Wellen. */
 export async function startLiveLastStand(userId: string): Promise<LiveBattleSnapshot> {
   const unlocked = await prisma.userCampaignProgress.findUnique({

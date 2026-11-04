@@ -74,7 +74,7 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
         {isSeriesMode && statRows.some(r => r.field.trim()) && (
           <p>📋 Statistiken: {statRows.filter(r => r.field.trim()).map(r =>
             typeof r.eventPointsPer === "number"
-              ? `${r.field} (Event ${r.eventPointsPer} · Gesamttabelle ${r.pointsPer} Pkt/Einheit)`
+              ? `${r.field} (Event ${r.eventPointsPer} · Reihentabelle ${r.pointsPer} Pkt/Einheit)`
               : `${r.field} (${r.pointsPer} Pkt/Einheit)`,
           ).join(", ")}</p>
         )}

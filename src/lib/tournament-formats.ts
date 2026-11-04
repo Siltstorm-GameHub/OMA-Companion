@@ -16,7 +16,7 @@ export const TOURNAMENT_FORMATS: { value: TournamentFormatValue; label: string; 
   { value: "single_elimination", label: "K.O.-System",         desc: "Einzel-Eliminierung: wer verliert, scheidet aus" },
   { value: "group_knockout",     label: "Gruppenphase + K.O.", desc: "Wie bei der WM: Gruppen, dann K.O.-Runde bis zum Finale" },
   { value: "round_robin",        label: "Liga-Modus",          desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "coop_stats",         label: "Skill-Index Modus",   desc: "Individuelle Stats, optional Team-Match-Win" },
+  { value: "coop_stats",         label: "Punktewertung",       desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },
 ];
 

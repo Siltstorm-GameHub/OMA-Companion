@@ -16,8 +16,8 @@ type UserLite = { id: string; name: string | null; username: string | null; imag
  * jene Route ist Moderator-Session-geschützt, hier reiner Read ohne Nebenwirkungen, daher
  * geringes Risiko einer eigenen Kopie). Bei Abweichungen künftig dort UND hier pflegen.
  *
- * "Turnierpunkte" (computeTurnierpunkte, src/lib/series-event-points.ts) werden zusätzlich live
- * berechnet — anders als die echten Ligapunkte (computeEventPoints) haengt diese Funktion NICHT an
+ * "Eventpunkte" (computeTurnierpunkte, src/lib/series-event-points.ts) werden zusätzlich live
+ * berechnet — anders als die echten Tabellenpunkte (computeEventPoints) haengt diese Funktion NICHT an
  * completionData, ist also schon waehrend eines laufenden Events verwendbar.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const format = event.format ?? "single_elimination";
   const userMap = new Map<string, UserLite>(event.participants.map((p) => [p.userId, p.user]));
 
-  // Turnierpunkte-Konfiguration: Reihen-weite StatConfig + Event-eigene Ueberschreibung (identisch
+  // Eventpunkte-Konfiguration: Reihen-weite StatConfig + Event-eigene Ueberschreibung (identisch
   // zu applyEventStatOverride-Nutzung in EventEditClient.tsx / computeTurnierpunkte-Aufrufern).
   const baseStatCfg: StatConfig = (() => {
     try {

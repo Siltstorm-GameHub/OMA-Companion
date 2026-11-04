@@ -359,7 +359,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             <div className="glass rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-base">🏆</span>
-                <p className="text-sm font-semibold text-white">Rang-Punkte (Gesamtrangliste)</p>
+                <p className="text-sm font-semibold text-white">Rang-Punkte (Rangliste)</p>
                 {user && (
                   <span className="ml-auto text-xs text-gray-500 tabular-nums">Aktuell: {user.rankPoints.toLocaleString("de-DE")}</span>
                 )}

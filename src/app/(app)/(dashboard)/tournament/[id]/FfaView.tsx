@@ -60,23 +60,23 @@ export default function FfaView({
   matches: Match[];
   participants: Participant[];
   statFields: string[];
-  /** Ligapunkte pro Einheit je Stat-Feld (aus der Reihen-Tabellenkonfiguration) — nur für die Punkte-Anzeige je Stat-Spalte */
+  /** Tabellenpunkte pro Einheit je Stat-Feld (aus der Reihen-Tabellenkonfiguration) — nur für die Punkte-Anzeige je Stat-Spalte */
   statPointsPer?: Record<string, number>;
-  /** Ligapunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Gesamttabelle der Eventreihe) */
+  /** Tabellenpunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Reihentabelle) */
   ligaPunkteByUser?: Record<string, number>;
-  /** Turnierpunkte dieses Events je Spieler (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
-   *  computeTurnierpunkte) — KEINE Ligapunkte, bestimmen nur die Endplatzierung/den Sieger dieses
+  /** Eventpunkte dieses Events je Spieler (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
+   *  computeTurnierpunkte) — KEINE Tabellenpunkte, bestimmen nur die Endplatzierung/den Sieger dieses
    *  einzelnen Events. Anders als ligaPunkteByUser bereits sichtbar, solange das Event noch läuft. */
   turnierpunkteByUser?: Record<string, number>;
   /** Punkte je Platz (Event-eigene statConfigJson, siehe EventEditClient "Turnier"-Reiter) — wenn
    *  gesetzt, zeigt die Tabelle zusätzlich die Ø-Platzierung über alle Runden sowie die daraus
-   *  resultierenden Turnierpunkte je Spieler. */
+   *  resultierenden Eventpunkte je Spieler. */
   placementPoints?: Record<string, number>;
   /** true, solange die Spielphase noch nicht abgeschlossen ist — dann sind ligaPunkteByUser nur eine
    *  Live-Vorschau (Teilnahme + bisherige Stats + projizierter Sieger-Bonus), keine endgültige
-   *  Vergabe. Steuert die pulsierende „Live"-Markierung an der Ligapunkte-Spalte. */
+   *  Vergabe. Steuert die pulsierende „Live"-Markierung an der Tabellenpunkte-Spalte. */
   isLigaPunkteLive?: boolean;
-  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen — nur relevant/gefüllt wenn
+  /** User-IDs, die aktuell (nach Eventpunkten) in Führung liegen — nur relevant/gefüllt wenn
    *  isLigaPunkteLive true ist. */
   projectedWinnerIds?: string[];
   /** Sieger-Bonus, den projectedWinnerIds zusätzlich zu ligaPunkteByUser bekämen, WENN das Event
@@ -89,7 +89,7 @@ export default function FfaView({
   userId: string;
   format?: string;
   /** Zeigt die "Match Wins"-Spalte/Team-Zuordnung nur, wenn die Reihe tatsächlich einen Stat darauf
-   *  aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst irrelevant für dieses Event. */
+   *  aufbaut (⚔️ in der Reihentabellen-Konfiguration) — sonst irrelevant für dieses Event. */
   trackMatchWin?: boolean;
   finalRankingGroups?: string[][] | null;
   pollWinnerIds?: string[];
@@ -98,7 +98,7 @@ export default function FfaView({
   pollWinsByUser?: Record<string, string[]>;
   /** Alle User-IDs, die in mindestens einer Umfrage des Events abgestimmt haben */
   votedUserIds?: string[];
-  /** Wähler ohne Event-Registrierung — nur übergeben wenn es Ligapunkte für Stimmabgabe gibt */
+  /** Wähler ohne Event-Registrierung — nur übergeben wenn es Tabellenpunkte für Stimmabgabe gibt */
   externalVoters?: Participant[];
   /** Begründung für manuelle Änderungen der Endtabelle / Disqualifikation, falls vorhanden */
   finalRankingNote?: string | null;
@@ -131,7 +131,7 @@ export default function FfaView({
     /** Anzahl Runden mit erfasster Platzierung (kann < matchCount sein, wenn nicht jede Runde eine
      *  Platzierung bekam) — Grundlage der Ø-Platzierung, siehe placementPoints-Spalte unten. */
     placementRounds: number;
-    /** Aus der Platzierung je Runde resultierende Turnierpunkte, über alle Runden summiert. */
+    /** Aus der Platzierung je Runde resultierende Eventpunkte, über alle Runden summiert. */
     placementPointsSum: number;
   };
   const totals = new Map<string, PlayerTotal>();
@@ -139,7 +139,7 @@ export default function FfaView({
   for (const p of participants) {
     totals.set(p.userId, { userId: p.userId, user: p.user, role: p.role, stats: {}, matchCount: 0, placementRounds: 0, placementPointsSum: 0 });
   }
-  // Externe Wähler (ohne Event-Teilnahme) werden nur übergeben, wenn es Ligapunkte für die
+  // Externe Wähler (ohne Event-Teilnahme) werden nur übergeben, wenn es Tabellenpunkte für die
   // Stimmabgabe gibt — dann tauchen sie unten im Gesamtranking als reine "Abgestimmt"-Zeile auf
   for (const v of externalVoters) {
     if (!totals.has(v.userId)) {
@@ -177,9 +177,9 @@ export default function FfaView({
   // einzigen eingetragenen Wert bleiben in der Tabelle sichtbar, landen aber immer ganz unten und
   // bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte "0" bei
   // niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
-  // Ist eine Turnierpunkte-Konfiguration aktiv (Punkte pro Stat und/oder Platzierungspunkte, siehe
+  // Ist eine Eventpunkte-Konfiguration aktiv (Punkte pro Stat und/oder Platzierungspunkte, siehe
   // computeTurnierpunkte), bestimmt AUSSCHLIESSLICH die kombinierte Gesamtpunktzahl die Reihenfolge —
-  // nie eine einzelne Stat-Spalte. Nur ohne Turnierpunkte-Konfiguration (reines ffa/avg_stats ohne
+  // nie eine einzelne Stat-Spalte. Nur ohne Eventpunkte-Konfiguration (reines ffa/avg_stats ohne
   // Punkte-Einstellungen) wird wie bisher lexikografisch nach den einzelnen Stat-Feldern sortiert.
   const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
   const byStatFields = (a: PlayerTotal, b: PlayerTotal) => {
@@ -270,12 +270,12 @@ export default function FfaView({
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
             {isLigaPunkteLive && (
-              <span className="flex items-center gap-1.5 normal-case tracking-normal text-[10px] font-medium text-teal-400" title="Ligapunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
+              <span className="flex items-center gap-1.5 normal-case tracking-normal text-[10px] font-medium text-teal-400" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500" />
                 </span>
-                Ligapunkte live
+                Tabellenpunkte live
               </span>
             )}
           </h2>
@@ -299,9 +299,9 @@ export default function FfaView({
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
                     )}
                     {hasTurnierpunkte && (
-                      <th className="text-center px-3 py-2.5 font-medium text-amber-400">Turnierpunkte</th>
+                      <th className="text-center px-3 py-2.5 font-medium text-amber-400">Eventpunkte</th>
                     )}
-                    <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
+                    <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Tabellenpunkte</th>
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
@@ -337,7 +337,7 @@ export default function FfaView({
                             {isLigaPunkteLive && projectedWinnerIds.includes(r.userId) && (
                               <span
                                 className="inline-flex items-center gap-1 text-[10px] font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-full shrink-0"
-                                title="Führt aktuell nach Turnierpunkten — würde bei Abschluss jetzt den Sieger-Bonus in Ligapunkten bekommen"
+                                title="Führt aktuell nach Eventpunkten — würde bei Abschluss jetzt den Sieger-Bonus in Tabellenpunkten bekommen"
                               >
                                 <Trophy className="w-2.5 h-2.5" /> aktuell vorn
                               </span>
@@ -459,7 +459,7 @@ export default function FfaView({
             {isAvg
               ? <>Sortiert nach kombiniertem Durchschnitt aller Felder ({avgWinnerDirection === "low" ? "niedrigster" : "höchster"} Ø gewinnt) · nicht eingetragene Werte zählen nicht als 0</>
               : hasTurnierpunkte
-                ? <>Sortiert nach Turnierpunkte</>
+                ? <>Sortiert nach Eventpunkte</>
                 : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
                     {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
           </p>

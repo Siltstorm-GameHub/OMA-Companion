@@ -74,10 +74,10 @@ export type EventOverlayState = {
   /** Profildaten des Streamers, dem dieses Overlay gehört — null bei Event-Links ohne
    *  `streamer`-Parameter oder wenn der User seither gelöscht wurde. */
   streamer: OverlayStreamer | null;
-  /** Ligapunkte je User, die dieses Event zu seiner Eventreihe beiträgt — leer, wenn das Event
+  /** Tabellenpunkte je User, die dieses Event zu seiner Eventreihe beiträgt — leer, wenn das Event
    *  zu keiner Reihe gehört oder die Spielphase noch nicht abgeschlossen ist. */
   ligaPunkteByUser: Record<string, number>;
-  /** Gesamttabelle der Eventreihe (separat von der Einzelevent-"table") — null, wenn das Event
+  /** Reihentabelle (separat von der Einzelevent-"table") — null, wenn das Event
    *  zu keiner Reihe gehört. */
   seriesTable: SeriesTable | null;
   /** Live-Steuerung durchs Touchscreen-Widget (Event.overlayControlJson, siehe schema.prisma) —
@@ -312,7 +312,7 @@ export const ELEMENT_LABELS: Record<ElementKey, string> = {
   ticker: "Aktuelles Match",
   bracket: "Turnierbaum",
   table: "Tabelle",
-  seriesTable: "Gesamttabelle",
+  seriesTable: "Reihentabelle",
   participants: "Teilnehmer",
 };
 

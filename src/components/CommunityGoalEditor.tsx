@@ -54,7 +54,7 @@ export default function CommunityGoalEditor({
       <p className="text-[11px] text-gray-500 -mt-2">
         Zählt die Werte der gewählten Stat-Felder über alle Runden zusammen, bis die Zielmarke erreicht
         ist — egal ob Tore, Kills oder Schritte im echten Leben. Die Werte trägst du wie gewohnt pro
-        Runde im Skill-Index ein.
+        Runde in der Punktewertung ein.
       </p>
 
       {value.enabled && (

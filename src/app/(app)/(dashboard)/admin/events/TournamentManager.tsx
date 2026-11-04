@@ -226,7 +226,7 @@ export default function TournamentManager({
   const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats";
   const isCoop = tournament.format === "coop_stats";
   // Match Win/Team-Zuordnung in einer Reihe nur anzeigen und erfassen, wenn die Reihe tatsächlich einen
-  // Stat darauf aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst unnötig. Ohne Reihe immer
+  // Stat darauf aufbaut (⚔️ in der Reihentabellen-Konfiguration) — sonst unnötig. Ohne Reihe immer
   // erfassbar; die Turnierseite zeigt es erst, sobald eine Runde gewonnen wurde.
   const trackMatchWin = isCoop && (matchWinStatKeys.length > 0 || standaloneEvent);
   // Platzierungs-Spalte pro Runde nur anzeigen, wenn für dieses Event Punkte je Platz konfiguriert

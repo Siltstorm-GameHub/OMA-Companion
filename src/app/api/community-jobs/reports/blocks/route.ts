@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?type=leaderboard — fertiger Markdown-Baustein für Berichte: Top 10 nach Rangpunkten als Tabelle.
+ * GET ?type=leaderboard — fertiger Markdown-Baustein für Berichte: Top 10 nach Rang-Punkten als Tabelle.
  * (Ergebnis-Tabellen und Teilnehmerlisten eines Events baut der Editor selbst aus den Event-Fakten.)
  */
 export async function GET(req: NextRequest) {

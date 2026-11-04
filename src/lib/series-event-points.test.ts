@@ -37,7 +37,7 @@ describe("applyEventStatOverride", () => {
     assert.deepEqual(applyEventStatOverride(cfg, null).stats.map(s => [s.field, s.pointsPer]), [["Kills", 4], ["Deaths", -1]]);
     const overridden = applyEventStatOverride(cfg, JSON.stringify({ stats: [{ field: "Kills", pointsPer: 7 }] }));
     assert.deepEqual(overridden.stats.map(s => [s.field, s.pointsPer]), [["Kills", 7], ["Deaths", -1]]);
-    // Gesamttabelle (computeEventPoints) nutzt weiter pointsPer der Reihe — die Eingabe bleibt unverändert
+    // Reihentabelle (computeEventPoints) nutzt weiter pointsPer der Reihe — die Eingabe bleibt unverändert
     assert.equal(cfg.stats[0].pointsPer, 1);
   });
 

@@ -368,7 +368,7 @@ export default async function TournamentDetailPage({
   }
   const votedUserIds = new Set(voterUserMap.keys());
   const externalVoters = [...voterUserMap.values()].filter(u => !registeredUserIds.has(u.id));
-  // Ligapunkte (Reihenpunkte) für die reine Stimmabgabe — wenn vorhanden, sollen externe Wähter
+  // Tabellenpunkte (Tabellenpunkte) für die reine Stimmabgabe — wenn vorhanden, sollen externe Wähter
   // auch im Gesamtranking auftauchen, da sie dafür Punkte für die Reihen-Tabelle erhalten
   const hasVoteSeriesPoints = mergedPolls.some(p => p.participationSeriesPoints > 0);
   const format = event.format ?? "single_elimination";
@@ -567,34 +567,34 @@ export default async function TournamentDetailPage({
     return event.pointReward ?? 0;
   })();
 
-  // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — Grundlage für die echten Ligapunkte
+  // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — Grundlage für die echten Tabellenpunkte
   // der Reihe (Teilnahme, Stats mit seriesweitem pointsPer, Sieger-Ziel-Feld). Die Event-eigene
   // statConfigJson (Reiter "Turnier" bei coop_stats) darf hier NICHT einfließen: sonst würden
   // rotierende Spiele mit ihren eigenen, nur für dieses eine Event gültigen Punktewerten die
-  // seriesweite Ligatabelle verzerren — sie bestimmt ausschließlich die Turnierpunkte (s.u.).
+  // seriesweite Reihentabelle verzerren — sie bestimmt ausschließlich die Eventpunkte (s.u.).
   const rawSeriesStatCfg: StatConfig = (() => {
     try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) as StatConfig : { participationPoints: 0, stats: [] }; }
     catch { return { participationPoints: 0, stats: [] }; }
   })();
   // Mit der Event-eigenen statConfigJson zusammengeführte Konfiguration — ausschließlich für die
-  // Turnierpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events) und die Punkte-Anzeige je
-  // Stat-Spalte, die sich direkt auf die Turnierpunkte bezieht.
+  // Eventpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events) und die Punkte-Anzeige je
+  // Stat-Spalte, die sich direkt auf die Eventpunkte bezieht.
   const turnierpunkteCfg: StatConfig = applyEventStatOverride(rawSeriesStatCfg, event.statConfigJson);
   const statPointsPer: Record<string, number> = (() => {
     const map: Record<string, number> = {};
     for (const s of turnierpunkteCfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
     return map;
   })();
-  // Turnierpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
-  // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Ligapunkte, dient nur der
+  // Eventpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
+  // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Tabellenpunkte, dient nur der
   // Endplatzierung/Sieger-Ermittlung dieses Events. Anders als ligaPunkteByUser bereits sichtbar,
   // während das Event noch läuft (keine Abhängigkeit von completionData).
   const turnierpunkteByUser: Record<string, number> =
     (turnierpunkteCfg.stats?.length ?? 0) > 0 || turnierpunkteCfg.placementPoints
       ? computeTurnierpunkte(event.matches, turnierpunkteCfg, format)
       : {};
-  // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
-  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
+  // Tabellenpunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
+  // Reihentabelle (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
   // Spielphase abgeschlossen ist. Läuft das Event noch, zeigen wir stattdessen eine Live-Vorschau
   // (Teilnahme Mitspieler + Zuschauer + bisherige Stats), mit dem Sieger-Bonus separat ausgewiesen —
   // klar als vorläufig markiert (isLigaPunkteLive), siehe computeLiveLigaPunkte. Beide nutzen bewusst
@@ -608,7 +608,7 @@ export default async function TournamentDetailPage({
   const standaloneMatchWinUsed = !event.series && format === "coop_stats" && event.matches.some(m =>
     m.entries.some(e => (readStatValue(parseEntryStats(e.statsJson), "Match Win") ?? 0) > 0));
   // avg_stats: Richtung aus Abschluss bzw. Event-Einstellung; der Führende ergibt sich aus dem Ø in
-  // dieser Richtung, nicht aus den (immer "höher = besser") Turnierpunkten.
+  // dieser Richtung, nicht aus den (immer "höher = besser") Eventpunkten.
   const avgDirection = resolveAvgDirection(event.completionData, event.statConfigJson);
   const avgLeaderIds = format === "avg_stats"
     ? bestAvgIds(
@@ -728,7 +728,7 @@ export default async function TournamentDetailPage({
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
             >
               <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-              {event.series.name} – Gesamttabelle
+              {event.series.name} – Reihentabelle
             </Link>
           )}
         </div>

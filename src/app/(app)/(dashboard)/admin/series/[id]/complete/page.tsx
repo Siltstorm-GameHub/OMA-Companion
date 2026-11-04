@@ -48,7 +48,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  // Dieselbe Berechnung wie die öffentliche Gesamttabelle der Reihe (eingefrorene Event-Konfiguration,
+  // Dieselbe Berechnung wie die öffentliche Reihentabelle (eingefrorene Event-Konfiguration,
   // Ausschlüsse, Umfrage- und Dominion-Punkte) — sonst würde die vorgeschlagene Endrangliste von der
   // Tabelle abweichen, die die Spieler sehen. Reine Zuschauer erhalten keine Endplatzierung.
   const { rows } = computeStatStandings(series.events, statCfg, legacyRows);

@@ -36,7 +36,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
           {eventType !== "community" && (
             <div>
-              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
+              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
               <input type="number" min="0" value={participationRankPts}
                 onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -44,10 +44,10 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
         </div>
         {isSeriesMode && (
-          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Gesamttabelle" weiter unten.</p>
+          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
         )}
         {isEventMode && seriesMode !== "none" && (
-          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Gesamttabellen-Konfiguration der Eventreihe eingestellt.</p>
+          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
         )}
         {isGemsTournament && (
           <div className="mt-3">
@@ -124,31 +124,31 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               </div>
             )}
             <div>
-              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
+              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
               <input type="number" min="0" value={spectatorRankPts}
                 onChange={e => setSpectatorRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
           </div>
           {isSeriesMode && (
-            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Gesamttabelle" weiter unten.</p>
+            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
           )}
           {isEventMode && seriesMode !== "none" && (
-            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Gesamttabellen-Konfiguration der Eventreihe eingestellt.</p>
+            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
           )}
         </div>
       )}
 
       {isSeriesMode && (
         <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
-          <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
+          <p className="text-sm font-medium text-indigo-300">📊 Reihentabelle</p>
           <p className="text-[11px] text-gray-500 -mt-1">
-            Die Saison-Rangliste der ganzen Reihe (Ligapunkte, über alle Events aufsummiert): Teilnahme plus
+            Die Reihentabelle der ganzen Reihe (Tabellenpunkte, über alle Events aufsummiert): Teilnahme plus
             die Punkte aus den Statistiken des vorigen Schritts.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
               <input type="number" min="0" value={statParticipationPts}
                 onChange={e => setStatParticipationPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -163,7 +163,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           {spectatorMode && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
                 <input type="number" min="0" value={statSpectatorParticipationPts}
                   onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
@@ -180,7 +180,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             <input type="checkbox" checked={statPtsToGlobalRanking}
               onChange={e => setStatPtsToGlobalRanking(e.target.checked)}
               className="w-4 h-4 rounded accent-indigo-500" />
-            <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
+            <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf die Rangliste übertragen</span>
           </label>
           {statRows.some(r => r.field.trim()) && (
             <p className="text-[11px] text-gray-500">
@@ -276,7 +276,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                     className={inputCls} style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Belohnung Abstimmung — Ligapunkte</label>
+                  <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
                   <input type="number" min="0" value={poll.participationSeriesPoints}
                     onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
@@ -290,7 +290,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                     className={inputCls} style={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelCls}>Sieger-Belohnung — Ligapunkte</label>
+                  <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>
                   <input type="number" min="0" value={poll.winnerRankPoints}
                     onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />

@@ -23,7 +23,7 @@ export async function generateMetadata({
   const name = user?.username ?? user?.name ?? "Mitglied";
   const title = `${name} – Old Masters Ally`;
   const description = user
-    ? `Ansehen ${levelTitle(user.reputationLevel)} · ${user.rankPoints.toLocaleString("de-DE")} Rangpunkte`
+    ? `Ansehen ${levelTitle(user.reputationLevel)} · ${user.rankPoints.toLocaleString("de-DE")} Rang-Punkte`
     : "Profil bei Old Masters Ally";
 
   return {

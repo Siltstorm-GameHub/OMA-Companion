@@ -36,7 +36,7 @@ export type PollConfig = {
 };
 
 export type PlacementReward = { place: number; coins: number; rankPoints: number };
-/** pointsPer = Punkte in der Gesamttabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
+/** pointsPer = Punkte in der Reihentabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
 export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 
 // Vorausgefüllte Werte, wenn eine neue Saison im Anschluss an den Abschluss einer alten Reihe angelegt wird

@@ -306,7 +306,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     ...[...allExtraFields].filter(f => !specialFields.has(f)).sort(),
   ].filter(f => standings.some(row => (row.stats[f] ?? 0) > 0));
   const showPoints = standings.some(r => r.totalPoints > 0);
-  // Solange noch niemand Ligapunkte hat, zeigt die Kompakt-Tabelle statt der leeren Punkte-Spalte
+  // Solange noch niemand Tabellenpunkte hat, zeigt die Kompakt-Tabelle statt der leeren Punkte-Spalte
   // ersatzweise den konfigurierten Gewinner-Stat der Reihe (z.B. "Wochensieg") — aussagekräftiger
   // als die reine Teilnahmezahl, ohne dafür ein eigenes Punktesystem konfigurieren zu müssen.
   const fallbackStatField = showPoints ? undefined : resolveWinnerTargetKeys(statCfg)[0];
@@ -767,7 +767,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Archivierte Saison: nur Gesamttabelle, keine Einzel-Events ────────── */}
+      {/* ── Archivierte Saison: nur Reihentabelle, keine Einzel-Events ────────── */}
       {isArchived ? (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">

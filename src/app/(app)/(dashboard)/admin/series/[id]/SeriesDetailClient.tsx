@@ -18,6 +18,7 @@ import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
 import StatRowsEditor, { type StatRow } from "@/components/admin/StatRowsEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
+import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import IconPicker from "@/components/IconPicker";
@@ -374,7 +375,7 @@ export default function SeriesDetailClient({
           winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
           matchWinStatKeys: statRows.filter(r => r.field.trim() && r.isMatchWinStat).map(r => r.field),
           ...(eventStatFields.length > 0 && { eventStatFields }),
-          ...(winnerStatField && eventStatFields.includes(winnerStatField) && { winnerStatField }),
+          ...(winnerStatField && (eventStatFields.includes(winnerStatField) || winnerStatField === TURNIERPUNKTE_STAT) && { winnerStatField }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
             dominionBonus: {
               enabled:      true,
@@ -859,12 +860,12 @@ export default function SeriesDetailClient({
                 Wird bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben — nicht mehr pro einzelnem Event.
               </p>
               <p className="text-[11px] text-gray-500 pt-1 border-t border-white/[0.05]">
-                Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Gesamttabellen-Konfiguration" weiter unten.
+                Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Reihentabellen-Konfiguration" weiter unten.
               </p>
               <Checkbox
                 checked={statTransferToGlobal}
                 onChange={setStatTransferToGlobal}
-                label="Ligapunkte bei Event-Abschluss auf Gesamtrangliste übertragen"
+                label="Tabellenpunkte bei Event-Abschluss auf die Rangliste übertragen"
               />
             </div>
           </Section>
@@ -1034,7 +1035,7 @@ export default function SeriesDetailClient({
                             className={inputCls} />
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Teilnahme-Ligapunkte</label>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Teilnahme-Tabellenpunkte</label>
                           <input type="number" min={0} value={p.participationSeriesPoints}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationSeriesPoints: Number(e.target.value) } : x))}
                             className={inputCls} />
@@ -1048,7 +1049,7 @@ export default function SeriesDetailClient({
                             className={inputCls} />
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Sieger-Ligapunkte</label>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Sieger-Rang-Punkte</label>
                           <input type="number" min={0} value={p.winnerRankPoints}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerRankPoints: Number(e.target.value) } : x))}
                             className={inputCls} />
@@ -1077,18 +1078,18 @@ export default function SeriesDetailClient({
           {lockedNotice}
           <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
           {/* Statistiken — EINE Liste: wird in jedem Event erfasst, Punkte gelten für den Skill-Index im
-              Event und (gleich oder mit ⇄ abweichend) für die Gesamttabelle */}
+              Event und (gleich oder mit ⇄ abweichend) für die Reihentabelle */}
           <Section title="Statistiken">
             <p className="text-xs text-gray-500 mb-2">
-              Werden in jedem Event der Reihe erfasst. Die Punkte gelten im Event (Skill-Index) und in der
-              Gesamttabelle — mit ⇄ legst du für die Gesamttabelle eigene Punkte fest. Zusatz-Stats nur für ein
+              Werden in jedem Event der Reihe erfasst. Die Punkte gelten im Event (Eventpunkte) und in der
+              Reihentabelle — mit ⇄ legst du für die Reihentabelle eigene Punkte fest. Zusatz-Stats nur für ein
               einzelnes Event ergänzt du dort im Reiter „Turnier“.
             </p>
             <StatRowsEditor
               rows={statRows}
               onChange={rows => {
                 setStatRows(rows);
-                if (winnerStatField && !deriveEventStatFields(rows).includes(winnerStatField)) setWinnerStatField("");
+                if (winnerStatField && winnerStatField !== TURNIERPUNKTE_STAT && !deriveEventStatFields(rows).includes(winnerStatField)) setWinnerStatField("");
               }}
               showLeagueOverride
             />
@@ -1102,6 +1103,7 @@ export default function SeriesDetailClient({
               <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)} className={inputCls}>
                 <option value="">– Kein / manuell festlegen –</option>
                 {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                <option value={TURNIERPUNKTE_STAT}>{EVENTPUNKTE_LABEL} (Summe der Stat-Punkte im Event)</option>
               </select>
             </Section>
           )}
@@ -1161,7 +1163,7 @@ export default function SeriesDetailClient({
                         onChange={e => setDominionCoins(Number(e.target.value))} className={inputCls} />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Liga-Pkt.</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpkt.</label>
                       <input type="number" min={0} value={dominionSeriesPoints}
                         onChange={e => setDominionSeriesPoints(Number(e.target.value))} className={inputCls} />
                     </div>

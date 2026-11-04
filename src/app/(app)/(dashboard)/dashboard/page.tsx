@@ -128,7 +128,7 @@ const getGlobalDashboardData = unstable_cache(
       .slice(0, 3);
 
     // Pro Reihe: nächstes offenes/laufendes/volles Event, Season-Fortschritt (fertige/gesamte Events)
-    // und aktueller Spitzenreiter (via computeStatStandings, dieselbe Logik wie die Reihen-Gesamttabelle).
+    // und aktueller Spitzenreiter (via computeStatStandings, dieselbe Logik wie die Reihentabelle).
     const enrichedSeries = activeSeries.map(series => {
       const nextEv = series.events
         .filter(ev => ["open", "active", "closed"].includes(ev.status))
@@ -438,7 +438,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Rang-Badge mit Cut-Corner → Gesamtrangliste */}
+          {/* Rang-Badge mit Cut-Corner → Rangliste */}
           {leaderboardRank && (
             <Link href="/leaderboard"
               className="group card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
