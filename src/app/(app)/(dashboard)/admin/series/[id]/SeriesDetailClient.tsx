@@ -342,6 +342,14 @@ export default function SeriesDetailClient({
   }
 
   async function saveSettings() {
+    // Community-Ziel der Vorlage geändert? Dann fragen, ob es auch in die noch offenen Termine soll
+    // (neue Termine übernehmen es ohnehin) — einzeln angepasste Ziele würden dabei überschrieben.
+    const openCoopEvents = (series.events as { status: string; type?: string }[])
+      .filter(e => e.status !== "finished" && e.status !== "closed").length;
+    const goalChanged = isTournamentSeries
+      && JSON.stringify(tournamentTemplate.communityGoal ?? null) !== JSON.stringify(parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null);
+    const applyGoalToOpenEvents = goalChanged && openCoopEvents > 0
+      && window.confirm(`Community-Ziel auch für die ${openCoopEvents} noch offenen Termine übernehmen? Dort einzeln angepasste Ziele werden dabei ersetzt.`);
     setSaving(true);
     const res = await fetch("/api/admin/event-series", {
       method: "PATCH",
@@ -355,6 +363,7 @@ export default function SeriesDetailClient({
         coverImageUrl:        coverImageUrl.trim() || null,
         category:             category || null,
         ...(isTournamentSeries && { tournamentTemplateJson: JSON.stringify(tournamentTemplate) }),
+        ...(applyGoalToOpenEvents && { applyGoalToOpenEvents: true }),
         ...(seasonCount > 1 && { statAliasesJson: JSON.stringify(statAliases) }),
         // Abgeschlossene Saison: gesperrte Felder gar nicht erst mitschicken (der Server ignoriert sie ohnehin)
         ...(!isArchived && {

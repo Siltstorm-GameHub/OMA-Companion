@@ -346,6 +346,12 @@ model Event {
   discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
   seriesId            String?
   reminderSentAt      DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
+  // Zeitraum-Events (> 24 h): "Endet bald"-Erinnerung schon verschickt (lib/event-period.ts)
+  endingSoonSentAt    DateTime?
+  // Community-Ziel-Zustand, JSON: { milestones: number[] (gemeldete %-Stufen), rewardedAt?: string,
+  // rewardedUserIds?: string[] } — getrennt von statConfigJson, damit das Speichern der Turnier-
+  // Einstellungen Meldungen/Belohnungen nicht zurücksetzt (lib/community-goal-milestones.ts)
+  goalStateJson       String?
   // JSON: { mvpUserId?, winnerStatField?, seriesWinnerTargetField?, lockedAt }
   completionData      String?
   // Gesetzt, solange ein Abschluss läuft. Verhindert, dass zwei parallele Abschlüsse

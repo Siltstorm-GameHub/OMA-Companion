@@ -1,3 +1,4 @@
+import { computeCommunityGoalProgress, goalPace, parseCommunityGoal } from "@/lib/community-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/auth";
@@ -65,7 +66,25 @@ const getGlobalNewsData = unstable_cache(
         })
       : [];
 
-    return { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders };
+    // Laufendes Community-Ziel (Punktewertung mit Ziel) für den Ticker: Fortschritt + Tempo — schon hier
+    // fertig berechnet, damit der Cache nur kleine, serialisierbare Werte hält
+    const goalTicker = await (async () => {
+      const ev = await prisma.event.findFirst({
+        where: {
+          hidden: false, format: "coop_stats", status: { in: ["open", "active"] }, startAt: { lte: new Date() },
+          statConfigJson: { contains: "\"goal\"" }, OR: [{ seriesId: null }, { series: { hidden: false } }],
+        },
+        orderBy: { startAt: "desc" },
+        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, matches: { select: { entries: { select: { userId: true, statsJson: true } } } } },
+      });
+      const goal = parseCommunityGoal(ev?.statConfigJson);
+      if (!ev || !goal) return null;
+      const progress = computeCommunityGoalProgress(ev.matches, goal);
+      const pace = ev.endAt && isPeriodEvent(ev) ? goalPace(progress.main.percent, periodInfo({ startAt: ev.startAt, endAt: ev.endAt }).progress) : null;
+      return { eventId: ev.id, title: goal.title || ev.title, percent: Math.floor(progress.main.percent), reached: progress.reached, paceLabel: pace?.label ?? null };
+    })();
+
+    return { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders, goalTicker };
   },
   ["dashboard-layout-news"],
   { revalidate: 60, tags: ["dashboard-global"] },
@@ -110,7 +129,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Für alle gleiche Daten kommen aus dem 60-s-Cache (getGlobalNewsData), pro Nutzer laufen nur
   // noch zwei kleine Abfragen — das Layout rendert bei JEDEM Seitenaufruf.
   const [
-    { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders },
+    { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders, goalTicker },
     completedMonthQuests,
     myPoints,
   ] = await Promise.all([
@@ -173,6 +192,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
         accent: "teal",
       });
     }
+  }
+
+  // Laufendes Community-Ziel: Fortschritt + Tempo
+  if (goalTicker) {
+    newsItems.push({
+      id: "community-goal",
+      icon: "leaderboard",
+      text: goalTicker.reached
+        ? `🎯 Geschafft: ${goalTicker.title} — Ziel erreicht!`
+        : `🎯 ${goalTicker.title}: ${goalTicker.percent} % geschafft${goalTicker.paceLabel ? ` · ${goalTicker.paceLabel}` : ""}`,
+      href: `/tournament/${goalTicker.eventId}`,
+      accent: goalTicker.reached ? "amber" : "teal",
+    });
   }
 
   // Clip des Monats – aktive Abstimmung

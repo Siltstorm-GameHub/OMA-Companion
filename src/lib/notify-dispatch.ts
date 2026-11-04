@@ -39,6 +39,8 @@ const RULE_TYPE: Record<string, NotificationType> = {
   event_reminder:     "event_start",
   event_started:      "event_start",
   event_poll_started: "event_start",
+  event_goal_milestone: "event_start",
+  event_ending_soon:  "event_start",
   event_ended:        "event_result",
   quest_completed:    "quest",
   quest_new:          "quest",

@@ -47,7 +47,7 @@ import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import FfaView from "./FfaView";
 import CommunityGoalCard from "./CommunityGoalCard";
-import { computeCommunityGoalProgress, parseCommunityGoal } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace, parseCommunityGoal } from "@/lib/community-goal";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import BlocksEventSection from "@/components/blocks/BlocksEventSection";
@@ -608,6 +608,10 @@ export default async function TournamentDetailPage({
   // Skill-Index mit Community-Ziel: Zähler über alle Runden bis zur Zielmarke, siehe lib/community-goal.ts
   const communityGoal = format === "coop_stats" ? parseCommunityGoal(event.statConfigJson) : null;
   const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
+  // Tempo: Ziel-Fortschritt im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events mit Ende)
+  const communityGoalPace = communityGoalProgress && event.endAt && isPeriodEvent(event) && event.status !== "finished"
+    ? goalPace(communityGoalProgress.main.percent, periodInfo({ startAt: event.startAt, endAt: event.endAt }).progress)
+    : null;
   const standaloneMatchWinUsed = !event.series && supportsMatchWin(format) && event.matches.some(m =>
     m.entries.some(e => (readStatValue(parseEntryStats(e.statsJson), "Match Win") ?? 0) > 0));
   // avg_stats: Richtung aus Abschluss bzw. Event-Einstellung; der Führende ergibt sich aus dem Ø in
@@ -1354,7 +1358,8 @@ export default async function TournamentDetailPage({
               />
             )}
             {communityGoalProgress && (
-              <CommunityGoalCard progress={communityGoalProgress} participants={mergedParticipants} userId={userId} />
+              <CommunityGoalCard progress={communityGoalProgress} participants={mergedParticipants} userId={userId}
+                pace={communityGoalPace} rewardCoins={communityGoal?.rewardCoins} />
             )}
             {isFfa && (
               <FfaView

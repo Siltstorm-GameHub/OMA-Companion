@@ -1,5 +1,7 @@
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
+import { sanitizeCommunityGoal } from "@/lib/community-goal";
+import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
@@ -156,6 +158,33 @@ export async function PATCH(req: NextRequest) {
       if (newTitle !== ev.title) {
         await prisma.event.update({ where: { id: ev.id }, data: { title: newTitle } });
       }
+    }
+  }
+
+  // 1c) Community-Ziel der Turniervorlage in die noch offenen Termine übernehmen (nur auf Nachfrage,
+  // siehe SeriesDetailClient) — ersetzt dort ein einzeln angepasstes Ziel bzw. entfernt es, wenn die
+  // Vorlage keins mehr hat. Nur Termine im Format Punktewertung; Felder, die ein Termin nicht erfasst,
+  // fallen heraus (sanitizeCommunityGoal).
+  if (fields.applyGoalToOpenEvents === true) {
+    const templateGoal = parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null;
+    const seriesFields = seriesEventStatFieldsFromConfig(series.seriesStatConfig);
+    const openEvents = await prisma.event.findMany({
+      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER, format: "coop_stats" },
+      select: { id: true, statFields: true, statConfigJson: true },
+    });
+    for (const ev of openEvents) {
+      let cfg: Record<string, unknown> = {};
+      try { cfg = ev.statConfigJson ? JSON.parse(ev.statConfigJson) : {}; } catch { cfg = {}; }
+      let evFields: string[] = seriesFields;
+      try { if (ev.statFields) evFields = [...new Set([...seriesFields, ...(JSON.parse(ev.statFields) as string[])])]; } catch { /* Reihen-Felder */ }
+      const goal = templateGoal ? sanitizeCommunityGoal(templateGoal, evFields) : null;
+      const rest = { ...cfg };
+      delete rest.goal;
+      const next = goal ? { ...rest, goal } : rest;
+      await prisma.event.update({
+        where: { id: ev.id },
+        data: { statConfigJson: Object.keys(next).length > 0 ? JSON.stringify(next) : null },
+      });
     }
   }
 

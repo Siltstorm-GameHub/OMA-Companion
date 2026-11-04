@@ -2,7 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import {
   computeCommunityGoalProgress,
+  goalPace,
   goalUnit,
+  type GoalPace,
   parseCommunityGoal,
   type CommunityGoalProgress,
 } from "@/lib/community-goal";
@@ -11,11 +13,15 @@ import { ChevronRight, Target } from "@/components/icons";
 
 const fmt = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 0 });
 
+const PACE_COLOR: Record<GoalPace["status"], string> = { ahead: "text-emerald-300", on_track: "text-teal-300", behind: "text-amber-300" };
+const PACE_ICON: Record<GoalPace["status"], string> = { ahead: "🚀", on_track: "✅", behind: "⚠️" };
+
 type GoalItem = {
   eventId: string;
   title: string;
   progress: CommunityGoalProgress;
   remainingLabel: string | null;
+  pace: GoalPace | null;
   myValue: number;
   isParticipant: boolean;
 };
@@ -55,6 +61,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
       title: goal.title || ev.title,
       progress,
       remainingLabel: period && !period.ended ? period.remainingLabel : null,
+      pace: period && !period.ended ? goalPace(progress.main.percent, period.progress) : null,
       myValue: userId ? progress.byUser[userId] ?? 0 : 0,
       isParticipant: ev.registrations.length > 0,
     }];
@@ -93,6 +100,11 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
               <div className={`h-full rounded-full ${reached ? "bg-gradient-to-r from-amber-400 to-amber-300" : "bg-gradient-to-r from-teal-500 to-emerald-400"}`}
                 style={{ width: `${main.percent}%` }} />
             </div>
+            {item.pace && (
+              <p className={`mt-1.5 text-[11px] font-semibold ${PACE_COLOR[item.pace.status]}`}>
+                {PACE_ICON[item.pace.status]} {item.pace.label} <span className="font-normal text-gray-500">· Soll nach Zeit: {Math.round(item.pace.expectedPercent)} %</span>
+              </p>
+            )}
             <p className="mt-1.5 text-[11px] text-gray-400">
               {item.myValue > 0
                 ? <>Dein Beitrag: <span className="text-teal-300 font-semibold tabular-nums">{fmt(item.myValue)} {unit}</span></>

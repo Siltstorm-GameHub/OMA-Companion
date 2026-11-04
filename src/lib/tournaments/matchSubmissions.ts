@@ -1,3 +1,4 @@
+import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { prisma } from "@/lib/prisma";
 import { applyMatchResult, ApplyMatchResultError, isKnockoutMatch } from "@/lib/tournaments/applyMatchResult";
 
@@ -181,6 +182,8 @@ export async function applySubmissionValues(
     data: { applied: false },
   });
   await prisma.matchResultSubmission.update({ where: { id: submissionId }, data: { applied: true } });
+  // Community-Ziel: neue Meilensteine melden / Belohnung auszahlen (no-op ohne Ziel, wirft nie)
+  if (plan.kind === "entry") await checkCommunityGoal(eventId);
 }
 
 /** Macht ein vorläufig eingetragenes Ergebnis rückgängig (abgelehnte Meldung). Bestätigte Ergebnisse bleiben unberührt. */

@@ -1,4 +1,4 @@
-import { goalPercent, goalUnit, type CommunityGoalProgress } from "@/lib/community-goal";
+import { goalPercent, goalUnit, type CommunityGoalProgress, type GoalPace } from "@/lib/community-goal";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -26,8 +26,14 @@ export default function CommunityGoalCard({
   progress,
   participants,
   userId,
+  pace = null,
+  rewardCoins,
 }: {
   progress: CommunityGoalProgress;
+  /** Tempo im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events), siehe goalPace */
+  pace?: GoalPace | null;
+  /** Münzen pro Mitwirkendem bei Erreichen (Anzeige) */
+  rewardCoins?: number;
   participants: Participant[];
   userId?: string | null;
 }) {
@@ -46,6 +52,15 @@ export default function CommunityGoalCard({
           <h3 className="text-base font-semibold text-white truncate">
             {goal.title || `${fmt(goal.target)} ${unit}`}
           </h3>
+          {pace && (
+            <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-emerald-300" : pace.status === "on_track" ? "text-teal-300" : "text-amber-300"}`}>
+              {pace.status === "ahead" ? "🚀" : pace.status === "on_track" ? "✅" : "⚠️"} {pace.label}
+              <span className="font-normal text-gray-500"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
+            </p>
+          )}
+          {!!rewardCoins && rewardCoins > 0 && !progress.reached && (
+            <p className="text-[11px] text-amber-300/80 mt-0.5">🪙 {rewardCoins} Münzen {goal.scope === "team" ? "für alle im Siegerteam" : goal.scope === "solo" ? "für jeden, der die Marke erreicht" : "für alle Mitwirkenden, wenn das Ziel erreicht wird"}</p>
+          )}
         </div>
         {progress.reached && (
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30">

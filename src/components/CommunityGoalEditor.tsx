@@ -12,15 +12,17 @@ export type CommunityGoalForm = {
   target: number;
   scope: CommunityGoalScope;
   unit: string;
+  /** Münzen pro Mitwirkendem bei Erreichen (0 = keine Belohnung) */
+  rewardCoins: number;
 };
 
 export const EMPTY_COMMUNITY_GOAL_FORM: CommunityGoalForm = {
-  enabled: false, title: "", fields: [], target: 100, scope: "community", unit: "",
+  enabled: false, title: "", fields: [], target: 100, scope: "community", unit: "", rewardCoins: 0,
 };
 
 export function goalToForm(goal: CommunityGoal | null): CommunityGoalForm {
   if (!goal) return EMPTY_COMMUNITY_GOAL_FORM;
-  return { enabled: true, title: goal.title ?? "", fields: goal.fields, target: goal.target, scope: goal.scope, unit: goal.unit ?? "" };
+  return { enabled: true, title: goal.title ?? "", fields: goal.fields, target: goal.target, scope: goal.scope, unit: goal.unit ?? "", rewardCoins: goal.rewardCoins ?? 0 };
 }
 
 /** Formular → gespeichertes Ziel (null = kein Ziel / unvollständig). Nur Felder, die das Event hat. */
@@ -117,6 +119,17 @@ export default function CommunityGoalEditor({
             <label className="text-xs text-gray-500 mb-1 block">Titel (optional)</label>
             <input type="text" value={value.title} maxLength={120} placeholder="z.B. 1.000 Tore für die Community"
               onChange={e => set({ title: e.target.value })} className={inputCls} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Belohnung bei Erreichen (Münzen pro Mitwirkendem, optional)</label>
+            <input type="number" min={0} value={value.rewardCoins}
+              onChange={e => set({ rewardCoins: Math.max(0, Number(e.target.value) || 0) })} className={inputCls} />
+            <p className="text-[10px] text-gray-500 mt-1">
+              {value.scope === "team" ? "Jeder im Team, das die Marke erreicht und etwas beigetragen hat."
+                : value.scope === "solo" ? "Jeder, der die Marke selbst erreicht."
+                : "Jeder, der etwas beigetragen hat — sobald die Community die Marke gemeinsam erreicht."}
+              {" "}Bei 25 %, 50 %, 75 % und 100 % gibt es automatisch eine Meldung an alle Teilnehmer.
+            </p>
           </div>
 
           {incomplete && (

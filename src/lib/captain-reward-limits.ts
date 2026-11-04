@@ -33,6 +33,8 @@ export type RewardLimits = {
   /** Liga-Modus "Sieg/Unentschieden-Münzen": Münzen pro gewonnenem bzw. unentschiedenem Match */
   matchWinCoins: number;
   matchDrawCoins: number;
+  /** Community-Ziel erreicht: Münzen pro Mitwirkendem */
+  goalRewardCoins: number;
 };
 
 /** Standardgrenzen (= Standardwerte des Event-Wizards). */
@@ -53,6 +55,7 @@ export const CAPTAIN_REWARD_LIMITS: RewardLimits = {
   dominionCoins: 0,
   matchWinCoins: 30,
   matchDrawCoins: 10,
+  goalRewardCoins: 20,
 };
 
 const DEFAULT = CAPTAIN_REWARD_LIMITS;

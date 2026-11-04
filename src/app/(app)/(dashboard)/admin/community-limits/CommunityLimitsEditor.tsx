@@ -17,6 +17,7 @@ const SCALAR_FIELDS: { key: ScalarKey; label: string }[] = [
   { key: "pollWinnerRankPoints",   label: "Umfrage: Rang-Punkte für Gewinner" },
   { key: "matchWinCoins",          label: "Liga: Münzen je Sieg" },
   { key: "matchDrawCoins",         label: "Liga: Münzen je Unentschieden" },
+  { key: "goalRewardCoins",        label: "Community-Ziel: Münzen je Mitwirkendem" },
 ];
 
 const inputCls = "w-full bg-gray-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-teal-500/50 disabled:opacity-60";

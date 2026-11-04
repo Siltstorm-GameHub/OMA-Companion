@@ -26,6 +26,10 @@ export type CommunityGoal = {
   scope: CommunityGoalScope;
   /** Einheit für die Anzeige, z.B. "Tore", "Schritte" — fehlt = Feldname(n) */
   unit?: string;
+  /** Münzen für jeden Mitwirkenden, sobald das Ziel erreicht ist (community: alle mit Beitrag, team: Mitglieder
+   *  des Siegerteams, solo: wer die Marke selbst erreicht). Bei Community-Events gekappt, siehe
+   *  lib/community-goal-milestones.ts */
+  rewardCoins?: number;
 };
 
 export const COMMUNITY_GOAL_SCOPES: { value: CommunityGoalScope; label: string; desc: string }[] = [
@@ -51,7 +55,8 @@ export function sanitizeCommunityGoal(raw: unknown, allowedFields?: string[]): C
   if (fields.length === 0) return null;
   const title = typeof r.title === "string" ? r.title.trim().slice(0, 120) : "";
   const unit  = typeof r.unit  === "string" ? r.unit.trim().slice(0, 40)   : "";
-  return { fields, target, scope, ...(title && { title }), ...(unit && { unit }) };
+  const rewardCoins = Math.min(1_000_000, Math.max(0, Math.floor(Number(r.rewardCoins) || 0)));
+  return { fields, target, scope, ...(title && { title }), ...(unit && { unit }), ...(rewardCoins > 0 && { rewardCoins }) };
 }
 
 /** Für API-Routen, die eine komplette statConfig vom Client übernehmen: das "goal" darin wird
@@ -137,4 +142,26 @@ export function goalPercent(value: number, target: number): number {
 /** Einheit für die Anzeige: explizite Einheit, sonst die Feldnamen ("Tore + Assists"). */
 export function goalUnit(goal: CommunityGoal): string {
   return goal.unit || goal.fields.join(" + ");
+}
+
+export type GoalPace = {
+  /** "ahead" = vor dem Plan, "on_track" = auf Kurs, "behind" = hängt hinterher */
+  status: "ahead" | "on_track" | "behind";
+  label: string;
+  /** Erwarteter Fortschritt in % anhand der verstrichenen Zeit */
+  expectedPercent: number;
+};
+
+/**
+ * Tempo eines Ziels: Fortschritt im Vergleich zur verstrichenen Zeit des Event-Zeitraums.
+ * Toleranz ±5 Prozentpunkte gilt als "auf Kurs". null, wenn das Ziel schon erreicht ist oder
+ * noch keine Zeit vergangen ist (kein sinnvoller Vergleich).
+ */
+export function goalPace(goalPercent: number, timeProgress: number): GoalPace | null {
+  if (goalPercent >= 100 || timeProgress <= 0) return null;
+  const expectedPercent = Math.min(100, timeProgress * 100);
+  const diff = goalPercent - expectedPercent;
+  if (diff > 5) return { status: "ahead", label: "Vor dem Plan", expectedPercent };
+  if (diff >= -5) return { status: "on_track", label: "Auf Kurs", expectedPercent };
+  return { status: "behind", label: "Wir hängen hinterher", expectedPercent };
 }

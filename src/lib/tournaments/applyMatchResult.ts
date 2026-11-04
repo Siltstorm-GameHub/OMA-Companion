@@ -1,3 +1,4 @@
+import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { prisma } from "@/lib/prisma";
 import { revokePointsByReason } from "@/lib/points";
 import { GROUP_KNOCKOUT_FORMAT } from "./groupStage";
@@ -189,6 +190,8 @@ export async function applyMatchResult(input: ApplyMatchResultInput) {
       },
     });
   }
+  // Community-Ziel: neue Meilensteine melden / Belohnung auszahlen (no-op ohne Ziel, wirft nie)
+  if (input.entries) await checkCommunityGoal(input.eventId);
   return result;
 }
 
