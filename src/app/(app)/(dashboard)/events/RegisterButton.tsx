@@ -9,11 +9,14 @@ export default function RegisterButton({
   isRegistered,
   isFull,
   discordEventUrl,
+  joinLabel = "Anmelden",
 }: {
   eventId: string;
   isRegistered: boolean;
   isFull: boolean;
   discordEventUrl?: string | null;
+  /** Beschriftung des Anmelde-Knopfs, z.B. "Jetzt einsteigen" bei laufenden Zeitraum-Events */
+  joinLabel?: string;
 }) {
   const [loading, setLoading]           = useState(false);
   const [registered, setRegistered]     = useState(isRegistered);
@@ -88,7 +91,7 @@ export default function RegisterButton({
         ) : registered ? (
           <><Check className="w-3 h-3" /> Angemeldet</>
         ) : (
-          "Anmelden"
+          joinLabel
         )}
       </button>
 

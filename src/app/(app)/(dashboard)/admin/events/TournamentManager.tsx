@@ -173,6 +173,8 @@ export default function TournamentManager({
     return init;
   });
   // Match Win: welches Team hat gewonnen (nur wenn Spieler Teams zugeordnet sind)
+  // Nachzügler-Hinweis: gewählte Runde je Spieler (Standard: neueste Runde)
+  const [latecomerRound, setLatecomerRound] = useState<Record<string, string>>({});
   const [matchWin, setMatchWin]   = useState<Record<string, "A" | "B" | null>>(() => {
     const init: Record<string, "A" | "B" | null> = {};
     for (const m of initial?.matches ?? []) {
@@ -254,6 +256,9 @@ export default function TournamentManager({
   // Stat-Formate: Runden nach Rundennummer (nachgetragene Runden landen an ihrer Stelle)
   const statRounds      = isFfa ? sortStatRounds(tournament.matches) : [];
   const usedRoundNumbers = new Set(statRounds.map(m => m.position));
+  // Nachzügler: angemeldete Spieler (allUsers), die in keiner Runde stehen — siehe Hinweis oben im Render
+  const inAnyRound = new Set(statRounds.flatMap(m => m.entries.map(e => e.userId).filter((id): id is string => !!id)));
+  const latecomers = isFfa ? allUsers.filter(u => !inAnyRound.has(u.id)) : [];
   const groupIndexes    = [...new Set(groupMatches.map(m => m.groupIndex!))];
   /** Label für Match-Listen: Gruppe + Spieltag bzw. K.O.-Runde (nur group_knockout). */
   const groupKnockoutLabel = (m: Match) => m.groupIndex != null
@@ -963,6 +968,34 @@ export default function TournamentManager({
           </button>
         ))}
       </div>
+
+      {/* Nachzügler (Punktewertung/Durchschnittswerte): angemeldete Spieler, die in noch keiner Runde
+          stehen — z.B. bei Zeitraum-Events nach dem Start eingestiegen. Per Knopf in eine Runde aufnehmen. */}
+      {isFfa && statRounds.length > 0 && latecomers.length > 0 && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 space-y-2">
+          <p className="text-sm font-semibold text-amber-300">
+            Neu dabei — noch in keiner Runde ({latecomers.length})
+          </p>
+          <div className="space-y-1.5">
+            {latecomers.map(u => (
+              <div key={u.id} className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-white flex-1 min-w-[120px] truncate">{u.username ?? u.name ?? "?"}</span>
+                <select
+                  value={latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id}
+                  onChange={e => setLatecomerRound(prev => ({ ...prev, [u.id]: e.target.value }))}
+                  className="rounded-lg px-2 py-1.5 text-xs text-white bg-gray-800 border border-gray-700 outline-none focus:border-amber-500/50">
+                  {[...statRounds].reverse().map(m => <option key={m.id} value={m.id}>{statRoundLabel(m)}</option>)}
+                </select>
+                <button type="button" disabled={loading}
+                  onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50">
+                  <Plus className="w-3.5 h-3.5" /> Zur Runde
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           Mobile / Touchscreen — eigener Live-Modus statt verkleinerter

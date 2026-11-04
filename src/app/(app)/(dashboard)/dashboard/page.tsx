@@ -1,4 +1,5 @@
 ﻿import { prisma } from "@/lib/prisma";
+import CommunityGoalsBanner from "@/components/CommunityGoalsBanner";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
@@ -16,6 +17,7 @@ import WatchTogetherTeaser from "@/components/watch/WatchTogetherTeaser";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
+import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -52,12 +54,12 @@ const getGlobalDashboardData = unstable_cache(
       prisma.eventSeries.findMany({
         where: { hidden: false, status: "active", events: { some: { status: { in: ["open", "active", "closed"] } } } },
         select: {
-          id: true, name: true, icon: true, fixedGame: true, category: true,
+          id: true, name: true, icon: true, fixedGame: true, category: true, coverImageUrl: true,
           seriesStatConfig: true, legacyStandings: true,
           events: {
             orderBy: { startAt: "asc" },
             select: {
-              id: true, startAt: true, status: true, game: true,
+              id: true, startAt: true, status: true, game: true, coverImageUrl: true,
               completionData: true, finalRankingJson: true,
               registrations: { select: { userId: true, role: true } },
               matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
@@ -152,9 +154,10 @@ const getGlobalDashboardData = unstable_cache(
 
       return {
         id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame, category: series.category,
+        coverImageUrl: series.coverImageUrl,
         finishedCount, totalCount, leaderUserId, leaderPoints,
         nextEvent: nextEv ? {
-          startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game,
+          startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game, coverImageUrl: nextEv.coverImageUrl,
           registeredUserIds: nextEv.registrations.map(r => r.userId),
         } : null,
       };
@@ -267,7 +270,7 @@ export default async function DashboardPage() {
           },
           orderBy: { startAt: "asc" },
           select: {
-            id: true, title: true, startAt: true, status: true,
+            id: true, title: true, startAt: true, endAt: true, status: true,
             polls: { where: { endAt: { gt: now } }, orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
           },
         })
@@ -497,7 +500,13 @@ export default async function DashboardPage() {
               style={{ background: `radial-gradient(circle at 30% 15%, ${acc("amber", 0.22)}, transparent 70%)` }} />
             <div className="relative">
               {nextRegisteredEvent ? (() => {
-                const phase = nextRegisteredEvent.status === "active"
+                const nextPeriod = nextRegisteredEvent.status === "active" && nextRegisteredEvent.endAt && isPeriodEvent(nextRegisteredEvent)
+                  ? periodInfo({ startAt: nextRegisteredEvent.startAt, endAt: nextRegisteredEvent.endAt }, now)
+                  : null;
+                // Zeitraum-Events: ruhige Restlaufzeit statt rot blinkendem "Live"
+                const phase = nextPeriod
+                  ? { label: "Läuft", color: "text-teal-400", extra: nextPeriod.remainingLabel as string | null }
+                  : nextRegisteredEvent.status === "active"
                   ? { label: "Live", color: "text-red-400", extra: null as string | null }
                   : nextRegisteredEvent.status === "umfrage"
                     ? {
@@ -602,6 +611,9 @@ export default async function DashboardPage() {
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
 
+        {/* ── Laufende Community-Ziele: "Gemeinsam schaffen wir …" mit Fortschritt ── */}
+        <CommunityGoalsBanner userId={userId} />
+
         {/* ── Community-Feed: prominent, direkt unter "was ist gerade los" ── */}
         <CommunityBoardWidget />
 
@@ -658,7 +670,7 @@ export default async function DashboardPage() {
                     style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all duration-200 group-hover:w-1" style={{ background: seriesColor }} />
                     <div className="relative w-10 h-10 shrink-0 transition-transform duration-200 group-hover:scale-105">
-                      <GameCover game={game} className="w-10 h-10" rounded="rounded-md" />
+                      <GameCover game={game} coverUrl={nextEv?.coverImageUrl ?? series.coverImageUrl ?? null} className="w-10 h-10" rounded="rounded-md" />
                       <div className="absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center"
                         style={{ background: "#111318", border: `1.5px solid ${seriesColor}` }}>
                         <SeriesIcon name={series.icon} className="w-2.5 h-2.5" />

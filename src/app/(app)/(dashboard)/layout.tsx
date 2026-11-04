@@ -10,6 +10,7 @@ import type { NewsItem } from "@/components/TopNewsFeed";
 import { getBerlinDateParts } from "@/lib/time";
 import { GUEST_ALLOWED_PATHS } from "@/lib/guest-access";
 import { unstable_cache } from "next/cache";
+import { endsSoonLabel, isPeriodEvent, periodInfo, PERIOD_TICKER_WINDOW_MS } from "@/lib/event-period";
 
 // Nutzerunabhängige News-Ticker-Daten, 60 s gecacht. Achtung: unstable_cache serialisiert als
 // JSON — Date-Felder (startAt) kommen als String zurück und werden unten per new Date() gelesen.
@@ -21,7 +22,7 @@ const getGlobalNewsData = unstable_cache(
       prisma.event.findFirst({
         where: { status: { in: ["active", "umfrage"] } },
         orderBy: { startAt: "desc" },
-        select: { id: true, title: true, startAt: true, game: true, status: true },
+        select: { id: true, title: true, startAt: true, endAt: true, game: true, status: true },
       }),
       // Next upcoming event
       prisma.event.findFirst({
@@ -124,7 +125,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : null,
   ]);
 
-  const nextEvent = activeOrPollEvent ?? upcomingEvent;
+  // Laufende Zeitraum-Events (> 24 h mit Ende) erscheinen nicht täglich als "Läuft gerade", sondern erst
+  // kurz vor Schluss ("Endet in 2 Tagen") — bis dahin rückt das nächste anstehende Event nach.
+  const activePeriod = activeOrPollEvent?.status === "active" && activeOrPollEvent.endAt && isPeriodEvent(activeOrPollEvent)
+    ? periodInfo({ startAt: activeOrPollEvent.startAt, endAt: activeOrPollEvent.endAt })
+    : null;
+  const showActive = activeOrPollEvent && (!activePeriod || activePeriod.remainingMs <= PERIOD_TICKER_WINDOW_MS);
+  const nextEvent = (showActive ? activeOrPollEvent : null) ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
 
   const newsItems: NewsItem[] = [];
@@ -135,7 +142,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       newsItems.push({
         id: "event-next",
         icon: "event",
-        text: `Läuft gerade: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
+        text: `${activePeriod && nextEvent === activeOrPollEvent ? endsSoonLabel(activePeriod.remainingMs) : "Läuft gerade"}: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
         href: "/events",
         accent: "amber",
       });

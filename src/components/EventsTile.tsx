@@ -51,7 +51,7 @@ export default function EventsTile({ items, activeEvents }: Props) {
       {/* Cover art area */}
       <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
         {/* Game cover background */}
-        {event?.game ? (
+        {event?.game || event?.coverImageUrl ? (
           <GameCover
             key={event.id}
             game={event.game}

@@ -10,7 +10,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Users } from "@/components/icons";
-import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings } from "@/components/icons";
+import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
+import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
 import GameCover from "@/components/GameCover";
@@ -239,6 +240,8 @@ export default async function TournamentDetailPage({
     try { return JSON.parse(raw); } catch { return null; }
   })();
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
+  // Laufendes Zeitraum-Event (> 24 h mit Ende): ruhige Restlaufzeit statt "läuft", Einstieg jederzeit
+  const period = event.status === "active" && event.endAt && isPeriodEvent(event) ? periodInfo({ startAt: event.startAt, endAt: event.endAt }) : null;
   const hasTournament = !!event.format;
 
   // Alle Teilnehmer (keine Zuschauer) dürfen Ergebnisse melden — eigene und die anderer Spieler,
@@ -831,10 +834,25 @@ export default async function TournamentDetailPage({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-            <span className={`text-sm px-3 py-1 rounded-full font-medium ${s.style}`}>{s.label}</span>
-          </div>
+          {period ? (
+            // Laufendes Zeitraum-Event: Restlaufzeit + Fortschritt statt pulsierendem "läuft"
+            <div className="flex flex-col items-end gap-1.5 min-w-[160px]">
+              <span className="flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium bg-teal-900/50 text-teal-300">
+                <Timer className="w-3.5 h-3.5" /> {period.remainingLabel}
+              </span>
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden" title={`${Math.round(period.progress * 100)} % des Zeitraums vorbei`}>
+                <div className="h-full bg-teal-400/80" style={{ width: `${period.progress * 100}%` }} />
+              </div>
+              <span className="text-[11px] text-gray-500">
+                bis {formatBerlinDate(event.endAt!, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+              <span className={`text-sm px-3 py-1 rounded-full font-medium ${s.style}`}>{s.label}</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-4">
@@ -949,7 +967,11 @@ export default async function TournamentDetailPage({
         {userId && (
           <div className="mt-4 flex items-center gap-3 flex-wrap">
             {canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember)) && (
-              <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl} />
+              <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl}
+                joinLabel={period ? "Jetzt einsteigen" : undefined} />
+            )}
+            {period && !isRegistered && canRegister && (
+              <span className="text-xs text-gray-500">Einstieg jederzeit bis zum Ende möglich</span>
             )}
             {isRegistered && event.checkInEnabled && event.status !== "finished" && (
               <CheckInButton

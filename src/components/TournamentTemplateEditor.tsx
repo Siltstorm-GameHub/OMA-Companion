@@ -1,7 +1,7 @@
 "use client";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tournaments/groupStage";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 
@@ -32,6 +32,19 @@ export default function TournamentTemplateEditor({
     setGoalForm(form);
     onChange({ ...value, communityGoal: formToGoal(form, statFields) });
   };
+  // Ändern sich die Stat-Felder NACH dem Ausfüllen des Ziels (z.B. Ziel zuerst ausgefüllt, Statistiken
+  // danach angelegt oder umbenannt), muss das gespeicherte Ziel neu berechnet werden — sonst zeigt das
+  // Formular ein vollständiges Ziel, in der Vorlage steht aber keins (bzw. eins mit veralteten Feldern).
+  const statFieldsKey = statFields.join("\u0000");
+  const derivedGoal = formToGoal(goalForm, statFields);
+  const derivedGoalKey = JSON.stringify(derivedGoal);
+  useEffect(() => {
+    if (JSON.stringify(value.communityGoal ?? null) !== derivedGoalKey) {
+      onChange({ ...value, communityGoal: derivedGoal });
+    }
+    // Nur auf geänderte Stat-Felder bzw. abgeleitetes Ziel reagieren, nicht auf jeden neuen value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statFieldsKey, derivedGoalKey]);
   const showGroups = anyFormat || format === GROUP_KNOCKOUT_FORMAT;
   const showPoints = anyFormat || format === "round_robin" || format === "liga";
   const gs = value.groupStage ?? null;

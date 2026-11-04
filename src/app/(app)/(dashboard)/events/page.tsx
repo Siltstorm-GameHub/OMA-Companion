@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
-import { CalendarDays, ExternalLink, Trophy, Check, Plus } from "@/components/icons";
+import { CalendarDays, ExternalLink, Trophy, Check, Plus, Timer } from "@/components/icons";
+import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import RegisterButton from "./RegisterButton";
@@ -64,7 +65,7 @@ export default async function EventsPage() {
         // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
         // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
         _count:        { select: { registrations: { where: { role: "player" } } } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true } },
+        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true } },
         createdBy:     { select: { username: true, name: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
@@ -77,7 +78,7 @@ export default async function EventsPage() {
           orderBy: { startAt: "desc" },
           include: {
             _count: { select: { registrations: true } },
-            series: { select: { id: true, name: true, icon: true } },
+            series: { select: { id: true, name: true, icon: true, coverImageUrl: true } },
           },
         })
       : Promise.resolve([]),
@@ -182,6 +183,8 @@ export default async function EventsPage() {
   const renderItem = (item: AnyItem, idx: number) => {
       const { ev } = item;
       const s            = EVENT_STATUS[ev.status] ?? EVENT_STATUS.finished;
+      // Laufendes Zeitraum-Event (> 24 h mit Ende): Restlaufzeit statt "Läuft", Einstieg jederzeit
+      const period = ev.status === "active" && ev.endAt && isPeriodEvent(ev) ? periodInfo({ startAt: ev.startAt, endAt: ev.endAt }, now) : null;
       const isRegistered = userId
         ? (ev.registrations as { userId: string }[]).some(r => r.userId === userId)
         : false;
@@ -218,16 +221,29 @@ export default async function EventsPage() {
             aspectRatio: "1 / 1",
           }}>
           <div className="absolute inset-0">
-            <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-full h-full" rounded="rounded-none"
+            <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-full h-full" rounded="rounded-none"
               imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge />
           </div>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
-          <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-            {isFull && !isRegistered ? "Voll" : s.label}
-          </span>
+          {period ? (
+            // Laufendes Zeitraum-Event: ruhig mit Restlaufzeit statt pulsierendem "Läuft"
+            <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium text-white bg-teal-600 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+              <Timer className="w-3 h-3" />
+              {period.remainingLabel}
+            </span>
+          ) : (
+            <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+              {isFull && !isRegistered ? "Voll" : s.label}
+            </span>
+          )}
+          {period && (
+            <div className="absolute top-[2px] left-0 right-0 h-[3px] bg-black/40" title={`${Math.round(period.progress * 100)} % des Zeitraums vorbei`}>
+              <div className="h-full bg-teal-400/80" style={{ width: `${period.progress * 100}%` }} />
+            </div>
+          )}
           {isRegistered && (
             <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-white bg-emerald-500 px-2.5 py-1 rounded-full font-medium shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
               <Check className="w-3 h-3" /> Angemeldet
@@ -284,6 +300,7 @@ export default async function EventsPage() {
                   isRegistered={isRegistered}
                   isFull={isFull && !isRegistered}
                   discordEventUrl={discordUrl}
+                  joinLabel={period ? "Jetzt einsteigen" : undefined}
                 />
                 {!isPartnerStreamer && (
                   <StreamRegisterButton eventId={ev.id} isStreaming={isCommunityStreamer} />
@@ -326,7 +343,7 @@ export default async function EventsPage() {
       const cardCls = "flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] transition-all group";
       const content = (
         <>
-          <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-10 h-7 shrink-0" rounded="rounded" />
+          <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-10 h-7 shrink-0" rounded="rounded" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
             <p className="text-[11px] text-gray-500">
@@ -437,7 +454,7 @@ export default async function EventsPage() {
             <GateLink key={`hidden-${ev.id}`}
               href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
-              <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
+              <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-9 h-6 shrink-0" rounded="rounded" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
                   {ev.title}
@@ -477,7 +494,7 @@ export default async function EventsPage() {
                 <EventCardLink key={`ev-fin-${ev.id}`}
                   href={cardHref}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
-                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
+                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
                     <GateLink href={`/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">

@@ -1,4 +1,5 @@
 "use client";
+import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import PlaceMedal from "@/components/PlaceMedal";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
@@ -27,6 +28,7 @@ export type SeriesEventItem = {
   title: string;
   status: string;
   startAt: Date | string;
+  endAt?: Date | string | null;
   game: string | null;
   genre?: string | null;
   placementRewardsJson?: unknown;
@@ -39,6 +41,8 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
   const s = STATUS_CFG[ev.status] ?? STATUS_CFG.finished;
   const isRegistered = ev.registrations.some(r => r.userId === userId);
   const isLive = ev.status === "active" || ev.status === "umfrage";
+  // Laufendes Zeitraum-Event (> 24 h mit Ende): Restlaufzeit statt pulsierendem "Läuft"
+  const period = ev.status === "active" && ev.endAt && isPeriodEvent({ startAt: ev.startAt, endAt: ev.endAt }) ? periodInfo({ startAt: ev.startAt, endAt: ev.endAt }) : null;
   const participants = ev.registrations.map(r => r.user);
   const date = new Date(ev.startAt);
   const isoStr = date.toISOString();
@@ -147,8 +151,8 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
 
       <div className="relative flex items-center gap-1.5 shrink-0">
         {isRegistered && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-        <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${s.badge}`}>{s.label}</span>
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${period ? "bg-teal-400" : s.dot}`} />
+        <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${s.badge}`}>{period ? period.remainingLabel : s.label}</span>
         <ChevronRight className="w-3.5 h-3.5 text-gray-700 shrink-0" />
       </div>
     </Link>
