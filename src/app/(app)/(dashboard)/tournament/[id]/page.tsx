@@ -56,6 +56,8 @@ import { placementRewardFor } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import NextMatches, { type UpcomingMatch } from "./NextMatches";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
+import ResultReviewClient from "@/app/(app)/(dashboard)/admin/events/[id]/results/ResultReviewClient";
+import { loadReviewData } from "@/lib/tournaments/review-data";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
@@ -163,6 +165,8 @@ export default async function TournamentDetailPage({
   // Ersteller, Squad-Captains und Mods dürfen das Event verwalten (Ergebnisse eintragen/korrigieren)
   // und sehen es auch, wenn es ausgeblendet ist
   const canManage = await canManageEvent(me, eventId);
+  // Offene Ergebnis-Meldungen zum Prüfen (nur Verwalter) — auch eigene Meldungen, siehe ResultReviewClient
+  const reviewData = canManage && event.format ? await loadReviewData(eventId, { onlyPending: true }) : null;
   const isHidden = event.hidden || !!event.series?.hidden;
   if (isHidden && !isMod && !canManage) notFound();
 
@@ -1402,6 +1406,22 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 locked={isParticipantEditLocked(event)}
               />
+              </div>
+            )}
+            {/* Ergebnis-Prüfung direkt auf der Eventseite — nur für Verwalter (Mods/Admins, Ersteller,
+                Squad-Captains), nur solange offene Meldungen da sind. Auch eigene Meldungen. */}
+            {reviewData && reviewData.matches.length > 0 && (
+              <div id="ergebnis-pruefen" className="scroll-mt-24 mt-5 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-300">Ergebnis-Meldungen prüfen</h3>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-semibold">
+                    {reviewData.matches.reduce((n, m) => n + m.submissions.length, 0)} offen
+                  </span>
+                  <Link href={`/admin/events/${event.id}/results`} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
+                    Alle Meldungen (auch erledigte) →
+                  </Link>
+                </div>
+                <ResultReviewClient eventId={event.id} matches={reviewData.matches} statFields={reviewData.statFields} />
               </div>
             )}
           </div>
