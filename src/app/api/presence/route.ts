@@ -7,20 +7,23 @@ export const dynamic = "force-dynamic";
 // Nutzer gilt als "aktiv", wenn er innerhalb dieses Zeitfensters einen Heartbeat gesendet hat
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 
-// GET /api/presence  →  Anzahl + Liste aktiver Nutzer
-export async function GET() {
+async function activeUsers() {
   const since = new Date(Date.now() - ACTIVE_WINDOW_MS);
-
   const users = await prisma.user.findMany({
     where: { lastActiveAt: { gt: since } },
     orderBy: { lastActiveAt: "desc" },
     select: { id: true, name: true, username: true, image: true, rankPoints: true },
   });
-
-  return NextResponse.json({ count: users.length, users });
+  return { count: users.length, users };
 }
 
-// POST /api/presence  →  Heartbeat (Auth erforderlich)
+// GET /api/presence  →  Anzahl + Liste aktiver Nutzer
+export async function GET() {
+  return NextResponse.json(await activeUsers());
+}
+
+// POST /api/presence  →  Heartbeat (Auth erforderlich) + aktuelle Online-Liste in einer Antwort,
+// damit der Client nicht zusätzlich per GET pollen muss.
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -32,5 +35,5 @@ export async function POST() {
     data: { lastActiveAt: new Date() },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...(await activeUsers()) });
 }

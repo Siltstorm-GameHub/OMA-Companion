@@ -1,24 +1,8 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { usePolledCount } from "@/lib/usePolledCount";
 
 export default function PollBadge() {
-  const [count, setCount] = useState(0);
-
-  const fetch_ = useCallback(async () => {
-    try {
-      const res = await fetch("/api/polls/pending-count");
-      if (res.ok) {
-        const d = await res.json() as { count: number };
-        setCount(d.count);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    fetch_();
-    const id = setInterval(fetch_, 60_000);
-    return () => clearInterval(id);
-  }, [fetch_]);
+  const count = usePolledCount("/api/polls/pending-count");
 
   if (count === 0) return null;
 

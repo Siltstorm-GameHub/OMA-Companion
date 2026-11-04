@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { getGameCoverUrl, getGameFallbackGradient, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import CoverBrandBadge from "@/components/CoverBrandBadge";
+import { coverHasOwnLogo } from "@/lib/event-cover-presets";
 
 interface GameCoverProps {
   game: string | null | undefined;
@@ -104,7 +105,7 @@ export default function GameCover({
               else setImgError(true);
             }}
           />
-          {brandBadge && <CoverBrandBadge />}
+          {brandBadge && !coverHasOwnLogo(resolvedUrl) && <CoverBrandBadge />}
         </>
       ) : fallbackVariant === "plain" ? (
         <div className="w-full h-full" style={{ background: getGameFallbackGradient(game) }} />

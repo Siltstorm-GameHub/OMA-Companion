@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
+import { revalidateTag } from "next/cache";
 
 export async function GET() {
   const partners = await prisma.partner.findMany({ orderBy: { order: "asc" } });
@@ -18,5 +19,6 @@ export async function POST(req: NextRequest) {
       order: body.order ?? 0,
     },
   });
+  revalidateTag("partners", { expire: 0 });
   return NextResponse.json(partner, { status: 201 });
 }

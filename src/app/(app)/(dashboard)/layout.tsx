@@ -9,6 +9,66 @@ import PartnerFooter from "@/components/PartnerFooter";
 import type { NewsItem } from "@/components/TopNewsFeed";
 import { getBerlinDateParts } from "@/lib/time";
 import { GUEST_ALLOWED_PATHS } from "@/lib/guest-access";
+import { unstable_cache } from "next/cache";
+
+// Nutzerunabhängige News-Ticker-Daten, 60 s gecacht. Achtung: unstable_cache serialisiert als
+// JSON — Date-Felder (startAt) kommen als String zurück und werden unten per new Date() gelesen.
+const getGlobalNewsData = unstable_cache(
+  async (questMonth: number, questYear: number) => {
+    const now = new Date();
+    const [activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal] = await Promise.all([
+      // Currently running or in poll phase
+      prisma.event.findFirst({
+        where: { status: { in: ["active", "umfrage"] } },
+        orderBy: { startAt: "desc" },
+        select: { id: true, title: true, startAt: true, game: true, status: true },
+      }),
+      // Next upcoming event
+      prisma.event.findFirst({
+        where: { startAt: { gt: now }, status: { not: "finished" } },
+        orderBy: { startAt: "asc" },
+        select: { id: true, title: true, startAt: true, game: true, status: true },
+      }),
+      prisma.quest.count({ where: { month: questMonth, year: questYear } }),
+      prisma.user.count(),
+      prisma.monthlyClipContest.findFirst({
+        where: { status: "voting" },
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        select: { month: true, year: true },
+      }),
+      // Clip des Jahres – aktive Abstimmung
+      prisma.yearlyClipContest.findFirst({
+        where: { status: "voting" },
+        orderBy: { year: "desc" },
+        select: { year: true },
+      }),
+      // Tages-Umfrage – aktuell laufend (nicht erst kürzlich beendet)
+      prisma.dailyPoll.findFirst({
+        where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, title: true, question: true },
+      }),
+      // Wanderpokal – zuletzt vergebener Titel (nur der Scope, Halter werden unten separat geladen —
+      // bei Gleichstand teilen sich mehrere User denselben Scope)
+      prisma.wanderpocalHolder.findFirst({
+        orderBy: { heldSince: "desc" },
+        select: { scopeType: true, scopeValue: true },
+      }),
+    ]);
+
+    // Wanderpokal – alle Halter des zuletzt vergebenen Scopes (Gleichstand möglich)
+    const wanderpokalHolders = latestWanderpokal
+      ? await prisma.wanderpocalHolder.findMany({
+          where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
+          select: { winCount: true, user: { select: { username: true, name: true } } },
+        })
+      : [];
+
+    return { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders };
+  },
+  ["dashboard-layout-news"],
+  { revalidate: 60, tags: ["dashboard-global"] },
+);
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -46,61 +106,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const currentQuestYear = nowParts.year;
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [activeOrPollEvent, upcomingEvent, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal] = await Promise.all([
-    // Currently running or in poll phase
-    prisma.event.findFirst({
-      where: { status: { in: ["active", "umfrage"] } },
-      orderBy: { startAt: "desc" },
-      select: { id: true, title: true, startAt: true, game: true, status: true },
-    }),
-    // Next upcoming event
-    prisma.event.findFirst({
-      where: { startAt: { gt: new Date() }, status: { not: "finished" } },
-      orderBy: { startAt: "asc" },
-      select: { id: true, title: true, startAt: true, game: true, status: true },
-    }),
-    prisma.quest.count({ where: { month: currentQuestMonth, year: currentQuestYear } }),
+  // Für alle gleiche Daten kommen aus dem 60-s-Cache (getGlobalNewsData), pro Nutzer laufen nur
+  // noch zwei kleine Abfragen — das Layout rendert bei JEDEM Seitenaufruf.
+  const [
+    { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders },
+    completedMonthQuests,
+    myPoints,
+  ] = await Promise.all([
+    getGlobalNewsData(currentQuestMonth, currentQuestYear),
     userId
       ? prisma.userQuestProgress.count({
           where: { userId, completed: true, quest: { month: currentQuestMonth, year: currentQuestYear } },
         })
       : 0,
-    prisma.user.count(),
     userId
       ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true } })
       : null,
-    prisma.monthlyClipContest.findFirst({
-      where: { status: "voting" },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      select: { month: true, year: true },
-    }),
-    // Clip des Jahres – aktive Abstimmung
-    prisma.yearlyClipContest.findFirst({
-      where: { status: "voting" },
-      orderBy: { year: "desc" },
-      select: { year: true },
-    }),
-    // Tages-Umfrage – aktuell laufend (nicht erst kürzlich beendet)
-    prisma.dailyPoll.findFirst({
-      where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, title: true, question: true },
-    }),
-    // Wanderpokal – zuletzt vergebener Titel (nur der Scope, Halter werden unten separat geladen —
-    // bei Gleichstand teilen sich mehrere User denselben Scope)
-    prisma.wanderpocalHolder.findFirst({
-      orderBy: { heldSince: "desc" },
-      select: { scopeType: true, scopeValue: true },
-    }),
   ]);
-
-  // Wanderpokal – alle Halter des zuletzt vergebenen Scopes (Gleichstand möglich)
-  const wanderpokalHolders = latestWanderpokal
-    ? await prisma.wanderpocalHolder.findMany({
-        where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
-        select: { winCount: true, user: { select: { username: true, name: true } } },
-      })
-    : [];
 
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;

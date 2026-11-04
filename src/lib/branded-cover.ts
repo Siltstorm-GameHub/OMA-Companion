@@ -1,6 +1,15 @@
-import sharp from "sharp";
+// sharp wird erst beim ersten Rendern geladen (nicht beim Import): diese Datei hängt über
+// discord-events/event-publish an mehreren Seiten. Fehlen dort die nativen Binaries, scheitert so
+// nur die Cover-Erzeugung (Aufrufer fangen das ab) statt der ganzen Seite.
+type SharpFn = typeof import("sharp").default;
+let sharpPromise: Promise<SharpFn> | null = null;
+function loadSharp(): Promise<SharpFn> {
+  sharpPromise ??= import("sharp").then((m) => m.default);
+  return sharpPromise;
+}
 import fs from "fs";
 import path from "path";
+import { coverHasOwnLogo } from "@/lib/event-cover-presets";
 
 const W = 680;
 const H = 400;
@@ -119,6 +128,7 @@ let cachedBadge: { buffer: Buffer; width: number; height: number } | null = null
  *  gleich "OMA Companion" wirkt, egal welche Quelle dahintersteckt.
  *  Immer identisch, deshalb einmal gerendert und gecacht. */
 async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const sharp = await loadSharp();
   if (cachedBadge) return cachedBadge;
 
   const logoPath  = path.join(process.cwd(), "public", "brand", "logo-256.png");
@@ -146,6 +156,7 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
 
 let cachedGradientBg: Buffer | null = null;
 async function getGradientBackground(): Promise<Buffer> {
+  const sharp = await loadSharp();
   if (cachedGradientBg) return cachedGradientBg;
   cachedGradientBg = await sharp(backgroundGradientSvg(), { density: 150 }).resize(W, H).png().toBuffer();
   return cachedGradientBg;
@@ -154,10 +165,23 @@ async function getGradientBackground(): Promise<Buffer> {
 /** Lädt eine Bildquelle und schneidet sie formatfüllend auf die Cover-Größe zu.
  *  `null` bei jedem Fehler — der Aufrufer fällt dann auf den Marken-Gradient zurück. */
 async function fetchCoverFitBuffer(url: string): Promise<Buffer | null> {
+  const sharp = await loadSharp();
   try {
-    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; OMACompanion/1.0)" } });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
+    let buf: Buffer;
+    if (url.startsWith("/") && !url.startsWith("//")) {
+      // Eigene Assets aus public/ (z.B. Vorlagen-Cover "/event-covers/…") —
+      // relative Pfade kann fetch() serverseitig nicht auflösen.
+      const publicDir = path.join(process.cwd(), "public");
+      const filePath  = path.join(publicDir, decodeURIComponent(url.split(/[?#]/)[0]));
+      if (!filePath.startsWith(publicDir + path.sep)) return null;
+      buf = fs.readFileSync(filePath);
+      // SVGs mit höherer Dichte rastern, damit sie beim Zuschnitt scharf bleiben
+      if (filePath.endsWith(".svg")) buf = await sharp(buf, { density: 150 }).png().toBuffer();
+    } else {
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; OMACompanion/1.0)" } });
+      if (!res.ok) return null;
+      buf = Buffer.from(await res.arrayBuffer());
+    }
     return await sharp(buf).resize(W, H, { fit: "cover" }).toBuffer();
   } catch {
     return null;
@@ -175,6 +199,7 @@ const coverCache = new Map<string, Buffer>();
  * gefunden wurde.
  */
 export async function generateBrandedCoverBuffer(sourceUrl: string | null): Promise<Buffer> {
+  const sharp = await loadSharp();
   const cacheKey = sourceUrl ?? "__gradient__";
   const cached = coverCache.get(cacheKey);
   if (cached) return cached;
@@ -190,7 +215,10 @@ export async function generateBrandedCoverBuffer(sourceUrl: string | null): Prom
     .composite([
       { input: vignetteSvg(), top: 0, left: 0 },
       { input: frameOverlaySvg(), top: 0, left: 0 },
-      { input: badge.buffer, top: H - badge.height - margin, left: W - badge.width - margin },
+      // Logo-Vorlagen tragen das Logo schon groß in der Mitte — kein zweites Badge
+      ...(coverHasOwnLogo(sourceUrl)
+        ? []
+        : [{ input: badge.buffer, top: H - badge.height - margin, left: W - badge.width - margin }]),
     ])
     .jpeg({ quality: 90 })
     .toBuffer();

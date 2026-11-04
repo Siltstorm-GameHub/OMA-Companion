@@ -25,7 +25,8 @@ export function useTournamentState(eventId: string | null, intervalMs = 5000): [
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
     if (done || !eventId) return;
-    const t = setInterval(() => void load(), intervalMs);
+    // Hintergrund-Tabs überspringen den Takt — spart Function-Aufrufe.
+    const t = setInterval(() => { if (!document.hidden) void load(); }, intervalMs);
     return () => clearInterval(t);
   }, [load, intervalMs, done, eventId]);
   return [state, load];

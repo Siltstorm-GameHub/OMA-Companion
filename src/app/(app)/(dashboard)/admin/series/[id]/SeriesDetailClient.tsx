@@ -14,6 +14,7 @@ import { RefreshCw, Gamepad2, Swords, BarChart2, Plus, X, Save, Coins, MessageSq
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";
+import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
 import StatRowsEditor, { type StatRow } from "@/components/admin/StatRowsEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
@@ -725,8 +726,9 @@ export default function SeriesDetailClient({
               value={coverImageUrl}
               onChange={setCoverImageUrl}
               kind="event-cover"
+              presets={EVENT_COVER_PRESETS}
               label="Eigenes Reihen-Bild"
-              hint="Optional. Events der Reihe ohne eigenes Bild erben dieses. Ohne Reihen-Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+              hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Events der Reihe ohne eigenes Bild erben dieses. Ohne Reihen-Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
               previewAspect="1200/630"
             />
           </Section>

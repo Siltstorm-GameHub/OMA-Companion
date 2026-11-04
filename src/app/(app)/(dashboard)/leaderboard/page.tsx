@@ -2,6 +2,7 @@ import PlaceMedal from "@/components/PlaceMedal";
 import { HeartColor as Heart } from "@/components/icons-color";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import { getSessionUser } from "@/lib/roles";
 import RankedAvatar from "@/components/RankedAvatar";
 import { calcStreak } from "@/lib/streak";
@@ -17,6 +18,36 @@ import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
 import { headers } from "next/headers";
 import { isLinkPreviewBot } from "@/lib/link-preview-bots";
+
+// Event-Siege je Nutzer: lädt und parst die completionData ALLER abgeschlossenen Events — teuer
+// und für alle Besucher gleich, daher 5 min gecacht (Tag "dashboard-global" wird beim
+// Abschließen von Serien bereits invalidiert). Rückgabe als Entry-Array, weil unstable_cache
+// JSON serialisiert (eine Map ginge verloren).
+const getEventWinCounts = unstable_cache(
+  async (): Promise<[string, number][]> => {
+    const events = await prisma.event.findMany({
+      where: { completionData: { not: null } },
+      select: { completionData: true },
+    });
+    const winMap = new Map<string, number>();
+    for (const ev of events) {
+      try {
+        const data = JSON.parse(ev.completionData!);
+        const winners: string[] =
+          data.eventWinnerIds ??
+          (data.eventWinnerId ? [data.eventWinnerId] : null) ??
+          data.finalRankingGroups?.[0] ??
+          (data.finalRanking?.[0] ? [data.finalRanking[0]] : []);
+        for (const uid of winners) {
+          winMap.set(uid, (winMap.get(uid) ?? 0) + 1);
+        }
+      } catch { /* skip malformed JSON */ }
+    }
+    return Array.from(winMap.entries());
+  },
+  ["leaderboard-event-wins"],
+  { revalidate: 300, tags: ["dashboard-global"] },
+);
 
 const MEDALS = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];
 
@@ -110,7 +141,7 @@ export default async function LeaderboardPage() {
   const userId = me?.id;
   const isAdmin = me?.role === "admin" || me?.role === "moderator";
 
-  const [allUsers, eventsWithWinners, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
+  const [allUsers, eventWinCounts, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
       take: 50,
@@ -120,10 +151,7 @@ export default async function LeaderboardPage() {
         _count: { select: { tournamentParticipants: true } },
       },
     }),
-    prisma.event.findMany({
-      where: { completionData: { not: null } },
-      select: { completionData: true },
-    }),
+    getEventWinCounts(),
     prisma.donation.groupBy({
       by: ["userId", "month", "year"],
       orderBy: [{ userId: "asc" }, { year: "desc" }, { month: "desc" }],
@@ -137,20 +165,7 @@ export default async function LeaderboardPage() {
   // Gäste sehen nur die Top-Plätze als Vorgeschmack, die volle Liste gibt es nach dem Login.
   const users = me ? allUsers : allUsers.slice(0, GUEST_LEADERBOARD_LIMIT);
 
-  const winMap = new Map<string, number>();
-  for (const ev of eventsWithWinners) {
-    try {
-      const data = JSON.parse(ev.completionData!);
-      const winners: string[] =
-        data.eventWinnerIds ??
-        (data.eventWinnerId ? [data.eventWinnerId] : null) ??
-        data.finalRankingGroups?.[0] ??
-        (data.finalRanking?.[0] ? [data.finalRanking[0]] : []);
-      for (const uid of winners) {
-        winMap.set(uid, (winMap.get(uid) ?? 0) + 1);
-      }
-    } catch { /* skip malformed JSON */ }
-  }
+  const winMap = new Map<string, number>(eventWinCounts);
 
   const donationsByUser = new Map<string, { month: number; year: number }[]>();
   for (const d of donationGroups) {

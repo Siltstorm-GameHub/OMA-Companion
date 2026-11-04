@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNow } from "@/lib/useNow";
+import { usePolling } from "@/lib/usePolling";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Vote, Clock, Trophy, Check } from "@/components/icons";
 import { usePollCountdown } from "@/components/PollCountdown";
@@ -266,10 +267,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
     } catch { /* ignore */ }
   }, [eventId]);
 
-  useEffect(() => {
-    const id = setInterval(refresh, 30_000);
-    return () => clearInterval(id);
-  }, [refresh]);
+  usePolling(refresh, 30_000, { immediate: false });
 
   function handleVoted(pollId: string, targetId: string) {
     setPolls(prev =>

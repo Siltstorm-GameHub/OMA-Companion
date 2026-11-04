@@ -8,7 +8,8 @@
 // Vor Turnierstart: Countdown. Während des Fensters: Kampf-Button + Rangliste.
 
 import { Button } from "@/components/ui/Button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { usePolling } from "@/lib/usePolling";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Gem, Trophy } from "@/components/icons";
@@ -44,11 +45,7 @@ export default function GemsTournamentBanner() {
     } catch { /* ignore */ }
   }
 
-  useEffect(() => {
-    load();
-    const id = setInterval(load, 30_000);
-    return () => clearInterval(id);
-  }, []);
+  usePolling(load, 30_000);
 
   async function start() {
     if (!tournament || starting) return;

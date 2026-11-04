@@ -23,6 +23,7 @@ import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
+import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
@@ -1026,8 +1027,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             value={coverImageUrl}
             onChange={setCoverImageUrl}
             kind="event-cover"
+            presets={EVENT_COVER_PRESETS}
             label="Eigenes Event-Bild"
-            hint="Optional. Ohne eigenes Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
             previewAspect="1200/630"
           />
 
@@ -1284,8 +1286,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             value={coverImageUrl}
             onChange={setCoverImageUrl}
             kind="event-cover"
+            presets={EVENT_COVER_PRESETS}
             label="Eigenes Event-Bild"
-            hint="Optional. Ohne eigenes Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
             previewAspect="1200/630"
           />
 

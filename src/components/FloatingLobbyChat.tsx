@@ -7,6 +7,7 @@ import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Tabs } from "@/components/admin/Tabs";
 import { formatBerlinTime } from "@/lib/time";
+import { usePolling } from "@/lib/usePolling";
 
 const NOTIF_DISPLAY_LIMIT = 30;
 
@@ -94,11 +95,6 @@ export function FloatingLobbyChat() {
     } catch { /* Netzwerkfehler ignorieren */ }
   }, []);
 
-  useEffect(() => {
-    fetchNotifications();
-    const id = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(id);
-  }, [fetchNotifications]);
 
   async function markRead(id: string) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -144,9 +140,11 @@ export function FloatingLobbyChat() {
     if (n.url) router.push(n.url);
   }
 
+  // Eingeloggt: POST = Heartbeat + Online-Liste in einem Aufruf. Gäste lesen nur (GET).
+  const isLoggedIn = !!session;
   const fetchPresence = useCallback(async () => {
     try {
-      const res = await fetch("/api/presence", { cache: "no-store" });
+      const res = await fetch("/api/presence", isLoggedIn ? { method: "POST" } : { cache: "no-store" });
       if (!res.ok) return;
       const data: { count: number; users: PresenceUser[] } = await res.json();
       setOnlineCount(data.count);
@@ -154,16 +152,7 @@ export function FloatingLobbyChat() {
     } catch {
       // Netzwerkfehler ignorieren
     }
-  }, []);
-
-  const sendHeartbeat = useCallback(async () => {
-    if (!session) return;
-    try {
-      await fetch("/api/presence", { method: "POST" });
-    } catch {
-      // Netzwerkfehler ignorieren
-    }
-  }, [session]);
+  }, [isLoggedIn]);
 
   const fetchMessages = useCallback(async (mode: "initial" | "poll" | "baseline") => {
     try {
@@ -211,29 +200,15 @@ export function FloatingLobbyChat() {
     }
   }, [open, fetchMessages]);
 
-  // Polling: 3 s wenn offen, 10 s wenn geschlossen
-  useEffect(() => {
-    const id = setInterval(() => fetchMessages("poll"), open ? 3000 : 10000);
-    return () => clearInterval(id);
-  }, [open, fetchMessages]);
-
-  // Heartbeat: signalisiert eigene Aktivität, solange die App offen ist (alle 60 s)
-  useEffect(() => {
-    sendHeartbeat();
-    const id = setInterval(sendHeartbeat, 60000);
-    return () => clearInterval(id);
-  }, [sendHeartbeat]);
-
-  // Presence: Online-Zähler/Liste laden (alle 15 s, sofort beim Öffnen)
-  useEffect(() => {
-    fetchPresence();
-    const id = setInterval(fetchPresence, 15000);
-    return () => clearInterval(id);
-  }, [fetchPresence]);
-
-  useEffect(() => {
-    if (open) fetchPresence();
-  }, [open, fetchPresence]);
+  // Polling läuft nur bei sichtbarem Tab (usePolling) und bei geschlossenem Fenster deutlich
+  // seltener — jede Abfrage ist ein Vercel-Function-Aufruf. Wechselt `open`, startet das
+  // Intervall neu und lädt Benachrichtigungen/Presence sofort.
+  // Nachrichten: 4 s offen, 30 s geschlossen (dann nur für den Unread-Zähler).
+  usePolling(() => fetchMessages("poll"), open ? 4_000 : 30_000, { immediate: false });
+  // Benachrichtigungen: 30 s offen, 60 s geschlossen.
+  usePolling(fetchNotifications, open ? 30_000 : 60_000);
+  // Presence + Heartbeat: 20 s offen, 60 s geschlossen (Aktiv-Fenster serverseitig 2 min).
+  usePolling(fetchPresence, open ? 20_000 : 60_000);
 
   // Desktop-Breakpoint überwachen (Slide-Richtung: rechts vs. unten)
   useEffect(() => {

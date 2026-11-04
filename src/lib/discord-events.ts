@@ -219,7 +219,11 @@ export async function createDiscordScheduledEvent(event: {
   // Events-API keine externen URLs, nur data:-URIs) — deshalb hier direkt im
   // Prozess gerendert statt wie bei Nachrichten-Embeds über eine HTTP-Route.
   const source       = await resolveCoverSource(event);
-  const imageDataUri = await generateBrandedCoverDataUri(source);
+  // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
+  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+    console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
+    return undefined;
+  });
 
   const payload = {
     name: event.title,
@@ -271,7 +275,11 @@ export async function updateDiscordScheduledEvent(
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
   const source       = await resolveCoverSource(event);
-  const imageDataUri = await generateBrandedCoverDataUri(source);
+  // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
+  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+    console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
+    return undefined;
+  });
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events/${discordEventId}`,

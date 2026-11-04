@@ -1,24 +1,8 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { usePolledCount } from "@/lib/usePolledCount";
 
 export default function DailyPollActionBadge() {
-  const [count, setCount] = useState(0);
-
-  const fetch_ = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/daily-poll/action-count");
-      if (res.ok) {
-        const d = await res.json() as { count: number };
-        setCount(d.count);
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    const initial = setTimeout(fetch_, 0);
-    const id = setInterval(fetch_, 60_000);
-    return () => { clearTimeout(initial); clearInterval(id); };
-  }, [fetch_]);
+  const count = usePolledCount("/api/admin/daily-poll/action-count");
 
   if (count === 0) return null;
 

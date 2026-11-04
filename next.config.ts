@@ -15,9 +15,22 @@ const nextConfig: NextConfig = {
   // sharp (Discord-Cover-Generierung, siehe src/lib/branded-cover.ts) wird von der automatischen
   // Output-File-Tracing manchmal nicht korrekt mit seinen nativen Plattform-Binaries (@img/sharp-*)
   // ins Vercel-Deployment übernommen -> ERR_DLOPEN_FAILED zur Laufzeit. Explizit einschließen behebt das.
-  outputFileTracingIncludes: {
-    "/*": ["node_modules/sharp/**/*", "node_modules/@img/**/*"],
-  },
+  // NUR für Routen, die sharp (direkt oder über branded-cover → discord-events → event-publish /
+  // event-lifecycle) importieren: vorher hing "/*" die ~20-40 MB nativen Binaries an JEDE
+  // Function und sprengte fast das Free-Plan-Limit "Functions Storage". Neue Routen, die eine
+  // dieser Libs importieren, hier ergänzen (discord-events fällt ohne sharp auf "kein Cover" zurück).
+  outputFileTracingIncludes: Object.fromEntries(
+    [
+      // Seiten (event-lifecycle veröffentlicht fällige Events lazy beim Rendern)
+      "/admin/events", "/admin/events/*", "/admin/series/*", "/dashboard", "/events", "/tournament/*",
+      // API
+      "/api/admin/event-series/generate", "/api/admin/events", "/api/admin/events/**", "/api/admin/series/**",
+      "/api/cron/close-event-polls", "/api/cron/event-reminders",
+      "/api/discord/cover/*", "/api/discord/podium/*",
+      "/api/events", "/api/events/series", "/api/sync", "/api/upload",
+    // public/event-covers: Vorlagen-Cover, die branded-cover.ts für Discord von der Platte liest
+    ].map((route) => [route, ["node_modules/sharp/**/*", "node_modules/@img/**/*", "public/event-covers/**/*"]]),
+  ),
   // OMA Battle Cards ist auf OMA Gems reduziert (siehe docs/gems-reduktion-plan.md) — alte Links
   // leiten dauerhaft (308) weiter.
   async redirects() {

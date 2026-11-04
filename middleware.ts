@@ -96,6 +96,10 @@ export function middleware(request: NextRequest) {
   return NextResponse.next({ request: { headers } });
 }
 
+// Statische Dateien aus public/ (Bilder, 3D-Modelle, Sounds, Manifest, Service Worker) brauchen
+// weder Rate-Limit noch x-pathname — ohne diesen Ausschluss startet jede einzelne Asset-Anfrage
+// eine Function und verbraucht Vercel-CPU (Free-Plan-Limit "Fluid Active CPU").
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+  matcher:
+    "/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:png|jpe?g|webp|gif|svg|ico|glb|gltf|wav|ogg|mp3|mp4|webm|woff2?|ttf|txt)$).*)",
 };
