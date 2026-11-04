@@ -29,10 +29,3 @@ export async function logAdminAction(actor: AuditActor, entry: AuditEntry): Prom
   }
 }
 
-/** Name/Job zu einer Mitgliedschaft für das Protokoll (Snapshot). */
-export async function memberAuditInfo(memberId: string) {
-  const m = await prisma.communityJobMember.findUnique({
-    where: { id: memberId }, select: { id: true, userId: true, jobKey: true, user: { select: { username: true, name: true } } },
-  });
-  return m ? { userId: m.userId, jobKey: m.jobKey, label: m.user.username ?? m.user.name ?? m.userId } : null;
-}

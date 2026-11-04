@@ -2,20 +2,20 @@
 import JobIcon from "@/components/JobIcon";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "@/components/icons";
+import { AlertTriangle, Plus, Trash2, Loader2, Search } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
 import type { PayoutTier, VoteBonusTier } from "@/lib/community-job-config";
+import { levelTitle } from "@/lib/job-badges";
 import { formatBerlinDate } from "@/lib/time";
 
 interface JobRef { key: string; label: string; emoji: string }
-interface AdminApplication { id: string; jobKey: string; status: string; message: string | null; appliedAt: string; user: { id: string; username: string | null; name: string | null } }
-interface AdminMember {
-  id: string; jobKey: string; status: string; contractEndAt: string; badgeLevel?: number; lastContributionAt?: string | null; assignedAt?: string; warningReason?: string | null;
-  user: { id: string; username: string | null; name: string | null };
-}
 interface AdminDispute { kind: string; id: string; reason: string | null; voter: { username: string | null; name: string | null }; context: string; ownerId: string }
+interface ReputationUser {
+  id: string; username: string | null; name: string | null;
+  reputationLevel: number; reputationPeakLevel: number; reputationPoints: number; reputationOverrideUntil: string | null;
+}
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -24,26 +24,21 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+/**
+ * Verwaltung der offenen Community-Jobs: Anfechtungen, Tageslimit, Ansehen und Job-Einstellungen.
+ * Bewerbungen, Slots, Mitglieder und Verträge gibt es nicht mehr — jeder User darf alle Jobs ausüben.
+ */
 export default function CommunityJobsAdminPanel({
-  jobs, effectiveSlots, channelOverrides, voteBonus, testModeEnabled,
+  jobs, channelOverrides, voteBonus, dailyLimit,
 }: {
-  jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string>;
-  voteBonus: VoteBonusTier[]; testModeEnabled: boolean;
+  jobs: JobRef[]; channelOverrides: Record<string, string>; voteBonus: VoteBonusTier[]; dailyLimit: number;
 }) {
-  const [applications, setApplications] = useState<AdminApplication[]>([]);
-  const [members, setMembers] = useState<AdminMember[]>([]);
   const [disputes, setDisputes] = useState<AdminDispute[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function reload() {
     try {
-      const [appsData, membersData, disputesData] = await Promise.all([
-        api<{ applications: AdminApplication[] }>("/api/admin/community-jobs/applications"),
-        api<{ members: AdminMember[] }>("/api/admin/community-jobs/members"),
-        api<{ disputes: AdminDispute[] }>("/api/admin/community-jobs/disputes"),
-      ]);
-      setApplications(appsData.applications);
-      setMembers(membersData.members);
+      const disputesData = await api<{ disputes: AdminDispute[] }>("/api/admin/community-jobs/disputes");
       setDisputes(disputesData.disputes);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Konnte Daten nicht laden");
@@ -52,71 +47,6 @@ export default function CommunityJobsAdminPanel({
     }
   }
   useEffect(() => { reload(); }, []);
-
-  const jobLabel = (key: string) => jobs.find(j => j.key === key)?.label ?? key;
-
-  async function decide(id: string, decision: "APPROVE" | "REJECT") {
-    try {
-      await api(`/api/admin/community-jobs/applications/${id}`, { method: "PATCH", body: JSON.stringify({ decision }) });
-      toast.success(decision === "APPROVE" ? "Genehmigt" : "Abgelehnt");
-      reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    }
-  }
-
-  async function revoke(id: string) {
-    const reason = prompt("Grund für den Entzug:");
-    if (!reason) return;
-    try {
-      await api(`/api/admin/community-jobs/members/${id}`, { method: "PATCH", body: JSON.stringify({ action: "REVOKE", reason }) });
-      toast.success("Job entzogen");
-      reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    }
-  }
-
-  async function reassign(memberId: string, targetApplicationId: string) {
-    try {
-      await api(`/api/admin/community-jobs/members/${memberId}`, {
-        method: "PATCH", body: JSON.stringify({ action: "REASSIGN", targetApplicationId }),
-      });
-      toast.success("Job übergeben");
-      reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    }
-  }
-
-  /** WARN / CONTRACT / BADGE: Werte per Eingabedialog abfragen und an die Members-Route schicken. */
-  async function memberAction(id: string, action: "WARN" | "CONTRACT" | "BADGE") {
-    const body: Record<string, unknown> = { action };
-    if (action === "WARN") {
-      const reason = prompt("Grund der Verwarnung (geht an das Mitglied):");
-      if (!reason?.trim()) return;
-      body.reason = reason;
-    } else if (action === "CONTRACT") {
-      const days = prompt("Vertrag um wie viele Tage verschieben? (z.B. 30 = verlängern, -14 = kürzen)");
-      if (!days) return;
-      const reason = prompt("Grund (geht an das Mitglied):");
-      if (!reason?.trim()) return;
-      body.days = Number(days); body.reason = reason;
-    } else {
-      const level = prompt("Neue Ansehens-Stufe (1–4). Sie bleibt 28 Tage unverändert:");
-      if (!level) return;
-      const reason = prompt("Grund (nur fürs Protokoll):");
-      if (!reason?.trim()) return;
-      body.level = Number(level); body.reason = reason;
-    }
-    try {
-      await api(`/api/admin/community-jobs/members/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-      toast.success(action === "WARN" ? "Verwarnung ausgesprochen" : action === "CONTRACT" ? "Vertrag angepasst" : "Stufe gesetzt");
-      reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    }
-  }
 
   async function resolveDispute(kind: string, id: string, resolution: "UPHELD" | "OVERTURNED") {
     try {
@@ -130,59 +60,8 @@ export default function CommunityJobsAdminPanel({
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
 
-  const pending = applications.filter(a => a.status === "PENDING");
-  const waitlisted = applications.filter(a => a.status === "WAITLISTED");
-
   return (
     <div className="space-y-8">
-      <TestModeSection initial={testModeEnabled} />
-
-      <section className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Offene Bewerbungen ({pending.length})</h2>
-        <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
-          {pending.length === 0 && <p className="p-4 text-xs text-gray-600">Keine offenen Bewerbungen.</p>}
-          {pending.map(a => (
-            <div key={a.id} className="p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs text-white">{a.user.username ?? a.user.name} → {jobLabel(a.jobKey)}</p>
-                {a.message && <p className="text-[11px] text-gray-500 truncate">{a.message}</p>}
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                <Button size="sm" variant="primary" icon={<Check className="w-3.5 h-3.5" />} onClick={() => decide(a.id, "APPROVE")}>Genehmigen</Button>
-                <Button size="sm" variant="outline" icon={<X className="w-3.5 h-3.5" />} onClick={() => decide(a.id, "REJECT")}>Ablehnen</Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {waitlisted.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Warteliste ({waitlisted.length})</h2>
-          <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
-            {waitlisted.map(a => (
-              <div key={a.id} className="p-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-gray-300">{a.user.username ?? a.user.name} → {jobLabel(a.jobKey)}</p>
-                <Badge tone="info">seit {formatBerlinDate(a.appliedAt)}</Badge>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Aktive Mitglieder ({members.length})</h2>
-        <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
-          {members.length === 0 && <p className="p-4 text-xs text-gray-600">Keine aktiven Mitglieder.</p>}
-          {members.map(m => (
-            <MemberRow key={m.id} member={m} jobLabel={jobLabel(m.jobKey)}
-              waitlistForJob={waitlisted.filter(a => a.jobKey === m.jobKey)}
-              onRevoke={() => revoke(m.id)} onReassign={targetApplicationId => reassign(m.id, targetApplicationId)}
-              onAction={action => memberAction(m.id, action)} />
-          ))}
-        </div>
-      </section>
-
       <section className="space-y-2">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
           <AlertTriangle className="w-3 h-3 text-amber-500" /> Anfechtungen ({disputes.length})
@@ -202,16 +81,17 @@ export default function CommunityJobsAdminPanel({
         </div>
       </section>
 
-      <JobSettingsSection jobs={jobs} effectiveSlots={effectiveSlots} channelOverrides={channelOverrides} />
+      <DailyLimitSection initial={dailyLimit} />
+      <ReputationSection />
+      <JobSettingsSection jobs={jobs} channelOverrides={channelOverrides} />
       <VoteBonusSection initial={voteBonus} />
     </div>
   );
 }
 
 function JobSettingsSection({
-  jobs, effectiveSlots, channelOverrides,
-}: { jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string> }) {
-  const [slots, setSlots] = useState(effectiveSlots);
+  jobs, channelOverrides,
+}: { jobs: JobRef[]; channelOverrides: Record<string, string> }) {
   const [channels, setChannels] = useState(channelOverrides);
   const [discordChannels, setDiscordChannels] = useState<{ id: string; name: string; category: string | null }[]>([]);
   const [selectedJob, setSelectedJob] = useState(jobs[0]?.key ?? "");
@@ -226,16 +106,6 @@ function JobSettingsSection({
   useEffect(() => {
     api<{ channels: typeof discordChannels }>("/api/community-jobs/discord-channels").then(d => setDiscordChannels(d.channels)).catch(() => {});
   }, []);
-
-  async function saveSlots(jobKey: string) {
-    setBusy(true);
-    try {
-      await api("/api/admin/community-jobs/slots", { method: "PATCH", body: JSON.stringify({ jobKey, maxSlots: slots[jobKey] ?? null }) });
-      toast.success("Slot-Zahl gespeichert");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally { setBusy(false); }
-  }
 
   async function saveChannel(jobKey: string) {
     setBusy(true);
@@ -265,13 +135,6 @@ function JobSettingsSection({
         {jobs.map(job => (
           <div key={job.key} className="p-3 flex items-center gap-3 flex-wrap">
             <span className="text-xs text-white w-40 shrink-0"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</span>
-            <label className="flex items-center gap-1.5 text-[11px] text-gray-500">
-              Slots
-              <input type="number" min={0} value={slots[job.key] ?? 0}
-                onChange={e => setSlots(s => ({ ...s, [job.key]: Number(e.target.value) }))}
-                className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-            </label>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => saveSlots(job.key)}>Speichern</Button>
             <label className="flex items-center gap-1.5 text-[11px] text-gray-500 flex-1 min-w-[180px]">
               Discord-Kanal
               {discordChannels.length > 0 ? (
@@ -345,7 +208,7 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
     <section className="space-y-2">
       <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Aktivitäts-Bonus (jobübergreifend)</h2>
       <p className="text-[11px] text-gray-600">
-        Gestaffelter Multiplikator auf das Wochengehalt, abhängig davon, wie viele fremde Beiträge der Job-Inhaber diese Woche selbst bewertet hat.
+        Gestaffelter Multiplikator auf das Wochengehalt jedes Jobs, abhängig davon, wie viele fremde Beiträge der User diese Woche selbst bewertet hat.
         Der Multiplikator kann auch unter 1× fallen (Abzug bei Nicht-Mitmachen) und ist nach oben auf 2× gedeckelt.
       </p>
       <div className="glass rounded-xl p-4 space-y-2">
@@ -378,84 +241,104 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
   );
 }
 
-function MemberRow({
-  member, jobLabel, waitlistForJob, onRevoke, onReassign, onAction,
-}: {
-  member: AdminMember; jobLabel: string; waitlistForJob: AdminApplication[];
-  onRevoke: () => void; onReassign: (targetApplicationId: string) => void;
-  onAction: (action: "WARN" | "CONTRACT" | "BADGE") => void;
-}) {
-  const lastActivity = new Date(member.lastContributionAt ?? member.assignedAt ?? member.contractEndAt);
-  const idleDays = Math.floor((Date.now() - lastActivity.getTime()) / 86_400_000);
-  const [reassigning, setReassigning] = useState(false);
-  const [target, setTarget] = useState(waitlistForJob[0]?.id ?? "");
+function DailyLimitSection({ initial }: { initial: number }) {
+  const [limit, setLimit] = useState(initial);
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api("/api/admin/community-jobs/daily-limit", { method: "PATCH", body: JSON.stringify({ limit }) });
+      toast.success("Tageslimit gespeichert");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally { setBusy(false); }
+  }
 
   return (
-    <div className="p-3 space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs text-white">{member.user.username ?? member.user.name} — {jobLabel}</p>
-          <p className="text-[11px] text-gray-500">
-            {member.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
-            Vertrag bis {formatBerlinDate(member.contractEndAt)}
-            {member.badgeLevel ? ` · Stufe ${member.badgeLevel}` : ""}
-            {` · letzter Beitrag vor ${idleDays} Tagen`}
-          </p>
-          {member.status === "WARNED" && member.warningReason && <p className="text-[11px] text-amber-400/90">Grund: {member.warningReason}</p>}
-        </div>
-        <div className="flex gap-1.5 shrink-0">
-          <Button size="sm" variant="ghost" onClick={() => onAction("WARN")}>Verwarnen</Button>
-          <Button size="sm" variant="ghost" onClick={() => onAction("CONTRACT")}>Vertrag</Button>
-          <Button size="sm" variant="ghost" onClick={() => onAction("BADGE")}>Stufe</Button>
-          {waitlistForJob.length > 0 && (
-            <Button size="sm" variant="outline" onClick={() => setReassigning(v => !v)}>Übergeben</Button>
-          )}
-          <Button size="sm" variant="danger" onClick={onRevoke}>Entziehen</Button>
+    <section className="space-y-2">
+      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Tageslimit</h2>
+      <div className="glass rounded-xl p-4 space-y-2">
+        <p className="text-[11px] text-gray-500">
+          So viele Beiträge pro Tag (Berliner Zeit, über alle Jobs zusammen) zählen fürs Gehalt. Weitere Beiträge
+          werden veröffentlicht, Stimmen darauf zählen aber nicht. Ein Mehrfach-Upload oder eine Termin-Serie zählt als ein Beitrag.
+        </p>
+        <div className="flex items-center gap-2">
+          <input type="number" min={0} max={50} value={limit} onChange={e => setLimit(Number(e.target.value))}
+            aria-label="Gezählte Beiträge pro Tag"
+            className="w-20 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+          <span className="text-[11px] text-gray-500">Beiträge pro Tag</span>
+          <Button size="sm" disabled={busy || !Number.isInteger(limit) || limit < 0 || limit > 50} onClick={save}>Speichern</Button>
         </div>
       </div>
-      {reassigning && (
-        <div className="flex items-center gap-2 pl-1">
-          <Select size="sm" value={target} onChange={e => setTarget(e.target.value)}>
-            {waitlistForJob.map(a => <option key={a.id} value={a.id}>{a.user.username ?? a.user.name}</option>)}
-          </Select>
-          <Button size="sm" onClick={() => { onReassign(target); setReassigning(false); }}>Bestätigen</Button>
-          <Button size="sm" variant="ghost" onClick={() => setReassigning(false)}>Abbrechen</Button>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
-function TestModeSection({ initial }: { initial: boolean }) {
-  const [enabled, setEnabled] = useState(initial);
-  const [busy, setBusy] = useState(false);
+function ReputationSection() {
+  const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<ReputationUser[] | null>(null);
 
-  async function toggle() {
-    const next = !enabled;
-    setBusy(true);
+  async function load(q: string) {
     try {
-      await api("/api/admin/community-jobs/test-mode", { method: "PATCH", body: JSON.stringify({ enabled: next }) });
-      setEnabled(next);
-      toast.success(next ? "Testmodus aktiviert" : "Testmodus deaktiviert");
+      const d = await api<{ users: ReputationUser[] }>(`/api/admin/community-jobs/reputation${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+      setUsers(d.users);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Konnte Ansehen nicht laden");
+    }
+  }
+  useEffect(() => { load(""); }, []);
+
+  async function setLevel(u: ReputationUser) {
+    const level = prompt(`Neue Ansehens-Stufe für ${u.username ?? u.name ?? "User"} (1 = Bronze … 4 = Platin). Sie bleibt 28 Tage unverändert:`);
+    if (!level) return;
+    const reason = prompt("Grund (nur fürs Protokoll):");
+    if (!reason?.trim()) return;
+    try {
+      await api("/api/admin/community-jobs/reputation", { method: "PATCH", body: JSON.stringify({ userId: u.id, level: Number(level), reason }) });
+      toast.success("Ansehen gesetzt");
+      load(query.trim());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
     }
   }
 
   return (
-    <section className={`rounded-xl p-4 flex items-center justify-between gap-3 border ${enabled ? "bg-amber-500/10 border-amber-500/30" : "glass border-white/[0.06]"}`}>
-      <div className="flex items-center gap-2.5">
-        <FlaskConical className={`w-4 h-4 ${enabled ? "text-amber-400" : "text-gray-500"}`} />
-        <div>
-          <p className="text-xs font-semibold text-white">Admin-Testmodus</p>
-          <p className="text-[11px] text-gray-500">Admins können Community-Jobs ohne Sperrfrist und ohne Rücksicht auf freie Slots wechseln, um alle Jobs durchzutesten.</p>
+    <section className="space-y-2">
+      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Ansehen</h2>
+      <p className="text-[11px] text-gray-600">
+        Stufe 1–4 (Bronze, Silber, Gold, Platin) aus der Gesamtleistung aller Jobs der letzten 8 Wochen plus Kommentar-Daumen.
+        Steuert Profilrahmen und Discord-Rolle. Ohne Suche: User mit Ansehen bzw. manuell gesetzter Stufe.
+      </p>
+      <form className="flex items-center gap-2" onSubmit={ev => { ev.preventDefault(); load(query.trim()); }}>
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="User suchen…" aria-label="User suchen"
+            className="w-full bg-white/[0.04] border border-white/10 rounded pl-7 pr-2 py-1 text-xs text-white placeholder:text-gray-600" />
         </div>
+        <Button size="sm" variant="outline" type="submit">Suchen</Button>
+      </form>
+      <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+        {users === null && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>}
+        {users?.length === 0 && <p className="p-4 text-xs text-gray-600">Keine User gefunden.</p>}
+        {users?.map(u => {
+          const override = u.reputationOverrideUntil && new Date(u.reputationOverrideUntil) > new Date();
+          return (
+            <div key={u.id} className="p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-white truncate">{u.username ?? u.name ?? u.id}</p>
+                <p className="text-[11px] text-gray-500">
+                  {levelTitle(u.reputationLevel)} (Stufe {u.reputationLevel}) · {u.reputationPoints} Punkte · höchste Stufe {u.reputationPeakLevel}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {override && <Badge tone="warning">manuell bis {formatBerlinDate(u.reputationOverrideUntil!)}</Badge>}
+                <Button size="sm" variant="ghost" onClick={() => setLevel(u)}>Stufe setzen</Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <Button size="sm" variant={enabled ? "danger" : "primary"} disabled={busy} onClick={toggle}>
-        {enabled ? "Deaktivieren" : "Aktivieren"}
-      </Button>
     </section>
   );
 }

@@ -199,7 +199,7 @@ export async function fileDispute(
 ): Promise<DisputeResult> {
   const info = await lookups[kind].getOwnerId(voteId);
   if (!info) return { error: "Bewertung nicht gefunden" };
-  if (info.ownerId !== requestingUserId) return { error: "Nur der betroffene Job-Inhaber kann anfechten" };
+  if (info.ownerId !== requestingUserId) return { error: "Nur der betroffene Autor kann anfechten" };
   if (!reason.trim()) return { error: "Begründung erforderlich" };
 
   await lookups[kind].setDispute(voteId, true, reason);

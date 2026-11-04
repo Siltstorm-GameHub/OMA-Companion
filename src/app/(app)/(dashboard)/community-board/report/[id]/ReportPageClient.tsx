@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -10,14 +9,8 @@ export default function ReportPageClient({ entry, isDraft }: { entry: FeedEntry;
   const router = useRouter();
   const { data: session } = useSession();
   const currentUserId = (session?.user as { id?: string } | undefined)?.id;
-  const [isJournalist, setIsJournalist] = useState(false);
-
-  useEffect(() => {
-    // Nur aktive Journalisten sehen "Bericht ergänzen".
-    fetch("/api/community-jobs").then(r => r.json())
-      .then((d: { activeMembership: { jobKey: string } | null }) => setIsJournalist(d.activeMembership?.jobKey === "journalist"))
-      .catch(() => {});
-  }, []);
+  // Offene Community-Jobs: jeder eingeloggte User darf Berichte ergänzen.
+  const isJournalist = !!currentUserId;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 px-4 py-6">

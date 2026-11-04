@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Info, Loader2 } from "@/components/icons";
 
 interface Health {
-  key: string; label: string; emoji: string; maxSlots: number; filled: number; free: number;
-  pending: number; waitlisted: number; active7: number; idle14: number; warned: number; endingSoon: number;
+  key: string; label: string; emoji: string;
+  active7: number; active30: number; contributions7: number; overLimit7: number;
   lastWeekCoins: number; lastWeekPaid: number; hints: { level: "warn" | "info"; text: string }[];
 }
 
 const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
 
-/** Gesundheit je Job: Besetzung, Aktivität, Bewerber, Verträge — mit Hinweisen, wo etwas hakt. */
+/** Gesundheit je Job (offene Jobs): wer beiträgt, wie viel, und was über dem Tageslimit lag — mit Hinweisen, wo etwas hakt. */
 export default function JobHealthBlock() {
   const [jobs, setJobs] = useState<Health[] | null>(null);
 
@@ -31,9 +31,9 @@ export default function JobHealthBlock() {
           <div key={j.key} className="glass rounded-xl p-3 space-y-2">
             <p className="text-xs text-white font-semibold"><JobIcon jobKey={j.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{j.label}</p>
             <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.filled}/{j.maxSlots}</p><p className="text-[10px] text-gray-500">Plätze</p></div>
-              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.active7}/{j.filled}</p><p className="text-[10px] text-gray-500">aktiv (7 T.)</p></div>
-              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.pending + j.waitlisted}</p><p className="text-[10px] text-gray-500">Bewerber</p></div>
+              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.active7}</p><p className="text-[10px] text-gray-500">aktiv (7 T.)</p></div>
+              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.active30}</p><p className="text-[10px] text-gray-500">aktiv (30 T.)</p></div>
+              <div className="rounded-lg bg-white/[0.03] py-1.5"><p className="text-sm text-white font-semibold tabular-nums">{j.contributions7}</p><p className="text-[10px] text-gray-500">Beiträge (7 T.)</p></div>
             </div>
             <p className="text-[10px] text-gray-500">Letzte Woche: {j.lastWeekPaid} ausgezahlt, {j.lastWeekCoins} Münzen</p>
             {j.hints.length > 0 && (

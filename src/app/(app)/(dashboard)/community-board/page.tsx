@@ -7,7 +7,7 @@ export default function CommunityBoardPage() {
       <div>
         <h1 className="text-lg font-bold text-white">Community-Board</h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          Berichte, Fotos, Werbung und Ideen der Community-Job-Inhaber — bewerte, was dir gefällt.
+          Berichte, Fotos, Werbung und Ideen aus den Community-Jobs — bewerte, was dir gefällt, oder mach selbst mit.
         </p>
       </div>
       <CoachRatingSection />

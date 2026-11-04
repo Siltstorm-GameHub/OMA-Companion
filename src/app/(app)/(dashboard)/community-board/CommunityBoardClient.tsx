@@ -109,16 +109,11 @@ export default function CommunityBoardClient() {
   const { data: session } = useSession();
   const currentUserId = (session?.user as { id?: string } | undefined)?.id;
   const [feed, setFeed] = useState<FeedEntry[] | null>(null);
-  const [isJournalist, setIsJournalist] = useState(false);
+  // Offene Community-Jobs: jeder eingeloggte User darf Berichte ergänzen.
+  const { status: sessionStatus } = useSession();
+  const isJournalist = sessionStatus === "authenticated";
   const [category, setCategory] = useState<string | null>(null);
   const [writeAbout, setWriteAbout] = useState<WriteAboutPreset | null>(null);
-
-  useEffect(() => {
-    // Nur aktive Journalisten sehen "Bericht ergänzen".
-    api<{ activeMembership: { jobKey: string } | null }>("/api/community-jobs")
-      .then(d => setIsJournalist(d.activeMembership?.jobKey === "journalist"))
-      .catch(() => {});
-  }, []);
 
   async function reload() {
     try {
@@ -366,7 +361,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
   );
 }
 
-/** Aktive Journalisten dürfen jeden Bericht ergänzen — ohne Freigabe des Autors. */
+/** Jeder eingeloggte User darf jeden Bericht ergänzen — ohne Freigabe des Autors. */
 function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");

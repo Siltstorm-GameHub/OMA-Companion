@@ -22,7 +22,7 @@ export default function SyncDiscordRolesButton() {
 
     try {
       while (true) {
-        setProgress(`Verarbeite Job-Inhaber ${offset + 1}–${offset + 10}…`);
+        setProgress(`Verarbeite User ${offset + 1}–${offset + 10}…`);
 
         const res  = await fetch(`/api/admin/sync-discord-roles?offset=${offset}`, { method: "POST" });
         const data = await res.json() as {

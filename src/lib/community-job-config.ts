@@ -3,14 +3,12 @@ import { COMMUNITY_JOBS, type CommunityJobDef } from "./community-jobs";
 
 /**
  * Admin-einstellbare Community-Job-Werte — EIN JSON-Blob in der BotConfig-Tabelle
- * statt eigener Tabellen für Slots/Gehaltsstufen/Bonus-Einstellungen. Der Job-
+ * statt eigener Tabellen für Gehaltsstufen/Bonus/Texte/Tageslimit. Der Job-
  * Katalog selbst (community-jobs.ts) bleibt reiner Code ohne Prisma.
  */
-const SLOTS_KEY = "community_job_slot_overrides";
 const TIERS_KEY = "community_job_payout_tiers";
 const BONUS_KEY = "community_job_vote_bonus_config";
 const CHANNELS_KEY = "community_job_announcement_channels";
-const TEST_MODE_KEY = "community_job_admin_test_mode";
 const TEXTS_KEY = "community_job_text_overrides";
 
 export interface PayoutTier {
@@ -80,20 +78,6 @@ async function writeJson(key: string, value: unknown): Promise<void> {
   });
 }
 
-// ── Slots ────────────────────────────────────────────────────────────────────
-
-export async function getSlotOverrides(): Promise<Record<string, number>> {
-  return readJson<Record<string, number>>(SLOTS_KEY, {});
-}
-
-export async function setSlotOverride(jobKey: string, maxSlots: number | null): Promise<void> {
-  const overrides = await getSlotOverrides();
-  const next = { ...overrides };
-  if (maxSlots == null) delete next[jobKey];
-  else next[jobKey] = maxSlots;
-  await writeJson(SLOTS_KEY, next);
-}
-
 // ── Job-Texte (Beschreibung + Büro-Anleitung) ───────────────────────────────
 
 export interface JobTextOverride { description?: string; officeGuideMarkdown?: string }
@@ -118,19 +102,12 @@ export async function setJobTextOverride(jobKey: string, patch: { description?: 
 }
 
 export async function getEffectiveCommunityJobs(): Promise<CommunityJobDef[]> {
-  const [overrides, texts] = await Promise.all([getSlotOverrides(), getJobTextOverrides()]);
+  const texts = await getJobTextOverrides();
   return COMMUNITY_JOBS.map(job => ({
     ...job,
-    maxSlots: overrides[job.key] ?? job.maxSlots,
     description: texts[job.key]?.description ?? job.description,
     officeGuideMarkdown: texts[job.key]?.officeGuideMarkdown ?? job.officeGuideMarkdown,
   }));
-}
-
-export async function getMaxSlots(jobKey: string): Promise<number> {
-  const overrides = await getSlotOverrides();
-  if (overrides[jobKey] != null) return overrides[jobKey];
-  return COMMUNITY_JOBS.find(j => j.key === jobKey)?.maxSlots ?? 0;
 }
 
 // ── Gehaltsstufen ────────────────────────────────────────────────────────────
@@ -223,21 +200,3 @@ export async function setDailyContributionLimit(limit: number): Promise<void> {
   });
 }
 
-// ── Admin-Testmodus ──────────────────────────────────────────────────────────
-// Global ein-/ausschaltbar im Admin-Bereich. Gilt NUR für User mit Admin-Rolle
-// (per-Route-Check, nicht hier) — erlaubt ihnen, Community-Jobs ohne Sperrfrist
-// nach Entzug und ohne Rücksicht auf freie Slots sofort zu wechseln, um alle
-// Jobs durchzutesten.
-
-export async function getTestModeEnabled(): Promise<boolean> {
-  const row = await prisma.botConfig.findUnique({ where: { key: TEST_MODE_KEY } }).catch(() => null);
-  return row?.value === "true";
-}
-
-export async function setTestModeEnabled(enabled: boolean): Promise<void> {
-  await prisma.botConfig.upsert({
-    where: { key: TEST_MODE_KEY },
-    create: { key: TEST_MODE_KEY, value: String(enabled) },
-    update: { value: String(enabled) },
-  });
-}

@@ -268,66 +268,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/servers",
   },
   {
-    key: "community_job_approved",
-    label: "Community-Job-Bewerbung genehmigt",
-    description: "Wenn eine Bewerbung für einen Community-Job genehmigt und sofort aktiv wird.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎉 Job-Bewerbung genehmigt",
-    bodyTemplate: "Du bist jetzt {jobLabel}! Schau in dein Büro im Profil-Reiter „Community-Jobs\".",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "community_job_waitlisted",
-    label: "Community-Job-Bewerbung auf Warteliste",
-    description: "Wenn eine Bewerbung genehmigt wurde, aber alle Slots belegt sind.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "⏳ Auf der Warteliste",
-    bodyTemplate: "Deine Bewerbung als {jobLabel} wurde genehmigt, aber aktuell sind alle Plätze belegt. Du stehst auf der Warteliste.",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "community_job_rejected",
-    label: "Community-Job-Bewerbung abgelehnt",
-    description: "Wenn eine Bewerbung für einen Community-Job abgelehnt wird.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "Bewerbung abgelehnt",
-    bodyTemplate: "Deine Bewerbung als {jobLabel} wurde leider abgelehnt.",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "community_job_warned",
-    label: "Community-Job-Verwarnung",
-    description: "Wenn ein Community-Job-Inhaber verwarnt wird (schlechte Bewertungen oder Inaktivität).",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "⚠️ Verwarnung erhalten",
-    bodyTemplate: "Du wurdest als {jobLabel} verwarnt: {reason}. Bei anhaltend schlechter Leistung kann dir der Job entzogen werden.",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "community_job_revoked",
-    label: "Community-Job entzogen",
-    description: "Wenn ein Community-Job-Inhaber den Job entzogen bekommt.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "Job entzogen",
-    bodyTemplate: "Dein Job als {jobLabel} wurde entzogen: {reason}",
-    urlTemplate: "/profile",
-  },
-  {
-    key: "community_job_contract_expiring",
-    label: "Community-Job-Vertrag läuft bald ab",
-    description: "Erinnerung, wenn der Vertrag eines Community-Jobs bald abläuft und noch nicht verlängert wurde.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "⏰ Vertrag läuft bald ab",
-    bodyTemplate: "Dein Vertrag als {jobLabel} läuft am {contractEndDate} ab. Du kannst ihn jetzt in deinem Büro verlängern.",
-    urlTemplate: "/profile",
-  },
-  {
     key: "coach_session_changed",
     label: "Coach-Termin geändert",
     description: "Wenn ein Coach Titel oder Zeit eines Trainings-Termins ändert — geht an alle angemeldeten Teilnehmer.",
@@ -588,16 +528,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/profile",
   },
   {
-    key: "community_job_contract_adjusted",
-    label: "Vertrag angepasst",
-    description: "Wenn das Team dein Vertragsende ändert.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "📅 Vertrag angepasst",
-    bodyTemplate: "Dein Vertrag als {jobLabel} läuft jetzt bis {date}. {reason}",
-    urlTemplate: "/profile",
-  },
-  {
     key: "promotion_request",
     label: "Werbe-Anfrage",
     description: "Ein Coach bittet die Marketing Manager, einen Trainings-Termin zu bewerben.",
@@ -667,16 +597,6 @@ const RULES: RuleSeed[] = [
     bodyTemplate: "Die Antworten stehen in deinem Büro zum Einfügen in einen Bericht bereit.",
     urlTemplate: "/profile",
   },
-  {
-    key: "community_job_handoff_received",
-    label: "Community-Job übernommen",
-    description: "Wenn ein Job per Übergabe (freiwillig oder durch Admin) an einen Bewerber übergeben wird.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎉 Job übernommen",
-    bodyTemplate: "Du hast den Job {jobLabel} übernommen! Schau in dein Büro im Profil-Reiter „Community-Jobs\".",
-    urlTemplate: "/profile",
-  },
 ];
 
 async function main() {
@@ -684,6 +604,8 @@ async function main() {
   await prisma.notificationRule.deleteMany({ where: { key: "leaderboard" } });
   // Entfernte Regeln: Abzeichen-System wurde komplett entfernt
   await prisma.notificationRule.deleteMany({ where: { key: { in: ["badge_earned", "badge_awarded"] } } });
+  // Offene Community-Jobs: keine Bewerbung, Warteliste, Übergabe, Verwarnung oder Verträge mehr.
+  await prisma.notificationRule.deleteMany({ where: { key: { in: ["community_job_approved","community_job_waitlisted","community_job_rejected","community_job_warned","community_job_revoked","community_job_contract_expiring","community_job_contract_adjusted","community_job_handoff_received"] } } });
 
   const legacyConfig = Object.fromEntries(
     (await prisma.botConfig.findMany()).map((r) => [r.key, r.value]),

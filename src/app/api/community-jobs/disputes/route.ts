@@ -7,7 +7,7 @@ const VALID_KINDS: VoteKind[] = [
   "communityIdeaVote", "communityBoardCommentVote", "coachGuideVote",
 ];
 
-/** Betroffener Job-Inhaber meldet eine Bewertung auf seinen eigenen Beitrag als Anfechtung an. */
+/** Betroffener Autor meldet eine Bewertung auf seinen eigenen Beitrag als Anfechtung an. */
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });

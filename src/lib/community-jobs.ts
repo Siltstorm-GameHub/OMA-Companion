@@ -3,9 +3,9 @@
  * Fotograf, Marketing Manager, Coach/Manager, Visionär). Reiner Code ohne
  * Prisma.
  *
- * Bewusst OHNE Rang-Voraussetzung: Admin-Freigabe der Bewerbung ist der
- * einzige Qualitätsfilter, siehe Plan "Community-Jobs mit Büro/Werkstatt
- * und Wochengehalt".
+ * Offenes Modell: Jeder User darf alle Jobs ausüben — ohne Bewerbung, Slots
+ * oder Vertrag. Qualität steuern Community-Bewertungen, das Tageslimit für
+ * gezählte Beiträge und die Moderation.
  */
 
 export interface CommunityJobDef {
@@ -13,7 +13,6 @@ export interface CommunityJobDef {
   label: string;
   emoji: string;
   description: string; // Deutsch, ein bis zwei Sätze
-  maxSlots: number; // Startwert, admin-überschreibbar (siehe community-job-config.ts)
   officeGuideMarkdown: string; // Anleitungstext fürs Büro
 }
 
@@ -23,7 +22,6 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     label: "Journalist",
     emoji: "📰",
     description: "Schreibt Berichte zu Events und aktuellen Themen der Community.",
-    maxSlots: 3,
     officeGuideMarkdown:
       "Du schreibst Berichte zu Events und aktuellen Themen. Je mehr Daumen deine Berichte, " +
       "Ergänzungen und Kommentare diese Woche bekommen, desto höher deine Gehaltsstufe. " +
@@ -46,7 +44,6 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     label: "Fotograf",
     emoji: "📸",
     description: "Lädt Highlight-Clips, Collagen, Screenshots und Grafiken hoch, die anderen Jobs zur Verfügung stehen.",
-    maxSlots: 5,
     officeGuideMarkdown:
       "Du lädst Bilder, Clips, Collagen, Banner und Grafiken in die gemeinsame Mediathek hoch. " +
       "Journalisten und Marketing Manager binden sie in ihre Beiträge ein. Du wirst für deine Beiträge " +
@@ -69,7 +66,6 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     label: "Marketing Manager",
     emoji: "📣",
     description: "Erstellt Werbe-Posts für kommende Events.",
-    maxSlots: 5,
     officeGuideMarkdown:
       "Du erstellst Werbe-Posts für bevorstehende Events. Bewertet wird über Daumen der Community, " +
       "deine Wochenstufe ergibt sich aus den Daumen auf deine Posts und Kommentare.\n\n" +
@@ -95,7 +91,6 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     label: "Coach/Manager",
     emoji: "🎓",
     description: "Hilft neuen oder unerfahrenen Spielern, unabhängig von Squad-Teamleadern.",
-    maxSlots: 10,
     officeGuideMarkdown:
       "Du hilfst neuen oder unerfahrenen Spielern, unabhängig von Squad-Teamleadern. " +
       "Andere bewerten dich auf deinem Profil oder nach einem Training (4–5 Sterne bringen einen Punkt, 3 sind neutral, 1–2 ziehen einen ab). Auch Daumen auf deine Anleitungen zählen.\n\n" +
@@ -118,7 +113,6 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     label: "Visionär",
     emoji: "💡",
     description: "Reicht Ideen und Vorschläge ein, über die die Community abstimmt und die sie bewertet.",
-    maxSlots: 3,
     officeGuideMarkdown:
       "Du reichst Ideen ein. Die Community bewertet sie mit 1 bis 5 Sternen und einer Begründung, " +
       "und daraus ergibt sich deine Wochenstufe: 4–5 Sterne bringen einen Punkt, 3 Sterne sind neutral, 1–2 Sterne ziehen einen ab. Auch nach Ablauf der Abstimmungsfrist bleibt eine Idee bewertbar.\n\n" +

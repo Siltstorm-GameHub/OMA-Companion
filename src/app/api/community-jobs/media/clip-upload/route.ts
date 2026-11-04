@@ -25,7 +25,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       request: req,
       onBeforeGenerateToken: async (pathname) => {
         if (!(await requireActiveFotograf(user.id))) {
-          throw new Error("Du bist gerade kein aktiver Fotograf");
+          throw new Error("Community-Jobs sind für dein Konto nicht verfügbar");
         }
         // Fester Ziel-Ordner statt frei wählbarem Pfad — sonst wäre `pathname`
         // ein Path-Traversal-Vektor (siehe gleiche Überlegung in /api/upload).

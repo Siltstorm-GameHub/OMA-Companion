@@ -1,6 +1,7 @@
 /** Aktionen im Admin-Protokoll der Community-Jobs (client-sicher, kein Prisma). */
 
 export const ADMIN_ACTIONS: Record<string, string> = {
+  // Aus der Zeit vor den offenen Jobs — bleiben für ältere Protokolleinträge lesbar.
   application_approve: "Bewerbung genehmigt",
   application_reject: "Bewerbung abgelehnt",
   member_revoke: "Job entzogen",
@@ -8,6 +9,8 @@ export const ADMIN_ACTIONS: Record<string, string> = {
   member_warn: "Verwarnung ausgesprochen",
   member_contract: "Vertrag angepasst",
   member_badge: "Abzeichen-Stufe gesetzt",
+  reputation_set: "Ansehen gesetzt",
+  daily_limit_change: "Tageslimit geändert",
   dispute_upheld: "Anfechtung: Bewertung bestätigt",
   dispute_overturned: "Anfechtung: Bewertung gestrichen",
   content_hide: "Beitrag ausgeblendet",

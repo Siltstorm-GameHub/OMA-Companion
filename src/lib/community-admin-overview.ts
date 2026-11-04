@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { getEffectiveCommunityJobs } from "./community-job-config";
 import { computeWeeklyPayout, getWeekBounds } from "./community-job-service";
+import { getPayoutCandidates } from "./community-job-access";
+import { COMMUNITY_JOBS } from "./community-jobs";
 import { getCommunityJob } from "./community-jobs";
 
 /**
@@ -47,10 +49,16 @@ export async function getPayoutOverview(weeks = 8) {
 /** Trockenlauf: was der nächste Payout-Lauf für die zuletzt abgeschlossene Woche auszahlen würde (schreibt nichts). */
 export async function previewPayout(referenceDate: Date = new Date()) {
   const { weekStart, weekEnd } = getWeekBounds(new Date(referenceDate.getTime() - 7 * DAY));
-  const members = await prisma.communityJobMember.findMany({
-    where: { status: { in: ["ACTIVE", "WARNED"] }, contractStartAt: { lt: weekEnd } },
-    include: { user: { select: { username: true, name: true } } },
+  // Offene Jobs: dieselben Kandidaten wie im echten Lauf (jeder, der in einem Job je beigetragen hat).
+  const pairs: { userId: string; jobKey: string }[] = [];
+  for (const job of COMMUNITY_JOBS) {
+    for (const userId of await getPayoutCandidates(job.key)) pairs.push({ userId, jobKey: job.key });
+  }
+  const users = await prisma.user.findMany({
+    where: { id: { in: [...new Set(pairs.map(p => p.userId))] } }, select: { id: true, username: true, name: true },
   });
+  const userById = new Map(users.map(u => [u.id, u]));
+  const members = pairs.map(p => ({ ...p, user: userById.get(p.userId) }));
   const existing = await prisma.communityJobWeeklyPayout.findMany({ where: { weekStart }, select: { userId: true, jobKey: true, coinsAwarded: true } });
   const paid = new Map(existing.map(e => [`${e.userId}:${e.jobKey}`, e.coinsAwarded]));
 
@@ -63,6 +71,7 @@ export async function previewPayout(referenceDate: Date = new Date()) {
     }
     try {
       const o = await computeWeeklyPayout(m, weekStart, weekEnd);
+      if (o.rawScore <= 0 && o.coinsAwarded <= 0) continue; // würde im echten Lauf übersprungen
       rows.push({ user: displayName(m.user), jobKey: m.jobKey, alreadyPaid: false, coins: o.coinsAwarded, score: o.rawScore, tier: o.tierLabel });
     } catch {
       rows.push({ user: displayName(m.user), jobKey: m.jobKey, alreadyPaid: false, coins: 0, score: null, tier: "Fehler bei der Berechnung" });
@@ -194,37 +203,30 @@ export async function getJobHealth() {
   const { weekStart } = getWeekBounds(new Date(now.getTime() - 7 * DAY));
 
   return Promise.all(jobs.map(async job => {
-    const [members, pending, waitlisted, payouts] = await Promise.all([
-      prisma.communityJobMember.findMany({
-        where: { jobKey: job.key, status: { in: ["ACTIVE", "WARNED"] } },
-        select: { status: true, lastContributionAt: true, assignedAt: true, contractEndAt: true },
+    const [active7, active30, overLimit7, payouts] = await Promise.all([
+      prisma.communityJobContribution.findMany({
+        where: { jobKey: job.key, createdAt: { gte: new Date(now.getTime() - 7 * DAY) } }, select: { userId: true }, distinct: ["userId"],
       }),
-      prisma.communityJobApplication.count({ where: { jobKey: job.key, status: "PENDING" } }),
-      prisma.communityJobApplication.count({ where: { jobKey: job.key, status: "WAITLISTED" } }),
+      prisma.communityJobContribution.findMany({
+        where: { jobKey: job.key, createdAt: { gte: new Date(now.getTime() - 30 * DAY) } }, select: { userId: true }, distinct: ["userId"],
+      }),
+      prisma.communityJobContribution.count({
+        where: { jobKey: job.key, counted: false, createdAt: { gte: new Date(now.getTime() - 7 * DAY) } },
+      }),
       prisma.communityJobWeeklyPayout.aggregate({ where: { jobKey: job.key, weekStart }, _sum: { coinsAwarded: true }, _count: true }),
     ]);
-
-    const free = Math.max(0, job.maxSlots - members.length);
-    const idle = (m: { lastContributionAt: Date | null; assignedAt: Date }, days: number) => {
-      const ref = m.lastContributionAt ?? m.assignedAt;
-      return now.getTime() - ref.getTime() > days * DAY;
-    };
-    const idle14 = members.filter(m => idle(m, 14)).length;
-    const active7 = members.filter(m => m.lastContributionAt && now.getTime() - m.lastContributionAt.getTime() <= 7 * DAY).length;
-    const endingSoon = members.filter(m => m.contractEndAt.getTime() - now.getTime() <= 14 * DAY).length;
-    const warned = members.filter(m => m.status === "WARNED").length;
+    const contributions7 = await prisma.communityJobContribution.count({
+      where: { jobKey: job.key, createdAt: { gte: new Date(now.getTime() - 7 * DAY) } },
+    });
 
     const hints: { level: "warn" | "info"; text: string }[] = [];
-    if (free > 0 && pending + waitlisted > 0) hints.push({ level: "warn", text: `${free} Platz frei, obwohl ${pending + waitlisted} Bewerber warten — bitte prüfen` });
-    else if (free > 0 && members.length === 0) hints.push({ level: "warn", text: "Komplett unbesetzt, keine Bewerber" });
-    else if (free > 0) hints.push({ level: "info", text: `${free} ${free === 1 ? "Platz" : "Plätze"} frei, keine Bewerber` });
-    if (idle14 > 0) hints.push({ level: "warn", text: `${idle14} ${idle14 === 1 ? "Mitglied" : "Mitglieder"} ohne Beitrag seit 14 Tagen` });
-    if (warned > 0) hints.push({ level: "info", text: `${warned} verwarnt` });
-    if (endingSoon > 0) hints.push({ level: "info", text: `${endingSoon} ${endingSoon === 1 ? "Vertrag läuft" : "Verträge laufen"} in 14 Tagen aus` });
+    if (active30.length === 0) hints.push({ level: "warn", text: "Seit 30 Tagen hat niemand in diesem Job beigetragen" });
+    else if (active7.length === 0) hints.push({ level: "info", text: "Diese Woche noch keine Beiträge" });
+    if (overLimit7 > 0) hints.push({ level: "info", text: `${overLimit7} ${overLimit7 === 1 ? "Beitrag" : "Beiträge"} über dem Tageslimit (7 Tage)` });
 
     return {
-      key: job.key, label: job.label, emoji: job.emoji, maxSlots: job.maxSlots, filled: members.length, free,
-      pending, waitlisted, active7, idle14, warned, endingSoon,
+      key: job.key, label: job.label, emoji: job.emoji,
+      active7: active7.length, active30: active30.length, contributions7, overLimit7,
       lastWeekCoins: payouts._sum.coinsAwarded ?? 0, lastWeekPaid: payouts._count, hints,
     };
   }));
