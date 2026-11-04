@@ -227,12 +227,13 @@ export default function AdminEventsClient({
           </h2>
         </div>
         {standaloneEvents.length === 0 ? (
-          <EmptyState
-            type="events"
-            title="Keine aktiven Standalone-Events"
-            description="Erstelle ein neues Event, das nicht Teil einer Reihe ist."
-            action={{ label: "Neues Event erstellen", href: "/admin/events/new" }}
-          />
+          // Kompakt statt großer Illustration — der "Neues Event"-Button steht ohnehin oben
+          <p className="px-4 py-3 text-xs text-gray-500">
+            Keine aktiven Standalone-Events.{" "}
+            <Link href="/admin/events/new?mode=event" className="text-teal-400 hover:text-teal-300 font-medium">
+              Neues Event erstellen
+            </Link>
+          </p>
         ) : (
           <div className="divide-y divide-white/[0.04]">
             {standaloneEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
