@@ -10,12 +10,13 @@ import Image from "next/image";
 import { CalendarPlus, Hash } from "@/components/icons";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Repeat } from "@/components/icons";
-import { RefreshCw, Gamepad2, Swords, BarChart2, Plus, X, Trophy, Save, Coins, MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff, Monitor, Flame, Clock, Lock, Unlock } from "@/components/icons";
+import { RefreshCw, Gamepad2, Swords, BarChart2, Plus, X, Save, Coins, MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff, Monitor, Flame, Clock, Lock, Unlock } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";
 import GameNameInput from "@/components/GameNameInput";
-import StatFieldEditor from "@/components/StatFieldEditor";
+import StatRowsEditor, { type StatRow } from "@/components/admin/StatRowsEditor";
+import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import IconPicker from "@/components/IconPicker";
@@ -252,13 +253,20 @@ export default function SeriesDetailClient({
   const [statParticipationCoins, setStatParticipationCoins] = useState<number>(initialStatCfg.participationCoins ?? 0);
   const [statSpectatorCoins, setStatSpectatorCoins]         = useState<number>(initialStatCfg.spectatorParticipationCoins ?? 0);
   const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
-  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[]>(initialStatCfg.stats ?? []);
+  // EINE Statistik-Liste der Reihe — was je Event erfasst wird (eventStatFields), wird daraus abgeleitet.
+  // Altbestand: Event-only-Felder (ohne gleichnamigen Reihen-Stat) bleiben als Zeilen mit 0 Punkten.
+  const [statRows, setStatRows] = useState<StatRow[]>(() => {
+    const rows: StatRow[] = initialStatCfg.stats ?? [];
+    const known = new Set(rows.map(r => r.field));
+    const extra = ((initialStatCfg.eventStatFields ?? []) as string[]).filter(f => f && !known.has(f)).map(f => ({ field: f, pointsPer: 0 }));
+    return [...rows, ...extra];
+  });
   // Zusätzliche Münzen für die Platzierung (1./2./3.) innerhalb eines einzelnen Events der Reihe
   const [eventPlacementCoins, setEventPlacementCoins] = useState<{ place: number; coins: number }[]>(
     initialStatCfg.eventPlacementCoins ?? [{ place: 1, coins: 0 }, { place: 2, coins: 0 }, { place: 3, coins: 0 }]
   );
-  // Event-level stat settings (Step 4 im Wizard)
-  const [eventStatFields, setEventStatFields] = useState<string[]>(initialStatCfg.eventStatFields ?? []);
+  // Event-level stat settings (abgeleitet aus den Statistiken, siehe lib/series-stat-fields.ts)
+  const eventStatFields = deriveEventStatFields(statRows);
   const [winnerStatField, setWinnerStatField] = useState<string>(initialStatCfg.winnerStatField ?? "");
   // Dominion Bonus
   const initialDom = initialStatCfg.dominionBonus ?? {};
@@ -361,11 +369,11 @@ export default function SeriesDetailClient({
           participationCoins:           statParticipationCoins,
           spectatorParticipationCoins:  statSpectatorCoins,
           transferToGlobalRanking:      statTransferToGlobal,
-          stats: statRows.filter(r => r.field.trim()),
+          stats: statRows.filter(r => r.field.trim()).map(r => ({ ...r, field: r.field.trim() })),
           winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
           matchWinStatKeys: statRows.filter(r => r.field.trim() && r.isMatchWinStat).map(r => r.field),
           ...(eventStatFields.length > 0 && { eventStatFields }),
-          ...(winnerStatField            && { winnerStatField }),
+          ...(winnerStatField && eventStatFields.includes(winnerStatField) && { winnerStatField }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
             dominionBonus: {
               enabled:      true,
@@ -1066,49 +1074,35 @@ export default function SeriesDetailClient({
           <>
           {lockedNotice}
           <fieldset disabled={isArchived} className="space-y-4 min-w-0 border-0 p-0 m-0">
-          {/* Stats */}
-          <Section title="Stats">
-            <div className="space-y-1.5">
-              {statRows.map((row, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input type="text" defaultValue={row.field}
-                    onBlur={e => { const v = e.target.value; setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r)); }}
-                    placeholder="Stat-Name (z.B. Kills)"
-                    className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
-                  />
-                  <input type="number" min={0} defaultValue={row.pointsPer}
-                    onBlur={e => { const v = Number(e.target.value); setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r)); }}
-                    placeholder="Pkt./Einheit" className="w-20 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    title="Gewinner-Stat"
-                    onClick={() => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, isWinnerStat: !r.isWinnerStat } : r))}
-                    className={`shrink-0 transition-colors ${row.isWinnerStat ? "text-amber-400" : "text-gray-600 hover:text-amber-400"}`}
-                  >
-                    <Trophy className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Match-Win-Stat"
-                    onClick={() => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, isMatchWinStat: !r.isMatchWinStat } : r))}
-                    className={`shrink-0 transition-colors ${row.isMatchWinStat ? "text-teal-400" : "text-gray-600 hover:text-teal-400"}`}
-                  >
-                    <Swords className="w-3.5 h-3.5" />
-                  </button>
-                  <button type="button" onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
-                    className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              <p className="text-[11px] text-gray-600">🏆 = Gewinner-Stat (bestimmt Reihensieger) · ⚔️ = Match-Win-Stat (+1 pro Match Win aus einzelnen Runden)</p>
-              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1, isWinnerStat: false, isMatchWinStat: false }])}
-                className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
-                <Plus className="w-3 h-3" /> Statistik hinzufügen
-              </button>
-            </div>
+          {/* Statistiken — EINE Liste: wird in jedem Event erfasst, Punkte gelten für den Skill-Index im
+              Event und (gleich oder mit ⇄ abweichend) für die Gesamttabelle */}
+          <Section title="Statistiken">
+            <p className="text-xs text-gray-500 mb-2">
+              Werden in jedem Event der Reihe erfasst. Die Punkte gelten im Event (Skill-Index) und in der
+              Gesamttabelle — mit ⇄ legst du für die Gesamttabelle eigene Punkte fest. Zusatz-Stats nur für ein
+              einzelnes Event ergänzt du dort im Reiter „Turnier“.
+            </p>
+            <StatRowsEditor
+              rows={statRows}
+              onChange={rows => {
+                setStatRows(rows);
+                if (winnerStatField && !deriveEventStatFields(rows).includes(winnerStatField)) setWinnerStatField("");
+              }}
+              showLeagueOverride
+            />
           </Section>
+
+          {eventStatFields.length > 0 && (
+            <Section title="Sieger-Ermittlung">
+              <p className="text-[11px] text-gray-500 mb-2">
+                Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
+              </p>
+              <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)} className={inputCls}>
+                <option value="">– Kein / manuell festlegen –</option>
+                {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </Section>
+          )}
 
           {/* Dominion Bonus */}
           <Section title="Dominion Bonus">
@@ -1175,48 +1169,6 @@ export default function SeriesDetailClient({
             </div>
           </Section>
 
-          {/* Event-Format-Einstellungen (für Stats/Durchschnittswerte-Modi) */}
-          {(fixedFormat === "ffa" || fixedFormat === "coop_stats" || fixedFormat === "avg_stats" || eventStatFields.length > 0) && (
-            <Section title="Event-Einstellungen (Stat-Tracking)">
-              <p className="text-xs text-gray-500 mb-1">
-                Welche Stats werden pro Event erfasst? Gilt als Vorlage für neue Events und den Abschluss-Assistenten.
-              </p>
-
-              <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
-                <p className="text-sm font-medium text-amber-300 mb-2">Trackte Statistiken je Event</p>
-                <StatFieldEditor
-                  fields={eventStatFields}
-                  onChange={f => {
-                    setEventStatFields(f);
-                    if (!f.includes(winnerStatField)) setWinnerStatField("");
-                  }}
-                  isAvg={fixedFormat === "avg_stats"}
-                />
-              </div>
-
-              {eventStatFields.length > 0 && (
-                <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
-                  <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
-                  <p className="text-[11px] text-gray-500">
-                    Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
-                  </p>
-                  <select
-                    value={winnerStatField}
-                    onChange={e => setWinnerStatField(e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">– Kein / manuell festlegen –</option>
-                    {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  {winnerStatField && statRows.filter(r => r.isWinnerStat).length === 0 && (
-                    <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-                      Markiere oben unter &quot;Stats&quot; einen Reihen-Stat mit 🏆, damit der Event-Sieger dort +1 bekommt.
-                    </p>
-                  )}
-                </div>
-              )}
-            </Section>
-          )}
           </fieldset>
           {aliasSection}
           </>

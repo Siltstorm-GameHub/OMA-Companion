@@ -8,6 +8,7 @@
 import "./journalist-service";
 import "./fotograf-service";
 import "./marketing-manager-service";
+import "./content-creator-service";
 import "./coach-service";
 import "./coach-guide-service";
 import "./visionaer-service";

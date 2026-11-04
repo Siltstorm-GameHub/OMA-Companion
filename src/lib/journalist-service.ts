@@ -1,13 +1,11 @@
 import { prisma } from "./prisma";
 import { isGameCoverUrl } from "./game-cover-url";
-import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
-import { collabBonuses } from "./collab-bonus";
+import type { ScoreStream } from "./score-engine";
 import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
-import { registerScoreBreakdown } from "./community-job-service";
-import { registerScoreResolver, registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
+import { registerOwnVoteCounter, getWeekBounds } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
-import { getCommunityJob } from "./community-jobs";
+import { getCommunityJob, CONTENT_CREATOR_KEY } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
 import { isVideoUrl } from "./upload-limits";
 import { isReportCategory, reportCategoryLabel, REPORT_TITLE_MAX, REPORT_BODY_MAX, CONTRIBUTION_MAX } from "./report-categories";
@@ -54,7 +52,10 @@ async function validateSeries(authorId: string, seriesId: string | null | undefi
  * Board, keine Bewertung, kein Discord-Post) und später veröffentlicht werden.
  */
 
-const JOB_KEY = "journalist";
+/** Seit der Zusammenlegung: Beiträge zählen für den Content Creator (Gehalt, Tageslimit, Ankündigungskanal). */
+const JOB_KEY = CONTENT_CREATOR_KEY;
+/** Bereich innerhalb des Content Creators (früherer Job-Schlüssel) — für Emoji/Label je Inhaltstyp. */
+const AREA_KEY = "journalist";
 
 /** Offene Jobs: jeder (nicht gelöschte) User darf als Journalist schreiben. */
 async function requireActiveJournalist(userId: string): Promise<boolean> {
@@ -137,7 +138,7 @@ async function announceAndStore(reportId: string, authorId: string, title: strin
   const messageId = await announceCommunityJobContent({
     title: label ? `${label}: ${title}` : title, description: plainExcerpt(body, 300),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📰", channelId,
+    jobEmoji: getCommunityJob(AREA_KEY)?.emoji ?? "📰", channelId,
     url: `${appBaseUrl()}${reportPath(reportId)}`,
   });
   if (messageId) await prisma.jobReport.update({ where: { id: reportId }, data: { discordMessageId: messageId } });
@@ -382,7 +383,8 @@ export async function getJournalistStats(userId: string) {
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
-async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+/** Score-Quellen dieses Bereichs — der Content Creator (content-creator-service.ts) rechnet alle Bereiche zusammen. */
+export async function journalistScoreStreams(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreStream[]> {
   const week = { gte: weekStart, lt: weekEnd };
   const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
   // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Inhalte innerhalb des Tageslimits (countsForScore) zählen.
@@ -396,16 +398,11 @@ async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): P
       select: { voterId: true, contributionId: true, createdAt: true },
     }),
   ]);
-  const scored = scoreStreams([
+  return [
     { key: "reports", label: "Daumen auf Berichte", unit: "thumb", events: reportVotes.map(v => ({ voterId: v.voterId, itemKey: `report:${v.reportId}`, points: 1, createdAt: v.createdAt })) },
     { key: "contributions", label: "Daumen auf Ergänzungen", unit: "thumb", events: contributionVotes.map(v => ({ voterId: v.voterId, itemKey: `contribution:${v.contributionId}`, points: 1, createdAt: v.createdAt })) },
-  ]);
-  const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
-  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+  ];
 }
-
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
-registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   const [reportVotes, contributionVotes] = await Promise.all([

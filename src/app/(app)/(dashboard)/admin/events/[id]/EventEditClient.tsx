@@ -16,6 +16,7 @@ import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
@@ -33,6 +34,8 @@ import { getClassConfig } from "@/components/gems/BattleCardView";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
+import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
+import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -109,6 +112,26 @@ function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null }
   } catch { return null; }
 }
 
+/** Statistiken der Reihe, die jedes Event fest erfasst — mit den Punkten, die im Event (Skill-Index)
+ *  gelten (eventPointsPer ?? pointsPer). Einzelne Events können nur ZUSÄTZLICHE Stats ergänzen. */
+function seriesEventStatRows(series: { seriesStatConfig?: string | null } | null | undefined): { field: string; points: number }[] {
+  if (!series?.seriesStatConfig) return [];
+  try {
+    const parsed = JSON.parse(series.seriesStatConfig) as {
+      stats?: { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
+      eventStatFields?: string[];
+    };
+    const stats = parsed.stats ?? [];
+    const fields = deriveEventStatFields(stats);
+    // Altbestand: separat gepflegte Event-Felder ohne gleichnamigen Reihen-Stat
+    for (const f of parsed.eventStatFields ?? []) if (f && !fields.includes(f)) fields.push(f);
+    return fields.map(field => {
+      const s = stats.find(x => x.field.trim() === field);
+      return { field, points: s ? (typeof s.eventPointsPer === "number" ? s.eventPointsPer : s.pointsPer) : 0 };
+    });
+  } catch { return []; }
+}
+
 type PlacementPointRow = { place: number; points: number };
 
 type EventStatConfigForm = {
@@ -152,12 +175,13 @@ function parseEventStatConfig(json: string | null | undefined): EventStatConfigF
 }
 
 /** Baut statConfigJson (siehe schema.prisma) aus der Bearbeitungsform. Gibt null zurück, wenn weder
- * Stat-Punkte noch Platzierungspunkte noch "niedrigster Ø gewinnt" gesetzt sind — dann gilt weiter
- * die Reihen-Konfiguration. */
-function buildEventStatConfig(fields: string[], form: EventStatConfigForm, isAvg: boolean): {
+ * Stat-Punkte noch Platzierungspunkte noch "niedrigster Ø gewinnt" noch ein Community-Ziel gesetzt
+ * sind — dann gilt weiter die Reihen-Konfiguration. */
+function buildEventStatConfig(fields: string[], form: EventStatConfigForm, isAvg: boolean, goal: CommunityGoal | null): {
   stats: { field: string; pointsPer: number }[];
   placementPoints: Record<string, number>;
   avgDirection?: AvgDirection;
+  goal?: CommunityGoal;
 } | null {
   const stats = fields
     .filter(f => (form.pointsByField[f] ?? 0) !== 0)
@@ -169,8 +193,8 @@ function buildEventStatConfig(fields: string[], form: EventStatConfigForm, isAvg
     }
   }
   const avgDirection = isAvg ? form.avgDirection : undefined;
-  if (stats.length === 0 && Object.keys(placementPoints).length === 0 && avgDirection !== "low") return null;
-  return { stats, placementPoints, ...(avgDirection && { avgDirection }) };
+  if (stats.length === 0 && Object.keys(placementPoints).length === 0 && avgDirection !== "low" && !goal) return null;
+  return { stats, placementPoints, ...(avgDirection && { avgDirection }), ...(goal && { goal }) };
 }
 
 const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
@@ -323,15 +347,25 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [tmtPoints, setTmtPoints]       = useState(() =>
     parseTmtConfig(event.pointsConfig)
   );
+  // Reihen-Stats sind in jedem Event der Reihe fest dabei; das Event kann nur Zusatz-Stats ergänzen
+  const seriesStatRows = seriesEventStatRows(event.series);
+  const seriesStatFieldSet = new Set(seriesStatRows.map(r => r.field));
   const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
+    let own: string[] | null = null;
     if (event.statFields) {
-      try { return JSON.parse(event.statFields) as string[]; } catch { /* fällt durch */ }
+      try { own = JSON.parse(event.statFields) as string[]; } catch { /* fällt durch */ }
     }
-    return deriveStatFieldsFromSeries(event.series) ?? ["Kills", "Assists", "Punkte"];
+    if (seriesStatRows.length > 0) {
+      return [...seriesStatRows.map(r => r.field), ...(own ?? []).filter(f => !seriesStatFieldSet.has(f))];
+    }
+    return own ?? deriveStatFieldsFromSeries(event.series) ?? ["Kills", "Assists", "Punkte"];
   });
+  const tmtExtraStatFields = tmtStatFields.filter(f => !seriesStatFieldSet.has(f));
   /* Event-eigene Stat-Punkte-Konfiguration (nur relevant bei coop_stats) — überschreibt für dieses
    * Event die Reihen-weite seriesStatConfig, siehe schema.prisma statConfigJson. */
   const [tmtStatConfig, setTmtStatConfig] = useState<EventStatConfigForm>(() => parseEventStatConfig(event.statConfigJson));
+  /* Community-Ziel (nur Skill-Index / coop_stats) — liegt ebenfalls in statConfigJson, siehe lib/community-goal.ts */
+  const [tmtGoal, setTmtGoal] = useState<CommunityGoalForm>(() => goalToForm(parseCommunityGoal(event.statConfigJson)));
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
@@ -591,7 +625,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
     const statConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
-      ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats") : null;
+      ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats",
+          tmtFormat === "coop_stats" ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1609,8 +1644,40 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
           {hasStat && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <label className={labelCls}>Statistik-Felder</label>
-              <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+              {seriesStatRows.length > 0 ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className={labelCls}>Statistiken der Reihe</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {seriesStatRows.map(r => (
+                        <span key={r.field} className="text-xs px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-300">
+                          {r.field} <span className="text-gray-500">· {r.points} Pkt.</span>
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Werden in jedem Event der Reihe erfasst und zählen für den Skill-Index und die Gesamttabelle.
+                      Ändern kannst du sie in den Einstellungen der Eventreihe.
+                    </p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Zusatz-Stats nur für dieses Event</label>
+                    <StatFieldEditor
+                      fields={tmtExtraStatFields}
+                      onChange={extra => setTmtStatFields([...seriesStatRows.map(r => r.field), ...extra.filter(f => !seriesStatFieldSet.has(f))])}
+                      isAvg={tmtFormat === "avg_stats"}
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Zählen nur im Skill-Index dieses Events, nicht für die Gesamttabelle der Reihe.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <label className={labelCls}>Statistik-Felder</label>
+                  <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+                </>
+              )}
               {tmtFormat === "avg_stats" && (
                 <div className="mt-3">
                   <AvgDirectionToggle
@@ -1619,6 +1686,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {tmtFormat === "coop_stats" && (
+            <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
+              <CommunityGoalEditor value={tmtGoal} onChange={setTmtGoal} statFields={tmtStatFields} />
             </div>
           )}
 
@@ -1631,20 +1704,22 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               <div>
                 <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
                 <p className="text-[11px] text-gray-500 -mt-1 mb-2">
-                  Überschreibt für dieses Event die Punkte-Konfiguration der Reihe — praktisch, wenn sich
-                  das Spiel und damit die Stats von Event zu Event ändern. Leer lassen, um die
-                  Reihen-Konfiguration zu übernehmen.
+                  {seriesStatRows.length > 0
+                    ? "Punkte für die Zusatz-Stats dieses Events. Die Statistiken der Reihe bringen ihre Punkte aus der Reihe mit."
+                    : "Wie viele Punkte gibt jede Einheit einer Statistik in diesem Event (Skill-Index)?"}
                 </p>
               </div>
 
+              {(seriesStatRows.length === 0 || tmtExtraStatFields.length > 0) && (
               <div className="space-y-2">
                 <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Statistik</p>
                 <StatPointsTable
-                  fields={tmtStatFields}
+                  fields={seriesStatRows.length > 0 ? tmtExtraStatFields : tmtStatFields}
                   values={tmtStatConfig.pointsByField}
                   onChange={(f, v) => setTmtStatConfig(c => ({ ...c, pointsByField: { ...c.pointsByField, [f]: v } }))}
                 />
               </div>
+              )}
 
               <div className="pt-2 border-t border-white/[0.06] space-y-3">
                 <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">

@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { getDailyContributionLimit } from "./community-job-config";
 import { startOfBerlinDay } from "./time";
-import { COMMUNITY_JOBS } from "./community-jobs";
+import { COMMUNITY_JOBS, CONTENT_AREAS, CONTENT_CREATOR_KEY } from "./community-jobs";
 
 /**
  * Offene Community-Jobs: Es gibt keine Mitgliedschaft mehr — jeder eingeloggte,
@@ -76,10 +76,10 @@ export function overLimitNotice(result: { counted: boolean; usage: DailyContribu
  * Wer in einem Job zuletzt beigetragen hat — Empfänger für Bild-/Werbe-Anfragen,
  * Anzeige im Katalog. Ersetzt die frühere Liste der "Job-Inhaber".
  */
-export async function getRecentJobContributors(jobKey: string, days = 30): Promise<string[]> {
+export async function getRecentJobContributors(jobKey: string, days = 30, kinds?: ContributionKind[]): Promise<string[]> {
   const since = new Date(Date.now() - days * 86_400_000);
   const rows = await prisma.communityJobContribution.findMany({
-    where: { jobKey, createdAt: { gte: since } },
+    where: { jobKey, createdAt: { gte: since }, ...(kinds ? { kind: { in: kinds } } : {}) },
     select: { userId: true }, distinct: ["userId"],
   });
   return rows.map(r => r.userId);
@@ -93,7 +93,11 @@ export async function getRecentJobContributors(jobKey: string, days = 30): Promi
 export async function getPayoutCandidates(jobKey: string): Promise<string[]> {
   const [ledger, legacy] = await Promise.all([
     prisma.communityJobContribution.findMany({ where: { jobKey }, select: { userId: true }, distinct: ["userId"] }),
-    prisma.communityJobMember.findMany({ where: { jobKey }, select: { userId: true }, distinct: ["userId"] }),
+    // Content Creator: ehemalige Journalisten, Fotografen und Marketing Manager zählen mit (alte Inhalte bekommen weiter Stimmen).
+    prisma.communityJobMember.findMany({
+      where: { jobKey: jobKey === CONTENT_CREATOR_KEY ? { in: CONTENT_AREAS.map(a => a.key) } : jobKey },
+      select: { userId: true }, distinct: ["userId"],
+    }),
   ]);
   const extra = jobKey === "coach"
     ? await prisma.user.findMany({
@@ -134,4 +138,15 @@ export async function listKnownCoaches(): Promise<{ userId: string; username: st
 export function jobKeyFromRequest(req: Request): string | null {
   const jobKey = new URL(req.url).searchParams.get("jobKey");
   return jobKey && COMMUNITY_JOBS.some(j => j.key === jobKey) ? jobKey : null;
+}
+
+/**
+ * Wie {@link jobKeyFromRequest}, aber für Werkzeuge/Empfehlungen je Inhaltstyp: Beim Content Creator
+ * entscheidet zusätzlich `area` (journalist | fotograf | marketing_manager) — ohne `area` bleibt es beim Job.
+ */
+export function workKeyFromRequest(req: Request): string | null {
+  const jobKey = jobKeyFromRequest(req);
+  if (jobKey !== CONTENT_CREATOR_KEY) return jobKey;
+  const area = new URL(req.url).searchParams.get("area");
+  return area && CONTENT_AREAS.some(a => a.key === area) ? area : jobKey;
 }

@@ -6,7 +6,7 @@ import EventSetupWizard from "../../../events/new/EventSetupWizard";
 import type { EventCategory, EventGenre } from "@prisma/client";
 import { parseTournamentTemplate } from "@/lib/series-seasons";
 
-type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
+type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type PollConfig = {
   label: string;

@@ -32,8 +32,8 @@ export async function createPromotionRequest(requesterId: string, data: { traini
   await prisma.promotionRequest.create({ data: { requesterId, trainingSessionId: session.id, note } });
 
   const [managers, user] = await Promise.all([
-    // Benachrichtigt wird, wer in den letzten 30 Tagen als Marketing Manager beigetragen hat.
-    getRecentJobContributors("marketing_manager").then(ids => ids.filter(id => id !== requesterId).map(userId => ({ userId }))),
+    // Benachrichtigt wird, wer in den letzten 30 Tagen Werbe-Posts erstellt hat (Content Creator).
+    getRecentJobContributors("content_creator", 30, ["marketing_post"]).then(ids => ids.filter(id => id !== requesterId).map(userId => ({ userId }))),
     prisma.user.findUnique({ where: { id: requesterId }, select: { username: true, name: true } }),
   ]);
   if (managers.length > 0) {

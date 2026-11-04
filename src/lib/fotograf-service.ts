@@ -1,12 +1,10 @@
 import { prisma } from "./prisma";
-import { scoreStreams, finalizeBreakdown, starsToPoints, type ScoreBreakdown } from "./score-engine";
-import { collabBonuses } from "./collab-bonus";
+import type { ScoreStream } from "./score-engine";
 import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
-import { registerScoreBreakdown } from "./community-job-service";
-import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
+import { registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
-import { getCommunityJob } from "./community-jobs";
+import { getCommunityJob, CONTENT_CREATOR_KEY } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
 import { fulfillPhotoRequest } from "./photo-request-service";
 import { dispatchNotification } from "./notify-dispatch";
@@ -20,7 +18,10 @@ import { isVideoUrl } from "./upload-limits";
  * beim Fotograf als Autor.
  */
 
-const JOB_KEY = "fotograf";
+/** Seit der Zusammenlegung: Beiträge zählen für den Content Creator (Gehalt, Tageslimit, Ankündigungskanal). */
+const JOB_KEY = CONTENT_CREATOR_KEY;
+/** Bereich innerhalb des Content Creators (früherer Job-Schlüssel) — für Emoji/Label je Inhaltstyp. */
+const AREA_KEY = "fotograf";
 export const ASSET_TYPES = ["CLIP", "COLLAGE", "SCREENSHOT", "BANNER", "GRAPHIC"] as const;
 export type AssetType = (typeof ASSET_TYPES)[number];
 
@@ -63,7 +64,7 @@ async function announceAndStore(assetId: string, authorId: string, title: string
   const messageId = await announceCommunityJobContent({
     title, description: "Neues Asset in der Community-Mediathek",
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📸", imageUrl, channelId,
+    jobEmoji: getCommunityJob(AREA_KEY)?.emoji ?? "📸", imageUrl, channelId,
   });
   if (messageId) await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { discordMessageId: messageId } });
 }
@@ -310,7 +311,8 @@ export async function unvoteAsset(voterId: string, assetId: string): Promise<Vot
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
-async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreBreakdown> {
+/** Score-Quellen dieses Bereichs — der Content Creator (content-creator-service.ts) rechnet alle Bereiche zusammen. */
+export async function fotografScoreStreams(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreStream[]> {
   const week = { gte: weekStart, lt: weekEnd };
   const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
   // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Inhalte innerhalb des Tageslimits (countsForScore) zählen.
@@ -318,15 +320,10 @@ async function scoreBreakdown(userId: string, weekStart: Date, weekEnd: Date): P
     where: { asset: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: week, ...valid },
     select: { voterId: true, assetId: true, createdAt: true },
   });
-  const scored = scoreStreams([
+  return [
     { key: "assets", label: "Daumen auf Bilder & Clips", unit: "thumb", events: assetVotes.map(v => ({ voterId: v.voterId, itemKey: `asset:${v.assetId}`, points: 1, createdAt: v.createdAt })) },
-  ]);
-  const bonuses = await collabBonuses(JOB_KEY, userId, weekStart, weekEnd, scored.base);
-  return finalizeBreakdown(JOB_KEY, weekStart, weekEnd, scored, bonuses);
+  ];
 }
-
-registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => (await scoreBreakdown(userId, weekStart, weekEnd)).total);
-registerScoreBreakdown(JOB_KEY, scoreBreakdown);
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.jobMediaAssetVote.count({

@@ -45,6 +45,8 @@ import { EventCategory } from "@prisma/client";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import FfaView from "./FfaView";
+import CommunityGoalCard from "./CommunityGoalCard";
+import { computeCommunityGoalProgress, parseCommunityGoal } from "@/lib/community-goal";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import BlocksEventSection from "@/components/blocks/BlocksEventSection";
@@ -600,6 +602,9 @@ export default async function TournamentDetailPage({
   const isLigaPunkteLive = !gamePhaseComplete;
   // Skill-Index ohne Reihe: Match Win/Team-Zuordnung ist dort immer erfassbar (TournamentManager) —
   // Spalte und Sieg/Niederlage-Anzeige erst, sobald tatsächlich eine Runde gewonnen wurde.
+  // Skill-Index mit Community-Ziel: Zähler über alle Runden bis zur Zielmarke, siehe lib/community-goal.ts
+  const communityGoal = format === "coop_stats" ? parseCommunityGoal(event.statConfigJson) : null;
+  const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
   const standaloneMatchWinUsed = !event.series && format === "coop_stats" && event.matches.some(m =>
     m.entries.some(e => (readStatValue(parseEntryStats(e.statsJson), "Match Win") ?? 0) > 0));
   // avg_stats: Richtung aus Abschluss bzw. Event-Einstellung; der Führende ergibt sich aus dem Ø in
@@ -1325,6 +1330,9 @@ export default async function TournamentDetailPage({
                 finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
                 excludedUserIds={[...excludedUserIds]}
               />
+            )}
+            {communityGoalProgress && (
+              <CommunityGoalCard progress={communityGoalProgress} participants={mergedParticipants} userId={userId} />
             )}
             {isFfa && (
               <FfaView

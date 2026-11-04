@@ -10,7 +10,9 @@ export type StatConfig = {
   /** Ligapunkte pro Event für anwesende (nicht ausgeschlossene) Zuschauer — unabhängig von
    *  participationPoints (das gilt nur für Mitspieler), siehe complete/route.ts. */
   spectatorParticipationPoints?: number;
-  stats: { field: string; pointsPer: number }[];
+  /** pointsPer = Punkte in der Gesamttabelle der Reihe. eventPointsPer (optional) = abweichende Punkte
+   *  im einzelnen Event (Skill-Index/Turnierpunkte); fehlt es, gilt pointsPer für beides. */
+  stats: { field: string; pointsPer: number; eventPointsPer?: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
@@ -57,10 +59,15 @@ function mergeStatsByField(
  *  Nötig für Reihen ohne festes Format/Spiel (coop_stats), wo sich Stat-Felder und Platzierungspunkte
  *  von Event zu Event unterscheiden können — nur gesetzte, nicht-leere Werte überschreiben die
  *  Reihen-weiten Werte, alles andere (participationPoints, mvpStatField, …) bleibt seriesweit fix. */
-export function applyEventStatOverride<T extends { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number> }>(
-  cfg: T,
+export function applyEventStatOverride<T extends { stats?: { field: string; pointsPer: number; eventPointsPer?: number }[]; placementPoints?: Record<string, number> }>(
+  seriesCfg: T,
   overrideJson: string | null | undefined,
 ): T {
+  // Reihen-Stats mit abweichenden Event-Punkten (eventPointsPer): im Event (Skill-Index/Turnierpunkte)
+  // gilt eventPointsPer, pointsPer bleibt der Wert für die Gesamttabelle der Reihe.
+  const cfg: T = seriesCfg.stats?.some(s => typeof s.eventPointsPer === "number")
+    ? { ...seriesCfg, stats: seriesCfg.stats.map(s => typeof s.eventPointsPer === "number" ? { ...s, pointsPer: s.eventPointsPer } : s) }
+    : seriesCfg;
   if (!overrideJson) return cfg;
   let override: EventStatOverride;
   try { override = JSON.parse(overrideJson); } catch { return cfg; }

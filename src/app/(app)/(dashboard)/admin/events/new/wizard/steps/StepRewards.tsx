@@ -2,14 +2,13 @@
 import PlaceMedal from "@/components/PlaceMedal";
 import Image from "next/image";
 import { Plus, Trash2 } from "@/components/icons";
-import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PollConfig, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
 export default function StepRewards({ w }: { w: EventWizard }) {
-  const { eventType, spectatorMode, seriesMode, gemsParticipationPack, setGemsParticipationPack, gemsPlacementPacks, setGemsPlacementPacks, isGemsTournament, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, setStatRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
+  const { eventType, spectatorMode, seriesMode, gemsParticipationPack, setGemsParticipationPack, gemsPlacementPacks, setGemsPlacementPacks, isGemsTournament, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
   if (w.isBlocksChallenge) {
     return (
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm text-gray-300">
@@ -144,10 +143,8 @@ export default function StepRewards({ w }: { w: EventWizard }) {
         <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
           <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
           <p className="text-[11px] text-gray-500 -mt-1">
-            Die Saison-Rangliste der ganzen Reihe (Ligapunkte, über alle Events aufsummiert). Die
-            Stat-Felder hier sind die <strong className="text-gray-400">Punkte-Formel</strong> — sie
-            zählen nur, wenn ein Event in Schritt 5 („Event-Einstellungen") einen{" "}
-            <em>gleichnamigen</em> Stat tatsächlich erfasst.
+            Die Saison-Rangliste der ganzen Reihe (Ligapunkte, über alle Events aufsummiert): Teilnahme plus
+            die Punkte aus den Statistiken des vorigen Schritts.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -185,14 +182,11 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               className="w-4 h-4 rounded accent-indigo-500" />
             <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
           </label>
-          {eventType === "tournament" && (
-            <StatRowsEditor
-              rows={statRows}
-              onChange={setStatRows}
-              accentClassName="text-indigo-400 hover:text-indigo-300"
-              inputClassName={`${inputCls}`}
-              inputStyle={inputStyle}
-            />
+          {statRows.some(r => r.field.trim()) && (
+            <p className="text-[11px] text-gray-500">
+              Punkte aus Statistiken (aus „Statistiken &amp; Events“):{" "}
+              {statRows.filter(r => r.field.trim()).map(r => `${r.field} ×${r.pointsPer}`).join(" · ")}
+            </p>
           )}
         </div>
       )}

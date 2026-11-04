@@ -8,6 +8,7 @@ import { notifyKnockoutCreated } from "@/lib/tournaments/matchNotifications";
 import { planSchedule } from "@/lib/tournaments/schedule";
 import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/groupStageServer";
+import { withSanitizedGoal } from "@/lib/community-goal";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // [id] ist jetzt die Event.id
@@ -16,7 +17,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json();
   // Squad-Captains: Münzen pro Match-Ergebnis auf die Obergrenze kappen (captain-reward-limits.ts)
   if (!hasMinRole(currentUser.role, "moderator")) body.pointsConfig = capMatchResultPoints(body.pointsConfig);
-  const { status, format, pointsConfig, statFields, statConfig, generateMatches, finalRanking, finalRankingNote } = body;
+  const { status, format, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
+  // Community-Ziel in statConfig prüfen (nur Skill-Index, nur vorhandene Stat-Felder), siehe lib/community-goal.ts.
+  // Ohne format im Body wird nur gegen die Stat-Felder geprüft — das Ziel wird ohnehin nur bei coop_stats angezeigt.
+  const statConfig = withSanitizedGoal(body.statConfig, format === undefined ? "coop_stats" : format, statFields);
 
   // Gruppenphase + K.O.: Gruppen auslosen / K.O.-Runde erzeugen / jeweils zurücksetzen
   if (GROUP_STAGE_ACTIONS.includes(generateMatches)) {

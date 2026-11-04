@@ -1,99 +1,59 @@
 "use client";
-import { Check, Plus } from "@/components/icons";
-import StatFieldEditor from "@/components/StatFieldEditor";
+import { Check } from "@/components/icons";
+import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
-// ── Step 4 (Series): Event-Einstellungen ─────────────────────────────────────
+// ── Step 3 (Series): Statistiken & Events ────────────────────────────────────
+// EINE Statistik-Liste für die ganze Reihe: Was hier steht, wird in jedem Event erfasst, zählt mit
+// den Punkten für den Skill-Index im Event und — gleich oder mit ⇄ abweichend — für die
+// Gesamttabelle. Einzelne Events können im Reiter "Turnier" eigene Zusatz-Stats ergänzen.
 export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
-  const { eventType, seriesFormat, tournamentTemplate, setTournamentTemplate, spectatorMode, variousGames, statRows, polls, eventStatFields, setEventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints } = w;
+  const { eventType, seriesFormat, tournamentTemplate, setTournamentTemplate, spectatorMode, variousGames, statRows, setStatRows, polls, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints } = w;
   const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
   const matchWinStatKeys = statRows.filter(r => r.isMatchWinStat).map(r => r.field);
   return (
     <div className="space-y-6">
-      {eventType === "tournament" && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-3">
-          <div>
-            <p className="text-sm font-semibold text-teal-200">Turniervorlage</p>
-            <p className="text-xs text-gray-500">
-              Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
-            </p>
-          </div>
-          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} />
-        </div>
-      )}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">📋</span>
-          <h2 className="text-base font-semibold text-white">Event-Einstellungen</h2>
+          <h2 className="text-base font-semibold text-white">Statistiken &amp; Events</h2>
         </div>
         <p className="text-xs text-gray-500">
-          Vorlage für die einzelnen Events dieser Reihe. Diese Einstellungen werden beim Anlegen
-          neuer Events und beim Abschluss automatisch vorausgefüllt.
+          Vorlage für alle Events dieser Reihe. Wird beim Anlegen neuer Events und beim Abschluss automatisch übernommen.
         </p>
       </div>
 
-      {variousGames && (
-        <div className="rounded-xl px-4 py-3 border border-blue-500/20 bg-blue-500/5">
-          <p className="text-xs text-blue-300">
-            Bei verschiedenen Spielen wird die Sieger-Ermittlung pro Event konfiguriert.
-            Stat-Tracking und Sieger-Ermittlung entfallen als Vorlage.
+      <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
+        <p className="text-sm font-medium text-amber-300">Statistiken</p>
+        <p className="text-[11px] text-gray-500">
+          Diese Werte trägst du <strong className="text-gray-400">in jedem Event</strong> ein. Die Punkte pro Einheit
+          gelten für den Skill-Index im Event <em>und</em> für die Gesamttabelle der Reihe — mit ⇄ kannst du für die
+          Gesamttabelle einen eigenen Wert festlegen. „Teilnahme“ wird automatisch gezählt.
+        </p>
+        {variousGames && (
+          <p className="text-[11px] text-blue-300/90 rounded-lg px-3 py-2 border border-blue-500/20 bg-blue-500/5">
+            Bei wechselnden Spielen: Lege hier nur Stats an, die es in jedem Spiel gibt. Spielspezifische Stats ergänzt
+            du im jeweiligen Event (Reiter „Turnier“) — die zählen dann nur im Event, nicht für die Gesamttabelle.
           </p>
-        </div>
-      )}
+        )}
+        <StatRowsEditor
+          rows={statRows}
+          onChange={rows => {
+            setStatRows(rows);
+            if (winnerStatField && !rows.some(r => r.field === winnerStatField && !r.isWinnerStat && !r.isMatchWinStat)) setWinnerStatField("");
+          }}
+          showWinnerToggle={eventType === "tournament"}
+          showMatchWinToggle={eventType === "tournament"}
+          showLeagueOverride
+          accentClassName="text-amber-400 hover:text-amber-300"
+          inputClassName={inputCls}
+          inputStyle={inputStyle}
+        />
+      </div>
 
-      {!variousGames && (
-        <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
-          <p className="text-sm font-medium text-amber-300 mb-1">Trackte Statistiken je Event</p>
-          <p className="text-[11px] text-gray-500">
-            Die Stat-Spalten, die beim Eintragen der Ergebnisse <strong className="text-gray-400">in jedem
-            einzelnen Event</strong> ausgefüllt werden. „Teilnahme" wird für jeden Mitspieler automatisch
-            +1 getrackt.
-          </p>
-          {statRows.length > 0 && (
-            <p className="text-[11px] text-gray-500">
-              Damit ein Wert hier auch in der Saison-Gesamttabelle (Schritt 4) Punkte gibt, muss der
-              Feldname exakt mit einem dortigen Stat übereinstimmen — Felder, die es dort nicht gibt,
-              bleiben nur eine event-lokale Statistik ohne Ligapunkte.
-            </p>
-          )}
-          {statRows.length > 0 && (
-            <button type="button"
-              onClick={() => setEventStatFields(prev => [...new Set([...prev, ...statRows.map(r => r.field).filter(Boolean)])])}
-              className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors">
-              <Plus className="w-3 h-3" /> Feldnamen aus Gesamttabelle übernehmen
-            </button>
-          )}
-          <StatFieldEditor fields={eventStatFields} onChange={f => {
-            setEventStatFields(f);
-            if (!f.includes(winnerStatField)) setWinnerStatField("");
-          }} />
-          {(() => {
-            const seriesFields = new Set(statRows.map(r => r.field).filter(Boolean));
-            const untracked = statRows.map(r => r.field).filter(f => f && !eventStatFields.includes(f));
-            const unlinked = eventStatFields.filter(f => !seriesFields.has(f));
-            return (
-              <>
-                {untracked.length > 0 && (
-                  <p className="text-[11px] text-red-400/80 rounded-lg px-3 py-2 border border-red-500/20 bg-red-500/5">
-                    ⚠️ Gesamttabellen-Stat(s) „{untracked.join(", ")}" werden hier nicht erfasst — bleiben in
-                    der Saison-Rangliste immer 0.
-                  </p>
-                )}
-                {unlinked.length > 0 && (
-                  <p className="text-[11px] text-gray-500 rounded-lg px-3 py-2 border border-white/10 bg-white/5">
-                    ℹ️ „{unlinked.join(", ")}" {unlinked.length === 1 ? "ist" : "sind"} nur event-lokal — kein
-                    gleichnamiger Stat in der Gesamttabelle, also keine Ligapunkte daraus.
-                  </p>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      )}
-
-      {!variousGames && eventStatFields.length > 0 && (
+      {eventStatFields.length > 0 && (
         <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
           <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
           <p className="text-[11px] text-gray-500">
@@ -107,24 +67,28 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
               {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
-          {winnerStatField && winnerStatKeys.length === 0 && (
-            <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-              Markiere in Schritt 3 einen Reihen-Stat mit 🏆, um +1 für den Event-Sieger zu tracken.
+          {winnerStatKeys.length > 0 && (
+            <p className="text-[10px] text-teal-600">
+              🏆 +1 für den Event-Sieger auf: {winnerStatKeys.join(", ")}
             </p>
           )}
-          {winnerStatKeys.length > 0 && (
-            <p className="text-[10px] text-teal-600 mt-1">
-              Reihen-Stats bei Event-Sieg +1: {winnerStatKeys.join(", ")}
+          {matchWinStatKeys.length > 0 && (
+            <p className="text-[10px] text-teal-600">
+              ⚔️ +1 pro Match Win (aus einzelnen Runden) auf: {matchWinStatKeys.join(", ")}
             </p>
           )}
         </div>
       )}
 
-      {matchWinStatKeys.length > 0 && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
-          <p className="text-[10px] text-teal-600">
-            ⚔️ Reihen-Stats +1 pro Match Win (aus einzelnen Runden): {matchWinStatKeys.join(", ")}
-          </p>
+      {eventType === "tournament" && (
+        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-teal-200">Turniervorlage</p>
+            <p className="text-xs text-gray-500">
+              Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
+            </p>
+          </div>
+          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} />
         </div>
       )}
 
@@ -177,7 +141,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                   </div>
                 ) : (
                   <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-                    Noch keine summierten Stats konfiguriert. Füge zuerst Stats oder Umfragen in Schritt 3 hinzu.
+                    Noch keine summierten Stats konfiguriert. Lege oben Statistiken an oder im nächsten Schritt Umfragen.
                   </p>
                 );
               })()}
@@ -211,12 +175,6 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         )}
       </div>
 
-      {!variousGames && eventStatFields.length === 0 && !dominionEnabled && (
-        <p className="text-xs text-gray-600 italic">
-          Ohne Stat-Felder werden keine Statistiken je Event getrackt. Du kannst dies auch später
-          in den Reihen-Einstellungen konfigurieren.
-        </p>
-      )}
     </div>
   );
 }

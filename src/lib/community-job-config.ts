@@ -37,20 +37,11 @@ const DEFAULT_VOTE_BONUS_TIERS: VoteBonusTier[] = [
 
 /** Sinnvolle Default-Gehaltsstufen je Job — admin-überschreibbar. */
 const DEFAULT_TIERS: Record<string, PayoutTier[]> = {
-  journalist: [
-    { label: "Schwach", minScore: 1, coinsAwarded: 40 },
-    { label: "Gut", minScore: 10, coinsAwarded: 90 },
-    { label: "Herausragend", minScore: 25, coinsAwarded: 180 },
-  ],
-  fotograf: [
-    { label: "Schwach", minScore: 1, coinsAwarded: 40 },
-    { label: "Gut", minScore: 15, coinsAwarded: 90 },
-    { label: "Herausragend", minScore: 35, coinsAwarded: 180 },
-  ],
-  marketing_manager: [
-    { label: "Schwach", minScore: 1, coinsAwarded: 40 },
-    { label: "Gut", minScore: 10, coinsAwarded: 90 },
-    { label: "Herausragend", minScore: 25, coinsAwarded: 180 },
+  // Content Creator = früher Journalist + Fotograf + Marketing Manager: ein Gehalt, daher höhere Schwellen und Beträge.
+  content_creator: [
+    { label: "Schwach", minScore: 1, coinsAwarded: 60 },
+    { label: "Gut", minScore: 15, coinsAwarded: 150 },
+    { label: "Herausragend", minScore: 35, coinsAwarded: 280 },
   ],
   coach: [
     { label: "Schwach", minScore: 1, coinsAwarded: 40 },

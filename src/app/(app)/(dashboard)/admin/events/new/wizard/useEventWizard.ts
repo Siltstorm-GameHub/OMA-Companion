@@ -11,7 +11,9 @@ import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib
 import { fromDatetimeLocalBerlin } from "@/lib/time";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
 import type { AvgDirection } from "@/lib/avg-stats";
+import { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
+import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { clearDraft, useInitialDraft, writeDraft } from "./draft";
 import { FORMATS, type EventTemplate, type SeriesOption, type SquadOption, type PollConfig, type PlacementReward, type StatRow, type SeasonPrefill } from "./shared";
 
@@ -74,6 +76,8 @@ export function useEventWizard({
   const [statFields, setStatFields]   = useState<string[]>(tpl?.statFields ?? []);
   const [statPointsByField, setStatPointsByField] = useState<Record<string, number>>(tpl?.statPointsByField ?? {});
   const [avgDirection, setAvgDirection] = useState<AvgDirection>(tpl?.avgDirection ?? "high");
+  // Skill-Index: optionales Community-Ziel (siehe lib/community-goal.ts)
+  const [communityGoal, setCommunityGoal] = useState<CommunityGoalForm>(tpl?.communityGoal ?? EMPTY_COMMUNITY_GOAL_FORM);
   // Veröffentlichung: sofort (sichtbar + angekündigt), unsichtbar, oder geplant zu publishAt
   const [publishMode, setPublishMode] = useState<"now" | "hidden" | "scheduled">("now");
   const [publishAt, setPublishAt]     = useState("");
@@ -125,11 +129,19 @@ export function useEventWizard({
   const [statParticipationPts, setStatParticipationPts] = useState(seasonPrefill?.statParticipationPts ?? 5);
   const [statSpectatorParticipationPts, setStatSpectatorParticipationPts] = useState(seasonPrefill?.statSpectatorParticipationPts ?? 3);
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(seasonPrefill?.statPtsToGlobalRanking ?? false);
-  const [statRows, setStatRows]         = useState<StatRow[]>(seasonPrefill?.statRows ?? []);
+  // Statistiken der Reihe: EINE Liste. Was je Event erfasst wird (eventStatFields), wird daraus
+  // abgeleitet — vorher eine zweite, von Hand gleichnamig zu pflegende Liste. Event-only-Felder einer
+  // Vorsaison bleiben als Zeilen mit 0 Punkten erhalten (zählen nicht für die Gesamttabelle).
+  const [statRows, setStatRows]         = useState<StatRow[]>(() => {
+    const rows = seasonPrefill?.statRows ?? [];
+    const known = new Set(rows.map(r => r.field));
+    const extra = (seasonPrefill?.eventStatFields ?? []).filter(f => f && !known.has(f)).map(f => ({ field: f, pointsPer: 0 }));
+    return [...rows, ...extra];
+  });
   const [seriesHidden, setSeriesHidden] = useState(seasonPrefill?.seriesHidden ?? false);
   const [seriesRegistrationLocked, setSeriesRegistrationLocked] = useState(seasonPrefill?.seriesRegistrationLocked ?? false);
   const [seriesSquadId, setSeriesSquadId] = useState(seasonPrefill?.seriesSquadId ?? initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
-  const [eventStatFields, setEventStatFields] = useState<string[]>(seasonPrefill?.eventStatFields ?? []);
+  const eventStatFields = useMemo(() => deriveEventStatFields(statRows), [statRows]);
   const [winnerStatField, setWinnerStatField] = useState(seasonPrefill?.winnerStatField ?? "");
 
   // ── Dominion Bonus ───────────────────────────────────────────────────────────
@@ -239,6 +251,7 @@ export function useEventWizard({
     statFields,
     statPointsByField,
     avgDirection,
+    communityGoal,
     publishMode,
     publishAt,
     playHomeAway,
@@ -275,7 +288,6 @@ export function useEventWizard({
     seriesHidden,
     seriesRegistrationLocked,
     seriesSquadId,
-    eventStatFields,
     winnerStatField,
     dominionEnabled,
     dominionTriggerStats,
@@ -311,6 +323,7 @@ export function useEventWizard({
     statFields: setStatFields,
     statPointsByField: setStatPointsByField,
     avgDirection: setAvgDirection,
+    communityGoal: setCommunityGoal,
     publishMode: setPublishMode,
     publishAt: setPublishAt,
     playHomeAway: setPlayHomeAway,
@@ -347,7 +360,6 @@ export function useEventWizard({
     seriesHidden: setSeriesHidden,
     seriesRegistrationLocked: setSeriesRegistrationLocked,
     seriesSquadId: setSeriesSquadId,
-    eventStatFields: setEventStatFields,
     winnerStatField: setWinnerStatField,
     dominionEnabled: setDominionEnabled,
     dominionTriggerStats: setDominionTriggerStats,
@@ -517,7 +529,8 @@ export function useEventWizard({
           .map(f => ({ field: f, pointsPer: statPointsByField[f] }));
         // avg_stats: "niedrigster Ø gewinnt" muss schon während des Events gelten, nicht erst beim Abschluss
         const avgDir = (seriesFixedFormat ?? format) === "avg_stats" && avgDirection === "low" ? avgDirection : undefined;
-        if (stats.length || avgDir) body.statConfig = { stats, ...(avgDir && { avgDirection: avgDir }) };
+        const goal = !seriesFixedFormat && format === "coop_stats" ? formToGoal(communityGoal, statFields) : null;
+        if (stats.length || avgDir || goal) body.statConfig = { stats, ...(avgDir && { avgDirection: avgDir }), ...(goal && { goal }) };
       }
     }
 
@@ -570,9 +583,9 @@ export function useEventWizard({
           spectatorParticipationPoints: spectatorMode ? statSpectatorParticipationPts : 0,
           spectatorParticipationCoins: spectatorMode ? spectatorCoins : 0,
           transferToGlobalRanking: statPtsToGlobalRanking,
-          stats: statRows,
+          stats: statRows.filter(r => r.field.trim()).map(r => ({ ...r, field: r.field.trim() })),
           ...(eventStatFields.length > 0 && { eventStatFields }),
-          ...(winnerStatField && { winnerStatField }),
+          ...(winnerStatField && eventStatFields.includes(winnerStatField) && { winnerStatField }),
           ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
           ...(matchWinStatKeys.length > 0 && { matchWinStatKeys }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
@@ -694,6 +707,8 @@ export function useEventWizard({
     setStatPointsByField,
     avgDirection,
     setAvgDirection,
+    communityGoal,
+    setCommunityGoal,
     eventRegistrationLocked,
     setEventRegistrationLocked,
     eventSquadId,
@@ -756,7 +771,6 @@ export function useEventWizard({
     seriesSquadId,
     setSeriesSquadId,
     eventStatFields,
-    setEventStatFields,
     winnerStatField,
     setWinnerStatField,
     dominionEnabled,

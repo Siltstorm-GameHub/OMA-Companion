@@ -14,6 +14,7 @@ import { createPollsForEvent } from "@/lib/event-polls";
 import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
 import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
+import { sanitizeCommunityGoal } from "@/lib/community-goal";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 // Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —
@@ -186,7 +187,11 @@ export async function POST(req: NextRequest) {
         : [];
       // avg_stats: "niedrigster Ø gewinnt" schon ab Event-Erstellung, siehe resolveAvgDirection
       const avgDirection = eventFormat === "avg_stats" && bodyStatConfig?.avgDirection === "low" ? "low" : undefined;
-      if (stats.length || avgDirection) eventStatConfigJson = JSON.stringify({ stats, ...(avgDirection && { avgDirection }) });
+      // Skill-Index: optionales Community-Ziel (Zähler bis zur Zielmarke), siehe lib/community-goal.ts
+      const goal = eventFormat === "coop_stats" ? sanitizeCommunityGoal(bodyStatConfig?.goal, fields) : null;
+      if (stats.length || avgDirection || goal) {
+        eventStatConfigJson = JSON.stringify({ stats, ...(avgDirection && { avgDirection }), ...(goal && { goal }) });
+      }
     }
   }
 

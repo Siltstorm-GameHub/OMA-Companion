@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import { COMMUNITY_JOBS } from "@/lib/community-jobs";
+import { COMMUNITY_JOBS, CONTENT_AREAS, CONTENT_CREATOR_KEY, isContentArea, type ContentAreaKey } from "@/lib/community-jobs";
 import ReportEditor from "@/components/community-jobs/ReportEditor";
 import { JournalistStatsBlock, JournalistExtras, PhotoRequestsBlock } from "@/components/community-jobs/JournalistTools";
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
@@ -48,7 +48,7 @@ import ImageCropTool from "@/components/community-jobs/ImageCropTool";
  */
 
 const JOB_ICONS: Record<string, typeof Newspaper> = {
-  journalist: Newspaper, fotograf: ImagePlus, marketing_manager: Megaphone,
+  content_creator: Sparkles, journalist: Newspaper, fotograf: ImagePlus, marketing_manager: Megaphone,
   coach: GraduationCap, visionaer: Lightbulb,
 };
 
@@ -73,10 +73,24 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const JOB_TAB_STORAGE_KEY = "oma.communityJobs.lastJob";
+const AREA_STORAGE_KEY = "oma.communityJobs.lastArea";
+
+/** Bereich des Content Creators: aus "?job=<früherer Job>" oder dem zuletzt gewählten Bereich. */
+function initialArea(): ContentAreaKey {
+  if (typeof window === "undefined") return CONTENT_AREAS[0].key;
+  const fromUrl = new URLSearchParams(window.location.search).get("job");
+  if (isContentArea(fromUrl)) return fromUrl;
+  try {
+    const stored = window.localStorage.getItem(AREA_STORAGE_KEY);
+    if (isContentArea(stored)) return stored;
+  } catch { /* privater Modus o.ä. */ }
+  return CONTENT_AREAS[0].key;
+}
 
 function initialJobKey(): string {
   if (typeof window === "undefined") return COMMUNITY_JOBS[0].key;
   const fromUrl = new URLSearchParams(window.location.search).get("job");
+  if (isContentArea(fromUrl)) return CONTENT_CREATOR_KEY;
   if (fromUrl && COMMUNITY_JOBS.some(j => j.key === fromUrl)) return fromUrl;
   try {
     const stored = window.localStorage.getItem(JOB_TAB_STORAGE_KEY);
@@ -241,6 +255,16 @@ interface ServerSummary { id: string; name: string; game: string; online: boolea
 function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   jobKey: string; guide?: string; description?: string; coachSelf: CoachSelf; onChanged: () => void;
 }) {
+  // Content Creator: Bereich (Berichte/Medien/Werbung) steuert Werkzeuge, Formulare und Empfehlungen.
+  // Gehalt, Score und Auswertung laufen weiter über den Job selbst (jobKey).
+  const isContentCreator = jobKey === CONTENT_CREATOR_KEY;
+  const [area, setArea] = useState<ContentAreaKey>(() => initialArea());
+  const workKey: string = isContentCreator ? area : jobKey;
+  function selectArea(next: ContentAreaKey) {
+    setArea(next);
+    setShowAllEvents(false);
+    try { window.localStorage.setItem(AREA_STORAGE_KEY, next); } catch { /* egal */ }
+  }
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [servers, setServers] = useState<ServerSummary[]>([]);
@@ -266,12 +290,11 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   /** Blendet eine Empfehlung dauerhaft aus (optimistisch entfernt, Request läuft im Hintergrund). */
   function dismissRecommendation(itemKey: string) {
     setRecs(r => (r ? { ...r, events: r.events.filter(e => e.eventId !== itemKey) } : r));
-    api("/api/community-jobs/recommendations/dismiss", { method: "POST", body: JSON.stringify({ jobKey, itemKey }) }).catch(() => {});
+    api("/api/community-jobs/recommendations/dismiss", { method: "POST", body: JSON.stringify({ jobKey: workKey, itemKey }) }).catch(() => {});
   }
 
   useEffect(() => {
     const q = `jobKey=${encodeURIComponent(jobKey)}`;
-    api<Recommendations>(`/api/community-jobs/recommendations?${q}`).then(setRecs).catch(() => {});
     api<{ payouts: Payout[] }>(`/api/community-jobs/payouts?${q}`).then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
     api<ServerSummary[]>("/api/servers").then(setServers).catch(() => {});
@@ -314,6 +337,12 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
     };
   }, [jobKey]);
 
+  // Empfehlungen je Bereich (Content Creator) bzw. Job — eigener Effekt, damit ein Bereichswechsel nur sie neu lädt.
+  useEffect(() => {
+    const area = isContentCreator ? `&area=${encodeURIComponent(workKey)}` : "";
+    api<Recommendations>(`/api/community-jobs/recommendations?jobKey=${encodeURIComponent(jobKey)}${area}`).then(setRecs).catch(() => {});
+  }, [jobKey, workKey, isContentCreator]);
+
   const onlineServers = servers.filter(s => s.online);
 
   const Icon = JOB_ICONS[jobKey] ?? Briefcase;
@@ -322,7 +351,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   const jobGuide = guide ?? COMMUNITY_JOBS.find(j => j.key === jobKey)?.officeGuideMarkdown;
   const recCount = recs ? recs.events.length : 0;
   // Journalist (Bericht), Visionär (Idee) und Marketing Manager (Werbe-Post) können direkt zu einem Steam-Spiel posten.
-  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(jobKey);
+  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(workKey);
 
   return (
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
@@ -399,6 +428,21 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 
       {tab === "work" && (
       <>
+      {isContentCreator && (
+        <div className="px-4 pt-4">
+          <div className="flex flex-wrap rounded-2xl bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold gap-0.5 w-fit" role="tablist" aria-label="Bereich">
+            {CONTENT_AREAS.map(a => {
+              const AreaIcon = JOB_ICONS[a.key] ?? Briefcase;
+              return (
+                <button key={a.key} role="tab" aria-selected={area === a.key} onClick={() => selectArea(a.key)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-colors ${area === a.key ? SWITCH_ON : SWITCH_OFF}`}>
+                  <AreaIcon className="w-3.5 h-3.5" /> {a.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0 || (recs.xboxDeals?.length ?? 0) > 0 || (recs.gamePassNew?.length ?? 0) > 0 || (recs.gamePassLeaving?.length ?? 0) > 0) && (
         <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-4">
@@ -410,7 +454,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             const hiddenCount = recs.events.length - visibleEvents.length;
             // Nur Journalist/Fotograf/Marketing-Manager-Empfehlungen zeigen auf ein echtes Event —
             // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
-            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(jobKey);
+            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(workKey);
             // Coach-Empfehlung "neue Spieler": kein Event, aber ein sinnvoller Vorschlag fürs Formular.
             const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
@@ -515,7 +559,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                       {canPostAboutSteam && (
                         <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
                           <Button size="sm" variant="outline" className="w-full justify-center"
-                            onClick={() => openCreateForm(undefined, storePrefill(activeTab, jobKey, s))}>
+                            onClick={() => openCreateForm(undefined, storePrefill(activeTab, workKey, s))}>
                             Beitrag dazu
                           </Button>
                         </div>
@@ -556,7 +600,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       <div className="p-4 border-b border-white/[0.04] space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
           action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
-        <JobToolContent key={toolsKey} jobKey={jobKey} coachSelf={coachSelf} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
+        <JobToolContent key={`${toolsKey}-${workKey}`} jobKey={workKey} coachSelf={coachSelf} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
       </div>
 
       </>
@@ -657,8 +701,8 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       </>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={jobKey === "journalist" ? "lg" : "md"}>
-        <CreateContentForm jobKey={jobKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={workKey === "journalist" ? "lg" : "md"}>
+        <CreateContentForm jobKey={workKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
       </Modal>
     </div>
   );

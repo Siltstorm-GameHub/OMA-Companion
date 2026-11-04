@@ -2,10 +2,11 @@ import { prisma } from "./prisma";
 import type { Bonus } from "./score-engine";
 
 /**
- * Zusammenarbeits-Bonus: Wird der Beitrag eines Jobs von einem ANDEREN Job aufgegriffen, gibt es Wochenpunkte.
- *  - Fotograf: Bild wird von anderen als Titelbild, im Werbe-Post oder in einer Anleitung genutzt.
- *  - Marketing Manager: Werbe-Post wird in einem fremden Bericht referenziert oder erfüllt eine Werbe-Anfrage eines Coaches.
- *  - Journalist: Aus dem Bericht entsteht eine Idee eines Visionärs.
+ * Zusammenarbeits-Bonus: Wird ein Beitrag von einer ANDEREN Person aufgegriffen, gibt es Wochenpunkte.
+ *  - Content Creator (früher Fotograf / Marketing Manager / Journalist, je Bereich gedeckelt):
+ *      Bild wird von anderen als Titelbild, im Werbe-Post oder in einer Anleitung genutzt;
+ *      Werbe-Post wird in einem fremden Bericht referenziert oder erfüllt eine Werbe-Anfrage eines Coaches;
+ *      aus einem Bericht entsteht die Idee einer anderen Person.
  *  - Coach: Ein Werbe-Post zu einem Trainings-Termin auf seine Anfrage hin.
  *  - Visionär: Eine Idee wird "Wird umgesetzt" bzw. "Umgesetzt".
  *
@@ -26,6 +27,11 @@ export async function collabBonusScore(jobKey: string, userId: string, weekStart
   const visible = { hiddenByAdminAt: null };
 
   switch (jobKey) {
+    case "content_creator": {
+      // Eigennutzung zählt in allen drei Bereichen nicht (authorId: { not: userId }) — auch innerhalb des gemeinsamen Jobs.
+      const parts = await Promise.all(["fotograf", "marketing_manager", "journalist"].map(area => collabBonusScore(area, userId, weekStart, weekEnd)));
+      return parts.reduce((sum, p) => sum + p, 0);
+    }
     case "fotograf": {
       const [reports, posts, guides] = await Promise.all([
         prisma.jobReport.count({ where: { isDraft: false, ...visible, publishedAt: inWeek, authorId: { not: userId }, coverAsset: { authorId: userId } } }),
@@ -99,5 +105,5 @@ async function countFulfilledPromotions(who: { postAuthorId?: string; requesterI
 export async function collabBonuses(jobKey: string, userId: string, weekStart: Date, weekEnd: Date, base: number): Promise<Bonus[]> {
   if (base <= 0) return [];
   const points = await collabBonusScore(jobKey, userId, weekStart, weekEnd);
-  return points > 0 ? [{ key: "collab", label: jobKey === "visionaer" ? "Ideen in Umsetzung/umgesetzt" : "Zusammenarbeit mit anderen Jobs", points }] : [];
+  return points > 0 ? [{ key: "collab", label: jobKey === "visionaer" ? "Ideen in Umsetzung/umgesetzt" : "Zusammenarbeit (deine Beiträge von anderen genutzt)", points }] : [];
 }

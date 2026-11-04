@@ -32,6 +32,15 @@ describe("applyEventStatOverride", () => {
     assert.equal(out.participationPoints, 10);
   });
 
+  test("abweichende Event-Punkte der Reihe (eventPointsPer) gelten im Event, Event-Überschreibung gewinnt", () => {
+    const cfg: StatConfig = { ...baseCfg, stats: [{ field: "Kills", pointsPer: 1, eventPointsPer: 4 }, { field: "Deaths", pointsPer: -1 }] };
+    assert.deepEqual(applyEventStatOverride(cfg, null).stats.map(s => [s.field, s.pointsPer]), [["Kills", 4], ["Deaths", -1]]);
+    const overridden = applyEventStatOverride(cfg, JSON.stringify({ stats: [{ field: "Kills", pointsPer: 7 }] }));
+    assert.deepEqual(overridden.stats.map(s => [s.field, s.pointsPer]), [["Kills", 7], ["Deaths", -1]]);
+    // Gesamttabelle (computeEventPoints) nutzt weiter pointsPer der Reihe — die Eingabe bleibt unverändert
+    assert.equal(cfg.stats[0].pointsPer, 1);
+  });
+
   test("leere oder kaputte Überschreibung ändert nichts", () => {
     assert.equal(applyEventStatOverride(baseCfg, null), baseCfg);
     assert.equal(applyEventStatOverride(baseCfg, "{kaputt"), baseCfg);

@@ -1,7 +1,7 @@
 /**
- * Community-Jobs: Katalog aktiver, community-bewerteter Jobs (Journalist,
- * Fotograf, Marketing Manager, Coach/Manager, Visionär). Reiner Code ohne
- * Prisma.
+ * Community-Jobs: Katalog aktiver, community-bewerteter Jobs (Content Creator,
+ * Coach/Manager, Visionär). Journalist, Fotograf und Marketing Manager sind im
+ * Content Creator zusammengelegt (siehe CONTENT_AREAS). Reiner Code ohne Prisma.
  *
  * Offenes Modell: Jeder User darf alle Jobs ausüben — ohne Bewerbung, Slots
  * oder Vertrag. Qualität steuern Community-Bewertungen, das Tageslimit für
@@ -18,11 +18,15 @@ export interface CommunityJobDef {
 
 export const COMMUNITY_JOBS: CommunityJobDef[] = [
   {
-    key: "journalist",
-    label: "Journalist",
-    emoji: "📰",
-    description: "Schreibt Berichte zu Events und aktuellen Themen der Community.",
+    key: "content_creator",
+    label: "Content Creator",
+    emoji: "🎬",
+    description: "Schreibt Berichte, lädt Fotos, Clips und Grafiken hoch und erstellt Werbe-Posts für Events.",
     officeGuideMarkdown:
+      "Als Content Creator machst du alles, was die Community sichtbar macht: Berichte schreiben, Bilder und Clips " +
+      "hochladen und für Events werben. Im Büro wählst du oben den Bereich (Berichte, Medien, Werbung). Alle drei " +
+      "zählen zusammen für **ein** Wochengehalt — je mehr Daumen deine Beiträge bekommen, desto höher die Stufe.\n\n" +
+      "## Berichte\n\n" +
       "Du schreibst Berichte zu Events und aktuellen Themen. Je mehr Daumen deine Berichte, " +
       "Ergänzungen und Kommentare diese Woche bekommen, desto höher deine Gehaltsstufe. " +
       "Auch Daumen auf ältere Berichte zählen für die Woche, in der sie eingehen.\n\n" +
@@ -37,14 +41,8 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Empfehlungen** zeigen dir Events ohne Bericht (große zuerst), Events von heute, alte Entwürfe, Berichte ohne Titelbild, neue Ergänzungen und mehr. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass): „Beitrag dazu“ legt einen Bericht ohne Event an.\n" +
       "- **Auswertung** zeigt Daumen pro Woche, Top-Bericht und Kategorien. Du bekommst Benachrichtigungen bei Ergänzungen, Kommentaren und Daumen-Meilensteinen.\n" +
       "- **Interviews:** Frage Spieler an, ihre Antworten fließen als Vorlage in deinen Bericht.\n" +
-      "- **Zusammenarbeit:** Bildwünsche kannst du an die Fotografen richten. Entsteht aus deinem Bericht eine Idee eines Visionärs, gibt es einen kleinen Bonus.",
-  },
-  {
-    key: "fotograf",
-    label: "Fotograf",
-    emoji: "📸",
-    description: "Lädt Highlight-Clips, Collagen, Screenshots und Grafiken hoch, die anderen Jobs zur Verfügung stehen.",
-    officeGuideMarkdown:
+      "- **Zusammenarbeit:** Bildwünsche kannst du an die Fotografen richten. Entsteht aus deinem Bericht eine Idee eines Visionärs, gibt es einen kleinen Bonus." +
+      "\n\n## Medien (Fotos, Clips, Grafiken)\n\n" +
       "Du lädst Bilder, Clips, Collagen, Banner und Grafiken in die gemeinsame Mediathek hoch. " +
       "Journalisten und Marketing Manager binden sie in ihre Beiträge ein. Du wirst für deine Beiträge " +
       "selbst über Daumen bewertet.\n\n" +
@@ -59,14 +57,8 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
       "- **Empfehlungen:** Events ohne oder mit wenigen Bildern, Events von heute, lange offene Bildwünsche, Bilder ohne Unterschrift und die Monats-Collage.\n" +
       "- **Auswertung:** Daumen, Nutzungen durch andere Jobs und beliebteste Bilder. Du wirst benachrichtigt, wenn dein Bild verwendet wird oder Daumen-Meilensteine erreicht.\n" +
       "- **Mediathek durchsuchen:** nach Unterschrift, Event, Fotograf und Typ. Deine Bilder erscheinen im Profil und auf der Turnierseite.\n" +
-      "- **Zusammenarbeit:** Nutzen andere dein Bild als Titelbild, im Werbe-Post oder in einer Anleitung, gibt es einen kleinen Bonus.",
-  },
-  {
-    key: "marketing_manager",
-    label: "Marketing Manager",
-    emoji: "📣",
-    description: "Erstellt Werbe-Posts für kommende Events.",
-    officeGuideMarkdown:
+      "- **Zusammenarbeit:** Nutzen andere dein Bild als Titelbild, im Werbe-Post oder in einer Anleitung, gibt es einen kleinen Bonus." +
+      "\n\n## Werbung\n\n" +
       "Du erstellst Werbe-Posts für bevorstehende Events. Bewertet wird über Daumen der Community, " +
       "deine Wochenstufe ergibt sich aus den Daumen auf deine Posts und Kommentare.\n\n" +
       "**Posts schreiben**\n" +
@@ -136,6 +128,31 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
   },
 ];
 
+/**
+ * Bereiche des Content Creators. Die Schlüssel sind die früheren Job-Schlüssel (Journalist,
+ * Fotograf, Marketing Manager) — intern steuern sie weiter Werkzeuge, Formulare und Empfehlungen
+ * je Inhaltstyp; Gehalt, Score, Tageslimit und Einstellungen laufen über `content_creator`.
+ */
+export const CONTENT_CREATOR_KEY = "content_creator";
+export const CONTENT_AREAS = [
+  { key: "journalist", label: "Berichte" },
+  { key: "fotograf", label: "Medien" },
+  { key: "marketing_manager", label: "Werbung" },
+] as const;
+export type ContentAreaKey = (typeof CONTENT_AREAS)[number]["key"];
+
+export function isContentArea(key: string | null | undefined): key is ContentAreaKey {
+  return !!key && CONTENT_AREAS.some(a => a.key === key);
+}
+
+/** Frühere Jobs (bis zur Zusammenlegung zum Content Creator) — nur noch für Historie, Labels und Emojis je Bereich. */
+const LEGACY_COMMUNITY_JOBS: CommunityJobDef[] = [
+  { key: "journalist", label: "Journalist", emoji: "📰", description: "", officeGuideMarkdown: "" },
+  { key: "fotograf", label: "Fotograf", emoji: "📸", description: "", officeGuideMarkdown: "" },
+  { key: "marketing_manager", label: "Marketing Manager", emoji: "📣", description: "", officeGuideMarkdown: "" },
+];
+
+/** Aktueller Job — oder ein früherer (Journalist/Fotograf/Marketing Manager) für alte Gehaltszeilen, Labels und Emojis. */
 export function getCommunityJob(jobKey: string): CommunityJobDef | undefined {
-  return COMMUNITY_JOBS.find(j => j.key === jobKey);
+  return COMMUNITY_JOBS.find(j => j.key === jobKey) ?? LEGACY_COMMUNITY_JOBS.find(j => j.key === jobKey);
 }

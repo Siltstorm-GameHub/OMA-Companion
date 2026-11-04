@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireEventArea, seriesScopeWhere, canManageEvent } from "@/lib/roles";
 import { toDatetimeLocalBerlin } from "@/lib/time";
+import { parseCommunityGoal } from "@/lib/community-goal";
 import EventSetupWizard from "./EventSetupWizard";
 import type { EventTemplate, PlacementReward, PollConfig } from "./wizard/shared";
 
@@ -63,6 +64,11 @@ async function loadTemplate(eventId: string): Promise<EventTemplate | null> {
     statFields: parseJson<string[]>(e.statFields, []),
     statPointsByField: Object.fromEntries((statConfig.stats ?? []).map(s => [s.field, s.pointsPer])),
     avgDirection: statConfig.avgDirection === "low" ? "low" : "high",
+    // Community-Ziel mit übernehmen (nur Skill-Index), Formularform wie goalToForm in CommunityGoalEditor
+    communityGoal: (() => {
+      const g = parseCommunityGoal(e.statConfigJson);
+      return g ? { enabled: true, title: g.title ?? "", fields: g.fields, target: g.target, scope: g.scope, unit: g.unit ?? "" } : undefined;
+    })(),
     checkInEnabled: e.checkInEnabled,
     checkInMinutes: e.checkInMinutes,
   };

@@ -2,12 +2,13 @@
 import StatFieldEditor from "@/components/StatFieldEditor";
 import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
+import CommunityGoalEditor from "@/components/CommunityGoalEditor";
 import { FORMATS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 2 (Event): Turnier ───────────────────────────────────────────────────
 export default function StepTournament({ w }: { w: EventWizard }) {
-  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, avgDirection, setAvgDirection, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes } = w;
+  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, avgDirection, setAvgDirection, communityGoal, setCommunityGoal, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes } = w;
   return (
     <div className="space-y-6">
       {seriesFixedFormat ? (
@@ -55,6 +56,11 @@ export default function StepTournament({ w }: { w: EventWizard }) {
                 values={statPointsByField}
                 onChange={(f, v) => setStatPointsByField(prev => ({ ...prev, [f]: v }))}
               />
+            </div>
+          )}
+          {format === "coop_stats" && (
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} />
             </div>
           )}
         </div>

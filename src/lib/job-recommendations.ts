@@ -597,6 +597,12 @@ export async function dismissRecommendation(userId: string, jobKey: string, item
 }
 
 export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {
+  // Content Creator ohne gewählten Bereich (z.B. Badge-Zähler): alle drei Bereiche zusammen.
+  if (jobKey === "content_creator") {
+    const parts = await Promise.all(["journalist", "fotograf", "marketing_manager"].map(area => getRecommendationsForJob(area, userId)));
+    const steam = parts.find(p => p.steamSales.length > 0 || p.steamReleases.length > 0) ?? parts[0];
+    return { ...steam, events: parts.flatMap(p => p.events) };
+  }
   let events: EventRecommendation[] = [];
   if (jobKey === "journalist") events = await journalistRecommendationsFor(userId);
   else if (jobKey === "fotograf") events = await fotografRecommendationsFor(userId);

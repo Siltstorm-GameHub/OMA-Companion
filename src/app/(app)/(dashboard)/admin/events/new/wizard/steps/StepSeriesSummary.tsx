@@ -71,11 +71,12 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
         {polls.map((poll, i) => (
           <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: Abstimmung ({poll.winnerCoins > 0 ? `Sieger: ${poll.winnerCoins} Münzen` : ""})</p>
         ))}
-        {isSeriesMode && eventType === "tournament" && statRows.length > 0 && (
-          <p>📊 Gesamttabelle: {statRows.map(r => `${r.field} (${r.pointsPer} Pkt/Einheit)`).join(", ")}</p>
-        )}
-        {eventStatFields.length > 0 && (
-          <p>📋 Event-Stats: {eventStatFields.join(", ")}</p>
+        {isSeriesMode && statRows.some(r => r.field.trim()) && (
+          <p>📋 Statistiken: {statRows.filter(r => r.field.trim()).map(r =>
+            typeof r.eventPointsPer === "number"
+              ? `${r.field} (Event ${r.eventPointsPer} · Gesamttabelle ${r.pointsPer} Pkt/Einheit)`
+              : `${r.field} (${r.pointsPer} Pkt/Einheit)`,
+          ).join(", ")}</p>
         )}
 {winnerStatField && (
           <p>🏆 Sieger via: {winnerStatField}{statRows.filter(r => r.isWinnerStat && r.field).length > 0 ? ` → Reihenstat(s) „${statRows.filter(r => r.isWinnerStat && r.field).map(r => r.field).join(", ")}" +1` : ""}</p>

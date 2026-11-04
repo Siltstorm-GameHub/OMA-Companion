@@ -1,6 +1,7 @@
 // Typen und Konstanten des Event-Wizards (aufgeteilt aus EventSetupWizard.tsx)
 import { EventCategory, EventGenre } from "@prisma/client";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import type { CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import type { TournamentTemplate } from "@/lib/series-seasons";
 
@@ -35,7 +36,8 @@ export type PollConfig = {
 };
 
 export type PlacementReward = { place: number; coins: number; rankPoints: number };
-export type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
+/** pointsPer = Punkte in der Gesamttabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
+export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 
 // Vorausgefüllte Werte, wenn eine neue Saison im Anschluss an den Abschluss einer alten Reihe angelegt wird
 export type SeasonPrefill = {
@@ -85,7 +87,7 @@ export type SeasonPrefill = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const STEP_LABELS_EVENT  = ["Typ & Kategorie", "Grunddaten", "Turnier", "Belohnungen", "Zusammenfassung"];
-export const STEP_LABELS_SERIES = ["Typ & Kategorie", "Reihen-Info", "Termine", "Reihen-Belohnungen", "Event-Einstellungen", "Zusammenfassung"];
+export const STEP_LABELS_SERIES = ["Typ & Kategorie", "Reihen-Info", "Termine", "Statistiken & Events", "Reihen-Belohnungen", "Zusammenfassung"];
 
 export const CATEGORIES: { value: EventCategory; label: string; emoji: string; color: string; border: string; bg: string }[] = [
   { value: "competitive",     label: "Kompetitiv", emoji: "🏆", color: "text-red-400",    border: "border-red-500/40",    bg: "bg-red-500/10" },
@@ -152,6 +154,8 @@ export type EventTemplate = {
   statPointsByField: Record<string, number>;
   /** Nur avg_stats: höchster oder niedrigster Ø gewinnt */
   avgDirection?: "high" | "low";
+  /** Nur coop_stats: Community-Ziel, siehe lib/community-goal.ts */
+  communityGoal?: CommunityGoalForm;
   checkInEnabled: boolean;
   checkInMinutes: number;
 };

@@ -3,9 +3,12 @@ import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
 import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate";
+import { withSanitizedGoal } from "@/lib/community-goal";
 
 export async function POST(req: NextRequest) {
-  const { eventId, format, participantIds, pointsConfig: rawPointsConfig, statFields, statConfig, autoGenerate, status } = await req.json();
+  const { eventId, format, participantIds, pointsConfig: rawPointsConfig, statFields, statConfig: rawStatConfig, autoGenerate, status } = await req.json();
+  // Community-Ziel nur bei Skill-Index und nur mit vorhandenen Stat-Feldern, siehe lib/community-goal.ts
+  const statConfig = withSanitizedGoal(rawStatConfig, format ?? "single_elimination", statFields);
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
   const currentUser = await requireEventManager(eventId);
   // Squad-Captains: Münzen pro Match-Ergebnis auf die Obergrenze kappen (captain-reward-limits.ts)

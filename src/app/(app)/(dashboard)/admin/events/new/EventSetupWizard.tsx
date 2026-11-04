@@ -22,7 +22,9 @@ export default function EventSetupWizard(props: EventWizardProps) {
   const eventStepComponents = showsTournamentStep
     ? [StepCategory, StepEventData, StepTournament, StepRewards, StepEventSummary]
     : [StepCategory, StepEventData, StepRewards, StepEventSummary];
-  const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepRewards, StepSeriesEventSettings, StepSeriesSummary];
+  // Statistiken (StepSeriesEventSettings) vor den Belohnungen: erst festlegen, was erfasst wird und wie
+  // viele Punkte es gibt — die Gesamttabelle in StepRewards baut darauf auf.
+  const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepSeriesEventSettings, StepRewards, StepSeriesSummary];
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
   // Community-Events (Ersteller ohne Mod-Rolle): Hinweis auf Limits und Freigabe

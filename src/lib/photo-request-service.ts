@@ -13,7 +13,7 @@ const MAX_OPEN_PER_REQUESTER = 3;
 const MAX_PER_DAY = 5;
 
 /** Jobs, die Bildwünsche an die Fotografen stellen dürfen (der Fotograf selbst lädt ja hoch). */
-const REQUESTER_JOBS = ["journalist", "marketing_manager", "coach", "visionaer"];
+const REQUESTER_JOBS = ["journalist", "marketing_manager", "content_creator", "coach", "visionaer"];
 
 /** Offene Jobs: jeder darf anfragen; der Job, aus dem heraus angefragt wurde, wird nur zur Anzeige gespeichert. */
 function normalizeRequesterJob(jobKey: string | undefined): string | null {
@@ -50,7 +50,8 @@ export async function createPhotoRequest(requesterId: string, data: { eventId?: 
   await prisma.photoRequest.create({ data: { requesterId, eventId: data.eventId || null, description, requesterJob } });
 
   // Benachrichtigt wird, wer in den letzten 30 Tagen als Fotograf beigetragen hat.
-  const fotografen = (await getRecentJobContributors("fotograf")).filter(id => id !== requesterId);
+  // Benachrichtigt werden Content Creator, die in den letzten 30 Tagen Bilder/Clips hochgeladen haben.
+  const fotografen = (await getRecentJobContributors("content_creator", 30, ["asset"])).filter(id => id !== requesterId);
   if (fotografen.length > 0) {
     dispatchNotification("photo_request", {
       users: fotografen,
