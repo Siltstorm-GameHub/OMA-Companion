@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -262,7 +261,7 @@ export default function FloatingPill() {
             }}>
               <RankedAvatar userId={myUserId} src={session?.user?.image} alt={userName} size={28} rounded="lg" />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--nav-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}<JobBadge userId={(session?.user as { id?: string } | undefined)?.id} variant="compact" className="ml-1" /></p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--nav-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
                 <p style={{ fontSize: 10, color: "rgba(20,184,166,0.6)", margin: "1px 0 0" }}>OMA-Mitglied</p>
               </div>
               {/* Theme toggle — icon only */}

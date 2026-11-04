@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
@@ -186,7 +185,7 @@ export default function CommunityBoardWidget() {
                         <RankedAvatar userId={entry.author.id} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />
+                          {entry.author.username ?? entry.author.name}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-6 group-hover:text-teal-200 transition-colors whitespace-normal">
@@ -215,7 +214,7 @@ export default function CommunityBoardWidget() {
                         <RankedAvatar userId={entry.author.id} src={entry.author.image}
                           alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}<JobBadge userId={entry.author.id} variant="compact" className="ml-1" />
+                          {entry.author.username ?? entry.author.name}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 group-hover:text-teal-200 transition-colors">

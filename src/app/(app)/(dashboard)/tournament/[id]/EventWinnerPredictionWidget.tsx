@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -162,7 +161,7 @@ export default function EventWinnerPredictionWidget({
         <div className="space-y-3">
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
             <RankedAvatar userId={selected.id} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
-            <span className="flex-1 text-sm text-white">{uname(selected)}<JobBadge userId={selected.id} variant="compact" className="ml-1" /></span>
+            <span className="flex-1 text-sm text-white">{uname(selected)}</span>
             <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
               <X className="w-3.5 h-3.5" />
             </button>
@@ -203,7 +202,7 @@ export default function EventWinnerPredictionWidget({
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
                   <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
-                  <span className="text-sm text-white">{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></span>
+                  <span className="text-sm text-white">{uname(u)}</span>
                 </button>
               ))}
             </div>

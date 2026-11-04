@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { LayoutGrid, Swords } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -99,7 +98,7 @@ export default function GroupKnockoutView({
                               <Link href={isMe ? "/profile" : `/profile/${u.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
                                 <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />
                                 <span className={`truncate text-sm ${isMe ? "text-rose-300 font-medium" : "text-white"}`}>
-                                  {uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" />{isMe && " (du)"}
+                                  {uname(u)}{isMe && " (du)"}
                                 </span>
                               </Link>
                             ) : <span className="text-gray-600">?</span>}

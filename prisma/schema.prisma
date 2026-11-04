@@ -15,18 +15,22 @@ model User {
   emailVerified DateTime?
   image         String?
 
-  discordId           String?   @unique
-  username            String?
-  role                String    @default("user") // user | moderator | admin
-  coachAvailableUntil DateTime? // Community-Job Coach: "Ich helfe gerade" bis zu diesem Zeitpunkt
-  coachSpecialties    String[]  @default([]) // Community-Job Coach: Spezialgebiete (Spiele/Sprachen), max. 6 Tags
-  points              Int       @default(0) // Münzen (Shop-Währung)
-  rankPoints          Int       @default(0) // Prestige-Punkte (Events, Turniere, LuL)
-  createdAt           DateTime  @default(now())
-  lastActiveAt        DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
-  lastLoginAt         DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
-  deletedAt           DateTime? // Konto auf eigenen Wunsch gelöscht und anonymisiert (src/lib/account-deletion.ts) — Login damit gesperrt
-  leftServerAt        DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
+  discordId               String?   @unique
+  username                String?
+  role                    String    @default("user") // user | moderator | admin
+  coachAvailableUntil     DateTime? // Community-Job Coach: "Ich helfe gerade" bis zu diesem Zeitpunkt
+  coachSpecialties        String[]  @default([]) // Community-Job Coach: Spezialgebiete (Spiele/Sprachen), max. 6 Tags
+  reputationLevel         Int       @default(1) // Ansehen 1–4 (Bronze/Silber/Gold/Platin) aus der Gesamtleistung aller Community-Jobs, wöchentlich neu berechnet
+  reputationPeakLevel     Int       @default(1) // höchste je erreichte Ansehens-Stufe
+  reputationPoints        Int       @default(0) // Punkte im Ansehens-Fenster (8 Wochen) — 0 = zuletzt nicht aktiv, dann keine Discord-Rolle
+  reputationOverrideUntil DateTime? // Admin hat die Stufe von Hand gesetzt — der Wochen-Cron lässt sie bis dahin unverändert
+  points                  Int       @default(0) // Münzen (Shop-Währung)
+  rankPoints              Int       @default(0) // Prestige-Punkte (Events, Turniere, LuL)
+  createdAt               DateTime  @default(now())
+  lastActiveAt            DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
+  lastLoginAt             DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
+  deletedAt               DateTime? // Konto auf eigenen Wunsch gelöscht und anonymisiert (src/lib/account-deletion.ts) — Login damit gesperrt
+  leftServerAt            DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
 
   twitchLogin        String?   @unique
   // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von

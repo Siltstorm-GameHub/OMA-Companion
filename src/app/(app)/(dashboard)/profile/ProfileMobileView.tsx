@@ -1,6 +1,5 @@
 "use client";
 import GiftIcon from "@/components/GiftIcon";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { Building2 } from "@/components/icons";
@@ -26,7 +25,6 @@ import ProfileQuestsAndTournaments, {
   type ProfileQuestEntry, type ProfileTournamentParticipationEntry,
 } from "./ProfileQuestsAndTournaments";
 import CommunityJobsPanel from "./CommunityJobsPanel";
-import ProfileJobBadge from "./ProfileJobBadge";
 
 interface Props {
   openCommunityJobs?: boolean;
@@ -120,12 +118,11 @@ export default function ProfileMobileView(props: Props) {
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-bold text-white truncate">{displayName}<JobBadge userId={userId} className="ml-1.5" /></p>
+            <p className="text-lg font-bold text-white truncate">{displayName}</p>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${rankColor} mt-0.5`}>
               {rankLabel}
             </span>
             <p className="text-[11px] text-gray-500 mt-1">Mitglied seit {memberSince}</p>
-            <div className="mt-1"><ProfileJobBadge userId={userId} /></div>
             <div className="flex items-center gap-1 mt-1">
               <CoinIcon size={11} />
               <span className="text-[11px] text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>

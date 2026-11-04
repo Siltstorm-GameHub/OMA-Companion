@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { TrendingUp, TrendingDown } from "@/components/icons";
@@ -266,7 +265,7 @@ export default function SeriesStandingsTable({
               <div className="flex items-center gap-2.5 min-w-0">
                 <Avatar u={u} size={7} />
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
-                  {name}<JobBadge userId={row.userId} variant="compact" className="ml-1" />
+                  {name}
                   {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
@@ -396,7 +395,7 @@ export default function SeriesStandingsTable({
               <div className="flex items-center gap-2 min-w-0">
                 <Avatar u={u} size={6} />
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
-                  {name}<JobBadge userId={row.userId} variant="compact" className="ml-1" />
+                  {name}
                   {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.disqualifiedEventCount > 0 && (

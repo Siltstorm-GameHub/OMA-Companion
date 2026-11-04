@@ -1,6 +1,5 @@
 "use client";
 import JobIcon from "@/components/JobIcon";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "@/components/icons";
@@ -145,7 +144,7 @@ export default function CommunityJobsAdminPanel({
           {pending.map(a => (
             <div key={a.id} className="p-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs text-white">{a.user.username ?? a.user.name}<JobBadge userId={a.user.id} variant="compact" className="ml-1" /> → {jobLabel(a.jobKey)}</p>
+                <p className="text-xs text-white">{a.user.username ?? a.user.name} → {jobLabel(a.jobKey)}</p>
                 {a.message && <p className="text-[11px] text-gray-500 truncate">{a.message}</p>}
               </div>
               <div className="flex gap-1.5 shrink-0">
@@ -163,7 +162,7 @@ export default function CommunityJobsAdminPanel({
           <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
             {waitlisted.map(a => (
               <div key={a.id} className="p-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-gray-300">{a.user.username ?? a.user.name}<JobBadge userId={a.user.id} variant="compact" className="ml-1" /> → {jobLabel(a.jobKey)}</p>
+                <p className="text-xs text-gray-300">{a.user.username ?? a.user.name} → {jobLabel(a.jobKey)}</p>
                 <Badge tone="info">seit {formatBerlinDate(a.appliedAt)}</Badge>
               </div>
             ))}
@@ -395,7 +394,7 @@ function MemberRow({
     <div className="p-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-white">{member.user.username ?? member.user.name}<JobBadge userId={member.user.id} variant="compact" className="ml-1" /> — {jobLabel}</p>
+          <p className="text-xs text-white">{member.user.username ?? member.user.name} — {jobLabel}</p>
           <p className="text-[11px] text-gray-500">
             {member.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
             Vertrag bis {formatBerlinDate(member.contractEndAt)}

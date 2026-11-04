@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import type { ScoreBreakdown } from "./score-engine";
 import { COIN_PREFIX } from "./points";
 import { getCommunityJob } from "./community-jobs";
-import { syncCommunityJobDiscordRole } from "./discord-roles";
+import { syncReputationDiscordRole } from "./discord-roles";
 import { dispatchNotification } from "./notify-dispatch";
 import {
   getEffectiveCommunityJobs, getMaxSlots, getPayoutTiers, getVoteBonusTiers,
@@ -10,15 +10,20 @@ import {
 } from "./community-job-config";
 import { formatBerlinDate } from "./time";
 import {
-  BADGE_WINDOW_WEEKS, levelFromPoints, weeklyBadgePoints, type JobBadgeData,
+  BADGE_WINDOW_WEEKS, WEEKLY_POINTS_MAX, levelFromPoints, weeklyBadgePoints, weeklyCommentPoints, type JobBadgeData,
 } from "./job-badges";
 import { getPayoutCandidates, getRecentJobContributors, listKnownCoaches } from "./community-job-access";
 import { COMMUNITY_JOBS } from "./community-jobs";
 
-/** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
-async function syncDiscordRoleForUser(userId: string, jobKey: string | null): Promise<void> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } }).catch(() => null);
-  await syncCommunityJobDiscordRole(user?.discordId, jobKey).catch(() => {});
+// Discord-Rollen hängen am Ansehen (siehe syncReputationRoleForUser), nicht mehr an Job-Mitgliedschaften.
+/** Setzt die Discord-Ansehens-Rolle nach dem gespeicherten Stand — Fehler dürfen nie etwas blockieren. */
+export async function syncReputationRoleForUser(userId: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId }, select: { discordId: true, reputationLevel: true, reputationPoints: true },
+  }).catch(() => null);
+  if (!user) return { ok: false, error: "User nicht gefunden" };
+  return syncReputationDiscordRole(user.discordId, user.reputationPoints > 0 ? user.reputationLevel : null)
+    .catch(() => ({ ok: false, error: "Discord-Fehler" }));
 }
 
 /** Fehler beim Benachrichtigen dürfen die eigentliche Aktion nie blockieren. */
@@ -96,42 +101,6 @@ export async function getActiveMembership(userId: string) {
     where: { userId, status: { in: ["ACTIVE", "WARNED"] } },
     orderBy: { assignedAt: "desc" },
   });
-}
-
-export type ProfileJobBadge =
-  | { employed: true; jobKey: string; jobLabel: string; jobEmoji: string; status: string; tierLabel: string | null; badgeLevel: number }
-  | { employed: false; unemployedSinceMonths: number };
-
-/**
- * Für die Profil-Hero-Section (eigenes UND fremde Profile): aktueller
- * Community-Job + letzte Gehaltsstufe, oder "Arbeitslos seit N Monaten".
- */
-export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadge> {
-  const active = await getActiveMembership(userId);
-  if (active) {
-    const job = getCommunityJob(active.jobKey);
-    const lastPayout = await prisma.communityJobWeeklyPayout.findFirst({
-      where: { userId, jobKey: active.jobKey },
-      orderBy: { weekStart: "desc" },
-    });
-    return {
-      employed: true, jobKey: active.jobKey,
-      jobLabel: job?.label ?? active.jobKey, jobEmoji: job?.emoji ?? "💼",
-      status: active.status, tierLabel: lastPayout?.tierLabel ?? null, badgeLevel: active.badgeLevel,
-    };
-  }
-
-  const lastEnded = await prisma.communityJobMember.findFirst({
-    where: { userId, status: { in: ["REVOKED", "QUIT", "EXPIRED"] } },
-    orderBy: [{ revokedAt: "desc" }],
-  });
-  const endDates = [lastEnded?.revokedAt, lastEnded?.contractEndAt].filter((d): d is Date => !!d);
-  const since = endDates.length > 0
-    ? new Date(Math.max(...endDates.map(d => d.getTime())))
-    : (await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }))?.createdAt ?? new Date();
-
-  const months = Math.max(0, Math.floor((Date.now() - since.getTime()) / (30 * 86_400_000)));
-  return { employed: false, unemployedSinceMonths: months };
 }
 
 export interface CommunityJobCatalogEntry {
@@ -253,7 +222,6 @@ async function activateApplication(applicationId: string, userId: string, jobKey
       },
     }),
   ]);
-  await syncDiscordRoleForUser(userId, jobKey);
 }
 
 export type ReviewResult = { ok: true; result: "ACTIVATED" | "WAITLISTED" | "REJECTED" } | { error: string };
@@ -312,7 +280,6 @@ async function performHandoff(fromMemberId: string, targetApplicationId: string)
     where: { id: fromMemberId },
     data: { status: "QUIT" },
   });
-  await syncDiscordRoleForUser(fromMember.userId, null);
   await activateApplication(targetApplicationId, targetApp.userId, targetApp.jobKey, fromMember.userId);
   notifyJob("community_job_handoff_received", targetApp.userId, targetApp.jobKey);
   return { ok: true };
@@ -355,7 +322,6 @@ export async function quitCommunityJob(userId: string): Promise<QuitResult> {
   const member = await getActiveMembership(userId);
   if (!member) return { error: "Du hast gerade keinen aktiven Community-Job" };
   await prisma.communityJobMember.update({ where: { id: member.id }, data: { status: "QUIT" } });
-  await syncDiscordRoleForUser(userId, null);
   return { ok: true };
 }
 
@@ -534,7 +500,6 @@ export async function runContractExpiryCheck(referenceDate: Date = new Date()): 
   });
   for (const m of expiredMembers) {
     await prisma.communityJobMember.update({ where: { id: m.id }, data: { status: "EXPIRED" } });
-    await syncDiscordRoleForUser(m.userId, null);
   }
   return { expired: expiredMembers.length };
 }
@@ -591,7 +556,6 @@ export async function revokeMembership(memberId: string, reason: string): Promis
       reapplyBlockedUntil: addDays(now, REAPPLY_BLOCK_DAYS),
     },
   });
-  await syncDiscordRoleForUser(member.userId, null);
   notifyJob("community_job_revoked", member.userId, member.jobKey, { "{reason}": reason });
   return { ok: true };
 }
@@ -626,15 +590,11 @@ export async function adminAdjustContract(memberId: string, days: number, reason
 }
 
 /** Ansehens-Stufe (1–4) von Hand setzen; der Wochen-Cron lässt sie danach 28 Tage unverändert. */
+/** Alte Admin-Mitgliederansicht: setzt das Ansehen des Users hinter dieser Mitgliedschaft. */
 export async function adminSetBadgeLevel(memberId: string, level: number): Promise<{ ok: true } | { error: string }> {
-  if (!Number.isInteger(level) || level < 1 || level > 4) return { error: "Stufe muss zwischen 1 und 4 liegen" };
-  const member = await prisma.communityJobMember.findUnique({ where: { id: memberId } });
-  if (!member || !["ACTIVE", "WARNED"].includes(member.status)) return { error: "Aktive Mitgliedschaft nicht gefunden" };
-  await prisma.communityJobMember.update({
-    where: { id: memberId },
-    data: { badgeLevel: level, peakBadgeLevel: Math.max(member.peakBadgeLevel, level), badgeOverrideUntil: addDays(new Date(), 28) },
-  });
-  return { ok: true };
+  const member = await prisma.communityJobMember.findUnique({ where: { id: memberId }, select: { userId: true } });
+  if (!member) return { error: "Mitgliedschaft nicht gefunden" };
+  return adminSetReputationLevel(member.userId, level);
 }
 
 /**
@@ -658,61 +618,124 @@ export async function runContractReminderCheck(referenceDate: Date = new Date())
   return { reminded: members.length };
 }
 
-// ── Badges (Ansehens-Stufe hinter dem Usernamen) ─────────────────────────────
+// ── Ansehen (Stufe 1–4 pro User, steuert den Profilrahmen) ──────────────────
 
 /**
- * Berechnet für alle aktiven Inhaber die Ansehens-Stufe neu: Wochenpunkte der letzten
- * BADGE_WINDOW_WEEKS Wochen (aus der erreichten Gehaltsstufe, siehe weeklyBadgePoints) → Stufe 1–4.
- * Die Stufe kann steigen UND sinken; `peakBadgeLevel` merkt sich die höchste der Amtszeit (für das
- * "Ehem."-Zeichen). Läuft im täglichen Payout-Cron NACH dem Wochen-Payout.
+ * Berechnet das Ansehen aller zuletzt aktiven User neu — aus der Gesamtleistung über ALLE
+ * Community-Jobs: Pro abgeschlossener Woche zählt jede Gehaltsstufe eines Jobs 1–3 Punkte
+ * (weeklyBadgePoints), dazu höchstens 1 Punkt für Daumen auf eigene Kommentare; die Woche
+ * wird bei WEEKLY_POINTS_MAX gedeckelt. Summe über BADGE_WINDOW_WEEKS Wochen → Stufe 1–4.
+ * Die Stufe kann steigen UND sinken. Vom Team gesetzte Stufen bleiben bis zum Ablauf des
+ * Overrides unverändert. Läuft im täglichen Payout-Cron NACH dem Wochen-Payout.
  */
-export async function runBadgeLevelUpdate(referenceDate: Date = new Date()): Promise<{ updated: number }> {
-  const since = new Date(referenceDate.getTime() - BADGE_WINDOW_WEEKS * 7 * 86_400_000);
-  const members = await prisma.communityJobMember.findMany({ where: { status: { in: ["ACTIVE", "WARNED"] } } });
+export async function runReputationUpdate(referenceDate: Date = new Date()): Promise<{ updated: number; rolesSynced: number }> {
+  const windowEnd = getWeekBounds(referenceDate).weekStart; // nur abgeschlossene Wochen
+  const since = new Date(windowEnd.getTime() - BADGE_WINDOW_WEEKS * 7 * 86_400_000);
+  const weekKey = (d: Date) => getWeekBounds(d).weekStart.getTime();
+
+  const [payouts, commentVotes, previouslyRated] = await Promise.all([
+    prisma.communityJobWeeklyPayout.findMany({
+      where: { weekStart: { gte: since, lt: windowEnd } },
+      select: { userId: true, jobKey: true, rawScore: true, weekStart: true },
+    }),
+    prisma.communityBoardCommentVote.findMany({
+      where: {
+        createdAt: { gte: since, lt: windowEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
+      select: { createdAt: true, comment: { select: { authorId: true } } },
+    }),
+    // Wer schon Ansehen hat, muss mitgerechnet werden, damit die Stufe auch wieder sinken kann.
+    prisma.user.findMany({
+      where: { OR: [{ reputationLevel: { gt: 1 } }, { reputationPoints: { gt: 0 } }] },
+      select: { id: true },
+    }),
+  ]);
+
   const tiersByJob = new Map<string, Awaited<ReturnType<typeof getPayoutTiers>>>();
+  for (const job of COMMUNITY_JOBS) {
+    tiersByJob.set(job.key, [...(await getPayoutTiers(job.key))].sort((x, y) => x.minScore - y.minScore));
+  }
 
-  let updated = 0;
-  for (const m of members) {
-    if (m.badgeOverrideUntil && m.badgeOverrideUntil > referenceDate) continue; // vom Team von Hand gesetzt
-    if (!tiersByJob.has(m.jobKey)) tiersByJob.set(m.jobKey, await getPayoutTiers(m.jobKey));
-    const tiers = [...(tiersByJob.get(m.jobKey) ?? [])].sort((a, b) => a.minScore - b.minScore);
+  // userId → (Woche → Punkte vor Deckel)
+  const weekly = new Map<string, Map<number, number>>();
+  const add = (userId: string, week: number, points: number) => {
+    if (points <= 0) return;
+    const m = weekly.get(userId) ?? new Map<number, number>();
+    m.set(week, (m.get(week) ?? 0) + points);
+    weekly.set(userId, m);
+  };
+  for (const p of payouts) {
+    const tiers = tiersByJob.get(p.jobKey) ?? [];
+    const tier = resolveTier(tiers, p.rawScore);
+    add(p.userId, weekKey(p.weekStart), weeklyBadgePoints(tier ? tiers.indexOf(tier) + 1 : 0, tiers.length));
+  }
+  const commentCounts = new Map<string, Map<number, number>>();
+  for (const v of commentVotes) {
+    const m = commentCounts.get(v.comment.authorId) ?? new Map<number, number>();
+    const k = weekKey(v.createdAt);
+    m.set(k, (m.get(k) ?? 0) + 1);
+    commentCounts.set(v.comment.authorId, m);
+  }
+  for (const [userId, perWeek] of commentCounts) {
+    for (const [week, count] of perWeek) add(userId, week, weeklyCommentPoints(count));
+  }
 
-    const payouts = await prisma.communityJobWeeklyPayout.findMany({
-      where: { userId: m.userId, jobKey: m.jobKey, weekStart: { gte: since } },
-      select: { rawScore: true },
+  const userIds = [...new Set([...weekly.keys(), ...previouslyRated.map(u => u.id)])];
+  let updated = 0, rolesSynced = 0;
+  for (const userId of userIds) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { reputationLevel: true, reputationPeakLevel: true, reputationPoints: true, reputationOverrideUntil: true, deletedAt: true },
     });
-    const points = payouts.reduce((sum, p) => {
-      const tier = resolveTier(tiers, p.rawScore);
-      return sum + weeklyBadgePoints(tier ? tiers.indexOf(tier) + 1 : 0, tiers.length);
-    }, 0);
+    if (!user || user.deletedAt) continue;
+    if (user.reputationOverrideUntil && user.reputationOverrideUntil > referenceDate) continue; // vom Team von Hand gesetzt
 
+    const points = [...(weekly.get(userId)?.values() ?? [])].reduce((sum, p) => sum + Math.min(WEEKLY_POINTS_MAX, p), 0);
     const level = levelFromPoints(points);
-    const peak = Math.max(m.peakBadgeLevel, level);
-    if (level !== m.badgeLevel || peak !== m.peakBadgeLevel) {
-      await prisma.communityJobMember.update({ where: { id: m.id }, data: { badgeLevel: level, peakBadgeLevel: peak } });
-      updated++;
+    const peak = Math.max(user.reputationPeakLevel, level);
+    if (level === user.reputationLevel && peak === user.reputationPeakLevel && points === user.reputationPoints) continue;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reputationLevel: level, reputationPeakLevel: peak, reputationPoints: points },
+    });
+    updated++;
+    // Discord-Rolle nur anfassen, wenn sich Stufe oder "aktiv ja/nein" geändert hat.
+    if (level !== user.reputationLevel || (points > 0) !== (user.reputationPoints > 0)) {
+      await syncReputationRoleForUser(userId);
+      rolesSynced++;
     }
   }
-  return { updated };
+  return { updated, rolesSynced };
+}
+
+/** Admin setzt das Ansehen eines Users von Hand (gilt 4 Wochen, dann übernimmt wieder die Berechnung). */
+export async function adminSetReputationLevel(userId: string, level: number): Promise<{ ok: true } | { error: string }> {
+  if (!Number.isInteger(level) || level < 1 || level > 4) return { error: "Stufe muss zwischen 1 und 4 liegen" };
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { reputationPeakLevel: true } });
+  if (!user) return { error: "User nicht gefunden" };
+  await prisma.user.update({
+    where: { id: userId },
+    data: { reputationLevel: level, reputationPeakLevel: Math.max(user.reputationPeakLevel, level), reputationOverrideUntil: addDays(new Date(), 28) },
+  });
+  await syncReputationRoleForUser(userId);
+  return { ok: true };
 }
 
 /**
- * Badge-Daten für viele Nutzer auf einmal: aktueller Job (mit Stufe, ggf. verwarnt).
- * Nutzer ohne Job fehlen im Ergebnis (= arbeitslos).
+ * Ansehen für viele Nutzer auf einmal (Profilrahmen). Jeder existierende User hat
+ * eine Stufe (Start: 1) — unbekannte IDs fehlen im Ergebnis.
  */
 export async function getJobBadges(userIds: string[]): Promise<Record<string, JobBadgeData>> {
   const ids = [...new Set(userIds)].slice(0, 200);
   const result: Record<string, JobBadgeData> = {};
   if (ids.length === 0) return result;
 
-  const active = await prisma.communityJobMember.findMany({
-    where: { userId: { in: ids }, status: { in: ["ACTIVE", "WARNED"] } },
-    orderBy: { assignedAt: "asc" }, // spätere (jüngste) Amtszeit überschreibt
-    select: { userId: true, jobKey: true, badgeLevel: true, status: true },
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, reputationLevel: true },
   });
-  for (const m of active) {
-    result[m.userId] = { jobKey: m.jobKey, level: m.badgeLevel, ...(m.status === "WARNED" ? { warned: true } : {}) };
-  }
-
+  for (const u of users) result[u.id] = { level: u.reputationLevel };
   return result;
 }

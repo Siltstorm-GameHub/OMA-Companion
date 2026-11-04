@@ -1,4 +1,3 @@
-import JobBadge from "@/components/community-jobs/JobBadge";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -36,7 +35,6 @@ function HolderChip({ holder }: { holder: WanderpocalHolderInfo }) {
       <span className="text-[10px] text-gray-500 group-hover/holder:text-teal-300 transition-colors truncate max-w-[90px]">
         {holder.holderName ?? "Unbekannt"}
       </span>
-      <JobBadge userId={holder.holderUserId} variant="compact" />
     </Link>
   );
 }

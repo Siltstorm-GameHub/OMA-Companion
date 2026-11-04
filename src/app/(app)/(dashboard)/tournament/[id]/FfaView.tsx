@@ -1,6 +1,5 @@
 "use client";
 import PlaceMedal from "@/components/PlaceMedal";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "@/components/icons";
@@ -329,7 +328,7 @@ export default function FfaView({
                             <Link href={isMe ? "/profile" : `/profile/${r.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                               <RankedAvatar userId={r.user.id} src={r.user.image} alt={uname(r.user)} size={24} className="w-6 h-6" />
                               <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
-                                {uname(r.user)}<JobBadge userId={r.user.id} variant="compact" className="ml-1" />{isMe && " (du)"}
+                                {uname(r.user)}{isMe && " (du)"}
                               </span>
                             </Link>
                             {r.role === "spectator" && (
@@ -619,7 +618,7 @@ export default function FfaView({
                                       {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
                                       {u && <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />}
                                       <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-rose-300" : "text-white"}`}>
-                                        {u ? <>{uname(u)}<JobBadge userId={u.id} variant="compact" className="ml-1" /></> : "?"}{isMe && " (du)"}
+                                        {u ? <>{uname(u)}</> : "?"}{isMe && " (du)"}
                                       </span>
                                     </div>
                                   </td>

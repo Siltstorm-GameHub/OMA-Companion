@@ -1,14 +1,14 @@
 "use client";
 import "./RankRing.css";
 import type { CSSProperties, ReactNode } from "react";
-import { useJobBadge } from "@/components/community-jobs/JobBadge";
+import { useReputation } from "@/components/community-jobs/useReputation";
 import { getJobRing, GOLD } from "@/lib/job-ring";
-import type { JobBadgeData } from "@/lib/job-badges";
+import { levelTitle, BADGE_MAX_LEVEL, type JobBadgeData } from "@/lib/job-badges";
 
 interface RankRingProps {
-  /** User, dessen Beruf Farbe und Effekt des Rings bestimmt. Ohne ID: schlichter Ring wie bei Arbeitslosen. */
+  /** User, dessen Ansehens-Stufe Farbe und Effekt des Rings bestimmt. Ohne ID: schlichter grauer Ring. */
   userId?: string | null;
-  /** Schon bekannte Badge-Daten (spart den Abruf); `null` = arbeitslos. */
+  /** Schon bekannte Ansehens-Daten (spart den Abruf). */
   badge?: JobBadgeData | null;
   /** Ringbreite in px. Wird als Padding gesetzt — das Padding IST der Ring. */
   width: number;
@@ -29,8 +29,8 @@ interface RankRingProps {
 /**
  * Der Rahmen ums Profilbild als eigenständiger Wrapper.
  *
- * Farbe = Beruf, Effekt = Stufe im Beruf (siehe lib/job-ring.ts); wer arbeitslos ist,
- * bekommt den schlichten grauen Ring. Existiert, damit die dreiteilige Struktur
+ * Farbe und Effekt = Ansehens-Stufe des Users (Bronze/Silber/Gold/Platin, siehe lib/job-ring.ts),
+ * unabhängig davon, welche Community-Jobs er ausübt. Existiert, damit die dreiteilige Struktur
  * (Ringschicht / Bild) nur an einer Stelle steht.
  */
 export default function RankRing({
@@ -46,7 +46,7 @@ export default function RankRing({
   title,
   children,
 }: RankRingProps) {
-  const badge = useJobBadge(userId, badgeProp);
+  const badge = useReputation(userId, badgeProp);
   const ring = getJobRing(badge);
   // Stufe 4: zusätzlicher goldener Innenring, aber nur wenn der Ring dick genug dafür ist
   const doubleRing = ring.level === 4 && !flat && width >= 4;
@@ -57,7 +57,7 @@ export default function RankRing({
     <div
       className={`${ring.className}${flat ? " rr-flat" : ""} ${rounded} ${className}`}
       style={{ ...ring.style, padding: width, ...style }}
-      title={title}
+      title={title ?? (ring.level > 0 ? `Ansehen: ${levelTitle(ring.level)} (Stufe ${ring.level}/${BADGE_MAX_LEVEL})` : undefined)}
     >
       <span className="rr-ring-layer" aria-hidden="true" />
       <div className={`rr-face ${rounded} ${faceClassName}`} style={faceShadow ? { boxShadow: faceShadow } : undefined}>{children}</div>

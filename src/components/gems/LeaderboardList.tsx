@@ -1,4 +1,3 @@
-import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Info, Trophy } from "@/components/icons";
@@ -41,7 +40,7 @@ function Row({ row, place, isViewer }: { row: LeaderboardEntry; place: number; i
       <RankBadge place={place} />
       <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate font-semibold">{row.name}<JobBadge userId={row.userId} variant="compact" className="ml-1" /></p>
+        <p className="text-sm text-white truncate font-semibold">{row.name}</p>
         <p className="text-[11px] text-gray-500 truncate">{row.detail}</p>
       </div>
       <span className="text-xs font-semibold text-white tabular-nums shrink-0 text-right">{row.value}</span>

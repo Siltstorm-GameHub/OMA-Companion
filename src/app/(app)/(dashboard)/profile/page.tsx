@@ -1,5 +1,4 @@
 import GiftIcon from "@/components/GiftIcon";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
@@ -25,7 +24,6 @@ import ProfileStatTiles from "./ProfileStatTiles";
 import ProfileRecentEvents from "./ProfileRecentEvents";
 import CommunityJobsPanel from "./CommunityJobsPanel";
 import DesktopProfileTabs from "./DesktopProfileTabs";
-import ProfileJobBadge from "./ProfileJobBadge";
 import ProfileQuestsAndTournaments from "./ProfileQuestsAndTournaments";
 import ProfileMobileView from "./ProfileMobileView";
 import { POINT_RULES } from "@/lib/points";
@@ -235,12 +233,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
                 <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-                <JobBadge userId={userId} />
               </div>
               <p className="text-xs text-gray-500 mb-1">
                 Mitglied seit {memberSince}
               </p>
-              <div className="mb-1"><ProfileJobBadge userId={userId} /></div>
               <div className="flex items-center gap-1 mb-2">
                 <CoinIcon size={12} />
                 <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>

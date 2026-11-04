@@ -2,16 +2,19 @@ import type { CSSProperties } from "react";
 import type { JobBadgeData } from "@/lib/job-badges";
 
 /**
- * Ring um das Profilbild: Farbe = Beruf, Effekt = Ansehens-Stufe (1–4) im Beruf.
- * Wer keinen Job hat, bekommt den schlichten grauen Ring (früher unterster Rang).
+ * Profilrahmen (Ring um das Profilbild): Farbe UND Effekt = Ansehens-Stufe des Users
+ * (Bronze, Silber, Gold, Platin) aus der Gesamtleistung aller Community-Jobs — kein
+ * Berufsbezug mehr. Solange die Stufe noch lädt, gibt es den schlichten grauen Ring.
  * Nutzt die bestehenden CSS-Klassen .rank-ring/.rr-t1–3/.rr-apex aus globals.css.
  */
 
-import { JOB_ICONS } from "@/lib/job-icons";
+export const GOLD = "#fbbf24";
 
-/** Eine Quelle für die Berufsfarbe: dieselbe wie beim Job-Icon (lib/job-icons.ts). */
-export function jobColor(jobKey: string): string | undefined {
-  return JOB_ICONS[jobKey]?.color;
+/** Grundfarbe je Stufe (Index 0 = Stufe 1). */
+export const REPUTATION_COLORS: readonly string[] = ["#cd7f32", "#c0c7d1", GOLD, "#a5f3fc"];
+
+export function reputationColor(level: number): string {
+  return REPUTATION_COLORS[Math.min(4, Math.max(1, level)) - 1];
 }
 
 function mix(hex: string, other: [number, number, number], t: number): string {
@@ -31,22 +34,15 @@ const LEVEL_FX = [
 
 const TIER_CLASS = ["rr-t1", "rr-t2", "rr-t3", "rr-t3 rr-apex"] as const;
 
-export function isEmployed(badge: JobBadgeData | null | undefined): badge is JobBadgeData {
-  return !!badge && !!jobColor(badge.jobKey);
-}
-
-/** Stufe 4: Gold im Verlauf und (bei genug Platz) ein zusätzlicher goldener Innenring. */
-/** Arbeitslos: schlichter grauer Ring (Werte des früheren untersten Rangs). */
-const JOBLESS_RING = {
+/** Lädt noch: schlichter grauer Ring. */
+const NEUTRAL_RING = {
   c1: "#3f3f46", c2: "#a1a1aa", c3: "#52525b", speed: "12s", glow: "0px", glowColor: "transparent",
   light: { c1: "#a1a1aa", c2: "#3f3f46", c3: "#71717a", glow: "0px", glowColor: "transparent" },
 };
 
-export const GOLD = "#fbbf24";
-
 export function getJobRing(badge: JobBadgeData | null | undefined): { className: string; style: CSSProperties; level: number } {
-  if (!isEmployed(badge)) {
-    const r = JOBLESS_RING;
+  if (!badge) {
+    const r = NEUTRAL_RING;
     return {
       level: 0,
       className: "rank-ring rr-t1",
@@ -57,21 +53,18 @@ export function getJobRing(badge: JobBadgeData | null | undefined): { className:
       } as CSSProperties,
     };
   }
-  const base = jobColor(badge.jobKey)!;
   const lvl = Math.min(4, Math.max(1, badge.level)) - 1;
+  const base = REPUTATION_COLORS[lvl];
   const fx = LEVEL_FX[lvl];
-  const top = lvl === 3;
   const dark = mix(base, [0, 0, 0], 0.55);
-  const light = top ? "#fde68a" : mix(base, [255, 255, 255], 0.55);
-  const mid = top ? mix(base, [251, 191, 36], 0.75) : base;
-  const glowRgb = top ? GOLD : base;
+  const light = mix(base, [255, 255, 255], 0.55);
   return {
     level: lvl + 1,
     className: `rank-ring ${TIER_CLASS[lvl]}`,
     style: {
-      "--rr-dc1": dark, "--rr-dc2": light, "--rr-dc3": mid,
-      "--rr-dglow": `${fx.glow}px`, "--rr-dglowc": fx.glow ? `${glowRgb}73` : "transparent",
-      "--rr-lc1": light, "--rr-lc2": mix(base, [0, 0, 0], 0.6), "--rr-lc3": top ? mix(base, [217, 119, 6], 0.5) : mix(base, [0, 0, 0], 0.2),
+      "--rr-dc1": dark, "--rr-dc2": light, "--rr-dc3": base,
+      "--rr-dglow": `${fx.glow}px`, "--rr-dglowc": fx.glow ? `${base}73` : "transparent",
+      "--rr-lc1": light, "--rr-lc2": mix(base, [0, 0, 0], 0.6), "--rr-lc3": mix(base, [0, 0, 0], 0.2),
       "--rr-lglow": `${Math.round(fx.glow * 0.55)}px`, "--rr-lglowc": fx.glow ? `${mix(base, [0, 0, 0], 0.6)}47` : "transparent",
       "--rr-speed": fx.speed,
     } as CSSProperties,

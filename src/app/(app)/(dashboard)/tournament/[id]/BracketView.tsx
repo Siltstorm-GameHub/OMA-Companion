@@ -1,5 +1,4 @@
 "use client";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import Link from "next/link";
 import { Trophy } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
@@ -180,7 +179,7 @@ function MatchCard({
                            "text-gray-600 italic"
               }`}>
                 {user
-                  ? <>{uname(user)}<JobBadge userId={user.id} variant="compact" className="ml-1" /><WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</>
+                  ? <>{uname(user)}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</>
                   : isBye ? "Freilos" : "TBD"}
               </span>
             </div>

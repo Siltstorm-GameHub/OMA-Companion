@@ -5,7 +5,7 @@ import { getJobBadges } from "@/lib/community-job-service";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?ids=a,b,c (max. 100) — Job-Badges für viele Nutzer auf einmal (siehe JobBadge-Komponente,
+ * GET ?ids=a,b,c (max. 100) — Ansehens-Stufen für viele Nutzer auf einmal (siehe useReputation, Profilrahmen —
  * die Anfragen pro Seite bündelt). Antwort: { [userId]: JobBadgeData } — Nutzer ohne Badge fehlen.
  */
 export async function GET(req: NextRequest) {

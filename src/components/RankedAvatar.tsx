@@ -3,9 +3,9 @@ import RankRing from "@/components/RankRing";
 import type { JobBadgeData } from "@/lib/job-badges";
 
 interface RankedAvatarProps {
-  /** User, dessen Beruf Ringfarbe und -effekt bestimmt. Ohne ID: schlichter Ring wie bei Arbeitslosen. */
+  /** User, dessen Ansehens-Stufe Ringfarbe und -effekt bestimmt. Ohne ID: schlichter grauer Ring. */
   userId?: string | null;
-  /** Schon bekannte Badge-Daten (spart den Abruf); `null` = arbeitslos. */
+  /** Schon bekannte Ansehens-Daten (spart den Abruf). */
   badge?: JobBadgeData | null;
   /** Veraltet, wird nicht mehr gebraucht. */
   rankPoints?: number;

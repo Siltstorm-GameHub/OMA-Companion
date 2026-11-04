@@ -1,5 +1,4 @@
 ﻿import { prisma } from "@/lib/prisma";
-import JobBadge from "@/components/community-jobs/JobBadge";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
@@ -684,7 +683,7 @@ export default async function DashboardPage() {
                         {leader && (
                           <span className="flex items-center gap-1 text-amber-500/80 shrink-0">
                             <Trophy className="w-2.5 h-2.5" />
-                            {leader.name ?? leader.username ?? "Unbekannt"}<JobBadge userId={leader.id} variant="compact" className="ml-1" />
+                            {leader.name ?? leader.username ?? "Unbekannt"}
                           </span>
                         )}
                         {isRegistered && (

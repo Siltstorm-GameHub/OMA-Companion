@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
-import { runWeeklyPayout, runBadgeLevelUpdate } from "@/lib/community-job-service";
+import { runWeeklyPayout, runReputationUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
 import { closeExpiredIdeas, postIdeaDigests } from "@/lib/visionaer-service";
 import { recordCronRun } from "@/lib/community-admin-overview";
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest) {
 
   const startedAt = Date.now();
   const payout = await step("payout", () => runWeeklyPayout());
-  // Direkt nach dem Payout, damit die neue Woche schon in die Stufe einfließt.
-  const badges = await step("badges", () => runBadgeLevelUpdate());
+  // Direkt nach dem Payout, damit die neue Woche schon ins Ansehen (Profilrahmen, Discord-Rolle) einfließt.
+  const badges = await step("badges", () => runReputationUpdate());
   const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
   const ideas = await step("ideas", () => closeExpiredIdeas());
   const ideaDigests = await step("ideaDigests", () => postIdeaDigests());

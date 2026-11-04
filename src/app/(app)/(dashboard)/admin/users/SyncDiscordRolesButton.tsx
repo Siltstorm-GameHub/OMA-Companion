@@ -10,7 +10,7 @@ export default function SyncDiscordRolesButton() {
   const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function handleSync() {
-    if (!(await confirm({ title: "Job-Rollen synchronisieren", description: "Discord-Rollen für alle aktuellen Job-Inhaber abgleichen?" }))) return;
+    if (!(await confirm({ title: "Ansehens-Rollen synchronisieren", description: "Discord-Rollen (Bronze/Silber/Gold/Platin) für alle aktiven User abgleichen? Alte Job-Rollen werden dabei entfernt." }))) return;
     setLoading(true);
     setResult(null);
 

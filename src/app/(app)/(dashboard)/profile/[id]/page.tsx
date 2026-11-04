@@ -1,4 +1,3 @@
-import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -251,7 +250,6 @@ export default async function PublicProfilePage({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-              <JobBadge userId={id} />
             </div>
             <p className="text-xs text-gray-500 mb-1">
               Mitglied seit {memberSince}
