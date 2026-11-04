@@ -3,7 +3,7 @@ import { Images } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { isVideoUrl } from "@/lib/upload-limits";
 
-/** Server-Komponenten: Fotografen-Galerie zu einem Event bzw. Bilder-Portfolio eines Users. */
+/** Server-Komponenten: Fotografen-Galerie zu einem Event (Profil: siehe ProfileTopContributions). */
 
 const VISIBLE = { hiddenByAdminAt: null } as const;
 
@@ -59,31 +59,6 @@ export async function EventGallerySection({ eventId }: { eventId: string }) {
     <div className="glass rounded-2xl p-4 mb-5 space-y-3">
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
         <Images className="w-3.5 h-3.5 text-teal-400" /> Fotos &amp; Clips zu diesem Event
-      </h2>
-      <AlbumChips albums={albums} />
-      <AssetGrid assets={assets} />
-    </div>
-  );
-}
-
-export async function FotografPortfolio({ userId }: { userId: string }) {
-  const [assets, total, albums] = await Promise.all([
-    prisma.jobMediaAsset.findMany({
-      where: { authorId: userId, ...VISIBLE }, orderBy: { createdAt: "desc" }, take: 12,
-      select: { id: true, url: true, caption: true, _count: { select: { votes: true } } },
-    }),
-    prisma.jobMediaAsset.count({ where: { authorId: userId, ...VISIBLE } }),
-    prisma.jobMediaAlbum.findMany({
-      where: { authorId: userId, assets: { some: VISIBLE } }, orderBy: { createdAt: "desc" }, take: 8,
-      select: { id: true, title: true, _count: { select: { assets: true } } },
-    }),
-  ]);
-  if (assets.length === 0) return null;
-
-  return (
-    <div className="glass rounded-2xl p-4 mb-5 space-y-3">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-        <Images className="w-3.5 h-3.5 text-teal-400" /> Fotos &amp; Clips ({total})
       </h2>
       <AlbumChips albums={albums} />
       <AssetGrid assets={assets} />

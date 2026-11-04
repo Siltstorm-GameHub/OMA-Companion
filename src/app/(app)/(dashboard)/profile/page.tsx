@@ -6,10 +6,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import PointsInfoModal from "./PointsInfoModal";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import PokalSection from "@/components/PokalSection";
-import { JournalistPortfolio } from "@/components/JournalistReportLists";
-import { FotografPortfolio } from "@/components/FotografGalleries";
-import { MarketingPortfolio } from "@/components/MarketingLists";
-import { IdeaPortfolio } from "@/components/IdeaLists";
+import ProfileTopContributions from "@/components/ProfileTopContributions";
 import { getAvailableReviewYears } from "@/lib/year-review";
 import { ChevronRight } from "@/components/icons";
 import { Clock, MessageSquare } from "@/components/icons";
@@ -297,7 +294,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </Link>
         )}
 
-        {/* ── Aktuelle Lieblingsspiele ─────────────────────────────────── */}
+        {/* ── Haupt-Inhalt (Übersicht/Community-Jobs als eigene Reiter, direkt über den Squads) ─── */}
+        <DesktopProfileTabs openCommunityJobs={openCommunityJobs} communityJobs={<CommunityJobsPanel />} overview={
+        <div className="space-y-5">
+        {/* ── Squads + aktuelle Lieblingsspiele ────────────────────────── */}
         <SquadsSection squads={squads} />
         <div id="favorite-games-section">
           <FavoriteGamesSection games={favoriteGames} viewerId={userId} />
@@ -305,13 +305,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
         {/* ── Pokale ───────────────────────────────────────────────────── */}
         <PokalSection pokale={pokale} ownerName={displayName} />
-        <FotografPortfolio userId={userId} />
-        <MarketingPortfolio userId={userId} />
-        <IdeaPortfolio userId={userId} />
-        <JournalistPortfolio userId={userId} />
 
-        {/* ── Haupt-Inhalt (Übersicht/Community-Jobs als eigene Reiter) ─── */}
-        <DesktopProfileTabs openCommunityJobs={openCommunityJobs} communityJobs={<CommunityJobsPanel />} overview={
+        {/* ── Beliebteste Beiträge (Top 3, per Button alle) ────────────── */}
+        <ProfileTopContributions userId={userId} />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* ── Linke Spalte ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
@@ -380,6 +377,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
           </div>
         </div>
+        </div>
         } />
       </div>
 
@@ -389,6 +387,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <div className="lg:hidden">
         <ProfileMobileView
           openCommunityJobs={openCommunityJobs}
+          contributions={<ProfileTopContributions userId={userId} />}
           displayName={displayName}
           avatarUrl={user.image}
           rankPoints={rankPoints}

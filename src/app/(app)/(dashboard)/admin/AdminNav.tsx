@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { Handshake } from "@/components/icons";
 import { Users, Users2 } from "@/components/icons";
 import { Server } from "@/components/icons";
-import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Swords, Briefcase, Tv2, Scale } from "@/components/icons";
+import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Briefcase, Tv2, Scale } from "@/components/icons";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
 import DailyPollActionBadge from "@/components/DailyPollActionBadge";
@@ -18,7 +18,13 @@ function hasRole(userRole: string, minRole: Role) {
   return HIERARCHY.indexOf(userRole as Role) >= HIERARCHY.indexOf(minRole);
 }
 
-type Tab = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role; allowCaptain?: boolean };
+type Tab = {
+  href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role; allowCaptain?: boolean;
+  /** Weitere URL-Präfixe, bei denen dieser Reiter als aktiv gilt (Unterseiten ohne eigenen Reiter) */
+  alsoActive?: string[];
+};
+const isTabActive = (tab: Tab, pathname: string) =>
+  pathname.startsWith(tab.href) || !!tab.alsoActive?.some(p => pathname.startsWith(p));
 
 const CATEGORIES: {
   key: string;
@@ -75,10 +81,10 @@ const CATEGORIES: {
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
-      { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
+      // OMA Gems (/admin/gems/…) ist Teil der Minigames-Seite und hat keinen eigenen Reiter mehr
+      { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin", alsoActive: ["/admin/gems"] },
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
-      { href: "/admin/gems",  label: "OMA Gems",         icon: Swords,      minRole: "admin" },
     ],
   },
 ];
@@ -99,7 +105,7 @@ export default function AdminNav({ isCaptainOnly = false }: { isCaptainOnly?: bo
 
   // Dynamischer Tab-Titel, damit man mehrere offene Admin-Tabs unterscheiden kann.
   useEffect(() => {
-    const activeTab = activeCategory.tabs?.find(t => pathname.startsWith(t.href));
+    const activeTab = activeCategory.tabs?.find(t => isTabActive(t, pathname));
     const label = activeTab?.label ?? activeCategory.label;
     document.title = `${label} · Admin`;
   }, [pathname, activeCategory]);
@@ -145,7 +151,7 @@ export default function AdminNav({ isCaptainOnly = false }: { isCaptainOnly?: bo
       {visibleSubTabs.length > 0 && (
         <div className="flex gap-1 px-1 overflow-x-auto scrollbar-none">
           {visibleSubTabs.map(tab => {
-            const active = pathname.startsWith(tab.href);
+            const active = isTabActive(tab, pathname);
             const Icon = tab.icon;
             return (
               <Link key={tab.href} href={tab.href}

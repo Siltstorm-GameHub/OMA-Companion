@@ -1,6 +1,6 @@
 "use client";
 import GiftIcon from "@/components/GiftIcon";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Building2 } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
@@ -28,6 +28,8 @@ import CommunityJobsPanel from "./CommunityJobsPanel";
 
 interface Props {
   openCommunityJobs?: boolean;
+  /** Server-gerenderter Block "Beliebteste Beiträge" (ProfileTopContributions). */
+  contributions?: ReactNode;
   // Hero
   displayName:       string;
   avatarUrl:         string | null;
@@ -239,6 +241,7 @@ export default function ProfileMobileView(props: Props) {
             />
 
             <SquadsSection squads={squads} />
+            {props.contributions}
             <ProfileCompletion done={profileCompletionDone} rewardPerItem={rewardPerItem} />
           </>
         )}

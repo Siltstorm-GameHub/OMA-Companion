@@ -8,10 +8,7 @@ import { Clock, MessageSquare, ArrowLeft } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import PokalSection from "@/components/PokalSection";
-import { JournalistPortfolio } from "@/components/JournalistReportLists";
-import { FotografPortfolio } from "@/components/FotografGalleries";
-import { MarketingPortfolio } from "@/components/MarketingLists";
-import { IdeaPortfolio } from "@/components/IdeaLists";
+import ProfileTopContributions from "@/components/ProfileTopContributions";
 import FavoriteGamesSection from "../FavoriteGamesSection";
 import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
@@ -294,10 +291,7 @@ export default async function PublicProfilePage({
 
       {/* ── Pokale (read-only) ───────────────────────────────────────── */}
       <PokalSection pokale={pokale} ownerName={displayName} />
-      <FotografPortfolio userId={id} />
-      <MarketingPortfolio userId={id} />
-      <IdeaPortfolio userId={id} />
-      <JournalistPortfolio userId={id} />
+      <ProfileTopContributions userId={id} />
 
       {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

@@ -57,7 +57,7 @@ export default async function HeroArtSheetPage() {
 
   return (
     <div className="space-y-8">
-      <Link href="/admin/gems" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
+      <Link href="/admin/minigames#gems" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
         <ArrowLeft className="w-3.5 h-3.5" /> OMA Gems
       </Link>
       <div className="space-y-1">
