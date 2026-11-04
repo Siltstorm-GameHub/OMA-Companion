@@ -680,6 +680,7 @@ export default function BlocksVersusClient({
               gestures={settings.gestures}
               gestureSensitivity={settings.gestureSensitivity}
               haptics={settings.haptics}
+              keyBindings={settings.keys}
               running={running}
               runnerRef={runnerRef}
               onEvents={onEvents}

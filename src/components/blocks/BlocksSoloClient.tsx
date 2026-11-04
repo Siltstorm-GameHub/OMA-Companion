@@ -277,6 +277,7 @@ export default function BlocksSoloClient({
         gestures={settings.gestures}
         gestureSensitivity={settings.gestureSensitivity}
         haptics={settings.haptics}
+        keyBindings={settings.keys}
         running={phase === "playing"}
         runnerRef={runnerRef}
         onSync={onSync}

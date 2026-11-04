@@ -1,16 +1,9 @@
 "use client";
-// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons/Gesten) + Tastenübersicht
+// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons/Gesten) + Tastenbelegung
 
 import { HANDLING_LIMITS, SDF_INSTANT, FPS } from "@/lib/blocks/engine";
-import { ACTION_LABELS, DEFAULT_KEYS, type Action, type BlocksSettings } from "./settings";
-
-const KEY_NAMES: Record<string, string> = {
-  ArrowLeft: "←", ArrowRight: "→", ArrowDown: "↓", ArrowUp: "↑", Space: "Leertaste",
-  ControlLeft: "Strg", ShiftLeft: "Shift",
-};
-function keyName(code: string): string {
-  return KEY_NAMES[code] ?? code.replace(/^Key/, "");
-}
+import type { BlocksSettings } from "./settings";
+import KeyBindingsEditor from "./KeyBindingsEditor";
 
 function Slider({
   label, hint, value, min, max, onChange, format,
@@ -106,19 +99,7 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
         </div>
       )}
 
-      <div>
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Tasten</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
-          {(Object.keys(DEFAULT_KEYS) as Action[]).map((a) => (
-            <div key={a} className="flex justify-between gap-2">
-              <span className="text-gray-400">{ACTION_LABELS[a]}</span>
-              <span className="text-white font-semibold">{DEFAULT_KEYS[a].map(keyName).join(" / ")}</span>
-            </div>
-          ))}
-          <div className="flex justify-between gap-2"><span className="text-gray-400">Pause</span><span className="text-white font-semibold">Esc / P</span></div>
-          <div className="flex justify-between gap-2"><span className="text-gray-400">Neustart</span><span className="text-white font-semibold">R</span></div>
-        </div>
-      </div>
+      <KeyBindingsEditor bindings={settings.keys} onChange={(keys) => onChange({ ...settings, keys })} />
     </div>
   );
 }

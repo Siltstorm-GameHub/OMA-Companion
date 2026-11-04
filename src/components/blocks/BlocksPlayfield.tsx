@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { BlocksEngine, EngineEvent, GameMode, HandlingSettings } from "@/lib/blocks/engine";
 import { BlocksRunner, type RunnerResult } from "./runner";
 import { BOARD_LEFT, LAYOUT_COLS, LAYOUT_ROWS } from "./render";
-import { actionForKey } from "./settings";
+import { actionForKey, DEFAULT_KEYS, type KeyBindings } from "./settings";
 import { NO_SELECT_STYLE, PAD_HEIGHT, TouchPad, useBoardGestures, useTouchSafety } from "./TouchControls";
 
 export interface PlayfieldProps {
@@ -32,9 +32,11 @@ export interface PlayfieldProps {
   onEvents?: (events: EngineEvent[], engine: BlocksEngine) => void;
   onSync?: (engine: BlocksEngine) => void;
   onGameOver?: (result: RunnerResult) => void;
-  /** Escape / P (nur Solo). */
+  /** Eigene Tastenbelegung (Standard: DEFAULT_KEYS). */
+  keyBindings?: KeyBindings;
+  /** Pause-Taste (nur Solo). */
   onPauseKey?: () => void;
-  /** R (nur Solo). */
+  /** Neustart-Taste (nur Solo). */
   onRestartKey?: () => void;
   runnerRef?: { current: BlocksRunner | null };
   /** Overlay über dem Feld (Countdown, Pause, Ergebnis). */
@@ -172,34 +174,41 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cssCell, seed]);
 
+  // Geänderte Belegung: gehaltene Tasten loslassen, sonst bliebe z.B. "Links" hängen.
+  const keyBindingsKey = JSON.stringify(props.keyBindings ?? null);
+  useEffect(() => {
+    internalRef.current?.releaseAll();
+  }, [keyBindingsKey]);
+
   // Tastatur
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.code === "Escape" || e.code === "KeyP") {
+      const bindings = callbacksRef.current.keyBindings ?? DEFAULT_KEYS;
+      const action = actionForKey(e.code, bindings);
+      if (!action) return;
+      if (action === "pause") {
         if (callbacksRef.current.onPauseKey) {
           e.preventDefault();
-          callbacksRef.current.onPauseKey();
+          if (!e.repeat) callbacksRef.current.onPauseKey();
         }
         return;
       }
-      if (e.code === "KeyR" && !e.ctrlKey && !e.metaKey) {
-        if (callbacksRef.current.onRestartKey) {
+      if (action === "restart") {
+        if (callbacksRef.current.onRestartKey && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
-          callbacksRef.current.onRestartKey();
+          if (!e.repeat) callbacksRef.current.onRestartKey();
         }
         return;
       }
-      const action = actionForKey(e.code);
-      if (!action) return;
       e.preventDefault();
       if (e.repeat) return;
       internalRef.current?.press(action);
     };
     const onUp = (e: KeyboardEvent) => {
-      const action = actionForKey(e.code);
-      if (!action) return;
+      const action = actionForKey(e.code, callbacksRef.current.keyBindings ?? DEFAULT_KEYS);
+      if (!action || action === "pause" || action === "restart") return;
       e.preventDefault();
       internalRef.current?.release(action);
     };
