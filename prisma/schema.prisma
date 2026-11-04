@@ -57,7 +57,6 @@ model User {
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
-  bannerUrl          String? // Eigenes Profil-Banner (Vercel Blob), 1200×300 empfohlen
 
   // Discord-Aktivität: kumulativ über alle Zeiten
   voiceMinutesTotal Int @default(0)

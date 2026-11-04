@@ -140,7 +140,7 @@ export default function DatenschutzPage() {
       </p>
       <p>
         Selbst erledigen kannst du das im{" "}
-        <Link href="/profile#account">Profil unter „Konto &amp; Daten“</Link>: Dort lädst du alle gespeicherten
+        <Link href="/profile?tab=settings#account">Profil unter „Konto &amp; Daten“</Link>: Dort lädst du alle gespeicherten
         Daten herunter oder löschst dein Konto. Beim Löschen werden alle persönlichen Angaben entfernt;
         Turnierergebnisse und Beiträge bleiben für die Community anonym als „Gelöschtes Mitglied“ erhalten.
         Für alles andere schreib uns an <LegalValue value={LEGAL.email} />.

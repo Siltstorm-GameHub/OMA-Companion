@@ -278,7 +278,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 
     // Der Bonus/Vorschau-Wert hängt von Bewertungen ab, die der User oft an
     // ANDERER Stelle abgibt (z.B. Daumen-hoch im Community-Board). `visibilitychange`/
-    // `focus` allein reichen NICHT: auf Desktop hält DesktopProfileTabs.tsx dieses
+    // `focus` allein reichen NICHT: ProfileTabs.tsx hält dieses
     // Büro dauerhaft gemountet (nur per CSS `hidden` ausgeblendet, nie unmounted),
     // und wer per In-App-Link zum Community-Board wechselt, dort bewertet und per
     // Link zurückkehrt, bleibt die ganze Zeit im selben Tab/Fenster — es feuert

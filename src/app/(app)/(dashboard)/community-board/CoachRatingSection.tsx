@@ -85,7 +85,7 @@ export default function CoachRatingSection() {
   );
 }
 
-function RatingForm({ coachId, trainingSessionId, onDone, onCancel }: {
+export function RatingForm({ coachId, trainingSessionId, onDone, onCancel }: {
   coachId: string; trainingSessionId?: string; onDone: () => void; onCancel: () => void;
 }) {
   const [stars, setStars] = useState(5);

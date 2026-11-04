@@ -4,7 +4,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 /**
  * Die 6 Stat-Kacheln oben auf dem Profil — extrahiert aus `page.tsx`, damit
  * sowohl die Desktop-Ansicht als auch der mobile "Profil"-Reiter
- * (`ProfileMobileView.tsx`, siehe Teil B des Umbau-Plans) dasselbe Markup
+ * (heute ein gemeinsames Layout: `ProfileView.tsx`) dasselbe Markup
  * nutzen, ohne es zu duplizieren. Reines Refactoring — keine visuelle
  * Änderung gegenüber dem vorherigen Inline-Code.
  */

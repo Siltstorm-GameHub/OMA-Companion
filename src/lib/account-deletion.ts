@@ -1,6 +1,4 @@
-import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
-import { resolveStoreId } from "@/lib/blob-store";
 
 export const DELETED_USER_NAME = "Gelöschtes Mitglied";
 /** Muss im Lösch-Dialog eingetippt werden. */
@@ -22,7 +20,7 @@ export const DELETE_CONFIRM_PHRASE = "LÖSCHEN";
 export async function anonymizeUser(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { discordId: true, bannerUrl: true, deletedAt: true },
+    select: { discordId: true, deletedAt: true },
   });
   if (!user || user.deletedAt) return;
 
@@ -70,7 +68,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
         birthday: null,
         birthdayBoostUntil: null,
         bio: null,
-        bannerUrl: null,
         vitrineSlotsJson: null,
         favoriteGamesJson: null,
         notificationPrefs: "{}",
@@ -79,14 +76,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
       },
     }),
   ]);
-
-  // Eigenes Banner aus dem Blob-Store entfernen (fremde https-URLs ignorieren)
-  if (user.bannerUrl?.includes(".blob.vercel-storage.com")) {
-    const storeId = resolveStoreId();
-    await del(user.bannerUrl, storeId ? { storeId } : undefined).catch(err =>
-      console.error("[account-deletion] Banner-Löschung fehlgeschlagen:", err),
-    );
-  }
 }
 
 /** Datenauskunft (DSGVO Art. 15/20): die zum Konto gespeicherten Daten als JSON. */

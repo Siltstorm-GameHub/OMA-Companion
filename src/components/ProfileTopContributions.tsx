@@ -1,4 +1,5 @@
 import { cache } from "react";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import { isVideoUrl } from "@/lib/upload-limits";
@@ -76,8 +77,17 @@ const loadContributions = cache(async (userId: string): Promise<ProfileContribut
   return items.sort((a, b) => b.thumbs - a.thumbs || b.date.localeCompare(a.date));
 });
 
-export default async function ProfileTopContributions({ userId }: { userId: string }) {
+export default async function ProfileTopContributions({ userId, isOwn = false }: { userId: string; isOwn?: boolean }) {
   const items = await loadContributions(userId);
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    // Fremde Profile: leeren Abschnitt ausblenden. Eigenes Profil: Einladung statt Lücke.
+    if (!isOwn) return null;
+    return (
+      <div className="glass rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs text-gray-400">Noch keine Beiträge — schreib einen Bericht, lade ein Foto hoch oder reiche eine Idee ein.</p>
+        <Link href="/profile?tab=community_jobs" className="text-xs text-teal-400 hover:text-teal-300 transition-colors">Zum Büro →</Link>
+      </div>
+    );
+  }
   return <ProfileContributionsList items={items.slice(0, MAX_ITEMS)} total={Math.min(items.length, MAX_ITEMS)} />;
 }

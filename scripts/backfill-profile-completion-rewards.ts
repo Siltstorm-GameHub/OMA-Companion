@@ -21,7 +21,7 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 async function main() {
   const users = await prisma.user.findMany({
     select: {
-      id: true, bio: true, birthday: true, bannerUrl: true,
+      id: true, bio: true, birthday: true,
       twitchLogin: true, favoriteGamesJson: true,
     },
   });
@@ -33,7 +33,6 @@ async function main() {
     const filled: Record<string, boolean> = {
       bio:           !!user.bio,
       birthday:      !!user.birthday,
-      banner:        !!user.bannerUrl,
       twitch:        !!user.twitchLogin,
       favoriteGames: parseFavoriteGames(user.favoriteGamesJson).length > 0,
     };

@@ -473,7 +473,7 @@ export function FloatingLobbyChat() {
 
             <div className="flex-shrink-0 p-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <Link
-                href="/profile?tab=notifications"
+                href="/profile?tab=settings#notifications"
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
               >

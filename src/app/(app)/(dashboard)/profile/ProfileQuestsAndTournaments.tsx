@@ -6,7 +6,7 @@ import { QUEST_TYPE_META, type QuestType } from "@/lib/quests-meta";
 /**
  * Quest-Fortschritt + Turnier-Ergebnisse — extrahiert aus `page.tsx`, damit
  * beide Blöcke sowohl von der Desktop-Ansicht als auch vom mobilen
- * "Profil"-Reiter (`ProfileMobileView.tsx`, siehe Teil B des Umbau-Plans)
+ * "Profil"-Reiter (heute ein gemeinsames Layout: `ProfileView.tsx`)
  * genutzt werden können, ohne das Markup zu duplizieren. Reines Refactoring —
  * keine visuelle Änderung gegenüber dem vorherigen Inline-Code.
  */

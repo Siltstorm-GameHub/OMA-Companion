@@ -6,6 +6,7 @@ import { ChevronDown } from "@/components/icons";
 import { CheckCircle2 } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import { PROFILE_COMPLETION_ITEMS } from "@/lib/profile-completion";
+import { PROFILE_SHOW_TAB_EVENT } from "./ProfileTabs";
 
 const STORAGE_KEY = "profile-completion-collapsed";
 
@@ -20,8 +21,10 @@ interface Props {
 }
 
 function openSection(sectionId: string, openEvent: string) {
+  // Lieblingsspiele liegen im Reiter "Übersicht" — erst dorthin wechseln, dann scrollen.
+  window.dispatchEvent(new CustomEvent(PROFILE_SHOW_TAB_EVENT, { detail: "overview" }));
   window.dispatchEvent(new Event(openEvent));
-  document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "center" }));
 }
 
 export default function ProfileCompletion({ done, rewardPerItem }: Props) {

@@ -4,7 +4,7 @@ import { formatBerlinDate } from "@/lib/time";
 /**
  * "Letzte Events"-Liste — extrahiert aus `page.tsx`, damit sie sowohl von der
  * Desktop-Ansicht als auch vom mobilen "Einstellungen"-Reiter
- * (`ProfileMobileView.tsx`, siehe Teil B des Umbau-Plans) genutzt werden
+ * (heute ein gemeinsames Layout: `ProfileView.tsx`) genutzt werden
  * kann, ohne das Markup zu duplizieren. Reines Refactoring — keine visuelle
  * Änderung gegenüber dem vorherigen Inline-Code.
  */
