@@ -1,11 +1,13 @@
-import { requireModeratorOrEventSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
+import { requireEventManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventEditClient from "./EventEditClient";
+import ApprovalBanner from "../ApprovalBanner";
+import { APPROVAL_PENDING, isAwaitingApproval } from "@/lib/community-events";
 
 export default async function AdminEventEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireModeratorOrEventSquadCaptain(id);
+  const user = await requireEventManager(id);
   const isModerator = hasMinRole(user.role, "moderator");
   const captainedSquadIds = isModerator ? null : await getCaptainedSquadIds(user.id);
 
@@ -44,5 +46,19 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
 
   if (!event) notFound();
 
-  return <EventEditClient event={event} allUsers={allUsers} squads={squads} />;
+  const seriesApproval = event.seriesId
+    ? (await prisma.eventSeries.findUnique({ where: { id: event.seriesId }, select: { approvalStatus: true } }))?.approvalStatus
+    : null;
+  const awaiting = isAwaitingApproval({ approvalStatus: event.approvalStatus, series: { approvalStatus: seriesApproval } });
+  const inheritedFromSeries = awaiting && event.approvalStatus !== APPROVAL_PENDING;
+
+  return (
+    <>
+      {awaiting && (
+        <ApprovalBanner kind={inheritedFromSeries ? "series" : "events"} id={inheritedFromSeries ? event.seriesId! : event.id}
+          canApprove={isModerator} inheritedFromSeries={inheritedFromSeries} />
+      )}
+      <EventEditClient event={event} allUsers={allUsers} squads={squads} />
+    </>
+  );
 }

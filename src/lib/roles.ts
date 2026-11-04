@@ -65,39 +65,95 @@ export async function getCaptainedSquadIds(userId: string) {
   return rows.map(r => r.squadId);
 }
 
-/** Zugriff auf ein bestehendes Event: Moderator/Admin immer, sonst nur Captain des Squads, dem das
- *  Event (direkt oder über seine Reihe) zugeordnet ist. Events ohne Squad-Zuordnung sind für Captains
- *  tabu — "voller Event-Admin, nur aufs eigene Team beschränkt" gilt nur für Team-Events. */
-export async function requireModeratorOrEventSquadCaptain(eventId: string) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (hasMinRole(user.role, "moderator")) return user;
+// ── Event-Verwaltung ─────────────────────────────────────────────────────────
+// Ein Event (bzw. eine Reihe) verwalten dürfen:
+//   - Moderatoren/Admins: immer
+//   - der Ersteller (Event.createdById, bzw. Ersteller der Reihe, zu der das Event gehört)
+//   - Captains des Squads, dem das Event (direkt oder über seine Reihe) zugeordnet ist
+// Belohnungen von Nicht-Moderatoren sind gekappt (lib/captain-reward-limits.ts).
+
+async function isSquadCaptain(userId: string, squadId: string | null) {
+  if (!squadId) return false;
+  const membership = await prisma.squadMembership.findUnique({
+    where: { squadId_userId: { squadId, userId } },
+    select: { role: true },
+  });
+  return membership?.role === "captain";
+}
+
+/** Darf `user` dieses Event verwalten? (ohne Redirect, z.B. für Anzeige-Entscheidungen) */
+export async function canManageEvent(user: { id: string; role: string } | null, eventId: string) {
+  if (!user) return false;
+  if (hasMinRole(user.role, "moderator")) return true;
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { squadId: true, series: { select: { squadId: true } } },
+    select: { createdById: true, squadId: true, series: { select: { createdById: true, squadId: true } } },
   });
-  const squadId = event?.squadId ?? event?.series?.squadId ?? null;
-  if (!squadId) redirect("/dashboard?error=unauthorized");
-  return requireModeratorOrSquadCaptain(squadId);
+  if (!event) return false;
+  if (event.createdById === user.id || event.series?.createdById === user.id) return true;
+  return isSquadCaptain(user.id, event.squadId ?? event.series?.squadId ?? null);
 }
 
-/** Analog zu requireModeratorOrEventSquadCaptain, aber für eine ganze Eventreihe. */
-export async function requireModeratorOrSeriesSquadCaptain(seriesId: string) {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (hasMinRole(user.role, "moderator")) return user;
-  const series = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { squadId: true } });
-  if (!series?.squadId) redirect("/dashboard?error=unauthorized");
-  return requireModeratorOrSquadCaptain(series.squadId);
+/** Darf `user` diese Eventreihe verwalten? */
+export async function canManageSeries(user: { id: string; role: string } | null, seriesId: string) {
+  if (!user) return false;
+  if (hasMinRole(user.role, "moderator")) return true;
+  const series = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { createdById: true, squadId: true } });
+  if (!series) return false;
+  if (series.createdById === user.id) return true;
+  return isSquadCaptain(user.id, series.squadId);
 }
 
-/** Für Einstiegspunkte ohne bereits feststehendes Event/Reihe (z.B. "Neues Event erstellen"):
- *  Moderator/Admin immer, sonst jeder, der mindestens ein Squad captained. */
-export async function requireModeratorOrAnySquadCaptain() {
+/** Zugriff auf ein bestehendes Event (siehe oben), sonst Redirect. */
+export async function requireEventManager(eventId: string) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (hasMinRole(user.role, "moderator")) return { user, captainedSquadIds: null as string[] | null };
+  if (!(await canManageEvent(user, eventId))) redirect("/dashboard?error=unauthorized");
+  return user;
+}
+
+/** Analog zu requireEventManager, aber für eine ganze Eventreihe. */
+export async function requireSeriesManager(seriesId: string) {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (!(await canManageSeries(user, seriesId))) redirect("/dashboard?error=unauthorized");
+  return user;
+}
+
+/** Was ein Nicht-Moderator in der Event-Verwaltung sieht: eigene Events/Reihen + die seiner Squads.
+ *  null = Moderator/Admin (alles). */
+export type EventScope = { userId: string; captainedSquadIds: string[] } | null;
+
+/** Einstieg in die Event-Verwaltung ("Neues Event", Event-Liste): jeder eingeloggte User. */
+export async function requireEventArea() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (hasMinRole(user.role, "moderator")) return { user, scope: null as EventScope, captainedSquadIds: null as string[] | null };
   const captainedSquadIds = await getCaptainedSquadIds(user.id);
-  if (captainedSquadIds.length === 0) redirect("/dashboard?error=unauthorized");
-  return { user, captainedSquadIds };
+  const scope: EventScope = { userId: user.id, captainedSquadIds };
+  return { user, scope, captainedSquadIds };
+}
+
+/** Prisma-Filter: Events, die im Scope liegen (eigene, eigene Reihe, Squad direkt oder über die Reihe). */
+export function eventScopeWhere(scope: EventScope) {
+  if (!scope) return {};
+  const squads = { in: scope.captainedSquadIds };
+  return {
+    OR: [
+      { createdById: scope.userId },
+      { series: { createdById: scope.userId } },
+      ...(scope.captainedSquadIds.length ? [{ squadId: squads }, { series: { squadId: squads } }] : []),
+    ],
+  };
+}
+
+/** Prisma-Filter: Reihen, die im Scope liegen. */
+export function seriesScopeWhere(scope: EventScope) {
+  if (!scope) return {};
+  return {
+    OR: [
+      { createdById: scope.userId },
+      ...(scope.captainedSquadIds.length ? [{ squadId: { in: scope.captainedSquadIds } }] : []),
+    ],
+  };
 }

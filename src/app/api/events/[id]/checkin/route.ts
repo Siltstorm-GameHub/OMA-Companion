@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireEventManager } from "@/lib/roles";
 import { checkInState } from "@/lib/checkin";
 
 async function loadEvent(eventId: string) {
@@ -53,7 +53,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 /** Admin/Captain: Spieler manuell ein- oder auschecken (jederzeit). Body: { userId, checkedIn } */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const { userId, checkedIn } = await req.json().catch(() => ({}));
   if (typeof userId !== "string" || typeof checkedIn !== "boolean") {
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });

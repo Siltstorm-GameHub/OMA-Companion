@@ -1,12 +1,14 @@
-import { requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
+import { requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
+import ApprovalBanner from "../../events/ApprovalBanner";
+import { APPROVAL_PENDING } from "@/lib/community-events";
 import { parseSeriesCompletion, parseStatConfig } from "@/lib/series-seasons";
 
 export default async function AdminSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireModeratorOrSeriesSquadCaptain(id);
+  const user = await requireSeriesManager(id);
   const isModerator = hasMinRole(user.role, "moderator");
   const captainedSquadIds = isModerator ? null : await getCaptainedSquadIds(user.id);
 
@@ -57,10 +59,15 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
   }))].filter(fld => fld && !fld.startsWith("_streak_")).sort((a, b) => a.localeCompare(b, "de"));
 
   return (
-    <SeriesDetailClient
-      series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
-      isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
-      seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
-    />
+    <>
+      {series.approvalStatus === APPROVAL_PENDING && (
+        <ApprovalBanner kind="series" id={series.id} canApprove={isModerator} />
+      )}
+      <SeriesDetailClient
+        series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
+        isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
+        seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
+      />
+    </>
   );
 }

@@ -84,11 +84,13 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
         </div>
       </div>
 
-      <div>
-        <label className={labelCls}>Discord-Textkanal ID (optional)</label>
-        <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
-          placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
-      </div>
+      {!w.isCommunity && (
+        <div>
+          <label className={labelCls}>Discord-Textkanal ID (optional)</label>
+          <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
+            placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+        </div>
+      )}
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">
         <label className="flex items-start gap-3 cursor-pointer select-none">

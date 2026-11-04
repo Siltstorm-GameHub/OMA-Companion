@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/roles";
+import { capSeasonPlacements, getCommunityLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesCompleteClient from "./SeriesCompleteClient";
@@ -75,7 +76,12 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     try { return series.seriesCompletionData ? JSON.parse(series.seriesCompletionData) : {}; } catch { return {}; }
   })();
   const pollPhaseComplete = existingCompletion.pollPhaseComplete === true;
-  const rewardsConfig = parseRewards(series.placementRewardsJson);
+  const rewardsConfig = { ...parseRewards(series.placementRewardsJson) };
+  // Community-Reihe: Anzeige wie bei der Auszahlung nach Terminanzahl gekappt (Vorschau mit allen
+  // Terminen; beim Verschieben/Löschen offener Termine rechnet die Auszahlung mit weniger)
+  if (series.approvalStatus) {
+    rewardsConfig.placements = capSeasonPlacements(rewardsConfig.placements, (await getCommunityLimits()).season, series.events.length);
+  }
 
   // Noch offene Termine — beim ersten Abschluss fragt der Assistent, was mit ihnen passiert
   const openEvents = isReEdit ? [] : series.events

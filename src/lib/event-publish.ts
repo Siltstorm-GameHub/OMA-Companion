@@ -38,9 +38,15 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
 export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true } } },
+    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true } } },
   });
   if (!event || event.hidden) return parsePublishState(event?.publishStateJson);
+  // Community-Events (von normalen Usern angelegt) werden erst nach Mod-Freigabe angekündigt —
+  // die Freigabe ruft publishEvent erneut auf (lib/community-events.ts). Bewusst inline statt
+  // isAwaitingApproval, um keinen Import-Zyklus mit community-events.ts zu erzeugen.
+  if (event.approvalStatus === "pending" || event.series?.approvalStatus === "pending") {
+    return parsePublishState(event.publishStateJson);
+  }
 
   const state = parsePublishState(event.publishStateJson);
   const errors: PublishError[] = [];

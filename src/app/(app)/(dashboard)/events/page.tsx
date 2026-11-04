@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
-import { CalendarDays, ExternalLink, Trophy, Check, Clapperboard } from "@/components/icons";
+import { CalendarDays, ExternalLink, Trophy, Check, Plus } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import RegisterButton from "./RegisterButton";
@@ -22,6 +22,7 @@ import { formatBerlinDate, formatBerlinRange, getBerlinDateParts, BERLIN_TZ } fr
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
+import MyEventsPanel from "./MyEventsPanel";
 import SquadsList from "../squads/SquadsList";
 import EventPredictionsPanel from "./EventPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
@@ -63,7 +64,8 @@ export default async function EventsPage() {
         // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
         // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
         _count:        { select: { registrations: { where: { role: "player" } } } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true } },
+        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true } },
+        createdBy:     { select: { username: true, name: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
         communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
@@ -201,6 +203,9 @@ export default async function EventsPage() {
       const discordUrl   = ev.discordEventId && GUILD_ID
         ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
       const date = item.date;
+      // Community-Event (von einem normalen User erstellt, direkt oder über seine Reihe)
+      const communityCreator = ev.approvalStatus || ev.series?.approvalStatus ? (ev.createdBy ?? null) : null;
+      const communityBy = communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null;
 
       return (
         <EventCardLink key={`ev-${ev.id}`}
@@ -245,6 +250,11 @@ export default async function EventsPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
               {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
+              {communityBy && (
+                <span className="text-[10px] font-medium text-violet-200 bg-violet-500/25 border border-violet-400/30 px-1.5 py-0.5 rounded-full truncate max-w-[10rem]">
+                  Community · @{communityBy}
+                </span>
+              )}
               {ev.game && <span className="text-xs text-gray-300 font-medium truncate">{ev.game}</span>}
             </div>
             <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
@@ -362,10 +372,10 @@ export default async function EventsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <GateLink href="/clip-des-monats"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass border border-[#9146ff]/20 hover:border-[#9146ff]/40 transition-colors group text-sm">
-            <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" />
-            <span className="text-gray-300 group-hover:text-white transition-colors">Clip des Monats</span>
+          <GateLink href="/admin/events/new"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 transition-colors text-sm font-medium text-white">
+            <Plus className="w-3.5 h-3.5" />
+            <span>Neues Event</span>
           </GateLink>
           {isMod && <SyncButton />}
         </div>
@@ -499,6 +509,7 @@ export default async function EventsPage() {
       )}
       {guestHasMore && <GuestMoreCta message="Alle Events gibt's nach dem Login" />}
         </>}
+        myEventsPanel={userId ? <MyEventsPanel userId={userId} /> : null}
         predictionsPanel={
           userId ? (
             <EventPredictionsPanel

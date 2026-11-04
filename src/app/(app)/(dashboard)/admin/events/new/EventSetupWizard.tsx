@@ -25,6 +25,15 @@ export default function EventSetupWizard(props: EventWizardProps) {
   const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepRewards, StepSeriesEventSettings, StepSeriesSummary];
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
+  // Community-Events (Ersteller ohne Mod-Rolle): Hinweis auf Limits und Freigabe
+  const communityHint = props.isCommunity && (
+    <div className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 space-y-1">
+      <p className="font-semibold text-amber-300">Community-Event</p>
+      <p>Dein Event ist sofort in der App sichtbar. Auf Discord angekündigt und per Push gemeldet wird es erst, nachdem ein Mod es freigegeben hat.</p>
+      <p>Belohnungen (Münzen, Rang-Punkte) werden beim Speichern automatisch auf die Community-Obergrenzen gekürzt.</p>
+    </div>
+  );
+
   // Gefundener lokaler Entwurf: übernehmen oder verwerfen (siehe wizard/draft.ts)
   const draftBanner = pendingDraft && (
     <div className="mb-6 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">
@@ -47,6 +56,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
         {draftBanner}
+        {communityHint}
         <div className="mb-8">
           <h1 className="text-xl font-bold text-white mb-1">Neues Event erstellen</h1>
           <p className="text-sm text-gray-500">Wähle, was du erstellen möchtest.</p>
@@ -111,6 +121,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
       </div>
 
       {draftBanner}
+      {communityHint}
 
       {eventTemplate && (
         <p className="text-xs text-gray-500 -mt-3 mb-6">

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { isStatFormat } from "@/lib/tournaments/stat-rounds";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const { title, round, position, player1Id, player2Id, scheduledAt, notes, entries } = await req.json();
 
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { format: true } });
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  const user = await requireModeratorOrEventSquadCaptain(eventId);
+  const user = await requireEventManager(eventId);
   const body = await req.json();
   const { matchId, winnerId, score1, score2, isDraw, entries, action } = body;
 
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 /** Änderungsprotokoll eines Matches (neueste zuerst): ?matchId=… */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const matchId = req.nextUrl.searchParams.get("matchId");
   if (!matchId) return NextResponse.json({ error: "matchId fehlt" }, { status: 400 });
   const logs = await prisma.matchResultLog.findMany({
@@ -130,7 +130,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const { matchId } = await req.json();
   await prisma.match.delete({ where: { id: matchId } });
   return NextResponse.json({ ok: true });
@@ -139,7 +139,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 /** Spieler zu einem (auch laufenden) Match hinzufügen oder daraus entfernen. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const { matchId, action, userId } = await req.json();
   if (!matchId || !userId || (action !== "add" && action !== "remove")) {
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });

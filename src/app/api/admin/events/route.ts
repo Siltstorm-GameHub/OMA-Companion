@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
+import { requireEventManager, hasMinRole, getCaptainedSquadIds, canManageSeries } from "@/lib/roles";
+import { getCommunityLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
-import { capCaptainRewardFields } from "@/lib/captain-reward-limits";
+import { capCaptainRewardFields, capMatchResultPoints, type RewardLimits } from "@/lib/captain-reward-limits";
 import { sanitizeCheckInMinutes } from "@/lib/checkin";
 import { publishEvent } from "@/lib/event-publish";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
@@ -21,7 +22,7 @@ export async function PATCH(req: NextRequest) {
   } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
-  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
+  const currentUser = await requireEventManager(eventId);
 
   if (endAt !== undefined) data.endAt = endAt ? new Date(endAt) : null;
   if (data.endAt) {
@@ -31,7 +32,12 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // Captains dürfen die Squad-Bindung ihres Events nur auf ein Squad setzen, das sie selbst
+  // Ersteller/Freigabe werden nie über diesen generischen Pfad geändert (Freigabe: eigene Route
+  // /api/admin/events/[id]/approve).
+  delete data.createdById;
+  delete data.approvalStatus;
+
+  // Nicht-Moderatoren dürfen die Squad-Bindung ihres Events nur auf ein Squad setzen, das sie selbst
   // captainen (nicht entfernen oder auf ein fremdes Squad umbiegen) — sonst könnten sie die
   // Anmeldebeschränkung faktisch aufheben oder ein fremdes Team betreffen.
   const isModerator = hasMinRole(currentUser.role, "moderator");
@@ -39,12 +45,12 @@ export async function PATCH(req: NextRequest) {
     const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
     if (!data.squadId || !captainedSquadIds.includes(data.squadId)) delete data.squadId;
   }
-  // Ebenso darf ein Captain sein Event nur in eine Reihe eines eigenen Squads verschieben.
+  // Ebenso darf ein Nicht-Moderator sein Event nur in eine Reihe verschieben, die er selbst verwaltet.
   if (!isModerator && "seriesId" in data && data.seriesId) {
-    const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
-    const target = await prisma.eventSeries.findUnique({ where: { id: data.seriesId }, select: { squadId: true } });
-    if (!target?.squadId || !captainedSquadIds.includes(target.squadId)) delete data.seriesId;
+    if (!(await canManageSeries(currentUser, data.seriesId))) delete data.seriesId;
   }
+  // Ankündigungskanal und Legacy-Feld pointReward legen nur Mods fest
+  if (!isModerator) delete data.pointReward;
 
   // Abgeschlossene Saisons nehmen keine weiteren Termine auf
   if ("seriesId" in data && data.seriesId) {
@@ -55,11 +61,28 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
-  const rewards = isModerator
-    ? { spectatorRewardJson, pollsConfigJson }
-    : capCaptainRewardFields({ spectatorRewardJson, pollsConfigJson });
-  if (!isModerator) Object.assign(data, capCaptainRewardFields(data));
+  // Belohnungen — für Nicht-Moderatoren auf die Community-Obergrenzen gekappt: Einzel-Event bzw.
+  // Reihen-Termin, je nachdem, wo das Event nach dem Speichern liegt (lib/community-event-limits.ts)
+  let rewardLimits: RewardLimits | null = null;
+  if (!isModerator) {
+    const limits = await getCommunityLimits();
+    const targetSeriesId = "seriesId" in data
+      ? data.seriesId
+      : (await prisma.event.findUnique({ where: { id: eventId }, select: { seriesId: true } }))?.seriesId;
+    rewardLimits = targetSeriesId ? limits.seriesEvent : limits.standalone;
+  }
+  const rewards = rewardLimits
+    ? capCaptainRewardFields({ spectatorRewardJson, pollsConfigJson }, rewardLimits)
+    : { spectatorRewardJson, pollsConfigJson };
+  if (rewardLimits) {
+    Object.assign(data, capCaptainRewardFields(data, rewardLimits));
+    // Sieg/Unentschieden-Münzen im Liga-Modus (pointsConfig { win, draw })
+    if (typeof data.pointsConfig === "string") {
+      try { data.pointsConfig = JSON.stringify(capMatchResultPoints(JSON.parse(data.pointsConfig), rewardLimits)); } catch { delete data.pointsConfig; }
+    } else if (data.pointsConfig && typeof data.pointsConfig === "object") {
+      data.pointsConfig = JSON.stringify(capMatchResultPoints(data.pointsConfig, rewardLimits));
+    }
+  }
 
   // Sichtbarkeit / geplante Veröffentlichung
   if ("publishAt" in data) {
@@ -85,7 +108,7 @@ export async function PATCH(req: NextRequest) {
   if ("checkInMinutes" in data) data.checkInMinutes = sanitizeCheckInMinutes(data.checkInMinutes);
 
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
-  if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;
+  if (discordChannelId !== undefined && isModerator) data.discordChannelId = discordChannelId;
   if (category !== undefined) data.category = category;
   if (genre !== undefined) data.genre = genre || null;
   if (spectatorMode !== undefined) data.spectatorMode = spectatorMode;
@@ -241,10 +264,18 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  await requireRole("moderator");
   const { searchParams } = new URL(req.url);
   const eventId = searchParams.get("eventId");
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
+  // Mods immer; Ersteller/Captains nur, solange noch nichts ausgezahlt wurde (kein Abschluss) —
+  // sonst müssten Belohnungen zurückgebucht werden, das bleibt Mods vorbehalten.
+  const currentUser = await requireEventManager(eventId);
+  if (!hasMinRole(currentUser.role, "moderator")) {
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { completionData: true } });
+    if (ev?.completionData) {
+      return NextResponse.json({ error: "Abgeschlossene Events kann nur ein Mod löschen." }, { status: 403 });
+    }
+  }
 
   await deleteEventRecord(eventId);
 

@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { CalendarClock } from "@/components/icons";
@@ -19,6 +21,10 @@ function formatCountdown(target: Date, now: Date): string {
 }
 
 export default async function AdminPage() {
+  // Das Admin-Dashboard ist Mods vorbehalten — normale User (Community-Ersteller, Captains) landen
+  // in ihrer Event-Verwaltung (der Layout-Gate lässt alle eingeloggten User in /admin).
+  const me = await getSessionUser();
+  if (!me || !hasMinRole(me.role, "moderator")) redirect("/admin/events");
   const now = new Date();
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

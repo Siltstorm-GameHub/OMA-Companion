@@ -1,15 +1,15 @@
-import { requireModeratorOrAnySquadCaptain } from "@/lib/roles";
+import { requireEventArea } from "@/lib/roles";
 import { Shield } from "@/components/icons";
 import AdminNav from "./AdminNav";
 
-// Der blanket Gate hier lässt zusätzlich zu Moderatoren/Admins auch reine Squad-Captains durch (globale
-// Rolle bleibt "user") — jede einzelne Unterseite hat aber weiterhin ihre eigene Rechteprüfung, die für
-// Captains standardmäßig moderator-only bleibt. Nur die Event-/Reihen-bezogenen Seiten wurden gezielt auf
-// requireModeratorOr...SquadCaptain umgestellt — alle anderen (Nutzer, Server, …) bleiben für
-// Captains dadurch automatisch verschlossen, ohne dass hier eine Sonderbehandlung nötig ist.
+// Der Gate hier lässt jeden eingeloggten User durch: normale User verwalten hier ihre eigenen
+// Community-Events (und Squad-Captains die ihres Squads). Jede einzelne Unterseite hat ihre eigene
+// Rechteprüfung — moderator-only bleibt moderator-only. Nur die Event-/Reihen-bezogenen Seiten nutzen
+// requireEventArea/requireEventManager/requireSeriesManager; alle anderen (Nutzer, Server, …) bleiben
+// für normale User dadurch automatisch verschlossen, ohne dass hier eine Sonderbehandlung nötig ist.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { captainedSquadIds } = await requireModeratorOrAnySquadCaptain();
-  const isCaptainOnly = captainedSquadIds !== null;
+  const { scope } = await requireEventArea();
+  const isRestricted = scope !== null;
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto">
@@ -19,15 +19,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">
-            {isCaptainOnly ? "Squad-Verwaltung" : "Admin-Bereich"}
+            {isRestricted ? "Event-Verwaltung" : "Admin-Bereich"}
           </h1>
           <p className="text-xs text-gray-500">
-            {isCaptainOnly ? "Events und Turniere deines Squads verwalten" : "Verwaltung von Events, Turnieren und Nutzern"}
+            {isRestricted ? "Deine Events und Eventreihen verwalten" : "Verwaltung von Events, Turnieren und Nutzern"}
           </p>
         </div>
       </div>
 
-      <AdminNav isCaptainOnly={isCaptainOnly} />
+      <AdminNav isCaptainOnly={isRestricted} />
       {children}
     </div>
   );

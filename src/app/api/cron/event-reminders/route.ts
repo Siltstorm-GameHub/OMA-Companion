@@ -4,6 +4,7 @@ import { getNotificationRule, dispatchEventNotification } from "@/lib/notify-dis
 import { fmtDateDE } from "@/lib/discord-rest";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import { publishDueScheduledEvents } from "@/lib/event-publish";
+import { notAwaitingApprovalWhere } from "@/lib/community-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +36,8 @@ export async function GET(req: NextRequest) {
       status:         { in: ["open", "upcoming"] },
       startAt:        { gte: winFrom, lte: winTo },
       reminderSentAt: null,
+      // Community-Events ohne Mod-Freigabe: keine Erinnerung (Discord-Ping/Push)
+      ...notAwaitingApprovalWhere,
     },
     include: { registrations: { select: { userId: true } } },
   });

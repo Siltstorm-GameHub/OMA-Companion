@@ -1,6 +1,7 @@
+import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { requireRole, requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
+import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { parseStatAliases, parseTournamentTemplate, serializeTournamentTemplate } from "@/lib/series-seasons";
@@ -68,15 +69,20 @@ export async function PATCH(req: NextRequest) {
   const { seriesId, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
-  const currentUser = await requireModeratorOrSeriesSquadCaptain(seriesId);
+  const currentUser = await requireSeriesManager(seriesId);
   // Captains dürfen die Squad-Bindung ihrer Reihe nur auf ein eigenes Squad setzen, nicht entfernen
   // oder auf ein fremdes Squad umbiegen.
   if (!hasMinRole(currentUser.role, "moderator") && "squadId" in fields) {
     const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
     if (!fields.squadId || !captainedSquadIds.includes(fields.squadId)) delete fields.squadId;
   }
-  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
-  if (!hasMinRole(currentUser.role, "moderator")) Object.assign(fields, capCaptainRewardFields(fields));
+  // Belohnungen — für Nicht-Moderatoren auf die Community-Obergrenzen gekappt (Reihen-Konfiguration,
+  // siehe lib/community-event-limits.ts). Ankündigungskanal und Freigabe bleiben Mods vorbehalten.
+  const limits = hasMinRole(currentUser.role, "moderator") ? null : await getCommunityLimits();
+  if (limits) {
+    Object.assign(fields, capCaptainRewardFields(fields, seriesConfigLimits(limits)));
+    delete fields.discordChannelId;
+  }
 
   const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true } });
   if (!current) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
@@ -90,7 +96,7 @@ export async function PATCH(req: NextRequest) {
   // Turniervorlage für neue Termine — normalisiert, für Captains auf die Standard-Obergrenzen gekappt
   if (fields.tournamentTemplateJson !== undefined) {
     const t = parseTournamentTemplate(fields.tournamentTemplateJson);
-    if (!hasMinRole(currentUser.role, "moderator") && t.matchResultPoints) t.matchResultPoints = capMatchResultPoints(t.matchResultPoints);
+    if (limits && t.matchResultPoints) t.matchResultPoints = capMatchResultPoints(t.matchResultPoints, limits.seriesEvent);
     fields.tournamentTemplateJson = serializeTournamentTemplate(t);
   }
 

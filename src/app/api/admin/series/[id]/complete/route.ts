@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
+import { capSeasonPlacements, getCommunityLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
 import { awardSeriesPokal } from "@/lib/award-pokal";
@@ -91,7 +92,14 @@ export async function POST(
   const playerSet = new Set([...registrations.filter(r => r.role !== "spectator").map(r => r.userId), ...legacyUserIds]);
   const registeredSet = new Set([...registrations.map(r => r.userId), ...legacyUserIds]);
 
-  const rewards = parseRewards(series.placementRewardsJson);
+  const rewards = { ...parseRewards(series.placementRewardsJson) }; // Kopie: parseRewards kann die geteilte Standard-Konstante liefern
+  // Community-Reihe (von einem normalen User angelegt): Endwertung auf die Community-Grenzen kappen,
+  // skaliert nach Anzahl der Termine (siehe lib/community-event-limits.ts)
+  if (series.approvalStatus) {
+    const limits = await getCommunityLimits();
+    const countedEvents = seasonEvents.filter(e => !leavingIds.has(e.id)).length;
+    rewards.placements = capSeasonPlacements(rewards.placements, limits.season, countedEvents);
+  }
   const pollCoins   = Math.max(0, body.pollBonusCoins ?? 0);
   const pollRankPts = Math.max(0, body.pollBonusRankPoints ?? 0);
   const newPollWinners = [...new Set((body.pollWinnerIds ?? []).filter(id => registeredSet.has(id)))];

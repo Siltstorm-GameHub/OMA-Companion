@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getCaptainedSquadIds, getSessionUser, hasMinRole } from "@/lib/roles";
-import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
+import { canManageSeries, getCaptainedSquadIds, getSessionUser, hasMinRole } from "@/lib/roles";
+import { getCommunityLimits } from "@/lib/community-event-limits";
+import { APPROVAL_APPROVED, assertCreatorQuota, CreatorLimitError, initialApprovalStatus } from "@/lib/community-events";
+import { capCaptainRewardFields, capMatchResultPoints, capPlacementRewardsJson } from "@/lib/captain-reward-limits";
 import { sanitizeCheckInMinutes } from "@/lib/checkin";
 import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { VALID_FORMAT_VALUES } from "@/lib/tournament-formats";
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
   const series = seriesId
     ? await prisma.eventSeries.findUnique({
         where: { id: seriesId },
-        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true, status: true, tournamentTemplateJson: true },
+        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true, status: true, tournamentTemplateJson: true, approvalStatus: true },
       })
     : null;
   if (seriesId && !series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 400 });
@@ -62,25 +64,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Diese Saison ist abgeschlossen — neue Termine gehören in die aktuelle Saison." }, { status: 409 });
   }
 
-  // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
-  // wenn das Event direkt auf ihr eigenes Squad beschränkt wird (squadId gesetzt + sie sind dessen
-  // Captain) — ein Community-weites Event ohne Squad-Bindung bleibt Moderatoren/Admins vorbehalten.
+  // Jeder eingeloggte User darf Events erstellen (Community-Events). Nicht-Moderatoren:
+  //   - Squad-Bindung nur an Squads, die sie selbst captainen
+  //   - Termine nur in Reihen, die sie selbst verwalten dürfen (Ersteller oder Squad-Captain)
+  //   - Mengenlimits (offene Einzel-Events / aktive Reihen) und gekappte Belohnungen
+  //   - Discord/Push erst nach Mod-Freigabe (approvalStatus "pending")
   const currentUser = await getSessionUser();
   if (!currentUser) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   const isModerator = hasMinRole(currentUser.role, "moderator");
+  const limits = isModerator ? null : await getCommunityLimits();
   if (!isModerator) {
-    // Event-Squad UND (falls angehängt) Reihen-Squad müssen eigene Squads sein — sonst könnte ein
-    // Captain sein Event mit eigener squadId in die Reihe eines fremden Squads hängen.
     const captained = await getCaptainedSquadIds(currentUser.id);
-    if (squadId && !captained.includes(squadId)) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
-    if (series && (!series.squadId || !captained.includes(series.squadId))) {
+    if (squadId && !captained.includes(squadId)) return NextResponse.json({ error: "Keine Berechtigung für dieses Squad" }, { status: 403 });
+    if (seriesId && !(await canManageSeries(currentUser, seriesId))) {
       return NextResponse.json({ error: "Keine Berechtigung für diese Eventreihe" }, { status: 403 });
     }
-    if (!squadId && !series?.squadId) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+    try {
+      if (body.newSeries) await assertCreatorQuota(currentUser.id, "series", limits!);
+      else if (!seriesId) await assertCreatorQuota(currentUser.id, "event", limits!);
+    } catch (err) {
+      if (err instanceof CreatorLimitError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
+    }
   }
+  const inSeries = !!(seriesId || body.newSeries);
+  const rewardLimits = limits ? (inSeries ? limits.seriesEvent : limits.standalone) : null;
 
-  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
-  const { spectatorRewardJson, pollsConfigJson, placementRewardsJson } = isModerator ? body : capCaptainRewardFields(body);
+  // Belohnungen — für Nicht-Moderatoren auf die Community-Obergrenzen gekappt (Einzel-Event bzw.
+  // Reihen-Termin, siehe lib/community-event-limits.ts)
+  const { spectatorRewardJson, pollsConfigJson, placementRewardsJson } = rewardLimits ? capCaptainRewardFields(body, rewardLimits) : body;
+  // Freigabe: Termine einer bereits freigegebenen Reihe brauchen keine eigene Freigabe mehr
+  const approvalStatus = !isModerator && series?.approvalStatus === APPROVAL_APPROVED
+    ? APPROVAL_APPROVED
+    : initialApprovalStatus(isModerator);
 
   if (typeof title !== "string" || !title.trim() || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
@@ -183,18 +199,23 @@ export async function POST(req: NextRequest) {
         draw: Math.max(0, Math.floor(Number(body.matchResultPoints.draw) || 0)),
       }
     : null;
-  const cappedMatchResultPoints = isModerator ? matchResultPoints : capMatchResultPoints(matchResultPoints);
+  const cappedMatchResultPoints = rewardLimits ? capMatchResultPoints(matchResultPoints, rewardLimits) : matchResultPoints;
 
   // Check-in und Punktemodus füllt der Wizard aus der Vorlage vor (der Admin kann sie dort ändern), die
   // Gruppenphase übernimmt der Server direkt
   const templateGroupStageJson = templateEventFields(parseTournamentTemplate(series?.tournamentTemplateJson), eventFormat).groupStageJson;
 
   // Derive participation coin default (10) from placementRewardsJson or series config
-  const rewardsData = placementRewardsJson
+  const rawRewardsData = placementRewardsJson
     ? JSON.stringify(placementRewardsJson)
     : seriesId
       ? series?.placementRewardsJson ?? null
       : JSON.stringify({ participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, { place: 2, coins: 250, rankPoints: 2 }, { place: 3, coins: 100, rankPoints: 1 }] });
+  // Auch Standardwerte bzw. die von der Reihe geerbten Werte kappen (die Reihe darf für ihre
+  // Endwertung mehr haben als ein einzelner Termin, siehe community-event-limits.ts)
+  const rewardsData = rewardLimits && rawRewardsData
+    ? (capPlacementRewardsJson(rawRewardsData, rewardLimits) as string | null)
+    : rawRewardsData;
 
   // "Neue Reihe" aus dem Wizard: Reihe und Event entstehen gemeinsam in einer Transaktion. Vorher legte
   // der Wizard die Reihe vorab separat an — scheiterte danach das Event, blieb eine leere Reihe zurück,
@@ -208,6 +229,8 @@ export async function POST(req: NextRequest) {
             category: category || "casual",
             // Captains brauchen die Squad-Bindung, um die Reihe später selbst verwalten zu können
             squadId: isModerator ? null : (squadId || null),
+            createdById: currentUser.id,
+            approvalStatus: initialApprovalStatus(isModerator),
           },
         })).id
       : null;
@@ -223,7 +246,10 @@ export async function POST(req: NextRequest) {
       maxPlayers: maxPlayersValue,
       type:            type ?? "community",
       seriesId:        seriesId || createdSeriesId,
-      discordChannelId: discordChannelId || null,
+      // Ankündigungskanal legen nur Mods fest (Community-Events landen im Standardkanal)
+      discordChannelId: isModerator ? (discordChannelId || null) : null,
+      createdById:     currentUser.id,
+      approvalStatus,
       // Mit geplanter Veröffentlichung in der Zukunft immer erst unsichtbar
       hidden:          hidden || scheduledPublishAt ? true : false,
       registrationLocked: registrationLocked ? true : false,

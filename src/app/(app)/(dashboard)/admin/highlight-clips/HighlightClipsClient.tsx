@@ -7,6 +7,7 @@ import { Tabs } from "@/components/admin/Tabs";
 import ContestManager from "./ContestManager";
 import CreateContestForm from "./CreateContestForm";
 import YearlyContestManager from "./YearlyContestManager";
+import AutoContestSettings from "./AutoContestSettings";
 
 type MonthlyContests = ComponentProps<typeof ContestManager>["contests"];
 type YearlyContests = ComponentProps<typeof YearlyContestManager>["contests"];
@@ -16,9 +17,11 @@ interface Props {
   partnerLogins: string[];
   hasActiveMonthlyContest: boolean;
   yearlyContests: YearlyContests;
+  autoVotingDays: number;
+  autoVotingDaysRange: [number, number];
 }
 
-export default function HighlightClipsClient({ monthlyContests, partnerLogins, hasActiveMonthlyContest, yearlyContests }: Props) {
+export default function HighlightClipsClient({ monthlyContests, partnerLogins, hasActiveMonthlyContest, yearlyContests, autoVotingDays, autoVotingDaysRange }: Props) {
   const [tab, setTab] = useState<"month" | "year">("month");
 
   return (
@@ -42,16 +45,22 @@ export default function HighlightClipsClient({ monthlyContests, partnerLogins, h
 
       {tab === "month" ? (
         <div className="space-y-8">
+          <AutoContestSettings
+            initialDays={autoVotingDays}
+            minDays={autoVotingDaysRange[0]}
+            maxDays={autoVotingDaysRange[1]}
+          />
           <CreateContestForm
             defaultChannels={partnerLogins}
             hasActiveContest={hasActiveMonthlyContest}
+            defaultVotingDays={autoVotingDays}
           />
           <ContestManager contests={monthlyContests} />
         </div>
       ) : (
         <div className="space-y-8">
           <p className="text-sm text-gray-500 -mt-2">
-            Startet automatisch Mitte Dezember (sobald die November-Abstimmung zum Clip des Monats endet) und berücksichtigt alle Monatssieger von Dezember des Vorjahres bis November des aktuellen Jahres.
+            Startet automatisch im Dezember (sobald die November-Abstimmung zum Clip des Monats endet) und berücksichtigt alle Monatssieger von Dezember des Vorjahres bis November des aktuellen Jahres.
           </p>
           <YearlyContestManager contests={yearlyContests} />
         </div>

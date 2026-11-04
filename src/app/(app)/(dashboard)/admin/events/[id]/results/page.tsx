@@ -1,4 +1,4 @@
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { statRoundLabel } from "@/lib/tournaments/stat-rounds";
 
 export default async function AdminEventResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireModeratorOrEventSquadCaptain(id);
+  await requireEventManager(id);
 
   const event = await prisma.event.findUnique({
     where: { id },

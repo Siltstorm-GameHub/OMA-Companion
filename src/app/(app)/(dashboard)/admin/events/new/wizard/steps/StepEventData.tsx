@@ -156,11 +156,13 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           className={`${inputCls} resize-none`} style={inputStyle} />
       </div>
 
-      <div>
-        <label className={labelCls}>Discord-Textkanal ID (optional)</label>
-        <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-          placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
-      </div>
+      {!w.isCommunity && (
+        <div>
+          <label className={labelCls}>Discord-Textkanal ID (optional)</label>
+          <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
+            placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+        </div>
+      )}
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 space-y-2">
         <p className="text-sm text-gray-200">Veröffentlichung</p>

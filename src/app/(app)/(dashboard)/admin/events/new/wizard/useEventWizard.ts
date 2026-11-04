@@ -22,6 +22,9 @@ export type EventWizardProps = {
    *  der übergebenen (bereits auf die eigenen Squads gefilterten) squads beschränkt bleiben, "für alle
    *  offen" ist keine Option. */
   forceSquad?: boolean;
+  /** true = Aufrufer ist kein Moderator/Admin (Community-Event): kein eigener Discord-Kanal,
+   *  Belohnungen werden serverseitig gekappt, Ankündigung erst nach Mod-Freigabe. */
+  isCommunity?: boolean;
   /** Vorausgewähltes Squad (z.B. von der Squad-Seite aus "+ Neues Event" gestartet) — nur eine Vorbelegung,
    *  bleibt bei forceSquad=false änderbar. */
   initialSquadId?: string;
@@ -35,6 +38,7 @@ export function useEventWizard({
   series,
   squads = [],
   forceSquad = false,
+  isCommunity = false,
   initialSquadId,
   initialMode = "select",
   seasonPrefill,
@@ -640,6 +644,7 @@ export function useEventWizard({
     series,
     squads,
     forceSquad,
+    isCommunity,
     initialSquadId,
     initialMode,
     seasonPrefill,

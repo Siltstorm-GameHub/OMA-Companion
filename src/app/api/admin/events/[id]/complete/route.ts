@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
-import { CAPTAIN_REWARD_LIMITS, capParticipationCoins, capPlacements } from "@/lib/captain-reward-limits";
+import { requireEventManager, hasMinRole } from "@/lib/roles";
+import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
+import { getCommunityLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
@@ -103,7 +104,7 @@ export async function POST(
   const { id: eventId } = await ctx.params;
   // Systemaufrufe (Cron/Widget mit CRON_SECRET) haben keine Session — sonst würde die Berechtigungs-
   // prüfung sie vorab nach /login umleiten, bevor completeEvent() sie als System erkennt.
-  if (!isSystemCall(req)) await requireModeratorOrEventSquadCaptain(eventId);
+  if (!isSystemCall(req)) await requireEventManager(eventId);
 
   // Abschluss gegen Parallelaufrufe sperren. Ohne das lesen zwei gleichzeitig speichernde
   // Moderatoren beide denselben Ausgangsstand (isReEdit === false) und zahlen beide die
@@ -145,7 +146,7 @@ function isSystemCall(req: NextRequest): boolean {
 async function completeEvent(req: NextRequest, eventId: string) {
   const currentUser = isSystemCall(req)
     ? { role: "admin" as const }
-    : await requireModeratorOrEventSquadCaptain(eventId);
+    : await requireEventManager(eventId);
 
   // Kleine Helfer für die Diff-basierte Vergabe unten: statt Münzen/Rang-Punkte nur einmalig beim
   // ersten Abschluss zu vergeben, wird bei jedem Speichern ein Delta gegen die zuletzt vergebenen
@@ -215,18 +216,28 @@ async function completeEvent(req: NextRequest, eventId: string) {
     keepPollOpen?: boolean;
   };
 
-  // Squad-Captains: Beträge aus dem Request (Überschreibungen der Event-Konfiguration) auf die
-  // Standard-Obergrenzen kappen, siehe captain-reward-limits.ts
+  // Nicht-Moderatoren (Ersteller, Squad-Captains): Beträge aus dem Request (Überschreibungen der
+  // Event-Konfiguration) auf die Community-Obergrenzen kappen — Einzel-Event bzw. Reihen-Termin,
+  // siehe lib/community-event-limits.ts
   if (!hasMinRole(currentUser.role, "moderator")) {
-    if (body.participationCoins !== undefined) body.participationCoins = capParticipationCoins(body.participationCoins);
-    if (Array.isArray(body.placements)) body.placements = capPlacements(body.placements);
-    if (body.pollBonusCoins !== undefined) body.pollBonusCoins = Math.min(Math.max(0, Number(body.pollBonusCoins) || 0), CAPTAIN_REWARD_LIMITS.pollBonusCoins);
-    if (body.pollBonusRankPoints !== undefined) body.pollBonusRankPoints = Math.min(Math.max(0, Number(body.pollBonusRankPoints) || 0), CAPTAIN_REWARD_LIMITS.pollBonusRankPoints);
+    const limits = await getCommunityLimits();
+    const ev = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { seriesId: true, placementRewardsJson: true, series: { select: { placementRewardsJson: true } } },
+    });
+    const L = ev?.seriesId ? limits.seriesEvent : limits.standalone;
+    // Ohne Überschreibung gilt die gespeicherte Konfiguration — auch die wird gekappt (falls die
+    // Grenzen seit dem Anlegen gesenkt wurden oder die Reihe mehr für ihre Endwertung vorsieht)
+    const stored = parseRewards(ev?.placementRewardsJson ?? ev?.series?.placementRewardsJson);
+    body.participationCoins = capParticipationCoins(body.participationCoins ?? stored.participationCoins, L);
+    body.placements = capPlacements(Array.isArray(body.placements) ? body.placements : stored.placements, L);
+    if (body.pollBonusCoins !== undefined) body.pollBonusCoins = capValue(body.pollBonusCoins, L.pollBonusCoins);
+    if (body.pollBonusRankPoints !== undefined) body.pollBonusRankPoints = capValue(body.pollBonusRankPoints, L.pollBonusRankPoints);
     if (Array.isArray(body.pollResults)) {
       body.pollResults = body.pollResults.map(r => ({
         ...r,
-        coins: Math.min(Math.max(0, Number(r.coins) || 0), CAPTAIN_REWARD_LIMITS.pollWinnerCoins),
-        rankPoints: Math.min(Math.max(0, Number(r.rankPoints) || 0), CAPTAIN_REWARD_LIMITS.pollWinnerRankPoints),
+        coins: capValue(r.coins, L.pollWinnerCoins),
+        rankPoints: capValue(r.rankPoints, L.pollWinnerRankPoints),
       }));
     }
   }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole, requireModeratorOrSquadCaptain, hasMinRole } from "@/lib/roles";
-import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
+import { getSessionUser, requireModeratorOrSquadCaptain, hasMinRole } from "@/lib/roles";
+import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
+import { assertCreatorQuota, CreatorLimitError, initialApprovalStatus } from "@/lib/community-events";
+import { capCaptainRewardFields, capMatchResultPoints, capPlacementRewardsJson } from "@/lib/captain-reward-limits";
 import { isOpenSeasonEvent, parseSeriesCompletion, parseTournamentTemplate, serializeTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
@@ -18,11 +20,29 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.json();
-  // Moderator/Admin dürfen immer. Reine Squad-Captains nur, wenn die neue Reihe direkt auf ihr
-  // eigenes Squad beschränkt wird — eine offene Community-Reihe bleibt Moderatoren/Admins vorbehalten.
-  const currentUser = rawBody.squadId ? await requireModeratorOrSquadCaptain(rawBody.squadId) : await requireRole("moderator");
-  // Belohnungen — für Captains auf die Standard-Obergrenzen gekappt (siehe captain-reward-limits.ts)
-  const body = hasMinRole(currentUser.role, "moderator") ? rawBody : capCaptainRewardFields(rawBody);
+  // Jeder eingeloggte User darf Reihen anlegen (Community-Reihen). Eine Squad-Bindung nur an eigene
+  // Squads (Captain). Nicht-Moderatoren: Limit aktiver Reihen, gekappte Belohnungen, Discord/Push
+  // erst nach Mod-Freigabe.
+  const currentUser = rawBody.squadId ? await requireModeratorOrSquadCaptain(rawBody.squadId) : await getSessionUser();
+  if (!currentUser) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  const isModerator = hasMinRole(currentUser.role, "moderator");
+  const limits = isModerator ? null : await getCommunityLimits();
+  if (limits) {
+    try {
+      await assertCreatorQuota(currentUser.id, "series", limits);
+    } catch (err) {
+      if (err instanceof CreatorLimitError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
+    }
+    // Ankündigungskanal legen nur Mods fest
+    delete rawBody.discordChannelId;
+  }
+  // Belohnungen — die Reihe selbst darf bis zur höchsten Endwertungs-Grenze konfiguriert werden
+  // (beim Saisonabschluss nach Terminanzahl skaliert gekappt), jeder Termin bekommt die Reihen-
+  // Termin-Grenzen (siehe lib/community-event-limits.ts).
+  const body = limits ? capCaptainRewardFields(rawBody, seriesConfigLimits(limits)) : rawBody;
+  const eventPlacementJson = (json: string | null) =>
+    limits && json ? (capPlacementRewardsJson(json, limits.seriesEvent) as string | null) : json;
   const {
     name, description,
     category, genre, fixedGame, fixedFormat, discordChannelId,
@@ -46,7 +66,7 @@ export async function POST(req: NextRequest) {
   const template = parseTournamentTemplate(
     typeof tournamentTemplateJson === "string" ? tournamentTemplateJson : tournamentTemplateJson ? JSON.stringify(tournamentTemplateJson) : null,
   );
-  if (!hasMinRole(currentUser.role, "moderator") && template.matchResultPoints) template.matchResultPoints = capMatchResultPoints(template.matchResultPoints);
+  if (limits && template.matchResultPoints) template.matchResultPoints = capMatchResultPoints(template.matchResultPoints, limits.seriesEvent);
   const templateJson = serializeTournamentTemplate(template);
   const templateFields = body.eventType === "tournament" ? templateEventFields(template, fixedFormat) : {};
 
@@ -56,18 +76,18 @@ export async function POST(req: NextRequest) {
     // Lock serialisiert gleichzeitige Anlagen (Doppelklick, zwei Tabs) für dieselbe Gruppe.
     let movedEvents = 0;
     const series = await prisma.$transaction(async (tx) => {
-      let season: { groupId: string; seasonNumber: number; icon: string | null; coverImageUrl: string | null; rules: string | null; statAliasesJson: string | null } | null = null;
+      let season: { groupId: string; seasonNumber: number; icon: string | null; coverImageUrl: string | null; rules: string | null; statAliasesJson: string | null; createdById: string | null; approved: boolean } | null = null;
       // Beim Abschluss der Vorsaison zum Verschieben vorgemerkte offene Termine
       const moves: { fromSeriesId: string; completion: string; eventIds: string[] }[] = [];
       if (groupId) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${String(groupId)}))`;
         const groupSeasons = await tx.eventSeries.findMany({
           where: { groupId: String(groupId) },
-          select: { id: true, status: true, seasonNumber: true, icon: true, coverImageUrl: true, rules: true, squadId: true, statAliasesJson: true, seriesCompletionData: true },
+          select: { id: true, status: true, seasonNumber: true, icon: true, coverImageUrl: true, rules: true, squadId: true, createdById: true, approvalStatus: true, statAliasesJson: true, seriesCompletionData: true },
           orderBy: { seasonNumber: { sort: "desc", nulls: "last" } },
         });
         if (groupSeasons.length === 0) throw new SeasonError("Saison-Gruppe nicht gefunden", 404);
-        if (!hasMinRole(currentUser.role, "moderator") && !groupSeasons.some(g => g.squadId && g.squadId === squadId)) {
+        if (!isModerator && !groupSeasons.some(g => (g.squadId && g.squadId === squadId) || g.createdById === currentUser.id)) {
           throw new SeasonError("Keine Berechtigung für diese Saison-Gruppe", 403);
         }
         if (groupSeasons.some(g => g.status === "active")) {
@@ -80,6 +100,10 @@ export async function POST(req: NextRequest) {
           // Aussehen und Regelwerk der letzten Saison übernehmen (der Assistent fragt sie nicht ab)
           icon: latest.icon, coverImageUrl: latest.coverImageUrl, rules: latest.rules,
           statAliasesJson: latest.statAliasesJson,
+          // Community-Reihe: Ersteller bleibt über alle Saisons derselbe (auch wenn ein Mod die neue
+          // Saison anlegt); einmal freigegeben bleibt freigegeben
+          createdById: latest.createdById,
+          approved: groupSeasons.some(g => g.approvalStatus === "approved"),
         };
         for (const g of groupSeasons) {
           const ids = parseSeriesCompletion(g.seriesCompletionData).pendingMoveEventIds ?? [];
@@ -103,6 +127,9 @@ export async function POST(req: NextRequest) {
           hidden: hidden ?? false,
           registrationLocked: registrationLocked ?? false,
           squadId: squadId || null,
+          createdById: season ? season.createdById : currentUser.id,
+          // Neue Saison einer bereits freigegebenen Community-Reihe braucht keine erneute Freigabe
+          approvalStatus: limits && season?.approved ? "approved" : initialApprovalStatus(isModerator),
           groupId: season?.groupId ?? null,
           seasonNumber: season?.seasonNumber ?? null,
           ...(season && { icon: season.icon, coverImageUrl: season.coverImageUrl, rules: season.rules, statAliasesJson: season.statAliasesJson }),
@@ -162,6 +189,8 @@ export async function POST(req: NextRequest) {
               startAt: dates[i],
               endAt: dates[i].endAt ?? null,
               seriesId: series.id,
+              createdById: series.createdById,
+              approvalStatus: series.approvalStatus,
               category: category ?? "casual",
               genre: genre ?? null,
               game: fixedGame?.trim() || null,
@@ -169,7 +198,7 @@ export async function POST(req: NextRequest) {
               discordChannelId: discordChannelId?.trim() || null,
               type: body.eventType ?? "community",
               pointReward: 0,
-              placementRewardsJson: placementJson,
+              placementRewardsJson: eventPlacementJson(placementJson),
               pollsConfigJson: pollsJson,
               spectatorMode: spectatorEnabled,
               spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
@@ -186,6 +215,8 @@ export async function POST(req: NextRequest) {
             startAt: start,
             endAt: firstEnd,
             seriesId: series.id,
+            createdById: series.createdById,
+            approvalStatus: series.approvalStatus,
             category: category ?? "casual",
             genre: genre ?? null,
             game: fixedGame?.trim() || null,
@@ -193,7 +224,7 @@ export async function POST(req: NextRequest) {
             discordChannelId: discordChannelId?.trim() || null,
             type: body.eventType ?? "community",
             pointReward: 0,
-            placementRewardsJson: placementJson,
+            placementRewardsJson: eventPlacementJson(placementJson),
             pollsConfigJson: pollsJson,
             spectatorMode: spectatorEnabled,
             spectatorRewardJson: spectatorEnabled ? spectatorJson : null,

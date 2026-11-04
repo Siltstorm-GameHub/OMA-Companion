@@ -27,14 +27,16 @@ function defaultPeriodEnd() {
 export default function CreateContestForm({
   defaultChannels,
   hasActiveContest,
+  defaultVotingDays,
 }: {
   defaultChannels: string[];
   hasActiveContest: boolean;
+  defaultVotingDays: number;
 }) {
   const router = useRouter();
   const [periodStart, setPeriodStart] = useState(defaultPeriodStart());
   const [periodEnd, setPeriodEnd] = useState(defaultPeriodEnd());
-  const [votingDurationDays, setVotingDurationDays] = useState("14");
+  const [votingDurationDays, setVotingDurationDays] = useState(String(defaultVotingDays));
   const [channels, setChannels] = useState<string[]>(defaultChannels);
   const [channelInput, setChannelInput] = useState("");
   const [submitting, setSubmitting] = useState(false);

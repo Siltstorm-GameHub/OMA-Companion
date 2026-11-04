@@ -1,11 +1,12 @@
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { getAutoVotingDays, MIN_AUTO_VOTING_DAYS, MAX_AUTO_VOTING_DAYS } from "@/lib/clip-contest-config";
 import HighlightClipsClient from "./HighlightClipsClient";
 
 export default async function AdminHighlightClipsPage() {
   await requireRole("moderator");
 
-  const [monthlyContests, partners, yearlyContestsRaw] = await Promise.all([
+  const [monthlyContests, partners, yearlyContestsRaw, autoVotingDays] = await Promise.all([
     prisma.monthlyClipContest.findMany({
       orderBy: [{ year: "desc" }, { month: "desc" }],
       include: {
@@ -25,6 +26,7 @@ export default async function AdminHighlightClipsPage() {
       select: { twitchLogin: true },
     }),
     prisma.yearlyClipContest.findMany({ orderBy: { year: "desc" } }),
+    getAutoVotingDays(),
   ]);
 
   const hasActiveMonthlyContest = monthlyContests.some((c) => c.status === "voting");
@@ -60,6 +62,8 @@ export default async function AdminHighlightClipsPage() {
       partnerLogins={partners.map((p) => p.twitchLogin)}
       hasActiveMonthlyContest={hasActiveMonthlyContest}
       yearlyContests={yearlyContests}
+      autoVotingDays={autoVotingDays}
+      autoVotingDaysRange={[MIN_AUTO_VOTING_DAYS, MAX_AUTO_VOTING_DAYS]}
     />
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { getSessionUser, requireEventManager } from "@/lib/roles";
 import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import {
   MAX_NOTE_LENGTH,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 /** Admin/Moderator prüft eine Meldung: approve (so übernehmen), correct (mit eigenen Werten übernehmen), reject. */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  const reviewer = await requireModeratorOrEventSquadCaptain(eventId);
+  const reviewer = await requireEventManager(eventId);
   const body = await req.json().catch(() => null);
   if (!body || typeof body.submissionId !== "string" || !["approve", "correct", "reject"].includes(body.action)) {
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });

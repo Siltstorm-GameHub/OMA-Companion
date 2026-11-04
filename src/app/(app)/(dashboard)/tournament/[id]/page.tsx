@@ -5,12 +5,13 @@ import JobBadge from "@/components/community-jobs/JobBadge";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/roles";
+import { canManageEvent, getSessionUser } from "@/lib/roles";
+import { isAwaitingApproval } from "@/lib/community-events";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Users } from "@/components/icons";
-import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "@/components/icons";
+import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings } from "@/components/icons";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
 import GameCover from "@/components/GameCover";
@@ -125,7 +126,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       blocksTournament: { select: { stage: true } },
       blocksChallenge: { select: { id: true } },
@@ -156,8 +157,17 @@ export default async function TournamentDetailPage({
   });
 
   if (!event) notFound();
+  // Ersteller, Squad-Captains und Mods dürfen das Event verwalten (Ergebnisse eintragen/korrigieren)
+  // und sehen es auch, wenn es ausgeblendet ist
+  const canManage = await canManageEvent(me, eventId);
   const isHidden = event.hidden || !!event.series?.hidden;
-  if (isHidden && !isMod) notFound();
+  if (isHidden && !isMod && !canManage) notFound();
+
+  const communityCreator = (event.approvalStatus || event.series?.approvalStatus) && event.createdById
+    ? await prisma.user.findUnique({ where: { id: event.createdById }, select: { username: true, name: true } })
+    : null;
+  const communityBy = communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null;
+  const awaitingApproval = isAwaitingApproval(event);
 
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
@@ -699,16 +709,33 @@ export default async function TournamentDetailPage({
         <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit group">
           <ArrowLeft className="w-4 h-4" /> Zurück
         </Link>
-        {event.series && (
-          <Link
-            href={`/events/series/${event.series.id}`}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
-          >
-            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-            {event.series.name} – Gesamttabelle
-          </Link>
-        )}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {canManage && (
+            <Link
+              href={`/admin/events/${event.id}`}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition-colors font-medium"
+            >
+              <Settings className="w-3.5 h-3.5" /> Verwalten
+            </Link>
+          )}
+          {event.series && (
+            <Link
+              href={`/events/series/${event.series.id}`}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
+            >
+              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
+              {event.series.name} – Gesamttabelle
+            </Link>
+          )}
+        </div>
       </div>
+
+      {communityBy && (
+        <p className="text-xs text-violet-300/90 mb-3">
+          Community-Event von <span className="font-semibold">@{communityBy}</span>
+          {awaitingApproval && <span className="text-amber-300/90"> · wartet noch auf Freigabe durch einen Mod</span>}
+        </p>
+      )}
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────── */}
       {isHidden && isMod && (

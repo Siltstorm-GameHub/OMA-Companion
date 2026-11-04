@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 
-// Deckt Dez(year-1) bis Nov(year) ab — die Umfrage startet Mitte Dezember, sobald
+// Deckt Dez(year-1) bis Nov(year) ab — die Umfrage startet im Dezember, sobald
 // die November-Abstimmung von "Clip des Monats" beendet ist, daher liegt der
 // Dezember-Contest desselben Jahres noch außerhalb (der landet erst im Folgejahr).
 export async function collectYearlyNominations(year: number): Promise<string[]> {

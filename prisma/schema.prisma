@@ -161,6 +161,8 @@ model User {
   blocksBests                      BlocksBest[]
   blocksMatchPlayers               BlocksMatchPlayer[]
   gemsCosmetics                    UserCosmetic[]
+  createdEvents                    Event[]                      @relation("EventCreator")
+  createdEventSeries               EventSeries[]                @relation("EventSeriesCreator")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -277,9 +279,18 @@ model EventSeries {
   // Turniervorlage für neue Termine der Reihe, JSON: { groupStage?: GroupStageConfig,
   // checkInEnabled?: boolean, checkInMinutes?: number, matchResultPoints?: { win, draw } }
   tournamentTemplateJson String?
+  // Community-Reihen: von einem normalen User (ohne Mod-Rolle) angelegt. Der Ersteller darf die Reihe
+  // verwalten; Belohnungen sind auf die Community-Obergrenzen gekappt (lib/community-event-limits.ts).
+  createdById           String?
+  createdBy             User?         @relation("EventSeriesCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  // null = keine Freigabe nötig (von Mod/Admin angelegt oder Altbestand), "pending" = wartet auf
+  // Mod-Freigabe (sichtbar, aber ohne Discord-Ankündigung/Push), "approved" = freigegeben
+  approvalStatus        String?
   createdAt             DateTime      @default(now())
   events                Event[]
   lulSeason             LulSeason?
+
+  @@index([createdById])
 }
 
 model Event {
@@ -361,6 +372,13 @@ model Event {
   summary               String?
   twitchClipUrl         String?
 
+  // Community-Events: von einem normalen User (ohne Mod-Rolle) angelegt, siehe EventSeries.createdById
+  createdById           String?
+  createdBy             User?         @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  // null | "pending" | "approved" — siehe EventSeries.approvalStatus. Events einer wartenden Reihe
+  // gelten ebenfalls als wartend (lib/community-events.ts → isAwaitingApproval).
+  approvalStatus        String?
+
   series             EventSeries?             @relation(fields: [seriesId], references: [id])
   lulSpieltag        LulSpieltag?
   registrations      EventRegistration[]
@@ -380,6 +398,8 @@ model Event {
   jobMediaAlbums     JobMediaAlbum[]
   marketingCampaigns MarketingCampaign[]
   marketingPosts     MarketingPost[]
+
+  @@index([createdById])
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────

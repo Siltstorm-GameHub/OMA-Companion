@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireModeratorOrAnySquadCaptain } from "@/lib/roles";
+import { requireEventArea, seriesScopeWhere, canManageEvent } from "@/lib/roles";
 import { toDatetimeLocalBerlin } from "@/lib/time";
 import EventSetupWizard from "./EventSetupWizard";
 import type { EventTemplate, PlacementReward, PollConfig } from "./wizard/shared";
@@ -12,15 +12,13 @@ function parseJson<T>(json: string | null | undefined, fallback: T): T {
 }
 
 /** "Event duplizieren": Vorlage aus einem bestehenden Event — nur Einstellungen, keine Teilnehmer/
- *  Ergebnisse. Captains dürfen nur Events ihrer eigenen Squads als Vorlage nutzen. */
-async function loadTemplate(eventId: string, captainedSquadIds: string[] | null): Promise<EventTemplate | null> {
+ *  Ergebnisse. Berechtigung (Event verwalten dürfen) prüft der Aufrufer. */
+async function loadTemplate(eventId: string): Promise<EventTemplate | null> {
   const e = await prisma.event.findUnique({
     where: { id: eventId },
     include: { series: { select: { squadId: true, status: true } } },
   });
   if (!e) return null;
-  const squadId = e.squadId ?? e.series?.squadId ?? null;
-  if (captainedSquadIds && (!squadId || !captainedSquadIds.includes(squadId))) return null;
 
   const rewards = parseJson<{ participationCoins?: number; participationRankPts?: number; placements?: PlacementReward[] }>(e.placementRewardsJson, {});
   const spectator = parseJson<{ coins?: number; rankPoints?: number }>(e.spectatorRewardJson, {});
@@ -75,15 +73,15 @@ export default async function NewEventPage({
 }: {
   searchParams: Promise<{ mode?: string; squadId?: string; from?: string }>;
 }) {
-  const { captainedSquadIds } = await requireModeratorOrAnySquadCaptain();
+  // Jeder eingeloggte User darf Events/Reihen anlegen (Community-Events). Nicht-Moderatoren sehen
+  // nur Reihen, die sie selbst verwalten, und nur Squads, die sie captainen (Squad-Bindung optional).
+  const { user, scope, captainedSquadIds } = await requireEventArea();
   const { mode, squadId: initialSquadId, from } = await searchParams;
-  // Captains dürfen nur an ihre eigenen Squad(s) gebundene Events/Reihen anlegen — kein "für alle
-  // offen" und keine Verknüpfung mit fremden Reihen.
   const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
   const [series, squads, eventTemplate] = await Promise.all([
     prisma.eventSeries.findMany({
-      where: { status: "active", ...(squadFilter && { squadId: squadFilter }) },
+      where: { status: "active", ...seriesScopeWhere(scope) },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -101,16 +99,16 @@ export default async function NewEventPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    from ? loadTemplate(from, captainedSquadIds) : Promise.resolve(null),
+    from && (await canManageEvent(user, from)) ? loadTemplate(from) : Promise.resolve(null),
   ]);
 
   return (
     <EventSetupWizard
       series={series}
       squads={squads}
-      forceSquad={captainedSquadIds !== null}
+      isCommunity={scope !== null}
       initialSquadId={eventTemplate?.squadId || initialSquadId}
-      initialMode={eventTemplate ? "event" : mode === "series" ? "series" : "select"}
+      initialMode={eventTemplate || mode === "event" ? "event" : mode === "series" ? "series" : "select"}
       eventTemplate={eventTemplate ?? undefined}
     />
   );

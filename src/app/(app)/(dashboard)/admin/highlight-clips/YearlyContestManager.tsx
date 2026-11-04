@@ -85,7 +85,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
       <div className="glass rounded-2xl p-8 text-center text-gray-500">
         <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
         <p>Noch keine Clip-des-Jahres-Wahlen vorhanden.</p>
-        <p className="text-sm mt-1">Die erste Wahl startet automatisch Mitte Dezember, sobald die November-Abstimmung zum Clip des Monats beendet ist.</p>
+        <p className="text-sm mt-1">Die erste Wahl startet automatisch im Dezember, sobald die November-Abstimmung zum Clip des Monats beendet ist.</p>
       </div>
     );
   }

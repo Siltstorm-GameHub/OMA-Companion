@@ -143,7 +143,7 @@ export default async function ClipDesJahresPage() {
         <div className="glass rounded-2xl p-8 text-center text-gray-500">
           <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p>Aktuell läuft keine Abstimmung.</p>
-          <p className="text-sm mt-1">Die nächste Wahl zum Clip des Jahres startet Mitte Dezember, sobald die Abstimmung zum Clip des Monats November beendet ist.</p>
+          <p className="text-sm mt-1">Die nächste Wahl zum Clip des Jahres startet im Dezember, sobald die Abstimmung zum Clip des Monats November beendet ist.</p>
         </div>
       )}
     </div>

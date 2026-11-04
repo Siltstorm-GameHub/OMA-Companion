@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain, hasMinRole } from "@/lib/roles";
+import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
 import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate";
@@ -12,7 +12,7 @@ import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/grou
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // [id] ist jetzt die Event.id
   const { id: eventId } = await params;
-  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
+  const currentUser = await requireEventManager(eventId);
   const body = await req.json();
   // Squad-Captains: Münzen pro Match-Ergebnis auf die Obergrenze kappen (captain-reward-limits.ts)
   if (!hasMinRole(currentUser.role, "moderator")) body.pointsConfig = capMatchResultPoints(body.pointsConfig);

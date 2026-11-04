@@ -1,4 +1,4 @@
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import TournamentManager from "../../TournamentManager";
 
 export default async function AdminEventBracketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireModeratorOrEventSquadCaptain(id);
+  await requireEventManager(id);
 
   const [event, allUsers] = await Promise.all([
     prisma.event.findUnique({

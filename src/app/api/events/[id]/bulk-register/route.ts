@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
+import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
-  await requireModeratorOrEventSquadCaptain(eventId);
+  await requireEventManager(eventId);
   const { userIds, role } = await req.json();
   if (!userIds?.length) return NextResponse.json({ error: "Keine User angegeben" }, { status: 400 });
   const registrationRole = role === "spectator" ? "spectator" : "player";

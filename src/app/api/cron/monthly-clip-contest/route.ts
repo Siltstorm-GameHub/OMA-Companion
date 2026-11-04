@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { collectNominations, finalizeContest, notifyNewContest } from "@/lib/clip-contest";
 import { getBerlinDateParts, fromDatetimeLocalBerlin } from "@/lib/time";
+import { getAutoVotingDays } from "@/lib/clip-contest-config";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const AUTO_VOTING_DAYS = 10;
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -78,7 +77,8 @@ export async function GET(req: NextRequest) {
     select: { rewardCoins: true, participationCoins: true },
   });
 
-  const votingEndsAt = new Date(monthEnd.getTime() + AUTO_VOTING_DAYS * 24 * 60 * 60 * 1000);
+  const autoVotingDays = await getAutoVotingDays();
+  const votingEndsAt = new Date(monthEnd.getTime() + autoVotingDays * 24 * 60 * 60 * 1000);
 
   await prisma.monthlyClipContest.create({
     data: {
