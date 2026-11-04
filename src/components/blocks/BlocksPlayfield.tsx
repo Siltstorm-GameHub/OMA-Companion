@@ -10,7 +10,7 @@ import type { BlocksEngine, EngineEvent, GameMode, HandlingSettings } from "@/li
 import { BlocksRunner, type RunnerResult } from "./runner";
 import { BOARD_LEFT, LAYOUT_COLS, LAYOUT_ROWS } from "./render";
 import { actionForKey } from "./settings";
-import { PAD_HEIGHT, TouchPad, useBoardGestures } from "./TouchControls";
+import { NO_SELECT_STYLE, PAD_HEIGHT, TouchPad, useBoardGestures, useTouchSafety } from "./TouchControls";
 
 export interface PlayfieldProps {
   seed: number;
@@ -89,6 +89,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
   const isTouch = useIsTouch();
   const showTouch = touchControls === "on" || (touchControls === "auto" && isTouch);
   const gestureHandlers = useBoardGestures(internalRef, cssCell, BOARD_LEFT, gestures, haptics, gestureSensitivity);
+  useTouchSafety(internalRef, isTouch || showTouch);
 
   useEffect(() => {
     callbacksRef.current = props;
@@ -217,7 +218,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
   const cssHeight = LAYOUT_ROWS * cssCell;
 
   return (
-    <div ref={containerRef} className="w-full flex flex-col items-center gap-3">
+    <div ref={containerRef} className="w-full flex flex-col items-center gap-3 select-none" style={NO_SELECT_STYLE}>
       <div
         className={`relative ${gestures && isTouch ? "touch-none select-none" : ""}`}
         style={{ width: cssWidth, height: cssHeight, WebkitTouchCallout: "none" }}

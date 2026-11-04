@@ -58,6 +58,7 @@ import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
 import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseEntryStats, readStatValue, resolveAvgDirection } from "@/lib/avg-stats";
+import { statRoundLabel } from "@/lib/tournaments/stat-rounds";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -263,7 +264,7 @@ export default async function TournamentDetailPage({
           const nm = (u: { name: string | null; username: string | null } | null) => u?.username ?? u?.name ?? "?";
           return {
             id: m.id,
-            label: m.title ?? (isDuel ? `${nm(p1)} vs ${nm(p2)}` : `Runde ${m.round} · Match ${m.position}`),
+            label: isDuel ? (m.title ?? `${nm(p1)} vs ${nm(p2)}`) : statRoundLabel(m),
             isDuel,
             player1: p1,
             player2: p2,
@@ -417,6 +418,7 @@ export default async function TournamentDetailPage({
     const userOf = (id: string | null) => (id ? mergedParticipants.find(p => p.userId === id)?.user ?? null : null);
     const koRounds = Math.max(0, ...event.matches.filter(m => m.groupIndex == null && !m.isThirdPlace).map(m => m.round));
     const label = (m: (typeof event.matches)[number]) => {
+      if (isFfa) return statRoundLabel(m);
       if (m.title) return m.title;
       if (isGroupKnockout && m.groupIndex != null) return `Gruppe ${groupLetter(m.groupIndex)} · Spieltag ${m.round}`;
       if (isLiga || isRoundRobin) return `Spieltag ${m.round}`;

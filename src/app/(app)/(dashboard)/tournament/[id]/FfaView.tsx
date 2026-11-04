@@ -10,6 +10,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { formatBerlinDate, formatBerlinTime, getBerlinDateParts } from "@/lib/time";
 import { compareAvg, computeAvgTotals, entryAvg, parseEntryStats, readStatValue, roundWinnerIds, type AvgTotals } from "@/lib/avg-stats";
+import { sortStatRounds, statRoundLabel, statRoundNote } from "@/lib/tournaments/stat-rounds";
 
 /** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen (1 statt 1.00, 1.5 statt 1.50). */
 function fmtUpTo2(n: number): string {
@@ -256,8 +257,9 @@ export default function FfaView({
   // Ø je Feld als eigene Spalten — bei nur einem Feld wäre das identisch mit "Ø Gesamt"
   const showAvgFieldCols = isAvg && statFields.length > 1;
 
-  const playedMatches   = matches.filter(m => m.playedAt);
-  const upcomingMatches = matches.filter(m => !m.playedAt);
+  // Nach Rundennummer sortiert — nachgetragene Runden erscheinen an ihrer Stelle, nicht am Ende
+  const playedMatches   = sortStatRounds(matches.filter(m => m.playedAt));
+  const upcomingMatches = sortStatRounds(matches.filter(m => !m.playedAt));
 
 
   return (
@@ -477,7 +479,7 @@ export default function FfaView({
       {upcomingMatches.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
-            Ausstehende Matches
+            Ausstehende Runden
           </h2>
           <div className="space-y-2">
             {upcomingMatches.map(match => (
@@ -494,7 +496,7 @@ export default function FfaView({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white">{match.title || `Match ${match.position}`}</p>
+                  <p className="text-sm font-medium text-white">{statRoundLabel(match)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{match.entries.length} Spieler</p>
                   {match.notes && <p className="text-xs text-gray-600 mt-0.5 truncate">{match.notes}</p>}
                 </div>
@@ -556,7 +558,8 @@ export default function FfaView({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-sm font-medium text-white truncate">
-                        {match.title || `Match ${match.position}`}
+                        Runde {match.position}
+                        {statRoundNote(match) && <span className="text-gray-400 font-normal"> · {statRoundNote(match)}</span>}
                       </span>
                       {match.playedAt && (
                         <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0">
@@ -646,7 +649,7 @@ export default function FfaView({
 
       {matches.length === 0 && (
         <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
-          Noch keine Matches angelegt.
+          Noch keine Runden angelegt.
         </div>
       )}
     </div>

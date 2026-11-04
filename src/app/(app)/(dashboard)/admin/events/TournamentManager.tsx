@@ -13,6 +13,8 @@ import { GROUP_KNOCKOUT_FORMAT, groupLabel, knockoutRoundLabel } from "@/lib/tou
 import TournamentManagerMobile from "./TournamentManagerMobile";
 import GroupStagePanel, { type GroupStageActionBody } from "./GroupStagePanel";
 import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
+import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote } from "@/lib/tournaments/stat-rounds";
+import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -249,6 +251,9 @@ export default function TournamentManager({
         .sort((a, b) => a.round - b.round || Number(!!a.isThirdPlace) - Number(!!b.isThirdPlace) || a.position - b.position || (a.leg ?? 0) - (b.leg ?? 0))
     : [];
   const knockoutRounds  = knockoutMatches.length ? Math.max(...knockoutMatches.map(m => m.round)) : 0;
+  // Stat-Formate: Runden nach Rundennummer (nachgetragene Runden landen an ihrer Stelle)
+  const statRounds      = isFfa ? sortStatRounds(tournament.matches) : [];
+  const usedRoundNumbers = new Set(statRounds.map(m => m.position));
   const groupIndexes    = [...new Set(groupMatches.map(m => m.groupIndex!))];
   /** Label für Match-Listen: Gruppe + Spieltag bzw. K.O.-Runde (nur group_knockout). */
   const groupKnockoutLabel = (m: Match) => m.groupIndex != null
@@ -376,7 +381,11 @@ export default function TournamentManager({
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify(isFfa ? {
+        // Stat-Formate: Rundennummer statt Datum, Titel = kurzer Zusatz hinter der Nummer
+        title: mTitle || null, position: mRound,
+        entries: mFfaIds.map(uid => ({ userId: uid })),
+      } : {
         title: mTitle || null, scheduledAt: mScheduled ? fromDatetimeLocalBerlin(mScheduled).toISOString() : null,
         notes: mNotes || null, round: mRound,
         player1Id: is1v1 ? mP1 || null : null,
@@ -392,6 +401,37 @@ export default function TournamentManager({
       setMTitle(""); setMScheduled(""); setMNotes(""); setMP1(""); setMP2(""); setMFfaIds([]);
       router.refresh();
     }
+  }
+
+  /** Stat-Formate: Formular "Runde hinzufügen" mit der nächsten freien Nummer und allen Teilnehmern öffnen. */
+  function openAddStatRound() {
+    if (!tournament) return;
+    setMRound(nextStatRoundNumber(tournament.matches));
+    setMTitle("");
+    // Standardmäßig alle Teilnehmer der Runde auswählen — abwählen ist die Ausnahme (wer diese Runde
+    // aussetzt), nicht der Regelfall.
+    setMFfaIds(tournament.participants.map(p => p.userId));
+    setShowAdd(true);
+  }
+
+  /** Stat-Formate: Rundennummer/Zusatz einer bestehenden Runde ändern (z.B. vergessene Runde einsortieren). */
+  async function updateRoundMeta(matchId: string, position: number, title: string): Promise<boolean> {
+    if (!tournament) return false;
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "meta", matchId, position, title }),
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      toast.error(e.error ?? "Fehler beim Speichern");
+      return false;
+    }
+    const u = await res.json() as { position: number; title: string | null };
+    setTournament(prev => prev ? { ...prev, matches: prev.matches.map(m => m.id === matchId ? { ...m, position: u.position, title: u.title } : m) } : prev);
+    toast.success("Runde aktualisiert");
+    router.refresh();
+    return true;
   }
 
   /** Gruppenspiel ändern, obwohl die K.O.-Runde schon steht? Die Setzung ändert sich dadurch nicht mit. */
@@ -588,7 +628,7 @@ export default function TournamentManager({
     const failedTitles: string[] = [];
     for (const m of candidates) {
       const ok = await submitFfa(m.id, m.entries, { silent: true });
-      if (ok) saved++; else failedTitles.push(m.title || `Match ${m.position}`);
+      if (ok) saved++; else failedTitles.push(statRoundLabel(m));
     }
     setLoading(false);
     if (saved > 0) toast.success(`${saved} Match(es) gespeichert`);
@@ -601,12 +641,14 @@ export default function TournamentManager({
    *  über mehrere Runden), damit nicht jede Runde komplett neu eingetippt werden muss. */
   function copyFromPreviousMatch(matchId: string) {
     if (!tournament) return;
-    const idx = tournament.matches.findIndex(m => m.id === matchId);
+    // Vorherige Runde = nach Rundennummer, nicht nach Anlege-Reihenfolge
+    const ordered = sortStatRounds(tournament.matches);
+    const idx = ordered.findIndex(m => m.id === matchId);
     if (idx <= 0) return;
-    const prev = tournament.matches[idx - 1];
+    const prev = ordered[idx - 1];
     const prevEdits = ffaEdits[prev.id] ?? {};
     const prevTeams = teamAssign[prev.id] ?? {};
-    const currentEntryUserIds = tournament.matches[idx].entries.map(e => e.userId).filter((id): id is string => !!id);
+    const currentEntryUserIds = ordered[idx].entries.map(e => e.userId).filter((id): id is string => !!id);
     // Vorab (rein lesend) ermitteln, ob es überhaupt etwas zu übernehmen gibt — die State-Updater
     // unten bleiben dadurch reine Funktionen ohne Seiteneffekt auf äußere Variablen.
     const copiedAny = currentEntryUserIds.some(uid => prevEdits[uid] || (trackMatchWin && prevTeams[uid]));
@@ -987,6 +1029,9 @@ export default function TournamentManager({
           mFfaIds={mFfaIds}
           setMFfaIds={setMFfaIds}
           addMatch={addMatch}
+          openAddStatRound={openAddStatRound}
+          updateRoundMeta={updateRoundMeta}
+          usedRoundNumbers={usedRoundNumbers}
         />
       </div>
 
@@ -1128,7 +1173,7 @@ export default function TournamentManager({
               );
             })
           : /* ── FFA / coop view ─────────────────────────────────────── */
-            tournament.matches.map((match, matchIdx) => {
+            statRounds.map((match, matchIdx) => {
               const isExp    = expanded.has(match.id);
               const isPlayed = !!match.playedAt;
               const ed       = ffaEdits[match.id] ?? {};
@@ -1141,7 +1186,8 @@ export default function TournamentManager({
                     className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-800 hover:bg-gray-750 text-left"
                     onClick={() => setExpanded(prev => { const s = new Set(prev); s.has(match.id) ? s.delete(match.id) : s.add(match.id); return s; })}>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-white">{match.title || `Match ${match.position}`}</span>
+                      <span className="text-sm text-white">Runde {match.position}</span>
+                      {statRoundNote(match) && <span className="text-sm text-gray-400">· {statRoundNote(match)}</span>}
                       {match.scheduledAt && (
                         <span className="text-xs text-gray-500 flex items-center gap-1">
                           <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
@@ -1159,6 +1205,11 @@ export default function TournamentManager({
 
                   {isExp && (
                     <div className="p-3">
+                      <StatRoundMetaEditor
+                        match={match}
+                        usedRoundNumbers={usedRoundNumbers}
+                        onSave={(position, title) => updateRoundMeta(match.id, position, title)}
+                      />
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
                       {/* Punkt 2: Werte des vorherigen Matches übernehmen (gleiche Teilnehmer über mehrere Runden) */}
                       {matchIdx > 0 && (
@@ -1382,23 +1433,29 @@ export default function TournamentManager({
       {/* Gruppenphase + K.O.: Matches entstehen nur über Auslosung bzw. K.O.-Runde */}
       {!isGroupKnockout && (!showAdd ? (
         <button onClick={() => {
+          if (isFfa) { openAddStatRound(); return; }
           setMScheduled(nowForDatetimeLocal());
-          // Bei Stat-basierten Formaten (FFA/coop_stats/avg_stats) standardmäßig alle Teilnehmer der
-          // Runde auswählen — abwählen ist die Ausnahme (wer diese Runde aussetzt), nicht der Regelfall.
-          if (isFfa) setMFfaIds(tournament.participants.map(p => p.userId));
           setShowAdd(true);
         }}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-4 py-2 w-full justify-center transition-colors">
-          <Plus className="w-4 h-4" /> Match hinzufügen
+          <Plus className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
         </button>
       ) : (
         <div className="border border-rose-800 rounded-lg p-4 bg-rose-950/20 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-white">Neues Match</p>
+            <p className="text-sm font-medium text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
             <button onClick={() => setShowAdd(false)} className="text-gray-500 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
+          {isFfa && (
+            <StatRoundFields
+              round={mRound} onRoundChange={setMRound}
+              note={mTitle} onNoteChange={setMTitle}
+              usedRoundNumbers={usedRoundNumbers}
+            />
+          )}
+          {!isFfa && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1">Titel (optional)</label>
@@ -1441,6 +1498,7 @@ export default function TournamentManager({
               </>
             )}
           </div>
+          )}
 
           {isFfa && (
             <div>
@@ -1460,6 +1518,7 @@ export default function TournamentManager({
             </div>
           )}
 
+          {!isFfa && (
           <div>
             <label className="text-xs text-gray-500 block mb-1">Notizen (optional)</label>
             <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
@@ -1467,10 +1526,11 @@ export default function TournamentManager({
               className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
             />
           </div>
+          )}
 
-          <button onClick={addMatch} disabled={loading || (isFfa && mFfaIds.length === 0)}
+          <button onClick={addMatch} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
             className="flex items-center gap-2 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-4 py-2">
-            <Plus className="w-4 h-4" /> Match erstellen
+            <Plus className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
           </button>
         </div>
       ))}

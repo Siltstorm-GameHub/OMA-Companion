@@ -2,17 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
+import { isStatFormat } from "@/lib/tournaments/stat-rounds";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   await requireModeratorOrEventSquadCaptain(eventId);
   const { title, round, position, player1Id, player2Id, scheduledAt, notes, entries } = await req.json();
 
-  const resolvedRound = round ?? 1;
-  let resolvedPosition = position;
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { format: true } });
+  // Stat-Formate: Rundennummer = position (round bleibt 1), ohne Angabe höchste vergebene Nummer + 1
+  const statFormat = isStatFormat(event?.format);
+  const resolvedRound = statFormat ? 1 : (round ?? 1);
+  let resolvedPosition = Number.isInteger(position) && position > 0 ? position : null;
   if (!resolvedPosition) {
-    const count = await prisma.match.count({ where: { eventId, round: resolvedRound } });
-    resolvedPosition = count + 1;
+    if (statFormat) {
+      const max = await prisma.match.aggregate({ where: { eventId }, _max: { position: true } });
+      resolvedPosition = (max._max.position ?? 0) + 1;
+    } else {
+      const count = await prisma.match.count({ where: { eventId, round: resolvedRound } });
+      resolvedPosition = count + 1;
+    }
   }
 
   const match = await prisma.match.create({
@@ -20,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       eventId,
       round: resolvedRound,
       position: resolvedPosition,
-      title: title ?? null,
+      title: typeof title === "string" && title.trim() ? title.trim() : null,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       notes: notes ?? null,
       player1Id: player1Id ?? null,
@@ -56,6 +65,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const updated = await prisma.match.update({
       where: { id: match.id },
       data: { startedAt: action === "start" ? new Date() : null },
+    });
+    return NextResponse.json(updated);
+  }
+
+  // Stat-Formate: Rundennummer und Zusatz einer bestehenden Runde nachträglich ändern
+  if (action === "meta") {
+    const { position, title } = body as { position?: unknown; title?: unknown };
+    if (!Number.isInteger(position) || (position as number) < 1 || (position as number) > 9999) {
+      return NextResponse.json({ error: "Ungültige Rundennummer" }, { status: 400 });
+    }
+    const match = await prisma.match.findFirst({ where: { id: matchId, eventId }, select: { id: true } });
+    if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+    const updated = await prisma.match.update({
+      where: { id: match.id },
+      data: {
+        position: position as number,
+        title: typeof title === "string" && title.trim() ? title.trim().slice(0, 100) : null,
+      },
+      select: { id: true, position: true, title: true },
     });
     return NextResponse.json(updated);
   }

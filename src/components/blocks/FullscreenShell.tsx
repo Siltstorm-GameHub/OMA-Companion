@@ -57,11 +57,15 @@ export default function FullscreenShell({ active, children }: { active: boolean;
     };
   }, [active]);
 
-  if (!active) return <>{children}</>;
+  // Beim Server-Rendern gibt es kein document (in der App wird active ohnehin erst im Browser true)
+  if (!active || typeof document === "undefined") return <>{children}</>;
   return createPortal(
     <div
-      className="fixed inset-0 overflow-y-auto overscroll-contain text-white"
+      className="fixed inset-0 overflow-y-auto overscroll-contain text-white select-none"
       style={{
+        // Keine Textauswahl/Lupe bei langem Drücken (siehe useTouchSafety in TouchControls.tsx)
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
         zIndex: 9999,
         background: "var(--bg-base, #070a10)",
         paddingTop: "max(env(safe-area-inset-top), 0.75rem)",

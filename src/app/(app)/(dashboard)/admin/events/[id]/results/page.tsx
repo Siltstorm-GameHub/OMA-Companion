@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "@/components/icons";
 import { parseScreenshotUrls, isDuelMatch, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import ResultReviewClient, { type ReviewMatch } from "./ResultReviewClient";
+import { statRoundLabel } from "@/lib/tournaments/stat-rounds";
 
 export default async function AdminEventResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,7 +32,7 @@ export default async function AdminEventResultsPage({ params }: { params: Promis
 
   const matches: ReviewMatch[] = event.matches.map(m => ({
     id: m.id,
-    label: m.title ?? `Runde ${m.round} · Match ${m.position}`,
+    label: isDuelMatch(m) ? (m.title ?? `Runde ${m.round} · Match ${m.position}`) : statRoundLabel(m),
     isDuel: isDuelMatch(m),
     player1: m.player1Id ? { id: m.player1Id, name: nameOf.get(m.player1Id) ?? "?" } : null,
     player2: m.player2Id ? { id: m.player2Id, name: nameOf.get(m.player2Id) ?? "?" } : null,

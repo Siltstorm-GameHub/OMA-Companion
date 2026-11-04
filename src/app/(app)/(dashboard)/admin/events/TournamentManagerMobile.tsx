@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { RotateCcw, Trash2, Check, Minus, Plus as PlusIcon, RefreshCw, Swords, X, Pencil } from "@/components/icons";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { userName, fmtDate, nowForDatetimeLocal, type User, type Match, type MatchEntry, type Tournament } from "./TournamentManager";
+import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
+import { sortStatRounds, statRoundLabel } from "@/lib/tournaments/stat-rounds";
 
 /**
  * Live-Modus für die Turnierverwaltung auf Handy/Tablet.
@@ -124,6 +126,11 @@ interface Props {
   mFfaIds: string[];
   setMFfaIds: React.Dispatch<React.SetStateAction<string[]>>;
   addMatch: () => Promise<void>;
+  /** Stat-Formate: Formular "Runde hinzufügen" mit nächster freier Nummer öffnen */
+  openAddStatRound: () => void;
+  /** Stat-Formate: Rundennummer/Zusatz einer bestehenden Runde ändern */
+  updateRoundMeta: (matchId: string, position: number, title: string) => Promise<boolean>;
+  usedRoundNumbers: Set<number>;
   /** Nur Gruppenphase + K.O.: Auslosung/Tabellen oben, Labels und Unentschieden je Match.
    *  Matches entstehen dort nur über Auslosung bzw. K.O.-Runde — kein "Match hinzufügen". */
   groupStage?: {
@@ -142,8 +149,11 @@ export default function TournamentManagerMobile({
   validateTeamAssignment, submit1v1, submitFfa, changeMatchPlayer, resetMatch, deleteMatch, generateRoundRobinMatches, canGenerate, isBracketFormat,
   showAdd, setShowAdd, mTitle, setMTitle, mScheduled, setMScheduled, mNotes, setMNotes,
   mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, addMatch, groupStage,
+  openAddStatRound, updateRoundMeta, usedRoundNumbers,
 }: Props) {
-  const matches = tournament.matches;
+  // Stat-Formate: nach Rundennummer sortiert (nachgetragene Runden landen an ihrer Stelle)
+  const matches = isFfa ? sortStatRounds(tournament.matches) : tournament.matches;
+  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
 
   // "Jetzt dran" = erstes noch offenes Match, sonst das erste überhaupt.
   const firstOpenIdx = matches.findIndex(m => is1v1 ? !(m.winnerId || m.playedAt) : !m.playedAt);
@@ -161,6 +171,7 @@ export default function TournamentManagerMobile({
   const isPlayedFfa = !!focused?.playedAt;
 
   function matchLabel(m: Match) {
+    if (isFfa) return statRoundLabel(m);
     return groupStage ? groupStage.roundLabel(m) : roundLabel(m.round);
   }
 
@@ -195,7 +206,7 @@ export default function TournamentManagerMobile({
     if (!focused) return;
     const ok = await submitFfa(focused.id, focused.entries);
     if (ok) {
-      setSnackbar({ text: `„${focused.title || `Match ${focused.position}`}" gespeichert`, matchId: focused.id });
+      setSnackbar({ text: `„${statRoundLabel(focused)}" gespeichert`, matchId: focused.id });
       goto(1);
     }
   }
@@ -259,7 +270,22 @@ export default function TournamentManagerMobile({
           </div>
         </div>
 
-        {focused.title && <p className="text-xs text-gray-400 -mt-1">{focused.title}</p>}
+        {!isFfa && focused.title && <p className="text-xs text-gray-400 -mt-1">{focused.title}</p>}
+        {isFfa && (editingMetaId === focused.id ? (
+          <StatRoundMetaEditor
+            match={focused} usedRoundNumbers={usedRoundNumbers} size="lg"
+            onSave={async (position, title) => {
+              const ok = await updateRoundMeta(focused.id, position, title);
+              if (ok) setEditingMetaId(null);
+              return ok;
+            }}
+          />
+        ) : (
+          <button type="button" onClick={() => setEditingMetaId(focused.id)}
+            className="flex items-center gap-1 text-[11px] text-gray-400 active:text-white -mt-1">
+            <Pencil className="w-3 h-3" /> Rundennummer/Zusatz ändern
+          </button>
+        ))}
 
         {is1v1 ? (
           <FocusedDuelCard
@@ -324,9 +350,9 @@ export default function TournamentManagerMobile({
                   <p className="text-xs text-white truncate">
                     {is1v1
                       ? `${m.player1Id ? userName(allUsers.find(u => u.id === m.player1Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"} vs. ${m.player2Id ? userName(allUsers.find(u => u.id === m.player2Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"}`
-                      : (m.title || `Match ${m.position}`)}
+                      : statRoundLabel(m)}
                   </p>
-                  <p className="text-[10px] text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>
+                  {is1v1 && <p className="text-[10px] text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
                 </div>
                 {is1v1 && played && (
                   <span className="text-[10px] text-teal-400 shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
@@ -348,12 +374,12 @@ export default function TournamentManagerMobile({
       {/* ── Match hinzufügen ── */}
       {groupStage ? null : !showAdd ? (
         <button onClick={() => {
+          if (isFfa) { openAddStatRound(); return; }
           setMScheduled(nowForDatetimeLocal());
-          if (isFfa) setMFfaIds(tournament.participants.map(p => p.userId));
           setShowAdd(true);
         }}
           className="flex items-center gap-2 text-sm text-gray-300 border border-gray-700 rounded-xl px-4 py-3 w-full justify-center">
-          <PlusIcon className="w-4 h-4" /> Match hinzufügen
+          <PlusIcon className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
         </button>
       ) : (
         <AddMatchForm
@@ -370,6 +396,7 @@ export default function TournamentManagerMobile({
           mP1={mP1} setMP1={setMP1}
           mP2={mP2} setMP2={setMP2}
           mFfaIds={mFfaIds} setMFfaIds={setMFfaIds}
+          usedRoundNumbers={usedRoundNumbers}
           onCancel={() => setShowAdd(false)}
           onSubmit={async () => { await addMatch(); }}
         />
@@ -386,7 +413,7 @@ export default function TournamentManagerMobile({
 function AddMatchForm({
   allUsers, participants, isFfa, is1v1, isLiga, loading,
   mTitle, setMTitle, mScheduled, setMScheduled, mNotes, setMNotes,
-  mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds,
+  mRound, setMRound, mP1, setMP1, mP2, setMP2, mFfaIds, setMFfaIds, usedRoundNumbers,
   onCancel, onSubmit,
 }: {
   allUsers: User[];
@@ -402,6 +429,7 @@ function AddMatchForm({
   mP1: string; setMP1: React.Dispatch<React.SetStateAction<string>>;
   mP2: string; setMP2: React.Dispatch<React.SetStateAction<string>>;
   mFfaIds: string[]; setMFfaIds: React.Dispatch<React.SetStateAction<string[]>>;
+  usedRoundNumbers: Set<number>;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
 }) {
@@ -417,12 +445,19 @@ function AddMatchForm({
   return (
     <div className="rounded-2xl border border-rose-800/60 bg-rose-950/20 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-white">Neues Match</p>
+        <p className="text-sm font-semibold text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
         <button onClick={onCancel} className="p-1.5 -m-1 text-gray-500 active:text-white">
           <X className="w-4 h-4" />
         </button>
       </div>
 
+      {isFfa ? (
+        <StatRoundFields
+          round={mRound} onRoundChange={setMRound}
+          note={mTitle} onNoteChange={setMTitle}
+          usedRoundNumbers={usedRoundNumbers} size="lg"
+        />
+      ) : (<>
       <div>
         <label className="text-xs text-gray-500 block mb-1.5">Titel (optional)</label>
         <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
@@ -437,6 +472,7 @@ function AddMatchForm({
           className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-3"
         />
       </div>
+      </>)}
 
       {is1v1 && (
         <>
@@ -493,6 +529,7 @@ function AddMatchForm({
         </div>
       )}
 
+      {!isFfa && (
       <div>
         <label className="text-xs text-gray-500 block mb-1.5">Notizen (optional)</label>
         <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
@@ -500,10 +537,11 @@ function AddMatchForm({
           className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-3"
         />
       </div>
+      )}
 
-      <button onClick={onSubmit} disabled={loading || (isFfa && mFfaIds.length === 0)}
+      <button onClick={onSubmit} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
         className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-rose-600 disabled:opacity-40 text-white rounded-xl py-3">
-        <PlusIcon className="w-4 h-4" /> Match erstellen
+        <PlusIcon className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
       </button>
     </div>
   );

@@ -5,13 +5,84 @@
 // Gesten: ziehen = Teil zellgenau mitschieben, nach unten ziehen = Soft Drop, nach unten wischen =
 // Hard Drop, nach oben wischen = Hold, tippen = drehen (linke Feldhälfte ↺, rechte ↻, Hold-Box = Hold).
 // Alles läuft über runner.press/release — Replays zeichnen Gesten also genauso auf wie Tasten.
+//
+// Absicherung (useTouchSafety): Langes Drücken kann auf Handys Textauswahl/Kontextmenü auslösen. Das System
+// bricht dann die Berührungen ab, ohne dass jedes Element ein "Loslassen" bekommt — ein hängender Soft Drop
+// ließ die Teile danach rasen. Deshalb: Auswahl/Kontextmenü unterbinden und alles loslassen, sobald kein
+// Finger mehr auf dem Bildschirm liegt.
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { WIDTH } from "@/lib/blocks/engine";
 import type { BlocksRunner } from "./runner";
 import type { Action } from "./settings";
 
 type RunnerRef = { current: BlocksRunner | null };
+
+/** Fenster-Ereignis: alle Touch-Eingaben zurücksetzen (Gesten + Gamepad-Anzeige). */
+const RELEASE_EVENT = "oma-blocks-release-all";
+
+/** Verzögerung nach dem letzten touchend, bevor alles losgelassen wird (pointerup kommt vorher dran). */
+const RELEASE_DELAY_MS = 60;
+
+/**
+ * Verhindert Textauswahl/Kontextmenü während des Spiels und lässt alle gehaltenen Aktionen los, sobald
+ * kein Finger mehr auf dem Bildschirm liegt oder das System die Berührungen abbricht.
+ */
+export function useTouchSafety(runner: RunnerRef, active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const releaseAll = () => {
+      runner.current?.releaseAll();
+      window.dispatchEvent(new Event(RELEASE_EVENT));
+    };
+    const onTouchStart = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length > 0) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(releaseAll, RELEASE_DELAY_MS);
+    };
+    const onTouchCancel = (e: TouchEvent) => {
+      if (e.touches.length === 0) releaseAll();
+    };
+    // Eingabefelder (Raumcode, Einstellungen) bleiben normal bedienbar
+    const isField = (t: EventTarget | null) => t instanceof Element && !!t.closest("input, textarea, select, [contenteditable]");
+    const block = (e: Event) => {
+      if (!isField(e.target)) e.preventDefault();
+    };
+    const onContextMenu = (e: Event) => {
+      if (isField(e.target)) return;
+      e.preventDefault();
+      releaseAll();
+    };
+    const onSelectionChange = () => {
+      if (isField(document.activeElement)) return;
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) sel.removeAllRanges();
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchCancel, { passive: true });
+    document.addEventListener("selectstart", block);
+    document.addEventListener("contextmenu", onContextMenu);
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchCancel);
+      document.removeEventListener("selectstart", block);
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("selectionchange", onSelectionChange);
+    };
+  }, [runner, active]);
+}
+
+/** Verhindert Auswahl, Lupe und Kontextmenü bei langem Drücken (für Container um Spielfeld/Gamepad). */
+export const NO_SELECT_STYLE = { WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" } as const;
 
 export function buzz(enabled: boolean, ms = 8): void {
   if (!enabled || typeof navigator === "undefined" || !("vibrate" in navigator)) return;
@@ -68,6 +139,17 @@ export function useBoardGestures(
   runner: RunnerRef, cssCell: number, boardLeft: number, enabled: boolean, haptics: boolean, sensitivity = SENSITIVITY_DEFAULT,
 ) {
   const g = useRef<Gesture | null>(null);
+
+  // Abgebrochene Berührungen (siehe useTouchSafety): laufende Geste verwerfen, sonst blockiert sie neue
+  useEffect(() => {
+    const reset = () => {
+      const gest = g.current;
+      g.current = null;
+      if (gest?.soft) runner.current?.release("soft");
+    };
+    window.addEventListener(RELEASE_EVENT, reset);
+    return () => window.removeEventListener(RELEASE_EVENT, reset);
+  }, [runner]);
 
   const tapMove = (action: "left" | "right") => {
     runner.current?.press(action);
@@ -209,6 +291,15 @@ function PadButton({
 }: { action: Action; label: string; runner: RunnerRef; haptics: boolean; className?: string; accent?: boolean }) {
   const [pressed, setPressed] = useState(false);
   const down = useRef(false);
+  // Gedrückt-Anzeige zurücksetzen, wenn useTouchSafety alles losgelassen hat
+  useEffect(() => {
+    const reset = () => {
+      down.current = false;
+      setPressed(false);
+    };
+    window.addEventListener(RELEASE_EVENT, reset);
+    return () => window.removeEventListener(RELEASE_EVENT, reset);
+  }, []);
   const up = () => {
     if (!down.current) return;
     down.current = false;
