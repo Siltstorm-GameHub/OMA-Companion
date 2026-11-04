@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { publishDueScheduledEvents } from "@/lib/event-publish";
+import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 
 /**
  * Setzt alle fälligen ("open" + startAt <= jetzt) Events mit mindestens einer Spieler-
@@ -20,6 +21,10 @@ import { publishDueScheduledEvents } from "@/lib/event-publish";
 export async function syncDueEventActivations(): Promise<void> {
   // Geplante Veröffentlichungen (Event.publishAt) — gleicher Lazy-Mechanismus, siehe event-publish.ts
   await publishDueScheduledEvents();
+
+  // Zeitraum-Events (Punktewertung/Durchschnittswerte): Runde 1 automatisch zum Starttermin eröffnen,
+  // siehe lib/tournaments/period-rounds.ts — unabhängig davon, ob schon Spieler angemeldet sind
+  await autoStartPeriodRounds();
 
   const dueEvents = await prisma.event.findMany({
     where: { status: "open", startAt: { lte: new Date() } },

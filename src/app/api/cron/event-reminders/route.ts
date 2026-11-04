@@ -6,6 +6,7 @@ import { eventParticipationCoins } from "@/lib/event-placeholders";
 import { publishDueScheduledEvents } from "@/lib/event-publish";
 import { notAwaitingApprovalWhere } from "@/lib/community-events";
 import { endsSoonLabel, isPeriodEvent } from "@/lib/event-period";
+import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 
 const ENDING_SOON_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -25,6 +26,8 @@ export async function GET(req: NextRequest) {
   // Fallback für geplante Veröffentlichungen an Tagen ohne Seitenaufrufe (sonst lazy, siehe
   // syncDueEventActivations) — läuft unabhängig davon, ob eine Erinnerungs-Regel existiert.
   await publishDueScheduledEvents();
+  // Fallback für Tage ohne Seitenaufrufe: Runde 1 bei gestarteten Zeitraum-Events eröffnen
+  await autoStartPeriodRounds();
 
   // Zeitraum-Events (> 24 h): einmalige "Endet bald"-Erinnerung an die Teilnehmer, sobald weniger als
   // 2 Tage übrig sind (der Cron läuft 1×/Tag) — unabhängig von der Start-Erinnerung unten.
