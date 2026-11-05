@@ -28,7 +28,7 @@ function ApprovalPill({ awaiting, community }: { awaiting: boolean; community: b
 
 /** Tab "Meine Events" auf /events: selbst erstellte Events und Reihen (mit Verwalten-Link),
  *  Limits und die eigenen Anmeldungen. */
-export default async function MyEventsPanel({ userId }: { userId: string }) {
+export default async function MyEventsPanel({ userId, isModerator = false }: { userId: string; isModerator?: boolean }) {
   const now = new Date();
   const [limits, usage, myEvents, mySeries, registered] = await Promise.all([
     getCommunityLimits(),
@@ -70,8 +70,9 @@ export default async function MyEventsPanel({ userId }: { userId: string }) {
 
   const openEvents = myEvents.filter(e => !CLOSED.includes(e.status));
   const pastEvents = myEvents.filter(e => CLOSED.includes(e.status));
-  const canCreateEvent = usage.openEvents < limits.maxOpenEvents;
-  const canCreateSeries = usage.activeSeries < limits.maxActiveSeries;
+  // Mods/Admins: keine Mengenlimits (der Server prüft sie ebenfalls nur für normale User)
+  const canCreateEvent = isModerator || usage.openEvents < limits.maxOpenEvents;
+  const canCreateSeries = isModerator || usage.activeSeries < limits.maxActiveSeries;
 
   const sectionTitle = (label: string) => (
     <div className="flex items-center gap-3 pb-1">
@@ -88,13 +89,23 @@ export default async function MyEventsPanel({ userId }: { userId: string }) {
       <div className="glass rounded-2xl p-4 flex items-center gap-4 flex-wrap">
         <div className="flex-1 min-w-[220px]">
           <p className="text-sm font-semibold text-white">Eigene Events veranstalten</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Offene Einzel-Events: <span className="text-gray-300 tabular-nums">{usage.openEvents} / {limits.maxOpenEvents}</span>
-            {" · "}Aktive Reihen: <span className="text-gray-300 tabular-nums">{usage.activeSeries} / {limits.maxActiveSeries}</span>
-          </p>
-          <p className="text-[11px] text-gray-600 mt-1">
-            Sofort in der App sichtbar. Discord-Ankündigung und Push gibt es nach der Freigabe durch einen Mod.
-          </p>
+          {isModerator ? (
+            <p className="text-xs text-gray-500 mt-0.5">
+              Offene Einzel-Events: <span className="text-gray-300 tabular-nums">{usage.openEvents}</span>
+              {" · "}Aktive Reihen: <span className="text-gray-300 tabular-nums">{usage.activeSeries}</span>
+              {" · "}<span className="text-teal-300/80">als Mod/Admin ohne Limit</span>
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Offene Einzel-Events: <span className="text-gray-300 tabular-nums">{usage.openEvents} / {limits.maxOpenEvents}</span>
+                {" · "}Aktive Reihen: <span className="text-gray-300 tabular-nums">{usage.activeSeries} / {limits.maxActiveSeries}</span>
+              </p>
+              <p className="text-[11px] text-gray-600 mt-1">
+                Sofort in der App sichtbar. Discord-Ankündigung und Push gibt es nach der Freigabe durch einen Mod.
+              </p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {canCreateEvent ? (

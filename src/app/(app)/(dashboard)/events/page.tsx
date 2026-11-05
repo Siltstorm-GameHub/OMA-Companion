@@ -526,7 +526,7 @@ export default async function EventsPage() {
       )}
       {guestHasMore && <GuestMoreCta message="Alle Events gibt's nach dem Login" />}
         </>}
-        myEventsPanel={userId ? <MyEventsPanel userId={userId} /> : null}
+        myEventsPanel={userId ? <MyEventsPanel userId={userId} isModerator={isMod} /> : null}
         predictionsPanel={
           userId ? (
             <EventPredictionsPanel
