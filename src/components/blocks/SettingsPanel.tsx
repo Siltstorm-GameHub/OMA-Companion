@@ -1,9 +1,10 @@
 "use client";
-// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons/Gesten) + Tastenbelegung
+// OMA Blocks — Einstellungen (Steuerungs-Timing, Ghost, Touch-Buttons/Gesten) + Tasten-/Controller-Belegung
 
 import { HANDLING_LIMITS, SDF_INSTANT, FPS } from "@/lib/blocks/engine";
 import type { BlocksSettings } from "./settings";
 import KeyBindingsEditor from "./KeyBindingsEditor";
+import GamepadBindingsEditor from "./GamepadBindingsEditor";
 
 function Slider({
   label, hint, value, min, max, onChange, format,
@@ -68,6 +69,10 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
           <input type="checkbox" checked={settings.haptics} onChange={(e) => onChange({ ...settings, haptics: e.target.checked })} className="accent-teal-400" />
           Vibration
         </label>
+        <label className="flex items-center gap-2 text-white">
+          <input type="checkbox" checked={settings.gamepad} onChange={(e) => onChange({ ...settings, gamepad: e.target.checked })} className="accent-teal-400" />
+          Controller
+        </label>
       </div>
 
       {settings.gestures && (
@@ -100,6 +105,8 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
       )}
 
       <KeyBindingsEditor bindings={settings.keys} onChange={(keys) => onChange({ ...settings, keys })} />
+
+      {settings.gamepad && <GamepadBindingsEditor bindings={settings.pad} onChange={(pad) => onChange({ ...settings, pad })} />}
     </div>
   );
 }

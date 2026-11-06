@@ -125,6 +125,59 @@ export function keyName(code: string): string {
   return code;
 }
 
+// ---------- Controller (Belegung; Abfrage siehe gamepad.ts) ----------
+
+/** Controller-Tasten je Aktion (Indizes nach dem W3C-"standard"-Layout, STICK_* = linker Stick). */
+export type PadBindings = Record<BindableAction, number[]>;
+
+/** Virtuelle Tasten für den linken Stick. */
+export const STICK_LEFT = 100;
+export const STICK_RIGHT = 101;
+export const STICK_UP = 102;
+export const STICK_DOWN = 103;
+
+export const MAX_BUTTONS_PER_ACTION = 3;
+
+export const DEFAULT_PAD: PadBindings = {
+  left: [14, STICK_LEFT],
+  right: [15, STICK_RIGHT],
+  soft: [13, STICK_DOWN],
+  hard: [12],
+  cw: [0, 3],
+  ccw: [1, 2],
+  r180: [7],
+  hold: [4, 5],
+  pause: [9],
+  restart: [8],
+};
+
+export function defaultPadBindings(): PadBindings {
+  return Object.fromEntries(BINDABLE_ACTIONS.map((a) => [a, [...DEFAULT_PAD[a]]])) as PadBindings;
+}
+
+const VALID = new Set([...Array.from({ length: 17 }, (_, i) => i), STICK_LEFT, STICK_RIGHT, STICK_UP, STICK_DOWN]);
+export function isBindableButton(b: number): boolean {
+  return VALID.has(b);
+}
+
+/** Bereinigt gespeicherte Belegungen (wie normalizeKeyBindings). */
+export function normalizePadBindings(input: unknown): PadBindings {
+  const src = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const used = new Set<number>();
+  const out = {} as PadBindings;
+  for (const a of BINDABLE_ACTIONS) {
+    const raw = Array.isArray(src[a]) ? (src[a] as unknown[]) : DEFAULT_PAD[a];
+    const buttons: number[] = [];
+    for (const b of raw) {
+      if (typeof b !== "number" || !isBindableButton(b) || used.has(b) || buttons.length >= MAX_BUTTONS_PER_ACTION) continue;
+      used.add(b);
+      buttons.push(b);
+    }
+    out[a] = buttons;
+  }
+  return out;
+}
+
 export interface BlocksSettings {
   handling: HandlingSettings;
   ghost: boolean;
@@ -137,10 +190,14 @@ export interface BlocksSettings {
   haptics: boolean;
   /** Eigene Tastenbelegung. */
   keys: KeyBindings;
+  /** Controller-Steuerung aktiv. */
+  gamepad: boolean;
+  /** Controller-Belegung. */
+  pad: PadBindings;
 }
 
 const STORAGE_KEY = "oma-blocks-settings";
-const DEFAULTS: BlocksSettings = { handling: DEFAULT_HANDLING, ghost: true, touchControls: "auto", gestures: true, gestureSensitivity: 3, haptics: true, keys: defaultKeyBindings() };
+const DEFAULTS: BlocksSettings = { handling: DEFAULT_HANDLING, ghost: true, touchControls: "auto", gestures: true, gestureSensitivity: 3, haptics: true, keys: defaultKeyBindings(), gamepad: true, pad: defaultPadBindings() };
 
 function load(): BlocksSettings {
   try {
@@ -155,6 +212,8 @@ function load(): BlocksSettings {
       gestureSensitivity: typeof p.gestureSensitivity === "number" ? Math.max(1, Math.min(5, Math.round(p.gestureSensitivity))) : 3,
       haptics: p.haptics !== false,
       keys: normalizeKeyBindings(p.keys),
+      gamepad: p.gamepad !== false,
+      pad: normalizePadBindings(p.pad),
     };
   } catch {
     return DEFAULTS;
@@ -169,7 +228,7 @@ export function useBlocksSettings(): [BlocksSettings, (s: BlocksSettings) => voi
     setSettings(load());
   }, []);
   const save = useCallback((s: BlocksSettings) => {
-    const next = { ...s, handling: clampHandling(s.handling), keys: normalizeKeyBindings(s.keys) };
+    const next = { ...s, handling: clampHandling(s.handling), keys: normalizeKeyBindings(s.keys), pad: normalizePadBindings(s.pad) };
     setSettings(next);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

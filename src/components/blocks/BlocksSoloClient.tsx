@@ -14,6 +14,7 @@ import BlocksPlayfield from "./BlocksPlayfield";
 import SettingsPanel from "./SettingsPanel";
 import FullscreenShell, { requestPhoneFullscreen, useIsPhone } from "./FullscreenShell";
 import { useBlocksSettings } from "./settings";
+import { useGamepadActions } from "./gamepad";
 import type { BlocksRunner, RunnerResult } from "./runner";
 import { Button, Modal } from "@/components/ui";
 import { ArrowLeft, Pause, Play, RotateCcw, Settings, Trophy } from "@/components/icons";
@@ -172,6 +173,16 @@ export default function BlocksSoloClient({
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, start, showSettings]);
 
+  // Controller: Start-Taste startet aus Start-/Ergebnis-Bildschirm (nicht A o.ä. — die wird beim
+  // Game Over oft noch gehämmert und würde sofort die nächste Runde starten).
+  useGamepadActions(
+    settings.pad,
+    settings.gamepad && (phase === "idle" || phase === "result") && !showSettings,
+    useCallback((a) => {
+      if (a === "pause") void start();
+    }, [start]),
+  );
+
   const pps = hud.frame > 0 ? formatFixed((hud.pieces / (hud.frame / FPS)), 2) : "0,00";
   const finalStats = result ?? (localStats ? { score: localStats.score, lines: localStats.lines, level: localStats.level } : null);
 
@@ -184,7 +195,7 @@ export default function BlocksSoloClient({
         <Button onClick={() => void start()} loading={phase === "loading"} icon={<Play className="w-4 h-4" />} className="w-full">
           Spielen
         </Button>
-        <p className="text-[10px] text-gray-500 hidden sm:block">oder Enter drücken</p>
+        <p className="text-[10px] text-gray-500 hidden sm:block">oder Enter / Start am Controller drücken</p>
       </div>
     );
   } else if (phase === "countdown") {
@@ -279,6 +290,8 @@ export default function BlocksSoloClient({
         gestureSensitivity={settings.gestureSensitivity}
         haptics={settings.haptics}
         keyBindings={settings.keys}
+        gamepad={settings.gamepad}
+        padBindings={settings.pad}
         running={phase === "playing"}
         runnerRef={runnerRef}
         onSync={onSync}

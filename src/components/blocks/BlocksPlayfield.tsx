@@ -1,15 +1,16 @@
 "use client";
 // ============================================
-// OMA Blocks — Spielfeld (Canvas + Tastatur + Touch-Steuerung)
+// OMA Blocks — Spielfeld (Canvas + Tastatur + Controller + Touch-Steuerung)
 // ============================================
 // Erzeugt je Seed einen BlocksRunner (runner.ts). Der Elternteil steuert über `running`, ob die
 // Zeit läuft (Countdown, Pause), und bekommt Ereignisse, HUD-Takt und das Endergebnis gemeldet.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { BlocksEngine, EngineEvent, GameMode, HandlingSettings } from "@/lib/blocks/engine";
 import { BlocksRunner, type RunnerResult } from "./runner";
 import { BOARD_LEFT, LAYOUT_COLS, LAYOUT_ROWS } from "./render";
-import { actionForKey, DEFAULT_KEYS, type KeyBindings } from "./settings";
+import { actionForKey, DEFAULT_KEYS, DEFAULT_PAD, type BindableAction, type KeyBindings, type PadBindings } from "./settings";
+import { useGamepadActions } from "./gamepad";
 import { NO_SELECT_STYLE, PAD_HEIGHT, TouchPad, useBoardGestures, useTouchSafety } from "./TouchControls";
 
 export interface PlayfieldProps {
@@ -34,6 +35,10 @@ export interface PlayfieldProps {
   onGameOver?: (result: RunnerResult) => void;
   /** Eigene Tastenbelegung (Standard: DEFAULT_KEYS). */
   keyBindings?: KeyBindings;
+  /** Controller-Steuerung (Standard: an). */
+  gamepad?: boolean;
+  /** Controller-Belegung (Standard: DEFAULT_PAD). */
+  padBindings?: PadBindings;
   /** Pause-Taste (nur Solo). */
   onPauseKey?: () => void;
   /** Neustart-Taste (nur Solo). */
@@ -222,6 +227,17 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
       window.removeEventListener("blur", onBlur);
     };
   }, []);
+
+  // Controller — dieselben Aktionen wie die Tastatur, also auch im Replay identisch
+  const onPadPress = useCallback((action: BindableAction) => {
+    if (action === "pause") callbacksRef.current.onPauseKey?.();
+    else if (action === "restart") callbacksRef.current.onRestartKey?.();
+    else internalRef.current?.press(action);
+  }, []);
+  const onPadRelease = useCallback((action: BindableAction) => {
+    if (action !== "pause" && action !== "restart") internalRef.current?.release(action);
+  }, []);
+  useGamepadActions(props.padBindings ?? DEFAULT_PAD, props.gamepad !== false, onPadPress, onPadRelease);
 
   const cssWidth = LAYOUT_COLS * cssCell;
   const cssHeight = LAYOUT_ROWS * cssCell;
