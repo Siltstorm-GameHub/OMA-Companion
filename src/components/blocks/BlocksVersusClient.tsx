@@ -687,6 +687,7 @@ export default function BlocksVersusClient({
               gamepad={settings.gamepad && !showSettings}
               padBindings={settings.pad}
               running={running}
+              lockScroll={running || countdown !== null}
               runnerRef={runnerRef}
               onEvents={onEvents}
               onSync={onSync}

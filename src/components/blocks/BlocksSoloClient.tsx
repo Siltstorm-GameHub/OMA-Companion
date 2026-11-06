@@ -297,6 +297,7 @@ export default function BlocksSoloClient({
         gamepad={settings.gamepad && !showSettings}
         padBindings={settings.pad}
         running={phase === "playing"}
+        lockScroll={(phase === "countdown" || phase === "playing") && !showSettings}
         runnerRef={runnerRef}
         onSync={onSync}
         onGameOver={(r) => void submit(r)}

@@ -11,6 +11,7 @@ import { BlocksRunner, type RunnerResult } from "./runner";
 import { BOARD_LEFT, LAYOUT_COLS, LAYOUT_ROWS } from "./render";
 import { actionForKey, DEFAULT_KEYS, DEFAULT_PAD, type BindableAction, type KeyBindings, type PadBindings } from "./settings";
 import { useGamepadActions } from "./gamepad";
+import { useRoundScrollLock } from "./scrollLock";
 import { NO_SELECT_STYLE, PAD_HEIGHT, TouchPad, useBoardGestures, useTouchSafety } from "./TouchControls";
 
 export interface PlayfieldProps {
@@ -44,6 +45,8 @@ export interface PlayfieldProps {
   /** Neustart-Taste (nur Solo). */
   onRestartKey?: () => void;
   runnerRef?: { current: BlocksRunner | null };
+  /** Seite nicht scrollbar (solange die eigene Runde läuft, inkl. Countdown). */
+  lockScroll?: boolean;
   /** Overlay über dem Feld (Countdown, Pause, Ergebnis). */
   overlay?: ReactNode;
 }
@@ -97,6 +100,7 @@ export default function BlocksPlayfield(props: PlayfieldProps) {
   const showTouch = touchControls === "on" || (touchControls === "auto" && isTouch);
   const gestureHandlers = useBoardGestures(internalRef, cssCell, BOARD_LEFT, gestures, haptics, gestureSensitivity);
   useTouchSafety(internalRef, isTouch || showTouch);
+  useRoundScrollLock(!!props.lockScroll, containerRef);
 
   useEffect(() => {
     callbacksRef.current = props;
