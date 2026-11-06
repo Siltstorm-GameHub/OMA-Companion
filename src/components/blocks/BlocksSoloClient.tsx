@@ -15,6 +15,7 @@ import SettingsPanel from "./SettingsPanel";
 import FullscreenShell, { requestPhoneFullscreen, useIsPhone } from "./FullscreenShell";
 import { useBlocksSettings } from "./settings";
 import { useGamepadActions } from "./gamepad";
+import { useGamepadMenu } from "./gamepadMenu";
 import type { BlocksRunner, RunnerResult } from "./runner";
 import { Button, Modal } from "@/components/ui";
 import { ArrowLeft, Pause, Play, RotateCcw, Settings, Trophy } from "@/components/icons";
@@ -183,6 +184,9 @@ export default function BlocksSoloClient({
     }, [start]),
   );
 
+  // Controller in Menüs (Start-/Pause-/Ergebnis-Bildschirm, Einstellungen)
+  useGamepadMenu(settings.gamepad && (showSettings || phase === "idle" || phase === "result" || phase === "paused"));
+
   const pps = hud.frame > 0 ? formatFixed((hud.pieces / (hud.frame / FPS)), 2) : "0,00";
   const finalStats = result ?? (localStats ? { score: localStats.score, lines: localStats.lines, level: localStats.level } : null);
 
@@ -192,7 +196,7 @@ export default function BlocksSoloClient({
       <div className="glass-heavy rounded-2xl p-5 text-center space-y-3 max-w-[85%]">
         <p className="font-display text-xl font-black text-white">Marathon</p>
         <p className="text-xs text-gray-400">Räume Linien, steig im Level auf und hol dir den Highscore. Alle 10 Linien wird es schneller.</p>
-        <Button onClick={() => void start()} loading={phase === "loading"} icon={<Play className="w-4 h-4" />} className="w-full">
+        <Button data-pad-default onClick={() => void start()} loading={phase === "loading"} icon={<Play className="w-4 h-4" />} className="w-full">
           Spielen
         </Button>
         <p className="text-[10px] text-gray-500 hidden sm:block">oder Enter / Start am Controller drücken</p>
@@ -204,7 +208,7 @@ export default function BlocksSoloClient({
     overlay = (
       <div className="glass-heavy rounded-2xl p-5 text-center space-y-3">
         <p className="font-display text-xl font-black text-white">Pause</p>
-        <Button onClick={togglePause} icon={<Play className="w-4 h-4" />} className="w-full">Weiter</Button>
+        <Button data-pad-default onClick={togglePause} icon={<Play className="w-4 h-4" />} className="w-full">Weiter</Button>
         <Button variant="ghost" onClick={restart} className="w-full">Aufgeben</Button>
       </div>
     );
@@ -227,7 +231,7 @@ export default function BlocksSoloClient({
         )}
         {error && <p className="text-xs text-red-400">{error}</p>}
         <div className="flex gap-2 pt-1">
-          <Button onClick={() => void start()} disabled={phase === "submitting"} icon={<RotateCcw className="w-4 h-4" />} className="flex-1">
+          <Button data-pad-default onClick={() => void start()} disabled={phase === "submitting"} icon={<RotateCcw className="w-4 h-4" />} className="flex-1">
             Nochmal
           </Button>
           <Link href="/gems?spiel=blocks" className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 hover:border-white/20 text-gray-300 hover:text-white text-sm px-3 py-2">
@@ -290,7 +294,7 @@ export default function BlocksSoloClient({
         gestureSensitivity={settings.gestureSensitivity}
         haptics={settings.haptics}
         keyBindings={settings.keys}
-        gamepad={settings.gamepad}
+        gamepad={settings.gamepad && !showSettings}
         padBindings={settings.pad}
         running={phase === "playing"}
         runnerRef={runnerRef}

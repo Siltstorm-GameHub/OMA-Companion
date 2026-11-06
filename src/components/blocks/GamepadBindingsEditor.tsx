@@ -111,7 +111,7 @@ export default function GamepadBindingsEditor({ bindings, onChange }: { bindings
 
       {notice && <p className="text-[11px] text-amber-300">{notice}</p>}
       <p className="text-[11px] text-gray-500">
-        Tastennamen nach Xbox / PlayStation-Layout · Start pausiert bzw. startet eine Solo-Runde · gespeichert auf diesem Gerät.
+        Tastennamen nach Xbox / PlayStation-Layout · Start pausiert bzw. startet eine Solo-Runde · in Menüs: Steuerkreuz wählt, A bestätigt, B schließt · gespeichert auf diesem Gerät.
       </p>
     </div>
   );

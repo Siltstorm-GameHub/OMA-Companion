@@ -19,6 +19,7 @@ import SettingsPanel from "./SettingsPanel";
 import FullscreenShell, { useIsPhone } from "./FullscreenShell";
 import { drawMiniBoard } from "./render";
 import { useBlocksSettings } from "./settings";
+import { useGamepadMenu } from "./gamepadMenu";
 import type { BlocksRunner } from "./runner";
 import { Button, Modal } from "@/components/ui";
 import { ArrowLeft, Copy, Crown, Loader2, LogOut, Play, RefreshCw, Settings, Skull, Users, Zap } from "@/components/icons";
@@ -337,6 +338,8 @@ export default function BlocksVersusClient({
   const iPlay = !!game && !!myId && !!me?.inRound && game.players.includes(myId);
   const isPhone = useIsPhone();
   const fullscreen = isPhone && inGame && iPlay;
+  // Controller in Lobby, Raumwahl und Einstellungen — nicht, solange man selbst in der Runde spielt
+  useGamepadMenu(settings.gamepad && (showSettings || !(inGame && iPlay)));
   const playerById = new Map((room?.players ?? []).map((p) => [p.id, p]));
 
   const copyInvite = async (code = room?.code) => {
@@ -386,7 +389,7 @@ export default function BlocksVersusClient({
       <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
         <p className="text-sm text-gray-300">{statusText}</p>
         {status === "closed" && (
-          <Button onClick={() => setConnectNonce((n) => n + 1)} icon={<RefreshCw className="w-4 h-4" />}>
+          <Button data-pad-default onClick={() => setConnectNonce((n) => n + 1)} icon={<RefreshCw className="w-4 h-4" />}>
             Neu verbinden
           </Button>
         )}
@@ -411,7 +414,7 @@ export default function BlocksVersusClient({
           <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">{tourState ? PHASE_LABEL[tourState.phase] : "Turnier"}</p>
           {text ? <p className="text-sm text-gray-300">{text}</p> : <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />}
           {tourState?.me.canPlay && (
-            <Button onClick={() => void joinTournament()} loading={tourJoining} icon={<Play className="w-4 h-4" />}>
+            <Button data-pad-default onClick={() => void joinTournament()} loading={tourJoining} icon={<Play className="w-4 h-4" />}>
               Turnier-Raum betreten
             </Button>
           )}
@@ -430,7 +433,7 @@ export default function BlocksVersusClient({
             <h2 className="font-display text-lg font-bold text-white">Schnelles Spiel</h2>
           </div>
           <p className="text-xs text-gray-400">Tritt einem offenen Raum bei oder eröffne einen — andere können jederzeit dazukommen.</p>
-          <Button onClick={() => send({ t: "quick" })} className="w-full" icon={<Play className="w-4 h-4" />}>
+          <Button data-pad-default onClick={() => send({ t: "quick" })} className="w-full" icon={<Play className="w-4 h-4" />}>
             Mitspielen
           </Button>
         </div>
@@ -597,7 +600,7 @@ export default function BlocksVersusClient({
         )}
 
         {isHost ? (
-          <Button onClick={() => send({ t: "start" })} disabled={room.players.length < 2} className="w-full" icon={<Play className="w-4 h-4" />}>
+          <Button data-pad-default onClick={() => send({ t: "start" })} disabled={room.players.length < 2} className="w-full" icon={<Play className="w-4 h-4" />}>
             {room.players.length < 2 ? "Warte auf Mitspieler …" : "Runde starten"}
           </Button>
         ) : (
@@ -681,7 +684,7 @@ export default function BlocksVersusClient({
               gestureSensitivity={settings.gestureSensitivity}
               haptics={settings.haptics}
               keyBindings={settings.keys}
-              gamepad={settings.gamepad}
+              gamepad={settings.gamepad && !showSettings}
               padBindings={settings.pad}
               running={running}
               runnerRef={runnerRef}

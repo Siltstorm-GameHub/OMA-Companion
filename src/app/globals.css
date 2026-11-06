@@ -111,6 +111,11 @@ html, body { overflow-x: hidden; }
 :focus:not(:focus-visible) {
   outline: none;
 }
+/* Per Controller fokussiert (OMA Blocks, gamepadMenu.ts) — immer sichtbar */
+[data-pad-focus]:focus {
+  outline: 2px solid rgba(20,184,166,0.9);
+  outline-offset: 2px;
+}
 
 /* ── Mobile optimizations ──────────────────────────────────────── */
 /* Prevent text resize on orientation change (safe, no layout impact) */
