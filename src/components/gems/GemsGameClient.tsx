@@ -3,8 +3,8 @@
 // OMA Gems — eine Runde spielen (klassisch oder Tages-Herausforderung)
 // ============================================
 // Ablauf: Start → Server vergibt Seed (/api/gems/runs) → spielen → bei Spielende (oder „Beenden“) werden die Züge
-// eingereicht (/api/gems/runs/[id]); der Server spielt nach und wertet. Der Spielstand (Run-ID, Seed, Züge) liegt
-// nach jedem Zug im localStorage — wer die Seite schließt oder neu lädt, kann die Runde fortsetzen.
+// eingereicht (/api/gems/runs/[id]); der Server spielt nach und wertet. Der Spielstand (Run-ID, Seed, Züge inkl.
+// Joker) liegt nach jedem Zug im localStorage — wer die Seite schließt oder neu lädt, kann die Runde fortsetzen.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -12,23 +12,29 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   COLOR_NAMES,
   COLS,
+  JOKER_CODE,
+  JOKER_MOVES,
   applyMove,
   encodeMove,
   findHint,
   goalProgress,
   newGame,
   replayGame,
+  playJoker as applyJoker,
+  type BlastKind,
   type GameMode,
   type GameState,
+  type Goal,
   type LevelDef,
   type Piece,
+  type Step,
 } from "@/lib/gems/engine";
-import { getSoundSettings, playSfx, setSoundSettings } from "@/lib/game-sfx";
-import GemsBoard, { type Blast, type ScorePopup } from "./GemsBoard";
+import { getSoundSettings, playSfx, setSoundSettings, type Sfx } from "@/lib/game-sfx";
+import GemsBoard, { type Blast, type Burst, type ScorePopup } from "./GemsBoard";
 import GemIcon from "./GemIcon";
 import FullscreenShell, { requestBrowserFullscreen } from "@/components/blocks/FullscreenShell";
 import { Button, Modal } from "@/components/ui";
-import { ArrowLeft, BellOff, Flag, Lightbulb, Play, RotateCcw, Trophy, Volume2 } from "@/components/icons";
+import { ArrowLeft, BellOff, Flag, Lightbulb, Play, RotateCcw, Star, Trophy, Volume2, Zap } from "@/components/icons";
 
 type Phase = "menu" | "loading" | "playing" | "submitting" | "result";
 
@@ -48,10 +54,12 @@ interface SubmitResult {
   score: number;
   level: number;
   moves: number;
+  stars: number;
   boards: { board: string; isNew: boolean; best: number; place: number | null }[];
 }
 
-const saveKey = (mode: GameMode) => `oma-gems-run-v1:${mode}`;
+// v2: Regeln mit Kombos, Eis, Ketten, Joker — ältere Spielstände passen nicht mehr dazu.
+const saveKey = (mode: GameMode) => `oma-gems-run-v2:${mode}`;
 const HINT_AFTER_MS = 7000;
 const fmt = (n: number) => n.toLocaleString("de-DE");
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -77,26 +85,81 @@ function writeSaved(run: SavedRun | null, mode: GameMode) {
   }
 }
 
-/** Ziel eines Levels in Worten. */
+/** Ein Ziel in Worten (ohne Zugzahl). */
+function singleGoalText(g: Goal): string {
+  if (g.type === "score") return `${fmt(g.target)} Punkte`;
+  if (g.type === "collect") return `${g.count} × ${COLOR_NAMES[g.color]} sammeln`;
+  if (g.type === "stones") return `${g.count} Felsen zerstören`;
+  if (g.type === "ice") return `${g.count} Steine aus dem Eis befreien`;
+  return "so viele Punkte wie möglich";
+}
+
+/** Ziel(e) eines Levels in Worten. */
 export function goalText(def: LevelDef): string {
-  const g = def.goal;
-  if (g.type === "score") return `Erreiche ${fmt(g.target)} Punkte in ${def.moves} Zügen`;
-  if (g.type === "collect") return `Sammle ${g.count} × ${COLOR_NAMES[g.color]} in ${def.moves} Zügen`;
-  if (g.type === "stones") return `Zerstöre ${g.count} Felsen in ${def.moves} Zügen`;
-  return `So viele Punkte wie möglich in ${def.moves} Zügen`;
+  const goals = def.goals.filter((g) => g.type !== "none");
+  if (goals.length === 0) return `So viele Punkte wie möglich in ${def.moves} Zügen`;
+  const parts = goals.map(singleGoalText);
+  const text = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} und ${parts[parts.length - 1]}`;
+  return `${text[0].toUpperCase()}${text.slice(1)} in ${def.moves} Zügen`;
 }
 
 function noveltyText(def: LevelDef): string | null {
-  if (def.novelty === "color") return `Neu: eine weitere Edelsteinfarbe (${def.colors} Farben)!`;
-  if (def.novelty === "stones") return "Felsen! Sie lassen sich nicht kombinieren — nur Explosionen von Sondersteinen zerstören sie.";
-  return null;
+  switch (def.novelty) {
+    case "color":
+      return `Neu: eine weitere Edelsteinfarbe (${def.colors} Farben)!`;
+    case "stones":
+      return "Felsen! Sie lassen sich nicht kombinieren — nur Explosionen von Sondersteinen zerstören sie. Zwei Sondersteine liegen schon bereit.";
+    case "ice":
+      return "Eis! Eingefrorene Steine lassen sich nicht tauschen. Bau sie in eine Reihe ein oder sprenge sie, dann bricht das Eis.";
+    case "chains":
+      return "Ketten! Angekettete Steine lassen sich nicht tauschen, aber ganz normal kombinieren.";
+    case "double":
+      return "Ab jetzt hat jedes Level zwei Ziele — beide müssen geschafft werden.";
+    default:
+      return null;
+  }
 }
 
-function GoalIcon({ def }: { def: LevelDef }) {
-  const g = def.goal;
-  if (g.type === "collect") return <GemIcon piece={{ kind: "gem", color: g.color, special: "none" }} uid="goal-icon" />;
-  if (g.type === "stones") return <GemIcon piece={{ kind: "stone", color: -1, special: "none" }} uid="goal-stone" />;
+function GoalIcon({ goal, uid }: { goal: Goal; uid: string }) {
+  if (goal.type === "collect") return <GemIcon piece={{ kind: "gem", color: goal.color, special: "none" }} uid={uid} />;
+  if (goal.type === "stones") return <GemIcon piece={{ kind: "stone", color: -1, special: "none" }} uid={uid} />;
+  if (goal.type === "ice") return <GemIcon piece={{ kind: "gem", color: 3, special: "none", lock: "ice" }} uid={uid} />;
   return <Trophy className="w-full h-full text-amber-300" />;
+}
+
+function Stars({ count, max = 3, className = "w-5 h-5" }: { count: number; max?: number; className?: string }) {
+  return (
+    <span className="inline-flex gap-0.5">
+      {Array.from({ length: max }, (_, i) => (
+        <Star key={i} className={`${className} ${i < count ? "text-amber-300" : "text-white/15"}`} />
+      ))}
+    </span>
+  );
+}
+
+const COMBO_NAMES: Partial<Record<BlastKind, string>> = {
+  cross: "Kreuz-Kombo!",
+  cross3: "Riesenkreuz!",
+  bomb5: "Mega-Bombe!",
+  prism: "Prisma-Kombo!",
+  board: "Brett-Räumer!",
+};
+
+/** Klang je Explosion. */
+function sfxForBlast(kind: BlastKind): Sfx {
+  switch (kind) {
+    case "row":
+    case "col":
+      return "hit2";
+    case "bomb":
+      return "fire";
+    case "prism":
+      return "spell";
+    case "ice":
+      return "ice";
+    default:
+      return "boss";
+  }
 }
 
 export default function GemsGameClient({
@@ -119,12 +182,14 @@ export default function GemsGameClient({
   const [spawnFrom, setSpawnFrom] = useState<Record<number, number>>({});
   const [blasts, setBlasts] = useState<Blast[]>([]);
   const [popups, setPopups] = useState<ScorePopup[]>([]);
+  const [bursts, setBursts] = useState<Burst[]>([]);
+  const [shake, setShake] = useState(0);
   const [liveScore, setLiveScore] = useState(0);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<[number, number] | null>(null);
-  const [banner, setBanner] = useState<{ title: string; lines: string[]; def: LevelDef | null } | null>(null);
+  const [banner, setBanner] = useState<{ title: string; lines: string[]; def: LevelDef | null; stars: number | null } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [combo, setCombo] = useState(0);
+  const [combo, setCombo] = useState<{ n: number; label: string | null } | null>(null);
   const [saved, setSaved] = useState<SavedRun | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +202,7 @@ export default function GemsGameClient({
   const runRef = useRef<RunInfo | null>(null);
   const alive = useRef(true);
   const keyCounter = useRef(0);
+  const nextKey = (p: string) => `${p}${keyCounter.current++}`;
 
   useEffect(() => {
     alive.current = true;
@@ -148,8 +214,6 @@ export default function GemsGameClient({
     };
   }, [mode]);
 
-  const sfx = useCallback((...args: Parameters<typeof playSfx>) => playSfx(...args), []);
-
   const showBoard = useCallback((state: GameState, drop: boolean) => {
     if (drop) {
       const from: Record<number, number> = {};
@@ -159,12 +223,13 @@ export default function GemsGameClient({
     setCells(state.board.slice());
   }, []);
 
-  const levelBanner = useCallback((def: LevelDef, extra: string[] = []) => {
+  const levelBanner = useCallback((def: LevelDef, extra: string[] = [], stars: number | null = null) => {
     const nov = noveltyText(def);
     setBanner({
-      title: def.goal.type === "none" ? "Tages-Herausforderung" : `Level ${def.level}`,
+      title: def.goals[0]?.type === "none" ? "Tages-Herausforderung" : `Level ${def.level}`,
       lines: [...extra, goalText(def), ...(nov ? [nov] : [])],
       def,
+      stars,
     });
   }, []);
 
@@ -185,6 +250,11 @@ export default function GemsGameClient({
     },
     [levelBanner, showBoard],
   );
+
+  const persist = useCallback(() => {
+    const info = runRef.current;
+    if (info) writeSaved({ ...info, moves: movesRef.current, savedAt: Date.now() }, mode);
+  }, [mode]);
 
   const submit = useCallback(async () => {
     const info = runRef.current;
@@ -260,55 +330,39 @@ export default function GemsGameClient({
     if (rep.state.over) void submit();
   }, [begin, mode, submit]);
 
-  const swap = useCallback(
-    async (a: number, b: number) => {
-      const state = gameRef.current;
-      if (!state || busy || phase !== "playing" || banner) return;
-      setHint(null);
-      const res = applyMove(state, a, b);
-      const swapped = state.board.slice() as (Piece | null)[];
-      [swapped[a], swapped[b]] = [swapped[b], swapped[a]];
-      setBusy(true);
-      setSpawnFrom({});
-      setCells(swapped);
-
-      if (!res.ok) {
-        sfx("error", 0.6);
-        await sleep(190);
-        if (!alive.current) return;
-        setCells(state.board.slice());
-        await sleep(190);
-        setBusy(false);
-        return;
-      }
-
-      sfx("click", 0.6);
-      movesRef.current = [...movesRef.current, encodeMove(a, b)];
-      const info = runRef.current;
-      if (info) writeSaved({ ...info, moves: movesRef.current, savedAt: Date.now() }, mode);
-      await sleep(170);
-
-      let score = state.score;
-      for (const step of res.steps) {
+  /** Spielt die Schritte eines Zugs nacheinander ab (Abräumen, Nachfallen, Mischen, Levelwechsel). */
+  const playSteps = useCallback(
+    async (steps: Step[], startScore: number) => {
+      let score = startScore;
+      for (const step of steps) {
         if (!alive.current) return;
         if (step.type === "clear") {
           score += step.points;
           setLiveScore(score);
-          setCombo(step.cascade);
-          if (step.fired.length > 0) {
-            setBlasts(step.fired.map((f) => ({ key: `b${keyCounter.current++}`, index: f.index, special: f.special })));
-            sfx(step.fired.some((f) => f.special === "prism") ? "spell" : "fire", 0.7);
-          } else sfx(step.cascade === 1 ? "click" : "ping", 0.5 + Math.min(0.4, step.cascade * 0.1));
-          if (step.created.length > 0) sfx("buff", 0.6);
-          if (step.cleared.some((c) => c.kind === "stone")) sfx("block", 0.8);
+          const comboLabel = step.combo ? (COMBO_NAMES[step.combo] ?? null) : null;
+          if (step.cascade >= 2 || comboLabel) setCombo({ n: step.cascade, label: comboLabel });
+          const newBlasts: Blast[] = [
+            ...step.fired.map((f) => ({ key: nextKey("b"), index: f.index, kind: f.kind })),
+            ...step.unfrozen.map((i) => ({ key: nextKey("i"), index: i, kind: "ice" as const })),
+          ];
+          setBlasts(newBlasts);
+          setBursts(step.cleared.slice(0, 40).map((c) => ({ key: nextKey("s"), index: c.index, color: c.kind === "stone" ? -1 : c.color })));
+          // Klänge: die „größte“ Explosion zählt, sonst Match-Klang je Kaskade
+          if (step.combo) playSfx(sfxForBlast(step.combo), 0.9);
+          else if (step.fired.length > 0) playSfx(sfxForBlast(step.fired[0].kind), 0.75);
+          else playSfx(step.cascade === 1 ? "click" : "ping", 0.5 + Math.min(0.4, step.cascade * 0.1));
+          if (step.created.length > 0) playSfx("buff", 0.6);
+          if (step.unfrozen.length > 0) playSfx("ice", 0.7);
+          if (step.cleared.some((c) => c.kind === "stone")) playSfx("block", 0.8);
+          if (step.combo || step.fired.some((f) => f.kind === "bomb" || f.kind === "prism")) setShake((n) => n + 1);
           const spots = step.cleared.length > 0 ? step.cleared : step.created;
           if (spots.length > 0) {
             const mid = spots[Math.floor(spots.length / 2)].index;
-            setPopups((p) => [...p.slice(-6), { key: `p${keyCounter.current++}`, index: mid, text: `+${fmt(step.points)}` }]);
+            setPopups((p) => [...p.slice(-6), { key: nextKey("p"), index: mid, text: `+${fmt(step.points)}`, big: !!step.combo || step.points >= 1000 }]);
           }
           setSpawnFrom({});
           setCells(step.board);
-          await sleep(step.fired.length > 0 ? 300 : 220);
+          await sleep(step.combo ? 420 : step.fired.length > 0 ? 300 : 220);
         } else if (step.type === "fall") {
           const perCol = new Map<number, number>();
           step.board.forEach((p, i) => {
@@ -330,28 +384,71 @@ export default function GemsGameClient({
           await sleep(500);
           setNotice(null);
         } else if (step.type === "level") {
-          sfx("level", 0.9);
+          playSfx("level", 0.9);
           score += step.bonus;
           setLiveScore(score);
           await sleep(350);
           const from: Record<number, number> = {};
           step.board.forEach((p) => (from[p.id] = COLS + 1));
           setCells([]);
+          setBursts([]);
           await sleep(200);
-          levelBanner(step.def, [`Level ${step.def.level - 1} geschafft!`, ...(step.bonus > 0 ? [`Bonus für übrige Züge: +${fmt(step.bonus)}`] : [])]);
+          levelBanner(
+            step.def,
+            [`Level ${step.def.level - 1} geschafft!`, ...(step.bonus > 0 ? [`Bonus für übrige Züge: +${fmt(step.bonus)}`] : [])],
+            step.stars,
+          );
           setSpawnFrom(from);
           setCells(step.board);
         }
       }
+    },
+    [levelBanner],
+  );
+
+  const swap = useCallback(
+    async (a: number, b: number) => {
+      const state = gameRef.current;
+      if (!state || busy || phase !== "playing" || banner || state.outOfMoves) return;
+      setHint(null);
+      const res = applyMove(state, a, b);
+      const swapped = state.board.slice() as (Piece | null)[];
+      [swapped[a], swapped[b]] = [swapped[b], swapped[a]];
+      setBusy(true);
+      setSpawnFrom({});
+
+      if (!res.ok) {
+        playSfx("error", 0.6);
+        // Hindernisse wackeln nur, getauscht wird nichts
+        if (swapped[a]?.kind === "gem" && swapped[b]?.kind === "gem" && !swapped[a]?.lock && !swapped[b]?.lock) {
+          setCells(swapped);
+          await sleep(190);
+          if (!alive.current) return;
+          setCells(state.board.slice());
+        }
+        await sleep(190);
+        setBusy(false);
+        return;
+      }
+
+      setCells(swapped);
+      playSfx("click", 0.6);
+      movesRef.current = [...movesRef.current, encodeMove(a, b)];
+      persist();
+      await sleep(170);
+      await playSteps(res.steps, state.score);
       if (!alive.current) return;
-      setCombo(0);
+      setCombo(null);
       setPopups([]);
+      setBursts([]);
       gameRef.current = res.state;
       setGame(res.state);
       setLiveScore(res.state.score);
       setBusy(false);
-      if (res.state.over) {
-        sfx(res.state.mode === "daily" ? "win" : "lose", 0.8);
+      if (res.state.outOfMoves) {
+        playSfx("hurt", 0.7);
+      } else if (res.state.over) {
+        playSfx(res.state.mode === "daily" ? "win" : "lose", 0.8);
         setNotice(res.state.mode === "daily" ? "Alle Züge gespielt!" : "Keine Züge mehr — Ziel verfehlt");
         await sleep(1400);
         if (!alive.current) return;
@@ -359,12 +456,25 @@ export default function GemsGameClient({
         void submit();
       }
     },
-    [banner, busy, levelBanner, mode, phase, sfx, submit],
+    [banner, busy, persist, phase, playSteps, submit],
   );
+
+  const takeJoker = useCallback(() => {
+    const state = gameRef.current;
+    if (!state) return;
+    const next = applyJoker(state);
+    if (!next) return;
+    playSfx("reward", 0.9);
+    movesRef.current = [...movesRef.current, JOKER_CODE];
+    persist();
+    gameRef.current = next;
+    setGame(next);
+    setCells(next.board.slice());
+  }, [persist]);
 
   // Hinweis nach etwas Leerlauf
   useEffect(() => {
-    if (phase !== "playing" || busy || banner || !game || game.over) return;
+    if (phase !== "playing" || busy || banner || !game || game.over || game.outOfMoves) return;
     const t = setTimeout(() => setHint(findHint(game.board)), HINT_AFTER_MS);
     return () => clearTimeout(t);
   }, [phase, busy, banner, game]);
@@ -372,7 +482,7 @@ export default function GemsGameClient({
   // Level-Ansage schließt sich von selbst
   useEffect(() => {
     if (!banner) return;
-    const t = setTimeout(() => setBanner(null), 2600);
+    const t = setTimeout(() => setBanner(null), banner.lines.length > 3 ? 4200 : 3000);
     return () => clearTimeout(t);
   }, [banner]);
 
@@ -383,8 +493,8 @@ export default function GemsGameClient({
   };
 
   const fullscreen = phase !== "menu";
-  const goal = game ? goalProgress(game) : null;
-  const goalDone = goal ? goal.value >= goal.target : false;
+  const goals = game ? goalProgress(game) : [];
+  const showJokerDialog = phase === "playing" && !busy && !!game?.outOfMoves;
 
   // ── Menü ──
   if (!fullscreen) {
@@ -406,11 +516,15 @@ export default function GemsGameClient({
           <ul className="text-sm text-gray-300 space-y-1.5 list-disc pl-5">
             <li>Tausche zwei benachbarte Steine, sodass 3 oder mehr gleiche in einer Reihe liegen.</li>
             <li>4 in einer Reihe ergibt einen Linien-Stein, eine L- oder T-Form eine Bombe, 5 in einer Reihe ein Prisma.</li>
-            <li>Felsen lassen sich nicht kombinieren — nur Explosionen von Sondersteinen zerstören sie.</li>
+            <li>Tausche zwei Sondersteine miteinander für eine Kombo — Kreuz, Mega-Bombe oder Prisma-Kombo.</li>
+            <li>Felsen zerstören nur Explosionen. Eis bricht, wenn du den Stein in eine Reihe einbaust. Angekettete Steine kann man nicht tauschen, aber kombinieren.</li>
             {mode === "classic" ? (
-              <li>Jedes Level hat ein Ziel und eine begrenzte Zahl an Zügen. Wer sein Ziel verfehlt, ist raus.</li>
+              <li>
+                Jedes Level hat ein Ziel (ab Level 10 zwei) und begrenzte Züge. Übrige Züge bringen Bonus und bis zu 3 Sterne. Einmal pro
+                Runde rettet dich ein Joker mit {JOKER_MOVES} Extra-Zügen.
+              </li>
             ) : (
-              <li>Alle spielen heute dasselbe Brett: 30 Züge, so viele Punkte wie möglich. Dein bester Versuch zählt.</li>
+              <li>Alle spielen heute dasselbe Brett mit demselben Nachschub: 30 Züge, so viele Punkte wie möglich. Dein bester Versuch zählt.</li>
             )}
           </ul>
           <p className="text-xs text-gray-500">
@@ -449,8 +563,16 @@ export default function GemsGameClient({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="font-display text-lg font-black text-white leading-tight truncate">{title}</p>
-            <p className="text-[11px] text-gray-500 truncate">
-              {game?.mode === "classic" ? `Level ${game.level} · ${game.def.colors} Farben` : subtitle}
+            <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+              {game?.mode === "classic" ? (
+                <>
+                  Level {game.level} · {game.def.colors} Farben ·
+                  <Star className="w-3 h-3 text-amber-300" /> {game.stars}
+                  {game.jokers > 0 && <span className="text-teal-300"> · Joker bereit</span>}
+                </>
+              ) : (
+                subtitle
+              )}
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -462,7 +584,7 @@ export default function GemsGameClient({
                 <button
                   type="button"
                   onClick={() => game && setHint(findHint(game.board))}
-                  disabled={busy}
+                  disabled={busy || !!game?.outOfMoves}
                   className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-40"
                   aria-label="Tipp anzeigen"
                 >
@@ -484,51 +606,64 @@ export default function GemsGameClient({
 
         {/* HUD */}
         {game && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${goals.length > 1 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
             <Stat label="Punkte" value={fmt(liveScore)} />
             <Stat label="Züge" value={String(game.movesLeft)} warn={game.movesLeft <= 5} />
-            {goal ? (
-              <div className="glass rounded-xl px-3 py-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 shrink-0">
-                    <GoalIcon def={game.def} />
-                  </span>
-                  <span className={`text-sm font-bold tabular-nums ${goalDone ? "text-emerald-300" : "text-white"}`}>
-                    {game.def.goal.type === "score" ? `${Math.round((goal.value / goal.target) * 100)} %` : `${goal.value}/${goal.target}`}
-                  </span>
-                </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 transition-all duration-300" style={{ width: `${Math.min(100, (goal.value / goal.target) * 100)}%` }} />
-                </div>
-              </div>
+            {goals.length > 0 ? (
+              goals.map((g, k) => {
+                const done = g.value >= g.target;
+                return (
+                  <div key={k} className={`glass rounded-xl px-3 py-2 ${done ? "ring-1 ring-emerald-400/40" : ""}`}>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-4 h-4 shrink-0">
+                        <GoalIcon goal={g.goal} uid={`hud-goal-${k}`} />
+                      </span>
+                      <span className={`text-sm font-bold tabular-nums ${done ? "text-emerald-300" : "text-white"}`}>
+                        {g.goal.type === "score" ? `${Math.round((g.value / g.target) * 100)} %` : `${g.value}/${g.target}`}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 transition-all duration-300" style={{ width: `${Math.min(100, (g.value / g.target) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              })
             ) : (
               <Stat label={bestLabel.split(" ")[0]} value={best > 0 ? fmt(best) : "–"} />
             )}
           </div>
         )}
-        {game && game.def.goal.type !== "none" && <p className="text-[11px] text-gray-400 text-center">{goalText(game.def)}</p>}
+        {game && goals.length > 0 && <p className="text-[11px] text-gray-400 text-center">{goalText(game.def)}</p>}
 
         {/* Brett */}
         <div className="relative">
           <GemsBoard
             cells={cells}
             spawnFrom={spawnFrom}
-            disabled={busy || phase !== "playing" || !!banner}
+            disabled={busy || phase !== "playing" || !!banner || !!game?.outOfMoves}
             hint={hint}
             blasts={blasts}
             popups={popups}
+            bursts={bursts}
+            shake={shake}
             onSwap={swap}
           />
           <AnimatePresence>
-            {combo >= 2 && (
+            {combo && (
               <motion.div
-                key={`combo-${combo}`}
-                className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-amber-400/90 text-gray-900 text-sm font-black pointer-events-none"
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
+                key={`combo-${combo.n}-${combo.label}`}
+                className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-gray-900 font-black pointer-events-none whitespace-nowrap z-10"
+                style={{
+                  background: combo.label ? "linear-gradient(90deg,#f472b6,#facc15,#34d399,#60a5fa)" : "rgba(251,191,36,0.92)",
+                  fontSize: combo.label ? 18 : 14 + Math.min(8, combo.n * 1.5),
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
+                }}
+                initial={{ opacity: 0, scale: 0.5, y: -6 }}
+                animate={{ opacity: 1, scale: [0.5, 1.15, 1], y: 0 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3 }}
               >
-                Kombo ×{combo}
+                {combo.label ?? `Kombo ×${combo.n}`}
               </motion.div>
             )}
           </AnimatePresence>
@@ -537,7 +672,7 @@ export default function GemsGameClient({
               <motion.button
                 type="button"
                 onClick={() => setBanner(null)}
-                className="absolute inset-0 flex items-center justify-center p-6 rounded-2xl bg-black/55 backdrop-blur-[2px] text-center"
+                className="absolute inset-0 z-20 flex items-center justify-center p-6 rounded-2xl bg-black/60 backdrop-blur-[2px] text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -545,17 +680,31 @@ export default function GemsGameClient({
                 <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} className="space-y-2 max-w-xs">
                   {banner ? (
                     <>
-                      {banner.def && banner.def.goal.type !== "score" && banner.def.goal.type !== "none" && (
-                        <div className="w-12 h-12 mx-auto">
-                          <GoalIcon def={banner.def} />
+                      {banner.stars !== null && (
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }}>
+                          <Stars count={banner.stars} className="w-8 h-8" />
+                        </motion.div>
+                      )}
+                      {banner.def && (
+                        <div className="flex justify-center gap-2">
+                          {banner.def.goals
+                            .filter((g) => g.type !== "score" && g.type !== "none")
+                            .map((g, k) => (
+                              <div key={k} className="w-11 h-11">
+                                <GoalIcon goal={g} uid={`banner-goal-${k}`} />
+                              </div>
+                            ))}
                         </div>
                       )}
                       <p className="font-display text-3xl font-black text-white">{banner.title}</p>
-                      {banner.lines.map((l, i) => (
-                        <p key={i} className={i === banner.lines.length - 1 && banner.def?.novelty !== "none" && banner.def?.novelty !== "start" ? "text-sm text-amber-200" : "text-sm text-gray-200"}>
-                          {l}
-                        </p>
-                      ))}
+                      {banner.lines.map((l, i) => {
+                        const isNovelty = i === banner.lines.length - 1 && !!banner.def && noveltyText(banner.def) === l;
+                        return (
+                          <p key={i} className={isNovelty ? "text-sm text-amber-200" : "text-sm text-gray-200"}>
+                            {l}
+                          </p>
+                        );
+                      })}
                       <p className="text-[10px] text-gray-400 pt-1">Tippen zum Weiterspielen</p>
                     </>
                   ) : (
@@ -563,6 +712,32 @@ export default function GemsGameClient({
                   )}
                 </motion.div>
               </motion.button>
+            )}
+          </AnimatePresence>
+          {/* Joker */}
+          <AnimatePresence>
+            {showJokerDialog && !banner && (
+              <motion.div
+                className="absolute inset-0 z-20 flex items-center justify-center p-6 rounded-2xl bg-black/65 backdrop-blur-[2px] text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} className="space-y-3 max-w-xs">
+                  <p className="font-display text-2xl font-black text-white">Keine Züge mehr!</p>
+                  <p className="text-sm text-gray-300">
+                    Du hast noch deinen Joker: {JOKER_MOVES} Extra-Züge für dieses Level. Danach gibt es für das Level höchstens einen Stern.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Button onClick={takeJoker} icon={<Zap className="w-4 h-4" />}>
+                      Joker einsetzen (+{JOKER_MOVES} Züge)
+                    </Button>
+                    <Button variant="ghost" onClick={() => void submit()}>
+                      Aufhören & werten
+                    </Button>
+                  </div>
+                </motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -583,7 +758,11 @@ export default function GemsGameClient({
               <>
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="font-display text-2xl font-black text-white tabular-nums">{fmt(result?.score ?? liveScore)} Punkte</p>
-                  {mode === "classic" && result && <p className="text-sm text-gray-400">Level {result.level}</p>}
+                  {mode === "classic" && result && (
+                    <p className="text-sm text-gray-400 flex items-center gap-1.5">
+                      Level {result.level} · <Star className="w-4 h-4 text-amber-300" /> {result.stars}
+                    </p>
+                  )}
                 </div>
                 {result?.boards.map((b) => (
                   <p key={b.board} className="text-sm text-gray-300">

@@ -1,7 +1,7 @@
 // ============================================
 // POST /api/gems/runs/[id] — Runde OMA Gems einreichen
 // ============================================
-// Body: { moves: number[] } (kodierte Züge, siehe encodeMove in lib/gems/engine.ts). Der Server spielt die Runde
+// Body: { moves: number[] } (kodierte Züge, siehe encodeMove / JOKER_CODE in lib/gems/engine.ts). Der Server spielt die Runde
 // mit dem beim Start vergebenen Seed nach und übernimmt nur das selbst errechnete Ergebnis. Eine Runde kann nicht
 // schneller gespielt worden sein, als Züge nun mal brauchen — sonst wird sie abgelehnt. Man darf eine Runde auch
 // vorzeitig beenden (dann zählt der Stand bis dahin).
@@ -64,6 +64,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/gems/runs/[id]"
     score: state.score,
     level: state.level,
     moves: state.totalMoves,
+    stars: state.stars,
     boards: record.boards.map((b, i) => ({ ...b, place: places[i]?.place ?? null })),
   });
 }

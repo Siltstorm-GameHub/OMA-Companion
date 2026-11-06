@@ -3,7 +3,8 @@
 // ============================================
 // Jede Farbe hat zusätzlich eine eigene Form (Quadrat, Raute, Achteck, Kreis, Dreieck, Sechseck, Stern) — so
 // lassen sich die Steine auch ohne Farbsehen auseinanderhalten. Sondersteine bekommen ein Overlay: Streifen
-// (Linien-Stein), Glut-Ring (Bombe) bzw. sind ein Regenbogen-Prisma. Felsen sind graue Brocken.
+// (Linien-Stein), Glut-Ring (Bombe) bzw. sind ein Regenbogen-Prisma. Felsen sind graue Brocken, Eis ein
+// hellblauer Block über dem Stein, Ketten zwei gekreuzte Kettenstränge.
 
 import { memo } from "react";
 import type { Piece } from "@/lib/gems/engine";
@@ -108,13 +109,49 @@ function SpecialOverlay({ special }: { special: Piece["special"] }) {
   return null;
 }
 
+function Ice() {
+  return (
+    <>
+      <rect x="3" y="3" width="94" height="94" rx="16" fill="#bae6fd" opacity="0.45" stroke="#e0f2fe" strokeWidth="4" />
+      <path d="M12 30 L30 12 M14 52 L52 14 M60 88 L88 60" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.7" />
+      <path d="M70 20 L78 34 L66 40" stroke="#7dd3fc" strokeWidth="3" fill="none" opacity="0.9" />
+    </>
+  );
+}
+
+function ChainStrand({ rotate }: { rotate: number }) {
+  return (
+    <g transform={`rotate(${rotate} 50 50)`}>
+      {[14, 38, 62].map((x) => (
+        <rect key={x} x={x} y="42" width="26" height="16" rx="8" fill="none" stroke="#d6d3d1" strokeWidth="6" />
+      ))}
+      {[14, 38, 62].map((x) => (
+        <rect key={`i${x}`} x={x} y="42" width="26" height="16" rx="8" fill="none" stroke="#57534e" strokeWidth="2" />
+      ))}
+    </g>
+  );
+}
+
+function Chains() {
+  return (
+    <>
+      <ChainStrand rotate={45} />
+      <ChainStrand rotate={-45} />
+      <circle cx="50" cy="50" r="9" fill="#a8a29e" stroke="#44403c" strokeWidth="3" />
+    </>
+  );
+}
+
 /** Ein Spielstein. `uid` muss im Dokument eindeutig sein (SVG-Gradient-IDs). */
-function GemIconInner({ piece, uid }: { piece: Pick<Piece, "kind" | "color" | "special">; uid: string }) {
+function GemIconInner({ piece, uid }: { piece: Pick<Piece, "kind" | "color" | "special" | "lock">; uid: string }) {
   const special = piece.special;
+  const lock = piece.lock ?? "none";
   return (
     <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
       {piece.kind === "stone" ? <Stone /> : special === "prism" ? <Prism id={uid} /> : <GemShape color={piece.color} id={uid} />}
       {piece.kind === "gem" && special !== "none" && special !== "prism" && <SpecialOverlay special={special} />}
+      {piece.kind === "gem" && lock === "ice" && <Ice />}
+      {piece.kind === "gem" && lock === "chain" && <Chains />}
     </svg>
   );
 }

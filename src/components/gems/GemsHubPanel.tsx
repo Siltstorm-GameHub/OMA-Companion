@@ -64,7 +64,7 @@ export default async function GemsHubPanel({ userId }: { userId: string }) {
           </span>
           <span className="flex-1 min-w-0">
             <span className="block font-display text-lg font-bold text-white">Klassisch</span>
-            <span className="block text-xs text-gray-400">Level für Level mit Zielen — mit jeder Stufe neue Farben und Felsen.</span>
+            <span className="block text-xs text-gray-400">Level für Level mit Zielen, Kombos, Sternen — und immer neuen Hindernissen.</span>
           </span>
           <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
         </Link>
@@ -75,7 +75,7 @@ export default async function GemsHubPanel({ userId }: { userId: string }) {
           <span className="flex-1 min-w-0">
             <span className="block font-display text-lg font-bold text-white">Tages-Herausforderung</span>
             <span className="block text-xs text-gray-400">
-              Ein Brett für alle, 30 Züge. {todayPlace ? `Du bist heute auf Platz ${todayPlace.place}.` : "Heute noch nicht gespielt."}
+              Ein Brett und derselbe Nachschub für alle, 30 Züge. {todayPlace ? `Du bist heute auf Platz ${todayPlace.place}.` : "Heute noch nicht gespielt."}
             </span>
           </span>
           <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
