@@ -12,7 +12,7 @@ import type { BlocksEngine, EngineStats } from "@/lib/blocks/engine";
 import { FPS } from "@/lib/blocks/engine";
 import BlocksPlayfield from "./BlocksPlayfield";
 import SettingsPanel from "./SettingsPanel";
-import FullscreenShell, { requestPhoneFullscreen, useIsPhone } from "./FullscreenShell";
+import FullscreenShell, { requestBrowserFullscreen, useIsPhone } from "./FullscreenShell";
 import { useBlocksSettings } from "./settings";
 import { useGamepadActions } from "./gamepad";
 import { useGamepadMenu } from "./gamepadMenu";
@@ -69,14 +69,17 @@ export default function BlocksSoloClient({
   const [bests, setBests] = useState({ month: initialMonthBest, all: initialAllTimeBest });
   const runnerRef = useRef<BlocksRunner | null>(null);
   const isPhone = useIsPhone();
-  const fullscreen = isPhone && phase !== "idle";
+  // Ab „Spielen“ läuft alles im Vollbild (ohne App-Navigation); verlassen über „← OMA Blocks“ nach der Runde.
+  const fullscreen = phase !== "idle";
+  /** Runde läuft — keine Links, über die man das Spiel versehentlich verlässt. */
+  const inRound = phase === "countdown" || phase === "playing";
   const runRef = useRef(run);
   useEffect(() => {
     runRef.current = run;
   }, [run]);
 
   const start = useCallback(async () => {
-    if (isPhone) requestPhoneFullscreen();
+    requestBrowserFullscreen();
     setPhase("loading");
     setError(null);
     setResult(null);
@@ -93,7 +96,7 @@ export default function BlocksSoloClient({
       setError(e instanceof Error ? e.message : "Konnte keine Runde starten.");
       setPhase("idle");
     }
-  }, [isPhone]);
+  }, []);
 
   // Countdown 3-2-1
   useEffect(() => {
@@ -246,9 +249,11 @@ export default function BlocksSoloClient({
     <FullscreenShell active={fullscreen}>
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <Link href="/gems?spiel=blocks" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> OMA Blocks
-        </Link>
+        {inRound ? <span /> : (
+          <Link href="/gems?spiel=blocks" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
+            <ArrowLeft className="w-4 h-4" /> OMA Blocks
+          </Link>
+        )}
         <div className="flex items-center gap-1">
           {(phase === "playing" || phase === "paused") && (
             <Button variant="ghost" size="sm" onClick={togglePause} icon={phase === "paused" ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}>
@@ -303,7 +308,7 @@ export default function BlocksSoloClient({
         onGameOver={(r) => void submit(r)}
         onPauseKey={togglePause}
         onRestartKey={restart}
-        reserveHeight={fullscreen ? 175 : 250}
+        reserveHeight={isPhone && fullscreen ? 175 : fullscreen ? 200 : 250}
         overlay={overlay}
       />
 

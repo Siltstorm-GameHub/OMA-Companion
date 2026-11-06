@@ -1,10 +1,12 @@
 "use client";
 // ============================================
-// OMA Blocks — Vollbild während einer Runde (nur Handys)
+// OMA Blocks — Vollbild während einer Runde (alle Geräte)
 // ============================================
-// Auf Handys wird die Runde als eigenes Fenster über die ganze App gelegt (Portal an <body>, weil
-// die Seite per transform-Animation einblendet und `fixed` sonst nicht am Viewport hängt). Zusätzlich
-// wird — wo der Browser es erlaubt (Android) — beim ersten Antippen echtes Browser-Vollbild angefordert.
+// Die Runde wird als eigenes Fenster über die ganze App gelegt (Portal an <body>, weil die Seite per
+// transform-Animation einblendet und `fixed` sonst nicht am Viewport hängt) — ohne App-Navigation, über die
+// man das Spiel versehentlich verlassen könnte. Zusätzlich wird echtes Browser-Vollbild angefordert.
+// Browser erlauben das nur direkt nach einer Nutzer-Geste: beim Klick auf „Spielen“ / „Runde starten“
+// (requestBrowserFullscreen) und sonst beim ersten Klick, Antippen oder Tastendruck in der Runde.
 // iPhones kennen kein Element-Vollbild; dort bleibt es beim Overlay ohne App-Navigation.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -22,7 +24,7 @@ export function useIsPhone(): boolean {
 }
 
 /** Echtes Browser-Vollbild anfordern — nur innerhalb einer Nutzer-Geste wirksam. */
-export function requestPhoneFullscreen(): void {
+export function requestBrowserFullscreen(): void {
   const el = document.documentElement;
   if (document.fullscreenElement || !el.requestFullscreen) return;
   el.requestFullscreen({ navigationUI: "hide" }).catch(() => {
@@ -36,24 +38,49 @@ function exitFullscreen(): void {
   }
 }
 
-export default function FullscreenShell({ active, children }: { active: boolean; children: ReactNode }) {
-  // Browser-Vollbild nur einmal je aktiver Phase anfordern — wer es selbst verlässt, wird nicht bei
-  // jedem Antippen wieder hineingeholt. (Solo fordert zusätzlich bei jedem Rundenstart an.)
+export default function FullscreenShell({
+  active, keepFullscreen = active, wide = false, children,
+}: {
+  /** Spiel als Overlay über der App. */
+  active: boolean;
+  /** Browser-Vollbild bleibt bestehen, solange true (Versus: auch zwischen den Runden im Raum). */
+  keepFullscreen?: boolean;
+  /** Breiterer Inhalt (Versus mit Gegnerfeldern daneben). */
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  // Browser-Vollbild nur einmal je Vollbild-Phase anfordern — wer es selbst verlässt (Esc), wird nicht bei
+  // jedem Tastendruck wieder hineingeholt.
   const asked = useRef(false);
+  const keep = keepFullscreen || active;
 
   useEffect(() => {
-    if (!active) return;
+    if (!keep) return;
     asked.current = !!document.fullscreenElement;
     const onChange = () => {
       if (document.fullscreenElement) asked.current = true;
     };
     document.addEventListener("fullscreenchange", onChange);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("fullscreenchange", onChange);
-      document.body.style.overflow = prev;
       exitFullscreen();
+    };
+  }, [keep]);
+
+  useEffect(() => {
+    if (!active) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Tastendruck zählt als Nutzer-Geste (Esc nicht — damit verlässt man das Vollbild)
+    const onKey = (e: KeyboardEvent) => {
+      if (asked.current || e.code === "Escape") return;
+      asked.current = true;
+      requestBrowserFullscreen();
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKey, { capture: true });
+      document.body.style.overflow = prev;
     };
   }, [active]);
 
@@ -75,10 +102,10 @@ export default function FullscreenShell({ active, children }: { active: boolean;
       onPointerUpCapture={() => {
         if (asked.current) return;
         asked.current = true;
-        requestPhoneFullscreen();
+        requestBrowserFullscreen();
       }}
     >
-      <div className="px-3 max-w-3xl mx-auto">{children}</div>
+      <div className={`px-3 sm:px-6 sm:pt-4 mx-auto ${wide ? "max-w-6xl" : "max-w-3xl"}`}>{children}</div>
     </div>,
     document.body,
   );

@@ -16,7 +16,7 @@ import type { ClientMessage, PublicRoomInfo, RoomState, ServerMessage } from "@/
 import { MAX_ROOM_PLAYERS, ROOM_CODE_LENGTH } from "@/lib/blocks/protocol";
 import BlocksPlayfield from "./BlocksPlayfield";
 import SettingsPanel from "./SettingsPanel";
-import FullscreenShell, { useIsPhone } from "./FullscreenShell";
+import FullscreenShell, { requestBrowserFullscreen, useIsPhone } from "./FullscreenShell";
 import { drawMiniBoard } from "./render";
 import { useBlocksSettings } from "./settings";
 import { useGamepadMenu } from "./gamepadMenu";
@@ -337,7 +337,9 @@ export default function BlocksVersusClient({
   const inGame = !!room && room.phase !== "lobby";
   const iPlay = !!game && !!myId && !!me?.inRound && game.players.includes(myId);
   const isPhone = useIsPhone();
-  const fullscreen = isPhone && inGame && iPlay;
+  // Eigene Runde im Vollbild (alle Geräte, ohne App-Navigation); Handys zusätzlich im kompakten Layout.
+  const fullscreen = inGame && iPlay;
+  const compact = isPhone && fullscreen;
   // Controller in Lobby, Raumwahl und Einstellungen — nicht, solange man selbst in der Runde spielt
   useGamepadMenu(settings.gamepad && (showSettings || !(inGame && iPlay)));
   const playerById = new Map((room?.players ?? []).map((p) => [p.id, p]));
@@ -357,12 +359,12 @@ export default function BlocksVersusClient({
 
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <Link
+      {fullscreen ? <span /> : <Link
         href={tourMode ? `/tournament/${tournamentEventId}` : "/gems?spiel=blocks"}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white"
       >
         <ArrowLeft className="w-4 h-4" /> {tourMode ? "Zum Event" : "OMA Blocks"}
-      </Link>
+      </Link>}
       <div className="flex items-center gap-1">
         {room && !inGame && (
           <Button variant="ghost" size="sm" onClick={() => send({ t: "leave" })} icon={<LogOut className="w-4 h-4" />}>
@@ -433,7 +435,7 @@ export default function BlocksVersusClient({
             <h2 className="font-display text-lg font-bold text-white">Schnelles Spiel</h2>
           </div>
           <p className="text-xs text-gray-400">Tritt einem offenen Raum bei oder eröffne einen — andere können jederzeit dazukommen.</p>
-          <Button data-pad-default onClick={() => send({ t: "quick" })} className="w-full" icon={<Play className="w-4 h-4" />}>
+          <Button data-pad-default onClick={() => { requestBrowserFullscreen(); send({ t: "quick" }); }} className="w-full" icon={<Play className="w-4 h-4" />}>
             Mitspielen
           </Button>
         </div>
@@ -600,7 +602,7 @@ export default function BlocksVersusClient({
         )}
 
         {isHost ? (
-          <Button data-pad-default onClick={() => send({ t: "start" })} disabled={room.players.length < 2} className="w-full" icon={<Play className="w-4 h-4" />}>
+          <Button data-pad-default onClick={() => { requestBrowserFullscreen(); send({ t: "start" }); }} disabled={room.players.length < 2} className="w-full" icon={<Play className="w-4 h-4" />}>
             {room.players.length < 2 ? "Warte auf Mitspieler …" : "Runde starten"}
           </Button>
         ) : (
@@ -662,7 +664,7 @@ export default function BlocksVersusClient({
     body = (
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         {/* Handy-Vollbild: Gegner als schmale Leiste über dem eigenen Feld */}
-        {fullscreen && opponents.length > 0 && (
+        {compact && opponents.length > 0 && (
           <div className="w-full flex items-start gap-2 -mb-2">
             <div className="shrink-0 pt-1 text-center">
               <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest">Gegner</p>
@@ -691,14 +693,14 @@ export default function BlocksVersusClient({
               runnerRef={runnerRef}
               onEvents={onEvents}
               onSync={onSync}
-              reserveHeight={fullscreen ? 190 : 180}
+              reserveHeight={compact ? 190 : 180}
               overlay={overlay}
             />
           ) : (
             <div className="glass rounded-2xl p-6 text-center text-sm text-gray-400">Diese Runde läuft schon — du bist in der nächsten dabei.</div>
           )}
         </div>
-        {!fullscreen && (
+        {!compact && (
           <div className="w-full lg:w-[360px] grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-3">{opponentBoards(false)}</div>
         )}
       </div>
@@ -706,7 +708,7 @@ export default function BlocksVersusClient({
   }
 
   return (
-    <FullscreenShell active={fullscreen}>
+    <FullscreenShell active={fullscreen} keepFullscreen={!!room} wide>
     <div className="space-y-4">
       {header}
       <div className={fullscreen ? "hidden" : undefined}>
