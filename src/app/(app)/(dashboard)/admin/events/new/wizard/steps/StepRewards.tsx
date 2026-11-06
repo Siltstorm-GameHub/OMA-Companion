@@ -8,7 +8,7 @@ import type { EventWizard } from "../useEventWizard";
 
 // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
 export default function StepRewards({ w }: { w: EventWizard }) {
-  const { eventType, spectatorMode, seriesMode, gemsParticipationPack, setGemsParticipationPack, gemsPlacementPacks, setGemsPlacementPacks, isGemsTournament, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
+  const { eventType, spectatorMode, seriesMode, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
   if (w.isBlocksChallenge) {
     return (
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm text-gray-300">
@@ -49,19 +49,6 @@ export default function StepRewards({ w }: { w: EventWizard }) {
         {isEventMode && seriesMode !== "none" && (
           <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
         )}
-        {isGemsTournament && (
-          <div className="mt-3">
-            <label className={labelCls}>Karten-Pack <span className="text-gray-500 font-normal">(optional, zusätzlich zu den Münzen)</span></label>
-            <select value={gemsParticipationPack}
-              onChange={e => setGemsParticipationPack(e.target.value as typeof gemsParticipationPack)}
-              className={inputCls} style={inputStyle}>
-              <option value="">Kein Pack</option>
-              <option value="STANDARD">Standard-Pack</option>
-              <option value="PREMIUM">Premium-Pack</option>
-              <option value="COMMUNITY">Community-Pack</option>
-            </select>
-          </div>
-        )}
       </div>
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">
@@ -91,23 +78,6 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               </div>
             </div>
           ))}
-          {isGemsTournament && (
-            <div className="grid grid-cols-3 gap-3 pt-1">
-              {gemsPlacementPacks.map((pack, i) => (
-                <div key={i}>
-                  <label className={labelCls}><PlaceMedal place={i + 1} /> Karten-Pack <span className="text-gray-500 font-normal">(optional)</span></label>
-                  <select value={pack}
-                    onChange={e => setGemsPlacementPacks(prev => prev.map((pp, ii) => ii === i ? e.target.value as typeof pp : pp))}
-                    className={inputCls} style={inputStyle}>
-                    <option value="">Kein Pack</option>
-                    <option value="STANDARD">Standard-Pack</option>
-                    <option value="PREMIUM">Premium-Pack</option>
-                    <option value="COMMUNITY">Community-Pack</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 

@@ -4,8 +4,6 @@ import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
-import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/gems/gems-monster-catalog";
-import { getClassConfig } from "@/components/gems/BattleCardView";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { inputCls, inputStyle, labelCls } from "../shared";
@@ -13,7 +11,7 @@ import type { EventWizard } from "../useEventWizard";
 
 // ── Step 1 (Event): Grunddaten ────────────────────────────────────────────────
 export default function StepEventData({ w }: { w: EventWizard }) {
-  const { series, squads, forceSquad, setEventType, title, setTitle, startAt, setStartAt, endAt, setEndAt, game, setGame, genre, setGenre, maxPlayers, setMaxPlayers, description, setDescription, discordChannelId, setDiscordChannelId, seriesMode, setSeriesMode, selectedSeriesId, setSelectedSeriesId, newSeriesName, setNewSeriesName, newSeriesDesc, setNewSeriesDesc, publishMode, setPublishMode, publishAt, setPublishAt, startInPast, eventRegistrationLocked, setEventRegistrationLocked, eventSquadId, setEventSquadId, gemsDifficulty, setGemsDifficulty, gemsMaxAttempts, setGemsMaxAttempts, gemsMonsterIds, setGemsMonsterIds, gemsMonsterPick, setGemsMonsterPick, isGemsTournament, eventDataProblem } = w;
+  const { series, squads, forceSquad, setEventType, title, setTitle, startAt, setStartAt, endAt, setEndAt, game, setGame, genre, setGenre, maxPlayers, setMaxPlayers, description, setDescription, discordChannelId, setDiscordChannelId, seriesMode, setSeriesMode, selectedSeriesId, setSelectedSeriesId, newSeriesName, setNewSeriesName, newSeriesDesc, setNewSeriesDesc, publishMode, setPublishMode, publishAt, setPublishAt, startInPast, eventRegistrationLocked, setEventRegistrationLocked, eventSquadId, setEventSquadId, eventDataProblem } = w;
   return (
     <div className="space-y-4">
       <div>
@@ -29,7 +27,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             className={inputCls} style={inputStyle} />
         </div>
         <div>
-          <label className={labelCls}>{isGemsTournament ? "Ende (Turnierschluss) *" : "Ende (optional)"}</label>
+          <label className={labelCls}>Ende (optional)</label>
           <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)}
             className={inputCls} style={inputStyle} />
         </div>
@@ -49,7 +47,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
 
       <div>
         <label className={labelCls}>Spiel</label>
-        <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === "OMA Gems" || v === BLOCKS_GAME) setEventType("tournament"); }}
+        <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === BLOCKS_GAME) setEventType("tournament"); }}
           placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
       </div>
 
@@ -62,76 +60,6 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           labelCls={labelCls}
           inputStyle={inputStyle}
         />
-      )}
-
-      {isGemsTournament && (
-        <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
-          <p className="text-xs font-semibold text-violet-300">OMA Gems Turnier-Einstellungen</p>
-          <p className="text-[11px] text-gray-500 leading-relaxed">
-            Alle User treten im Zeitraum zwischen Start und Ende gegen dasselbe feste Gegner-Team an — ihr bester
-            Score zählt fürs Ranking. Auf der Battle-Cards-Seite erscheint dafür automatisch ein Banner mit
-            Countdown. Platzierungsbelohnungen werden weiter unten im Schritt Belohnungen festgelegt. Das
-            Turnier-Ende wird über das „Ende&quot;-Feld oben festgelegt.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Schwierigkeit</label>
-              <select value={gemsDifficulty} onChange={e => setGemsDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")}
-                className={inputCls} style={inputStyle}>
-                <option value="EASY">Einfach</option>
-                <option value="MEDIUM">Mittel</option>
-                <option value="HARD">Schwer</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Max. Versuche pro User</label>
-              <input type="number" min="1" value={gemsMaxAttempts} onChange={e => setGemsMaxAttempts(e.target.value)}
-                className={inputCls} style={inputStyle} />
-            </div>
-          </div>
-
-          <div>
-            <label className={labelCls}>Boss-Team ({gemsMonsterIds.length}/{GEMS_MONSTER_TEAM_MAX})</label>
-            <p className="text-[11px] text-gray-500 mb-2">
-              Leer lassen für eine zufällige Auswahl passend zur Schwierigkeit. Sonst gezielt bis zu{" "}
-              {GEMS_MONSTER_TEAM_MAX} Gegner wählen (auch mehrfach) — die Schwierigkeit oben bestimmt weiterhin
-              deren Stufe.
-            </p>
-            <div className="flex items-center gap-2">
-              <select value={gemsMonsterPick} onChange={e => setGemsMonsterPick(e.target.value)}
-                className={inputCls} style={inputStyle}>
-                {GEMS_MONSTER_CATALOG.map(m => (
-                  <option key={m.cardId} value={m.cardId}>
-                    {m.name} · {getClassConfig(m.class).label}
-                  </option>
-                ))}
-              </select>
-              <button type="button"
-                disabled={gemsMonsterIds.length >= GEMS_MONSTER_TEAM_MAX}
-                onClick={() => setGemsMonsterIds(prev => [...prev, gemsMonsterPick])}
-                className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 hover:bg-violet-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                + Hinzufügen
-              </button>
-            </div>
-            {gemsMonsterIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {gemsMonsterIds.map((cardId, i) => {
-                  const template = GEMS_MONSTER_CATALOG.find(m => m.cardId === cardId);
-                  return (
-                    <span key={`${cardId}-${i}`}
-                      className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] bg-white/5 border border-white/10 text-gray-300">
-                      {template?.name ?? cardId}
-                      <button type="button" onClick={() => setGemsMonsterIds(prev => prev.filter((_, ii) => ii !== i))}
-                        className="w-4 h-4 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors">
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
       )}
 
       {game && (

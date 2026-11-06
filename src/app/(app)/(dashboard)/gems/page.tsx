@@ -1,50 +1,15 @@
 // ============================================
 // /gems — Games-Hub: OMA Gems und OMA Blocks (Umschalter oben, ?spiel=blocks öffnet OMA Blocks)
 // ============================================
-// OMA Gems hat 3 Reiter (Spielen, Sammlung, Shop), OMA Blocks siehe components/blocks/BlocksHubPanel.
-// Einstieg in der App-Navigation. Wer noch kein Lineup hat, bekommt beim ersten Aufruf automatisch ein
-// Startpaket (siehe auto-starter.ts) — es gibt keine vorgeschaltete Helden-Einrichtung mehr.
-//    "Spielen"  („Weiter“-Karte mit Tageswerten, Event-Turnier, Spielmodi: Kampagne / Der Aufstieg / Last Stand mit Ranglisten),
-//    "Sammlung" (Startaufstellung + Karten),
-//    "Shop"     (Glücksrad, Packs öffnen und kaufen).
-//  Alte ?tab=-Werte landen über LEGACY_TABS in GemsTabs im passenden Reiter.
+// OMA Gems: Edelsteine tauschen — klassisch (Level mit Zielen) oder als Tages-Herausforderung, mit Ranglisten
+// und Monatswertung (siehe components/gems/GemsHubPanel). OMA Blocks siehe components/blocks/BlocksHubPanel.
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { ensureGemsStarter } from "@/lib/gems/auto-starter";
-import { countUnopenedPacks, peekNextPackKind, countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/gems/packs";
-import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/gems/card-view";
-import { getShopConfig } from "@/lib/shop-config";
-import { getCampaignLeaderboard, getSeasonLeaderboard, getWaveLeaderboard, toSeasonEntry, toWaveEntry } from "@/lib/gems/leaderboard";
-import { LAST_STAND_COINS_PER_WAVE } from "@/lib/gems/daily-rules";
-import { getEquippedRelicIds } from "@/lib/gems/relic-store";
-import { relicById } from "@/lib/gems/relics";
-import { getPlayStatus } from "@/lib/gems/play-status";
-import LeaderboardList, { LEADERBOARD_TEXTS } from "@/components/gems/LeaderboardList";
-import GemsPlayCard from "@/components/gems/GemsPlayCard";
-import PackOpener from "@/components/gems/PackOpener";
-import CardCollectionBrowser from "@/components/gems/CardCollectionBrowser";
-import GemsTabs from "./GemsTabs";
-import { ChevronRight, Gamepad2 } from "@/components/icons";
+import { Gamepad2 } from "@/components/icons";
 import GamesSwitcher from "./GamesSwitcher";
 import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
-import LineupStrip from "@/components/gems/LineupStrip";
-import PlayModes from "@/components/gems/PlayModes";
-import GemsTournamentBanner from "@/components/gems/GemsTournamentBanner";
-import CoinIcon from "@/components/CoinIcon";
-import DailySpin from "@/components/gems/shop/DailySpin";
-import BuyPack from "@/components/gems/shop/BuyPack";
-import HeroFigure from "@/components/gems/HeroFigure";
-import HeroBackdrop from "@/components/gems/HeroBackdrop";
-import { getOwnCommunityCard, getOwnedCosmetics } from "@/lib/gems/hero/my-hero";
-import { cardXp } from "@/lib/gems/card-ranks";
-import CosmeticShop from "@/components/gems/shop/CosmeticShop";
-import { effectiveHeroLook, type HeroClass } from "@/lib/gems/hero/look";
-
-const OTHER_CARDS_PAGE_SIZE = 12;
-const LEADERBOARD_PREVIEW = 5;
+import GemsHubPanel from "@/components/gems/GemsHubPanel";
 
 export const metadata = {
   title: "Games | OMA",
@@ -56,182 +21,6 @@ export default async function GemsPage() {
     redirect("/login?notice=login_required&callbackUrl=/gems");
   }
   const userId = session.user.id;
-
-  await ensureGemsStarter(userId);
-
-  const ownedUserCards = await prisma.userCard.findMany({
-    where: { userId },
-    include: { card: true },
-    orderBy: [{ inLineup: "desc" }, { acquiredAt: "asc" }],
-  });
-  const ownedCardIds = ownedUserCards.map((uc) => uc.cardId);
-
-  const otherCardsAll = await prisma.card.findMany({
-    where: { id: { notIn: ownedCardIds } },
-  });
-  const otherCardsSorted = sortByQuality(otherCardsAll);
-  const otherCardsFirstPage = otherCardsSorted.slice(0, OTHER_CARDS_PAGE_SIZE);
-
-  const avatarByDiscordId = await resolveAvatarsForCards([
-    ...ownedUserCards.map((uc) => uc.card),
-    ...otherCardsFirstPage,
-  ]);
-  const unopenedPacks = await countUnopenedPacks(userId);
-  const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
-  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
-  const [shopConfig, purchasedToday, todaySpin, leaderboardRows, seasonRows, waveRows, equippedRelicIds, ownHeroCard] = await Promise.all([
-    getShopConfig(),
-    countPacksPurchasedToday(userId),
-    prisma.dailySpin.findFirst({ where: { userId, date: new Date().toISOString().slice(0, 10) } }).catch(() => null),
-    getCampaignLeaderboard(),
-    getSeasonLeaderboard(),
-    getWaveLeaderboard(),
-    getEquippedRelicIds(userId),
-    getOwnCommunityCard(userId),
-  ]);
-
-  const ownedCards = ownedUserCards.map((uc) => ({
-    id: uc.id,
-    acquiredAt: uc.acquiredAt.toISOString(),
-    xp: cardXp(uc.winsInLineup, uc.rankBonusHalves, uc.gemXp),
-    card: toCardData(uc.card, avatarByDiscordId),
-  }));
-  const lineupCards = ownedUserCards
-    .filter((uc) => uc.inLineup)
-    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), xp: cardXp(uc.winsInLineup, uc.rankBonusHalves, uc.gemXp) }));
-
-  const coins = currentUser?.points ?? 0;
-  const playStatus = await getPlayStatus(userId, leaderboardRows, seasonRows);
-  const ownedCosmetics = ownHeroCard ? await getOwnedCosmetics(userId) : new Set<string>();
-  const seasonEntries = seasonRows.map(toSeasonEntry);
-  const waveEntries = waveRows.map(toWaveEntry);
-  const isLeader = playStatus.current.isEndless
-    ? seasonRows[0]?.userId === userId
-    : leaderboardRows[0]?.userId === userId;
-  const equippedRelics = equippedRelicIds.map((id) => relicById(id)!).filter(Boolean);
-
-  const spielenPanel = (
-    <div className="space-y-8">
-      <GemsPlayCard status={playStatus} isLeader={isLeader} />
-
-      <GemsTournamentBanner />
-
-      <PlayModes
-        defaultMode={playStatus.current.isEndless ? "aufstieg" : "campaign"}
-        aufstiegUnlocked={playStatus.aufstieg.unlocked}
-        lastStand={playStatus.lastStand}
-        seasonLabel={playStatus.season.label}
-        seasonDaysLeft={playStatus.season.daysLeft}
-        coinsPerWave={LAST_STAND_COINS_PER_WAVE}
-        aufstiegExtras={
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-bold text-white">Rangliste · Aufstieg · {playStatus.season.label}</h2>
-              <Link href="/gems/leaderboard" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
-                Alle Ranglisten →
-              </Link>
-            </div>
-            <LeaderboardList rows={seasonEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.saison} />
-          </div>
-        }
-        lastStandExtras={
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-bold text-white">Rangliste · Last Stand · {playStatus.season.label}</h2>
-              <Link href="/gems/leaderboard?ansicht=laststand" className="text-xs font-semibold text-gray-400 hover:text-white transition-colors">
-                Alle Plätze →
-              </Link>
-            </div>
-            <LeaderboardList rows={waveEntries} viewerId={userId} limit={LEADERBOARD_PREVIEW} {...LEADERBOARD_TEXTS.laststand} />
-          </div>
-        }
-      />
-    </div>
-  );
-
-  const sammlungPanel = (
-    <div className="space-y-4">
-      {ownHeroCard && (
-        <Link
-          href="/gems/held"
-          className="glass rounded-2xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors"
-        >
-          <span className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden">
-            <HeroBackdrop id={effectiveHeroLook(ownHeroCard).backdrop} />
-            <HeroFigure look={effectiveHeroLook(ownHeroCard)} title={ownHeroCard.name} className="relative w-full h-full" />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display text-base font-bold text-white">Mein Held gestalten</span>
-            <span className="block text-xs text-gray-400">
-              Gesicht, Frisur, Ausrüstung, Pose und Hintergrund deiner Community-Karte — so sehen dich alle Sammler.
-            </span>
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
-        </Link>
-      )}
-      <div>
-        <h2 className="font-display text-lg font-bold text-white">Deine Karten</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Antippen für Details. Karten steigen durch Siege in deiner Startaufstellung im Rang auf und werden stärker.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
-        <LineupStrip cards={lineupCards} />
-        <p className="text-[11px] text-gray-500 px-0.5">
-          {equippedRelics.length > 0
-            ? `Relikte: ${equippedRelics.map((r) => r.name).join(", ")}`
-            : "Noch keine Relikte — die gibt es für Wächter (Stufe 20, 30, …)."}{" "}
-          <Link href="/gems/lineup" className="font-semibold text-gray-400 hover:text-white">
-            Ändern →
-          </Link>
-        </p>
-      </div>
-
-      <CardCollectionBrowser
-        ownedCards={ownedCards}
-        initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
-        initialOtherTotal={otherCardsSorted.length}
-      />
-    </div>
-  );
-
-  const ladenPanel = (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-display text-lg font-bold text-white">Shop</h2>
-        <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400 tabular-nums"><CoinIcon size={16} /> {coins} Münzen</span>
-      </div>
-
-      <DailySpin
-        alreadySpun={!!todaySpin}
-        lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
-        initialPoints={coins}
-        prizes={shopConfig.wheelPrizes}
-      />
-
-      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <BuyPack
-          packPrices={shopConfig.packPrices}
-          initialPoints={coins}
-          dailyLimit={PACK_DAILY_PURCHASE_LIMIT}
-          purchasedToday={purchasedToday}
-        />
-      </div>
-
-      {ownHeroCard && (
-        <CosmeticShop
-          look={effectiveHeroLook(ownHeroCard)}
-          heroClass={ownHeroCard.class as HeroClass}
-          owned={[...ownedCosmetics]}
-          coins={coins}
-        />
-      )}
-    </div>
-  );
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
@@ -247,17 +36,7 @@ export default async function GemsPage() {
         </div>
         <p className="text-xs text-gray-500 ml-11">Die Community-Spiele · OMA Gems und OMA Blocks mit Ranglisten und Monatswertungen</p>
       </div>
-      <GamesSwitcher
-        gems={
-          <GemsTabs
-            spielenPanel={spielenPanel}
-            sammlungPanel={sammlungPanel}
-            ladenPanel={ladenPanel}
-            ladenBadge={unopenedPacks}
-          />
-        }
-        blocks={<BlocksHubPanel userId={userId} />}
-      />
+      <GamesSwitcher gems={<GemsHubPanel userId={userId} />} blocks={<BlocksHubPanel userId={userId} />} />
     </div>
   );
 }

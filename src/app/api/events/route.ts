@@ -12,16 +12,8 @@ import { EventCategory, EventGenre } from "@prisma/client";
 import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { createPollsForEvent } from "@/lib/event-polls";
-import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
-import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 import { sanitizeCommunityGoal } from "@/lib/community-goal";
-
-const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
-// Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —
-// es gibt kein "Spiel-Cover" für OMA Gems (kein echtes Steam-Spiel), ohne das würde
-// sonst der generische OMA-Companion-Platzhalter (EventCoverDefault) angezeigt.
-const GEMS_TOURNAMENT_DEFAULT_COVER = "/gems-assets/gems-tournament-cover.png";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -51,7 +43,6 @@ export async function POST(req: NextRequest) {
   const {
     title, description, game, genre, category, startAt, endAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, hidden, registrationLocked, squadId,
-    gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
     format: bodyFormat, statFields: bodyStatFields, statConfig: bodyStatConfig,
   } = body;
 
@@ -140,9 +131,6 @@ export async function POST(req: NextRequest) {
   }
   // Nur ein zukünftiger Zeitpunkt plant etwas — ein vergangener heißt "sofort veröffentlichen"
   const scheduledPublishAt = publishAtDate && publishAtDate > new Date() ? publishAtDate : null;
-  if (game === "OMA Gems" && !endDate) {
-    return NextResponse.json({ error: "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss)" }, { status: 400 });
-  }
   // OMA Blocks: Live-Turnier oder Community-Challenge (siehe lib/blocks/event-config.ts)
   const blocks = game === BLOCKS_GAME ? sanitizeBlocksEventConfig(body.blocks, !isModerator) : null;
   if (blocks?.kind === "challenge" && !endDate) {
@@ -272,7 +260,7 @@ export async function POST(req: NextRequest) {
       placementRewardsJson: rewardsData,
       ...(allowedCoverUrl(body.coverImageUrl, isModerator)
         ? { coverImageUrl: allowedCoverUrl(body.coverImageUrl, isModerator) }
-        : game === "OMA Gems" ? { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER } : {}),
+        : {}),
       ...(eventFormat        && { format:       eventFormat }),
       ...(eventStatFields    && { statFields:   eventStatFields }),
       ...(eventStatConfigJson && { statConfigJson: eventStatConfigJson }),
@@ -287,29 +275,6 @@ export async function POST(req: NextRequest) {
     },
     });
 
-    // OMA-Gems-Turnier: automatisch angehängt, sobald game === "OMA Gems" gewählt wurde (ein Ende ist
-    // dann Pflicht, siehe Validierung oben). Das Boss-Team wird EINMALIG erzeugt und persistiert, damit
-    // alle Teilnehmer exakt dasselbe Gegner-Team bekommen. Gleiche Transaktion wie das Event — sonst
-    // bliebe bei einem Fehler ein Gems-Event ohne Turnier zurück.
-    if (game === "OMA Gems" && endDate) {
-      const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
-      const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
-      const monsterCardIds: string[] | undefined =
-        Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
-          ? gemsMonsterIds
-          : undefined;
-      await tx.gemsTournament.create({
-        data: {
-          eventId: created.id,
-          // GemsTournament.endAt bewusst NICHT gesetzt (deprecated) — das Turnierende liegt
-          // jetzt auf Event.endAt (siehe endDate oben).
-          difficulty,
-          maxAttemptsPerUser,
-          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
-          monsterCardIdsJson: monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null,
-        },
-      });
-    }
     // OMA Blocks: Turnier bzw. Challenge gleich mit anlegen (gleiche Transaktion wie das Event)
     if (blocks?.kind === "tournament") {
       await tx.blocksTournament.create({

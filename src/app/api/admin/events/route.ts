@@ -8,18 +8,17 @@ import { sanitizeCheckInMinutes } from "@/lib/checkin";
 import { publishEvent } from "@/lib/event-publish";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
-import { generateGemsTournamentBossTeam } from "@/lib/gems/gems-tournament";
-import type { NpcDifficulty } from "@/lib/gems/npc-battle-types";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
-
-const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const {
     eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson,
-    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, endAt, gemsDifficulty, gemsMaxAttempts,
-    gemsMonsterIds, blocks: blocksBody, ...data
+    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, endAt, blocks: blocksBody,
+    // Felder der entfernten OMA-Gems-Turniere — von alten offenen Tabs evtl. noch mitgeschickt, ignorieren.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    gemsDifficulty: _gemsDifficulty, gemsMaxAttempts: _gemsMaxAttempts, gemsMonsterIds: _gemsMonsterIds,
+    ...data
   } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
@@ -211,53 +210,6 @@ export async function PATCH(req: NextRequest) {
           minContribution: blocks.minContribution,
           rewardCoins: blocks.rewardCoins,
           rewardRankPoints: blocks.rewardRankPoints,
-        },
-      });
-    }
-  }
-
-  // OMA-Gems-Turnier-Einstellungen (nur relevant, wenn dieses Event game === "OMA Gems" ist,
-  // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich Schwierigkeit oder
-  // Monster-Auswahl ändert UND noch keine Versuche existieren — sonst bleiben laufende
-  // Angriffe fair vergleichbar.
-  // gemsDifficulty wird nur mitgeschickt, wenn das Event ein OMA-Gems-Turnier ist UND das
-  // generische Ende-Feld gesetzt ist (siehe EventEditClient.tsx) — das Turnier-Ende selbst
-  // liegt jetzt auf Event.endAt (oben in `data` mit übernommen), GemsTournament.endAt wird
-  // für neue/aktualisierte Turniere bewusst nicht mehr geschrieben (deprecated).
-  if (gemsDifficulty !== undefined) {
-    const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
-    const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
-    const monsterCardIds: string[] | undefined =
-      Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
-        ? gemsMonsterIds
-        : undefined;
-    const monsterCardIdsJson = monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null;
-    const existing = await prisma.gemsTournament.findUnique({ where: { eventId } });
-    if (existing) {
-      const attemptCount = await prisma.gemsTournamentAttempt.count({ where: { tournamentId: existing.id } });
-      const difficultyChanged = existing.difficulty !== difficulty;
-      const monstersChanged = (existing.monsterCardIdsJson ?? null) !== monsterCardIdsJson;
-      await prisma.gemsTournament.update({
-        where: { id: existing.id },
-        data: {
-          difficulty,
-          maxAttemptsPerUser,
-          ...((difficultyChanged || monstersChanged) && attemptCount === 0
-            ? {
-                bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
-                monsterCardIdsJson,
-              }
-            : {}),
-        },
-      });
-    } else {
-      await prisma.gemsTournament.create({
-        data: {
-          eventId,
-          difficulty,
-          maxAttemptsPerUser,
-          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
-          monsterCardIdsJson,
         },
       });
     }

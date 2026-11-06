@@ -5,7 +5,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { seasonKey, seasonLabel } from "@/lib/gems/tower-season";
+import { seasonKey, seasonLabel } from "@/lib/month-season";
 import { ALL_TIME } from "@/lib/blocks/scores";
 import BlocksSoloClient from "@/components/blocks/BlocksSoloClient";
 

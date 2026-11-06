@@ -9,7 +9,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
-import { seasonKey, seasonLabel } from "@/lib/gems/tower-season";
+import { seasonKey, seasonLabel } from "@/lib/month-season";
 import { COIN_PREFIX, RANK_PREFIX } from "@/lib/points";
 import { getBlocksRewards, rewardLabel, type BlocksPlaceReward } from "./rewards-config";
 import type { EngineStats } from "./engine";

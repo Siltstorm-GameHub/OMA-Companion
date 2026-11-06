@@ -3,7 +3,7 @@ import { formatFixed } from "@/lib/format-number";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Plus, Trash2 } from "@/components/icons";
-import type { PackKind, PackPrices, ShopConfig, WheelPrize } from "@/lib/shop-config";
+import type { ShopConfig, WheelPrize } from "@/lib/shop-config";
 
 function newId() {
   return Math.random().toString(36).slice(2, 10);
@@ -11,19 +11,11 @@ function newId() {
 
 const TYPE_LABEL: Record<WheelPrize["type"], string> = {
   points: "Münzen",
-  pack: "Karten-Pack",
   nothing: "Nichts",
 };
 
-const PACK_KIND_INFO: Record<PackKind, { label: string; hint: string }> = {
-  STANDARD: { label: "Standard-Pack", hint: "1 Karte, sehr geringe Community-Chance" },
-  PREMIUM: { label: "Premium-Pack", hint: "5 Karten, ca. 25% Chance auf 1 Community-Karte" },
-  COMMUNITY: { label: "Community-Pack", hint: "1 Karte, garantiert Community" },
-};
-const PACK_KIND_ORDER: PackKind[] = ["STANDARD", "PREMIUM", "COMMUNITY"];
 
 export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
-  const [packPrices, setPackPrices] = useState<PackPrices>(initial.packPrices);
   const [prizes, setPrizes] = useState<WheelPrize[]>(initial.wheelPrizes);
   const [saving, setSaving] = useState(false);
 
@@ -59,21 +51,16 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
       toast.error("Gewichtung muss größer als 0 sein");
       return;
     }
-    if (PACK_KIND_ORDER.some((kind) => packPrices[kind] <= 0)) {
-      toast.error("Alle Pack-Preise müssen größer als 0 sein");
-      return;
-    }
 
     setSaving(true);
     try {
       const res = await fetch("/api/admin/shop", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packPrices, wheelPrizes: prizes }),
+        body: JSON.stringify({ wheelPrizes: prizes }),
       });
       if (!res.ok) { toast.error("Speichern fehlgeschlagen"); return; }
       const data: ShopConfig = await res.json();
-      setPackPrices(data.packPrices);
       setPrizes(data.wheelPrizes);
       toast.success("Shop-Einstellungen gespeichert");
     } catch {
@@ -85,28 +72,6 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
 
   return (
     <div className="space-y-6">
-      {/* ── Pack-Preise ── */}
-      <div className="glass rounded-2xl p-4 space-y-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Karten-Pack-Preise</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {PACK_KIND_ORDER.map((kind) => (
-            <label key={kind} className="block">
-              <span className="text-xs text-gray-500">{PACK_KIND_INFO[kind].label}</span>
-              <input
-                type="number"
-                min={1}
-                value={packPrices[kind]}
-                onChange={(e) =>
-                  setPackPrices((prev) => ({ ...prev, [kind]: parseInt(e.target.value, 10) || 0 }))
-                }
-                className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-teal-500/50"
-              />
-              <span className="mt-1 block text-[10px] text-gray-600">{PACK_KIND_INFO[kind].hint}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
       {/* ── Glücksrad-Preise ── */}
       <div className="glass rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between">

@@ -1,25 +1,21 @@
 // ============================================
-// Shop-Konfiguration (Pack-Preise je Sorte + Glücksrad-Preise)
+// Shop-Konfiguration (Glücksrad-Preise)
 // ============================================
 // Nutzt dieselbe BotConfig-Key-Value-Tabelle wie job-config/minigames-config
-// — admin-editierbar über /admin/shop.
+// — admin-editierbar über /admin/shop. (Karten-Packs gibt es seit dem Umbau von OMA Gems nicht mehr;
+// alte Pack-Preise im Rad werden beim Laden ausgefiltert.)
 
 import { prisma } from "./prisma";
 
 export interface WheelPrize {
   id: string;
-  type: "points" | "pack" | "nothing";
+  type: "points" | "nothing";
   value: string;
   label: string;
   weight: number;
 }
 
-export type PackKind = "STANDARD" | "PREMIUM" | "COMMUNITY";
-
-export type PackPrices = Record<PackKind, number>;
-
 export interface ShopConfig {
-  packPrices: PackPrices;
   wheelPrizes: WheelPrize[];
 }
 
@@ -30,70 +26,43 @@ const DEFAULT_WHEEL_PRIZES: WheelPrize[] = [
   { id: "p4", type: "points", value: "100", label: "100 Münzen", weight: 12 },
   { id: "p5", type: "points", value: "200", label: "200 Münzen ⭐", weight: 4 },
   { id: "p6", type: "points", value: "200", label: "200 Münzen", weight: 8 },
-  { id: "p7", type: "pack", value: "1", label: "Karten-Pack", weight: 3 },
   { id: "p8", type: "nothing", value: "0", label: "Kein Glück", weight: 1 },
 ];
 
-const DEFAULT_PACK_PRICES: PackPrices = {
-  STANDARD: 150,
-  PREMIUM: 600,
-  COMMUNITY: 2000,
-};
-
 export const DEFAULTS: ShopConfig = {
-  packPrices: DEFAULT_PACK_PRICES,
   wheelPrizes: DEFAULT_WHEEL_PRIZES,
 };
 
-// "shop_pack_cost" ist der historische Key aus der Zeit vor mehreren
-// Pack-Sorten — bleibt als Preis für STANDARD erhalten, damit ein bereits
-// konfigurierter Preis nicht verloren geht.
 const KEYS = {
-  packCostStandard: "shop_pack_cost",
-  packCostPremium: "shop_pack_cost_premium",
-  packCostCommunity: "shop_pack_cost_community",
   wheelPrizes: "shop_wheel_prizes",
 } as const;
 
-function parsePositiveInt(raw: string | undefined, fallback: number): number {
-  const n = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(n) && n > 0 ? n : fallback;
+/** Nur gültige Preise übernehmen (Münzen / Nichts) — z.B. alte Karten-Pack-Einträge fallen weg. */
+function sanitizePrizes(input: unknown): WheelPrize[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter(
+    (p): p is WheelPrize =>
+      !!p && typeof p === "object" && (p.type === "points" || p.type === "nothing") &&
+      typeof p.label === "string" && typeof p.id === "string" && Number(p.weight) > 0,
+  ).map((p) => ({ id: p.id, type: p.type, value: String(p.value ?? "0"), label: p.label, weight: Number(p.weight) }));
 }
 
 export async function getShopConfig(): Promise<ShopConfig> {
-  const rows = await prisma.botConfig.findMany({ where: { key: { in: Object.values(KEYS) } } });
-  const map = new Map(rows.map((r) => [r.key, r.value]));
-
-  const packPrices: PackPrices = {
-    STANDARD: parsePositiveInt(map.get(KEYS.packCostStandard), DEFAULTS.packPrices.STANDARD),
-    PREMIUM: parsePositiveInt(map.get(KEYS.packCostPremium), DEFAULTS.packPrices.PREMIUM),
-    COMMUNITY: parsePositiveInt(map.get(KEYS.packCostCommunity), DEFAULTS.packPrices.COMMUNITY),
-  };
-
-  const wheelPrizesRaw = map.get(KEYS.wheelPrizes);
+  const row = await prisma.botConfig.findUnique({ where: { key: KEYS.wheelPrizes } });
   let wheelPrizes = DEFAULTS.wheelPrizes;
-  if (wheelPrizesRaw) {
+  if (row) {
     try {
-      const parsed = JSON.parse(wheelPrizesRaw);
-      if (Array.isArray(parsed) && parsed.length > 0) wheelPrizes = parsed;
+      const parsed = sanitizePrizes(JSON.parse(row.value));
+      if (parsed.length > 0) wheelPrizes = parsed;
     } catch {
       // kaputtes JSON in der DB — Defaults verwenden statt zu crashen
     }
   }
-
-  return { packPrices, wheelPrizes };
+  return { wheelPrizes };
 }
 
 export async function updateShopConfig(patch: Partial<ShopConfig>): Promise<void> {
-  const entries: [string, string][] = [];
-  if (patch.packPrices?.STANDARD !== undefined) entries.push([KEYS.packCostStandard, String(patch.packPrices.STANDARD)]);
-  if (patch.packPrices?.PREMIUM !== undefined) entries.push([KEYS.packCostPremium, String(patch.packPrices.PREMIUM)]);
-  if (patch.packPrices?.COMMUNITY !== undefined) entries.push([KEYS.packCostCommunity, String(patch.packPrices.COMMUNITY)]);
-  if (patch.wheelPrizes !== undefined) entries.push([KEYS.wheelPrizes, JSON.stringify(patch.wheelPrizes)]);
-
-  await Promise.all(
-    entries.map(([key, value]) =>
-      prisma.botConfig.upsert({ where: { key }, create: { key, value }, update: { value } })
-    )
-  );
+  if (patch.wheelPrizes === undefined) return;
+  const value = JSON.stringify(sanitizePrizes(patch.wheelPrizes));
+  await prisma.botConfig.upsert({ where: { key: KEYS.wheelPrizes }, create: { key: KEYS.wheelPrizes, value }, update: { value } });
 }

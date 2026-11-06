@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -157,12 +156,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch (error) {
           console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
           if (!token.role) token.role = "user";
-        }
-      }
-
-      if (token.id && user) {
-        if (token.discordId) {
-          ensureCommunityCard({ userId: token.id as string, discordId: token.discordId as string, displayName: user.name ?? "OMA-Mitglied" }).catch(() => {});
         }
       }
 

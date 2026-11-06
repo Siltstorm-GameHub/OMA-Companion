@@ -31,19 +31,24 @@ const nextConfig: NextConfig = {
     // public/event-covers: Vorlagen-Cover, die branded-cover.ts für Discord von der Platte liest
     ].map((route) => [route, ["node_modules/sharp/**/*", "node_modules/@img/**/*", "public/event-covers/**/*"]]),
   ),
-  // OMA Battle Cards ist auf OMA Gems reduziert (siehe docs/gems-reduktion-plan.md) — alte Links
-  // leiten dauerhaft (308) weiter.
+  // OMA Gems ist ein schlichtes Edelstein-Tauschspiel (Karten, Kämpfe, Helden und Shop sind entfernt) —
+  // alte Links leiten dauerhaft (308) auf den Games-Hub weiter.
   async redirects() {
     return [
       // Der Games-Hub (OMA Gems + OMA Blocks) liegt unter /gems.
       { source: "/games", destination: "/gems", permanent: false },
       { source: "/blocks", destination: "/gems/blocks", permanent: false },
-      // Der Shop ist ein Reiter im Gems-Hub.
-      { source: "/shop", destination: "/gems?tab=laden", permanent: true },
+      // Der Shop (heute nur noch das Glücksrad) liegt im Gems-Hub.
+      { source: "/shop", destination: "/gems", permanent: false },
       // Alte Seiten-URLs von Battle Cards
       { source: "/battle-cards", destination: "/gems", permanent: true },
-      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)", destination: "/gems/:page", permanent: true },
-      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest+", destination: "/gems/:page/:rest+", permanent: true },
+      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)", destination: "/gems", permanent: true },
+      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest+", destination: "/gems", permanent: true },
+      // Seiten des früheren Karten-/Kampf-Systems von OMA Gems
+      { source: "/gems/:page(live|battles|lineup|leaderboard|held)", destination: "/gems", permanent: true },
+      { source: "/gems/:page(live|battles|lineup|leaderboard|held)/:rest+", destination: "/gems", permanent: true },
+      { source: "/admin/gems", destination: "/admin/minigames#gems", permanent: true },
+      { source: "/admin/gems/:path+", destination: "/admin/minigames#gems", permanent: true },
       { source: "/battle-cards/:page(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
       // Alte Asset-URLs: Grafiken und Sounds lagen bis Phase 5 unter /battle-cards/ und wurden von
       // einer früheren Pauschal-Weiterleitung (308, von Browsern gecacht) auf /gems/… umgeleitet.
@@ -54,11 +59,7 @@ const nextConfig: NextConfig = {
       { source: "/oma-quest/:path*", destination: "/gems", permanent: true },
       { source: "/dnd/:path*", destination: "/gems", permanent: true },
       { source: "/gems/:sub(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
-      // Interne Umbenennung battle-cards → gems: Admin-Bereich dauerhaft, die Spiel-API nur
-      // vorübergehend (307 behält POST und Body), damit noch offene Tabs mit altem JS weiterlaufen.
-      { source: "/admin/battle-cards/:path*", destination: "/admin/gems/:path*", permanent: true },
-      { source: "/api/battle-cards/:path*", destination: "/api/gems/:path*", permanent: false },
-      { source: "/api/admin/battle-cards/:path*", destination: "/api/admin/gems/:path*", permanent: false },
+      { source: "/admin/battle-cards/:path*", destination: "/admin/minigames#gems", permanent: true },
     ];
   },
   images: {

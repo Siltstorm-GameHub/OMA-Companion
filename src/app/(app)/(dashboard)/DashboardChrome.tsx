@@ -1,5 +1,4 @@
 "use client";
-import { usePathname } from "next/navigation";
 import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import MobileTopBar from "@/components/MobileTopBar";
@@ -29,13 +28,6 @@ export default function DashboardChrome({
   isGuest: boolean;
   inviteUrl: string | null;
 }) {
-  const pathname = usePathname();
-  // Laufender OMA-Gems-Kampf rendert sich selbst als
-  // Vollbild-Overlay mit eigenem "Verlassen"-Button (siehe LiveBattlePage) —
-  // die mobile BottomNav braucht es dort nicht zum Verlassen, überlappt aber
-  // (gleicher z-index 50, im DOM nach dem Kampf-Overlay) unten die Karten.
-  const isLiveBattle = pathname.startsWith("/gems/live/");
-
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
     <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": "2.25rem" } as React.CSSProperties}>
@@ -72,12 +64,10 @@ export default function DashboardChrome({
       {/* Community-Lobby-Chat */}
       <FloatingLobbyChat />
 
-      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy, außer im laufenden Kampf) ───────── */}
-      {!isLiveBattle && (
-        <div className="lg:hidden">
-          <BottomNav />
-        </div>
-      )}
+      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </div>
     </GuestGateProvider>
   );

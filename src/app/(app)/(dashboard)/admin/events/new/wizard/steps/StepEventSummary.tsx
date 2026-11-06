@@ -9,7 +9,7 @@ import type { EventWizard } from "../useEventWizard";
 
 // ── Step 4 (Event): Zusammenfassung ───────────────────────────────────────────
 export default function StepEventSummary({ w }: { w: EventWizard }) {
-  const { squads, category, eventType, spectatorMode, title, startAt, endAt, game, genre, maxPlayers, discordChannelId, seriesMode, newSeriesName, format, publishMode, publishAt, startInPast, seriesFixedFormat, playHomeAway, isRoundRobinFamily, pointsMode, coinsWin, coinsDraw, checkInEnabled, checkInMinutes, eventRegistrationLocked, eventSquadId, gemsDifficulty, gemsMaxAttempts, isGemsTournament, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, belongsToSeries, selectedSeries } = w;
+  const { squads, category, eventType, spectatorMode, title, startAt, endAt, game, genre, maxPlayers, discordChannelId, seriesMode, newSeriesName, format, publishMode, publishAt, startInPast, seriesFixedFormat, playHomeAway, isRoundRobinFamily, pointsMode, coinsWin, coinsDraw, checkInEnabled, checkInMinutes, eventRegistrationLocked, eventSquadId, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, belongsToSeries, selectedSeries } = w;
   const catCfg  = CATEGORIES.find(c => c.value === category);
   const genreCfg = genre ? GENRES.find(g => g.value === genre) : null;
   return (
@@ -28,19 +28,16 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
           {game && <p>🎮 {game}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
           {maxPlayers && <p>👥 Max. {maxPlayers} Spieler</p>}
           {spectatorMode && <p>👁️ Zuschauer-Modus aktiv</p>}
-          {eventType === "tournament" && !isGemsTournament && (
+          {eventType === "tournament" && (
             <p>⚔️ Format: {formatLabel(!seriesFixedFormat && format === "round_robin" && playHomeAway ? "liga" : (seriesFixedFormat ?? format))}
               {isRoundRobinFamily && pointsMode === "matchResult" && ` · ${coinsWin} Münzen/Sieg, ${coinsDraw}/Unentschieden`}</p>
           )}
-          {eventType === "tournament" && !isGemsTournament && checkInEnabled && <p>✅ Check-in {checkInMinutes} Min. vor Start</p>}
+          {eventType === "tournament" && checkInEnabled && <p>✅ Check-in {checkInMinutes} Min. vor Start</p>}
           {w.isBlocksEvent && w.blocks.kind === "tournament" && (
             <p>🧱 Live-Turnier · Vorrunde {w.blocks.groupRounds} Runden · Finale {w.blocks.finalRounds} Runden · Top {w.blocks.advancePerGroup} je Gruppe ins Finale{checkInEnabled ? ` · Check-in ${checkInMinutes} Min. vor Start` : ""}</p>
           )}
           {w.isBlocksChallenge && (
             <p>🧱 Challenge · gemeinsam {w.blocks.goal.toLocaleString("de-DE")} {w.blocks.metric === "score" ? "Punkte" : "Linien"} · Belohnung ab {w.blocks.minContribution.toLocaleString("de-DE")}: {w.blocks.rewardCoins} Münzen{w.blocks.rewardRankPoints ? ` + ${w.blocks.rewardRankPoints} Rang-Punkte` : ""}</p>
-          )}
-          {isGemsTournament && endAt && (
-            <p>💎 Turnier bis {formatBerlinDateTime(fromDatetimeLocalBerlin(endAt), { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
           )}
           {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
           {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}

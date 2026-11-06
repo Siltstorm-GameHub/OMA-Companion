@@ -40,8 +40,9 @@ export function normalizeBlocksRewards(input: unknown): BlocksRewardsConfig {
   }) as BlocksRewardsConfig;
 }
 
-export async function getBlocksRewards(): Promise<BlocksRewardsConfig> {
-  const row = await prisma.botConfig.findUnique({ where: { key: BLOCKS_REWARDS_KEY } });
+/** Monatssieger-Belohnungen unter einem BotConfig-Key lesen (auch von OMA Gems genutzt, eigener Key). */
+export async function getMonthlyRewards(key: string): Promise<BlocksRewardsConfig> {
+  const row = await prisma.botConfig.findUnique({ where: { key } });
   if (!row) return normalizeBlocksRewards(DEFAULT_BLOCKS_REWARDS);
   try {
     return normalizeBlocksRewards(JSON.parse(row.value));
@@ -50,15 +51,18 @@ export async function getBlocksRewards(): Promise<BlocksRewardsConfig> {
   }
 }
 
-export async function updateBlocksRewards(input: unknown): Promise<BlocksRewardsConfig> {
+export async function updateMonthlyRewards(key: string, input: unknown): Promise<BlocksRewardsConfig> {
   const value = normalizeBlocksRewards(input);
   await prisma.botConfig.upsert({
-    where: { key: BLOCKS_REWARDS_KEY },
-    create: { key: BLOCKS_REWARDS_KEY, value: JSON.stringify(value) },
+    where: { key },
+    create: { key, value: JSON.stringify(value) },
     update: { value: JSON.stringify(value) },
   });
   return value;
 }
+
+export const getBlocksRewards = (): Promise<BlocksRewardsConfig> => getMonthlyRewards(BLOCKS_REWARDS_KEY);
+export const updateBlocksRewards = (input: unknown): Promise<BlocksRewardsConfig> => updateMonthlyRewards(BLOCKS_REWARDS_KEY, input);
 
 /** Kurztext für Anzeige/Benachrichtigung, z.B. "500 Münzen + 100 Rang-Punkte". */
 export function rewardLabel(r: BlocksPlaceReward): string {

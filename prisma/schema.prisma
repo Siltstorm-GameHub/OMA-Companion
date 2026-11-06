@@ -165,6 +165,8 @@ model User {
   gemsWaveBests                    GemsWaveBest[]
   blocksRuns                       BlocksRun[]
   blocksBests                      BlocksBest[]
+  gemsRuns                         GemsRun[]
+  gemsBests                        GemsBest[]
   blocksMatchPlayers               BlocksMatchPlayer[]
   gemsCosmetics                    UserCosmetic[]
   createdEvents                    Event[]                      @relation("EventCreator")
@@ -2592,4 +2594,53 @@ model BlocksChallenge {
   succeeded        Boolean?
   finalizedAt      DateTime?
   createdAt        DateTime  @default(now())
+}
+
+// ── OMA Gems (Edelsteine tauschen, Level mit Zielen — siehe lib/gems/engine.ts) ─────────────────
+// Die Tabellen des früheren Karten-/Kampf-Systems (Card, UserCard, CardPack, GemsTournament, GemsPlayer,
+// GemsTower*, GemsWave* …) bleiben vorerst bestehen, damit keine Daten verloren gehen — der Code dazu ist entfernt.
+
+// Eine Runde. Beim Start vergibt der Server den Seed (finishedAt = null); beim Einreichen spielt er die Runde
+// aus Seed + Zügen nach und trägt das selbst errechnete Ergebnis ein.
+// mode: "classic" (Level mit Zielen) | "daily" (Tages-Brett, day = "YYYY-MM-DD", Seed aus dem Datum).
+model GemsRun {
+  id         String    @id @default(cuid())
+  userId     String
+  mode       String
+  seed       Int
+  day        String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+  season     String?
+  score      Int?
+  level      Int?
+  moves      Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([finishedAt, createdAt])
+}
+
+// Bestwerte je Wertung. board: "classic:YYYY-MM" (Monat), "classic:all" (All-Time), "daily:YYYY-MM-DD" (Tag).
+model GemsBest {
+  id        String   @id @default(cuid())
+  userId    String
+  board     String
+  score     Int
+  level     Int
+  runId     String
+  reachedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, board])
+  @@index([board, score])
+}
+
+// Abgeschlossene Monatswertung (eingefroren vom Cron cron/gems-season, Belohnungen ausgezahlt).
+model GemsMonth {
+  season      String   @id
+  finalizedAt DateTime @default(now())
+  rankingJson String
 }

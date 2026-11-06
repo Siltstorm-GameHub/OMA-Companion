@@ -12,7 +12,7 @@ function gameFromParam(v: string | null): GameKey {
 }
 
 const GAMES: { key: GameKey; label: string; sub: string; icon: typeof Gem; color: string }[] = [
-  { key: "gems", label: "OMA Gems", sub: "Match-3-Kämpfe", icon: Gem, color: "20,184,166" },
+  { key: "gems", label: "OMA Gems", sub: "Edelsteine tauschen · Level", icon: Gem, color: "20,184,166" },
   { key: "blocks", label: "OMA Blocks", sub: "Blöcke stapeln · Versus", icon: LayoutGrid, color: "192,132,252" },
 ];
 

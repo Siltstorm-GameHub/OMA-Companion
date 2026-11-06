@@ -1,5 +1,5 @@
 "use client";
-// Admin: Belohnungen für Platz 1–3 der OMA-Blocks-Monatswertung (Münzen + Rang-Punkte)
+// Admin: Belohnungen für Platz 1–3 einer Monatswertung (OMA Blocks bzw. OMA Gems — Münzen + Rang-Punkte)
 
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,7 +8,15 @@ import type { BlocksRewardsConfig } from "@/lib/blocks/rewards-config";
 
 const PLACES = ["🥇 Platz 1", "🥈 Platz 2", "🥉 Platz 3"];
 
-export function BlocksRewardsPanel({ initial }: { initial: BlocksRewardsConfig }) {
+export function BlocksRewardsPanel({
+  initial,
+  endpoint = "/api/admin/blocks-rewards",
+  ranking = "Solo-Monatswertung",
+}: {
+  initial: BlocksRewardsConfig;
+  endpoint?: string;
+  ranking?: string;
+}) {
   const [config, setConfig] = useState<BlocksRewardsConfig>(initial);
   const [saving, setSaving] = useState(false);
 
@@ -19,7 +27,7 @@ export function BlocksRewardsPanel({ initial }: { initial: BlocksRewardsConfig }
   async function save() {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/blocks-rewards", {
+      const res = await fetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
@@ -38,7 +46,7 @@ export function BlocksRewardsPanel({ initial }: { initial: BlocksRewardsConfig }
     <div className="space-y-4">
       <div className="glass rounded-2xl p-4 space-y-4">
         <p className="text-xs text-gray-500">
-          Wird beim Monatsabschluss (in der Nacht nach dem Monatswechsel) an die besten drei der Solo-Monatswertung
+          Wird beim Monatsabschluss (in der Nacht nach dem Monatswechsel) an die besten drei der {ranking}
           ausgezahlt. 0 = keine Belohnung dieser Art.
         </p>
         {config.map((r, i) => (

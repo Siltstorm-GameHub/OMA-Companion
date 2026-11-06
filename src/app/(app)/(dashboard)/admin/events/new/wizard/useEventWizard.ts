@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { EventCategory, EventGenre } from "@prisma/client";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
-import { GEMS_MONSTER_CATALOG } from "@/lib/gems/gems-monster-catalog";
 import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
 import { fromDatetimeLocalBerlin } from "@/lib/time";
 import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
@@ -61,8 +60,7 @@ export function useEventWizard({
   // ── Event mode state ─────────────────────────────────────────────────────────
   const [title, setTitle]             = useState(tpl?.title ?? "");
   const [startAt, setStartAt]         = useState(tpl?.startAt ?? "");
-  // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar, bei OMA-Gems-Turnieren
-  // wie bisher genutzt (siehe isGemsTournament unten), schreibt aber auf Event.endAt.
+  // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar (Event.endAt).
   const [endAt, setEndAt]             = useState(tpl?.endAt ?? "");
   const [game, setGame]               = useState(tpl?.game ?? "");
   const [genre, setGenre]             = useState<EventGenre | null>(tpl?.genre ?? null);
@@ -93,17 +91,6 @@ export function useEventWizard({
   const [checkInMinutes, setCheckInMinutes] = useState(tpl?.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(tpl?.registrationLocked ?? false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
-
-  // ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ────────────────────────────
-  const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
-  const [gemsMaxAttempts, setGemsMaxAttempts] = useState("3");
-  // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
-  const [gemsMonsterIds, setGemsMonsterIds] = useState<string[]>([]);
-  const [gemsMonsterPick, setGemsMonsterPick] = useState(GEMS_MONSTER_CATALOG[0]?.cardId ?? "");
-  // Optionale Karten-Pack-Belohnung on top der Münzen/Rang-Punkte (siehe Schritt "Belohnungen").
-  const [gemsParticipationPack, setGemsParticipationPack] = useState<"" | "STANDARD" | "PREMIUM" | "COMMUNITY">("");
-  const [gemsPlacementPacks, setGemsPlacementPacks] = useState<("" | "STANDARD" | "PREMIUM" | "COMMUNITY")[]>(["", "", ""]);
-  const isGemsTournament = game === "OMA Gems";
 
   // ── OMA Blocks (nur bei game === "OMA Blocks"): Live-Turnier oder Community-Challenge ──────────
   const [blocks, setBlocks] = useState<BlocksEventConfig>(DEFAULT_BLOCKS_EVENT);
@@ -217,10 +204,8 @@ export function useEventWizard({
   }, [seriesStartDate, seriesEndDate, recurrenceType, recurrenceMonthlyMode]);
 
   // ── Step lists ───────────────────────────────────────────────────────────────
-  // Event mode: skip tournament step if community ODER OMA Gems (Format/Bracket
-  // sind dort irrelevant — die Turnier-Einstellungen kommen stattdessen aus dem
-  // eigenen Block in renderStepEventData, siehe isGemsTournament oben).
-  const showsTournamentStep = eventType === "tournament" && !isGemsTournament && !isBlocksEvent;
+  // Event mode: skip tournament step bei OMA Blocks (Format/Bracket sind dort irrelevant).
+  const showsTournamentStep = eventType === "tournament" && !isBlocksEvent;
   // Start in der Vergangenheit: Anmeldung wäre sofort geschlossen, die Ankündigung käme zu spät
   const startInPast = !!startAt && fromDatetimeLocalBerlin(startAt) < new Date();
 
@@ -267,11 +252,6 @@ export function useEventWizard({
     checkInMinutes,
     eventRegistrationLocked,
     eventSquadId,
-    gemsDifficulty,
-    gemsMaxAttempts,
-    gemsMonsterIds,
-    gemsParticipationPack,
-    gemsPlacementPacks,
     blocks,
     seriesName,
     seriesDesc,
@@ -341,11 +321,6 @@ export function useEventWizard({
     checkInMinutes: setCheckInMinutes,
     eventRegistrationLocked: setEventRegistrationLocked,
     eventSquadId: setEventSquadId,
-    gemsDifficulty: setGemsDifficulty,
-    gemsMaxAttempts: setGemsMaxAttempts,
-    gemsMonsterIds: setGemsMonsterIds,
-    gemsParticipationPack: setGemsParticipationPack,
-    gemsPlacementPacks: setGemsPlacementPacks,
     blocks: setBlocks,
     seriesName: setSeriesName,
     seriesDesc: setSeriesDesc,
@@ -418,7 +393,6 @@ export function useEventWizard({
   function eventDataProblem(): string | null {
     if (!title.trim()) return "Titel fehlt.";
     if (!startAt) return "Start-Datum fehlt.";
-    if (isGemsTournament && !endAt) return "Ein OMA-Gems-Turnier braucht ein Ende (Turnierschluss).";
     if (isBlocksChallenge && !endAt) return "Eine OMA-Blocks-Challenge braucht ein Ende.";
     if (isBlocksChallenge && !(blocks.goal > 0)) return "Bitte ein Ziel für die Challenge angeben.";
     if (endAt && fromDatetimeLocalBerlin(endAt) <= fromDatetimeLocalBerlin(startAt)) return "Das Ende muss nach dem Start liegen.";
@@ -486,12 +460,7 @@ export function useEventWizard({
     const effectivePlacementsBase = eventType === "community"
       ? placements.map(p => ({ ...p, rankPoints: 0 }))
       : placements;
-    // Karten-Pack-Belohnungen sind nur bei OMA-Gems-Turnieren wählbar (siehe gems-tournament.ts:
-    // finalizeDueGemsTournaments liest packKind/participationPackKind, alle anderen Event-Typen
-    // ignorieren diese Zusatzfelder einfach).
-    const effectivePlacements = isGemsTournament
-      ? effectivePlacementsBase.map((p, i) => gemsPlacementPacks[i] ? { ...p, packKind: gemsPlacementPacks[i] } : p)
-      : effectivePlacementsBase;
+    const effectivePlacements = effectivePlacementsBase;
 
     const body: Record<string, unknown> = {
       title: title.trim(),
@@ -517,7 +486,6 @@ export function useEventWizard({
         participationCoins,
         participationRankPts: effectiveParticipationRankPts,
         placements: effectivePlacements,
-        ...(isGemsTournament && gemsParticipationPack && { participationPackKind: gemsParticipationPack }),
       },
       pollsConfigJson: polls.length > 0 ? polls : null,
     };
@@ -527,7 +495,7 @@ export function useEventWizard({
       // "liga" bleibt intern der gespeicherte Wert für Liga mit Hin-/Rückrunde
       body.format = !seriesFixedFormat && format === "round_robin" && playHomeAway ? "liga" : chosenFormat;
       if (isRoundRobinFamily && pointsMode === "matchResult") body.matchResultPoints = { win: coinsWin, draw: coinsDraw };
-      if (checkInEnabled && !isGemsTournament) {
+      if (checkInEnabled) {
         body.checkInEnabled = true;
         body.checkInMinutes = checkInMinutes;
       }
@@ -549,12 +517,6 @@ export function useEventWizard({
         body.checkInEnabled = true;
         body.checkInMinutes = checkInMinutes;
       }
-    }
-
-    if (isGemsTournament && endAt) {
-      body.gemsDifficulty = gemsDifficulty;
-      body.gemsMaxAttempts = Number(gemsMaxAttempts) || 3;
-      if (gemsMonsterIds.length > 0) body.gemsMonsterIds = gemsMonsterIds;
     }
 
     const res = await fetch("/api/events", {
@@ -725,19 +687,6 @@ export function useEventWizard({
     setEventRegistrationLocked,
     eventSquadId,
     setEventSquadId,
-    gemsDifficulty,
-    setGemsDifficulty,
-    gemsMaxAttempts,
-    setGemsMaxAttempts,
-    gemsMonsterIds,
-    setGemsMonsterIds,
-    gemsMonsterPick,
-    setGemsMonsterPick,
-    gemsParticipationPack,
-    setGemsParticipationPack,
-    gemsPlacementPacks,
-    setGemsPlacementPacks,
-    isGemsTournament,
     blocks,
     setBlocks,
     isBlocksEvent,

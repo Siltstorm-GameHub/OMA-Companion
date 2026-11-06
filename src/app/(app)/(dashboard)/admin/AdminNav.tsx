@@ -81,7 +81,7 @@ const CATEGORIES: {
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
-      // OMA Gems (/admin/gems/…) ist Teil der Minigames-Seite und hat keinen eigenen Reiter mehr
+      // OMA Gems (früher /admin/gems/…) ist Teil der Minigames-Seite
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin", alsoActive: ["/admin/gems"] },
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },

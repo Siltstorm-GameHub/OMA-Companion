@@ -5,10 +5,9 @@
 // und die Sieger der letzten Monate.
 
 import Link from "next/link";
-import { seasonDaysLeft, seasonKey, seasonLabel } from "@/lib/gems/tower-season";
+import { seasonDaysLeft, seasonKey, seasonLabel } from "@/lib/month-season";
 import { ALL_TIME, getBlocksPlace, getBlocksRanking, getFinishedBlocksSeasons, getVersusWins, type BlocksRankingRow } from "@/lib/blocks/scores";
-import LeaderboardList from "@/components/gems/LeaderboardList";
-import type { LeaderboardEntry } from "@/lib/gems/leaderboard";
+import LeaderboardList, { type LeaderboardEntry } from "@/components/games/LeaderboardList";
 import { ChevronRight, Crown, Play, Swords, Trophy } from "@/components/icons";
 import BlocksRankingTabs from "./BlocksRankingTabs";
 import { getBlocksRewards, rewardLabel } from "@/lib/blocks/rewards-config";

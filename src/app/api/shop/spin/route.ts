@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
-import { grantPack } from "@/lib/gems/packs";
 import { getShopConfig, type WheelPrize } from "@/lib/shop-config";
 
 function rollPrize(prizes: WheelPrize[]): WheelPrize {
@@ -62,12 +61,6 @@ export async function POST() {
   });
 
   updateQuestProgress(userId, "DAILY_SPIN", 1).catch(() => {});
-
-  // Pack landet nur im Inventar, löst sich nicht auf — Öffnen passiert
-  // manuell auf /gems.
-  if (prize.type === "pack") {
-    await grantPack(userId, "WHEEL");
-  }
 
   return NextResponse.json({
     ok: true,

@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hmac, safeEqual, SIGNATURE_HEADER } from "@/lib/blocks/mp-token";
-import { seasonKey } from "@/lib/gems/tower-season";
+import { seasonKey } from "@/lib/month-season";
 import { advanceTournament } from "@/lib/blocks/tournament";
 
 export const runtime = "nodejs";

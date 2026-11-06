@@ -28,7 +28,6 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
           include: { entries: true },
         },
         teams: { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
-        gemsTournament: { select: { id: true, endAt: true, difficulty: true, maxAttemptsPerUser: true, monsterCardIdsJson: true } },
         blocksTournament: { select: { groupRounds: true, finalRounds: true, advancePerGroup: true, stage: true } },
         blocksChallenge: { select: { metric: true, goal: true, minContribution: true, rewardCoins: true, rewardRankPoints: true, finalizedAt: true } },
       },

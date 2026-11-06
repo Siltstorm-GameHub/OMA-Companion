@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints, awardedToday, everAwarded } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
-import { ensureCommunityCard } from "@/lib/season/card-provisioning";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
@@ -120,22 +119,14 @@ async function createStubUser(discordId: string, username: string, avatar?: stri
   }
 }
 
-/** Community-Karte (fertiger OMA-Quest-Charakter) sofort anlegen — idempotent. */
-async function provisionCard(user: { id: string; username: string | null; name: string | null }, discordId: string) {
-  await ensureCommunityCard({ userId: user.id, discordId, displayName: user.username ?? user.name ?? "OMA-Mitglied" })
-    .catch((err) => console.error("  ⚠ Community-Karte konnte nicht angelegt werden:", err));
-}
-
 export async function handleMemberJoin(discordId: string, username: string, avatar?: string | null) {
   await new Promise((r) => setTimeout(r, 5000));
   const user = await findUser(discordId);
   if (!user) {
-    // Neues Mitglied ohne App-Konto: Platzhalter-User + Karte, damit es sofort mitspielt (keine Willkommens-Punkte wie bisher)
-    const stub = await createStubUser(discordId, username, avatar);
-    if (stub) await provisionCard(stub, discordId);
+    // Neues Mitglied ohne App-Konto: Platzhalter-User, damit es sofort in Ranglisten & Co. auftaucht (keine Willkommens-Punkte wie bisher)
+    await createStubUser(discordId, username, avatar);
     return;
   }
-  await provisionCard(user, discordId);
   // Nicht am Punktestand festmachen: wer sein Guthaben im Shop leer kauft und den Server
   // neu betritt, hätte sonst erneut Willkommens-Punkte bekommen.
   if (await everAwarded(user.id, "FIRST_LOGIN")) return;

@@ -1,6 +1,6 @@
 // TOURNAMENT, DUEL_PLAYED und JOB_CLAIM sind aus dem aktiven Rotationspool entfernt (Turniere
 // laufen inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell wurde durch OMA
-// Battle Cards ersetzt, siehe BATTLE_CARD_DUEL; die Idle-Jobs wurden komplett abgeschafft),
+// Battle Cards ersetzt — BATTLE_CARD_DUEL zählt heute gespielte OMA-Gems-Runden; die Idle-Jobs wurden komplett abgeschafft),
 // bleiben aber im Union-Typ für die History-Anzeige alter Quests.
 //
 // Bewusst ausgelagert aus `quests.ts`: diese Datei hat KEINE Imports (kein prisma,
@@ -53,7 +53,7 @@ export const QUEST_TYPE_META: Record<
     color: "text-violet-300", bar: "from-violet-600 to-violet-400", bg: "from-violet-500/10",
   },
   BATTLE_CARD_DUEL: {
-    label: "OMA Gems",     unit: "Kämpfe",     icon: "💎",
+    label: "OMA Gems",     unit: "Runden",     icon: "💎",
     color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
   },
   COMMUNITY_JOB_VOTE: {
