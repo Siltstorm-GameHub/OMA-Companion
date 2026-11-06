@@ -7,9 +7,12 @@
 // Bretts herein (spawnFrom = wie viele Reihen über ihrem Ziel sie starten). Feste Felder (Felsen, Eis, Ketten)
 // liegen unter den beweglichen Steinen, die daran vorbeifallen.
 //
+// Look (Neon): leuchtender Rahmen, der bei großen Explosionen aufblitzt, eingelassene Fassungen statt Schachbrett,
+// zufälliges Funkeln auf den Steinen, federndes Aufsetzen beim Nachfallen, Glanz auf dem ausgewählten Stein und
+// ein hüpfender Pfeil als Hinweis.
 // Effekte: Splitter beim Abräumen (bursts), Explosionen der Sondersteine und Kombos (blasts), Punkte (popups),
 // Wackeln des Bretts bei großen Explosionen (shake). Bei „weniger Bewegung“ (prefers-reduced-motion) entfallen
-// Splitter und Wackeln.
+// Splitter, Wackeln und Funkeln.
 //
 // Bedienung: Wischen/Ziehen eines Steins Richtung Nachbar, oder Tippen auf zwei benachbarte Steine.
 // Tastatur: Pfeiltasten bewegen den Rahmen, Leertaste/Enter wählt aus bzw. tauscht.
@@ -98,6 +101,26 @@ export default function GemsBoard({
   const drag = useRef<{ x: number; y: number; cell: number; moved: boolean } | null>(null);
   const reduced = useReducedMotion();
   const shakeCtl = useAnimationControls();
+  const frameCtl = useAnimationControls();
+  const [sparkle, setSparkle] = useState<{ key: number; index: number; dx: number; dy: number } | null>(null);
+  const cellsRef = useRef(cells);
+  useEffect(() => {
+    cellsRef.current = cells;
+  }, [cells]);
+
+  // Funkeln: alle ~1,1 s blitzt auf einem zufälligen Edelstein kurz ein Stern auf.
+  useEffect(() => {
+    if (reduced) return;
+    let n = 0;
+    const t = setInterval(() => {
+      const gems = cellsRef.current.map((p, i) => (p && p.kind === "gem" && !p.lock ? i : -1)).filter((i) => i >= 0);
+      if (gems.length === 0) return;
+      n++;
+      const index = gems[Math.floor(Math.random() * gems.length)];
+      setSparkle({ key: n, index, dx: 0.2 + Math.random() * 0.5, dy: 0.15 + Math.random() * 0.4 });
+    }, 1100);
+    return () => clearInterval(t);
+  }, [reduced]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -116,9 +139,18 @@ export default function GemsBoard({
   }, [disabled]);
 
   useEffect(() => {
-    if (shake <= 0 || reduced) return;
+    if (shake <= 0) return;
+    void frameCtl.start({
+      boxShadow: [
+        "0 0 0 1px rgba(45,212,191,0.5), 0 0 22px rgba(45,212,191,0.25), 0 0 60px rgba(168,85,247,0.15)",
+        "0 0 0 2px rgba(255,255,255,0.9), 0 0 40px rgba(244,114,182,0.8), 0 0 120px rgba(168,85,247,0.6)",
+        "0 0 0 1px rgba(45,212,191,0.5), 0 0 22px rgba(45,212,191,0.25), 0 0 60px rgba(168,85,247,0.15)",
+      ],
+      transition: { duration: 0.6 },
+    });
+    if (reduced) return;
     void shakeCtl.start({ x: [0, -7, 6, -4, 3, 0], y: [0, 3, -4, 2, -1, 0], transition: { duration: 0.35 } });
-  }, [shake, reduced, shakeCtl]);
+  }, [shake, reduced, shakeCtl, frameCtl]);
 
   const cellAt = useCallback(
     (clientX: number, clientY: number): number | null => {
@@ -202,6 +234,11 @@ export default function GemsBoard({
 
   return (
     <motion.div animate={shakeCtl}>
+      <motion.div
+        className="rounded-[22px] p-[3px] gems-frame"
+        animate={frameCtl}
+        initial={{ boxShadow: "0 0 0 1px rgba(45,212,191,0.5), 0 0 22px rgba(45,212,191,0.25), 0 0 60px rgba(168,85,247,0.15)" }}
+      >
       <div
         ref={ref}
         role="grid"
@@ -213,30 +250,76 @@ export default function GemsBoard({
         onPointerCancel={() => (drag.current = null)}
         onKeyDown={onKeyDown}
         onBlur={() => setCursor(null)}
-        className="relative w-full aspect-square rounded-2xl overflow-hidden touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+        className="relative w-full aspect-square rounded-[19px] overflow-hidden touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
         style={{
           background:
-            "repeating-conic-gradient(rgba(255,255,255,0.035) 0% 25%, rgba(255,255,255,0.0) 0% 50%) 0 0 / 25% 25%, linear-gradient(160deg, #111827, #0b1020)",
-          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.45)",
+            "radial-gradient(120% 90% at 50% 0%, rgba(76,29,149,0.35), transparent 60%), radial-gradient(100% 80% at 50% 110%, rgba(13,148,136,0.28), transparent 60%), #070816",
+          boxShadow: "inset 0 0 40px rgba(0,0,0,0.6)",
         }}
       >
         {size > 0 && (
           <>
-            {/* Hinweis */}
-            {hint &&
-              hint.map((i) => (
-                <div
-                  key={`hint-${i}`}
-                  className="absolute rounded-xl animate-pulse pointer-events-none"
-                  style={{ left: pos(i).x, top: pos(i).y, width: size, height: size, boxShadow: "inset 0 0 0 3px rgba(253,224,71,0.85)", background: "rgba(253,224,71,0.12)" }}
-                />
-              ))}
+            {/* Fassungen */}
+            {Array.from({ length: ROWS * COLS }, (_, i) => (
+              <div
+                key={`socket-${i}`}
+                className="absolute pointer-events-none"
+                style={{
+                  left: pos(i).x + size * 0.05,
+                  top: pos(i).y + size * 0.05,
+                  width: size * 0.9,
+                  height: size * 0.9,
+                  borderRadius: size * 0.22,
+                  background: "radial-gradient(circle at 50% 40%, rgba(255,255,255,0.045), rgba(255,255,255,0.01) 70%)",
+                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.65), inset 0 -1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(129,140,248,0.08)",
+                }}
+              />
+            ))}
+            {/* Hinweis: hüpfender Pfeil vom einen zum anderen Stein */}
+            {hint && (() => {
+              const [a, b] = hint;
+              const pa = pos(a);
+              const pb = pos(b);
+              const angle = Math.atan2(pb.y - pa.y, pb.x - pa.x) * (180 / Math.PI);
+              return (
+                <>
+                  {[a, b].map((i) => (
+                    <div
+                      key={`hint-${i}`}
+                      className="absolute pointer-events-none"
+                      style={{ left: pos(i).x + size * 0.05, top: pos(i).y + size * 0.05, width: size * 0.9, height: size * 0.9, borderRadius: size * 0.22, boxShadow: "0 0 0 2px rgba(253,224,71,0.8), 0 0 18px rgba(253,224,71,0.55)", zIndex: 3 }}
+                    />
+                  ))}
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{ left: (pa.x + pb.x) / 2, top: (pa.y + pb.y) / 2, width: size, height: size, zIndex: 6, transform: `rotate(${angle}deg)` }}
+                  >
+                    <div className="w-full h-full flex items-center justify-center gems-hint-arrow">
+                      <svg viewBox="0 0 40 40" style={{ width: size * 0.6, height: size * 0.6, filter: "drop-shadow(0 0 6px rgba(253,224,71,0.9))" }}>
+                        <path d="M6 16 H24 V8 L36 20 L24 32 V24 H6 Z" fill="#fde047" stroke="#713f12" strokeWidth="2" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
             {/* Auswahl / Tastatur-Rahmen */}
             {selected !== null && (
               <div
-                className="absolute rounded-xl pointer-events-none"
-                style={{ left: pos(selected).x, top: pos(selected).y, width: size, height: size, background: "rgba(255,255,255,0.14)", boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.75)" }}
-              />
+                className="absolute pointer-events-none overflow-hidden"
+                style={{
+                  left: pos(selected).x + size * 0.03,
+                  top: pos(selected).y + size * 0.03,
+                  width: size * 0.94,
+                  height: size * 0.94,
+                  borderRadius: size * 0.24,
+                  zIndex: 3,
+                  background: "rgba(45,212,191,0.14)",
+                  boxShadow: "0 0 0 2px rgba(94,234,212,0.95), 0 0 20px rgba(45,212,191,0.75)",
+                }}
+              >
+                <div className="gems-glint absolute inset-0" />
+              </div>
             )}
             {cursor !== null && (
               <div
@@ -258,13 +341,19 @@ export default function GemsBoard({
                     className="absolute pointer-events-none"
                     style={{ width: size, height: size, left: 0, top: 0, padding: size * 0.08, zIndex: isFixed(p) ? 1 : 2 }}
                     initial={{ x, y: from ? y - from * size : y, scale: from ? 1 : 0.6, opacity: from ? 1 : 0 }}
-                    animate={{ x, y, scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.1, opacity: 0, transition: { duration: 0.18 } }}
-                    transition={{ duration: from ? 0.28 : MOVE_MS, ease: from ? "easeIn" : "easeOut" }}
+                    animate={{ x, y, scale: selected === index ? 1.12 : 1, opacity: 1 }}
+                    exit={{ scale: 1.35, opacity: 0, filter: "brightness(2.2)", transition: { duration: 0.2 } }}
+                    transition={
+                      reduced
+                        ? { duration: MOVE_MS }
+                        : from
+                          ? { type: "spring", stiffness: 380, damping: 17, mass: 0.9 }
+                          : { type: "spring", stiffness: 520, damping: 30 }
+                    }
                   >
                     <div
                       className={`w-full h-full ${special ? "gems-special" : ""}`}
-                      style={special ? { filter: `drop-shadow(0 0 ${size * 0.12}px ${glow})` } : undefined}
+                      style={{ filter: `drop-shadow(0 0 ${size * (special ? 0.16 : 0.06)}px ${glow})` }}
                     >
                       <GemIcon piece={p} uid={`g${p.id}`} />
                     </div>
@@ -272,6 +361,19 @@ export default function GemsBoard({
                 );
               })}
             </AnimatePresence>
+
+            {/* Funkeln */}
+            {sparkle && cells[sparkle.index] && (
+              <div
+                key={`sparkle-${sparkle.key}`}
+                className="absolute pointer-events-none gems-twinkle"
+                style={{ left: pos(sparkle.index).x + size * sparkle.dx - size * 0.15, top: pos(sparkle.index).y + size * sparkle.dy - size * 0.15, width: size * 0.3, height: size * 0.3, zIndex: 4 }}
+              >
+                <svg viewBox="0 0 20 20" className="w-full h-full">
+                  <path d="M10 0 L12 8 L20 10 L12 12 L10 20 L8 12 L0 10 L8 8 Z" fill="#fff" />
+                </svg>
+              </div>
+            )}
 
             {/* Splitter */}
             {!reduced && (
@@ -379,6 +481,7 @@ export default function GemsBoard({
           </>
         )}
       </div>
+      </motion.div>
     </motion.div>
   );
 }

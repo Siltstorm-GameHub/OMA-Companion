@@ -31,10 +31,10 @@ import {
 } from "@/lib/gems/engine";
 import { getSoundSettings, playSfx, setSoundSettings, type Sfx } from "@/lib/game-sfx";
 import GemsBoard, { type Blast, type Burst, type ScorePopup } from "./GemsBoard";
-import GemIcon from "./GemIcon";
+import { CountUp, Flash, GemsLogo, GoalBadge, HowToPlay, LevelCard, MovesRing, NeonBackground, Praise, type LevelCardData } from "./GemsUi";
 import FullscreenShell, { requestBrowserFullscreen } from "@/components/blocks/FullscreenShell";
 import { Button, Modal } from "@/components/ui";
-import { ArrowLeft, BellOff, Flag, Lightbulb, Play, RotateCcw, Star, Trophy, Volume2, Zap } from "@/components/icons";
+import { ArrowLeft, BellOff, Flag, Lightbulb, Play, RotateCcw, Star, Volume2, Zap } from "@/components/icons";
 
 type Phase = "menu" | "loading" | "playing" | "submitting" | "result";
 
@@ -120,23 +120,6 @@ function noveltyText(def: LevelDef): string | null {
   }
 }
 
-function GoalIcon({ goal, uid }: { goal: Goal; uid: string }) {
-  if (goal.type === "collect") return <GemIcon piece={{ kind: "gem", color: goal.color, special: "none" }} uid={uid} />;
-  if (goal.type === "stones") return <GemIcon piece={{ kind: "stone", color: -1, special: "none" }} uid={uid} />;
-  if (goal.type === "ice") return <GemIcon piece={{ kind: "gem", color: 3, special: "none", lock: "ice" }} uid={uid} />;
-  return <Trophy className="w-full h-full text-amber-300" />;
-}
-
-function Stars({ count, max = 3, className = "w-5 h-5" }: { count: number; max?: number; className?: string }) {
-  return (
-    <span className="inline-flex gap-0.5">
-      {Array.from({ length: max }, (_, i) => (
-        <Star key={i} className={`${className} ${i < count ? "text-amber-300" : "text-white/15"}`} />
-      ))}
-    </span>
-  );
-}
-
 const COMBO_NAMES: Partial<Record<BlastKind, string>> = {
   cross: "Kreuz-Kombo!",
   cross3: "Riesenkreuz!",
@@ -144,6 +127,14 @@ const COMBO_NAMES: Partial<Record<BlastKind, string>> = {
   prism: "Prisma-Kombo!",
   board: "Brett-Räumer!",
 };
+
+/** Lob für lange Kaskaden. */
+function praiseFor(cascade: number): string | null {
+  if (cascade >= 6) return "Unglaublich!";
+  if (cascade >= 5) return "Fantastisch!";
+  if (cascade >= 4) return "Super!";
+  return null;
+}
 
 /** Klang je Explosion. */
 function sfxForBlast(kind: BlastKind): Sfx {
@@ -168,6 +159,7 @@ export default function GemsGameClient({
   subtitle,
   bestLabel,
   initialBest,
+  bestLevel = 0,
 }: {
   mode: GameMode;
   title: string;
@@ -175,6 +167,8 @@ export default function GemsGameClient({
   /** z.B. „Bestwert im November 2026“ */
   bestLabel: string;
   initialBest: number;
+  /** Höchstes Level des Bestwerts (klassisch). */
+  bestLevel?: number;
 }) {
   const [phase, setPhase] = useState<Phase>("menu");
   const [game, setGame] = useState<GameState | null>(null);
@@ -187,9 +181,11 @@ export default function GemsGameClient({
   const [liveScore, setLiveScore] = useState(0);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<[number, number] | null>(null);
-  const [banner, setBanner] = useState<{ title: string; lines: string[]; def: LevelDef | null; stars: number | null } | null>(null);
+  const [banner, setBanner] = useState<LevelCardData | null>(null);
+  const [praise, setPraise] = useState<string | null>(null);
+  const [flash, setFlash] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
-  const [combo, setCombo] = useState<{ n: number; label: string | null } | null>(null);
+  const [combo, setCombo] = useState<number>(0);
   const [saved, setSaved] = useState<SavedRun | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -224,10 +220,10 @@ export default function GemsGameClient({
   }, []);
 
   const levelBanner = useCallback((def: LevelDef, extra: string[] = [], stars: number | null = null) => {
-    const nov = noveltyText(def);
     setBanner({
       title: def.goals[0]?.type === "none" ? "Tages-Herausforderung" : `Level ${def.level}`,
-      lines: [...extra, goalText(def), ...(nov ? [nov] : [])],
+      lines: [...extra, goalText(def)],
+      novelty: noveltyText(def),
       def,
       stars,
     });
@@ -340,7 +336,12 @@ export default function GemsGameClient({
           score += step.points;
           setLiveScore(score);
           const comboLabel = step.combo ? (COMBO_NAMES[step.combo] ?? null) : null;
-          if (step.cascade >= 2 || comboLabel) setCombo({ n: step.cascade, label: comboLabel });
+          setCombo(step.cascade);
+          const cheer = comboLabel ?? praiseFor(step.cascade);
+          if (cheer) {
+            setPraise(cheer);
+            setFlash((n) => n + 1);
+          }
           const newBlasts: Blast[] = [
             ...step.fired.map((f) => ({ key: nextKey("b"), index: f.index, kind: f.kind })),
             ...step.unfrozen.map((i) => ({ key: nextKey("i"), index: i, kind: "ice" as const })),
@@ -438,7 +439,8 @@ export default function GemsGameClient({
       await sleep(170);
       await playSteps(res.steps, state.score);
       if (!alive.current) return;
-      setCombo(null);
+      setCombo(0);
+      setPraise(null);
       setPopups([]);
       setBursts([]);
       gameRef.current = res.state;
@@ -496,79 +498,80 @@ export default function GemsGameClient({
   const goals = game ? goalProgress(game) : [];
   const showJokerDialog = phase === "playing" && !busy && !!game?.outOfMoves;
 
-  // ── Menü ──
+  // ── Startbildschirm ──
   if (!fullscreen) {
+    const hasSaved = !!saved && saved.moves.length > 0;
     return (
       <div className="space-y-4">
         <Link href="/gems" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
           <ArrowLeft className="w-3.5 h-3.5" /> Games
         </Link>
-        <div className="glass rounded-2xl p-5 sm:p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 shrink-0">
-              <GemIcon piece={{ kind: "gem", color: 3, special: "none" }} uid="menu-gem" />
+        <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7 space-y-5 gems-hero">
+          <GemsLogo />
+          <div className="text-center">
+            <h1 className="font-display text-xl font-black text-white">{title}</h1>
+            <p className="text-sm text-gray-300">{subtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+            <div className="rounded-2xl px-3 py-2.5 text-center gems-card">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">{bestLabel}</p>
+              <p className="font-display text-2xl font-black text-white tabular-nums">{best > 0 ? fmt(best) : "–"}</p>
             </div>
-            <div>
-              <h1 className="font-display text-2xl font-black text-white">{title}</h1>
-              <p className="text-xs text-gray-400">{subtitle}</p>
+            <div className="rounded-2xl px-3 py-2.5 text-center gems-card">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">{mode === "classic" ? "Bestes Level" : "Züge"}</p>
+              <p className="font-display text-2xl font-black text-white tabular-nums">{mode === "classic" ? (bestLevel > 0 ? bestLevel : "–") : 30}</p>
             </div>
           </div>
-          <ul className="text-sm text-gray-300 space-y-1.5 list-disc pl-5">
-            <li>Tausche zwei benachbarte Steine, sodass 3 oder mehr gleiche in einer Reihe liegen.</li>
-            <li>4 in einer Reihe ergibt einen Linien-Stein, eine L- oder T-Form eine Bombe, 5 in einer Reihe ein Prisma.</li>
-            <li>Tausche zwei Sondersteine miteinander für eine Kombo — Kreuz, Mega-Bombe oder Prisma-Kombo.</li>
-            <li>Felsen zerstören nur Explosionen. Eis bricht, wenn du den Stein in eine Reihe einbaust. Angekettete Steine kann man nicht tauschen, aber kombinieren.</li>
-            {mode === "classic" ? (
-              <li>
-                Jedes Level hat ein Ziel (ab Level 10 zwei) und begrenzte Züge. Übrige Züge bringen Bonus und bis zu 3 Sterne. Einmal pro
-                Runde rettet dich ein Joker mit {JOKER_MOVES} Extra-Zügen.
-              </li>
-            ) : (
-              <li>Alle spielen heute dasselbe Brett mit demselben Nachschub: 30 Züge, so viele Punkte wie möglich. Dein bester Versuch zählt.</li>
-            )}
-          </ul>
-          <p className="text-xs text-gray-500">
-            {bestLabel}: <span className="font-bold text-white tabular-nums">{best > 0 ? fmt(best) : "–"}</span>
-          </p>
-          {error && <p className="text-sm text-rose-300">{error}</p>}
-          <div className="flex flex-wrap gap-2">
-            {saved && saved.moves.length > 0 ? (
+
+          {error && <p className="text-center text-sm text-rose-300">{error}</p>}
+          <div className="flex flex-col items-center gap-2">
+            <motion.button
+              type="button"
+              onClick={hasSaved ? resume : start}
+              className="gems-play-button inline-flex items-center gap-3 rounded-full px-10 py-4 font-display text-xl font-black text-gray-950"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Play className="w-6 h-6" />
+              {hasSaved ? "Fortsetzen" : "Spielen"}
+            </motion.button>
+            {hasSaved && (
               <>
-                <Button onClick={resume} icon={<Play className="w-4 h-4" />}>
-                  Fortsetzen ({saved.moves.length} {saved.moves.length === 1 ? "Zug" : "Züge"})
-                </Button>
-                <Button variant="outline" onClick={start} icon={<RotateCcw className="w-4 h-4" />}>
-                  Neue Runde
-                </Button>
+                <button type="button" onClick={start} className="text-sm font-semibold text-gray-300 hover:text-white inline-flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5" /> Neue Runde
+                </button>
+                <p className="text-[11px] text-gray-500 text-center">
+                  Angefangene Runde: {saved!.moves.length} {saved!.moves.length === 1 ? "Zug" : "Züge"}. Bei „Neue Runde“ wird sie mit ihrem bisherigen Stand gewertet.
+                </p>
               </>
-            ) : (
-              <Button onClick={start} icon={<Play className="w-4 h-4" />}>
-                Spielen
-              </Button>
             )}
           </div>
-          {saved && saved.moves.length > 0 && (
-            <p className="text-[11px] text-gray-500">Bei „Neue Runde“ wird die angefangene Runde mit ihrem bisherigen Stand gewertet.</p>
-          )}
+
+          <div className="max-w-sm mx-auto">
+            <HowToPlay mode={mode} />
+          </div>
         </div>
       </div>
     );
   }
 
   // ── Spiel / Ergebnis (Vollbild) ──
+  const finished = phase === "submitting" || phase === "result";
   return (
     <FullscreenShell active={fullscreen}>
+      <NeonBackground />
       <div className="max-w-[560px] mx-auto space-y-3">
         {/* Kopfzeile */}
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-display text-lg font-black text-white leading-tight truncate">{title}</p>
-            <p className="text-[11px] text-gray-500 truncate flex items-center gap-1.5">
+          <div className="min-w-0 flex items-center gap-3">
+            <GemsLogo small />
+            <p className="text-[11px] text-gray-400 truncate flex items-center gap-1.5">
               {game?.mode === "classic" ? (
                 <>
-                  Level {game.level} · {game.def.colors} Farben ·
+                  <span className="font-bold text-white">Level {game.level}</span> ·
                   <Star className="w-3 h-3 text-amber-300" /> {game.stars}
-                  {game.jokers > 0 && <span className="text-teal-300"> · Joker bereit</span>}
+                  {game.jokers > 0 && <span className="text-teal-300 inline-flex items-center gap-0.5"> · <Zap className="w-3 h-3" /> Joker</span>}
                 </>
               ) : (
                 subtitle
@@ -576,7 +579,7 @@ export default function GemsGameClient({
             </p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <button type="button" onClick={toggleMute} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06]" aria-label={muted ? "Ton an" : "Ton aus"}>
+            <button type="button" onClick={toggleMute} className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06]" aria-label={muted ? "Ton an" : "Ton aus"}>
               {muted ? <BellOff className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             {phase === "playing" && (
@@ -585,7 +588,7 @@ export default function GemsGameClient({
                   type="button"
                   onClick={() => game && setHint(findHint(game.board))}
                   disabled={busy || !!game?.outOfMoves}
-                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-40"
+                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-40"
                   aria-label="Tipp anzeigen"
                 >
                   <Lightbulb className="w-4 h-4" />
@@ -594,7 +597,7 @@ export default function GemsGameClient({
                   type="button"
                   onClick={() => setConfirmEnd(true)}
                   disabled={busy}
-                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-40"
+                  className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-40"
                   aria-label="Runde beenden"
                 >
                   <Flag className="w-4 h-4" />
@@ -604,36 +607,31 @@ export default function GemsGameClient({
           </div>
         </div>
 
-        {/* HUD */}
+        {/* Spielkopf: Punkte, Züge, Ziele */}
         {game && (
-          <div className={`grid gap-2 ${goals.length > 1 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
-            <Stat label="Punkte" value={fmt(liveScore)} />
-            <Stat label="Züge" value={String(game.movesLeft)} warn={game.movesLeft <= 5} />
-            {goals.length > 0 ? (
-              goals.map((g, k) => {
-                const done = g.value >= g.target;
-                return (
-                  <div key={k} className={`glass rounded-xl px-3 py-2 ${done ? "ring-1 ring-emerald-400/40" : ""}`}>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-4 h-4 shrink-0">
-                        <GoalIcon goal={g.goal} uid={`hud-goal-${k}`} />
-                      </span>
-                      <span className={`text-sm font-bold tabular-nums ${done ? "text-emerald-300" : "text-white"}`}>
-                        {g.goal.type === "score" ? `${Math.round((g.value / g.target) * 100)} %` : `${g.value}/${g.target}`}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-300 transition-all duration-300" style={{ width: `${Math.min(100, (g.value / g.target) * 100)}%` }} />
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <Stat label={bestLabel.split(" ")[0]} value={best > 0 ? fmt(best) : "–"} />
+          <div className="rounded-2xl px-3 py-2.5 gems-card flex items-center gap-3">
+            <MovesRing left={game.movesLeft} total={game.def.moves} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">Punkte</p>
+              <CountUp value={liveScore} className="block font-display text-3xl font-black tabular-nums gems-neon-text leading-tight" />
+            </div>
+            {goals.length === 0 && (
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-widest text-gray-400">{bestLabel.split(" ")[0]}</p>
+                <p className="font-display text-lg font-black text-white tabular-nums">{best > 0 ? fmt(best) : "–"}</p>
+              </div>
             )}
           </div>
         )}
-        {game && goals.length > 0 && <p className="text-[11px] text-gray-400 text-center">{goalText(game.def)}</p>}
+        {game && goals.length > 0 && (
+          <div className={`grid gap-2 ${goals.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+            {goals.map((g, k) => (
+              <div key={k} className="rounded-2xl px-3 py-2 gems-card">
+                <GoalBadge goal={g.goal} value={g.value} target={g.target} uid={`hud-goal-${k}`} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Brett */}
         <div className="relative">
@@ -648,90 +646,64 @@ export default function GemsGameClient({
             shake={shake}
             onSwap={swap}
           />
+          <Flash n={flash} />
+          <Praise text={praise} />
           <AnimatePresence>
-            {combo && (
+            {combo >= 2 && !praise && (
               <motion.div
-                key={`combo-${combo.n}-${combo.label}`}
-                className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-gray-900 font-black pointer-events-none whitespace-nowrap z-10"
-                style={{
-                  background: combo.label ? "linear-gradient(90deg,#f472b6,#facc15,#34d399,#60a5fa)" : "rgba(251,191,36,0.92)",
-                  fontSize: combo.label ? 18 : 14 + Math.min(8, combo.n * 1.5),
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
-                }}
+                key={`combo-${combo}`}
+                className="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full font-display font-black pointer-events-none whitespace-nowrap z-10 text-gray-950"
+                style={{ background: "linear-gradient(90deg,#5eead4,#a78bfa)", fontSize: 14 + Math.min(8, combo * 1.5), boxShadow: "0 0 18px rgba(167,139,250,0.7)" }}
                 initial={{ opacity: 0, scale: 0.5, y: -6 }}
                 animate={{ opacity: 1, scale: [0.5, 1.15, 1], y: 0 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.3 }}
               >
-                {combo.label ?? `Kombo ×${combo.n}`}
+                Kaskade ×{combo}
               </motion.div>
             )}
           </AnimatePresence>
+          <AnimatePresence>{banner && <LevelCard data={banner} onClose={() => setBanner(null)} />}</AnimatePresence>
           <AnimatePresence>
-            {(banner || notice) && (
-              <motion.button
-                type="button"
-                onClick={() => setBanner(null)}
-                className="absolute inset-0 z-20 flex items-center justify-center p-6 rounded-2xl bg-black/60 backdrop-blur-[2px] text-center"
+            {notice && !banner && (
+              <motion.div
+                className="absolute inset-0 z-20 flex items-center justify-center p-6 rounded-[22px] bg-[#05060f]/65 backdrop-blur-[2px] text-center pointer-events-none"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} className="space-y-2 max-w-xs">
-                  {banner ? (
-                    <>
-                      {banner.stars !== null && (
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 14 }}>
-                          <Stars count={banner.stars} className="w-8 h-8" />
-                        </motion.div>
-                      )}
-                      {banner.def && (
-                        <div className="flex justify-center gap-2">
-                          {banner.def.goals
-                            .filter((g) => g.type !== "score" && g.type !== "none")
-                            .map((g, k) => (
-                              <div key={k} className="w-11 h-11">
-                                <GoalIcon goal={g} uid={`banner-goal-${k}`} />
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                      <p className="font-display text-3xl font-black text-white">{banner.title}</p>
-                      {banner.lines.map((l, i) => {
-                        const isNovelty = i === banner.lines.length - 1 && !!banner.def && noveltyText(banner.def) === l;
-                        return (
-                          <p key={i} className={isNovelty ? "text-sm text-amber-200" : "text-sm text-gray-200"}>
-                            {l}
-                          </p>
-                        );
-                      })}
-                      <p className="text-[10px] text-gray-400 pt-1">Tippen zum Weiterspielen</p>
-                    </>
-                  ) : (
-                    <p className="font-display text-xl font-black text-white">{notice}</p>
-                  )}
-                </motion.div>
-              </motion.button>
+                <motion.p initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="font-display text-2xl font-black gems-neon-text">
+                  {notice}
+                </motion.p>
+              </motion.div>
             )}
           </AnimatePresence>
+
           {/* Joker */}
           <AnimatePresence>
             {showJokerDialog && !banner && (
               <motion.div
-                className="absolute inset-0 z-20 flex items-center justify-center p-6 rounded-2xl bg-black/65 backdrop-blur-[2px] text-center"
+                className="absolute inset-0 z-20 flex items-center justify-center p-4 rounded-[22px] bg-[#05060f]/70 backdrop-blur-[3px] text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} className="space-y-3 max-w-xs">
-                  <p className="font-display text-2xl font-black text-white">Keine Züge mehr!</p>
+                <motion.div initial={{ y: 40, scale: 0.9 }} animate={{ y: 0, scale: 1 }} className="w-full max-w-[300px] rounded-2xl p-5 space-y-3 gems-card">
+                  <motion.div
+                    className="mx-auto w-14 h-14 rounded-full flex items-center justify-center bg-teal-400/15 text-teal-300"
+                    animate={{ boxShadow: ["0 0 0px rgba(45,212,191,0)", "0 0 28px rgba(45,212,191,0.9)", "0 0 0px rgba(45,212,191,0)"] }}
+                    transition={{ duration: 1.6, repeat: Infinity }}
+                  >
+                    <Zap className="w-7 h-7" />
+                  </motion.div>
+                  <p className="font-display text-2xl font-black gems-neon-text">Keine Züge mehr!</p>
                   <p className="text-sm text-gray-300">
-                    Du hast noch deinen Joker: {JOKER_MOVES} Extra-Züge für dieses Level. Danach gibt es für das Level höchstens einen Stern.
+                    Dein Joker gibt dir {JOKER_MOVES} Extra-Züge für dieses Level. Danach gibt es für das Level höchstens einen Stern.
                   </p>
                   <div className="flex flex-col gap-2">
-                    <Button onClick={takeJoker} icon={<Zap className="w-4 h-4" />}>
-                      Joker einsetzen (+{JOKER_MOVES} Züge)
-                    </Button>
+                    <button type="button" onClick={takeJoker} className="gems-play-button rounded-full px-5 py-2.5 font-display font-black text-gray-950 inline-flex items-center justify-center gap-2">
+                      <Zap className="w-4 h-4" /> Joker einsetzen (+{JOKER_MOVES})
+                    </button>
                     <Button variant="ghost" onClick={() => void submit()}>
                       Aufhören & werten
                     </Button>
@@ -740,48 +712,80 @@ export default function GemsGameClient({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        {/* Ergebnis */}
-        {(phase === "submitting" || phase === "result") && (
-          <div className="glass rounded-2xl p-4 space-y-3">
-            {phase === "submitting" ? (
-              <p className="text-sm text-gray-300">Ergebnis wird gewertet …</p>
-            ) : error ? (
-              <>
-                <p className="text-sm text-rose-300">{error}</p>
-                <Button onClick={submit} icon={<RotateCcw className="w-4 h-4" />}>
-                  Nochmal senden
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-display text-2xl font-black text-white tabular-nums">{fmt(result?.score ?? liveScore)} Punkte</p>
-                  {mode === "classic" && result && (
-                    <p className="text-sm text-gray-400 flex items-center gap-1.5">
-                      Level {result.level} · <Star className="w-4 h-4 text-amber-300" /> {result.stars}
-                    </p>
+          {/* Ergebnis */}
+          <AnimatePresence>
+            {finished && (
+              <motion.div
+                className="absolute inset-0 z-30 flex items-center justify-center p-4 rounded-[22px] bg-[#05060f]/75 backdrop-blur-[4px] text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div
+                  className="w-full max-w-[320px] rounded-2xl p-5 space-y-3 gems-card"
+                  initial={{ y: 80, scale: 0.85 }}
+                  animate={{ y: 0, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 240, damping: 20 }}
+                >
+                  {phase === "submitting" ? (
+                    <>
+                      <p className="font-display text-2xl font-black gems-neon-text">Runde vorbei</p>
+                      <p className="text-sm text-gray-300">Ergebnis wird gewertet …</p>
+                    </>
+                  ) : error ? (
+                    <>
+                      <p className="font-display text-2xl font-black text-white">Hoppla</p>
+                      <p className="text-sm text-rose-300">{error}</p>
+                      <Button onClick={submit} icon={<RotateCcw className="w-4 h-4" />}>
+                        Nochmal senden
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-teal-300">Ergebnis</p>
+                      <CountUp value={result?.score ?? liveScore} className="block font-display text-5xl font-black tabular-nums gems-neon-text" />
+                      <p className="text-xs text-gray-400 -mt-1">Punkte</p>
+                      {mode === "classic" && result && (
+                        <div className="flex items-center justify-center gap-4 text-sm text-gray-200">
+                          <span>
+                            Level <span className="font-black text-white">{result.level}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="w-4 h-4 text-amber-300" /> <span className="font-black text-white">{result.stars}</span> Sterne
+                          </span>
+                        </div>
+                      )}
+                      <div className="space-y-1.5 pt-1">
+                        {result?.boards.map((b) => (
+                          <div
+                            key={b.board}
+                            className={`rounded-xl px-3 py-2 text-sm flex items-center justify-between gap-2 ${b.isNew ? "bg-amber-300/10 border border-amber-300/30" : "bg-white/[0.04]"}`}
+                          >
+                            <span className="text-gray-300">
+                              {b.isNew ? "🎉 Neuer Bestwert" : "Bestwert"} {boardName(b.board)}
+                            </span>
+                            <span className="font-black text-white tabular-nums">
+                              {fmt(b.best)}
+                              {b.place && <span className="text-teal-300 font-semibold"> · #{b.place}</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex flex-col gap-2 pt-1">
+                        <button type="button" onClick={start} className="gems-play-button rounded-full px-5 py-3 font-display text-lg font-black text-gray-950 inline-flex items-center justify-center gap-2">
+                          <RotateCcw className="w-5 h-5" /> Nochmal
+                        </button>
+                        <Link href="/gems" className="text-sm font-semibold text-gray-300 hover:text-white inline-flex items-center justify-center gap-1.5 py-1">
+                          <ArrowLeft className="w-4 h-4" /> Zur Übersicht
+                        </Link>
+                      </div>
+                    </>
                   )}
-                </div>
-                {result?.boards.map((b) => (
-                  <p key={b.board} className="text-sm text-gray-300">
-                    {b.isNew ? "🎉 Neuer Bestwert" : "Bestwert"} {boardName(b.board)}: <span className="font-bold text-white">{fmt(b.best)}</span>
-                    {b.place && <span className="text-gray-400"> · Platz {b.place}</span>}
-                  </p>
-                ))}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button onClick={start} icon={<RotateCcw className="w-4 h-4" />}>
-                    Nochmal
-                  </Button>
-                  <Link href="/gems" className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 hover:border-white/20 text-gray-300 hover:text-white text-sm px-3 py-2">
-                    <ArrowLeft className="w-4 h-4" /> Zur Übersicht
-                  </Link>
-                </div>
-              </>
+                </motion.div>
+              </motion.div>
             )}
-          </div>
-        )}
+          </AnimatePresence>
+        </div>
       </div>
 
       <Modal open={confirmEnd} onClose={() => setConfirmEnd(false)} title="Runde beenden?" size="sm">
@@ -811,13 +815,4 @@ function boardName(board: string): string {
   if (board === "classic:all") return "aller Zeiten";
   if (board.startsWith("classic:")) return "im Monat";
   return "heute";
-}
-
-function Stat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
-  return (
-    <div className="glass rounded-xl px-3 py-2">
-      <p className="text-[10px] uppercase tracking-widest text-gray-500">{label}</p>
-      <p className={`text-lg font-black tabular-nums leading-tight ${warn ? "text-rose-300" : "text-white"}`}>{value}</p>
-    </div>
-  );
 }

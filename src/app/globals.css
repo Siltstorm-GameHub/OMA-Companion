@@ -434,8 +434,101 @@ select.input-glass option { background: #0f1117; }
   50%      { transform: scale(1.06); filter: brightness(1.25); }
 }
 .gems-special { animation: gems-special-pulse 1.2s ease-in-out infinite; }
+
+/* Neon-Rahmen ums Brett: Farbverlauf wandert langsam einmal herum */
+@keyframes gems-frame-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+.gems-frame {
+  background: linear-gradient(90deg, #2dd4bf, #818cf8, #f472b6, #facc15, #2dd4bf);
+  background-size: 300% 100%;
+  animation: gems-frame-shift 9s linear infinite;
+}
+
+/* Prisma-Kristall dreht sich, Bomben-Funkenring auch (SVG-Gruppen um ihre eigene Mitte) */
+@keyframes gems-spin { to { transform: rotate(360deg); } }
+.gems-spin { transform-box: fill-box; transform-origin: center; animation: gems-spin 6s linear infinite; }
+
+/* Glimmender Bomben-Kern */
+@keyframes gems-ember {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+.gems-ember { animation: gems-ember 0.8s ease-in-out infinite; }
+
+/* Leuchtstreifen der Linien-Steine flackert leicht */
+@keyframes gems-streak {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+.gems-streak { animation: gems-streak 0.9s ease-in-out infinite; }
+
+/* Funkeln auf einem zufälligen Stein */
+@keyframes gems-twinkle {
+  0%   { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  40%  { opacity: 1; transform: scale(1) rotate(45deg); }
+  100% { opacity: 0; transform: scale(0.3) rotate(90deg); }
+}
+.gems-twinkle { animation: gems-twinkle 0.9s ease-out both; }
+
+/* Glanz, der über den ausgewählten Stein streicht */
+@keyframes gems-glint {
+  0%   { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(160%) skewX(-20deg); }
+}
+.gems-glint {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  width: 50%;
+  animation: gems-glint 1.4s ease-in-out infinite;
+}
+
+/* Hinweis-Pfeil hüpft in Zugrichtung */
+@keyframes gems-hint-arrow {
+  0%, 100% { transform: translateX(-12%); }
+  50%      { transform: translateX(12%); }
+}
+.gems-hint-arrow { animation: gems-hint-arrow 0.7s ease-in-out infinite; }
+
+/* Züge-Anzeige pulsiert, wenn es knapp wird */
+@keyframes gems-danger {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(244,63,94,0.4)); transform: scale(1); }
+  50%      { filter: drop-shadow(0 0 12px rgba(244,63,94,0.95)); transform: scale(1.06); }
+}
+.gems-danger { animation: gems-danger 0.9s ease-in-out infinite; }
+
+/* Neon-Karten (Spielkopf, Level-Karte, Ergebnis) */
+.gems-card {
+  background: linear-gradient(160deg, rgba(23,19,58,0.92), rgba(9,10,28,0.92));
+  border: 1px solid rgba(129,140,248,0.28);
+  box-shadow: 0 0 0 1px rgba(45,212,191,0.06), 0 0 24px rgba(129,140,248,0.14), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Startbildschirm */
+.gems-hero {
+  background:
+    radial-gradient(70% 55% at 20% 0%, rgba(124,58,237,0.45), transparent 70%),
+    radial-gradient(60% 50% at 100% 100%, rgba(13,148,136,0.4), transparent 70%),
+    radial-gradient(40% 35% at 85% 10%, rgba(236,72,153,0.25), transparent 70%),
+    #070816;
+  border: 1px solid rgba(129,140,248,0.3);
+  box-shadow: 0 0 40px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Großer Neon-Knopf */
+.gems-play-button {
+  background: linear-gradient(90deg, #5eead4, #a78bfa, #f472b6);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset, 0 0 24px rgba(167,139,250,0.7), 0 6px 18px rgba(0,0,0,0.4);
+}
+
+/* Neon-Schrift */
+.gems-neon-text {
+  color: #fff;
+  text-shadow: 0 0 6px rgba(94,234,212,0.9), 0 0 18px rgba(129,140,248,0.75), 0 0 36px rgba(244,114,182,0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .gems-special { animation: none; }
+  .gems-special, .gems-frame, .gems-spin, .gems-ember, .gems-streak, .gems-twinkle, .gems-glint, .gems-hint-arrow, .gems-danger { animation: none; }
 }
 
 /* ── Icon-Bounce für neuen Content seit letztem Besuch ────────────── */

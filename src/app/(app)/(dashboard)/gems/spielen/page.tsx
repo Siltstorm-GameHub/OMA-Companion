@@ -19,17 +19,18 @@ export default async function GemsClassicPage() {
   const season = seasonKey();
   const best = await prisma.gemsBest.findUnique({
     where: { userId_board: { userId: session.user.id, board: classicMonthBoard(season) } },
-    select: { score: true },
+    select: { score: true, level: true },
   });
 
   return (
     <div className="p-3 sm:p-6 max-w-3xl mx-auto animate-fade-in">
       <GemsGameClient
         mode="classic"
-        title="OMA Gems"
-        subtitle="Klassisch · Level für Level"
+        title="Klassisch"
+        subtitle="Level für Level — mit Zielen, Kombos und Sternen"
         bestLabel={`Bestwert im ${seasonLabel(season)}`}
         initialBest={best?.score ?? 0}
+        bestLevel={best?.level ?? 0}
       />
     </div>
   );
