@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/Button";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
 
-/** Journalisten-Büro: eigene Auswertung (Berichte, Bewertungen, Ergänzungen, Verlauf). */
+/** Content-Creator-Büro: Auswertung über alle eigenen Beiträge (Daumen, Arten, Bilder, Werbung, Ergänzungen, Verlauf). */
 
 interface Stats {
-  published: number; drafts: number; totalVotes: number; averageVotes: number; votesThisWeek: number;
+  published: number; drafts: number; scheduled: number; totalVotes: number; averageVotes: number; votesThisWeek: number;
+  kinds: { withMedia: number; promo: number; longText: number };
+  averageVotesWithMedia: number; averageVotesWithoutMedia: number;
+  externallyPosted: number; overDailyLimit: number; mediaUsedByOthers: number;
   top: { id: string; title: string; votes: number } | null;
   contributionsReceived: number; contributionsWritten: number; contributionVotes: number;
   weekly: { weekStart: string; votes: number }[];
@@ -44,7 +47,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-300 flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
-          {stats.published} {stats.published === 1 ? "Bericht" : "Berichte"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
+          {stats.published} {stats.published === 1 ? "Beitrag" : "Beiträge"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
           className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
@@ -55,15 +58,24 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
       {open && (
         <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            <Tile label="Veröffentlicht" value={String(stats.published)} sub={stats.drafts > 0 ? `+ ${stats.drafts} Entwürfe` : undefined} />
-            <Tile label="Ø Daumen/Bericht" value={formatFixed(stats.averageVotes, 1)} />
+            <Tile label="Veröffentlicht" value={String(stats.published)}
+              sub={[stats.drafts > 0 ? `${stats.drafts} Entwürfe` : "", stats.scheduled > 0 ? `${stats.scheduled} geplant` : ""].filter(Boolean).join(" · ") || undefined} />
+            <Tile label="Ø Daumen/Beitrag" value={formatFixed(stats.averageVotes, 1)} />
+            <Tile label="Mit Bildern/Clips" value={String(stats.kinds.withMedia)}
+              sub={`Ø ${formatFixed(stats.averageVotesWithMedia, 1)} 👍 · ohne Ø ${formatFixed(stats.averageVotesWithoutMedia, 1)}`} />
+            <Tile label="Werbung" value={String(stats.kinds.promo)} sub={`${stats.externallyPosted} extern gepostet`} />
+            <Tile label="Längere Berichte" value={String(stats.kinds.longText)} />
+            <Tile label="Deine Bilder genutzt" value={String(stats.mediaUsedByOthers)} sub="als Titelbild bei anderen" />
             <Tile label="Ergänzungen erhalten" value={String(stats.contributionsReceived)} />
             <Tile label="Meine Ergänzungen" value={String(stats.contributionsWritten)} sub={`${stats.contributionVotes} 👍 darauf`} />
           </div>
+          {stats.overDailyLimit > 0 && (
+            <p className="text-[11px] text-amber-400/90">{stats.overDailyLimit} {stats.overDailyLimit === 1 ? "Beitrag lag" : "Beiträge lagen"} über dem Tageslimit und {stats.overDailyLimit === 1 ? "zählt" : "zählen"} nicht fürs Gehalt.</p>
+          )}
 
           {stats.top && (
             <p className="text-[11px] text-gray-400">
-              Beliebtester Bericht: <span className="text-gray-200">{stats.top.title}</span> <span className="text-gray-600">({stats.top.votes} 👍)</span>
+              Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-gray-200 hover:text-teal-300">{stats.top.title}</a> <span className="text-gray-600">({stats.top.votes} 👍)</span>
             </p>
           )}
 

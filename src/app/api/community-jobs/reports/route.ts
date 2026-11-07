@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { eventId, coverAssetId, referencedMarketingPostId, category, draft, seriesId, gameCoverUrl, gameCoverName } = body;
+  const { eventId, coverAssetId, category, draft, seriesId, gameCoverUrl, gameCoverName } = body;
   // Titel und Text sind optional — ein Beitrag braucht Text ODER Bild (prüft createReport).
   const title = typeof body.title === "string" ? body.title : "";
   const bodyMarkdown = typeof body.bodyMarkdown === "string" ? body.bodyMarkdown : "";
@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
     coverAssetId: typeof coverAssetId === "string" ? coverAssetId : undefined,
     gameCoverUrl: typeof gameCoverUrl === "string" ? gameCoverUrl : undefined,
     gameCoverName: typeof gameCoverName === "string" ? gameCoverName : undefined,
-    referencedMarketingPostId: typeof referencedMarketingPostId === "string" ? referencedMarketingPostId : undefined,
     category: typeof category === "string" && category ? category : undefined,
     draft: draft === true,
     seriesId: typeof seriesId === "string" && seriesId ? seriesId : undefined,

@@ -802,8 +802,8 @@ interface EventOption { id: string; title: string; startAt: string }
 
 interface MyReport {
   id: string; title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
-  coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean; publishedAt: string;
-  gameCoverUrl?: string | null; template?: string | null; adminConfirmedPosted?: boolean;
+  coverAssetId: string | null; seriesId?: string | null; isDraft: boolean; publishedAt: string;
+  gameCoverUrl?: string | null; template?: string | null; adminConfirmedPosted?: boolean; scheduledAt?: string | null;
   event?: { id: string; title: string } | null;
   media?: { id: string; url: string }[];
   _count: { votes: number; contributions: number; media?: number };
@@ -872,7 +872,8 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
               <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
                 <span className="flex items-center gap-2 min-w-0">
                   {thumb ? <Thumb url={thumb} /> : null}
-                  {r.isDraft && <Badge tone="warning">Entwurf</Badge>}
+                  {r.isDraft && r.scheduledAt && <Badge tone="info">Geplant · {formatBerlinDateTime(r.scheduledAt, { dateStyle: "short", timeStyle: "short" })}</Badge>}
+                  {r.isDraft && !r.scheduledAt && <Badge tone="warning">Entwurf</Badge>}
                   {r.template && <Badge tone="info">Werbung</Badge>}
                   {reportCategoryLabel(r.category) && <Badge tone="neutral">{reportCategoryLabel(r.category)}</Badge>}
                   <span className="text-gray-300 truncate">{postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount })}</span>

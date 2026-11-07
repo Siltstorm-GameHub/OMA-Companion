@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
 import { canWorkCommunityJobs } from "./community-job-access";
-import { registerOwnVoteCounter } from "./community-job-service";
 import { dispatchNotification } from "./notify-dispatch";
 
 /**
@@ -74,7 +73,7 @@ export async function searchMedia(query: MediaQuery) {
     // "Beliebteste": nach Daumen auf den Beitrag, in dem das Bild/der Clip veröffentlicht wurde.
     orderBy: query.sort === "votes" ? [{ report: { votes: { _count: "desc" as const } } }, { createdAt: "desc" as const }] : { createdAt: "desc" as const },
     include: {
-      _count: { select: { votes: true } },
+      report: { select: { id: true, _count: { select: { votes: true } } } },
       author: { select: { id: true, username: true, name: true } },
       event: { select: { id: true, title: true } },
       album: { select: { id: true, title: true } },
@@ -143,13 +142,3 @@ export async function deleteAsset(authorId: string, assetId: string, opts: { isA
 
 export type VoteResult = { ok: true } | { error: string };
 
-// ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
-
-registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
-  return prisma.jobMediaAssetVote.count({
-    where: {
-      voterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
-      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-    },
-  });
-});

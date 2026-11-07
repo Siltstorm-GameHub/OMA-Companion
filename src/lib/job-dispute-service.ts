@@ -14,7 +14,7 @@ import { prisma } from "./prisma";
  */
 
 export type VoteKind =
-  | "jobReportVote" | "jobReportContributionVote" | "jobMediaAssetVote" | "marketingPostVote" | "coachRating"
+  | "jobReportVote" | "jobReportContributionVote" | "coachRating"
   | "communityIdeaVote" | "communityBoardCommentVote" | "coachGuideVote";
 
 interface VoteOwnerLookup {
@@ -61,48 +61,6 @@ const lookups: Record<VoteKind, VoteOwnerLookup> = {
     },
     async resolveDispute(voteId, resolution, adminId) {
       await prisma.jobReportContributionVote.update({
-        where: { id: voteId },
-        data: { disputeResolution: resolution, disputeResolvedById: adminId },
-      });
-    },
-  },
-  jobMediaAssetVote: {
-    async getOwnerId(voteId) {
-      const vote = await prisma.jobMediaAssetVote.findUnique({
-        where: { id: voteId },
-        include: { asset: { select: { authorId: true } } },
-      });
-      return vote ? { ownerId: vote.asset.authorId, voterId: vote.voterId } : null;
-    },
-    async setDispute(voteId, disputed, reason) {
-      await prisma.jobMediaAssetVote.update({
-        where: { id: voteId },
-        data: { disputed, disputeReason: reason, disputeResolution: disputed ? "PENDING" : null },
-      });
-    },
-    async resolveDispute(voteId, resolution, adminId) {
-      await prisma.jobMediaAssetVote.update({
-        where: { id: voteId },
-        data: { disputeResolution: resolution, disputeResolvedById: adminId },
-      });
-    },
-  },
-  marketingPostVote: {
-    async getOwnerId(voteId) {
-      const vote = await prisma.marketingPostVote.findUnique({
-        where: { id: voteId },
-        include: { post: { select: { authorId: true } } },
-      });
-      return vote ? { ownerId: vote.post.authorId, voterId: vote.voterId } : null;
-    },
-    async setDispute(voteId, disputed, reason) {
-      await prisma.marketingPostVote.update({
-        where: { id: voteId },
-        data: { disputed, disputeReason: reason, disputeResolution: disputed ? "PENDING" : null },
-      });
-    },
-    async resolveDispute(voteId, resolution, adminId) {
-      await prisma.marketingPostVote.update({
         where: { id: voteId },
         data: { disputeResolution: resolution, disputeResolvedById: adminId },
       });

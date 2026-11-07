@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { bodyMarkdown, coverAssetId, gameCoverUrl, gameCoverName, category, eventId, referencedMarketingPostId, seriesId, editNote } = body;
+  const { bodyMarkdown, coverAssetId, gameCoverUrl, gameCoverName, category, eventId, seriesId, editNote } = body;
   const title = typeof body.title === "string" ? body.title : "";
   if (bodyMarkdown !== undefined && typeof bodyMarkdown !== "string") {
     return NextResponse.json({ error: "bodyMarkdown muss ein String sein" }, { status: 400 });
@@ -39,7 +39,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       gameCoverName: typeof gameCoverName === "string" ? gameCoverName : undefined,
       category: category === undefined ? undefined : (typeof category === "string" && category ? category : null),
       eventId: eventId === undefined ? undefined : (typeof eventId === "string" && eventId ? eventId : null),
-      referencedMarketingPostId: referencedMarketingPostId === undefined ? undefined : (typeof referencedMarketingPostId === "string" && referencedMarketingPostId ? referencedMarketingPostId : null),
       seriesId: seriesId === undefined ? undefined : (typeof seriesId === "string" && seriesId ? seriesId : null),
       editNote: typeof editNote === "string" ? editNote : undefined,
       ...parsePostExtras(body),

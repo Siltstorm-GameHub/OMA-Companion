@@ -10,13 +10,19 @@ import { AlbumSelect, MonthCollageBuilder, useAlbums } from "./FotografTools";
 import { prepareUploadImage } from "@/lib/studio-templates";
 import { CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, CLIP_MAX_BYTES, CLIP_UPLOAD_PREFIX, isVideoUrl } from "@/lib/upload-limits";
 import { POST_MEDIA_MAX } from "@/lib/post-display";
+import ClipTrimmer from "./ClipTrimmer";
+import TrimmedVideo from "./TrimmedVideo";
 
 /** Bild/Clip eines Beitrags im Editor: `id` = schon gespeichert, sonst frisch hochgeladen. */
-export interface EditorMedia { id?: string; url: string; caption: string; type?: string }
+export interface EditorMedia {
+  id?: string; url: string; caption: string; type?: string;
+  /** Clips: Schnitt-Bereich (Sekunden) und Vorschaubild. */
+  clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null;
+}
 
 const SMALL_INPUT = "bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
-async function uploadBlob(blob: Blob, name: string): Promise<string> {
+export async function uploadBlob(blob: Blob, name: string): Promise<string> {
   const body = new FormData();
   body.append("file", blob, name);
   body.append("kind", "community-job-asset");
@@ -92,6 +98,8 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
   const [mode, setMode] = useState<AddMode>(startMode ?? null);
   const [watermark, setWatermark] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [trimming, setTrimming] = useState<string | null>(null); // URL des Clips im Schnitt
+  const trimItem = media.find(m => m.url === trimming) ?? null;
   const free = POST_MEDIA_MAX - media.length;
 
   function add(items: EditorMedia[]) {
@@ -139,7 +147,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
             <div key={m.id ?? m.url} className="rounded-lg bg-white/[0.03] border border-white/10 p-1.5 space-y-1">
               <div className="relative">
                 {isVideoUrl(m.url)
-                  ? <video src={m.url} muted preload="metadata" className="w-full aspect-video object-cover rounded" />
+                  ? <TrimmedVideo url={m.url} clipStart={m.clipStart} clipEnd={m.clipEnd} posterUrl={m.posterUrl} controls={false} muted className="w-full aspect-video object-cover rounded" />
                   // eslint-disable-next-line @next/next/no-img-element -- Upload-Vorschau, Blob-Host
                   : <img src={m.url} alt="" className="w-full aspect-video object-cover rounded" />}
                 <button type="button" onClick={() => onChange(media.filter((_, j) => j !== i))} aria-label="Entfernen"
@@ -148,6 +156,12 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
               <input value={m.caption} maxLength={300} placeholder="Bildunterschrift" aria-label="Bildunterschrift"
                 onChange={e => onChange(media.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
                 className={`w-full ${SMALL_INPUT}`} />
+              {isVideoUrl(m.url) && (
+                <button type="button" onClick={() => setTrimming(trimming === m.url ? null : m.url)}
+                  className="w-full text-[10px] text-gray-400 hover:text-teal-300 text-left">
+                  ✂ {m.clipStart != null || m.clipEnd != null || m.posterUrl ? "Schnitt/Vorschaubild ändern" : "Schneiden & Vorschaubild"}
+                </button>
+              )}
               {media.length > 1 && (
                 <div className="flex justify-between">
                   <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Nach vorne" className="text-gray-500 hover:text-white disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -157,6 +171,13 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
             </div>
           ))}
         </div>
+      )}
+
+      {trimItem && (
+        <ClipTrimmer key={trimItem.url} url={trimItem.url} clipStart={trimItem.clipStart ?? null} clipEnd={trimItem.clipEnd ?? null}
+          posterUrl={trimItem.posterUrl ?? null} uploadPoster={blob => uploadBlob(blob, `${crypto.randomUUID()}.jpg`)}
+          onCancel={() => setTrimming(null)}
+          onSave={v => { onChange(media.map(x => (x.url === trimItem.url ? { ...x, ...v } : x))); setTrimming(null); }} />
       )}
 
       {free > 0 && (

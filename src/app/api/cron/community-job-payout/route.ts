@@ -3,6 +3,9 @@ import "@/lib/community-job-bootstrap";
 import { runWeeklyPayout, runReputationUpdate } from "@/lib/community-job-service";
 import { runCoachSessionReminders } from "@/lib/coach-service";
 import { closeExpiredIdeas, postIdeaDigests } from "@/lib/visionaer-service";
+import { publishDueScheduledPosts } from "@/lib/journalist-service";
+import { resolveDuePolls } from "@/lib/post-poll-service";
+import { runContentDigest } from "@/lib/content-digest";
 import { recordCronRun } from "@/lib/community-admin-overview";
 
 export const runtime = "nodejs";
@@ -44,11 +47,14 @@ export async function GET(req: NextRequest) {
   const badges = await step("badges", () => runReputationUpdate());
   const coachReminders = await step("coachReminders", () => runCoachSessionReminders());
   const ideas = await step("ideas", () => closeExpiredIdeas());
+  const scheduledPosts = await step("scheduledPosts", () => publishDueScheduledPosts());
+  const pollResolve = await step("pollResolve", () => resolveDuePolls());
+  const contentDigest = await step("contentDigest", () => runContentDigest());
   const ideaDigests = await step("ideaDigests", () => postIdeaDigests());
 
-  const hasError = [payout, badges, coachReminders, ideas, ideaDigests].some(r => "error" in r)
+  const hasError = [payout, badges, coachReminders, ideas, ideaDigests, scheduledPosts, pollResolve, contentDigest].some(r => "error" in r)
     || ("failed" in payout && payout.failed > 0);
-  const result = { payout, badges, coachReminders, ideas, ideaDigests };
+  const result = { payout, badges, coachReminders, ideas, ideaDigests, scheduledPosts, pollResolve, contentDigest };
   await recordCronRun(Date.now() - startedAt, hasError, result);
   return NextResponse.json(result, { status: hasError ? 500 : 200 });
 }

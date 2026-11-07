@@ -11,6 +11,8 @@
 import { prisma } from "@/lib/prisma";
 import { publishDueScheduledEvents } from "@/lib/event-publish";
 import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
+import { publishDueScheduledPosts } from "@/lib/journalist-service";
+import { resolveDuePolls } from "@/lib/post-poll-service";
 
 /**
  * Setzt alle fälligen ("open" + startAt <= jetzt) Events mit mindestens einer Spieler-
@@ -21,6 +23,10 @@ import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 export async function syncDueEventActivations(): Promise<void> {
   // Geplante Veröffentlichungen (Event.publishAt) — gleicher Lazy-Mechanismus, siehe event-publish.ts
   await publishDueScheduledEvents();
+
+  // Geplante Beiträge (Content Creator, z.B. Kampagnen-Erinnerung) — gleicher Lazy-Mechanismus
+  await publishDueScheduledPosts().catch(() => {});
+  await resolveDuePolls().catch(() => {});
 
   // Zeitraum-Events (Punktewertung/Durchschnittswerte): Runde 1 automatisch zum Starttermin eröffnen,
   // siehe lib/tournaments/period-rounds.ts — unabhängig davon, ob schon Spieler angemeldet sind

@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/roles";
 import { fileDispute, type VoteKind } from "@/lib/job-dispute-service";
 
 const VALID_KINDS: VoteKind[] = [
-  "jobReportVote", "jobReportContributionVote", "jobMediaAssetVote", "marketingPostVote", "coachRating",
+  "jobReportVote", "jobReportContributionVote", "coachRating",
   "communityIdeaVote", "communityBoardCommentVote", "coachGuideVote",
 ];
 

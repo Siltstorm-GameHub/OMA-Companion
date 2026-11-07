@@ -17,6 +17,8 @@ import { isMarketingTemplate } from "./marketing-templates";
 import { fulfillPromotionRequests } from "./promotion-request-service";
 import { fulfillPhotoRequest } from "./photo-request-service";
 import { POST_MEDIA_MAX, isAllowedMediaUrl, postDisplayTitle } from "./post-display";
+import { validatePoll, savePollForReport } from "./post-poll-service";
+import type { PollInput } from "./post-poll";
 
 export function appBaseUrl(): string { return process.env.NEXTAUTH_URL ?? "https://oma-app.de"; }
 export function reportPath(id: string): string { return `/community-board/report/${id}`; }
@@ -65,7 +67,11 @@ async function requireActiveJournalist(userId: string): Promise<boolean> {
 }
 
 /** Bild/Clip eines Beitrags: `id` = schon gespeichertes Medium dieses Beitrags, sonst neuer Upload (`url`). */
-export interface PostMediaInput { id?: string; url: string; caption?: string | null; type?: string | null }
+export interface PostMediaInput {
+  id?: string; url: string; caption?: string | null; type?: string | null;
+  /** Clips: Wiedergabe-Bereich in Sekunden und gewähltes Vorschaubild. */
+  clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null;
+}
 
 /**
  * Ein "Beitrag" (früher Bericht, Fotos/Clips oder Werbe-Post): Titel optional, Text und/oder Bilder/Clips,
@@ -73,7 +79,7 @@ export interface PostMediaInput { id?: string; url: string; caption?: string | n
  */
 interface ReportInput {
   title: string; bodyMarkdown: string; category?: string | null; eventId?: string | null;
-  coverAssetId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null;
+  coverAssetId?: string | null; seriesId?: string | null;
   /** Spiel-Cover statt Fotograf-Bild als Titelbild (schließt coverAssetId aus). */
   gameCoverUrl?: string | null; gameCoverName?: string | null;
   /** Bilder/Clips in Reihenfolge — `undefined` = unverändert (beim Bearbeiten). */
@@ -83,6 +89,20 @@ interface ReportInput {
   template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
   /** Bildwunsch, den dieser Beitrag erfüllt (erstes Bild wird verknüpft). */
   photoRequestId?: string | null;
+  /** Geplant veröffentlichen: Beitrag bleibt Entwurf und erscheint automatisch zu diesem Zeitpunkt. null = Planung aufheben. */
+  scheduledAt?: Date | null;
+  /** Umfrage im Beitrag — Objekt = anlegen/ersetzen (solange keine Stimmen), null = entfernen, undefined = unverändert. */
+  poll?: PollInput | null;
+}
+
+const SCHEDULE_MAX_DAYS = 60;
+
+function validateSchedule(at: Date | null | undefined): string | null {
+  if (!at) return null;
+  if (Number.isNaN(at.getTime())) return "Ungültiger Zeitpunkt";
+  if (at.getTime() < Date.now() + 60_000) return "Der geplante Zeitpunkt muss in der Zukunft liegen";
+  if (at.getTime() > Date.now() + SCHEDULE_MAX_DAYS * 86_400_000) return `Höchstens ${SCHEDULE_MAX_DAYS} Tage im Voraus planbar`;
+  return null;
 }
 
 const MEDIA_TYPES = ["CLIP", "COLLAGE", "SCREENSHOT", "BANNER", "GRAPHIC"];
@@ -94,6 +114,9 @@ async function validatePostExtras(authorId: string, data: Partial<ReportInput>):
     for (const m of data.media) {
       if (!m.id && !isAllowedMediaUrl(m.url)) return "Ungültige Datei (nur eigene Uploads)";
       if (m.caption && m.caption.length > 300) return "Bildunterschrift ist zu lang (max. 300 Zeichen)";
+      if (m.posterUrl && !isAllowedMediaUrl(m.posterUrl)) return "Ungültiges Vorschaubild";
+      if (m.clipStart != null && (!Number.isFinite(m.clipStart) || m.clipStart < 0)) return "Ungültiger Clip-Start";
+      if (m.clipEnd != null && (!Number.isFinite(m.clipEnd) || m.clipEnd <= (m.clipStart ?? 0))) return "Clip-Ende muss nach dem Start liegen";
     }
   }
   if (data.template && !isMarketingTemplate(data.template)) return "Ungültige Werbe-Vorlage";
@@ -106,7 +129,7 @@ async function validatePostExtras(authorId: string, data: Partial<ReportInput>):
   if (data.albumId && !(await prisma.jobMediaAlbum.findFirst({ where: { id: data.albumId, authorId }, select: { id: true } }))) {
     return "Album nicht gefunden";
   }
-  return null;
+  return validateSchedule(data.scheduledAt);
 }
 
 /**
@@ -122,15 +145,16 @@ async function syncReportMedia(
   const ids: string[] = [];
   for (const [position, m] of media.entries()) {
     const caption = m.caption?.trim() || null;
+    const clip = { clipStart: m.clipStart ?? null, clipEnd: m.clipEnd ?? null, posterUrl: m.posterUrl || null };
     if (m.id && currentIds.has(m.id)) {
-      await prisma.jobMediaAsset.update({ where: { id: m.id }, data: { position, caption } });
+      await prisma.jobMediaAsset.update({ where: { id: m.id }, data: { position, caption, ...clip } });
       ids.push(m.id);
       continue;
     }
     if (!isAllowedMediaUrl(m.url)) continue;
     const type = m.type && MEDIA_TYPES.includes(m.type) ? m.type : isVideoUrl(m.url) ? "CLIP" : "SCREENSHOT";
     const created = await prisma.jobMediaAsset.create({
-      data: { authorId, eventId, url: m.url, caption, type, reportId, position, albumId: albumId || null },
+      data: { authorId, eventId, url: m.url, caption, type, reportId, position, albumId: albumId || null, ...(type === "CLIP" ? clip : {}) },
     });
     ids.push(created.id);
   }
@@ -163,10 +187,6 @@ async function validateReportRefs(data: Partial<ReportInput>): Promise<string | 
     if (!asset || asset.hiddenByAdminAt) return "Titelbild nicht gefunden";
     if (isVideoUrl(asset.url)) return "Als Titelbild ist nur ein Standbild möglich, kein Video";
   }
-  if (data.referencedMarketingPostId
-    && !(await prisma.marketingPost.findUnique({ where: { id: data.referencedMarketingPostId }, select: { id: true } }))) {
-    return "Werbe-Post nicht gefunden";
-  }
   return null;
 }
 
@@ -180,7 +200,11 @@ export async function createReport(
   if (!(await requireActiveJournalist(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const invalid = (await validateReportRefs(data)) ?? (await validateSeries(authorId, data.seriesId)) ?? (await validatePostExtras(authorId, data));
   if (invalid) return { error: invalid };
-  const hasContent = !!data.bodyMarkdown.trim() || (data.media?.length ?? 0) > 0 || !!data.coverAssetId || !!data.gameCoverUrl;
+  if (data.poll) {
+    const pollError = await validatePoll(data.poll, data.eventId || null);
+    if (pollError) return { error: pollError };
+  }
+  const hasContent = !!data.bodyMarkdown.trim() || (data.media?.length ?? 0) > 0 || !!data.coverAssetId || !!data.gameCoverUrl || !!data.poll;
   if (!hasContent) return { error: "Schreib einen Text oder füge ein Bild/einen Clip hinzu" };
 
   const report = await prisma.jobReport.create({
@@ -189,16 +213,18 @@ export async function createReport(
       eventId: data.eventId || null,
       coverAssetId: data.gameCoverUrl ? null : data.coverAssetId || null,
       gameCoverUrl: data.gameCoverUrl || null, gameCoverName: data.gameCoverUrl ? data.gameCoverName?.trim() || null : null,
-      referencedMarketingPostId: data.referencedMarketingPostId || null,
-      category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true,
+      category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true || !!data.scheduledAt,
       template: data.template || null, campaignId: data.campaignId || null, trainingSessionId: data.trainingSessionId || null,
+      scheduledAt: data.scheduledAt ?? null,
     },
   });
+  const isDraft = data.draft === true || !!data.scheduledAt;
   if (data.media?.length) await syncReportMedia(report.id, authorId, data.eventId || null, data.media, data.albumId);
+  if (data.poll) await savePollForReport(report.id, data.eventId || null, data.poll);
   const displayTitle = postDisplayTitle({ title: data.title, bodyMarkdown: data.bodyMarkdown, mediaCount: data.media?.length });
-  const notice = data.draft ? undefined : await afterPublish(report.id, authorId, displayTitle, data.bodyMarkdown, data.category ?? null);
-  if (!data.draft) await afterPublishExtras(report.id, authorId, data.trainingSessionId || null, data.photoRequestId);
-  if (data.coverAssetId && !data.gameCoverUrl && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", displayTitle, reportPath(report.id)).catch(() => {});
+  const notice = isDraft ? undefined : await afterPublish(report.id, authorId, displayTitle, data.bodyMarkdown, data.category ?? null);
+  if (!isDraft) await afterPublishExtras(report.id, authorId, data.trainingSessionId || null, data.photoRequestId);
+  if (data.coverAssetId && !data.gameCoverUrl && !isDraft) notifyAssetUsed(data.coverAssetId, authorId, "report", displayTitle, reportPath(report.id)).catch(() => {});
   return { ok: true, reportId: report.id, notice };
 }
 
@@ -239,11 +265,43 @@ export async function publishReport(authorId: string, reportId: string, opts: { 
   if (!report.isDraft) return { error: "Bericht ist bereits veröffentlicht" };
   if (!(await requireActiveJournalist(report.authorId))) return { error: "Community-Jobs sind für dieses Konto nicht verfügbar" };
 
-  await prisma.jobReport.update({ where: { id: reportId }, data: { isDraft: false, publishedAt: new Date() } });
+  await prisma.jobReport.update({ where: { id: reportId }, data: { isDraft: false, publishedAt: new Date(), scheduledAt: null } });
   const mediaCount = await prisma.jobMediaAsset.count({ where: { reportId } });
   const notice = await afterPublish(reportId, report.authorId, postDisplayTitle({ ...report, mediaCount }), report.bodyMarkdown, report.category);
   await afterPublishExtras(reportId, report.authorId, report.trainingSessionId);
   return { ok: true, notice };
+}
+
+/**
+ * Geplante Beiträge veröffentlichen, deren Zeitpunkt erreicht ist. Es gibt keinen Minuten-Cron —
+ * deshalb lazy beim Laden von Dashboard/Event-Seiten/Board (siehe event-lifecycle.ts, community-board)
+ * und zusätzlich im täglichen Community-Job-Cron. Jeder Beitrag wird atomar "beansprucht", damit er
+ * bei gleichzeitigen Aufrufen nur einmal veröffentlicht und angekündigt wird.
+ */
+let lastScheduledCheck = 0;
+export async function publishDueScheduledPosts(now: Date = new Date()): Promise<{ published: number }> {
+  if (now.getTime() - lastScheduledCheck < 30_000) return { published: 0 }; // höchstens alle 30 s je Server-Instanz
+  lastScheduledCheck = now.getTime();
+  const due = await prisma.jobReport.findMany({
+    where: { isDraft: true, scheduledAt: { lte: now } }, orderBy: { scheduledAt: "asc" }, take: 20,
+    select: { id: true, authorId: true, title: true, bodyMarkdown: true, category: true, trainingSessionId: true },
+  });
+  let published = 0;
+  for (const r of due) {
+    const claimed = await prisma.jobReport.updateMany({
+      where: { id: r.id, isDraft: true, scheduledAt: { lte: now } },
+      data: { isDraft: false, publishedAt: now, scheduledAt: null },
+    });
+    if (claimed.count === 0) continue;
+    published++;
+    const mediaCount = await prisma.jobMediaAsset.count({ where: { reportId: r.id } });
+    await afterPublish(r.id, r.authorId, postDisplayTitle({ ...r, mediaCount }), r.bodyMarkdown, r.category).catch(() => {});
+    await afterPublishExtras(r.id, r.authorId, r.trainingSessionId).catch(() => {});
+    dispatchNotification("post_scheduled_published", {
+      users: [r.authorId], placeholders: { "{title}": postDisplayTitle({ ...r, mediaCount }), "{url}": reportPath(r.id) },
+    }).catch(() => {});
+  }
+  return { published };
 }
 
 /** Für den Lese-Ansicht/Bearbeiten-Abruf: Entwürfe nur für Autor bzw. Admin. */
@@ -252,12 +310,21 @@ export async function getReportForViewer(viewerId: string, reportId: string, opt
     where: { id: reportId },
     include: {
       event: { select: { id: true, title: true } },
-      media: { orderBy: { position: "asc" }, select: { id: true, url: true, caption: true, type: true } },
+      media: { orderBy: { position: "asc" }, select: { id: true, url: true, caption: true, type: true, clipStart: true, clipEnd: true, posterUrl: true } },
+      poll: { include: { options: { orderBy: { position: "asc" }, select: { id: true, label: true } }, _count: { select: { votes: true } } } },
     },
   });
   if (!report || report.hiddenByAdminAt) return null;
   if (report.isDraft && report.authorId !== viewerId && !opts.isAdmin) return null;
-  return report;
+  const { poll, ...rest } = report;
+  // Umfrage im Editor-Format — nur für den Autor (die Quiz-Antwort bleibt sonst bis zur Auflösung geheim).
+  const editPoll = poll && report.authorId === viewerId ? {
+    question: poll.question, kind: poll.kind, options: poll.options.map(o => o.label),
+    correctIndex: poll.correctOptionId ? poll.options.findIndex(o => o.id === poll.correctOptionId) : null,
+    participationReward: poll.participationReward, correctReward: poll.correctReward,
+    closesAt: poll.closesAt ? poll.closesAt.toISOString() : null, locked: poll._count.votes > 0,
+  } : null;
+  return { ...rest, poll: editPoll };
 }
 
 export type ContributeResult = { ok: true; contributionId: string; notice?: string } | { error: string };
@@ -281,7 +348,7 @@ export async function addContribution(
   // Autor benachrichtigen + in der Ergänzung genannte Personen (der Autor selbst bekommt nur die Ergänzungs-Nachricht).
   const authorName = await userDisplayName(authorId);
   const placeholders = { "{authorName}": authorName, "{title}": report.title, "{url}": reportPath(reportId) };
-  if (report.authorId !== authorId) dispatchNotification("report_contribution", { users: [report.authorId], placeholders }).catch(() => {});
+  // Den Autor informiert die tägliche Sammel-Benachrichtigung (content-digest.ts) statt einer Einzelmeldung.
   const mentioned = extractMentionedUserIds(bodyMarkdown).filter(id => id !== authorId && id !== report.authorId);
   if (mentioned.length > 0) {
     const existing = await prisma.user.findMany({ where: { id: { in: mentioned } }, select: { id: true } });
@@ -302,9 +369,11 @@ export async function updateReport(
   data: {
     title: string; bodyMarkdown?: string; coverAssetId?: string | null; category?: string | null;
     gameCoverUrl?: string | null; gameCoverName?: string | null;
-    eventId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null; editNote?: string;
+    eventId?: string | null; seriesId?: string | null; editNote?: string;
     media?: PostMediaInput[]; albumId?: string | null;
     template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
+    scheduledAt?: Date | null;
+    poll?: PollInput | null;
   },
   opts: { isAdmin?: boolean } = {},
 ): Promise<MutationResult> {
@@ -318,6 +387,15 @@ export async function updateReport(
   const nextHasCover = data.coverAssetId !== undefined || data.gameCoverUrl !== undefined
     ? !!data.coverAssetId || !!data.gameCoverUrl : !!report.coverAssetId || !!report.gameCoverUrl;
   if (!nextBody.trim() && nextMediaCount === 0 && !nextHasCover) return { error: "Schreib einen Text oder füge ein Bild/einen Clip hinzu" };
+  if (data.scheduledAt && !report.isDraft) return { error: "Nur Entwürfe lassen sich zeitlich planen" };
+  const nextEventId = data.eventId !== undefined ? data.eventId || null : report.eventId;
+  if (data.poll) {
+    const hasVotes = await prisma.postPollVote.count({ where: { poll: { reportId } } });
+    if (!hasVotes) {
+      const pollError = await validatePoll(data.poll, nextEventId);
+      if (pollError) return { error: pollError };
+    }
+  }
 
   // Veröffentlichte Berichte: bei inhaltlicher Änderung die alte Fassung sichern und "Korrigiert am" setzen.
   const contentChanged = !report.isDraft
@@ -340,16 +418,15 @@ export async function updateReport(
         : data.gameCoverUrl === null || data.coverAssetId ? { gameCoverUrl: null, gameCoverName: null } : {}),
       ...(data.category !== undefined ? { category: data.category || null } : {}),
       ...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
-      ...(data.referencedMarketingPostId !== undefined ? { referencedMarketingPostId: data.referencedMarketingPostId } : {}),
       ...(data.template !== undefined ? { template: data.template || null } : {}),
       ...(data.campaignId !== undefined ? { campaignId: data.campaignId || null } : {}),
       ...(data.trainingSessionId !== undefined ? { trainingSessionId: data.trainingSessionId || null } : {}),
+      ...(data.scheduledAt !== undefined && report.isDraft ? { scheduledAt: data.scheduledAt } : {}),
     },
   })]);
-  if (data.media !== undefined) {
-    const eventId = data.eventId !== undefined ? data.eventId || null : report.eventId;
-    await syncReportMedia(reportId, report.authorId, eventId, data.media, data.albumId);
-  }
+  if (data.media !== undefined) await syncReportMedia(reportId, report.authorId, nextEventId, data.media, data.albumId);
+  const pollError = await savePollForReport(reportId, nextEventId, data.poll);
+  if (pollError) return { error: pollError };
   if (!report.isDraft) notifyMentions(reportId, report.authorId, postDisplayTitle({ title: data.title, bodyMarkdown: nextBody, mediaCount: nextMediaCount }), nextBody).catch(() => {});
   if (!report.isDraft && data.coverAssetId && !data.gameCoverUrl && data.coverAssetId !== report.coverAssetId) {
     notifyAssetUsed(data.coverAssetId, report.authorId, "report", data.title.trim(), reportPath(reportId)).catch(() => {});
@@ -400,18 +477,8 @@ export async function voteReport(voterId: string, reportId: string): Promise<Vot
 
   await prisma.jobReportVote.create({ data: { reportId, voterId } });
   onCommunityJobVoteCast(voterId).catch(() => {});
-  notifyVoteMilestone(reportId, report.authorId, report.title).catch(() => {});
+  // Daumen werden nicht einzeln gemeldet — die tägliche Sammel-Benachrichtigung fasst sie zusammen (content-digest.ts).
   return { ok: true };
-}
-
-const VOTE_MILESTONES = [5, 10, 25, 50, 100];
-
-async function notifyVoteMilestone(reportId: string, authorId: string, title: string): Promise<void> {
-  const count = await prisma.jobReportVote.count({ where: { reportId } });
-  if (!VOTE_MILESTONES.includes(count)) return;
-  await dispatchNotification("report_votes_milestone", {
-    users: [authorId], placeholders: { "{count}": String(count), "{title}": title, "{url}": reportPath(reportId) },
-  });
 }
 
 export async function unvoteReport(voterId: string, reportId: string): Promise<VoteResult> {
@@ -448,12 +515,17 @@ export async function getJournalistStats(userId: string) {
   const validVote = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }] };
   const { weekStart, weekEnd } = getWeekBounds(now);
 
-  const [reports, drafts, recentVotes, contributionsReceived, contributionsWritten, contributionVotes] = await Promise.all([
+  const [reports, drafts, scheduled, recentVotes, contributionsReceived, contributionsWritten, contributionVotes, mediaUsedByOthers] = await Promise.all([
     prisma.jobReport.findMany({
       where: { authorId: userId, isDraft: false },
-      select: { id: true, title: true, category: true, publishedAt: true, _count: { select: { votes: true, contributions: true } } },
+      select: {
+        id: true, title: true, bodyMarkdown: true, category: true, publishedAt: true, template: true, adminConfirmedPosted: true,
+        coverAssetId: true, gameCoverUrl: true, countsForScore: true,
+        _count: { select: { votes: true, contributions: true, media: true } },
+      },
     }),
-    prisma.jobReport.count({ where: { authorId: userId, isDraft: true } }),
+    prisma.jobReport.count({ where: { authorId: userId, isDraft: true, scheduledAt: null } }),
+    prisma.jobReport.count({ where: { authorId: userId, isDraft: true, scheduledAt: { not: null } } }),
     prisma.jobReportVote.findMany({
       where: { report: { authorId: userId }, createdAt: { gte: since }, ...validVote },
       select: { createdAt: true },
@@ -461,6 +533,8 @@ export async function getJournalistStats(userId: string) {
     prisma.jobReportContribution.count({ where: { report: { authorId: userId }, authorId: { not: userId } } }),
     prisma.jobReportContribution.count({ where: { authorId: userId } }),
     prisma.jobReportContributionVote.count({ where: { contribution: { authorId: userId }, ...validVote } }),
+    // Eigene Bilder, die andere als Titelbild ihres Beitrags nutzen
+    prisma.jobReport.count({ where: { isDraft: false, hiddenByAdminAt: null, authorId: { not: userId }, coverAsset: { authorId: userId } } }),
   ]);
 
   const totalVotes = reports.reduce((sum, r) => sum + r._count.votes, 0);
@@ -476,11 +550,23 @@ export async function getJournalistStats(userId: string) {
   const byCategory = new Map<string, number>();
   for (const r of reports) byCategory.set(r.category ?? "ohne", (byCategory.get(r.category ?? "ohne") ?? 0) + 1);
 
+  // Art der Beiträge (ein Beitrag kann mehreres sein): mit Bildern/Clips, Werbung, längerer Text
+  const withMedia = reports.filter(r => r._count.media > 0 || !!r.coverAssetId || !!r.gameCoverUrl).length;
+  const promo = reports.filter(r => !!r.template).length;
+  const longText = reports.filter(r => r.bodyMarkdown.trim().length >= 600).length;
+  const avgOf = (list: typeof reports) => (list.length > 0 ? list.reduce((s, r) => s + r._count.votes, 0) / list.length : 0);
+
   return {
-    published: reports.length, drafts, totalVotes,
+    published: reports.length, drafts, scheduled, totalVotes,
+    kinds: { withMedia, promo, longText },
+    averageVotesWithMedia: avgOf(reports.filter(r => r._count.media > 0 || !!r.coverAssetId || !!r.gameCoverUrl)),
+    averageVotesWithoutMedia: avgOf(reports.filter(r => r._count.media === 0 && !r.coverAssetId && !r.gameCoverUrl)),
+    externallyPosted: reports.filter(r => r.adminConfirmedPosted).length,
+    overDailyLimit: reports.filter(r => !r.countsForScore).length,
+    mediaUsedByOthers,
     averageVotes: reports.length > 0 ? totalVotes / reports.length : 0,
     votesThisWeek: recentVotes.filter(v => v.createdAt >= weekStart && v.createdAt < weekEnd).length,
-    top: top && top._count.votes > 0 ? { id: top.id, title: top.title, votes: top._count.votes } : null,
+    top: top && top._count.votes > 0 ? { id: top.id, title: postDisplayTitle({ ...top, mediaCount: top._count.media }), votes: top._count.votes } : null,
     contributionsReceived, contributionsWritten, contributionVotes,
     weekly,
     categories: [...byCategory.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count),

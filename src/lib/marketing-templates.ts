@@ -20,6 +20,8 @@ export interface MarketingEventFacts {
   id: string; title: string; game: string | null; startAt: string; registered: number; url: string;
   /** true = Coach-Trainings-Termin statt Event (Anmeldezahl = Trainings-Anmeldungen). */
   training?: boolean;
+  /** Event-Bild (falls gesetzt) und Teilnehmer-Limit — für die Story-Grafik. */
+  imageUrl?: string | null; maxPlayers?: number | null;
 }
 
 const LINK_PREFIX = "\u{1F449} Jetzt anmelden: ";

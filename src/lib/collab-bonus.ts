@@ -43,29 +43,6 @@ export async function collabBonusScore(jobKey: string, userId: string, weekStart
       ]);
       return (Math.min(covers + guides, MAX_COLLAB_USES) + Math.min(promos, MAX_COLLAB_USES) + Math.min(ideas, MAX_COLLAB_USES)) * COLLAB_POINTS;
     }
-    case "fotograf": {
-      const [reports, posts, guides] = await Promise.all([
-        prisma.jobReport.count({ where: { isDraft: false, ...visible, publishedAt: inWeek, authorId: { not: userId }, coverAsset: { authorId: userId } } }),
-        prisma.marketingPost.count({ where: { ...visible, createdAt: inWeek, authorId: { not: userId }, asset: { authorId: userId } } }),
-        guidesUsingAssetsOf(userId, weekStart, weekEnd),
-      ]);
-      return Math.min(reports + posts + guides, MAX_COLLAB_USES) * COLLAB_POINTS;
-    }
-    case "marketing_manager": {
-      const [reports, promos] = await Promise.all([
-        prisma.jobReport.count({ where: { isDraft: false, ...visible, publishedAt: inWeek, authorId: { not: userId }, referencedMarketingPost: { authorId: userId } } }),
-        countFulfilledPromotions({ postAuthorId: userId }, weekStart, weekEnd),
-      ]);
-      return Math.min(reports + promos, MAX_COLLAB_USES) * COLLAB_POINTS;
-    }
-    case "journalist": {
-      const own = await prisma.jobReport.findMany({ where: { authorId: userId, isDraft: false }, select: { id: true } });
-      if (own.length === 0) return 0;
-      const fromOwn = await prisma.communityIdea.count({
-        where: { ...visible, createdAt: inWeek, authorId: { not: userId }, sourceReportId: { in: own.map(r => r.id) } },
-      });
-      return Math.min(fromOwn, MAX_COLLAB_USES) * COLLAB_POINTS;
-    }
     case "coach": {
       const promos = await countFulfilledPromotions({ requesterId: userId }, weekStart, weekEnd);
       return Math.min(promos, MAX_COLLAB_USES) * COLLAB_POINTS;

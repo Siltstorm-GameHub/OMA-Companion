@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { reportFeedInclude, toReportFeedEntry } from "@/lib/report-feed";
+import { publishDueScheduledPosts } from "@/lib/journalist-service";
+import { resolveDuePolls } from "@/lib/post-poll-service";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
+  await publishDueScheduledPosts().catch(() => {}); // fällige geplante Beiträge zuerst veröffentlichen
+  await resolveDuePolls().catch(() => {}); // fällige Umfragen auflösen (Gewinn-Münzen)
   const { searchParams } = new URL(req.url);
   const limit = Math.min(50, Number(searchParams.get("limit")) || 20);
 

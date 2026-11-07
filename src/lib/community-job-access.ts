@@ -39,7 +39,6 @@ async function markNotCounted(kind: ContributionKind, ids: string[]): Promise<vo
     case "report": await prisma.jobReport.updateMany({ where, data }); break;
     case "contribution": await prisma.jobReportContribution.updateMany({ where, data }); break;
     case "asset": await prisma.jobMediaAsset.updateMany({ where, data }); break;
-    case "marketing_post": await prisma.marketingPost.updateMany({ where, data }); break;
     case "idea": await prisma.communityIdea.updateMany({ where, data }); break;
     case "guide": await prisma.coachGuide.updateMany({ where, data }); break;
     case "training": await prisma.coachTrainingSession.updateMany({ where, data }); break;
@@ -86,26 +85,29 @@ export async function getRecentJobContributors(jobKey: string, days = 30, kinds?
 }
 
 /**
- * Alle User, für die im Gehaltslauf ein Score dieses Jobs berechnet werden muss:
- * jeder, der je in diesem Job beigetragen hat (Ledger) — plus ehemalige Inhaber aus
- * der Zeit vor den offenen Jobs, deren alte Inhalte weiterhin Stimmen bekommen.
+ * Alle User, für die im Gehaltslauf ein Score dieses Jobs berechnet werden muss: jeder, der je in
+ * diesem Job beigetragen hat (Ledger) — plus alle Autoren älterer Inhalte (vor dem Ledger), deren
+ * Beiträge, Termine, Anleitungen und Ideen weiterhin Stimmen bekommen.
  */
 export async function getPayoutCandidates(jobKey: string): Promise<string[]> {
-  const [ledger, legacy] = await Promise.all([
-    prisma.communityJobContribution.findMany({ where: { jobKey }, select: { userId: true }, distinct: ["userId"] }),
-    // Content Creator: ehemalige Journalisten, Fotografen und Marketing Manager zählen mit (alte Inhalte bekommen weiter Stimmen).
-    prisma.communityJobMember.findMany({
-      where: { jobKey: jobKey === CONTENT_CREATOR_KEY ? { in: CONTENT_AREAS.map(a => a.key) } : jobKey },
-      select: { userId: true }, distinct: ["userId"],
-    }),
-  ]);
-  const extra = jobKey === "coach"
-    ? await prisma.user.findMany({
-        where: { OR: [{ coachSpecialties: { isEmpty: false } }, { coachAvailableUntil: { not: null } }] },
-        select: { id: true },
-      }).then(rows => rows.map(r => r.id))
-    : [];
-  return [...new Set([...ledger.map(r => r.userId), ...legacy.map(r => r.userId), ...extra])];
+  const ledger = prisma.communityJobContribution.findMany({ where: { jobKey }, select: { userId: true }, distinct: ["userId"] })
+    .then(rows => rows.map(r => r.userId));
+  const sources: Promise<string[]>[] = [ledger];
+  if (jobKey === CONTENT_CREATOR_KEY) {
+    sources.push(prisma.jobReport.findMany({ where: { isDraft: false }, select: { authorId: true }, distinct: ["authorId"] }).then(rows => rows.map(r => r.authorId)));
+  } else if (jobKey === "coach") {
+    sources.push(
+      prisma.coachTrainingSession.findMany({ select: { coachId: true }, distinct: ["coachId"] }).then(rows => rows.map(r => r.coachId)),
+      prisma.coachGuide.findMany({ select: { authorId: true }, distinct: ["authorId"] }).then(rows => rows.map(r => r.authorId)),
+      prisma.coachRating.findMany({ select: { coachId: true }, distinct: ["coachId"] }).then(rows => rows.map(r => r.coachId)),
+      prisma.user.findMany({
+        where: { OR: [{ coachSpecialties: { isEmpty: false } }, { coachAvailableUntil: { not: null } }] }, select: { id: true },
+      }).then(rows => rows.map(r => r.id)),
+    );
+  } else if (jobKey === "visionaer") {
+    sources.push(prisma.communityIdea.findMany({ select: { authorId: true }, distinct: ["authorId"] }).then(rows => rows.map(r => r.authorId)));
+  }
+  return [...new Set((await Promise.all(sources)).flat())];
 }
 
 /**

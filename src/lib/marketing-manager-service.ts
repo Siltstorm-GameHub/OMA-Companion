@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
 import { canWorkCommunityJobs } from "./community-job-access";
-import { registerOwnVoteCounter } from "./community-job-service";
 import { postDisplayTitle } from "./post-display";
 import { dispatchNotification } from "./notify-dispatch";
 
@@ -38,12 +37,16 @@ const BASE_URL = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
 export async function getMarketingEventFacts(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, game: true, startAt: true, hidden: true, _count: { select: { registrations: true } } },
+    select: {
+      id: true, title: true, game: true, startAt: true, hidden: true, coverImageUrl: true, maxPlayers: true,
+      _count: { select: { registrations: true } },
+    },
   });
   if (!event || event.hidden) return null;
   return {
     id: event.id, title: event.title, game: event.game, startAt: event.startAt.toISOString(),
     registered: event._count.registrations, url: `${BASE_URL}/tournament/${event.id}`,
+    imageUrl: event.coverImageUrl, maxPlayers: event.maxPlayers,
   };
 }
 
@@ -80,10 +83,14 @@ export async function listMyCampaigns(userId: string) {
       id: true, title: true, eventId: true,
       event: { select: { id: true, title: true, startAt: true } },
       // Seit der Zusammenlegung sind Kampagnen-Schritte Beiträge (JobReport.template = Schritt).
-      reports: { where: { isDraft: false }, orderBy: { publishedAt: "asc" }, select: { id: true, template: true, publishedAt: true } },
+      reports: {
+        where: { OR: [{ isDraft: false }, { scheduledAt: { not: null } }] }, orderBy: { publishedAt: "asc" },
+        select: { id: true, template: true, publishedAt: true, scheduledAt: true, isDraft: true },
+      },
     },
   }).then(list => list.map(({ reports, ...c }) => ({
-    ...c, posts: reports.map(r => ({ id: r.id, kind: r.template, createdAt: r.publishedAt })),
+    ...c,
+    posts: reports.map(r => ({ id: r.id, kind: r.template, createdAt: r.publishedAt, scheduledAt: r.isDraft ? r.scheduledAt : null })),
   })));
 }
 
@@ -95,13 +102,3 @@ export async function deleteCampaign(authorId: string, campaignId: string, opts:
   return { ok: true };
 }
 
-// ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
-
-registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
-  return prisma.marketingPostVote.count({
-    where: {
-      voterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
-      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-    },
-  });
-});

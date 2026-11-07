@@ -16,6 +16,9 @@ import IdeaBody from "@/components/community-jobs/IdeaCard";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import { REPORT_CATEGORIES, reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
+import TrimmedVideo from "@/components/community-jobs/TrimmedVideo";
+import PostPollCard from "@/components/community-jobs/PostPollCard";
+import type { PollView } from "@/lib/post-poll";
 
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
@@ -45,7 +48,6 @@ export interface FeedEntry {
   votedByMe: boolean;
   coverAsset?: SubEntity | null;
   gameCover?: { url: string; name: string | null } | null;
-  referencedMarketingPost?: SubEntity | null;
   contributions?: { id: string; bodyMarkdown: string; author: Author; upvotes: number }[];
   adminConfirmedPosted?: boolean;
   lifecycle?: string;
@@ -67,7 +69,9 @@ export interface FeedEntry {
   imageUrl?: string | null;
   asset?: { url: string } | null;
   /** Beitrag: Bilder/Clips in Reihenfolge. */
-  media?: { id: string; url: string; caption: string | null; type: string }[];
+  media?: { id: string; url: string; caption: string | null; type: string; clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null }[];
+  /** Beitrag: Umfrage (richtige Antwort erst nach der Auflösung). */
+  poll?: PollView | null;
   hasOwnTitle?: boolean;
   template?: string | null;
 }
@@ -152,7 +156,8 @@ function MediaGallery({ media }: { media: NonNullable<FeedEntry["media"]> }) {
       {media.map(m => (
         <figure key={m.id} className="space-y-1">
           {isVideoUrl(m.url) ? (
-            <video src={m.url} controls preload="metadata" className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
+            <TrimmedVideo url={m.url} clipStart={m.clipStart} clipEnd={m.clipEnd} posterUrl={m.posterUrl}
+              className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
           ) : (
             <a href={m.url} target="_blank" rel="noreferrer" className="block">
               {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
@@ -235,6 +240,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
         ? <MarkdownLite text={full} className="text-xs" />
         : entry.excerpt ? <p className="text-xs text-gray-400 whitespace-pre-line"><EmojiText text={entry.excerpt} /></p> : null}
       {entry.media && <MediaGallery media={entry.media} />}
+      {entry.poll && <PostPollCard key={entry.poll.id} poll={entry.poll} isAuthor={entry.author.id === currentUserId} canVote={!!currentUserId && isJournalist} />}
       <div>
         {/* Kurze Texte stehen schon vollständig im Auszug — "weiterlesen" nur bei längeren. */}
         {(onReportPage || (entry.excerpt?.length ?? 0) >= 300) && (

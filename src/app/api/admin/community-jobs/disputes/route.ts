@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  const [reportVotes, contributionVotes, assetVotes, marketingVotes, coachRatings, ideaVotes, commentVotes, guideVotes] = await Promise.all([
+  const [reportVotes, contributionVotes, coachRatings, ideaVotes, commentVotes, guideVotes] = await Promise.all([
     prisma.jobReportVote.findMany({
       where: { disputed: true, disputeResolution: "PENDING" },
       include: { report: { select: { title: true, authorId: true } }, voter: { select: { username: true, name: true } } },
@@ -21,14 +21,6 @@ export async function GET() {
     prisma.jobReportContributionVote.findMany({
       where: { disputed: true, disputeResolution: "PENDING" },
       include: { contribution: { select: { authorId: true } }, voter: { select: { username: true, name: true } } },
-    }),
-    prisma.jobMediaAssetVote.findMany({
-      where: { disputed: true, disputeResolution: "PENDING" },
-      include: { asset: { select: { caption: true, authorId: true } }, voter: { select: { username: true, name: true } } },
-    }),
-    prisma.marketingPostVote.findMany({
-      where: { disputed: true, disputeResolution: "PENDING" },
-      include: { post: { select: { caption: true, authorId: true } }, voter: { select: { username: true, name: true } } },
     }),
     prisma.coachRating.findMany({
       where: { disputed: true, disputeResolution: "PENDING" },
@@ -52,8 +44,6 @@ export async function GET() {
     disputes: [
       ...reportVotes.map(v => ({ kind: "jobReportVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.report.title, ownerId: v.report.authorId })),
       ...contributionVotes.map(v => ({ kind: "jobReportContributionVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: "Ergänzung", ownerId: v.contribution.authorId })),
-      ...assetVotes.map(v => ({ kind: "jobMediaAssetVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.asset.caption ?? "Asset", ownerId: v.asset.authorId })),
-      ...marketingVotes.map(v => ({ kind: "marketingPostVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.post.caption, ownerId: v.post.authorId })),
       ...coachRatings.map(r => ({ kind: "coachRating" as const, id: r.id, reason: r.disputeReason, voter: r.rater, context: `Coach-Bewertung (${r.stars}★)`, ownerId: r.coach.id })),
       ...ideaVotes.map(v => ({ kind: "communityIdeaVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.idea.title, ownerId: v.idea.authorId })),
       ...commentVotes.map(v => ({ kind: "communityBoardCommentVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.comment.bodyMarkdown.slice(0, 60), ownerId: v.comment.authorId })),
@@ -71,7 +61,7 @@ export async function PATCH(req: NextRequest) {
 
   const { kind, voteId, resolution } = await req.json().catch(() => ({}));
   const validKinds: VoteKind[] = [
-    "jobReportVote", "jobReportContributionVote", "jobMediaAssetVote", "marketingPostVote", "coachRating",
+    "jobReportVote", "jobReportContributionVote", "coachRating",
     "communityIdeaVote", "communityBoardCommentVote", "coachGuideVote",
   ];
   if (!validKinds.includes(kind) || (resolution !== "UPHELD" && resolution !== "OVERTURNED") || typeof voteId !== "string") {

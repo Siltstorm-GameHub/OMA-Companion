@@ -20,7 +20,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ id: stri
       event: { select: { id: true, title: true } },
       assets: {
         where: { hiddenByAdminAt: null }, orderBy: { createdAt: "asc" },
-        select: { id: true, url: true, caption: true, _count: { select: { votes: true } } },
+        select: { id: true, url: true, caption: true, report: { select: { _count: { select: { votes: true } } } } },
       },
     },
   });
@@ -37,7 +37,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ id: stri
       </div>
       {album.assets.length === 0
         ? <p className="text-sm text-gray-500">Dieses Album ist noch leer.</p>
-        : <div className="glass rounded-2xl p-4"><AssetGrid assets={album.assets} /></div>}
+        : <div className="glass rounded-2xl p-4"><AssetGrid assets={album.assets.map(a => ({ ...a, _count: { votes: a.report?._count.votes ?? 0 } }))} /></div>}
     </div>
   );
 }

@@ -14,10 +14,13 @@ import { REPORT_CATEGORIES, REPORT_TITLE_MAX, REPORT_BODY_MAX } from "@/lib/repo
 import { readingMinutes, wordCount } from "@/lib/report-text";
 import { mentionToken } from "@/lib/report-mentions";
 import { isVideoUrl } from "@/lib/upload-limits";
-import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
+import { formatBerlinDate, formatBerlinDateTime, fromDatetimeLocalBerlin, toDatetimeLocalBerlin } from "@/lib/time";
+import { CalendarClock } from "@/components/icons";
 import type { EventFacts } from "@/lib/report-event-facts";
-import PostMediaEditor, { type EditorMedia } from "./PostMediaEditor";
-import { Megaphone, Copy } from "@/components/icons";
+import PostMediaEditor, { type EditorMedia, uploadBlob } from "./PostMediaEditor";
+import StoryGenerator from "./StoryGenerator";
+import PostPollEditor, { type PollDraft } from "./PostPollEditor";
+import { Megaphone, Copy, Sparkles } from "@/components/icons";
 import {
   MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
 } from "@/lib/marketing-templates";
@@ -41,10 +44,12 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export interface ReportEditorInitial {
   title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
-  coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean;
+  coverAssetId: string | null; seriesId?: string | null; isDraft: boolean;
   gameCoverUrl?: string | null; gameCoverName?: string | null;
-  media?: { id: string; url: string; caption: string | null; type: string }[];
+  media?: { id: string; url: string; caption: string | null; type: string; clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null }[];
   template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
+  scheduledAt?: string | null;
+  poll?: PollDraft | null;
 }
 
 /** Vorbelegung beim Start aus Empfehlungen, Anfragen, Kampagnen oder Spiele-Angeboten. */
@@ -97,8 +102,32 @@ function buildEventTemplate(f: EventFacts): string {
 
 const cell = (s: string) => s.replace(/\|/g, "/");
 
+// ── Automatisches Zwischenspeichern im Browser ─────────────────────────────────
+// Schützt lange Beiträge vor Verlust (Tab geschlossen, Verbindung weg). Pro neuem Beitrag bzw. pro
+// bearbeitetem Beitrag ein Schlüssel; wird nach erfolgreichem Speichern/Veröffentlichen gelöscht.
+const AUTOSAVE_PREFIX = "oma.postDraft.";
+const AUTOSAVE_MAX_AGE_MS = 14 * 86_400_000;
+
+interface AutosaveData {
+  savedAt: number;
+  title: string; body: string; category: string; eventId: string; seriesId: string;
+  coverAssetId: string; gameCover: { name: string; url: string } | null;
+  media: { id?: string; url: string; caption: string; type?: string }[];
+  usedTemplate: string | null; includeLink: boolean; scheduleOn: boolean; scheduleAt: string;
+}
+
+function readAutosave(key: string): AutosaveData | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as AutosaveData;
+    if (!data?.savedAt || Date.now() - data.savedAt > AUTOSAVE_MAX_AGE_MS) { window.localStorage.removeItem(key); return null; }
+    return data;
+  } catch { return null; }
+}
+
 export default function ReportEditor({
-  reportId, initial, eventId: presetEventId, presetCoverAssetId, presetPostId, recap, prefill, onDone,
+  reportId, initial, eventId: presetEventId, presetCoverAssetId, recap, prefill, onDone,
 }: {
   reportId?: string;
   initial?: ReportEditorInitial;
@@ -106,7 +135,6 @@ export default function ReportEditor({
   eventId?: string;
   /** Vom Foto/Werbe-Post im Board aus gestartet: Titelbild bzw. Werbe-Post vorwählen. */
   presetCoverAssetId?: string;
-  presetPostId?: string;
   /** Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
   recap?: "week" | "month";
   prefill?: PostEditorPrefill;
@@ -128,15 +156,21 @@ export default function ReportEditor({
   const [coverPickerOpen, setCoverPickerOpen] = useState(!!gameCover);
   const setCoverAssetId = (id: string) => { setCoverAssetIdRaw(id); if (id) { setGameCoverRaw(null); setCoverPickerOpen(false); } };
   const setGameCover = (v: PickedGameCover | null) => { setGameCoverRaw(v); if (v) setCoverAssetIdRaw(""); };
-  // Früher: "Über diesen Werbe-Post berichten" — bleibt beim Bearbeiten erhalten, wird aber nicht mehr neu gesetzt.
-  const refPostId = initial?.referencedMarketingPostId ?? presetPostId ?? "";
   const [media, setMedia] = useState<EditorMedia[]>(() => {
-    if (initial?.media) return initial.media.map(m => ({ id: m.id, url: m.url, caption: m.caption ?? "", type: m.type }));
+    if (initial?.media) {
+      return initial.media.map(m => ({
+        id: m.id, url: m.url, caption: m.caption ?? "", type: m.type,
+        clipStart: m.clipStart ?? null, clipEnd: m.clipEnd ?? null, posterUrl: m.posterUrl ?? null,
+      }));
+    }
     // Eigenes Bild aus einem Spiele-Angebot o.ä. (kein Spiel-Cover) als erstes Medium übernehmen.
     if (prefill?.imageUrl && !isGameCoverUrl(prefill.imageUrl)) return [{ url: prefill.imageUrl, caption: "", type: "GRAPHIC" }];
     return [];
   });
   const [albumId, setAlbumId] = useState("");
+  const [poll, setPoll] = useState<PollDraft | null>(initial?.poll ?? null);
+  const [pollOpen, setPollOpen] = useState(!!initial?.poll);
+  const [storyOpen, setStoryOpen] = useState(false);
   // Werbung: Vorlage, Event-/Trainings-Fakten und Anmelde-Link.
   const initialTemplate = initial?.template ?? prefill?.template;
   const [template, setTemplate] = useState<MarketingTemplateId>(
@@ -147,11 +181,14 @@ export default function ReportEditor({
   // Fakten gelten nur, solange ein Event bzw. Trainings-Termin gewählt ist.
   const facts = eventId || trainingSessionId ? loadedFacts : null;
   const [includeLink, setIncludeLink] = useState(false);
+  // Zeitgesteuert veröffentlichen (Berliner Zeit im Eingabefeld)
+  const [scheduleOn, setScheduleOn] = useState(!!initial?.scheduledAt);
+  const [scheduleAt, setScheduleAt] = useState(initial?.scheduledAt ? toDatetimeLocalBerlin(initial.scheduledAt) : "");
   const [marketingOpen, setMarketingOpen] = useState(!!trainingSessionId || !!campaignId || isMarketingTemplate(initialTemplate));
   const [seriesId, setSeriesId] = useState(initial?.seriesId ?? "");
   const [editNote, setEditNote] = useState("");
   const [preview, setPreview] = useState(false);
-  const [busy, setBusy] = useState<"draft" | "publish" | "save" | null>(null);
+  const [busy, setBusy] = useState<"draft" | "publish" | "save" | "schedule" | null>(null);
   const [filling, setFilling] = useState(false);
   const [events, setEvents] = useState<EventOption[]>([]);
   const [assets, setAssets] = useState<AssetOption[]>([]);
@@ -169,6 +206,15 @@ export default function ReportEditor({
   const [photoText, setPhotoText] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const autosaveKey = `${AUTOSAVE_PREFIX}${reportId ?? "new"}`;
+  const [restorable, setRestorable] = useState<AutosaveData | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = readAutosave(autosaveKey);
+    // Nur anbieten, wenn sich der gespeicherte Stand vom aktuellen unterscheidet.
+    if (!saved || (saved.body === (initial?.bodyMarkdown ?? prefill?.body ?? "") && saved.title === (initial?.title ?? prefill?.title ?? ""))) return null;
+    return saved;
+  });
+  const autosaveReady = useRef(false);
   const autoFilled = useRef(false);
   const searchSeq = useRef(0);
 
@@ -208,6 +254,27 @@ export default function ReportEditor({
     }
   }
 
+  /** Event-Recap: Ergebnis, MVP, Teilnehmer, beste Bilder (Titelbild + Galerie) und Kommentar-Zitate. */
+  async function fillEventRecap() {
+    if (!eventId) return;
+    if (body.trim() && !window.confirm("Der bisherige Text wird durch das Event-Recap ersetzt. Fortfahren?")) return;
+    setFilling(true);
+    try {
+      const r = await api<{ title: string; body: string; category: string; coverAssetId: string | null; imageCount: number; quoteCount: number }>(
+        `/api/community-jobs/reports/event-recap?eventId=${encodeURIComponent(eventId)}`,
+      );
+      setBody(r.body);
+      setTitle(t => t || r.title);
+      setCategory(c => c || r.category);
+      if (r.coverAssetId && !coverAssetId && !gameCover) setCoverAssetId(r.coverAssetId);
+      toast.success(`Recap erstellt — ${r.imageCount} ${r.imageCount === 1 ? "Bild" : "Bilder"}, ${r.quoteCount} ${r.quoteCount === 1 ? "Zitat" : "Zitate"}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Recap konnte nicht erstellt werden");
+    } finally {
+      setFilling(false);
+    }
+  }
+
   async function fillRecap(period: "week" | "month", silent = false) {
     if (!silent && body.trim() && !window.confirm("Der bisherige Text wird durch die Rückblick-Vorlage ersetzt. Fortfahren?")) return;
     setFilling(true);
@@ -238,6 +305,14 @@ export default function ReportEditor({
       .then(f => {
         if (cancelled) return;
         setFacts(f);
+        // Kampagnen-Erinnerung bzw. "Heute": passenden Zeitpunkt vorschlagen (3 Tage vorher 18 Uhr / am Tag 10 Uhr).
+        if (!reportId && campaignId && (template === "reminder" || template === "today") && !f.training) {
+          const start = new Date(f.startAt);
+          const day = new Date(start.getTime() - (template === "reminder" ? 3 : 0) * 86_400_000);
+          const local = toDatetimeLocalBerlin(day).slice(0, 10) + (template === "reminder" ? "T18:00" : "T10:00");
+          const at = fromDatetimeLocalBerlin(local);
+          if (at.getTime() > Date.now() + 5 * 60_000 && at.getTime() < start.getTime()) { setScheduleAt(local); setScheduleOn(true); }
+        }
         // Vom Event/Training aus gestartet und noch leer: kommendes Event → Werbe-Text, vergangenes → Bericht-Vorlage.
         if (!autoFilled.current && !reportId && !body.trim() && (presetEventId || trainingSessionId)) {
           autoFilled.current = true;
@@ -384,15 +459,23 @@ export default function ReportEditor({
   }
 
   // ── Speichern ─────────────────────────────────────────────────────────────
-  async function submit(mode: "draft" | "publish" | "save") {
+  async function submit(mode: "draft" | "publish" | "save" | "schedule") {
     setBusy(mode);
     try {
+      const scheduledIso = mode === "schedule" && scheduleAt ? fromDatetimeLocalBerlin(scheduleAt).toISOString() : null;
       const payload = {
+        // Nur Entwürfe sind planbar: "Einplanen" setzt den Zeitpunkt, normales Speichern/Veröffentlichen hebt ihn auf.
+        ...(isPublishedEdit ? {} : { scheduledAt: scheduledIso }),
         title, bodyMarkdown: finalText(),
         category: category || null, eventId: eventId || null, seriesId: seriesId || null,
-        coverAssetId: gameCover ? null : coverAssetId || null, referencedMarketingPostId: refPostId || null,
+        coverAssetId: gameCover ? null : coverAssetId || null,
         gameCoverUrl: gameCover?.url ?? null, gameCoverName: gameCover?.name ?? null,
-        media: media.map(m => ({ id: m.id, url: m.url, caption: m.caption, type: m.type })),
+        media: media.map(m => ({
+          id: m.id, url: m.url, caption: m.caption, type: m.type,
+          clipStart: m.clipStart ?? null, clipEnd: m.clipEnd ?? null, posterUrl: m.posterUrl ?? null,
+        })),
+        // Umfrage: mit Stimmen unverändert lassen; entfernt = null (nur wenn vorher eine da war)
+        ...(poll?.locked ? {} : poll ? { poll } : initial?.poll ? { poll: null } : {}),
         albumId: albumId || null,
         template: usedTemplate, campaignId: campaignId ?? null, trainingSessionId: trainingSessionId ?? null,
         photoRequestId: photoRequestId ?? null,
@@ -401,9 +484,11 @@ export default function ReportEditor({
         await api(`/api/community-jobs/reports/${reportId}`, { method: "PATCH", body: JSON.stringify({ ...payload, editNote: isPublishedEdit ? editNote : undefined }) });
         if (mode === "publish") await api(`/api/community-jobs/reports/${reportId}/publish`, { method: "POST" });
       } else {
-        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ ...payload, draft: mode === "draft" }) });
+        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ ...payload, draft: mode === "draft" || mode === "schedule" }) });
       }
-      toast.success(mode === "draft" ? "Entwurf gespeichert" : mode === "publish" ? "Veröffentlicht" : "Gespeichert");
+      clearAutosave();
+      toast.success(mode === "draft" ? "Entwurf gespeichert" : mode === "publish" ? "Veröffentlicht"
+        : mode === "schedule" ? `Geplant für ${formatBerlinDateTime(fromDatetimeLocalBerlin(scheduleAt), { dateStyle: "short", timeStyle: "short" })}` : "Gespeichert");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
@@ -412,11 +497,49 @@ export default function ReportEditor({
     }
   }
 
+  // Änderungen verzögert im Browser sichern — erst, nachdem ein angebotener Stand übernommen oder verworfen wurde.
+  useEffect(() => {
+    if (restorable) return;
+    if (!autosaveReady.current) { autosaveReady.current = true; return; } // Ausgangszustand nicht speichern
+    const handle = setTimeout(() => {
+      const hasContent = body.trim() || title.trim() || media.length > 0;
+      try {
+        if (!hasContent) { window.localStorage.removeItem(autosaveKey); return; }
+        const data: AutosaveData = {
+          savedAt: Date.now(), title, body, category, eventId, seriesId, coverAssetId, gameCover,
+          media: media.map(m => ({ id: m.id, url: m.url, caption: m.caption, type: m.type })),
+          usedTemplate, includeLink, scheduleOn, scheduleAt,
+        };
+        window.localStorage.setItem(autosaveKey, JSON.stringify(data));
+      } catch { /* Speicher voll oder privat — dann eben ohne */ }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [title, body, category, eventId, seriesId, coverAssetId, gameCover, media, usedTemplate, includeLink, scheduleOn, scheduleAt, restorable, autosaveKey]);
+
+  function clearAutosave() {
+    try { window.localStorage.removeItem(autosaveKey); } catch { /* egal */ }
+  }
+  function restoreAutosave() {
+    if (!restorable) return;
+    setTitle(restorable.title); setBody(restorable.body); setCategory(restorable.category);
+    setEventId(restorable.eventId); setSeriesId(restorable.seriesId);
+    if (restorable.gameCover) setGameCover(restorable.gameCover); else setCoverAssetId(restorable.coverAssetId);
+    setMedia(restorable.media.map(m => ({ ...m, caption: m.caption ?? "" })));
+    setUsedTemplate(restorable.usedTemplate); setIncludeLink(restorable.includeLink);
+    setScheduleOn(restorable.scheduleOn); setScheduleAt(restorable.scheduleAt);
+    autoFilled.current = true; // keine Vorlage mehr über den wiederhergestellten Text legen
+    setRestorable(null);
+  }
+  function discardAutosave() {
+    clearAutosave();
+    setRestorable(null);
+  }
+
   const words = useMemo(() => wordCount(body), [body]);
   const minutes = useMemo(() => readingMinutes(body), [body]);
   const cover = assets.find(a => a.id === coverAssetId);
   // Ein Beitrag braucht Text ODER ein Bild/einen Clip — der Titel ist optional.
-  const canSubmit = (body.trim().length > 0 || media.length > 0 || !!coverAssetId || !!gameCover) && body.length <= REPORT_BODY_MAX;
+  const canSubmit = (body.trim().length > 0 || media.length > 0 || !!coverAssetId || !!gameCover || !!poll?.question.trim()) && body.length <= REPORT_BODY_MAX;
   const selectedEventTitle = events.find(e => e.id === eventId)?.title;
 
   const toolbar: { icon: typeof Bold; label: string; run: () => void }[] = [
@@ -435,6 +558,18 @@ export default function ReportEditor({
 
   return (
     <div className="space-y-3">
+      {restorable && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-amber-200">
+            Nicht gespeicherter Stand vom {formatBerlinDateTime(new Date(restorable.savedAt), { dateStyle: "short", timeStyle: "short" })} gefunden
+            {restorable.title ? ` („${restorable.title.slice(0, 40)}“)` : ""}.
+          </p>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="ghost" onClick={discardAutosave}>Verwerfen</Button>
+            <Button size="sm" onClick={restoreAutosave}>Wiederherstellen</Button>
+          </div>
+        </div>
+      )}
       {trainingSessionId && (
         <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
       )}
@@ -464,6 +599,12 @@ export default function ReportEditor({
         {eventId && (
           <Button size="sm" variant="outline" loading={filling} icon={<Wand2 className="w-3.5 h-3.5" />} onClick={() => fillFromEvent(eventId)}>
             Aus Event vorbefüllen
+          </Button>
+        )}
+        {eventId && (
+          <Button size="sm" variant="outline" loading={filling} icon={<Sparkles className="w-3.5 h-3.5" />} onClick={fillEventRecap}
+            title="Ergebnis, MVP, Teilnehmer, beste Bilder und Kommentar-Zitate als fertiger Entwurf">
+            Event-Recap erstellen
           </Button>
         )}
       </div>
@@ -620,6 +761,9 @@ export default function ReportEditor({
       {/* Bilder & Clips */}
       <PostMediaEditor media={media} onChange={setMedia} albumId={albumId} onAlbumChange={setAlbumId} startMode={prefill?.collage ? "collage" : undefined} />
 
+      {/* Umfrage */}
+      <PostPollEditor value={poll} onChange={setPoll} eventId={eventId} open={pollOpen} onToggle={() => setPollOpen(v => !v)} />
+
       {/* Werbung */}
       <div className="rounded-lg border border-white/10 bg-white/[0.02]">
         <button type="button" onClick={() => setMarketingOpen(v => !v)} aria-expanded={marketingOpen}
@@ -639,7 +783,13 @@ export default function ReportEditor({
                 <input type="checkbox" checked={includeLink} disabled={!facts} onChange={e => setIncludeLink(e.target.checked)} /> Anmelde-Link
               </label>
               <Button size="sm" variant="ghost" icon={<Copy className="w-3.5 h-3.5" />} disabled={!body.trim()} onClick={copyText}>Text kopieren</Button>
+              <Button size="sm" variant={storyOpen ? "primary" : "outline"} disabled={!facts} onClick={() => setStoryOpen(v => !v)}>Story 9:16</Button>
             </div>
+            {storyOpen && facts && (
+              <StoryGenerator facts={facts} mediaUrls={media.map(m => m.url)}
+                upload={blob => uploadBlob(blob, `${crypto.randomUUID()}.jpg`)}
+                onExported={url => { setMedia(m => [...m, { url, caption: "", type: "GRAPHIC" }]); setStoryOpen(false); }} />
+            )}
           </div>
         )}
       </div>
@@ -672,6 +822,20 @@ export default function ReportEditor({
         </div>
       )}
 
+      {(!reportId || isDraftEdit) && (
+        <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+            <input type="checkbox" checked={scheduleOn} onChange={e => setScheduleOn(e.target.checked)} />
+            <CalendarClock className="w-3.5 h-3.5" /> Zeitgesteuert veröffentlichen
+          </label>
+          {scheduleOn && (
+            <input type="datetime-local" value={scheduleAt} onChange={e => setScheduleAt(e.target.value)} aria-label="Veröffentlichungszeitpunkt"
+              className={SMALL_INPUT} />
+          )}
+          {scheduleOn && <span className="text-[10px] text-gray-600">Bis dahin bleibt der Beitrag ein Entwurf (Berliner Zeit).</span>}
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 flex-wrap">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
         {(!reportId || isDraftEdit) && (
@@ -679,6 +843,8 @@ export default function ReportEditor({
         )}
         {reportId && !isDraftEdit ? (
           <Button loading={busy === "save"} disabled={!canSubmit || busy !== null} onClick={() => submit("save")}>Speichern</Button>
+        ) : scheduleOn ? (
+          <Button loading={busy === "schedule"} disabled={!canSubmit || !scheduleAt || busy !== null} onClick={() => submit("schedule")}>Einplanen</Button>
         ) : (
           <Button loading={busy === "publish"} disabled={!canSubmit || busy !== null} onClick={() => submit("publish")}>Veröffentlichen</Button>
         )}

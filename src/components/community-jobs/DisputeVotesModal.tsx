@@ -15,7 +15,7 @@ import { formatBerlinDate } from "@/lib/time";
  */
 
 export type DisputeKind =
-  | "jobReportVote" | "jobReportContributionVote" | "jobMediaAssetVote" | "marketingPostVote"
+  | "jobReportVote" | "jobReportContributionVote"
   | "coachRating" | "communityIdeaVote" | "communityBoardCommentVote" | "coachGuideVote";
 
 interface VoteEntry {

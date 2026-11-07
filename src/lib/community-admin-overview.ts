@@ -108,11 +108,9 @@ export async function getVoteAnomalies(days = 30) {
   const since = new Date(Date.now() - days * DAY);
   const where = { createdAt: { gte: since } };
   const take = 20_000;
-  const [reports, contribs, assets, posts, ideas, guides, comments, ratings] = await Promise.all([
+  const [reports, contribs, ideas, guides, comments, ratings] = await Promise.all([
     prisma.jobReportVote.findMany({ where, take, select: { voterId: true, createdAt: true, report: { select: { authorId: true } } } }),
     prisma.jobReportContributionVote.findMany({ where, take, select: { voterId: true, createdAt: true, contribution: { select: { authorId: true } } } }),
-    prisma.jobMediaAssetVote.findMany({ where, take, select: { voterId: true, createdAt: true, asset: { select: { authorId: true } } } }),
-    prisma.marketingPostVote.findMany({ where, take, select: { voterId: true, createdAt: true, post: { select: { authorId: true } } } }),
     prisma.communityIdeaVote.findMany({ where, take, select: { voterId: true, createdAt: true, idea: { select: { authorId: true } } } }),
     prisma.coachGuideVote.findMany({ where, take, select: { voterId: true, createdAt: true, guide: { select: { authorId: true } } } }),
     prisma.communityBoardCommentVote.findMany({ where, take, select: { voterId: true, createdAt: true, comment: { select: { authorId: true } } } }),
@@ -122,8 +120,6 @@ export async function getVoteAnomalies(days = 30) {
   const events: VoteEvent[] = [
     ...reports.map(v => ({ voter: v.voterId, owner: v.report.authorId, at: v.createdAt.getTime() })),
     ...contribs.map(v => ({ voter: v.voterId, owner: v.contribution.authorId, at: v.createdAt.getTime() })),
-    ...assets.map(v => ({ voter: v.voterId, owner: v.asset.authorId, at: v.createdAt.getTime() })),
-    ...posts.map(v => ({ voter: v.voterId, owner: v.post.authorId, at: v.createdAt.getTime() })),
     ...ideas.map(v => ({ voter: v.voterId, owner: v.idea.authorId, at: v.createdAt.getTime() })),
     ...guides.map(v => ({ voter: v.voterId, owner: v.guide.authorId, at: v.createdAt.getTime() })),
     ...comments.map(v => ({ voter: v.voterId, owner: v.comment.authorId, at: v.createdAt.getTime() })),
