@@ -30,6 +30,8 @@ interface FeedEntry {
   imageUrl?: string | null;
   asset?: { id: string; url: string } | null;
   adminConfirmedPosted?: boolean;
+  template?: string | null;
+  media?: { id: string; url: string }[];
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -42,6 +44,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 function entryImage(e: FeedEntry): { url: string; assetId?: string; via: "coverAsset" | "asset" | "imageUrl" } | null {
   if (e.kind === "asset" && e.url) return { url: e.url, via: "imageUrl" };
   if (e.kind === "report" && e.coverAsset) return { url: e.coverAsset.url, assetId: e.coverAsset.id, via: "coverAsset" };
+  if (e.kind === "report" && e.media?.[0]) return { url: e.media[0].url, assetId: e.media[0].id, via: "asset" };
   if (e.kind === "marketing_post") {
     if (e.imageUrl) return { url: e.imageUrl, via: "imageUrl" };
     if (e.asset) return { url: e.asset.url, assetId: e.asset.id, via: "asset" };
@@ -51,7 +54,7 @@ function entryImage(e: FeedEntry): { url: string; assetId?: string; via: "coverA
 
 const KIND_ICON = { report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Newspaper, guide: Newspaper } as const;
 const KIND_LABEL: Record<FeedEntry["kind"], string> = {
-  report: "Bericht", asset: "Fotograf-Asset", marketing_post: "Marketing-Post", idea: "Idee", guide: "Anleitung",
+  report: "Beitrag", asset: "Bild/Clip", marketing_post: "Werbe-Post (alt)", idea: "Idee", guide: "Anleitung",
 };
 
 export default function AdminContentSection() {
@@ -126,7 +129,7 @@ export default function AdminContentSection() {
                 <p className="text-xs text-gray-300 truncate">{entry.title ?? entry.caption}</p>
               </div>
               <div className="flex gap-1.5 shrink-0">
-                {entry.kind === "marketing_post" && (
+                {(entry.kind === "marketing_post" || (entry.kind === "report" && !!entry.template)) && (
                   <Button size="sm" variant={entry.adminConfirmedPosted ? "outline" : "primary"}
                     icon={<CheckCircle2 className="w-3.5 h-3.5" />}
                     onClick={() => toggleConfirmedPosted(entry, !entry.adminConfirmedPosted)}>
@@ -163,8 +166,6 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
         await api(`/api/community-jobs/reports/${entry.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
       } else if (entry.kind === "asset") {
         await api(`/api/community-jobs/media/${entry.id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
-      } else if (entry.kind === "marketing_post") {
-        await api(`/api/community-jobs/marketing-posts/${entry.id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
       }
       toast.success("Gespeichert");
       onDone();
@@ -184,8 +185,6 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
         await api(`/api/community-jobs/media/${image.assetId}`, { method: "PATCH", body: JSON.stringify({ url: newUrl }) });
       } else if (entry.kind === "asset") {
         await api(`/api/community-jobs/media/${entry.id}`, { method: "PATCH", body: JSON.stringify({ url: newUrl }) });
-      } else if (entry.kind === "marketing_post") {
-        await api(`/api/community-jobs/marketing-posts/${entry.id}`, { method: "PATCH", body: JSON.stringify({ imageUrl: newUrl }) });
       }
       toast.success("Zuschnitt gespeichert");
       setCropping(false);

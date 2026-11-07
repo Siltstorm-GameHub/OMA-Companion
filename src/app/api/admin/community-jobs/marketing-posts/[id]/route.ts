@@ -3,7 +3,7 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { logAdminAction } from "@/lib/community-admin-audit";
 import { setAdminConfirmedPosted } from "@/lib/marketing-manager-service";
 
-/** PATCH { confirmed: boolean } — Admin bestätigt/widerruft "wurde tatsächlich gepostet". */
+/** PATCH { confirmed: boolean } — Admin bestätigt/widerruft "Beitrag wurde tatsächlich extern gepostet" (id = Beitrag). */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSessionUser();
   if (!user || !hasMinRole(user.role, "moderator")) {
@@ -18,6 +18,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const result = await setAdminConfirmedPosted(id, confirmed);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
-  await logAdminAction(user, { action: confirmed ? "marketing_confirm" : "marketing_unconfirm", targetType: "marketing_post", targetId: id });
+  await logAdminAction(user, { action: confirmed ? "marketing_confirm" : "marketing_unconfirm", targetType: "report", targetId: id });
   return NextResponse.json(result);
 }

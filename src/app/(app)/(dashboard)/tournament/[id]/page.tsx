@@ -27,10 +27,7 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
-import { EventReportsSection } from "@/components/JournalistReportLists";
-import { EventGallerySection } from "@/components/FotografGalleries";
-import { EventMarketingSection } from "@/components/MarketingLists";
-import EventJobPackage from "@/components/EventJobPackage";
+import EventPostsSection from "@/components/EventPostsSection";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
@@ -1225,11 +1222,9 @@ export default async function TournamentDetailPage({
         </div>
       )}
 
-      <EventJobPackage eventId={event.id} />
-      <EventMarketingSection eventId={event.id} />
+      {/* Ein Bereich für alle Beiträge zum Event — Werbung, Fotos & Clips und Berichte sind seit der Zusammenlegung ein Typ. */}
+      <EventPostsSection eventId={event.id} canCreate={!!me} />
       <div className="mb-5"><IdeaFromButton label="Idee zu diesem Event" prefill={{ title: `Idee zu \u201e${event.title}\u201c`, eventId: event.id }} /></div>
-      <EventGallerySection eventId={event.id} />
-      <EventReportsSection eventId={event.id} />
 
       {/* ── Twitch-Clip (Admin-Highlight) ────────────────────────────── */}
       {event.twitchClipUrl && (

@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { plainExcerpt, readingMinutes } from "./report-text";
+import { postDisplayTitle } from "./post-display";
 
 /**
- * Berichte als Board-Karten: gemeinsame Abfrage + Abbildung für den Feed (/api/community-board) und die
- * einzelne Bericht-Seite (/community-board/report/[id]), damit beide exakt dieselbe Form liefern.
+ * Beiträge (Text + Bilder/Clips + optional Werbung) als Board-Karten: gemeinsame Abfrage + Abbildung für den
+ * Feed (/api/community-board), die Turnierseite und die einzelne Beitragsseite (/community-board/report/[id]).
  */
 
 const AUTHOR = { select: { id: true, username: true, name: true, image: true, rankPoints: true } } as const;
@@ -16,6 +17,7 @@ export function reportFeedInclude(viewerId: string) {
     coverAsset: { include: { author: AUTHOR, _count: { select: { votes: true } } } },
     referencedMarketingPost: { include: { author: AUTHOR, _count: { select: { votes: true } } } },
     contributions: { include: { author: AUTHOR, _count: { select: { votes: true } } } },
+    media: { where: { hiddenByAdminAt: null }, orderBy: { position: "asc" }, select: { id: true, url: true, caption: true, type: true } },
     votes: { where: { voterId: viewerId }, select: { id: true } },
     _count: { select: { votes: true } },
   } satisfies Prisma.JobReportInclude;
@@ -28,8 +30,14 @@ export function toReportFeedEntry(r: ReportWithFeedData) {
     kind: "report" as const,
     id: r.id,
     publishedAt: r.publishedAt,
-    title: r.title,
+    title: postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount: r.media.length }),
+    /** true = eigener Titel gesetzt (sonst ist `title` aus Text bzw. "Fotos & Clips" abgeleitet). */
+    hasOwnTitle: !!r.title.trim(),
     category: r.category,
+    media: r.media,
+    template: r.template,
+    adminConfirmedPosted: r.adminConfirmedPosted,
+    trainingSessionId: r.trainingSessionId,
     event: r.event,
     series: r.series,
     editedAt: r.editedAt,

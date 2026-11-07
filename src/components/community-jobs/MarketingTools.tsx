@@ -1,7 +1,5 @@
 "use client";
-import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState } from "react";
-import { TrendingUp } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
 import { Check, Megaphone, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
@@ -23,96 +21,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-lg bg-white/[0.03] px-2.5 py-2">
-      <p className="text-[10px] text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
-    </div>
-  );
-}
-
 // ── Auswertung ───────────────────────────────────────────────────────────────
-
-interface Stats {
-  total: number; totalVotes: number; averageVotes: number; votesThisWeek: number;
-  eventsPromoted: number; withImage: number; confirmed: number;
-  top: { id: string; caption: string; votes: number } | null;
-  weekly: { weekStart: string; votes: number }[];
-  reach: { promotedAvg: number | null; promotedCount: number; unpromotedAvg: number | null; unpromotedCount: number };
-}
-
-export function MarketingStatsBlock({ refreshKey }: { refreshKey?: number }) {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/community-jobs/marketing-posts/stats").then(r => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
-  }, [refreshKey]);
-
-  if (!stats) return null;
-  const maxWeek = Math.max(1, ...stats.weekly.map(w => w.votes));
-  const { reach } = stats;
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-300 flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
-          {stats.total} {stats.total === 1 ? "Post" : "Posts"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
-        </p>
-        <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
-          Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-        </button>
-      </div>
-
-      {open && (
-        <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            <Tile label="Posts" value={String(stats.total)} sub={`${stats.eventsPromoted} ${stats.eventsPromoted === 1 ? "Event" : "Events"} beworben`} />
-            <Tile label="Ø Daumen/Post" value={formatFixed(stats.averageVotes, 1)} />
-            <Tile label="Mit Bild" value={stats.total > 0 ? `${Math.round((stats.withImage / stats.total) * 100)} %` : "–"} sub={`${stats.withImage} von ${stats.total}`} />
-            <Tile label="Extern bestätigt" value={stats.total > 0 ? `${Math.round((stats.confirmed / stats.total) * 100)} %` : "–"} sub={`${stats.confirmed} von ${stats.total}`} />
-          </div>
-
-          {stats.top && (
-            <p className="text-[11px] text-gray-400">
-              Bester Post: <span className="text-gray-200">{stats.top.caption}</span> <span className="text-gray-600">({stats.top.votes} 👍)</span>
-            </p>
-          )}
-
-          <div className="space-y-1.5">
-            <p className={LABEL}>Daumen pro Woche</p>
-            {stats.weekly.length === 0 ? (
-              <p className="text-[11px] text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
-            ) : (
-              <div className="flex items-end gap-1.5 h-16">
-                {stats.weekly.map(w => (
-                  <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.votes}`}>
-                    <span className="text-[9px] text-gray-500">{w.votes}</span>
-                    <div className="w-full rounded-t bg-teal-400/70" style={{ height: `${Math.max(4, (w.votes / maxWeek) * 36)}px` }} />
-                    <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {reach.promotedAvg !== null && reach.unpromotedAvg !== null && (
-            <div className="space-y-1">
-              <p className={LABEL}>Anmeldungen: mit vs. ohne Werbung</p>
-              <p className="text-[11px] text-gray-300">
-                Events mit Werbe-Post: Ø {formatFixed(reach.promotedAvg, 1)} ({reach.promotedCount}) · ohne: Ø {formatFixed(reach.unpromotedAvg, 1)} ({reach.unpromotedCount})
-              </p>
-              <p className="text-[10px] text-gray-600">Nur eine grobe Orientierung (letzte 90 Tage, alle Marketing Manager) — Spiel, Uhrzeit und Beliebtheit spielen ebenfalls mit.</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Kampagnen ────────────────────────────────────────────────────────────────
 

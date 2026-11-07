@@ -35,6 +35,7 @@ interface FeedEntry {
   gameCover?: { url: string } | null;
   imageUrl?: string | null;
   asset?: { url: string } | null;
+  media?: { url: string }[];
 }
 
 const KIND_ICON: Record<FeedEntry["kind"], typeof Newspaper> = {
@@ -49,8 +50,6 @@ const KIND_ACCENT: Record<FeedEntry["kind"], AccentName> = {
 function voteUrl(e: FeedEntry): string | null {
   switch (e.kind) {
     case "report": return `/api/community-jobs/reports/${e.id}/vote`;
-    case "asset": return `/api/community-jobs/media/${e.id}/vote`;
-    case "marketing_post": return `/api/community-jobs/marketing-posts/${e.id}/vote`;
     case "guide": return `/api/community-jobs/coach/guides/${e.id}/vote`;
     default: return null;
   }
@@ -107,7 +106,7 @@ function entryLabel(e: FeedEntry): string {
 
 function entryImage(e: FeedEntry): string | null {
   if (e.kind === "asset") return e.url ?? null;
-  if (e.kind === "report") return e.coverAsset?.url ?? e.gameCover?.url ?? null;
+  if (e.kind === "report") return e.coverAsset?.url ?? e.gameCover?.url ?? e.media?.find(m => !/\.(mp4|webm|mov)(\?|$)/i.test(m.url))?.url ?? null;
   if (e.kind === "marketing_post") return e.imageUrl ?? e.asset?.url ?? null;
   return null;
 }

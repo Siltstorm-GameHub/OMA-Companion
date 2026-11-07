@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Award, ChevronDown, FileText, Images, Megaphone, Lightbulb, BookOpen } from "@/components/icons";
+import { Award, ChevronDown, FileText, Lightbulb, BookOpen } from "@/components/icons";
 import { formatBerlinDate } from "@/lib/time";
 
 export interface ProfileContribution {
   id: string;
-  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
+  kind: "report" | "idea" | "guide";
   title: string;
   href: string;
   meta: string | null;
@@ -18,9 +18,7 @@ export interface ProfileContribution {
 const TOP_COUNT = 3;
 
 const KIND_META: Record<ProfileContribution["kind"], { label: string; icon: typeof FileText }> = {
-  report: { label: "Bericht", icon: FileText },
-  asset: { label: "Foto/Clip", icon: Images },
-  marketing_post: { label: "Werbe-Post", icon: Megaphone },
+  report: { label: "Beitrag", icon: FileText },
   idea: { label: "Idee", icon: Lightbulb },
   guide: { label: "Anleitung", icon: BookOpen },
 };
@@ -41,7 +39,6 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
         {visible.map(item => {
           const meta = KIND_META[item.kind];
           const Icon = meta.icon;
-          const external = item.kind === "asset";
           const content = (
             <>
               {item.image ? (
@@ -64,9 +61,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
           const cls = "flex items-center gap-3 hover:text-teal-400 transition-colors";
           return (
             <li key={item.id}>
-              {external
-                ? <a href={item.href} target="_blank" rel="noreferrer" className={cls}>{content}</a>
-                : <Link href={item.href} className={cls}>{content}</Link>}
+              <Link href={item.href} className={cls}>{content}</Link>
             </li>
           );
         })}

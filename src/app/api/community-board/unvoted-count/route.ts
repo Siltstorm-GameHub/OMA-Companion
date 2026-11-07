@@ -9,15 +9,9 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const [reports, assets, posts, ideas, guides] = await Promise.all([
+  const [reports, ideas, guides] = await Promise.all([
     prisma.jobReport.count({
       where: { hiddenByAdminAt: null, isDraft: false, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
-    }),
-    prisma.jobMediaAsset.count({
-      where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
-    }),
-    prisma.marketingPost.count({
-      where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
     }),
     prisma.communityIdea.count({
       where: { hiddenByAdminAt: null, authorId: { not: user.id }, votes: { none: { voterId: user.id } } },
@@ -27,5 +21,5 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({ count: reports + assets + posts + ideas + guides });
+  return NextResponse.json({ count: reports + ideas + guides });
 }

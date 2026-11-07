@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { getSessionUser } from "@/lib/roles";
-import { requireActiveFotograf } from "@/lib/fotograf-service";
+import { canWorkCommunityJobs } from "@/lib/community-job-access";
 import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_UPLOAD_PREFIX } from "@/lib/upload-limits";
 
 /**
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname) => {
-        if (!(await requireActiveFotograf(user.id))) {
+        if (!(await canWorkCommunityJobs(user.id))) {
           throw new Error("Community-Jobs sind für dein Konto nicht verfügbar");
         }
         // Fester Ziel-Ordner statt frei wählbarem Pfad — sonst wäre `pathname`

@@ -4,6 +4,7 @@ import { deleteComment } from "./community-board-comment-service";
 import { deleteAlbum } from "./fotograf-service";
 import { deleteCampaign } from "./marketing-manager-service";
 import { logAdminAction, type AuditActor } from "./community-admin-audit";
+import { postDisplayTitle } from "./post-display";
 
 /**
  * Moderation der Community-Job-Inhalte: ausblenden/einblenden (Berichte, Bilder, Werbe-Posts, Ideen, Anleitungen)
@@ -14,7 +15,6 @@ import { logAdminAction, type AuditActor } from "./community-admin-audit";
 export const MODERATION_TYPES = [
   { id: "report", label: "Berichte", canHide: true },
   { id: "asset", label: "Bilder & Clips", canHide: true },
-  { id: "marketing_post", label: "Werbe-Posts", canHide: true },
   { id: "idea", label: "Ideen", canHide: true },
   { id: "guide", label: "Anleitungen", canHide: true },
   { id: "comment", label: "Kommentare", canHide: false },
@@ -60,11 +60,11 @@ export async function listModerationItems(
   switch (type) {
     case "report": {
       const rows = await prisma.jobReport.findMany({
-        where: { isDraft: false, ...h, ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, authorSearch(q)] } : {}) },
+        where: { isDraft: false, ...h, ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { bodyMarkdown: { contains: q, mode: "insensitive" } }, authorSearch(q)] } : {}) },
         include: { author: AUTHOR }, take, skip, orderBy: { publishedAt: "desc" },
       });
       return rows.map(r => ({
-        type, id: r.id, title: r.title, authorId: r.author.id, authorName: nameOf(r.author), createdAt: r.publishedAt.toISOString(),
+        type, id: r.id, title: postDisplayTitle(r), authorId: r.author.id, authorName: nameOf(r.author), createdAt: r.publishedAt.toISOString(),
         hidden: !!r.hiddenByAdminAt, hiddenReason: r.hiddenReason, url: `/community-board/report/${r.id}`, canHide: true,
       }));
     }
@@ -76,16 +76,6 @@ export async function listModerationItems(
       return rows.map(r => ({
         type, id: r.id, title: r.caption ?? r.type, authorId: r.author.id, authorName: nameOf(r.author), createdAt: r.createdAt.toISOString(),
         hidden: !!r.hiddenByAdminAt, hiddenReason: r.hiddenReason, url: r.url, canHide: true,
-      }));
-    }
-    case "marketing_post": {
-      const rows = await prisma.marketingPost.findMany({
-        where: { ...h, ...(q ? { OR: [{ caption: { contains: q, mode: "insensitive" } }, authorSearch(q)] } : {}) },
-        include: { author: AUTHOR }, ...page,
-      });
-      return rows.map(r => ({
-        type, id: r.id, title: r.caption.replace(/\s+/g, " ").slice(0, 120), authorId: r.author.id, authorName: nameOf(r.author), createdAt: r.createdAt.toISOString(),
-        hidden: !!r.hiddenByAdminAt, hiddenReason: r.hiddenReason, url: `/tournament/${r.eventId}`, canHide: true,
       }));
     }
     case "idea": {
@@ -159,9 +149,8 @@ export async function listModerationItems(
 /** Autor + Anzeigetitel eines Inhalts (für Benachrichtigung und Protokoll). */
 async function contentInfo(type: ModerationType, id: string): Promise<{ authorId: string; title: string } | null> {
   switch (type) {
-    case "report": { const r = await prisma.jobReport.findUnique({ where: { id }, select: { authorId: true, title: true } }); return r; }
+    case "report": { const r = await prisma.jobReport.findUnique({ where: { id }, select: { authorId: true, title: true, bodyMarkdown: true } }); return r && { authorId: r.authorId, title: postDisplayTitle(r) }; }
     case "asset": { const r = await prisma.jobMediaAsset.findUnique({ where: { id }, select: { authorId: true, caption: true, type: true } }); return r && { authorId: r.authorId, title: r.caption ?? r.type }; }
-    case "marketing_post": { const r = await prisma.marketingPost.findUnique({ where: { id }, select: { authorId: true, caption: true } }); return r && { authorId: r.authorId, title: r.caption.slice(0, 80) }; }
     case "idea": { const r = await prisma.communityIdea.findUnique({ where: { id }, select: { authorId: true, title: true } }); return r; }
     case "guide": { const r = await prisma.coachGuide.findUnique({ where: { id }, select: { authorId: true, title: true } }); return r; }
     case "comment": { const r = await prisma.communityBoardComment.findUnique({ where: { id }, select: { authorId: true, bodyMarkdown: true } }); return r && { authorId: r.authorId, title: r.bodyMarkdown.slice(0, 80) }; }
@@ -176,7 +165,6 @@ async function setHidden(type: ModerationType, id: string, at: Date | null, reas
   switch (type) {
     case "report": await prisma.jobReport.update({ where: { id }, data }); break;
     case "asset": await prisma.jobMediaAsset.update({ where: { id }, data }); break;
-    case "marketing_post": await prisma.marketingPost.update({ where: { id }, data }); break;
     case "idea": await prisma.communityIdea.update({ where: { id }, data }); break;
     case "guide": await prisma.coachGuide.update({ where: { id }, data }); break;
     default: throw new Error("Dieser Typ lässt sich nicht ausblenden");

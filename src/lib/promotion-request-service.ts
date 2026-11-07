@@ -23,7 +23,7 @@ export async function createPromotionRequest(requesterId: string, data: { traini
   const [existing, open, posted] = await Promise.all([
     prisma.promotionRequest.findFirst({ where: { trainingSessionId: session.id, status: "OPEN" }, select: { id: true } }),
     prisma.promotionRequest.count({ where: { requesterId, status: "OPEN" } }),
-    prisma.marketingPost.count({ where: { trainingSessionId: session.id, hiddenByAdminAt: null } }),
+    prisma.jobReport.count({ where: { trainingSessionId: session.id, hiddenByAdminAt: null, isDraft: false } }),
   ]);
   if (existing) return { error: "Für diesen Termin läuft schon eine Anfrage" };
   if (posted > 0) return { error: "Dieser Termin wird bereits beworben" };
@@ -69,7 +69,7 @@ export async function listOpenPromotionRequests() {
 export async function promotionStatusForCoach(coachId: string) {
   const [requests, posts] = await Promise.all([
     prisma.promotionRequest.findMany({ where: { requesterId: coachId, status: "OPEN" }, select: { trainingSessionId: true } }),
-    prisma.marketingPost.findMany({ where: { trainingSessionId: { not: null }, hiddenByAdminAt: null, createdAt: { gte: new Date(Date.now() - 120 * 86_400_000) } }, select: { trainingSessionId: true } }),
+    prisma.jobReport.findMany({ where: { trainingSessionId: { not: null }, hiddenByAdminAt: null, isDraft: false, publishedAt: { gte: new Date(Date.now() - 120 * 86_400_000) } }, select: { trainingSessionId: true } }),
   ]);
   return {
     requested: requests.map(r => r.trainingSessionId),
@@ -77,7 +77,7 @@ export async function promotionStatusForCoach(coachId: string) {
   };
 }
 
-/** Vom Marketing-Manager-Service aufgerufen, wenn ein Post zu einem Termin entsteht: offene Anfragen erfüllen, Coach informieren. */
+/** Beim Veröffentlichen eines Beitrags zu einem Trainings-Termin: offene Anfragen erfüllen (postId = Beitrag), Coach informieren. */
 export async function fulfillPromotionRequests(trainingSessionId: string, postId: string): Promise<void> {
   const open = await prisma.promotionRequest.findMany({ where: { trainingSessionId, status: "OPEN" } });
   if (open.length === 0) return;

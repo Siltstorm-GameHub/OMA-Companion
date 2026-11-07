@@ -1429,11 +1429,14 @@ model JobRecommendationDismissal {
 
 // ── Journalist ───────────────────────────────────────────────────────────────
 
+/// "Beitrag" des Content Creators (Tabelle historisch JobReport): Text, beliebig viele Bilder/Clips
+/// (media), optional Event, Werbe-Vorlage, Kampagne oder beworbener Trainings-Termin. Frühere Fotos und
+/// Werbe-Posts wurden zu Beiträgen migriert (legacyType/legacyId).
 model JobReport {
   id                        String    @id @default(cuid())
   authorId                  String
-  eventId                   String? // optional — ein Bericht kann, muss aber nicht an ein Event gekoppelt sein
-  title                     String
+  eventId                   String? // optional — ein Beitrag kann, muss aber nicht an ein Event gekoppelt sein
+  title                     String    @default("") // optional — reine Foto-/Werbe-Beiträge brauchen keinen Titel
   bodyMarkdown              String
   coverAssetId              String? // → JobMediaAsset (Fotograf-Bild als Cover)
   referencedMarketingPostId String? // → MarketingPost, falls der Bericht über eine Marketing-Aktion berichtet
@@ -1451,12 +1454,21 @@ model JobReport {
   gameCoverUrl              String? // Spiel-Cover als Titelbild (statt Fotograf-Bild) — nur bekannte Cover-Hosts, siehe game-cover-url.ts
   gameCoverName             String?
   updatedAt                 DateTime  @default(now()) @updatedAt
+  template                  String? // Werbe-Vorlage, aus der der Text entstand: announce | reminder | lastspots | today | training
+  campaignId                String? // optionale Kampagne (Ankündigung → Erinnerung → Heute)
+  trainingSessionId         String? // Beitrag bewirbt einen Coach-Trainings-Termin (kein FK, wie bei MarketingPost früher)
+  adminConfirmedPosted      Boolean   @default(false) // Admin bestätigt: tatsächlich extern (z.B. Instagram) gepostet
+  confirmedNotified         Boolean   @default(false) // Autor wurde über die externe Bestätigung informiert
+  legacyType                String? // migriert aus: marketing_post | asset_upload — null = als Beitrag/Bericht entstanden
+  legacyId                  String? // ID des migrierten Werbe-Posts bzw. des ersten Bildes der Upload-Gruppe
 
   author                  User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   event                   Event?                  @relation(fields: [eventId], references: [id])
   coverAsset              JobMediaAsset?          @relation(fields: [coverAssetId], references: [id])
   referencedMarketingPost MarketingPost?          @relation("ReportReferencesMarketingPost", fields: [referencedMarketingPostId], references: [id])
   series                  ReportSeries?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  campaign                MarketingCampaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  media                   JobMediaAsset[]         @relation("ReportMedia")
   revisions               JobReportRevision[]
   votes                   JobReportVote[]
   contributions           JobReportContribution[]
@@ -1464,6 +1476,8 @@ model JobReport {
   @@index([eventId])
   @@index([authorId])
   @@index([seriesId])
+  @@index([campaignId])
+  @@index([legacyId])
 }
 
 /// Berichtsreihe eines Journalisten (z.B. "Turnier-Rückblick: Teil 1–3").
@@ -1600,8 +1614,11 @@ model JobMediaAsset {
   hiddenReason     String?
   discordMessageId String?
   albumId          String? // optionales Album ("Grand Final 2026")
+  reportId         String? // Beitrag, in dem das Bild/der Clip veröffentlicht wurde (null = nur Mediathek)
+  position         Int       @default(0) // Reihenfolge innerhalb des Beitrags
 
   author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  report        JobReport?          @relation("ReportMedia", fields: [reportId], references: [id], onDelete: SetNull)
   event         Event?              @relation(fields: [eventId], references: [id])
   album         JobMediaAlbum?      @relation(fields: [albumId], references: [id], onDelete: SetNull)
   votes         JobMediaAssetVote[]
@@ -1611,6 +1628,7 @@ model JobMediaAsset {
   @@index([eventId])
   @@index([authorId])
   @@index([albumId])
+  @@index([reportId])
 }
 
 /// Fotografen-Album: Bilder/Clips zu einer Serie zusammengefasst, als Ganzes verlinkbar.
@@ -1685,9 +1703,10 @@ model MarketingCampaign {
   title     String
   createdAt DateTime @default(now())
 
-  author User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  event  Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  posts  MarketingPost[]
+  author  User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event   Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  posts   MarketingPost[] // Archiv (vor der Zusammenlegung)
+  reports JobReport[]
 
   @@index([authorId])
   @@index([eventId])

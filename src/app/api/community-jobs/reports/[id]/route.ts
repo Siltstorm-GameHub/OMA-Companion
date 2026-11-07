@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { updateReport, deleteReport, getReportForViewer } from "@/lib/journalist-service";
+import { parsePostExtras } from "@/lib/post-input";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const { id } = await params;
-  const { title, bodyMarkdown, coverAssetId, gameCoverUrl, gameCoverName, category, eventId, referencedMarketingPostId, seriesId, editNote } = await req.json().catch(() => ({}));
-  if (typeof title !== "string") {
-    return NextResponse.json({ error: "Titel erforderlich" }, { status: 400 });
-  }
+  const body = await req.json().catch(() => ({}));
+  const { bodyMarkdown, coverAssetId, gameCoverUrl, gameCoverName, category, eventId, referencedMarketingPostId, seriesId, editNote } = body;
+  const title = typeof body.title === "string" ? body.title : "";
   if (bodyMarkdown !== undefined && typeof bodyMarkdown !== "string") {
     return NextResponse.json({ error: "bodyMarkdown muss ein String sein" }, { status: 400 });
   }
@@ -42,6 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       referencedMarketingPostId: referencedMarketingPostId === undefined ? undefined : (typeof referencedMarketingPostId === "string" && referencedMarketingPostId ? referencedMarketingPostId : null),
       seriesId: seriesId === undefined ? undefined : (typeof seriesId === "string" && seriesId ? seriesId : null),
       editNote: typeof editNote === "string" ? editNote : undefined,
+      ...parsePostExtras(body),
     },
     { isAdmin },
   );

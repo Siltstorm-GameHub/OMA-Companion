@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ImagePlus } from "@/components/icons";
-import { ThumbsUp, Loader2, Star, Megaphone, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "@/components/icons";
+import { ThumbsUp, Loader2, Star, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
@@ -13,11 +12,8 @@ import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLit
 import { plainExcerpt } from "@/lib/report-text";
 import GameCover from "@/components/GameCover";
 import EmojiPanel from "@/components/community-jobs/EmojiPicker";
-import ReportEditor from "@/components/community-jobs/ReportEditor";
-import { Modal } from "@/components/ui/Modal";
 import IdeaBody from "@/components/community-jobs/IdeaCard";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
-import { mentionToken } from "@/lib/report-mentions";
 import { REPORT_CATEGORIES, reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
 
@@ -70,6 +66,10 @@ export interface FeedEntry {
   myInterests?: string[];
   imageUrl?: string | null;
   asset?: { url: string } | null;
+  /** Beitrag: Bilder/Clips in Reihenfolge. */
+  media?: { id: string; url: string; caption: string | null; type: string }[];
+  hasOwnTitle?: boolean;
+  template?: string | null;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -79,23 +79,6 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   // Offene Community-Jobs: Beitrag über dem Tageslimit — veröffentlicht, zählt aber nicht fürs Gehalt.
   if (typeof data?.notice === "string" && data.notice) toast.warning(data.notice);
   return data as T;
-}
-
-/** Macht http(s)-Links in Beitragstexten klickbar (öffnet extern, ohne Referrer/Opener). */
-function Linkified({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
-  return (
-    <>
-      {parts.map((part, i) => /^https?:\/\//.test(part)
-        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-teal-300 hover:text-teal-200 underline underline-offset-2 break-all">{part}</a>
-        : <span key={i}>{part}</span>)}
-    </>
-  );
-}
-
-/** Vorbelegung des Bericht-Editors, wenn ein Journalist direkt zu einem Foto/Werbe-Post schreibt. */
-interface WriteAboutPreset {
-  coverAssetId?: string; postId?: string; eventId?: string; title: string; body: string;
 }
 
 const CHIP_ON = "bg-teal-500 text-black border-teal-500";
@@ -113,7 +96,6 @@ export default function CommunityBoardClient() {
   const { status: sessionStatus } = useSession();
   const isJournalist = sessionStatus === "authenticated";
   const [category, setCategory] = useState<string | null>(null);
-  const [writeAbout, setWriteAbout] = useState<WriteAboutPreset | null>(null);
 
   async function reload() {
     try {
@@ -153,20 +135,37 @@ export default function CommunityBoardClient() {
       )}
       {/* Eine Spalte: streng von oben nach unten, neu → alt (mehrere CSS-Spalten würden die Reihenfolge spaltenweise mischen). */}
       <div className="max-w-2xl mx-auto">
-        {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} onWriteAbout={setWriteAbout} />)}
+        {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} />)}
       </div>
 
-      <Modal open={!!writeAbout} onClose={() => setWriteAbout(null)} title="Bericht schreiben" size="lg">
-        {writeAbout && (
-          <ReportEditor eventId={writeAbout.eventId} presetCoverAssetId={writeAbout.coverAssetId} presetPostId={writeAbout.postId}
-            prefill={{ title: writeAbout.title, body: writeAbout.body }} onDone={() => { setWriteAbout(null); reload(); }} />
-        )}
-      </Modal>
     </div>
   );
 }
 
 /** Bericht im Board: Auszug + "Bericht lesen" (lädt den vollen Text nach), Bewertungen, Ergänzungen (schreiben/bearbeiten/löschen). */
+/** Bilder/Clips eines Beitrags: eins groß, mehrere als Raster (Klick öffnet das Original). */
+function MediaGallery({ media }: { media: NonNullable<FeedEntry["media"]> }) {
+  if (media.length === 0) return null;
+  const single = media.length === 1;
+  return (
+    <div className={single ? "" : "grid grid-cols-2 sm:grid-cols-3 gap-1.5"}>
+      {media.map(m => (
+        <figure key={m.id} className="space-y-1">
+          {isVideoUrl(m.url) ? (
+            <video src={m.url} controls preload="metadata" className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
+          ) : (
+            <a href={m.url} target="_blank" rel="noreferrer" className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
+              <img src={m.url} alt={m.caption ?? ""} loading="lazy" className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
+            </a>
+          )}
+          {single && m.caption && <figcaption className="text-[11px] text-gray-500">{m.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  );
+}
+
 function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPage }: {
   entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void; onReportPage: boolean;
 }) {
@@ -205,9 +204,9 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
   const categoryLabel = reportCategoryLabel(entry.category);
   return (
     <>
-      {onReportPage
+      {entry.hasOwnTitle !== false && (onReportPage
         ? <h1 className="text-lg font-bold text-white">{entry.title}</h1>
-        : <a href={`/community-board/report/${entry.id}`} className="block text-sm font-semibold text-white hover:text-teal-300 transition-colors">{entry.title}</a>}
+        : <a href={`/community-board/report/${entry.id}`} className="block text-sm font-semibold text-white hover:text-teal-300 transition-colors">{entry.title}</a>)}
       {(categoryLabel || entry.series || entry.event || entry.readingMinutes) && (
         <div className="flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
           {categoryLabel && <Badge tone="info">{categoryLabel}</Badge>}
@@ -234,13 +233,19 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
 
       {open && full !== null
         ? <MarkdownLite text={full} className="text-xs" />
-        : entry.excerpt ? <p className="text-xs text-gray-400"><EmojiText text={entry.excerpt} /></p> : null}
-      <button onClick={toggleRead} disabled={loading} aria-expanded={open}
-        className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
-        {loading && <Loader2 className="w-3 h-3 animate-spin" />}
-        {open ? "Bericht einklappen" : "Ganzen Bericht lesen"}
-      </button>
-      <button onClick={copyLink} className="ml-3 text-[11px] text-gray-500 hover:text-teal-300 transition-colors">Link kopieren</button>
+        : entry.excerpt ? <p className="text-xs text-gray-400 whitespace-pre-line"><EmojiText text={entry.excerpt} /></p> : null}
+      {entry.media && <MediaGallery media={entry.media} />}
+      <div>
+        {/* Kurze Texte stehen schon vollständig im Auszug — "weiterlesen" nur bei längeren. */}
+        {(onReportPage || (entry.excerpt?.length ?? 0) >= 300) && (
+          <button onClick={toggleRead} disabled={loading} aria-expanded={open}
+            className="mr-3 text-[11px] text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+            {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+            {open ? "Einklappen" : "Ganzen Beitrag lesen"}
+          </button>
+        )}
+        <button onClick={copyLink} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors">Link kopieren</button>
+      </div>
 
       {entry.seriesParts && entry.seriesParts.length > 1 && (
         <div className="rounded-lg bg-white/[0.03] p-2.5 space-y-1">
@@ -258,29 +263,9 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
       <div className="flex items-center gap-3 flex-wrap">
         <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
           onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-          onDone={onChanged} label="Bericht" />
+          onDone={onChanged} label="Beitrag" />
         {entry.author.id === currentUserId && (
           <DisputeTrigger kind="jobReportVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/votes`} listKey="votes" />
-        )}
-        {entry.coverAsset && (
-          <>
-            <UpvoteButton votedByMe={false} upvotes={entry.coverAsset.upvotes}
-              onVote={added => api(`/api/community-jobs/media/${entry.coverAsset!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-              onDone={onChanged} label={`Bild von ${authorLabel(entry.coverAsset.author)}`} icon={<ImagePlus className="w-3 h-3" />} />
-            {entry.coverAsset.author.id === currentUserId && (
-              <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.coverAsset.id}/votes`} listKey="votes" />
-            )}
-          </>
-        )}
-        {entry.referencedMarketingPost && (
-          <>
-            <UpvoteButton votedByMe={false} upvotes={entry.referencedMarketingPost.upvotes}
-              onVote={added => api(`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-              onDone={onChanged} label={`Post von ${authorLabel(entry.referencedMarketingPost.author)}`} icon={<Megaphone className="w-3 h-3" />} />
-            {entry.referencedMarketingPost.author.id === currentUserId && (
-              <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost.id}/votes`} listKey="votes" />
-            )}
-          </>
         )}
       </div>
 
@@ -418,9 +403,8 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
   );
 }
 
-export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expandReport = false, onWriteAbout }: {
+export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expandReport = false }: {
   entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void; expandReport?: boolean;
-  onWriteAbout?: (preset: WriteAboutPreset) => void;
 }) {
   return (
     <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
@@ -432,73 +416,13 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
             <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
           </div>
         </a>
-        {entry.kind === "marketing_post" && (
-          <Badge tone={entry.adminConfirmedPosted ? "success" : "neutral"}>
-            {entry.adminConfirmedPosted ? "Bestätigt gepostet" : "Post"}
-          </Badge>
-        )}
+        {entry.kind === "report" && entry.adminConfirmedPosted && <Badge tone="success">Extern gepostet</Badge>}
         {entry.kind === "idea" && entry.status === "CLOSED" && <Badge tone="neutral">Abstimmung beendet</Badge>}
         {entry.kind === "guide" && <Badge tone="info"><BookOpen className="w-2.5 h-2.5" /> Anleitung{entry.game ? ` · ${entry.game}` : ""}</Badge>}
       </div>
 
       {entry.kind === "report" && <ReportBody entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={onChanged} onReportPage={expandReport} />}
-      {entry.kind === "report" && <IdeaFromButton prefill={{ title: `Idee zu \u201e${entry.title ?? "Bericht"}\u201c`, reportId: entry.id }} />}
-
-      {entry.kind === "asset" && (
-        <>
-          {entry.caption && <p className="text-sm text-gray-300 whitespace-pre-line"><Linkified text={entry.caption} /></p>}
-          {entry.url && (
-            isVideoUrl(entry.url)
-              ? <video src={entry.url} controls className="w-full h-auto rounded-lg" />
-              // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-              : <img src={entry.url} alt="" className="w-full h-auto rounded-lg" />
-          )}
-          <div className="flex items-center gap-2">
-            <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-              onVote={added => api(`/api/community-jobs/media/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-              onDone={onChanged} label="Asset" />
-            {entry.author.id === currentUserId && (
-              <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.id}/votes`} listKey="votes" />
-            )}
-            {isJournalist && onWriteAbout && (
-              <button onClick={() => {
-                const video = isVideoUrl(entry.url);
-                onWriteAbout({
-                  // Ein Video kann kein Titelbild sein — dann als Link in den Text.
-                  coverAssetId: video ? undefined : entry.id, eventId: entry.eventId ?? undefined,
-                  title: (entry.caption ?? "").slice(0, 100),
-                  body: `${video && entry.url ? `▶ ${entry.url}\n\n` : ""}Zum Bild von ${mentionToken(authorLabel(entry.author), entry.author.id)}: …`,
-                });
-              }} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors">Bericht dazu schreiben</button>
-            )}
-          </div>
-        </>
-      )}
-
-      {entry.kind === "marketing_post" && (
-        <>
-          <p className="text-sm text-gray-300 whitespace-pre-line"><Linkified text={entry.caption ?? ""} /></p>
-          {(entry.imageUrl || entry.asset?.url) && (
-            // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-            <img src={entry.imageUrl ?? entry.asset!.url} alt="" className="w-full h-auto rounded-lg" />
-          )}
-          <div className="flex items-center gap-2">
-            <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-              onVote={added => api(`/api/community-jobs/marketing-posts/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-              onDone={onChanged} label="Post" />
-            {entry.author.id === currentUserId && (
-              <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.id}/votes`} listKey="votes" />
-            )}
-            {isJournalist && onWriteAbout && (
-              <button onClick={() => onWriteAbout({
-                postId: entry.id, eventId: entry.event?.id,
-                title: entry.event ? `Zur Aktion: ${entry.event.title}` : "",
-                body: `Zur Werbeaktion von ${mentionToken(authorLabel(entry.author), entry.author.id)}: …`,
-              })} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors">Bericht dazu schreiben</button>
-            )}
-          </div>
-        </>
-      )}
+      {entry.kind === "report" && <IdeaFromButton prefill={{ title: `Idee zu \u201e${entry.title ?? "Beitrag"}\u201c`, reportId: entry.id }} />}
 
       {entry.kind === "idea" && (
         <IdeaBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onIdeaPage={expandReport}

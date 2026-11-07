@@ -1,23 +1,18 @@
 "use client";
-import { formatFixed } from "@/lib/format-number";
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
-import { TrendingUp } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
-import { Camera, Copy, Images, Loader2, Search, Trash2, Upload, X } from "@/components/icons";
+import { Camera, Copy, Images, Loader2, Search, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { formatBerlinDate } from "@/lib/time";
 import { isVideoUrl } from "@/lib/upload-limits";
-import { loadImage, LOGO_URL, prepareUploadImage, renderCollageCanvas } from "@/lib/studio-templates";
+import { loadImage, LOGO_URL, renderCollageCanvas } from "@/lib/studio-templates";
 
 /** Fotografen-Büro: Bildwünsche, Auswertung, Alben, Sammel-Upload, Monats-Collage und Mediathek-Suche. */
 
 const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
 const FIELD = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
-const BULK_MAX = 20;
-
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = await res.json().catch(() => ({}));
@@ -79,108 +74,11 @@ export function PhotoRequestList({ onFulfill }: { onFulfill: (request: { id: str
 
 // ── Auswertung ───────────────────────────────────────────────────────────────
 
-interface Stats {
-  total: number; totalVotes: number; averageVotes: number; votesThisWeek: number; usesTotal: number; usedAssets: number;
-  top: { id: string; caption: string; url: string; votes: number } | null;
-  mostUsed: { id: string; caption: string; url: string; uses: number } | null;
-  weekly: { weekStart: string; votes: number }[];
-  types: { type: string; count: number }[];
-}
-
-const TYPE_LABEL: Record<string, string> = { CLIP: "Clips", COLLAGE: "Collagen", SCREENSHOT: "Screenshots", BANNER: "Banner", GRAPHIC: "Grafiken" };
-
-function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-lg bg-white/[0.03] px-2.5 py-2">
-      <p className="text-[10px] text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
-    </div>
-  );
-}
-
 function Thumb({ url, className = "w-10 h-10" }: { url: string; className?: string }) {
   return isVideoUrl(url)
     ? <video src={url} muted preload="metadata" className={`${className} rounded object-cover shrink-0 bg-black/40`} />
     // eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau, beliebiger Blob-Host
     : <img src={url} alt="" className={`${className} rounded object-cover shrink-0 bg-black/40`} />;
-}
-
-export function FotografStatsBlock({ refreshKey }: { refreshKey?: number }) {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/community-jobs/media/stats").then(r => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
-  }, [refreshKey]);
-
-  if (!stats) return null;
-  const maxWeek = Math.max(1, ...stats.weekly.map(w => w.votes));
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-300 flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
-          {stats.total} {stats.total === 1 ? "Bild/Clip" : "Bilder/Clips"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
-        </p>
-        <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
-          Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-        </button>
-      </div>
-
-      {open && (
-        <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            <Tile label="Hochgeladen" value={String(stats.total)} />
-            <Tile label="Ø Daumen/Bild" value={formatFixed(stats.averageVotes, 1)} />
-            <Tile label="Nutzungen" value={String(stats.usesTotal)} sub="als Titelbild / im Post" />
-            <Tile label="Genutzte Bilder" value={String(stats.usedAssets)} sub={stats.total > 0 ? `${Math.round((stats.usedAssets / stats.total) * 100)} %` : undefined} />
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-2">
-            {stats.top && (
-              <div className="flex items-center gap-2 rounded-lg bg-white/[0.03] p-2 min-w-0">
-                <Thumb url={stats.top.url} />
-                <p className="text-[11px] text-gray-400 min-w-0"><span className="block text-gray-500">Beliebtestes ({stats.top.votes} 👍)</span><span className="block truncate text-gray-200">{stats.top.caption}</span></p>
-              </div>
-            )}
-            {stats.mostUsed && (
-              <div className="flex items-center gap-2 rounded-lg bg-white/[0.03] p-2 min-w-0">
-                <Thumb url={stats.mostUsed.url} />
-                <p className="text-[11px] text-gray-400 min-w-0"><span className="block text-gray-500">Am häufigsten genutzt ({stats.mostUsed.uses}×)</span><span className="block truncate text-gray-200">{stats.mostUsed.caption}</span></p>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <p className={LABEL}>Daumen pro Woche</p>
-            {stats.weekly.length === 0 ? (
-              <p className="text-[11px] text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
-            ) : (
-              <div className="flex items-end gap-1.5 h-16">
-                {stats.weekly.map(w => (
-                  <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.votes}`}>
-                    <span className="text-[9px] text-gray-500">{w.votes}</span>
-                    <div className="w-full rounded-t bg-teal-400/70" style={{ height: `${Math.max(4, (w.votes / maxWeek) * 36)}px` }} />
-                    <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {stats.types.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {stats.types.map(t => (
-                <span key={t.type} className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">{TYPE_LABEL[t.type] ?? t.type}: {t.count}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── Alben ────────────────────────────────────────────────────────────────────
@@ -360,8 +258,6 @@ export function FotografExtras() {
 
 // ── Sammel-Upload ────────────────────────────────────────────────────────────
 
-interface BulkFile { id: string; file: File; caption: string }
-
 async function uploadBlob(blob: Blob, name: string): Promise<string> {
   const body = new FormData();
   body.append("file", blob, name);
@@ -373,101 +269,6 @@ async function uploadBlob(blob: Blob, name: string): Promise<string> {
 }
 
 /** Mehrere Bilder eines Events auf einmal: verkleinert, optional mit Wasserzeichen, dann ein gemeinsamer Datensatz-Aufruf. */
-export function BulkUploadForm({ eventId: initialEventId, onDone }: { eventId?: string; onDone: () => void }) {
-  const { data: session } = useSession();
-  const events = useRecentEvents();
-  const { albums } = useAlbums();
-  const [files, setFiles] = useState<BulkFile[]>([]);
-  const [eventId, setEventId] = useState(initialEventId ?? "");
-  const [albumId, setAlbumId] = useState("");
-  const [watermark, setWatermark] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const authorName = session?.user?.name ?? "OMA";
-
-  function addFiles(list: FileList | null) {
-    if (!list) return;
-    const images = [...list].filter(f => f.type.startsWith("image/"));
-    if (images.length < list.length) toast.error("Nur Bilder werden akzeptiert (Clips einzeln hochladen)");
-    setFiles(cur => [...cur, ...images.map(file => ({ id: crypto.randomUUID(), file, caption: "" }))].slice(0, BULK_MAX));
-  }
-
-  async function submit() {
-    setProgress({ done: 0, total: files.length });
-    const items: { url: string; caption: string }[] = [];
-    let failed = 0;
-    for (const f of files) {
-      try {
-        const blob = await prepareUploadImage(f.file, { watermark: watermark ? `© ${authorName} · OMA` : undefined });
-        items.push({ url: await uploadBlob(blob, `${f.id}.jpg`), caption: f.caption });
-      } catch { failed += 1; }
-      setProgress(p => (p ? { ...p, done: p.done + 1 } : p));
-    }
-    try {
-      if (items.length === 0) throw new Error("Kein Bild konnte hochgeladen werden");
-      await api("/api/community-jobs/media/bulk", { method: "POST", body: JSON.stringify({ eventId: eventId || undefined, albumId: albumId || undefined, items }) });
-      toast.success(`${items.length} ${items.length === 1 ? "Bild" : "Bilder"} hochgeladen${failed ? ` (${failed} fehlgeschlagen)` : ""}`);
-      onDone();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setProgress(null);
-    }
-  }
-
-  const busy = progress !== null;
-  return (
-    <div className="space-y-3">
-      <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-8 cursor-pointer hover:border-teal-500/30 transition-colors">
-        <Upload className="w-5 h-5 text-gray-500" />
-        <span className="text-xs text-gray-500">Bilder auswählen (bis zu {BULK_MAX})</span>
-        <span className="text-[10px] text-gray-700">Werden automatisch auf max. 1920 px verkleinert</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" disabled={busy}
-          onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
-      </label>
-
-      {files.length > 0 && (
-        <>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Select size="sm" value={eventId} onChange={e => setEventId(e.target.value)} aria-label="Event">
-              <option value="">Ohne Event</option>
-              {events.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-            </Select>
-            <AlbumSelect albums={albums} value={albumId} onChange={setAlbumId} />
-            <label className="flex items-center gap-1.5 text-xs text-gray-400">
-              <input type="checkbox" checked={watermark} onChange={e => setWatermark(e.target.checked)} />
-              Wasserzeichen
-            </label>
-          </div>
-          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-            {files.map(f => (
-              <BulkRow key={f.id} file={f.file} caption={f.caption} disabled={busy}
-                onCaption={caption => setFiles(cur => cur.map(x => (x.id === f.id ? { ...x, caption } : x)))}
-                onRemove={() => setFiles(cur => cur.filter(x => x.id !== f.id))} />
-            ))}
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-gray-500">{progress ? `Lade hoch… ${progress.done}/${progress.total}` : `${files.length} ${files.length === 1 ? "Bild" : "Bilder"}`}</p>
-            <Button loading={busy} onClick={submit}>Alle hochladen</Button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function BulkRow({ file, caption, disabled, onCaption, onRemove }: { file: File; caption: string; disabled: boolean; onCaption: (c: string) => void; onRemove: () => void }) {
-  const preview = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(preview), [preview]);
-  return (
-    <div className="flex items-center gap-2">
-      {/* eslint-disable-next-line @next/next/no-img-element -- lokale Vorschau (blob:) */}
-      <img src={preview} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
-      <input value={caption} onChange={e => onCaption(e.target.value)} disabled={disabled} maxLength={300} placeholder="Bildunterschrift (optional)" className={`${FIELD} flex-1 min-w-0`} />
-      <button onClick={onRemove} disabled={disabled} title="Entfernen" aria-label="Entfernen" className="p-1 text-gray-500 hover:text-red-400 transition-colors"><X className="w-3.5 h-3.5" /></button>
-    </div>
-  );
-}
-
 // ── Monats-Collage ───────────────────────────────────────────────────────────
 
 const CAPTION_PREFIX = "Bilder des Monats";

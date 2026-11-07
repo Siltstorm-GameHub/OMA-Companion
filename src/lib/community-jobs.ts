@@ -21,62 +21,26 @@ export const COMMUNITY_JOBS: CommunityJobDef[] = [
     key: "content_creator",
     label: "Content Creator",
     emoji: "🎬",
-    description: "Schreibt Berichte, lädt Fotos, Clips und Grafiken hoch und erstellt Werbe-Posts für Events.",
+    description: "Teilt Beiträge: Werbung für Events, Fotos und Clips oder Berichte — alles in einem, wie es passt.",
     officeGuideMarkdown:
-      "Als Content Creator machst du alles, was die Community sichtbar macht: Berichte schreiben, Bilder und Clips " +
-      "hochladen und für Events werben. Im Büro wählst du oben den Bereich (Berichte, Medien, Werbung). Alle drei " +
-      "zählen zusammen für **ein** Wochengehalt — je mehr Daumen deine Beiträge bekommen, desto höher die Stufe.\n\n" +
-      "## Berichte\n\n" +
-      "Du schreibst Berichte zu Events und aktuellen Themen. Je mehr Daumen deine Berichte, " +
-      "Ergänzungen und Kommentare diese Woche bekommen, desto höher deine Gehaltsstufe. " +
-      "Auch Daumen auf ältere Berichte zählen für die Woche, in der sie eingehen.\n\n" +
-      "**Schreiben**\n" +
-      "- **Erstellen** öffnet den Editor mit Vorschau. Entwürfe speicherst du privat und veröffentlichst sie später.\n" +
-      "- **Bausteine:** Ergebnistabelle, Teilnehmerliste, Top 10, Wochen- und Monatsrückblick und Interview-Vorlage füllen sich aus Community-Daten.\n" +
-      "- **Formatierung, Emojis (auch Discord-Emojis) und @-Erwähnungen** helfen dir beim Ausformulieren. Erwähnte Spieler werden benachrichtigt.\n" +
-      "- **Kategorie, Berichtsreihe und Titelbild** gibst du im Editor an. Ein Bild kannst du bei den Fotografen anfragen, oder du nimmst statt eines Fotos das **Cover eines Spiels** als Titelbild.\n" +
-      "- Jeder Bericht hat eine **eigene Seite mit Link**. Änderungen an veröffentlichten Berichten erscheinen als „Korrigiert am“ mit Verlauf.\n" +
-      "- Zu Fotos und Werbe-Posts im Community-Board schreibst du direkt mit „Bericht dazu schreiben“.\n\n" +
+      "Als Content Creator machst du die Community sichtbar — mit **Beiträgen**. Ein Beitrag kann Werbung für ein Event sein, " +
+      "ein paar Fotos und Clips oder ein ganzer Bericht. Wie du die Werkzeuge kombinierst, ist dir überlassen. Je mehr Daumen " +
+      "deine Beiträge und Ergänzungen diese Woche bekommen, desto höher deine Gehaltsstufe — auch Daumen auf ältere Beiträge zählen.\n\n" +
+      "**Ein Beitrag, alle Werkzeuge**\n" +
+      "- **Text** mit Formatierung, Vorschau, Emojis (auch Discord-Emojis) und @-Erwähnungen. Titel ist optional.\n" +
+      "- **Bilder & Clips:** mehrere Bilder auf einmal (automatisch verkleinert, optional mit Wasserzeichen), Video-Clips, im **Studio** gestaltete Grafiken oder die **Monats-Collage**. Alles landet zusätzlich in der Mediathek und kann einem Album zugeordnet werden.\n" +
+      "- **Titelbild:** aus der Mediathek (auch Bilder anderer) oder das **Cover eines Spiels**.\n" +
+      "- **Werbung:** Wähle ein Event — Vorlagen (Ankündigung, Erinnerung, Letzte Plätze, Heute) füllen Datum, Spiel und Anmeldungen ein, ein Häkchen hängt den **Anmelde-Link** an, „Text kopieren“ bringt ihn nach Instagram oder Discord.\n" +
+      "- **Bausteine:** Ergebnistabelle, Teilnehmerliste, Top 10, Wochen- und Monatsrückblick und Interviews füllen sich aus Community-Daten. Bei vergangenen Events füllt „Aus Event vorbefüllen“ einen Bericht vor.\n" +
+      "- Entwürfe speicherst du privat. Jeder Beitrag hat eine **eigene Seite mit Link**, Änderungen erscheinen als „Korrigiert am“.\n\n" +
       "**Im Büro**\n" +
-      "- **Empfehlungen** zeigen dir Events ohne Bericht (große zuerst), Events von heute, alte Entwürfe, Berichte ohne Titelbild, neue Ergänzungen und mehr. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass): „Beitrag dazu“ legt einen Bericht ohne Event an.\n" +
-      "- **Auswertung** zeigt Daumen pro Woche, Top-Bericht und Kategorien. Du bekommst Benachrichtigungen bei Ergänzungen, Kommentaren und Daumen-Meilensteinen.\n" +
-      "- **Interviews:** Frage Spieler an, ihre Antworten fließen als Vorlage in deinen Bericht.\n" +
-      "- **Zusammenarbeit:** Bildwünsche kannst du an die Fotografen richten. Entsteht aus deinem Bericht eine Idee eines Visionärs, gibt es einen kleinen Bonus." +
-      "\n\n## Medien (Fotos, Clips, Grafiken)\n\n" +
-      "Du lädst Bilder, Clips, Collagen, Banner und Grafiken in die gemeinsame Mediathek hoch. " +
-      "Journalisten und Marketing Manager binden sie in ihre Beiträge ein. Du wirst für deine Beiträge " +
-      "selbst über Daumen bewertet.\n\n" +
-      "**Hochladen**\n" +
-      "- **Bild gestalten:** Vorlagen, OMA-Logo, wählbares Format (16:9, Banner, Quadrat, Hochkant) und auf Wunsch ein Wasserzeichen mit deinem Namen.\n" +
-      "- **Mehrere Bilder:** Bis zu 20 Fotos eines Events auf einmal mit Unterschriften, automatisch verkleinert. Es gibt nur eine Discord-Ankündigung.\n" +
-      "- **Video-Clip:** echte Videodatei mit Größenlimit und Fortschrittsanzeige.\n" +
-      "- **Monats-Collage:** baut sich aus den beliebtesten Bildern der letzten 30 Tage.\n" +
-      "- **Alben** fassen Bilder einer Serie zusammen und lassen sich als Ganzes verlinken.\n\n" +
-      "**Im Büro**\n" +
-      "- **Bildwünsche** von Journalisten, Marketing Managern, Coaches und Visionären: Ein Klick auf „Bild hochladen“ erfüllt den Wunsch.\n" +
-      "- **Empfehlungen:** Events ohne oder mit wenigen Bildern, Events von heute, lange offene Bildwünsche, Bilder ohne Unterschrift und die Monats-Collage.\n" +
-      "- **Auswertung:** Daumen, Nutzungen durch andere Jobs und beliebteste Bilder. Du wirst benachrichtigt, wenn dein Bild verwendet wird oder Daumen-Meilensteine erreicht.\n" +
-      "- **Mediathek durchsuchen:** nach Unterschrift, Event, Fotograf und Typ. Deine Bilder erscheinen im Profil und auf der Turnierseite.\n" +
-      "- **Zusammenarbeit:** Nutzen andere dein Bild als Titelbild, im Werbe-Post oder in einer Anleitung, gibt es einen kleinen Bonus." +
-      "\n\n## Werbung\n\n" +
-      "Du erstellst Werbe-Posts für bevorstehende Events. Bewertet wird über Daumen der Community, " +
-      "deine Wochenstufe ergibt sich aus den Daumen auf deine Posts und Kommentare.\n\n" +
-      "**Posts schreiben**\n" +
-      "- **Text aus Vorlage:** Ankündigung, Erinnerung, „Letzte Plätze“ und „Heute geht’s los“ setzen Titel, Datum, Uhrzeit, Spiel und Anmeldezahl automatisch ein.\n" +
-      "- **Anmelde-Link:** Ein Häkchen hängt „Jetzt anmelden“ mit Link zur Event-Seite an. Die **Vorschau** zeigt den fertigen Post.\n" +
-      "- **Bild:** aus der Mediathek (oben stehen Bilder passend zu Event oder Spiel), im Studio gestaltet, selbst hochgeladen oder einfach das **Cover eines Spiels**.\n" +
-      "- **Kopieren:** Text inklusive Link mit einem Klick für Instagram oder Discord. Ein Admin bestätigt später, dass der Post extern veröffentlicht wurde.\n\n" +
-      "**Kampagnen und Vorlagen**\n" +
-      "- **Kampagne:** plant zu einem Event Ankündigung, Erinnerung (3 Tage vorher) und „Heute“. Erledigte Schritte bekommen einen Haken.\n" +
-      "- **Als Vorlage:** Ein guter Post lässt sich für ein anderes Event übernehmen, prüfe danach Datum und Uhrzeit.\n\n" +
-      "**Im Büro**\n" +
-      "- **Empfehlungen:** Events ohne Werbung, Erinnerung kurz vor dem Start, wenige Anmeldungen, Posts ohne Bild und wiederkehrende Events. Dazu Spiele-Vorschläge von Steam und Xbox (Sales bzw. Angebote, Neuerscheinungen, Game Pass): „Beitrag dazu“ legt einen Post ohne Event an. Ein Werbe-Post braucht überhaupt kein Event, du kannst ihn auch allgemein veröffentlichen.\n" +
-      "- **Auswertung:** Daumen pro Woche, bester Post, Anteil mit Bild und extern bestätigt. Du wirst bei Daumen-Meilensteinen und bei der externen Bestätigung benachrichtigt.\n" +
-      "- Deine Posts stehen im Profil und auf der Turnierseite des Events.\n\n" +
+      "- **Empfehlungen:** kommende Events ohne Werbung, Erinnerungen kurz vor dem Start, wenige Anmeldungen, vergangene Events ohne Beitrag, alte Entwürfe, offene Bildwünsche und die Monats-Collage. Dazu Spiele-Angebote von Steam und Xbox: „Beitrag dazu“ startet einen Beitrag ohne Event.\n" +
+      "- **Bildwünsche** anderer erfüllst du mit „Bild hochladen“ — der Beitrag mit deinem Bild erfüllt den Wunsch. Brauchst du selbst ein Bild, frag im Editor bei den anderen an.\n" +
+      "- **Werbe-Anfragen von Coaches:** „Post schreiben“ startet einen Werbe-Beitrag für den Trainings-Termin.\n" +
+      "- **Kampagnen** planen Ankündigung, Erinnerung und „Heute“ zu einem Event. **Interviews** und **Reihen** findest du ebenfalls hier.\n" +
+      "- Auf der Turnierseite stehen alle Beiträge zum Event, mit „Beitrag dazu erstellen“.\n\n" +
       "**Zusammenarbeit**\n" +
-      "- **Werbe-Anfragen von Coaches:** Ein Coach bittet dich, einen Trainings-Termin zu bewerben. „Post schreiben“ öffnet den Baustein „Trainings-Termin“.\n" +
-      "- **Bild fehlt?** Frage es bei den Fotografen an.\n" +
-      "- Wird dein Post von einem Journalisten in einem Bericht aufgegriffen oder erfüllt er eine Werbe-Anfrage, gibt es einen kleinen Bonus.",
+      "- Nutzt jemand dein Bild als Titelbild oder in einer Anleitung, erfüllt dein Beitrag eine Werbe-Anfrage oder entsteht daraus eine Idee, gibt es einen kleinen Bonus.",
   },
   {
     key: "coach",

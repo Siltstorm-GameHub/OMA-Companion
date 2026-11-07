@@ -88,7 +88,7 @@ async function eventsWithoutReports(): Promise<EventRecommendation[]> {
     .sort((a, b) => b._count.registrations - a._count.registrations)
     .map(e => ({
       eventId: e.id, title: e.title, startAt: e.startAt, url: `/tournament/${e.id}`,
-      reason: e._count.registrations > 0 ? `Noch kein Bericht · ${e._count.registrations} Teilnehmer` : "Noch kein Bericht",
+      reason: e._count.registrations > 0 ? `Noch kein Beitrag · ${e._count.registrations} Teilnehmer` : "Noch kein Beitrag",
       ...pastEventUrgency(e.startAt),
     }));
 }
@@ -446,13 +446,13 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
 
   const until = new Date(now.getTime() + LOOKAHEAD_DAYS * 86_400_000);
   const noPost = await prisma.event.findMany({
-    where: { hidden: false, startAt: { gte: now, lte: until }, marketingPosts: { none: { hiddenByAdminAt: null } } },
+    where: { hidden: false, startAt: { gte: now, lte: until }, jobReports: { none: { hiddenByAdminAt: null, isDraft: false } } },
     orderBy: { startAt: "asc" }, take: 10,
   });
   for (const e of noPost) {
     seenEvents.add(e.id);
     recs.push({
-      eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung", url: `/tournament/${e.id}`,
+      eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch kein Beitrag — Werbung machen", url: `/tournament/${e.id}`,
       ...upcomingEventUrgency(e.startAt),
     });
   }
@@ -478,35 +478,37 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
   const soon = new Date(now.getTime() + 48 * 3_600_000);
   const [reminderCandidates, fewRegistrations, noImage, seriesCandidates, precedents] = await Promise.all([
     prisma.event.findMany({
-      where: { hidden: false, startAt: { gte: now, lte: soon }, marketingPosts: { some: { hiddenByAdminAt: null } } },
+      where: { hidden: false, startAt: { gte: now, lte: soon }, jobReports: { some: { hiddenByAdminAt: null, isDraft: false } } },
       orderBy: { startAt: "asc" }, take: 5,
-      select: { id: true, title: true, startAt: true, marketingPosts: { where: { hiddenByAdminAt: null }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+      select: { id: true, title: true, startAt: true, jobReports: { where: { hiddenByAdminAt: null, isDraft: false }, orderBy: { publishedAt: "desc" }, take: 1, select: { publishedAt: true } } },
     }),
     prisma.event.findMany({
       where: { hidden: false, status: { not: "finished" }, startAt: { gte: now, lte: new Date(now.getTime() + 3 * 86_400_000) } },
       orderBy: { startAt: "asc" }, take: 10,
       select: { id: true, title: true, startAt: true, _count: { select: { registrations: true } } },
     }),
-    prisma.marketingPost.findMany({
+    // Eigene Werbe-Beiträge (mit Werbe-Vorlage) zu kommenden Events ohne jedes Bild.
+    prisma.jobReport.findMany({
       where: {
-        authorId: userId, hiddenByAdminAt: null, imageUrl: null, assetId: null,
-        createdAt: { gte: new Date(now.getTime() - 14 * 86_400_000) }, OR: [{ event: { startAt: { gte: now } } }, { trainingSessionId: { not: null } }],
+        authorId: userId, hiddenByAdminAt: null, isDraft: false, template: { not: null },
+        coverAssetId: null, gameCoverUrl: null, media: { none: {} },
+        publishedAt: { gte: new Date(now.getTime() - 14 * 86_400_000) }, OR: [{ event: { startAt: { gte: now } } }, { trainingSessionId: { not: null } }],
       },
-      orderBy: { createdAt: "desc" }, take: 3, select: { id: true, caption: true, event: { select: { title: true, startAt: true } } },
+      orderBy: { publishedAt: "desc" }, take: 3, select: { id: true, event: { select: { title: true, startAt: true } } },
     }),
     prisma.event.findMany({
-      where: { hidden: false, startAt: { gt: until, lte: new Date(now.getTime() + 30 * 86_400_000) }, marketingPosts: { none: { hiddenByAdminAt: null } } },
+      where: { hidden: false, startAt: { gt: until, lte: new Date(now.getTime() + 30 * 86_400_000) }, jobReports: { none: { hiddenByAdminAt: null, isDraft: false } } },
       orderBy: { startAt: "asc" }, take: 15, select: { id: true, title: true, startAt: true, game: true, seriesId: true },
     }),
     prisma.event.findMany({
-      where: { hidden: false, startAt: { lt: now, gte: new Date(now.getTime() - 90 * 86_400_000) }, marketingPosts: { some: { hiddenByAdminAt: null } } },
+      where: { hidden: false, startAt: { lt: now, gte: new Date(now.getTime() - 90 * 86_400_000) }, jobReports: { some: { hiddenByAdminAt: null, isDraft: false } } },
       select: { game: true, seriesId: true },
     }),
   ]);
 
   // Erinnerung: Event heute/morgen, der letzte Post ist älter als 3 Tage.
   for (const e of reminderCandidates) {
-    const last = e.marketingPosts[0]?.createdAt;
+    const last = e.jobReports[0]?.publishedAt;
     if (!last || now.getTime() - last.getTime() < 3 * 86_400_000) continue;
     const age = daysBetween(now, last);
     seenEvents.add(e.id);
@@ -532,7 +534,7 @@ async function marketingRecommendationsFor(userId: string): Promise<EventRecomme
   for (const p of noImage) {
     recs.push({
       eventId: `marketing-noimage-${p.id}`, title: p.event?.title ?? "Trainings-Termin", startAt: p.event?.startAt ?? now,
-      reason: "Dein Post hat noch kein Bild — Bilder bringen mehr Aufmerksamkeit", url: "/profile", noCreate: true,
+      reason: "Dein Werbe-Beitrag hat noch kein Bild — Bilder bringen mehr Aufmerksamkeit", url: `/community-board/report/${p.id}`, noCreate: true,
     });
   }
 
@@ -600,9 +602,25 @@ export async function dismissRecommendation(userId: string, jobKey: string, item
 export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {
   // Content Creator ohne gewählten Bereich (z.B. Badge-Zähler): alle drei Bereiche zusammen.
   if (jobKey === "content_creator") {
-    const parts = await Promise.all(["journalist", "fotograf", "marketing_manager"].map(area => getRecommendationsForJob(area, userId)));
-    const steam = parts.find(p => p.steamSales.length > 0 || p.steamReleases.length > 0) ?? parts[0];
-    return { ...steam, events: parts.flatMap(p => p.events) };
+    // Kommende Events (Werbung) zuerst, dann vergangene (Bericht, Fotos/Clips). Gleiches Event nur einmal —
+    // ein Beitrag kann ohnehin Werbung, Fotos und Bericht in einem sein.
+    const [marketing, reports, media] = await Promise.all([
+      marketingRecommendationsFor(userId), journalistRecommendationsFor(userId), fotografRecommendationsFor(userId),
+    ]);
+    const dismissed = new Set([
+      ...await getDismissedItemKeys(userId, "content_creator"),
+      ...await getDismissedItemKeys(userId, "journalist"),
+      ...await getDismissedItemKeys(userId, "fotograf"),
+      ...await getDismissedItemKeys(userId, "marketing_manager"),
+    ]);
+    const seen = new Set<string>();
+    const events = [...marketing, ...reports, ...media].filter(e => {
+      if (dismissed.has(e.eventId) || seen.has(e.eventId)) return false;
+      seen.add(e.eventId);
+      return true;
+    });
+    const steam = await getRecommendationsForJob("journalist", userId);
+    return { ...steam, events };
   }
   let events: EventRecommendation[] = [];
   if (jobKey === "journalist") events = await journalistRecommendationsFor(userId);

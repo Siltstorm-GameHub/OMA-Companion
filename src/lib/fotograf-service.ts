@@ -1,104 +1,15 @@
 import { prisma } from "./prisma";
-import type { ScoreStream } from "./score-engine";
-import { canWorkCommunityJobs, recordContribution, overLimitNotice } from "./community-job-access";
+import { canWorkCommunityJobs } from "./community-job-access";
 import { registerOwnVoteCounter } from "./community-job-service";
-import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
-import { announceCommunityJobContent } from "./discord-community-jobs";
-import { getCommunityJob, CONTENT_CREATOR_KEY } from "./community-jobs";
-import { getAnnouncementChannel } from "./community-job-config";
-import { fulfillPhotoRequest } from "./photo-request-service";
 import { dispatchNotification } from "./notify-dispatch";
-import { getWeekBounds } from "./community-job-service";
-import { isVideoUrl } from "./upload-limits";
 
 /**
- * Fotograf: lädt Clips/Collagen/Screenshots/Banner/Grafiken in die gemeinsame
- * Mediathek hoch. Andere Jobs (Journalist, später Marketing Manager) können
- * Assets referenzieren (usageCount) — die Bewertung bleibt trotzdem unabhängig
- * beim Fotograf als Autor.
+ * Mediathek des Content Creators: Bilder/Clips aus Beiträgen (JobMediaAsset), Alben, Suche, Bearbeiten/Löschen
+ * und Benachrichtigung, wenn jemand ein Bild als Titelbild nutzt. Hochgeladen wird nur noch über einen Beitrag.
  */
 
-/** Seit der Zusammenlegung: Beiträge zählen für den Content Creator (Gehalt, Tageslimit, Ankündigungskanal). */
-const JOB_KEY = CONTENT_CREATOR_KEY;
-/** Bereich innerhalb des Content Creators (früherer Job-Schlüssel) — für Emoji/Label je Inhaltstyp. */
-const AREA_KEY = "fotograf";
 export const ASSET_TYPES = ["CLIP", "COLLAGE", "SCREENSHOT", "BANNER", "GRAPHIC"] as const;
 export type AssetType = (typeof ASSET_TYPES)[number];
-
-export async function requireActiveFotograf(userId: string): Promise<boolean> {
-  return canWorkCommunityJobs(userId);
-}
-
-export type UploadAssetResult = { ok: true; assetId: string; notice?: string } | { error: string };
-
-export async function uploadAsset(
-  authorId: string,
-  data: { type: AssetType; url: string; caption?: string; eventId?: string; requestId?: string; albumId?: string },
-): Promise<UploadAssetResult> {
-  if (!(await requireActiveFotograf(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
-  if (!ASSET_TYPES.includes(data.type)) return { error: "Ungültiger Asset-Typ" };
-  if (!data.url.trim()) return { error: "Datei fehlt" };
-  if (data.albumId && !(await prisma.jobMediaAlbum.findFirst({ where: { id: data.albumId, authorId }, select: { id: true } }))) {
-    return { error: "Album nicht gefunden" };
-  }
-
-  const asset = await prisma.jobMediaAsset.create({
-    data: {
-      authorId, type: data.type, url: data.url, caption: data.caption ?? null,
-      eventId: data.eventId ?? null, albumId: data.albumId ?? null,
-    },
-  });
-  const booked = await recordContribution(authorId, JOB_KEY, "asset", [asset.id]);
-
-  announceAndStore(asset.id, authorId, data.caption ?? data.type, data.url).catch(() => {});
-  // Auf einen Bildwunsch eines Journalisten hochgeladen → Wunsch als erfüllt markieren.
-  if (data.requestId) fulfillPhotoRequest(authorId, data.requestId, asset.id).catch(() => {});
-  return { ok: true, assetId: asset.id, notice: overLimitNotice(booked) };
-}
-
-async function announceAndStore(assetId: string, authorId: string, title: string, imageUrl: string): Promise<void> {
-  const [author, channelId] = await Promise.all([
-    prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } }),
-    getAnnouncementChannel(JOB_KEY),
-  ]);
-  const messageId = await announceCommunityJobContent({
-    title, description: "Neues Asset in der Community-Mediathek",
-    authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(AREA_KEY)?.emoji ?? "📸", imageUrl, channelId,
-  });
-  if (messageId) await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { discordMessageId: messageId } });
-}
-
-export const BULK_MAX = 20;
-
-export type BulkUploadResult = { ok: true; assetIds: string[]; notice?: string } | { error: string };
-
-/** Mehrere Bilder/Clips eines Events auf einmal — eine einzige Discord-Ankündigung statt eines Posts pro Bild. */
-export async function uploadAssetsBulk(
-  authorId: string,
-  data: { eventId?: string; albumId?: string; items: { url: string; caption?: string; type?: AssetType }[] },
-): Promise<BulkUploadResult> {
-  if (!(await requireActiveFotograf(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
-  const items = data.items.filter(i => typeof i.url === "string" && i.url.trim());
-  if (items.length === 0) return { error: "Keine Dateien übergeben" };
-  if (items.length > BULK_MAX) return { error: `Maximal ${BULK_MAX} Dateien auf einmal` };
-  if (data.albumId && !(await prisma.jobMediaAlbum.findFirst({ where: { id: data.albumId, authorId }, select: { id: true } }))) {
-    return { error: "Album nicht gefunden" };
-  }
-
-  const created = await prisma.$transaction(items.map(i => prisma.jobMediaAsset.create({
-    data: {
-      authorId, url: i.url, caption: i.caption?.trim() || null, eventId: data.eventId ?? null, albumId: data.albumId ?? null,
-      type: i.type && ASSET_TYPES.includes(i.type) ? i.type : isVideoUrl(i.url) ? "CLIP" : "SCREENSHOT",
-    },
-  })));
-  // Ein Mehrfach-Upload zählt als EIN Beitrag gegen das Tageslimit.
-  const booked = await recordContribution(authorId, JOB_KEY, "asset", created.map(a => a.id));
-
-  const first = created.find(a => !isVideoUrl(a.url)) ?? created[0];
-  announceAndStore(first.id, authorId, created.length === 1 ? (first.caption ?? first.type) : `${created.length} neue Bilder`, first.url).catch(() => {});
-  return { ok: true, assetIds: created.map(a => a.id), notice: overLimitNotice(booked) };
-}
 
 // ── Alben ────────────────────────────────────────────────────────────────────
 
@@ -112,7 +23,7 @@ export async function listMyAlbums(userId: string) {
 }
 
 export async function createAlbum(authorId: string, data: { title: string; eventId?: string }): Promise<{ ok: true; albumId: string } | { error: string }> {
-  if (!(await requireActiveFotograf(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
+  if (!(await canWorkCommunityJobs(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
   const title = data.title.trim();
   if (!title) return { error: "Titel erforderlich" };
   if (title.length > ALBUM_TITLE_MAX) return { error: `Titel ist zu lang (max. ${ALBUM_TITLE_MAX} Zeichen)` };
@@ -160,7 +71,8 @@ export async function searchMedia(query: MediaQuery) {
         { author: { OR: [{ username: { contains: q, mode: "insensitive" as const } }, { name: { contains: q, mode: "insensitive" as const } }] } },
       ] } : {}),
     },
-    orderBy: query.sort === "votes" ? [{ votes: { _count: "desc" as const } }, { createdAt: "desc" as const }] : { createdAt: "desc" as const },
+    // "Beliebteste": nach Daumen auf den Beitrag, in dem das Bild/der Clip veröffentlicht wurde.
+    orderBy: query.sort === "votes" ? [{ report: { votes: { _count: "desc" as const } } }, { createdAt: "desc" as const }] : { createdAt: "desc" as const },
     include: {
       _count: { select: { votes: true } },
       author: { select: { id: true, username: true, name: true } },
@@ -188,53 +100,6 @@ export async function notifyAssetUsed(assetId: string, userId: string, kind: "re
 }
 
 // ── Auswertung fürs Fotografen-Büro ──────────────────────────────────────────
-
-export async function getFotografStats(userId: string) {
-  const now = new Date();
-  const { weekStart, weekEnd } = getWeekBounds(now);
-  const eightWeeksAgo = new Date(weekStart.getTime() - 7 * 7 * 86_400_000);
-
-  const [assets, recentVotes, reportUses, postUses] = await Promise.all([
-    prisma.jobMediaAsset.findMany({
-      where: { authorId: userId, hiddenByAdminAt: null },
-      select: { id: true, type: true, caption: true, url: true, _count: { select: { votes: true } } },
-    }),
-    prisma.jobMediaAssetVote.findMany({
-      where: { asset: { authorId: userId }, createdAt: { gte: eightWeeksAgo }, OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }] },
-      select: { createdAt: true },
-    }),
-    prisma.jobReport.findMany({ where: { coverAsset: { authorId: userId }, isDraft: false }, select: { coverAssetId: true } }),
-    prisma.marketingPost.findMany({ where: { asset: { authorId: userId } }, select: { assetId: true } }),
-  ]);
-
-  const uses = new Map<string, number>();
-  for (const r of reportUses) if (r.coverAssetId) uses.set(r.coverAssetId, (uses.get(r.coverAssetId) ?? 0) + 1);
-  for (const m of postUses) if (m.assetId) uses.set(m.assetId, (uses.get(m.assetId) ?? 0) + 1);
-
-  const totalVotes = assets.reduce((sum, a) => sum + a._count.votes, 0);
-  const top = [...assets].sort((a, b) => b._count.votes - a._count.votes)[0];
-  const mostUsed = [...assets].sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0))[0];
-  const usesTotal = [...uses.values()].reduce((a, b) => a + b, 0);
-
-  const byWeek = new Map<number, number>();
-  for (const v of recentVotes) {
-    const key = getWeekBounds(v.createdAt).weekStart.getTime();
-    byWeek.set(key, (byWeek.get(key) ?? 0) + 1);
-  }
-  const byType = new Map<string, number>();
-  for (const a of assets) byType.set(a.type, (byType.get(a.type) ?? 0) + 1);
-
-  return {
-    total: assets.length, totalVotes,
-    averageVotes: assets.length > 0 ? totalVotes / assets.length : 0,
-    votesThisWeek: recentVotes.filter(v => v.createdAt >= weekStart && v.createdAt < weekEnd).length,
-    usesTotal, usedAssets: uses.size,
-    top: top && top._count.votes > 0 ? { id: top.id, caption: top.caption ?? top.type, url: top.url, votes: top._count.votes } : null,
-    mostUsed: mostUsed && (uses.get(mostUsed.id) ?? 0) > 0 ? { id: mostUsed.id, caption: mostUsed.caption ?? mostUsed.type, url: mostUsed.url, uses: uses.get(mostUsed.id) ?? 0 } : null,
-    weekly: [...byWeek.entries()].sort((a, b) => a[0] - b[0]).map(([ts, votes]) => ({ weekStart: new Date(ts).toISOString(), votes })),
-    types: [...byType.entries()].map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count),
-  };
-}
 
 /** Wird aufgerufen, wenn ein anderer Job (Journalist-Report als Cover, später Marketing-Post) das Asset einbindet. */
 export async function markAssetUsed(assetId: string): Promise<void> {
@@ -278,52 +143,7 @@ export async function deleteAsset(authorId: string, assetId: string, opts: { isA
 
 export type VoteResult = { ok: true } | { error: string };
 
-export async function voteAsset(voterId: string, assetId: string): Promise<VoteResult> {
-  const asset = await prisma.jobMediaAsset.findUnique({ where: { id: assetId } });
-  if (!asset) return { error: "Asset nicht gefunden" };
-  if (asset.authorId === voterId) return { error: "Du kannst dein eigenes Asset nicht bewerten" };
-
-  const existing = await prisma.jobMediaAssetVote.findUnique({
-    where: { assetId_voterId: { assetId, voterId } },
-  }).catch(() => null);
-  if (existing) return { error: "Du hast dieses Asset bereits bewertet" };
-
-  await prisma.jobMediaAssetVote.create({ data: { assetId, voterId } });
-  onCommunityJobVoteCast(voterId).catch(() => {});
-  notifyVoteMilestone(assetId, asset.authorId, asset.caption ?? asset.type).catch(() => {});
-  return { ok: true };
-}
-
-const VOTE_MILESTONES = [5, 10, 25, 50, 100];
-
-async function notifyVoteMilestone(assetId: string, authorId: string, title: string): Promise<void> {
-  const count = await prisma.jobMediaAssetVote.count({ where: { assetId } });
-  if (!VOTE_MILESTONES.includes(count)) return;
-  await dispatchNotification("asset_votes_milestone", {
-    users: [authorId], placeholders: { "{count}": String(count), "{title}": title.slice(0, 60), "{url}": "/community-board" },
-  });
-}
-
-export async function unvoteAsset(voterId: string, assetId: string): Promise<VoteResult> {
-  await prisma.jobMediaAssetVote.deleteMany({ where: { assetId, voterId } });
-  return { ok: true };
-}
-
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
-
-/** Score-Quellen dieses Bereichs — der Content Creator (content-creator-service.ts) rechnet alle Bereiche zusammen. */
-export async function fotografScoreStreams(userId: string, weekStart: Date, weekEnd: Date): Promise<ScoreStream[]> {
-  const week = { gte: weekStart, lt: weekEnd };
-  const valid = { OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" as const } }] };
-  // Kommentar-Daumen zählen nicht mehr fürs Gehalt; nur Inhalte innerhalb des Tageslimits (countsForScore) zählen.
-  const assetVotes = await prisma.jobMediaAssetVote.findMany({
-    where: { asset: { authorId: userId, hiddenByAdminAt: null, countsForScore: true }, createdAt: week, ...valid },
-    select: { voterId: true, assetId: true, createdAt: true },
-  });
-  return [
-    { key: "assets", label: "Daumen auf Bilder & Clips", unit: "thumb", events: assetVotes.map(v => ({ voterId: v.voterId, itemKey: `asset:${v.assetId}`, points: 1, createdAt: v.createdAt })) },
-  ];
-}
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.jobMediaAssetVote.count({

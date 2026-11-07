@@ -28,9 +28,20 @@ export async function collabBonusScore(jobKey: string, userId: string, weekStart
 
   switch (jobKey) {
     case "content_creator": {
-      // Eigennutzung zählt in allen drei Bereichen nicht (authorId: { not: userId }) — auch innerhalb des gemeinsamen Jobs.
-      const parts = await Promise.all(["fotograf", "marketing_manager", "journalist"].map(area => collabBonusScore(area, userId, weekStart, weekEnd)));
-      return parts.reduce((sum, p) => sum + p, 0);
+      // Drei Wege, je höchstens MAX_COLLAB_USES — Eigennutzung zählt nie (authorId: { not: userId }):
+      //  1. eigenes Bild aus der Mediathek als Titelbild in einem fremden Beitrag oder in einer fremden Anleitung
+      //  2. eigener Beitrag erfüllt eine Werbe-Anfrage eines Coaches
+      //  3. aus einem eigenen Beitrag entsteht die Idee einer anderen Person
+      const own = await prisma.jobReport.findMany({ where: { authorId: userId, isDraft: false }, select: { id: true } });
+      const [covers, guides, promos, ideas] = await Promise.all([
+        prisma.jobReport.count({ where: { isDraft: false, ...visible, publishedAt: inWeek, authorId: { not: userId }, coverAsset: { authorId: userId } } }),
+        guidesUsingAssetsOf(userId, weekStart, weekEnd),
+        countFulfilledPromotions({ postAuthorId: userId }, weekStart, weekEnd),
+        own.length === 0 ? 0 : prisma.communityIdea.count({
+          where: { ...visible, createdAt: inWeek, authorId: { not: userId }, sourceReportId: { in: own.map(r => r.id) } },
+        }),
+      ]);
+      return (Math.min(covers + guides, MAX_COLLAB_USES) + Math.min(promos, MAX_COLLAB_USES) + Math.min(ideas, MAX_COLLAB_USES)) * COLLAB_POINTS;
     }
     case "fotograf": {
       const [reports, posts, guides] = await Promise.all([
@@ -98,7 +109,8 @@ async function countFulfilledPromotions(who: { postAuthorId?: string; requesterI
   const postIds = requests.map(r => r.postId).filter((x): x is string => !!x);
   if (postIds.length === 0) return 0;
   if (!who.postAuthorId) return postIds.length;
-  return prisma.marketingPost.count({ where: { id: { in: postIds }, authorId: who.postAuthorId, hiddenByAdminAt: null } });
+  // Seit der Zusammenlegung erfüllt ein Beitrag (JobReport) die Anfrage; alte Werbe-Posts wurden migriert ("mp_"-IDs).
+  return prisma.jobReport.count({ where: { id: { in: postIds }, authorId: who.postAuthorId, hiddenByAdminAt: null } });
 }
 
 /** Zusammenarbeits-Bonus als Zeile fürs Score-Protokoll — leer, solange noch keine Bewertungen der Community vorliegen. */

@@ -3,18 +3,19 @@ import { formatFixed } from "@/lib/format-number";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { TrendingUp, Crop } from "@/components/icons";
+import { TrendingUp } from "@/components/icons";
 import { Sparkles, ImagePlus } from "@/components/icons";
 import { ChevronRight, ChevronDown } from "@/components/icons";
 import { Server as ServerIcon } from "@/components/icons";
-import { Briefcase, Coins, ThumbsUp, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, X, Wrench, Wallet, CalendarDays, Tag, Rocket, BookOpen, Star, Copy } from "@/components/icons";
+import { Briefcase, Coins, ThumbsUp, Loader2, Newspaper, Megaphone, GraduationCap, Lightbulb, X, Wrench, Wallet, CalendarDays, Tag, Rocket, BookOpen, Star, Copy } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import { COMMUNITY_JOBS, CONTENT_AREAS, CONTENT_CREATOR_KEY, isContentArea, type ContentAreaKey } from "@/lib/community-jobs";
-import ReportEditor from "@/components/community-jobs/ReportEditor";
+import { COMMUNITY_JOBS, CONTENT_CREATOR_KEY, isContentArea } from "@/lib/community-jobs";
+import ReportEditor, { type ReportEditorInitial } from "@/components/community-jobs/ReportEditor";
+import { postDisplayTitle } from "@/lib/post-display";
 import { JournalistStatsBlock, JournalistExtras, PhotoRequestsBlock } from "@/components/community-jobs/JournalistTools";
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
@@ -22,26 +23,19 @@ import PhotoRequestButton from "@/components/community-jobs/PhotoRequestButton";
 import ScoreBreakdownBlock from "@/components/community-jobs/ScoreBreakdownBlock";
 import MediaPickerPanel from "@/components/community-jobs/MediaPickerPanel";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
-import GameCoverPicker, { type PickedGameCover } from "@/components/community-jobs/GameCoverPicker";
 import GameNameInput from "@/components/GameNameInput";
 import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
-import { MarketingStatsBlock, MarketingCampaignsBlock, PromotionRequestList } from "@/components/community-jobs/MarketingTools";
-import {
-  MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
-} from "@/lib/marketing-templates";
-import { PhotoRequestList, FotografStatsBlock, FotografExtras, BulkUploadForm, MonthCollageBuilder, AlbumSelect, useAlbums } from "@/components/community-jobs/FotografTools";
+import { MarketingCampaignsBlock, PromotionRequestList } from "@/components/community-jobs/MarketingTools";
+import { PhotoRequestList, FotografExtras } from "@/components/community-jobs/FotografTools";
 import { reportCategoryLabel } from "@/lib/report-categories";
 import {
   CoachAvailability, CoachStatsBlock, CoachAttendance, CoachMentees, CoachHelpInbox, CoachSpecialties, CoachNewcomers, CoachGuideList,
 } from "@/components/community-jobs/CoachTools";
 import GameCover from "@/components/GameCover";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
-import { upload } from "@vercel/blob/client";
-import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, CLIP_UPLOAD_PREFIX, isVideoUrl } from "@/lib/upload-limits";
+import { isVideoUrl } from "@/lib/upload-limits";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
-import StudioEditor from "@/components/community-jobs/StudioEditor";
-import ImageCropTool from "@/components/community-jobs/ImageCropTool";
 
 /**
  * Community-Jobs-Reiter/-Sektion. Lädt alle Daten selbst per fetch und läuft
@@ -74,20 +68,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const JOB_TAB_STORAGE_KEY = "oma.communityJobs.lastJob";
-const AREA_STORAGE_KEY = "oma.communityJobs.lastArea";
 
-/** Bereich des Content Creators: aus "?job=<früherer Job>" oder dem zuletzt gewählten Bereich. */
-function initialArea(): ContentAreaKey {
-  if (typeof window === "undefined") return CONTENT_AREAS[0].key;
-  const fromUrl = new URLSearchParams(window.location.search).get("job");
-  if (isContentArea(fromUrl)) return fromUrl;
-  try {
-    const stored = window.localStorage.getItem(AREA_STORAGE_KEY);
-    if (isContentArea(stored)) return stored;
-  } catch { /* privater Modus o.ä. */ }
-  return CONTENT_AREAS[0].key;
-}
-
+/** Startreiter: "?job=" (auch frühere Job-Schlüssel → Content Creator) oder der zuletzt gewählte Job. */
 function initialJobKey(): string {
   if (typeof window === "undefined") return COMMUNITY_JOBS[0].key;
   const fromUrl = new URLSearchParams(window.location.search).get("job");
@@ -99,7 +81,6 @@ function initialJobKey(): string {
   } catch { /* privater Modus o.ä. */ }
   return COMMUNITY_JOBS[0].key;
 }
-
 /**
  * Offene Community-Jobs: jeder User kann alle Jobs ausüben. Statt Bewerbung/Vertrag
  * gibt es ein Büro mit einem Reiter pro Job; das Tageslimit gilt über alle Jobs.
@@ -256,23 +237,20 @@ interface ServerSummary { id: string; name: string; game: string; online: boolea
 function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   jobKey: string; guide?: string; description?: string; coachSelf: CoachSelf; onChanged: () => void;
 }) {
-  // Content Creator: Bereich (Berichte/Medien/Werbung) steuert Werkzeuge, Formulare und Empfehlungen.
-  // Gehalt, Score und Auswertung laufen weiter über den Job selbst (jobKey).
   const isContentCreator = jobKey === CONTENT_CREATOR_KEY;
-  const [area, setArea] = useState<ContentAreaKey>(() => initialArea());
-  const workKey: string = isContentCreator ? area : jobKey;
-  function selectArea(next: ContentAreaKey) {
-    setArea(next);
-    setShowAllEvents(false);
-    try { window.localStorage.setItem(AREA_STORAGE_KEY, next); } catch { /* egal */ }
-  }
+  const workKey = jobKey;
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
+  // Deep-Link "/profile?job=content_creator&compose=<eventId>" (Turnierseite: "Beitrag dazu erstellen").
+  const [composeEventId] = useState<string | undefined>(() => {
+    if (!isContentCreator || typeof window === "undefined") return undefined;
+    return new URLSearchParams(window.location.search).get("compose") ?? undefined;
+  });
+  const [createOpen, setCreateOpen] = useState(!!composeEventId);
+  const [createEventId, setCreateEventId] = useState<string | undefined>(composeEventId);
   const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
   const [toolsKey, setToolsKey] = useState(0);
   const [showAllEvents, setShowAllEvents] = useState(false);
@@ -338,11 +316,9 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
     };
   }, [jobKey]);
 
-  // Empfehlungen je Bereich (Content Creator) bzw. Job — eigener Effekt, damit ein Bereichswechsel nur sie neu lädt.
   useEffect(() => {
-    const area = isContentCreator ? `&area=${encodeURIComponent(workKey)}` : "";
-    api<Recommendations>(`/api/community-jobs/recommendations?jobKey=${encodeURIComponent(jobKey)}${area}`).then(setRecs).catch(() => {});
-  }, [jobKey, workKey, isContentCreator]);
+    api<Recommendations>(`/api/community-jobs/recommendations?jobKey=${encodeURIComponent(jobKey)}`).then(setRecs).catch(() => {});
+  }, [jobKey]);
 
   const onlineServers = servers.filter(s => s.online);
 
@@ -352,7 +328,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   const jobGuide = guide ?? COMMUNITY_JOBS.find(j => j.key === jobKey)?.officeGuideMarkdown;
   const recCount = recs ? recs.events.length : 0;
   // Journalist (Bericht), Visionär (Idee) und Marketing Manager (Werbe-Post) können direkt zu einem Steam-Spiel posten.
-  const canPostAboutSteam = ["journalist", "visionaer", "marketing_manager"].includes(workKey);
+  const canPostAboutSteam = ["content_creator", "visionaer"].includes(workKey);
 
   return (
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
@@ -429,21 +405,6 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 
       {tab === "work" && (
       <>
-      {isContentCreator && (
-        <div className="px-4 pt-4">
-          <div className="flex flex-wrap rounded-2xl bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold gap-0.5 w-fit" role="tablist" aria-label="Bereich">
-            {CONTENT_AREAS.map(a => {
-              const AreaIcon = JOB_ICONS[a.key] ?? Briefcase;
-              return (
-                <button key={a.key} role="tab" aria-selected={area === a.key} onClick={() => selectArea(a.key)}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-colors ${area === a.key ? SWITCH_ON : SWITCH_OFF}`}>
-                  <AreaIcon className="w-3.5 h-3.5" /> {a.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0 || (recs.xboxDeals?.length ?? 0) > 0 || (recs.gamePassNew?.length ?? 0) > 0 || (recs.gamePassLeaving?.length ?? 0) > 0) && (
         <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-4">
@@ -455,7 +416,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             const hiddenCount = recs.events.length - visibleEvents.length;
             // Nur Journalist/Fotograf/Marketing-Manager-Empfehlungen zeigen auf ein echtes Event —
             // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
-            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(workKey);
+            const isEventScopedJob = workKey === CONTENT_CREATOR_KEY;
             // Coach-Empfehlung "neue Spieler": kein Event, aber ein sinnvoller Vorschlag fürs Formular.
             const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
@@ -702,7 +663,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       </>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={workKey === "journalist" ? "lg" : "md"}>
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size={workKey === CONTENT_CREATOR_KEY ? "lg" : "md"}>
         <CreateContentForm jobKey={workKey} eventId={createEventId} prefill={createPrefill} onDone={() => { setCreateOpen(false); setToolsKey(k => k + 1); onChanged(); }} />
       </Modal>
     </div>
@@ -778,25 +739,16 @@ function JobToolContent({ jobKey, coachSelf, onDuplicate, onCompose }: {
   jobKey: string; coachSelf: CoachSelf; onDuplicate: (prefill: PostPrefill) => void;
   onCompose: (eventId?: string, prefill?: PostPrefill) => void;
 }) {
-  if (jobKey === "journalist") return <ReportList onCompose={onCompose} />;
-  if (jobKey === "fotograf") {
+  if (jobKey === CONTENT_CREATOR_KEY) {
+    // Ein Beitrag kann Werbung, Fotos & Clips oder ein Bericht sein — alle Werkzeuge an einem Ort.
     return (
       <div className="space-y-4">
-        <FotografStatsBlock />
         <PhotoRequestList onFulfill={r => onCompose(r.eventId ?? undefined, { photoRequestId: r.id, title: r.description })} />
-        <AssetList />
-        <FotografExtras />
-      </div>
-    );
-  }
-  if (jobKey === "marketing_manager") {
-    return (
-      <div className="space-y-4">
-        <MarketingStatsBlock />
-        <PhotoRequestsBlock />
         <PromotionRequestList onWrite={r => onCompose(r.session.eventId ?? undefined, { trainingSessionId: r.session.id, template: "training" })} />
+        <ReportList onCompose={onCompose} />
         <MarketingCampaignsBlock onCompose={(eventId, p) => onCompose(eventId, p)} />
-        <MarketingPostList onDuplicate={onDuplicate} />
+        <PhotoRequestsBlock />
+        <FotografExtras />
       </div>
     );
   }
@@ -846,73 +798,20 @@ function Thumb({ url }: { url: string | null }) {
   );
 }
 
-/**
- * Bild-Bearbeitung für eigene, bereits veröffentlichte Beiträge — Zuschneiden
- * (wiederverwendet ImageCropTool), Ersetzen durch komplett neuen Upload,
- * optional Entfernen. Jede Aktion speichert sofort (ruft `onSaved` mit der
- * neuen URL bzw. `null` bei Entfernen auf), analog zum Admin-Bearbeiten-Muster
- * in AdminContentSection.tsx.
- */
-function ImageEditControls({
-  imageUrl, onSaved, allowRemove,
-}: { imageUrl: string | null; onSaved: (url: string | null) => void; allowRemove?: boolean }) {
-  const [cropping, setCropping] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function handleFile(file: File) {
-    setUploading(true);
-    try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", "community-job-asset");
-      const res = await fetch("/api/upload", { method: "POST", body });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload fehlgeschlagen");
-      onSaved(data.url);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  return (
-    <div className="space-y-1.5">
-      {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- Vorschau beliebiger Blob-URLs
-        <img src={imageUrl} alt="" className="w-full max-h-40 object-contain rounded-lg border border-white/10 bg-black/20" />
-      )}
-      <div className="flex flex-wrap gap-1.5">
-        {imageUrl && (
-          <Button size="sm" variant="outline" icon={<Crop className="w-3.5 h-3.5" />} onClick={() => setCropping(true)}>Zuschneiden</Button>
-        )}
-        <Button size="sm" variant="outline" loading={uploading} icon={<Upload className="w-3.5 h-3.5" />} onClick={() => fileRef.current?.click()}>
-          {imageUrl ? "Ersetzen" : "Bild hochladen"}
-        </Button>
-        {imageUrl && allowRemove && (
-          <Button size="sm" variant="outline" icon={<X className="w-3.5 h-3.5" />} onClick={() => onSaved(null)}>Entfernen</Button>
-        )}
-      </div>
-      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-      <Modal open={cropping} onClose={() => setCropping(false)} title="Bild zuschneiden" size="lg">
-        {imageUrl && <ImageCropTool imageUrl={imageUrl} onCropped={url => { setCropping(false); onSaved(url); }} onCancel={() => setCropping(false)} />}
-      </Modal>
-    </div>
-  );
-}
+interface EventOption { id: string; title: string; startAt: string }
 
 interface MyReport {
   id: string; title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
   coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean; publishedAt: string;
-  _count: { votes: number; contributions: number };
+  gameCoverUrl?: string | null; template?: string | null; adminConfirmedPosted?: boolean;
+  event?: { id: string; title: string } | null;
+  media?: { id: string; url: string }[];
+  _count: { votes: number; contributions: number; media?: number };
 }
 
 function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: PostPrefill) => void }) {
   const [items, setItems] = useState<MyReport[] | null>(null);
-  const [editing, setEditing] = useState<MyReport | null>(null);
+  const [editing, setEditing] = useState<(ReportEditorInitial & { id: string }) | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [statsKey, setStatsKey] = useState(0);
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -935,10 +834,18 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
     finally { setBusy(null); }
   }
+  /** Zum Bearbeiten den vollständigen Beitrag (alle Bilder/Clips, Werbe-Felder) laden. */
+  async function edit(r: MyReport) {
+    try {
+      const d = await api<{ report: ReportEditorInitial & { id: string } }>(`/api/community-jobs/reports/${r.id}`);
+      setEditing(d.report);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Beitrag konnte nicht geladen werden"); }
+  }
   async function remove(r: MyReport) {
+    const name = postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount: r._count.media });
     const ok = await confirm({
-      title: r.isDraft ? "Entwurf löschen?" : "Bericht löschen?",
-      description: r.isDraft ? `„${r.title}“ wird gelöscht.` : `„${r.title}“ wird samt Ergänzungen und Bewertungen gelöscht.`,
+      title: r.isDraft ? "Entwurf löschen?" : "Beitrag löschen?",
+      description: r.isDraft ? `„${name}“ wird gelöscht.` : `„${name}“ wird samt Ergänzungen und Bewertungen gelöscht. Bilder und Clips bleiben in der Mediathek.`,
       confirmLabel: "Löschen", variant: "danger",
     });
     if (!ok) return;
@@ -955,180 +862,41 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
       <JournalistStatsBlock refreshKey={statsKey} />
       <JournalistExtras onCompose={recap => onCompose(undefined, { recap })} />
       {items.length === 0 ? (
-        <p className="text-xs text-gray-600">Noch keine Berichte. Über „Neuer Beitrag“ schreibst du deinen ersten — mit „Aus Event vorbefüllen“ startest du direkt mit den Fakten.</p>
+        <p className="text-xs text-gray-600">Noch keine Beiträge. Über „Neuer Beitrag“ teilst du Fotos oder Clips, machst Werbung für ein Event oder schreibst einen Bericht — alles in einem Beitrag.</p>
       ) : (
         <div className="space-y-1.5">
-          {items.map(r => (
-            <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
-              <span className="flex items-center gap-1.5 min-w-0">
-                {r.isDraft && <Badge tone="warning">Entwurf</Badge>}
-                {reportCategoryLabel(r.category) && <Badge tone="neutral">{reportCategoryLabel(r.category)}</Badge>}
-                <span className="text-gray-300 truncate">{r.title}</span>
-              </span>
-              <span className="flex items-center gap-2 shrink-0">
-                {!r.isDraft && <VoteRow upvotes={r._count.votes} votedByMe={false} />}
-                {!r.isDraft && <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>}
-                {r.isDraft && <Button size="sm" variant="outline" loading={busy === r.id} onClick={() => publish(r)}>Veröffentlichen</Button>}
-                <EditDeleteBar onEdit={() => setEditing(r)} onDelete={() => remove(r)} />
-              </span>
-            </div>
-          ))}
+          {items.map(r => {
+            const thumb = r.media?.find(m => !isVideoUrl(m.url))?.url ?? r.gameCoverUrl ?? null;
+            const mediaCount = r._count.media ?? r.media?.length ?? 0;
+            return (
+              <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-2 min-w-0">
+                  {thumb ? <Thumb url={thumb} /> : null}
+                  {r.isDraft && <Badge tone="warning">Entwurf</Badge>}
+                  {r.template && <Badge tone="info">Werbung</Badge>}
+                  {reportCategoryLabel(r.category) && <Badge tone="neutral">{reportCategoryLabel(r.category)}</Badge>}
+                  <span className="text-gray-300 truncate">{postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount })}</span>
+                  {mediaCount > 0 && <span className="text-gray-600 shrink-0">· {mediaCount} 📷</span>}
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {!r.isDraft && <VoteRow upvotes={r._count.votes} votedByMe={false} />}
+                  {!r.isDraft && r._count.contributions > 0 && <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>}
+                  {r.adminConfirmedPosted && <span className="text-emerald-400">✓ extern</span>}
+                  {r.isDraft && <Button size="sm" variant="outline" loading={busy === r.id} onClick={() => publish(r)}>Veröffentlichen</Button>}
+                  <EditDeleteBar onEdit={() => edit(r)} onDelete={() => remove(r)} />
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} title={editing?.isDraft ? "Entwurf bearbeiten" : "Bericht bearbeiten"} size="lg">
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={editing?.isDraft ? "Entwurf bearbeiten" : "Beitrag bearbeiten"} size="lg">
         {editing && (
           <ReportEditor reportId={editing.id} initial={editing} onDone={() => { setEditing(null); reload(); }} />
         )}
       </Modal>
       {ConfirmDialogElement}
-    </div>
-  );
-}
-
-function AssetList() {
-  const [items, setItems] = useState<{ id: string; caption: string | null; type: string; url: string; album?: { id: string; title: string } | null; _count: { votes: number } }[]>([]);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-  const [albumId, setAlbumId] = useState("");
-  const { albums } = useAlbums();
-
-  function reload() {
-    api<{ assets: typeof items }>("/api/community-jobs/media?mine=1").then(d => setItems(d.assets)).catch(() => {});
-  }
-  useEffect(reload, []);
-
-  async function save(id: string) {
-    try {
-      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ caption, albumId: albumId || null }) });
-      toast.success("Gespeichert"); setEditing(null); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-  async function saveImage(id: string, url: string) {
-    try {
-      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ url }) });
-      toast.success("Bild gespeichert"); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-  async function remove(id: string) {
-    if (!confirm("Asset wirklich löschen?")) return;
-    try {
-      await api(`/api/community-jobs/media/${id}`, { method: "DELETE" });
-      toast.success("Gelöscht"); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-
-  if (!items.length) return <p className="text-xs text-gray-600">Noch keine Assets hochgeladen.</p>;
-  return (
-    <div className="space-y-1.5">
-      {items.map(a => editing === a.id ? (
-        <div key={a.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
-          <div className="flex items-center gap-1.5">
-            <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift"
-              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-            <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
-          </div>
-          <AlbumSelect albums={albums} value={albumId} onChange={setAlbumId} />
-          {!isVideoUrl(a.url) && <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />}
-        </div>
-      ) : (
-        <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
-          <span className="flex items-center gap-2 min-w-0">
-            <Thumb url={a.url} />
-            <span className="text-gray-300 truncate">{a.caption ?? a.type}{a.album && <span className="ml-1.5 text-[10px] text-teal-400/80">📁 {a.album.title}</span>}</span>
-          </span>
-          <span className="flex items-center gap-2 shrink-0">
-            <VoteRow upvotes={a._count.votes} votedByMe={false} />
-            <EditDeleteBar onEdit={() => { setEditing(a.id); setCaption(a.caption ?? ""); setAlbumId(a.album?.id ?? ""); }} onDelete={() => remove(a.id)} />
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface MyMarketingPost {
-  id: string; caption: string; imageUrl: string | null; assetId: string | null; asset?: { url: string } | null;
-  adminConfirmedPosted: boolean; kind: string | null; event?: { id: string; title: string; startAt: string };
-  _count: { votes: number };
-}
-
-function MarketingPostList({ onDuplicate }: { onDuplicate?: (prefill: PostPrefill) => void }) {
-  const [items, setItems] = useState<MyMarketingPost[]>([]);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-
-  function reload() {
-    api<{ posts: typeof items }>("/api/community-jobs/marketing-posts").then(d => setItems(d.posts)).catch(() => {});
-  }
-  useEffect(reload, []);
-
-  async function save(id: string) {
-    try {
-      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
-      toast.success("Gespeichert"); setEditing(null); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-  async function saveImage(id: string, url: string | null) {
-    try {
-      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ imageUrl: url }) });
-      toast.success(url ? "Bild gespeichert" : "Bild entfernt"); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-  async function remove(id: string) {
-    if (!confirm("Post wirklich löschen?")) return;
-    try {
-      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "DELETE" });
-      toast.success("Gelöscht"); reload();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-  }
-
-  async function copyText(p: MyMarketingPost) {
-    const link = p.event ? `${window.location.origin}/tournament/${p.event.id}` : "";
-    const text = link && !p.caption.includes(link) && !p.caption.includes("/tournament/") ? `${p.caption.trim()}\n\n\u{1F449} Jetzt anmelden: ${link}` : p.caption;
-    try { await navigator.clipboard.writeText(text); toast.success("Text kopiert — zum Einfügen z.B. in Instagram oder Discord"); }
-    catch { toast.error("Kopieren nicht möglich"); }
-  }
-
-  if (!items.length) return <p className="text-xs text-gray-600">Noch keine Werbe-Posts erstellt.</p>;
-  return (
-    <div className="space-y-1.5">
-      {items.map(p => editing === p.id ? (
-        <div key={p.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
-          <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={2}
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
-          <div className="flex justify-end gap-1.5">
-            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-            <Button size="sm" onClick={() => save(p.id)}>Speichern</Button>
-          </div>
-          <ImageEditControls imageUrl={p.imageUrl ?? p.asset?.url ?? null} allowRemove onSaved={url => saveImage(p.id, url)} />
-        </div>
-      ) : (
-        <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
-          <span className="flex items-center gap-2 min-w-0">
-            <Thumb url={p.imageUrl ?? p.asset?.url ?? null} />
-            <span className="min-w-0">
-              <span className="block text-gray-300 truncate">{p.caption}</span>
-              <span className="block text-[10px] text-gray-600 truncate">
-                {p.event?.title}
-                {p.adminConfirmedPosted
-                  ? <span className="ml-1.5 text-emerald-400" title="Ein Admin hat bestätigt, dass dieser Post extern veröffentlicht wurde">✓ extern gepostet</span>
-                  : <span className="ml-1.5" title="Noch nicht von einem Admin als extern gepostet bestätigt">· noch nicht extern bestätigt</span>}
-              </span>
-            </span>
-          </span>
-          <span className="flex items-center gap-2 shrink-0">
-            <VoteRow upvotes={p._count.votes} votedByMe={false} />
-            <button onClick={() => copyText(p)} title="Text kopieren (inkl. Anmelde-Link)" aria-label="Text kopieren" className="p-1 text-gray-600 hover:text-teal-400 transition-colors"><Copy className="w-3.5 h-3.5" /></button>
-            {onDuplicate && (
-              <button onClick={() => onDuplicate({ body: p.caption, assetId: p.assetId ?? undefined, imageUrl: p.imageUrl ?? undefined, fromEventTitle: p.event?.title })}
-                title="Als Vorlage für ein anderes Event verwenden" className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Als Vorlage</button>
-            )}
-            <EditDeleteBar onEdit={() => { setEditing(p.id); setCaption(p.caption); }} onDelete={() => remove(p.id)} />
-          </span>
-        </div>
-      ))}
     </div>
   );
 }
@@ -1497,7 +1265,7 @@ function IdeaList() {
 
 function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [coachKind, setCoachKind] = useState<"session" | "guide">("session");
-  if (jobKey === "journalist") return <ReportEditor eventId={eventId} recap={prefill?.recap} prefill={prefill} onDone={onDone} />;
+  if (jobKey === CONTENT_CREATOR_KEY) return <ReportEditor eventId={eventId} recap={prefill?.recap} prefill={prefill} onDone={onDone} />;
   if (jobKey === "coach") {
     return (
       <div className="space-y-3">
@@ -1511,11 +1279,9 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
       </div>
     );
   }
-  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} requestId={prefill?.photoRequestId} startCollage={prefill?.collage} onDone={onDone} />;
   if (jobKey === "visionaer") {
     return <IdeaForm prefill={{ title: prefill?.title, body: prefill?.body, link: prefill?.link, linkLabel: prefill?.linkLabel, imageUrl: prefill?.imageUrl, eventId }} onDone={onDone} />;
   }
-  if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} prefill={prefill} onDone={onDone} />;
   return <TextContentForm jobKey={jobKey} eventId={eventId} prefill={prefill} onDone={onDone} />;
 }
 
@@ -1693,395 +1459,3 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
 // "CLIP" heißt hier bewusst "Clip-Vorschaubild" statt "Highlight-Clip" — dieses
 // Dropdown gilt nur im Bild-gestalten-Pfad (Studio-Export), das echte Video
 // lädt man über den zweiten Modus ("Video-Clip hochladen", ClipUploadField).
-const ASSET_TYPE_OPTIONS = [
-  { value: "CLIP", label: "Clip-Vorschaubild" },
-  { value: "COLLAGE", label: "Collage" },
-  { value: "SCREENSHOT", label: "Screenshot" },
-  { value: "BANNER", label: "Event-Banner" },
-  { value: "GRAPHIC", label: "Grafik" },
-];
-
-type AssetUploadMode = "design" | "clip" | "bulk" | "collage";
-
-function UploadAssetForm({ eventId, requestId, startCollage, onDone }: { eventId?: string; requestId?: string; startCollage?: boolean; onDone: () => void }) {
-  const [mode, setMode] = useState<AssetUploadMode>(startCollage ? "collage" : "design");
-  const [albumId, setAlbumId] = useState("");
-  const { albums } = useAlbums();
-  const [url, setUrl] = useState("");
-  const [isVideo, setIsVideo] = useState(false);
-  const [type, setType] = useState("SCREENSHOT");
-  const [caption, setCaption] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit() {
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId, requestId, albumId: albumId || undefined }) });
-      toast.success("Hochgeladen");
-      onDone();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function reset() {
-    setUrl("");
-    setIsVideo(false);
-  }
-
-  if (mode === "bulk" && !url) {
-    return (
-      <div className="space-y-3">
-        <UploadModeTabs mode={mode} onChange={setMode} />
-        <BulkUploadForm eventId={eventId} onDone={onDone} />
-      </div>
-    );
-  }
-
-  if (!url) {
-    return (
-      <div className="space-y-3">
-        <UploadModeTabs mode={mode} onChange={setMode} />
-        <p className="text-[10px] text-gray-600">
-          {mode === "design"
-            ? "Screenshot/Foto mit Vorlage + Logo zu einer Grafik zusammenstellen (z.B. Collage, Banner oder Vorschaubild für einen Clip). Format, Logo und Wasserzeichen sind wählbar."
-            : mode === "clip" ? "Lädt eine echte Videodatei hoch (z.B. einen Highlight-Clip)."
-            : "Stellt aus den beliebtesten Bildern der Community eine Monats-Collage zusammen."}
-        </p>
-        {mode === "design" && <StudioEditor allowWatermark onExported={u => { setUrl(u); setIsVideo(false); }} />}
-        {mode === "clip" && <ClipUploadField onUploaded={u => { setUrl(u); setIsVideo(true); setType("CLIP"); }} />}
-        {mode === "collage" && <MonthCollageBuilder onExported={(u, cap) => { setUrl(u); setIsVideo(false); setType("COLLAGE"); setCaption(cap); }} />}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {isVideo ? (
-        <video src={url} controls className="w-full rounded-lg" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports, beliebiger Blob-Host
-        <img src={url} alt="" className="w-full rounded-lg" />
-      )}
-      {!isVideo && (
-        <Select value={type} onChange={e => setType(e.target.value)} className="w-full">
-          {ASSET_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </Select>
-      )}
-      <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift (optional)"
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
-      <AlbumSelect albums={albums} value={albumId} onChange={setAlbumId} />
-      <div className="flex justify-between gap-2">
-        <Button variant="ghost" onClick={reset}>{isVideo ? "Anderer Clip" : "Neu gestalten"}</Button>
-        <Button loading={busy} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Hochladen</Button>
-      </div>
-    </div>
-  );
-}
-
-function UploadModeTabs({ mode, onChange }: { mode: AssetUploadMode; onChange: (m: AssetUploadMode) => void }) {
-  const tabs: { id: AssetUploadMode; label: string }[] = [
-    { id: "design", label: "Bild gestalten" }, { id: "bulk", label: "Mehrere Bilder" },
-    { id: "clip", label: "Video-Clip" }, { id: "collage", label: "Monats-Collage" },
-  ];
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {tabs.map(t => <Button key={t.id} size="sm" variant={mode === t.id ? "primary" : "outline"} onClick={() => onChange(t.id)}>{t.label}</Button>)}
-    </div>
-  );
-}
-
-/**
- * Lädt eine Video-Datei direkt aus dem Browser zu Vercel Blob hoch (siehe
- * /api/community-jobs/media/clip-upload) — Video-Dateien sind zu groß fürs
- * Body-Limit einer normalen Server-Route wie /api/upload. Die eigentliche
- * Größen-/Typ-Grenze erzwingt Vercel Blob serverseitig über das Upload-Token;
- * die Prüfung hier ist nur ein schneller Client-Check ohne Netzwerk-Rundtrip.
- */
-function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  async function handleFile(file: File) {
-    if (!CLIP_ALLOWED_TYPES.includes(file.type as (typeof CLIP_ALLOWED_TYPES)[number])) {
-      toast.error("Nur MP4, WebM oder MOV erlaubt");
-      return;
-    }
-    if (file.size > CLIP_MAX_BYTES) {
-      toast.error(`Datei zu groß (max. ${Math.round(CLIP_MAX_BYTES / 1_000_000)} MB)`);
-      return;
-    }
-    setUploading(true);
-    setProgress(0);
-    try {
-      const ext = CLIP_EXTENSION_BY_MIME[file.type as (typeof CLIP_ALLOWED_TYPES)[number]];
-      const blob = await upload(`${CLIP_UPLOAD_PREFIX}${crypto.randomUUID()}.${ext}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/community-jobs/media/clip-upload",
-        contentType: file.type,
-        onUploadProgress: p => setProgress(p.percentage),
-      });
-      onUploaded(blob.url);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
-      {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
-      <span className="text-xs text-gray-500">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
-      {uploading && (
-        <div className="w-40 h-1 rounded-full bg-white/10 overflow-hidden">
-          <div className="h-full bg-teal-400 transition-all" style={{ width: `${progress}%` }} />
-        </div>
-      )}
-      <span className="text-[10px] text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
-      <input type="file" accept={CLIP_ALLOWED_TYPES.join(",")} className="hidden" disabled={uploading}
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-    </label>
-  );
-}
-
-interface EventOption { id: string; title: string; startAt: string }
-
-type PostImageMode = "none" | "library" | "studio" | "upload" | "game";
-
-function CreateMarketingPostForm({ eventId: initialEventId, prefill, onDone }: { eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
-  const [events, setEvents] = useState<EventOption[]>([]);
-  const [eventId, setEventId] = useState(initialEventId ?? "");
-  const [caption, setCaption] = useState(prefill?.body ?? "");
-  const [assetId, setAssetId] = useState(prefill?.assetId ?? "");
-  const [studioImageUrl, setStudioImageUrl] = useState("");
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(prefill?.imageUrl && !isGameCoverUrl(prefill.imageUrl) ? prefill.imageUrl : "");
-  const prefillCover = prefill?.imageUrl && isGameCoverUrl(prefill.imageUrl) ? prefill.imageUrl : null;
-  const [gameCover, setGameCover] = useState<PickedGameCover | null>(prefillCover ? { name: prefill?.linkLabel ?? "", url: prefillCover } : null);
-  const [imageMode, setImageMode] = useState<PostImageMode>(prefill?.assetId ? "library" : prefillCover ? "game" : prefill?.imageUrl ? "upload" : "none");
-  const [assets, setAssets] = useState<{ id: string; caption: string | null; url: string }[]>([]);
-  const [related, setRelated] = useState<{ id: string; caption: string | null; url: string }[]>([]);
-  const [assetQuery, setAssetQuery] = useState("");
-  const [facts, setFacts] = useState<MarketingEventFacts | null>(null);
-  const trainingSessionId = prefill?.trainingSessionId;
-  const [templateId, setTemplateId] = useState<MarketingTemplateId>(isMarketingTemplate(prefill?.template) ? prefill.template : trainingSessionId ? "training" : "announce");
-  const [usedTemplate, setUsedTemplate] = useState<MarketingTemplateId | undefined>(undefined);
-  const [includeLink, setIncludeLink] = useState(true);
-  const [preview, setPreview] = useState(false);
-  const autoApplied = useRef(false);
-  const lastEventTitle = useRef(prefill?.fromEventTitle);
-  const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  async function uploadOwnImage(file: File) {
-    setUploading(true);
-    try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", "community-job-asset");
-      const res = await fetch("/api/upload", { method: "POST", body });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload fehlgeschlagen");
-      setUploadedImageUrl(data.url);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  useEffect(() => {
-    api<EventOption[]>("/api/events").then(all => {
-      const upcoming = all.filter(e => new Date(e.startAt).getTime() > Date.now());
-      setEvents(upcoming);
-      // Beiträge zu Spiele-Angeboten (Steam/Xbox) starten ohne Event, alle anderen mit dem nächsten Event.
-      if (!initialEventId && !prefill?.trainingSessionId && !prefill?.link && upcoming[0]) setEventId(upcoming[0].id);
-    }).catch(() => {});
-  }, []);
-
-  // Marketing-Post-Bild muss ein Standbild sein — Video-Clips aus der Mediathek ausschließen. Mit Suche (leicht verzögert).
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (assetQuery.trim()) params.set("q", assetQuery.trim());
-      api<{ assets: typeof assets }>(`/api/community-jobs/media?${params}`).then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
-    }, assetQuery ? 250 : 0);
-    return () => clearTimeout(handle);
-  }, [assetQuery]);
-
-  // Event-Fakten laden (Datum, Spiel, Anmeldungen, Link) — Grundlage für die Vorlagen.
-  useEffect(() => {
-    if (!eventId && !trainingSessionId) return;
-    let cancelled = false;
-    const query = trainingSessionId ? `trainingSessionId=${encodeURIComponent(trainingSessionId)}` : `eventId=${encodeURIComponent(eventId)}`;
-    api<MarketingEventFacts>(`/api/community-jobs/marketing-posts/facts?${query}`)
-      .then(f => { if (!cancelled) setFacts(f); }).catch(() => { if (!cancelled) setFacts(null); });
-    return () => { cancelled = true; };
-  }, [eventId, trainingSessionId]);
-
-  // Passende Bilder zum Event (gleiches Event oder gleiches Spiel) — nur im Mediathek-Modus nötig.
-  useEffect(() => {
-    if (imageMode !== "library" || !eventId) return;
-    api<{ assets: typeof related }>(`/api/community-jobs/media?relatedEventId=${encodeURIComponent(eventId)}&take=8`)
-      .then(d => setRelated(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
-  }, [imageMode, eventId]);
-
-  useEffect(() => {
-    if (!facts) return;
-    // Leerer Text: einmalig mit dem gewählten Baustein vorbelegen.
-    if (!autoApplied.current && !caption.trim()) {
-      autoApplied.current = true;
-      setCaption(buildMarketingText(templateId, facts));
-      setUsedTemplate(templateId);
-    }
-    // "Als Vorlage": Event-Titel des Originals durch den neuen ersetzen.
-    const old = lastEventTitle.current;
-    if (old && old !== facts.title && caption.includes(old)) {
-      setCaption(caption.split(old).join(facts.title));
-      lastEventTitle.current = facts.title;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur auf neue Event-Fakten reagieren
-  }, [facts]);
-
-  function applyTemplate() {
-    if (!facts) return;
-    if (caption.trim() && !confirm("Den aktuellen Text durch die Vorlage ersetzen?")) return;
-    setCaption(buildMarketingText(templateId, facts));
-    setUsedTemplate(templateId);
-    lastEventTitle.current = undefined;
-  }
-
-  const finalText = facts && includeLink ? withEventLink(caption, facts, true) : caption;
-  const previewImage = imageMode === "library" ? [...related, ...assets].find(a => a.id === assetId)?.url
-    : imageMode === "studio" ? studioImageUrl : imageMode === "upload" ? uploadedImageUrl : imageMode === "game" ? gameCover?.url : "";
-
-  async function submit() {
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/marketing-posts", {
-        method: "POST", body: JSON.stringify({
-          eventId: eventId || undefined, trainingSessionId, caption: withLink(finalText, prefill?.link),
-          campaignId: prefill?.campaignId, kind: usedTemplate ?? (isMarketingTemplate(prefill?.template) ? prefill.template : undefined),
-          assetId: imageMode === "library" ? (assetId || undefined) : undefined,
-          imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
-            : imageMode === "upload" ? (uploadedImageUrl || undefined)
-            : imageMode === "game" ? (gameCover?.url || undefined) : undefined,
-        }),
-      });
-      toast.success("Veröffentlicht");
-      onDone();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      {trainingSessionId ? (
-        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
-      ) : (
-        <Select value={eventId} onChange={e => setEventId(e.target.value)} disabled={!!prefill?.campaignId} className="w-full">
-          <option value="">Ohne Event (allgemeiner Post)</option>
-          {events.map(e => <option key={e.id} value={e.id}>{e.title} — {formatBerlinDate(e.startAt)}</option>)}
-        </Select>
-      )}
-
-      <div className="flex gap-1.5">
-        <Button size="sm" variant={imageMode === "none" ? "primary" : "outline"} onClick={() => setImageMode("none")}>Kein Bild</Button>
-        {(assets.length > 0 || assetQuery) && (
-          <Button size="sm" variant={imageMode === "library" ? "primary" : "outline"} onClick={() => setImageMode("library")}>Aus Mediathek</Button>
-        )}
-        <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
-        <Button size="sm" variant={imageMode === "upload" ? "primary" : "outline"} onClick={() => setImageMode("upload")}>Eigenes Bild hochladen</Button>
-        <Button size="sm" variant={imageMode === "game" ? "primary" : "outline"} onClick={() => setImageMode("game")}>Spiel-Cover</Button>
-      </div>
-
-      <PhotoRequestButton requesterJob="marketing_manager" eventId={eventId || undefined} defaultText={facts ? `Bild für: ${facts.title}` : ""} />
-
-      {imageMode === "library" && (
-        <div className="space-y-1.5">
-          {related.length > 0 && !assetQuery && (
-            <div className="space-y-1">
-              <p className="text-[10px] text-gray-500">Passend zum Event (gleiches Event oder Spiel)</p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {related.map(a => (
-                  <button key={a.id} onClick={() => setAssetId(a.id)} aria-pressed={assetId === a.id} title={a.caption ?? undefined}
-                    className={`shrink-0 rounded-lg overflow-hidden border-2 ${assetId === a.id ? "border-teal-400" : "border-transparent hover:border-white/20"}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau, beliebiger Blob-Host */}
-                    <img src={a.url} alt="" className="w-16 h-12 object-cover" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <input value={assetQuery} onChange={e => setAssetQuery(e.target.value)} placeholder="Mediathek durchsuchen (Unterschrift, Event, Fotograf)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
-          <Select value={assetId} onChange={e => setAssetId(e.target.value)} className="w-full">
-            <option value="">{assets.length === 0 ? "Nichts gefunden" : "Bild wählen…"}</option>
-            {assets.map(a => <option key={a.id} value={a.id}>{a.caption ?? a.id}</option>)}
-          </Select>
-        </div>
-      )}
-      {imageMode === "upload" && (
-        uploadedImageUrl ? (
-          <div className="space-y-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
-            <img src={uploadedImageUrl} alt="" className="w-full rounded-lg" />
-            <Button size="sm" variant="ghost" onClick={() => setUploadedImageUrl("")}>Anderes Bild</Button>
-          </div>
-        ) : (
-          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-8 cursor-pointer hover:border-teal-500/30 transition-colors">
-            {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
-            <span className="text-xs text-gray-500">Bild auswählen</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
-              onChange={e => { const f = e.target.files?.[0]; if (f) uploadOwnImage(f); }} />
-          </label>
-        )
-      )}
-      {imageMode === "game" && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
-      {imageMode === "studio" && (
-        studioImageUrl ? (
-          <div className="space-y-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports */}
-            <img src={studioImageUrl} alt="" className="w-full rounded-lg" />
-            <Button size="sm" variant="ghost" onClick={() => setStudioImageUrl("")}>Neu gestalten</Button>
-          </div>
-        ) : (
-          <StudioEditor onExported={setStudioImageUrl} />
-        )
-      )}
-
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Select size="sm" value={templateId} onChange={e => setTemplateId(e.target.value as MarketingTemplateId)} aria-label="Werbetext-Baustein">
-          {MARKETING_TEMPLATES.filter(t => (t.id === "training") === !!trainingSessionId).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-        </Select>
-        <Button size="sm" variant="outline" disabled={!facts} onClick={applyTemplate}>Text aus Vorlage</Button>
-        <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">
-          <input type="checkbox" checked={includeLink} onChange={e => setIncludeLink(e.target.checked)} />
-          Anmelde-Link
-        </label>
-        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setPreview(v => !v)}>{preview ? "Bearbeiten" : "Vorschau"}</Button>
-      </div>
-      {preview ? (
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
-          {previewImage && (
-            // eslint-disable-next-line @next/next/no-img-element -- Vorschau, beliebiger Blob-Host
-            <img src={previewImage} alt="" className="w-full rounded-lg" />
-          )}
-          <p className="text-sm text-gray-200 whitespace-pre-line break-words">{withLink(finalText, prefill?.link) || "—"}</p>
-        </div>
-      ) : (
-        <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Werbetext" rows={6}
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
-      )}
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
-        <Button loading={busy} disabled={!caption.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
-      </div>
-    </div>
-  );
-}

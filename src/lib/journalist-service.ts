@@ -13,6 +13,10 @@ import { plainExcerpt } from "./report-text";
 import { dispatchNotification } from "./notify-dispatch";
 import { notifyAssetUsed } from "./fotograf-service";
 import { extractMentionedUserIds } from "./report-mentions";
+import { isMarketingTemplate } from "./marketing-templates";
+import { fulfillPromotionRequests } from "./promotion-request-service";
+import { fulfillPhotoRequest } from "./photo-request-service";
+import { POST_MEDIA_MAX, isAllowedMediaUrl, postDisplayTitle } from "./post-display";
 
 export function appBaseUrl(): string { return process.env.NEXTAUTH_URL ?? "https://oma-app.de"; }
 export function reportPath(id: string): string { return `/community-board/report/${id}`; }
@@ -54,31 +58,102 @@ async function validateSeries(authorId: string, seriesId: string | null | undefi
 
 /** Seit der Zusammenlegung: Beiträge zählen für den Content Creator (Gehalt, Tageslimit, Ankündigungskanal). */
 const JOB_KEY = CONTENT_CREATOR_KEY;
-/** Bereich innerhalb des Content Creators (früherer Job-Schlüssel) — für Emoji/Label je Inhaltstyp. */
-const AREA_KEY = "journalist";
 
 /** Offene Jobs: jeder (nicht gelöschte) User darf als Journalist schreiben. */
 async function requireActiveJournalist(userId: string): Promise<boolean> {
   return canWorkCommunityJobs(userId);
 }
 
+/** Bild/Clip eines Beitrags: `id` = schon gespeichertes Medium dieses Beitrags, sonst neuer Upload (`url`). */
+export interface PostMediaInput { id?: string; url: string; caption?: string | null; type?: string | null }
+
+/**
+ * Ein "Beitrag" (früher Bericht, Fotos/Clips oder Werbe-Post): Titel optional, Text und/oder Bilder/Clips,
+ * optional Event, Werbe-Vorlage, Kampagne, beworbener Trainings-Termin oder erfüllter Bildwunsch.
+ */
 interface ReportInput {
   title: string; bodyMarkdown: string; category?: string | null; eventId?: string | null;
   coverAssetId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null;
   /** Spiel-Cover statt Fotograf-Bild als Titelbild (schließt coverAssetId aus). */
   gameCoverUrl?: string | null; gameCoverName?: string | null;
+  /** Bilder/Clips in Reihenfolge — `undefined` = unverändert (beim Bearbeiten). */
+  media?: PostMediaInput[];
+  /** Album für neu hochgeladene Bilder (optional). */
+  albumId?: string | null;
+  template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
+  /** Bildwunsch, den dieser Beitrag erfüllt (erstes Bild wird verknüpft). */
+  photoRequestId?: string | null;
+}
+
+const MEDIA_TYPES = ["CLIP", "COLLAGE", "SCREENSHOT", "BANNER", "GRAPHIC"];
+
+/** Prüft die Beitrags-Zusätze (Medien, Werbe-Vorlage, Kampagne, Training, Album). */
+async function validatePostExtras(authorId: string, data: Partial<ReportInput>): Promise<string | null> {
+  if (data.media) {
+    if (data.media.length > POST_MEDIA_MAX) return `Höchstens ${POST_MEDIA_MAX} Bilder/Clips pro Beitrag`;
+    for (const m of data.media) {
+      if (!m.id && !isAllowedMediaUrl(m.url)) return "Ungültige Datei (nur eigene Uploads)";
+      if (m.caption && m.caption.length > 300) return "Bildunterschrift ist zu lang (max. 300 Zeichen)";
+    }
+  }
+  if (data.template && !isMarketingTemplate(data.template)) return "Ungültige Werbe-Vorlage";
+  if (data.campaignId && !(await prisma.marketingCampaign.findFirst({ where: { id: data.campaignId, authorId }, select: { id: true } }))) {
+    return "Kampagne nicht gefunden";
+  }
+  if (data.trainingSessionId && !(await prisma.coachTrainingSession.findUnique({ where: { id: data.trainingSessionId }, select: { id: true } }))) {
+    return "Trainings-Termin nicht gefunden";
+  }
+  if (data.albumId && !(await prisma.jobMediaAlbum.findFirst({ where: { id: data.albumId, authorId }, select: { id: true } }))) {
+    return "Album nicht gefunden";
+  }
+  return null;
+}
+
+/**
+ * Setzt die Bilder/Clips eines Beitrags auf genau die übergebene Liste: neue Uploads werden als Medium
+ * (Mediathek) angelegt, bestehende umsortiert/umbeschriftet, entfernte nur gelöst (bleiben in der Mediathek).
+ * Gibt die IDs in Reihenfolge zurück.
+ */
+async function syncReportMedia(
+  reportId: string, authorId: string, eventId: string | null, media: PostMediaInput[], albumId?: string | null,
+): Promise<string[]> {
+  const current = await prisma.jobMediaAsset.findMany({ where: { reportId }, select: { id: true } });
+  const currentIds = new Set(current.map(c => c.id));
+  const ids: string[] = [];
+  for (const [position, m] of media.entries()) {
+    const caption = m.caption?.trim() || null;
+    if (m.id && currentIds.has(m.id)) {
+      await prisma.jobMediaAsset.update({ where: { id: m.id }, data: { position, caption } });
+      ids.push(m.id);
+      continue;
+    }
+    if (!isAllowedMediaUrl(m.url)) continue;
+    const type = m.type && MEDIA_TYPES.includes(m.type) ? m.type : isVideoUrl(m.url) ? "CLIP" : "SCREENSHOT";
+    const created = await prisma.jobMediaAsset.create({
+      data: { authorId, eventId, url: m.url, caption, type, reportId, position, albumId: albumId || null },
+    });
+    ids.push(created.id);
+  }
+  const keep = new Set(ids);
+  const detach = [...currentIds].filter(id => !keep.has(id));
+  if (detach.length > 0) await prisma.jobMediaAsset.updateMany({ where: { id: { in: detach } }, data: { reportId: null } });
+  return ids;
+}
+
+/** Nach dem Veröffentlichen: beworbenen Termin als "beworben" melden und einen Bildwunsch erfüllen. */
+async function afterPublishExtras(reportId: string, authorId: string, trainingSessionId: string | null, photoRequestId?: string | null): Promise<void> {
+  if (trainingSessionId) await fulfillPromotionRequests(trainingSessionId, reportId).catch(() => {});
+  if (photoRequestId) {
+    const first = await prisma.jobMediaAsset.findFirst({ where: { reportId }, orderBy: { position: "asc" }, select: { id: true } });
+    if (first) await fulfillPhotoRequest(authorId, photoRequestId, first.id).catch(() => {});
+  }
 }
 
 /** Prüft Länge/Kategorie und dass verknüpfte Datensätze existieren (Cover nur Standbilder, kein Video). */
 async function validateReportRefs(data: Partial<ReportInput>): Promise<string | null> {
-  if (data.title !== undefined) {
-    if (!data.title.trim()) return "Titel erforderlich";
-    if (data.title.trim().length > REPORT_TITLE_MAX) return `Titel ist zu lang (max. ${REPORT_TITLE_MAX} Zeichen)`;
-  }
-  if (data.bodyMarkdown !== undefined) {
-    if (!data.bodyMarkdown.trim()) return "Text erforderlich";
-    if (data.bodyMarkdown.length > REPORT_BODY_MAX) return `Text ist zu lang (max. ${REPORT_BODY_MAX} Zeichen)`;
-  }
+  // Titel ist optional (reine Foto-/Werbe-Beiträge); dass Text ODER Bild vorhanden ist, prüft hasContent().
+  if (data.title !== undefined && data.title.trim().length > REPORT_TITLE_MAX) return `Titel ist zu lang (max. ${REPORT_TITLE_MAX} Zeichen)`;
+  if (data.bodyMarkdown !== undefined && data.bodyMarkdown.length > REPORT_BODY_MAX) return `Text ist zu lang (max. ${REPORT_BODY_MAX} Zeichen)`;
   if (data.category && !isReportCategory(data.category)) return "Ungültige Kategorie";
   if (data.eventId && !(await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } }))) return "Event nicht gefunden";
   if (data.gameCoverUrl && !isGameCoverUrl(data.gameCoverUrl)) return "Ungültiges Spiel-Cover";
@@ -103,8 +178,10 @@ export async function createReport(
   data: ReportInput & { draft?: boolean },
 ): Promise<CreateReportResult> {
   if (!(await requireActiveJournalist(authorId))) return { error: "Community-Jobs sind für dein Konto nicht verfügbar" };
-  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(authorId, data.seriesId));
+  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(authorId, data.seriesId)) ?? (await validatePostExtras(authorId, data));
   if (invalid) return { error: invalid };
+  const hasContent = !!data.bodyMarkdown.trim() || (data.media?.length ?? 0) > 0 || !!data.coverAssetId || !!data.gameCoverUrl;
+  if (!hasContent) return { error: "Schreib einen Text oder füge ein Bild/einen Clip hinzu" };
 
   const report = await prisma.jobReport.create({
     data: {
@@ -114,10 +191,14 @@ export async function createReport(
       gameCoverUrl: data.gameCoverUrl || null, gameCoverName: data.gameCoverUrl ? data.gameCoverName?.trim() || null : null,
       referencedMarketingPostId: data.referencedMarketingPostId || null,
       category: data.category || null, seriesId: data.seriesId || null, isDraft: data.draft === true,
+      template: data.template || null, campaignId: data.campaignId || null, trainingSessionId: data.trainingSessionId || null,
     },
   });
-  const notice = data.draft ? undefined : await afterPublish(report.id, authorId, data.title.trim(), data.bodyMarkdown, data.category ?? null);
-  if (data.coverAssetId && !data.gameCoverUrl && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", data.title.trim(), reportPath(report.id)).catch(() => {});
+  if (data.media?.length) await syncReportMedia(report.id, authorId, data.eventId || null, data.media, data.albumId);
+  const displayTitle = postDisplayTitle({ title: data.title, bodyMarkdown: data.bodyMarkdown, mediaCount: data.media?.length });
+  const notice = data.draft ? undefined : await afterPublish(report.id, authorId, displayTitle, data.bodyMarkdown, data.category ?? null);
+  if (!data.draft) await afterPublishExtras(report.id, authorId, data.trainingSessionId || null, data.photoRequestId);
+  if (data.coverAssetId && !data.gameCoverUrl && !data.draft) notifyAssetUsed(data.coverAssetId, authorId, "report", displayTitle, reportPath(report.id)).catch(() => {});
   return { ok: true, reportId: report.id, notice };
 }
 
@@ -135,10 +216,16 @@ async function announceAndStore(reportId: string, authorId: string, title: strin
     getAnnouncementChannel(JOB_KEY),
   ]);
   const label = reportCategoryLabel(category);
+  // Vorschaubild: Titelbild, sonst Spiel-Cover, sonst erstes Bild des Beitrags (keine Clips).
+  const post = await prisma.jobReport.findUnique({
+    where: { id: reportId },
+    select: { gameCoverUrl: true, coverAsset: { select: { url: true } }, media: { orderBy: { position: "asc" }, select: { url: true } } },
+  });
+  const imageUrl = post?.coverAsset?.url ?? post?.gameCoverUrl ?? post?.media.find(m => !isVideoUrl(m.url))?.url;
   const messageId = await announceCommunityJobContent({
     title: label ? `${label}: ${title}` : title, description: plainExcerpt(body, 300),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(AREA_KEY)?.emoji ?? "📰", channelId,
+    jobEmoji: getCommunityJob(CONTENT_CREATOR_KEY)?.emoji ?? "🎬", channelId, imageUrl,
     url: `${appBaseUrl()}${reportPath(reportId)}`,
   });
   if (messageId) await prisma.jobReport.update({ where: { id: reportId }, data: { discordMessageId: messageId } });
@@ -153,7 +240,9 @@ export async function publishReport(authorId: string, reportId: string, opts: { 
   if (!(await requireActiveJournalist(report.authorId))) return { error: "Community-Jobs sind für dieses Konto nicht verfügbar" };
 
   await prisma.jobReport.update({ where: { id: reportId }, data: { isDraft: false, publishedAt: new Date() } });
-  const notice = await afterPublish(reportId, report.authorId, report.title, report.bodyMarkdown, report.category);
+  const mediaCount = await prisma.jobMediaAsset.count({ where: { reportId } });
+  const notice = await afterPublish(reportId, report.authorId, postDisplayTitle({ ...report, mediaCount }), report.bodyMarkdown, report.category);
+  await afterPublishExtras(reportId, report.authorId, report.trainingSessionId);
   return { ok: true, notice };
 }
 
@@ -161,7 +250,10 @@ export async function publishReport(authorId: string, reportId: string, opts: { 
 export async function getReportForViewer(viewerId: string, reportId: string, opts: { isAdmin?: boolean } = {}) {
   const report = await prisma.jobReport.findUnique({
     where: { id: reportId },
-    include: { event: { select: { id: true, title: true } } },
+    include: {
+      event: { select: { id: true, title: true } },
+      media: { orderBy: { position: "asc" }, select: { id: true, url: true, caption: true, type: true } },
+    },
   });
   if (!report || report.hiddenByAdminAt) return null;
   if (report.isDraft && report.authorId !== viewerId && !opts.isAdmin) return null;
@@ -211,14 +303,21 @@ export async function updateReport(
     title: string; bodyMarkdown?: string; coverAssetId?: string | null; category?: string | null;
     gameCoverUrl?: string | null; gameCoverName?: string | null;
     eventId?: string | null; referencedMarketingPostId?: string | null; seriesId?: string | null; editNote?: string;
+    media?: PostMediaInput[]; albumId?: string | null;
+    template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
   },
   opts: { isAdmin?: boolean } = {},
 ): Promise<MutationResult> {
   const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
   if (!report) return { error: "Bericht nicht gefunden" };
   if (report.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Bericht zu bearbeiten" };
-  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(report.authorId, data.seriesId));
+  const invalid = (await validateReportRefs(data)) ?? (await validateSeries(report.authorId, data.seriesId)) ?? (await validatePostExtras(report.authorId, data));
   if (invalid) return { error: invalid };
+  const nextBody = data.bodyMarkdown ?? report.bodyMarkdown;
+  const nextMediaCount = data.media !== undefined ? data.media.length : await prisma.jobMediaAsset.count({ where: { reportId } });
+  const nextHasCover = data.coverAssetId !== undefined || data.gameCoverUrl !== undefined
+    ? !!data.coverAssetId || !!data.gameCoverUrl : !!report.coverAssetId || !!report.gameCoverUrl;
+  if (!nextBody.trim() && nextMediaCount === 0 && !nextHasCover) return { error: "Schreib einen Text oder füge ein Bild/einen Clip hinzu" };
 
   // Veröffentlichte Berichte: bei inhaltlicher Änderung die alte Fassung sichern und "Korrigiert am" setzen.
   const contentChanged = !report.isDraft
@@ -242,9 +341,16 @@ export async function updateReport(
       ...(data.category !== undefined ? { category: data.category || null } : {}),
       ...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
       ...(data.referencedMarketingPostId !== undefined ? { referencedMarketingPostId: data.referencedMarketingPostId } : {}),
+      ...(data.template !== undefined ? { template: data.template || null } : {}),
+      ...(data.campaignId !== undefined ? { campaignId: data.campaignId || null } : {}),
+      ...(data.trainingSessionId !== undefined ? { trainingSessionId: data.trainingSessionId || null } : {}),
     },
   })]);
-  if (!report.isDraft) notifyMentions(reportId, report.authorId, data.title.trim(), data.bodyMarkdown ?? report.bodyMarkdown).catch(() => {});
+  if (data.media !== undefined) {
+    const eventId = data.eventId !== undefined ? data.eventId || null : report.eventId;
+    await syncReportMedia(reportId, report.authorId, eventId, data.media, data.albumId);
+  }
+  if (!report.isDraft) notifyMentions(reportId, report.authorId, postDisplayTitle({ title: data.title, bodyMarkdown: nextBody, mediaCount: nextMediaCount }), nextBody).catch(() => {});
   if (!report.isDraft && data.coverAssetId && !data.gameCoverUrl && data.coverAssetId !== report.coverAssetId) {
     notifyAssetUsed(data.coverAssetId, report.authorId, "report", data.title.trim(), reportPath(reportId)).catch(() => {});
   }
@@ -399,7 +505,7 @@ export async function journalistScoreStreams(userId: string, weekStart: Date, we
     }),
   ]);
   return [
-    { key: "reports", label: "Daumen auf Berichte", unit: "thumb", events: reportVotes.map(v => ({ voterId: v.voterId, itemKey: `report:${v.reportId}`, points: 1, createdAt: v.createdAt })) },
+    { key: "reports", label: "Daumen auf Beiträge", unit: "thumb", events: reportVotes.map(v => ({ voterId: v.voterId, itemKey: `report:${v.reportId}`, points: 1, createdAt: v.createdAt })) },
     { key: "contributions", label: "Daumen auf Ergänzungen", unit: "thumb", events: contributionVotes.map(v => ({ voterId: v.voterId, itemKey: `contribution:${v.contributionId}`, points: 1, createdAt: v.createdAt })) },
   ];
 }

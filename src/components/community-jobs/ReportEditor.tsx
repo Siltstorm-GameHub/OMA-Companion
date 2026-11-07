@@ -16,12 +16,18 @@ import { mentionToken } from "@/lib/report-mentions";
 import { isVideoUrl } from "@/lib/upload-limits";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 import type { EventFacts } from "@/lib/report-event-facts";
+import PostMediaEditor, { type EditorMedia } from "./PostMediaEditor";
+import { Megaphone, Copy } from "@/components/icons";
+import {
+  MARKETING_TEMPLATES, buildMarketingText, isMarketingTemplate, withEventLink, type MarketingEventFacts, type MarketingTemplateId,
+} from "@/lib/marketing-templates";
 
 /**
- * Editor für Journalisten-Berichte: Titel, Kategorie, Reihe, Event-Bezug ("Aus Event vorbefüllen"), Titelbild und
- * verknüpfter Werbe-Post aus der Mediathek, Markdown-Formatierung mit Vorschau, Emojis, @-Erwähnungen, Bausteine
- * (Ergebnis-Tabelle, Rangliste, Interview, Rückblick), Bildwunsch an die Fotografen, Versionsverlauf mit
- * Korrekturhinweis, Zeichen-/Lesezeit-Anzeige, Entwurf speichern oder veröffentlichen.
+ * Editor für Beiträge (Content Creator) — ein Beitrag kann Werbung, Fotos & Clips oder ein Bericht sein,
+ * wie es der User mag: Titel (optional), Text mit Formatierung/Vorschau, Emojis, @-Erwähnungen, Bausteine
+ * (Ergebnis-Tabelle, Rangliste, Interview, Rückblick), Bilder & Clips (Upload, Studio, Collage), Titelbild aus
+ * der Mediathek oder Spiel-Cover, Werbe-Vorlagen mit Anmelde-Link, Kategorie, Reihe, Event-Bezug, Bildwunsch,
+ * Versionsverlauf mit Korrekturhinweis, Entwurf speichern oder veröffentlichen.
  */
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -37,11 +43,24 @@ export interface ReportEditorInitial {
   title: string; bodyMarkdown: string; category: string | null; eventId: string | null;
   coverAssetId: string | null; referencedMarketingPostId: string | null; seriesId?: string | null; isDraft: boolean;
   gameCoverUrl?: string | null; gameCoverName?: string | null;
+  media?: { id: string; url: string; caption: string | null; type: string }[];
+  template?: string | null; campaignId?: string | null; trainingSessionId?: string | null;
+}
+
+/** Vorbelegung beim Start aus Empfehlungen, Anfragen, Kampagnen oder Spiele-Angeboten. */
+export interface PostEditorPrefill {
+  title?: string; body?: string; link?: string; linkLabel?: string; imageUrl?: string;
+  /** Mediathek-Bild als Titelbild. */
+  assetId?: string;
+  template?: string; campaignId?: string; trainingSessionId?: string;
+  /** Bildwunsch, den dieser Beitrag erfüllen soll. */
+  photoRequestId?: string;
+  /** Direkt die Monats-Collage öffnen. */
+  collage?: boolean;
 }
 
 interface EventOption { id: string; title: string; startAt: string }
 interface AssetOption { id: string; url: string; caption: string | null; type: string }
-interface PostOption { id: string; caption: string; event?: { id: string; title: string } | null }
 interface SeriesOption { id: string; title: string }
 interface Revision { id: string; title: string; bodyMarkdown: string; note: string | null; savedAt: string }
 interface FoundUser { id: string; username: string | null; name: string | null }
@@ -90,14 +109,17 @@ export default function ReportEditor({
   presetPostId?: string;
   /** Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
   recap?: "week" | "month";
-  prefill?: { title?: string; body?: string; link?: string; linkLabel?: string; imageUrl?: string };
+  prefill?: PostEditorPrefill;
   onDone: () => void;
 }) {
+  const trainingSessionId = initial?.trainingSessionId ?? prefill?.trainingSessionId;
+  const campaignId = initial?.campaignId ?? prefill?.campaignId;
+  const photoRequestId = prefill?.photoRequestId;
   const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? "");
   const [body, setBody] = useState(initial?.bodyMarkdown ?? prefill?.body ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [eventId, setEventId] = useState(initial?.eventId ?? presetEventId ?? "");
-  const [coverAssetId, setCoverAssetIdRaw] = useState(initial?.coverAssetId ?? presetCoverAssetId ?? "");
+  const [coverAssetId, setCoverAssetIdRaw] = useState(initial?.coverAssetId ?? presetCoverAssetId ?? prefill?.assetId ?? "");
   // Titelbild: Fotograf-Bild ODER Spiel-Cover — das eine ersetzt das andere.
   const [gameCover, setGameCoverRaw] = useState<PickedGameCover | null>(
     initial?.gameCoverUrl ? { name: initial.gameCoverName ?? "", url: initial.gameCoverUrl }
@@ -106,7 +128,26 @@ export default function ReportEditor({
   const [coverPickerOpen, setCoverPickerOpen] = useState(!!gameCover);
   const setCoverAssetId = (id: string) => { setCoverAssetIdRaw(id); if (id) { setGameCoverRaw(null); setCoverPickerOpen(false); } };
   const setGameCover = (v: PickedGameCover | null) => { setGameCoverRaw(v); if (v) setCoverAssetIdRaw(""); };
-  const [refPostId, setRefPostId] = useState(initial?.referencedMarketingPostId ?? presetPostId ?? "");
+  // Früher: "Über diesen Werbe-Post berichten" — bleibt beim Bearbeiten erhalten, wird aber nicht mehr neu gesetzt.
+  const refPostId = initial?.referencedMarketingPostId ?? presetPostId ?? "";
+  const [media, setMedia] = useState<EditorMedia[]>(() => {
+    if (initial?.media) return initial.media.map(m => ({ id: m.id, url: m.url, caption: m.caption ?? "", type: m.type }));
+    // Eigenes Bild aus einem Spiele-Angebot o.ä. (kein Spiel-Cover) als erstes Medium übernehmen.
+    if (prefill?.imageUrl && !isGameCoverUrl(prefill.imageUrl)) return [{ url: prefill.imageUrl, caption: "", type: "GRAPHIC" }];
+    return [];
+  });
+  const [albumId, setAlbumId] = useState("");
+  // Werbung: Vorlage, Event-/Trainings-Fakten und Anmelde-Link.
+  const initialTemplate = initial?.template ?? prefill?.template;
+  const [template, setTemplate] = useState<MarketingTemplateId>(
+    isMarketingTemplate(initialTemplate) ? initialTemplate : trainingSessionId ? "training" : "announce",
+  );
+  const [usedTemplate, setUsedTemplate] = useState<string | null>(isMarketingTemplate(initialTemplate) ? initialTemplate : null);
+  const [loadedFacts, setFacts] = useState<MarketingEventFacts | null>(null);
+  // Fakten gelten nur, solange ein Event bzw. Trainings-Termin gewählt ist.
+  const facts = eventId || trainingSessionId ? loadedFacts : null;
+  const [includeLink, setIncludeLink] = useState(false);
+  const [marketingOpen, setMarketingOpen] = useState(!!trainingSessionId || !!campaignId || isMarketingTemplate(initialTemplate));
   const [seriesId, setSeriesId] = useState(initial?.seriesId ?? "");
   const [editNote, setEditNote] = useState("");
   const [preview, setPreview] = useState(false);
@@ -115,7 +156,6 @@ export default function ReportEditor({
   const [events, setEvents] = useState<EventOption[]>([]);
   const [assets, setAssets] = useState<AssetOption[]>([]);
   const [assetQuery, setAssetQuery] = useState("");
-  const [posts, setPosts] = useState<PostOption[]>([]);
   const [seriesList, setSeriesList] = useState<SeriesOption[]>([]);
   const [newSeries, setNewSeries] = useState("");
   const [insertAssetId, setInsertAssetId] = useState("");
@@ -147,8 +187,6 @@ export default function ReportEditor({
 
   useEffect(() => {
     api<EventOption[]>("/api/events").then(all => setEvents([...all].sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()).slice(0, 80))).catch(() => {});
-    api<{ feed: (PostOption & { kind: string })[] }>("/api/community-board?limit=50")
-      .then(d => setPosts(d.feed.filter(e => e.kind === "marketing_post"))).catch(() => {});
     api<{ series: SeriesOption[] }>("/api/community-jobs/reports/series").then(d => setSeriesList(d.series)).catch(() => {});
   }, []);
 
@@ -185,12 +223,54 @@ export default function ReportEditor({
     }
   }
 
-  // Vom Event bzw. Rückblick-Empfehlung aus gestartet und noch leer → Vorlage direkt einsetzen (einmalig).
+  // Vom Rückblick-Hinweis aus gestartet und noch leer → Rückblick-Vorlage direkt einsetzen (einmalig).
   useEffect(() => {
     if (autoFilled.current || reportId || body.trim()) return;
     if (recap) { autoFilled.current = true; fillRecap(recap, true); }
-    else if (presetEventId) { autoFilled.current = true; fillFromEvent(presetEventId, true); }
-  }, [presetEventId, recap]); // eslint-disable-line react-hooks/exhaustive-deps -- nur beim Öffnen
+  }, [recap]); // eslint-disable-line react-hooks/exhaustive-deps -- nur beim Öffnen
+
+  // Event-/Trainings-Fakten (Datum, Spiel, Anmeldungen, Link) — Grundlage für Werbe-Vorlagen und Anmelde-Link.
+  useEffect(() => {
+    if (!eventId && !trainingSessionId) return; // ohne Event/Termin: activeFacts ist dann null
+    let cancelled = false;
+    const query = trainingSessionId ? `trainingSessionId=${encodeURIComponent(trainingSessionId)}` : `eventId=${encodeURIComponent(eventId)}`;
+    api<MarketingEventFacts>(`/api/community-jobs/marketing-posts/facts?${query}`)
+      .then(f => {
+        if (cancelled) return;
+        setFacts(f);
+        // Vom Event/Training aus gestartet und noch leer: kommendes Event → Werbe-Text, vergangenes → Bericht-Vorlage.
+        if (!autoFilled.current && !reportId && !body.trim() && (presetEventId || trainingSessionId)) {
+          autoFilled.current = true;
+          const upcoming = f.training || new Date(f.startAt).getTime() > Date.now();
+          if (upcoming) {
+            setBody(buildMarketingText(template, f));
+            setUsedTemplate(template);
+            setIncludeLink(!f.training);
+            setMarketingOpen(true);
+          } else if (presetEventId) {
+            fillFromEvent(presetEventId, true);
+          }
+        }
+      })
+      .catch(() => { if (!cancelled) setFacts(null); });
+    return () => { cancelled = true; };
+  }, [eventId, trainingSessionId]); // eslint-disable-line react-hooks/exhaustive-deps -- nur auf Event-/Terminwechsel
+
+  function applyTemplate() {
+    if (!facts) return;
+    if (body.trim() && !window.confirm("Den bisherigen Text durch die Werbe-Vorlage ersetzen?")) return;
+    setBody(buildMarketingText(template, facts));
+    setUsedTemplate(template);
+  }
+  function finalText(): string {
+    const withSignup = facts && includeLink ? withEventLink(body, facts, true) : body;
+    return appendLink(withSignup, prefill?.link);
+  }
+  function copyText() {
+    navigator.clipboard?.writeText(finalText())
+      .then(() => toast.success("Text kopiert — z.B. für Instagram oder Discord"))
+      .catch(() => toast.error("Kopieren nicht möglich"));
+  }
 
   // ── Einfügen ──────────────────────────────────────────────────────────────
   function wrap(prefix: string, suffix: string, placeholder: string) {
@@ -296,8 +376,8 @@ export default function ReportEditor({
   async function sendPhotoRequest() {
     setPhotoBusy(true);
     try {
-      await api("/api/community-jobs/photo-requests", { method: "POST", body: JSON.stringify({ eventId: eventId || undefined, description: photoText, requesterJob: "journalist" }) });
-      toast.success("Bildwunsch an die Fotografen gesendet");
+      await api("/api/community-jobs/photo-requests", { method: "POST", body: JSON.stringify({ eventId: eventId || undefined, description: photoText, requesterJob: "content_creator" }) });
+      toast.success("Bildwunsch gesendet");
       setPhotoOpen(false); setPhotoText("");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Bildwunsch fehlgeschlagen"); }
     finally { setPhotoBusy(false); }
@@ -308,10 +388,14 @@ export default function ReportEditor({
     setBusy(mode);
     try {
       const payload = {
-        title, bodyMarkdown: appendLink(body, prefill?.link),
+        title, bodyMarkdown: finalText(),
         category: category || null, eventId: eventId || null, seriesId: seriesId || null,
         coverAssetId: gameCover ? null : coverAssetId || null, referencedMarketingPostId: refPostId || null,
         gameCoverUrl: gameCover?.url ?? null, gameCoverName: gameCover?.name ?? null,
+        media: media.map(m => ({ id: m.id, url: m.url, caption: m.caption, type: m.type })),
+        albumId: albumId || null,
+        template: usedTemplate, campaignId: campaignId ?? null, trainingSessionId: trainingSessionId ?? null,
+        photoRequestId: photoRequestId ?? null,
       };
       if (reportId) {
         await api(`/api/community-jobs/reports/${reportId}`, { method: "PATCH", body: JSON.stringify({ ...payload, editNote: isPublishedEdit ? editNote : undefined }) });
@@ -330,9 +414,9 @@ export default function ReportEditor({
 
   const words = useMemo(() => wordCount(body), [body]);
   const minutes = useMemo(() => readingMinutes(body), [body]);
-  const visiblePosts = eventId && posts.some(p => p.event?.id === eventId) ? posts.filter(p => p.event?.id === eventId) : posts;
   const cover = assets.find(a => a.id === coverAssetId);
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0 && body.length <= REPORT_BODY_MAX;
+  // Ein Beitrag braucht Text ODER ein Bild/einen Clip — der Titel ist optional.
+  const canSubmit = (body.trim().length > 0 || media.length > 0 || !!coverAssetId || !!gameCover) && body.length <= REPORT_BODY_MAX;
   const selectedEventTitle = events.find(e => e.id === eventId)?.title;
 
   const toolbar: { icon: typeof Bold; label: string; run: () => void }[] = [
@@ -351,7 +435,13 @@ export default function ReportEditor({
 
   return (
     <div className="space-y-3">
-      <input value={title} onChange={e => setTitle(e.target.value)} maxLength={REPORT_TITLE_MAX} placeholder="Titel" className={INPUT} />
+      {trainingSessionId && (
+        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
+      )}
+      {photoRequestId && (
+        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">📸 Du erfüllst einen Bildwunsch{prefill?.title ? `: „${prefill.title}“` : ""} — füge mindestens ein Bild hinzu.</p>
+      )}
+      <input value={title} onChange={e => setTitle(e.target.value)} maxLength={REPORT_TITLE_MAX} placeholder="Titel (optional)" className={INPUT} />
 
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="space-y-1 text-[11px] text-gray-500">
@@ -395,9 +485,9 @@ export default function ReportEditor({
       {/* Titelbild */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-gray-500">Titelbild aus der Mediathek (optional)</p>
+          <p className="text-[11px] text-gray-500">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
           <button onClick={() => setPhotoOpen(v => !v)} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
-            <Camera className="w-3 h-3" /> Bild beim Fotografen anfragen
+            <Camera className="w-3 h-3" /> Bild bei anderen anfragen
           </button>
         </div>
         {photoOpen && (
@@ -509,7 +599,7 @@ export default function ReportEditor({
           </div>
         ) : (
           <textarea ref={areaRef} value={body} onChange={e => setBody(e.target.value)} rows={12}
-            placeholder="Dein Bericht… Formatierung über die Leiste oder direkt als Markdown (**fett**, ## Überschrift, - Liste)."
+            placeholder="Dein Beitrag — Werbetext, ein paar Worte zu deinen Bildern oder ein ganzer Bericht. Formatierung über die Leiste oder als Markdown (**fett**, ## Überschrift, - Liste)."
             className={`${INPUT} resize-y font-mono text-[13px] leading-relaxed`} />
         )}
 
@@ -527,20 +617,32 @@ export default function ReportEditor({
         </div>
       </div>
 
-      {/* Werbe-Post */}
-      {(visiblePosts.length > 0 || refPostId) && (
-        <label className="space-y-1 text-[11px] text-gray-500 block">
-          Über diesen Werbe-Post berichten (optional)
-          <div className="flex items-center gap-1.5">
-            <Select value={refPostId} className="flex-1" onChange={e => setRefPostId(e.target.value)}>
-              <option value="">Keiner</option>
-              {refPostId && !visiblePosts.some(p => p.id === refPostId) && <option value={refPostId}>Gewählter Werbe-Post</option>}
-              {visiblePosts.map(p => <option key={p.id} value={p.id}>{p.event?.title ? `${p.event.title}: ` : ""}{p.caption.slice(0, 60)}</option>)}
-            </Select>
-            {refPostId && <button onClick={() => setRefPostId("")} aria-label="Verknüpfung entfernen" className="text-gray-600 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>}
+      {/* Bilder & Clips */}
+      <PostMediaEditor media={media} onChange={setMedia} albumId={albumId} onAlbumChange={setAlbumId} startMode={prefill?.collage ? "collage" : undefined} />
+
+      {/* Werbung */}
+      <div className="rounded-lg border border-white/10 bg-white/[0.02]">
+        <button type="button" onClick={() => setMarketingOpen(v => !v)} aria-expanded={marketingOpen}
+          className="w-full px-3 py-2 flex items-center justify-between text-left text-[11px] text-gray-400 hover:text-white">
+          <span className="inline-flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Werbung für ein Event oder Training</span>
+          <span>{marketingOpen ? "−" : "+"}</span>
+        </button>
+        {marketingOpen && (
+          <div className="px-3 pb-3 space-y-2">
+            {!facts && <p className="text-[11px] text-gray-600">Wähle oben ein Event, dann füllt die Vorlage Datum, Spiel und Anmeldungen automatisch ein.</p>}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Select size="sm" value={template} onChange={e => setTemplate(e.target.value as MarketingTemplateId)} aria-label="Werbe-Vorlage">
+                {MARKETING_TEMPLATES.filter(t => (t.id === "training") === !!trainingSessionId).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </Select>
+              <Button size="sm" variant="outline" disabled={!facts} onClick={applyTemplate}>Text aus Vorlage</Button>
+              <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">
+                <input type="checkbox" checked={includeLink} disabled={!facts} onChange={e => setIncludeLink(e.target.checked)} /> Anmelde-Link
+              </label>
+              <Button size="sm" variant="ghost" icon={<Copy className="w-3.5 h-3.5" />} disabled={!body.trim()} onClick={copyText}>Text kopieren</Button>
+            </div>
           </div>
-        </label>
-      )}
+        )}
+      </div>
 
       {prefill?.link && <p className="text-[11px] text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
 
