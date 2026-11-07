@@ -252,7 +252,7 @@ async function announceAndStore(reportId: string, authorId: string, title: strin
     title: label ? `${label}: ${title}` : title, description: plainExcerpt(body, 300),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
     jobEmoji: getCommunityJob(CONTENT_CREATOR_KEY)?.emoji ?? "🎬", channelId, imageUrl,
-    url: `${appBaseUrl()}${reportPath(reportId)}`,
+    url: `${appBaseUrl()}${reportPath(reportId)}`, ruleKey: "job_report_posted",
   });
   if (messageId) await prisma.jobReport.update({ where: { id: reportId }, data: { discordMessageId: messageId } });
 }

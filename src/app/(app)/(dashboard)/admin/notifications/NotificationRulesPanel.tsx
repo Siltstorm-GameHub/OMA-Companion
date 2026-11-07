@@ -32,16 +32,46 @@ export type NotificationRuleRow = {
 interface DiscordEmoji { id: string; name: string; animated: boolean }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  events:       "Events",
-  tournaments:  "Turniere",
-  quests:       "Quests",
-  clips:        "Clip des Monats",
-  rank:         "Rang",
-  battle_cards: "Battle Cards",
-  system:       "System",
+  events:         "📅 Events",
+  tournaments:    "⚔️ Turniere",
+  quests:         "🎯 Quests",
+  community_jobs: "🧑‍💼 Community-Jobs",
+  clips:          "🎬 Clip des Monats",
+  rank:           "🏅 Rang",
+  battle_cards:   "🃏 Battle Cards",
+  system:         "⚙️ System",
 };
 
-const CATEGORY_ORDER = ["events", "tournaments", "quests", "clips", "rank", "battle_cards", "system"];
+// Feste Reihenfolge; unbekannte Kategorien werden danach alphabetisch angehängt (nie ausgeblendet)
+const CATEGORY_ORDER = ["events", "tournaments", "quests", "community_jobs", "clips", "rank", "battle_cards", "system"];
+
+type ChannelFilter = "all" | "push" | "inApp" | "dm" | "chan" | "off";
+const CHANNEL_FILTERS: { id: ChannelFilter; label: string }[] = [
+  { id: "all",   label: "Alle" },
+  { id: "chan",  label: "Discord-Kanal" },
+  { id: "dm",    label: "Discord-DM" },
+  { id: "push",  label: "Push" },
+  { id: "inApp", label: "In-App" },
+  { id: "off",   label: "Komplett aus" },
+];
+
+function matchesChannel(r: NotificationRuleRow, f: ChannelFilter): boolean {
+  switch (f) {
+    case "push":  return r.pushEnabled;
+    case "inApp": return r.inAppEnabled;
+    case "dm":    return r.discordDmEnabled;
+    case "chan":  return r.discordChanEnabled;
+    case "off":   return !r.pushEnabled && !r.inAppEnabled && !r.discordDmEnabled && !r.discordChanEnabled;
+    default:      return true;
+  }
+}
+
+/** Platzhalter, die im Text stehen, aber (noch) nicht in PLACEHOLDERS dokumentiert sind. */
+function tokensIn(...texts: string[]): string[] {
+  const found = new Set<string>();
+  for (const t of texts) for (const m of t.matchAll(/\{[a-zA-Z]+\}/g)) found.add(m[0]);
+  return [...found];
+}
 
 // Welche Platzhalter pro Regel beim Versand ersetzt werden (siehe src/lib/notify-dispatch.ts Aufrufer)
 const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
@@ -120,6 +150,43 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
   server_approved: [{ key: "{serverName}", description: "Name des Servers" }],
   server_denied:   [{ key: "{serverName}", description: "Name des Servers" }],
   server_revoked:  [{ key: "{serverName}", description: "Name des Servers" }],
+  event_tournament_started: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{game}", description: "Spielname" },
+    { key: "{format}", description: "Turnier-Format" },
+    { key: "{teilnehmer}", description: "Anzahl Turnier-Teilnehmer" },
+  ],
+  coach_training_posted: [
+    { key: "{title}", description: "Titel des Termins" },
+    { key: "{description}", description: "Beschreibung des Termins" },
+    { key: "{date}", description: "Datum & Uhrzeit" },
+  ],
+  coach_available: [
+    { key: "{coach}", description: "Name des Coaches" },
+    { key: "{until}", description: "Verfügbar bis (Uhrzeit)" },
+  ],
+  job_report_posted: [
+    { key: "{emoji}", description: "Emoji des Beitrags" },
+    { key: "{title}", description: "Titel des Berichts" },
+    { key: "{description}", description: "Inhalt / Vorschau" },
+    { key: "{author}", description: "Autor" },
+  ],
+  job_idea_posted: [
+    { key: "{emoji}", description: "Emoji des Beitrags" },
+    { key: "{title}", description: "Titel der Idee" },
+    { key: "{description}", description: "Inhalt / Vorschau" },
+    { key: "{author}", description: "Autor" },
+  ],
+  job_ideas_digest: [
+    { key: "{emoji}", description: "Emoji" },
+    { key: "{title}", description: "Titel des Rückblicks" },
+    { key: "{description}", description: "Liste der Top-Ideen" },
+  ],
+  admin_quests_late: [
+    { key: "{month}", description: "Monatsname" },
+    { key: "{year}", description: "Jahr" },
+    { key: "{day}", description: "Tag der Erzeugung" },
+  ],
 };
 
 /** Realistische Beispielwerte pro Regel, nur für die Live-Vorschau im Admin-Panel. */
@@ -143,6 +210,13 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   server_approved: { "{serverName}": "Survival #1" },
   server_denied:   { "{serverName}": "Survival #1" },
   server_revoked:  { "{serverName}": "Survival #1" },
+  event_tournament_started: { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{teilnehmer}": "8" },
+  coach_training_posted: { "{title}": "Aim-Training", "{description}": "Gemeinsam Aim verbessern.", "{date}": "Fr., 20.12. 19:00" },
+  coach_available: { "{coach}": "MaxMustermann", "{until}": "21:00" },
+  job_report_posted: { "{emoji}": "📰", "{title}": "Rückblick auf den Community Cup", "{description}": "Was für ein Abend!", "{author}": "ErikaBeispiel" },
+  job_idea_posted: { "{emoji}": "💡", "{title}": "Monatliches Retro-Turnier", "{description}": "Jeden Monat ein Klassiker.", "{author}": "ErikaBeispiel" },
+  job_ideas_digest: { "{emoji}": "🏆", "{title}": "Top-Ideen der Woche", "{description}": "1. Retro-Turnier (12 👍)\n2. Speedrun-Abend (8 👍)" },
+  admin_quests_late: { "{month}": "Dezember", "{year}": "2026", "{day}": "5" },
 };
 
 /** Ersetzt alle Platzhalter durch ihre Beispielwerte — identisch zur Server-Logik in notify-dispatch.ts. */
@@ -184,6 +258,10 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
   const [pickerFor, setPickerFor] = useState<{ key: string; field: "title" | "body" } | null>(null);
   const [lastField, setLastField] = useState<Record<string, "title" | "body">>({});
   const { confirm, ConfirmDialogElement } = useConfirm();
+  const [query, setQuery] = useState("");
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
+  const [openRules, setOpenRules] = useState<Set<string>>(new Set());
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
   const linkBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -300,9 +378,28 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
     }
   }
 
-  const grouped = CATEGORY_ORDER
-    .map((cat) => ({ cat, rows: rules.filter((r) => r.category === cat) }))
+  const q = query.trim().toLowerCase();
+  const visible = rules.filter((r) =>
+    matchesChannel(r, channelFilter) &&
+    (!q || [r.label, r.description, r.key, r.titleTemplate, r.bodyTemplate, CATEGORY_LABELS[r.category] ?? r.category]
+      .some((t) => t.toLowerCase().includes(q))),
+  );
+  const extraCats = [...new Set(rules.map((r) => r.category))]
+    .filter((c) => !CATEGORY_ORDER.includes(c))
+    .sort((a, b) => a.localeCompare(b, "de"));
+  const grouped = [...CATEGORY_ORDER, ...extraCats]
+    .map((cat) => ({
+      cat,
+      rows: visible.filter((r) => r.category === cat).sort((a, b) => a.label.localeCompare(b.label, "de")),
+      total: rules.filter((r) => r.category === cat).length,
+    }))
     .filter((g) => g.rows.length > 0);
+  // Bei aktiver Suche/Filter sind alle Treffer-Gruppen offen, damit nichts versteckt bleibt
+  const filtering = !!q || channelFilter !== "all";
+
+  function toggleSet(setter: typeof setOpenRules, key: string) {
+    setter((s) => { const next = new Set(s); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+  }
 
   return (
     <div className="space-y-6">
@@ -331,34 +428,153 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
         </p>
       )}
 
-      {grouped.map(({ cat, rows }) => (
-        <div key={cat} className="space-y-3">
-          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-1">
-            {CATEGORY_LABELS[cat] ?? cat}
-          </h3>
-          {rows.map((r) => {
+      {/* Suche + Filter */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Suchen in ${rules.length} Benachrichtigungen (Name, Text, Schlüssel …)`}
+            className="flex-1 min-w-0 rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} title="Suche leeren" className="p-2 rounded-xl text-gray-500 hover:text-white border border-white/[0.06]">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {CHANNEL_FILTERS.map((f) => {
+            const count = rules.filter((r) => matchesChannel(r, f.id)).length;
+            return (
+              <button
+                key={f.id}
+                onClick={() => setChannelFilter(f.id)}
+                className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors ${
+                  channelFilter === f.id
+                    ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
+                    : "bg-white/[0.02] text-gray-500 border-white/[0.06] hover:border-white/[0.12]"
+                }`}
+              >
+                {f.label} <span className="opacity-60">{count}</span>
+              </button>
+            );
+          })}
+          <span className="flex-1" />
+          <button
+            onClick={() => setOpenRules(new Set(visible.map((r) => r.key)))}
+            className="text-[11px] text-gray-500 hover:text-gray-300 px-1"
+          >
+            Alle aufklappen
+          </button>
+          <button
+            onClick={() => { setOpenRules(new Set()); setCollapsedCats(new Set()); }}
+            className="text-[11px] text-gray-500 hover:text-gray-300 px-1"
+          >
+            Alle zuklappen
+          </button>
+        </div>
+        {/* Sprungmarken zu den Kategorien */}
+        {!filtering && grouped.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            {grouped.map(({ cat, total }) => (
+              <a
+                key={cat}
+                href={`#notif-cat-${cat}`}
+                className="px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[11px] text-gray-400 hover:text-white hover:border-white/[0.15] transition-colors"
+              >
+                {CATEGORY_LABELS[cat] ?? cat} <span className="opacity-50">{total}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {grouped.length === 0 && (
+        <p className="text-sm text-gray-500 text-center py-8">Keine Benachrichtigung passt zu Suche/Filter.</p>
+      )}
+
+      {grouped.map(({ cat, rows, total }) => {
+        const catOpen = filtering || !collapsedCats.has(cat);
+        const dirtyInCat = rows.filter((r) => dirtyKeys.has(r.key)).length;
+        return (
+        <div key={cat} id={`notif-cat-${cat}`} className="space-y-2 scroll-mt-20">
+          <button
+            onClick={() => toggleSet(setCollapsedCats, cat)}
+            className="w-full flex items-center gap-2 px-1 py-1 text-left group"
+          >
+            <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${catOpen ? "" : "-rotate-90"}`} />
+            <h3 className="text-[11px] font-bold text-gray-400 group-hover:text-gray-200 uppercase tracking-widest">
+              {CATEGORY_LABELS[cat] ?? cat}
+            </h3>
+            <span className="text-[10px] text-gray-600">
+              {filtering ? `${rows.length} von ${total}` : total}
+            </span>
+            {dirtyInCat > 0 && <span className="text-[10px] text-amber-400">● {dirtyInCat} ungespeichert</span>}
+            <span className="flex-1 h-px bg-white/[0.05] ml-2" />
+          </button>
+          {catOpen && rows.map((r) => {
             const selectedLink = PAGE_LINKS.find((p) => p.url === r.urlTemplate);
-            const placeholders = PLACEHOLDERS[r.key] ?? [];
+            const documented = PLACEHOLDERS[r.key] ?? [];
+            const placeholders = [
+              ...documented,
+              ...tokensIn(r.titleTemplate, r.bodyTemplate)
+                .filter((t) => !documented.some((d) => d.key === t))
+                .map((t) => ({ key: t, description: "im Text verwendet" })),
+            ];
             const activeField = lastField[r.key] ?? "body";
+            const isOpen = openRules.has(r.key);
+            const allOff = !r.pushEnabled && !r.inAppEnabled && !r.discordDmEnabled && !r.discordChanEnabled;
+            const badges: { on: boolean; icon: typeof Bell; label: string }[] = [
+              { on: r.pushEnabled, icon: Smartphone, label: "Push" },
+              { on: r.inAppEnabled, icon: Bell, label: "In-App" },
+              { on: r.discordDmEnabled, icon: Send, label: "Discord-DM" },
+              { on: r.discordChanEnabled, icon: MessageSquare, label: "Discord-Kanal" },
+            ];
 
             return (
-              <div key={r.key} className="glass card-shine rounded-2xl overflow-hidden">
-                <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-white/[0.05]">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">{r.label}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">{r.description}</p>
-                  </div>
-                  <button
-                    onClick={() => deleteRule(r)}
-                    disabled={deletingKey === r.key}
-                    title="Regel löschen"
-                    className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-white/[0.06] hover:border-red-500/20 transition-colors shrink-0 disabled:opacity-40"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
+              <div key={r.key} className={`glass card-shine rounded-2xl overflow-hidden ${allOff ? "opacity-60" : ""}`}>
+                <div className={`flex items-center justify-between gap-3 px-4 py-2.5 ${isOpen ? "border-b border-white/[0.05]" : ""}`}>
+                  <button onClick={() => toggleSet(setOpenRules, r.key)} className="min-w-0 flex-1 flex items-center gap-2.5 text-left">
+                    <ChevronDown className={`w-3.5 h-3.5 text-gray-500 shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {dirtyKeys.has(r.key) && <span className="text-amber-400 mr-1" title="Ungespeichert">●</span>}
+                        {r.label}
+                      </p>
+                      <p className={`text-[11px] text-gray-500 mt-0.5 ${isOpen ? "" : "truncate"}`}>{r.description}</p>
+                    </div>
                   </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {allOff ? (
+                      <span className="text-[10px] text-gray-500 px-1.5 py-0.5 rounded-md border border-white/[0.06]">aus</span>
+                    ) : badges.map((b) => (
+                      <span
+                        key={b.label}
+                        title={`${b.label}: ${b.on ? "an" : "aus"}`}
+                        className={`w-6 h-6 rounded-md flex items-center justify-center border ${
+                          b.on ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30" : "text-gray-700 border-transparent"
+                        }`}
+                      >
+                        <b.icon className="w-3 h-3" />
+                      </span>
+                    ))}
+                    {isOpen && (
+                      <button
+                        onClick={() => deleteRule(r)}
+                        disabled={deletingKey === r.key}
+                        title="Regel löschen"
+                        className="ml-1 flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-white/[0.06] hover:border-red-500/20 transition-colors disabled:opacity-40"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
+                {isOpen && (
                 <div className="px-4 py-3 space-y-3">
+                  <p className="text-[10px] text-gray-600 font-mono">Schlüssel: {r.key}</p>
                   {/* Kanal-Toggles */}
                   <div className="flex flex-wrap gap-1.5">
                     <Toggle on={r.pushEnabled} onClick={() => update(r.key, { pushEnabled: !r.pushEnabled })} label="Push" icon={Smartphone} />
@@ -415,7 +631,9 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       <input
                         value={r.discordChannelId ?? ""}
                         onChange={(e) => update(r.key, { discordChannelId: e.target.value })}
-                        placeholder={`Standard: News-Kanal${newsChannelId ? ` (${newsChannelId})` : ""}`}
+                        placeholder={r.isEventNotification
+                          ? `Kanal des Events/der Reihe hat Vorrang, sonst diese ID, sonst News-Kanal${newsChannelId ? ` (${newsChannelId})` : ""}`
+                          : `Standard: News-Kanal${newsChannelId ? ` (${newsChannelId})` : ""}`}
                         className="flex-1 rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
                       />
                     </div>
@@ -562,11 +780,13 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                     )}
                   </div>
                 </div>
+                )}
               </div>
             );
           })}
         </div>
-      ))}
+        );
+      })}
 
       {linkDropFor && linkDropRect && typeof document !== "undefined" && createPortal(
         (() => {

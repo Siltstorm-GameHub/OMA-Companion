@@ -6,7 +6,6 @@ import { collabBonuses } from "./collab-bonus";
 import { dispatchNotification } from "./notify-dispatch";
 import { guideVoteEvents } from "./coach-guide-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
-import { sendDiscordMessage } from "./discord-rest";
 import { DISCORD_COLORS } from "./discord-colors";
 import { formatBerlinDateTime } from "./time";
 import { canWorkCommunityJobs, recordContribution, overLimitNotice, listKnownCoaches } from "./community-job-access";
@@ -93,16 +92,21 @@ export async function createTrainingSession(
   // Reaktionen) — hier entscheidet der Coach selbst je Termin, in welchen
   // Kanal die Einladung geht. Rein informativ, kein Reaktions-Voting. Bei einer
   // Serie geht nur EINE Nachricht für den ersten Termin raus.
+  // Regel "coach_training_posted" (Admin → Benachrichtigungen: Text, An/Aus) — Kanal wählt der Coach
   if (data.discordChannelId) {
-    sendDiscordMessage(data.discordChannelId, {
-      title: `🎓 Neuer Trainings-Termin: ${data.title.trim()}`,
-      description: data.description || "Neuer Trainings-Termin — meldet euch in der App an!",
-      color: DISCORD_COLORS.eventNew,
-      fields: [
+    dispatchNotification("coach_training_posted", {
+      users: [],
+      discordChannelIdOverride: data.discordChannelId,
+      placeholders: {
+        "{title}": data.title.trim(),
+        "{description}": data.description || "Neuer Trainings-Termin — meldet euch in der App an!",
+        "{date}": formatBerlinDateTime(data.startAt, { dateStyle: "full", timeStyle: "short" }),
+      },
+      discordColor: DISCORD_COLORS.eventNew,
+      discordFields: [
         { name: "📆 Start", value: formatBerlinDateTime(data.startAt, { dateStyle: "full", timeStyle: "short" }), inline: true },
         ...(repeat > 1 ? [{ name: "🔁 Serie", value: `${repeat} wöchentliche Termine`, inline: true }] : []),
       ],
-      footer: { text: "OMA Companion · Community-Jobs · Coach" },
     }).catch(() => {});
   }
 
@@ -510,12 +514,16 @@ export async function setAvailability(
 
   if (availableUntil && discordChannelId) {
     const name = await coachDisplayName(coachId);
-    sendDiscordMessage(discordChannelId, {
-      title: `🎓 ${name} hilft gerade`,
-      description: "Fragen zu Spielen, Einstieg oder Community? Melde dich direkt bei diesem Coach.",
-      color: DISCORD_COLORS.eventNew,
-      fields: [{ name: "🟢 Verfügbar bis", value: formatBerlinDateTime(availableUntil, { dateStyle: "short", timeStyle: "short" }), inline: true }],
-      footer: { text: "OMA Companion · Community-Jobs · Coach" },
+    // Regel "coach_available" (Admin → Benachrichtigungen: Text, An/Aus) — Kanal wählt der Coach
+    dispatchNotification("coach_available", {
+      users: [],
+      discordChannelIdOverride: discordChannelId,
+      placeholders: {
+        "{coach}": name,
+        "{until}": formatBerlinDateTime(availableUntil, { dateStyle: "short", timeStyle: "short" }),
+      },
+      discordColor: DISCORD_COLORS.eventNew,
+      discordFields: [{ name: "🟢 Verfügbar bis", value: formatBerlinDateTime(availableUntil, { dateStyle: "short", timeStyle: "short" }), inline: true }],
     }).catch(() => {});
   }
   return { ok: true, availableUntil: availableUntil ? availableUntil.toISOString() : null };

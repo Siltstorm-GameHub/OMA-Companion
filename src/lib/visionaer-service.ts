@@ -97,7 +97,7 @@ async function announceAndStore(ideaId: string, authorId: string, title: string,
     title, description: plainExcerpt(description, 350),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
     jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "💡", channelId,
-    url: `${BASE_URL}${ideaPath(ideaId)}`, imageUrl,
+    url: `${BASE_URL}${ideaPath(ideaId)}`, imageUrl, ruleKey: "job_idea_posted",
   });
   if (messageId) await prisma.communityIdea.update({ where: { id: ideaId }, data: { discordMessageId: messageId } });
 }
@@ -457,7 +457,7 @@ export async function postIdeaDigests(): Promise<{ posted: string[] }> {
     const lines = top.map((t, i) => `${i + 1}. **${t.title}** \u2014 \u00d8 ${formatFixed(t.average, 1)} \u2605 (${t.votes} Stimmen) \u00b7 ${t.author}\n${BASE_URL}${ideaPath(t.id)}`);
     const messageId = await announceCommunityJobContent({
       title: p.title, description: lines.join("\n\n"), authorName: "OMA Visionäre",
-      jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "\u{1F4A1}", channelId, url: `${BASE_URL}/community-board/roadmap`,
+      jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "\u{1F4A1}", channelId, url: `${BASE_URL}/community-board/roadmap`, ruleKey: "job_ideas_digest",
     });
     if (messageId) { await prisma.ideaDigest.create({ data: { period: p.key } }); posted.push(p.key); }
   }

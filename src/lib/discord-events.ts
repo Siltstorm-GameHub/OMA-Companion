@@ -90,7 +90,10 @@ export async function buildNewEventEmbed(event: NewEventAnnouncement) {
 /** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen).
  *  null = nicht konfiguriert oder fehlgeschlagen (Fehler wird geloggt). */
 export async function announceNewEvent(event: NewEventAnnouncement): Promise<string | null> {
-  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+  // Regel "event_new" (Admin → Benachrichtigungen): Kanal-Post abschaltbar, Kanal = Event/Reihe → Regel → Standard
+  const rule = await getNotificationRule("event_new");
+  if (rule && !rule.discordChanEnabled) return null;
+  const channelId = event.discordChannelId || rule?.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !botToken) return null;
 
@@ -126,7 +129,10 @@ export async function announceEventResults(event: {
   winnerNames?: string[];
   note?: string | null;
 }): Promise<void> {
-  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+  // Regel "event_ended" (Admin → Benachrichtigungen): Ergebnis-Post abschaltbar, Kanal = Event/Reihe → Regel → Standard
+  const resultRule = await getNotificationRule("event_ended");
+  if (resultRule && !resultRule.discordChanEnabled) return;
+  const channelId = event.discordChannelId || resultRule?.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !botToken) return;
 

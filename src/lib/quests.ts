@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
-import { sendDiscordDM } from "./discord-rest";
 import type { QuestType } from "./quests-meta";
 import { getBerlinDateParts } from "./time";
 
@@ -98,18 +97,17 @@ async function notifyNewQuests(month: number, year: number, quests: { title: str
 /** Warnt Admins per Discord-DM, wenn Quests nicht durch den Monatsanfangs-Cron, sondern
  * verspätet durch den Lazy-Fallback erzeugt wurden (Hinweis auf einen ausgefallenen Cron-Lauf). */
 async function warnLateGeneration(month: number, year: number, day: number) {
-  const admins = await prisma.user.findMany({
-    where:  { role: "admin", discordId: { not: null } },
-    select: { discordId: true },
-  });
-  const embed = {
-    title: "⚠️ Quests verspätet generiert",
-    description:
-      `Die Quests für ${MONTH_NAMES[month - 1]} ${year} wurden erst am ${day}. des Monats erzeugt, ` +
-      `nicht am 1. Das deutet darauf hin, dass der monatliche Cron-Job (\`/api/cron/monthly-quests\`) nicht gelaufen ist.`,
-    color: 0xf59e0b,
-  };
-  await Promise.allSettled(admins.map((a) => sendDiscordDM(a.discordId!, embed)));
+  // Regel "admin_quests_late" (Admin → Benachrichtigungen): standardmäßig nur Discord-DM an alle Admins
+  const admins = await prisma.user.findMany({ where: { role: "admin" }, select: { id: true } });
+  await dispatchNotification("admin_quests_late", {
+    users: admins.map((a) => a.id),
+    placeholders: {
+      "{month}": MONTH_NAMES[month - 1],
+      "{year}": String(year),
+      "{day}": String(day),
+    },
+    discordColor: 0xf59e0b,
+  }).catch(() => {});
 }
 
 /** Generates exactly 3 quests for the month. Returns null if already generated. */

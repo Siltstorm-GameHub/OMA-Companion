@@ -1,37 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
-import { sendDiscordMessage, resolveChannelId } from "@/lib/discord-rest";
 import { FORMAT_LABELS } from "@/lib/event-placeholders";
 
-async function notifyTournamentStarted(tournament: {
+// Turnier-Start-Nachricht mit Erwähnung der Teilnehmer — Regel "event_tournament_started" (Admin →
+// Benachrichtigungen: Text, An/Aus, Kanal). Kanal wie alle Event-Nachrichten: Event → Reihe → Regel →
+// Standard (dispatchEventNotification). Entfällt, solange noch niemand Turnier-Teilnehmer ist.
+async function notifyTournamentStarted(eventId: string, tournament: {
   format: string;
-  event: { title: string; game: string | null };
   participants: { user: { username: string | null; name: string | null; discordId: string | null } }[];
 }) {
-  const channelId = resolveChannelId();
-  if (!channelId) return;
-
+  if (tournament.participants.length === 0) return;
   const mentions = tournament.participants
     .map(p => p.user.discordId ? `<@${p.user.discordId}>` : (p.user.username ?? p.user.name ?? "?"))
     .join(" ");
-
-  await sendDiscordMessage(channelId, {
-    color: 0xf43f5e,
-    title: `⚔️ Turnier gestartet: ${tournament.event.title}`,
-    fields: [
-      { name: "🎮 Spiel",      value: tournament.event.game ?? "–",                         inline: true },
-      { name: "📋 Format",     value: FORMAT_LABELS[tournament.format] ?? tournament.format, inline: true },
-      { name: "👥 Teilnehmer", value: String(tournament.participants.length),                inline: true },
-    ],
-    footer: { text: "OMA Companion · Turniere" },
-  }, mentions || undefined).catch(() => {});
+  await dispatchEventNotification("event_tournament_started", { id: eventId }, {
+    placeholders: {
+      "{format}": FORMAT_LABELS[tournament.format] ?? tournament.format,
+      "{teilnehmer}": String(tournament.participants.length),
+    },
+    discordContent: mentions || undefined,
+    discordColor: 0xf43f5e,
+  }).catch(() => {});
 }
 
 // Hilfsfunktion: Event anhand discordEventId finden (nur WebApp-Events haben eine discordEventId)
 async function findEventByDiscordId(discordEventId: string) {
   return prisma.event.findUnique({
     where:  { discordEventId },
-    select: { id: true, title: true, game: true, status: true, discordChannelId: true },
+    select: { id: true, title: true, game: true, status: true, discordChannelId: true, series: { select: { discordChannelId: true } } },
   });
 }
 
@@ -61,9 +57,8 @@ export async function updateEventStatus(discordEventId: string, status: string) 
         },
       });
       if (eventWithTournament?.format) {
-        await notifyTournamentStarted({
+        await notifyTournamentStarted(event.id, {
           format:       eventWithTournament.format,
-          event:        { title: event.title, game: event.game },
           participants: eventWithTournament.participants,
         });
       }

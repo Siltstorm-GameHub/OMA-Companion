@@ -1,3 +1,4 @@
+import { fillPlaceholders, getNotificationRule } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 
 /**
@@ -15,15 +16,24 @@ export async function announceCommunityJobContent(content: {
   channelId: string | null;
   url?: string;
   imageUrl?: string;
+  /** Benachrichtigungsregel (Admin → Benachrichtigungen): An/Aus, Titel/Text, Ersatz-Kanal */
+  ruleKey: "job_report_posted" | "job_idea_posted" | "job_ideas_digest";
 }): Promise<string | null> {
   const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!content.channelId || !botToken) return null;
-  const channelId = content.channelId;
+  const rule = await getNotificationRule(content.ruleKey);
+  if (rule && !rule.discordChanEnabled) return null;
+  // Kanal: der im Job hinterlegte Ankündigungskanal, sonst der Kanal der Regel
+  const channelId = content.channelId || rule?.discordChannelId || null;
+  if (!channelId || !botToken) return null;
 
+  const placeholders = {
+    "{emoji}": content.jobEmoji, "{title}": content.title,
+    "{description}": content.description, "{author}": content.authorName,
+  };
   const embed = {
     color: DISCORD_COLORS.eventNew,
-    title: `${content.jobEmoji} ${content.title}`,
-    description: content.description,
+    title: rule ? fillPlaceholders(rule.titleTemplate, placeholders) : `${content.jobEmoji} ${content.title}`,
+    description: rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : content.description,
     ...(content.url && { url: content.url }),
     ...(content.imageUrl && { image: { url: content.imageUrl } }),
     footer: { text: `OMA Companion · Community-Jobs · von ${content.authorName}` },

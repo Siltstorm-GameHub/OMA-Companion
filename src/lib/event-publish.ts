@@ -14,7 +14,7 @@ import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { announceNewEvent, createDiscordScheduledEvent } from "@/lib/discord-events";
-import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { dispatchEventNotification, getNotificationRule } from "@/lib/notify-dispatch";
 
 import { parsePublishState, type PublishError, type PublishState } from "@/lib/event-publish-state";
 
@@ -76,7 +76,10 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   }
 
   // 2) Ankündigung im Discord-Kanal
-  if (!event.discordMessageId && discordConfigured && (resolveEventChannelId(event) || process.env.DISCORD_NEWS_CHANNEL_ID)) {
+  // Regel "event_new": ist der Kanal-Post dort abgeschaltet, gibt es bewusst keine Ankündigung (kein Fehler)
+  const newEventRule = await getNotificationRule("event_new");
+  const announceEnabled = !newEventRule || newEventRule.discordChanEnabled;
+  if (announceEnabled && !event.discordMessageId && discordConfigured && (resolveEventChannelId(event) || newEventRule?.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID)) {
     try {
       const discordMessageId = await announceNewEvent({
         eventId: event.id,
