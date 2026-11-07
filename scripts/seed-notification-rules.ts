@@ -177,16 +177,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/events?tab=duels",
   },
   {
-    key: "battle_card_tier_up",
-    label: "Battle-Card-Stufenaufstieg",
-    description: "Wenn die Aktivitäts-Stufe der eigenen Community-Karte durch eine Saison-Neuberechnung steigt.",
-    category: "battle_cards",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🃏 Stufenaufstieg: {tier}",
-    bodyTemplate: "Deine Karte „{cardName}\" hat die Aktivitäts-Stufe **{tier}** erreicht!",
-    urlTemplate: "/gems?tab=sammlung",
-  },
-  {
     key: "clip_started",
     label: "Clip des Monats – Abstimmung gestartet",
     description: "Wenn ein neuer Clip-Contest erstellt wird.",
@@ -225,17 +215,6 @@ const RULES: RuleSeed[] = [
     titleTemplate: "🏆 Clip des Jahres {year} – {resultHeadline}",
     bodyTemplate: "{resultText}",
     urlTemplate: "/clip-des-jahres",
-  },
-  {
-    key: "rank_up",
-    label: "Rang-Aufstieg",
-    description: "Wenn ein Nutzer durch Aktivität einen neuen Rang erreicht.",
-    category: "rank",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: true,
-    titleTemplate: "{rankEmoji} Rang-Aufstieg!",
-    bodyTemplate: "🎊 {username} hat den Rang **{rank}** erreicht – weiter so!",
-    urlTemplate: "/profile",
-    legacyBotConfigKey: "rank_up",
   },
   {
     key: "birthday",
@@ -388,16 +367,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/profile",
   },
   {
-    key: "report_contribution",
-    label: "Beitrag ergänzt",
-    description: "Wenn jemand deinen Beitrag ergänzt.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "✍️ {authorName} hat deinen Beitrag ergänzt",
-    bodyTemplate: "Zu „{title}“ gibt es eine neue Ergänzung.",
-    urlTemplate: "{url}",
-  },
-  {
     key: "content_digest",
     label: "Tägliche Zusammenfassung deiner Beiträge",
     description: "Einmal am Tag: neue Daumen und Ergänzungen zu deinen Beiträgen (statt einzelner Meldungen).",
@@ -438,16 +407,6 @@ const RULES: RuleSeed[] = [
     urlTemplate: "{url}",
   },
   {
-    key: "report_votes_milestone",
-    label: "Bericht: Daumen-Meilenstein",
-    description: "Wenn ein eigener Bericht 5/10/25/50/100 Daumen erreicht.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎉 {count} Daumen für „{title}“",
-    bodyTemplate: "Dein Bericht kommt richtig gut an!",
-    urlTemplate: "{url}",
-  },
-  {
     key: "asset_used",
     label: "Dein Bild wurde verwendet",
     description: "Wenn jemand dein Bild aus der Mediathek als Titelbild seines Beitrags nutzt.",
@@ -455,26 +414,6 @@ const RULES: RuleSeed[] = [
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "📸 Dein Bild wird verwendet",
     bodyTemplate: "{user} nutzt dein Bild: {title}",
-    urlTemplate: "{url}",
-  },
-  {
-    key: "asset_votes_milestone",
-    label: "Bild: Daumen-Meilenstein",
-    description: "Wenn ein eigenes Bild/Clip 5/10/25/50/100 Daumen erreicht.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎉 {count} Daumen für dein Bild",
-    bodyTemplate: "„{title}“ kommt richtig gut an!",
-    urlTemplate: "{url}",
-  },
-  {
-    key: "marketing_votes_milestone",
-    label: "Werbe-Post: Daumen-Meilenstein",
-    description: "Wenn ein eigener Werbe-Post 5/10/25/50/100 Daumen erreicht.",
-    category: "community_jobs",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎉 {count} Daumen für deinen Werbe-Post",
-    bodyTemplate: "{title}",
     urlTemplate: "{url}",
   },
   {
@@ -719,6 +658,12 @@ async function main() {
   // Entfernte Regeln: Abzeichen-System wurde komplett entfernt
   await prisma.notificationRule.deleteMany({ where: { key: { in: ["badge_earned", "badge_awarded"] } } });
   // Offene Community-Jobs: keine Bewerbung, Warteliste, Übergabe, Verwarnung oder Verträge mehr.
+  // Generelles Aufräumen: Diese Liste ist die einzige Quelle der Regeln (im Admin kann man nur
+  // bearbeiten, nicht neu anlegen). Alles, was hier nicht mehr steht, wird vom Code nicht mehr
+  // ausgelöst — z.B. rank_up (Rang-Rollen abgeschafft), battle_card_tier_up (Battle Cards → OMA Gems),
+  // report_/asset_/marketing_votes_milestone und report_contribution (Community-Jobs verschlankt).
+  const removed = await prisma.notificationRule.deleteMany({ where: { key: { notIn: RULES.map((r) => r.key) } } });
+  if (removed.count > 0) console.log(`🗑 ${removed.count} nicht mehr genutzte Notification-Regel(n) entfernt.`);
   await prisma.notificationRule.deleteMany({ where: { key: { in: ["community_job_approved","community_job_waitlisted","community_job_rejected","community_job_warned","community_job_revoked","community_job_contract_expiring","community_job_contract_adjusted","community_job_handoff_received"] } } });
 
   const legacyConfig = Object.fromEntries(

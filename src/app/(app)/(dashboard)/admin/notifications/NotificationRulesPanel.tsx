@@ -40,13 +40,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   quests:         "🎯 Quests",
   community_jobs: "🧑‍💼 Community-Jobs",
   clips:          "🎬 Clip des Monats",
-  rank:           "🏅 Rang",
-  battle_cards:   "🃏 Battle Cards",
   system:         "⚙️ System",
 };
 
 // Feste Reihenfolge; unbekannte Kategorien werden danach alphabetisch angehängt (nie ausgeblendet)
-const CATEGORY_ORDER = ["events", "tournaments", "quests", "community_jobs", "clips", "rank", "battle_cards", "system"];
+const CATEGORY_ORDER = ["events", "tournaments", "quests", "community_jobs", "clips", "system"];
 
 type ChannelFilter = "all" | "push" | "inApp" | "dm" | "chan" | "off";
 const CHANNEL_FILTERS: { id: ChannelFilter; label: string }[] = [
@@ -143,10 +141,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{resultHeadline}", description: "Kurzer Ergebnis-Titel (z.B. \"Gewinner steht fest!\")" },
     { key: "{resultText}", description: "Ausführlicher Ergebnistext" },
   ],
-  leaderboard: [
-    { key: "{month}", description: "Monatsname des Vormonats" },
-    { key: "{lines}", description: "Fertig formatierte Ranglisten-Zeilen" },
-  ],
   birthday: [
     { key: "{username}", description: "Discord-Erwähnung des Users" },
   ],
@@ -208,7 +202,6 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
   clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },
   clip_of_year_finished: { "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
-  leaderboard:     { "{month}": "November", "{lines}": "🥇 MaxMustermann – 1.240 Punkte\n🥈 ErikaBeispiel – 980 Punkte\n🥉 JohnDoe – 750 Punkte" },
   birthday:        { "{username}": "@MaxMustermann" },
   server_approved: { "{serverName}": "Survival #1" },
   server_denied:   { "{serverName}": "Survival #1" },
