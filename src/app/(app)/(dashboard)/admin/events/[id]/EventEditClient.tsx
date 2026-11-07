@@ -15,6 +15,7 @@ import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, Ex
 import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import StatPointsTable from "@/components/StatPointsTable";
@@ -1183,15 +1184,18 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
           <div>
             <label className={`${labelCls} flex items-center justify-between`}>
-              <span>Discord-Kanal ID</span>
+              <span>Discord-Kanal</span>
               {seriesDiscord && discordChannelId && seriesDiscord !== discordChannelId && (
                 <span className="flex items-center gap-1 text-amber-400 text-[10px]">
                   <AlertCircle className="w-3 h-3" /> Abweichend von Reihe
                 </span>
               )}
             </label>
-            <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-              placeholder="Leer = Standard" className={inputCls} />
+            <DiscordChannelSelect
+              value={discordChannelId}
+              onChange={setDiscordChannelId}
+              emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"}
+            />
           </div>
 
           {/* ── Twitch Clip ── */}

@@ -19,6 +19,7 @@ type RuleUpdate = {
   discordDmEnabled?: boolean;
   discordChanEnabled?: boolean;
   discordChannelId?: string | null;
+  discordColor?: number | null;
   titleTemplate?: string;
   bodyTemplate?: string;
   urlTemplate?: string | null;

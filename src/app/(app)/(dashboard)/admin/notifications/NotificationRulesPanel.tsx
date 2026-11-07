@@ -9,7 +9,9 @@ import { Hash, Users } from "@/components/icons";
 import { ChevronDown } from "@/components/icons";
 import { Bell, Save, MessageSquare, Send, Trash2, Check, Smile, X, Link2, Calendar } from "@/components/icons";
 import { PAGE_LINKS } from "@/lib/page-links";
+import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import DiscordChannelSelect, { useDiscordChannelName } from "@/components/DiscordChannelSelect";
 
 export type NotificationRuleRow = {
   key: string;
@@ -21,6 +23,7 @@ export type NotificationRuleRow = {
   discordDmEnabled: boolean;
   discordChanEnabled: boolean;
   discordChannelId: string | null;
+  discordColor: number | null;
   titleTemplate: string;
   bodyTemplate: string;
   urlTemplate: string | null;
@@ -219,6 +222,110 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   admin_quests_late: { "{month}": "Dezember", "{year}": "2026", "{day}": "5" },
 };
 
+/** Standard-Randfarbe je Regel, wenn keine eigene Farbe gesetzt ist — spiegelt die Aufrufer im Code. */
+const DEFAULT_COLORS: Record<string, number> = {
+  event_new: DISCORD_COLORS.eventNew,
+  event_ended: DISCORD_COLORS.eventResult,
+  event_poll_started: DISCORD_COLORS.eventPoll,
+  event_tournament_started: 0xf43f5e,
+  admin_quests_late: 0xf59e0b,
+};
+const defaultColor = (key: string) => DEFAULT_COLORS[key] ?? DISCORD_COLORS.default;
+const toHex = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+
+/** Zusätzliche Felder, die der Code bei bestimmten Kanal-Posts automatisch anhängt (nur Vorschau). */
+const SAMPLE_FIELDS: Record<string, { name: string; value: string }[]> = {
+  event_new: [
+    { name: "🎮 Spiel", value: "Counter-Strike 2" },
+    { name: "📆 Start", value: "Freitag, 20. Dezember um 20:00" },
+    { name: "👥 Max. Spieler", value: "16" },
+  ],
+  event_ended: [
+    { name: "🎮 Spiel", value: "Counter-Strike 2" },
+    { name: "🥇 Sieger", value: "MaxMustermann" },
+  ],
+};
+/** Text über dem Embed (Erwähnungen), den der Code bei bestimmten Posts mitschickt (nur Vorschau). */
+const SAMPLE_CONTENT: Record<string, string> = {
+  event_tournament_started: "@MaxMustermann @ErikaBeispiel @JohnDoe",
+};
+
+/** Sehr einfache Discord-Markdown-Darstellung: **fett**, *kursiv*, Server-Emojis, Zeilenumbrüche. */
+function DiscordText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|<a?:\w+:\d+>)/g);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (/^\*\*[^*]+\*\*$/.test(p)) return <strong key={i} className="font-semibold text-white">{p.slice(2, -2)}</strong>;
+        if (/^\*[^*]+\*$/.test(p)) return <em key={i}>{p.slice(1, -1)}</em>;
+        const emoji = p.match(/^<(a?):(\w+):(\d+)>$/);
+        if (emoji) {
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={`https://cdn.discordapp.com/emojis/${emoji[3]}.${emoji[1] ? "gif" : "webp"}?size=32`} alt={`:${emoji[2]}:`} className="inline w-[1.2em] h-[1.2em] align-[-0.2em] object-contain" />
+          );
+        }
+        return <span key={i}>{p}</span>;
+      })}
+    </>
+  );
+}
+
+/** Nachbau einer Discord-Bot-Nachricht mit Embed — so sieht der Post im Kanal bzw. in der DM aus. */
+function DiscordPreview({ rule, title, body }: { rule: NotificationRuleRow; title: string; body: string }) {
+  const color = rule.discordColor ?? defaultColor(rule.key);
+  const fields = rule.discordChanEnabled ? SAMPLE_FIELDS[rule.key] ?? [] : [];
+  const content = SAMPLE_CONTENT[rule.key];
+  return (
+    <div className="rounded-xl px-3 py-3 bg-[#313338] border border-black/30 flex gap-3">
+      <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">OMA</div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] leading-tight">
+          <span className="font-semibold text-white">OMA Companion</span>
+          <span className="ml-1.5 px-1 py-px rounded bg-[#5865f2] text-white text-[9px] font-semibold align-middle">BOT</span>
+          <span className="ml-1.5 text-[10px] text-[#949ba4]">Heute um 20:00</span>
+        </p>
+        {content && (
+          <p className="text-[13px] mt-0.5">
+            {content.split(" ").map((m, i) => (
+              <span key={i} className="mr-1 px-0.5 rounded bg-[#5865f2]/30 text-[#c9cdfb]">{m}</span>
+            ))}
+          </p>
+        )}
+        <div className="mt-1 max-w-[440px] rounded bg-[#2b2d31] border-l-4 px-3 py-2.5" style={{ borderLeftColor: toHex(color) }}>
+          {title && <p className="text-[14px] font-semibold text-white break-words"><DiscordText text={title} /></p>}
+          {body && <p className="text-[13px] text-[#dbdee1] whitespace-pre-line break-words mt-1"><DiscordText text={body} /></p>}
+          {fields.length > 0 && (
+            <div className="grid grid-cols-3 gap-x-3 gap-y-2 mt-2">
+              {fields.map((f) => (
+                <div key={f.name} className="min-w-0">
+                  <p className="text-[12px] font-semibold text-white">{f.name}</p>
+                  <p className="text-[12px] text-[#dbdee1] break-words">{f.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[10px] text-[#949ba4] mt-2">OMA Companion</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Push-/In-App-Darstellung: Titel und Text ohne Discord-Formatierung. */
+function PushPreview({ title, body }: { title: string; body: string }) {
+  const plain = (t: string) => t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/<a?:(\w+):\d+>/g, ":$1:");
+  return (
+    <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-white/[0.06] flex gap-2.5">
+      <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">OMA</div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-white break-words">{plain(title) || "–"}</p>
+        <p className="text-xs text-gray-400 whitespace-pre-line break-words mt-0.5 line-clamp-4">{plain(body) || "–"}</p>
+      </div>
+    </div>
+  );
+}
+
 /** Ersetzt alle Platzhalter durch ihre Beispielwerte — identisch zur Server-Logik in notify-dispatch.ts. */
 function fillSample(text: string, ruleKey: string): string {
   const values = SAMPLE_VALUES[ruleKey] ?? {};
@@ -258,6 +365,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
   const [pickerFor, setPickerFor] = useState<{ key: string; field: "title" | "body" } | null>(null);
   const [lastField, setLastField] = useState<Record<string, "title" | "body">>({});
   const { confirm, ConfirmDialogElement } = useConfirm();
+  const newsChannelName = useDiscordChannelName(newsChannelId);
   const [query, setQuery] = useState("");
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [openRules, setOpenRules] = useState<Set<string>>(new Set());
@@ -355,6 +463,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
           discordDmEnabled: r.discordDmEnabled,
           discordChanEnabled: r.discordChanEnabled,
           discordChannelId: r.discordChannelId?.trim() || null,
+          discordColor: r.discordColor,
           titleTemplate: r.titleTemplate,
           bodyTemplate: r.bodyTemplate,
           urlTemplate: r.urlTemplate?.trim() || null,
@@ -628,14 +737,16 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   {r.discordChanEnabled && (
                     <div className="flex items-center gap-2">
                       <Hash className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                      <input
-                        value={r.discordChannelId ?? ""}
-                        onChange={(e) => update(r.key, { discordChannelId: e.target.value })}
-                        placeholder={r.isEventNotification
-                          ? `Kanal des Events/der Reihe hat Vorrang, sonst diese ID, sonst News-Kanal${newsChannelId ? ` (${newsChannelId})` : ""}`
-                          : `Standard: News-Kanal${newsChannelId ? ` (${newsChannelId})` : ""}`}
-                        className="flex-1 rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
-                      />
+                      <div className="flex-1 min-w-0">
+                        <DiscordChannelSelect
+                          value={r.discordChannelId}
+                          onChange={(id) => update(r.key, { discordChannelId: id })}
+                          emptyLabel={`Standard: News-Kanal${newsChannelName ? ` (${newsChannelName})` : ""}`}
+                        />
+                        {r.isEventNotification && (
+                          <p className="text-[10px] text-gray-600 mt-1">Hat das Event oder seine Reihe einen eigenen Kanal, wird immer dieser genutzt.</p>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -679,13 +790,41 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   </div>
 
                   {/* Vorschau: Titel + Text mit Beispielwerten statt Platzhaltern */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Vorschau</label>
-                    <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-white/[0.06]">
-                      <p className="text-sm font-semibold text-white break-words">{fillSample(r.titleTemplate, r.key) || "–"}</p>
-                      <p className="text-xs text-gray-400 whitespace-pre-line break-words mt-1">{fillSample(r.bodyTemplate, r.key) || "–"}</p>
+                  {(r.discordChanEnabled || r.discordDmEnabled) && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                          Vorschau Discord{r.discordChanEnabled && r.discordDmEnabled ? " (Kanal & DM)" : r.discordDmEnabled ? " (DM)" : ""}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-600">Randfarbe</span>
+                          <input
+                            type="color"
+                            value={toHex(r.discordColor ?? defaultColor(r.key))}
+                            onChange={(e) => update(r.key, { discordColor: parseInt(e.target.value.slice(1), 16) })}
+                            title="Farbe des Rands am Discord-Embed"
+                            className="w-7 h-6 rounded cursor-pointer bg-transparent border border-white/[0.08]"
+                          />
+                          {r.discordColor != null ? (
+                            <button onClick={() => update(r.key, { discordColor: null })} className="text-[10px] text-gray-500 hover:text-gray-300">
+                              Standard
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-gray-700">Standard</span>
+                          )}
+                        </div>
+                      </div>
+                      <DiscordPreview rule={r} title={fillSample(r.titleTemplate, r.key)} body={fillSample(r.bodyTemplate, r.key)} />
                     </div>
-                  </div>
+                  )}
+                  {(r.pushEnabled || r.inAppEnabled) && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                        Vorschau {r.pushEnabled && r.inAppEnabled ? "Push & In-App" : r.pushEnabled ? "Push" : "In-App"}
+                      </label>
+                      <PushPreview title={fillSample(r.titleTemplate, r.key)} body={fillSample(r.bodyTemplate, r.key)} />
+                    </div>
+                  )}
 
                   {/* Toolbar: Emoji-Picker + Platzhalter-Legende */}
                   <div className="space-y-1.5">

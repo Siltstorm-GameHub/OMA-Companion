@@ -16,6 +16,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import StatRowsEditor, { type StatRow } from "@/components/admin/StatRowsEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
@@ -832,8 +833,7 @@ export default function SeriesDetailClient({
           {/* Discord & Wiederholung */}
           <Section title="Discord & Wiederholung">
             <Field label={<><Hash className="w-3 h-3" /> Discord-Kanal</>}>
-              <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-                placeholder="Kanal-ID (leer = Standard)" className={inputCls} />
+              <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (News-Kanal)" />
               <p className="text-[11px] text-gray-600 mt-1">Wird auf alle Events der Reihe angewendet</p>
             </Field>
             <Field label={<><RefreshCw className="w-3 h-3" /> Wiederholung</>}>

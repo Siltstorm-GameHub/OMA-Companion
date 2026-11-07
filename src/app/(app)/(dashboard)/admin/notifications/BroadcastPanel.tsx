@@ -6,6 +6,7 @@ import { ChevronDown } from "@/components/icons";
 import { Send, X, Check, Bell, MessageSquare } from "@/components/icons";
 import Image from "next/image";
 import { PAGE_LINKS } from "@/lib/page-links";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 
 type UserResult = { id: string; name: string | null; username: string | null; image: string | null };
 type SendResult  = { ok: boolean; sent?: Record<string, number>; error?: string };
@@ -276,9 +277,9 @@ export default function BroadcastPanel() {
         {channels.discordChannel && (
           <div className="flex items-center gap-2 mt-2">
             <Hash className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-            <input value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-              placeholder="Standard: News-Kanal"
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors" />
+            <div className="flex-1 min-w-0">
+              <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard: News-Kanal" />
+            </div>
           </div>
         )}
       </div>

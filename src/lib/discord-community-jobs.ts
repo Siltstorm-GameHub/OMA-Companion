@@ -31,7 +31,7 @@ export async function announceCommunityJobContent(content: {
     "{description}": content.description, "{author}": content.authorName,
   };
   const embed = {
-    color: DISCORD_COLORS.eventNew,
+    color: rule?.discordColor ?? DISCORD_COLORS.eventNew,
     title: rule ? fillPlaceholders(rule.titleTemplate, placeholders) : `${content.jobEmoji} ${content.title}`,
     description: rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : content.description,
     ...(content.url && { url: content.url }),

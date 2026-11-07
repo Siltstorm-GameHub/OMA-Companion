@@ -71,7 +71,7 @@ export async function buildNewEventEmbed(event: NewEventAnnouncement) {
   const desc  = rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : "Ein neues Community-Event wurde angekündigt! Meldet euch jetzt an.";
 
   const embed = {
-    color:       DISCORD_COLORS.eventNew,
+    color:       rule?.discordColor ?? DISCORD_COLORS.eventNew,
     title,
     description: desc,
     fields: [
@@ -158,7 +158,7 @@ export async function announceEventResults(event: {
   const pollWinners = await getEventPollWinners(event.eventId).catch(() => []);
 
   const embed = {
-    color:       DISCORD_COLORS.eventResult,
+    color:       rule?.discordColor ?? DISCORD_COLORS.eventResult,
     title,
     url:         `${base}${event.resultsPath}`,
     description: desc,

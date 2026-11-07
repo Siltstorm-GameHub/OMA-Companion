@@ -150,7 +150,7 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
     }
     if (rule.discordDmEnabled) {
       tasks.push(dispatchDiscordDm(opts.users, {
-        title, description: body, url, color: opts.discordColor ?? DISCORD_COLORS.default,
+        title, description: body, url, color: rule.discordColor ?? opts.discordColor ?? DISCORD_COLORS.default,
         ...(opts.discordThumbnail && { thumbnail: { url: opts.discordThumbnail } }),
       }));
     }
@@ -164,7 +164,7 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
         {
           title,
           description: body,
-          color:  opts.discordColor ?? DISCORD_COLORS.default,
+          color:  rule.discordColor ?? opts.discordColor ?? DISCORD_COLORS.default,
           fields: opts.discordFields,
           footer: { text: "OMA Companion" },
           ...(opts.discordThumbnail && { thumbnail: { url: opts.discordThumbnail } }),

@@ -4,6 +4,7 @@ import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { inputCls, inputStyle, labelCls } from "../shared";
@@ -99,9 +100,8 @@ export default function StepEventData({ w }: { w: EventWizard }) {
 
       {!w.isCommunity && (
         <div>
-          <label className={labelCls}>Discord-Textkanal ID (optional)</label>
-          <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-            placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+          <label className={labelCls}>Discord-Textkanal (optional)</label>
+          <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (Kanal der Reihe, sonst News-Kanal)" />
         </div>
       )}
 

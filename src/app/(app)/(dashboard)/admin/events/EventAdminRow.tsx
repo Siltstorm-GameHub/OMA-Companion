@@ -13,6 +13,7 @@ import { formatBerlinDate } from "@/lib/time";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
@@ -636,17 +637,13 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       <Hash className="w-3.5 h-3.5 text-indigo-400" />
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Discord-Kanal</span>
                     </div>
-                    <input
-                      type="text"
+                    <DiscordChannelSelect
                       value={discordChannelId}
-                      onChange={e => setDiscordChannelId(e.target.value)}
-                      placeholder="Kanal-ID (leer = Standard aus .env)"
-                      className={inputCls}
+                      onChange={setDiscordChannelId}
+                      emptyLabel="Standard (Kanal der Reihe, sonst News-Kanal)"
                     />
                     <p className="text-[10px] text-gray-600 leading-relaxed">
-                      Kanal-ID aus Discord (Rechtsklick auf Kanal → ID kopieren). Bot postet Ankündigungen,
-                      Erinnerungen und Ergebnisse für dieses Event in diesen Kanal.
-                      Leer lassen = globaler Standard-Kanal aus der Server-Konfiguration.
+                      Bot postet Ankündigungen, Erinnerungen und Ergebnisse für dieses Event in diesen Kanal.
                     </p>
                   </div>
 
@@ -785,12 +782,10 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             Discord-Kanal
                             <span className="text-gray-600">(wird auf alle Events der Reihe übertragen)</span>
                           </label>
-                          <input
-                            type="text"
+                          <DiscordChannelSelect
                             value={seriesDiscordChannelId}
-                            onChange={e => setSeriesDiscordChannelId(e.target.value)}
-                            placeholder="Kanal-ID (leer = Standard aus .env)"
-                            className={inputCls}
+                            onChange={setSeriesDiscordChannelId}
+                            emptyLabel="Standard (News-Kanal)"
                           />
                         </div>
 

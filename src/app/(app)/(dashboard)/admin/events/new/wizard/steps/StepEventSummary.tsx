@@ -5,11 +5,13 @@ import { fromDatetimeLocalBerlin, formatBerlinDateTime } from "@/lib/time";
 import { CATEGORIES } from "../shared";
 import { formatLabel } from "@/lib/tournament-formats";
 import AnnouncementPreview from "./AnnouncementPreview";
+import { useDiscordChannelName } from "@/components/DiscordChannelSelect";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 4 (Event): Zusammenfassung ───────────────────────────────────────────
 export default function StepEventSummary({ w }: { w: EventWizard }) {
   const { squads, category, eventType, spectatorMode, title, startAt, endAt, game, genre, maxPlayers, discordChannelId, seriesMode, newSeriesName, format, publishMode, publishAt, startInPast, seriesFixedFormat, playHomeAway, isRoundRobinFamily, pointsMode, coinsWin, coinsDraw, checkInEnabled, checkInMinutes, eventRegistrationLocked, eventSquadId, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, belongsToSeries, selectedSeries } = w;
+  const channelName = useDiscordChannelName(discordChannelId);
   const catCfg  = CATEGORIES.find(c => c.value === category);
   const genreCfg = genre ? GENRES.find(g => g.value === genre) : null;
   return (
@@ -41,7 +43,7 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
           )}
           {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
           {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}
-          {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}
+          {discordChannelId && <p>📢 Kanal: {channelName}</p>}
           {publishMode === "hidden" && <p className="text-violet-400">🔒 Unsichtbar – wird erst beim Sichtbarschalten angekündigt</p>}
           {publishMode === "scheduled" && publishAt && (
             <p className="text-violet-400">🕒 Veröffentlichung am {formatBerlinDateTime(fromDatetimeLocalBerlin(publishAt), { dateStyle: "medium", timeStyle: "short" })}</p>

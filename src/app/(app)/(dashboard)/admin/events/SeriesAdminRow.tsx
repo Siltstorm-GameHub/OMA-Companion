@@ -9,6 +9,7 @@ import { Gamepad2, Swords, RefreshCw, BarChart2, X, Trophy, ExternalLink, Settin
 import Link from "next/link";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import EventAdminRow from "./EventAdminRow";
 import { formatBerlinDate } from "@/lib/time";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
@@ -247,8 +248,7 @@ export default function SeriesAdminRow({
                     <Hash className="w-3 h-3" />
                     Discord-Kanal <span className="text-gray-600">(für alle Events der Reihe)</span>
                   </label>
-                  <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
-                    placeholder="Kanal-ID (leer = Standard)" className={inputCls} />
+                  <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (News-Kanal)" />
                 </div>
 
                 {/* Wiederholung */}

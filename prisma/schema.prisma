@@ -937,6 +937,7 @@ model NotificationRule {
   discordDmEnabled   Boolean @default(false)
   discordChanEnabled Boolean @default(true)
   discordChannelId   String? // leer = DISCORD_NEWS_CHANNEL_ID
+  discordColor       Int?    // Embed-Randfarbe (0xRRGGBB); leer = Standardfarbe der jeweiligen Nachricht
 
   titleTemplate String
   bodyTemplate  String
