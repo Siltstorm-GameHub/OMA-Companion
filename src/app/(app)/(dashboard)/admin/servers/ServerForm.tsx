@@ -4,6 +4,7 @@ import { Eye, EyeOff, Globe, Loader2 } from "@/components/icons";
 import GameNameInput from "@/components/GameNameInput";
 import { validateServerInput, MAX_SLOTS_LIMIT } from "@/lib/gameserver-input";
 import JoinInstructionsPreview from "./JoinInstructionsPreview";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export type ServerFormState = {
   name: string;
@@ -115,7 +116,7 @@ export default function ServerForm({
             {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
           </button>
         </div>
-        <input type="number" min={1} max={MAX_SLOTS_LIMIT} step={1} placeholder="Max. Spieler" title="Max. Spieler (Plätze für Bewerbungen)"
+        <NumberInput min={1} max={MAX_SLOTS_LIMIT} step={1} placeholder="Max. Spieler" title="Max. Spieler (Plätze für Bewerbungen)"
           value={form.maxSlots} onChange={(e) => set("maxSlots", e.target.value)} className={field} />
         <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => set("description", e.target.value)} className={`col-span-2 ${field}`} />
         <textarea

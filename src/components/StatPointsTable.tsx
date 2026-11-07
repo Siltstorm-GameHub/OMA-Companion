@@ -1,5 +1,7 @@
 "use client";
 
+import { NumberInput } from "@/components/ui/NumberInput";
+
 /**
  * Übersichtliche Zuordnung "Statistik → Punkte pro Einheit". Gemeinsam genutzt vom Event-Wizard und
  * vom Event-Editor, damit auf einen Blick erkennbar ist, welche Stat wie viele Punkte gibt.
@@ -34,8 +36,7 @@ export default function StatPointsTable({
                 </p>
               </div>
               <div className="relative w-28">
-                <input
-                  type="number"
+                <NumberInput
                   step="0.1"
                   value={pts}
                   onChange={(e) => onChange(f, Number(e.target.value))}

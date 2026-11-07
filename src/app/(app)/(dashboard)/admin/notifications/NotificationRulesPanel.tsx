@@ -12,6 +12,7 @@ import { PAGE_LINKS } from "@/lib/page-links";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import DiscordChannelSelect, { useDiscordChannelName } from "@/components/DiscordChannelSelect";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export type NotificationRuleRow = {
   key: string;
@@ -747,8 +748,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   {r.key === "event_reminder" && (
                     <div className="flex items-center gap-2">
                       <label className="text-[11px] text-gray-500 shrink-0">Stunden vorher:</label>
-                      <input
-                        type="number"
+                      <NumberInput
                         min={1}
                         value={r.reminderHoursBefore ?? 24}
                         onChange={(e) => update(r.key, { reminderHoursBefore: Number(e.target.value) || 24 })}

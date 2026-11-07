@@ -7,6 +7,7 @@ import {
   POLL_KIND_LABELS, POLL_OPTIONS_MAX, POLL_OPTIONS_MIN, POLL_OPTION_MAX, POLL_QUESTION_MAX,
   POLL_PARTICIPATION_MAX, POLL_CORRECT_MAX, type PollInput, type PollKind,
 } from "@/lib/post-poll";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /** Umfrage im Editor — `locked` = es gibt schon Stimmen, dann nicht mehr änderbar. */
 export type PollDraft = PollInput & { locked?: boolean };
@@ -112,14 +113,14 @@ export default function PostPollEditor({
                 <span className="inline-flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-amber-300" /> Belohnung</span>
                 <label className="flex items-center gap-1">
                   Mitmachen
-                  <input type="number" min={0} max={POLL_PARTICIPATION_MAX} value={p.participationReward} className={`${SMALL} w-16`}
+                  <NumberInput min={0} max={POLL_PARTICIPATION_MAX} value={p.participationReward} className={`${SMALL} w-16`}
                     onChange={e => set({ participationReward: clampInt(e.target.value, POLL_PARTICIPATION_MAX) })} />
                   <span className="text-gray-600">/ {POLL_PARTICIPATION_MAX}</span>
                 </label>
                 {p.kind !== "opinion" && (
                   <label className="flex items-center gap-1">
                     Richtig getippt
-                    <input type="number" min={0} max={POLL_CORRECT_MAX} value={p.correctReward} className={`${SMALL} w-16`}
+                    <NumberInput min={0} max={POLL_CORRECT_MAX} value={p.correctReward} className={`${SMALL} w-16`}
                       onChange={e => set({ correctReward: clampInt(e.target.value, POLL_CORRECT_MAX) })} />
                     <span className="text-gray-600">/ {POLL_CORRECT_MAX}</span>
                   </label>

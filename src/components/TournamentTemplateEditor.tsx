@@ -4,6 +4,7 @@ import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
 import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50";
 
@@ -74,12 +75,12 @@ export default function TournamentTemplateEditor({
               <div className="flex flex-wrap gap-4">
                 <label className="text-[11px] text-gray-500 space-y-1">
                   <span className="block">Anzahl Gruppen</span>
-                  <input type="number" min={1} max={16} value={gs.groupCount} className={numCls}
+                  <NumberInput min={1} max={16} value={gs.groupCount} className={numCls}
                     onChange={e => setGs({ groupCount: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
                 </label>
                 <label className="text-[11px] text-gray-500 space-y-1">
                   <span className="block">Weiter pro Gruppe</span>
-                  <input type="number" min={1} max={8} value={gs.advancePerGroup} className={numCls}
+                  <NumberInput min={1} max={8} value={gs.advancePerGroup} className={numCls}
                     onChange={e => setGs({ advancePerGroup: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
                 </label>
               </div>
@@ -118,7 +119,7 @@ export default function TournamentTemplateEditor({
         </label>
         {value.checkInEnabled && (
           <label className="pl-6 flex items-center gap-2 text-[11px] text-gray-500">
-            <input type="number" min={5} max={1440} value={value.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES} className={numCls}
+            <NumberInput min={5} max={1440} value={value.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES} className={numCls}
               onChange={e => onChange({ ...value, checkInMinutes: Math.floor(Number(e.target.value) || DEFAULT_CHECK_IN_MINUTES) })} />
             Minuten vor Start öffnet der Check-in
           </label>
@@ -136,12 +137,12 @@ export default function TournamentTemplateEditor({
             <div className="pl-6 flex flex-wrap gap-4">
               <label className="text-[11px] text-gray-500 space-y-1">
                 <span className="block">Münzen je Sieg</span>
-                <input type="number" min={0} value={value.matchResultPoints.win} className={numCls}
+                <NumberInput min={0} value={value.matchResultPoints.win} className={numCls}
                   onChange={e => onChange({ ...value, matchResultPoints: { ...value.matchResultPoints!, win: Math.max(0, Math.floor(Number(e.target.value) || 0)) } })} />
               </label>
               <label className="text-[11px] text-gray-500 space-y-1">
                 <span className="block">Münzen je Unentschieden</span>
-                <input type="number" min={0} value={value.matchResultPoints.draw} className={numCls}
+                <NumberInput min={0} value={value.matchResultPoints.draw} className={numCls}
                   onChange={e => onChange({ ...value, matchResultPoints: { ...value.matchResultPoints!, draw: Math.max(0, Math.floor(Number(e.target.value) || 0)) } })} />
               </label>
             </div>

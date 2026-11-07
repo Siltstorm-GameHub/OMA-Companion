@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ProofUploader from "@/components/match-results/ProofUploader";
 import { ChevronDown } from "@/components/icons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type U = { id: string; name: string | null; username: string | null };
 export type ReportMatch = {
@@ -161,11 +162,11 @@ function MatchForm({
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs text-gray-400 space-y-1">
                 {uname(m.player1)}
-                <input type="number" min={0} value={score1} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
+                <NumberInput min={0} value={score1} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
               </label>
               <label className="text-xs text-gray-400 space-y-1">
                 {uname(m.player2)}
-                <input type="number" min={0} value={score2} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
+                <NumberInput min={0} value={score2} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
               </label>
             </div>
           ) : (
@@ -173,8 +174,7 @@ function MatchForm({
               {statFields.map((f) => (
                 <label key={f} className="text-xs text-gray-400 space-y-1">
                   {f}
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     value={stats[f] ?? ""}
                     onChange={(e) => setStats({ ...stats, [f]: e.target.value })}
@@ -297,7 +297,7 @@ function MultiForm({
                 <td className="py-1 pr-2 text-gray-300 whitespace-nowrap">{uname(p)}{p.id === userId ? " (du)" : ""}</td>
                 {statFields.map(f => (
                   <td key={f} className="py-1 px-1 min-w-[80px]">
-                    <input type="number" min={0} value={rows[p.id]?.[f] ?? ""}
+                    <NumberInput min={0} value={rows[p.id]?.[f] ?? ""}
                       onChange={e => setRows(prev => ({ ...prev, [p.id]: { ...prev[p.id], [f]: e.target.value } }))}
                       className={inputCls} />
                   </td>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Save } from "@/components/icons";
 import type { BlocksRewardsConfig } from "@/lib/blocks/rewards-config";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 const PLACES = ["🥇 Platz 1", "🥈 Platz 2", "🥉 Platz 3"];
 
@@ -73,8 +74,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
   return (
     <label className="block">
       <span className="text-xs text-gray-500">{label}</span>
-      <input
-        type="number"
+      <NumberInput
         min={0}
         value={value}
         onChange={(e) => onChange(Math.max(0, parseInt(e.target.value, 10) || 0))}

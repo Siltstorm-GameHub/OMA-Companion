@@ -18,6 +18,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { TOURNAMENT_FORMATS, SERIES_FORMAT_OPTIONS, formatLabel } from "@/lib/tournament-formats";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -626,7 +627,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     </div>
                     <div>
                       <label className="flex items-center gap-1 text-xs text-gray-500 mb-1"><CoinIcon size={13} /> Münzen bei Anmeldung</label>
-                      <input type="number" value={pointReward} onChange={e => setPointReward(Number(e.target.value))}
+                      <NumberInput value={pointReward} onChange={e => setPointReward(Number(e.target.value))}
                         className="w-28 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
                     </div>
                   </div>
@@ -843,8 +844,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           {/* Teilnahme-Punkte */}
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-400 w-32 shrink-0">Punkte pro Teilnahme</span>
-                            <input
-                              type="number"
+                            <NumberInput
                               min={0}
                               value={statParticipationPts}
                               onChange={e => setStatParticipationPts(Number(e.target.value))}
@@ -866,8 +866,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                   placeholder="Stat-Name (z.B. Kills)"
                                   className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
                                 />
-                                <input
-                                  type="number"
+                                <NumberInput
                                   min={0}
                                   defaultValue={row.pointsPer}
                                   onBlur={e => {
@@ -960,8 +959,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                     <div className="flex flex-wrap gap-2">
                                       <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
                                         Teilnahmen
-                                        <input
-                                          type="number" min={0}
+                                        <NumberInput
+                                          min={0}
                                           value={row.participations}
                                           onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                             if (j !== i) return r;
@@ -976,8 +975,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                       {statRows.filter(s => s.field.trim()).map(s => (
                                         <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
                                           {s.field}
-                                          <input
-                                            type="number" min={0}
+                                          <NumberInput
+                                            min={0}
                                             value={row.stats[s.field] ?? 0}
                                             onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                               if (j !== i) return r;
@@ -1157,7 +1156,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                               {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
                                 <div key={key} className="flex-1">
                                   <label className="text-xs text-gray-600 block mb-1">{label}</label>
-                                  <input type="number" min={0} value={tmtPoints[key]}
+                                  <NumberInput min={0} value={tmtPoints[key]}
                                     onChange={e => setTmtPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
                                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
                                   />

@@ -14,6 +14,7 @@ import EventAdminRow from "./EventAdminRow";
 import { formatBerlinDate } from "@/lib/time";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 
@@ -292,7 +293,7 @@ export default function SeriesAdminRow({
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 w-32 shrink-0">Punkte pro Teilnahme</span>
-                    <input type="number" min={0} value={statParticipationPts}
+                    <NumberInput min={0} value={statParticipationPts}
                       onChange={e => setStatParticipationPts(Number(e.target.value))}
                       className="w-20 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors" />
                   </div>
@@ -324,7 +325,7 @@ export default function SeriesAdminRow({
                             <div className="flex flex-wrap gap-2">
                               <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
                                 Teilnahmen
-                                <input type="number" min={0} value={row.participations}
+                                <NumberInput min={0} value={row.participations}
                                   onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                     if (j !== i) return r;
                                     const newPart = Number(e.target.value);
@@ -337,7 +338,7 @@ export default function SeriesAdminRow({
                               {statRows.filter(s => s.field.trim()).map(s => (
                                 <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
                                   {s.field}
-                                  <input type="number" min={0} value={row.stats[s.field] ?? 0}
+                                  <NumberInput min={0} value={row.stats[s.field] ?? 0}
                                     onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                       if (j !== i) return r;
                                       const newStats = { ...r.stats, [s.field]: Number(e.target.value) };

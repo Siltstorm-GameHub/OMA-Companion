@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { Plus, CalendarDays } from "@/components/icons";
 import GameNameInput from "@/components/GameNameInput";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
@@ -129,13 +130,13 @@ export default function EventCreateForm() {
 
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Max. Spieler</label>
-              <input type="number" min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+              <NumberInput min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
                 placeholder="unbegrenzt" className={inputCls} style={inputStyle} />
             </div>
 
             <div>
               <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={12} /> Münzen-Belohnung (Teilnahme)</label>
-              <input type="number" min="0" value={pointReward} onChange={e => setPointReward(e.target.value)}
+              <NumberInput min="0" value={pointReward} onChange={e => setPointReward(e.target.value)}
                 className={inputCls} style={inputStyle} />
             </div>
 

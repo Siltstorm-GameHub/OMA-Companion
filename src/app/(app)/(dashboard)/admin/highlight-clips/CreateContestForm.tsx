@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Sparkles } from "@/components/icons";
 import { Loader2, Plus, X } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 function toDateInputValue(d: Date) {
   // Berlin-Kalendertag statt Browser-/Server-Lokalzeit — die Community ist ausschließlich
@@ -129,8 +130,7 @@ export default function CreateContestForm({
 
       <div>
         <label className="text-xs text-gray-500 block mb-1">Umfragedauer (Tage ab Start)</label>
-        <input
-          type="number"
+        <NumberInput
           min={1}
           value={votingDurationDays}
           onChange={(e) => setVotingDurationDays(e.target.value)}

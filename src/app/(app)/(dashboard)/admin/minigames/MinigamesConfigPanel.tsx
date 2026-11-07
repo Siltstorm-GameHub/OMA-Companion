@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Save } from "@/components/icons";
 import type { MinigamesConfig } from "@/lib/minigames-config";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) {
   const [config, setConfig] = useState<MinigamesConfig>(initial);
@@ -83,8 +84,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
   return (
     <label className="block">
       <span className="text-xs text-gray-500">{label}</span>
-      <input
-        type="number"
+      <NumberInput
         min={0}
         value={value}
         onChange={e => onChange(parseInt(e.target.value, 10) || 0)}

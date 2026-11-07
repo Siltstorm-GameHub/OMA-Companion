@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Minus, Check, X, Loader2 } from "@/components/icons";
 import { toast } from "sonner";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export default function PointsManager({ userId, userName }: { userId: string; userName: string }) {
   const [open, setOpen]       = useState(false);
@@ -74,8 +75,7 @@ export default function PointsManager({ userId, userName }: { userId: string; us
         </button>
       </div>
 
-      <input
-        type="number"
+      <NumberInput
         min="1"
         placeholder="Münzen"
         value={amount}

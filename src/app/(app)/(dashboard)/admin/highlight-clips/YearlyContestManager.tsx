@@ -7,6 +7,7 @@ import { Square } from "@/components/icons";
 import { Trophy, Clapperboard, ExternalLink, Loader2 } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { formatBerlinDate } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type Nomination = {
   id: string;
@@ -139,8 +140,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-500">Münzen fürs Abstimmen</label>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   value={participationInputs[contest.id] ?? contest.participationCoins}
                   onChange={(e) => setParticipationInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
@@ -150,8 +150,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
               <div className="w-px h-6 bg-white/[0.08]" />
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-500">Münzen für Sieger</label>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   value={rewardInputs[contest.id] ?? contest.rewardCoins}
                   onChange={(e) => setRewardInputs((p) => ({ ...p, [contest.id]: e.target.value }))}

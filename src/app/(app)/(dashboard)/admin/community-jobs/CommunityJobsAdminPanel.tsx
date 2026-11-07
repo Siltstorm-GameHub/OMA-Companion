@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import type { PayoutTier, VoteBonusTier } from "@/lib/community-job-config";
 import { levelTitle } from "@/lib/job-badges";
 import { formatBerlinDate } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 interface JobRef { key: string; label: string; emoji: string }
 interface AdminDispute { kind: string; id: string; reason: string | null; voter: { username: string | null; name: string | null }; context: string; ownerId: string }
@@ -167,12 +168,12 @@ function JobSettingsSection({
               className="w-28 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             <label className="flex items-center gap-1 text-[10px] text-gray-600">
               ab Score
-              <input type="number" value={t.minScore} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minScore: Number(e.target.value) } : x))}
+              <NumberInput value={t.minScore} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minScore: Number(e.target.value) } : x))}
                 className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             </label>
             <label className="flex items-center gap-1 text-[10px] text-gray-600">
               Münzen
-              <input type="number" value={t.coinsAwarded} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, coinsAwarded: Number(e.target.value) } : x))}
+              <NumberInput value={t.coinsAwarded} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, coinsAwarded: Number(e.target.value) } : x))}
                 className="w-20 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             </label>
             <button onClick={() => setTiers(ts => ts.filter((_, j) => j !== i))} className="text-gray-600 hover:text-red-400">
@@ -218,12 +219,12 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
               className="w-32 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             <label className="flex items-center gap-1 text-[10px] text-gray-600">
               ab Bewertungen
-              <input type="number" min={0} value={t.minVotes} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minVotes: Number(e.target.value) } : x))}
+              <NumberInput min={0} value={t.minVotes} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minVotes: Number(e.target.value) } : x))}
                 className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             </label>
             <label className="flex items-center gap-1 text-[10px] text-gray-600">
               Multiplikator
-              <input type="number" step={0.1} value={t.multiplier} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, multiplier: Number(e.target.value) } : x))}
+              <NumberInput step={0.1} value={t.multiplier} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, multiplier: Number(e.target.value) } : x))}
                 className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
             </label>
             <button onClick={() => setTiers(ts => ts.filter((_, j) => j !== i))} className="text-gray-600 hover:text-red-400">
@@ -264,7 +265,7 @@ function DailyLimitSection({ initial }: { initial: number }) {
           werden veröffentlicht, Stimmen darauf zählen aber nicht. Ein Mehrfach-Upload oder eine Termin-Serie zählt als ein Beitrag.
         </p>
         <div className="flex items-center gap-2">
-          <input type="number" min={0} max={50} value={limit} onChange={e => setLimit(Number(e.target.value))}
+          <NumberInput min={0} max={50} value={limit} onChange={e => setLimit(Number(e.target.value))}
             aria-label="Gezählte Beiträge pro Tag"
             className="w-20 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
           <span className="text-[11px] text-gray-500">Beiträge pro Tag</span>

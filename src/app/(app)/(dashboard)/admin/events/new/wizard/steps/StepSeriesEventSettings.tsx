@@ -5,6 +5,7 @@ import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 3 (Series): Statistiken & Events ────────────────────────────────────
 // EINE Statistik-Liste für die ganze Reihe: Was hier steht, wird in jedem Event erfasst, zählt mit
@@ -150,20 +151,20 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
             </div>
             <div>
               <label className={labelCls}>Schwellenwert (wie viele Male in Folge?)</label>
-              <input type="number" min="2" max="20" value={dominionThreshold}
+              <NumberInput min="2" max="20" value={dominionThreshold}
                 onChange={e => setDominionThreshold(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={labelCls}>Bonus — Münzen</label>
-                <input type="number" min="0" value={dominionCoins}
+                <NumberInput min="0" value={dominionCoins}
                   onChange={e => setDominionCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className={labelCls}>Bonus — Tabellenpunkte</label>
-                <input type="number" min="0" value={dominionSeriesPoints}
+                <NumberInput min="0" value={dominionSeriesPoints}
                   onChange={e => setDominionSeriesPoints(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>

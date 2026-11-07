@@ -16,6 +16,7 @@ import { Ban } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
 import { statDisplayName } from "@/lib/series-event-points";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -780,8 +781,7 @@ export default function EventCompleteClient({
                           <div key={u.id} className="flex items-center gap-3">
                             <Avatar u={u} size={5} />
                             <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
-                            <input
-                              type="number"
+                            <NumberInput
                               min={0}
                               value={pollVotes[u.id] ?? 0}
                               onChange={e => setPollVotes(prev => ({ ...prev, [u.id]: Math.max(0, Number(e.target.value)) }))}

@@ -1,5 +1,6 @@
 "use client";
 import { COMMUNITY_GOAL_SCOPES, sanitizeCommunityGoal, type CommunityGoal, type CommunityGoalScope } from "@/lib/community-goal";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /**
  * Einstellungen für das Community-Ziel (Zusatz zum Skill-Index Modus, siehe lib/community-goal.ts).
@@ -106,7 +107,7 @@ export default function CommunityGoalEditor({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Zielmarke</label>
-              <input type="number" min={1} value={value.target}
+              <NumberInput min={1} value={value.target}
                 onChange={e => set({ target: Number(e.target.value) })} className={inputCls} />
             </div>
             <div>
@@ -122,7 +123,7 @@ export default function CommunityGoalEditor({
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Belohnung bei Erreichen (Münzen pro Mitwirkendem, optional)</label>
-            <input type="number" min={0} value={value.rewardCoins}
+            <NumberInput min={0} value={value.rewardCoins}
               onChange={e => set({ rewardCoins: Math.max(0, Number(e.target.value) || 0) })} className={inputCls} />
             <p className="text-[10px] text-gray-500 mt-1">
               {value.scope === "team" ? "Jeder im Team, das die Marke erreicht und etwas beigetragen hat."

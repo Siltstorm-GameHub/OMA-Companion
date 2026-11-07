@@ -38,6 +38,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -1178,7 +1179,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
           <div>
             <label className={labelCls}>Max. Spieler</label>
-            <input type="number" min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+            <NumberInput min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
               placeholder="unbegrenzt" className={inputCls} />
           </div>
 
@@ -1280,7 +1281,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Münzen</label>
-                    <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+                    <NumberInput min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
                   </div>
                 </div>
               </div>
@@ -1298,10 +1299,10 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
                     <span className="text-base"><PlaceMedal place={p.place} /></span>
                     <span className="text-sm text-gray-300">{p.place}. Platz</span>
-                    <input type="number" min={0} value={p.rankPoints}
+                    <NumberInput min={0} value={p.rankPoints}
                       onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}
                       className={numCls} />
-                    <input type="number" min={0} value={p.coins}
+                    <NumberInput min={0} value={p.coins}
                       onChange={e => updatePlacement(p.place, "coins", Number(e.target.value))}
                       className={numCls} />
                   </div>
@@ -1315,11 +1316,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Münzen</label>
-                      <input type="number" min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
+                      <NumberInput min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
                     </div>
                     <div>
                       <label className={labelCls}>Rang-Punkte</label>
-                      <input type="number" min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
+                      <NumberInput min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
                     </div>
                   </div>
                 </div>
@@ -1407,36 +1408,36 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelCls}>Start (Std. nach Event-Start)</label>
-                    <input type="number" min={0} value={poll.startOffsetHours}
+                    <NumberInput min={0} value={poll.startOffsetHours}
                       onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Ende (Std. nach Event-Start)</label>
-                    <input type="number" min={1} value={poll.endOffsetHours}
+                    <NumberInput min={1} value={poll.endOffsetHours}
                       onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelCls}>Belohnung Abstimmung — Münzen</label>
-                    <input type="number" min={0} value={poll.participationCoins}
+                    <NumberInput min={0} value={poll.participationCoins}
                       onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
-                    <input type="number" min={0} value={poll.participationSeriesPoints}
+                    <NumberInput min={0} value={poll.participationSeriesPoints}
                       onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelCls}>Sieger-Belohnung — Münzen</label>
-                    <input type="number" min={0} value={poll.winnerCoins}
+                    <NumberInput min={0} value={poll.winnerCoins}
                       onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
                     <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>
-                    <input type="number" min={0} value={poll.winnerRankPoints}
+                    <NumberInput min={0} value={poll.winnerRankPoints}
                       onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
@@ -1470,7 +1471,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             {checkInEnabled && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Öffnet</span>
-                <input type="number" min={5} max={MAX_CHECK_IN_MINUTES} value={checkInMinutes}
+                <NumberInput min={5} max={MAX_CHECK_IN_MINUTES} value={checkInMinutes}
                   onChange={e => setCheckInMinutes(Number(e.target.value))}
                   className="w-20 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1 text-center" />
                 <span className="text-xs text-gray-400">Min. vor Start</span>
@@ -1543,7 +1544,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
                   <div key={key}>
                     <label className={labelCls}>{label}</label>
-                    <input type="number" min={0} value={tmtPoints[key]}
+                    <NumberInput min={0} value={tmtPoints[key]}
                       onChange={e => setTmtPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
                       className={inputCls} />
                   </div>
@@ -1655,7 +1656,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       <div key={i} className="flex items-center gap-2">
                         <span className="text-xs text-gray-500 w-14 shrink-0">Platz</span>
                         <div className="w-16 shrink-0">
-                          <input type="number" min={1} value={row.place}
+                          <NumberInput min={1} value={row.place}
                             onChange={e => setTmtStatConfig(c => ({
                               ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, place: Number(e.target.value) } : r),
                             }))}
@@ -1663,7 +1664,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                         </div>
                         <span className="text-xs text-gray-500 shrink-0">Punkte</span>
                         <div className="flex-1">
-                          <input type="number" step="0.1" value={row.points}
+                          <NumberInput step="0.1" value={row.points}
                             onChange={e => setTmtStatConfig(c => ({
                               ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, points: Number(e.target.value) } : r),
                             }))}

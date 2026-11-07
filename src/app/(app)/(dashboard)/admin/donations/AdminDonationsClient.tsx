@@ -8,6 +8,7 @@ import { TrendingDown } from "@/components/icons";
 import { Trash2, Plus, ShoppingCart, Wallet, Lightbulb, Pencil, Check, X } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni",
   "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -240,7 +241,7 @@ export default function AdminDonationsClient({
           <Input label="Betrag (€)">
             <div className="relative">
               <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-              <input type="number" min="0.01" step="0.01" value={amount}
+              <NumberInput min="0.01" step="0.01" value={amount}
                 onChange={e => setAmount(e.target.value)} required placeholder="5.00"
                 className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
                 style={inputStyle} />
@@ -288,7 +289,7 @@ export default function AdminDonationsClient({
           <Input label="Betrag (€)">
             <div className="relative">
               <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-              <input type="number" min="0.01" step="0.01" value={exAmt}
+              <NumberInput min="0.01" step="0.01" value={exAmt}
                 onChange={e => setExAmt(e.target.value)} required placeholder="9.99"
                 className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
                 style={{ background: "#0b1a17", border: "1px solid rgba(239,68,68,0.15)" }} />
@@ -364,7 +365,7 @@ export default function AdminDonationsClient({
             <Input label="Schätzpreis in € (optional)">
               <div className="relative">
                 <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                <input type="number" min="0" step="0.01" value={ideaCost} onChange={e => setIdeaCost(e.target.value)}
+                <NumberInput min="0" step="0.01" value={ideaCost} onChange={e => setIdeaCost(e.target.value)}
                   placeholder="0.00"
                   className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
                   style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
@@ -395,7 +396,7 @@ export default function AdminDonationsClient({
                         className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
                       <div className="relative">
                         <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                        <input type="number" min="0" step="0.01" value={editCost} onChange={e => setEditCost(e.target.value)}
+                        <NumberInput min="0" step="0.01" value={editCost} onChange={e => setEditCost(e.target.value)}
                           placeholder="Schätzpreis"
                           className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
                           style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />

@@ -8,6 +8,7 @@
 import type { CSSProperties } from "react";
 import { ADVANCE_LIMITS, ROUND_LIMITS } from "@/lib/blocks/tournament-shared";
 import type { BlocksEventConfig } from "@/lib/blocks/event-config";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export interface BlocksEventSettingsProps {
   value: BlocksEventConfig;
@@ -32,8 +33,8 @@ export default function BlocksEventSettings({
   const field = (label: string, key: keyof BlocksEventConfig, min: number, max?: number) => (
     <div>
       <label className={labelCls}>{label}</label>
-      <input
-        type="number" min={min} max={max} value={blocks[key] as number} disabled={disabled}
+      <NumberInput
+        min={min} max={max} value={blocks[key] as number} disabled={disabled}
         onChange={(e) => set({ [key]: num(e.target.value) } as Partial<BlocksEventConfig>)}
         className={`${inputCls} disabled:opacity-50`} style={inputStyle}
       />
@@ -83,7 +84,7 @@ export default function BlocksEventSettings({
               Check-in vor dem Start
               {checkIn.enabled && (
                 <>
-                  <input type="number" min={5} max={180} value={checkIn.minutes}
+                  <NumberInput min={5} max={180} value={checkIn.minutes}
                     onChange={(e) => checkIn.setMinutes(Number(e.target.value))}
                     className={`${inputCls} !w-20 !py-1`} style={inputStyle} />
                   <span className="text-gray-400 text-xs">Min. vorher — nur Eingecheckte werden ausgelost</span>

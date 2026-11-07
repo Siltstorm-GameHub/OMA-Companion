@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/EmptyState";
 import PollOptionGameInput from "@/components/admin/PollOptionGameInput";
 import CoinIcon from "@/components/CoinIcon";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type Option = { id: string; label: string; gameName: string | null; steamAppId: number | null; order: number };
 type Vote   = {
@@ -356,7 +357,7 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
           <label className="text-xs text-gray-400 mb-1.5 block flex items-center gap-1.5">
             <CoinIcon size={12} /> Coin-Belohnung fürs Abstimmen (optional)
           </label>
-          <input type="number" min={0} value={form.rewardCoins}
+          <NumberInput min={0} value={form.rewardCoins}
             onChange={e => setForm(f => ({ ...f, rewardCoins: Math.max(0, parseInt(e.target.value) || 0) }))}
             className="w-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
         </div>

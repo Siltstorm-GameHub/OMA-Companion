@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { CommunityLimitsConfig, SeasonRewardLimits } from "@/lib/community-event-limits";
 import type { RewardLimits } from "@/lib/captain-reward-limits";
 import { Save } from "@/components/icons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type ScalarKey = Exclude<keyof RewardLimits, "placementCoins" | "placementRankPoints">;
 
@@ -28,7 +29,7 @@ function NumberField({ label, value, onChange, disabled, step = 1 }: {
   return (
     <label className="block">
       <span className="block text-[11px] text-gray-400 mb-1">{label}</span>
-      <input type="number" min={0} step={step} value={value} disabled={disabled}
+      <NumberInput min={0} step={step} value={value} disabled={disabled}
         onChange={e => onChange(Number(e.target.value))} className={inputCls} />
     </label>
   );
@@ -44,7 +45,7 @@ function PlacesRow({ label, values, onChange, disabled }: {
         {[0, 1, 2].map(i => (
           <label key={i} className="block">
             <span className="block text-[10px] text-gray-600 mb-0.5">Platz {i + 1}</span>
-            <input type="number" min={0} value={values[i] ?? 0} disabled={disabled}
+            <NumberInput min={0} value={values[i] ?? 0} disabled={disabled}
               onChange={e => { const next = [...values]; next[i] = Number(e.target.value); onChange(next); }}
               className={inputCls} />
           </label>

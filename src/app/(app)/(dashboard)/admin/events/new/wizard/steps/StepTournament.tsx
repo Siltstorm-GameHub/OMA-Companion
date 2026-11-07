@@ -5,6 +5,7 @@ import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import CommunityGoalEditor from "@/components/CommunityGoalEditor";
 import { FORMATS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 2 (Event): Turnier ───────────────────────────────────────────────────
 export default function StepTournament({ w }: { w: EventWizard }) {
@@ -96,11 +97,11 @@ export default function StepTournament({ w }: { w: EventWizard }) {
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className={labelCls}>🏆 Münzen pro Sieg</span>
-                <input type="number" min={0} value={coinsWin} onChange={e => setCoinsWin(Math.max(0, Number(e.target.value) || 0))} className={inputCls} style={inputStyle} />
+                <NumberInput min={0} value={coinsWin} onChange={e => setCoinsWin(Math.max(0, Number(e.target.value) || 0))} className={inputCls} style={inputStyle} />
               </label>
               <label className="block">
                 <span className={labelCls}>🤝 Münzen pro Unentschieden</span>
-                <input type="number" min={0} value={coinsDraw} onChange={e => setCoinsDraw(Math.max(0, Number(e.target.value) || 0))} className={inputCls} style={inputStyle} />
+                <NumberInput min={0} value={coinsDraw} onChange={e => setCoinsDraw(Math.max(0, Number(e.target.value) || 0))} className={inputCls} style={inputStyle} />
               </label>
             </div>
           )}
@@ -122,7 +123,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
         {checkInEnabled && (
           <div className="flex items-center gap-2 pl-7">
             <span className="text-xs text-gray-400">Öffnet</span>
-            <input type="number" min={5} max={1440} value={checkInMinutes}
+            <NumberInput min={5} max={1440} value={checkInMinutes}
               onChange={e => setCheckInMinutes(Number(e.target.value) || 0)}
               className="w-20 rounded-lg px-2 py-1 text-sm text-white text-center outline-none" style={inputStyle} />
             <span className="text-xs text-gray-400">Minuten vor dem Start</span>

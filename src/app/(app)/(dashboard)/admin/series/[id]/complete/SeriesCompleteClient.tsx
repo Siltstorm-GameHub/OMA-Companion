@@ -12,6 +12,7 @@ import { GripVertical } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { Repeat } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, AlertTriangle, RotateCcw, Equal, Plus } from "@/components/icons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -427,11 +428,11 @@ export default function SeriesCompleteClient({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
-                      <input type="number" min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
+                      <NumberInput min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
-                      <input type="number" min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
+                      <NumberInput min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
                     </div>
                   </div>
                 </div>
@@ -456,11 +457,11 @@ export default function SeriesCompleteClient({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
-                      <input type="number" min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
+                      <NumberInput min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
-                      <input type="number" min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
+                      <NumberInput min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
                     </div>
                   </div>
                 </div>
@@ -495,8 +496,8 @@ export default function SeriesCompleteClient({
                   <div key={u.id} className="flex items-center gap-3">
                     <Avatar u={u} size={5} />
                     <span className="flex-1 text-sm text-white">{userName(u)}</span>
-                    <input
-                      type="number" min={0}
+                    <NumberInput
+                      min={0}
                       value={pollVotes[u.id] ?? 0}
                       onChange={e => setPollVotes(prev => ({ ...prev, [u.id]: Number(e.target.value) }))}
                       className="w-20 rounded-lg px-3 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-violet-500/50 transition-colors tabular-nums"

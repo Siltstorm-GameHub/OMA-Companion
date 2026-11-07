@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "@/components/icons";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PollConfig, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
 export default function StepRewards({ w }: { w: EventWizard }) {
@@ -29,7 +30,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           {!belongsToSeries && (
             <div>
               <label className={labelCls}>Münzen</label>
-              <input type="number" min="0" value={participationCoins}
+              <NumberInput min="0" value={participationCoins}
                 onChange={e => setParticipationCoins(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
@@ -37,7 +38,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           {eventType !== "community" && (
             <div>
               <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
-              <input type="number" min="0" value={participationRankPts}
+              <NumberInput min="0" value={participationRankPts}
                 onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
@@ -63,14 +64,14 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <div className={eventType === "community" ? "flex-1 grid grid-cols-1 gap-2" : "flex-1 grid grid-cols-2 gap-2"}>
                 <div>
                   <label className={labelCls}>Münzen</label>
-                  <input type="number" min="0" value={p.coins}
+                  <NumberInput min="0" value={p.coins}
                     onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, coins: Number(e.target.value) } : pp))}
                     className={inputCls} style={inputStyle} />
                 </div>
                 {eventType !== "community" && (
                   <div>
                     <label className={labelCls}>Rang-Punkte</label>
-                    <input type="number" min="0" value={p.rankPoints}
+                    <NumberInput min="0" value={p.rankPoints}
                       onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
                       className={inputCls} style={inputStyle} />
                   </div>
@@ -88,14 +89,14 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             {!belongsToSeries && (
               <div>
                 <label className={labelCls}>Münzen</label>
-                <input type="number" min="0" value={spectatorCoins}
+                <NumberInput min="0" value={spectatorCoins}
                   onChange={e => setSpectatorCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
             )}
             <div>
               <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
-              <input type="number" min="0" value={spectatorRankPts}
+              <NumberInput min="0" value={spectatorRankPts}
                 onChange={e => setSpectatorRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
@@ -119,13 +120,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
-              <input type="number" min="0" value={statParticipationPts}
+              <NumberInput min="0" value={statParticipationPts}
                 onChange={e => setStatParticipationPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
             <div>
               <label className={labelCls}>Münzen pro Mitspieler-Teilnahme</label>
-              <input type="number" min="0" value={participationCoins}
+              <NumberInput min="0" value={participationCoins}
                 onChange={e => setParticipationCoins(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
@@ -134,13 +135,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
-                <input type="number" min="0" value={statSpectatorParticipationPts}
+                <NumberInput min="0" value={statSpectatorParticipationPts}
                   onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className={labelCls}>Münzen pro Zuschauer-Teilnahme</label>
-                <input type="number" min="0" value={spectatorCoins}
+                <NumberInput min="0" value={spectatorCoins}
                   onChange={e => setSpectatorCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
@@ -227,13 +228,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelCls}>Start (Std. nach Event-Start)</label>
-                  <input type="number" min="0" value={poll.startOffsetHours}
+                  <NumberInput min="0" value={poll.startOffsetHours}
                     onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className={labelCls}>Ende (Std. nach Event-Start)</label>
-                  <input type="number" min="1" value={poll.endOffsetHours}
+                  <NumberInput min="1" value={poll.endOffsetHours}
                     onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>
@@ -241,13 +242,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelCls}>Belohnung Abstimmung — Münzen</label>
-                  <input type="number" min="0" value={poll.participationCoins}
+                  <NumberInput min="0" value={poll.participationCoins}
                     onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
-                  <input type="number" min="0" value={poll.participationSeriesPoints}
+                  <NumberInput min="0" value={poll.participationSeriesPoints}
                     onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>
@@ -255,13 +256,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelCls}>Sieger-Belohnung — Münzen</label>
-                  <input type="number" min="0" value={poll.winnerCoins}
+                  <NumberInput min="0" value={poll.winnerCoins}
                     onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>
-                  <input type="number" min="0" value={poll.winnerRankPoints}
+                  <NumberInput min="0" value={poll.winnerRankPoints}
                     onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
                 </div>

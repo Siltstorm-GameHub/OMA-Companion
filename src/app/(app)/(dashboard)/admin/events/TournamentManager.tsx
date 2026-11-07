@@ -15,6 +15,7 @@ import GroupStagePanel, { type GroupStageActionBody } from "./GroupStagePanel";
 import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -857,7 +858,7 @@ export default function TournamentManager({
               {player ? userName(player) : "TBD"}
             </span>
             {isPending ? (
-              <input type="number" placeholder="0" min={0}
+              <NumberInput placeholder="0" min={0}
                 value={scores1v1[match.id]?.[key as "s1" | "s2"] ?? ""}
                 onChange={e => setScores1v1(prev => ({
                   ...prev, [match.id]: { ...prev[match.id], [key]: e.target.value },
@@ -1113,7 +1114,7 @@ export default function TournamentManager({
                 <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
                   className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
                 <span className="text-xs text-gray-400">alle</span>
-                <input type="number" min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
+                <NumberInput min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
                   className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
                 <span className="text-xs text-gray-400">Minuten</span>
               </div>
@@ -1408,7 +1409,7 @@ export default function TournamentManager({
                                     )}
                                     {trackPlacement && (
                                       <td className="py-1 px-2 text-center">
-                                        <input type="number" min={1} placeholder="–"
+                                        <NumberInput min={1} placeholder="–"
                                           value={row[PLACEMENT_STAT_KEY] ?? (existing[PLACEMENT_STAT_KEY] !== undefined ? String(existing[PLACEMENT_STAT_KEY]) : "")}
                                           onChange={e => setFfaField(match.id, entry.userId ?? "", PLACEMENT_STAT_KEY, e.target.value)}
                                           className="w-14 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
@@ -1417,7 +1418,7 @@ export default function TournamentManager({
                                     )}
                                     {visibleStatFields.map(f => (
                                       <td key={f} className="py-1 px-2 text-center">
-                                        <input type="number" placeholder="–"
+                                        <NumberInput placeholder="–"
                                           value={row[f] ?? (existing[f] !== undefined ? String(existing[f]) : "")}
                                           onChange={e => setFfaField(match.id, entry.userId ?? "", f, e.target.value)}
                                           className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
@@ -1507,7 +1508,7 @@ export default function TournamentManager({
               <>
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">{isLiga ? "Spieltag" : "Runde"}</label>
-                  <input type="number" min={1} value={mRound} onChange={e => setMRound(Number(e.target.value))}
+                  <NumberInput min={1} value={mRound} onChange={e => setMRound(Number(e.target.value))}
                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
                   />
                 </div>

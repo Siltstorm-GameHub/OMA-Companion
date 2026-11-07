@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import { Target, Search, X } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
 type Prediction = {
@@ -169,8 +170,7 @@ export default function EventWinnerPredictionWidget({
 
           <label className="block">
             <span className="text-xs text-gray-500">Einsatz ({minWager}–{maxWager} Münzen)</span>
-            <input
-              type="number"
+            <NumberInput
               min={minWager}
               max={maxWager}
               value={wager}

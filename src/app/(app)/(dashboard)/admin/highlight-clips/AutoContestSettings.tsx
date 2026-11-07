@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export default function AutoContestSettings({
   initialDays,
@@ -57,8 +58,7 @@ export default function AutoContestSettings({
       <div className="flex items-end gap-2">
         <div>
           <label className="text-xs text-gray-500 block mb-1">Umfragedauer (Tage)</label>
-          <input
-            type="number"
+          <NumberInput
             min={minDays}
             max={maxDays}
             value={input}

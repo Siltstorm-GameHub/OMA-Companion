@@ -36,6 +36,7 @@ import GameCover from "@/components/GameCover";
 import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 import { isVideoUrl } from "@/lib/upload-limits";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /**
  * Community-Jobs-Reiter/-Sektion. Lädt alle Daten selbst per fetch und läuft
@@ -1029,7 +1030,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                 <input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} className={INPUT_CLS} />
                 <label className="flex items-center gap-1 text-[10px] text-gray-500">
                   Plätze
-                  <input type="number" min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
+                  <NumberInput min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
                 </label>
               </div>
               <input value={form.meetingUrl} onChange={e => setForm(f => ({ ...f, meetingUrl: e.target.value }))} placeholder="Treffpunkt-Link (z.B. Discord-Voice-Kanal)" className={`w-full ${INPUT_CLS}`} />
@@ -1412,7 +1413,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             </label>
             <label className="space-y-1 text-[11px] text-gray-500">
               Plätze (optional)
-              <input type="number" min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
+              <NumberInput min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
                 className="block w-28 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
             </label>
           </div>

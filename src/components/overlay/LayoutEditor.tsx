@@ -5,6 +5,7 @@ import { Move, Repeat, Maximize2, Timer } from "@/components/icons";
 import PositionCanvas, { type CanvasElementOption, type Pos } from "./PositionCanvas";
 import { SCALE_STEPS, snapScale, type LayoutEntry, type OverlayLayout } from "./types";
 import HelpTip from "./HelpTip";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export type EditorElementOption<K extends string> = CanvasElementOption<K> & {
   /** Kurzer Hinweis unter dem Schalter, z.B. "nur bei K.-o.-Turnieren". */
@@ -123,8 +124,7 @@ export default function LayoutEditor<K extends string>({
               <Repeat className="w-3.5 h-3.5" /> Rotation
             </span>
             <span className="text-sm text-gray-400">Übereinanderliegende Kacheln wechseln alle</span>
-            <input
-              type="number"
+            <NumberInput
               min={4}
               max={60}
               value={value.rotateSeconds}
@@ -174,14 +174,14 @@ export default function LayoutEditor<K extends string>({
                 </label>}
                 {showMore && entry.cycle && (
                   <span className="flex items-center gap-1.5 text-gray-500">
-                    <input
-                      type="number" min={2} max={300} value={entry.cycle.onSec}
+                    <NumberInput
+                      min={2} max={300} value={entry.cycle.onSec}
                       onChange={e => patchEntry(key, { cycle: { ...entry.cycle!, onSec: Math.min(300, Math.max(2, Number(e.target.value) || 10)) } })}
                       className="input-glass w-14 text-center"
                     />
                     <span className="text-xs">s sichtbar,</span>
-                    <input
-                      type="number" min={2} max={300} value={entry.cycle.offSec}
+                    <NumberInput
+                      min={2} max={300} value={entry.cycle.offSec}
                       onChange={e => patchEntry(key, { cycle: { ...entry.cycle!, offSec: Math.min(300, Math.max(2, Number(e.target.value) || 6)) } })}
                       className="input-glass w-14 text-center"
                     />

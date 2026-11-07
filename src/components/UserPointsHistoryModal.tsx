@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/admin/Tabs";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 interface Transaction {
   id: string;
@@ -338,8 +339,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                   <span className="ml-auto text-xs text-gray-500 tabular-nums">Aktuell: {user.points.toLocaleString("de-DE")}</span>
                 )}
               </div>
-              <input
-                type="number"
+              <NumberInput
                 min="0"
                 value={editCoins}
                 onChange={e => setEditCoins(e.target.value)}
@@ -364,8 +364,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                   <span className="ml-auto text-xs text-gray-500 tabular-nums">Aktuell: {user.rankPoints.toLocaleString("de-DE")}</span>
                 )}
               </div>
-              <input
-                type="number"
+              <NumberInput
                 min="0"
                 value={editRank}
                 onChange={e => setEditRank(e.target.value)}

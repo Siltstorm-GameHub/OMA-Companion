@@ -6,6 +6,7 @@ import {
   resolveGroupCount, seedKnockout, suggestedGroupCount, validateGroupStageConfig,
 } from "@/lib/tournaments/groupStage";
 import { userName, type Tournament, type User } from "./TournamentManager";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 export type GroupStageActionBody =
   | {
@@ -66,13 +67,13 @@ export default function GroupStagePanel({
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs text-gray-500 block mb-1">Anzahl Gruppen</span>
-            <input type="number" min={1} max={Math.max(1, Math.floor(participantCount / 2))} value={groupCount}
+            <NumberInput min={1} max={Math.max(1, Math.floor(participantCount / 2))} value={groupCount}
               onChange={e => setGroupCount(Math.max(1, Number(e.target.value) || 1))}
               className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
           </label>
           <label className="block">
             <span className="text-xs text-gray-500 block mb-1">Weiter pro Gruppe</span>
-            <input type="number" min={1} value={advancePerGroup}
+            <NumberInput min={1} value={advancePerGroup}
               onChange={e => setAdvancePerGroup(Math.max(1, Number(e.target.value) || 1))}
               className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
           </label>

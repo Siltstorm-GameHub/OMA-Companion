@@ -1,5 +1,6 @@
 "use client";
 import { Plus, Trash2 } from "@/components/icons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 /** pointsPer = Punkte in der Reihentabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
 export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
@@ -91,8 +92,7 @@ export default function StatRowsEditor({
               />
             </div>
             <div className="w-20 shrink-0">
-              <input
-                type="number"
+              <NumberInput
                 value={eventPoints(row)}
                 onChange={e => setEventPoints(i, Number(e.target.value))}
                 placeholder="Pkt./Einheit"
@@ -138,8 +138,7 @@ export default function StatRowsEditor({
                 Punkte in der Reihentabelle
               </span>
               <div className="w-20 shrink-0">
-                <input
-                  type="number"
+                <NumberInput
                   value={row.pointsPer}
                   onChange={e => update(i, { pointsPer: Number(e.target.value) })}
                   aria-label="Punkte in der Reihentabelle"

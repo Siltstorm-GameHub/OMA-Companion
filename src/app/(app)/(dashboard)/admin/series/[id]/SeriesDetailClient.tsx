@@ -27,6 +27,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -883,13 +884,13 @@ export default function SeriesDetailClient({
                   </span>
                   <div className="flex items-center gap-1">
                     <RankPointsIcon size={12} />
-                    <input type="number" min={0} value={r.rankPoints}
+                    <NumberInput min={0} value={r.rankPoints}
                       onChange={e => updatePlacementReward(r.place, "rankPoints", Number(e.target.value))}
                       className={numCls} />
                   </div>
                   <div className="flex items-center gap-1">
                     <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                    <input type="number" min={0} value={r.coins}
+                    <NumberInput min={0} value={r.coins}
                       onChange={e => updatePlacementReward(r.place, "coins", Number(e.target.value))}
                       className={numCls} />
                   </div>
@@ -913,22 +914,22 @@ export default function SeriesDetailClient({
           <Section title="Punkte & Münzen pro Teilnahme">
             <div className="grid grid-cols-2 gap-3">
               <Field label={<><BarChart2 className="w-3 h-3" /> Punkte pro Teilnahme</>}>
-                <input type="number" min={0} value={statParticipationPts}
+                <NumberInput min={0} value={statParticipationPts}
                   onChange={e => setStatParticipationPts(Number(e.target.value))}
                   className={inputCls} />
               </Field>
               <Field label="Punkte pro Zuschauer-Teilnahme">
-                <input type="number" min={0} value={statSpectatorPts}
+                <NumberInput min={0} value={statSpectatorPts}
                   onChange={e => setStatSpectatorPts(Number(e.target.value))}
                   className={inputCls} />
               </Field>
               <Field label={<><Coins className="w-3 h-3 text-amber-400" /> Münzen pro Teilnahme</>}>
-                <input type="number" min={0} value={statParticipationCoins}
+                <NumberInput min={0} value={statParticipationCoins}
                   onChange={e => setStatParticipationCoins(Number(e.target.value))}
                   className={inputCls} />
               </Field>
               <Field label="Münzen pro Zuschauer-Teilnahme">
-                <input type="number" min={0} value={statSpectatorCoins}
+                <NumberInput min={0} value={statSpectatorCoins}
                   onChange={e => setStatSpectatorCoins(Number(e.target.value))}
                   className={inputCls} />
               </Field>
@@ -951,7 +952,7 @@ export default function SeriesDetailClient({
                   </span>
                   <div className="flex items-center gap-1">
                     <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                    <input type="number" min={0} value={r.coins}
+                    <NumberInput min={0} value={r.coins}
                       onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
                       className={numCls} />
                   </div>
@@ -1055,13 +1056,13 @@ export default function SeriesDetailClient({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Start (Stunden nach Event)</label>
-                          <input type="number" min={0} value={p.startOffsetHours}
+                          <NumberInput min={0} value={p.startOffsetHours}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, startOffsetHours: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Ende (Stunden nach Event)</label>
-                          <input type="number" min={0} value={p.endOffsetHours}
+                          <NumberInput min={0} value={p.endOffsetHours}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, endOffsetHours: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
@@ -1069,13 +1070,13 @@ export default function SeriesDetailClient({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Teilnahme-Münzen</label>
-                          <input type="number" min={0} value={p.participationCoins}
+                          <NumberInput min={0} value={p.participationCoins}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationCoins: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Teilnahme-Tabellenpunkte</label>
-                          <input type="number" min={0} value={p.participationSeriesPoints}
+                          <NumberInput min={0} value={p.participationSeriesPoints}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationSeriesPoints: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
@@ -1083,13 +1084,13 @@ export default function SeriesDetailClient({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Sieger-Münzen</label>
-                          <input type="number" min={0} value={p.winnerCoins}
+                          <NumberInput min={0} value={p.winnerCoins}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerCoins: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Sieger-Rang-Punkte</label>
-                          <input type="number" min={0} value={p.winnerRankPoints}
+                          <NumberInput min={0} value={p.winnerRankPoints}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerRankPoints: Number(e.target.value) } : x))}
                             className={inputCls} />
                         </div>
@@ -1193,17 +1194,17 @@ export default function SeriesDetailClient({
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Streak-Schwelle</label>
-                      <input type="number" min={1} value={dominionThreshold}
+                      <NumberInput min={1} value={dominionThreshold}
                         onChange={e => setDominionThreshold(Number(e.target.value))} className={inputCls} />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
-                      <input type="number" min={0} value={dominionCoins}
+                      <NumberInput min={0} value={dominionCoins}
                         onChange={e => setDominionCoins(Number(e.target.value))} className={inputCls} />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpkt.</label>
-                      <input type="number" min={0} value={dominionSeriesPoints}
+                      <NumberInput min={0} value={dominionSeriesPoints}
                         onChange={e => setDominionSeriesPoints(Number(e.target.value))} className={inputCls} />
                     </div>
                   </div>
@@ -1242,7 +1243,7 @@ export default function SeriesDetailClient({
                       <div className="flex flex-wrap gap-2">
                         <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
                           Teilnahmen
-                          <input type="number" min={0} value={row.participations}
+                          <NumberInput min={0} value={row.participations}
                             onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                               if (j !== i) return r;
                               const newPart = Number(e.target.value);
@@ -1253,7 +1254,7 @@ export default function SeriesDetailClient({
                         {statRows.filter(s => s.field.trim()).map(s => (
                           <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
                             {s.field}
-                            <input type="number" min={0} value={row.stats[s.field] ?? 0}
+                            <NumberInput min={0} value={row.stats[s.field] ?? 0}
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                 if (j !== i) return r;
                                 const newStats = { ...r.stats, [s.field]: Number(e.target.value) };
@@ -1275,7 +1276,7 @@ export default function SeriesDetailClient({
                           {polls.filter(p => p.label.trim()).map(p => (
                             <label key={p.label} className="flex items-center gap-1.5 text-[11px] text-violet-400">
                               {p.label} Siege
-                              <input type="number" min={0} value={row.stats[p.label] ?? 0}
+                              <NumberInput min={0} value={row.stats[p.label] ?? 0}
                                 onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                   if (j !== i) return r;
                                   const newStats = { ...r.stats, [p.label]: Number(e.target.value) };
@@ -1291,7 +1292,7 @@ export default function SeriesDetailClient({
                         <div className="flex flex-wrap gap-2 pt-1.5 border-t border-white/[0.04] mt-1">
                           <label className="flex items-center gap-1.5 text-[11px] text-amber-400">
                             <Flame className="w-3 h-3" /> Dominion Bonus (Anzahl)
-                            <input type="number" min={0} value={row.stats["Dominion Bonus"] ?? 0}
+                            <NumberInput min={0} value={row.stats["Dominion Bonus"] ?? 0}
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                 if (j !== i) return r;
                                 const newStats = { ...r.stats, "Dominion Bonus": Number(e.target.value) };

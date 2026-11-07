@@ -9,6 +9,7 @@ import { BLOCKS_GAME } from "@/lib/blocks/event-config";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 1 (Event): Grunddaten ────────────────────────────────────────────────
 export default function StepEventData({ w }: { w: EventWizard }) {
@@ -42,7 +43,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
 
       <div>
         <label className={labelCls}>Max. Spieler</label>
-        <input type="number" min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+        <NumberInput min="2" value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
           placeholder="unbegrenzt" className={inputCls} style={inputStyle} />
       </div>
 

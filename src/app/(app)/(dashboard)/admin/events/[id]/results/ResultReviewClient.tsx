@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 type Sub = {
   id: string;
@@ -106,17 +107,17 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
       {match.isDuel ? (
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-gray-400 space-y-1">{match.player1?.name ?? "Spieler 1"}
-            <input type="number" min={0} value={score1} disabled={done} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
+            <NumberInput min={0} value={score1} disabled={done} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
           </label>
           <label className="text-xs text-gray-400 space-y-1">{match.player2?.name ?? "Spieler 2"}
-            <input type="number" min={0} value={score2} disabled={done} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
+            <NumberInput min={0} value={score2} disabled={done} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
           </label>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {statFields.map((f) => (
             <label key={f} className="text-xs text-gray-400 space-y-1">{f}
-              <input type="number" min={0} value={stats[f] ?? ""} disabled={done} onChange={(e) => setStats({ ...stats, [f]: e.target.value })} className={inputCls} />
+              <NumberInput min={0} value={stats[f] ?? ""} disabled={done} onChange={(e) => setStats({ ...stats, [f]: e.target.value })} className={inputCls} />
             </label>
           ))}
         </div>

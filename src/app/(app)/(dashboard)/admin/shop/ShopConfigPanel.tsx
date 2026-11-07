@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Save, Plus, Trash2 } from "@/components/icons";
 import type { ShopConfig, WheelPrize } from "@/lib/shop-config";
+import { NumberInput } from "@/components/ui/NumberInput";
 
 function newId() {
   return Math.random().toString(36).slice(2, 10);
@@ -108,8 +109,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                 />
 
                 {prize.type === "points" && (
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     value={prize.value}
                     onChange={(e) => updatePrize(prize.id, "value", e.target.value)}
@@ -118,8 +118,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   />
                 )}
 
-                <input
-                  type="number"
+                <NumberInput
                   min={1}
                   value={prize.weight}
                   onChange={(e) => updatePrize(prize.id, "weight", parseInt(e.target.value, 10) || 0)}
