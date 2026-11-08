@@ -37,7 +37,6 @@ interface DiscordEmoji { id: string; name: string; animated: boolean }
 
 const CATEGORY_LABELS: Record<string, string> = {
   events:         "📅 Events",
-  tournaments:    "⚔️ Turniere",
   quests:         "🎯 Quests",
   community_jobs: "🧑‍💼 Community-Jobs",
   clips:          "🎬 Clip des Monats",
@@ -45,7 +44,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // Feste Reihenfolge; unbekannte Kategorien werden danach alphabetisch angehängt (nie ausgeblendet)
-const CATEGORY_ORDER = ["events", "tournaments", "quests", "community_jobs", "clips", "system"];
+const CATEGORY_ORDER = ["events", "quests", "community_jobs", "clips", "system"];
 
 type ChannelFilter = "all" | "push" | "inApp" | "dm" | "chan" | "off";
 const CHANNEL_FILTERS: { id: ChannelFilter; label: string }[] = [

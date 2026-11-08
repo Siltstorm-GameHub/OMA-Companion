@@ -69,7 +69,7 @@ const RULES: RuleSeed[] = [
     key: "event_tournament_started",
     label: "Turnier gestartet (mit Erwähnung)",
     description: "Discord-Bot: wenn das Discord-Event eines Turniers auf 'Aktiv' springt — erwähnt alle Turnier-Teilnehmer. Entfällt ohne Teilnehmer.",
-    category: "tournaments",
+    category: "events",
     pushEnabled: false, inAppEnabled: false, discordDmEnabled: false, discordChanEnabled: true,
     titleTemplate: "⚔️ Turnier gestartet: {eventName}",
     bodyTemplate: "🎮 {game} · 📋 {format} · 👥 {teilnehmer} Teilnehmer — viel Erfolg!",
@@ -140,7 +140,7 @@ const RULES: RuleSeed[] = [
     key: "prediction_result",
     label: "Vorhersage-Ergebnis",
     description: "Wenn eine Event-Sieger-Vorhersage ausgewertet wurde (richtig oder falsch).",
-    category: "tournaments",
+    category: "events",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "🎯 Dein Tipp war {result}",
     bodyTemplate: "Du erhältst {reward} Münzen für deine Event-Sieger-Vorhersage.",
@@ -150,7 +150,7 @@ const RULES: RuleSeed[] = [
     key: "match_ready",
     label: "Turnier: Dein Match ist bereit",
     description: "Wenn beide Gegner eines Turnier-Matches feststehen (z.B. nach dem Aufrücken im K.O.-Baum oder beim Erstellen der K.O.-Runde). Geht an beide Spieler.",
-    category: "tournaments",
+    category: "events",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: true, discordChanEnabled: false,
     titleTemplate: "⚔️ Dein Match ist bereit",
     bodyTemplate: "{round} bei {eventName}: Du spielst gegen {opponent}. Viel Erfolg!",
@@ -160,7 +160,7 @@ const RULES: RuleSeed[] = [
     key: "duel_challenge",
     label: "Münzen-Duell-Herausforderung",
     description: "Wenn ein Nutzer zu einem Münzen-Duell herausgefordert wird.",
-    category: "tournaments",
+    category: "events",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "⚔️ Duell-Herausforderung",
     bodyTemplate: "{challenger} fordert dich zu einem Münzen-Duell heraus — Einsatz: {wager} Münzen.",
@@ -170,7 +170,7 @@ const RULES: RuleSeed[] = [
     key: "duel_result",
     label: "Münzen-Duell-Ergebnis",
     description: "Wenn ein Münzen-Duell aufgelöst wurde.",
-    category: "tournaments",
+    category: "events",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "⚔️ Duell-Ergebnis",
     bodyTemplate: "{result}",
@@ -657,13 +657,16 @@ async function main() {
   await prisma.notificationRule.deleteMany({ where: { key: "leaderboard" } });
   // Entfernte Regeln: Abzeichen-System wurde komplett entfernt
   await prisma.notificationRule.deleteMany({ where: { key: { in: ["badge_earned", "badge_awarded"] } } });
-  // Offene Community-Jobs: keine Bewerbung, Warteliste, Übergabe, Verwarnung oder Verträge mehr.
+  // Turnier-Benachrichtigungen gehören zur Kategorie "Events" (keine eigene Kategorie "Turniere" mehr) —
+  // bestehende Zeilen umstellen, da der Upsert unten vorhandene Regeln nicht anfasst.
+  await prisma.notificationRule.updateMany({ where: { category: "tournaments" }, data: { category: "events" } });
   // Generelles Aufräumen: Diese Liste ist die einzige Quelle der Regeln (im Admin kann man nur
   // bearbeiten, nicht neu anlegen). Alles, was hier nicht mehr steht, wird vom Code nicht mehr
   // ausgelöst — z.B. rank_up (Rang-Rollen abgeschafft), battle_card_tier_up (Battle Cards → OMA Gems),
   // report_/asset_/marketing_votes_milestone und report_contribution (Community-Jobs verschlankt).
   const removed = await prisma.notificationRule.deleteMany({ where: { key: { notIn: RULES.map((r) => r.key) } } });
   if (removed.count > 0) console.log(`🗑 ${removed.count} nicht mehr genutzte Notification-Regel(n) entfernt.`);
+  // Offene Community-Jobs: keine Bewerbung, Warteliste, Übergabe, Verwarnung oder Verträge mehr.
   await prisma.notificationRule.deleteMany({ where: { key: { in: ["community_job_approved","community_job_waitlisted","community_job_rejected","community_job_warned","community_job_revoked","community_job_contract_expiring","community_job_contract_adjusted","community_job_handoff_received"] } } });
 
   const legacyConfig = Object.fromEntries(
