@@ -59,7 +59,7 @@ import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from 
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
-import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, hasEventPoints, resolveRankStatField, type StatConfig } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseEntryStats, readStatValue, resolveAvgDirection } from "@/lib/avg-stats";
 import { statRoundLabel, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 
@@ -611,10 +611,28 @@ export default async function TournamentDetailPage({
   // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Tabellenpunkte, dient nur der
   // Endplatzierung/Sieger-Ermittlung dieses Events. Anders als ligaPunkteByUser bereits sichtbar,
   // während das Event noch läuft (keine Abhängigkeit von completionData).
-  const turnierpunkteByUser: Record<string, number> =
-    (turnierpunkteCfg.stats?.length ?? 0) > 0 || turnierpunkteCfg.placementPoints
-      ? computeTurnierpunkte(event.matches, turnierpunkteCfg, format)
-      : {};
+  // Geben alle Stats 0 Punkte (und keine Rundenplatzierung Punkte), gibt es keine Eventpunkte: keine
+  // Spalte, und die Platzierung ergibt sich direkt aus dem Sieger-Stat (rankStatField).
+  const turnierpunkteByUser: Record<string, number> = hasEventPoints(turnierpunkteCfg)
+    ? computeTurnierpunkte(event.matches, turnierpunkteCfg, format)
+    : {};
+  const eventStatFieldList: string[] = event.statFields ? JSON.parse(event.statFields) : [];
+  const rankStatField = hasEventPoints(turnierpunkteCfg)
+    ? undefined
+    : resolveRankStatField(eventStatFieldList, event.seriesEventConfigJson, rawSeriesStatCfg as { winnerStatField?: string; defaultWinnerStatField?: string });
+  // Wer gerade führt (für die Live-Vorschau des Sieger-Bonus): nach Eventpunkten, ohne Eventpunkte
+  // nach dem Sieger-Stat
+  const leaderScoreByUser: Record<string, number> = rankStatField
+    ? (() => {
+        const out: Record<string, number> = {};
+        for (const m of event.matches) for (const e of m.entries) {
+          if (!e.userId) continue;
+          const v = readStatValue(parseEntryStats(e.statsJson), rankStatField);
+          if (v !== null) out[e.userId] = (out[e.userId] ?? 0) + v;
+        }
+        return out;
+      })()
+    : turnierpunkteByUser;
   // Tabellenpunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
   // Reihentabelle (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
   // Spielphase abgeschlossen ist. Läuft das Event noch, zeigen wir stattdessen eine Live-Vorschau
@@ -648,7 +666,7 @@ export default async function TournamentDetailPage({
     ? computeLiveLigaPunkte(
         { registrations: event.registrations, matches: event.matches },
         rawSeriesStatCfg,
-        turnierpunkteByUser,
+        leaderScoreByUser,
         avgLeaderIds,
       )
     : null;
@@ -1388,6 +1406,7 @@ export default async function TournamentDetailPage({
                 statPointsPer={statPointsPer}
                 ligaPunkteByUser={ligaPunkteByUser}
                 turnierpunkteByUser={turnierpunkteByUser}
+                rankStatField={rankStatField}
                 placementPoints={turnierpunkteCfg.placementPoints}
                 isLigaPunkteLive={isLigaPunkteLive}
                 projectedWinnerIds={liveLigaPunkte?.projectedWinnerIds ?? []}

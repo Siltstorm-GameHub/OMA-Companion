@@ -101,6 +101,30 @@ export function extractPlacementPoints(stats: Record<string, unknown>, placement
   return placementPoints[String(place)];
 }
 
+/** Ob die (mit applyEventStatOverride zusammengeführte) Konfiguration überhaupt Eventpunkte vergibt:
+ *  mindestens ein Stat mit Punkten ≠ 0 oder Platzierungspunkte > 0 pro Runde. Sonst wären alle
+ *  Eventpunkte 0 — dann gibt es keine Eventpunkte-Spalte/-Option, und die Platzierung ergibt sich
+ *  direkt aus dem Sieger-Stat (siehe resolveRankStatField). */
+export function hasEventPoints(cfg: { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number> }): boolean {
+  return (cfg.stats ?? []).some(s => s.pointsPer !== 0)
+    || Object.values(cfg.placementPoints ?? {}).some(p => p > 0);
+}
+
+/** Stat-Feld, nach dem ein Event ohne Eventpunkte sortiert wird: Sieger-Stat des Events (Reiter
+ *  "Reihe") → Sieger-Ermittlung der Reihe → Altfeld, jeweils nur wenn es ein echtes Stat-Feld des
+ *  Events ist; sonst das erste Stat-Feld. */
+export function resolveRankStatField(
+  statFields: string[],
+  seriesEventConfigJson: string | null | undefined,
+  seriesCfg: { winnerStatField?: string; defaultWinnerStatField?: string } | null | undefined,
+): string | undefined {
+  let eventField: string | undefined;
+  try { eventField = seriesEventConfigJson ? (JSON.parse(seriesEventConfigJson) as { winnerStatField?: string }).winnerStatField : undefined; }
+  catch { eventField = undefined; }
+  return [eventField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField]
+    .find((f): f is string => !!f && statFields.includes(f)) ?? statFields[0];
+}
+
 /** Name der berechneten Gewinner-Stat-Option "Eventpunkte" beim Event-Abschluss (kein echtes Stat-Feld). */
 export const TURNIERPUNKTE_STAT = "Turnierpunkte";
 /** Angezeigter Name für TURNIERPUNKTE_STAT. Der gespeicherte Wert bleibt "Turnierpunkte" (steht so in

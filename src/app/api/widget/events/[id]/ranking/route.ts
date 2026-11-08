@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { placementRewardFor } from "@/lib/placement-rewards";
 import { requireWidgetKey } from "@/lib/widgetAuth";
-import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
+import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, PLACEMENT_STAT_KEY, resolveRankStatField, type StatConfig } from "@/lib/series-event-points";
 import { compareAvg, computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 import { GROUP_KNOCKOUT_FORMAT, computeLeagueStandings, groupKnockoutRanking, leagueMemberIds } from "@/lib/tournaments/groupStage";
 
@@ -50,7 +50,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   })() ?? { participationPoints: 0, stats: [] };
   const effectiveStatCfg = applyEventStatOverride(baseStatCfg, event.statConfigJson);
-  const hasTurnierpunkteConfig = effectiveStatCfg.stats.length > 0 || !!effectiveStatCfg.placementPoints;
+  // Alle Stats 0 Punkte → keine Eventpunkte (wie Eventseite), sortiert wird nach dem Sieger-Stat
+  const hasTurnierpunkteConfig = hasEventPoints(effectiveStatCfg);
   const turnierpunkteByUser = hasTurnierpunkteConfig
     ? computeTurnierpunkte(event.matches, effectiveStatCfg, format)
     : {};
@@ -58,7 +59,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   let ranking: { userId: string; score: number; label: string; stats?: Record<string, number> }[] = [];
 
   if (format === "ffa" || format === "coop_stats" || format === "avg_stats") {
-    const fields: string[] = event.statFields ? JSON.parse(event.statFields) : [];
+    const statFieldList: string[] = event.statFields ? JSON.parse(event.statFields) : [];
+    // Ohne Eventpunkte entscheidet der Sieger-Stat (zuerst sortiert), die übrigen sind Tiebreaker
+    const rankField = hasTurnierpunkteConfig
+      ? undefined
+      : resolveRankStatField(statFieldList, event.seriesEventConfigJson, baseStatCfg as { winnerStatField?: string; defaultWinnerStatField?: string });
+    const fields: string[] = rankField ? [rankField, ...statFieldList.filter((f) => f !== rankField)] : statFieldList;
     const totals = new Map<
       string,
       { userId: string; stats: Record<string, number>; rounds: number; placementSum: number; placementCount: number }

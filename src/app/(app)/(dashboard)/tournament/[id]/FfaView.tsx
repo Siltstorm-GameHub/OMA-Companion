@@ -39,6 +39,7 @@ export default function FfaView({
   statPointsPer = {},
   ligaPunkteByUser = {},
   turnierpunkteByUser = {},
+  rankStatField,
   placementPoints,
   isLigaPunkteLive = false,
   projectedWinnerIds = [],
@@ -73,6 +74,9 @@ export default function FfaView({
    *  computeTurnierpunkte) — KEINE Tabellenpunkte, bestimmen nur die Endplatzierung/den Sieger dieses
    *  einzelnen Events. Anders als ligaPunkteByUser bereits sichtbar, solange das Event noch läuft. */
   turnierpunkteByUser?: Record<string, number>;
+  /** Ohne Eventpunkte (alle Stats 0 Punkte): Stat, der die Platzierung entscheidet (Sieger-Stat) —
+   *  wird vor den übrigen Stat-Feldern sortiert, die nur noch Tiebreaker sind. */
+  rankStatField?: string;
   /** Punkte je Platz (Event-eigene statConfigJson, siehe EventEditClient "Turnier"-Reiter) — wenn
    *  gesetzt, zeigt die Tabelle zusätzlich die Ø-Platzierung über alle Runden sowie die daraus
    *  resultierenden Eventpunkte je Spieler. */
@@ -187,9 +191,13 @@ export default function FfaView({
   // nie eine einzelne Stat-Spalte. Nur ohne Eventpunkte-Konfiguration (reines ffa/avg_stats ohne
   // Punkte-Einstellungen) wird wie bisher lexikografisch nach den einzelnen Stat-Feldern sortiert.
   const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
+  // Sieger-Stat (falls angegeben) zuerst, die übrigen Felder nur als Tiebreaker
+  const sortFields = rankStatField && statFields.includes(rankStatField)
+    ? [rankStatField, ...statFields.filter(f => f !== rankStatField)]
+    : statFields;
   const byStatFields = (a: PlayerTotal, b: PlayerTotal) => {
     if (isAvg) return 0; // Summen sind bei Ø-Wertung kein sinnvoller Tiebreaker
-    for (const f of statFields) {
+    for (const f of sortFields) {
       const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
       if (diff !== 0) return diff;
     }
@@ -465,8 +473,8 @@ export default function FfaView({
               ? <>Sortiert nach kombiniertem Durchschnitt aller Felder ({avgWinnerDirection === "low" ? "niedrigster" : "höchster"} Ø gewinnt) · nicht eingetragene Werte zählen nicht als 0</>
               : hasTurnierpunkte
                 ? <>Sortiert nach Eventpunkte</>
-                : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
-                    {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
+                : <>Sortiert nach: <span className="text-gray-500">{sortFields[0]}</span>
+                    {sortFields.length > 1 && <> · Tiebreaker: {sortFields.slice(1).join(", ")}</>}</>}
           </p>
         </div>
       )}

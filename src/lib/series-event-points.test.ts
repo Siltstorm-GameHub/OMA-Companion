@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   applyEventStatOverride, computeEventPoints, computeLiveLigaPunkte, computeStatStandings, computeTurnierpunkte,
-  extractPlacementPoints, mergeStandingRows, type EventCompletionData, type StatConfig,
+  extractPlacementPoints, hasEventPoints, mergeStandingRows, resolveRankStatField, type EventCompletionData, type StatConfig,
 } from "./series-event-points";
 
 const baseCfg: StatConfig = {
@@ -194,5 +194,21 @@ describe("computeEventPoints – Platzierungspunkte und gutgeschriebene Teilnahm
     assert.equal(withList.pointsByUser.b, undefined);
     const legacy = computeEventPoints({ completionData: done({}), registrations: regs, matches: [] }, { participationPoints: 10, stats: [] });
     assert.deepEqual(legacy.participationsByUser, { a: 1, b: 1, x: 1 });
+  });
+});
+
+describe("hasEventPoints / resolveRankStatField", () => {
+  test("keine Eventpunkte, wenn alle Stats 0 Punkte geben und keine Rundenplatzierung zählt", () => {
+    assert.equal(hasEventPoints({ stats: [{ field: "Schüsse", pointsPer: 0 }] }), false);
+    assert.equal(hasEventPoints({ stats: [{ field: "Schüsse", pointsPer: 0 }], placementPoints: { "1": 0 } }), false);
+    assert.equal(hasEventPoints({ stats: [{ field: "Schüsse", pointsPer: 1 }] }), true);
+    assert.equal(hasEventPoints({ stats: [], placementPoints: { "1": 5 } }), true);
+  });
+
+  test("Sieger-Stat: Event vor Reihe vor Altfeld, nur echte Stat-Felder, sonst erstes Feld", () => {
+    const fields = ["Kills", "Schüsse"];
+    assert.equal(resolveRankStatField(fields, JSON.stringify({ winnerStatField: "Schüsse" }), { winnerStatField: "Kills" }), "Schüsse");
+    assert.equal(resolveRankStatField(fields, null, { winnerStatField: "Turnierpunkte", defaultWinnerStatField: "Schüsse" }), "Schüsse");
+    assert.equal(resolveRankStatField(fields, null, { winnerStatField: "Turnierpunkte" }), "Kills");
   });
 });

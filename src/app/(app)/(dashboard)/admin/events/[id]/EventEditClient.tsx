@@ -943,6 +943,23 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           <ExternalLink className="w-4 h-4 text-teal-400 shrink-0" />
         </Link>
       )}
+      {/* Beendetes Event: Ergebnis-Übersicht — erneutes Bestätigen rechnet mit den aktuellen
+          Reihen-Einstellungen neu (Diff-Buchung, siehe complete/route.ts) */}
+      {event.status === "finished" && !!event.completionData && (
+        <Link href={`/admin/events/${event.id}/complete`}
+          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+          <div>
+            <p className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-teal-400" />
+              Ergebnisse
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Vergebene Belohnungen ansehen, Finale Platzierung anpassen{event.series ? " oder mit den aktuellen Reihen-Einstellungen neu berechnen" : ""}
+            </p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
+        </Link>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">

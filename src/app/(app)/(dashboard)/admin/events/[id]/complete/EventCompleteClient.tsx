@@ -564,6 +564,11 @@ export default function EventCompleteClient({
           <span>
             Dieses Event ist abgeschlossen. Unten eine Übersicht der vergebenen Belohnungen — nur die Finale
             Platzierung kann bei Bedarf noch angepasst werden (z.B. bei nachträglicher Disqualifikation).
+            {seriesId && (
+              <> „Ergebnisse bestätigen“ rechnet das Event außerdem mit den <b>aktuellen</b> Einstellungen der
+              Eventreihe neu (Tabellenpunkte, Teilnahme- und Platzierungs-Belohnungen) — Unterschiede werden
+              automatisch nach- bzw. zurückgebucht.</>
+            )}
           </span>
         </div>
       )}

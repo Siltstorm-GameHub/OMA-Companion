@@ -2,7 +2,7 @@ import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
-import { applyEventStatOverride, computeTurnierpunkte, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
+import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, resolveRankStatField, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -152,7 +152,9 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // ermittelte Sieger erhält seine Tabellenpunkte ganz normal über den bestehenden Weg. Direkt in
   // userStats injiziert, damit die bestehende Sortier-/Anzeige-Logik (userStats[uid]?.[winnerStatField])
   // sie ohne weitere Änderungen mitbenutzt.
-  const hasTurnierpunkteOption = (turnierpunkteCfg.stats?.length ?? 0) > 0 || !!turnierpunkteCfg.placementPoints;
+  // Geben alle Stats 0 Punkte, wäre "Eventpunkte" für alle 0 (alle gleichauf) — dann nicht anbieten,
+  // die Platzierung kommt direkt aus dem Sieger-Stat (z.B. "Erfolgreiche Schüsse").
+  const hasTurnierpunkteOption = hasEventPoints(turnierpunkteCfg);
   if (hasTurnierpunkteOption) {
     const turnierpunkteByUser = computeTurnierpunkte(event.matches, turnierpunkteCfg, event.format ?? undefined);
     for (const uid of Object.keys(userStats)) {
@@ -171,7 +173,13 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     })();
     const seriesCfg = rawSeriesStatConfig as { winnerStatField?: string; defaultWinnerStatField?: string } | null;
     const candidates = [eventCfg?.winnerStatField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField];
-    return candidates.find((f): f is string => !!f && winnerStatFieldOptions.includes(f)) ?? "";
+    return candidates.find((f): f is string => !!f && winnerStatFieldOptions.includes(f))
+      // Ohne Eventpunkte: war "Eventpunkte" als Sieger-Stat eingestellt, entscheidet der passende
+      // echte Stat (gleiche Regel wie die Sortierung auf der Eventseite)
+      ?? (!hasTurnierpunkteOption && candidates.includes(TURNIERPUNKTE_STAT)
+        ? resolveRankStatField(tournamentStatFields, event.seriesEventConfigJson, seriesCfg)
+        : undefined)
+      ?? "";
   })();
 
   // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle

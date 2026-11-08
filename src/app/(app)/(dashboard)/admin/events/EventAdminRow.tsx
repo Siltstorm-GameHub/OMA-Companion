@@ -1252,16 +1252,18 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                   {/* ── Event abschließen / Abschluss bearbeiten ──
                       nicht mehr editierbar, wenn das Event bereits beendet ist; dafür muss der
                       Status erst wieder auf aktiv gesetzt werden (Status-Dropdown oben) */}
-                  {event.seriesId && status !== "finished" && (
+                  {event.seriesId && (status !== "finished" || !!event.completionData) && (
                     <div className="border border-teal-800/40 rounded-lg p-3 bg-teal-950/10">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
                           <p className="text-sm font-medium text-white flex items-center gap-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
-                            {event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
+                            {status === "finished" ? "Ergebnisse" : event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">
-                            {event.completionData
+                            {status === "finished"
+                              ? "Belohnungen ansehen, Platzierung anpassen oder mit den aktuellen Reihen-Einstellungen neu berechnen."
+                              : event.completionData
                               ? "MVP, Umfrage oder Endplatzierung nachträglich anpassen."
                               : "Überträgt Teilnahmen und Stats in die Reihentabelle."}
                           </p>
@@ -1271,7 +1273,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {event.completionData ? "Bearbeiten" : "Abschließen"}
+                          {status === "finished" ? "Ergebnisse" : event.completionData ? "Bearbeiten" : "Abschließen"}
                         </Link>
                       </div>
                     </div>

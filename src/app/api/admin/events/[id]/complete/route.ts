@@ -17,7 +17,7 @@ import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { isPeriodEvent } from "@/lib/event-period";
-import { applyEventStatOverride, computeTurnierpunkte, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
+import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -386,7 +386,14 @@ async function completeEvent(req: NextRequest, eventId: string) {
     );
     eventWinnerId = eventWinnerIds[0];
   } else if (effectiveWinnerMode === "stat") {
-    const statField = seriesEventCfg?.winnerStatField ?? body.winnerStatField;
+    // "Eventpunkte" als Sieger-Stat, obwohl alle Stats 0 Punkte geben (alle wären gleichauf) → der
+    // beim Abschluss gewählte echte Stat entscheidet (siehe complete/page.tsx, hasEventPoints)
+    const configured = seriesEventCfg?.winnerStatField;
+    const statField = configured === TURNIERPUNKTE_STAT
+      && !hasEventPoints(applyEventStatOverride(statCfg, event.statConfigJson))
+      && body.winnerStatField
+      ? body.winnerStatField
+      : (configured ?? body.winnerStatField);
     if (statField) {
       // "Eventpunkte" ist als Gewinner-Stat wählbar (siehe complete/page.tsx) und steht nicht in den
       // Rohwerten — hier genauso berechnen, sonst hätten alle 0 und ohne mitgeschickte Rangliste wären
