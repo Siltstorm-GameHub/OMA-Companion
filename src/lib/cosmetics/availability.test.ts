@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { COSMETICS, COSMETIC_SETS, getCosmetic, isSeasonActive, isoWeekKey, weekEnd } from "./catalog";
-import { DEFAULT_SETTINGS, computeAvailability } from "./availability";
+import { DEFAULT_SETTINGS, computeAvailability, computeSetState } from "./availability";
 
 // 12:00 UTC = 13:00/14:00 Berliner Zeit — weit weg von Tagesgrenzen
 const at = (iso: string) => new Date(`${iso}T12:00:00Z`);
@@ -77,5 +77,27 @@ describe("Wochen-Rotation", () => {
   test("Admin-Preis wird übernommen", () => {
     const a = computeAvailability({ "title:newbie": { price: 50 } }, { ...DEFAULT_SETTINGS, weeklyEnabled: false }, at("2026-11-03"));
     assert.equal(a.get("title:newbie")!.price, 50);
+  });
+});
+
+describe("Sets", () => {
+  const now = at("2026-11-03");
+  const noOffers = { ...DEFAULT_SETTINGS, weeklyEnabled: false };
+  test("Admin-Rabatt ersetzt den Standard, Besitz wird herausgerechnet", () => {
+    const avail = computeAvailability({}, noOffers, now);
+    const set = COSMETIC_SETS.find(s => s.id === "set:starter")!;
+    const full = set.items.reduce((s, id) => s + avail.get(id)!.price!, 0);
+    const std = computeSetState(set.id, new Set(), avail, noOffers)!;
+    assert.equal(std.price, Math.round(full * (100 - set.discountPct) / 100));
+    const custom = computeSetState(set.id, new Set(), avail, { ...noOffers, sets: { [set.id]: { discountPct: 50 } } })!;
+    assert.equal(custom.price, Math.round(full / 2));
+    const partial = computeSetState(set.id, new Set([set.items[0]]), avail, noOffers)!;
+    assert.equal(partial.missing.length, set.items.length - 1);
+  });
+  test("deaktiviertes Set ist nicht kaufbar", () => {
+    const avail = computeAvailability({}, noOffers, now);
+    const s = computeSetState("set:fire", new Set(), avail, { ...noOffers, sets: { "set:fire": { enabled: false } } })!;
+    assert.equal(s.enabled, false);
+    assert.equal(s.buyable, false);
   });
 });

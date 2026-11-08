@@ -3,6 +3,7 @@ import type { ScoreBreakdown } from "./score-engine";
 import { COIN_PREFIX } from "./points";
 import { getCommunityJob } from "./community-jobs";
 import { syncReputationDiscordRole } from "./discord-roles";
+import { getAppEraStart } from "./app-era";
 import {
   getEffectiveCommunityJobs, getPayoutTiers, getVoteBonusTiers,
   resolveTier, resolveVoteBonusMultiplier,
@@ -255,7 +256,11 @@ export async function runWeeklyPayout(referenceDate: Date = new Date()): Promise
  */
 export async function runReputationUpdate(referenceDate: Date = new Date()): Promise<{ updated: number; rolesSynced: number }> {
   const windowEnd = getWeekBounds(referenceDate).weekStart; // nur abgeschlossene Wochen
-  const since = new Date(windowEnd.getTime() - BADGE_WINDOW_WEEKS * 7 * 86_400_000);
+  const windowStart = new Date(windowEnd.getTime() - BADGE_WINDOW_WEEKS * 7 * 86_400_000);
+  // Nach einem selektiven Reset zählt nichts von davor (lib/app-era.ts) — sonst stellen die erhalten
+  // gebliebenen Kommentar-Stimmen das zurückgesetzte Ansehen wieder her.
+  const eraStart = await getAppEraStart();
+  const since = eraStart && eraStart > windowStart ? eraStart : windowStart;
   const weekKey = (d: Date) => getWeekBounds(d).weekStart.getTime();
 
   const [payouts, commentVotes, previouslyRated] = await Promise.all([

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { CalendarClock } from "@/components/icons";
 import { Trophy, Clock, Vote, Clapperboard, ArrowRight, Zap } from "@/components/icons";
 import ActivityFeed from "./ActivityFeed";
-import ResetSelectiveButton from "./ResetSelectiveButton";
+import ResetSelectiveButton, { type SeriesGroupOption } from "./ResetSelectiveButton";
+import { getResetSchedule } from "@/lib/reset-selective";
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
 
@@ -83,8 +84,26 @@ export default async function AdminPage() {
 
   const allSeries = await prisma.eventSeries.findMany({
     orderBy: [{ status: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, status: true, seasonNumber: true, _count: { select: { events: true } } },
+    select: { id: true, name: true, status: true, groupId: true, createdAt: true, _count: { select: { events: true } } },
   });
+  // Selektiver Reset: Saisons einer Reihe (gleiche groupId) als eine Auswahl, benannt nach der neuesten Saison
+  const groupedSeries = new Map<string, typeof allSeries>();
+  for (const s of allSeries) {
+    const key = s.groupId ?? s.id;
+    groupedSeries.set(key, [...(groupedSeries.get(key) ?? []), s]);
+  }
+  const seriesGroups: SeriesGroupOption[] = [...groupedSeries].map(([key, list]) => {
+    const newest = [...list].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+    return {
+      key,
+      name: newest.name,
+      seriesIds: list.map(s => s.id),
+      seasonCount: list.length,
+      eventCount: list.reduce((sum, s) => sum + s._count.events, 0),
+      active: list.some(s => s.status !== "archived"),
+    };
+  }).sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "de"));
+  const resetSchedule = await getResetSchedule();
 
   const hasActionItems =
     activeTournaments.length > 0 ||
@@ -271,9 +290,7 @@ export default async function AdminPage() {
       <div>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
         <div className="space-y-3">
-          <ResetSelectiveButton series={allSeries.map(s => ({
-            id: s.id, name: s.name, status: s.status, seasonNumber: s.seasonNumber, eventCount: s._count.events,
-          }))} />
+          <ResetSelectiveButton groups={seriesGroups} schedule={resetSchedule} />
         </div>
       </div>
     </div>

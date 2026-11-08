@@ -10,10 +10,10 @@
 // Die Berechnung (Preis, Wochenrabatt, Saison, Exklusiv-Rotation) steckt in availability.ts.
 
 import { prisma } from "@/lib/prisma";
-import { getCosmetic } from "./catalog";
+import { getCosmetic, getSet } from "./catalog";
 import {
   DEFAULT_SETTINGS, computeAvailability,
-  type CosmeticOverride, type CosmeticsConfig, type ItemAvailability, type ShopSettings,
+  type CosmeticOverride, type CosmeticsConfig, type ItemAvailability, type SetOverride, type ShopSettings,
 } from "./availability";
 
 export * from "./availability";
@@ -47,7 +47,23 @@ function sanitizeSettings(input: unknown): ShopSettings {
     weeklyCount: int(r.weeklyCount, 0, 12, DEFAULT_SETTINGS.weeklyCount),
     weeklyDiscountPct: int(r.weeklyDiscountPct, 0, 90, DEFAULT_SETTINGS.weeklyDiscountPct),
     exclusiveCount: int(r.exclusiveCount, 0, 5, DEFAULT_SETTINGS.exclusiveCount),
+    sets: sanitizeSetOverrides(r.sets),
   };
+}
+
+function sanitizeSetOverrides(input: unknown): Record<string, SetOverride> {
+  if (!input || typeof input !== "object") return {};
+  const out: Record<string, SetOverride> = {};
+  for (const [id, raw] of Object.entries(input as Record<string, unknown>)) {
+    if (!getSet(id) || !raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const o: SetOverride = {};
+    const pct = Math.round(Number(r.discountPct));
+    if (r.discountPct !== undefined && r.discountPct !== null && Number.isFinite(pct)) o.discountPct = Math.min(90, Math.max(0, pct));
+    if (typeof r.enabled === "boolean") o.enabled = r.enabled;
+    if (Object.keys(o).length > 0) out[id] = o;
+  }
+  return out;
 }
 
 async function readJson(key: string): Promise<unknown> {
@@ -86,6 +102,11 @@ export async function saveShopSettings(input: unknown): Promise<ShopSettings> {
 }
 
 export async function getAvailability(now = new Date()): Promise<Map<string, ItemAvailability>> {
+  return (await getShopContext(now)).avail;
+}
+
+/** Verfügbarkeit + Einstellungen in einem Rutsch (für Set-Preise). */
+export async function getShopContext(now = new Date()): Promise<{ avail: Map<string, ItemAvailability>; settings: ShopSettings }> {
   const [config, settings] = await Promise.all([getCosmeticsConfig(), getShopSettings()]);
-  return computeAvailability(config, settings, now);
+  return { avail: computeAvailability(config, settings, now), settings };
 }

@@ -74,8 +74,8 @@ export async function recomputeSeriesDominionBonus(seriesId: string): Promise<vo
 
   const streak: Record<string, number> = {};
   // Kumulierte Dominion-Bonus-Liga-Punkte über die gesamte (neu berechnete) Historie — wird als
-  // "Dominion Bonus Punkte" in raw geschrieben, dieselbe Stelle, die computeKeptSeriesRankPoints
-  // (siehe reset-selective.ts) beim selektiven Reset ausliest.
+  // "Dominion Bonus Punkte" in raw geschrieben (Anzeige). Der selektive Reset liest die tatsächlich
+  // gebuchten Rang-Punkte dagegen aus completionData.dominionChanges (siehe reset-ledger.ts).
   const bonusPointsTotal: Record<string, number> = {};
   const txns: Prisma.PrismaPromise<unknown>[] = [];
 

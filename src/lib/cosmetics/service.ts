@@ -9,7 +9,7 @@ import {
   reputationTitlesFor, rewardItemsFor,
   type CosmeticCategory, type EquippedCosmetics, type RewardKey, type UserLook,
 } from "./catalog";
-import { getAvailability, type ItemAvailability } from "./config";
+import { computeSetState, getAvailability, getShopContext, type ItemAvailability, type SetState } from "./config";
 
 export class CosmeticError extends Error {
   constructor(message: string, public status: number) {
@@ -56,16 +56,7 @@ async function getUnlockedIds(userId: string, reputationPeakLevel: number): Prom
   return ids;
 }
 
-export interface ShopSetState {
-  id: string;
-  /** Noch fehlende Artikel */
-  missing: string[];
-  /** Summe der fehlenden Artikel zum aktuellen Preis */
-  fullPrice: number;
-  /** Preis mit Set-Rabatt */
-  price: number;
-  buyable: boolean;
-}
+export type ShopSetState = SetState;
 
 export interface ShopState {
   balance: number;
@@ -79,24 +70,13 @@ export interface ShopState {
   weekEndsAt: string | null;
 }
 
-function computeSetState(setId: string, owned: Set<string>, avail: Map<string, ItemAvailability>): ShopSetState | null {
-  const set = getSet(setId);
-  if (!set) return null;
-  const missing = set.items.filter(id => !owned.has(id));
-  const fullPrice = missing.reduce((s, id) => s + (avail.get(id)?.price ?? 0), 0);
-  const buyable = missing.length > 0 && missing.every(id => avail.get(id)?.buyable);
-  // Rabatt nur, wenn mehr als ein Artikel fehlt — sonst ist es ein Einzelkauf
-  const discount = missing.length > 1 ? set.discountPct : 0;
-  return { id: set.id, missing, fullPrice, price: Math.round(fullPrice * (100 - discount) / 100), buyable };
-}
-
 export async function getShopState(userId: string): Promise<ShopState> {
-  const [user, avail] = await Promise.all([
+  const [user, { avail, settings }] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { points: true, equippedCosmeticsJson: true, reputationPeakLevel: true },
     }),
-    getAvailability(),
+    getShopContext(),
   ]);
   if (!user) throw new CosmeticError("Nutzer nicht gefunden", 404);
   const unlocked = await getUnlockedIds(userId, user.reputationPeakLevel);
@@ -109,7 +89,7 @@ export async function getShopState(userId: string): Promise<ShopState> {
     look: resolveLook(equipped, user.reputationPeakLevel),
     reputationPeakLevel: user.reputationPeakLevel,
     items,
-    sets: COSMETIC_SETS.map(s => computeSetState(s.id, unlocked, avail)).filter((s): s is ShopSetState => !!s),
+    sets: COSMETIC_SETS.map(s => computeSetState(s.id, unlocked, avail, settings)).filter((s): s is ShopSetState => !!s),
     weekEndsAt: items.find(i => i.tag === "offer" || i.tag === "exclusive")?.until ?? null,
   };
 }
@@ -160,8 +140,9 @@ export async function purchaseSet(userId: string, setId: string): Promise<{ bala
   if (!set) throw new CosmeticError("Set nicht gefunden", 404);
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { reputationPeakLevel: true } });
   if (!user) throw new CosmeticError("Nutzer nicht gefunden", 404);
-  const [avail, unlocked] = await Promise.all([getAvailability(), getUnlockedIds(userId, user.reputationPeakLevel)]);
-  const state = computeSetState(setId, unlocked, avail);
+  const [{ avail, settings }, unlocked] = await Promise.all([getShopContext(), getUnlockedIds(userId, user.reputationPeakLevel)]);
+  const state = computeSetState(setId, unlocked, avail, settings);
+  if (state && !state.enabled) throw new CosmeticError("Dieses Set ist zurzeit nicht im Angebot", 409);
   if (!state || state.missing.length === 0) throw new CosmeticError("Du besitzt bereits alle Artikel dieses Sets", 409);
   if (!state.buyable) throw new CosmeticError("Nicht alle Artikel dieses Sets sind gerade kaufbar", 409);
 

@@ -4,13 +4,17 @@ import { toast } from "sonner";
 import { Save, Undo2 } from "@/components/icons";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { CosmeticName, CosmeticTitle } from "@/components/cosmetics/CosmeticName";
+import LookPreview, { lookOfSet } from "@/components/cosmetics/LookPreview";
 import { AuraLayer } from "@/components/RankRing";
 import { getFrameRing } from "@/lib/cosmetics/frame-style";
 import {
-  CATEGORY_META, CATEGORY_ORDER, COSMETICS, COSMETIC_SETS, RARITY_META, SEASONS, unlockLabel,
-  type Cosmetic, type CosmeticCategory,
+  CATEGORY_META, CATEGORY_ORDER, COSMETICS, COSMETIC_SETS, RARITY_META, SEASONS, getCosmetic, unlockLabel,
+  type Cosmetic, type CosmeticCategory, type CosmeticSet,
 } from "@/lib/cosmetics/catalog";
-import { computeAvailability, type CosmeticsConfig, type ShopSettings } from "@/lib/cosmetics/availability";
+import {
+  computeAvailability, isSetEnabled, setDiscountPct,
+  type CosmeticsConfig, type ShopSettings,
+} from "@/lib/cosmetics/availability";
 import "@/components/RankRing.css";
 
 /** Mini-Vorschau ohne Avatarbild (Admin-Liste). */
@@ -42,14 +46,25 @@ function Swatch({ item }: { item: Cosmetic }) {
   }
 }
 
+const ddmm = (mmdd: string) => mmdd.split("-").reverse().join(".") + ".";
+
 function availabilityNote(item: Cosmetic): string | null {
   if (item.season) {
     const s = SEASONS[item.season];
-    return `${s.emoji} Saison ${s.name} (${s.from.split("-").reverse().join(".")}.–${s.to.split("-").reverse().join(".")}.)`;
+    return `${s.emoji} ${s.name} (${ddmm(s.from)}–${ddmm(s.to)})`;
   }
-  if (item.rotationOnly) return "✨ Wochen-Exklusiv (nur in der Rotation kaufbar)";
+  if (item.rotationOnly) return "✨ Wochen-Exklusiv";
   return null;
 }
+
+type View = CosmeticCategory | "season" | "exclusive" | "sets";
+
+const VIEWS: { key: View; label: string }[] = [
+  ...CATEGORY_ORDER.map(c => ({ key: c as View, label: CATEGORY_META[c].plural })),
+  { key: "season", label: "🍂 Saison" },
+  { key: "exclusive", label: "✨ Exklusiv" },
+  { key: "sets", label: "🎁 Sets" },
+];
 
 const inputCls = "px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm text-right tabular-nums focus:outline-none focus:border-teal-500/50";
 
@@ -63,7 +78,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
   const [settings, setSettings] = useState<ShopSettings>(initialSettings);
   const [saved, setSaved] = useState({ config: initial, settings: initialSettings });
   const [saving, setSaving] = useState(false);
-  const [category, setCategory] = useState<CosmeticCategory>("frame");
+  const [view, setView] = useState<View>("frame");
 
   const dirty = useMemo(
     () => JSON.stringify({ config, settings }) !== JSON.stringify(saved),
@@ -75,8 +90,9 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
 
   // Günstig → teuer nach aktuellem (Admin-)Preis, Freischalt-Artikel ans Ende
   const priceOf = (c: Cosmetic) => (c.defaultPrice === null ? Number.POSITIVE_INFINITY : config[c.id]?.price ?? c.defaultPrice);
-  const items = COSMETICS.filter(c => c.category === category)
-    .sort((a, b) => priceOf(a) - priceOf(b) || a.name.localeCompare(b.name, "de"));
+  const items = (view === "sets" ? [] : COSMETICS.filter(c =>
+    view === "season" ? !!c.season : view === "exclusive" ? !!c.rotationOnly : c.category === view,
+  )).sort((a, b) => priceOf(a) - priceOf(b) || a.name.localeCompare(b.name, "de"));
 
   function patch(id: string, p: { price?: number; enabled?: boolean }) {
     setConfig(prev => {
@@ -88,6 +104,18 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
       if (o.enabled === true) delete o.enabled;
       if (o.price === undefined && o.enabled === undefined) delete next[id];
       return next;
+    });
+  }
+
+  function patchSet(set: CosmeticSet, p: { discountPct?: number; enabled?: boolean }) {
+    setSettings(prev => {
+      const o = { ...prev.sets[set.id], ...p };
+      if (o.discountPct === set.discountPct) delete o.discountPct;
+      if (o.enabled === true) delete o.enabled;
+      const sets = { ...prev.sets };
+      if (o.discountPct === undefined && o.enabled === undefined) delete sets[set.id];
+      else sets[set.id] = o;
+      return { ...prev, sets };
     });
   }
 
@@ -110,6 +138,101 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
     } finally {
       setSaving(false);
     }
+  }
+
+  function renderItemRow(item: Cosmetic) {
+    const o = config[item.id] ?? {};
+    const unlockOnly = item.defaultPrice === null;
+    const enabled = o.enabled ?? true;
+    const price = o.price ?? item.defaultPrice ?? 0;
+    const rarity = RARITY_META[item.rarity];
+    const note = availabilityNote(item);
+    const a = avail.get(item.id);
+    return (
+      <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${!unlockOnly && !enabled ? "opacity-50" : ""}`}>
+        <div className="w-12 flex items-center justify-center shrink-0"><Swatch item={item} /></div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-white font-medium truncate">
+            {item.name}
+            {a?.tag === "offer" && <span className="ml-1.5 text-[9px] font-bold text-rose-300">−{a.discountPct} % diese Woche</span>}
+            {a?.tag === "exclusive" && a.buyable && <span className="ml-1.5 text-[9px] font-bold text-fuchsia-300">diese Woche kaufbar</span>}
+            {a?.tag === "season" && a.buyable && <span className="ml-1.5 text-[9px] font-bold text-orange-300">gerade kaufbar</span>}
+          </p>
+          <p className="text-[10px] text-gray-500">
+            <span style={{ color: rarity.color }}>{rarity.label}</span>
+            {(view === "season" || view === "exclusive") && <> · {CATEGORY_META[item.category].label}</>}
+            {!unlockOnly && <> · {ownerCounts[item.id] ?? 0}× verkauft</>}
+            {!unlockOnly && o.price !== undefined && <> · Standard {item.defaultPrice}</>}
+            {note && <> · {note}</>}
+          </p>
+        </div>
+        {unlockOnly ? (
+          <span className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full bg-white/[0.04]">Freischaltung: {unlockLabel(item)}</span>
+        ) : (
+          <>
+            <label className="flex items-center gap-1.5">
+              <span className="sr-only">Preis</span>
+              <NumberInput min={0} value={price} className={`w-24 ${inputCls}`}
+                onChange={e => patch(item.id, { price: Math.max(0, parseInt(e.target.value, 10) || 0) })} />
+              <span className="text-[10px] text-gray-500">Münzen</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={enabled} onChange={e => patch(item.id, { enabled: e.target.checked })}
+                className="w-4 h-4 accent-teal-500" />
+              <span className="text-[10px] text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
+            </label>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  function renderSetRow(set: CosmeticSet) {
+    const enabled = isSetEnabled(set, settings);
+    const pct = setDiscountPct(set, settings);
+    // Preis für jemanden, der noch keinen Artikel besitzt (mit aktuellen Artikelpreisen inkl. Wochenrabatt)
+    const full = set.items.reduce((s, id) => s + (avail.get(id)?.price ?? 0), 0);
+    const price = Math.round(full * (100 - pct) / 100);
+    const blocked = set.items.filter(id => !avail.get(id)?.buyable);
+    return (
+      <div key={set.id} className={`px-4 py-3 space-y-2.5 ${!enabled ? "opacity-50" : ""}`}>
+        <div className="flex items-start gap-3 flex-wrap">
+          <LookPreview look={lookOfSet(set)} name="Vorschau" size={36} className="w-48 shrink-0" />
+          <div className="flex-1 min-w-[10rem]">
+            <p className="text-sm text-white font-medium">{set.name}</p>
+            <p className="text-[10px] text-gray-500">{set.description}</p>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {set.items.map(id => {
+                const c = getCosmetic(id);
+                return c ? (
+                  <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${blocked.includes(id) ? "border-rose-500/40 text-rose-300" : "border-white/10 text-gray-300"}`}>
+                    {CATEGORY_META[c.category].label}: {c.name}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <span className="text-[11px] text-gray-400 mr-auto">
+            Komplett: <span className="text-white font-semibold">{price.toLocaleString("de-DE")}</span>
+            <span className="line-through opacity-60 ml-1">{full.toLocaleString("de-DE")}</span> Münzen
+            {blocked.length > 0 && <span className="text-rose-300"> · gerade nicht kaufbar ({blocked.length} Artikel aus)</span>}
+          </span>
+          <label className="flex items-center gap-1.5 text-[10px] text-gray-400">
+            Rabatt
+            <NumberInput min={0} max={90} value={pct} className={`w-16 ${inputCls}`}
+              onChange={e => patchSet(set, { discountPct: Math.min(90, Math.max(0, parseInt(e.target.value, 10) || 0)) })} />
+            %
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={enabled} onChange={e => patchSet(set, { enabled: e.target.checked })}
+              className="w-4 h-4 accent-teal-500" />
+            <span className="text-[10px] text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
+          </label>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -152,86 +275,43 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             );
           })}
         </div>
-        <p className="text-[11px] text-gray-500">
-          Sets ({COSMETIC_SETS.length}) haben ihren Rabatt fest hinterlegt und sind nur kaufbar, wenn alle fehlenden Artikel aktiv sind.
-        </p>
       </div>
 
-      <p className="text-xs text-gray-500 leading-relaxed">
-        Preise und Angebot der Kosmetik-Artikel (sortiert nach Preis). Deaktivierte Artikel verschwinden aus dem Shop, bleiben bei
-        bisherigen Käufern aber erhalten und ausrüstbar. Belohnungs- und Community-Job-Artikel sind nicht käuflich.
-      </p>
-
       <div className="flex gap-1 flex-wrap">
-        {CATEGORY_ORDER.map(c => (
-          <button key={c} onClick={() => setCategory(c)}
+        {VIEWS.map(v => (
+          <button key={v.key} onClick={() => setView(v.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              c === category ? "bg-teal-600/20 text-teal-300 ring-1 ring-teal-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+              v.key === view ? "bg-teal-600/20 text-teal-300 ring-1 ring-teal-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
             }`}>
-            {CATEGORY_META[c].plural}
+            {v.label}
           </button>
         ))}
       </div>
 
+      <p className="text-xs text-gray-500 leading-relaxed">
+        {view === "sets"
+          ? "Set-Preis = Summe der noch fehlenden Artikel (aktuelle Preise inkl. Wochenrabatt) minus Set-Rabatt. Ein Set ist nur kaufbar, wenn alle fehlenden Artikel gerade kaufbar sind."
+          : view === "season"
+            ? "Saison-Artikel sind nur im jeweiligen Zeitfenster kaufbar. Preis und Angebot stellst du hier ein."
+            : view === "exclusive"
+              ? "Pro Woche ist eine zufällige Auswahl dieser Artikel kaufbar (Anzahl oben unter „Exklusiv-Artikel“)."
+              : "Preise und Angebot (sortiert nach Preis). Deaktivierte Artikel verschwinden aus dem Shop, bleiben bei Käufern aber erhalten. Belohnungs- und Community-Job-Artikel sind nicht käuflich."}
+      </p>
+
       <div className="glass rounded-2xl divide-y divide-white/5">
-        {items.map(item => {
-          const o = config[item.id] ?? {};
-          const unlockOnly = item.defaultPrice === null;
-          const enabled = o.enabled ?? true;
-          const price = o.price ?? item.defaultPrice ?? 0;
-          const rarity = RARITY_META[item.rarity];
-          const note = availabilityNote(item);
-          const a = avail.get(item.id);
-          return (
-            <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${!unlockOnly && !enabled ? "opacity-50" : ""}`}>
-              <div className="w-12 flex items-center justify-center shrink-0"><Swatch item={item} /></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate">
-                  {item.name}
-                  {a?.tag === "offer" && <span className="ml-1.5 text-[9px] font-bold text-rose-300">−{a.discountPct} % diese Woche</span>}
-                  {a?.tag === "exclusive" && a.buyable && <span className="ml-1.5 text-[9px] font-bold text-fuchsia-300">diese Woche kaufbar</span>}
-                </p>
-                <p className="text-[10px] text-gray-500">
-                  <span style={{ color: rarity.color }}>{rarity.label}</span>
-                  {!unlockOnly && <> · {ownerCounts[item.id] ?? 0}× verkauft</>}
-                  {!unlockOnly && o.price !== undefined && <> · Standard {item.defaultPrice}</>}
-                  {note && <> · {note}</>}
-                </p>
-              </div>
-              {unlockOnly ? (
-                <span className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full bg-white/[0.04]">Freischaltung: {unlockLabel(item)}</span>
-              ) : (
-                <>
-                  <label className="flex items-center gap-1.5">
-                    <span className="sr-only">Preis</span>
-                    <NumberInput
-                      min={0}
-                      value={price}
-                      onChange={e => patch(item.id, { price: Math.max(0, parseInt(e.target.value, 10) || 0) })}
-                      className={`w-24 ${inputCls}`}
-                    />
-                    <span className="text-[10px] text-gray-500">Münzen</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={enabled} onChange={e => patch(item.id, { enabled: e.target.checked })}
-                      className="w-4 h-4 accent-teal-500" />
-                    <span className="text-[10px] text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
-                  </label>
-                </>
-              )}
-            </div>
-          );
-        })}
+        {view === "sets"
+          ? [...COSMETIC_SETS].sort((a, b) => a.name.localeCompare(b.name, "de")).map(renderSetRow)
+          : items.map(renderItemRow)}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 sticky bottom-3">
         <button
           onClick={save}
           disabled={saving || !dirty}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50 shadow-lg"
         >
           <Save className="w-4 h-4" />
-          {saving ? "Speichert…" : "Speichern"}
+          {saving ? "Speichert…" : dirty ? "Änderungen speichern" : "Gespeichert"}
         </button>
         {dirty && (
           <button onClick={() => { setConfig(saved.config); setSettings(saved.settings); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white bg-white/[0.04] transition-colors">

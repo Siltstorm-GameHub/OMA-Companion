@@ -1,153 +1,343 @@
 import { prisma } from "@/lib/prisma";
-import { computeStatStandings, type StatConfig, type LegacyStandingRow, type SeriesEventForStandings } from "@/lib/series-event-points";
+import type { Prisma } from "@prisma/client";
+import { APP_ERA_START_KEY } from "@/lib/app-era";
+import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
+import { syncReputationRoleForUser } from "@/lib/community-job-service";
+import { getBerlinDateParts } from "@/lib/time";
+import {
+  expandToSeasonGroups, mergeTotals, rankPointsFromEventCompletion, rankPointsFromSeriesCompletion,
+  type RankTotals,
+} from "@/lib/reset-ledger";
 
-type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+// ── Selektiver Reset (Neustart auf v1.0) ────────────────────────────────────
+// Der Admin wählt Eventreihen, die fortgeführt werden (immer mit ALLEN Saisons ihrer Gruppe), und
+// ein Datum. Der tägliche Cron (/api/cron/app-reset) führt den Reset in der Nacht dieses Datums aus.
+//
+// Bleibt erhalten: bewahrte Reihen samt Events, Tabellen, Statistiken, Pokalen und LuL-Saisons;
+// alle Events, die erst NACH dem Reset-Zeitpunkt beginnen; Clips/Contests, Ideen-Board, Posts und
+// Berichte, Squads.
+// Wird zurückgesetzt: Münzen (0), Rang-Punkte (= Summe aus den bewahrten Reihen), Punktehistorie,
+// alle übrigen bereits begonnenen Events und Reihen, Pokale, LuL, Quests, Tipps, Minigames
+// (Gems, Blocks, Karten), Shop-Inventar, Community-Job-Auszahlungen und Ansehen, Voice-/Nachrichten-
+// Zähler, Ranglisten-Snapshots, In-App-Benachrichtigungen. Danach: Wanderpokale neu berechnen.
 
-function parsePlacementRewards(json: string | null): RewardsConfig {
-  const empty: RewardsConfig = { participationCoins: 0, placements: [] };
-  if (!json) return empty;
-  try { return { ...empty, ...JSON.parse(json) }; } catch { return empty; }
-}
+const SCHEDULE_KEY = "app_reset_schedule";
+const RANK_TRANSFER_REASON = "[Rang-Punkte] Übernahme aus fortgeführten Reihen (Neustart v1.0)";
 
-/**
- * Berechnet die Rang-Punkte, die jeder User über eine Auswahl bewahrter Eventreihen hinweg
- * "verdient" hat — Grundlage für den selektiven Reset (setSelectiveReset). Kombiniert drei
- * bereits an anderer Stelle im System genutzte Quellen, statt die Punkte-Vergabe neu zu erfinden:
- *  1. computeStatStandings (Teilnahme + Stats + Event-Umfragen, inkl. Legacy-Stand)
- *  2. Dominion-Bonus-Punkte aus dem seriesStandingsJson-Cache der Reihe
- *  3. Endplatzierungs-/Saison-Poll-Belohnungen aus seriesCompletionData (nur falls die Reihe
- *     bereits abgeschlossen wurde)
- */
-export async function computeKeptSeriesRankPoints(keepSeriesIds: string[]): Promise<Record<string, number>> {
-  const totals: Record<string, number> = {};
-  if (keepSeriesIds.length === 0) return totals;
-
-  const seriesList = await prisma.eventSeries.findMany({
-    where: { id: { in: keepSeriesIds } },
-    select: {
-      id: true,
-      seriesStatConfig: true,
-      legacyStandings: true,
-      seriesStandingsJson: true,
-      seriesCompletionData: true,
-      events: {
-        select: {
-          id: true, status: true, completionData: true, finalRankingJson: true, statConfigJson: true,
-          registrations: { select: { userId: true, role: true } },
-          matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
-        },
-      },
-    },
-  });
-
-  function add(userId: string, amount: number) {
-    if (!amount) return;
-    totals[userId] = (totals[userId] ?? 0) + amount;
-  }
-
-  for (const series of seriesList) {
-    const statCfg: StatConfig = (() => {
-      try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
-    })() ?? { participationPoints: 0, stats: [] };
-    const legacyRows: LegacyStandingRow[] = (() => {
-      try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
-    })();
-
-    const { rows } = computeStatStandings(series.events as SeriesEventForStandings[], statCfg, legacyRows);
-    for (const row of rows) add(row.userId, row.totalPoints);
-
-    // Dominion-Bonus: kumulierte Rang-Punkte liegen bereits im Standings-Cache der Reihe
-    try {
-      const cache = series.seriesStandingsJson
-        ? JSON.parse(series.seriesStandingsJson) as { raw?: Record<string, Record<string, number>> }
-        : null;
-      for (const [userId, stats] of Object.entries(cache?.raw ?? {})) {
-        add(userId, stats["Dominion Bonus Punkte"] ?? 0);
-      }
-    } catch { /* ignore */ }
-
-    // Endplatzierung + Saison-Poll: nur vorhanden, wenn die Reihe bereits abgeschlossen wurde
-    try {
-      const completion = series.seriesCompletionData
-        ? JSON.parse(series.seriesCompletionData) as {
-            placementRewards?: { userId: string; rankPoints: number }[];
-            pollWinnerIds?: string[];
-            pollBonusRankPoints?: number;
-          }
-        : null;
-      for (const pr of completion?.placementRewards ?? []) add(pr.userId, pr.rankPoints);
-      if (completion?.pollBonusRankPoints) {
-        for (const userId of completion.pollWinnerIds ?? []) add(userId, completion.pollBonusRankPoints);
-      }
-    } catch { /* ignore */ }
-  }
-
-  return totals;
-}
-
-export type SelectiveResetSummary = {
+export type ResetSummary = {
   keptSeriesCount: number;
   deletedSeriesCount: number;
+  resetSeriesCount: number;
   deletedEventCount: number;
-  affectedUserCount: number;
+  keptFutureEventCount: number;
+  usersWithRankPoints: number;
+  totalRankPoints: number;
 };
 
-/**
- * Setzt alles zurück außer den ausgewählten Eventreihen: Münzen aller User auf 0, Rang-Punkte
- * auf die Summe aus den bewahrten Reihen (siehe computeKeptSeriesRankPoints), löscht alle Events/
- * Eventreihen außerhalb der Auswahl vollständig sowie LuL, Quest-Fortschritt, Event-
- * Vorhersagen und Pokale. Unangetastet bleiben: Badges, Wanderpokale, Clip-Contests,
- * Spendenpool.
- */
-export async function resetAllExceptSeries(keepSeriesIds: string[]): Promise<SelectiveResetSummary> {
-  const keptRankPoints = await computeKeptSeriesRankPoints(keepSeriesIds);
+export type ResetSchedule = {
+  status: "scheduled" | "running" | "done" | "failed";
+  scheduledFor: string; // YYYY-MM-DD (Berlin)
+  keepSeriesIds: string[];
+  scheduledAt: string;
+  scheduledById: string | null;
+  startedAt?: string;
+  finishedAt?: string;
+  result?: ResetSummary;
+  error?: string;
+};
 
-  const eventsToDelete = await prisma.event.findMany({
-    where: { OR: [{ seriesId: null }, { seriesId: { notIn: keepSeriesIds } }] },
-    select: { id: true },
+export type ResetPreview = ResetSummary & {
+  keptSeries: { id: string; name: string; seasonNumber: number | null }[];
+  resetSeries: { id: string; name: string; futureEvents: number }[];
+  topUsers: { userId: string; name: string; rankPoints: number }[];
+};
+
+// ── Planung ─────────────────────────────────────────────────────────────────
+
+export async function getResetSchedule(): Promise<ResetSchedule | null> {
+  const row = await prisma.botConfig.findUnique({ where: { key: SCHEDULE_KEY } }).catch(() => null);
+  if (!row) return null;
+  try { return JSON.parse(row.value) as ResetSchedule; } catch { return null; }
+}
+
+async function saveSchedule(s: ResetSchedule) {
+  const value = JSON.stringify(s);
+  await prisma.botConfig.upsert({ where: { key: SCHEDULE_KEY }, update: { value }, create: { key: SCHEDULE_KEY, value } });
+}
+
+export function berlinToday(now: Date = new Date()): string {
+  const { year, month, day } = getBerlinDateParts(now);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export async function scheduleReset(date: string, keepSeriesIds: string[], userId: string): Promise<ResetSchedule> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Ungültiges Datum");
+  if (date <= berlinToday()) throw new Error("Das Datum muss frühestens morgen sein (der Reset läuft nachts um ca. 4 Uhr).");
+  const current = await getResetSchedule();
+  if (current?.status === "running") throw new Error("Ein Reset läuft gerade.");
+  const existing = new Set((await prisma.eventSeries.findMany({ select: { id: true } })).map(s => s.id));
+  const schedule: ResetSchedule = {
+    status: "scheduled",
+    scheduledFor: date,
+    keepSeriesIds: keepSeriesIds.filter(id => existing.has(id)),
+    scheduledAt: new Date().toISOString(),
+    scheduledById: userId,
+  };
+  await saveSchedule(schedule);
+  return schedule;
+}
+
+export async function cancelReset(): Promise<void> {
+  const current = await getResetSchedule();
+  if (current?.status === "running") throw new Error("Ein Reset läuft gerade und kann nicht mehr abgebrochen werden.");
+  if (current?.status === "scheduled") await prisma.botConfig.delete({ where: { key: SCHEDULE_KEY } });
+}
+
+// ── Plan: was bleibt, was geht ──────────────────────────────────────────────
+
+type ResetPlan = {
+  keptSeriesIds: string[];
+  deleteSeriesIds: string[];
+  resetSeriesIds: string[];
+  deleteEventIds: string[];
+  keptEventIds: string[];
+  keptFutureEventCount: number;
+  rankPoints: RankTotals;
+};
+
+async function buildPlan(selectedIds: string[], cutoff: Date): Promise<ResetPlan> {
+  const allSeries = await prisma.eventSeries.findMany({
+    select: { id: true, groupId: true, seriesStatConfig: true, seriesCompletionData: true },
   });
-  const eventIds = eventsToDelete.map(e => e.id);
+  const keptSeriesIds = expandToSeasonGroups(selectedIds, allSeries);
+  const kept = new Set(keptSeriesIds);
 
-  const seriesToDelete = await prisma.eventSeries.findMany({
-    where: { id: { notIn: keepSeriesIds } },
-    select: { id: true },
+  const events = await prisma.event.findMany({
+    select: { id: true, seriesId: true, startAt: true },
   });
-  const seriesIds = seriesToDelete.map(s => s.id);
+  const deleteEventIds: string[] = [];
+  const keptEventIds: string[] = [];
+  const survivingSeries = new Set<string>();
+  let keptFutureEventCount = 0;
+  for (const ev of events) {
+    if (ev.seriesId && kept.has(ev.seriesId)) { keptEventIds.push(ev.id); continue; }
+    if (ev.startAt >= cutoff) {
+      keptFutureEventCount++;
+      if (ev.seriesId) survivingSeries.add(ev.seriesId);
+      continue;
+    }
+    deleteEventIds.push(ev.id);
+  }
+  const notKept = allSeries.filter(s => !kept.has(s.id));
+  const resetSeriesIds = notKept.filter(s => survivingSeries.has(s.id)).map(s => s.id);
+  const deleteSeriesIds = notKept.filter(s => !survivingSeries.has(s.id)).map(s => s.id);
 
-  await prisma.$transaction([
-    // ── LuL, Quests, Vorhersagen, Shop-Inventar: vollständig zurückgesetzt ──
-    prisma.lulPollVote.deleteMany(),
-    prisma.lulPoll.deleteMany(),
-    prisma.lulEntry.deleteMany(),
-    prisma.lulLegacyEntry.deleteMany(),
-    prisma.lulSpieltag.deleteMany(),
-    prisma.lulSeason.deleteMany(),
+  // Rang-Punkte der bewahrten Reihen aus den Abschluss-Ledgern
+  const rankPoints: RankTotals = {};
+  const keptSeries = allSeries.filter(s => kept.has(s.id));
+  const keptEvents = keptSeriesIds.length === 0 ? [] : await prisma.event.findMany({
+    where: { seriesId: { in: keptSeriesIds }, completionData: { not: null } },
+    select: { seriesId: true, completionData: true, registrations: { select: { userId: true, role: true } } },
+  });
+  const transfers = new Map(keptSeries.map(s => {
+    try { return [s.id, !!(s.seriesStatConfig && JSON.parse(s.seriesStatConfig)?.transferToGlobalRanking)] as const; }
+    catch { return [s.id, false] as const; }
+  }));
+  for (const ev of keptEvents) {
+    mergeTotals(rankPoints, rankPointsFromEventCompletion(ev.completionData, ev.registrations, transfers.get(ev.seriesId!) ?? false));
+  }
+  for (const s of keptSeries) mergeTotals(rankPoints, rankPointsFromSeriesCompletion(s.seriesCompletionData));
+
+  // Nur existierende User mit positivem Saldo (Korrekturen können einzelne Werte ins Minus drücken)
+  const existingUsers = new Set((await prisma.user.findMany({
+    where: { id: { in: Object.keys(rankPoints) } }, select: { id: true },
+  })).map(u => u.id));
+  for (const [userId, pts] of Object.entries(rankPoints)) {
+    if (!existingUsers.has(userId) || pts <= 0) delete rankPoints[userId];
+  }
+
+  return { keptSeriesIds, deleteSeriesIds, resetSeriesIds, deleteEventIds, keptEventIds, keptFutureEventCount, rankPoints };
+}
+
+function summarize(plan: ResetPlan): ResetSummary {
+  return {
+    keptSeriesCount: plan.keptSeriesIds.length,
+    deletedSeriesCount: plan.deleteSeriesIds.length,
+    resetSeriesCount: plan.resetSeriesIds.length,
+    deletedEventCount: plan.deleteEventIds.length,
+    keptFutureEventCount: plan.keptFutureEventCount,
+    usersWithRankPoints: Object.keys(plan.rankPoints).length,
+    totalRankPoints: Object.values(plan.rankPoints).reduce((a, b) => a + b, 0),
+  };
+}
+
+/** Vorschau ohne Schreiben — gerechnet mit "jetzt" als Stichtag; der echte Lauf nimmt seinen eigenen Zeitpunkt. */
+export async function previewReset(selectedIds: string[]): Promise<ResetPreview> {
+  const plan = await buildPlan(selectedIds, new Date());
+  const [keptSeries, resetSeries] = await Promise.all([
+    prisma.eventSeries.findMany({
+      where: { id: { in: plan.keptSeriesIds } },
+      select: { id: true, name: true, seasonNumber: true },
+      orderBy: [{ name: "asc" }, { seasonNumber: "asc" }],
+    }),
+    prisma.eventSeries.findMany({
+      where: { id: { in: plan.resetSeriesIds } },
+      select: { id: true, name: true, _count: { select: { events: { where: { startAt: { gte: new Date() } } } } } },
+    }),
+  ]);
+  const top = Object.entries(plan.rankPoints).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const users = await prisma.user.findMany({
+    where: { id: { in: top.map(([id]) => id) } }, select: { id: true, name: true, username: true },
+  });
+  const nameOf = new Map(users.map(u => [u.id, u.name ?? u.username ?? "?"]));
+  return {
+    ...summarize(plan),
+    keptSeries,
+    resetSeries: resetSeries.map(s => ({ id: s.id, name: s.name, futureEvents: s._count.events })),
+    topUsers: top.map(([userId, rankPoints]) => ({ userId, name: nameOf.get(userId) ?? "?", rankPoints })),
+  };
+}
+
+// ── Ausführung ──────────────────────────────────────────────────────────────
+
+export async function executeReset(selectedIds: string[]): Promise<ResetSummary> {
+  const cutoff = new Date();
+  const plan = await buildPlan(selectedIds, cutoff);
+  const { keptSeriesIds, deleteSeriesIds, resetSeriesIds, deleteEventIds, keptEventIds } = plan;
+
+  // Für die Discord-Rollen nach dem Reset: wer hat aktuell Ansehen?
+  const hadReputation = (await prisma.user.findMany({
+    where: { reputationPoints: { gt: 0 } }, select: { id: true },
+  })).map(u => u.id);
+
+  const lulSeasonWhere: Prisma.LulSeasonWhereInput = keptSeriesIds.length
+    ? { OR: [{ seriesId: null }, { seriesId: { notIn: keptSeriesIds } }] }
+    : {};
+
+  const ops: Prisma.PrismaPromise<unknown>[] = [
+    // ── LuL: nur Saisons bewahrter Reihen bleiben ──
+    prisma.lulPollVote.deleteMany({ where: { poll: { spieltag: { season: lulSeasonWhere } } } }),
+    prisma.lulSeason.deleteMany({ where: lulSeasonWhere }),
+    prisma.lulSpieltag.updateMany({ where: { eventId: { in: deleteEventIds } }, data: { eventId: null } }),
+
+    // ── Posts/Berichte und Medien bleiben, verlieren nur den Event-Bezug ──
+    prisma.jobReport.updateMany({ where: { eventId: { in: deleteEventIds } }, data: { eventId: null } }),
+    prisma.jobMediaAsset.updateMany({ where: { eventId: { in: deleteEventIds } }, data: { eventId: null } }),
+
+    // ── Events vor dem Stichtag außerhalb der bewahrten Reihen (FK-sichere Reihenfolge) ──
+    prisma.match.deleteMany({ where: { eventId: { in: deleteEventIds } } }),
+    prisma.team.deleteMany({ where: { eventId: { in: deleteEventIds } } }),
+    prisma.eventRegistration.deleteMany({ where: { eventId: { in: deleteEventIds } } }),
+    prisma.tournamentParticipant.deleteMany({ where: { eventId: { in: deleteEventIds } } }),
+    prisma.event.deleteMany({ where: { id: { in: deleteEventIds } } }),
+
+    // Nicht bewahrte Reihen mit künftigen Terminen laufen weiter, starten aber bei 0
+    prisma.eventSeries.updateMany({
+      where: { id: { in: resetSeriesIds } },
+      data: { seriesStandingsJson: null, legacyStandings: null, seriesCompletionData: null },
+    }),
+    prisma.eventSeries.deleteMany({ where: { id: { in: deleteSeriesIds } } }),
+
+    // ── Pokale: nur die der bewahrten Reihen bleiben ──
+    prisma.pokal.deleteMany({
+      where: {
+        AND: [
+          { OR: [{ seriesId: null }, { seriesId: { notIn: keptSeriesIds } }] },
+          { OR: [{ eventId: null }, { eventId: { notIn: keptEventIds } }] },
+        ],
+      },
+    }),
+
+    // ── Quests, Tipps ──
     prisma.userQuestProgress.deleteMany(),
     prisma.eventWinnerPrediction.deleteMany(),
     prisma.predictionStreak.deleteMany(),
-    prisma.pokal.deleteMany(),
+
+    // ── Minigames (Gems, Blocks, Karten) + Shop-Inventar; Karten-Katalog bleibt ──
+    prisma.liveBattle.deleteMany(),
+    prisma.battle.deleteMany(),
+    prisma.cardPack.deleteMany(),
+    prisma.userCard.deleteMany(),
+    prisma.userCampaignProgress.deleteMany(),
+    prisma.gemsTournamentAttempt.deleteMany(),
+    prisma.gemsDailyStats.deleteMany(),
+    prisma.gemsPlayer.deleteMany(),
+    prisma.userRelic.deleteMany(),
+    prisma.gemsTowerClear.deleteMany(),
+    prisma.gemsTowerSeason.deleteMany(),
+    prisma.gemsWaveBest.deleteMany(),
+    prisma.gemsWaveSeason.deleteMany(),
+    prisma.gemsRun.deleteMany(),
+    prisma.gemsBest.deleteMany(),
+    prisma.gemsMonth.deleteMany(),
+    prisma.blocksRun.deleteMany(),
+    prisma.blocksBest.deleteMany(),
+    prisma.blocksSeason.deleteMany(),
+    prisma.blocksMatch.deleteMany(),
+    prisma.userCosmetic.deleteMany(),
+
+    // ── Community-Jobs, Ranglisten-Verlauf, Benachrichtigungen, Punktehistorie ──
+    prisma.communityJobWeeklyPayout.deleteMany(),
+    prisma.leaderboardRankSnapshot.deleteMany(),
+    prisma.inAppNotification.deleteMany(),
     prisma.pointTransaction.deleteMany(),
 
-    // ── Events außerhalb der Auswahl vollständig löschen (FK-sichere Reihenfolge) ──
-    prisma.match.deleteMany({ where: { eventId: { in: eventIds } } }),
-    prisma.team.deleteMany({ where: { eventId: { in: eventIds } } }),
-    prisma.eventRegistration.deleteMany({ where: { eventId: { in: eventIds } } }),
-    prisma.tournamentParticipant.deleteMany({ where: { eventId: { in: eventIds } } }),
-    prisma.event.deleteMany({ where: { id: { in: eventIds } } }),
-    prisma.eventSeries.deleteMany({ where: { id: { in: seriesIds } } }),
+    // ── User-Werte ──
+    prisma.user.updateMany({
+      data: {
+        points: 0, rankPoints: 0, voiceMinutesTotal: 0, messagesTotal: 0,
+        reputationLevel: 1, reputationPeakLevel: 1, reputationPoints: 0, reputationOverrideUntil: null,
+        // Shop-Inventar (UserCosmetic) ist weg — angelegte Artikel ebenfalls ablegen
+        equippedCosmeticsJson: null,
+      },
+    }),
+    ...Object.entries(plan.rankPoints).flatMap(([userId, pts]) => [
+      prisma.user.update({ where: { id: userId }, data: { rankPoints: pts } }),
+      prisma.pointTransaction.create({ data: { userId, amount: pts, reason: RANK_TRANSFER_REASON } }),
+    ]),
 
-    // ── Münzen & Rang-Punkte: alle auf 0, danach Rang-Punkte der bewahrten Reihen wieder gutschreiben ──
-    prisma.user.updateMany({ data: { points: 0, rankPoints: 0 } }),
-    ...Object.entries(keptRankPoints)
-      .filter(([, pts]) => pts > 0)
-      .map(([userId, pts]) => prisma.user.update({ where: { id: userId }, data: { rankPoints: pts } })),
-  ]);
+    prisma.botConfig.upsert({
+      where: { key: APP_ERA_START_KEY },
+      update: { value: cutoff.toISOString() },
+      create: { key: APP_ERA_START_KEY, value: cutoff.toISOString() },
+    }),
+  ];
 
-  return {
-    keptSeriesCount: keepSeriesIds.length,
-    deletedSeriesCount: seriesIds.length,
-    deletedEventCount: eventIds.length,
-    affectedUserCount: Object.keys(keptRankPoints).length,
-  };
+  await prisma.$transaction(ops);
+
+  // Nachlauf außerhalb der Transaktion — Fehler hier lassen den Reset selbst gültig
+  await recomputeWanderpocalHolders().catch(err => console.error("[reset] Wanderpokale:", err));
+  for (const userId of hadReputation) {
+    await syncReputationRoleForUser(userId).catch(err => console.error("[reset] Ansehen-Rolle:", userId, err));
+  }
+
+  return summarize(plan);
+}
+
+/** Vom Cron aufgerufen: führt einen fälligen geplanten Reset genau einmal aus. */
+export async function runDueReset(now: Date = new Date()): Promise<{ ran: boolean; summary?: ResetSummary; error?: string }> {
+  const row = await prisma.botConfig.findUnique({ where: { key: SCHEDULE_KEY } });
+  if (!row) return { ran: false };
+  let schedule: ResetSchedule;
+  try { schedule = JSON.parse(row.value) as ResetSchedule; } catch { return { ran: false }; }
+  if (schedule.status !== "scheduled" || schedule.scheduledFor > berlinToday(now)) return { ran: false };
+
+  // Optimistisch beanspruchen: nur wer den unveränderten Wert sieht, startet den Lauf
+  const running: ResetSchedule = { ...schedule, status: "running", startedAt: now.toISOString() };
+  const claimed = await prisma.botConfig.updateMany({
+    where: { key: SCHEDULE_KEY, value: row.value },
+    data: { value: JSON.stringify(running) },
+  });
+  if (claimed.count === 0) return { ran: false };
+
+  try {
+    const summary = await executeReset(schedule.keepSeriesIds);
+    await saveSchedule({ ...running, status: "done", finishedAt: new Date().toISOString(), result: summary });
+    return { ran: true, summary };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    console.error("[reset] fehlgeschlagen:", err);
+    await saveSchedule({ ...running, status: "failed", finishedAt: new Date().toISOString(), error });
+    return { ran: true, error };
+  }
 }

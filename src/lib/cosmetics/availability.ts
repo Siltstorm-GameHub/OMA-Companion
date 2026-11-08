@@ -6,9 +6,15 @@
 // mit ungespeicherten Werten berechnen kann. Laden/Speichern: config.ts.
 
 import {
-  COSMETICS, isSeasonActive, isoWeekKey, seasonEnd, seededPick, weekEnd,
-  type Cosmetic,
+  COSMETICS, getSet, isSeasonActive, isoWeekKey, seasonEnd, seededPick, weekEnd,
+  type Cosmetic, type CosmeticSet,
 } from "./catalog";
+
+/** Admin-Anpassung eines Sets: eigener Rabatt und ob es angeboten wird. */
+export interface SetOverride {
+  discountPct?: number;
+  enabled?: boolean;
+}
 
 export interface CosmeticOverride {
   price?: number;
@@ -26,6 +32,8 @@ export interface ShopSettings {
   weeklyDiscountPct: number;
   /** Anzahl kaufbarer Wochen-Exklusiv-Artikel pro Woche */
   exclusiveCount: number;
+  /** Admin-Anpassungen je Set (fehlend = Katalog-Standard) */
+  sets: Record<string, SetOverride>;
 }
 
 export const DEFAULT_SETTINGS: ShopSettings = {
@@ -33,7 +41,50 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   weeklyCount: 4,
   weeklyDiscountPct: 30,
   exclusiveCount: 1,
+  sets: {},
 };
+
+/** Aktueller Set-Rabatt in % (Admin-Wert oder Katalog-Standard). */
+export function setDiscountPct(set: CosmeticSet, settings: ShopSettings): number {
+  return settings.sets[set.id]?.discountPct ?? set.discountPct;
+}
+
+export function isSetEnabled(set: CosmeticSet, settings: ShopSettings): boolean {
+  return settings.sets[set.id]?.enabled ?? true;
+}
+
+export interface SetState {
+  id: string;
+  /** Noch fehlende Artikel */
+  missing: string[];
+  /** Summe der fehlenden Artikel zum aktuellen Preis */
+  fullPrice: number;
+  /** Preis mit Set-Rabatt */
+  price: number;
+  /** Tatsächlich angewendeter Rabatt (0, wenn nur noch ein Artikel fehlt) */
+  discountPct: number;
+  buyable: boolean;
+  /** Vom Admin angeboten */
+  enabled: boolean;
+}
+
+/**
+ * Set-Preis für einen User: Summe der noch fehlenden Artikel (jeweils zum aktuellen Preis inkl.
+ * Wochenrabatt) minus Set-Rabatt. Rabatt nur, wenn mehr als ein Artikel fehlt — sonst Einzelkauf.
+ * Kaufbar nur, wenn das Set aktiv ist und alle fehlenden Artikel gerade kaufbar sind.
+ */
+export function computeSetState(
+  setId: string, owned: Set<string>, avail: Map<string, ItemAvailability>, settings: ShopSettings,
+): SetState | null {
+  const set = getSet(setId);
+  if (!set) return null;
+  const enabled = isSetEnabled(set, settings);
+  const missing = set.items.filter(id => !owned.has(id));
+  const fullPrice = missing.reduce((s, id) => s + (avail.get(id)?.price ?? 0), 0);
+  const discountPct = missing.length > 1 ? setDiscountPct(set, settings) : 0;
+  const buyable = enabled && missing.length > 0 && missing.every(id => avail.get(id)?.buyable);
+  return { id: set.id, missing, fullPrice, price: Math.round(fullPrice * (100 - discountPct) / 100), discountPct, buyable, enabled };
+}
 
 export interface PricedCosmetic {
   item: Cosmetic;
