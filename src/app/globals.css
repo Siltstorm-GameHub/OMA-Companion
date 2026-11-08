@@ -976,3 +976,23 @@ a.card-hover:active { transform: scale(0.985); }
 .tm-root[data-tm-view="touch"] .tm-desktop-only { display: none; }
 .tm-root[data-tm-view="desktop"] .tm-touch-only { display: none; }
 .tm-root[data-tm-view="desktop"] .tm-desktop-only { display: block; }
+
+/* ── Community-Job-Abzeichen (Titel): Glanz streicht drüber, Platin leuchtet ──── */
+.job-badge-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: job-badge-shine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes job-badge-shine {
+  0%, 55% { transform: translateX(-120%); }
+  85%, 100% { transform: translateX(120%); }
+}
+.job-badge-pulse { animation: job-badge-pulse 2.6s ease-in-out infinite; }
+@keyframes job-badge-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(103,232,249,0.3); }
+  50%      { box-shadow: 0 0 22px rgba(103,232,249,0.6), 0 0 6px rgba(167,139,250,0.5); }
+}

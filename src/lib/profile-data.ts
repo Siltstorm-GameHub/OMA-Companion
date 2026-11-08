@@ -125,7 +125,7 @@ export async function loadProfileData(userId: string) {
     rankPoints: user.rankPoints ?? 0,
     leaderboardRank: higherRanked + 1,
     totalUsers,
-    reputation: { level: user.reputationLevel, points: user.reputationPoints },
+    reputation: { level: user.reputationLevel, points: user.reputationPoints, peakLevel: user.reputationPeakLevel },
     // Kosmetik-Shop: Rahmen/Aura (Avatar), Hintergrund (Kopfkarte), Namensfarbe, Titel
     look: resolveLook(parseEquipped(user.equippedCosmeticsJson), user.reputationPeakLevel),
     eventRegs, eventCount, eventWins,

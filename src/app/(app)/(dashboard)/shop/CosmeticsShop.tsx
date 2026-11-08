@@ -241,7 +241,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{item.name}</p>
                 <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: rarity.color }}>
-                  {rarity.label}{isUnlockItem && " · Ansehen"}
+                  {rarity.label}{isUnlockItem && " · Community-Jobs"}
                 </p>
                 {isUnlockItem && item.description && !isOwned && (
                   <p className="text-[10px] text-gray-500 mt-1 leading-snug">{item.description}</p>
@@ -299,7 +299,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
       )}
 
       <p className="text-[11px] text-gray-600 flex items-center gap-1.5">
-        <Crown className="w-3 h-3" /> Ansehens-Titel schaltest du über die Community-Jobs frei — sie sind nicht käuflich.
+        <Crown className="w-3 h-3" /> Die Community-Job-Titel (Silber, Gold, Platin) schaltest du über die Community-Jobs frei — sie sind nicht käuflich.
       </p>
     </div>
   );

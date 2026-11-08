@@ -3,7 +3,8 @@ import type { FrameCosmetic } from "./catalog";
 
 /**
  * Rahmen (Ring ums Profilbild) → CSS-Klassen + Variablen für RankRing.css.
- * Ohne gekauften Rahmen gibt es den schlichten grauen Ring.
+ * Ohne gekauften Rahmen gibt es einen bewusst unauffälligen Standard: statisch, ohne Verlauf/Glow
+ * und nur eine Spur heller als der Hintergrund — damit gekaufte Rahmen sich klar abheben.
  */
 
 function mix(hex: string, other: [number, number, number], t: number): string {
@@ -13,14 +14,18 @@ function mix(hex: string, other: [number, number, number], t: number): string {
   return `#${m.map(v => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+// Standard-Rahmen: halbtransparent statt fester Grautöne, damit er auf jedem Untergrund zurücktritt.
+// rr-flat = einfarbig (--rr-c3), keine Rotation, kein Glow.
 const NEUTRAL: CSSProperties = {
-  "--rr-dc1": "#3f3f46", "--rr-dc2": "#a1a1aa", "--rr-dc3": "#52525b", "--rr-dglow": "0px", "--rr-dglowc": "transparent",
-  "--rr-lc1": "#a1a1aa", "--rr-lc2": "#3f3f46", "--rr-lc3": "#71717a", "--rr-lglow": "0px", "--rr-lglowc": "transparent",
+  "--rr-dc1": "rgba(255,255,255,0.08)", "--rr-dc2": "rgba(255,255,255,0.08)", "--rr-dc3": "rgba(255,255,255,0.08)",
+  "--rr-dglow": "0px", "--rr-dglowc": "transparent",
+  "--rr-lc1": "rgba(0,0,0,0.08)", "--rr-lc2": "rgba(0,0,0,0.08)", "--rr-lc3": "rgba(0,0,0,0.08)",
+  "--rr-lglow": "0px", "--rr-lglowc": "transparent",
   "--rr-speed": "12s",
 } as CSSProperties;
 
 export function getFrameRing(frame: FrameCosmetic | undefined): { className: string; style: CSSProperties } {
-  if (!frame) return { className: "rank-ring rr-t1", style: NEUTRAL };
+  if (!frame) return { className: "rank-ring rr-flat rr-plain", style: NEUTRAL };
   const [dark, light, base] = frame.colors;
   const tierClass = `rr-t${frame.tier}${frame.pulse ? " rr-apex" : ""}`;
   return {

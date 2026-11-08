@@ -132,6 +132,9 @@
   will-change: auto;
 }
 
+/* Standard-Rahmen ohne Kosmetik: nur ein Hauch, ohne Haarlinien-Absatz zum Bild. */
+.rr-plain .rr-face { box-shadow: none; }
+
 /* Aufflackern beim Rangwechsel. Nach .rr-apex, damit es dessen Puls für die Dauer
    der Feier überschreibt; die Klasse wird danach wieder entfernt. */
 .rr-flare { animation: rr-flare 1400ms cubic-bezier(0.2, 0.8, 0.2, 1) 1; }
@@ -227,6 +230,24 @@
   filter: blur(2px);
   animation: cos-aura-flicker 3s ease-in-out infinite;
 }
+
+/* Wellen: zwei Ringe laufen versetzt nach außen und verblassen */
+@keyframes cos-aura-ripple {
+  0%   { transform: scale(0.72); opacity: 0.9; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+.cos-aura--ripple { inset: -16%; }
+.cos-aura--ripple::before,
+.cos-aura--ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--aura-c1);
+  box-shadow: 0 0 6px var(--aura-c1);
+  animation: cos-aura-ripple 2.4s ease-out infinite;
+}
+.cos-aura--ripple::after { animation-delay: 1.2s; }
 
 @media (prefers-reduced-motion: reduce) {
   .cos-aura, .cos-aura::before, .cos-aura::after { animation: none !important; }

@@ -112,7 +112,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
 
   const overview = (
     <div className="space-y-5">
-      <ReputationCard level={data.reputation.level} points={data.reputation.points} isOwn={isOwn} />
+      <ReputationCard level={data.reputation.level} points={data.reputation.points} peakLevel={data.reputation.peakLevel} isOwn={isOwn} />
 
       <SquadsSection squads={data.squads} />
       {(isOwn || data.favoriteGames.length > 0) && (
