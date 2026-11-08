@@ -727,7 +727,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   </div>
 
                   {/* Kanal-ID (nur wenn Discord-Kanal aktiv) */}
-                  {r.discordChanEnabled && (
+                  {r.discordChanEnabled && !r.isEventNotification && (
                     <div className="flex items-center gap-2">
                       <Hash className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -736,9 +736,36 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                           onChange={(id) => update(r.key, { discordChannelId: id })}
                           emptyLabel={`Standard: News-Kanal${newsChannelName ? ` (${newsChannelName})` : ""}`}
                         />
-                        {r.isEventNotification && (
-                          <p className="text-[10px] text-gray-600 mt-1">Hat das Event oder seine Reihe einen eigenen Kanal, wird immer dieser genutzt.</p>
-                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* Event-Benachrichtigung: Kanal des Events/der Reihe hat immer Vorrang — die Auswahl
+                      hier ist nur der (optionale) Ersatz, siehe dispatchEventNotification */}
+                  {r.discordChanEnabled && r.isEventNotification && (
+                    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] px-3 py-2.5 space-y-2">
+                      <p className="text-[11px] font-semibold text-indigo-200 flex items-center gap-1.5">
+                        <Hash className="w-3.5 h-3.5" /> Gepostet wird in diesem Kanal:
+                      </p>
+                      <ol className="text-[11px] text-gray-400 space-y-0.5 list-decimal pl-5">
+                        <li><span className="text-white">Kanal des jeweiligen Events</span> — falls dort einer eingestellt ist</li>
+                        <li><span className="text-white">sonst Kanal der Eventreihe</span> — falls dort einer eingestellt ist</li>
+                        <li>sonst der Ersatz-Kanal unten{r.discordChannelId ? "" : " (nicht gesetzt)"}</li>
+                        <li>sonst der News-Kanal{newsChannelName ? ` (${newsChannelName})` : ""}</li>
+                      </ol>
+                      <div className="pt-1">
+                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                          Ersatz-Kanal (optional)
+                        </label>
+                        <div className="mt-1">
+                          <DiscordChannelSelect
+                            value={r.discordChannelId}
+                            onChange={(id) => update(r.key, { discordChannelId: id })}
+                            emptyLabel={`Kein Ersatz — dann News-Kanal${newsChannelName ? ` (${newsChannelName})` : ""}`}
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          Gilt nur für Events, bei denen weder das Event noch seine Reihe einen eigenen Kanal hat.
+                        </p>
                       </div>
                     </div>
                   )}
