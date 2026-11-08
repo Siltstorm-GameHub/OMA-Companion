@@ -62,6 +62,8 @@ type CompletionData = {
    *  /api/admin/events/[id]/complete) — für exaktes Zurückbuchen ohne die aktuelle Konfiguration
    *  neu interpretieren zu müssen. */
   seriesContrib?: {
+    /** Spieler, denen beim Abschluss tatsächlich eine Teilnahme gutgeschrieben wurde */
+    participations?: string[];
     transferredParticipationPoints?: Record<string, number>;
     transferredStatPoints?: Record<string, number>;
     transferredSpectatorPoints?: Record<string, number>;
@@ -366,9 +368,13 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           }
         }
 
+        // Nur die beim Abschluss wirklich gutgeschriebenen Teilnahmen zurücknehmen — ausgeschlossene
+        // Spieler und (Punktewertung/Durchschnitt) Angemeldete ohne gespielte Runde haben keine erhalten.
+        // Ältere Abschlüsse ohne diese Liste: wie bisher alle angemeldeten Spieler.
+        const credited = cd.seriesContrib?.participations ? new Set(cd.seriesContrib.participations) : null;
         for (const { userId, role } of event.registrations) {
           if (role !== "player") continue;
-          sub(userId, "participations", 1);
+          if (!credited || credited.has(userId)) sub(userId, "participations", 1);
           for (const { field } of statCfg.stats ?? []) {
             const val = statCfg.matchWinStatKeys?.includes(field)
               ? (userStats[userId]?.["Match Win"] ?? 0)

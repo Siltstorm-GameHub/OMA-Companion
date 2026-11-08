@@ -62,7 +62,19 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
         }
 
         // Teilnahmen abziehen
-        for (const { userId } of event.registrations) sub(userId, "participations", 1);
+        // Nur tatsächlich gutgeschriebene Teilnahmen (siehe complete/route.ts seriesContrib.participations);
+        // ältere Abschlüsse ohne diese Liste: wie bisher alle Angemeldeten.
+        const credited = (() => {
+          try {
+            const list = event.completionData
+              ? (JSON.parse(event.completionData) as { seriesContrib?: { participations?: string[] } }).seriesContrib?.participations
+              : undefined;
+            return list ? new Set(list) : null;
+          } catch { return null; }
+        })();
+        for (const { userId } of event.registrations) {
+          if (!credited || credited.has(userId)) sub(userId, "participations", 1);
+        }
 
         // Stat-Beiträge aus Match-Einträgen abziehen (Platzierung fließt bewusst nicht ein — sie ist
         // keine Tabellenpunkte-Quelle, siehe computeTurnierpunkte)

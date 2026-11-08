@@ -16,6 +16,7 @@ import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
+import { isPeriodEvent } from "@/lib/event-period";
 import { applyEventStatOverride, computeTurnierpunkte, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
 
@@ -420,6 +421,31 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Die Begründung dafür trägt der Admin im bereits vorhandenen Feld "Finale-Platzierung-Notiz" ein.
   const excludedSet = new Set((body.excludedUserIds ?? []).filter(id => registeredSet.has(id)));
 
+  // Punktewertung/Skill-Index (coop_stats) und Durchschnittswerte (avg_stats): Wer angemeldet war, aber
+  // bei keiner Runde mitgespielt hat, bekommt weder Teilnahme-Münzen noch Teilnahme-Tabellenpunkte
+  // (inkl. Übertrag auf die Rangliste). Bleibt in der Tabelle sichtbar.
+  // "Mitgespielt" heißt: in einer Runde eingetragen. Nur bei Zeitraum-Events (> 24 h) zählt ein leerer
+  // Rundeneintrag NICHT — dort werden alle Angemeldeten automatisch in die Runden übernommen
+  // (period-rounds.ts / late-join.ts), es braucht also mindestens einen eingetragenen Wert.
+  // Sicherung: Gibt es noch gar keinen Mitspieler in Runden (z.B. Ergebnis ohne Runden eingetragen),
+  // gilt die Regel nicht — sonst ginge jede Teilnahme leer aus.
+  const needsValue = isPeriodEvent(event);
+  const playedSet = new Set<string>();
+  for (const match of event.matches) {
+    for (const entry of match.entries) {
+      if (!entry.userId) continue;
+      if (!needsValue) { playedSet.add(entry.userId); continue; }
+      if (!entry.statsJson) continue;
+      let parsed: Record<string, unknown> = {};
+      try { parsed = JSON.parse(entry.statsJson) ?? {}; } catch { continue; }
+      const hasValue = Object.entries(parsed).some(([k, v]) =>
+        !k.startsWith("_") && v !== null && v !== "" && Number.isFinite(Number(v)));
+      if (hasValue) playedSet.add(entry.userId);
+    }
+  }
+  const roundBasedFormat = event.format === "coop_stats" || event.format === "avg_stats";
+  const noShowSet = new Set(roundBasedFormat && playedSet.size > 0 ? playerIds.filter(id => !playedSet.has(id)) : []);
+
   // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
   // Admin manuell überschrieben werden (z.B. nachträgliche Disqualifikation eines Spielers, der laut
   // reiner Stat-Auswertung gewonnen hätte). In den Stat-Modi ("stat"/"avg_stats") überschreibt eine
@@ -463,7 +489,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const newParticipationCoins: Record<string, number> = {};
   if (effectiveParticipationCoins > 0) {
     for (const userId of playerIds) {
-      if (excludedSet.has(userId)) continue;
+      if (excludedSet.has(userId) || noShowSet.has(userId)) continue;
       newParticipationCoins[userId] = effectiveParticipationCoins;
     }
   }
@@ -871,7 +897,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     const newParticipations: string[] = [];
     const newStatFieldsByUser: Record<string, Record<string, number>> = {};
     for (const { userId, role } of event.registrations) {
-      if (role !== "player" || excludedSet.has(userId)) continue;
+      if (role !== "player" || excludedSet.has(userId) || noShowSet.has(userId)) continue;
       addToUser(userId, "participations", 1);
       newParticipations.push(userId);
       const eStats = userStats[userId] ?? {};
