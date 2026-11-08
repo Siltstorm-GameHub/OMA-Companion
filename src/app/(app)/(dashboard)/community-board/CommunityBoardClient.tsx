@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
 import RankedAvatar from "@/components/RankedAvatar";
+import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
 import { isVideoUrl } from "@/lib/upload-limits";
 import MarkdownLite, { EmojiText } from "@/components/community-jobs/MarkdownLite";
 import { plainExcerpt } from "@/lib/report-text";
@@ -418,7 +419,7 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
         <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
           <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
           <div className="min-w-0">
-            <span className="flex items-center gap-1.5 min-w-0"><span className="text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span></span>
+            <span className="flex items-center gap-1.5 min-w-0"><StyledUserName userId={entry.author.id} name={authorLabel(entry.author)} className="text-xs font-semibold text-white truncate" /><StyledUserTitle userId={entry.author.id} className="shrink-0 !text-[8px]" /></span>
             <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
           </div>
         </a>
@@ -521,7 +522,7 @@ function CommentSection({
                 <div className="flex items-center justify-between gap-2">
                   <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                     <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={16} />
-                    <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span>
+                    <StyledUserName userId={c.author.id} name={authorLabel(c.author)} className="text-[11px] font-medium text-white truncate" />
                   </a>
                   <span className="text-[10px] text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
                 </div>

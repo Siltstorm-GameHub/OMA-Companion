@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
-import { getCosmeticsConfig, saveCosmeticsConfig } from "@/lib/cosmetics/config";
+import { getCosmeticsConfig, getShopSettings, saveCosmeticsConfig, saveShopSettings } from "@/lib/cosmetics/config";
 
 export async function GET() {
   await requireRole("admin");
-  return NextResponse.json(await getCosmeticsConfig());
+  const [config, settings] = await Promise.all([getCosmeticsConfig(), getShopSettings()]);
+  return NextResponse.json({ config, settings });
 }
 
-/** PUT — komplette Override-Liste { [itemId]: { price?, enabled? } } speichern. */
+/** PUT { config?: { [itemId]: { price?, enabled? } }, settings?: ShopSettings } — jeweils komplett ersetzen. */
 export async function PUT(req: NextRequest) {
   await requireRole("admin");
   const body = await req.json().catch(() => null);
-  return NextResponse.json(await saveCosmeticsConfig(body));
+  const [config, settings] = await Promise.all([
+    body?.config !== undefined ? saveCosmeticsConfig(body.config) : getCosmeticsConfig(),
+    body?.settings !== undefined ? saveShopSettings(body.settings) : getShopSettings(),
+  ]);
+  return NextResponse.json({ config, settings });
 }

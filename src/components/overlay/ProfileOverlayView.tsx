@@ -69,7 +69,7 @@ export default function ProfileOverlayView({
           width={PROFILE_ELEMENT_SIZE[zoom.display].width}
           header={
             <ZoomBannerShell>
-              <RankedAvatar look={null} userId={state.id} src={state.image} alt={streamer.username ?? "Streamer"} size={40} />
+              <RankedAvatar userId={state.id} src={state.image} alt={streamer.username ?? "Streamer"} size={40} />
               <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 700, color: "#fff" }}>
                 {state.twitchLogin && <TwitchGlyph size={18} />}
                 {state.twitchLogin ?? state.username ?? state.name}
@@ -100,7 +100,7 @@ function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userI
   return (
     <PanelShell title="Rang">
       <div style={{ display: "flex", alignItems: "center", gap: 18, height: CARD_BODY_HEIGHT }}>
-        <RankedAvatar look={null} userId={userId} src={image} alt={name} size={96} />
+        <RankedAvatar userId={userId} src={image} alt={name} size={96} />
         <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flex: 1 }}>
           <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {name}

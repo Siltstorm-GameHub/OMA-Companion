@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, X, Send, Bell, Settings } from "@/components/icons";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
+import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { Tabs } from "@/components/admin/Tabs";
 import { formatBerlinTime } from "@/lib/time";
 import { usePolling } from "@/lib/usePolling";
@@ -511,7 +512,9 @@ export function FloatingLobbyChat() {
                         <RankedAvatar userId={msg.user.id} src={msg.user.image} alt={displayName(msg.user)} size={28} />
                       </Link>
                       <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-                        <span className="text-[10px] text-gray-500">{displayName(msg.user)}</span>
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          <StyledUserName userId={msg.user.id} name={displayName(msg.user)} />
+                        </span>
                         <div
                           className="text-sm px-3 py-1.5 leading-snug"
                           style={

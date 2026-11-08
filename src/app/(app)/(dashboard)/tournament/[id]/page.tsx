@@ -14,6 +14,7 @@ import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperbo
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
+import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
 import GameCover from "@/components/GameCover";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -1109,7 +1110,7 @@ export default async function TournamentDetailPage({
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
                   <RankedAvatar userId={user.id} src={user.image} alt={name} size={24} className="w-6 h-6" />
                   <span className={`text-sm ${isMe ? "text-teal-300 font-medium" : "text-gray-200"}`}>
-                    {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                    <StyledUserName userId={user.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                   </span>
                 </div>
               );
@@ -1138,7 +1139,7 @@ export default async function TournamentDetailPage({
                     <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                     <div className="flex-1 min-w-0">
                       <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
-                        {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                        <StyledUserName userId={user?.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                       </span>
                       <div className="flex items-center gap-2 mt-0.5">
                         {(pollBonusCoins ?? 0) > 0 && (
@@ -1186,7 +1187,7 @@ export default async function TournamentDetailPage({
                         <span className="text-base shrink-0">🏆</span>
                         <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                         <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
-                          {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                          <StyledUserName userId={user?.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                         </span>
                       </div>
                     );
@@ -1300,7 +1301,7 @@ export default async function TournamentDetailPage({
                       <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
-                          <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                          <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
                           {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
                           {excludedUserIds.has(user.id) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
@@ -1313,6 +1314,7 @@ export default async function TournamentDetailPage({
                             </span>
                           )}
                         </p>
+                        <StyledUserTitle userId={user.id} className="block truncate leading-tight" />
                         {wonLabels.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-0.5">
                             {wonLabels.map(label => (

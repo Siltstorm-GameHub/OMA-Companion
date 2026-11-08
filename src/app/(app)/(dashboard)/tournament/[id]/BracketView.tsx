@@ -5,6 +5,7 @@ import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
 import RankedAvatar from "@/components/RankedAvatar";
+import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { formatBerlinDateTime } from "@/lib/time";
 import { knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 
@@ -179,7 +180,8 @@ function MatchCard({
                            "text-gray-600 italic"
               }`}>
                 {user
-                  ? <>{uname(user)}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</>
+                  ? <>{/* Sieg/Niederlage-Farbe hat Vorrang; offene Matches zeigen die Namensfarbe */}
+                      {isWinner || isLoser ? uname(user) : <StyledUserName userId={user.id} name={uname(user)} />}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</>
                   : isBye ? "Freilos" : "TBD"}
               </span>
             </div>

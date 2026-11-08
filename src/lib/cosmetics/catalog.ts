@@ -11,6 +11,34 @@
 export type CosmeticCategory = "frame" | "aura" | "background" | "title" | "nameColor";
 export type CosmeticRarity = "common" | "rare" | "epic" | "legendary";
 
+/**
+ * Belohnungen, die Artikel freischalten (nicht käuflich). Werden bei jedem Shop-Aufruf aus den
+ * echten Daten abgeleitet (lib/cosmetics/service.ts → getRewardKeys) — wird z.B. ein Turniersieger
+ * nachträglich korrigiert, wandert die Freischaltung automatisch mit.
+ */
+export type RewardKey = "tournament_win" | "series_win" | "clip_month" | "clip_year" | "veteran" | "donor";
+
+export const REWARD_META: Record<RewardKey, { label: string; requirement: string }> = {
+  tournament_win: { label: "Turniersieg",     requirement: "Gewinne ein Turnier (Event-Pokal oder Eventreihe)." },
+  series_win:     { label: "Eventreihe",      requirement: "Gewinne eine komplette Eventreihe." },
+  clip_month:     { label: "Clip des Monats", requirement: "Gewinne die Abstimmung zum Clip des Monats." },
+  clip_year:      { label: "Clip des Jahres", requirement: "Gewinne die Abstimmung zum Clip des Jahres." },
+  veteran:        { label: "Veteran",         requirement: "Sei seit mindestens einem Jahr Mitglied der Community." },
+  donor:          { label: "Spende",          requirement: "Unterstütze die Community mit einer Spende." },
+};
+
+export type CosmeticUnlock = { reputationLevel: number } | { reward: RewardKey };
+
+/** Jährlich wiederkehrende Saisons ("MM-DD", Berliner Zeit, jeweils inklusive; Ende darf im Folgejahr liegen). */
+export type SeasonKey = "autumn" | "halloween" | "christmas" | "newyear";
+
+export const SEASONS: Record<SeasonKey, { name: string; emoji: string; from: string; to: string }> = {
+  autumn:    { name: "Herbst",     emoji: "🍂", from: "10-01", to: "11-30" },
+  halloween: { name: "Halloween",  emoji: "🎃", from: "10-15", to: "11-05" },
+  christmas: { name: "Weihnachten", emoji: "🎄", from: "12-01", to: "12-26" },
+  newyear:   { name: "Silvester",  emoji: "🎆", from: "12-27", to: "01-06" },
+};
+
 interface CosmeticBase {
   id: string;
   name: string;
@@ -18,8 +46,27 @@ interface CosmeticBase {
   rarity: CosmeticRarity;
   /** Startpreis in Münzen. null = nicht kaufbar (nur über `unlock` erhältlich). */
   defaultPrice: number | null;
-  /** Wird automatisch freigeschaltet, z.B. über die Ansehens-Stufe (höchste je erreichte). */
-  unlock?: { reputationLevel: number };
+  /** Wird automatisch freigeschaltet: Ansehens-Stufe (höchste je erreichte) oder eine Belohnung. */
+  unlock?: CosmeticUnlock;
+  /** Saison-Artikel: nur im Zeitfenster der Saison kaufbar (Besitz bleibt danach erhalten). */
+  season?: SeasonKey;
+  /** Wochen-Exklusiv: nur kaufbar, wenn der Artikel gerade in der Wochen-Rotation ist. */
+  rotationOnly?: boolean;
+}
+
+/** Text, wie ein nicht käuflicher Artikel freigeschaltet wird. */
+export function unlockRequirement(item: Cosmetic): string | null {
+  const u = item.unlock;
+  if (!u) return null;
+  if ("reward" in u) return REWARD_META[u.reward].requirement;
+  return item.description ?? `Erreiche Ansehens-Stufe ${u.reputationLevel} in den Community-Jobs.`;
+}
+
+/** Kurzlabel der Freischalt-Quelle (für Karten/Admin). */
+export function unlockLabel(item: Cosmetic): string | null {
+  const u = item.unlock;
+  if (!u) return null;
+  return "reward" in u ? REWARD_META[u.reward].label : "Community-Jobs";
 }
 
 /** Rahmen = der (frühere Ansehens-)Ring ums Profilbild. Farben dunkel/mittel/hell, Stufe = Effekt-Stärke. */
@@ -183,6 +230,36 @@ export const COSMETICS: Cosmetic[] = [
   { id: "name:toxic",    category: "nameColor", name: "Giftig",       color: "#a3e635", gradient: "linear-gradient(90deg, #d9f99d, #84cc16, #15803d)", rarity: "epic", defaultPrice: 2500 },
   { id: "name:galaxy",   category: "nameColor", name: "Galaxie",      color: "#a78bfa", gradient: "linear-gradient(90deg, #60a5fa, #a78bfa, #f0abfc, #60a5fa)", rarity: "epic", defaultPrice: 2800 },
   { id: "name:goldleaf", category: "nameColor", name: "Blattgold",    color: "#fbbf24", gradient: "linear-gradient(90deg, #fef3c7, #fbbf24, #b45309, #fde68a)", rarity: "legendary", defaultPrice: 6500 },
+
+  // ── Saison-Artikel (nur im Zeitfenster der Saison kaufbar) ───────────────
+  { id: "bg:autumn-leaves",   category: "background", name: "Herbstlaub",     rarity: "rare",      defaultPrice: 900,  season: "autumn",    css: "radial-gradient(circle at 15% 25%, rgba(234,88,12,0.4) 0 5%, transparent 6%), radial-gradient(circle at 70% 15%, rgba(202,138,4,0.35) 0 4%, transparent 5%), radial-gradient(circle at 85% 75%, rgba(185,28,28,0.35) 0 5%, transparent 6%), radial-gradient(circle at 35% 85%, rgba(217,119,6,0.3) 0 3.5%, transparent 4.5%), linear-gradient(170deg, rgba(120,53,15,0.4), rgba(69,26,3,0.15))" },
+  { id: "name:autumn",        category: "nameColor",  name: "Laubfarben",     rarity: "epic",      defaultPrice: 2000, season: "autumn",    color: "#ea580c", gradient: "linear-gradient(90deg, #facc15, #ea580c, #b91c1c, #ca8a04)" },
+  { id: "frame:pumpkin",      category: "frame",      name: "Kürbis",         rarity: "epic",      defaultPrice: 2200, season: "halloween", colors: ["#431407", "#fed7aa", "#f97316"], tier: 3, glow: 16, speed: "7s" },
+  { id: "aura:ghost",         category: "aura",       name: "Geisterhauch",   rarity: "epic",      defaultPrice: 2400, season: "halloween", kind: "sparkle", color: "#e9d5ff", color2: "#a3e635" },
+  { id: "title:ghosthunter",  category: "title",      name: "Geisterjäger",   rarity: "rare",      defaultPrice: 900,  season: "halloween", text: "Geisterjäger", color: "#a3e635" },
+  { id: "frame:candycane",    category: "frame",      name: "Zuckerstange",   rarity: "epic",      defaultPrice: 2200, season: "christmas", colors: ["#7f1d1d", "#ffffff", "#ef4444"], tier: 3, glow: 14, speed: "6s" },
+  { id: "aura:snow",          category: "aura",       name: "Schneegestöber", rarity: "epic",      defaultPrice: 2400, season: "christmas", kind: "sparkle", color: "#ffffff", color2: "#bae6fd" },
+  { id: "bg:winter-forest",   category: "background", name: "Winterwald",     rarity: "rare",      defaultPrice: 900,  season: "christmas", css: "radial-gradient(circle at 20% 20%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 60% 35%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 85% 15%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 40% 60%, #fff 0 1px, transparent 1.5px), linear-gradient(0deg, rgba(20,83,45,0.45), transparent 45%), linear-gradient(180deg, rgba(30,58,138,0.35), rgba(15,23,42,0.15))" },
+  { id: "title:elf",          category: "title",      name: "Wichtel",        rarity: "rare",      defaultPrice: 900,  season: "christmas", text: "Wichtel", color: "#f87171" },
+  { id: "aura:fireworks",     category: "aura",       name: "Feuerwerk",      rarity: "legendary", defaultPrice: 5500, season: "newyear",   kind: "sparkle", color: "#f472b6", color2: "#facc15" },
+  { id: "name:fireworks",     category: "nameColor",  name: "Funkenregen",    rarity: "epic",      defaultPrice: 2500, season: "newyear",   color: "#facc15", gradient: "linear-gradient(90deg, #f472b6, #facc15, #38bdf8, #f472b6)" },
+  { id: "title:newyear",      category: "title",      name: "Neujahrs-Held",  rarity: "rare",      defaultPrice: 900,  season: "newyear",   text: "Neujahrs-Held", color: "#facc15" },
+
+  // ── Wochen-Exklusiv (je Woche ist einer davon kaufbar) ──────────────────
+  { id: "frame:nebula",   category: "frame",      name: "Nebel",         rarity: "legendary", defaultPrice: 7000, rotationOnly: true, colors: ["#4c1d95", "#f5d0fe", "#ec4899"], tier: 3, glow: 22, speed: "5s", pulse: true },
+  { id: "aura:comet",     category: "aura",       name: "Komet",         rarity: "legendary", defaultPrice: 7000, rotationOnly: true, kind: "orbit", color: "#fde68a", color2: "#f97316" },
+  { id: "bg:synthwave",   category: "background", name: "Synthwave",     rarity: "legendary", defaultPrice: 6500, rotationOnly: true, css: "linear-gradient(rgba(236,72,153,0.25) 1px, transparent 1px) 0 60% / 100% 14px, radial-gradient(circle at 50% 75%, rgba(251,146,60,0.55), transparent 35%), linear-gradient(180deg, rgba(76,29,149,0.55), rgba(190,24,93,0.35) 70%, rgba(15,23,42,0.4))" },
+  { id: "name:holo",      category: "nameColor",  name: "Hologramm",     rarity: "legendary", defaultPrice: 7000, rotationOnly: true, color: "#a5f3fc", gradient: "linear-gradient(90deg, #a5f3fc, #f0abfc, #fef08a, #a7f3d0, #a5f3fc)" },
+  { id: "title:mythic",   category: "title",      name: "Mythos",        rarity: "legendary", defaultPrice: 7500, rotationOnly: true, text: "Mythos", color: "#f0abfc" },
+
+  // ── Belohnungen (nicht käuflich) ─────────────────────────────────────────
+  { id: "frame:champion",        category: "frame",     name: "Champion",       rarity: "legendary", defaultPrice: null, unlock: { reward: "tournament_win" }, colors: ["#7c2d12", "#fef3c7", "#f59e0b"], tier: 3, glow: 20, speed: "6s", pulse: true },
+  { id: "title:series-champion", category: "title",     name: "Serienchampion", rarity: "legendary", defaultPrice: null, unlock: { reward: "series_win" },     text: "Serienchampion", color: "#f59e0b" },
+  { id: "aura:spotlight",        category: "aura",      name: "Rampenlicht",    rarity: "epic",      defaultPrice: null, unlock: { reward: "clip_month" },     kind: "ripple", color: "#e879f9" },
+  { id: "title:clip-legend",     category: "title",     name: "Clip-Legende",   rarity: "legendary", defaultPrice: null, unlock: { reward: "clip_year" },      text: "Clip-Legende", color: "#e879f9" },
+  { id: "title:veteran",         category: "title",     name: "Veteran",        rarity: "rare",      defaultPrice: null, unlock: { reward: "veteran" },        text: "Veteran", color: "#94a3b8" },
+  { id: "name:donor",            category: "nameColor", name: "Herzblut",       rarity: "epic",      defaultPrice: null, unlock: { reward: "donor" },          color: "#f43f5e", gradient: "linear-gradient(90deg, #fda4af, #f43f5e, #be123c)" },
+  { id: "title:supporter",       category: "title",     name: "Supporter",      rarity: "epic",      defaultPrice: null, unlock: { reward: "donor" },          text: "Supporter", color: "#fb7185" },
 ];
 
 const BY_ID = new Map(COSMETICS.map(c => [c.id, c]));
@@ -219,8 +296,104 @@ export function parseEquipped(json: string | null | undefined): EquippedCosmetic
 /** Freigeschaltete Ansehens-Titel bei gegebener (höchster) Ansehens-Stufe — der beste zuerst. */
 export function reputationTitlesFor(peakLevel: number): TitleCosmetic[] {
   return COSMETICS
-    .filter((c): c is TitleCosmetic => c.category === "title" && !!c.unlock && c.unlock.reputationLevel <= peakLevel)
-    .sort((a, b) => (b.unlock!.reputationLevel - a.unlock!.reputationLevel));
+    .filter((c): c is TitleCosmetic => c.category === "title" && repLevel(c) !== null && repLevel(c)! <= peakLevel)
+    .sort((a, b) => repLevel(b)! - repLevel(a)!);
+}
+
+function repLevel(c: Cosmetic): number | null {
+  return c.unlock && "reputationLevel" in c.unlock ? c.unlock.reputationLevel : null;
+}
+
+/** Per Belohnung freigeschaltete Artikel (bei gegebenen erreichten Belohnungen). */
+export function rewardItemsFor(rewards: Iterable<RewardKey>): Cosmetic[] {
+  const set = new Set(rewards);
+  return COSMETICS.filter(c => !!c.unlock && "reward" in c.unlock && set.has(c.unlock.reward));
+}
+
+// ── Sets ──────────────────────────────────────────────────────────────────────
+// Thematisch passende Artikel als Bündel. Preis = Summe der noch fehlenden Artikel (jeweils zum
+// aktuellen Preis inkl. Wochen-Rabatt) abzüglich Set-Rabatt. Nur kaufbar, wenn alle fehlenden
+// Artikel gerade kaufbar sind.
+
+export interface CosmeticSet {
+  id: string;
+  name: string;
+  description: string;
+  items: string[];
+  discountPct: number;
+}
+
+export const COSMETIC_SETS: CosmeticSet[] = [
+  { id: "set:fire",    name: "Feuer-Set",       description: "Für alle, die heiß laufen.",               items: ["frame:inferno", "aura:flame", "name:fire", "title:clutch"],          discountPct: 20 },
+  { id: "set:ice",     name: "Eis-Set",         description: "Kühler Kopf, kalte Clutches.",             items: ["frame:ice", "aura:frostfire", "name:ice", "title:calm"],             discountPct: 20 },
+  { id: "set:galaxy",  name: "Galaxie-Set",     description: "Nicht von dieser Welt.",                   items: ["frame:violet", "aura:stardust", "bg:galaxy", "name:galaxy"],         discountPct: 20 },
+  { id: "set:sakura",  name: "Kirschblüten-Set",description: "Sanft, aber gefährlich.",                  items: ["frame:sakura", "bg:sakura", "name:rose", "aura:rose-pulse"],         discountPct: 15 },
+  { id: "set:toxic",   name: "Gift-Set",        description: "Nichts für schwache Nerven.",              items: ["frame:toxic", "aura:toxic-pulse", "name:toxic", "bg:neon-grid"],     discountPct: 15 },
+  { id: "set:gold",    name: "Gold-Set",        description: "Für Pokaljäger mit Stil.",                 items: ["frame:gold", "aura:ripple-gold", "name:goldleaf", "title:trophyhunter"], discountPct: 20 },
+  { id: "set:starter", name: "Einsteiger-Set",  description: "Der günstige Start in die Kosmetik.",      items: ["frame:teal", "aura:teal-glow", "name:teal", "title:newbie"],         discountPct: 25 },
+];
+
+export function getSet(id: string): CosmeticSet | undefined {
+  return COSMETIC_SETS.find(s => s.id === id);
+}
+
+// ── Zeit (Berliner Datum) für Saison & Wochen-Rotation ─────────────────────────
+
+/** Datum in Berliner Zeit als { y, m, d }. */
+export function berlinDate(now: Date): { y: number; m: number; d: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(now);
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value);
+  return { y: get("year"), m: get("month"), d: get("day") };
+}
+
+const mmdd = (m: number, d: number) => m * 100 + d;
+const parseMmdd = (s: string) => { const [m, d] = s.split("-").map(Number); return mmdd(m, d); };
+
+export function isSeasonActive(season: SeasonKey, now: Date): boolean {
+  const { m, d } = berlinDate(now);
+  const cur = mmdd(m, d);
+  const from = parseMmdd(SEASONS[season].from);
+  const to = parseMmdd(SEASONS[season].to);
+  return from <= to ? cur >= from && cur <= to : cur >= from || cur <= to;
+}
+
+/** Ende (letzter Tag, 23:59:59 Berliner Zeit ≈ UTC+1) der gerade laufenden Saison. */
+export function seasonEnd(season: SeasonKey, now: Date): Date {
+  const { y, m } = berlinDate(now);
+  const [tm, td] = SEASONS[season].to.split("-").map(Number);
+  const year = tm < m ? y + 1 : y; // Saison läuft über den Jahreswechsel
+  return new Date(Date.UTC(year, tm - 1, td, 22, 59, 59));
+}
+
+/** ISO-Woche des Berliner Datums, z.B. "2026-W45" — Schlüssel für die Wochen-Rotation (Wechsel montags). */
+export function isoWeekKey(now: Date): string {
+  const { y, m, d } = berlinDate(now);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/** Nächster Montag 00:00 Berliner Zeit (≈ UTC+1) — Ende der aktuellen Angebotswoche. */
+export function weekEnd(now: Date): Date {
+  const { y, m, d } = berlinDate(now);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + (8 - day));
+  return new Date(date.getTime() - 60 * 60_000);
+}
+
+/** Deterministische Auswahl (gleiche Woche → gleiche Artikel für alle). */
+export function seededPick<T>(items: T[], count: number, seed: string): T[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const rand = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr.slice(0, Math.max(0, count));
 }
 
 /**

@@ -113,7 +113,7 @@ export function IdentityFlipTile({ streamer, together }: { streamer: OverlayStre
       >
         {showTogether ? <TogetherFace together={together!} /> : omaFace}
         <FlipFace back>
-          <RankedAvatar look={null} userId={streamer.id} src={streamer.image} alt={name} size={48} />
+          <RankedAvatar userId={streamer.id} src={streamer.image} alt={name} size={48} />
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
             <span style={{ fontSize: 19, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {name}
@@ -280,7 +280,7 @@ export function MatchTicker({
                     key={e.id}
                     style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: i === 0 ? 0 : 16, flexShrink: 0 }}
                   >
-                    <RankedAvatar look={null} userId={u?.id} src={u?.image} alt={displayName(u)} size={30} />
+                    <RankedAvatar userId={u?.id} src={u?.image} alt={displayName(u)} size={30} />
                     <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
                       {displayName(u)}{statsLabel ? ` · ${statsLabel}` : ""}
                     </span>
@@ -348,7 +348,7 @@ function PlayerName({
       {/* key=winnerKey lässt den Glow einmal aufflackern, sobald ein Sieger feststeht,
          statt ihn dauerhaft leuchten zu lassen. */}
       <div key={winner ? winnerKey : "pending"} className={winner ? "oma-anim-flare" : undefined} style={{ borderRadius: 999 }}>
-        <RankedAvatar look={null} userId={user?.id} src={user?.image} alt={name} size={32} />
+        <RankedAvatar userId={user?.id} src={user?.image} alt={name} size={32} />
       </div>
       <span
         style={{

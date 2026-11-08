@@ -27,3 +27,9 @@ export default function StyledUserName({
     </>
   );
 }
+
+/** Nur der Titel eines Users (eigene Zeile unter dem Namen in Listen). Rendert nichts ohne Titel. */
+export function StyledUserTitle({ userId, className = "" }: { userId?: string | null; className?: string }) {
+  const look = useUserLook(userId);
+  return <CosmeticTitle title={look?.title} className={className} />;
+}
