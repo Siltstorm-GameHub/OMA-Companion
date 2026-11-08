@@ -96,7 +96,7 @@ export type SelectiveResetSummary = {
 /**
  * Setzt alles zurück außer den ausgewählten Eventreihen: Münzen aller User auf 0, Rang-Punkte
  * auf die Summe aus den bewahrten Reihen (siehe computeKeptSeriesRankPoints), löscht alle Events/
- * Eventreihen außerhalb der Auswahl vollständig sowie LuL, Quest-Fortschritt, Duelle, Event-
+ * Eventreihen außerhalb der Auswahl vollständig sowie LuL, Quest-Fortschritt, Event-
  * Vorhersagen und Pokale. Unangetastet bleiben: Badges, Wanderpokale, Clip-Contests,
  * Spendenpool.
  */
@@ -116,7 +116,7 @@ export async function resetAllExceptSeries(keepSeriesIds: string[]): Promise<Sel
   const seriesIds = seriesToDelete.map(s => s.id);
 
   await prisma.$transaction([
-    // ── LuL, Quests, Duelle, Vorhersagen, Shop-Inventar: vollständig zurückgesetzt ──
+    // ── LuL, Quests, Vorhersagen, Shop-Inventar: vollständig zurückgesetzt ──
     prisma.lulPollVote.deleteMany(),
     prisma.lulPoll.deleteMany(),
     prisma.lulEntry.deleteMany(),
@@ -124,7 +124,6 @@ export async function resetAllExceptSeries(keepSeriesIds: string[]): Promise<Sel
     prisma.lulSpieltag.deleteMany(),
     prisma.lulSeason.deleteMany(),
     prisma.userQuestProgress.deleteMany(),
-    prisma.duelChallenge.deleteMany(),
     prisma.eventWinnerPrediction.deleteMany(),
     prisma.predictionStreak.deleteMany(),
     prisma.pokal.deleteMany(),

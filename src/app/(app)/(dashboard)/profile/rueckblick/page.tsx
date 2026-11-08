@@ -12,7 +12,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
 import { TrendingUp } from "@/components/icons";
 import { Sparkles } from "@/components/icons";
-import { CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Dices, Target } from "@/components/icons";
+import { CalendarDays, Swords, Clock, MessageSquare, Gamepad2, Medal, ArrowRight, Target } from "@/components/icons";
 import { getBerlinDateParts } from "@/lib/time";
 
 const MONTH_NAMES = [
@@ -205,20 +205,13 @@ export default async function YearReviewPage({
       )}
 
       {/* ── Minigames & Extras ───────────────────────────────────────── */}
-      {(review.lul || review.duels || review.predictions || review.donationsTotal > 0) && (
+      {(review.lul || review.predictions || review.donationsTotal > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {review.lul && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
               <p className="relative text-2xl font-black text-white tabular-nums">{review.lul.points}</p>
               <p className="relative text-xs text-gray-400 mt-1.5">LuL-Punkte · {review.lul.spieltage} Spieltage{review.lul.wins > 0 ? ` · ${review.lul.wins} Siege` : ""}</p>
-            </div>
-          )}
-          {review.duels && (
-            <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/8 to-transparent pointer-events-none" />
-              <p className="relative text-2xl font-black text-white tabular-nums">{review.duels.won}/{review.duels.played}</p>
-              <p className="relative text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Dices className="w-3 h-3" /> Münzen-Duelle gewonnen</p>
             </div>
           )}
           {review.predictions && (

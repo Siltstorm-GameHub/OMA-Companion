@@ -79,11 +79,16 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
         return;
       }
 
+      const twitchRes = (await r3.json().catch(() => ({}))) as { clipRewardCoins?: number };
+
       setSavedBirthday(bdVal);
       setSavedBio(bio.trim() || null);
       setSavedTwitch(twitchVal);
       setOpen(false);
       toast.success("Profil gespeichert");
+      if (twitchRes.clipRewardCoins) {
+        toast.success(`🏆 ${twitchRes.clipRewardCoins} Münzen für deinen Gewinner-Clip gutgeschrieben!`);
+      }
       router.refresh();
     } finally {
       setSaving(false);
@@ -194,6 +199,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
             />
             <p className="text-[10px] text-gray-600">
               Wenn du live bist, erscheinst du im "Community streamt gerade"-Widget auf dem Dashboard.
+              Auch ohne eigenen Stream sinnvoll: Gewinnt einer deiner Clips den Clip des Monats, bekommst du die Münzen automatisch.
             </p>
           </div>
 

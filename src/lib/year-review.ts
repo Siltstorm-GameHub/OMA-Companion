@@ -34,7 +34,6 @@ export type YearReview = {
   newPokale: { id: string; title: string; category: string; isSeries: boolean }[];
 
   lul: { spieltage: number; points: number; wins: number } | null;
-  duels: { played: number; won: number } | null;
   predictions: { total: number; correct: number } | null;
   donationsTotal: number;
 
@@ -51,7 +50,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     rankPointsBeforeAgg, rankPointsThroughAgg,
     biggestWin, txInYear,
     eventRegs, tournamentParts,
-    lulEntries, duelsRaw, predictionRows,
+    lulEntries, predictionRows,
     donationsAgg, pokaleAcquired,
   ] = await Promise.all([
     prisma.pointTransaction.aggregate({
@@ -89,10 +88,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     prisma.lulEntry.findMany({
       where:  { userId, spieltag: { scheduledAt: { gte: yearStart, lt: yearEnd } } },
       select: { lulPoints: true, gameWinner: true },
-    }),
-    prisma.duelChallenge.findMany({
-      where:  { OR: [{ challengerId: userId }, { opponentId: userId }], status: "resolved", resolvedAt: { gte: yearStart, lt: yearEnd } },
-      select: { winnerId: true },
     }),
     prisma.eventWinnerPrediction.findMany({
       where:  { userId, resolved: true, createdAt: { gte: yearStart, lt: yearEnd } },
@@ -145,11 +140,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     wins:      lulEntries.filter(e => e.gameWinner).length,
   } : null;
 
-  const duels = duelsRaw.length > 0 ? {
-    played: duelsRaw.length,
-    won:    duelsRaw.filter(d => d.winnerId === userId).length,
-  } : null;
-
   const predictions = predictionRows.length > 0 ? {
     total:   predictionRows.length,
     correct: predictionRows.filter(p => p.correct).length,
@@ -171,7 +161,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     messagesEstimate,
     newPokale,
     lul,
-    duels,
     predictions,
     donationsTotal: donationsAgg._sum.amount ?? 0,
     biggestWin: biggestWin

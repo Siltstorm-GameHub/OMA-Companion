@@ -173,7 +173,8 @@ export function AlbumsBlock({ onChanged }: { onChanged?: () => void }) {
 
 interface MediaItem {
   id: string; url: string; type: string; caption: string | null; createdAt: string;
-  _count: { votes: number };
+  /** Daumen zählen auf den Beitrag, in dem das Bild/der Clip veröffentlicht wurde (null = ohne Beitrag). */
+  report: { id: string; _count: { votes: number } } | null;
   author: { id: string; username: string | null; name: string | null };
   event: { id: string; title: string } | null;
   album: { id: string; title: string } | null;
@@ -232,7 +233,7 @@ export function MediaLibraryBlock() {
               </a>
               <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-[9px] text-gray-200 leading-tight">
                 <p className="truncate">{a.caption ?? a.event?.title ?? a.type}</p>
-                <p className="truncate text-gray-400">{a.author.username ?? a.author.name} · {a._count.votes} 👍</p>
+                <p className="truncate text-gray-400">{a.author.username ?? a.author.name} · {a.report?._count.votes ?? 0} 👍</p>
               </div>
               <button onClick={() => copy(a.url)} title="Link kopieren" aria-label="Bild-Link kopieren"
                 className="absolute top-1 right-1 p-1 rounded bg-black/60 text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">

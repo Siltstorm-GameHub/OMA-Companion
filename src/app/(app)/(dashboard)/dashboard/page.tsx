@@ -22,6 +22,7 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import RankRing from "@/components/RankRing";
+import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
@@ -425,7 +426,7 @@ export default async function DashboardPage() {
           <div className="flex-1 min-w-0 pt-1">
             <p className="text-[10px] text-teal-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Spieler</p>
             <h1 className="font-display text-3xl sm:text-4xl font-black text-white leading-none tracking-tight">
-              {firstName}
+              <StyledUserName userId={userId} name={firstName} />
             </h1>
             <div className="flex items-center gap-3 mt-3 flex-wrap">
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>

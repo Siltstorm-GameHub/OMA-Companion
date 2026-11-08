@@ -1,17 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { JobBadgeData } from "@/lib/job-badges";
+import type { UserLook } from "@/lib/cosmetics/catalog";
 
 /**
- * Ansehens-Stufe eines Users für den Profilrahmen. Anfragen aller Rahmen einer Seite
- * werden gebündelt (ein Request je 100 User) und 5 Minuten gecacht.
+ * Sichtbare Kosmetik eines Users (Rahmen, Aura, Namensfarbe, Titel). Anfragen aller Avatare einer
+ * Seite werden gebündelt (ein Request je 100 User) und 5 Minuten gecacht.
  */
 
 const TTL_MS = 5 * 60_000;
 const CHUNK = 100;
-const SOURCE_PREFIX = "/api/community-jobs/badges?ids=";
+const SOURCE_PREFIX = "/api/cosmetics/looks?ids=";
 
-const cache = new Map<string, { data: JobBadgeData | null; at: number }>();
+const cache = new Map<string, { data: UserLook | null; at: number }>();
 const pending = new Set<string>();
 const inflight = new Set<string>();
 const listeners = new Set<() => void>();
@@ -31,11 +31,11 @@ async function flush() {
     chunk.forEach(id => inflight.add(id));
     try {
       const res = await fetch(`${SOURCE_PREFIX}${encodeURIComponent(chunk.join(","))}`);
-      const data: Record<string, JobBadgeData> = res.ok ? await res.json() : {};
+      const data: Record<string, UserLook> = res.ok ? await res.json() : {};
       const now = Date.now();
       chunk.forEach(id => cache.set(id, { data: data[id] ?? null, at: now }));
     } catch {
-      // Netzwerkfehler: neutraler Rahmen, beim nächsten Mount wird erneut versucht
+      // Netzwerkfehler: schlichter Rahmen, beim nächsten Mount wird erneut versucht
       chunk.forEach(id => cache.delete(id));
     } finally {
       chunk.forEach(id => inflight.delete(id));
@@ -50,19 +50,25 @@ function request(id: string) {
   if (!timer) timer = setTimeout(flush, 30);
 }
 
+/** Nach Kauf/Ausrüsten im Shop: eigenen Eintrag ersetzen, damit alle Avatare sofort umspringen. */
+export function setCachedLook(userId: string, look: UserLook) {
+  cache.set(userId, { data: look, at: Date.now() });
+  listeners.forEach(l => l());
+}
+
 /** undefined = lädt noch (oder keine userId), null = unbekannter User. */
-export function useReputation(userId: string | null | undefined, prefetched?: JobBadgeData | null): JobBadgeData | null | undefined {
+export function useUserLook(userId: string | null | undefined, prefetched?: UserLook | null): UserLook | null | undefined {
   const [, setVersion] = useState(0);
   useEffect(() => {
-    if (!userId || prefetched !== undefined) return;
+    if (!userId) return;
     const listener = () => setVersion(v => v + 1);
     listeners.add(listener);
-    request(userId);
+    if (prefetched === undefined) request(userId);
     return () => { listeners.delete(listener); };
   }, [userId, prefetched]);
 
-  if (prefetched !== undefined) return prefetched;
-  if (!userId) return undefined;
+  if (!userId) return prefetched;
   const hit = cache.get(userId);
+  if (prefetched !== undefined && !hit) return prefetched;
   return hit ? hit.data : undefined;
 }

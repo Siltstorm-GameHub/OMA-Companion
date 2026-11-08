@@ -3,7 +3,7 @@ import { BADGE_LEVEL_THRESHOLDS, BADGE_MAX_LEVEL, BADGE_WINDOW_WEEKS, levelTitle
 import { reputationColor } from "@/lib/job-ring";
 
 /**
- * Ansehen (Bronze–Platin) erklärt statt nur als Profilrahmen gezeigt.
+ * Ansehen (Bronze–Platin) erklärt. Sichtbar wird es als freischaltbarer Titel (Kosmetik-Shop).
  *  - eigenes Profil: Stufe, Punkte, Fortschritt bis zur nächsten Stufe + wie man Punkte sammelt
  *  - fremdes Profil: nur Stufe und Titel
  */
@@ -44,8 +44,9 @@ export default function ReputationCard({ level, points, isOwn }: { level: number
       </div>
       <p className="text-[11px] text-gray-500 leading-relaxed">
         Punkte gibt es jede Woche für deine Gehaltsstufen in den Community-Jobs (alle Jobs zusammen, höchstens 3 pro Woche)
-        und für Daumen auf deine Kommentare. Gezählt werden die letzten {BADGE_WINDOW_WEEKS} Wochen — die Stufe zeigt sich
-        als Rahmen um dein Profilbild und kann auch wieder sinken.{" "}
+        und für Daumen auf deine Kommentare. Gezählt werden die letzten {BADGE_WINDOW_WEEKS} Wochen, die Stufe kann also auch wieder sinken.
+        Ab Silber schaltest du einen Ansehens-Titel frei, den du im <Link href="/shop" className="text-amber-300 hover:text-amber-200">Shop</Link> unter
+        „Titel“ anlegen kannst — er bleibt dir, auch wenn die Stufe später sinkt.{" "}
         <Link href="/profile?tab=community_jobs" className="text-teal-400 hover:text-teal-300">Zum Büro →</Link>
       </p>
     </section>

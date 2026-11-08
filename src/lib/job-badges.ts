@@ -2,7 +2,7 @@
  * Ansehen (Stufe 1–4) pro User — aus der Gesamtleistung über ALLE Community-Jobs
  * (Gehaltsstufen der letzten Wochen) plus Daumen auf eigene Kommentare. Rein kodierte
  * Konstanten/Funktionen OHNE Server-Abhängigkeiten — wird sowohl vom Cron
- * (community-job-service.ts) als auch vom Profilrahmen im Browser genutzt.
+ * (community-job-service.ts) als auch von der Ansehens-Karte im Profil genutzt.
  *
  * Dateiname historisch ("job-badges"): Früher gab es ein Abzeichen je Job-Inhaber.
  */
@@ -55,7 +55,3 @@ export function levelTitle(level: number): string {
   return REPUTATION_TITLES[idx];
 }
 
-/** Was die Ansehens-Abfrage pro Nutzer liefert. */
-export interface JobBadgeData {
-  level: number;
-}

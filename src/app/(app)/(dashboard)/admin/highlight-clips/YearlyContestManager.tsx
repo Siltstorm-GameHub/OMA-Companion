@@ -197,7 +197,9 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
                         </p>
                         {noAccountWinner && (
                           <p className="text-amber-300 text-xs mt-1">
-                            Twitch-User „{winner.twitchCreatorLogin}" hat kein Community-Konto — keine Münzen vergeben.
+                            Twitch-User „{winner.twitchCreatorLogin}" hat noch kein Community-Konto — die Münzen sind vorgemerkt
+                            und werden automatisch gutgeschrieben, sobald der Twitch-Account im Profil hinterlegt oder beim
+                            Clip des Monats verknüpft wird.
                           </p>
                         )}
                       </div>

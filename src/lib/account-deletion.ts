@@ -34,6 +34,7 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.session.deleteMany({ where: { userId } }),
     prisma.pushSubscription.deleteMany({ where: { userId } }),
     prisma.inAppNotification.deleteMany({ where: { userId } }),
+    prisma.twitchClipperLink.deleteMany({ where: { userId } }),
     // Freitext ohne Bezug für andere
     prisma.lobbyMessage.deleteMany({ where: { userId } }),
 
@@ -60,6 +61,7 @@ export async function anonymizeUser(userId: string): Promise<void> {
         points: 0,
         rankPoints: 0,
         twitchLogin: null,
+        twitchUserId: null,
         overlayToken: null,
         overlayLayoutJson: null,
         overlayControlJson: null,
@@ -94,6 +96,7 @@ export async function buildUserExport(userId: string) {
       donations: { omit: { note: true } },
       lobbyMessages: true,
       clipSubmissions: true,
+      twitchClipperLinks: { select: { twitchLogin: true, createdAt: true } },
       eventPredictionsMade: true,
       eventPollVotes: true,
       dailyPollVotes: true,

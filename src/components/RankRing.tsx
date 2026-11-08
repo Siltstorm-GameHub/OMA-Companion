@@ -1,23 +1,21 @@
 "use client";
 import "./RankRing.css";
 import type { CSSProperties, ReactNode } from "react";
-import { useReputation } from "@/components/community-jobs/useReputation";
-import { getJobRing, GOLD } from "@/lib/job-ring";
-import { levelTitle, BADGE_MAX_LEVEL, type JobBadgeData } from "@/lib/job-badges";
+import { useUserLook } from "@/components/cosmetics/useUserLook";
+import { getCosmeticOf, type AuraCosmetic, type UserLook } from "@/lib/cosmetics/catalog";
+import { getFrameRing } from "@/lib/cosmetics/frame-style";
 
 interface RankRingProps {
-  /** User, dessen Ansehens-Stufe Farbe und Effekt des Rings bestimmt. Ohne ID: schlichter grauer Ring. */
+  /** User, dessen ausgerüsteter Rahmen/Aura gezeigt wird. Ohne ID: schlichter grauer Ring. */
   userId?: string | null;
-  /** Schon bekannte Ansehens-Daten (spart den Abruf). */
-  badge?: JobBadgeData | null;
+  /** Schon bekanntes Aussehen (spart den Abruf). null = nicht laden, schlichter Ring (z.B. OBS-Overlays). */
+  look?: UserLook | null;
   /** Ringbreite in px. Wird als Padding gesetzt — das Padding IST der Ring. */
   width: number;
   /** Tailwind-Rundungsklasse, z.B. "rounded-full". Vererbt sich an die Ringschicht. */
   rounded: string;
-  /** Einfarbiger Ring ohne Animation — für sehr kleine Avatare. */
+  /** Einfarbiger Ring ohne Animation und ohne Aura — für sehr kleine Avatare. */
   flat?: boolean;
-  /** Stufenpunkte (1–4) am unteren Rand. */
-  showLevel?: boolean;
   /** Klassen für den Bild-Container. Trägt die Größe und ggf. eine Sonderform. */
   faceClassName?: string;
   className?: string;
@@ -26,48 +24,49 @@ interface RankRingProps {
   children: ReactNode;
 }
 
+/** Aura-Schicht außerhalb des Rings (Styles in RankRing.css, Abschnitt "Auren"). */
+export function AuraLayer({ aura }: { aura: AuraCosmetic }) {
+  return (
+    <span
+      className={`cos-aura cos-aura--${aura.kind}`}
+      style={{ "--aura-c1": aura.color, "--aura-c2": aura.color2 ?? aura.color } as CSSProperties}
+      aria-hidden="true"
+    />
+  );
+}
+
 /**
  * Der Rahmen ums Profilbild als eigenständiger Wrapper.
  *
- * Farbe und Effekt = Ansehens-Stufe des Users (Bronze/Silber/Gold/Platin, siehe lib/job-ring.ts),
- * unabhängig davon, welche Community-Jobs er ausübt. Existiert, damit die dreiteilige Struktur
- * (Ringschicht / Bild) nur an einer Stelle steht.
+ * Farbe und Effekt = im Kosmetik-Shop gekaufter und ausgerüsteter Rahmen (lib/cosmetics/catalog.ts),
+ * dazu optional eine Aura außerhalb des Rings. Ohne Rahmen: schlichter grauer Ring.
  */
 export default function RankRing({
   userId,
-  badge: badgeProp,
+  look: lookProp,
   width,
   rounded,
   flat = false,
-  showLevel = false,
   faceClassName = "",
   className = "",
   style,
   title,
   children,
 }: RankRingProps) {
-  const badge = useReputation(userId, badgeProp);
-  const ring = getJobRing(badge);
-  // Stufe 4: zusätzlicher goldener Innenring, aber nur wenn der Ring dick genug dafür ist
-  const doubleRing = ring.level === 4 && !flat && width >= 4;
-  const goldW = width >= 6 ? 2 : 1;
-  const faceShadow = doubleRing ? `0 0 0 1px var(--rr-gap), 0 0 0 ${1 + goldW}px ${GOLD}` : undefined;
+  const look = useUserLook(userId, lookProp);
+  const frame = getCosmeticOf(look?.frame, "frame");
+  const aura = flat ? undefined : getCosmeticOf(look?.aura, "aura");
+  const ring = getFrameRing(frame);
 
   return (
     <div
       className={`${ring.className}${flat ? " rr-flat" : ""} ${rounded} ${className}`}
       style={{ ...ring.style, padding: width, ...style }}
-      title={title ?? (ring.level > 0 ? `Ansehen: ${levelTitle(ring.level)} (Stufe ${ring.level}/${BADGE_MAX_LEVEL})` : undefined)}
+      title={title}
     >
+      {aura && <AuraLayer aura={aura} />}
       <span className="rr-ring-layer" aria-hidden="true" />
-      <div className={`rr-face ${rounded} ${faceClassName}`} style={faceShadow ? { boxShadow: faceShadow } : undefined}>{children}</div>
-      {showLevel && !flat && ring.level > 0 && (
-        <span className="rr-dots" aria-hidden="true">
-          {[1, 2, 3, 4].map((i) => (
-            <span key={i} className={`rr-dot${i <= ring.level ? " rr-dot--on" : ""}`} />
-          ))}
-        </span>
-      )}
+      <div className={`rr-face ${rounded} ${faceClassName}`}>{children}</div>
     </div>
   );
 }

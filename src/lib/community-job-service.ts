@@ -8,7 +8,7 @@ import {
   resolveTier, resolveVoteBonusMultiplier,
 } from "./community-job-config";
 import {
-  BADGE_WINDOW_WEEKS, WEEKLY_POINTS_MAX, levelFromPoints, weeklyBadgePoints, weeklyCommentPoints, type JobBadgeData,
+  BADGE_WINDOW_WEEKS, WEEKLY_POINTS_MAX, levelFromPoints, weeklyBadgePoints, weeklyCommentPoints,
 } from "./job-badges";
 import { getPayoutCandidates, getRecentJobContributors, listKnownCoaches } from "./community-job-access";
 import { COMMUNITY_JOBS } from "./community-jobs";
@@ -348,19 +348,3 @@ export async function adminSetReputationLevel(userId: string, level: number): Pr
   return { ok: true };
 }
 
-/**
- * Ansehen für viele Nutzer auf einmal (Profilrahmen). Jeder existierende User hat
- * eine Stufe (Start: 1) — unbekannte IDs fehlen im Ergebnis.
- */
-export async function getJobBadges(userIds: string[]): Promise<Record<string, JobBadgeData>> {
-  const ids = [...new Set(userIds)].slice(0, 200);
-  const result: Record<string, JobBadgeData> = {};
-  if (ids.length === 0) return result;
-
-  const users = await prisma.user.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, reputationLevel: true },
-  });
-  for (const u of users) result[u.id] = { level: u.reputationLevel };
-  return result;
-}

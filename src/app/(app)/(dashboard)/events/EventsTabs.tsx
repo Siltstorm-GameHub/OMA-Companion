@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
 import { CalendarDays, Target, Users, User } from "@/components/icons";
 
-const TAB_KEYS = ["events", "mine", "duels", "squads"] as const;
+const TAB_KEYS = ["events", "mine", "predictions", "squads"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 function EventsTabsInner({
@@ -20,7 +20,9 @@ function EventsTabsInner({
   squadsPanel: ReactNode;
 }) {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
+  // "duels" = alter Tab-Key (Links aus älteren Benachrichtigungen) → Vorhersagen
+  const rawTab = searchParams.get("tab");
+  const tabParam = rawTab === "duels" ? "predictions" : rawTab;
   const initialTab: TabKey = (TAB_KEYS as readonly string[]).includes(tabParam ?? "") && (tabParam !== "mine" || myEventsPanel)
     ? (tabParam as TabKey)
     : "events";
@@ -35,13 +37,13 @@ function EventsTabsInner({
         tabs={[
           { key: "events", label: "Events", icon: CalendarDays },
           ...(myEventsPanel ? [{ key: "mine", label: "Meine Events", icon: User }] : []),
-          { key: "duels", label: "Vorhersagen", icon: Target },
+          { key: "predictions", label: "Vorhersagen", icon: Target },
           { key: "squads", label: "Squads", icon: Users },
         ]}
       />
       <TabPanel tabKey="events" active={active}>{eventsPanel}</TabPanel>
       {myEventsPanel && <TabPanel tabKey="mine" active={active}>{myEventsPanel}</TabPanel>}
-      <TabPanel tabKey="duels" active={active}>{predictionsPanel}</TabPanel>
+      <TabPanel tabKey="predictions" active={active}>{predictionsPanel}</TabPanel>
       <TabPanel tabKey="squads" active={active}>{squadsPanel}</TabPanel>
     </div>
   );

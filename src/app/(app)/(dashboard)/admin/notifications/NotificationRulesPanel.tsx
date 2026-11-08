@@ -196,8 +196,6 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   quest_completed: { "{questTitle}": "5 Matches gewinnen", "{reward}": "50" },
   quest_new:       { "{month}": "Dezember" },
   prediction_result: { "{result}": "richtig" },
-  duel_challenge:  { "{challenger}": "MaxMustermann", "{wager}": "100" },
-  duel_result:     { "{result}": "Du hast gegen MaxMustermann gewonnen und 100 Münzen erhalten!" },
   clip_started:    { "{month}": "Dezember", "{year}": "2026", "{nominationCount}": "12" },
   clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
   clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },

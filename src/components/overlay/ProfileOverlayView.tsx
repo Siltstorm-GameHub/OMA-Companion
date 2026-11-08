@@ -69,7 +69,7 @@ export default function ProfileOverlayView({
           width={PROFILE_ELEMENT_SIZE[zoom.display].width}
           header={
             <ZoomBannerShell>
-              <RankedAvatar badge={null} userId={state.id} src={state.image} alt={streamer.username ?? "Streamer"} size={40} />
+              <RankedAvatar look={null} userId={state.id} src={state.image} alt={streamer.username ?? "Streamer"} size={40} />
               <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 700, color: "#fff" }}>
                 {state.twitchLogin && <TwitchGlyph size={18} />}
                 {state.twitchLogin ?? state.username ?? state.name}
@@ -100,7 +100,7 @@ function RankTile({ rankLabel, userId, image, name }: { rankLabel: string; userI
   return (
     <PanelShell title="Rang">
       <div style={{ display: "flex", alignItems: "center", gap: 18, height: CARD_BODY_HEIGHT }}>
-        <RankedAvatar badge={null} userId={userId} src={image} alt={name} size={96} />
+        <RankedAvatar look={null} userId={userId} src={image} alt={name} size={96} />
         <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0, flex: 1 }}>
           <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {name}
@@ -230,7 +230,7 @@ export function CommunityTile({
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {item.holders.map(h => (
               <div key={h.title} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <RankedAvatar badge={null} src={h.image} alt={h.name} size={32} />
+                <RankedAvatar look={null} src={h.image} alt={h.name} size={32} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#fff", ...textStyle }}>
                   <span style={{ fontWeight: 700 }}>{h.name}</span>
                   <span style={{ color: "rgba(255,255,255,0.55)" }}> · {h.title}</span>
@@ -255,7 +255,7 @@ export function LiveMembersTile({ members }: { members: LiveMember[] }) {
       <AutoScrollViewport axis="y" size={CARD_BODY_HEIGHT} gap={8}>
         {members.map(m => (
           <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <RankedAvatar badge={null} src={m.image} alt={m.name} size={30} />
+            <RankedAvatar look={null} src={m.image} alt={m.name} size={30} />
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 700, color: "#fff" }}>
                 <TwitchGlyph size={12} /> {m.twitchLogin}

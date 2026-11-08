@@ -18,6 +18,8 @@ import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
 import { headers } from "next/headers";
 import { isLinkPreviewBot } from "@/lib/link-preview-bots";
+import { parseEquipped, resolveLook } from "@/lib/cosmetics/catalog";
+import { CosmeticName, CosmeticTitle } from "@/components/cosmetics/CosmeticName";
 
 // Event-Siege je Nutzer: lädt und parst die completionData ALLER abgeschlossenen Events — teuer
 // und für alle Besucher gleich, daher 5 min gecacht (Tag "dashboard-global" wird beim
@@ -148,6 +150,7 @@ export default async function LeaderboardPage() {
       select: {
         id: true, name: true, username: true, image: true,
         rankPoints: true,
+        equippedCosmeticsJson: true, reputationPeakLevel: true,
         _count: { select: { tournamentParticipants: true } },
       },
     }),
@@ -183,6 +186,9 @@ export default async function LeaderboardPage() {
   const hasSnapshot = Object.keys(snapshotRanks).length > 0;
 
   const myRank = userId ? users.findIndex(u => u.id === userId) + 1 : null;
+
+  // Kosmetik-Shop: Rahmen/Aura, Namensfarbe, Titel — hier schon bekannt, spart den Abruf je Avatar
+  const looks = new Map(users.map(u => [u.id, resolveLook(parseEquipped(u.equippedCosmeticsJson), u.reputationPeakLevel)]));
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
@@ -261,6 +267,7 @@ export default async function LeaderboardPage() {
 
                 <RankedAvatar
                   userId={u.id}
+                  look={looks.get(u.id)}
                   src={u.image}
                   alt={displayName}
                   size={cfg.rank === 0 ? 80 : 56}
@@ -269,10 +276,11 @@ export default async function LeaderboardPage() {
                 />
 
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
-                  {displayName}
+                  <CosmeticName nameColor={looks.get(u.id)?.nameColor}>{displayName}</CosmeticName>
                   <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                   {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                 </p>
+                <CosmeticTitle title={looks.get(u.id)?.title} className="mt-1 text-center" />
 
                 <div className="mt-3 text-center">
                   <p className={`text-base sm:text-lg font-black tabular-nums ${cfg.pointsColor}`}>
@@ -364,6 +372,7 @@ export default async function LeaderboardPage() {
                 {/* Avatar */}
                 <RankedAvatar
                   userId={u.id}
+                  look={looks.get(u.id)}
                   src={u.image}
                   alt={displayName}
                   size={36}
@@ -375,10 +384,11 @@ export default async function LeaderboardPage() {
                 <div className="min-w-0 flex items-center gap-2">
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
-                      {displayName}
+                      <CosmeticName nameColor={looks.get(u.id)?.nameColor}>{displayName}</CosmeticName>
                       <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                       {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                     </p>
+                    <CosmeticTitle title={looks.get(u.id)?.title} className="block truncate leading-tight mt-0.5" />
                   </div>
                 </div>
 

@@ -309,7 +309,7 @@ function ReputationSection() {
       <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Ansehen</h2>
       <p className="text-[11px] text-gray-600">
         Stufe 1–4 (Bronze, Silber, Gold, Platin) aus der Gesamtleistung aller Jobs der letzten 8 Wochen plus Kommentar-Daumen.
-        Steuert Profilrahmen und Discord-Rolle. Ohne Suche: User mit Ansehen bzw. manuell gesetzter Stufe.
+        Steuert Ansehens-Titel und Discord-Rolle. Ohne Suche: User mit Ansehen bzw. manuell gesetzter Stufe.
       </p>
       <form className="flex items-center gap-2" onSubmit={ev => { ev.preventDefault(); load(query.trim()); }}>
         <div className="relative flex-1">

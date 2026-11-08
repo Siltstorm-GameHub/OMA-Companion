@@ -59,7 +59,7 @@ export default function ResetSelectiveButton({ series }: { series: SeriesOption[
           <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
             Setzt Münzen aller User auf 0 und löscht alle Events/Eventreihen — außer den hier ausgewählten
             Eventreihen. Deren Tabellenpunkte, Rang-Punkte und Event-Statistiken bleiben erhalten. Zusätzlich
-            zurückgesetzt: LuL, Quest-Fortschritt, Duelle, Event-Vorhersagen, Shop-Inventar. Unangetastet:
+            zurückgesetzt: LuL, Quest-Fortschritt, Event-Vorhersagen, Shop-Inventar. Unangetastet:
             Wanderpokale, Clip-Contests, Spendenpool.
           </p>
 
@@ -124,7 +124,7 @@ export default function ResetSelectiveButton({ series }: { series: SeriesOption[
         description={
           `Münzen aller User werden auf 0 gesetzt. Alle Eventreihen & Events außer den ${keepIds.size} ` +
           `ausgewählten werden unwiderruflich gelöscht (inkl. Anmeldungen, Turniere, Umfragen). ` +
-          `LuL, Quest-Fortschritt, Duelle, Event-Vorhersagen und Shop-Inventar werden ebenfalls zurückgesetzt.\n\n` +
+          `LuL, Quest-Fortschritt, Event-Vorhersagen und Shop-Inventar werden ebenfalls zurückgesetzt.\n\n` +
           `Nicht rückgängig zu machen.`
         }
         confirmLabel="Ja, jetzt zurücksetzen"

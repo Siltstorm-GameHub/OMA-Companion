@@ -1,6 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { getTwitchUsers, getTwitchUsersByIds, getPartnerClips, type TwitchClip } from "@/lib/twitch";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import {
+  awardClipReward,
+  claimPendingClipRewards,
+  findUserForTwitch,
+  recordPendingClipReward,
+  rememberTwitchLink,
+} from "@/lib/clip-rewards";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -9,6 +16,7 @@ type PartnerNomination = {
   thumbnailUrl: string;
   clipTitle: string;
   twitchCreatorLogin: string;
+  twitchCreatorId: string | null;
   partnerTwitchLogin: string;
 };
 
@@ -59,6 +67,7 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
     thumbnailUrl: clip.thumbnail_url,
     clipTitle: clip.title,
     twitchCreatorLogin: loginByCreatorId.get(clip.creator_id) ?? clip.creator_name.toLowerCase(),
+    twitchCreatorId: clip.creator_id || null,
     partnerTwitchLogin: partnerLogin,
   }));
 
@@ -124,37 +133,41 @@ export async function finalizeContest(contestId: string): Promise<string> {
 
   // Bei Gleichstand kann derselbe User mehrere Gewinner-Clips haben (z.B. zwei Event-Einreichungen,
   // oder mehrere geclippte Momente desselben Streamers) — Münzen trotzdem nur einmal pro User vergeben.
+  const reason = `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`;
   const winnerUserIds = new Set<string>();
-  const noAccountLogins = new Set<string>();
+  const pendingLogins = new Set<string>();
 
   for (const winner of winners) {
     if (winner.submittedByUserId) {
       winnerUserIds.add(winner.submittedByUserId);
     } else if (winner.twitchCreatorLogin) {
-      const user = await prisma.user.findUnique({ where: { twitchLogin: winner.twitchCreatorLogin } });
-      if (user) {
-        winnerUserIds.add(user.id);
+      const userId = await findUserForTwitch({ login: winner.twitchCreatorLogin, id: winner.twitchCreatorId });
+      if (userId) {
+        winnerUserIds.add(userId);
       } else {
-        noAccountLogins.add(winner.twitchCreatorLogin);
+        // Kein Konto gefunden → vormerken; Auszahlung, sobald der Twitch-Account im Profil hinterlegt
+        // oder von einem Admin verknüpft wird (siehe src/lib/clip-rewards.ts)
+        await recordPendingClipReward({
+          contestKind: "monthly",
+          contestId: contest.id,
+          nominationId: winner.id,
+          twitchLogin: winner.twitchCreatorLogin,
+          twitchUserId: winner.twitchCreatorId,
+          amount: contest.rewardCoins,
+          reason,
+        });
+        pendingLogins.add(winner.twitchCreatorLogin);
       }
     }
   }
 
   for (const winnerUserId of winnerUserIds) {
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
-      prisma.pointTransaction.create({
-        data: {
-          userId: winnerUserId,
-          amount: contest.rewardCoins,
-          reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
-        },
-      }),
-    ]);
-    message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+    if (await awardClipReward(winnerUserId, contest.rewardCoins, reason)) {
+      message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+    }
   }
-  for (const login of noAccountLogins) {
-    message += ` — Gewinner (Twitch: ${login}) hat kein Community-Konto, keine Münzen vergeben`;
+  for (const login of pendingLogins) {
+    message += ` — Gewinner (Twitch: ${login}) hat noch kein Community-Konto, Münzen vorgemerkt`;
   }
 
   if (contest.participationCoins > 0 && contest.votes.length > 0) {
@@ -184,9 +197,11 @@ export async function finalizeContest(contestId: string): Promise<string> {
   return message;
 }
 
-// Verknüpft nachträglich einen Twitch-Gewinner ohne erkanntes Community-Konto mit einem
-// User und vergibt die Sieger-Münzen, die bei finalizeContest() mangels Zuordnung ausblieben.
-export async function linkWinnerToUser(contestId: string, nominationId: string, userId: string) {
+// Verknüpft nachträglich einen Twitch-Gewinner ohne erkanntes Community-Konto mit einem User.
+// Die Verknüpfung wird dauerhaft gespeichert (TwitchClipperLink) — künftige Clips desselben
+// Twitch-Accounts werden automatisch zugeordnet. Vorgemerkte Belohnungen (auch Clip des Jahres)
+// werden dabei ausgezahlt; für ältere Contests ohne Vormerkung wird wie bisher direkt vergeben.
+export async function linkWinnerToUser(contestId: string, nominationId: string, userId: string, adminId: string | null = null) {
   const contest = await prisma.monthlyClipContest.findUnique({ where: { id: contestId } });
   if (!contest) return { ok: false as const, error: "Abstimmung nicht gefunden" };
   if (contest.status !== "finished") return { ok: false as const, error: "Abstimmung ist noch nicht beendet" };
@@ -203,22 +218,30 @@ export async function linkWinnerToUser(contestId: string, nominationId: string, 
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return { ok: false as const, error: "Nutzer nicht gefunden" };
+  if (!user || user.deletedAt) return { ok: false as const, error: "Nutzer nicht gefunden" };
 
-  // Vor erneuter Vergabe prüfen: falls für diesen Contest bereits Münzen an den User
-  // gebucht wurden (z.B. weil er über eine andere Gewinner-Einreichung schon erkannt wurde).
-  const reason = `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`;
-  const alreadyAwarded = await prisma.pointTransaction.findFirst({ where: { userId, reason } });
-
-  if (alreadyAwarded) {
-    await prisma.clipNomination.update({ where: { id: nominationId }, data: { submittedByUserId: userId } });
-  } else {
-    await prisma.$transaction([
-      prisma.clipNomination.update({ where: { id: nominationId }, data: { submittedByUserId: userId } }),
-      prisma.user.update({ where: { id: userId }, data: { points: { increment: contest.rewardCoins } } }),
-      prisma.pointTransaction.create({ data: { userId, amount: contest.rewardCoins, reason } }),
-    ]);
+  if (nomination.twitchCreatorLogin) {
+    const linked = await rememberTwitchLink(
+      userId,
+      { login: nomination.twitchCreatorLogin, id: nomination.twitchCreatorId },
+      adminId,
+    );
+    if (!linked.ok) return { ok: false as const, error: linked.error };
   }
 
-  return { ok: true as const, awarded: !alreadyAwarded };
+  await prisma.clipNomination.update({ where: { id: nominationId }, data: { submittedByUserId: userId } });
+
+  // Zahlt diese und alle weiteren vorgemerkten Belohnungen dieses Twitch-Accounts aus
+  const { claimed, coins } = await claimPendingClipRewards(userId);
+
+  // Contests von vor der Vormerk-Funktion haben keine PendingClipReward → direkt vergeben.
+  // awardClipReward prüft vorher, ob für diesen Contest schon Münzen an den User gingen.
+  const reason = `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`;
+  const legacyAwarded = await awardClipReward(userId, contest.rewardCoins, reason);
+
+  return {
+    ok: true as const,
+    awarded: claimed > 0 || legacyAwarded,
+    coins: coins + (legacyAwarded ? contest.rewardCoins : 0),
+  };
 }

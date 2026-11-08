@@ -34,6 +34,12 @@ model User {
   leftServerAt            DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
 
   twitchLogin        String?   @unique
+  // Twitch-User-ID zu twitchLogin (bleibt bei Umbenennung gleich) — beim Speichern im Profil
+  // gesetzt bzw. beim Clip-Gewinner-Abgleich nachgetragen. Siehe src/lib/clip-rewards.ts.
+  twitchUserId       String?   @unique
+  // Weitere Twitch-Accounts dieses Users, die Clips erstellen (z.B. Zuschauer-Account ohne eigenen
+  // Stream) — von Admins beim Verknüpfen eines Clip-Gewinners angelegt, damit es nur einmal nötig ist.
+  twitchClipperLinks TwitchClipperLink[]
   // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von
   // jedem Event, nur für User mit gesetztem twitchLogin erreichbar. Lazy erzeugt wie Event.overlayToken.
   overlayToken       String?   @unique
@@ -72,6 +78,9 @@ model User {
   vitrineUpdatedAt  DateTime?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
   favoriteGamesJson String?
+  // Kosmetik-Shop: ausgerüstetes Set { frame, aura, background, title, nameColor } → Artikel-ID aus
+  // lib/cosmetics/catalog.ts. Fehlender Key = nichts gewählt, null = bewusst leer (siehe parseEquipped).
+  equippedCosmeticsJson String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
   notificationPrefs String    @default("{}")
 
@@ -102,8 +111,6 @@ model User {
   eventPredictionsMade        EventWinnerPrediction[]      @relation("EventPredictionAuthor")
   eventPredictionsReceived    EventWinnerPrediction[]      @relation("EventPredictionTarget")
   predictionStreak            PredictionStreak?
-  duelChallengesSent          DuelChallenge[]              @relation("DuelChallenger")
-  duelChallengesReceived      DuelChallenge[]              @relation("DuelOpponent")
   wanderpocalHoldings         WanderpocalHolder[]
   wanderpocalStats            WanderpocalStat[]
   communityStreams            EventCommunityStreamer[]
@@ -165,7 +172,7 @@ model User {
   gemsRuns                    GemsRun[]
   gemsBests                   GemsBest[]
   blocksMatchPlayers          BlocksMatchPlayer[]
-  gemsCosmetics               UserCosmetic[]
+  cosmetics                   UserCosmetic[]
   createdEvents               Event[]                      @relation("EventCreator")
   createdEventSeries          EventSeries[]                @relation("EventSeriesCreator")
 }
@@ -588,6 +595,7 @@ model ClipNomination {
   customTitle        String? // Admin-Umbenennung nur für die Community (Twitch-Titel bleibt in clipTitle)
   submittedByUserId  String? // Community-Clip: User der eingereicht hat
   twitchCreatorLogin String? // Partner-Clip: Twitch-Login des Clip-Erstellers
+  twitchCreatorId    String? // Partner-Clip: Twitch-User-ID des Clip-Erstellers (stabil bei Umbenennung)
   partnerTwitchLogin String? // Partner-Clip: Twitch-Login des Kanals
   contest            MonthlyClipContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
   submittedBy        User?              @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
@@ -606,6 +614,39 @@ model ClipContestVote {
   createdAt    DateTime           @default(now())
 
   @@unique([contestId, userId])
+}
+
+// Zusätzlicher Twitch-Account eines Users für den Clip-Gewinner-Abgleich (neben User.twitchLogin).
+model TwitchClipperLink {
+  id           String   @id @default(cuid())
+  userId       String
+  twitchLogin  String   @unique // klein geschrieben
+  twitchUserId String?  @unique
+  createdById  String? // Admin, der verknüpft hat
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Sieger-Münzen für einen Clip-Ersteller ohne erkanntes Konto — werden automatisch gutgeschrieben,
+// sobald jemand diesen Twitch-Account im Profil hinterlegt oder ein Admin ihn verknüpft.
+model PendingClipReward {
+  id              String    @id @default(cuid())
+  contestKind     String // monthly | yearly
+  contestId       String // MonthlyClipContest.id bzw. YearlyClipContest.id
+  nominationId    String // ClipNomination.id (lose Referenz)
+  twitchLogin     String // klein geschrieben
+  twitchUserId    String?
+  amount          Int
+  reason          String // identisch mit dem PointTransaction-Grund der regulären Vergabe
+  claimedByUserId String?
+  claimedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@unique([contestKind, contestId, twitchLogin])
+  @@index([twitchLogin])
+  @@index([twitchUserId])
 }
 
 // ── Clip des Jahres ──────────────────────────────────────────────────────────
@@ -790,7 +831,7 @@ model Quest {
   id          String   @id @default(cuid())
   title       String
   description String
-  // VOICE_MINUTES | MESSAGES | EVENT_ATTEND | TOURNAMENT | POLL_VOTE | DAILY_SPIN | DUEL_PLAYED | PREDICTION_MADE | JOB_CLAIM
+  // VOICE_MINUTES | MESSAGES | EVENT_ATTEND | TOURNAMENT | POLL_VOTE | DAILY_SPIN | PREDICTION_MADE | JOB_CLAIM
   // (maßgeblich ist QuestType in src/lib/quests.ts)
   // (TOURNAMENT ist aus der aktiven Rotation entfernt, existiert aber noch in historischen Quest-Zeilen)
   type        String
@@ -852,27 +893,6 @@ model PredictionStreak {
   best          Int     @default(0)
   lastPlayedDay String? // "YYYY-MM-DD" — letzter Tag mit korrekt aufgelöstem Tipp
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ── Minigames: 1v1 Münzen-Duell ──────────────────────────────────────────────
-
-model DuelChallenge {
-  id           String    @id @default(cuid())
-  challengerId String
-  opponentId   String
-  wager        Int
-  status       String    @default("pending") // pending | accepted | declined | expired | resolved
-  // "coinflip" — v1 nur Server-RNG, Skill-Modi später denkbar
-  mode         String    @default("coinflip")
-  winnerId     String?
-  createdAt    DateTime  @default(now())
-  respondedAt  DateTime?
-  resolvedAt   DateTime?
-
-  challenger User @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
-  opponent   User @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
-
-  @@index([challengerId, opponentId, createdAt])
 }
 
 // ── Spendenpool ─────────────────────────────────────────────────────────────
@@ -2366,9 +2386,9 @@ model GemsWaveSeason {
   rankingJson String
 }
 
-// OMA Gems — gekaufte Kosmetik für „Mein Held“ (itemId wie "accessory:headset", siehe
-// lib/gems/hero/cosmetics.ts). Über Ränge, Turmwächter und Saison erspielte Teile werden aus dem
-// Fortschritt abgeleitet und stehen nicht hier.
+// Kosmetik-Shop — gekaufte Artikel (itemId aus lib/cosmetics/catalog.ts, z.B. "frame:gold").
+// Freischalt-Artikel (Ansehens-Titel) stehen nicht hier, sie werden aus dem Ansehen abgeleitet.
+// Alte Einträge aus OMA Gems ("accessory:…") sind nicht mehr im Katalog und werden ignoriert.
 model UserCosmetic {
   id         String   @id @default(cuid())
   userId     String

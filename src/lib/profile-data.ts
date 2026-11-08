@@ -4,6 +4,7 @@ import { parseFavoriteGames } from "./favorite-games";
 import { loadWanderpokalStatus } from "./wanderpokal-status";
 import { getAvailableReviewYears } from "./year-review";
 import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "./trophy-models";
+import { parseEquipped, resolveLook } from "./cosmetics/catalog";
 import type { Trophy3DItem } from "@/components/Trophy3DViewer";
 import type { WanderpocalHolderInfo } from "@/components/WanderpocalSection";
 
@@ -27,7 +28,7 @@ export async function loadProfileData(userId: string) {
       select: {
         id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, deletedAt: true,
         favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, voiceMinutesTotal: true, messagesTotal: true,
-        reputationLevel: true, reputationPoints: true,
+        reputationLevel: true, reputationPoints: true, reputationPeakLevel: true, equippedCosmeticsJson: true,
       },
     }),
     prisma.eventRegistration.findMany({
@@ -125,6 +126,8 @@ export async function loadProfileData(userId: string) {
     leaderboardRank: higherRanked + 1,
     totalUsers,
     reputation: { level: user.reputationLevel, points: user.reputationPoints },
+    // Kosmetik-Shop: Rahmen/Aura (Avatar), Hintergrund (Kopfkarte), Namensfarbe, Titel
+    look: resolveLook(parseEquipped(user.equippedCosmeticsJson), user.reputationPeakLevel),
     eventRegs, eventCount, eventWins,
     pollMasterCount: pollWinsFromEvents + lulPollWins,
     topGames,

@@ -25,6 +25,9 @@ import ProfileRecentEvents from "./ProfileRecentEvents";
 import CommunityJobsPanel from "./CommunityJobsPanel";
 import ProfileTabs, { type ProfileTabKey } from "./ProfileTabs";
 import ReputationCard from "./ReputationCard";
+import { CosmeticName, CosmeticTitle } from "@/components/cosmetics/CosmeticName";
+import { getCosmeticOf } from "@/lib/cosmetics/catalog";
+import { ShoppingBag } from "@/components/icons";
 
 const H2 = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3";
 
@@ -52,28 +55,36 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
   /** Aktionen unter dem Hero (fremde Profile). */
   actions?: ReactNode;
 }) {
-  const { user, displayName } = data;
+  const { user, displayName, look } = data;
   const accent = isOwn ? "teal" : "rose";
+  const background = getCosmeticOf(look.background, "background");
 
   const hero = (
     <div className="glass card-shine relative overflow-hidden rounded-2xl p-5 sm:p-6">
       <div className={`absolute inset-0 bg-gradient-to-br ${accent === "teal" ? "from-teal-500/10 via-transparent to-teal-900/10" : "from-rose-500/10 via-transparent to-purple-500/8"} pointer-events-none`} />
+      {background && <div className="absolute inset-0 pointer-events-none" style={{ background: background.css }} />}
       <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
       <div className={`absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent ${accent === "teal" ? "via-teal-500/40" : "via-rose-500/25"} to-transparent pointer-events-none`} />
 
       <div className="relative flex items-start gap-4 sm:gap-5">
         <div className="relative shrink-0">
-          <RankedAvatar userId={user.id} src={user.image} alt={displayName} size={80} rounded="2xl" />
+          <RankedAvatar userId={user.id} look={look} src={user.image} alt={displayName} size={80} rounded="2xl" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{displayName}</h1>
+          <CosmeticName as="h1" nameColor={look.nameColor} className="block text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{displayName}</CosmeticName>
+          <CosmeticTitle title={look.title} className="mt-0.5" />
           <p className="text-xs text-gray-500 mt-0.5">Mitglied seit {data.memberSince}</p>
           <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mt-1.5">
             <span className={`text-sm font-bold ${accent === "teal" ? "text-teal-400" : "text-rose-400"}`}>{data.rankPoints.toLocaleString("de-DE")} Punkte</span>
             <span className="inline-flex items-center gap-1 text-xs text-amber-400 font-medium tabular-nums">
               <CoinIcon size={12} /> {data.totalPoints.toLocaleString("de-DE")} Münzen
             </span>
+            {isOwn && (
+              <Link href="/shop" className="inline-flex items-center gap-1 text-xs text-amber-300/80 hover:text-amber-200 transition-colors">
+                <ShoppingBag className="w-3 h-3" /> Zum Shop
+              </Link>
+            )}
             {/* Rang auf dem Handy inline (auf größeren Bildschirmen als eigener Block rechts). */}
             <span className="sm:hidden text-xs text-gray-400">Rang <span className="text-white font-semibold">#{data.leaderboardRank}</span> von {data.totalUsers}</span>
           </div>

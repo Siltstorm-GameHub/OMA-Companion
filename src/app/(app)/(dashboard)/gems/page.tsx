@@ -6,7 +6,8 @@
 
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { Gamepad2 } from "@/components/icons";
+import Link from "next/link";
+import { Gamepad2, ShoppingBag } from "@/components/icons";
 import GamesSwitcher from "./GamesSwitcher";
 import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
 import GemsHubPanel from "@/components/gems/GemsHubPanel";
@@ -24,6 +25,7 @@ export default async function GemsPage() {
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
       <div>
         <div className="flex items-center gap-2.5 mb-1">
           <div
@@ -35,6 +37,10 @@ export default async function GemsPage() {
           <h1 className="font-display text-2xl font-black text-white tracking-tight">Games</h1>
         </div>
         <p className="text-xs text-gray-500 ml-11">Die Community-Spiele · OMA Gems und OMA Blocks mit Ranglisten und Monatswertungen</p>
+      </div>
+        <Link href="/shop" className="glass rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-medium text-amber-200 hover:text-amber-100 hover:bg-amber-500/10 transition-colors">
+          <ShoppingBag className="w-4 h-4 text-amber-400" /> Münzen ausgeben im Shop
+        </Link>
       </div>
       <GamesSwitcher gems={<GemsHubPanel userId={userId} />} blocks={<BlocksHubPanel userId={userId} />} />
     </div>

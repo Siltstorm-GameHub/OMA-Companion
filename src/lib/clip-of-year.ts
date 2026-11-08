@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import { awardClipReward, findUserForTwitch, recordPendingClipReward } from "@/lib/clip-rewards";
 
 // Deckt Dez(year-1) bis Nov(year) ab — die Umfrage startet im Dezember, sobald
 // die November-Abstimmung von "Clip des Monats" beendet ist, daher liegt der
@@ -70,37 +71,40 @@ export async function finalizeYearlyContest(contestId: string): Promise<string> 
     message += ` — Gleichstand zwischen ${winners.length} Clips (je ${maxVotes} Stimmen)`;
   }
 
+  const reason = `[Münzen] Clip des Jahres – ${contest.year}`;
   const winnerUserIds = new Set<string>();
-  const noAccountLogins = new Set<string>();
+  const pendingLogins = new Set<string>();
 
   for (const winner of winners) {
     if (winner.submittedByUserId) {
       winnerUserIds.add(winner.submittedByUserId);
     } else if (winner.twitchCreatorLogin) {
-      const user = await prisma.user.findUnique({ where: { twitchLogin: winner.twitchCreatorLogin } });
-      if (user) {
-        winnerUserIds.add(user.id);
+      const userId = await findUserForTwitch({ login: winner.twitchCreatorLogin, id: winner.twitchCreatorId });
+      if (userId) {
+        winnerUserIds.add(userId);
       } else {
-        noAccountLogins.add(winner.twitchCreatorLogin);
+        // Kein Konto gefunden → vormerken (siehe src/lib/clip-rewards.ts)
+        await recordPendingClipReward({
+          contestKind: "yearly",
+          contestId: contest.id,
+          nominationId: winner.id,
+          twitchLogin: winner.twitchCreatorLogin,
+          twitchUserId: winner.twitchCreatorId,
+          amount: contest.rewardCoins,
+          reason,
+        });
+        pendingLogins.add(winner.twitchCreatorLogin);
       }
     }
   }
 
   for (const winnerUserId of winnerUserIds) {
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
-      prisma.pointTransaction.create({
-        data: {
-          userId: winnerUserId,
-          amount: contest.rewardCoins,
-          reason: `[Münzen] Clip des Jahres – ${contest.year}`,
-        },
-      }),
-    ]);
-    message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+    if (await awardClipReward(winnerUserId, contest.rewardCoins, reason)) {
+      message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+    }
   }
-  for (const login of noAccountLogins) {
-    message += ` — Gewinner (Twitch: ${login}) hat kein Community-Konto, keine Münzen vergeben`;
+  for (const login of pendingLogins) {
+    message += ` — Gewinner (Twitch: ${login}) hat noch kein Community-Konto, Münzen vorgemerkt`;
   }
 
   if (contest.participationCoins > 0 && votes.length > 0) {

@@ -381,7 +381,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
                 <li>Du kannst alle Jobs gleichzeitig ausüben, ohne Bewerbung oder Vertrag. Jeder Job zahlt sein eigenes Wochengehalt.</li>
                 <li>Pro Tag zählen deine ersten Beiträge über alle Jobs zusammen fürs Gehalt (Anzeige oben). Weitere Beiträge sind erlaubt, Stimmen darauf zählen aber nicht. Ein Mehrfach-Upload oder eine Termin-Serie zählt als ein Beitrag.</li>
-                <li>Dein Ansehen (Bronze, Silber, Gold, Platin) ergibt sich aus deiner Gesamtleistung über alle Jobs der letzten 8 Wochen plus Daumen auf deine Kommentare. Es zeigt sich als Rahmen um dein Profilbild und kann auch sinken.</li>
+                <li>Dein Ansehen (Bronze, Silber, Gold, Platin) ergibt sich aus deiner Gesamtleistung über alle Jobs der letzten 8 Wochen plus Daumen auf deine Kommentare. Es kann auch sinken; ab Silber schaltet es einen Titel im Shop frei.</li>
                 <li>Beiträge, die das Team wegen eines Regelverstoßes ausblendet, zählen nicht fürs Gehalt.</li>
                 <li>Pro Woche zählen deine 6 besten Beiträge, und von derselben Person zählen höchstens 5 Stimmen. Unter „Gehalt“ siehst du, wie sich dein Score zusammensetzt.</li>
                 <li>Greifen andere Jobs deinen Beitrag auf (Titelbild, Werbe-Post, Anleitung, Bericht oder Idee), gibt es einen kleinen Zusammenarbeits-Bonus: höchstens 3× pro Woche, und nur, wenn du diese Woche schon Bewertungen bekommen hast.</li>

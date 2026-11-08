@@ -1,12 +1,12 @@
 import Image from "next/image";
 import RankRing from "@/components/RankRing";
-import type { JobBadgeData } from "@/lib/job-badges";
+import type { UserLook } from "@/lib/cosmetics/catalog";
 
 interface RankedAvatarProps {
-  /** User, dessen Ansehens-Stufe Ringfarbe und -effekt bestimmt. Ohne ID: schlichter grauer Ring. */
+  /** User, dessen ausgerüsteter Rahmen (+ Aura) aus dem Kosmetik-Shop gezeigt wird. Ohne ID: schlichter grauer Ring. */
   userId?: string | null;
-  /** Schon bekannte Ansehens-Daten (spart den Abruf). */
-  badge?: JobBadgeData | null;
+  /** Schon bekanntes Aussehen (spart den Abruf). null = nicht laden, schlichter Ring (z.B. OBS-Overlays). */
+  look?: UserLook | null;
   /** Veraltet, wird nicht mehr gebraucht. */
   rankPoints?: number;
   src: string | null | undefined;
@@ -19,12 +19,10 @@ interface RankedAvatarProps {
   size?: number;
   rounded?: "full" | "2xl" | "xl" | "lg";
   /**
-   * "full" = animierter Ring mit Stufenform, "flat" = einfarbiger Ring ohne Animation.
+   * "full" = animierter Ring mit Aura, "flat" = einfarbiger Ring ohne Animation und Aura.
    * "auto" (Default) wählt anhand der Größe: unter 24px ist der Verlauf nicht mehr auflösbar.
    */
   variant?: "auto" | "full" | "flat";
-  /** Stufenpunkte (1–4) unter dem Bild. Default: ab 48px, darunter zu klein zum Ablesen. */
-  showLevel?: boolean;
   className?: string;
   title?: string;
 }
@@ -61,13 +59,12 @@ function getInitials(name: string): string {
 
 export default function RankedAvatar({
   userId,
-  badge,
+  look,
   src,
   alt,
   size = 40,
   rounded = "full",
   variant = "auto",
-  showLevel,
   className = "",
   title,
 }: RankedAvatarProps) {
@@ -78,11 +75,10 @@ export default function RankedAvatar({
   return (
     <RankRing
       userId={userId}
-      badge={badge}
+      look={look}
       width={pad}
       rounded={r}
       flat={flat}
-      showLevel={showLevel ?? size >= 48}
       faceClassName="w-full h-full"
       className={`shrink-0 ${className}`}
       style={{ width: size, height: size, boxSizing: "border-box" }}

@@ -149,7 +149,11 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
       setLinkingNominationId(null);
       setUserSearchInput("");
       setUserSearchResults([]);
-      toast.success(data.awarded ? "Konto verknüpft und Münzen vergeben" : "Konto verknüpft");
+      toast.success(
+        data.awarded
+          ? `Konto verknüpft und ${data.coins ?? ""} Münzen vergeben — künftige Clips werden automatisch zugeordnet`
+          : "Konto verknüpft — künftige Clips werden automatisch zugeordnet"
+      );
     } finally {
       setLinkSaving(false);
     }
@@ -374,7 +378,9 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                           </p>
                           {noAccountWinner && (
                             <p className="text-amber-300 text-xs mt-1">
-                              Twitch-User „{winner.twitchCreatorLogin}" hat kein Community-Konto — keine Münzen vergeben.
+                              Twitch-User „{winner.twitchCreatorLogin}" hat noch kein Community-Konto — die Münzen sind vorgemerkt
+                              und werden automatisch gutgeschrieben, sobald der Twitch-Account im Profil hinterlegt wird.
+                              Oder hier einmalig verknüpfen (gilt dann auch für künftige Clips).
                             </p>
                           )}
                         </div>
