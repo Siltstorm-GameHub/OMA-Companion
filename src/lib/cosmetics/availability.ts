@@ -6,9 +6,16 @@
 // mit ungespeicherten Werten berechnen kann. Laden/Speichern: config.ts.
 
 import {
-  COSMETICS, getSet, isSeasonActive, isoWeekKey, seasonEnd, seededPick, weekEnd,
-  type Cosmetic, type CosmeticSet,
+  COSMETICS, SEASONS, getSet, isSeasonActive, isoWeekKey, seasonEnd, seededPick, weekEnd,
+  type Cosmetic, type CosmeticSet, type SeasonKey, type SeasonWindow,
 } from "./catalog";
+
+/** Admin-Anpassung einer Saison: eigener Zeitraum ("MM-DD") und ob sie überhaupt läuft. */
+export interface SeasonOverride {
+  from?: string;
+  to?: string;
+  enabled?: boolean;
+}
 
 /** Admin-Anpassung eines Sets: eigener Rabatt und ob es angeboten wird. */
 export interface SetOverride {
@@ -34,6 +41,8 @@ export interface ShopSettings {
   exclusiveCount: number;
   /** Admin-Anpassungen je Set (fehlend = Katalog-Standard) */
   sets: Record<string, SetOverride>;
+  /** Admin-Anpassungen je Saison (fehlend = Katalog-Standard) */
+  seasons: Partial<Record<SeasonKey, SeasonOverride>>;
 }
 
 export const DEFAULT_SETTINGS: ShopSettings = {
@@ -42,7 +51,23 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   weeklyDiscountPct: 30,
   exclusiveCount: 1,
   sets: {},
+  seasons: {},
 };
+
+/** Tatsächlicher Zeitraum einer Saison (Admin-Wert oder Katalog-Standard). */
+export function seasonWindow(season: SeasonKey, settings: ShopSettings): SeasonWindow {
+  const o = settings.seasons?.[season];
+  return { from: o?.from ?? SEASONS[season].from, to: o?.to ?? SEASONS[season].to };
+}
+
+export function isSeasonEnabled(season: SeasonKey, settings: ShopSettings): boolean {
+  return settings.seasons?.[season]?.enabled ?? true;
+}
+
+/** Läuft die Saison gerade (aktiviert und im eingestellten Zeitraum)? */
+export function isSeasonRunning(season: SeasonKey, settings: ShopSettings, now: Date): boolean {
+  return isSeasonEnabled(season, settings) && isSeasonActive(season, now, seasonWindow(season, settings));
+}
 
 /** Aktueller Set-Rabatt in % (Admin-Wert oder Katalog-Standard). */
 export function setDiscountPct(set: CosmeticSet, settings: ShopSettings): number {
@@ -147,10 +172,10 @@ export function computeAvailability(config: CosmeticsConfig, settings: ShopSetti
       continue;
     }
     if (item.season) {
-      const active = isSeasonActive(item.season, now);
+      const active = isSeasonRunning(item.season, settings, now);
       out.set(item.id, {
         id: item.id, basePrice, price: basePrice, buyable: enabled && active, visible: enabled && active,
-        tag: "season", until: active ? seasonEnd(item.season, now).toISOString() : undefined,
+        tag: "season", until: active ? seasonEnd(item.season, now, seasonWindow(item.season, settings)).toISOString() : undefined,
       });
       continue;
     }

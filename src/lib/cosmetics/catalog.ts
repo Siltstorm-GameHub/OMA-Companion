@@ -29,14 +29,30 @@ export const REWARD_META: Record<RewardKey, { label: string; requirement: string
 
 export type CosmeticUnlock = { reputationLevel: number } | { reward: RewardKey };
 
-/** Jährlich wiederkehrende Saisons ("MM-DD", Berliner Zeit, jeweils inklusive; Ende darf im Folgejahr liegen). */
-export type SeasonKey = "autumn" | "halloween" | "christmas" | "newyear";
+/**
+ * Jährlich wiederkehrende Saisons ("MM-DD", Berliner Zeit, jeweils inklusive; Ende darf im Folgejahr
+ * liegen). `from`/`to` sind nur die Startwerte — der Admin kann Zeitraum und an/aus je Saison unter
+ * /admin/shop ändern (ShopSettings.seasons, siehe availability.ts → seasonWindow).
+ */
+export type SeasonKey =
+  | "winter" | "valentine" | "spring" | "easter" | "summer"
+  | "autumn" | "halloween" | "christmas" | "newyear";
+
+/** Zeitfenster "MM-DD" bis "MM-DD" (inklusive). */
+export interface SeasonWindow { from: string; to: string }
+
+export const SEASON_ORDER: SeasonKey[] = ["winter", "valentine", "spring", "easter", "summer", "autumn", "halloween", "christmas", "newyear"];
 
 export const SEASONS: Record<SeasonKey, { name: string; emoji: string; from: string; to: string }> = {
-  autumn:    { name: "Herbst",     emoji: "🍂", from: "10-01", to: "11-30" },
-  halloween: { name: "Halloween",  emoji: "🎃", from: "10-15", to: "11-05" },
-  christmas: { name: "Weihnachten", emoji: "🎄", from: "12-01", to: "12-26" },
-  newyear:   { name: "Silvester",  emoji: "🎆", from: "12-27", to: "01-06" },
+  winter:    { name: "Winter",       emoji: "❄️", from: "01-07", to: "02-28" },
+  valentine: { name: "Valentinstag", emoji: "💘", from: "02-07", to: "02-15" },
+  spring:    { name: "Frühling",     emoji: "🌸", from: "03-20", to: "05-31" },
+  easter:    { name: "Ostern",       emoji: "🐣", from: "03-25", to: "04-21" },
+  summer:    { name: "Sommer",       emoji: "☀️", from: "06-01", to: "08-31" },
+  autumn:    { name: "Herbst",       emoji: "🍂", from: "10-01", to: "11-30" },
+  halloween: { name: "Halloween",    emoji: "🎃", from: "10-15", to: "11-05" },
+  christmas: { name: "Weihnachten",  emoji: "🎄", from: "12-01", to: "12-26" },
+  newyear:   { name: "Silvester",    emoji: "🎆", from: "12-27", to: "01-06" },
 };
 
 interface CosmeticBase {
@@ -244,6 +260,31 @@ export const COSMETICS: Cosmetic[] = [
   { id: "aura:fireworks",     category: "aura",       name: "Feuerwerk",      rarity: "legendary", defaultPrice: 5500, season: "newyear",   kind: "sparkle", color: "#f472b6", color2: "#facc15" },
   { id: "name:fireworks",     category: "nameColor",  name: "Funkenregen",    rarity: "epic",      defaultPrice: 2500, season: "newyear",   color: "#facc15", gradient: "linear-gradient(90deg, #f472b6, #facc15, #38bdf8, #f472b6)" },
   { id: "title:newyear",      category: "title",      name: "Neujahrs-Held",  rarity: "rare",      defaultPrice: 900,  season: "newyear",   text: "Neujahrs-Held", color: "#facc15" },
+  // Winter
+  { id: "frame:frostcrown",   category: "frame",      name: "Frostkrone",       rarity: "epic",      defaultPrice: 2200, season: "winter",    colors: ["#0c4a6e", "#ffffff", "#bae6fd"], tier: 3, glow: 16, speed: "8s" },
+  { id: "aura:blizzard",      category: "aura",       name: "Schneesturm",      rarity: "epic",      defaultPrice: 2400, season: "winter",    kind: "sparkle", color: "#ffffff", color2: "#7dd3fc" },
+  { id: "bg:polar-night",     category: "background", name: "Polarnacht",       rarity: "rare",      defaultPrice: 900,  season: "winter",    css: "radial-gradient(ellipse at 50% -10%, rgba(34,211,238,0.35), transparent 55%), linear-gradient(100deg, transparent 20%, rgba(16,185,129,0.22) 40%, rgba(129,140,248,0.2) 60%, transparent 80%), linear-gradient(180deg, rgba(8,47,73,0.55), rgba(2,6,23,0.4))" },
+  { id: "title:frostbite",    category: "title",      name: "Frostbeule",       rarity: "rare",      defaultPrice: 800,  season: "winter",    text: "Frostbeule", color: "#7dd3fc" },
+  // Valentinstag
+  { id: "frame:rosegold",     category: "frame",      name: "Roségold",         rarity: "epic",      defaultPrice: 2200, season: "valentine", colors: ["#881337", "#ffe4e6", "#fb7185"], tier: 3, glow: 16, speed: "7s", pulse: true },
+  { id: "aura:hearts",        category: "aura",       name: "Herzflattern",     rarity: "epic",      defaultPrice: 2400, season: "valentine", kind: "sparkle", color: "#f43f5e", color2: "#f9a8d4" },
+  { id: "name:valentine",     category: "nameColor",  name: "Verliebt",         rarity: "epic",      defaultPrice: 2000, season: "valentine", color: "#fb7185", gradient: "linear-gradient(90deg, #fda4af, #f43f5e, #f9a8d4)" },
+  { id: "title:sweetheart",   category: "title",      name: "Herzblatt",        rarity: "rare",      defaultPrice: 800,  season: "valentine", text: "Herzblatt", color: "#f472b6" },
+  // Frühling
+  { id: "bg:meadow",          category: "background", name: "Blütenwiese",      rarity: "rare",      defaultPrice: 900,  season: "spring",    css: "radial-gradient(circle at 15% 80%, rgba(244,114,182,0.4) 0 4%, transparent 5%), radial-gradient(circle at 40% 90%, rgba(250,204,21,0.4) 0 3%, transparent 4%), radial-gradient(circle at 75% 85%, rgba(196,181,253,0.4) 0 4%, transparent 5%), linear-gradient(0deg, rgba(34,197,94,0.35), transparent 50%), linear-gradient(180deg, rgba(125,211,252,0.25), rgba(15,23,42,0.1))" },
+  { id: "aura:pollen",        category: "aura",       name: "Blütenstaub",      rarity: "rare",      defaultPrice: 1100, season: "spring",    kind: "sparkle", color: "#fde047", color2: "#bbf7d0" },
+  { id: "name:spring",        category: "nameColor",  name: "Frühlingsbote",    rarity: "epic",      defaultPrice: 2000, season: "spring",    color: "#86efac", gradient: "linear-gradient(90deg, #86efac, #f9a8d4, #fde68a)" },
+  { id: "title:springfever",  category: "title",      name: "Frühlingsgefühle", rarity: "rare",      defaultPrice: 800,  season: "spring",    text: "Frühlingsgefühle", color: "#f9a8d4" },
+  // Ostern
+  { id: "frame:easteregg",    category: "frame",      name: "Osterei",          rarity: "epic",      defaultPrice: 2000, season: "easter",    colors: ["#a5b4fc", "#fef9c3", "#f9a8d4"], tier: 3, glow: 12, speed: "9s" },
+  { id: "aura:easter",        category: "aura",       name: "Pastellglanz",     rarity: "rare",      defaultPrice: 1100, season: "easter",    kind: "orbit", color: "#f9a8d4", color2: "#a5f3fc" },
+  { id: "bg:easter",          category: "background", name: "Eiersuche",        rarity: "rare",      defaultPrice: 900,  season: "easter",    css: "radial-gradient(ellipse 5% 7% at 20% 75%, rgba(249,168,212,0.55), transparent), radial-gradient(ellipse 5% 7% at 55% 85%, rgba(165,243,252,0.55), transparent), radial-gradient(ellipse 5% 7% at 82% 70%, rgba(253,224,71,0.5), transparent), linear-gradient(0deg, rgba(74,222,128,0.3), transparent 45%), linear-gradient(180deg, rgba(196,181,253,0.2), rgba(15,23,42,0.1))" },
+  { id: "title:egghunter",    category: "title",      name: "Eiersucher",       rarity: "rare",      defaultPrice: 800,  season: "easter",    text: "Eiersucher", color: "#fde68a" },
+  // Sommer
+  { id: "frame:sunshine",     category: "frame",      name: "Sonnenschein",     rarity: "epic",      defaultPrice: 2200, season: "summer",    colors: ["#9a3412", "#fef9c3", "#facc15"], tier: 3, glow: 18, speed: "6s" },
+  { id: "aura:heatwave",      category: "aura",       name: "Hitzewelle",       rarity: "epic",      defaultPrice: 2400, season: "summer",    kind: "ripple", color: "#fb923c" },
+  { id: "bg:beach",           category: "background", name: "Strandabend",      rarity: "rare",      defaultPrice: 900,  season: "summer",    css: "radial-gradient(circle at 70% 55%, rgba(253,186,116,0.6), transparent 22%), linear-gradient(180deg, rgba(251,146,60,0.35), rgba(236,72,153,0.25) 45%, rgba(14,165,233,0.35) 60%, rgba(253,230,138,0.25) 85%)" },
+  { id: "name:tropical",      category: "nameColor",  name: "Tropisch",         rarity: "epic",      defaultPrice: 2000, season: "summer",    color: "#2dd4bf", gradient: "linear-gradient(90deg, #facc15, #fb923c, #2dd4bf)" },
 
   // ── Wochen-Exklusiv (je Woche ist einer davon kaufbar) ──────────────────
   { id: "frame:nebula",   category: "frame",      name: "Nebel",         rarity: "legendary", defaultPrice: 7000, rotationOnly: true, colors: ["#4c1d95", "#f5d0fe", "#ec4899"], tier: 3, glow: 22, speed: "5s", pulse: true },
@@ -350,18 +391,33 @@ export function berlinDate(now: Date): { y: number; m: number; d: number } {
 const mmdd = (m: number, d: number) => m * 100 + d;
 const parseMmdd = (s: string) => { const [m, d] = s.split("-").map(Number); return mmdd(m, d); };
 
-export function isSeasonActive(season: SeasonKey, now: Date): boolean {
+const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Gültiges "MM-DD" (29.02. erlaubt — in Nicht-Schaltjahren greift dann der 28.02. bzw. 01.03.). */
+export function isValidMmdd(s: unknown): s is string {
+  if (typeof s !== "string" || !/^\d{2}-\d{2}$/.test(s)) return false;
+  const [m, d] = s.split("-").map(Number);
+  return m >= 1 && m <= 12 && d >= 1 && d <= DAYS_IN_MONTH[m - 1];
+}
+
+/** "MM-DD" → "TT.MM." */
+export function formatMmdd(s: string): string {
+  const [m, d] = s.split("-");
+  return `${d}.${m}.`;
+}
+
+export function isSeasonActive(season: SeasonKey, now: Date, window: SeasonWindow = SEASONS[season]): boolean {
   const { m, d } = berlinDate(now);
   const cur = mmdd(m, d);
-  const from = parseMmdd(SEASONS[season].from);
-  const to = parseMmdd(SEASONS[season].to);
+  const from = parseMmdd(window.from);
+  const to = parseMmdd(window.to);
   return from <= to ? cur >= from && cur <= to : cur >= from || cur <= to;
 }
 
 /** Ende (letzter Tag, 23:59:59 Berliner Zeit ≈ UTC+1) der gerade laufenden Saison. */
-export function seasonEnd(season: SeasonKey, now: Date): Date {
+export function seasonEnd(season: SeasonKey, now: Date, window: SeasonWindow = SEASONS[season]): Date {
   const { y, m } = berlinDate(now);
-  const [tm, td] = SEASONS[season].to.split("-").map(Number);
+  const [tm, td] = window.to.split("-").map(Number);
   const year = tm < m ? y + 1 : y; // Saison läuft über den Jahreswechsel
   return new Date(Date.UTC(year, tm - 1, td, 22, 59, 59));
 }

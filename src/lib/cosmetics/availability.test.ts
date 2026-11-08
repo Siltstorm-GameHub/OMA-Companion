@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { COSMETICS, COSMETIC_SETS, getCosmetic, isSeasonActive, isoWeekKey, weekEnd } from "./catalog";
+import { COSMETICS, COSMETIC_SETS, SEASONS, getCosmetic, isSeasonActive, isValidMmdd, isoWeekKey, weekEnd } from "./catalog";
 import { DEFAULT_SETTINGS, computeAvailability, computeSetState } from "./availability";
 
 // 12:00 UTC = 13:00/14:00 Berliner Zeit — weit weg von Tagesgrenzen
@@ -99,5 +99,28 @@ describe("Sets", () => {
     const s = computeSetState("set:fire", new Set(), avail, { ...noOffers, sets: { "set:fire": { enabled: false } } })!;
     assert.equal(s.enabled, false);
     assert.equal(s.buyable, false);
+  });
+});
+
+describe("Saison-Zeiträume (Admin)", () => {
+  test("eigener Zeitraum ersetzt den Standard", () => {
+    const settings = { ...DEFAULT_SETTINGS, seasons: { halloween: { from: "12-01", to: "12-10" } } };
+    assert.equal(computeAvailability({}, settings, at("2026-10-20")).get("frame:pumpkin")!.buyable, false);
+    assert.equal(computeAvailability({}, settings, at("2026-12-05")).get("frame:pumpkin")!.buyable, true);
+  });
+  test("abgeschaltete Saison verkauft nichts", () => {
+    const settings = { ...DEFAULT_SETTINGS, seasons: { autumn: { enabled: false } } };
+    assert.equal(computeAvailability({}, settings, at("2026-11-03")).get("name:autumn")!.buyable, false);
+  });
+  test("jede Saison hat Artikel", () => {
+    for (const key of Object.keys(SEASONS)) {
+      assert.ok(COSMETICS.some(c => c.season === key), `${key} ohne Artikel`);
+    }
+  });
+  test("Datumsprüfung", () => {
+    assert.equal(isValidMmdd("02-29"), true);
+    assert.equal(isValidMmdd("02-30"), false);
+    assert.equal(isValidMmdd("13-01"), false);
+    assert.equal(isValidMmdd("1-1"), false);
   });
 });

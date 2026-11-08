@@ -10,10 +10,10 @@
 // Die Berechnung (Preis, Wochenrabatt, Saison, Exklusiv-Rotation) steckt in availability.ts.
 
 import { prisma } from "@/lib/prisma";
-import { getCosmetic, getSet } from "./catalog";
+import { SEASONS, getCosmetic, getSet, isValidMmdd, type SeasonKey } from "./catalog";
 import {
   DEFAULT_SETTINGS, computeAvailability,
-  type CosmeticOverride, type CosmeticsConfig, type ItemAvailability, type SetOverride, type ShopSettings,
+  type CosmeticOverride, type CosmeticsConfig, type ItemAvailability, type SeasonOverride, type SetOverride, type ShopSettings,
 } from "./availability";
 
 export * from "./availability";
@@ -48,7 +48,23 @@ function sanitizeSettings(input: unknown): ShopSettings {
     weeklyDiscountPct: int(r.weeklyDiscountPct, 0, 90, DEFAULT_SETTINGS.weeklyDiscountPct),
     exclusiveCount: int(r.exclusiveCount, 0, 5, DEFAULT_SETTINGS.exclusiveCount),
     sets: sanitizeSetOverrides(r.sets),
+    seasons: sanitizeSeasonOverrides(r.seasons),
   };
+}
+
+function sanitizeSeasonOverrides(input: unknown): ShopSettings["seasons"] {
+  if (!input || typeof input !== "object") return {};
+  const out: ShopSettings["seasons"] = {};
+  for (const [key, raw] of Object.entries(input as Record<string, unknown>)) {
+    if (!(key in SEASONS) || !raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const o: SeasonOverride = {};
+    if (isValidMmdd(r.from)) o.from = r.from;
+    if (isValidMmdd(r.to)) o.to = r.to;
+    if (typeof r.enabled === "boolean") o.enabled = r.enabled;
+    if (Object.keys(o).length > 0) out[key as SeasonKey] = o;
+  }
+  return out;
 }
 
 function sanitizeSetOverrides(input: unknown): Record<string, SetOverride> {

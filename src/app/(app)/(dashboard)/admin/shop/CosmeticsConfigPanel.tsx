@@ -8,11 +8,12 @@ import LookPreview, { lookOfSet } from "@/components/cosmetics/LookPreview";
 import { AuraLayer } from "@/components/RankRing";
 import { getFrameRing } from "@/lib/cosmetics/frame-style";
 import {
-  CATEGORY_META, CATEGORY_ORDER, COSMETICS, COSMETIC_SETS, RARITY_META, SEASONS, getCosmetic, unlockLabel,
-  type Cosmetic, type CosmeticCategory, type CosmeticSet,
+  CATEGORY_META, CATEGORY_ORDER, COSMETICS, COSMETIC_SETS, RARITY_META, SEASONS, SEASON_ORDER, formatMmdd,
+  getCosmetic, isValidMmdd, unlockLabel,
+  type Cosmetic, type CosmeticCategory, type CosmeticSet, type SeasonKey,
 } from "@/lib/cosmetics/catalog";
 import {
-  computeAvailability, isSetEnabled, setDiscountPct,
+  computeAvailability, isSeasonEnabled, isSeasonRunning, isSetEnabled, seasonWindow, setDiscountPct,
   type CosmeticsConfig, type ShopSettings,
 } from "@/lib/cosmetics/availability";
 import "@/components/RankRing.css";
@@ -46,15 +47,53 @@ function Swatch({ item }: { item: Cosmetic }) {
   }
 }
 
-const ddmm = (mmdd: string) => mmdd.split("-").reverse().join(".") + ".";
-
-function availabilityNote(item: Cosmetic): string | null {
+function availabilityNote(item: Cosmetic, settings: ShopSettings): string | null {
   if (item.season) {
     const s = SEASONS[item.season];
-    return `${s.emoji} ${s.name} (${ddmm(s.from)}–${ddmm(s.to)})`;
+    const w = seasonWindow(item.season, settings);
+    return `${s.emoji} ${s.name} (${formatMmdd(w.from)}–${formatMmdd(w.to)})`;
   }
   if (item.rotationOnly) return "✨ Wochen-Exklusiv";
   return null;
+}
+
+/** "TT.MM." ↔ "MM-DD". Übernimmt den Wert erst, wenn das Datum gültig ist. */
+function toMmdd(text: string): string | null {
+  const m = text.trim().match(/^(\d{1,2})\.(\d{1,2})\.?$/);
+  if (!m) return null;
+  const v = `${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return isValidMmdd(v) ? v : null;
+}
+
+function DateField({ value, onChange, label }: { value: string; onChange: (mmdd: string) => void; label: string }) {
+  const [text, setText] = useState(formatMmdd(value));
+  const [lastValue, setLastValue] = useState(value);
+  // Externe Änderung (z.B. „Verwerfen“, „Standard“) übernehmen
+  if (value !== lastValue) {
+    setLastValue(value);
+    setText(formatMmdd(value));
+  }
+  const valid = toMmdd(text) !== null;
+  return (
+    <label className="flex items-center gap-1.5 text-[10px] text-gray-400">
+      {label}
+      <input
+        value={text}
+        inputMode="numeric"
+        placeholder="TT.MM."
+        aria-invalid={!valid}
+        onChange={e => {
+          setText(e.target.value);
+          const v = toMmdd(e.target.value);
+          if (v) onChange(v);
+        }}
+        onBlur={() => setText(formatMmdd(value))}
+        className={`w-20 px-2 py-1.5 rounded-lg bg-white/[0.04] border text-white text-sm text-center tabular-nums focus:outline-none ${
+          valid ? "border-white/10 focus:border-teal-500/50" : "border-rose-500/60"
+        }`}
+      />
+    </label>
+  );
 }
 
 type View = CosmeticCategory | "season" | "exclusive" | "sets";
@@ -119,6 +158,53 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
     });
   }
 
+  function patchSeason(season: SeasonKey, p: { from?: string; to?: string; enabled?: boolean } | null) {
+    setSettings(prev => {
+      const seasons = { ...prev.seasons };
+      if (p === null) { delete seasons[season]; return { ...prev, seasons }; } // zurück auf Standard
+      const o = { ...seasons[season], ...p };
+      if (o.from === SEASONS[season].from) delete o.from;
+      if (o.to === SEASONS[season].to) delete o.to;
+      if (o.enabled === true) delete o.enabled;
+      if (o.from === undefined && o.to === undefined && o.enabled === undefined) delete seasons[season];
+      else seasons[season] = o;
+      return { ...prev, seasons };
+    });
+  }
+
+  function renderSeasonRow(season: SeasonKey) {
+    const s = SEASONS[season];
+    const w = seasonWindow(season, settings);
+    const enabled = isSeasonEnabled(season, settings);
+    const running = isSeasonRunning(season, settings, new Date());
+    const customized = !!settings.seasons[season];
+    const count = COSMETICS.filter(c => c.season === season).length;
+    return (
+      <div key={season} className={`flex items-center gap-3 px-4 py-2.5 flex-wrap ${!enabled ? "opacity-50" : ""}`}>
+        <div className="flex-1 min-w-[9rem]">
+          <p className="text-sm text-white font-medium">
+            {s.emoji} {s.name}
+            {running && <span className="ml-1.5 text-[9px] font-bold text-emerald-300">läuft gerade</span>}
+          </p>
+          <p className="text-[10px] text-gray-500">
+            {count} Artikel{customized && <> · Standard {formatMmdd(s.from)}–{formatMmdd(s.to)}</>}
+          </p>
+        </div>
+        <DateField label="von" value={w.from} onChange={from => patchSeason(season, { from })} />
+        <DateField label="bis" value={w.to} onChange={to => patchSeason(season, { to })} />
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={enabled} onChange={e => patchSeason(season, { enabled: e.target.checked })}
+            className="w-4 h-4 accent-teal-500" />
+          <span className="text-[10px] text-gray-400 w-8">{enabled ? "An" : "Aus"}</span>
+        </label>
+        <button onClick={() => patchSeason(season, null)} disabled={!customized}
+          className="text-[10px] text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors">
+          Standard
+        </button>
+      </div>
+    );
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -146,7 +232,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
     const enabled = o.enabled ?? true;
     const price = o.price ?? item.defaultPrice ?? 0;
     const rarity = RARITY_META[item.rarity];
-    const note = availabilityNote(item);
+    const note = view === "season" ? null : availabilityNote(item, settings);
     const a = avail.get(item.id);
     return (
       <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${!unlockOnly && !enabled ? "opacity-50" : ""}`}>
@@ -292,17 +378,39 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         {view === "sets"
           ? "Set-Preis = Summe der noch fehlenden Artikel (aktuelle Preise inkl. Wochenrabatt) minus Set-Rabatt. Ein Set ist nur kaufbar, wenn alle fehlenden Artikel gerade kaufbar sind."
           : view === "season"
-            ? "Saison-Artikel sind nur im jeweiligen Zeitfenster kaufbar. Preis und Angebot stellst du hier ein."
+            ? "Lege fest, wann welche Saison läuft (TT.MM., jedes Jahr gleich; das Ende darf im Folgejahr liegen, z.B. 27.12.–06.01.). Saison-Artikel sind nur in diesem Zeitraum kaufbar — darunter stellst du ihre Preise ein."
             : view === "exclusive"
               ? "Pro Woche ist eine zufällige Auswahl dieser Artikel kaufbar (Anzahl oben unter „Exklusiv-Artikel“)."
               : "Preise und Angebot (sortiert nach Preis). Deaktivierte Artikel verschwinden aus dem Shop, bleiben bei Käufern aber erhalten. Belohnungs- und Community-Job-Artikel sind nicht käuflich."}
       </p>
 
-      <div className="glass rounded-2xl divide-y divide-white/5">
-        {view === "sets"
-          ? [...COSMETIC_SETS].sort((a, b) => a.name.localeCompare(b.name, "de")).map(renderSetRow)
-          : items.map(renderItemRow)}
-      </div>
+      {view === "season" ? (
+        <div className="space-y-4">
+          <div className="glass rounded-2xl divide-y divide-white/5">
+            <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Zeiträume</p>
+            {SEASON_ORDER.map(renderSeasonRow)}
+          </div>
+          {SEASON_ORDER.map(season => {
+            const list = items.filter(c => c.season === season);
+            if (list.length === 0) return null;
+            const w = seasonWindow(season, settings);
+            return (
+              <div key={season} className="glass rounded-2xl divide-y divide-white/5">
+                <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                  {SEASONS[season].emoji} {SEASONS[season].name} · {formatMmdd(w.from)}–{formatMmdd(w.to)}
+                </p>
+                {list.map(renderItemRow)}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="glass rounded-2xl divide-y divide-white/5">
+          {view === "sets"
+            ? [...COSMETIC_SETS].sort((a, b) => a.name.localeCompare(b.name, "de")).map(renderSetRow)
+            : items.map(renderItemRow)}
+        </div>
+      )}
 
       <div className="flex items-center gap-2 sticky bottom-3">
         <button
