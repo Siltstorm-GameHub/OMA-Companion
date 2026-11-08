@@ -56,24 +56,29 @@ export default function GameCover({
   // unscharfen statischen Map-Match und der eigenen Steam-Suche, sonst
   // kann nach dem Speichern ein anderes Bild als das ausgewählte erscheinen.
   const pickedUrl = game ? pickedCoverCache.get(normalizeForCoverCache(game)) : undefined;
-  const staticUrl = usableExplicitUrl ?? pickedUrl ?? getGameCoverUrl(game);
+  // Statisches/gemerktes Cover lädt nicht (z.B. alte Steam-Adresse eines neueren Spiels) →
+  // einmal live bei Steam nachschlagen, ohne die statische Liste.
+  const [staticFailed, setStaticFailed] = useState(false);
+  const staticUrl = usableExplicitUrl ?? (staticFailed ? null : (pickedUrl ?? getGameCoverUrl(game)));
+  const live = staticFailed;
+  const cacheKey = game ? `${live ? "live:" : ""}${game.toLowerCase()}` : "";
 
   const [dynamicUrl, setDynamicUrl] = useState<string | null | undefined>(
     // Sofort aus Cache bedienen falls vorhanden
-    game ? dynamicCache.get(game.toLowerCase()) : undefined
+    game ? dynamicCache.get(cacheKey) : undefined
   );
   const [imgError, setImgError] = useState(false);
 
   // Falls kein statisches Cover: Steam API anfragen
   useEffect(() => {
     if (!game || staticUrl) return;                     // nichts zu tun
-    const key = game.toLowerCase();
+    const key = cacheKey;
     if (dynamicCache.has(key)) {                        // schon gecacht
       setDynamicUrl(dynamicCache.get(key) ?? null);
       return;
     }
     let cancelled = false;
-    fetch(`/api/game-cover?name=${encodeURIComponent(game)}`)
+    fetch(`/api/game-cover?name=${encodeURIComponent(game)}${live ? "&live=1" : ""}`)
       .then(r => r.json())
       .then((data: { url: string | null }) => {
         if (cancelled) return;
@@ -84,7 +89,7 @@ export default function GameCover({
         dynamicCache.set(key, null);
       });
     return () => { cancelled = true; };
-  }, [game, staticUrl]);
+  }, [game, staticUrl, cacheKey, live]);
 
   const resolvedUrl = staticUrl ?? (dynamicUrl ?? null);
   const showImage   = resolvedUrl && !imgError;
@@ -102,6 +107,7 @@ export default function GameCover({
             onError={() => {
               // Nur das explizite Cover war kaputt → Namens-Auflösung bekommt noch eine Chance
               if (resolvedUrl === usableExplicitUrl) setExplicitFailed(true);
+              else if (resolvedUrl === staticUrl && !staticFailed) setStaticFailed(true);
               else setImgError(true);
             }}
           />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveSteamCoverUrl } from "@/lib/steam-cover";
 
 export interface SteamGameResult {
   appId:    number;
@@ -31,15 +32,17 @@ export async function GET(req: NextRequest) {
       items: { id: number; name: string; type: string; tiny_image?: string }[];
     };
 
-    const results: SteamGameResult[] = (data.items ?? [])
+    // Cover je Treffer über die Store-API auflösen (pro App-ID 24 h gecacht), weil neuere
+    // Spiele keine festen CDN-Pfade mehr haben. Fällt die Abfrage aus: alte Adresse.
+    const results: SteamGameResult[] = await Promise.all((data.items ?? [])
       .filter(item => item.type === "app")
       .slice(0, 10)
-      .map(item => ({
+      .map(async item => ({
         appId:    item.id,
         name:     item.name,
-        coverUrl: `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.id}/capsule_616x353.jpg`,
+        coverUrl: await resolveSteamCoverUrl(item.id),
         thumbUrl: item.tiny_image ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.id}/capsule_sm_120.jpg`,
-      }));
+      })));
 
     return NextResponse.json(results, {
       headers: { "Cache-Control": "public, max-age=300" },

@@ -319,14 +319,10 @@ export async function getGameCoverUrlAsync(gameName: string | null | undefined):
   if (!gameName) return null;
 
   try {
-    const res = await fetch(
-      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(gameName)}&l=english&cc=DE&f=games`,
-      { headers: { "User-Agent": "OMA-Companion/1.0" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json() as { items: { id: number; name: string; type: string }[] };
-    const first = (data.items ?? []).find(i => i.type === "app");
-    if (first) return `https://cdn.cloudflare.steamstatic.com/steam/apps/${first.id}/capsule_616x353.jpg`;
+    // Dynamisch, damit der Client-Bundle von GameCover die Server-Abfrage nicht mitschleppt.
+    const { resolveSteamCoverUrl, searchSteamAppId } = await import("./steam-cover");
+    const appId = await searchSteamAppId(gameName);
+    if (appId) return await resolveSteamCoverUrl(appId);
   } catch (err) {
     console.error("[game-cover] Steam-Suche fehlgeschlagen:", err);
   }

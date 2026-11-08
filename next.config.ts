@@ -31,15 +31,14 @@ const nextConfig: NextConfig = {
     // public/event-covers: Vorlagen-Cover, die branded-cover.ts für Discord von der Platte liest
     ].map((route) => [route, ["node_modules/sharp/**/*", "node_modules/@img/**/*", "public/event-covers/**/*"]]),
   ),
-  // OMA Gems ist ein schlichtes Edelstein-Tauschspiel (Karten, Kämpfe, Helden und Shop sind entfernt) —
+  // OMA Gems ist ein schlichtes Edelstein-Tauschspiel (Karten, Kämpfe und Helden sind entfernt; /shop ist
+  // heute der Kosmetik-Shop) —
   // alte Links leiten dauerhaft (308) auf den Games-Hub weiter.
   async redirects() {
     return [
       // Der Games-Hub (OMA Gems + OMA Blocks) liegt unter /gems.
       { source: "/games", destination: "/gems", permanent: false },
       { source: "/blocks", destination: "/gems/blocks", permanent: false },
-      // Der Shop (heute nur noch das Glücksrad) liegt im Gems-Hub.
-      { source: "/shop", destination: "/gems", permanent: false },
       // Alte Seiten-URLs von Battle Cards
       { source: "/battle-cards", destination: "/gems", permanent: true },
       { source: "/battle-cards/:page(live|battles|lineup|leaderboard)", destination: "/gems", permanent: true },
