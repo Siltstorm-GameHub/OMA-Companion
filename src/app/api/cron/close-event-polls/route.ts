@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { POST as completeEventRoute } from "@/app/api/admin/events/[id]/complete/route";
+import { buildRecompleteBody } from "@/lib/event-recomplete";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,22 +68,7 @@ export async function GET(req: NextRequest) {
     const legacyResolved = !hasLegacyPoll || ((oldCompletion.pollWinnerIds as string[] | null)?.length ?? 0) > 0;
     if (!legacyResolved) { skipped.push(event.id); continue; } // braucht noch eine manuelle Sieger-Wahl
 
-    const body = {
-      mvpUserId:               oldCompletion.mvpUserId ?? undefined,
-      winnerStatField:         oldCompletion.winnerStatField ?? undefined,
-      avgWinnerDirection:      oldCompletion.avgWinnerDirection ?? undefined,
-      seriesWinnerTargetField: oldCompletion.seriesWinnerTargetField ?? undefined,
-      pollWinnerIds:           oldCompletion.pollWinnerIds ?? undefined,
-      pollLabel:               oldCompletion.pollLabel ?? undefined,
-      pollBonusCoins:          oldCompletion.pollBonusCoins ?? undefined,
-      pollBonusRankPoints:     oldCompletion.pollBonusRankPoints ?? undefined,
-      pollExcludedUserIds:     oldCompletion.pollExcludedUserIds ?? undefined,
-      spectatorAttendedIds:    oldCompletion.spectatorAttendedIds ?? undefined,
-      finalRanking:            oldCompletion.finalRanking ?? undefined,
-      finalRankingGroups:      oldCompletion.finalRankingGroups ?? undefined,
-      finalRankingNote:        event.finalRankingNote ?? undefined,
-      excludedUserIds:         oldCompletion.excludedUserIds ?? undefined,
-    };
+    const body = buildRecompleteBody(event.completionData, event.finalRankingNote);
 
     const internalReq = new NextRequest(`http://internal.local/api/admin/events/${event.id}/complete`, {
       method: "POST",

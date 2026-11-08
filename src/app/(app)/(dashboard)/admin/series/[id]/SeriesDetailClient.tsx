@@ -26,6 +26,7 @@ import IconPicker from "@/components/IconPicker";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
+import RecalculateSeriesButton from "./RecalculateSeriesButton";
 import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
 import { NumberInput } from "@/components/ui/NumberInput";
 
@@ -982,6 +983,21 @@ export default function SeriesDetailClient({
               wenn oben aktiviert — auch auf die Rangliste übertragen.
             </p>
           </Section>
+
+          {/* Geänderte Einstellungen auf bereits beendete Events anwenden */}
+          {!isArchived && series.status !== "finished" && series.status !== "closed" && (
+            <Section title="Bereits abgeschlossene Events">
+              <p className="text-xs text-gray-500">
+                Änderungen an Punkten und Statistiken gelten zunächst nur für noch nicht abgeschlossene Events — jedes
+                beendete Event behält die Einstellungen von seinem Abschluss. Hiermit werden alle beendeten Events der
+                Reihe mit den aktuell gespeicherten Einstellungen neu berechnet (einzeln geht es über „Ergebnisse“ am Event).
+              </p>
+              <RecalculateSeriesButton
+                seriesId={series.id}
+                finishedCount={(series.events as { status: string }[]).filter(e => e.status === "finished").length}
+              />
+            </Section>
+          )}
           </fieldset>
           </>
           )}
