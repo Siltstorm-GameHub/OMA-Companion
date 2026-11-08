@@ -1418,6 +1418,7 @@ export default async function TournamentDetailPage({
                 submissions={mySubmissions}
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 locked={isParticipantEditLocked(event)}
+                startAt={event.startAt.toISOString()}
               />
               </div>
             )}

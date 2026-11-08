@@ -1,11 +1,12 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import CoinIcon from "@/components/CoinIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw, Pencil, History, Play, Square, CalendarClock } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { confirmEventTiming } from "@/lib/event-timing-warning";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { formatLabel as centralFormatLabel } from "@/lib/tournament-formats";
@@ -53,7 +54,7 @@ export type Tournament = {
   groupStageJson?: string | null;
   participants: Participant[]; matches: Match[];
 };
-type Event = { id: string };
+type Event = { id: string; startAt?: Date | string; endAt?: Date | string | null };
 
 
 
@@ -119,6 +120,7 @@ export default function TournamentManager({
   }
   const [loading, setLoading] = useState(false);
   const { confirm, ConfirmDialogElement } = useConfirm();
+  const resultsTimingOk = useRef(false);
 
   // ── Panel visibility ──────────────────────────────────────────────────
   const [showParticipants, setShowParticipants] = useState(false);
@@ -452,8 +454,17 @@ export default function TournamentManager({
     });
   }
 
+  /** Warnt einmalig (pro geöffneter Seite), wenn vor dem Event-Start Ergebnisse eingetragen werden. */
+  async function guardResultsTiming(): Promise<boolean> {
+    if (resultsTimingOk.current || !event.startAt) return true;
+    const ok = await confirmEventTiming(confirm, "results", { startAt: event.startAt, endAt: event.endAt });
+    if (ok) resultsTimingOk.current = true;
+    return ok;
+  }
+
   async function submit1v1(matchId: string, winnerId: string | null, isDraw = false): Promise<boolean> {
     if (!tournament) return false;
+    if (!(await guardResultsTiming())) return false;
     if (!(await confirmGroupChangeAfterKnockout(matchId))) return false;
     const s = scores1v1[matchId];
     setLoading(true);
@@ -605,6 +616,7 @@ export default function TournamentManager({
       if (!silent) toast.error(error);
       return false;
     }
+    if (!(await guardResultsTiming())) return false;
     const updated = buildFfaEntries(matchId, matchEntries);
     if (!silent) setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
@@ -627,6 +639,7 @@ export default function TournamentManager({
    *  und am Ende zusammengefasst gemeldet, statt den ganzen Vorgang abzubrechen. */
   async function saveAllExpanded() {
     if (!tournament) return;
+    if (!(await guardResultsTiming())) return;
     const candidates = tournament.matches.filter(m => expanded.has(m.id));
     if (candidates.length === 0) return;
     setLoading(true);

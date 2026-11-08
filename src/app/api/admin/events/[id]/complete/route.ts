@@ -52,6 +52,7 @@ type SeriesStatConfig = {
   winnerSeriesStatKey?: string;     // old: single field (backward compat)
   matchWinStatKeys?: string[];      // array of series stat fields fed by the per-round "Match Win" flag
   eventPlacementCoins?: { place: number; coins: number }[]; // Bonus-Münzen für Platz 1-3 je Einzel-Event der Reihe
+  eventPlacementPoints?: { place: number; points: number }[]; // Tabellenpunkte je Endplatzierung im Einzel-Event
   dominionBonus?: {
     enabled: boolean;
     triggerStats: string[];   // new: array (any match keeps streak)
@@ -601,6 +602,31 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   }
 
+  // Tabellenpunkte je Endplatzierung im Einzel-Event (nur Events einer Reihe, Reihen-Einstellung
+  // eventPlacementPoints). Grundlage ist dieselbe Finale Platzierung wie bei den Platzierungs-Münzen
+  // (inkl. Gleichstand: gleicher Platz → gleiche Punkte, danach wird übersprungen). Ausgeschlossene
+  // bekommen nichts. Landet in completionData.eventPlacementPoints und wird von computeEventPoints
+  // (series-event-points.ts) als Spalte "Platzierungspunkte" in die Reihentabelle gerechnet.
+  const newEventPlacementPoints: Record<string, number> = {};
+  if (event.seriesId && (statCfg.eventPlacementPoints ?? []).some(p => p.points > 0)) {
+    const table = statCfg.eventPlacementPoints ?? [];
+    const placed: { userId: string; place: number }[] = [];
+    if (body.finalRankingGroups?.length) {
+      let place = 1;
+      for (const group of body.finalRankingGroups) {
+        for (const userId of group.filter(id => registeredSet.has(id))) placed.push({ userId, place });
+        place += group.length;
+      }
+    } else {
+      (body.finalRanking ?? []).filter(id => registeredSet.has(id)).forEach((userId, i) => placed.push({ userId, place: i + 1 }));
+    }
+    for (const { userId, place } of placed) {
+      if (excludedSet.has(userId)) continue;
+      const pts = table.find(p => p.place === place)?.points ?? 0;
+      if (pts > 0) newEventPlacementPoints[userId] = pts;
+    }
+  }
+
   // ── Poll-Belohnungen (auch beim Re-Edit, mit Rückbuchung) ───────────────────
   // Alte Poll-Gewinner rückbuchen
   if (isReEdit) {
@@ -848,6 +874,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     transferredParticipationPoints: Record<string, number>;
     transferredStatPoints: Record<string, number>;
     transferredSpectatorPoints: Record<string, number>;
+    transferredPlacementPoints: Record<string, number>;
   } | null = null;
 
   if (event.series) {
@@ -947,6 +974,15 @@ async function completeEvent(req: NextRequest, eventId: string) {
       const oldMap = oldSeriesContrib.transferredParticipationPoints ?? {};
       for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredParticipationPoints)])) {
         await applyRankDelta(userId, (newTransferredParticipationPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Reihentabelle Teilnahme: ${event.title}`);
+      }
+    }
+
+    // Tabellenpunkte je Endplatzierung → globale Rangliste (wenn aktiviert), Diff gegen letzten Stand
+    const newTransferredPlacementPoints: Record<string, number> = statCfg.transferToGlobalRanking ? { ...newEventPlacementPoints } : {};
+    {
+      const oldMap = (oldSeriesContrib as { transferredPlacementPoints?: Record<string, number> }).transferredPlacementPoints ?? {};
+      for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredPlacementPoints)])) {
+        await applyRankDelta(userId, (newTransferredPlacementPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Reihentabelle Platzierung: ${event.title}`);
       }
     }
 
@@ -1161,6 +1197,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       transferredParticipationPoints: newTransferredParticipationPoints,
       transferredStatPoints: newTransferredStatPoints,
       transferredSpectatorPoints: newTransferredSpectatorPoints,
+      transferredPlacementPoints: newTransferredPlacementPoints,
     };
 
     updatedStandings = {
@@ -1214,6 +1251,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
       placementRewards:   newPlacementRewards,
     },
     seriesContrib:           seriesContrib,
+    // Tabellenpunkte je Endplatzierung im Einzel-Event (siehe newEventPlacementPoints)
+    eventPlacementPoints:    Object.keys(newEventPlacementPoints).length > 0 ? newEventPlacementPoints : null,
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
     // Freeze: friert die gerade für die Punkte-Vergabe oben verwendete Reihen-Konfiguration ein,

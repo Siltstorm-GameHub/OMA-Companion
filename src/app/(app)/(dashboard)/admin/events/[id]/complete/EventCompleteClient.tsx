@@ -1,7 +1,9 @@
 "use client";
 import { formatDecimal, formatFixed } from "@/lib/format-number";
 import PlaceMedal from "@/components/PlaceMedal";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+
+const noopSubscribe = () => () => {};
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -17,10 +19,12 @@ import { ChevronLeft } from "@/components/icons";
 import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
 import { statDisplayName } from "@/lib/series-event-points";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { confirmEventTiming, eventTimingWarning } from "@/lib/event-timing-warning";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
-type PlacementReward = { place: number; coins: number; rankPoints: number };
+type PlacementReward = { place: number; coins: number; rankPoints: number; /** Tabellenpunkte der Reihe (eventPlacementPoints) */ tablePoints?: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
 type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
@@ -33,6 +37,7 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  eventPlacementPoints?: { place: number; points: number }[];
   placementPoints?: Record<string, number>;
   dominionBonus?: {
     enabled: boolean;
@@ -48,6 +53,9 @@ type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded:
 interface Props {
   eventId: string;
   eventTitle: string;
+  /** Für die Warnung "Abschluss vor Start/Ende" (ISO) */
+  eventStartAt: string;
+  eventEndAt: string | null;
   seriesId: string | null;
   seriesName: string | null;
   seriesIcon?: string | null;
@@ -131,7 +139,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 }
 
 export default function EventCompleteClient({
-  eventId, eventTitle, seriesId, seriesName, seriesIcon,
+  eventId, eventTitle, eventStartAt, eventEndAt, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField, userStats, format, userAvgScore, defaultAvgDirection = "high",
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
@@ -140,6 +148,19 @@ export default function EventCompleteClient({
 }: Props) {
   const router = useRouter();
   const isAvgFormat = format === "avg_stats";
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  // Hinweis oben auf der Seite, solange noch gar nicht abgeschlossen wurde. Nur im Browser berechnet
+  // (Server-Snapshot null), damit Server- und Client-Render nicht auseinanderlaufen; als String,
+  // weil useSyncExternalStore einen stabilen Snapshot braucht.
+  const timingWarningJson = useSyncExternalStore(
+    noopSubscribe,
+    () => isReEdit ? null : JSON.stringify(eventTimingWarning("complete", { startAt: eventStartAt, endAt: eventEndAt })),
+    () => null,
+  );
+  const timingWarning = useMemo(
+    () => (timingWarningJson ? JSON.parse(timingWarningJson) as ReturnType<typeof eventTimingWarning> : null),
+    [timingWarningJson],
+  );
 
   // Mode wird direkt vom Event-Status abgeleitet (nicht von completionData) — so zeigt die Seite
   // immer den richtigen Modus, auch wenn completionData z.B. durch eine manuelle Statusänderung
@@ -335,8 +356,9 @@ export default function EventCompleteClient({
   // (Münzen + Rang-Punkte) kommt erst bei Abschluss der gesamten Reihe anhand der Endplatzierung.
   function getPlacementReward(place: number): PlacementReward | undefined {
     if (seriesId) {
-      const r = seriesStatConfig?.eventPlacementCoins?.find(p => p.place === place);
-      return r && r.coins > 0 ? { place, coins: r.coins, rankPoints: 0 } : undefined;
+      const coins = seriesStatConfig?.eventPlacementCoins?.find(p => p.place === place)?.coins ?? 0;
+      const tablePoints = seriesStatConfig?.eventPlacementPoints?.find(p => p.place === place)?.points ?? 0;
+      return coins > 0 || tablePoints > 0 ? { place, coins, rankPoints: 0, tablePoints } : undefined;
     }
     return rewardsConfig.placements.find(p => p.place === place);
   }
@@ -418,6 +440,8 @@ export default function EventCompleteClient({
   // Finalen Platzierung/Begründung während der Umfragephase gesichert werden, ohne das Event dadurch
   // schon komplett abzuschließen.
   async function handleConfirm(pollOnly = false, keepPollOpen = false) {
+    // Erster Abschluss vor Start bzw. vor eingetragenem Ende → Warnung (Korrekturen später nicht mehr)
+    if (!isReEdit && !(await confirmEventTiming(confirm, "complete", { startAt: eventStartAt, endAt: eventEndAt }))) return;
     setLoading(true);
 
     try {
@@ -480,6 +504,7 @@ export default function EventCompleteClient({
   /* ── Render ── */
   return (
     <div className="space-y-4">
+      {ConfirmDialogElement}
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
         {seriesId ? (
@@ -502,6 +527,16 @@ export default function EventCompleteClient({
           {isPollOnly ? "Umfrage nachtragen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen"}
         </span>
       </div>
+
+      {timingWarning && (
+        <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-semibold">{timingWarning.title}</p>
+            <p className="text-xs text-amber-200/80 whitespace-pre-line mt-0.5">{timingWarning.description?.split("\n\n")[0]}</p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center gap-2">
@@ -915,7 +950,7 @@ export default function EventCompleteClient({
                   {rankingGroups.map((group, gi) => {
                     const place = placementMap.get(group[0]) ?? gi + 1;
                     const reward = getPlacementReward(place);
-                    if (!reward || (reward.coins === 0 && reward.rankPoints === 0)) return null;
+                    if (!reward || (reward.coins === 0 && reward.rankPoints === 0 && !reward.tablePoints)) return null;
                     const names = group.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null }));
                     return (
                       <li key={gi} className="flex items-center gap-2">
@@ -924,6 +959,7 @@ export default function EventCompleteClient({
                         {reward.coins > 0 ? `${reward.coins} Münzen` : ""}
                         {reward.coins > 0 && reward.rankPoints > 0 ? " + " : ""}
                         {reward.rankPoints > 0 ? `${reward.rankPoints} Punkte` : ""}
+                        {reward.tablePoints ? `${reward.coins > 0 || reward.rankPoints > 0 ? " + " : ""}${reward.tablePoints} Tabellenpunkte` : ""}
                       </li>
                     );
                   })}
@@ -1147,6 +1183,11 @@ export default function EventCompleteClient({
                               +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}
+                          {!isExcluded && reward?.tablePoints ? (
+                            <span className="text-[10px] text-indigo-300 tabular-nums leading-tight" title="Tabellenpunkte für die Reihentabelle">
+                              +{reward.tablePoints} Tab.
+                            </span>
+                          ) : null}
                         </span>
                         <div className="flex gap-0.5 shrink-0">
                             <button

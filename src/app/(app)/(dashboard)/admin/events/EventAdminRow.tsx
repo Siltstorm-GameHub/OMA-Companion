@@ -17,6 +17,7 @@ import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { TOURNAMENT_FORMATS, SERIES_FORMAT_OPTIONS, formatLabel } from "@/lib/tournament-formats";
 import { NumberInput } from "@/components/ui/NumberInput";
 
@@ -31,6 +32,7 @@ type Series = { id: string; name: string; _count: { events: number } };
 type Event = {
   id: string; title: string; description: string | null; status: string; game: string | null;
   startAt: Date; maxPlayers: number | null; pointReward: number; type: string;
+  endAt?: Date | string | null;
   discordChannelId?: string | null;
   seriesId?: string | null;
   series?: { id: string; name: string } | null;
@@ -620,7 +622,14 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                   <div className="flex flex-wrap gap-3 items-end">
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">Status</label>
-                      <select value={status} onChange={e => setStatus(e.target.value)}
+                      <select value={status} onChange={async e => {
+                          const s = e.target.value;
+                          if (s !== status && s !== event.status) {
+                            const action = s === "active" ? "activate" : (s === "umfrage" || s === "finished") ? "complete" : null;
+                            if (action && !(await confirmEventTiming(confirm, action, event))) return;
+                          }
+                          setStatus(s);
+                        }}
                         className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
                         {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -1400,7 +1409,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
               {/* ── TURNIERBAUM ── */}
               {tab === "bracket" && (
                 <TournamentManager
-                  event={{ id: event.id }}
+                  event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
                   tournament={tournament ?? null}
                   allUsers={allUsers.filter(u => registeredIds.has(u.id))}
                   winnerStatKeys={winnerStatKeys}

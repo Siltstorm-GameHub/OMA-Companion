@@ -269,6 +269,10 @@ export default function SeriesDetailClient({
   const [eventPlacementCoins, setEventPlacementCoins] = useState<{ place: number; coins: number }[]>(
     initialStatCfg.eventPlacementCoins ?? [{ place: 1, coins: 0 }, { place: 2, coins: 0 }, { place: 3, coins: 0 }]
   );
+  // Tabellenpunkte für die Platzierung (1./2./3.) innerhalb eines einzelnen Events der Reihe
+  const [eventPlacementPoints, setEventPlacementPoints] = useState<{ place: number; points: number }[]>(
+    initialStatCfg.eventPlacementPoints ?? [{ place: 1, points: 0 }, { place: 2, points: 0 }, { place: 3, points: 0 }]
+  );
   // Event-level stat settings (abgeleitet aus den Statistiken, siehe lib/series-stat-fields.ts)
   const eventStatFields = deriveEventStatFields(statRows);
   const [winnerStatField, setWinnerStatField] = useState<string>(initialStatCfg.winnerStatField ?? "");
@@ -329,6 +333,9 @@ export default function SeriesDetailClient({
 
   function updateEventPlacementCoins(place: number, value: number) {
     setEventPlacementCoins(prev => prev.map(r => r.place === place ? { ...r, coins: value } : r));
+  }
+  function updateEventPlacementPoints(place: number, value: number) {
+    setEventPlacementPoints(prev => prev.map(r => r.place === place ? { ...r, points: value } : r));
   }
 
   function calcLegacyPoints(participations: number, stats: Record<string, number>): number {
@@ -407,6 +414,7 @@ export default function SeriesDetailClient({
             },
           }),
           eventPlacementCoins,
+          eventPlacementPoints,
         }),
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
@@ -941,27 +949,37 @@ export default function SeriesDetailClient({
 
           {/* Platzierungs-Bonus je Event */}
           <Section title="Platzierungs-Bonus je Event">
-            <p className="text-xs text-gray-500 flex items-center gap-1.5">
-              <Coins className="w-3 h-3 text-amber-400" /> Zusätzliche Münzen für Platzierung je Event
+            <p className="text-xs text-gray-500">
+              Für die Platzierung im jeweiligen Einzel-Event: zusätzliche Münzen und/oder Tabellenpunkte für die Reihentabelle
             </p>
             <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-wider">
+                <span className="w-24 shrink-0" />
+                <span className="flex items-center gap-1 w-24"><Coins className="w-3 h-3 text-amber-400" /> Münzen</span>
+                <span className="flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpunkte</span>
+              </div>
               {eventPlacementCoins.map(r => (
                 <div key={r.place} className="flex items-center gap-2">
                   <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
                     <PlaceMedal place={r.place} /> {r.place}. Platz
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                  <div className="w-24">
                     <NumberInput min={0} value={r.coins}
                       onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
                       className={numCls} />
                   </div>
+                  <NumberInput min={0} value={eventPlacementPoints.find(p => p.place === r.place)?.points ?? 0}
+                    onChange={e => updateEventPlacementPoints(r.place, Number(e.target.value))}
+                    className={numCls} />
                 </div>
               ))}
             </div>
             <p className="text-[11px] text-gray-500">
-              Zusätzlich zu den Münzen pro Teilnahme oben — wird direkt bei Abschluss des jeweiligen Events für
-              dessen eigene Platzierung vergeben, unabhängig von der Endplatzierung der gesamten Reihe.
+              Wird direkt bei Abschluss des jeweiligen Events anhand seiner Finalen Platzierung vergeben (bei
+              Gleichstand bekommen alle Gleichplatzierten die Punkte dieses Platzes), unabhängig von der
+              Endplatzierung der gesamten Reihe. Die Platzierung ergibt sich aus dem Sieger-Stat des Events.
+              Die Tabellenpunkte erscheinen in der Reihentabelle als Spalte „Platzierungspunkte“ und werden —
+              wenn oben aktiviert — auch auf die Rangliste übertragen.
             </p>
           </Section>
           </fieldset>

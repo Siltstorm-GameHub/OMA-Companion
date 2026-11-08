@@ -67,6 +67,7 @@ type CompletionData = {
     transferredParticipationPoints?: Record<string, number>;
     transferredStatPoints?: Record<string, number>;
     transferredSpectatorPoints?: Record<string, number>;
+    transferredPlacementPoints?: Record<string, number>;
   } | null;
 };
 
@@ -316,14 +317,17 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   const transferredParticipationPoints = cd.seriesContrib?.transferredParticipationPoints ?? {};
   const transferredStatPoints          = cd.seriesContrib?.transferredStatPoints ?? {};
   const transferredSpectatorPoints     = cd.seriesContrib?.transferredSpectatorPoints ?? {};
+  const transferredPlacementPoints     = cd.seriesContrib?.transferredPlacementPoints ?? {};
   for (const userId of new Set([
     ...Object.keys(transferredParticipationPoints),
     ...Object.keys(transferredStatPoints),
     ...Object.keys(transferredSpectatorPoints),
+    ...Object.keys(transferredPlacementPoints),
   ])) {
     const total = (transferredParticipationPoints[userId] ?? 0)
       + (transferredStatPoints[userId] ?? 0)
-      + (transferredSpectatorPoints[userId] ?? 0);
+      + (transferredSpectatorPoints[userId] ?? 0)
+      + (transferredPlacementPoints[userId] ?? 0);
     reverse(userId, 0, total);
   }
 

@@ -24,6 +24,9 @@ export type StatConfig = {
    *  konfigurierbar (nicht auf 1./2./3. beschränkt) — kann seriesweit ODER pro Event (statConfigJson)
    *  gesetzt sein, siehe applyEventStatOverride. */
   placementPoints?: Record<string, number>;
+  /** Tabellenpunkte je Endplatzierung im Einzel-Event (Reihen-Einstellung). Die beim Abschluss
+   *  tatsächlich vergebenen Punkte stehen in EventCompletionData.eventPlacementPoints. */
+  eventPlacementPoints?: { place: number; points: number }[];
   dominionBonus?: {
     enabled: boolean;
     triggerStats: string[];
@@ -84,6 +87,9 @@ export function applyEventStatOverride<T extends { stats?: { field: string; poin
  *  Platzierung eines Spielers ablegt (analog zu "Match Win") — kein normales Stat-Feld, wird über
  *  StatConfig.placementPoints in Punkte umgerechnet, siehe extractPlacementPoints. */
 export const PLACEMENT_STAT_KEY = "Platzierung";
+
+/** Spalte der Reihentabelle für die Tabellenpunkte je Endplatzierung im Einzel-Event */
+export const EVENT_PLACEMENT_POINTS_FIELD = "Platzierungspunkte";
 
 /** Rechnet die in einem Match-Entry unter PLACEMENT_STAT_KEY erfasste rohe Platzierung (1 = Erster)
  *  über die Punkte-je-Platz-Tabelle (StatConfig.placementPoints) in Punkte um — undefined, wenn keine
@@ -323,6 +329,11 @@ export type EventCompletionData = {
   dominionChanges?: Record<string, { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number }> | null;
   /** Ausgeschlossene User (Disqualifikation): tragen nichts zu den Tabellenpunkten dieses Events bei */
   excludedUserIds?: string[] | null;
+  /** Tabellenpunkte je Endplatzierung im Einzel-Event, je User (siehe complete/route.ts) */
+  eventPlacementPoints?: Record<string, number> | null;
+  /** Beim Abschluss gutgeschriebene Mitspieler-Teilnahmen — ohne Ausgeschlossene und (Punktewertung/
+   *  Durchschnitt) ohne Angemeldete, die keine Runde gespielt haben. Fehlt bei älteren Abschlüssen. */
+  seriesContrib?: { participations?: string[] } | null;
   /** Freeze: Snapshot der zum Abschlusszeitpunkt gültigen Reihen-Konfiguration (EventSeries.
    *  seriesStatConfig), siehe computeEventPoints. Verhindert, dass spätere Änderungen an der
    *  Reihen-Konfiguration rückwirkend die Tabellenpunkte/Standings dieses bereits abgeschlossenen
@@ -506,8 +517,13 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // Mitspieler-Teilnahmen — nur explizit als "spectator" markierte Registrierungen zählen NICHT
   // dazu (fehlt role ganz, z.B. bei älteren/unvollständigen Abfragen, gilt das als Mitspieler,
   // dem bisherigen Verhalten entsprechend).
+  // Seit dem Abschluss eine Liste der gutgeschriebenen Teilnahmen speichert, zählt nur diese (plus
+  // Ausgeschlossene, die weiterhin als Teilnahme ohne Punkte sichtbar bleiben). Wer bei Punktewertung/
+  // Durchschnitt angemeldet war, aber keine Runde gespielt hat, zählt so nicht als Teilnahme.
+  const credited = cd.seriesContrib?.participations ? new Set(cd.seriesContrib.participations) : null;
   for (const { userId: uid, role } of ev.registrations) {
     if (role === "spectator") continue;
+    if (credited && !credited.has(uid) && !excludedSet.has(uid)) continue;
     evPart[uid] = (evPart[uid] ?? 0) + 1;
   }
   // Zuschauer-Teilnahmen — separat gezählt, aus den beim Abschluss erfassten anwesenden Zuschauern
@@ -626,6 +642,15 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     }
   }
 
+  // Tabellenpunkte je Endplatzierung im Einzel-Event — fester Betrag je Platz, beim Abschluss ermittelt
+  // (nicht aus cfg.stats, daher wie der Dominion-Bonus separat in pointsByUser addiert)
+  const placementPts: Record<string, number> = {};
+  for (const [uid, pts] of Object.entries(cd.eventPlacementPoints ?? {})) {
+    if (!pts || excludedSet.has(uid)) continue;
+    addEv(uid, EVENT_PLACEMENT_POINTS_FIELD, pts);
+    placementPts[uid] = (placementPts[uid] ?? 0) + pts;
+  }
+
   const allUids = new Set([
     ...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts),
   ]);
@@ -638,7 +663,8 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     let pts = part * effectiveCfg.participationPoints
       + spectatorPart * (effectiveCfg.spectatorParticipationPoints ?? 0)
       + (pollBonusPts[uid] ?? 0)
-      + (dominionBonusPts[uid] ?? 0);
+      + (dominionBonusPts[uid] ?? 0)
+      + (placementPts[uid] ?? 0);
     for (const { field, pointsPer } of effectiveCfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }

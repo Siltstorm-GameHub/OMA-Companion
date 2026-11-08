@@ -38,6 +38,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
+import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 /* ── Types ── */
@@ -590,8 +591,31 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     }
   }
 
+  /** Start/Ende aus dem Formular (ungespeicherte Änderungen zählen schon), sonst aus dem Event. */
+  function formTiming() {
+    try {
+      return {
+        startAt: startAt ? fromDatetimeLocalBerlin(startAt) : event.startAt,
+        endAt: endAt ? fromDatetimeLocalBerlin(endAt) : null,
+      };
+    } catch {
+      return { startAt: event.startAt, endAt: event.endAt ?? null };
+    }
+  }
+
+  /** Status wählen — warnt vor "aktiv" vor dem Start bzw. "Umfrage"/"Beendet" vor Start/Ende. */
+  async function pickStatus(s: string) {
+    if (s !== status && s !== event.status) {
+      const action = s === "active" ? "activate" : (s === "umfrage" || s === "finished") ? "complete" : null;
+      if (action && !(await confirmEventTiming(confirm, action, formTiming()))) return;
+    }
+    setStatus(s);
+  }
+
   /** startStatus: "pending" legt das Turnier nur an (noch nicht gestartet), "active" startet es direkt. */
   async function saveTmtSettings(startStatus: "pending" | "active" = "active") {
+    if (startStatus === "active" && event.tournamentStatus !== "active"
+      && !(await confirmEventTiming(confirm, "activate", formTiming()))) return;
     setTmtLoading(true);
     // pointsConfig nur noch für Sieg/Unentschieden-Münzen pro Match — Platzierungen zahlt der
     // Event-Abschluss aus dem Reiter "Belohnungen"
@@ -634,6 +658,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   }
 
   async function startTournament() {
+    if (!(await confirmEventTiming(confirm, "activate", formTiming()))) return;
     setTmtLoading(true);
     const res = await fetch(`/api/tournaments/${event.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -976,7 +1001,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <label className="text-xs text-gray-500 shrink-0">Status</label>
             <div className="flex gap-2 flex-wrap">
               {STATUS_OPTIONS.map(s => (
-                <button key={s} type="button" onClick={() => setStatus(s)}
+                <button key={s} type="button" onClick={() => pickStatus(s)}
                   className={`text-xs px-3 py-1 rounded-full border transition-all ${
                     status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
                   }`}>
@@ -1072,7 +1097,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <label className="text-xs text-gray-500 shrink-0">Status</label>
             <div className="flex gap-2 flex-wrap">
               {STATUS_OPTIONS.map(s => (
-                <button key={s} type="button" onClick={() => setStatus(s)}
+                <button key={s} type="button" onClick={() => pickStatus(s)}
                   className={`text-xs px-3 py-1 rounded-full border transition-all ${
                     status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
                   }`}>
@@ -1723,7 +1748,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           {bracketTournament && (
             <div className="pt-4 border-t border-white/[0.06]">
               <TournamentManager
-                event={{ id: event.id }}
+                event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
                 tournament={bracketTournament}
                 allUsers={bracketRegisteredUsers}
                 winnerStatKeys={bracketWinnerStatKeys}
@@ -1746,7 +1771,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
           )}
           <TournamentManager
-            event={{ id: event.id }}
+            event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
             tournament={bracketTournament}
             allUsers={bracketRegisteredUsers}
             winnerStatKeys={bracketWinnerStatKeys}

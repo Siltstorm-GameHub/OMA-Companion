@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ProofUploader from "@/components/match-results/ProofUploader";
@@ -49,8 +51,9 @@ const inputCls =
   "w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
 function MatchForm({
-  eventId, m, subject, s, statFields, locked,
+  eventId, m, subject, s, statFields, locked, beforeSubmit,
 }: {
+  beforeSubmit: () => Promise<boolean>;
   eventId: string;
   m: ReportMatch;
   subject: U | null;
@@ -73,6 +76,7 @@ function MatchForm({
 
   /** Ergebnis des Gegners bestätigen — stimmen beide Meldungen überein, gilt es sofort (ohne Admin) */
   async function confirmOpponent() {
+    if (!(await beforeSubmit())) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/tournaments/${eventId}/submissions`, {
@@ -91,6 +95,7 @@ function MatchForm({
 
   async function submit() {
     if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
+    if (!(await beforeSubmit())) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/tournaments/${eventId}/submissions`, {
@@ -221,8 +226,9 @@ const MULTI = "__multi__";
  * werden übersprungen.
  */
 function MultiForm({
-  eventId, m, userId, submissions, statFields, locked,
+  eventId, m, userId, submissions, statFields, locked, beforeSubmit,
 }: {
+  beforeSubmit: () => Promise<boolean>;
   eventId: string;
   m: ReportMatch;
   userId: string;
@@ -248,6 +254,7 @@ function MultiForm({
   async function submit() {
     if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
     if (filled.length === 0) return toast.error("Bitte für mindestens einen Spieler Werte eintragen");
+    if (!(await beforeSubmit())) return;
     setBusy(true);
     let ok = 0;
     const failed: string[] = [];
@@ -330,6 +337,7 @@ export default function MatchResultSubmit({
   submissions,
   statFields,
   locked,
+  startAt,
 }: {
   eventId: string;
   userId: string;
@@ -337,7 +345,17 @@ export default function MatchResultSubmit({
   submissions: MySubmission[];
   statFields: string[];
   locked: boolean;
+  /** Event-Start (ISO) — vorher eingetragene Ergebnisse lösen eine Warnung aus */
+  startAt?: string;
 }) {
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  const earlyOk = useRef(false);
+  async function guardEarly(): Promise<boolean> {
+    if (earlyOk.current || !startAt) return true;
+    const ok = await confirmEventTiming(confirm, "results", { startAt });
+    if (ok) earlyOk.current = true;
+    return ok;
+  }
   // Vorauswahl: erstes eigenes, noch nicht gespieltes Match — sonst das erste überhaupt.
   const defaultMatch = matches.find((m) => m.mine && !m.played) ?? matches.find((m) => m.mine) ?? matches[0];
   const [expanded, setExpanded] = useState(false);
@@ -357,6 +375,7 @@ export default function MatchResultSubmit({
 
   return (
     <div className="glass rounded-2xl mt-4">
+      {ConfirmDialogElement}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -424,6 +443,7 @@ export default function MatchResultSubmit({
               submissions={submissions}
               statFields={statFields}
               locked={locked}
+              beforeSubmit={guardEarly}
             />
           ) : (
             <MatchForm
@@ -434,6 +454,7 @@ export default function MatchResultSubmit({
               s={submission}
               statFields={statFields}
               locked={locked}
+              beforeSubmit={guardEarly}
             />
           )}
         </div>

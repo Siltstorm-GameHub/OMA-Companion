@@ -168,3 +168,31 @@ describe("mergeStandingRows (All-Time)", () => {
     assert.equal(s1[0].stats.Kills, 1);
   });
 });
+
+describe("computeEventPoints – Platzierungspunkte und gutgeschriebene Teilnahmen", () => {
+  test("Platzierungspunkte fließen als Spalte und in die Tabellenpunkte ein, nicht für Ausgeschlossene", () => {
+    const out = computeEventPoints({
+      completionData: done({ eventPlacementPoints: { a: 10, b: 6, c: 3 }, excludedUserIds: ["c"] }),
+      registrations: [{ userId: "a" }, { userId: "b" }, { userId: "c" }],
+      matches: [],
+    }, { participationPoints: 0, stats: [] });
+    assert.equal(out.pointsByUser.a, 10);
+    assert.equal(out.pointsByUser.b, 6);
+    assert.equal(out.pointsByUser.c, 0);
+    assert.equal(out.statsByUser.a.Platzierungspunkte, 10);
+    assert.equal(out.statsByUser.c?.Platzierungspunkte, undefined);
+  });
+
+  test("nur gutgeschriebene Teilnahmen zählen (plus Ausgeschlossene), ältere Abschlüsse ohne Liste wie bisher", () => {
+    const regs = [{ userId: "a" }, { userId: "b" }, { userId: "x" }];
+    const withList = computeEventPoints({
+      completionData: done({ seriesContrib: { participations: ["a"] }, excludedUserIds: ["x"] }),
+      registrations: regs, matches: [],
+    }, { participationPoints: 10, stats: [] });
+    assert.deepEqual(withList.participationsByUser, { a: 1, x: 1 });
+    assert.equal(withList.pointsByUser.a, 10);
+    assert.equal(withList.pointsByUser.b, undefined);
+    const legacy = computeEventPoints({ completionData: done({}), registrations: regs, matches: [] }, { participationPoints: 10, stats: [] });
+    assert.deepEqual(legacy.participationsByUser, { a: 1, b: 1, x: 1 });
+  });
+});

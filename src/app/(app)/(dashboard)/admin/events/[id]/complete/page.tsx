@@ -18,6 +18,7 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  eventPlacementPoints?: { place: number; points: number }[];
   placementPoints?: Record<string, number>;
   matchWinStatKeys?: string[];
   dominionBonus?: {
@@ -239,6 +240,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     <EventCompleteClient
       eventId={event.id}
       eventTitle={event.title}
+      eventStartAt={event.startAt.toISOString()}
+      eventEndAt={event.endAt?.toISOString() ?? null}
       seriesId={event.series?.id ?? null}
       seriesName={event.series?.name ?? null}
       seriesIcon={event.series?.icon ?? null}
