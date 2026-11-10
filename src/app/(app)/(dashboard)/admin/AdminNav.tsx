@@ -64,9 +64,10 @@ const CATEGORIES: {
     label: "Community",
     icon: Users2,
     minRole: "moderator",
-    prefixes: ["/admin/daily-message", "/admin/partners", "/admin/servers", "/admin/donations"],
+    prefixes: ["/admin/daily-message", "/admin/partners", "/admin/servers", "/admin/spiele", "/admin/donations"],
     tabs: [
       { href: "/admin/servers",       label: "Gameserver",   icon: Server,    minRole: "moderator" },
+      { href: "/admin/spiele",        label: "Spieleliste",  icon: Gamepad2,  minRole: "moderator" },
       { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
       { href: "/admin/donations",     label: "Spendenpool",  icon: Heart,     minRole: "moderator" },
       { href: "/admin/daily-message", label: "Mitteilungen & Umfragen", icon: Megaphone, minRole: "admin"     },

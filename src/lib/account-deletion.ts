@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { recomputeGameAggregates } from "@/lib/games/service";
 
 export const DELETED_USER_NAME = "Gelöschtes Mitglied";
 /** Muss im Lösch-Dialog eingetippt werden. */
@@ -27,6 +28,7 @@ export async function anonymizeUser(userId: string): Promise<void> {
   const card = user.discordId
     ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { id: true } })
     : null;
+  const ratedGames = await prisma.gameReaction.findMany({ where: { userId }, select: { gameId: true } });
 
   await prisma.$transaction([
     // Login-Verknüpfungen und Geräte
@@ -37,6 +39,8 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.twitchClipperLink.deleteMany({ where: { userId } }),
     // Freitext ohne Bezug für andere
     prisma.lobbyMessage.deleteMany({ where: { userId } }),
+    // Spieleliste: Bewertungen/"Würde ich zocken" (Schnitte werden unten neu berechnet)
+    prisma.gameReaction.deleteMany({ where: { userId } }),
 
     // Community-Karte: andere Spieler besitzen sie ggf. — Karte bleibt, Personenbezug geht
     ...(card ? [
@@ -78,6 +82,8 @@ export async function anonymizeUser(userId: string): Promise<void> {
       },
     }),
   ]);
+
+  await recomputeGameAggregates(ratedGames.map(r => r.gameId));
 }
 
 /** Datenauskunft (DSGVO Art. 15/20): die zum Konto gespeicherten Daten als JSON. */
@@ -95,6 +101,7 @@ export async function buildUserExport(userId: string) {
       dailySpins: true,
       donations: { omit: { note: true } },
       lobbyMessages: true,
+      gameReactions: { include: { game: { select: { name: true } } } },
       clipSubmissions: true,
       twitchClipperLinks: { select: { twitchLogin: true, createdAt: true } },
       eventPredictionsMade: true,

@@ -9,6 +9,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { Gamepad2, ShoppingBag } from "@/components/icons";
 import GamesSwitcher from "./GamesSwitcher";
+import GameListBanner from "@/components/games/GameListBanner";
 import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
 import GemsHubPanel from "@/components/gems/GemsHubPanel";
 
@@ -42,6 +43,7 @@ export default async function GemsPage() {
           <ShoppingBag className="w-4 h-4 text-amber-400" /> Münzen ausgeben im Shop
         </Link>
       </div>
+      <GameListBanner />
       <GamesSwitcher gems={<GemsHubPanel userId={userId} />} blocks={<BlocksHubPanel userId={userId} />} />
     </div>
   );

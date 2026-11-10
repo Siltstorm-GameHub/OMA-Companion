@@ -175,6 +175,8 @@ model User {
   cosmetics                   UserCosmetic[]
   createdEvents               Event[]                      @relation("EventCreator")
   createdEventSeries          EventSeries[]                @relation("EventSeriesCreator")
+  gameReactions               GameReaction[]
+  gamesAdded                  Game[]                       @relation("GameAddedBy")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -2635,4 +2637,59 @@ model PostPollReward {
 
   @@unique([pollId, userId, kind])
   @@index([userId, createdAt])
+}
+
+// ── Spieleliste ──────────────────────────────────────────────────────────────
+// Gemeinsame Spiele-Datenbank der Community (/spiele): Ideen finden, was man zocken kann.
+// Angaben kommen soweit möglich automatisch aus dem Steam-Store (lib/games/steam.ts);
+// fieldSources merkt sich je Feld, ob es von Steam oder von einem Menschen stammt.
+
+model Game {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  nameKey       String    @unique // normalisierter Name für die Dubletten-Prüfung (lib/games/slug.ts)
+  name          String
+  steamAppId    Int?      @unique
+  coverUrl      String? // von Steam aufgelöst (header_image) — nie vom Client übernommen
+  description   String?
+  genres        String[]  @default([]) // siehe GAME_GENRES in lib/games/options.ts
+  tags          String[]  @default([]) // siehe GAME_TAGS
+  modes         String[]  @default([]) // solo | coop | pvp
+  platforms     String[]  @default([]) // pc | playstation | xbox | switch | mobile
+  crossplay     Boolean   @default(false)
+  isFree        Boolean?
+  minPlayers    Int?
+  maxPlayers    Int?
+  sessionLength String? // kurz | mittel | lang | endlos
+  releaseYear   Int?
+  fieldSources  Json? // { feld: "steam" | "user" }
+  enrichedAt    DateTime? // letzter Steam-Abgleich (auch erfolglos) — verhindert Endlos-Wiederholungen
+  status        String    @default("APPROVED") // APPROVED | PENDING | HIDDEN
+  ratingSum     Int       @default(0)
+  ratingCount   Int       @default(0)
+  wantCount     Int       @default(0)
+  addedById     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  addedBy   User?          @relation("GameAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  reactions GameReaction[]
+
+  @@index([status])
+}
+
+/// Bewertung (1–5 Sterne) und "Würde ich zocken" — pro User und Spiel genau ein Eintrag.
+model GameReaction {
+  userId    String
+  gameId    String
+  rating    Int?
+  wantPlay  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+  @@index([gameId])
 }

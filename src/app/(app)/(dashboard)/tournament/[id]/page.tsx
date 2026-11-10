@@ -30,6 +30,7 @@ import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
 import EventPostsSection from "@/components/EventPostsSection";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
+import { findGameSlug } from "@/lib/games/service";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import CheckInButton from "./CheckInButton";
@@ -184,6 +185,8 @@ export default async function TournamentDetailPage({
   }
   const isHidden = event.hidden || !!event.series?.hidden;
   if (isHidden && !isMod && !canManage) notFound();
+  // Spiel in der Spieleliste → Name wird zum Link auf die Spiel-Seite
+  const gameListSlug = event.game ? await findGameSlug(event.game, null) : null;
 
   const communityCreator = (event.approvalStatus || event.series?.approvalStatus) && event.createdById
     ? await prisma.user.findUnique({ where: { id: event.createdById }, select: { username: true, name: true } })
@@ -857,7 +860,9 @@ export default async function TournamentDetailPage({
             <div className="flex items-center gap-4 flex-wrap">
               {(event.game || genreInfo) && (
                 <span className="flex items-center gap-1.5 text-sm text-gray-400">
-                  {event.game && <span>{event.game}</span>}
+                  {event.game && (gameListSlug
+                    ? <Link href={`/spiele/${gameListSlug}`} className="hover:text-teal-300 underline decoration-white/20 underline-offset-2 transition-colors">{event.game}</Link>
+                    : <span>{event.game}</span>)}
                   {genreInfo && (
                     <span className="flex items-center gap-1 text-xs text-gray-500">
                       <AppIcon kind="genre" name={genreInfo.value} size={12} />

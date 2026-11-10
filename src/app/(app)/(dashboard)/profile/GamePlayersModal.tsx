@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users } from "@/components/icons";
+import { ChevronRight, Users } from "@/components/icons";
 import { Loader2 } from "@/components/icons";
 import { Modal } from "@/components/ui/Modal";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -109,6 +109,14 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
               })}
             </div>
           )}
+
+          <Link
+            href={`/spiele/finde?${new URLSearchParams({ name: game.name, ...(game.appId ? { appId: String(game.appId) } : {}) })}`}
+            onClick={onClose}
+            className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-teal-300 border border-teal-500/20 hover:bg-teal-500/10 transition-colors"
+          >
+            In der Spieleliste ansehen & bewerten <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       )}
     </Modal>

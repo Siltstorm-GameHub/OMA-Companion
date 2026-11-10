@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
-import { Repeat, Server } from "@/components/icons";
+import { Dices, Repeat, Server } from "@/components/icons";
 import { CalendarDays, Clock, Scroll, CheckCircle2, Newspaper, Gamepad2, ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -31,6 +31,7 @@ import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
+import GameIdeaTile from "@/components/games/GameIdeaTile";
 import CommunityBoardWidget from "./CommunityBoardWidget";
 import GuestLockOverlay from "@/components/GuestLockOverlay";
 import { acc } from "@/lib/accentColors";
@@ -756,6 +757,23 @@ export default async function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Spieleliste: zufällige Spiel-Idee */}
+          {userId && (
+            <div className="animate-slide-up stagger-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Dices className="w-3.5 h-3.5 text-teal-500/70" /> Spiel-Idee gefällig?
+                </h2>
+                <Link href="/spiele" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
+                  Spieleliste <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="surface overflow-hidden relative" style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
+                <GameIdeaTile />
+              </div>
+            </div>
+          )}
 
           {/* Quests diesen Monat */}
           <div className="animate-slide-up stagger-5">
