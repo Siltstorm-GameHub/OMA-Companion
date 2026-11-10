@@ -665,7 +665,7 @@ export async function mergeGames(sourceId: string, targetId: string): Promise<Re
   return { ok: true, slug: target.slug };
 }
 
-// ── Teaser (Games-Seite, Dashboard) ──────────────────────────────────────────
+// ── Teaser (Games-Seite) ──────────────────────────────────────────
 
 export interface GameTeaser { slug: string; name: string; coverUrl: string | null; ratingSum: number; ratingCount: number; wantCount: number }
 
@@ -683,19 +683,6 @@ export async function getGameListTeaser(take = 4): Promise<{ total: number; top:
     }),
   ]);
   return { total, top };
-}
-
-/** Zufällige Spiel-Idee aus den 20 beliebtesten (bevorzugt mit Cover) — für die Dashboard-Kachel */
-export async function pickGameIdea(): Promise<GameTeaser | null> {
-  const pool = await prisma.game.findMany({
-    where: { status: "APPROVED" },
-    orderBy: [{ wantCount: "desc" }, { ratingCount: "desc" }, { ratingSum: "desc" }],
-    take: 20,
-    select: TEASER_SELECT,
-  });
-  const withCover = pool.filter(g => g.coverUrl);
-  const candidates = withCover.length > 0 ? withCover : pool;
-  return candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
 }
 
 // ── Gruppen-Finder ("Was zocken wir?") ───────────────────────────────────────
