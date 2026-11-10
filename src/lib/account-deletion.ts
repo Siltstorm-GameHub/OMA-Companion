@@ -102,6 +102,7 @@ export async function buildUserExport(userId: string) {
       donations: { omit: { note: true } },
       lobbyMessages: true,
       gameReactions: { include: { game: { select: { name: true } } } },
+      gameEdits: { include: { game: { select: { name: true } } } },
       clipSubmissions: true,
       twitchClipperLinks: { select: { twitchLogin: true, createdAt: true } },
       eventPredictionsMade: true,

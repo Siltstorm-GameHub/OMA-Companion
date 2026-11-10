@@ -177,6 +177,7 @@ model User {
   createdEventSeries          EventSeries[]                @relation("EventSeriesCreator")
   gameReactions               GameReaction[]
   gamesAdded                  Game[]                       @relation("GameAddedBy")
+  gameEdits                   GameEdit[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -2650,6 +2651,7 @@ model Game {
   nameKey       String    @unique // normalisierter Name für die Dubletten-Prüfung (lib/games/slug.ts)
   name          String
   steamAppId    Int?      @unique
+  igdbId        Int? // IGDB (Twitch) — Konsolen, Spieleranzahl, Spiele ohne Steam. Eindeutigkeit prüft der Code (ein @unique bräche den db push im Build ab)
   coverUrl      String? // von Steam aufgelöst (header_image) — nie vom Client übernommen
   description   String?
   genres        String[]  @default([]) // siehe GAME_GENRES in lib/games/options.ts
@@ -2668,22 +2670,26 @@ model Game {
   ratingSum     Int       @default(0)
   ratingCount   Int       @default(0)
   wantCount     Int       @default(0)
+  ownCount      Int       @default(0)
   addedById     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   addedBy   User?          @relation("GameAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   reactions GameReaction[]
+  edits     GameEdit[]
 
   @@index([status])
+  @@index([igdbId])
 }
 
-/// Bewertung (1–5 Sterne) und "Würde ich zocken" — pro User und Spiel genau ein Eintrag.
+/// Bewertung (1–5 Sterne), "Würde ich zocken" und "Hab ich" — pro User und Spiel genau ein Eintrag.
 model GameReaction {
   userId    String
   gameId    String
   rating    Int?
   wantPlay  Boolean  @default(false)
+  owns      Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2692,4 +2698,23 @@ model GameReaction {
 
   @@id([userId, gameId])
   @@index([gameId])
+}
+
+/// Von Mitgliedern ergänzte Angaben (nur zuvor leere Felder) — das Team kann sie zurücksetzen.
+model GameEdit {
+  id         String    @id @default(cuid())
+  gameId     String
+  userId     String?
+  field      String
+  oldValue   Json?
+  newValue   Json?
+  revertedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  game Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([gameId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { NumberInput } from "@/components/ui/NumberInput";
-import type { FieldSources, GameFields } from "@/lib/games/draft";
+import type { FieldSource, FieldSources, GameFields } from "@/lib/games/draft";
 import {
   GAME_GENRES, GAME_MODES, GAME_PLATFORMS, GAME_TAGS, MAX_GAME_DESCRIPTION_LENGTH, MAX_PLAYERS_LIMIT, SESSION_LENGTHS,
 } from "@/lib/games/options";
@@ -25,16 +25,16 @@ export function Chip({ active, onClick, children, disabled }: { active: boolean;
   );
 }
 
-function SourceBadge({ source }: { source?: "steam" | "user" }) {
-  if (source !== "steam") return null;
+function SourceBadge({ source }: { source?: FieldSource }) {
+  if (source !== "steam" && source !== "igdb") return null;
   return (
     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
-      von Steam
+      {source === "steam" ? "von Steam" : "von IGDB"}
     </span>
   );
 }
 
-function Section({ label, hint, source, children }: { label: string; hint?: string; source?: "steam" | "user"; children: ReactNode }) {
+function Section({ label, hint, source, children }: { label: string; hint?: string; source?: FieldSource; children: ReactNode }) {
   return (
     <fieldset className="space-y-2">
       <legend className="flex items-center gap-2 text-xs font-semibold text-gray-300 mb-2">
@@ -76,62 +76,79 @@ const parseCount = (v: string): number | null => {
  * heißt einfach: nichts auswählen. `sources` markiert Werte, die Steam vorausgefüllt hat.
  */
 export default function GameFieldsForm({
-  value, onChange, sources = {}, showDescription = false,
+  value, onChange, sources = {}, showDescription = false, only,
 }: {
   value: GameFields;
   onChange: (next: GameFields) => void;
   sources?: FieldSources;
   showDescription?: boolean;
+  /** Nur diese Abschnitte zeigen (z.B. beim Ergänzen fehlender Angaben) */
+  only?: (keyof GameFields)[];
 }) {
   const set = <K extends keyof GameFields>(key: K, v: GameFields[K]) => onChange({ ...value, [key]: v });
+  const shows = (...fields: (keyof GameFields)[]) => !only || fields.some(f => only.includes(f));
+  const locked = (field: keyof GameFields) => !!only && !only.includes(field);
   const inputClass = "w-20 bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
   return (
     <div className="space-y-5">
+      {shows("modes") && (
       <Section label="Spielmodus" source={sources.modes}>
         <MultiChips options={GAME_MODES} value={value.modes} onChange={v => set("modes", v)} />
       </Section>
+      )}
 
+      {shows("minPlayers", "maxPlayers") && (
       <Section label="Spieleranzahl" hint="leer lassen, wenn unbekannt" source={sources.minPlayers ?? sources.maxPlayers}>
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <label className="flex items-center gap-2">
             von
             <NumberInput
               min={1} max={MAX_PLAYERS_LIMIT} inputMode="numeric" placeholder="?" aria-label="Mindestens Spieler"
-              value={value.minPlayers?.toString() ?? ""} onChange={e => set("minPlayers", parseCount(e.target.value))} className={inputClass}
+              value={value.minPlayers?.toString() ?? ""} onChange={e => set("minPlayers", parseCount(e.target.value))} className={`${inputClass} disabled:opacity-50`}
+              disabled={locked("minPlayers")}
             />
           </label>
           <label className="flex items-center gap-2">
             bis
             <NumberInput
               min={1} max={MAX_PLAYERS_LIMIT} inputMode="numeric" placeholder="?" aria-label="Höchstens Spieler"
-              value={value.maxPlayers?.toString() ?? ""} onChange={e => set("maxPlayers", parseCount(e.target.value))} className={inputClass}
+              value={value.maxPlayers?.toString() ?? ""} onChange={e => set("maxPlayers", parseCount(e.target.value))} className={`${inputClass} disabled:opacity-50`}
+              disabled={locked("maxPlayers")}
             />
           </label>
           <span>Spieler</span>
         </div>
       </Section>
+      )}
 
+      {shows("platforms") && (
       <Section label="Plattformen" source={sources.platforms}>
         <MultiChips options={GAME_PLATFORMS} value={value.platforms} onChange={v => set("platforms", v)} />
-        <label className="flex items-center gap-2 text-xs text-gray-300 pt-1 cursor-pointer w-fit">
+        {!only && <label className="flex items-center gap-2 text-xs text-gray-300 pt-1 cursor-pointer w-fit">
           <input type="checkbox" checked={value.crossplay} onChange={e => set("crossplay", e.target.checked)} className="accent-teal-500 w-4 h-4" />
           Crossplay (plattformübergreifend)
           <SourceBadge source={sources.crossplay} />
-        </label>
+        </label>}
       </Section>
+      )}
 
+      {shows("isFree") && (
       <Section label="Kosten" source={sources.isFree}>
         <div className="flex flex-wrap gap-1.5">
           <Chip active={value.isFree === true} onClick={() => set("isFree", value.isFree === true ? null : true)}>Kostenlos</Chip>
           <Chip active={value.isFree === false} onClick={() => set("isFree", value.isFree === false ? null : false)}>Kostenpflichtig</Chip>
         </div>
       </Section>
+      )}
 
+      {shows("genres") && (
       <Section label="Genre" source={sources.genres}>
         <MultiChips options={GAME_GENRES} value={value.genres} onChange={v => set("genres", v)} />
       </Section>
+      )}
 
+      {shows("sessionLength") && (
       <Section label="Rundenlänge" source={sources.sessionLength}>
         <div className="flex flex-wrap gap-1.5">
           {(Object.keys(SESSION_LENGTHS) as (keyof typeof SESSION_LENGTHS)[]).map(k => (
@@ -141,12 +158,15 @@ export default function GameFieldsForm({
           ))}
         </div>
       </Section>
+      )}
 
+      {shows("tags") && (
       <Section label="Passt gut für …" source={sources.tags}>
         <MultiChips options={GAME_TAGS} value={value.tags} onChange={v => set("tags", v)} />
       </Section>
+      )}
 
-      {showDescription && (
+      {showDescription && shows("description") && (
         <Section label="Kurzbeschreibung" source={sources.description}>
           <textarea
             value={value.description ?? ""}

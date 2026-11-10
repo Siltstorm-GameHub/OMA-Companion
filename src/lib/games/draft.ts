@@ -1,10 +1,9 @@
 /**
  * Formular-/Import-Daten eines Spiels ("Entwurf") — client-sicher, kein Prisma.
  *
- * Ein Entwurf entsteht aus den Steam-Daten (lib/games/steam.ts) und wird im Formular vom
- * Nutzer höchstens noch angepasst. `fieldSources` hält fest, welche Angaben von Steam
- * stammen und welche ein Mensch gesetzt hat — spätere Steam-Abgleiche überschreiben nur
- * Felder, die nicht von Hand geändert wurden.
+ * Ein Entwurf entsteht automatisch aus Steam (lib/games/steam.ts) und IGDB (lib/games/igdb.ts)
+ * und wird im Formular vom Nutzer höchstens noch angepasst. `fieldSources` hält fest, woher jede
+ * Angabe stammt — spätere Abgleiche überschreiben nur Felder, die kein Mensch gesetzt hat.
  */
 
 import {
@@ -30,11 +29,13 @@ export interface GameFields {
 export interface GameDraft extends GameFields {
   name:        string;
   steamAppId:  number | null;
+  igdbId:      number | null;
   coverUrl:    string | null;
   releaseYear: number | null;
 }
 
-export type FieldSource = "steam" | "user";
+export type AutoSource = "steam" | "igdb";
+export type FieldSource = AutoSource | "user";
 export type FieldSources = Partial<Record<keyof GameFields, FieldSource>>;
 
 export const EDITABLE_FIELDS: (keyof GameFields)[] = [
@@ -106,32 +107,96 @@ function sameValue(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Quelle je Feld nach dem Speichern: Stimmt ein Wert mit dem Steam-Vorschlag überein, gilt er als
- * "steam" (darf beim nächsten Abgleich aktualisiert werden), sonst — sofern gesetzt — als "user".
+ * Quelle je Feld nach dem Speichern: Stimmt ein Wert mit dem automatischen Vorschlag überein, behält
+ * er dessen Quelle (darf beim nächsten Abgleich aktualisiert werden), sonst — sofern gesetzt — "user".
  */
-export function computeFieldSources(final: GameFields, steam: GameFields | null): FieldSources {
+export function computeFieldSources(
+  final: GameFields, auto: GameFields | null, autoSources: FieldSources = {},
+): FieldSources {
   const sources: FieldSources = {};
   for (const field of EDITABLE_FIELDS) {
     const value = final[field];
-    if (steam && hasValue(steam[field]) && sameValue(steam[field], value)) sources[field] = "steam";
+    if (auto && hasValue(auto[field]) && sameValue(auto[field], value)) sources[field] = autoSources[field] ?? "steam";
     else if (hasValue(value)) sources[field] = "user";
   }
   return sources;
 }
 
-/** Steam-Abgleich: Steam-Werte nur für Felder übernehmen, die kein Mensch gesetzt hat. */
-export function mergeSteamFields(
-  current: GameFields, currentSources: FieldSources, steam: GameFields,
+/** Automatischer Abgleich: neue Werte nur für Felder übernehmen, die kein Mensch gesetzt hat. */
+export function mergeAutoFields(
+  current: GameFields, currentSources: FieldSources, auto: GameFields, autoSources: FieldSources = {},
 ): { fields: GameFields; sources: FieldSources } {
   const fields = { ...current };
   const sources = { ...currentSources };
   for (const field of EDITABLE_FIELDS) {
     if (sources[field] === "user") continue;
-    if (!hasValue(steam[field])) continue;
-    (fields as Record<string, unknown>)[field] = steam[field];
-    sources[field] = "steam";
+    if (!hasValue(auto[field])) continue;
+    (fields as Record<string, unknown>)[field] = auto[field];
+    sources[field] = autoSources[field] ?? "steam";
   }
   return { fields, sources };
+}
+
+function union<T extends string>(a: T[], b: T[], order: Record<string, string>): T[] {
+  const keys = Object.keys(order);
+  return [...new Set([...a, ...b])].sort((x, y) => keys.indexOf(x) - keys.indexOf(y));
+}
+
+/**
+ * Steam + IGDB zu einem Entwurf zusammenführen. Steam gewinnt bei Beschreibung (deutsch), Genres,
+ * Cover und Preis; IGDB liefert Konsolen und die Spieleranzahl. Modi, Plattformen und Merkmale
+ * werden vereinigt. Die Quelle je Feld landet in `sources`.
+ */
+export function combineDrafts(steam: GameDraft | null, igdb: GameDraft | null): { draft: GameDraft; sources: FieldSources } | null {
+  if (!steam && !igdb) return null;
+  if (!steam || !igdb) {
+    const only = (steam ?? igdb)!;
+    const src: AutoSource = steam ? "steam" : "igdb";
+    const sources: FieldSources = {};
+    for (const f of EDITABLE_FIELDS) if (hasValue(only[f])) sources[f] = src;
+    return { draft: only, sources };
+  }
+
+  const sources: FieldSources = {};
+  const pick = <K extends keyof GameFields>(field: K, preferIgdb = false): GameFields[K] => {
+    const [first, second, a, b] = preferIgdb
+      ? [igdb, steam, "igdb", "steam"] as const
+      : [steam, igdb, "steam", "igdb"] as const;
+    if (hasValue(first[field])) { sources[field] = a; return first[field]; }
+    if (hasValue(second[field])) sources[field] = b;
+    return second[field];
+  };
+  const merged = <K extends "modes" | "platforms" | "tags">(field: K, order: Record<string, string>): GameFields[K] => {
+    const value = union(steam[field] as string[], igdb[field] as string[], order) as GameFields[K];
+    if (hasValue(value)) sources[field] = hasValue(igdb[field]) && !sameValue(igdb[field], steam[field]) ? "igdb" : "steam";
+    return value;
+  };
+  // Spieleranzahl nur als Paar übernehmen — IGDB kennt das Maximum, Steam rät nur das Minimum
+  const playersFromIgdb = igdb.maxPlayers !== null;
+  const minPlayers = playersFromIgdb ? igdb.minPlayers : steam.minPlayers;
+  const maxPlayers = playersFromIgdb ? igdb.maxPlayers : steam.maxPlayers;
+  if (minPlayers !== null) sources.minPlayers = playersFromIgdb ? "igdb" : "steam";
+  if (maxPlayers !== null) sources.maxPlayers = playersFromIgdb ? "igdb" : "steam";
+
+  const draft: GameDraft = {
+    name: steam.name,
+    steamAppId: steam.steamAppId ?? igdb.steamAppId,
+    igdbId: igdb.igdbId ?? steam.igdbId,
+    coverUrl: steam.coverUrl ?? igdb.coverUrl,
+    releaseYear: steam.releaseYear ?? igdb.releaseYear,
+    description: pick("description"),
+    genres: pick("genres"),
+    tags: merged("tags", GAME_TAGS),
+    modes: merged("modes", GAME_MODES),
+    platforms: merged("platforms", GAME_PLATFORMS),
+    crossplay: steam.crossplay || igdb.crossplay,
+    isFree: pick("isFree"),
+    minPlayers,
+    maxPlayers,
+    sessionLength: pick("sessionLength"),
+  };
+  if (draft.crossplay) sources.crossplay = steam.crossplay ? "steam" : "igdb";
+  return { draft, sources };
 }
 
 export function parseFieldSources(json: unknown): FieldSources {
@@ -139,7 +204,7 @@ export function parseFieldSources(json: unknown): FieldSources {
   const out: FieldSources = {};
   for (const field of EDITABLE_FIELDS) {
     const v = (json as Record<string, unknown>)[field];
-    if (v === "steam" || v === "user") out[field] = v;
+    if (v === "steam" || v === "igdb" || v === "user") out[field] = v;
   }
   return out;
 }

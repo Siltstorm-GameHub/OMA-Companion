@@ -2,7 +2,7 @@
  * Spieleliste (/spiele) — Datenbank-Logik (nur serverseitig).
  *
  * Status: APPROVED (sichtbar), PENDING (wartet auf Freischaltung — Freitext-Einträge ohne
- * Steam-Treffer), HIDDEN (vom Team ausgeblendet).
+ * Steam-/IGDB-Treffer), HIDDEN (vom Team ausgeblendet).
  */
 
 import { Prisma, type Game } from "@prisma/client";
@@ -10,13 +10,17 @@ import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames, type FavoriteGame } from "@/lib/favorite-games";
 import { sameGame } from "@/lib/game-match";
 import {
-  EDITABLE_FIELDS, cleanGameName, computeFieldSources, mergeSteamFields, parseFieldSources, sanitizeGameFields,
+  EDITABLE_FIELDS, cleanGameName, computeFieldSources, mergeAutoFields, parseFieldSources, sanitizeGameFields,
   type FieldSources, type GameFields,
 } from "./draft";
+import { igdbConfigured, searchIgdbGames } from "./igdb";
+import { fetchCombinedDraft } from "./sources";
+import type { GroupGameInfo } from "./group";
+import { DAILY_FILL_LIMIT, FILLABLE_FIELDS, applicableFills, type FillableField } from "./edits";
 import type { GameListItem } from "./filter";
 import type { GameGenre, GameMode, GamePlatform, GameStatus, GameTag, SessionLength } from "./options";
 import { gameNameKey, uniqueGameSlug } from "./slug";
-import { fetchSteamGameDraft, searchSteamGames } from "./steam";
+import { searchSteamGames } from "./steam";
 
 /** Wie viele Spiele ein normales Mitglied pro 24 h hinzufügen darf */
 export const DAILY_ADD_LIMIT = 10;
@@ -47,12 +51,30 @@ async function takenSlugs(): Promise<Set<string>> {
   return new Set(rows.map(r => r.slug));
 }
 
-/** Bestehendes Spiel mit derselben Steam-ID bzw. demselben normalisierten Namen */
-export async function findDuplicate(steamAppId: number | null, name: string) {
-  const or: Prisma.GameWhereInput[] = [{ nameKey: gameNameKey(name) }];
+/** Bestehendes Spiel mit derselben Steam-/IGDB-ID bzw. demselben normalisierten Namen */
+export async function findDuplicate(steamAppId: number | null, name: string, igdbId: number | null = null) {
+  const or: Prisma.GameWhereInput[] = [];
+  if (gameNameKey(name)) or.push({ nameKey: gameNameKey(name) });
   if (steamAppId) or.push({ steamAppId });
+  if (igdbId) or.push({ igdbId });
+  if (or.length === 0) return null;
   return prisma.game.findFirst({ where: { OR: or }, select: { id: true, slug: true, name: true, status: true } });
 }
+
+/** Steam-/IGDB-ID nur übernehmen, wenn sie keinem anderen Eintrag gehört (Rest: Fall fürs Zusammenführen) */
+async function freeIds(gameId: string | null, steamAppId: number | null, igdbId: number | null) {
+  const [steamOwner, igdbOwner] = await Promise.all([
+    steamAppId ? prisma.game.findUnique({ where: { steamAppId }, select: { id: true } }) : null,
+    igdbId ? prisma.game.findFirst({ where: { igdbId }, select: { id: true } }) : null,
+  ]);
+  return {
+    steamAppId: steamOwner && steamOwner.id !== gameId ? null : steamAppId,
+    igdbId: igdbOwner && igdbOwner.id !== gameId ? null : igdbId,
+  };
+}
+
+const positiveInt = (v: unknown): number | null =>
+  typeof v === "number" && Number.isInteger(v) && v > 0 && v < 2_000_000_000 ? v : null;
 
 // ── "Zockt gerade" (Profil-Lieblingsspiele) ──────────────────────────────────
 
@@ -89,11 +111,12 @@ export async function listApprovedGames(userId: string | undefined): Promise<Gam
     return {
       id: g.id, slug: g.slug, name: g.name, coverUrl: g.coverUrl,
       ...pickListFields(gameFieldsOf(g)),
-      ratingSum: g.ratingSum, ratingCount: g.ratingCount, wantCount: g.wantCount,
+      ratingSum: g.ratingSum, ratingCount: g.ratingCount, wantCount: g.wantCount, ownCount: g.ownCount,
       playingCount: holders.filter(h => h.games.some(f => favoriteMatchesGame(f, g))).length,
       createdAt: g.createdAt.toISOString(),
       myRating: my?.rating ?? null,
       myWant: my?.wantPlay ?? false,
+      myOwns: my?.owns ?? false,
     };
   });
 }
@@ -142,7 +165,9 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
     game,
     fields: gameFieldsOf(game),
     fieldSources: parseFieldSources(game.fieldSources),
-    myReaction: myReaction ? { rating: myReaction.rating, wantPlay: myReaction.wantPlay } : { rating: null, wantPlay: false },
+    myReaction: myReaction
+      ? { rating: myReaction.rating, wantPlay: myReaction.wantPlay, owns: myReaction.owns }
+      : { rating: null, wantPlay: false, owns: false },
     distribution,
     players,
     events: matchingEvents.slice(0, 6).map(e => ({ id: e.id, title: e.title, startAt: e.startAt, status: e.status })),
@@ -167,19 +192,28 @@ export async function findGameSlug(name: string | null, appId: number | null): P
 export interface LookupResult {
   local: { slug: string; name: string; coverUrl: string | null; status: string }[];
   steam: { appId: number; name: string; thumbUrl: string; existingSlug: string | null }[];
+  /** IGDB-Treffer, die nicht schon unter den Steam-Treffern sind (Konsole, Handy, Launcher-Spiele) */
+  igdb: { igdbId: number; name: string; year: number | null; platforms: string[]; thumbUrl: string | null; existingSlug: string | null }[];
   steamError: boolean;
+  igdbError: boolean;
 }
 
 export async function lookupGames(q: string): Promise<LookupResult> {
   const key = gameNameKey(q);
-  const [all, steamResult] = await Promise.all([
+  const [all, steamResult, igdbResult] = await Promise.all([
     prisma.game.findMany({
       where:  { status: { not: "HIDDEN" } },
-      select: { slug: true, name: true, nameKey: true, coverUrl: true, status: true, steamAppId: true },
+      select: { slug: true, name: true, nameKey: true, coverUrl: true, status: true, steamAppId: true, igdbId: true },
     }),
     searchSteamGames(q, { resolveCovers: false }).then(r => ({ ok: true as const, r }), () => ({ ok: false as const, r: [] })),
+    igdbConfigured()
+      ? searchIgdbGames(q).then(r => ({ ok: true as const, r }), err => { console.error("[games] IGDB-Suche", err); return { ok: false as const, r: [] }; })
+      : Promise.resolve({ ok: true as const, r: [] }),
   ]);
   const byAppId = new Map(all.filter(g => g.steamAppId).map(g => [g.steamAppId!, g.slug]));
+  const byIgdbId = new Map(all.filter(g => g.igdbId).map(g => [g.igdbId!, g.slug]));
+  const steamIds = new Set(steamResult.r.map(s => s.appId));
+  const steamKeys = new Set(steamResult.r.map(s => gameNameKey(s.name)));
 
   const local = key
     ? all.filter(g => g.nameKey.includes(key))
@@ -191,7 +225,15 @@ export async function lookupGames(q: string): Promise<LookupResult> {
   return {
     local,
     steam: steamResult.r.map(s => ({ appId: s.appId, name: s.name, thumbUrl: s.thumbUrl, existingSlug: byAppId.get(s.appId) ?? null })),
+    igdb: igdbResult.r
+      .filter(h => !(h.steamAppId && steamIds.has(h.steamAppId)) && !steamKeys.has(gameNameKey(h.name)))
+      .slice(0, 6)
+      .map(h => ({
+        igdbId: h.igdbId, name: h.name, year: h.year, platforms: h.platforms, thumbUrl: h.thumbUrl,
+        existingSlug: byIgdbId.get(h.igdbId) ?? (h.steamAppId ? byAppId.get(h.steamAppId) : undefined) ?? null,
+      })),
     steamError: !steamResult.ok,
+    igdbError: !igdbResult.ok,
   };
 }
 
@@ -199,10 +241,10 @@ export async function lookupGames(q: string): Promise<LookupResult> {
 
 export async function createGame(
   user: { id: string; isModerator: boolean },
-  input: { steamAppId?: unknown; name?: unknown; fields?: unknown },
+  input: { steamAppId?: unknown; igdbId?: unknown; name?: unknown; fields?: unknown },
 ): Promise<Result<{ slug: string; status: GameStatus }>> {
-  const steamAppId = typeof input.steamAppId === "number" && Number.isInteger(input.steamAppId) && input.steamAppId > 0
-    ? input.steamAppId : null;
+  let steamAppId = positiveInt(input.steamAppId);
+  let igdbId = positiveInt(input.igdbId);
   const fields = sanitizeGameFields(input.fields);
   let name = cleanGameName(input.name);
 
@@ -215,26 +257,25 @@ export async function createGame(
     }
   }
 
-  // Steam-Daten serverseitig neu holen — Cover und Name nie vom Client übernehmen
-  let steam: Awaited<ReturnType<typeof fetchSteamGameDraft>> = null;
-  let steamReached = false;
-  if (steamAppId) {
-    try {
-      steam = await fetchSteamGameDraft(steamAppId);
-      steamReached = true;
-    } catch (err) {
-      console.error("[games] Steam nicht erreichbar", err);
+  // Automatische Angaben serverseitig neu holen — Cover und Name nie vom Client übernehmen
+  let auto: Awaited<ReturnType<typeof fetchCombinedDraft>>["combined"] = null;
+  if (steamAppId || igdbId) {
+    const res = await fetchCombinedDraft({ steamAppId, igdbId });
+    if (!res.combined && !res.allFailed) return { ok: false, status: 400, error: "Zu diesem Treffer gibt es keine Spieldaten." };
+    auto = res.combined;
+    if (auto) {
+      name = auto.draft.name;
+      steamAppId = auto.draft.steamAppId ?? steamAppId;
+      igdbId = auto.draft.igdbId ?? igdbId;
     }
-    if (steamReached && !steam) return { ok: false, status: 400, error: "Steam kennt dieses Spiel nicht." };
-    if (steam) name = steam.name;
   }
   if (!name) return { ok: false, status: 400, error: "Bitte gib einen Spielnamen an." };
 
-  const dup = await findDuplicate(steamAppId, name);
+  const dup = await findDuplicate(steamAppId, name, igdbId);
   if (dup) return { ok: false, status: 409, error: `„${dup.name}“ ist schon in der Spieleliste.`, slug: dup.slug };
 
-  // Ohne Steam-Treffer (Freitext) prüft das Team erst; Moderatoren schalten direkt frei
-  const status: GameStatus = user.isModerator || steamAppId ? "APPROVED" : "PENDING";
+  // Ohne Steam-/IGDB-Treffer (Freitext) prüft das Team erst; Moderatoren schalten direkt frei
+  const status: GameStatus = user.isModerator || steamAppId || igdbId ? "APPROVED" : "PENDING";
   const taken = await takenSlugs();
 
   try {
@@ -244,11 +285,12 @@ export async function createGame(
         nameKey: gameNameKey(name),
         name,
         steamAppId,
-        coverUrl: steam?.coverUrl ?? null,
-        releaseYear: steam?.releaseYear ?? null,
+        igdbId,
+        coverUrl: auto?.draft.coverUrl ?? null,
+        releaseYear: auto?.draft.releaseYear ?? null,
         ...fields,
-        fieldSources: sourcesJson(computeFieldSources(fields, steam)),
-        enrichedAt: steam ? new Date() : null,
+        fieldSources: sourcesJson(computeFieldSources(fields, auto?.draft ?? null, auto?.sources)),
+        enrichedAt: auto ? new Date() : null,
         status,
         addedById: user.id,
       },
@@ -257,7 +299,7 @@ export async function createGame(
     return { ok: true, slug: game.slug, status: game.status as GameStatus };
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      const again = await findDuplicate(steamAppId, name);
+      const again = await findDuplicate(steamAppId, name, igdbId);
       return { ok: false, status: 409, error: "Das Spiel wurde gerade schon hinzugefügt.", slug: again?.slug };
     }
     throw err;
@@ -267,14 +309,15 @@ export async function createGame(
 // ── Bewertung & "Würde ich zocken" ───────────────────────────────────────────
 
 async function recomputeAggregates(tx: Prisma.TransactionClient, gameId: string) {
-  const [ratings, wants] = await Promise.all([
+  const [ratings, wants, owns] = await Promise.all([
     tx.gameReaction.aggregate({ where: { gameId, rating: { not: null } }, _sum: { rating: true }, _count: { rating: true } }),
     tx.gameReaction.count({ where: { gameId, wantPlay: true } }),
+    tx.gameReaction.count({ where: { gameId, owns: true } }),
   ]);
   return tx.game.update({
     where: { id: gameId },
-    data: { ratingSum: ratings._sum.rating ?? 0, ratingCount: ratings._count.rating, wantCount: wants },
-    select: { ratingSum: true, ratingCount: true, wantCount: true },
+    data: { ratingSum: ratings._sum.rating ?? 0, ratingCount: ratings._count.rating, wantCount: wants, ownCount: owns },
+    select: { ratingSum: true, ratingCount: true, wantCount: true, ownCount: true },
   });
 }
 
@@ -285,63 +328,88 @@ export async function recomputeGameAggregates(gameIds: string[]) {
   }
 }
 
+export interface ReactionChange { rating?: number | null; wantPlay?: boolean; owns?: boolean }
+
 export async function setReaction(
-  userId: string, slug: string, change: { rating?: number | null; wantPlay?: boolean },
-): Promise<Result<{ ratingSum: number; ratingCount: number; wantCount: number; rating: number | null; wantPlay: boolean }>> {
+  userId: string, slug: string, change: ReactionChange,
+): Promise<Result<{
+  ratingSum: number; ratingCount: number; wantCount: number; ownCount: number;
+  rating: number | null; wantPlay: boolean; owns: boolean;
+}>> {
   const game = await prisma.game.findUnique({ where: { slug }, select: { id: true, status: true } });
   if (!game || game.status !== "APPROVED") return { ok: false, status: 404, error: "Spiel nicht gefunden" };
 
   return prisma.$transaction(async tx => {
-    const data: { rating?: number | null; wantPlay?: boolean } = {};
+    const data: ReactionChange = {};
     if (change.rating !== undefined) data.rating = change.rating;
     if (change.wantPlay !== undefined) data.wantPlay = change.wantPlay;
+    if (change.owns !== undefined) data.owns = change.owns;
 
     const reaction = await tx.gameReaction.upsert({
       where:  { userId_gameId: { userId, gameId: game.id } },
-      create: { userId, gameId: game.id, rating: data.rating ?? null, wantPlay: data.wantPlay ?? false },
+      create: { userId, gameId: game.id, rating: data.rating ?? null, wantPlay: data.wantPlay ?? false, owns: data.owns ?? false },
       update: data,
     });
     // Leere Reaktionen nicht aufheben
-    if (reaction.rating === null && !reaction.wantPlay) {
+    if (reaction.rating === null && !reaction.wantPlay && !reaction.owns) {
       await tx.gameReaction.delete({ where: { userId_gameId: { userId, gameId: game.id } } });
     }
     const agg = await recomputeAggregates(tx, game.id);
-    return { ok: true as const, ...agg, rating: reaction.rating, wantPlay: reaction.wantPlay };
+    return { ok: true as const, ...agg, rating: reaction.rating, wantPlay: reaction.wantPlay, owns: reaction.owns };
   });
 }
 
-// ── Steam-Abgleich ───────────────────────────────────────────────────────────
+// ── Automatischer Abgleich (Steam + IGDB) ─────────────────────────────────────
 
 export type EnrichOutcome = "enriched" | "not_found" | "error";
 
+/** Treffer mit (fast) gleichem Namen — sonst landete z.B. "Mario Kart" bei einem fremden Spiel */
+function nameMatches(candidate: string, game: Pick<Game, "name" | "nameKey">): boolean {
+  return gameNameKey(candidate) === game.nameKey || sameGame(candidate, game.name);
+}
+
 /**
- * Ergänzt ein Spiel um Steam-Daten. Ohne Steam-ID wird per Namenssuche gesucht — übernommen wird
- * nur ein Treffer mit (fast) gleichem Namen, sonst landete z.B. "Mario Kart" bei einem fremden Spiel.
- * Von Menschen gesetzte Felder bleiben unangetastet.
+ * Ergänzt ein Spiel um Steam- und IGDB-Daten. Ohne IDs wird per Namenssuche gesucht und nur ein
+ * Treffer mit (fast) gleichem Namen übernommen. Von Menschen gesetzte Felder bleiben unangetastet.
  */
 export async function enrichGame(game: Game): Promise<EnrichOutcome> {
   try {
-    let appId = game.steamAppId;
-    if (!appId) {
-      const hits = await searchSteamGames(game.name, { resolveCovers: false });
-      const hit = hits.find(h => gameNameKey(h.name) === game.nameKey) ?? hits.find(h => sameGame(h.name, game.name));
-      if (hit) {
-        const owner = await prisma.game.findUnique({ where: { steamAppId: hit.appId }, select: { id: true } });
-        if (!owner) appId = hit.appId; // gehört schon einem anderen Eintrag → Fall fürs Zusammenführen
-      }
+    let steamAppId = game.steamAppId;
+    let igdbId = game.igdbId;
+    let searchFailed = false;
+
+    if (!steamAppId && !igdbId) {
+      const [steamHits, igdbHits] = await Promise.all([
+        searchSteamGames(game.name, { resolveCovers: false }).catch(() => { searchFailed = true; return []; }),
+        igdbConfigured() ? searchIgdbGames(game.name).catch(() => { searchFailed = true; return []; }) : Promise.resolve([]),
+      ]);
+      const steamHit = steamHits.find(h => gameNameKey(h.name) === game.nameKey) ?? steamHits.find(h => nameMatches(h.name, game));
+      const igdbHit = igdbHits.find(h => gameNameKey(h.name) === game.nameKey) ?? igdbHits.find(h => nameMatches(h.name, game));
+      ({ steamAppId, igdbId } = await freeIds(game.id, steamHit?.appId ?? igdbHit?.steamAppId ?? null, igdbHit?.igdbId ?? null));
     }
-    const steam = appId ? await fetchSteamGameDraft(appId) : null;
-    if (!steam) {
+
+    if (!steamAppId && !igdbId) {
+      if (searchFailed) return "error"; // nicht als "erledigt" markieren — später nochmal versuchen
       await prisma.game.update({ where: { id: game.id }, data: { enrichedAt: new Date() } });
       return "not_found";
     }
-    const merged = mergeSteamFields(gameFieldsOf(game), parseFieldSources(game.fieldSources), steam);
+
+    const res = await fetchCombinedDraft({ steamAppId, igdbId });
+    if (!res.combined) {
+      if (res.allFailed) return "error";
+      await prisma.game.update({ where: { id: game.id }, data: { enrichedAt: new Date() } });
+      return "not_found";
+    }
+    const { draft, sources } = res.combined;
+    const ids = await freeIds(game.id, draft.steamAppId ?? steamAppId, draft.igdbId ?? igdbId);
+    const merged = mergeAutoFields(gameFieldsOf(game), parseFieldSources(game.fieldSources), draft, sources);
     await prisma.game.update({
       where: { id: game.id },
       data: {
-        steamAppId: appId,
-        coverUrl: steam.coverUrl ?? game.coverUrl,
-        releaseYear: steam.releaseYear ?? game.releaseYear,
+        steamAppId: ids.steamAppId ?? game.steamAppId,
+        igdbId: ids.igdbId ?? game.igdbId,
+        coverUrl: draft.coverUrl ?? game.coverUrl,
+        releaseYear: draft.releaseYear ?? game.releaseYear,
         ...merged.fields,
         fieldSources: sourcesJson(merged.sources),
         enrichedAt: new Date(),
@@ -349,12 +417,12 @@ export async function enrichGame(game: Game): Promise<EnrichOutcome> {
     });
     return "enriched";
   } catch (err) {
-    console.error(`[games] Steam-Abgleich für ${game.name} fehlgeschlagen`, err);
+    console.error(`[games] Abgleich für ${game.name} fehlgeschlagen`, err);
     return "error";
   }
 }
 
-/** Nächste Spiele ohne Steam-Abgleich verarbeiten (nacheinander, um Steams Rate-Limit zu schonen). */
+/** Nächste Spiele ohne Abgleich verarbeiten (nacheinander, um die Rate-Limits zu schonen). */
 export async function enrichPendingGames(limit = 8) {
   const games = await prisma.game.findMany({
     where: { enrichedAt: null, status: { not: "HIDDEN" } },
@@ -420,7 +488,7 @@ export async function importCommunityGames(): Promise<{ created: number; candida
 
 export async function updateGameAdmin(
   id: string,
-  input: { name?: unknown; status?: unknown; steamAppId?: unknown; fields?: unknown },
+  input: { name?: unknown; status?: unknown; steamAppId?: unknown; igdbId?: unknown; fields?: unknown },
 ): Promise<Result<{ slug: string }>> {
   const game = await prisma.game.findUnique({ where: { id } });
   if (!game) return { ok: false, status: 404, error: "Spiel nicht gefunden" };
@@ -446,11 +514,12 @@ export async function updateGameAdmin(
     data.status = input.status;
   }
 
-  let steamChanged = false;
+  const parseId = (v: unknown): number | null =>
+    v === null || v === "" ? null : Number.isInteger(Number(v)) && Number(v) > 0 && Number(v) < 2_000_000_000 ? Number(v) : NaN;
+
+  let idsChanged = false;
   if (input.steamAppId !== undefined) {
-    const appId = input.steamAppId === null || input.steamAppId === ""
-      ? null
-      : Number.isInteger(Number(input.steamAppId)) && Number(input.steamAppId) > 0 ? Number(input.steamAppId) : NaN;
+    const appId = parseId(input.steamAppId);
     if (Number.isNaN(appId)) return { ok: false, status: 400, error: "Ungültige Steam-App-ID" };
     if (appId !== game.steamAppId) {
       if (appId) {
@@ -458,10 +527,24 @@ export async function updateGameAdmin(
         if (owner) return { ok: false, status: 409, error: `Diese Steam-ID gehört schon zu „${owner.name}“.` };
       }
       data.steamAppId = appId;
-      data.coverUrl = null;
-      data.enrichedAt = null;
-      steamChanged = true;
+      idsChanged = true;
     }
+  }
+  if (input.igdbId !== undefined) {
+    const igdbId = parseId(input.igdbId);
+    if (Number.isNaN(igdbId)) return { ok: false, status: 400, error: "Ungültige IGDB-ID" };
+    if (igdbId !== game.igdbId) {
+      if (igdbId) {
+        const owner = await prisma.game.findFirst({ where: { igdbId, id: { not: id } }, select: { name: true } });
+        if (owner) return { ok: false, status: 409, error: `Diese IGDB-ID gehört schon zu „${owner.name}“.` };
+      }
+      data.igdbId = igdbId;
+      idsChanged = true;
+    }
+  }
+  if (idsChanged) {
+    data.coverUrl = null;
+    data.enrichedAt = null;
   }
 
   if (input.fields !== undefined) {
@@ -475,7 +558,7 @@ export async function updateGameAdmin(
   }
 
   const updated = await prisma.game.update({ where: { id }, data });
-  if (steamChanged && updated.steamAppId) await enrichGame(updated);
+  if (idsChanged && (updated.steamAppId || updated.igdbId)) await enrichGame(updated);
   return { ok: true, slug: updated.slug };
 }
 
@@ -496,12 +579,17 @@ export async function mergeGames(sourceId: string, targetId: string): Promise<Re
     for (const r of sourceReactions) {
       if (targetUsers.has(r.userId)) continue;
       await tx.gameReaction.create({
-        data: { userId: r.userId, gameId: targetId, rating: r.rating, wantPlay: r.wantPlay, createdAt: r.createdAt },
+        data: { userId: r.userId, gameId: targetId, rating: r.rating, wantPlay: r.wantPlay, owns: r.owns, createdAt: r.createdAt },
       });
     }
+    // Protokoll der Ergänzungen mitnehmen, bevor das Löschen es per Cascade entfernt
+    await tx.gameEdit.updateMany({ where: { gameId: sourceId }, data: { gameId: targetId } });
     await tx.game.delete({ where: { id: sourceId } });
     if (!target.steamAppId && source.steamAppId) {
-      await tx.game.update({ where: { id: targetId }, data: { steamAppId: source.steamAppId, coverUrl: source.coverUrl } });
+      await tx.game.update({ where: { id: targetId }, data: { steamAppId: source.steamAppId, coverUrl: target.coverUrl ?? source.coverUrl } });
+    }
+    if (!target.igdbId && source.igdbId) {
+      await tx.game.update({ where: { id: targetId }, data: { igdbId: source.igdbId, coverUrl: target.coverUrl ?? source.coverUrl } });
     }
     await recomputeAggregates(tx, targetId);
   });
@@ -539,4 +627,144 @@ export async function pickGameIdea(): Promise<GameTeaser | null> {
   const withCover = pool.filter(g => g.coverUrl);
   const candidates = withCover.length > 0 ? withCover : pool;
   return candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+}
+
+// ── Gruppen-Finder ("Was zocken wir?") ───────────────────────────────────────
+
+export const GROUP_MAX_MEMBERS = 16;
+
+export interface GroupMember { id: string; name: string; image: string | null }
+
+/** Mitglieder für die Auswahl im Gruppen-Finder (zuletzt aktive zuerst) */
+export async function listGroupCandidates(): Promise<GroupMember[]> {
+  const users = await prisma.user.findMany({
+    where: { deletedAt: null, leftServerAt: null },
+    select: { id: true, name: true, username: true, image: true },
+    orderBy: [{ lastActiveAt: { sort: "desc", nulls: "last" } }, { name: "asc" }],
+    take: 500,
+  });
+  return users.map(u => ({ id: u.id, name: u.username ?? u.name ?? "Unbekannt", image: u.image }));
+}
+
+/**
+ * Wer aus der Gruppe hat welches Spiel ("Hab ich" oder als Lieblingsspiel im Profil) und wer würde
+ * es zocken. Nur freigeschaltete Spiele, bei denen mindestens einer aus der Gruppe etwas markiert hat.
+ */
+export async function groupOwnership(userIds: string[]): Promise<Record<string, GroupGameInfo>> {
+  const ids = [...new Set(userIds)].slice(0, GROUP_MAX_MEMBERS);
+  if (ids.length === 0) return {};
+  const [games, reactions, users] = await Promise.all([
+    prisma.game.findMany({ where: { status: "APPROVED" }, select: { id: true, steamAppId: true, nameKey: true } }),
+    prisma.gameReaction.findMany({
+      where: { userId: { in: ids }, OR: [{ owns: true }, { wantPlay: true }] },
+      select: { userId: true, gameId: true, owns: true, wantPlay: true },
+    }),
+    prisma.user.findMany({ where: { id: { in: ids }, favoriteGamesJson: { not: null } }, select: { id: true, favoriteGamesJson: true } }),
+  ]);
+
+  const out: Record<string, GroupGameInfo> = {};
+  const entry = (gameId: string) => (out[gameId] ??= { owners: [], wanters: [] });
+  const approved = new Set(games.map(g => g.id));
+
+  for (const r of reactions) {
+    if (!approved.has(r.gameId)) continue;
+    if (r.owns && !entry(r.gameId).owners.includes(r.userId)) entry(r.gameId).owners.push(r.userId);
+    if (r.wantPlay) entry(r.gameId).wanters.push(r.userId);
+  }
+  // "Zockt gerade" im Profil heißt: hat das Spiel
+  for (const u of users) {
+    for (const fav of parseFavoriteGames(u.favoriteGamesJson)) {
+      const g = games.find(x => favoriteMatchesGame(fav, x));
+      if (g && !entry(g.id).owners.includes(u.id)) entry(g.id).owners.push(u.id);
+    }
+  }
+  return out;
+}
+
+// ── Ergänzungen durch Mitglieder ─────────────────────────────────────────────
+
+/** Leere Angaben eines Spiels ergänzen (nie überschreiben). Jede Änderung wird protokolliert. */
+export async function fillMissingFields(
+  user: { id: string; isModerator: boolean }, slug: string, input: unknown,
+): Promise<Result<{ filled: string[] }>> {
+  const game = await prisma.game.findUnique({ where: { slug } });
+  if (!game || game.status !== "APPROVED") return { ok: false, status: 404, error: "Spiel nicht gefunden" };
+
+  const fills = applicableFills(gameFieldsOf(game), sanitizeGameFields(input));
+  const fields = Object.keys(fills) as FillableField[];
+  if (fields.length === 0) return { ok: false, status: 400, error: "Nichts Neues zum Ergänzen — evtl. hat jemand anderes schneller ausgefüllt." };
+
+  if (!user.isModerator) {
+    const recent = await prisma.gameEdit.count({
+      where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) } },
+    });
+    if (recent + fields.length > DAILY_FILL_LIMIT) {
+      return { ok: false, status: 429, error: "Für heute hast du genug ergänzt — danke! Morgen geht's weiter." };
+    }
+  }
+
+  const sources = parseFieldSources(game.fieldSources);
+  for (const f of fields) sources[f] = "user";
+
+  await prisma.$transaction([
+    // Nur übernehmen, wenn die Felder noch leer sind (gleichzeitige Ergänzungen)
+    prisma.game.update({ where: { id: game.id, updatedAt: game.updatedAt }, data: { ...fills, fieldSources: sourcesJson(sources) } }),
+    prisma.gameEdit.createMany({
+      data: fields.map(f => ({
+        gameId: game.id, userId: user.id, field: f,
+        oldValue: jsonValue(gameFieldsOf(game)[f]), newValue: jsonValue(fills[f]),
+      })),
+    }),
+  ]).catch(err => {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") throw new ConflictError();
+    throw err;
+  });
+  return { ok: true, filled: fields };
+}
+
+export class ConflictError extends Error {
+  constructor() { super("Das Spiel wurde gerade geändert — bitte Seite neu laden."); }
+}
+
+const jsonValue = (v: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull =>
+  v === null || v === undefined ? Prisma.JsonNull : (v as Prisma.InputJsonValue);
+
+export async function listRecentGameEdits(take = 60) {
+  const rows = await prisma.gameEdit.findMany({
+    orderBy: { createdAt: "desc" },
+    take,
+    include: {
+      game: { select: { id: true, slug: true, name: true } },
+      user: { select: { id: true, name: true, username: true } },
+    },
+  });
+  return rows.map(r => ({
+    id: r.id, field: r.field, oldValue: r.oldValue, newValue: r.newValue,
+    reverted: r.revertedAt !== null, createdAt: r.createdAt.toISOString(),
+    game: r.game, userName: r.user ? r.user.username ?? r.user.name : null,
+  }));
+}
+
+/** Ergänzung zurücksetzen — nur solange der Wert seither nicht weiter geändert wurde. */
+export async function revertGameEdit(editId: string): Promise<Result<{ slug: string }>> {
+  const edit = await prisma.gameEdit.findUnique({ where: { id: editId }, include: { game: true } });
+  if (!edit) return { ok: false, status: 404, error: "Eintrag nicht gefunden" };
+  if (edit.revertedAt) return { ok: false, status: 400, error: "Schon zurückgesetzt" };
+  if (!(FILLABLE_FIELDS as readonly string[]).includes(edit.field)) return { ok: false, status: 400, error: "Unbekanntes Feld" };
+  const field = edit.field as FillableField;
+
+  const current = gameFieldsOf(edit.game)[field];
+  if (JSON.stringify(current ?? null) !== JSON.stringify(edit.newValue ?? null)) {
+    return { ok: false, status: 409, error: "Der Wert wurde seitdem geändert — bitte direkt im Spiel bearbeiten." };
+  }
+
+  const restore = edit.oldValue ?? (Array.isArray(edit.newValue) ? [] : null);
+  const sources = parseFieldSources(edit.game.fieldSources);
+  delete sources[field];
+
+  await prisma.$transaction([
+    prisma.game.update({ where: { id: edit.gameId }, data: { [field]: restore, fieldSources: sourcesJson(sources) } }),
+    prisma.gameEdit.update({ where: { id: editId }, data: { revertedAt: new Date() } }),
+  ]);
+  return { ok: true, slug: edit.game.slug };
 }

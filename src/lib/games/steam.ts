@@ -147,6 +147,7 @@ export function parseSteamAppData(appId: number, data: SteamAppData): GameDraft 
     ...fields,
     name: cleanSteamText(data.name ?? "") || `Steam-App ${appId}`,
     steamAppId: appId,
+    igdbId: null,
     coverUrl: typeof data.header_image === "string" && data.header_image.startsWith("https://") ? data.header_image : null,
     releaseYear: yearMatch ? Number(yearMatch[0]) : null,
   };

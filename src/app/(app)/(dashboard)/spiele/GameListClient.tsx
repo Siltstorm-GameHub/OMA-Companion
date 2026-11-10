@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
 import AddGameModal from "@/components/games/AddGameModal";
 import { Chip } from "@/components/games/GameFieldsForm";
-import { ChevronDown, Gamepad2, Plus, Search, SearchX, Settings2, ShieldCheck, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, Dices, Gamepad2, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
 import {
   EMPTY_FILTERS, GAME_SORTS, activeFilterCount, filterGames, sortGames,
   type GameFilters, type GameListItem, type GameSort,
@@ -27,6 +28,7 @@ export default function GameListClient({
   pendingCount: number;
   isModerator: boolean;
 }) {
+  const router = useRouter();
   const [filters, setFilters] = useState<GameFilters>({ ...EMPTY_FILTERS, q: initialQuery });
   const [sort, setSort] = useState<GameSort>("popular");
   const [showMore, setShowMore] = useState(false);
@@ -37,6 +39,10 @@ export default function GameListClient({
   const filterCount = activeFilterCount(filters);
   const moreCount = (filters.genre ? 1 : 0) + filters.platforms.length + (filters.sessionLength ? 1 : 0) + (filters.crossplayOnly ? 1 : 0);
   const toggleMode = (m: GameMode) => set("modes", toggle(filters.modes, m));
+  const pickRandom = () => {
+    if (visible.length === 0) return;
+    router.push(`/spiele/${visible[Math.floor(Math.random() * visible.length)].slug}`);
+  };
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in pb-28 sm:pb-6">
@@ -57,6 +63,19 @@ export default function GameListClient({
           <Plus className="w-4 h-4" /> Spiel hinzufügen
         </button>
       </div>
+
+      <Link href="/spiele/gruppe"
+        className="group flex items-center gap-3 rounded-2xl p-3 border border-teal-500/25 hover:border-teal-400/50 transition-colors"
+        style={{ background: "linear-gradient(110deg, rgba(20,184,166,0.12), rgba(20,184,166,0.02) 65%)" }}>
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-teal-500/15 border border-teal-500/30">
+          <Users className="w-4.5 h-4.5 text-teal-300" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-white">Was zocken wir?</span>
+          <span className="block text-xs text-gray-400 truncate">Wähle, wer mitzockt — wir zeigen Spiele, die alle haben.</span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-teal-300 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </Link>
 
       {isModerator && pendingCount > 0 && (
         <Link href="/admin/spiele" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs bg-amber-500/10 border border-amber-500/20 text-amber-200 hover:bg-amber-500/15 transition-colors">
@@ -91,6 +110,11 @@ export default function GameListClient({
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </label>
+        <button type="button" onClick={pickRandom} disabled={visible.length === 0} title="Zufälliges Spiel aus den Treffern"
+          aria-label="Zufälliges Spiel aus den Treffern"
+          className="shrink-0 w-11 rounded-xl border border-white/10 text-gray-300 hover:text-teal-200 hover:border-teal-500/40 flex items-center justify-center disabled:opacity-40 transition-colors">
+          <Dices className="w-4.5 h-4.5" />
+        </button>
       </div>
 
       {/* Schnellfilter */}

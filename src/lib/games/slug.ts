@@ -23,7 +23,7 @@ export function gameNameKey(name: string): string {
 }
 
 /** Pfade unter /spiele, die keine Spiel-Slugs sein dürfen */
-export const RESERVED_GAME_SLUGS = new Set(["finde", "neu"]);
+export const RESERVED_GAME_SLUGS = new Set(["finde", "neu", "gruppe"]);
 
 export function gameSlug(name: string): string {
   const slug = baseNormalize(name)

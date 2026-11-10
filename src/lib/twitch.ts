@@ -3,7 +3,7 @@ const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET!;
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getAppAccessToken(): Promise<string> {
+export async function getAppAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
     return cachedToken.token;
   }

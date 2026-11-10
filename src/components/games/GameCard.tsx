@@ -1,7 +1,7 @@
 import Link from "next/link";
 import GameCover from "@/components/GameCover";
 import { StarDisplay } from "./StarRating";
-import { Heart, Users } from "@/components/icons";
+import { Check, Heart, Users } from "@/components/icons";
 import type { GameListItem } from "@/lib/games/filter";
 import { GAME_MODES, formatPlayers } from "@/lib/games/options";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
@@ -35,6 +35,11 @@ export default function GameCard({ game }: { game: GameListItem }) {
           {game.myWant && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
               <Heart className="w-2.5 h-2.5" /> Würde ich zocken
+            </span>
+          )}
+          {game.myOwns && !game.myWant && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/90 text-white flex items-center gap-1">
+              <Check className="w-2.5 h-2.5" /> Hab ich
             </span>
           )}
         </div>

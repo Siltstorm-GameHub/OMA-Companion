@@ -8,6 +8,8 @@ import GameCover from "@/components/GameCover";
 import RankedAvatar from "@/components/RankedAvatar";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import GameReactionPanel from "./GameReactionPanel";
+import MissingFieldsPanel from "./MissingFieldsPanel";
+import { missingFields } from "@/lib/games/edits";
 import { ArrowLeft, CalendarDays, ChevronRight, ExternalLink, Pencil, Server, Users } from "@/components/icons";
 import {
   GAME_GENRES, GAME_MODES, GAME_PLATFORMS, GAME_TAGS, SESSION_LENGTHS, formatPlayers, labelOf,
@@ -49,12 +51,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
   const chips = [...fields.genres.map(g => GAME_GENRES[g]), ...fields.tags.map(t => GAME_TAGS[t])];
   const steamUrl = game.steamAppId ? `https://store.steampowered.com/app/${game.steamAppId}/` : null;
   const addedByName = game.addedBy ? game.addedBy.username ?? game.addedBy.name : null;
-  const missing = [
-    !fields.modes.length && "Spielmodus",
-    !players && "Spieleranzahl",
-    !fields.platforms.length && "Plattformen",
-    !session && "Rundenlänge",
-  ].filter(Boolean) as string[];
+  const missing = missingFields(fields);
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
@@ -121,11 +118,15 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
 
       <GameReactionPanel
         slug={game.slug}
-        initialStats={{ ratingSum: game.ratingSum, ratingCount: game.ratingCount, wantCount: game.wantCount }}
+        initialStats={{ ratingSum: game.ratingSum, ratingCount: game.ratingCount, wantCount: game.wantCount, ownCount: game.ownCount }}
         initialMine={detail.myReaction}
         initialDistribution={detail.distribution}
         canReact={game.status === "APPROVED" && !!user}
       />
+
+      {game.status === "APPROVED" && !!user && missing.length > 0 && (
+        <MissingFieldsPanel slug={game.slug} current={fields} missing={missing} />
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4">
         {/* Wer zockt das? */}
@@ -193,7 +194,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             Angaben teils von Steam <ExternalLink className="w-3 h-3" />
           </a>
         )}
-        {missing.length > 0 && <span>Fehlt noch: {missing.join(", ")}{isModerator ? "" : " — sag dem Team Bescheid, wenn du's weißt"}</span>}
+        {game.igdbId && <span>Angaben teils von IGDB.com</span>}
       </div>
     </div>
   );

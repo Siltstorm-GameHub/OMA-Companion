@@ -25,11 +25,13 @@ export interface GameListItem {
   ratingSum:     number;
   ratingCount:   number;
   wantCount:     number;
+  ownCount:      number;
   /** Anzahl Mitglieder mit dem Spiel in "Zockt gerade" (Profil-Lieblingsspiele) */
   playingCount:  number;
   createdAt:     string;
   myRating:      number | null;
   myWant:        boolean;
+  myOwns:        boolean;
 }
 
 export type GameSort = "popular" | "rating" | "new" | "name";
@@ -85,7 +87,7 @@ export function filterGames(games: GameListItem[], f: GameFilters): GameListItem
     if (f.sessionLength && g.sessionLength !== f.sessionLength) return false;
     if (f.freeOnly && g.isFree !== true) return false;
     if (f.crossplayOnly && !g.crossplay) return false;
-    if (f.mineOnly && !g.myWant && g.myRating === null) return false;
+    if (f.mineOnly && !g.myWant && !g.myOwns && g.myRating === null) return false;
     return true;
   });
 }

@@ -9,25 +9,28 @@ import { Button } from "@/components/ui/Button";
 import GameCover from "@/components/GameCover";
 import GameFieldsForm from "./GameFieldsForm";
 import { ArrowLeft, Check, ChevronRight, Loader2, Plus, Search } from "@/components/icons";
-import { EDITABLE_FIELDS, computeFieldSources, emptyFields, type FieldSources, type GameDraft, type GameFields } from "@/lib/games/draft";
-import { MAX_GAME_NAME_LENGTH } from "@/lib/games/options";
+import { EDITABLE_FIELDS, emptyFields, type FieldSources, type GameDraft, type GameFields } from "@/lib/games/draft";
+import { GAME_PLATFORMS, MAX_GAME_NAME_LENGTH, labelOf } from "@/lib/games/options";
 import type { LookupResult } from "@/lib/games/service";
 
 type Step =
   | { kind: "search" }
-  | { kind: "loading"; appId: number; name: string }
+  | { kind: "loading"; name: string }
   | { kind: "exists"; slug: string; name: string }
-  | { kind: "form"; steamAppId: number | null; name: string; coverUrl: string | null; description: string | null; sources: FieldSources; steamError?: boolean };
+  | {
+      kind: "form"; steamAppId: number | null; igdbId: number | null; name: string; coverUrl: string | null;
+      description: string | null; sources: FieldSources; sourceError?: boolean;
+    };
 
 function pickFields(d: GameDraft): GameFields {
   return Object.fromEntries(EDITABLE_FIELDS.map(f => [f, d[f]])) as unknown as GameFields;
 }
 
-const EMPTY_LOOKUP: LookupResult = { local: [], steam: [], steamError: false };
+const EMPTY_LOOKUP: LookupResult = { local: [], steam: [], igdb: [], steamError: false, igdbError: false };
 
 /**
  * "Spiel hinzufügen" in drei Schritten: Namen tippen → Treffer antippen → vorausgefülltes Formular
- * kurz prüfen. Alles, was Steam weiß, ist schon ausgefüllt; Pflicht ist nur der Name.
+ * kurz prüfen. Alles, was Steam und IGDB wissen, ist schon ausgefüllt; Pflicht ist nur der Name.
  */
 export default function AddGameModal({ open, onClose, initialQuery = "" }: { open: boolean; onClose: () => void; initialQuery?: string }) {
   const router = useRouter();
@@ -65,24 +68,34 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
   const searching = trimmed.length >= 2 && lookup?.q !== trimmed;
   const result = trimmed.length >= 2 && lookup?.q === trimmed ? lookup.result : null;
 
-  async function pickSteam(appId: number, name: string) {
-    setStep({ kind: "loading", appId, name });
+  async function pick(ids: { steamAppId?: number; igdbId?: number }, name: string) {
+    setStep({ kind: "loading", name });
+    const params = new URLSearchParams({ name });
+    if (ids.steamAppId) params.set("appId", String(ids.steamAppId));
+    if (ids.igdbId) params.set("igdbId", String(ids.igdbId));
     try {
-      const res = await fetch(`/api/games/preview?appId=${appId}&name=${encodeURIComponent(name)}`);
-      const data = await res.json() as { existing?: { slug: string; name: string } | null; draft?: GameDraft | null; steamError?: boolean; error?: string };
+      const res = await fetch(`/api/games/preview?${params}`);
+      const data = await res.json() as {
+        existing?: { slug: string; name: string } | null; draft?: GameDraft | null; sources?: FieldSources;
+        sourceError?: boolean; error?: string;
+      };
       if (data.existing) { setStep({ kind: "exists", ...data.existing }); return; }
       if (data.draft) {
         const draftFields = pickFields(data.draft);
         setFields(draftFields);
         setStep({
-          kind: "form", steamAppId: appId, name: data.draft.name, coverUrl: data.draft.coverUrl,
-          description: draftFields.description, sources: computeFieldSources(draftFields, draftFields),
+          kind: "form", steamAppId: data.draft.steamAppId, igdbId: data.draft.igdbId, name: data.draft.name,
+          coverUrl: data.draft.coverUrl, description: draftFields.description, sources: data.sources ?? {},
+          sourceError: data.sourceError,
         });
         return;
       }
-      if (data.steamError) {
+      if (data.sourceError) {
         setFields(emptyFields());
-        setStep({ kind: "form", steamAppId: appId, name, coverUrl: null, description: null, sources: {}, steamError: true });
+        setStep({
+          kind: "form", steamAppId: ids.steamAppId ?? null, igdbId: ids.igdbId ?? null, name,
+          coverUrl: null, description: null, sources: {}, sourceError: true,
+        });
         return;
       }
       toast.error(data.error ?? "Spiel konnte nicht geladen werden");
@@ -95,7 +108,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
   function startManual() {
     setFields(emptyFields());
-    setStep({ kind: "form", steamAppId: null, name: trimmed.slice(0, MAX_GAME_NAME_LENGTH), coverUrl: null, description: null, sources: {} });
+    setStep({ kind: "form", steamAppId: null, igdbId: null, name: trimmed.slice(0, MAX_GAME_NAME_LENGTH), coverUrl: null, description: null, sources: {} });
   }
 
   async function submit() {
@@ -106,7 +119,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ steamAppId: step.steamAppId, name: step.name, fields }),
+        body: JSON.stringify({ steamAppId: step.steamAppId, igdbId: step.igdbId, name: step.name, fields }),
       });
       const data = await res.json() as { slug?: string; status?: string; error?: string };
       if (res.status === 409 && data.slug) {
@@ -183,7 +196,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                   <span className="text-[11px] text-gray-500 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
                 </Link>
               ) : (
-                <button key={s.appId} type="button" onClick={() => pickSteam(s.appId, s.name)}
+                <button key={s.appId} type="button" onClick={() => pick({ steamAppId: s.appId }, s.name)}
                   className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
@@ -194,14 +207,48 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
             </div>
           )}
 
-          {result && result.steamError && (
-            <p className="text-xs text-amber-300/90">Steam ist gerade nicht erreichbar — du kannst das Spiel trotzdem von Hand eintragen.</p>
+          {result && result.igdb.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Weitere Treffer <span className="normal-case tracking-normal font-normal">(Konsole, Handy, andere Launcher)</span></p>
+              {result.igdb.map(g => {
+                const sub = [g.year, g.platforms.map(p => labelOf(GAME_PLATFORMS, p)).filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+                const inner = (
+                  <>
+                    <GameCover game={g.name} coverUrl={g.thumbUrl} className="w-14 h-8" rounded="rounded-md" fallbackVariant="plain" imgClassName="w-full h-full object-cover" />
+                    <span className="flex-1 min-w-0">
+                      <span className={`block text-sm truncate ${g.existingSlug ? "text-gray-300" : "text-white"}`}>{g.name}</span>
+                      {sub && <span className="block text-[11px] text-gray-500 truncate">{sub}</span>}
+                    </span>
+                  </>
+                );
+                return g.existingSlug ? (
+                  <Link key={g.igdbId} href={`/spiele/${g.existingSlug}`} onClick={onClose}
+                    className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] opacity-70 hover:opacity-100 transition-opacity">
+                    {inner}
+                    <span className="text-[11px] text-gray-500 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
+                  </Link>
+                ) : (
+                  <button key={g.igdbId} type="button" onClick={() => pick({ igdbId: g.igdbId }, g.name)}
+                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
+                    {inner}
+                    <Plus className="w-4 h-4 text-teal-400 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {result && result.steamError && result.igdbError && (
+            <p className="text-xs text-amber-300/90">Steam und IGDB sind gerade nicht erreichbar — du kannst das Spiel trotzdem von Hand eintragen.</p>
+          )}
+          {result && result.steamError && !result.igdbError && (
+            <p className="text-xs text-amber-300/90">Steam ist gerade nicht erreichbar — Treffer kommen nur aus IGDB.</p>
           )}
 
           {result && (
             <button type="button" onClick={startManual}
               className="w-full text-left rounded-xl px-3 py-2.5 border border-dashed border-white/10 hover:border-white/25 text-sm text-gray-400 hover:text-white transition-colors">
-              {result.steam.length === 0 && result.local.length === 0 && !result.steamError && <span className="block text-xs text-gray-500 mb-0.5">Nichts gefunden.</span>}
+              {result.steam.length === 0 && result.igdb.length === 0 && result.local.length === 0 && !result.steamError && <span className="block text-xs text-gray-500 mb-0.5">Nichts gefunden.</span>}
               „{trimmed}“ ohne Steam eintragen <span className="text-gray-600">(z.B. Konsolen-, Handy- oder Brettspiele)</span>
             </button>
           )}
@@ -211,7 +258,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
       {step.kind === "loading" && (
         <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-400">
           <Loader2 className="w-6 h-6 animate-spin text-teal-400" />
-          Hole Infos zu „{step.name}“ von Steam …
+          Hole Infos zu „{step.name}“ …
         </div>
       )}
 
@@ -233,7 +280,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
           <div className="flex items-start gap-3">
             <GameCover game={step.name} coverUrl={step.coverUrl} className="w-28 h-16" rounded="rounded-lg" fallbackVariant="plain" />
             <div className="flex-1 min-w-0">
-              {step.steamAppId ? (
+              {step.steamAppId || step.igdbId ? (
                 <p className="font-semibold text-white leading-tight">{step.name}</p>
               ) : (
                 <input
@@ -245,19 +292,19 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                 />
               )}
               {step.description && <p className="text-xs text-gray-400 mt-1 line-clamp-3">{step.description}</p>}
-              {step.steamAppId && !step.steamError && (
-                <p className="text-[11px] text-sky-300/80 mt-1.5">Vorausgefüllt mit Steam-Daten — bitte nur kurz prüfen und ergänzen.</p>
+              {(step.steamAppId || step.igdbId) && Object.keys(step.sources).length > 0 && (
+                <p className="text-[11px] text-sky-300/80 mt-1.5">Automatisch vorausgefüllt — bitte nur kurz prüfen und ergänzen.</p>
               )}
-              {step.steamError && (
-                <p className="text-[11px] text-amber-300/90 mt-1.5">Steam ist gerade nicht erreichbar. Cover und Beschreibung holt das Team später nach.</p>
+              {step.sourceError && Object.keys(step.sources).length === 0 && (
+                <p className="text-[11px] text-amber-300/90 mt-1.5">Die Spieldaten sind gerade nicht erreichbar. Cover und Angaben holt das Team später nach.</p>
               )}
-              {!step.steamAppId && (
-                <p className="text-[11px] text-gray-500 mt-1.5">Ohne Steam-Treffer schaut das Team kurz drüber, bevor das Spiel erscheint.</p>
+              {!step.steamAppId && !step.igdbId && (
+                <p className="text-[11px] text-gray-500 mt-1.5">Ohne Treffer schaut das Team kurz drüber, bevor das Spiel erscheint.</p>
               )}
             </div>
           </div>
 
-          <GameFieldsForm value={fields} onChange={setFields} sources={step.sources} showDescription={!step.steamAppId} />
+          <GameFieldsForm value={fields} onChange={setFields} sources={step.sources} showDescription={!step.description} />
 
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="ghost" onClick={back} icon={<ArrowLeft className="w-4 h-4" />}>Zurück</Button>

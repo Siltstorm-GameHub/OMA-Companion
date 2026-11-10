@@ -2,7 +2,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { gameNameKey, gameSlug, uniqueGameSlug } from "./slug";
 import { averageRating, formatRating, isValidRating, weightedRating } from "./rating";
-import { computeFieldSources, emptyFields, mergeSteamFields, parseFieldSources, sanitizeGameFields } from "./draft";
+import { combineDrafts, computeFieldSources, emptyFields, mergeAutoFields, parseFieldSources, sanitizeGameFields } from "./draft";
+import { rankForGroup } from "./group";
+import { applicableFills, formatFieldValue, missingFields } from "./edits";
+import { igdbString, parseIgdbGame, steamAppIdFromUrls } from "./igdb";
 import { cleanSteamText, parseSteamAppData } from "./steam";
 import { EMPTY_FILTERS, filterGames, fitsPlayerCount, sortGames, type GameListItem } from "./filter";
 import { formatPlayers } from "./options";
@@ -73,7 +76,7 @@ describe("fieldSources", () => {
   });
   test("Steam-Abgleich überschreibt keine Menschen-Angaben", () => {
     const current = { ...emptyFields(), modes: ["pvp" as const], genres: ["shooter" as const] };
-    const { fields, sources } = mergeSteamFields(current, { modes: "user", genres: "steam" }, steam);
+    const { fields, sources } = mergeAutoFields(current, { modes: "user", genres: "steam" }, steam);
     assert.deepEqual(fields.modes, ["pvp"]);
     assert.deepEqual(fields.genres, ["action"]);
     assert.equal(fields.isFree, true);
@@ -82,7 +85,7 @@ describe("fieldSources", () => {
   });
   test("parseFieldSources ist defensiv", () => {
     assert.deepEqual(parseFieldSources(null), {});
-    assert.deepEqual(parseFieldSources({ modes: "user", genres: "x", foo: "steam" }), { modes: "user" });
+    assert.deepEqual(parseFieldSources({ modes: "user", genres: "x", foo: "steam", tags: "igdb" }), { modes: "user", tags: "igdb" });
   });
 });
 
@@ -140,8 +143,8 @@ function item(over: Partial<GameListItem>): GameListItem {
   return {
     id: over.slug ?? "x", slug: "x", name: "X", coverUrl: null, genres: [], tags: [], modes: [], platforms: [],
     crossplay: false, isFree: null, minPlayers: null, maxPlayers: null, sessionLength: null,
-    ratingSum: 0, ratingCount: 0, wantCount: 0, playingCount: 0, createdAt: "2026-01-01T00:00:00.000Z",
-    myRating: null, myWant: false, ...over,
+    ratingSum: 0, ratingCount: 0, wantCount: 0, ownCount: 0, playingCount: 0, createdAt: "2026-01-01T00:00:00.000Z",
+    myRating: null, myWant: false, myOwns: false, ...over,
   };
 }
 
@@ -187,5 +190,152 @@ describe("formatPlayers", () => {
     assert.equal(formatPlayers(2, null), "ab 2 Spielern");
     assert.equal(formatPlayers(1, null), "ab 1 Spieler");
     assert.equal(formatPlayers(null, 100), "bis 100+ Spieler");
+  });
+});
+
+describe("IGDB-Auswertung", () => {
+  test("Valorant-artig: nur PvP, Plattformen, Spieleranzahl aus multiplayer_modes", () => {
+    const d = parseIgdbGame({
+      id: 126459,
+      name: "Valorant",
+      summary: "A 5v5 character-based tactical shooter.",
+      first_release_date: 1590710400, // 2020-05-29
+      artworks: [{ image_id: "ar123" }],
+      cover: { image_id: "co2mvt" },
+      platforms: [{ name: "PC (Microsoft Windows)" }, { name: "PlayStation 5" }, { name: "Xbox Series X|S" }],
+      game_modes: [2],
+      genres: [5, 24],
+      multiplayer_modes: [{ onlinemax: 10, onlinecoopmax: 0 }],
+      websites: [{ url: "https://playvalorant.com" }],
+    });
+    assert.equal(d.igdbId, 126459);
+    assert.equal(d.steamAppId, null);
+    assert.deepEqual(d.modes, ["pvp"]);
+    assert.deepEqual(d.platforms, ["pc", "playstation", "xbox"]);
+    assert.deepEqual(d.genres, ["shooter", "strategy"]);
+    assert.equal(d.minPlayers, 2);
+    assert.equal(d.maxPlayers, 10);
+    assert.equal(d.releaseYear, 2020);
+    assert.equal(d.coverUrl, "https://images.igdb.com/igdb/image/upload/t_screenshot_big/ar123.jpg");
+  });
+
+  test("Koop + Splitscreen + Switch/Handy, Steam-ID aus dem Link", () => {
+    const d = parseIgdbGame({
+      id: 1,
+      name: "Overcooked! 2",
+      cover: { image_id: "c1" },
+      platforms: [{ name: "Nintendo Switch" }, { name: "iOS" }, { name: "Android" }, { name: "Mac" }],
+      game_modes: [1, 2, 3, 4],
+      themes: [27],
+      multiplayer_modes: [{ offlinecoopmax: 4, onlinecoopmax: 4, splitscreen: true }],
+      websites: [{ url: "https://store.steampowered.com/app/728880/Overcooked_2/" }],
+    });
+    assert.deepEqual(d.modes, ["solo", "coop"]);
+    assert.deepEqual(d.platforms, ["switch", "mobile", "pc"]);
+    assert.deepEqual(d.tags, ["couch", "funny"]);
+    assert.equal(d.minPlayers, 1);
+    assert.equal(d.maxPlayers, 4);
+    assert.equal(d.steamAppId, 728880);
+    assert.equal(d.coverUrl, "https://images.igdb.com/igdb/image/upload/t_cover_big/c1.jpg");
+  });
+
+  test("Steam-Link exakt, Abfrage-Strings sicher", () => {
+    assert.equal(steamAppIdFromUrls(["https://x.de", "https://store.steampowered.com/app/7301/"]), 7301);
+    assert.equal(steamAppIdFromUrls([undefined]), null);
+    assert.equal(igdbString('Bad "Game"; fields *;'), '"Bad \\"Game\\"; fields *;"');
+  });
+});
+
+describe("combineDrafts", () => {
+  const base = { name: "X", steamAppId: null, igdbId: null, coverUrl: null, releaseYear: null };
+  const steam = { ...emptyFields(), ...base, name: "Rocket League", steamAppId: 252950, coverUrl: "https://steam/c.jpg",
+    description: "Deutsch", genres: ["sport" as const], modes: ["solo" as const, "pvp" as const], platforms: ["pc" as const],
+    isFree: true, minPlayers: 1 };
+  const igdb = { ...emptyFields(), ...base, name: "Rocket League", igdbId: 11198, coverUrl: "https://igdb/c.jpg",
+    description: "English", genres: ["racing" as const], modes: ["coop" as const, "pvp" as const],
+    platforms: ["pc" as const, "playstation" as const, "switch" as const], tags: ["couch" as const], minPlayers: 1, maxPlayers: 8, crossplay: false };
+
+  test("Steam gewinnt bei Text/Genre/Cover, IGDB liefert Konsolen und Spieleranzahl", () => {
+    const r = combineDrafts(steam, igdb)!;
+    assert.equal(r.draft.description, "Deutsch");
+    assert.deepEqual(r.draft.genres, ["sport"]);
+    assert.equal(r.draft.coverUrl, "https://steam/c.jpg");
+    assert.equal(r.draft.steamAppId, 252950);
+    assert.equal(r.draft.igdbId, 11198);
+    assert.deepEqual(r.draft.modes, ["solo", "coop", "pvp"]);
+    assert.deepEqual(r.draft.platforms, ["pc", "playstation", "switch"]);
+    assert.equal(r.draft.maxPlayers, 8);
+    assert.equal(r.sources.description, "steam");
+    assert.equal(r.sources.platforms, "igdb");
+    assert.equal(r.sources.maxPlayers, "igdb");
+    assert.equal(r.sources.isFree, "steam");
+  });
+
+  test("Nur eine Quelle / keine Quelle", () => {
+    const r = combineDrafts(null, igdb)!;
+    assert.equal(r.draft.name, "Rocket League");
+    assert.equal(r.sources.platforms, "igdb");
+    assert.equal(r.sources.isFree, undefined);
+    assert.equal(combineDrafts(null, null), null);
+  });
+
+  test("computeFieldSources übernimmt die Quelle des Vorschlags", () => {
+    const r = combineDrafts(steam, igdb)!;
+    const final = { ...r.draft, sessionLength: "kurz" as const };
+    const src = computeFieldSources(final, r.draft, r.sources);
+    assert.equal(src.platforms, "igdb");
+    assert.equal(src.genres, "steam");
+    assert.equal(src.sessionLength, "user");
+  });
+});
+
+describe("Gruppen-Finder", () => {
+  const games = [
+    item({ id: "rl", slug: "rl", name: "Rocket League", isFree: true, maxPlayers: 8 }),
+    item({ id: "oc", slug: "oc", name: "Overcooked 2", maxPlayers: 4, modes: ["coop"] }),
+    item({ id: "cs", slug: "cs", name: "CS2", maxPlayers: 10 }),
+    item({ id: "solo", slug: "solo", name: "Solo", modes: ["solo"] }),
+    item({ id: "none", slug: "none", name: "Keiner hat's" }),
+  ];
+  const info = {
+    oc: { owners: ["a", "b", "c"], wanters: ["a"] },
+    cs: { owners: ["a", "b"], wanters: ["c", "x"] },
+  };
+
+  test("kostenlos und von allen besessen → bereit; einem fehlt's → fast", () => {
+    const r = rankForGroup(games, info, ["a", "b", "c"]);
+    assert.deepEqual(r.ready.map(m => m.game.slug), ["oc", "rl"]);
+    assert.deepEqual(r.almost.map(m => m.game.slug), ["cs"]);
+    assert.deepEqual(r.almost[0].missing, ["c"]);
+    assert.deepEqual(r.almost[0].wanters, ["c"]); // "x" ist nicht in der Gruppe
+  });
+
+  test("zu viele Leute → Spiel fällt raus; Solo-Spiele nie für Gruppen", () => {
+    const r = rankForGroup(games, info, ["a", "b", "c", "d", "e"]);
+    assert.ok(!r.ready.some(m => m.game.slug === "oc")); // max. 4
+    assert.ok(![...r.ready, ...r.almost].some(m => m.game.slug === "solo" || m.game.slug === "none"));
+  });
+
+  test("leere Gruppe", () => {
+    assert.deepEqual(rankForGroup(games, info, []), { ready: [], almost: [] });
+  });
+});
+
+describe("Ergänzungen durch Mitglieder", () => {
+  test("nur leere Felder, nie überschreiben", () => {
+    const current = { ...emptyFields(), modes: ["pvp" as const], minPlayers: 2 };
+    assert.deepEqual(missingFields(current), ["maxPlayers", "platforms", "sessionLength", "genres", "isFree"]);
+    const proposed = { ...emptyFields(), modes: ["coop" as const], maxPlayers: 8, platforms: ["pc" as const], isFree: false };
+    assert.deepEqual(applicableFills(current, proposed), { maxPlayers: 8, platforms: ["pc"], isFree: false });
+  });
+  test("Spieleranzahl darf der bekannten nicht widersprechen", () => {
+    const current = { ...emptyFields(), minPlayers: 4 };
+    assert.deepEqual(applicableFills(current, { ...emptyFields(), maxPlayers: 2 }), {});
+  });
+  test("Anzeige", () => {
+    assert.equal(formatFieldValue("modes", ["coop", "pvp"]), "Koop, Gegeneinander");
+    assert.equal(formatFieldValue("isFree", true), "Kostenlos");
+    assert.equal(formatFieldValue("sessionLength", "kurz"), "Kurze Runden (< 20 Min.)");
+    assert.equal(formatFieldValue("maxPlayers", null), "–");
   });
 });

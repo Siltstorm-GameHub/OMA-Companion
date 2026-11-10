@@ -19,6 +19,7 @@ export interface AdminGame {
   name: string;
   status: "APPROVED" | "PENDING" | "HIDDEN";
   steamAppId: number | null;
+  igdbId: number | null;
   coverUrl: string | null;
   fields: GameFields;
   ratingCount: number;
@@ -47,6 +48,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
   const router = useRouter();
   const [name, setName] = useState(game.name);
   const [steamAppId, setSteamAppId] = useState(game.steamAppId?.toString() ?? "");
+  const [igdbId, setIgdbId] = useState(game.igdbId?.toString() ?? "");
   const [fields, setFields] = useState<GameFields>(game.fields);
   const [saving, setSaving] = useState(false);
 
@@ -55,7 +57,11 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
     try {
       await call(`/api/admin/games/${game.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name, steamAppId: steamAppId.trim() === "" ? null : steamAppId.trim(), fields }),
+        body: JSON.stringify({
+          name, fields,
+          steamAppId: steamAppId.trim() === "" ? null : steamAppId.trim(),
+          igdbId: igdbId.trim() === "" ? null : igdbId.trim(),
+        }),
       });
       toast.success("Gespeichert");
       onDone();
@@ -70,7 +76,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
   const input = "bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
   return (
     <div className="border-t border-white/[0.06] p-4 space-y-5 bg-black/20">
-      <div className="grid sm:grid-cols-[1fr_10rem] gap-3">
+      <div className="grid sm:grid-cols-[1fr_9rem_9rem] gap-3">
         <label className="space-y-1">
           <span className="text-xs font-semibold text-gray-300">Name</span>
           <input value={name} onChange={e => setName(e.target.value.slice(0, MAX_GAME_NAME_LENGTH))} className={`${input} w-full`} />
@@ -79,8 +85,12 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
           <span className="text-xs font-semibold text-gray-300">Steam-App-ID</span>
           <input value={steamAppId} onChange={e => setSteamAppId(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="z.B. 252950" className={`${input} w-full`} />
         </label>
+        <label className="space-y-1">
+          <span className="text-xs font-semibold text-gray-300">IGDB-ID</span>
+          <input value={igdbId} onChange={e => setIgdbId(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="z.B. 11198" className={`${input} w-full`} />
+        </label>
       </div>
-      <p className="text-[11px] text-gray-500 -mt-3">Geänderte Steam-ID → Cover und Steam-Angaben werden neu geladen. Was du hier änderst, überschreibt Steam später nicht mehr.</p>
+      <p className="text-[11px] text-gray-500 -mt-3">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
       <GameFieldsForm value={fields} onChange={setFields} showDescription />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
@@ -122,9 +132,9 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
 
   const refresh = (g: AdminGame) => act(g.id, async () => {
     const { outcome } = await call(`/api/admin/games/${g.id}/refresh`, { method: "POST" });
-    if (outcome === "enriched") toast.success("Steam-Daten aktualisiert");
-    else if (outcome === "not_found") toast.info("Bei Steam nichts Passendes gefunden — Steam-ID ggf. von Hand eintragen.");
-    else toast.error("Steam nicht erreichbar");
+    if (outcome === "enriched") toast.success("Angaben aktualisiert");
+    else if (outcome === "not_found") toast.info("Bei Steam/IGDB nichts Passendes gefunden — ID ggf. von Hand eintragen.");
+    else toast.error("Steam/IGDB nicht erreichbar");
   });
 
   async function remove(g: AdminGame) {
@@ -171,11 +181,11 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
         done += r.enriched;
         setEnrichProgress(`${done} ergänzt · ${r.remaining} offen`);
         if (r.remaining === 0 || r.processed === 0 || r.error === r.processed) {
-          if (r.error > 0 && r.error === r.processed) toast.error("Steam antwortet gerade nicht — später nochmal versuchen.");
+          if (r.error > 0 && r.error === r.processed) toast.error("Steam/IGDB antworten gerade nicht — später nochmal versuchen.");
           break;
         }
       }
-      toast.success(`Steam-Abgleich fertig: ${done} Spiele ergänzt`);
+      toast.success(`Abgleich fertig: ${done} Spiele ergänzt`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Abgleich fehlgeschlagen");
     } finally {
@@ -195,12 +205,12 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
           Aus Events & Profilen übernehmen
         </Button>
         <Button variant="outline" onClick={enrichAll} loading={busy === "enrich"} disabled={notEnriched === 0} icon={<RefreshCw className="w-4 h-4" />}>
-          Steam-Daten nachladen{notEnriched > 0 ? ` (${notEnriched} offen)` : ""}
+          Steam/IGDB-Daten nachladen{notEnriched > 0 ? ` (${notEnriched} offen)` : ""}
         </Button>
         {enrichProgress && <span className="text-xs text-gray-400">{enrichProgress}</span>}
         <p className="basis-full text-[11px] text-gray-500">
           Übernehmen sammelt alle Spiele, die schon in Events, Liga-Spieltagen, Gameservern, Lieblingsspielen und Spiele-Ideen stehen.
-          Danach ergänzt der Steam-Abgleich Cover, Beschreibung und Angaben (nur bei eindeutigem Namens-Treffer).
+          Danach ergänzt der Abgleich mit Steam und IGDB Cover, Beschreibung, Konsolen und Spieleranzahl (nur bei eindeutigem Namens-Treffer).
         </p>
       </div>
 
@@ -231,7 +241,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link href={`/spiele/${g.slug}`} className="font-semibold text-sm text-white hover:text-teal-300 truncate">{g.name}</Link>
                     <Badge tone={STATUS_BADGE[g.status].tone}>{STATUS_BADGE[g.status].label}</Badge>
-                    {!g.enriched && g.status !== "HIDDEN" && <Badge tone="info">Steam offen</Badge>}
+                    {!g.enriched && g.status !== "HIDDEN" && <Badge tone="info">Abgleich offen</Badge>}
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5 truncate">
                     {g.steamAppId ? (
@@ -239,6 +249,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                         Steam {g.steamAppId} <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     ) : "ohne Steam"}
+                    {g.igdbId && " · IGDB"}
                     {" · "}{g.ratingCount} Bewertungen · {g.wantCount}× Würde ich zocken
                     {g.addedBy && ` · von ${g.addedBy}`}
                   </p>
@@ -251,7 +262,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                     <Button size="sm" variant="ghost" onClick={() => setStatus(g, "HIDDEN")} disabled={busy === g.id} icon={<EyeOff className="w-3.5 h-3.5" />}>Ausblenden</Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => setEditId(editId === g.id ? null : g.id)} icon={<Pencil className="w-3.5 h-3.5" />}>Bearbeiten</Button>
-                  <Button size="sm" variant="ghost" onClick={() => refresh(g)} disabled={busy === g.id} icon={<RefreshCw className="w-3.5 h-3.5" />} title="Steam-Daten neu laden">Steam</Button>
+                  <Button size="sm" variant="ghost" onClick={() => refresh(g)} disabled={busy === g.id} icon={<RefreshCw className="w-3.5 h-3.5" />} title="Steam-/IGDB-Daten neu laden">Abgleich</Button>
                   <Button size="sm" variant="ghost" onClick={() => { setMergeFor(mergeFor === g.id ? null : g.id); setMergeTarget(""); }} icon={<GitBranch className="w-3.5 h-3.5" />} title="Dublette zusammenführen">Zusammenführen</Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(g)} disabled={busy === g.id} icon={<Trash2 className="w-3.5 h-3.5 text-red-400" />} aria-label="Löschen" />
                 </div>

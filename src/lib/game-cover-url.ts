@@ -1,6 +1,6 @@
 /**
  * Spiel-Cover als Beitragsbild: nur URLs von bekannten Cover-Hosts (Steam, Xbox/Microsoft Store, Battle.net, Epic,
- * Minecraft) sind erlaubt — so lässt sich über diese Felder kein beliebiges externes Bild einbinden.
+ * Minecraft, IGDB) sind erlaubt — so lässt sich über diese Felder kein beliebiges externes Bild einbinden.
  * Client-sicher, kein Prisma.
  */
 
@@ -11,6 +11,7 @@ const EXACT_HOSTS = new Set([
   "cdn2.unrealengine.com",
   "www.minecraft.net",
   "store-images.s-microsoft.com",
+  "images.igdb.com", // Spieleliste: Cover von Spielen ohne Steam (lib/games/igdb.ts)
 ]);
 
 export function isGameCoverUrl(url: unknown): url is string {
