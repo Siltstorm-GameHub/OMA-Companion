@@ -2665,6 +2665,15 @@ model Game {
   maxPlayers    Int?
   sessionLength String? // kurz | mittel | lang | endlos
   releaseYear   Int?
+  // Steam-Preis (Cent, DE-Store) — täglich abgeglichen (lib/games/store-sync.ts)
+  priceCents        Int?
+  priceInitialCents Int?
+  discountPercent   Int       @default(0)
+  priceCurrency     String?
+  priceUpdatedAt    DateTime?
+  saleStartedAt     DateTime? // Beginn des aktuellen Angebots — für "Im Angebot"-Benachrichtigungen
+  // Abos, in denen das Spiel enthalten ist (siehe GAME_SUBSCRIPTIONS). Game Pass wird automatisch abgeglichen.
+  subscriptions     String[]  @default([])
   fieldSources  Json? // { feld: "steam" | "user" }
   enrichedAt    DateTime? // letzter Steam-Abgleich (auch erfolglos) — verhindert Endlos-Wiederholungen
   status        String    @default("APPROVED") // APPROVED | PENDING | HIDDEN

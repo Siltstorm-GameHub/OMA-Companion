@@ -26,6 +26,9 @@ export interface GameListItem {
   ratingCount:   number;
   wantCount:     number;
   ownCount:      number;
+  priceCents:      number | null;
+  discountPercent: number;
+  subscriptions:   string[];
   /** Anzahl Mitglieder mit dem Spiel in "Zockt gerade" (Profil-Lieblingsspiele) */
   playingCount:  number;
   createdAt:     string;
@@ -34,12 +37,13 @@ export interface GameListItem {
   myOwns:        boolean;
 }
 
-export type GameSort = "popular" | "rating" | "new" | "name";
+export type GameSort = "popular" | "rating" | "new" | "sale" | "name";
 
 export const GAME_SORTS: Record<GameSort, string> = {
   popular: "Beliebt",
   rating:  "Bestbewertet",
   new:     "Neu",
+  sale:    "Größter Rabatt",
   name:    "A–Z",
 };
 
@@ -53,16 +57,20 @@ export interface GameFilters {
   freeOnly:      boolean;
   crossplayOnly: boolean;
   mineOnly:      boolean;
+  onSaleOnly:    boolean;
+  /** Mindestens eines dieser Abos (leer = egal) */
+  subscriptions: string[];
 }
 
 export const EMPTY_FILTERS: GameFilters = {
   q: "", players: null, modes: [], genre: null, platforms: [], sessionLength: null,
-  freeOnly: false, crossplayOnly: false, mineOnly: false,
+  freeOnly: false, crossplayOnly: false, mineOnly: false, onSaleOnly: false, subscriptions: [],
 };
 
 export function activeFilterCount(f: GameFilters): number {
   return (f.players !== null ? 1 : 0) + f.modes.length + (f.genre ? 1 : 0) + f.platforms.length
-    + (f.sessionLength ? 1 : 0) + (f.freeOnly ? 1 : 0) + (f.crossplayOnly ? 1 : 0) + (f.mineOnly ? 1 : 0);
+    + (f.sessionLength ? 1 : 0) + (f.freeOnly ? 1 : 0) + (f.crossplayOnly ? 1 : 0) + (f.mineOnly ? 1 : 0)
+    + (f.onSaleOnly ? 1 : 0) + f.subscriptions.length;
 }
 
 /**
@@ -88,6 +96,8 @@ export function filterGames(games: GameListItem[], f: GameFilters): GameListItem
     if (f.freeOnly && g.isFree !== true) return false;
     if (f.crossplayOnly && !g.crossplay) return false;
     if (f.mineOnly && !g.myWant && !g.myOwns && g.myRating === null) return false;
+    if (f.onSaleOnly && g.discountPercent <= 0) return false;
+    if (f.subscriptions.length > 0 && !f.subscriptions.some(s => g.subscriptions.includes(s))) return false;
     return true;
   });
 }
@@ -105,6 +115,7 @@ export function sortGames(games: GameListItem[], sort: GameSort): GameListItem[]
     case "name":   return list.sort(byName);
     case "new":    return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || byName(a, b));
     case "rating": return list.sort((a, b) => byRating(a, b) || b.ratingCount - a.ratingCount || byName(a, b));
+    case "sale":   return list.sort((a, b) => b.discountPercent - a.discountPercent || popularityScore(b) - popularityScore(a) || byName(a, b));
     case "popular":
     default:
       return list.sort((a, b) => popularityScore(b) - popularityScore(a) || byRating(a, b) || byName(a, b));

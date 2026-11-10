@@ -26,12 +26,22 @@ export interface GameFields {
   sessionLength: SessionLength | null;
 }
 
+/** Steam-Preis im DE-Store (Cent) */
+export interface SteamPrice {
+  priceCents:        number;
+  priceInitialCents: number;
+  discountPercent:   number;
+  currency:          string;
+}
+
 export interface GameDraft extends GameFields {
   name:        string;
   steamAppId:  number | null;
   igdbId:      number | null;
   coverUrl:    string | null;
   releaseYear: number | null;
+  /** Nur aus Steam; fehlt bei kostenlosen oder nicht käuflichen Spielen */
+  steamPrice?: SteamPrice | null;
 }
 
 export type AutoSource = "steam" | "igdb";
@@ -184,6 +194,7 @@ export function combineDrafts(steam: GameDraft | null, igdb: GameDraft | null): 
     igdbId: igdb.igdbId ?? steam.igdbId,
     coverUrl: steam.coverUrl ?? igdb.coverUrl,
     releaseYear: steam.releaseYear ?? igdb.releaseYear,
+    steamPrice: steam.steamPrice ?? null,
     description: pick("description"),
     genres: pick("genres"),
     tags: merged("tags", GAME_TAGS),

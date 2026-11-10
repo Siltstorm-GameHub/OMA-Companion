@@ -10,9 +10,9 @@ import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import GameReactionPanel from "./GameReactionPanel";
 import MissingFieldsPanel from "./MissingFieldsPanel";
 import { missingFields } from "@/lib/games/edits";
-import { ArrowLeft, CalendarDays, ChevronRight, ExternalLink, Pencil, Server, Users } from "@/components/icons";
+import { ArrowLeft, CalendarDays, CalendarPlus, ChevronRight, ExternalLink, Pencil, Server, Users } from "@/components/icons";
 import {
-  GAME_GENRES, GAME_MODES, GAME_PLATFORMS, GAME_TAGS, SESSION_LENGTHS, formatPlayers, labelOf,
+  GAME_GENRES, GAME_MODES, GAME_PLATFORMS, GAME_SUBSCRIPTIONS, GAME_TAGS, SESSION_LENGTHS, formatPlayers, formatPrice, labelOf,
 } from "@/lib/games/options";
 
 export const dynamic = "force-dynamic";
@@ -88,15 +88,50 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 {[game.releaseYear, fields.isFree === true ? "Kostenlos" : fields.isFree === false ? "Kostenpflichtig" : null].filter(Boolean).join(" · ")}
               </p>
             </div>
-            <IdeaFromButton
-              label="Event-Idee vorschlagen"
-              prefill={{
-                title: `Event-Idee: ${game.name}`,
-                ...(steamUrl ? { link: steamUrl, linkLabel: "dem Spiel" } : {}),
-                ...(game.coverUrl ? { imageUrl: game.coverUrl } : {}),
-              }}
-            />
+            <div className="flex flex-col items-end gap-1.5">
+              {game.status === "APPROVED" && user && (
+                <Link href={`/admin/events/new?mode=event&game=${encodeURIComponent(game.slug)}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors">
+                  <CalendarPlus className="w-3.5 h-3.5" /> Event anlegen
+                </Link>
+              )}
+              <IdeaFromButton
+                label="Event-Idee vorschlagen"
+                prefill={{
+                  title: `Event-Idee: ${game.name}`,
+                  ...(steamUrl ? { link: steamUrl, linkLabel: "dem Spiel" } : {}),
+                  ...(game.coverUrl ? { imageUrl: game.coverUrl } : {}),
+                }}
+              />
+            </div>
           </div>
+          {(game.priceCents !== null || game.subscriptions.length > 0) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {game.priceCents !== null && steamUrl && (
+                <a href={steamUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-colors">
+                  {game.discountPercent > 0 && (
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-amber-400 text-gray-950">−{game.discountPercent} %</span>
+                  )}
+                  <span className="text-sm font-semibold text-white">{formatPrice(game.priceCents, game.priceCurrency)}</span>
+                  {game.discountPercent > 0 && game.priceInitialCents !== null && (
+                    <span className="text-xs text-gray-500 line-through">{formatPrice(game.priceInitialCents, game.priceCurrency)}</span>
+                  )}
+                  <span className="text-[11px] text-gray-400 inline-flex items-center gap-1">auf Steam <ExternalLink className="w-3 h-3" /></span>
+                </a>
+              )}
+              {game.subscriptions.length > 0 && (
+                <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
+                  Im Abo:
+                  {game.subscriptions.map(s => (
+                    <span key={s} className="px-2 py-0.5 rounded-full bg-lime-400/10 border border-lime-400/25 text-lime-200 text-[11px]">
+                      {labelOf(GAME_SUBSCRIPTIONS, s) ?? s}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+          )}
           {game.aliases.length > 0 && <p className="text-[11px] text-gray-500 -mt-1">Auch bekannt als: {game.aliases.join(", ")}</p>}
           {fields.description && <p className="text-sm text-gray-300 leading-relaxed">{fields.description}</p>}
           {chips.length > 0 && (

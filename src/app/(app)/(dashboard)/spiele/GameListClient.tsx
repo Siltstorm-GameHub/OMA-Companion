@@ -11,9 +11,13 @@ import {
   EMPTY_FILTERS, GAME_SORTS, activeFilterCount, filterGames, sortGames,
   type GameFilters, type GameListItem, type GameSort,
 } from "@/lib/games/filter";
-import { GAME_GENRES, GAME_PLATFORMS, SESSION_LENGTHS, type GameGenre, type GameMode, type GamePlatform } from "@/lib/games/options";
+import {
+  GAME_GENRES, GAME_PLATFORMS, GAME_SUBSCRIPTIONS, SESSION_LENGTHS,
+  type GameGenre, type GameMode, type GamePlatform, type GameSubscription,
+} from "@/lib/games/options";
 
 const PLAYER_CHOICES = [1, 2, 3, 4, 5, 6, 8];
+const ALL_SUBS = Object.keys(GAME_SUBSCRIPTIONS) as GameSubscription[];
 
 function toggle<T>(list: T[], v: T): T[] {
   return list.includes(v) ? list.filter(x => x !== v) : [...list, v];
@@ -37,7 +41,8 @@ export default function GameListClient({
   const visible = useMemo(() => sortGames(filterGames(games, filters), sort), [games, filters, sort]);
   const set = <K extends keyof GameFilters>(key: K, v: GameFilters[K]) => setFilters(f => ({ ...f, [key]: v }));
   const filterCount = activeFilterCount(filters);
-  const moreCount = (filters.genre ? 1 : 0) + filters.platforms.length + (filters.sessionLength ? 1 : 0) + (filters.crossplayOnly ? 1 : 0);
+  const moreCount = (filters.genre ? 1 : 0) + filters.platforms.length + (filters.sessionLength ? 1 : 0) + (filters.crossplayOnly ? 1 : 0)
+    + (filters.subscriptions.length > 0 && filters.subscriptions.length < ALL_SUBS.length ? filters.subscriptions.length : 0);
   const toggleMode = (m: GameMode) => set("modes", toggle(filters.modes, m));
   const pickRandom = () => {
     if (visible.length === 0) return;
@@ -131,6 +136,8 @@ export default function GameListClient({
           <Chip active={filters.modes.includes("coop")} onClick={() => toggleMode("coop")}>Koop</Chip>
           <Chip active={filters.modes.includes("pvp")} onClick={() => toggleMode("pvp")}>Gegeneinander</Chip>
           <Chip active={filters.freeOnly} onClick={() => set("freeOnly", !filters.freeOnly)}>Kostenlos</Chip>
+          <Chip active={filters.onSaleOnly} onClick={() => set("onSaleOnly", !filters.onSaleOnly)}>Im Angebot</Chip>
+          <Chip active={filters.subscriptions.length > 0} onClick={() => set("subscriptions", filters.subscriptions.length > 0 ? [] : [...ALL_SUBS])}>Im Abo</Chip>
           <Chip active={filters.mineOnly} onClick={() => set("mineOnly", !filters.mineOnly)}>Meine</Chip>
           <button type="button" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
@@ -160,6 +167,17 @@ export default function GameListClient({
                   <Chip key={p} active={filters.platforms.includes(p)} onClick={() => set("platforms", toggle(filters.platforms, p))}>{GAME_PLATFORMS[p]}</Chip>
                 ))}
                 <Chip active={filters.crossplayOnly} onClick={() => set("crossplayOnly", !filters.crossplayOnly)}>Crossplay</Chip>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-300">Im Abo enthalten</p>
+              <div className="flex flex-wrap gap-1.5">
+                {ALL_SUBS.map(sub => (
+                  <Chip key={sub} active={filters.subscriptions.includes(sub)}
+                    onClick={() => set("subscriptions", toggle(filters.subscriptions.length === ALL_SUBS.length ? [] : filters.subscriptions, sub))}>
+                    {GAME_SUBSCRIPTIONS[sub]}
+                  </Chip>
+                ))}
               </div>
             </div>
             <div className="space-y-2">

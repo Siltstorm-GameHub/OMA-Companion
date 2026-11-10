@@ -7,7 +7,7 @@
  */
 
 import { legacySteamCoverUrl, resolveSteamCoverUrl } from "@/lib/steam-cover";
-import { emptyFields, type GameDraft, type GameFields } from "./draft";
+import { emptyFields, type GameDraft, type GameFields, type SteamPrice } from "./draft";
 import type { GameGenre, GameMode, GameTag } from "./options";
 
 const UA = { "User-Agent": "OMA-Companion/1.0" };
@@ -60,6 +60,23 @@ export interface SteamAppData {
   categories?: { id: number; description?: string }[];
   genres?: { id: string | number; description?: string }[];
   release_date?: { coming_soon?: boolean; date?: string };
+  price_overview?: SteamPriceOverview;
+}
+
+export interface SteamPriceOverview {
+  currency?: string;
+  initial?: number;
+  final?: number;
+  discount_percent?: number;
+}
+
+/** Steam-Preisangabe auswerten (null = kein Kaufpreis, z.B. kostenlos) */
+export function parseSteamPrice(p: SteamPriceOverview | undefined | null): SteamPrice | null {
+  if (!p || typeof p.final !== "number" || !Number.isFinite(p.final)) return null;
+  const final = Math.max(0, Math.round(p.final));
+  const initial = typeof p.initial === "number" && p.initial >= final ? Math.round(p.initial) : final;
+  const discount = typeof p.discount_percent === "number" ? Math.min(100, Math.max(0, Math.round(p.discount_percent))) : 0;
+  return { priceCents: final, priceInitialCents: initial, discountPercent: discount, currency: p.currency || "EUR" };
 }
 
 // Steam-Kategorie-IDs (stabil, unabhängig von der Sprache)
@@ -150,7 +167,42 @@ export function parseSteamAppData(appId: number, data: SteamAppData): GameDraft 
     igdbId: null,
     coverUrl: typeof data.header_image === "string" && data.header_image.startsWith("https://") ? data.header_image : null,
     releaseYear: yearMatch ? Number(yearMatch[0]) : null,
+    steamPrice: parseSteamPrice(data.price_overview),
   };
+}
+
+/**
+ * Preise vieler Spiele auf einmal (Steam erlaubt mehrere App-IDs nur mit filters=price_overview).
+ * Ergebnis: App-ID → Preis bzw. null (kein Kaufpreis). Fehlende App-IDs = Steam kennt sie nicht.
+ * Wirft, wenn Steam gar nicht antwortet.
+ */
+export async function fetchSteamPrices(appIds: number[]): Promise<Map<number, SteamPrice | null>> {
+  const out = new Map<number, SteamPrice | null>();
+  const ids = [...new Set(appIds.filter(id => Number.isInteger(id) && id > 0))];
+  let failures = 0;
+  let batches = 0;
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    batches++;
+    try {
+      const res = await fetch(
+        `https://store.steampowered.com/api/appdetails?appids=${batch.join(",")}&filters=price_overview&cc=DE`,
+        { headers: UA, signal: AbortSignal.timeout(8000), cache: "no-store" },
+      );
+      if (!res.ok) throw new Error(`Steam prices ${res.status}`);
+      const json = await res.json() as Record<string, { success: boolean; data?: { price_overview?: SteamPriceOverview } | [] }>;
+      for (const id of batch) {
+        const entry = json?.[String(id)];
+        if (!entry?.success) continue;
+        out.set(id, Array.isArray(entry.data) ? null : parseSteamPrice(entry.data?.price_overview));
+      }
+    } catch (err) {
+      failures++;
+      console.error("[games] Steam-Preise", err);
+    }
+  }
+  if (batches > 0 && failures === batches) throw new Error("Steam-Preise nicht erreichbar");
+  return out;
 }
 
 /**

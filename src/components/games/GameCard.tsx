@@ -3,7 +3,7 @@ import GameCover from "@/components/GameCover";
 import { StarDisplay } from "./StarRating";
 import { Check, Heart, Users } from "@/components/icons";
 import type { GameListItem } from "@/lib/games/filter";
-import { GAME_MODES, formatPlayers } from "@/lib/games/options";
+import { GAME_MODES, formatPlayers, subscriptionBadges } from "@/lib/games/options";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
 
 export default function GameCard({ game }: { game: GameListItem }) {
@@ -28,21 +28,35 @@ export default function GameCard({ game }: { game: GameListItem }) {
           fallbackVariant="plain"
           imgClassName="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
-        <div className="absolute top-2 left-2 flex gap-1">
+        {/* Store: kostenlos / Rabatt / Abo */}
+        <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
           {game.isFree && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white">Kostenlos</span>
           )}
-          {game.myWant && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
-              <Heart className="w-2.5 h-2.5" /> Würde ich zocken
+          {game.discountPercent > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-400 text-gray-950" title="Gerade im Angebot auf Steam">
+              −{game.discountPercent} %
             </span>
           )}
-          {game.myOwns && !game.myWant && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/90 text-white flex items-center gap-1">
-              <Check className="w-2.5 h-2.5" /> Hab ich
-            </span>
-          )}
+          {subscriptionBadges(game.subscriptions).map(b => (
+            <span key={b} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gray-950/80 text-lime-300 border border-lime-400/30">{b}</span>
+          ))}
         </div>
+        {/* Eigene Markierung */}
+        {(game.myWant || game.myOwns) && (
+          <div className="absolute bottom-2 left-2 flex gap-1">
+            {game.myWant && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
+                <Heart className="w-2.5 h-2.5" /> Würde ich zocken
+              </span>
+            )}
+            {game.myOwns && !game.myWant && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/90 text-white flex items-center gap-1">
+                <Check className="w-2.5 h-2.5" /> Hab ich
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="p-3 flex-1 flex flex-col gap-1.5">
         <p className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-teal-200 transition-colors">{game.name}</p>

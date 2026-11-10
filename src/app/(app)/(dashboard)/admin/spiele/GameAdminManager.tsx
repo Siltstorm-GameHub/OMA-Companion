@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import GameCover from "@/components/GameCover";
-import GameFieldsForm from "@/components/games/GameFieldsForm";
+import GameFieldsForm, { Chip } from "@/components/games/GameFieldsForm";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import { Check, Download, ExternalLink, Eye, EyeOff, GitBranch, Pencil, RefreshCw, Search, Trash2 } from "@/components/icons";
+import { Check, Download, ExternalLink, Eye, EyeOff, GitBranch, Pencil, RefreshCw, Search, Tag, Trash2 } from "@/components/icons";
 import type { GameFields } from "@/lib/games/draft";
-import { MAX_GAME_NAME_LENGTH } from "@/lib/games/options";
+import { AUTO_SUBSCRIPTIONS, GAME_SUBSCRIPTIONS, MAX_GAME_NAME_LENGTH, type GameSubscription } from "@/lib/games/options";
 
 export interface AdminGame {
   id: string;
@@ -21,6 +21,7 @@ export interface AdminGame {
   steamAppId: number | null;
   igdbId: number | null;
   aliases: string[];
+  subscriptions: string[];
   coverUrl: string | null;
   fields: GameFields;
   ratingCount: number;
@@ -51,6 +52,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
   const [steamAppId, setSteamAppId] = useState(game.steamAppId?.toString() ?? "");
   const [igdbId, setIgdbId] = useState(game.igdbId?.toString() ?? "");
   const [aliases, setAliases] = useState(game.aliases.join(", "));
+  const [subs, setSubs] = useState<string[]>(game.subscriptions);
   const [fields, setFields] = useState<GameFields>(game.fields);
   const [saving, setSaving] = useState(false);
 
@@ -60,7 +62,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
       await call(`/api/admin/games/${game.id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          name, fields, aliases,
+          name, fields, aliases, subscriptions: subs,
           steamAppId: steamAppId.trim() === "" ? null : steamAppId.trim(),
           igdbId: igdbId.trim() === "" ? null : igdbId.trim(),
         }),
@@ -97,6 +99,17 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
         <input value={aliases} onChange={e => setAliases(e.target.value)} placeholder="z.B. CS2, CS:GO 2" className={`${input} w-full`} />
         <span className="block text-[11px] text-gray-500">Komma-getrennt. Events, Gameserver und Profile mit diesen Namen werden dem Spiel zugeordnet.</span>
       </label>
+      <div className="space-y-1.5">
+        <span className="text-xs font-semibold text-gray-300">Im Abo enthalten</span>
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(GAME_SUBSCRIPTIONS) as GameSubscription[]).map(k => (
+            <Chip key={k} active={subs.includes(k)} onClick={() => setSubs(x => (x.includes(k) ? x.filter(y => y !== k) : [...x, k]))}>
+              {GAME_SUBSCRIPTIONS[k]}{AUTO_SUBSCRIPTIONS.includes(k) ? " (auto)" : ""}
+            </Chip>
+          ))}
+        </div>
+        <span className="block text-[11px] text-gray-500">„auto“ = wird täglich mit dem Game-Pass-Katalog abgeglichen (über Name und andere Schreibweisen). Die übrigen pflegt ihr hier.</span>
+      </div>
       <p className="text-[11px] text-gray-500">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
       <GameFieldsForm value={fields} onChange={setFields} showDescription />
       <div className="flex justify-end gap-2">
@@ -178,6 +191,27 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
     }
   }
 
+  async function syncStores() {
+    setBusy("stores");
+    try {
+      const r = await call("/api/admin/games/sync-stores", { method: "POST" }) as {
+        prices: { checked?: number; newSales?: number; error?: string };
+        gamePass: { matched?: number; changed?: number; error?: string };
+      };
+      const parts = [
+        r.prices.error ? "Steam-Preise: nicht erreichbar" : `${r.prices.checked} Preise geprüft, ${r.prices.newSales} neue Angebote`,
+        r.gamePass.error ? "Game Pass: nicht erreichbar" : `${r.gamePass.matched} Spiele im Game Pass`,
+      ];
+      if (r.prices.error && r.gamePass.error) toast.error(parts.join(" · "));
+      else toast.success(parts.join(" · "));
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Abgleich fehlgeschlagen");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function enrichAll() {
     setBusy("enrich");
     let done = 0;
@@ -213,6 +247,9 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
         </Button>
         <Button variant="outline" onClick={enrichAll} loading={busy === "enrich"} disabled={notEnriched === 0} icon={<RefreshCw className="w-4 h-4" />}>
           Steam/IGDB-Daten nachladen{notEnriched > 0 ? ` (${notEnriched} offen)` : ""}
+        </Button>
+        <Button variant="outline" onClick={syncStores} loading={busy === "stores"} icon={<Tag className="w-4 h-4" />}>
+          Preise & Game Pass abgleichen
         </Button>
         {enrichProgress && <span className="text-xs text-gray-400">{enrichProgress}</span>}
         <p className="basis-full text-[11px] text-gray-500">

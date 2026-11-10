@@ -10,6 +10,7 @@ const DEFAULT_PREFS = {
   clip:      true,
   admin:     true,
   server:    true,
+  game:      true,
   discordDm: true,
 };
 

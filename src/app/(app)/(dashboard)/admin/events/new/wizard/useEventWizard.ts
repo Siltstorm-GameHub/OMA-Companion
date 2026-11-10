@@ -34,7 +34,11 @@ export type EventWizardProps = {
   seasonPrefill?: SeasonPrefill;
   /** "Event duplizieren": Einstellungen eines bestehenden Events als Vorbelegung */
   eventTemplate?: EventTemplate;
+  /** "Event mit diesem Spiel anlegen" aus der Spieleliste: Spiel (+ Genre) vorausgefüllt */
+  gamePrefill?: GamePrefill;
 };
+
+export type GamePrefill = { name: string; slug: string; genre: EventGenre | null };
 
 export function useEventWizard({
   series,
@@ -45,6 +49,7 @@ export function useEventWizard({
   initialMode = "select",
   seasonPrefill,
   eventTemplate,
+  gamePrefill,
 }: EventWizardProps) {
   const tpl = eventTemplate;
   const router = useRouter();
@@ -62,8 +67,8 @@ export function useEventWizard({
   const [startAt, setStartAt]         = useState(tpl?.startAt ?? "");
   // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar (Event.endAt).
   const [endAt, setEndAt]             = useState(tpl?.endAt ?? "");
-  const [game, setGame]               = useState(tpl?.game ?? "");
-  const [genre, setGenre]             = useState<EventGenre | null>(tpl?.genre ?? null);
+  const [game, setGame]               = useState(tpl?.game ?? gamePrefill?.name ?? "");
+  const [genre, setGenre]             = useState<EventGenre | null>(tpl?.genre ?? gamePrefill?.genre ?? null);
   const [maxPlayers, setMaxPlayers]   = useState(tpl?.maxPlayers ?? "");
   const [description, setDescription] = useState(tpl?.description ?? "");
   // Eigenes Cover (Upload, URL oder Vorlage aus EVENT_COVER_PRESETS) — leer = Spiel-Cover bzw. Standard-Motiv
@@ -213,7 +218,7 @@ export function useEventWizard({
   // ── Entwurf (lokal im Browser) ──────────────────────────────────────────────
   // Alle Eingaben werden laufend gespeichert und beim nächsten Öffnen zur Wiederherstellung
   // angeboten (nicht bei Vorlage/neuer Saison — dort ist die Vorbelegung gewollt).
-  const draftEnabled = !eventTemplate && !seasonPrefill;
+  const draftEnabled = !eventTemplate && !seasonPrefill && !gamePrefill;
   const initialDraft = useInitialDraft();
   const [draftHandled, setDraftHandled] = useState(false);
   const pendingDraft = draftEnabled && !draftHandled && initialDraft && initialDraft.values.wizardMode !== "select" ? initialDraft : null;
@@ -622,6 +627,7 @@ export function useEventWizard({
 
   return {
     eventTemplate,
+    gamePrefill,
     publishMode, setPublishMode, publishAt, setPublishAt,
     playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw,
     checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes,

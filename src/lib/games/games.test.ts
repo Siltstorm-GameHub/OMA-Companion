@@ -6,6 +6,11 @@ import { combineDrafts, computeFieldSources, emptyFields, mergeAutoFields, parse
 import { rankForGroup } from "./group";
 import { matchesGameName, sanitizeAliases } from "./match";
 import { applicableFills, formatFieldValue, missingFields } from "./edits";
+import { cleanStoreTitle } from "./gamepass";
+import { eventGenreForGame } from "./event-genre";
+import { nextPriceState, nextSubscriptions } from "./store-sync";
+import { parseSteamPrice } from "./steam";
+import { formatPrice, subscriptionBadges, type GameSubscription } from "./options";
 import { igdbString, parseIgdbGame, steamAppIdFromUrls } from "./igdb";
 import { cleanSteamText, parseSteamAppData } from "./steam";
 import { EMPTY_FILTERS, filterGames, fitsPlayerCount, sortGames, type GameListItem } from "./filter";
@@ -145,6 +150,7 @@ function item(over: Partial<GameListItem>): GameListItem {
     id: over.slug ?? "x", slug: "x", name: "X", coverUrl: null, genres: [], tags: [], modes: [], platforms: [],
     crossplay: false, isFree: null, minPlayers: null, maxPlayers: null, sessionLength: null,
     ratingSum: 0, ratingCount: 0, wantCount: 0, ownCount: 0, playingCount: 0, createdAt: "2026-01-01T00:00:00.000Z",
+    priceCents: null, discountPercent: 0, subscriptions: [],
     myRating: null, myWant: false, myOwns: false, ...over,
   };
 }
@@ -354,5 +360,77 @@ describe("Abgleich mit anderen Schreibweisen", () => {
     assert.deepEqual(sanitizeAliases(" CS2 , cs 2, Counter Strike 2,,  CSGO2 ", "Counter-Strike 2"), ["CS2", "CSGO2"]);
     assert.deepEqual(sanitizeAliases(["A", 3, "a"], "B"), ["A"]);
     assert.equal(sanitizeAliases(Array.from({ length: 20 }, (_, i) => `Alias ${i}`), "X").length, 10);
+  });
+});
+
+describe("Preise & Rabatte", () => {
+  test("parseSteamPrice", () => {
+    assert.deepEqual(parseSteamPrice({ currency: "EUR", initial: 1999, final: 999, discount_percent: 50 }),
+      { priceCents: 999, priceInitialCents: 1999, discountPercent: 50, currency: "EUR" });
+    assert.equal(parseSteamPrice(undefined), null);
+    assert.equal(parseSteamPrice({ currency: "EUR" }), null);
+    // kaputte Angaben werden geglättet
+    assert.deepEqual(parseSteamPrice({ final: 500, initial: 100, discount_percent: 150 }),
+      { priceCents: 500, priceInitialCents: 500, discountPercent: 100, currency: "EUR" });
+  });
+
+  test("nextPriceState erkennt Beginn und Ende eines Angebots", () => {
+    const now = new Date("2026-11-10T05:20:00Z");
+    const sale = { priceCents: 999, priceInitialCents: 1999, discountPercent: 50, currency: "EUR" };
+    const started = nextPriceState({ discountPercent: 0, saleStartedAt: null }, sale, now);
+    assert.equal(started.saleStarted, true);
+    assert.equal(started.saleStartedAt, now);
+    const later = new Date("2026-11-11T05:20:00Z");
+    const running = nextPriceState({ discountPercent: 50, saleStartedAt: now }, { ...sale, discountPercent: 60 }, later);
+    assert.equal(running.saleStarted, false); // kein zweiter Hinweis, nur weil der Rabatt steigt
+    assert.equal(running.saleStartedAt, now);
+    const ended = nextPriceState({ discountPercent: 60, saleStartedAt: now }, { ...sale, discountPercent: 0, priceCents: 1999 }, later);
+    assert.equal(ended.saleStarted, false);
+    assert.equal(ended.saleStartedAt, null);
+    assert.equal(nextPriceState({ discountPercent: 0, saleStartedAt: null }, null, now).priceCents, null);
+  });
+
+  test("Anzeige", () => {
+    assert.equal(formatPrice(1999, "EUR")?.replace(/\s/g, " "), "19,99 €");
+    assert.equal(formatPrice(null), null);
+  });
+});
+
+describe("Abos", () => {
+  test("cleanStoreTitle kürzt Editionen und Plattform-Zusätze", () => {
+    assert.equal(cleanStoreTitle("Forza Horizon 5 Standard Edition"), "Forza Horizon 5");
+    assert.equal(cleanStoreTitle("Minecraft: Java & Bedrock Edition for PC"), "Minecraft");
+    assert.equal(cleanStoreTitle("Sea of Thieves: 2024 Edition"), "Sea of Thieves: 2024 Edition");
+    assert.equal(cleanStoreTitle("Halo Infinite (Game Preview)"), "Halo Infinite");
+    assert.equal(cleanStoreTitle("Overcooked! 2 – Xbox Series X|S"), "Overcooked! 2");
+    assert.equal(cleanStoreTitle("Palworld™ (Game Preview)"), "Palworld");
+  });
+
+  test("nextSubscriptions ersetzt nur automatisch gepflegte und erfolgreich geladene Abos", () => {
+    const loaded = new Set<GameSubscription>(["gamepass_pc", "gamepass_xbox"]);
+    assert.deepEqual(nextSubscriptions(["ea_play", "gamepass_pc"], new Set(["gamepass_xbox"]), loaded), ["gamepass_xbox", "ea_play"]);
+    // Konsolen-Katalog nicht geladen → bisherige Konsolen-Angabe bleibt
+    assert.deepEqual(nextSubscriptions(["gamepass_xbox"], new Set(), new Set(["gamepass_pc"])), ["gamepass_xbox"]);
+    assert.deepEqual(nextSubscriptions(["quatsch"], new Set(), loaded), []);
+  });
+
+  test("Badges und Filter", () => {
+    assert.deepEqual(subscriptionBadges(["gamepass_pc", "gamepass_xbox", "ea_play"]), ["Game Pass", "EA Play"]);
+    const games = [
+      item({ slug: "a", discountPercent: 30, subscriptions: [] }),
+      item({ slug: "b", subscriptions: ["gamepass_pc"] }),
+      item({ slug: "c" }),
+    ];
+    assert.deepEqual(filterGames(games, { ...EMPTY_FILTERS, onSaleOnly: true }).map(g => g.slug), ["a"]);
+    assert.deepEqual(filterGames(games, { ...EMPTY_FILTERS, subscriptions: ["gamepass_pc", "ea_play"] }).map(g => g.slug), ["b"]);
+    assert.deepEqual(sortGames(games, "sale").map(g => g.slug)[0], "a");
+  });
+});
+
+describe("Event aus Spiel", () => {
+  test("Genre-Zuordnung: erstes passendes Genre gewinnt", () => {
+    assert.equal(eventGenreForGame(["action", "racing", "sport"]), "racing");
+    assert.equal(eventGenreForGame(["fighting"]), "beat_em_up");
+    assert.equal(eventGenreForGame(["rpg", "adventure"]), null);
   });
 });

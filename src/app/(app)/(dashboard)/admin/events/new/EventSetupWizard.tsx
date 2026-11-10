@@ -17,7 +17,7 @@ import StepSeriesSummary from "./wizard/steps/StepSeriesSummary";
 
 export default function EventSetupWizard(props: EventWizardProps) {
   const w = useEventWizard(props);
-  const { seasonPrefill, eventTemplate, pendingDraft, restoreDraft, discardDraft, router, wizardMode, setWizardMode, step, setStep, loading, isEventMode, isSeriesMode, showsTournamentStep, canProceed, handleSubmitEvent, handleSubmitSeries } = w;
+  const { seasonPrefill, eventTemplate, gamePrefill, pendingDraft, restoreDraft, discardDraft, router, wizardMode, setWizardMode, step, setStep, loading, isEventMode, isSeriesMode, showsTournamentStep, canProceed, handleSubmitEvent, handleSubmitSeries } = w;
 
   const eventStepComponents = showsTournamentStep
     ? [StepCategory, StepEventData, StepTournament, StepRewards, StepEventSummary]
@@ -129,6 +129,12 @@ export default function EventSetupWizard(props: EventWizardProps) {
         <p className="text-xs text-gray-500 -mt-3 mb-6">
           Kopie von „{eventTemplate.sourceTitle}“ — Einstellungen und Belohnungen sind übernommen, Teilnehmer
           und Ergebnisse nicht. Datum ist eine Woche später vorgeschlagen, bitte prüfen.
+        </p>
+      )}
+
+      {gamePrefill && !eventTemplate && (
+        <p className="text-xs text-gray-500 -mt-3 mb-6">
+          Spiel aus der Spieleliste übernommen: <span className="text-gray-300">{gamePrefill.name}</span>. Titel, Termin und Format legst du jetzt fest.
         </p>
       )}
 

@@ -11,14 +11,14 @@ import { parseFavoriteGames, type FavoriteGame } from "@/lib/favorite-games";
 import { gameKeys, matchesGameName, sanitizeAliases } from "./match";
 import {
   EDITABLE_FIELDS, cleanGameName, computeFieldSources, mergeAutoFields, parseFieldSources, sanitizeGameFields,
-  type FieldSources, type GameFields,
+  type FieldSources, type GameFields, type SteamPrice,
 } from "./draft";
 import { igdbConfigured, searchIgdbGames } from "./igdb";
 import { fetchCombinedDraft } from "./sources";
 import type { GroupGameInfo } from "./group";
 import { DAILY_FILL_LIMIT, FILLABLE_FIELDS, applicableFills, type FillableField } from "./edits";
 import type { GameListItem } from "./filter";
-import type { GameGenre, GameMode, GamePlatform, GameStatus, GameTag, SessionLength } from "./options";
+import { GAME_SUBSCRIPTIONS, pickKeys, type GameGenre, type GameMode, type GamePlatform, type GameStatus, type GameTag, type SessionLength } from "./options";
 import { gameNameKey, uniqueGameSlug } from "./slug";
 import { searchSteamGames } from "./steam";
 
@@ -87,6 +87,20 @@ async function freeIds(gameId: string | null, steamAppId: number | null, igdbId:
   };
 }
 
+/** Steam-Preis für die DB (Angebotsbeginn bleibt erhalten, Hinweise verschickt nur der tägliche Abgleich) */
+function priceData(price: SteamPrice | null | undefined, prev?: Pick<Game, "discountPercent" | "saleStartedAt">) {
+  if (price === undefined) return {};
+  const onSale = (price?.discountPercent ?? 0) > 0;
+  return {
+    priceCents: price?.priceCents ?? null,
+    priceInitialCents: price?.priceInitialCents ?? null,
+    discountPercent: price?.discountPercent ?? 0,
+    priceCurrency: price?.currency ?? null,
+    priceUpdatedAt: new Date(),
+    saleStartedAt: onSale ? (prev?.discountPercent ? prev.saleStartedAt : new Date()) : null,
+  };
+}
+
 const positiveInt = (v: unknown): number | null =>
   typeof v === "number" && Number.isInteger(v) && v > 0 && v < 2_000_000_000 ? v : null;
 
@@ -126,6 +140,7 @@ export async function listApprovedGames(userId: string | undefined): Promise<Gam
       id: g.id, slug: g.slug, name: g.name, coverUrl: g.coverUrl,
       ...pickListFields(gameFieldsOf(g)),
       ratingSum: g.ratingSum, ratingCount: g.ratingCount, wantCount: g.wantCount, ownCount: g.ownCount,
+      priceCents: g.priceCents, discountPercent: g.discountPercent, subscriptions: g.subscriptions,
       playingCount: holders.filter(h => h.games.some(f => favoriteMatchesGame(f, g))).length,
       createdAt: g.createdAt.toISOString(),
       myRating: my?.rating ?? null,
@@ -317,6 +332,7 @@ export async function createGame(
         igdbId,
         coverUrl: auto?.draft.coverUrl ?? null,
         releaseYear: auto?.draft.releaseYear ?? null,
+        ...priceData(auto?.draft.steamPrice),
         ...fields,
         fieldSources: sourcesJson(computeFieldSources(fields, auto?.draft ?? null, auto?.sources)),
         enrichedAt: auto ? new Date() : null,
@@ -439,6 +455,7 @@ export async function enrichGame(game: Game): Promise<EnrichOutcome> {
         igdbId: ids.igdbId ?? game.igdbId,
         coverUrl: draft.coverUrl ?? game.coverUrl,
         releaseYear: draft.releaseYear ?? game.releaseYear,
+        ...(draft.steamPrice !== undefined && ids.steamAppId ? priceData(draft.steamPrice, game) : {}),
         ...merged.fields,
         fieldSources: sourcesJson(merged.sources),
         enrichedAt: new Date(),
@@ -517,7 +534,10 @@ export async function importCommunityGames(): Promise<{ created: number; candida
 
 export async function updateGameAdmin(
   id: string,
-  input: { name?: unknown; status?: unknown; steamAppId?: unknown; igdbId?: unknown; aliases?: unknown; fields?: unknown },
+  input: {
+    name?: unknown; status?: unknown; steamAppId?: unknown; igdbId?: unknown; aliases?: unknown;
+    subscriptions?: unknown; fields?: unknown;
+  },
 ): Promise<Result<{ slug: string }>> {
   const game = await prisma.game.findUnique({ where: { id } });
   if (!game) return { ok: false, status: 404, error: "Spiel nicht gefunden" };
@@ -545,6 +565,10 @@ export async function updateGameAdmin(
     });
     if (clash) return { ok: false, status: 409, error: `„${clash.name}“ ist ein eigenes Spiel — lieber zusammenführen.` };
     data.aliases = aliases;
+  }
+
+  if (input.subscriptions !== undefined) {
+    data.subscriptions = pickKeys(GAME_SUBSCRIPTIONS, input.subscriptions);
   }
 
   if (input.status !== undefined) {
@@ -845,4 +869,19 @@ export async function suggestGames(q: string, take = 6): Promise<GameSuggestion[
       || a.g.name.length - b.g.name.length)
     .slice(0, take)
     .map(({ g }) => ({ name: g.name, coverUrl: g.coverUrl }));
+}
+
+/** Cover aus der Spieleliste zu einem Freitext-Namen (Name oder andere Schreibweise) — für Event-Cover */
+export async function findListCover(name: string): Promise<string | null> {
+  const key = gameNameKey(name);
+  if (!key) return null;
+  const direct = await prisma.game.findFirst({
+    where: { nameKey: key, status: "APPROVED", coverUrl: { not: null } },
+    select: { coverUrl: true },
+  });
+  if (direct) return direct.coverUrl;
+  const viaAlias = await findByAlias(name, true);
+  if (!viaAlias) return null;
+  const g = await prisma.game.findUnique({ where: { id: viaAlias.id }, select: { coverUrl: true } });
+  return g?.coverUrl ?? null;
 }

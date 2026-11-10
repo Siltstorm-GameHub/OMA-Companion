@@ -91,3 +91,34 @@ export function formatPlayers(min: number | null | undefined, max: number | null
   if (lo !== null) return `ab ${lo} Spieler${lo === 1 ? "" : "n"}`;
   return `bis ${fmtHi(hi!)} Spieler`;
 }
+
+/** Abos, in denen ein Spiel enthalten sein kann. Game Pass wird täglich automatisch abgeglichen. */
+export const GAME_SUBSCRIPTIONS = {
+  gamepass_pc:   "PC Game Pass",
+  gamepass_xbox: "Game Pass (Xbox)",
+  ea_play:       "EA Play",
+  ubisoft_plus:  "Ubisoft+",
+  ps_plus:       "PlayStation Plus",
+  nso:           "Nintendo Switch Online",
+} as const;
+export type GameSubscription = keyof typeof GAME_SUBSCRIPTIONS;
+/** Diese Abos pflegt der automatische Abgleich (lib/games/store-sync.ts) — die übrigen das Team */
+export const AUTO_SUBSCRIPTIONS: GameSubscription[] = ["gamepass_pc", "gamepass_xbox"];
+
+/** Kurzform fürs Badge auf Karten: beide Game-Pass-Varianten → "Game Pass" */
+export function subscriptionBadges(subs: string[]): string[] {
+  const out: string[] = [];
+  if (subs.some(s => s.startsWith("gamepass_"))) out.push("Game Pass");
+  for (const s of subs) if (!s.startsWith("gamepass_") && s in GAME_SUBSCRIPTIONS) out.push(GAME_SUBSCRIPTIONS[s as GameSubscription]);
+  return out;
+}
+
+/** "19,99 €" */
+export function formatPrice(cents: number | null | undefined, currency: string | null | undefined = "EUR"): string | null {
+  if (cents === null || cents === undefined) return null;
+  try {
+    return (cents / 100).toLocaleString("de-DE", { style: "currency", currency: currency || "EUR" });
+  } catch {
+    return `${(cents / 100).toFixed(2).replace(".", ",")} ${currency ?? ""}`.trim();
+  }
+}

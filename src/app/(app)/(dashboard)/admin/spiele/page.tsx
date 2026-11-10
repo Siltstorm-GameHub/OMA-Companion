@@ -26,6 +26,7 @@ export default async function AdminSpielePage({ searchParams }: { searchParams: 
     steamAppId: g.steamAppId,
     igdbId: g.igdbId,
     aliases: g.aliases,
+    subscriptions: g.subscriptions,
     coverUrl: g.coverUrl,
     fields: gameFieldsOf(g),
     ratingCount: g.ratingCount,

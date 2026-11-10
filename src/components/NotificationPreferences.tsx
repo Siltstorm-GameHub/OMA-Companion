@@ -9,6 +9,7 @@ type Prefs = {
   points:    boolean;
   clip:      boolean;
   admin:     boolean;
+  game:      boolean;
   discordDm: boolean;
 };
 
@@ -18,6 +19,7 @@ const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string 
   { key: "quest",  label: "Quests",           desc: "Quest abgeschlossen & Belohnung erhalten",      icon: "⭐" },
   { key: "points", label: "Punkte & Münzen",  desc: "Münzen oder Rang-Punkte erhalten",              icon: "💰" },
   { key: "clip",   label: "Clip des Monats",  desc: "Abstimmung & Ergebnisse",                       icon: "🎬" },
+  { key: "game",   label: "Spieleliste",      desc: "Angebote für Spiele, die du zocken würdest",    icon: "🎮" },
   { key: "admin",  label: "Admin-Nachrichten",desc: "Direkte Nachrichten vom Admin-Team",            icon: "📢" },
 ];
 
