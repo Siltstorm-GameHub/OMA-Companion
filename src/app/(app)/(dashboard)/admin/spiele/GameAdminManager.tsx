@@ -20,6 +20,7 @@ export interface AdminGame {
   status: "APPROVED" | "PENDING" | "HIDDEN";
   steamAppId: number | null;
   igdbId: number | null;
+  aliases: string[];
   coverUrl: string | null;
   fields: GameFields;
   ratingCount: number;
@@ -49,6 +50,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
   const [name, setName] = useState(game.name);
   const [steamAppId, setSteamAppId] = useState(game.steamAppId?.toString() ?? "");
   const [igdbId, setIgdbId] = useState(game.igdbId?.toString() ?? "");
+  const [aliases, setAliases] = useState(game.aliases.join(", "));
   const [fields, setFields] = useState<GameFields>(game.fields);
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +60,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
       await call(`/api/admin/games/${game.id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          name, fields,
+          name, fields, aliases,
           steamAppId: steamAppId.trim() === "" ? null : steamAppId.trim(),
           igdbId: igdbId.trim() === "" ? null : igdbId.trim(),
         }),
@@ -90,7 +92,12 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
           <input value={igdbId} onChange={e => setIgdbId(e.target.value.replace(/\D/g, ""))} inputMode="numeric" placeholder="z.B. 11198" className={`${input} w-full`} />
         </label>
       </div>
-      <p className="text-[11px] text-gray-500 -mt-3">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
+      <label className="block space-y-1 -mt-2">
+        <span className="text-xs font-semibold text-gray-300">Andere Schreibweisen</span>
+        <input value={aliases} onChange={e => setAliases(e.target.value)} placeholder="z.B. CS2, CS:GO 2" className={`${input} w-full`} />
+        <span className="block text-[11px] text-gray-500">Komma-getrennt. Events, Gameserver und Profile mit diesen Namen werden dem Spiel zugeordnet.</span>
+      </label>
+      <p className="text-[11px] text-gray-500">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
       <GameFieldsForm value={fields} onChange={setFields} showDescription />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>

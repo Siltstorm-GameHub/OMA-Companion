@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { getGameCoverUrl, getGameFallbackGradient, KNOWN_GAMES, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import type { SteamGameResult } from "@/app/api/game-search/route";
 import { Gamepad2, X, Loader2 } from "@/components/icons";
+import type { GameSuggestion } from "@/lib/games/service";
+import { gameNameKey } from "@/lib/games/slug";
 
 interface GameNameInputProps {
   value: string;
@@ -21,6 +23,12 @@ const norm = normalizeForCoverCache;
 /** Session-Cache: normierter Name → CDN-URL (von Steam-Suche) */
 const coverCache = new Map<string, string>();
 
+/** Session-Cache der Spieleliste-Vorschläge je Suchtext ("" = beliebteste) */
+const listCache = new Map<string, GameSuggestion[]>();
+
+type Group = "list" | "steam" | "known";
+const GROUP_LABELS: Record<Group, string> = { list: "Aus der Spieleliste", steam: "Steam-Suche", known: "Bekannte Spiele" };
+
 export default function GameNameInput({
   value,
   onChange,
@@ -34,6 +42,7 @@ export default function GameNameInput({
   const [active, setActive]         = useState(-1);
   const [loading, setLoading]       = useState(false);
   const [results, setResults]       = useState<SteamGameResult[]>([]);
+  const [listHits, setListHits]     = useState<{ q: string; items: GameSuggestion[] } | null>(null);
   const containerRef                = useRef<HTMLDivElement>(null);
   const inputRef                    = useRef<HTMLInputElement>(null);
   const listRef                     = useRef<HTMLUListElement>(null);
@@ -45,6 +54,26 @@ export default function GameNameInput({
     : KNOWN_GAMES.filter(g => g.toLowerCase().includes(value.toLowerCase())).slice(0, 5);
 
   const suggestions = results.length > 0 ? results : null;
+
+  // Spieleliste (debounced 200 ms) — zuerst vorschlagen, damit überall dieselbe Schreibweise landet
+  const listQuery = value.trim();
+  useEffect(() => {
+    if (!open) return;
+    const cached = listCache.get(listQuery);
+    let cancelled = false;
+    const t = setTimeout(() => {
+      (cached ? Promise.resolve(cached) : fetch(`/api/games/suggest?q=${encodeURIComponent(listQuery)}`)
+        .then(r => (r.ok ? r.json() as Promise<GameSuggestion[]> : []))
+        .catch(() => [] as GameSuggestion[]))
+        .then(items => {
+          if (cancelled) return;
+          listCache.set(listQuery, items);
+          items.forEach(g => { if (g.coverUrl) coverCache.set(norm(g.name), g.coverUrl); });
+          setListHits({ q: listQuery, items });
+        });
+    }, cached ? 0 : 200);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, listQuery]);
 
   // Steam-Suche (debounced 350 ms)
   useEffect(() => {
@@ -71,10 +100,17 @@ export default function GameNameInput({
     return () => clearTimeout(debounceRef.current);
   }, [value]);
 
-  const allItems: { name: string; coverUrl?: string; thumbUrl?: string }[] =
+  const listItems = listHits?.q === listQuery ? listHits.items : [];
+  const listKeys = new Set(listItems.map(g => gameNameKey(g.name)));
+  const otherItems: { name: string; coverUrl?: string; thumbUrl?: string; group: Group }[] =
     suggestions
-      ? suggestions.map(g => ({ name: g.name, coverUrl: g.coverUrl, thumbUrl: g.thumbUrl }))
-      : staticSuggestions.map(g => ({ name: g, coverUrl: getGameCoverUrl(g) ?? undefined }));
+      ? suggestions.map(g => ({ name: g.name, coverUrl: g.coverUrl, thumbUrl: g.thumbUrl, group: "steam" as const }))
+      // Ohne Steam-Treffer: statische Liste nur, solange die Spieleliste nichts liefert
+      : listItems.length > 0 ? [] : staticSuggestions.map(g => ({ name: g, coverUrl: getGameCoverUrl(g) ?? undefined, group: "known" as const }));
+  const allItems: { name: string; coverUrl?: string; thumbUrl?: string; group: Group }[] = [
+    ...listItems.map(g => ({ name: g.name, coverUrl: g.coverUrl ?? undefined, group: "list" as const })),
+    ...otherItems.filter(g => !listKeys.has(gameNameKey(g.name))),
+  ];
 
   const select = useCallback((name: string) => {
     // Exaktes Cover des angeklickten Treffers dauerhaft (über die reine
@@ -102,7 +138,7 @@ export default function GameNameInput({
   // Aktives Item in Sicht scrollen
   useEffect(() => {
     if (active >= 0 && listRef.current) {
-      (listRef.current.children[active] as HTMLElement)?.scrollIntoView({ block: "nearest" });
+      listRef.current.querySelector<HTMLElement>(`[data-idx="${active}"]`)?.scrollIntoView({ block: "nearest" });
     }
   }, [active]);
 
@@ -195,22 +231,18 @@ export default function GameNameInput({
             </li>
           )}
 
-          {/* Quelle-Label */}
-          {!loading && (
-            <li className="px-3 pt-2 pb-1">
-              <span className="text-[10px] text-gray-600 uppercase tracking-widest">
-                {results.length > 0 ? "Steam-Suche" : "Bekannte Spiele"}
-              </span>
-            </li>
-          )}
-
           {allItems.map((item, i) => {
             const isActive = i === active;
             const url      = item.coverUrl ?? item.thumbUrl ?? null;
             const grad     = getGameFallbackGradient(item.name);
+            // Quelle-Label vor jeder neuen Gruppe
+            const label    = i === 0 || allItems[i - 1].group !== item.group ? GROUP_LABELS[item.group] : null;
 
             return (
-              <li key={item.name + i}>
+              <li key={item.group + item.name + i} data-idx={i}>
+                {label && (
+                  <span className="block px-3 pt-2 pb-1 text-[10px] text-gray-600 uppercase tracking-widest">{label}</span>
+                )}
                 <button
                   type="button"
                   onMouseDown={() => select(item.name)}

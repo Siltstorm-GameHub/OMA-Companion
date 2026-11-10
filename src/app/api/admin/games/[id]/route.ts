@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
 import { updateGameAdmin } from "@/lib/games/service";
 
-/** Spiel bearbeiten: { name?, status?, steamAppId?, igdbId?, fields? } */
+/** Spiel bearbeiten: { name?, status?, steamAppId?, igdbId?, aliases?, fields? } */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;

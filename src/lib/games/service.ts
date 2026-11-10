@@ -8,7 +8,7 @@
 import { Prisma, type Game } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames, type FavoriteGame } from "@/lib/favorite-games";
-import { sameGame } from "@/lib/game-match";
+import { gameKeys, matchesGameName, sanitizeAliases } from "./match";
 import {
   EDITABLE_FIELDS, cleanGameName, computeFieldSources, mergeAutoFields, parseFieldSources, sanitizeGameFields,
   type FieldSources, type GameFields,
@@ -58,7 +58,21 @@ export async function findDuplicate(steamAppId: number | null, name: string, igd
   if (steamAppId) or.push({ steamAppId });
   if (igdbId) or.push({ igdbId });
   if (or.length === 0) return null;
-  return prisma.game.findFirst({ where: { OR: or }, select: { id: true, slug: true, name: true, status: true } });
+  const direct = await prisma.game.findFirst({ where: { OR: or }, select: { id: true, slug: true, name: true, status: true } });
+  if (direct) return direct;
+  return findByAlias(name);
+}
+
+/** Spiel, dessen andere Schreibweisen den Namen enthalten ("CS2" → Counter-Strike 2) */
+async function findByAlias(name: string, onlyApproved = false) {
+  const key = gameNameKey(name);
+  if (!key) return null;
+  const withAliases = await prisma.game.findMany({
+    where: { aliases: { isEmpty: false }, ...(onlyApproved ? { status: "APPROVED" } : {}) },
+    select: { id: true, slug: true, name: true, status: true, aliases: true },
+  });
+  const hit = withAliases.find(g => g.aliases.some(a => gameNameKey(a) === key));
+  return hit ? { id: hit.id, slug: hit.slug, name: hit.name, status: hit.status } : null;
 }
 
 /** Steam-/IGDB-ID nur übernehmen, wenn sie keinem anderen Eintrag gehört (Rest: Fall fürs Zusammenführen) */
@@ -91,9 +105,9 @@ export async function loadFavoriteHolders(): Promise<FavoriteHolder[]> {
   }));
 }
 
-export function favoriteMatchesGame(fav: FavoriteGame, game: Pick<Game, "steamAppId" | "nameKey">): boolean {
+export function favoriteMatchesGame(fav: FavoriteGame, game: Pick<Game, "steamAppId" | "nameKey" | "aliases">): boolean {
   if (fav.appId !== null && game.steamAppId !== null) return fav.appId === game.steamAppId;
-  return gameNameKey(fav.name) === game.nameKey;
+  return gameKeys(game).includes(gameNameKey(fav.name));
 }
 
 // ── Liste ────────────────────────────────────────────────────────────────────
@@ -159,7 +173,14 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
     .sort((a, b) => b.rankPoints - a.rankPoints || a.name.localeCompare(b.name, "de"))
     .map(p => ({ id: p.id, name: p.name, image: p.image, rankPoints: p.rankPoints }));
 
-  const matchingEvents = events.filter(e => e.game && sameGame(e.game, game.name));
+  const matchingEvents = events.filter(e => matchesGameName(game, e.game, true));
+  const now = new Date();
+  const past = matchingEvents.filter(e => e.startAt <= now);
+  const upcoming = matchingEvents.filter(e => e.startAt > now).sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  const participations = past.length > 0
+    ? await prisma.eventRegistration.count({ where: { eventId: { in: past.map(e => e.id) }, role: "player" } })
+    : 0;
+  const toItem = (e: (typeof events)[number]) => ({ id: e.id, title: e.title, startAt: e.startAt, status: e.status });
 
   return {
     game,
@@ -170,9 +191,16 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
       : { rating: null, wantPlay: false, owns: false },
     distribution,
     players,
-    events: matchingEvents.slice(0, 6).map(e => ({ id: e.id, title: e.title, startAt: e.startAt, status: e.status })),
+    // Kommende zuerst (nächstes oben), dann die letzten vergangenen
+    events: [...upcoming.slice(0, 3), ...past.slice(0, 6 - Math.min(upcoming.length, 3))].map(toItem),
     eventCount: matchingEvents.length,
-    servers: servers.filter(s => sameGame(s.game, game.name)),
+    stats: {
+      pastEvents: past.length,
+      participations,
+      lastPlayedAt: past[0]?.startAt ?? null,
+      nextEvent: upcoming[0] ? toItem(upcoming[0]) : null,
+    },
+    servers: servers.filter(s => matchesGameName(game, s.game, true)),
   };
 }
 
@@ -184,7 +212,8 @@ export async function findGameSlug(name: string | null, appId: number | null): P
   }
   if (!name) return null;
   const byKey = await prisma.game.findFirst({ where: { nameKey: gameNameKey(name), status: "APPROVED" }, select: { slug: true } });
-  return byKey?.slug ?? null;
+  if (byKey) return byKey.slug;
+  return (await findByAlias(name, true))?.slug ?? null;
 }
 
 // ── Suche beim Hinzufügen ────────────────────────────────────────────────────
@@ -203,7 +232,7 @@ export async function lookupGames(q: string): Promise<LookupResult> {
   const [all, steamResult, igdbResult] = await Promise.all([
     prisma.game.findMany({
       where:  { status: { not: "HIDDEN" } },
-      select: { slug: true, name: true, nameKey: true, coverUrl: true, status: true, steamAppId: true, igdbId: true },
+      select: { slug: true, name: true, nameKey: true, aliases: true, coverUrl: true, status: true, steamAppId: true, igdbId: true },
     }),
     searchSteamGames(q, { resolveCovers: false }).then(r => ({ ok: true as const, r }), () => ({ ok: false as const, r: [] })),
     igdbConfigured()
@@ -216,8 +245,8 @@ export async function lookupGames(q: string): Promise<LookupResult> {
   const steamKeys = new Set(steamResult.r.map(s => gameNameKey(s.name)));
 
   const local = key
-    ? all.filter(g => g.nameKey.includes(key))
-        .sort((a, b) => Number(b.nameKey === key) - Number(a.nameKey === key) || a.name.length - b.name.length)
+    ? all.filter(g => gameKeys(g).some(k => k.includes(key)))
+        .sort((a, b) => Number(gameKeys(b).includes(key)) - Number(gameKeys(a).includes(key)) || a.name.length - b.name.length)
         .slice(0, 5)
         .map(({ slug, name, coverUrl, status }) => ({ slug, name, coverUrl, status }))
     : [];
@@ -364,8 +393,8 @@ export async function setReaction(
 export type EnrichOutcome = "enriched" | "not_found" | "error";
 
 /** Treffer mit (fast) gleichem Namen — sonst landete z.B. "Mario Kart" bei einem fremden Spiel */
-function nameMatches(candidate: string, game: Pick<Game, "name" | "nameKey">): boolean {
-  return gameNameKey(candidate) === game.nameKey || sameGame(candidate, game.name);
+function nameMatches(candidate: string, game: Pick<Game, "name" | "nameKey" | "aliases">): boolean {
+  return matchesGameName(game, candidate, true);
 }
 
 /**
@@ -452,7 +481,7 @@ export async function importCommunityGames(): Promise<{ created: number; candida
     prisma.gameServer.findMany({ select: { game: true } }),
     loadFavoriteHolders(),
     prisma.communityIdea.findMany({ where: { gameName: { not: null } }, select: { gameName: true, gameAppId: true } }),
-    prisma.game.findMany({ select: { slug: true, nameKey: true, steamAppId: true } }),
+    prisma.game.findMany({ select: { slug: true, nameKey: true, aliases: true, steamAppId: true } }),
   ]);
 
   const candidates: FavoriteGame[] = [
@@ -463,7 +492,7 @@ export async function importCommunityGames(): Promise<{ created: number; candida
     ...servers.map(s => ({ name: s.game, appId: null })),
   ];
 
-  const keys = new Set(existing.map(g => g.nameKey));
+  const keys = new Set(existing.flatMap(g => gameKeys(g)));
   const appIds = new Set(existing.flatMap(g => (g.steamAppId ? [g.steamAppId] : [])));
   const slugs = new Set(existing.map(g => g.slug));
   const rows: Prisma.GameCreateManyInput[] = [];
@@ -488,7 +517,7 @@ export async function importCommunityGames(): Promise<{ created: number; candida
 
 export async function updateGameAdmin(
   id: string,
-  input: { name?: unknown; status?: unknown; steamAppId?: unknown; igdbId?: unknown; fields?: unknown },
+  input: { name?: unknown; status?: unknown; steamAppId?: unknown; igdbId?: unknown; aliases?: unknown; fields?: unknown },
 ): Promise<Result<{ slug: string }>> {
   const game = await prisma.game.findUnique({ where: { id } });
   if (!game) return { ok: false, status: 404, error: "Spiel nicht gefunden" };
@@ -505,6 +534,17 @@ export async function updateGameAdmin(
     }
     data.name = name;
     data.nameKey = key;
+  }
+
+  if (input.aliases !== undefined) {
+    const aliases = sanitizeAliases(input.aliases, (data.name as string | undefined) ?? game.name);
+    // Eine Schreibweise, die schon eigenes Spiel ist, wäre eine Dublette → zusammenführen statt Alias
+    const clash = await prisma.game.findFirst({
+      where: { nameKey: { in: aliases.map(gameNameKey) }, id: { not: id } },
+      select: { name: true },
+    });
+    if (clash) return { ok: false, status: 409, error: `„${clash.name}“ ist ein eigenes Spiel — lieber zusammenführen.` };
+    data.aliases = aliases;
   }
 
   if (input.status !== undefined) {
@@ -582,6 +622,11 @@ export async function mergeGames(sourceId: string, targetId: string): Promise<Re
         data: { userId: r.userId, gameId: targetId, rating: r.rating, wantPlay: r.wantPlay, owns: r.owns, createdAt: r.createdAt },
       });
     }
+    // Name und Schreibweisen der Dublette als Alias behalten — so passen alte Events/Profile weiter
+    await tx.game.update({
+      where: { id: targetId },
+      data: { aliases: sanitizeAliases([...target.aliases, source.name, ...source.aliases], target.name) },
+    });
     // Protokoll der Ergänzungen mitnehmen, bevor das Löschen es per Cascade entfernt
     await tx.gameEdit.updateMany({ where: { gameId: sourceId }, data: { gameId: targetId } });
     await tx.game.delete({ where: { id: sourceId } });
@@ -654,7 +699,7 @@ export async function groupOwnership(userIds: string[]): Promise<Record<string, 
   const ids = [...new Set(userIds)].slice(0, GROUP_MAX_MEMBERS);
   if (ids.length === 0) return {};
   const [games, reactions, users] = await Promise.all([
-    prisma.game.findMany({ where: { status: "APPROVED" }, select: { id: true, steamAppId: true, nameKey: true } }),
+    prisma.game.findMany({ where: { status: "APPROVED" }, select: { id: true, steamAppId: true, nameKey: true, aliases: true } }),
     prisma.gameReaction.findMany({
       where: { userId: { in: ids }, OR: [{ owns: true }, { wantPlay: true }] },
       select: { userId: true, gameId: true, owns: true, wantPlay: true },
@@ -767,4 +812,37 @@ export async function revertGameEdit(editId: string): Promise<Result<{ slug: str
     prisma.gameEdit.update({ where: { id: editId }, data: { revertedAt: new Date() } }),
   ]);
   return { ok: true, slug: edit.game.slug };
+}
+
+// ── Vorschläge für Spiel-Eingabefelder (Events, Server, Umfragen, Profil) ────
+
+export interface GameSuggestion { name: string; coverUrl: string | null }
+
+/**
+ * Freigeschaltete Spiele, deren Name oder andere Schreibweise passt (immer mit dem offiziellen
+ * Namen, damit überall dieselbe Schreibweise landet). Ohne Suchtext: die beliebtesten Spiele.
+ */
+export async function suggestGames(q: string, take = 6): Promise<GameSuggestion[]> {
+  const key = gameNameKey(q);
+  if (!key) {
+    return prisma.game.findMany({
+      where: { status: "APPROVED" },
+      orderBy: [{ wantCount: "desc" }, { ownCount: "desc" }, { ratingCount: "desc" }, { name: "asc" }],
+      take: 8,
+      select: { name: true, coverUrl: true },
+    });
+  }
+  const games = await prisma.game.findMany({
+    where: { status: "APPROVED" },
+    select: { name: true, nameKey: true, aliases: true, coverUrl: true, wantCount: true },
+  });
+  return games
+    .map(g => ({ g, keys: gameKeys(g) }))
+    .filter(({ keys }) => keys.some(k => k.includes(key)))
+    .sort((a, b) =>
+      Number(b.keys.some(k => k.startsWith(key))) - Number(a.keys.some(k => k.startsWith(key)))
+      || b.g.wantCount - a.g.wantCount
+      || a.g.name.length - b.g.name.length)
+    .slice(0, take)
+    .map(({ g }) => ({ name: g.name, coverUrl: g.coverUrl }));
 }

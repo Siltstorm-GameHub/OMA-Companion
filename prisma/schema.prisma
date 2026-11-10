@@ -2650,6 +2650,7 @@ model Game {
   slug          String    @unique
   nameKey       String    @unique // normalisierter Name für die Dubletten-Prüfung (lib/games/slug.ts)
   name          String
+  aliases       String[]  @default([]) // andere Schreibweisen ("CS2", "RL") — für den Abgleich mit Events, Servern, Profilen
   steamAppId    Int?      @unique
   igdbId        Int? // IGDB (Twitch) — Konsolen, Spieleranzahl, Spiele ohne Steam. Eindeutigkeit prüft der Code (ein @unique bräche den db push im Build ab)
   coverUrl      String? // von Steam aufgelöst (header_image) — nie vom Client übernommen

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { motion } from "motion/react";
 import GameCover from "@/components/GameCover";
 import ApplyButton from "./ApplyButton";
@@ -110,7 +111,9 @@ export default function ServerCard({ server }: { server: Server }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{server.name}</p>
-          <p className="text-xs text-gray-500">{server.game}</p>
+          <Link href={`/spiele/finde?name=${encodeURIComponent(server.game)}`} className="block w-fit text-xs text-gray-500 hover:text-teal-300 transition-colors" title="In der Spieleliste ansehen">
+            {server.game}
+          </Link>
           {server.online ? (
             <p className="text-xs mt-1" style={{ color: PRESENCE_ONLINE }}>Server online</p>
           ) : (

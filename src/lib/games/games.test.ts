@@ -4,6 +4,7 @@ import { gameNameKey, gameSlug, uniqueGameSlug } from "./slug";
 import { averageRating, formatRating, isValidRating, weightedRating } from "./rating";
 import { combineDrafts, computeFieldSources, emptyFields, mergeAutoFields, parseFieldSources, sanitizeGameFields } from "./draft";
 import { rankForGroup } from "./group";
+import { matchesGameName, sanitizeAliases } from "./match";
 import { applicableFills, formatFieldValue, missingFields } from "./edits";
 import { igdbString, parseIgdbGame, steamAppIdFromUrls } from "./igdb";
 import { cleanSteamText, parseSteamAppData } from "./steam";
@@ -337,5 +338,21 @@ describe("Ergänzungen durch Mitglieder", () => {
     assert.equal(formatFieldValue("isFree", true), "Kostenlos");
     assert.equal(formatFieldValue("sessionLength", "kurz"), "Kurze Runden (< 20 Min.)");
     assert.equal(formatFieldValue("maxPlayers", null), "–");
+  });
+});
+
+describe("Abgleich mit anderen Schreibweisen", () => {
+  const cs = { name: "Counter-Strike 2", nameKey: "counterstrike2", aliases: ["CS2", "CS 2"] };
+  test("Name und Aliase passen exakt, fuzzy nur auf Wunsch", () => {
+    assert.ok(matchesGameName(cs, "counter strike 2"));
+    assert.ok(matchesGameName(cs, "cs2"));
+    assert.ok(!matchesGameName(cs, "Counter-Strike"));
+    assert.ok(matchesGameName(cs, "Counter-Strike", true)); // grob ähnlich (wie bisher bei Events)
+    assert.ok(!matchesGameName(cs, null, true));
+  });
+  test("sanitizeAliases: trimmen, Dubletten und eigener Name raus, Komma-Text erlaubt", () => {
+    assert.deepEqual(sanitizeAliases(" CS2 , cs 2, Counter Strike 2,,  CSGO2 ", "Counter-Strike 2"), ["CS2", "CSGO2"]);
+    assert.deepEqual(sanitizeAliases(["A", 3, "a"], "B"), ["A"]);
+    assert.equal(sanitizeAliases(Array.from({ length: 20 }, (_, i) => `Alias ${i}`), "X").length, 10);
   });
 });

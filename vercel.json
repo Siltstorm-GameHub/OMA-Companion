@@ -61,6 +61,10 @@
     {
       "path": "/api/cron/app-reset",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/game-list-sync",
+      "schedule": "20 5 * * *"
     }
   ]
 }

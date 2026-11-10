@@ -23,6 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: game?.status === "APPROVED" ? `${game.name} · Spieleliste | OMA` : "Spieleliste | OMA" };
 }
 
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" });
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2">
@@ -94,6 +97,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
               }}
             />
           </div>
+          {game.aliases.length > 0 && <p className="text-[11px] text-gray-500 -mt-1">Auch bekannt als: {game.aliases.join(", ")}</p>}
           {fields.description && <p className="text-sm text-gray-300 leading-relaxed">{fields.description}</p>}
           {chips.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -156,6 +160,13 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
             <CalendarDays className="w-3.5 h-3.5 text-teal-500/70" /> In der Community
           </h2>
+          {detail.stats.pastEvents > 0 && (
+            <p className="text-xs text-gray-400">
+              Bei <span className="text-white font-semibold">{detail.stats.pastEvents}</span> {detail.stats.pastEvents === 1 ? "Event" : "Events"} gespielt
+              {detail.stats.participations > 0 && <> · <span className="text-white font-semibold">{detail.stats.participations}</span> Teilnahmen</>}
+              {detail.stats.lastPlayedAt && <> · zuletzt {fmtDate(detail.stats.lastPlayedAt)}</>}
+            </p>
+          )}
           {detail.events.length === 0 && detail.servers.length === 0 ? (
             <p className="text-xs text-gray-500">Noch kein Event und kein Gameserver zu diesem Spiel.</p>
           ) : (
@@ -169,16 +180,23 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                   </Link>
                 </li>
               ))}
-              {detail.events.map(e => (
+              {detail.events.map(e => {
+                const isNext = e.id === detail.stats.nextEvent?.id;
+                return (
                 <li key={e.id}>
-                  <Link href={`/tournament/${e.id}`} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.04] text-sm text-gray-200">
-                    <CalendarDays className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                    <span className="flex-1 truncate">{e.title}</span>
-                    <span className="text-[10px] text-gray-500 shrink-0">{e.startAt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}</span>
+                  <Link href={`/tournament/${e.id}`}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/15" : "hover:bg-white/[0.04]"}`}>
+                    <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isNext ? "text-teal-300" : "text-gray-500"}`} />
+                    <span className="flex-1 truncate">
+                      {isNext && <span className="text-[10px] font-semibold text-teal-300 mr-1.5">NÄCHSTES</span>}
+                      {e.title}
+                    </span>
+                    <span className="text-[10px] text-gray-500 shrink-0">{fmtDate(e.startAt)}</span>
                     <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
                   </Link>
                 </li>
-              ))}
+                );
+              })}
               {detail.eventCount > detail.events.length && (
                 <li className="text-[11px] text-gray-500 px-2">… und {detail.eventCount - detail.events.length} weitere Events</li>
               )}
