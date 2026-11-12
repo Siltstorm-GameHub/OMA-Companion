@@ -9,7 +9,7 @@ import { isAwaitingApproval } from "@/lib/community-events";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Users } from "@/components/icons";
+import { Users, ChevronDown } from "@/components/icons";
 import { ArrowLeft, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
@@ -756,6 +756,93 @@ export default async function TournamentDetailPage({
       voteCounts: p.voteCounts, myVote: p.myVote, answerOptions: p.answerOptions, excludedUserIds: p.excludedUserIds,
     }));
 
+  // Mobil: Vor dem Start ist die Teilnehmerliste zentral und steht oben. Sobald das Event läuft,
+  // rückt sie hinter die Turnieransicht und wird eingeklappt — außer es gibt keine eigene
+  // Turnier-/Ziel-Ansicht, dann bleibt sie der Hauptinhalt. Desktop: immer Seitenspalte.
+  const hasStarted = event.status === "finished" || event.startAt <= new Date();
+  const collapseParticipantsOnMobile = hasStarted && (hasTournament || !!communityGoalProgress);
+
+  const participantList = (
+    <div className="glass rounded-2xl divide-y divide-white/5">
+      {sortedRegistrations.map(({ user, role }, i) => {
+        const isMe = user.id === userId;
+        const wins = event.matches.filter(m => m.winnerId === user.id).length;
+        const wonLabels = [
+          ...(pollWinnerIds.includes(user.id) && pollLabel ? [pollLabel] : []),
+          ...(pollWinsByUser[user.id] ?? []),
+        ];
+        const isSpectatorRow = role === "spectator";
+        const showDivider = isSpectatorRow && (i === 0 || sortedRegistrations[i - 1].role !== "spectator");
+        return (
+          <div key={user.id}>
+            {showDivider && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+                <Eye className="w-3 h-3 text-gray-500" />
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
+              </div>
+            )}
+            <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+              <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
+              <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                  <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
+                  {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
+                  {excludedUserIds.has(user.id) && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
+                      Ungewertet
+                    </span>
+                  )}
+                  {votedUserIds.has(user.id) && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
+                    </span>
+                  )}
+                </p>
+                <StyledUserTitle userId={user.id} className="block truncate leading-tight" />
+                {wonLabels.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    {wonLabels.map(label => (
+                      <span key={label} className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
+                        <Vote className="w-2.5 h-2.5" /> {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
+            </div>
+          </div>
+        );
+      })}
+      {externalVoters.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+            <Vote className="w-3 h-3" style={{ color: "#14b8a6" }} />
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
+          </div>
+          {externalVoters.map((user, i) => {
+            const isMe = user.id === userId;
+            return (
+              <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+                <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
+                <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                    <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
+                    </span>
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-5">
@@ -1278,89 +1365,12 @@ export default async function TournamentDetailPage({
 
       {/* ── Content ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-          {/* Teilnehmerliste */}
-          <div className="lg:col-span-1">
+          {/* Teilnehmerliste — mobil vor dem Start oben, danach eingeklappt unter der Turnieransicht */}
+          <div className={`lg:col-span-1 ${collapseParticipantsOnMobile ? "hidden lg:block" : ""}`}>
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Users className="w-3.5 h-3.5" /> Teilnehmer
             </h2>
-            <div className="glass rounded-2xl divide-y divide-white/5">
-              {sortedRegistrations.map(({ user, role }, i) => {
-                const isMe = user.id === userId;
-                const wins = event.matches.filter(m => m.winnerId === user.id).length;
-                const wonLabels = [
-                  ...(pollWinnerIds.includes(user.id) && pollLabel ? [pollLabel] : []),
-                  ...(pollWinsByUser[user.id] ?? []),
-                ];
-                const isSpectatorRow = role === "spectator";
-                const showDivider = isSpectatorRow && (i === 0 || sortedRegistrations[i - 1].role !== "spectator");
-                return (
-                  <div key={user.id}>
-                    {showDivider && (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
-                        <Eye className="w-3 h-3 text-gray-500" />
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
-                      </div>
-                    )}
-                    <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
-                      <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                      <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
-                          <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
-                          {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
-                          {excludedUserIds.has(user.id) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
-                              Ungewertet
-                            </span>
-                          )}
-                          {votedUserIds.has(user.id) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
-                              <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
-                            </span>
-                          )}
-                        </p>
-                        <StyledUserTitle userId={user.id} className="block truncate leading-tight" />
-                        {wonLabels.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {wonLabels.map(label => (
-                              <span key={label} className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
-                                <Vote className="w-2.5 h-2.5" /> {label}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
-                    </div>
-                  </div>
-                );
-              })}
-              {externalVoters.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
-                    <Vote className="w-3 h-3" style={{ color: "#14b8a6" }} />
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
-                  </div>
-                  {externalVoters.map((user, i) => {
-                    const isMe = user.id === userId;
-                    return (
-                      <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
-                        <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                        <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
-                            <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
-                              <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {participantList}
           </div>
 
           {/* Format-spezifische Ansicht */}
@@ -1465,6 +1475,23 @@ export default async function TournamentDetailPage({
               </div>
             )}
           </div>
+
+          {collapseParticipantsOnMobile && (
+            <details className="lg:hidden group">
+              <summary className="glass rounded-2xl px-4 py-3 flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <Users className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-sm font-semibold text-white">Teilnehmer</span>
+                <span className="text-xs text-gray-500 tabular-nums">{sortedRegistrations.length}</span>
+                <span className="flex -space-x-1.5 ml-1 min-w-0 overflow-hidden">
+                  {sortedRegistrations.slice(0, 6).map(({ user }) => (
+                    <RankedAvatar key={user.id} userId={user.id} src={user.image} alt={userName(user)} size={22} variant="flat" />
+                  ))}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-500 ml-auto shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-2">{participantList}</div>
+            </details>
+          )}
         </div>
     </div>
   );
