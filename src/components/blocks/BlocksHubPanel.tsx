@@ -1,20 +1,24 @@
 // ============================================
 // OMA Blocks — Bereich im Games-Hub (/games)
 // ============================================
-// Spielmodi (Solo/Versus), eigene Bestwerte, Monats- und All-Time-Rangliste, Versus-Siege im Monat
-// und die Sieger der letzten Monate.
+// Start-Block (eigener Monatsstand, Abstand nach oben, Monatsziel), Versus mit Live-Raumliste,
+// Belohnungen zum Monatsende, Monats- und All-Time-Rangliste, Versus-Siege im Monat und die Sieger der
+// letzten Monate.
 
 import Link from "next/link";
 import { seasonDaysLeft, seasonKey, seasonLabel } from "@/lib/month-season";
 import { ALL_TIME, getBlocksPlace, getBlocksRanking, getFinishedBlocksSeasons, getVersusWins, type BlocksRankingRow } from "@/lib/blocks/scores";
 import LeaderboardList, { type LeaderboardEntry } from "@/components/games/LeaderboardList";
-import { ChevronRight, Crown, Play, Swords, Trophy } from "@/components/icons";
+import { Crown, Trophy } from "@/components/icons";
 import BlocksRankingTabs from "./BlocksRankingTabs";
 import { getBlocksRewards, rewardLabel } from "@/lib/blocks/rewards-config";
+import { getBlocksGoals } from "@/lib/blocks/goals-config";
 import { getActiveChallenges } from "@/lib/blocks/challenge";
 import { getActiveTournaments } from "@/lib/blocks/tournament";
 import ChallengeCard from "./ChallengeCard";
 import TournamentTeaser from "./TournamentTeaser";
+import BlocksStartCard, { BlocksRewardsOverview } from "./BlocksStartCard";
+import VersusLobbyLive from "./VersusLobbyLive";
 
 const PREVIEW = 10;
 const fmt = (n: number) => n.toLocaleString("de-DE");
@@ -26,7 +30,7 @@ function toEntry(r: BlocksRankingRow): LeaderboardEntry {
 export default async function BlocksHubPanel({ userId }: { userId: string }) {
   const season = seasonKey();
   const label = seasonLabel(season);
-  const [monthRows, allRows, monthPlace, allPlace, finished, versus, rewards, challenges, tournaments] = await Promise.all([
+  const [monthRows, allRows, monthPlace, allPlace, finished, versus, rewards, goals, challenges, tournaments] = await Promise.all([
     getBlocksRanking(season, 100),
     getBlocksRanking(ALL_TIME, 100),
     getBlocksPlace(userId, season),
@@ -34,11 +38,18 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
     getFinishedBlocksSeasons(6),
     getVersusWins(season, 10),
     getBlocksRewards(),
+    getBlocksGoals(),
     getActiveChallenges(userId),
     getActiveTournaments(),
   ]);
   const rewardRows = rewards.map((r, i) => ({ place: i + 1, label: rewardLabel(r) })).filter((r) => r.label);
   const daysLeft = seasonDaysLeft();
+  // Wer direkt vor einem liegt (bzw. als Erster: direkt dahinter) — aus der geladenen Top 100.
+  const neighbourScore = !monthPlace
+    ? null
+    : monthPlace.place === 1
+      ? monthRows[1]?.score ?? null
+      : monthRows[monthPlace.place - 2]?.score ?? null;
 
   const versusEntries: LeaderboardEntry[] = versus.map((v) => ({
     userId: v.userId, name: v.name, image: v.image,
@@ -56,60 +67,21 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Spielmodi */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Link href="/games/blocks" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
-          <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.25)" }}>
-            <Play className="w-5 h-5 text-teal-300" />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display text-lg font-bold text-white">Solo · Marathon</span>
-            <span className="block text-xs text-gray-400">Highscore jagen — zählt für Monats- und All-Time-Rangliste.</span>
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
-        </Link>
-        <Link href="/games/blocks/versus" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
-          <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
-            <Swords className="w-5 h-5 text-violet-300" />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display text-lg font-bold text-white">Versus</span>
-            <span className="block text-xs text-gray-400">Echtzeit gegen bis zu 7 Leute — Linien schicken Garbage rüber.</span>
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
-        </Link>
-      </div>
+      {/* Start: eigener Monatsstand, nächstes Ziel (für Neue: Einstieg mit Steuerung) */}
+      <BlocksStartCard
+        monthLabel={label}
+        daysLeft={daysLeft}
+        month={monthPlace}
+        allTime={allPlace}
+        neighbourScore={neighbourScore}
+        goals={goals}
+      />
 
-      {/* Eigene Bestwerte */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Dein Bestwert · {label}</p>
-          <p className="font-display text-2xl font-black text-white tabular-nums">{fmt(monthPlace?.score ?? 0)}</p>
-          <p className="text-xs text-gray-400">{monthPlace ? `Platz ${monthPlace.place}` : "Noch kein Eintrag"} · noch {daysLeft} {daysLeft === 1 ? "Tag" : "Tage"}</p>
-        </div>
-        <div className="glass rounded-2xl p-4">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Dein All-Time-Rekord</p>
-          <p className="font-display text-2xl font-black text-white tabular-nums">{fmt(allPlace?.score ?? 0)}</p>
-          <p className="text-xs text-gray-400">{allPlace ? `Platz ${allPlace.place}` : "Noch kein Eintrag"}</p>
-        </div>
-      </div>
+      {/* Versus mit Live-Raumliste */}
+      <VersusLobbyLive />
 
-      {/* Monatsbelohnung */}
-      {rewardRows.length > 0 && (
-        <div className="glass rounded-2xl p-4 space-y-2">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Belohnung zum Monatsende · {label}</p>
-          <div className="grid sm:grid-cols-3 gap-2">
-            {rewardRows.map((r) => (
-              <div key={r.place} className="flex items-center gap-2 text-xs">
-                <span className="w-6 h-6 rounded-full flex items-center justify-center font-black text-[11px] text-black shrink-0" style={{ background: ["#fbbf24", "#d1d5db", "#f0a868"][r.place - 1] }}>
-                  {r.place}
-                </span>
-                <span className="text-white font-semibold">{r.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Belohnungen zum Monatsende: Top 3 und Monatsziele */}
+      <BlocksRewardsOverview monthLabel={label} places={rewardRows} goals={goals} />
 
       {/* Ranglisten */}
       <BlocksRankingTabs

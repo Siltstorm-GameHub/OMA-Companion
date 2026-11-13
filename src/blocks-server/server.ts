@@ -53,6 +53,8 @@ interface Client {
   msgCount: number;
   attackWindowStart: number;
   attackCount: number;
+  /** Nur Zuschauer der Raumliste (Games-Hub), kein Spieler — siehe "observe". */
+  observer: boolean;
 }
 
 interface Member {
@@ -96,6 +98,8 @@ const rooms = new Map<string, Room>();
 const tourRooms = new Map<string, Room>();
 /** userId → aktive Verbindung (eine Verbindung je Nutzer; eine neue ersetzt die alte). */
 const clientsByUser = new Map<string, Client>();
+/** Zuschauer der Raumliste (Games-Hub) — beliebig viele je Nutzer, ohne Raum und ohne Spielrechte. */
+const observers = new Set<Client>();
 
 // ── Hilfen ──
 
@@ -166,14 +170,18 @@ function publicRooms(): PublicRoomInfo[] {
     .slice(0, 20);
 }
 
+function roomList(): ServerMessage {
+  return { t: "rooms", rooms: publicRooms(), online: clientsByUser.size };
+}
+
 let roomListTimer: ReturnType<typeof setTimeout> | null = null;
 
 function scheduleRoomList(): void {
   if (roomListTimer) return;
   roomListTimer = setTimeout(() => {
     roomListTimer = null;
-    const data = JSON.stringify({ t: "rooms", rooms: publicRooms() } satisfies ServerMessage);
-    for (const c of clientsByUser.values()) {
+    const data = JSON.stringify(roomList());
+    for (const c of [...clientsByUser.values(), ...observers]) {
       if (!c.room && c.ws.readyState === WebSocket.OPEN) c.ws.send(data);
     }
   }, ROOM_LIST_DEBOUNCE_MS);
@@ -443,7 +451,19 @@ function handle(c: Client, msg: ClientMessage): void {
     c.image = p.img;
     clientsByUser.set(p.uid, c);
     send(c, { t: "welcome", userId: p.uid });
-    return send(c, { t: "rooms", rooms: publicRooms() });
+    scheduleRoomList(); // Spielerzahl für Zuschauer aktualisieren
+    return send(c, roomList());
+  }
+
+  if (msg.t === "observe") {
+    if (c.userId || c.observer) return;
+    if (!verifyMpToken(SECRET, msg.token)) {
+      c.ws.close(4001, "auth");
+      return;
+    }
+    c.observer = true;
+    observers.add(c);
+    return send(c, roomList());
   }
 
   if (!c.userId) return;
@@ -550,13 +570,13 @@ export function attachBlocksServer(server: http.Server): boolean {
   wss.on("connection", (ws) => {
     const c: Client = {
       ws, userId: null, name: "", image: null, room: null,
-      msgWindowStart: Date.now(), msgCount: 0, attackWindowStart: Date.now(), attackCount: 0,
+      msgWindowStart: Date.now(), msgCount: 0, attackWindowStart: Date.now(), attackCount: 0, observer: false,
     };
     alive.set(ws, true);
     ws.on("pong", () => alive.set(ws, true));
 
     const helloTimer = setTimeout(() => {
-      if (!c.userId) ws.close(4001, "auth timeout");
+      if (!c.userId && !c.observer) ws.close(4001, "auth timeout");
     }, HELLO_TIMEOUT_MS);
 
     ws.on("message", (data) => {
@@ -578,7 +598,11 @@ export function attachBlocksServer(server: http.Server): boolean {
     ws.on("close", () => {
       clearTimeout(helloTimer);
       leaveRoom(c);
-      if (c.userId && clientsByUser.get(c.userId) === c) clientsByUser.delete(c.userId);
+      observers.delete(c);
+      if (c.userId && clientsByUser.get(c.userId) === c) {
+        clientsByUser.delete(c.userId);
+        scheduleRoomList(); // Spielerzahl für Zuschauer aktualisieren
+      }
     });
   });
 

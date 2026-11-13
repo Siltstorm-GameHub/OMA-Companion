@@ -74,6 +74,9 @@ export interface ClearReport {
 // ── Client → Server ──
 export type ClientMessage =
   | { t: "hello"; token: string }
+  /** Nur zuschauen (Games-Hub): bekommt die Raumliste, zählt nicht als Spieler-Verbindung und ersetzt
+   *  deshalb keine offene Versus-Verbindung desselben Nutzers in einem anderen Tab. */
+  | { t: "observe"; token: string }
   | { t: "quick" }
   | { t: "create"; isPublic?: boolean }
   | { t: "join"; code: string }
@@ -93,8 +96,9 @@ export type ServerMessage =
   | { t: "welcome"; userId: string }
   | { t: "room"; room: RoomState }
   | { t: "left" }
-  /** Offene öffentliche Räume — geht an alle Verbundenen ohne Raum, bei jeder Änderung. */
-  | { t: "rooms"; rooms: PublicRoomInfo[] }
+  /** Offene öffentliche Räume — geht an alle Verbundenen ohne Raum, bei jeder Änderung. online = gerade
+   *  mit dem Versus-Server verbundene Spieler (ohne Zuschauer). */
+  | { t: "rooms"; rooms: PublicRoomInfo[]; online?: number }
   | { t: "start"; seed: number; round: number; countdownMs: number; players: string[] }
   | { t: "board"; id: string; b: string; g: number }
   | { t: "garbage"; lines: number; hole: number; from: string }
