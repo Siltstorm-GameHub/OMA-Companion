@@ -1,7 +1,7 @@
 /**
  * Gruppen-Finder ("Was zocken wir?") — Auswertung, client-sicher.
  *
- * Ein Spiel "hat" ein Mitglied, wenn es "Hab ich" markiert oder das Spiel im Profil unter
+ * Ein Spiel "hat" ein Mitglied, wenn es dort "Am Start" ist (Spieleliste-Swipen) oder das Spiel im Profil unter
  * "Zockt gerade" stehen hat. Kostenlose Spiele hat automatisch jeder.
  */
 

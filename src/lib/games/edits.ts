@@ -1,14 +1,16 @@
 /**
- * Ergänzungen durch Mitglieder — client-sicher.
+ * Ergänzungen und Korrekturen durch Mitglieder — client-sicher.
  *
- * Mitglieder dürfen nur LEERE Angaben füllen (nichts überschreiben). Jede Ergänzung landet im
- * Protokoll (GameEdit), das Team kann sie im Admin-Bereich zurücksetzen.
+ * Mitglieder dürfen leere Angaben füllen und bei Spielerzahl, Rundenlänge, Plattformen und Crossplay
+ * auch Fehler korrigieren (OVERWRITABLE_FIELDS) — alles andere bleibt, wie es ist; Preise und Cover kommen
+ * ohnehin von Steam. Jede Änderung landet im Protokoll (GameEdit), das Team kann sie im Admin-Bereich
+ * zurücksetzen.
  */
 
 import type { GameFields } from "./draft";
 import { GAME_GENRES, GAME_MODES, GAME_PLATFORMS, SESSION_LENGTHS, labelOf } from "./options";
 
-export const FILLABLE_FIELDS = ["modes", "minPlayers", "maxPlayers", "platforms", "sessionLength", "genres", "isFree"] as const;
+export const FILLABLE_FIELDS = ["modes", "minPlayers", "maxPlayers", "platforms", "crossplay", "sessionLength", "genres", "isFree"] as const;
 export type FillableField = (typeof FILLABLE_FIELDS)[number];
 
 export const FIELD_LABELS: Record<FillableField, string> = {
@@ -16,10 +18,14 @@ export const FIELD_LABELS: Record<FillableField, string> = {
   minPlayers: "Spieler (min.)",
   maxPlayers: "Spieler (max.)",
   platforms: "Plattformen",
+  crossplay: "Crossplay",
   sessionLength: "Rundenlänge",
   genres: "Genre",
   isFree: "Kosten",
 };
+
+/** Felder, die Mitglieder auch korrigieren (überschreiben) dürfen, nicht nur ergänzen */
+export const OVERWRITABLE_FIELDS: readonly FillableField[] = ["minPlayers", "maxPlayers", "sessionLength", "platforms", "crossplay"];
 
 /** Ergänzungen pro Mitglied und 24 h (Moderatoren unbegrenzt) */
 export const DAILY_FILL_LIMIT = 30;
@@ -36,6 +42,7 @@ export function missingFields(f: GameFields): FillableField[] {
 export function formatFieldValue(field: string, value: unknown): string {
   if (isEmptyValue(value)) return "–";
   if (field === "isFree") return value ? "Kostenlos" : "Kostenpflichtig";
+  if (field === "crossplay") return value ? "Ja" : "Nein";
   if (field === "sessionLength") return labelOf(SESSION_LENGTHS, String(value)) ?? String(value);
   const options = field === "modes" ? GAME_MODES : field === "platforms" ? GAME_PLATFORMS : field === "genres" ? GAME_GENRES : null;
   if (options && Array.isArray(value)) return value.map(v => labelOf(options, String(v)) ?? String(v)).join(", ");
@@ -43,13 +50,16 @@ export function formatFieldValue(field: string, value: unknown): string {
 }
 
 /**
- * Welche Felder eine Ergänzung tatsächlich setzt: nur zuvor leere, nur mit Wert, und die
- * Spieleranzahl nur, wenn sie zum schon bekannten Gegenstück passt (min ≤ max).
+ * Welche Felder eine Ergänzung bzw. Korrektur tatsächlich setzt: zuvor leere, bei OVERWRITABLE_FIELDS
+ * auch belegte (wenn sich der Wert ändert), nie leeren, und die Spieleranzahl nur, wenn sie zum
+ * Gegenstück passt (min ≤ max).
  */
 export function applicableFills(current: GameFields, proposed: GameFields): Partial<GameFields> {
   const out: Partial<GameFields> = {};
   for (const field of FILLABLE_FIELDS) {
-    if (!isEmptyValue(current[field]) || isEmptyValue(proposed[field])) continue;
+    if (isEmptyValue(proposed[field])) continue;
+    if (!isEmptyValue(current[field]) && !OVERWRITABLE_FIELDS.includes(field)) continue;
+    if (JSON.stringify(current[field]) === JSON.stringify(proposed[field])) continue;
     (out as Record<string, unknown>)[field] = proposed[field];
   }
   const min = out.minPlayers ?? current.minPlayers;

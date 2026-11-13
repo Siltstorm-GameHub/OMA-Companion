@@ -162,6 +162,7 @@ model User {
   createdEvents               Event[]                      @relation("EventCreator")
   createdEventSeries          EventSeries[]                @relation("EventSeriesCreator")
   gameReactions               GameReaction[]
+  steamSwipes                 SteamSwipe[]
   gamesAdded                  Game[]                       @relation("GameAddedBy")
   gameEdits                   GameEdit[]
 }
@@ -737,6 +738,7 @@ model Squad {
   memberships SquadMembership[]
   events      Event[]
   eventSeries EventSeries[]
+  gameMatches GameMatch[]
 }
 
 model SquadMembership {
@@ -2268,8 +2270,10 @@ model Game {
   status        String    @default("APPROVED") // APPROVED | PENDING | HIDDEN
   ratingSum     Int       @default(0)
   ratingCount   Int       @default(0)
-  wantCount     Int       @default(0)
-  ownCount      Int       @default(0)
+  wantCount     Int       @default(0) // alt ("Würde ich zocken") — abgelöst durch inCount/wishCount, entfällt später
+  ownCount      Int       @default(0) // alt ("Hab ich") — abgelöst durch inCount, entfällt später
+  inCount       Int       @default(0) // "Am Start" (hat es und würde spielen, siehe GameReaction.status)
+  wishCount     Int       @default(0) // "Würde ich holen" (Wunschliste)
   addedById     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -2277,6 +2281,7 @@ model Game {
   addedBy   User?          @relation("GameAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
   reactions GameReaction[]
   edits     GameEdit[]
+  matches   GameMatch[]
 
   @@index([status])
   @@index([igdbId])
@@ -2287,8 +2292,14 @@ model GameReaction {
   userId    String
   gameId    String
   rating    Int?
-  wantPlay  Boolean  @default(false)
-  owns      Boolean  @default(false)
+  wantPlay  Boolean  @default(false) // alt — abgelöst durch status, entfällt später
+  owns      Boolean  @default(false) // alt — abgelöst durch status, entfällt später
+  /// Swipe-Entscheidung (lib/games/swipe.ts): "in" = Am Start (öffentlich), "wish" = Würde ich holen,
+  /// "out" = Nicht meins (privat). null = noch nicht entschieden.
+  status         String?
+  decidedAt      DateTime?
+  /// Erste Entscheidung überhaupt — zählt einmalig für die Monats-Quest (Rückgängig zählt nicht doppelt)
+  firstDecidedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2297,6 +2308,37 @@ model GameReaction {
 
   @@id([userId, gameId])
   @@index([gameId])
+  @@index([gameId, status])
+}
+
+/// Swipe-Entscheidung zu einem Steam-Trend, der (noch) nicht in der Spieleliste steht. "Am Start" nimmt
+/// das Spiel sofort auf (dann GameReaction); "wish"/"out" landen hier, damit die Karte nicht
+/// wiederkommt — und werden übernommen, sobald jemand anderes das Spiel aufnehmen lässt.
+model SteamSwipe {
+  userId     String
+  steamAppId Int
+  status     String // "wish" | "out"
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, steamAppId])
+  @@index([steamAppId])
+}
+
+/// Match: genug Mitglieder eines Squads sind bei einem Spiel "Am Start" (siehe lib/games/matches.ts).
+/// Merkt sich, dass die Squad-Mitglieder schon benachrichtigt wurden.
+model GameMatch {
+  id         String   @id @default(cuid())
+  squadId    String
+  gameId     String
+  size       Int
+  notifiedAt DateTime @default(now())
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  game  Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, gameId])
 }
 
 /// Von Mitgliedern ergänzte Angaben (nur zuvor leere Felder) — das Team kann sie zurücksetzen.

@@ -5,7 +5,7 @@ import { listGamesOnSale } from "@/lib/games/service";
 import { formatPrice } from "@/lib/games/options";
 
 /** „Gerade im Angebot“: Spiele der Spieleliste, die bei Steam reduziert sind (Preise täglich abgeglichen).
- *  Eigene Wunschspiele („Würde ich zocken“) zuerst. Ohne Angebote wird nichts angezeigt. */
+ *  Eigene Wunschspiele („Würde ich holen“) zuerst. Ohne Angebote wird nichts angezeigt. */
 export default async function GameSalesStrip({ userId }: { userId: string }) {
   const { total, games } = await listGamesOnSale(userId, 8);
   if (games.length === 0) return null;
@@ -49,10 +49,10 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
                 <p className={`flex items-center gap-1 text-[10px] ${g.onMyList ? "text-rose-300" : "text-gray-500"}`}>
                   <Heart className="w-2.5 h-2.5 shrink-0" />
                   {g.onMyList
-                    ? "Auf deiner Liste"
-                    : g.wantCount > 0
-                      ? `${g.wantCount} ${g.wantCount === 1 ? "will" : "wollen"} es zocken`
-                      : "Noch auf niemandes Liste"}
+                    ? "Auf deiner Wunschliste"
+                    : g.inCount > 0
+                      ? `${g.inCount} am Start`
+                      : "Noch niemand am Start"}
                 </p>
               </div>
             </Link>

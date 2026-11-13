@@ -7,6 +7,7 @@
 import type { GameGenre, GameMode, GamePlatform, GameTag, SessionLength } from "./options";
 import { gameNameKey } from "./slug";
 import { weightedRating } from "./rating";
+import type { SwipeStatus } from "./swipe";
 
 export interface GameListItem {
   id:            string;
@@ -24,8 +25,10 @@ export interface GameListItem {
   sessionLength: SessionLength | null;
   ratingSum:     number;
   ratingCount:   number;
-  wantCount:     number;
-  ownCount:      number;
+  /** "Am Start" (hat es und würde spielen) */
+  inCount:       number;
+  /** "Würde ich holen" (Wunschliste) */
+  wishCount:     number;
   priceCents:      number | null;
   discountPercent: number;
   subscriptions:   string[];
@@ -33,8 +36,7 @@ export interface GameListItem {
   playingCount:  number;
   createdAt:     string;
   myRating:      number | null;
-  myWant:        boolean;
-  myOwns:        boolean;
+  myStatus:      SwipeStatus | null;
 }
 
 export type GameSort = "popular" | "rating" | "new" | "sale" | "name";
@@ -95,15 +97,15 @@ export function filterGames(games: GameListItem[], f: GameFilters): GameListItem
     if (f.sessionLength && g.sessionLength !== f.sessionLength) return false;
     if (f.freeOnly && g.isFree !== true) return false;
     if (f.crossplayOnly && !g.crossplay) return false;
-    if (f.mineOnly && !g.myWant && !g.myOwns && g.myRating === null) return false;
+    if (f.mineOnly && (g.myStatus === null || g.myStatus === "out") && g.myRating === null) return false;
     if (f.onSaleOnly && g.discountPercent <= 0) return false;
     if (f.subscriptions.length > 0 && !f.subscriptions.some(s => g.subscriptions.includes(s))) return false;
     return true;
   });
 }
 
-export function popularityScore(g: Pick<GameListItem, "wantCount" | "playingCount" | "ratingCount">): number {
-  return g.wantCount * 2 + g.playingCount * 3 + g.ratingCount;
+export function popularityScore(g: Pick<GameListItem, "inCount" | "wishCount" | "playingCount" | "ratingCount">): number {
+  return g.inCount * 2 + g.wishCount + g.playingCount * 3 + g.ratingCount;
 }
 
 export function sortGames(games: GameListItem[], sort: GameSort): GameListItem[] {

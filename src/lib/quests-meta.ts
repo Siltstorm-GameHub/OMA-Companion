@@ -10,7 +10,7 @@
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
   | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
-  | "JOB_CLAIM" | "BATTLE_CARD_DUEL" | "COMMUNITY_JOB_VOTE";
+  | "JOB_CLAIM" | "BATTLE_CARD_DUEL" | "COMMUNITY_JOB_VOTE" | "GAME_SWIPE";
 
 export const QUEST_TYPE_META: Record<
   QuestType,
@@ -55,6 +55,10 @@ export const QUEST_TYPE_META: Record<
   BATTLE_CARD_DUEL: {
     label: "OMA Gems",     unit: "Runden",     icon: "💎",
     color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
+  },
+  GAME_SWIPE: {
+    label: "Spieleliste", unit: "Spiele",      icon: "🃏",
+    color: "text-emerald-300", bar: "from-emerald-600 to-emerald-400", bg: "from-emerald-500/10",
   },
   COMMUNITY_JOB_VOTE: {
     label: "Community-Bewertungen", unit: "Bewertungen", icon: "👍",

@@ -9,6 +9,9 @@ import RankedAvatar from "@/components/RankedAvatar";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import GameReactionPanel from "./GameReactionPanel";
 import MissingFieldsPanel from "./MissingFieldsPanel";
+import CorrectFieldsPanel from "./CorrectFieldsPanel";
+import { squadMatchesFor } from "@/lib/games/matches";
+import { planRoundUrl } from "@/lib/games/swipe";
 import { missingFields } from "@/lib/games/edits";
 import { ArrowLeft, CalendarDays, CalendarPlus, ChevronRight, ExternalLink, Pencil, Server, Users } from "@/components/icons";
 import {
@@ -55,6 +58,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
   const steamUrl = game.steamAppId ? `https://store.steampowered.com/app/${game.steamAppId}/` : null;
   const addedByName = game.addedBy ? game.addedBy.username ?? game.addedBy.name : null;
   const missing = missingFields(fields);
+  // Matches: genug aus einem eigenen Squad sind am Start → "Runde planen"
+  const matches = user && game.status === "APPROVED" && detail.myReaction.status === "in" ? await squadMatchesFor(user.id, game.id) : [];
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
@@ -157,15 +162,51 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
 
       <GameReactionPanel
         slug={game.slug}
-        initialStats={{ ratingSum: game.ratingSum, ratingCount: game.ratingCount, wantCount: game.wantCount, ownCount: game.ownCount }}
+        initialStats={{ ratingSum: game.ratingSum, ratingCount: game.ratingCount, inCount: game.inCount, wishCount: game.wishCount }}
         initialMine={detail.myReaction}
         initialDistribution={detail.distribution}
         canReact={game.status === "APPROVED" && !!user}
       />
 
+      {matches.map(m => (
+        <div key={m.squadId} className="rounded-2xl border border-emerald-400/30 p-4 flex items-center gap-3 flex-wrap"
+          style={{ background: "linear-gradient(110deg, rgba(16,185,129,0.14), transparent 70%)" }}>
+          <span className="text-2xl leading-none" aria-hidden>🎮</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Match mit {m.squadName}: {m.count} sind am Start</p>
+            <p className="text-xs text-gray-400 truncate">Mit dir: {m.others.map(o => o.name).join(", ")}</p>
+          </div>
+          <Link href={planRoundUrl(game.slug, m.squadId)}
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+            <CalendarPlus className="w-4 h-4" /> Runde planen
+          </Link>
+        </div>
+      ))}
+
       {game.status === "APPROVED" && !!user && missing.length > 0 && (
         <MissingFieldsPanel slug={game.slug} current={fields} missing={missing} />
       )}
+      {game.status === "APPROVED" && !!user && <CorrectFieldsPanel slug={game.slug} current={fields} />}
+
+      {/* Am Start (Spieleliste-Swipen, öffentlich) */}
+      <section className="surface rounded-2xl p-4 space-y-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+          <Users className="w-3.5 h-3.5 text-emerald-500/80" /> Am Start ({detail.inPeople.length})
+        </h2>
+        {detail.inPeople.length === 0 ? (
+          <p className="text-xs text-gray-500">Noch niemand. Hast du es und würdest spielen? Dann sag oben „Am Start“.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {detail.inPeople.slice(0, 24).map(p => (
+              <Link key={p.id} href={`/profile/${p.id}`} title={p.name} className="flex items-center gap-1.5 rounded-full pr-2.5 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+                <RankedAvatar userId={p.id} src={p.image} alt={p.name} size={26} />
+                <span className="text-xs text-gray-200 max-w-[7rem] truncate">{p.name}</span>
+              </Link>
+            ))}
+            {detail.inPeople.length > 24 && <span className="text-xs text-gray-500 self-center">+{detail.inPeople.length - 24}</span>}
+          </div>
+        )}
+      </section>
 
       <div className="grid sm:grid-cols-2 gap-4">
         {/* Wer zockt das? */}

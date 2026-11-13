@@ -27,7 +27,7 @@ function MatchRow({ match, names }: { match: GroupMatch; names: Map<string, stri
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5 text-[11px]">
           {match.free && <span className="text-emerald-300">Kostenlos</span>}
           {match.wanters.length > 0 && (
-            <span className="text-rose-300 inline-flex items-center gap-1"><Heart className="w-2.5 h-2.5" /> {match.wanters.length} {match.wanters.length === 1 ? "will" : "wollen"}</span>
+            <span className="text-rose-300 inline-flex items-center gap-1"><Heart className="w-2.5 h-2.5" /> {match.wanters.length} auf der Wunschliste</span>
           )}
           {match.missing.length > 0 && (
             <span className="text-amber-300/90 truncate">Fehlt: {match.missing.map(id => names.get(id) ?? "?").join(", ")}</span>

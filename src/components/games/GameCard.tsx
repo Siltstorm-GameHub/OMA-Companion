@@ -43,16 +43,15 @@ export default function GameCard({ game }: { game: GameListItem }) {
           ))}
         </div>
         {/* Eigene Markierung */}
-        {(game.myWant || game.myOwns) && (
+        {(game.myStatus === "in" || game.myStatus === "wish") && (
           <div className="absolute bottom-2 left-2 flex gap-1">
-            {game.myWant && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
-                <Heart className="w-2.5 h-2.5" /> Würde ich zocken
+            {game.myStatus === "in" ? (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white flex items-center gap-1">
+                <Check className="w-2.5 h-2.5" /> Am Start
               </span>
-            )}
-            {game.myOwns && !game.myWant && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/90 text-white flex items-center gap-1">
-                <Check className="w-2.5 h-2.5" /> Hab ich
+            ) : (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
+                <Heart className="w-2.5 h-2.5" /> Würde ich holen
               </span>
             )}
           </div>

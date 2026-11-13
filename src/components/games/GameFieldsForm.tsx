@@ -125,7 +125,7 @@ export default function GameFieldsForm({
       {shows("platforms") && (
       <Section label="Plattformen" source={sources.platforms}>
         <MultiChips options={GAME_PLATFORMS} value={value.platforms} onChange={v => set("platforms", v)} />
-        {!only && <label className="flex items-center gap-2 text-xs text-gray-300 pt-1 cursor-pointer w-fit">
+        {(!only || only.includes("crossplay")) && <label className="flex items-center gap-2 text-xs text-gray-300 pt-1 cursor-pointer w-fit">
           <input type="checkbox" checked={value.crossplay} onChange={e => set("crossplay", e.target.checked)} className="accent-teal-500 w-4 h-4" />
           Crossplay (plattformübergreifend)
           <SourceBadge source={sources.crossplay} />

@@ -18,6 +18,7 @@ import { fetchCombinedDraft } from "./sources";
 import type { GroupGameInfo } from "./group";
 import { DAILY_FILL_LIMIT, FILLABLE_FIELDS, applicableFills, type FillableField } from "./edits";
 import type { GameListItem } from "./filter";
+import { effectiveStatus, type SwipeStatus } from "./swipe";
 import { GAME_SUBSCRIPTIONS, pickKeys, type GameGenre, type GameMode, type GamePlatform, type GameStatus, type GameTag, type SessionLength } from "./options";
 import { gameNameKey, uniqueGameSlug } from "./slug";
 import { searchSteamGames } from "./steam";
@@ -139,13 +140,12 @@ export async function listApprovedGames(userId: string | undefined): Promise<Gam
     return {
       id: g.id, slug: g.slug, name: g.name, coverUrl: g.coverUrl,
       ...pickListFields(gameFieldsOf(g)),
-      ratingSum: g.ratingSum, ratingCount: g.ratingCount, wantCount: g.wantCount, ownCount: g.ownCount,
+      ratingSum: g.ratingSum, ratingCount: g.ratingCount, inCount: g.inCount, wishCount: g.wishCount,
       priceCents: g.priceCents, discountPercent: g.discountPercent, subscriptions: g.subscriptions,
       playingCount: holders.filter(h => h.games.some(f => favoriteMatchesGame(f, g))).length,
       createdAt: g.createdAt.toISOString(),
       myRating: my?.rating ?? null,
-      myWant: my?.wantPlay ?? false,
-      myOwns: my?.owns ?? false,
+      myStatus: effectiveStatus(my),
     };
   });
 }
@@ -166,7 +166,7 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
   });
   if (!game) return null;
 
-  const [myReaction, distributionRows, holders, events, servers] = await Promise.all([
+  const [myReaction, distributionRows, holders, events, servers, inRows] = await Promise.all([
     userId ? prisma.gameReaction.findUnique({ where: { userId_gameId: { userId, gameId: game.id } } }) : null,
     prisma.gameReaction.groupBy({ by: ["rating"], where: { gameId: game.id, rating: { not: null } }, _count: { _all: true } }),
     loadFavoriteHolders(),
@@ -176,6 +176,12 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
       orderBy: { startAt: "desc" },
     }),
     prisma.gameServer.findMany({ select: { id: true, name: true, game: true, isOnline: true } }),
+    // Wer ist "Am Start"? (öffentlich — "Nicht meins" bleibt privat)
+    prisma.gameReaction.findMany({
+      where: { gameId: game.id, ...IN_WHERE, user: { deletedAt: null } },
+      orderBy: { updatedAt: "desc" },
+      select: { user: { select: { id: true, name: true, username: true, image: true } } },
+    }),
   ]);
 
   const distribution = [5, 4, 3, 2, 1].map(stars => ({
@@ -201,9 +207,8 @@ export async function getGameDetail(slug: string, userId: string | undefined) {
     game,
     fields: gameFieldsOf(game),
     fieldSources: parseFieldSources(game.fieldSources),
-    myReaction: myReaction
-      ? { rating: myReaction.rating, wantPlay: myReaction.wantPlay, owns: myReaction.owns }
-      : { rating: null, wantPlay: false, owns: false },
+    myReaction: { rating: myReaction?.rating ?? null, status: effectiveStatus(myReaction) },
+    inPeople: inRows.map(r => ({ id: r.user.id, name: r.user.username ?? r.user.name ?? "Mitglied", image: r.user.image })),
     distribution,
     players,
     // Kommende zuerst (nächstes oben), dann die letzten vergangenen
@@ -286,13 +291,16 @@ export async function lookupGames(q: string): Promise<LookupResult> {
 export async function createGame(
   user: { id: string; isModerator: boolean },
   input: { steamAppId?: unknown; igdbId?: unknown; name?: unknown; fields?: unknown },
+  /** skipDailyLimit: automatische Aufnahme aus dem Swipe-Stapel (Steam-Trends) — zählt nicht als
+   *  händisches Hinzufügen, die Trendliste ist ohnehin begrenzt. */
+  opts: { skipDailyLimit?: boolean } = {},
 ): Promise<Result<{ slug: string; status: GameStatus }>> {
   let steamAppId = positiveInt(input.steamAppId);
   let igdbId = positiveInt(input.igdbId);
   const fields = sanitizeGameFields(input.fields);
   let name = cleanGameName(input.name);
 
-  if (!user.isModerator) {
+  if (!user.isModerator && !opts.skipDailyLimit) {
     const recent = await prisma.game.count({
       where: { addedById: user.id, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) } },
     });
@@ -351,18 +359,61 @@ export async function createGame(
   }
 }
 
-// ── Bewertung & "Würde ich zocken" ───────────────────────────────────────────
+// ── Bewertung & Swipe-Status ("Am Start" / "Würde ich holen" / "Nicht meins") ──
+
+/** Reaktionen, die als "Am Start" zählen — inkl. alter Markierungen ohne Status (siehe swipe.ts). */
+export const IN_WHERE = {
+  OR: [{ status: "in" }, { status: null, OR: [{ owns: true }, { wantPlay: true }] }],
+} satisfies Prisma.GameReactionWhereInput;
 
 async function recomputeAggregates(tx: Prisma.TransactionClient, gameId: string) {
-  const [ratings, wants, owns] = await Promise.all([
+  const [ratings, ins, wishes] = await Promise.all([
     tx.gameReaction.aggregate({ where: { gameId, rating: { not: null } }, _sum: { rating: true }, _count: { rating: true } }),
-    tx.gameReaction.count({ where: { gameId, wantPlay: true } }),
-    tx.gameReaction.count({ where: { gameId, owns: true } }),
+    tx.gameReaction.count({ where: { gameId, ...IN_WHERE } }),
+    tx.gameReaction.count({ where: { gameId, status: "wish" } }),
   ]);
   return tx.game.update({
     where: { id: gameId },
-    data: { ratingSum: ratings._sum.rating ?? 0, ratingCount: ratings._count.rating, wantCount: wants, ownCount: owns },
-    select: { ratingSum: true, ratingCount: true, wantCount: true, ownCount: true },
+    data: { ratingSum: ratings._sum.rating ?? 0, ratingCount: ratings._count.rating, inCount: ins, wishCount: wishes },
+    select: { ratingSum: true, ratingCount: true, inCount: true, wishCount: true },
+  });
+}
+
+/** Reaktion ohne jeden Inhalt? Dann wird sie gelöscht — außer es gab schon einmal eine Swipe-Entscheidung
+ *  (firstDecidedAt), sonst ließe sich die Monats-Quest per Rückgängig mehrfach zählen. */
+function isEmptyReaction(r: { rating: number | null; status: string | null; owns: boolean; wantPlay: boolean; firstDecidedAt: Date | null }) {
+  return r.rating === null && r.status === null && !r.owns && !r.wantPlay && r.firstDecidedAt === null;
+}
+
+/**
+ * Swipe-Entscheidung setzen (null = zurücknehmen). Liefert die neuen Zähler und ob es die allererste
+ * Entscheidung zu diesem Spiel war (zählt für die Monats-Quest).
+ */
+export async function setSwipeStatus(
+  userId: string, gameId: string, status: SwipeStatus | null,
+): Promise<Result<{ inCount: number; wishCount: number; status: SwipeStatus | null; firstDecision: boolean }>> {
+  const game = await prisma.game.findUnique({ where: { id: gameId }, select: { id: true, status: true } });
+  if (!game || game.status !== "APPROVED") return { ok: false, status: 404, error: "Spiel nicht gefunden" };
+  const now = new Date();
+
+  return prisma.$transaction(async tx => {
+    const before = await tx.gameReaction.findUnique({ where: { userId_gameId: { userId, gameId } } });
+    const firstDecision = status !== null && !before?.firstDecidedAt;
+    const data = {
+      status,
+      decidedAt: status ? now : null,
+      firstDecidedAt: before?.firstDecidedAt ?? (status ? now : null),
+      // Mit der ersten echten Entscheidung haben die alten Markierungen ausgedient
+      ...(status ? { owns: false, wantPlay: false } : {}),
+    };
+    const reaction = await tx.gameReaction.upsert({
+      where: { userId_gameId: { userId, gameId } },
+      create: { userId, gameId, ...data },
+      update: data,
+    });
+    if (isEmptyReaction(reaction)) await tx.gameReaction.delete({ where: { userId_gameId: { userId, gameId } } });
+    const agg = await recomputeAggregates(tx, gameId);
+    return { ok: true as const, inCount: agg.inCount, wishCount: agg.wishCount, status: effectiveStatus(reaction), firstDecision };
   });
 }
 
@@ -373,34 +424,22 @@ export async function recomputeGameAggregates(gameIds: string[]) {
   }
 }
 
-export interface ReactionChange { rating?: number | null; wantPlay?: boolean; owns?: boolean }
-
-export async function setReaction(
-  userId: string, slug: string, change: ReactionChange,
-): Promise<Result<{
-  ratingSum: number; ratingCount: number; wantCount: number; ownCount: number;
-  rating: number | null; wantPlay: boolean; owns: boolean;
-}>> {
+/** Sterne-Bewertung setzen (null = entfernen). Der Swipe-Status läuft über setSwipeStatus. */
+export async function setRating(
+  userId: string, slug: string, rating: number | null,
+): Promise<Result<{ ratingSum: number; ratingCount: number; rating: number | null }>> {
   const game = await prisma.game.findUnique({ where: { slug }, select: { id: true, status: true } });
   if (!game || game.status !== "APPROVED") return { ok: false, status: 404, error: "Spiel nicht gefunden" };
 
   return prisma.$transaction(async tx => {
-    const data: ReactionChange = {};
-    if (change.rating !== undefined) data.rating = change.rating;
-    if (change.wantPlay !== undefined) data.wantPlay = change.wantPlay;
-    if (change.owns !== undefined) data.owns = change.owns;
-
     const reaction = await tx.gameReaction.upsert({
       where:  { userId_gameId: { userId, gameId: game.id } },
-      create: { userId, gameId: game.id, rating: data.rating ?? null, wantPlay: data.wantPlay ?? false, owns: data.owns ?? false },
-      update: data,
+      create: { userId, gameId: game.id, rating },
+      update: { rating },
     });
-    // Leere Reaktionen nicht aufheben
-    if (reaction.rating === null && !reaction.wantPlay && !reaction.owns) {
-      await tx.gameReaction.delete({ where: { userId_gameId: { userId, gameId: game.id } } });
-    }
+    if (isEmptyReaction(reaction)) await tx.gameReaction.delete({ where: { userId_gameId: { userId, gameId: game.id } } });
     const agg = await recomputeAggregates(tx, game.id);
-    return { ok: true as const, ...agg, rating: reaction.rating, wantPlay: reaction.wantPlay, owns: reaction.owns };
+    return { ok: true as const, ratingSum: agg.ratingSum, ratingCount: agg.ratingCount, rating: reaction.rating };
   });
 }
 
@@ -695,28 +734,28 @@ export interface GameOnSale {
   priceCents: number | null;
   priceInitialCents: number | null;
   priceCurrency: string | null;
-  wantCount: number;
-  /** Der angemeldete Nutzer hat es mit "Würde ich zocken" markiert */
+  inCount: number;
+  /** Der angemeldete Nutzer hat es auf der Wunschliste ("Würde ich holen") */
   onMyList: boolean;
 }
 
 /** Spiele der Liste, die gerade bei Steam reduziert sind (täglich abgeglichen, siehe store-sync.ts) —
- *  eigene Wunschspiele zuerst, dann die meistgewünschten, dann der größte Rabatt. */
+ *  eigene Wunschspiele zuerst, dann die beliebtesten, dann der größte Rabatt. */
 export async function listGamesOnSale(userId: string | undefined, take = 8): Promise<{ total: number; games: GameOnSale[] }> {
   const where = { status: "APPROVED", discountPercent: { gt: 0 } } as const;
   const [total, rows, mine] = await Promise.all([
     prisma.game.count({ where }),
     prisma.game.findMany({
       where,
-      orderBy: [{ wantCount: "desc" }, { discountPercent: "desc" }, { name: "asc" }],
+      orderBy: [{ wishCount: "desc" }, { inCount: "desc" }, { discountPercent: "desc" }, { name: "asc" }],
       take: 40,
       select: {
         id: true, slug: true, name: true, coverUrl: true, discountPercent: true,
-        priceCents: true, priceInitialCents: true, priceCurrency: true, wantCount: true,
+        priceCents: true, priceInitialCents: true, priceCurrency: true, inCount: true,
       },
     }),
     userId
-      ? prisma.gameReaction.findMany({ where: { userId, wantPlay: true, game: where }, select: { gameId: true } })
+      ? prisma.gameReaction.findMany({ where: { userId, status: "wish", game: where }, select: { gameId: true } })
       : Promise.resolve([]),
   ]);
   const wanted = new Set(mine.map(r => r.gameId));
@@ -729,8 +768,8 @@ export async function listGamesOnSale(userId: string | undefined, take = 8): Pro
 
 export interface GameListInfo {
   slug: string;
-  ownCount: number;
-  wantCount: number;
+  inCount: number;
+  wishCount: number;
   ratingSum: number;
   ratingCount: number;
   discountPercent: number;
@@ -742,7 +781,7 @@ export async function getGameListInfo(name: string | null): Promise<GameListInfo
   if (!slug) return null;
   return prisma.game.findUnique({
     where: { slug },
-    select: { slug: true, ownCount: true, wantCount: true, ratingSum: true, ratingCount: true, discountPercent: true },
+    select: { slug: true, inCount: true, wishCount: true, ratingSum: true, ratingCount: true, discountPercent: true },
   });
 }
 
@@ -773,8 +812,8 @@ export async function groupOwnership(userIds: string[]): Promise<Record<string, 
   const [games, reactions, users] = await Promise.all([
     prisma.game.findMany({ where: { status: "APPROVED" }, select: { id: true, steamAppId: true, nameKey: true, aliases: true } }),
     prisma.gameReaction.findMany({
-      where: { userId: { in: ids }, OR: [{ owns: true }, { wantPlay: true }] },
-      select: { userId: true, gameId: true, owns: true, wantPlay: true },
+      where: { userId: { in: ids }, OR: [{ status: { in: ["in", "wish"] } }, { status: null, OR: [{ owns: true }, { wantPlay: true }] }] },
+      select: { userId: true, gameId: true, status: true, owns: true, wantPlay: true },
     }),
     prisma.user.findMany({ where: { id: { in: ids }, favoriteGamesJson: { not: null } }, select: { id: true, favoriteGamesJson: true } }),
   ]);
@@ -785,8 +824,9 @@ export async function groupOwnership(userIds: string[]): Promise<Record<string, 
 
   for (const r of reactions) {
     if (!approved.has(r.gameId)) continue;
-    if (r.owns && !entry(r.gameId).owners.includes(r.userId)) entry(r.gameId).owners.push(r.userId);
-    if (r.wantPlay) entry(r.gameId).wanters.push(r.userId);
+    const status = effectiveStatus(r);
+    if (status === "in" && !entry(r.gameId).owners.includes(r.userId)) entry(r.gameId).owners.push(r.userId);
+    if (status === "wish") entry(r.gameId).wanters.push(r.userId);
   }
   // "Zockt gerade" im Profil heißt: hat das Spiel
   for (const u of users) {
@@ -800,7 +840,8 @@ export async function groupOwnership(userIds: string[]): Promise<Record<string, 
 
 // ── Ergänzungen durch Mitglieder ─────────────────────────────────────────────
 
-/** Leere Angaben eines Spiels ergänzen (nie überschreiben). Jede Änderung wird protokolliert. */
+/** Angaben eines Spiels ergänzen bzw. korrigieren (Regeln: applicableFills in edits.ts). Jede Änderung
+ *  wird protokolliert. */
 export async function fillMissingFields(
   user: { id: string; isModerator: boolean }, slug: string, input: unknown,
 ): Promise<Result<{ filled: string[] }>> {
@@ -808,6 +849,10 @@ export async function fillMissingFields(
   if (!game || game.status !== "APPROVED") return { ok: false, status: 404, error: "Spiel nicht gefunden" };
 
   const fills = applicableFills(gameFieldsOf(game), sanitizeGameFields(input));
+  // Nur Felder, die tatsächlich mitgeschickt wurden — sanitizeGameFields füllt fehlende mit Standardwerten
+  // (z. B. Crossplay = nein), die sonst als Korrektur durchgingen.
+  const provided = new Set(input && typeof input === "object" ? Object.keys(input) : []);
+  for (const key of Object.keys(fills)) if (!provided.has(key)) delete (fills as Record<string, unknown>)[key];
   const fields = Object.keys(fills) as FillableField[];
   if (fields.length === 0) return { ok: false, status: 400, error: "Nichts Neues zum Ergänzen — evtl. hat jemand anderes schneller ausgefüllt." };
 

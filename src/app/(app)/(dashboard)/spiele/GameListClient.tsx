@@ -4,9 +4,11 @@ import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
+import SwipeDeck from "@/components/games/SwipeDeck";
+import type { DeckCard } from "@/lib/games/deck";
 import AddGameModal from "@/components/games/AddGameModal";
 import { Chip } from "@/components/games/GameFieldsForm";
-import { ChevronDown, ChevronRight, Dices, Gamepad2, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
+import { ChevronDown, ChevronRight, Dices, Copy, Gamepad2, List, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
 import {
   EMPTY_FILTERS, GAME_SORTS, activeFilterCount, filterGames, sortGames,
   type GameFilters, type GameListItem, type GameSort,
@@ -24,7 +26,7 @@ function toggle<T>(list: T[], v: T): T[] {
 }
 
 export default function GameListClient({
-  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator, tabs,
+  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator, tabs, swipe, initialView = "list",
 }: {
   games: GameListItem[];
   initialQuery: string;
@@ -34,7 +36,12 @@ export default function GameListClient({
   isModerator: boolean;
   /** Reiter des Games-Bereichs (serverseitig gerendert, siehe GamesSectionTabs) */
   tabs?: ReactNode;
+  /** Erster Swipe-Stapel (nur für angemeldete Mitglieder) */
+  swipe?: { cards: DeckCard[]; remaining: number } | null;
+  /** Startansicht: Swipen (Standard für Mitglieder) oder Liste (Suche, Sortierung, ?ansicht=liste) */
+  initialView?: "swipe" | "list";
 }) {
+  const [view, setView] = useState<"swipe" | "list">(swipe ? initialView : "list");
   const router = useRouter();
   const [filters, setFilters] = useState<GameFilters>({ ...EMPTY_FILTERS, q: initialQuery });
   const [sort, setSort] = useState<GameSort>(initialSort);
@@ -93,6 +100,24 @@ export default function GameListClient({
         </Link>
       )}
 
+      {/* Ansicht: Swipen oder Liste */}
+      {swipe && (
+        <div className="grid grid-cols-2 gap-1 rounded-xl p-1 bg-white/[0.03] border border-white/[0.06] max-w-xs">
+          {([["swipe", "Swipen", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" onClick={() => setView(key)} aria-pressed={view === key}
+              className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+                view === key ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white"
+              }`}>
+              <Icon className="w-3.5 h-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === "swipe" && swipe ? (
+        <SwipeDeck initial={swipe} onShowList={() => setView("list")} />
+      ) : (
+      <>
       {/* Suche + Sortierung */}
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -238,6 +263,8 @@ export default function GameListClient({
             {visible.map(g => <GameCard key={g.id} game={g} />)}
           </div>
         </>
+      )}
+      </>
       )}
 
       {/* Mobil: schwebender Button über der Navigation */}

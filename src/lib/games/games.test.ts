@@ -149,9 +149,9 @@ function item(over: Partial<GameListItem>): GameListItem {
   return {
     id: over.slug ?? "x", slug: "x", name: "X", coverUrl: null, genres: [], tags: [], modes: [], platforms: [],
     crossplay: false, isFree: null, minPlayers: null, maxPlayers: null, sessionLength: null,
-    ratingSum: 0, ratingCount: 0, wantCount: 0, ownCount: 0, playingCount: 0, createdAt: "2026-01-01T00:00:00.000Z",
+    ratingSum: 0, ratingCount: 0, inCount: 0, wishCount: 0, playingCount: 0, createdAt: "2026-01-01T00:00:00.000Z",
     priceCents: null, discountPercent: 0, subscriptions: [],
-    myRating: null, myWant: false, myOwns: false, ...over,
+    myRating: null, myStatus: null, ...over,
   };
 }
 
@@ -165,9 +165,9 @@ describe("Filter & Sortierung", () => {
   });
 
   const games = [
-    item({ slug: "rl", name: "Rocket League", modes: ["pvp"], isFree: true, ratingSum: 46, ratingCount: 10, wantCount: 1, platforms: ["pc"] }),
-    item({ slug: "cs", name: "Counter-Strike 2", modes: ["pvp"], genres: ["shooter"], ratingSum: 5, ratingCount: 1, wantCount: 5, createdAt: "2026-03-01T00:00:00.000Z" }),
-    item({ slug: "ow", name: "Overcooked 2", modes: ["coop"], tags: ["couch"], minPlayers: 1, maxPlayers: 4, myWant: true }),
+    item({ slug: "rl", name: "Rocket League", modes: ["pvp"], isFree: true, ratingSum: 46, ratingCount: 10, inCount: 1, platforms: ["pc"] }),
+    item({ slug: "cs", name: "Counter-Strike 2", modes: ["pvp"], genres: ["shooter"], ratingSum: 5, ratingCount: 1, inCount: 5, createdAt: "2026-03-01T00:00:00.000Z" }),
+    item({ slug: "ow", name: "Overcooked 2", modes: ["coop"], tags: ["couch"], minPlayers: 1, maxPlayers: 4, myStatus: "in" }),
   ];
 
   test("Suche ignoriert Schreibweise", () => {
@@ -334,6 +334,13 @@ describe("Ergänzungen durch Mitglieder", () => {
     assert.deepEqual(missingFields(current), ["maxPlayers", "platforms", "sessionLength", "genres", "isFree"]);
     const proposed = { ...emptyFields(), modes: ["coop" as const], maxPlayers: 8, platforms: ["pc" as const], isFree: false };
     assert.deepEqual(applicableFills(current, proposed), { maxPlayers: 8, platforms: ["pc"], isFree: false });
+  });
+  test("Korrekturen: Spielerzahl, Rundenlänge, Plattformen und Crossplay überschreibbar, Rest nicht", () => {
+    const current = { ...emptyFields(), modes: ["pvp" as const], minPlayers: 2, maxPlayers: 4, platforms: ["pc" as const], sessionLength: "kurz" as const, genres: ["shooter" as const] };
+    const proposed = { ...current, modes: ["coop" as const], maxPlayers: 8, platforms: ["pc" as const, "playstation" as const], crossplay: true, sessionLength: "lang" as const, genres: ["rpg" as const] };
+    assert.deepEqual(applicableFills(current, proposed), { maxPlayers: 8, platforms: ["pc", "playstation"], crossplay: true, sessionLength: "lang" });
+    // Leeren geht nicht, gleiche Werte zählen nicht als Änderung
+    assert.deepEqual(applicableFills(current, { ...current, maxPlayers: null }), {});
   });
   test("Spieleranzahl darf der bekannten nicht widersprechen", () => {
     const current = { ...emptyFields(), minPlayers: 4 };

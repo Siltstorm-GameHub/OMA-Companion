@@ -38,6 +38,7 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.lobbyMessage.deleteMany({ where: { userId } }),
     // Spieleliste: Bewertungen/"Würde ich zocken" (Schnitte werden unten neu berechnet)
     prisma.gameReaction.deleteMany({ where: { userId } }),
+    prisma.steamSwipe.deleteMany({ where: { userId } }),
 
     prisma.user.update({
       where: { id: userId },

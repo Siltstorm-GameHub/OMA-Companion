@@ -3,14 +3,14 @@ import { Heart, Star, Tag, Users } from "@/components/icons";
 import type { GameListInfo as Info } from "@/lib/games/service";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
 
-/** Kurzinfo aus der Spieleliste neben einem Spielnamen (Event-, Squad-Seite): wer es hat, wer es
- *  zocken will, Note, Angebot — führt auf die Spielseite. Nichts, wenn das Spiel nicht in der Liste ist. */
+/** Kurzinfo aus der Spieleliste neben einem Spielnamen (Event-, Squad-Seite): wie viele am Start sind,
+ *  Wunschliste, Note, Angebot — führt auf die Spielseite. Nichts, wenn das Spiel nicht in der Liste ist. */
 export default function GameListInfo({ info }: { info: Info | null }) {
   if (!info) return null;
   const avg = info.ratingCount >= MIN_RATINGS_FOR_AVERAGE ? averageRating(info.ratingSum, info.ratingCount) : null;
   const parts: { icon: typeof Users; text: string; className?: string }[] = [];
-  if (info.ownCount > 0) parts.push({ icon: Users, text: `${info.ownCount} ${info.ownCount === 1 ? "hat" : "haben"} es` });
-  if (info.wantCount > 0) parts.push({ icon: Heart, text: `${info.wantCount} ${info.wantCount === 1 ? "will" : "wollen"} es zocken` });
+  if (info.inCount > 0) parts.push({ icon: Users, text: `${info.inCount} am Start` });
+  if (info.wishCount > 0) parts.push({ icon: Heart, text: `${info.wishCount} auf der Wunschliste` });
   if (avg !== null) parts.push({ icon: Star, text: formatRating(avg) });
   if (info.discountPercent > 0) parts.push({ icon: Tag, text: `−${info.discountPercent} % bei Steam`, className: "text-rose-300" });
 

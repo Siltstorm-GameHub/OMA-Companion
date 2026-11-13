@@ -1,11 +1,10 @@
 /**
  * Täglicher Abgleich mit den Stores (nur serverseitig): Steam-Preise/Rabatte und Game-Pass-Katalog.
- * Wer ein Spiel mit "Würde ich zocken" markiert hat, wird benachrichtigt, sobald es reduziert ist.
+ * Wer ein Spiel auf der Wunschliste hat ("Würde ich holen"), wird benachrichtigt, sobald es reduziert ist.
  */
 
 import { prisma } from "@/lib/prisma";
-import { createNotificationForUsers, PREF_KEY } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { notifyGameUsers } from "./notify";
 import { parseFieldSources, type SteamPrice } from "./draft";
 import { fetchGamePassCatalog } from "./gamepass";
 import { gameKeys } from "./match";
@@ -76,7 +75,7 @@ export async function syncSteamPrices(): Promise<{ checked: number; updated: num
 
 async function notifySale(sale: { id: string; slug: string; name: string; update: PriceUpdate }) {
   const wanters = await prisma.gameReaction.findMany({
-    where: { gameId: sale.id, wantPlay: true, user: { deletedAt: null } },
+    where: { gameId: sale.id, status: "wish", user: { deletedAt: null } },
     select: { userId: true },
   });
   const userIds = wanters.map(w => w.userId);
@@ -89,13 +88,7 @@ async function notifySale(sale: { id: string; slug: string; name: string; update
   const body = now && before ? `Jetzt ${now} statt ${before} auf Steam.` : "Gerade reduziert auf Steam.";
   const url = `/spiele/${sale.slug}`;
 
-  await createNotificationForUsers(userIds, { type: "game", title, body, url });
-  // Push nur an alle, die Spieleliste-Hinweise nicht abgeschaltet haben
-  const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, notificationPrefs: true } });
-  const eligible = users.filter(u => {
-    try { return JSON.parse(u.notificationPrefs || "{}")[PREF_KEY.game] !== false; } catch { return true; }
-  }).map(u => u.id);
-  await sendPushToUsers(eligible, { title, body, url }).catch(err => console.error("[games] Push", err));
+  await notifyGameUsers(userIds, { title, body, url });
 }
 
 // ── Abos ─────────────────────────────────────────────────────────────────────

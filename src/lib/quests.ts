@@ -51,6 +51,13 @@ const TEMPLATES: QuestTemplate[] = [
     rewards: [100, 150, 200, 275],
   },
   {
+    type: "GAME_SWIPE",
+    titles: ["Spiele-Scout", "Geschmackstester", "Wisch-Profi", "Spielekenner"],
+    descriptions: ["Entscheide bei {target} Spielen in der Spieleliste, ob du am Start bist"],
+    targets: [10, 20, 30],
+    rewards: [100, 175, 250],
+  },
+  {
     type: "PREDICTION_MADE",
     titles: ["Hellseher", "Tippkönig", "Sieger-Orakel", "Wettfreund"],
     descriptions: ["Tippe bei {target} Event(s) auf den Sieger"],

@@ -25,7 +25,7 @@ export interface AdminGame {
   coverUrl: string | null;
   fields: GameFields;
   ratingCount: number;
-  wantCount: number;
+  inCount: number;
   enriched: boolean;
   addedBy: string | null;
   createdAt: string;
@@ -294,7 +294,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                       </a>
                     ) : "ohne Steam"}
                     {g.igdbId && " · IGDB"}
-                    {" · "}{g.ratingCount} Bewertungen · {g.wantCount}× Würde ich zocken
+                    {" · "}{g.ratingCount} Bewertungen · {g.inCount}× am Start
                     {g.addedBy && ` · von ${g.addedBy}`}
                   </p>
                 </div>

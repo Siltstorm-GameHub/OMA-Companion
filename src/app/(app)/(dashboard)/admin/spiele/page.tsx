@@ -30,7 +30,7 @@ export default async function AdminSpielePage({ searchParams }: { searchParams: 
     coverUrl: g.coverUrl,
     fields: gameFieldsOf(g),
     ratingCount: g.ratingCount,
-    wantCount: g.wantCount,
+    inCount: g.inCount,
     enriched: g.enrichedAt !== null,
     addedBy: g.addedBy ? g.addedBy.username ?? g.addedBy.name : null,
     createdAt: g.createdAt.toISOString(),

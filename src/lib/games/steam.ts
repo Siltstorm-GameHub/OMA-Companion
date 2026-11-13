@@ -205,11 +205,16 @@ export async function fetchSteamPrices(appIds: number[]): Promise<Map<number, St
   return out;
 }
 
+/** Steam-Genres, die Programme statt Spiele kennzeichnen (Animation, Design, Audio, Schulung, Foto,
+ *  Dienstprogramme, Video, Web, Spiele-Entwicklung) — manche Programme führt Steam trotzdem als Typ "game". */
+const SOFTWARE_GENRE_IDS = new Set(["51", "53", "54", "55", "56", "57", "58", "59", "60"]);
+
 /**
  * Holt die Steam-Daten zu einer App-ID. null = Steam kennt die App nicht (oder es ist kein Spiel);
  * wirft bei Netzwerk-/Serverfehlern, damit Aufrufer "nicht gefunden" von "Steam down" unterscheiden.
+ * excludeSoftware: auch Programme mit Software-Genre (z. B. Wallpaper Engine) als "kein Spiel" werten.
  */
-export async function fetchSteamGameDraft(appId: number): Promise<GameDraft | null> {
+export async function fetchSteamGameDraft(appId: number, opts: { excludeSoftware?: boolean } = {}): Promise<GameDraft | null> {
   if (!Number.isInteger(appId) || appId <= 0) return null;
   const res = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=german&cc=DE`, {
     headers: UA,
@@ -221,6 +226,7 @@ export async function fetchSteamGameDraft(appId: number): Promise<GameDraft | nu
   const entry = json?.[String(appId)];
   if (!entry?.success || !entry.data) return null;
   if (entry.data.type && entry.data.type !== "game") return null;
+  if (opts.excludeSoftware && (entry.data.genres ?? []).some(g => SOFTWARE_GENRE_IDS.has(String(g.id)))) return null;
 
   const draft = parseSteamAppData(appId, entry.data);
   if (!draft.coverUrl) draft.coverUrl = await resolveSteamCoverUrl(appId);

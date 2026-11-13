@@ -12,7 +12,7 @@ function isAuthorized(req: NextRequest): boolean {
 
 // Spieleliste aktuell halten: neue Spielnamen aus Events, Spieltagen, Gameservern, Profilen und
 // Ideen übernehmen, einen Schwung Einträge mit Steam/IGDB ergänzen, Steam-Preise/Rabatte und den
-// Game-Pass-Katalog abgleichen (neue Angebote → Hinweis an alle mit "Würde ich zocken").
+// Game-Pass-Katalog abgleichen (neue Angebote → Hinweis an alle mit dem Spiel auf der Wunschliste).
 // Wird täglich um 05:20 UTC von Vercel Cron aufgerufen.
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
