@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 import { getShopConfig, type WheelPrize } from "@/lib/shop-config";
+import { spinDateKey } from "@/lib/daily-spin";
 
 function rollPrize(prizes: WheelPrize[]): WheelPrize {
   const total = prizes.reduce((s, p) => s + p.weight, 0);
@@ -14,16 +15,12 @@ function rollPrize(prizes: WheelPrize[]): WheelPrize {
   return prizes[0];
 }
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-}
-
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
 
   const existing = await prisma.dailySpin.findUnique({
-    where: { userId_date: { userId: session.user.id, date: todayStr() } },
+    where: { userId_date: { userId: session.user.id, date: spinDateKey() } },
   }).catch(() => null);
 
   const { wheelPrizes } = await getShopConfig();
@@ -42,7 +39,7 @@ export async function POST() {
 
   // Bereits heute gedreht?
   const existing = await prisma.dailySpin.findUnique({
-    where: { userId_date: { userId, date: todayStr() } },
+    where: { userId_date: { userId, date: spinDateKey() } },
   }).catch(() => null);
   if (existing) return NextResponse.json({ error: "Heute bereits gedreht", result: existing }, { status: 400 });
 
@@ -52,7 +49,7 @@ export async function POST() {
 
   await prisma.$transaction(async tx => {
     await tx.dailySpin.create({
-      data: { userId, date: todayStr(), prizeType: prize.type, prizeValue: prize.value, prizeLabel: prize.label },
+      data: { userId, date: spinDateKey(), prizeType: prize.type, prizeValue: prize.value, prizeLabel: prize.label },
     });
     if (prize.type === "points" && amount > 0) {
       await tx.user.update({ where: { id: userId }, data: { points: { increment: amount } } });

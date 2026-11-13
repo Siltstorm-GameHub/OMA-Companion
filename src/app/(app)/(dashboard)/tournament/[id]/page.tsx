@@ -30,7 +30,8 @@ import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
 import EventPostsSection from "@/components/EventPostsSection";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
-import { findGameSlug } from "@/lib/games/service";
+import { getGameListInfo } from "@/lib/games/service";
+import GameListInfo from "@/components/games/GameListInfo";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import CheckInButton from "./CheckInButton";
@@ -185,8 +186,9 @@ export default async function TournamentDetailPage({
   }
   const isHidden = event.hidden || !!event.series?.hidden;
   if (isHidden && !isMod && !canManage) notFound();
-  // Spiel in der Spieleliste → Name wird zum Link auf die Spiel-Seite
-  const gameListSlug = event.game ? await findGameSlug(event.game, null) : null;
+  // Spiel in der Spieleliste → Name wird zum Link auf die Spiel-Seite, dazu eine Kurzinfo (wer es hat …)
+  const gameInfo = event.game ? await getGameListInfo(event.game) : null;
+  const gameListSlug = gameInfo?.slug ?? null;
 
   const communityCreator = (event.approvalStatus || event.series?.approvalStatus) && event.createdById
     ? await prisma.user.findUnique({ where: { id: event.createdById }, select: { username: true, name: true } })
@@ -958,6 +960,7 @@ export default async function TournamentDetailPage({
                   )}
                 </span>
               )}
+              <GameListInfo info={gameInfo} />
               <span className="flex items-center gap-1.5 text-sm text-gray-400">
                 <Clock className="w-3.5 h-3.5" />
                 {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}

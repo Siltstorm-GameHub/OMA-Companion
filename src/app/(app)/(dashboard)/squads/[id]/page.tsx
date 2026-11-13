@@ -8,6 +8,8 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import SeriesIcon from "@/components/SeriesIcon";
 import SquadRosterManager from "@/components/squads/SquadRosterManager";
 import { formatBerlinDate } from "@/lib/time";
+import { getGameListInfo } from "@/lib/games/service";
+import GameListInfo from "@/components/games/GameListInfo";
 
 const EVENT_STATUS_LABEL: Record<string, string> = {
   open: "Offen", active: "Läuft", closed: "Voll", umfrage: "Umfragephase", finished: "Beendet",
@@ -45,6 +47,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
   // Wer das Roster/die Events verwalten darf (Moderator/Admin oder Captain dieses Squads) sieht auch
   // noch unveröffentlichte (hidden) Events der eigenen Squad — alle anderen Betrachter nicht.
   const canManage = isModerator || isCaptain;
+  const gameInfo = squad.game ? await getGameListInfo(squad.game) : null;
 
   const [squadEvents, allUsers] = await Promise.all([
     prisma.event.findMany({
@@ -102,6 +105,8 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
           )}
         </div>
       )}
+
+      {gameInfo && <GameListInfo info={gameInfo} />}
 
       {squad.description && (
         <p className="text-sm text-gray-400 leading-relaxed">{squad.description}</p>

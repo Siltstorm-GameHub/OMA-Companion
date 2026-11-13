@@ -3,6 +3,7 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { listApprovedGames } from "@/lib/games/service";
 import GameListClient from "./GameListClient";
+import { GAME_SORTS, type GameSort } from "@/lib/games/filter";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -10,8 +11,8 @@ export const metadata: Metadata = {
   description: "Was zocken wir heute? Spiele für eure Runde finden — bewertet von der Community.",
 };
 
-export default async function SpielePage({ searchParams }: { searchParams: Promise<{ q?: string; neu?: string }> }) {
-  const { q, neu } = await searchParams;
+export default async function SpielePage({ searchParams }: { searchParams: Promise<{ q?: string; neu?: string; sort?: string }> }) {
+  const { q, neu, sort } = await searchParams;
   const user = await getSessionUser();
   const isModerator = !!user && hasMinRole(user.role, "moderator");
 
@@ -24,6 +25,7 @@ export default async function SpielePage({ searchParams }: { searchParams: Promi
     <GameListClient
       games={games}
       initialQuery={(q ?? "").slice(0, 80)}
+      initialSort={sort && sort in GAME_SORTS ? (sort as GameSort) : "popular"}
       openAdd={neu === "1"}
       pendingCount={pendingCount}
       isModerator={isModerator}

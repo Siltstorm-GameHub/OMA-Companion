@@ -685,6 +685,67 @@ export async function getGameListTeaser(take = 4): Promise<{ total: number; top:
   return { total, top };
 }
 
+// ── Angebote und Spiel-Infos für andere Seiten ───────────────────────────────
+
+export interface GameOnSale {
+  slug: string;
+  name: string;
+  coverUrl: string | null;
+  discountPercent: number;
+  priceCents: number | null;
+  priceInitialCents: number | null;
+  priceCurrency: string | null;
+  wantCount: number;
+  /** Der angemeldete Nutzer hat es mit "Würde ich zocken" markiert */
+  onMyList: boolean;
+}
+
+/** Spiele der Liste, die gerade bei Steam reduziert sind (täglich abgeglichen, siehe store-sync.ts) —
+ *  eigene Wunschspiele zuerst, dann die meistgewünschten, dann der größte Rabatt. */
+export async function listGamesOnSale(userId: string | undefined, take = 8): Promise<{ total: number; games: GameOnSale[] }> {
+  const where = { status: "APPROVED", discountPercent: { gt: 0 } } as const;
+  const [total, rows, mine] = await Promise.all([
+    prisma.game.count({ where }),
+    prisma.game.findMany({
+      where,
+      orderBy: [{ wantCount: "desc" }, { discountPercent: "desc" }, { name: "asc" }],
+      take: 40,
+      select: {
+        id: true, slug: true, name: true, coverUrl: true, discountPercent: true,
+        priceCents: true, priceInitialCents: true, priceCurrency: true, wantCount: true,
+      },
+    }),
+    userId
+      ? prisma.gameReaction.findMany({ where: { userId, wantPlay: true, game: where }, select: { gameId: true } })
+      : Promise.resolve([]),
+  ]);
+  const wanted = new Set(mine.map(r => r.gameId));
+  const games = rows
+    .map(({ id, ...g }) => ({ ...g, onMyList: wanted.has(id) }))
+    .sort((a, b) => Number(b.onMyList) - Number(a.onMyList))
+    .slice(0, take);
+  return { total, games };
+}
+
+export interface GameListInfo {
+  slug: string;
+  ownCount: number;
+  wantCount: number;
+  ratingSum: number;
+  ratingCount: number;
+  discountPercent: number;
+}
+
+/** Kurzinfo aus der Spieleliste zu einem Spielnamen (Event, Squad …), null = nicht in der Liste. */
+export async function getGameListInfo(name: string | null): Promise<GameListInfo | null> {
+  const slug = await findGameSlug(name, null);
+  if (!slug) return null;
+  return prisma.game.findUnique({
+    where: { slug },
+    select: { slug: true, ownCount: true, wantCount: true, ratingSum: true, ratingCount: true, discountPercent: true },
+  });
+}
+
 // ── Gruppen-Finder ("Was zocken wir?") ───────────────────────────────────────
 
 export const GROUP_MAX_MEMBERS = 16;

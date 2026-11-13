@@ -24,17 +24,18 @@ function toggle<T>(list: T[], v: T): T[] {
 }
 
 export default function GameListClient({
-  games, initialQuery, openAdd, pendingCount, isModerator,
+  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator,
 }: {
   games: GameListItem[];
   initialQuery: string;
+  initialSort?: GameSort;
   openAdd: boolean;
   pendingCount: number;
   isModerator: boolean;
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState<GameFilters>({ ...EMPTY_FILTERS, q: initialQuery });
-  const [sort, setSort] = useState<GameSort>("popular");
+  const [sort, setSort] = useState<GameSort>(initialSort);
   const [showMore, setShowMore] = useState(false);
   const [addOpen, setAddOpen] = useState(openAdd);
 

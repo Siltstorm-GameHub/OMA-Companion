@@ -1,8 +1,10 @@
 // ============================================
-// /games — Games-Hub der Community: OMA Blocks (siehe components/blocks/BlocksHubPanel)
+// /games — Games-Hub der Community: OMA Blocks (siehe components/blocks/BlocksHubPanel), tägliches
+// Glücksrad, Spieleliste mit aktuellen Angeboten
 // ============================================
 // Früher lag der Hub unter /gems und enthielt zusätzlich OMA Gems; alte Adressen leiten hierher um
-// (next.config.ts).
+// (next.config.ts). Das Glücksrad steht oben, solange heute noch nicht gedreht wurde (Home verlinkt
+// dann auf #gluecksrad), danach am Seitenende.
 
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -10,6 +12,11 @@ import Link from "next/link";
 import { Gamepad2, ShoppingBag } from "@/components/icons";
 import GameListBanner from "@/components/games/GameListBanner";
 import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
+import GameSalesStrip from "@/components/games/GameSalesStrip";
+import DailySpin from "@/components/shop/DailySpin";
+import { prisma } from "@/lib/prisma";
+import { getShopConfig } from "@/lib/shop-config";
+import { spinDateKey } from "@/lib/daily-spin";
 
 export const metadata = {
   title: "Games | OMA",
@@ -21,6 +28,21 @@ export default async function GamesPage() {
     redirect("/login?notice=login_required&callbackUrl=/games");
   }
   const userId = session.user.id;
+  const [todaySpin, shopConfig, user] = await Promise.all([
+    prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } } }).catch(() => null),
+    getShopConfig(),
+    prisma.user.findUnique({ where: { id: userId }, select: { points: true } }),
+  ]);
+  const wheel = (
+    <section id="gluecksrad" className="scroll-mt-24">
+      <DailySpin
+        alreadySpun={!!todaySpin}
+        lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
+        initialPoints={user?.points ?? 0}
+        prizes={shopConfig.wheelPrizes}
+      />
+    </section>
+  );
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
@@ -41,8 +63,11 @@ export default async function GamesPage() {
           <ShoppingBag className="w-4 h-4 text-amber-400" /> Münzen ausgeben im Shop
         </Link>
       </div>
+      {!todaySpin && wheel}
       <GameListBanner />
+      <GameSalesStrip userId={userId} />
       <BlocksHubPanel userId={userId} />
+      {todaySpin && wheel}
     </div>
   );
 }

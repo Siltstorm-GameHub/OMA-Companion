@@ -21,6 +21,7 @@ import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
+import { spinDateKey } from "@/lib/daily-spin";
 import RankRing from "@/components/RankRing";
 import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { getVisibleServers } from "@/lib/gameservers";
@@ -238,6 +239,7 @@ export default async function DashboardPage() {
     finishedClipContest,
     activeClipContest,
     registeredDashboardEventIds,
+    spunToday,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -290,6 +292,10 @@ export default async function DashboardPage() {
       ? prisma.eventRegistration.findMany({ where: { userId, eventId: { in: dashboardEvents.map(ev => ev.id) } }, select: { eventId: true } })
           .then(rows => new Set(rows.map(r => r.eventId)))
       : new Set<string>(),
+    // Tägliches Glücksrad schon gedreht? Sonst weist Home darauf hin (gedreht wird auf /games).
+    userId
+      ? prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } }, select: { id: true } }).then(Boolean).catch(() => true)
+      : true,
   ]);
 
   const myPoints     = sessionUser?.points ?? 0;
@@ -475,6 +481,22 @@ export default async function DashboardPage() {
           )}
 
         </div>
+
+        {/* ── Hinweis: tägliches Glücksrad noch nicht gedreht ── */}
+        {!spunToday && (
+          <Link href="/games#gluecksrad"
+            className="group mt-4 sm:mt-6 flex items-center gap-3 rounded-xl border border-amber-500/30 px-4 py-3 transition-colors hover:border-amber-400/60"
+            style={{ background: `linear-gradient(110deg, ${acc("amber", 0.14)}, transparent 70%)` }}>
+            <span className="text-2xl leading-none shrink-0" aria-hidden>🎰</span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-white">Dein tägliches Glücksrad wartet</span>
+              <span className="block text-xs text-gray-400">Einmal am Tag gratis drehen und Münzen gewinnen.</span>
+            </span>
+            <span className="flex items-center gap-1 text-xs font-semibold text-amber-300 group-hover:text-amber-200 shrink-0">
+              Drehen <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </Link>
+        )}
 
         {/* ── Stat-Streifen ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 sm:mt-6">
