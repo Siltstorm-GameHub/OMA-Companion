@@ -3,6 +3,7 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { listApprovedGames } from "@/lib/games/service";
 import GameListClient from "./GameListClient";
+import GamesSectionTabs from "@/components/games/GamesSectionTabs";
 import { GAME_SORTS, type GameSort } from "@/lib/games/filter";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function SpielePage({ searchParams }: { searchParams: Promi
       openAdd={neu === "1"}
       pendingCount={pendingCount}
       isModerator={isModerator}
+      tabs={<GamesSectionTabs active="spieleliste" userId={user?.id} />}
     />
   );
 }

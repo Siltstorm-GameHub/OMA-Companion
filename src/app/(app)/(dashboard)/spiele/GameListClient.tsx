@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
@@ -24,7 +24,7 @@ function toggle<T>(list: T[], v: T): T[] {
 }
 
 export default function GameListClient({
-  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator,
+  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator, tabs,
 }: {
   games: GameListItem[];
   initialQuery: string;
@@ -32,6 +32,8 @@ export default function GameListClient({
   openAdd: boolean;
   pendingCount: number;
   isModerator: boolean;
+  /** Reiter des Games-Bereichs (serverseitig gerendert, siehe GamesSectionTabs) */
+  tabs?: ReactNode;
 }) {
   const router = useRouter();
   const [filters, setFilters] = useState<GameFilters>({ ...EMPTY_FILTERS, q: initialQuery });
@@ -52,6 +54,7 @@ export default function GameListClient({
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in pb-28 sm:pb-6">
+      {tabs}
       {/* Kopf */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>

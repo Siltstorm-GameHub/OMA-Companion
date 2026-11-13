@@ -292,7 +292,7 @@ export default async function DashboardPage() {
       ? prisma.eventRegistration.findMany({ where: { userId, eventId: { in: dashboardEvents.map(ev => ev.id) } }, select: { eventId: true } })
           .then(rows => new Set(rows.map(r => r.eventId)))
       : new Set<string>(),
-    // Tägliches Glücksrad schon gedreht? Sonst weist Home darauf hin (gedreht wird auf /games).
+    // Tägliches Glücksrad schon gedreht? Sonst weist Home darauf hin (gedreht wird im Shop-Reiter).
     userId
       ? prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } }, select: { id: true } }).then(Boolean).catch(() => true)
       : true,
@@ -484,7 +484,7 @@ export default async function DashboardPage() {
 
         {/* ── Hinweis: tägliches Glücksrad noch nicht gedreht ── */}
         {!spunToday && (
-          <Link href="/games#gluecksrad"
+          <Link href="/shop#gluecksrad"
             className="group mt-4 sm:mt-6 flex items-center gap-3 rounded-xl border border-amber-500/30 px-4 py-3 transition-colors hover:border-amber-400/60"
             style={{ background: `linear-gradient(110deg, ${acc("amber", 0.14)}, transparent 70%)` }}>
             <span className="text-2xl leading-none shrink-0" aria-hidden>🎰</span>

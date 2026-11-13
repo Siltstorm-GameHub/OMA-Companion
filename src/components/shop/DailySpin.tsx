@@ -60,9 +60,13 @@ function buildSegments(prizes: WheelPrize[]) {
 
 const CX = 150, CY = 150, R = 137, R_TEXT = 92, R_RIM = 140;
 
+// Auf 2 Nachkommastellen gerundet: Server und Browser rechnen Winkelfunktionen in der letzten Stelle
+// unterschiedlich — ungerundet passt das gerenderte SVG nicht zum Client (Hydration-Fehler).
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function pt(r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
-  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+  return { x: round2(CX + r * Math.cos(rad)), y: round2(CY + r * Math.sin(rad)) };
 }
 function segPath(i: number, seg: number) {
   const { x: sx, y: sy } = pt(R, i * seg);
