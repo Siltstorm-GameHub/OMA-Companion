@@ -31,34 +31,24 @@ const nextConfig: NextConfig = {
     // public/event-covers: Vorlagen-Cover, die branded-cover.ts für Discord von der Platte liest
     ].map((route) => [route, ["node_modules/sharp/**/*", "node_modules/@img/**/*", "public/event-covers/**/*"]]),
   ),
-  // OMA Gems ist ein schlichtes Edelstein-Tauschspiel (Karten, Kämpfe und Helden sind entfernt; /shop ist
-  // heute der Kosmetik-Shop) —
-  // alte Links leiten dauerhaft (308) auf den Games-Hub weiter.
+  // Der Games-Hub liegt unter /games (nur noch OMA Blocks). OMA Gems ist entfernt, ebenso das frühere
+  // Karten-/Kampfsystem (Battle Cards), OMA Quest und OMA Duels — alte Links leiten dauerhaft (308) weiter.
   async redirects() {
     return [
-      // Der Games-Hub (OMA Gems + OMA Blocks) liegt unter /gems.
-      { source: "/games", destination: "/gems", permanent: false },
-      { source: "/blocks", destination: "/gems/blocks", permanent: false },
-      // Alte Seiten-URLs von Battle Cards
-      { source: "/battle-cards", destination: "/gems", permanent: true },
-      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)", destination: "/gems", permanent: true },
-      { source: "/battle-cards/:page(live|battles|lineup|leaderboard)/:rest+", destination: "/gems", permanent: true },
-      // Seiten des früheren Karten-/Kampf-Systems von OMA Gems
-      { source: "/gems/:page(live|battles|lineup|leaderboard|held)", destination: "/gems", permanent: true },
-      { source: "/gems/:page(live|battles|lineup|leaderboard|held)/:rest+", destination: "/gems", permanent: true },
-      { source: "/admin/gems", destination: "/admin/minigames#gems", permanent: true },
-      { source: "/admin/gems/:path+", destination: "/admin/minigames#gems", permanent: true },
-      { source: "/battle-cards/:page(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
-      // Alte Asset-URLs: Grafiken und Sounds lagen bis Phase 5 unter /battle-cards/ und wurden von
-      // einer früheren Pauschal-Weiterleitung (308, von Browsern gecacht) auf /gems/… umgeleitet.
-      // Sie liegen jetzt unter /gems-assets/ — beide Wege führen dorthin.
-      { source: "/battle-cards/:asset*", destination: "/gems-assets/:asset*", permanent: true },
-      { source: "/gems/:asset(.+\\.(?:png|jpe?g|webp|gif|svg|wav|ogg|mp3))", destination: "/gems-assets/:asset", permanent: true },
-      // OMA Quest (vormals /dnd) und OMA Duels sind entfernt.
-      { source: "/oma-quest/:path*", destination: "/gems", permanent: true },
-      { source: "/dnd/:path*", destination: "/gems", permanent: true },
-      { source: "/gems/:sub(challenges|duel-deck|my-card)", destination: "/gems", permanent: true },
-      { source: "/admin/battle-cards/:path*", destination: "/admin/minigames#gems", permanent: true },
+      { source: "/blocks", destination: "/games/blocks", permanent: false },
+      // Bis 2026-11 lag der Hub unter /gems — OMA Blocks zieht mit, alles andere landet im Hub.
+      { source: "/gems/blocks", destination: "/games/blocks", permanent: true },
+      { source: "/gems/blocks/:path+", destination: "/games/blocks/:path+", permanent: true },
+      { source: "/gems", destination: "/games", permanent: true },
+      { source: "/gems/:path+", destination: "/games", permanent: true },
+      { source: "/gems-assets/:path+", destination: "/games", permanent: true },
+      { source: "/battle-cards", destination: "/games", permanent: true },
+      { source: "/battle-cards/:path+", destination: "/games", permanent: true },
+      { source: "/oma-quest/:path*", destination: "/games", permanent: true },
+      { source: "/dnd/:path*", destination: "/games", permanent: true },
+      { source: "/admin/gems", destination: "/admin/minigames", permanent: true },
+      { source: "/admin/gems/:path+", destination: "/admin/minigames", permanent: true },
+      { source: "/admin/battle-cards/:path*", destination: "/admin/minigames", permanent: true },
     ];
   },
   images: {

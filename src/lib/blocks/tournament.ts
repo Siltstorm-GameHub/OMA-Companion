@@ -218,7 +218,7 @@ export async function startTournament(eventId: string): Promise<string | null> {
   if (claim.count !== 1) return "Das Turnier läuft bereits.";
 
   await prisma.event.update({ where: { id: eventId }, data: { status: "active" } }).catch(() => {});
-  const url = `/gems/blocks/turnier/${eventId}`;
+  const url = `/games/blocks/turnier/${eventId}`;
   await Promise.all(
     players.map((id) => {
       const g = groups.findIndex((list) => list.includes(id));
@@ -260,7 +260,7 @@ export async function advanceTournament(eventId: string, force = false): Promise
             type: "event_start",
             title: `${event.title}: Du bist im Finale!`,
             body: "Das Finale startet, sobald alle im Turnier-Raum sind.",
-            url: `/gems/blocks/turnier/${eventId}`,
+            url: `/games/blocks/turnier/${eventId}`,
           }).catch(() => {}),
         ),
       );

@@ -5,7 +5,7 @@
 // Anmeldung: Token von /api/blocks/mp-token holen → WebSocket öffnen → "hello". Danach Räume:
 // Schnelles Spiel (öffentlicher Raum), privater Raum mit Code/Einladungslink. Alle Spieler einer
 // Runde bekommen denselben Seed. Eigene Angriffe gehen an den Server, der Ziel und Lücke wählt.
-// Turnier-Modus (tournamentEventId, Seite /gems/blocks/turnier/[eventId]): Statt Räume zu wählen, holt der
+// Turnier-Modus (tournamentEventId, Seite /games/blocks/turnier/[eventId]): Statt Räume zu wählen, holt der
 // Client ein Ticket und betritt damit den Raum seiner Gruppe bzw. das Finale — Runden starten automatisch.
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -346,7 +346,7 @@ export default function BlocksVersusClient({
 
   const copyInvite = async (code = room?.code) => {
     if (!code) return;
-    const url = `${window.location.origin}/gems/blocks/versus?raum=${code}`;
+    const url = `${window.location.origin}/games/blocks/versus?raum=${code}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Einladungslink kopiert");
@@ -360,7 +360,7 @@ export default function BlocksVersusClient({
   const header = (
     <div className="flex items-center justify-between gap-2">
       {fullscreen ? <span /> : <Link
-        href={tourMode ? `/tournament/${tournamentEventId}` : "/gems?spiel=blocks"}
+        href={tourMode ? `/tournament/${tournamentEventId}` : "/games"}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white"
       >
         <ArrowLeft className="w-4 h-4" /> {tourMode ? "Zum Event" : "OMA Blocks"}
@@ -395,7 +395,7 @@ export default function BlocksVersusClient({
             Neu verbinden
           </Button>
         )}
-        <Link href="/gems/blocks" className="text-xs text-gray-400 hover:text-white">Solange Solo spielen →</Link>
+        <Link href="/games/blocks" className="text-xs text-gray-400 hover:text-white">Solange Solo spielen →</Link>
       </div>
     );
   } else if (tourMode && !room) {

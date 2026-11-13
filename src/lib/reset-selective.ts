@@ -18,7 +18,7 @@ import {
 // Berichte, Squads.
 // Wird zurückgesetzt: Münzen (0), Rang-Punkte (= Summe aus den bewahrten Reihen), Punktehistorie,
 // alle übrigen bereits begonnenen Events und Reihen, Pokale, LuL, Quests, Tipps, Minigames
-// (Gems, Blocks, Karten), Shop-Inventar, Community-Job-Auszahlungen und Ansehen, Voice-/Nachrichten-
+// (Blocks), Shop-Inventar, Community-Job-Auszahlungen und Ansehen, Voice-/Nachrichten-
 // Zähler, Ranglisten-Snapshots, In-App-Benachrichtigungen. Danach: Wanderpokale neu berechnen.
 
 const SCHEDULE_KEY = "app_reset_schedule";
@@ -253,23 +253,7 @@ export async function executeReset(selectedIds: string[]): Promise<ResetSummary>
     prisma.eventWinnerPrediction.deleteMany(),
     prisma.predictionStreak.deleteMany(),
 
-    // ── Minigames (Gems, Blocks, Karten) + Shop-Inventar; Karten-Katalog bleibt ──
-    prisma.liveBattle.deleteMany(),
-    prisma.battle.deleteMany(),
-    prisma.cardPack.deleteMany(),
-    prisma.userCard.deleteMany(),
-    prisma.userCampaignProgress.deleteMany(),
-    prisma.gemsTournamentAttempt.deleteMany(),
-    prisma.gemsDailyStats.deleteMany(),
-    prisma.gemsPlayer.deleteMany(),
-    prisma.userRelic.deleteMany(),
-    prisma.gemsTowerClear.deleteMany(),
-    prisma.gemsTowerSeason.deleteMany(),
-    prisma.gemsWaveBest.deleteMany(),
-    prisma.gemsWaveSeason.deleteMany(),
-    prisma.gemsRun.deleteMany(),
-    prisma.gemsBest.deleteMany(),
-    prisma.gemsMonth.deleteMany(),
+    // ── Minigames (Blocks) + Shop-Inventar ──
     prisma.blocksRun.deleteMany(),
     prisma.blocksBest.deleteMany(),
     prisma.blocksSeason.deleteMany(),

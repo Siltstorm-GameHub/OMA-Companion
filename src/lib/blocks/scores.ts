@@ -1,7 +1,7 @@
 // ============================================
 // OMA Blocks — Highscores (Monat + All-Time), Monatsabschluss, Versus-Siege
 // ============================================
-// Bestwerte liegen in BlocksBest: season "YYYY-MM" (Berliner Kalendermonat, wie die Gems-Saisons)
+// Bestwerte liegen in BlocksBest: season "YYYY-MM" (Berliner Kalendermonat)
 // und "all" für All-Time. Die Monatswertung "setzt sich zurück", indem ab dem 1. einfach die neue
 // season-Zeile zählt — nichts wird gelöscht. Der Cron (cron/blocks-season) friert danach den Endstand
 // des Vormonats in BlocksSeason ein, zahlt Platz 1–3 die im Adminbereich eingestellte Belohnung
@@ -160,7 +160,7 @@ export async function finalizeDueBlocksSeasons(now: Date = new Date()): Promise<
         body:
           `Mit ${ranking[i].score.toLocaleString("de-DE")} Punkten bist du auf Platz ${i + 1} der Monatswertung gelandet.` +
           (label ? ` Deine Belohnung: ${label}.` : ""),
-        url: "/gems?spiel=blocks",
+        url: "/games",
       });
     }
   }

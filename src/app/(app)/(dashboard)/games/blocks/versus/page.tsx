@@ -1,5 +1,5 @@
 // ============================================
-// /gems/blocks/versus — OMA Blocks Versus (Echtzeit-Multiplayer)
+// /games/blocks/versus — OMA Blocks Versus (Echtzeit-Multiplayer)
 // ============================================
 // Verbindet sich mit dem Multiplayer-Server (src/blocks-server). ?raum=CODE tritt direkt einem Raum bei.
 
@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function BlocksVersusPage({ searchParams }: { searchParams: Promise<{ raum?: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=/gems/blocks/versus");
+  if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=/games/blocks/versus");
   const { raum } = await searchParams;
 
   return (

@@ -1,5 +1,5 @@
 // ============================================
-// /gems/blocks — OMA Blocks Solo (Marathon)
+// /games/blocks — OMA Blocks Solo (Marathon)
 // ============================================
 
 import { redirect } from "next/navigation";
@@ -15,7 +15,7 @@ export const metadata = {
 
 export default async function BlocksSoloPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=/gems/blocks");
+  if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=/games/blocks");
   const userId = session.user.id;
   const season = seasonKey();
 

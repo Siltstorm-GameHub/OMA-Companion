@@ -9,7 +9,7 @@ export const DELETE_CONFIRM_PHRASE = "LÖSCHEN";
  * Löscht ein Konto auf Wunsch des Mitglieds (DSGVO Art. 17).
  *
  * Bewusst Anonymisierung statt `user.delete()`: An der User-Zeile hängen
- * Turnierergebnisse, Brackets, Abstimmungen und Karten anderer Spieler. Ein
+ * Turnierergebnisse, Brackets und Abstimmungen anderer Spieler. Ein
  * hartes Löschen würde deren Historie zerreißen (bzw. an Foreign Keys
  * scheitern). Stattdessen wird alles entfernt, was die Person identifiziert —
  * zurück bleibt ein namenloser Platzhalter "Gelöschtes Mitglied".
@@ -25,9 +25,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
   });
   if (!user || user.deletedAt) return;
 
-  const card = user.discordId
-    ? await prisma.card.findUnique({ where: { linkedDiscordId: user.discordId }, select: { id: true } })
-    : null;
   const ratedGames = await prisma.gameReaction.findMany({ where: { userId }, select: { gameId: true } });
 
   await prisma.$transaction([
@@ -41,14 +38,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.lobbyMessage.deleteMany({ where: { userId } }),
     // Spieleliste: Bewertungen/"Würde ich zocken" (Schnitte werden unten neu berechnet)
     prisma.gameReaction.deleteMany({ where: { userId } }),
-
-    // Community-Karte: andere Spieler besitzen sie ggf. — Karte bleibt, Personenbezug geht
-    ...(card ? [
-      prisma.card.update({
-        where: { id: card.id },
-        data: { linkedDiscordId: null, name: DELETED_USER_NAME, imageUrl: null, sourceStatsJson: undefined, heroLook: undefined },
-      }),
-    ] : []),
 
     prisma.user.update({
       where: { id: userId },
@@ -119,7 +108,6 @@ export async function buildUserExport(userId: string) {
       communityIdeaVotes: true,
       communityBoardComments: true,
       pokale: true,
-      battleCardUserCards: true,
       pushSubscriptions: { select: { createdAt: true } },
       accounts: { select: { provider: true, providerAccountId: true } },
     },

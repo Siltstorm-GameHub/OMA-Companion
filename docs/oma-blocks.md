@@ -1,6 +1,6 @@
 # OMA Blocks
 
-Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores und Echtzeit-Versus.
+Fallende-Blöcke-Puzzle im Games-Hub (`/games`) mit Solo-Highscores und Echtzeit-Versus.
 
 ## Aufbau
 
@@ -11,10 +11,10 @@ Fallende-Blöcke-Puzzle im Games-Hub (`/gems?spiel=blocks`) mit Solo-Highscores 
 | Highscores, Monatsabschluss, Versus-Siege | `src/lib/blocks/scores.ts` |
 | Versus-Protokoll / Token-Signatur | `src/lib/blocks/protocol.ts`, `src/lib/blocks/mp-token.ts` |
 | Browser (Canvas, Steuerung, Solo, Versus) | `src/components/blocks/*` |
-| Seiten | `/gems/blocks` (Solo), `/gems/blocks/versus` (Versus, `?raum=CODE`) |
+| Seiten | `/games/blocks` (Solo), `/games/blocks/versus` (Versus, `?raum=CODE`) |
 | API | `/api/blocks/runs`, `/api/blocks/runs/[id]`, `/api/blocks/mp-token`, `/api/blocks/match-result` |
 | Cron (Monatsabschluss + Challenges, täglich) | `/api/cron/blocks-season` |
-| Events: Live-Turnier / Community-Challenge | `src/lib/blocks/tournament.ts`, `src/lib/blocks/challenge.ts`, Seite `/gems/blocks/turnier/[eventId]` |
+| Events: Live-Turnier / Community-Challenge | `src/lib/blocks/tournament.ts`, `src/lib/blocks/challenge.ts`, Seite `/games/blocks/turnier/[eventId]` |
 | Versus-Server (hängt am Discord-Bot auf Render) | `src/blocks-server/server.ts`, eingebunden in `src/bot/index.ts` |
 
 ## Highscores
@@ -50,7 +50,7 @@ ist nur vor dem Start änderbar, eine Challenge bis zur Abrechnung.
 - Spieler melden sich ganz normal am Event an (optional mit Check-in).
 - Zur Startzeit drückt die Turnierleitung auf der Event-Seite „Turnier starten“: Alle angemeldeten bzw. eingecheckten
   Spieler werden zufällig auf Gruppen à max. 8 verteilt. Bei bis zu 8 Spielern geht es direkt ins Finale.
-- Die Spieler kommen über „Zum Turnier-Raum“ auf `/gems/blocks/turnier/[eventId]`. Die App stellt dort ein signiertes
+- Die Spieler kommen über „Zum Turnier-Raum“ auf `/games/blocks/turnier/[eventId]`. Die App stellt dort ein signiertes
   Ticket aus (Gruppe, Rundenzahl, Teilnehmer), mit dem der Versus-Server den Raum baut — er braucht weiter keine Datenbank.
 - Runden starten automatisch: 5 s nachdem alle da sind, sonst spätestens 90 s nachdem der zweite Spieler da ist.
   Wer zu spät kommt, spielt ab der nächsten Runde mit. Punkte je Runde: 10/7/5/3/2/1 (Gleichstand: Siege, dann

@@ -3,7 +3,7 @@ import GameCover from "@/components/GameCover";
 import { ChevronRight, Gamepad2 } from "@/components/icons";
 import { getGameListTeaser } from "@/lib/games/service";
 
-/** Banner auf der Games-Seite (/gems): führt zur Spieleliste, mit Covern der beliebtesten Spiele. */
+/** Banner auf der Games-Seite (/games): führt zur Spieleliste, mit Covern der beliebtesten Spiele. */
 export default async function GameListBanner() {
   const { total, top } = await getGameListTeaser(4);
 

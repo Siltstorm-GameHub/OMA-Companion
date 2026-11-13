@@ -1,4 +1,4 @@
-// Gemeinsame Ranglisten-Anzeige der Community-Spiele (OMA Gems, OMA Blocks).
+// Gemeinsame Ranglisten-Anzeige der Community-Spiele (OMA Blocks).
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Info, Trophy } from "@/components/icons";
@@ -58,7 +58,7 @@ function Row({ row, place, isViewer }: { row: LeaderboardEntry; place: number; i
   );
 }
 
-/** Rangliste der Community-Spiele (OMA Gems, OMA Blocks). Mit `limit` nur die ersten
+/** Rangliste der Community-Spiele (OMA Blocks). Mit `limit` nur die ersten
  *  Plätze — der Betrachter wird dann zusätzlich unten angehängt, falls er außerhalb steht. */
 export default function LeaderboardList({
   rows,

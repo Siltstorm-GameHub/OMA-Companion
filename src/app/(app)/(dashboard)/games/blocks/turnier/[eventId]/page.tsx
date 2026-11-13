@@ -1,5 +1,5 @@
 // ============================================
-// /gems/blocks/turnier/[eventId] — Turnier-Raum eines OMA-Blocks-Live-Turniers
+// /games/blocks/turnier/[eventId] — Turnier-Raum eines OMA-Blocks-Live-Turniers
 // ============================================
 // Der Versus-Client im Turnier-Modus: tritt mit einem Ticket dem Raum der eigenen Gruppe bzw. dem Finale bei.
 
@@ -15,7 +15,7 @@ export const metadata = {
 export default async function BlocksTournamentPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect(`/login?notice=login_required&callbackUrl=/gems/blocks/turnier/${eventId}`);
+  if (!session?.user?.id) redirect(`/login?notice=login_required&callbackUrl=/games/blocks/turnier/${eventId}`);
   const tournament = await prisma.blocksTournament.findUnique({ where: { eventId }, select: { id: true } });
   if (!tournament) notFound();
 

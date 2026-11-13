@@ -51,13 +51,6 @@ const TEMPLATES: QuestTemplate[] = [
     rewards: [100, 150, 200, 275],
   },
   {
-    type: "BATTLE_CARD_DUEL",
-    titles: ["Edelsteinsammler", "Kombo-Stratege", "Juwelen-Jäger", "Gems-Champion"],
-    descriptions: ["Spiele {target} Runden OMA Gems (klassisch oder Tages-Herausforderung)"],
-    targets: [3, 5, 8],
-    rewards: [150, 250, 400],
-  },
-  {
     type: "PREDICTION_MADE",
     titles: ["Hellseher", "Tippkönig", "Sieger-Orakel", "Wettfreund"],
     descriptions: ["Tippe bei {target} Event(s) auf den Sieger"],

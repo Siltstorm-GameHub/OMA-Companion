@@ -1,5 +1,5 @@
 // ============================================
-// OMA Blocks — Bereich im Games-Hub (/gems?spiel=blocks)
+// OMA Blocks — Bereich im Games-Hub (/games)
 // ============================================
 // Spielmodi (Solo/Versus), eigene Bestwerte, Monats- und All-Time-Rangliste, Versus-Siege im Monat
 // und die Sieger der letzten Monate.
@@ -58,7 +58,7 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
 
       {/* Spielmodi */}
       <div className="grid sm:grid-cols-2 gap-3">
-        <Link href="/gems/blocks" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
+        <Link href="/games/blocks" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
           <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.25)" }}>
             <Play className="w-5 h-5 text-teal-300" />
           </span>
@@ -68,7 +68,7 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
         </Link>
-        <Link href="/gems/blocks/versus" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
+        <Link href="/games/blocks/versus" className="glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors group">
           <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
             <Swords className="w-5 h-5 text-violet-300" />
           </span>

@@ -1,26 +1,24 @@
 // ============================================
-// /gems — Games-Hub: OMA Gems und OMA Blocks (Umschalter oben, ?spiel=blocks öffnet OMA Blocks)
+// /games — Games-Hub der Community: OMA Blocks (siehe components/blocks/BlocksHubPanel)
 // ============================================
-// OMA Gems: Edelsteine tauschen — klassisch (Level mit Zielen) oder als Tages-Herausforderung, mit Ranglisten
-// und Monatswertung (siehe components/gems/GemsHubPanel). OMA Blocks siehe components/blocks/BlocksHubPanel.
+// Früher lag der Hub unter /gems und enthielt zusätzlich OMA Gems; alte Adressen leiten hierher um
+// (next.config.ts).
 
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
 import { Gamepad2, ShoppingBag } from "@/components/icons";
-import GamesSwitcher from "./GamesSwitcher";
 import GameListBanner from "@/components/games/GameListBanner";
 import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
-import GemsHubPanel from "@/components/gems/GemsHubPanel";
 
 export const metadata = {
   title: "Games | OMA",
 };
 
-export default async function GemsPage() {
+export default async function GamesPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login?notice=login_required&callbackUrl=/gems");
+    redirect("/login?notice=login_required&callbackUrl=/games");
   }
   const userId = session.user.id;
 
@@ -37,14 +35,14 @@ export default async function GemsPage() {
           </div>
           <h1 className="font-display text-2xl font-black text-white tracking-tight">Games</h1>
         </div>
-        <p className="text-xs text-gray-500 ml-11">Die Community-Spiele · OMA Gems und OMA Blocks mit Ranglisten und Monatswertungen</p>
+        <p className="text-xs text-gray-500 ml-11">Das Community-Spiel · OMA Blocks mit Ranglisten und Monatswertung</p>
       </div>
         <Link href="/shop" className="glass rounded-xl px-3 py-2 flex items-center gap-2 text-xs font-medium text-amber-200 hover:text-amber-100 hover:bg-amber-500/10 transition-colors">
           <ShoppingBag className="w-4 h-4 text-amber-400" /> Münzen ausgeben im Shop
         </Link>
       </div>
       <GameListBanner />
-      <GamesSwitcher gems={<GemsHubPanel userId={userId} />} blocks={<BlocksHubPanel userId={userId} />} />
+      <BlocksHubPanel userId={userId} />
     </div>
   );
 }

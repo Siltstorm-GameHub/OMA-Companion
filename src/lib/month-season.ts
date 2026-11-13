@@ -1,5 +1,5 @@
 // ============================================
-// Monats-Saisons der Community-Spiele (OMA Gems, OMA Blocks)
+// Monats-Saisons der Community-Spiele (OMA Blocks)
 // ============================================
 // Jeder Kalendermonat (Berliner Zeit, "YYYY-MM") ist eine Saison mit eigener Rangliste. Zum Monatswechsel
 // frieren die Crons den Endstand ein und zahlen die Belohnungen aus.

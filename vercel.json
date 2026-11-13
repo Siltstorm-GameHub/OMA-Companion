@@ -43,10 +43,6 @@
       "schedule": "0 17 * * *"
     },
     {
-      "path": "/api/cron/gems-season",
-      "schedule": "45 6 * * *"
-    },
-    {
       "path": "/api/cron/community-job-payout",
       "schedule": "0 8 * * *"
     },

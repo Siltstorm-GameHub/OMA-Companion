@@ -66,7 +66,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, isMod }: { ev
         </div>
         {me.canPlay && (
           <Link
-            href={`/gems/blocks/turnier/${eventId}`}
+            href={`/games/blocks/turnier/${eventId}`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-black font-bold text-sm px-4 py-2"
           >
             <Play className="w-4 h-4" /> Zum Turnier-Raum

@@ -1,6 +1,6 @@
-// TOURNAMENT, DUEL_PLAYED und JOB_CLAIM sind aus dem aktiven Rotationspool entfernt (Turniere
-// laufen inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell wurde komplett
-// entfernt — BATTLE_CARD_DUEL zählt heute gespielte OMA-Gems-Runden; die Idle-Jobs wurden komplett abgeschafft),
+// TOURNAMENT, DUEL_PLAYED, JOB_CLAIM und BATTLE_CARD_DUEL sind aus dem aktiven Rotationspool entfernt
+// (Turniere laufen inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell, die
+// Idle-Jobs und OMA Gems — BATTLE_CARD_DUEL zählte zuletzt OMA-Gems-Runden — wurden komplett abgeschafft),
 // bleiben aber im Union-Typ für die History-Anzeige alter Quests.
 //
 // Bewusst ausgelagert aus `quests.ts`: diese Datei hat KEINE Imports (kein prisma,

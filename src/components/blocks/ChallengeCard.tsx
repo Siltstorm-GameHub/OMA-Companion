@@ -89,7 +89,7 @@ export default function ChallengeCard({ p, compact = false }: { p: ChallengeProg
 
       {p.status !== "ended" && (
         <Link
-          href="/gems/blocks"
+          href="/games/blocks"
           className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-teal-500/20 border border-teal-400/30 text-teal-100 text-sm font-semibold px-3 py-2 hover:bg-teal-500/30"
         >
           <Play className="w-4 h-4" /> {p.status === "upcoming" ? "Schon mal üben" : "Solo spielen & beitragen"}

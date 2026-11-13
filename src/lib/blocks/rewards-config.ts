@@ -40,7 +40,7 @@ export function normalizeBlocksRewards(input: unknown): BlocksRewardsConfig {
   }) as BlocksRewardsConfig;
 }
 
-/** Monatssieger-Belohnungen unter einem BotConfig-Key lesen (auch von OMA Gems genutzt, eigener Key). */
+/** Monatssieger-Belohnungen unter einem BotConfig-Key lesen. */
 export async function getMonthlyRewards(key: string): Promise<BlocksRewardsConfig> {
   const row = await prisma.botConfig.findUnique({ where: { key } });
   if (!row) return normalizeBlocksRewards(DEFAULT_BLOCKS_REWARDS);

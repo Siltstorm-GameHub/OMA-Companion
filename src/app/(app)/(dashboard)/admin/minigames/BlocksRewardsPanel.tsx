@@ -1,5 +1,5 @@
 "use client";
-// Admin: Belohnungen für Platz 1–3 einer Monatswertung (OMA Blocks bzw. OMA Gems — Münzen + Rang-Punkte)
+// Admin: Belohnungen für Platz 1–3 einer Monatswertung (OMA Blocks — Münzen + Rang-Punkte)
 
 import { useState } from "react";
 import { toast } from "sonner";
