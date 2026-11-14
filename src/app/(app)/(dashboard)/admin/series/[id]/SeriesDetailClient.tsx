@@ -14,6 +14,7 @@ import { RefreshCw, Gamepad2, Swords, BarChart2, Plus, X, Save, Coins, MessageSq
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";
+import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
@@ -246,6 +247,7 @@ export default function SeriesDetailClient({
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
   const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
+  const [omaOriginal, setOmaOriginal] = useState<boolean>(series.omaOriginal ?? false);
   const [squadId, setSquadId] = useState<string>(series.squadId ?? "");
   const [squadIdBusy, setSquadIdBusy] = useState(false);
 
@@ -463,6 +465,23 @@ export default function SeriesDetailClient({
       toast.success(next ? "Selbst-Anmeldung für die ganze Reihe deaktiviert" : "Selbst-Anmeldung wieder aktiv");
     } else {
       toast.error("Fehler");
+    }
+  }
+
+  // OMA Original — gilt für alle Termine der Reihe, sofort gespeichert, nur Mods (lib/oma-original.ts)
+  async function saveOmaOriginal(next: boolean) {
+    setOmaOriginal(next);
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, omaOriginal: next }),
+    });
+    if (res.ok) {
+      toast.success(next ? "Reihe ist jetzt ein OMA Original" : "Reihe ist kein OMA Original mehr");
+      router.refresh();
+    } else {
+      setOmaOriginal(!next);
+      toast.error("Fehler beim Speichern");
     }
   }
 
@@ -753,6 +772,9 @@ export default function SeriesDetailClient({
 
           {/* Eigenes Reihen-Cover */}
           <Section title="Reihen-Cover">
+            {isModerator && (
+              <OmaOriginalToggle kind="series" checked={omaOriginal} onChange={saveOmaOriginal} />
+            )}
             <ImageUploadField
               value={coverImageUrl}
               onChange={setCoverImageUrl}

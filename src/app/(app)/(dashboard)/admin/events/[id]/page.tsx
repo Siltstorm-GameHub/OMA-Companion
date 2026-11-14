@@ -15,7 +15,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true, icon: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true, fixedFormat: true, seriesStatConfig: true, squadId: true, tournamentTemplateJson: true } },
+        series: { select: { id: true, name: true, icon: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true, fixedFormat: true, seriesStatConfig: true, squadId: true, tournamentTemplateJson: true, omaOriginal: true } },
         registrations: { select: { userId: true, role: true, checkedInAt: true } },
         streamingPartners: { select: { partnerId: true } },
         clipSubmissions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { createdAt: "desc" } },

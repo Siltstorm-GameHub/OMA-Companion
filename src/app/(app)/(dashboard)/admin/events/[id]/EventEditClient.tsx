@@ -24,6 +24,7 @@ import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
+import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
@@ -362,6 +363,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [hiddenBusy, setHiddenBusy] = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
   const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
+  const [omaOriginal, setOmaOriginal] = useState<boolean>(event.omaOriginal ?? false);
   const [squadId, setSquadId] = useState<string>(event.squadId ?? "");
   const [squadIdBusy, setSquadIdBusy] = useState(false);
 
@@ -448,6 +450,23 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       toast.success(next ? "Selbst-Anmeldung deaktiviert" : "Selbst-Anmeldung wieder aktiv");
     } else {
       toast.error("Fehler");
+    }
+  }
+
+  // OMA Original — wird sofort gespeichert, nur Mods (lib/oma-original.ts)
+  async function saveOmaOriginal(next: boolean) {
+    setOmaOriginal(next);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, omaOriginal: next }),
+    });
+    if (res.ok) {
+      toast.success(next ? "Als OMA Original markiert" : "Kein OMA Original mehr");
+      router.refresh();
+    } else {
+      setOmaOriginal(!next);
+      toast.error("Fehler beim Speichern");
     }
   }
 
@@ -1049,6 +1068,16 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
 
+          {/* ── OMA Original (sofort gespeichert) ── */}
+          {isModerator && (
+            <OmaOriginalToggle
+              kind="event"
+              checked={omaOriginal}
+              onChange={saveOmaOriginal}
+              inheritedFromSeries={!!event.series?.omaOriginal}
+            />
+          )}
+
           {/* ── Eigenes Event-Cover ── */}
           <ImageUploadField
             value={coverImageUrl}
@@ -1250,6 +1279,16 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
             <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
+
+          {/* ── OMA Original (sofort gespeichert) ── */}
+          {isModerator && (
+            <OmaOriginalToggle
+              kind="event"
+              checked={omaOriginal}
+              onChange={saveOmaOriginal}
+              inheritedFromSeries={!!event.series?.omaOriginal}
+            />
+          )}
 
           {/* ── Eigenes Event-Cover ── */}
           <ImageUploadField

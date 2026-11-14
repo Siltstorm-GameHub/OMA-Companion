@@ -3,10 +3,13 @@ import CoverBrandBadge from "@/components/CoverBrandBadge";
 export default function EventCoverDefault({
   className = "w-full h-full",
   brandBadge = false,
+  omaOriginal = false,
 }: {
   className?: string;
-  /** Vignette + Logo-Badge unten rechts — nur für großformatige Cover, siehe CoverBrandBadge. */
+  /** Marken-Rahmen + Vignette — nur für großformatige Cover, siehe CoverBrandBadge. */
   brandBadge?: boolean;
+  /** Mit brandBadge: Logo-Siegel "OMA Original" unten rechts (lib/oma-original.ts) */
+  omaOriginal?: boolean;
 }) {
   return (
     <div className={`${className} relative overflow-hidden`}
@@ -93,7 +96,7 @@ export default function EventCoverDefault({
         <circle cx="516" cy="354" r="2" fill="#8b2020" fillOpacity="0.5"/>
       </svg>
 
-      {brandBadge && <CoverBrandBadge />}
+      {brandBadge && <CoverBrandBadge omaOriginal={omaOriginal} />}
     </div>
   );
 }

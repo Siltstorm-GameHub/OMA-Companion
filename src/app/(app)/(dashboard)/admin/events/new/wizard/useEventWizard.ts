@@ -95,6 +95,7 @@ export function useEventWizard({
   const [checkInEnabled, setCheckInEnabled] = useState(tpl?.checkInEnabled ?? false);
   const [checkInMinutes, setCheckInMinutes] = useState(tpl?.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(tpl?.registrationLocked ?? false);
+  const [eventOmaOriginal, setEventOmaOriginal] = useState(tpl?.omaOriginal ?? false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
 
   // ── OMA Blocks (nur bei game === "OMA Blocks"): Live-Turnier oder Community-Challenge ──────────
@@ -136,6 +137,7 @@ export function useEventWizard({
   });
   const [seriesHidden, setSeriesHidden] = useState(seasonPrefill?.seriesHidden ?? false);
   const [seriesRegistrationLocked, setSeriesRegistrationLocked] = useState(seasonPrefill?.seriesRegistrationLocked ?? false);
+  const [seriesOmaOriginal, setSeriesOmaOriginal] = useState(seasonPrefill?.seriesOmaOriginal ?? false);
   const [seriesSquadId, setSeriesSquadId] = useState(seasonPrefill?.seriesSquadId ?? initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
   const eventStatFields = useMemo(() => deriveEventStatFields(statRows), [statRows]);
   const [winnerStatField, setWinnerStatField] = useState(seasonPrefill?.winnerStatField ?? "");
@@ -256,6 +258,7 @@ export function useEventWizard({
     checkInEnabled,
     checkInMinutes,
     eventRegistrationLocked,
+    eventOmaOriginal,
     eventSquadId,
     blocks,
     seriesName,
@@ -278,6 +281,7 @@ export function useEventWizard({
     statRows,
     seriesHidden,
     seriesRegistrationLocked,
+    seriesOmaOriginal,
     seriesSquadId,
     winnerStatField,
     dominionEnabled,
@@ -325,6 +329,7 @@ export function useEventWizard({
     checkInEnabled: setCheckInEnabled,
     checkInMinutes: setCheckInMinutes,
     eventRegistrationLocked: setEventRegistrationLocked,
+    eventOmaOriginal: setEventOmaOriginal,
     eventSquadId: setEventSquadId,
     blocks: setBlocks,
     seriesName: setSeriesName,
@@ -347,6 +352,7 @@ export function useEventWizard({
     statRows: setStatRows,
     seriesHidden: setSeriesHidden,
     seriesRegistrationLocked: setSeriesRegistrationLocked,
+    seriesOmaOriginal: setSeriesOmaOriginal,
     seriesSquadId: setSeriesSquadId,
     winnerStatField: setWinnerStatField,
     dominionEnabled: setDominionEnabled,
@@ -484,6 +490,8 @@ export function useEventWizard({
       hidden: publishMode === "hidden",
       publishAt: publishMode === "scheduled" && publishAt ? fromDatetimeLocalBerlin(publishAt).toISOString() : null,
       registrationLocked: eventRegistrationLocked,
+      // Nur Mods dürfen ein Original anlegen — der Server ignoriert das Feld sonst ohnehin
+      ...(!isCommunity && eventOmaOriginal && { omaOriginal: true }),
       squadId: eventSquadId || null,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
@@ -600,6 +608,7 @@ export function useEventWizard({
         eventType,
         hidden: seriesHidden,
         registrationLocked: seriesRegistrationLocked,
+        ...(!isCommunity && seriesOmaOriginal && { omaOriginal: true }),
         squadId: seriesSquadId || null,
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
@@ -691,6 +700,8 @@ export function useEventWizard({
     setCommunityGoal,
     eventRegistrationLocked,
     setEventRegistrationLocked,
+    eventOmaOriginal,
+    setEventOmaOriginal,
     eventSquadId,
     setEventSquadId,
     blocks,
@@ -737,6 +748,8 @@ export function useEventWizard({
     setSeriesHidden,
     seriesRegistrationLocked,
     setSeriesRegistrationLocked,
+    seriesOmaOriginal,
+    setSeriesOmaOriginal,
     seriesSquadId,
     setSeriesSquadId,
     eventStatFields,

@@ -123,9 +123,9 @@ function vignetteSvg(): Buffer {
 
 let cachedBadge: { buffer: Buffer; width: number; height: number } | null = null;
 
-/** Kleines, halbtransparentes Logo-Badge (abgerundeter Chip-Hintergrund +
- *  Logo) — wird unten rechts auf jedes Cover komponiert, damit jedes Bild
- *  gleich "OMA Companion" wirkt, egal welche Quelle dahintersteckt.
+/** Siegel "OMA Original": abgerundeter Chip mit Logo und Schriftzug darunter —
+ *  wird unten rechts auf die Cover von OMA Originals komponiert (lib/oma-original.ts).
+ *  Normale Events bekommen nur den Rahmen, kein Logo.
  *  Immer identisch, deshalb einmal gerendert und gecacht. */
 async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
   const sharp = await loadSharp();
@@ -136,12 +136,17 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
   const logo = await sharp(fs.readFileSync(logoPath)).resize(logoWidth).png().toBuffer();
   const logoHeight = (await sharp(logo).metadata()).height ?? logoWidth;
 
-  const pad   = 14;
-  const chipW = logoWidth + pad * 2;
-  const chipH = logoHeight + pad * 2;
+  const pad    = 14;
+  const labelH = 26;
+  const chipW  = logoWidth + pad * 2;
+  const chipH  = logoHeight + pad * 2 + labelH;
   const chipSvg = Buffer.from(
     `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
       <rect width="${chipW}" height="${chipH}" rx="14" fill="#06080f" fill-opacity="0.85" stroke="#14b8a6" stroke-opacity="0.75" stroke-width="2.5"/>
+      <text x="${chipW / 2}" y="${chipH - pad - 2}" text-anchor="middle"
+        font-family="system-ui,ui-sans-serif,sans-serif" font-size="15" font-weight="800" letter-spacing="3.5">
+        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="7">ORIGINAL</tspan>
+      </text>
     </svg>`
   );
 
@@ -193,14 +198,16 @@ const coverCache = new Map<string, Buffer>();
 /**
  * Rendert ein Cover mit einheitlichem Marken-Auftritt: die gegebene
  * Bildquelle (eigenes Cover, Reihen-Cover oder Steam-Cover-URL) als
- * Hintergrund — ohne Quelle der Marken-Gradient. In jedem Fall mit Vignette,
- * Marken-Rahmen (frameOverlaySvg) und Logo-Badge unten rechts, damit jedes
- * Cover gleich "OMA Companion" wirkt, unabhängig davon, was hochgeladen oder
- * gefunden wurde.
+ * Hintergrund — ohne Quelle der Marken-Gradient. In jedem Fall mit Vignette
+ * und Marken-Rahmen (frameOverlaySvg). Das Logo-Siegel unten rechts bekommen
+ * nur OMA Originals (omaOriginal), damit das Logo etwas Besonderes bleibt.
  */
-export async function generateBrandedCoverBuffer(sourceUrl: string | null): Promise<Buffer> {
+export async function generateBrandedCoverBuffer(
+  sourceUrl: string | null,
+  { omaOriginal = false }: { omaOriginal?: boolean } = {},
+): Promise<Buffer> {
   const sharp = await loadSharp();
-  const cacheKey = sourceUrl ?? "__gradient__";
+  const cacheKey = `${omaOriginal ? "original:" : ""}${sourceUrl ?? "__gradient__"}`;
   const cached = coverCache.get(cacheKey);
   if (cached) return cached;
 
@@ -208,17 +215,15 @@ export async function generateBrandedCoverBuffer(sourceUrl: string | null): Prom
     ? (await fetchCoverFitBuffer(sourceUrl)) ?? (await getGradientBackground())
     : await getGradientBackground();
 
-  const badge  = await getLogoBadge();
+  // Logo-Vorlagen tragen das Logo schon groß in der Mitte — kein zweites Badge
+  const badge  = omaOriginal && !coverHasOwnLogo(sourceUrl) ? await getLogoBadge() : null;
   const margin = 16;
 
   const result = await sharp(bg)
     .composite([
       { input: vignetteSvg(), top: 0, left: 0 },
       { input: frameOverlaySvg(), top: 0, left: 0 },
-      // Logo-Vorlagen tragen das Logo schon groß in der Mitte — kein zweites Badge
-      ...(coverHasOwnLogo(sourceUrl)
-        ? []
-        : [{ input: badge.buffer, top: H - badge.height - margin, left: W - badge.width - margin }]),
+      ...(badge ? [{ input: badge.buffer, top: H - badge.height - margin, left: W - badge.width - margin }] : []),
     ])
     .jpeg({ quality: 90 })
     .toBuffer();
@@ -227,7 +232,10 @@ export async function generateBrandedCoverBuffer(sourceUrl: string | null): Prom
   return result;
 }
 
-export async function generateBrandedCoverDataUri(sourceUrl: string | null): Promise<string> {
-  const buffer = await generateBrandedCoverBuffer(sourceUrl);
+export async function generateBrandedCoverDataUri(
+  sourceUrl: string | null,
+  options: { omaOriginal?: boolean } = {},
+): Promise<string> {
+  const buffer = await generateBrandedCoverBuffer(sourceUrl, options);
   return `data:image/jpeg;base64,${buffer.toString("base64")}`;
 }

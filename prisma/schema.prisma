@@ -245,6 +245,9 @@ model EventSeries {
   rules                  String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
   icon                   String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
   coverImageUrl          String? // Eigenes Reihen-Bild (Vercel Blob); Events der Reihe erben es, wenn sie keins haben
+  // OMA Original: eigene Reihe der Old Masters Allies. Nur Mods setzen es; alle Termine der Reihe
+  // gelten dann als Original (Logo-Siegel auf dem Cover, siehe lib/oma-original.ts).
+  omaOriginal            Boolean       @default(false)
   fixedGame              String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat            String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId       String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
@@ -333,6 +336,9 @@ model Event {
   squadId             String?
   squad               Squad?        @relation(fields: [squadId], references: [id])
   coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
+  // OMA Original (nur Mods): Logo-Siegel auf dem Cover. Termine einer Original-Reihe gelten auch ohne
+  // dieses Feld als Original (lib/oma-original.ts).
+  omaOriginal         Boolean       @default(false)
   // Token für die öffentliche OBS-Overlay-Route (/overlay/[id]?token=…). Wird lazy bei der
   // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.
   overlayToken        String?       @unique

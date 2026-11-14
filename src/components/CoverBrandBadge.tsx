@@ -1,7 +1,8 @@
 /**
  * Marken-Rahmen für Cover: Diagonalstreifen in den oberen Ecken, farbige
- * Eckakzente, obere Trennlinie, "OLD MASTERS ALLIES"-Wasserzeichen, Vignette
- * und Logo-Badge unten rechts — auf jedes Cover ohne eigenes Branding komponiert
+ * Eckakzente, obere Trennlinie, "OLD MASTERS ALLIES"-Wasserzeichen und Vignette
+ * — auf jedes Cover ohne eigenes Branding komponiert. Das Logo-Siegel
+ * "OMA Original" unten rechts kommt nur bei OMA Originals dazu (lib/oma-original.ts),
  * (Steam-Cover, eigener Upload, Reihen-Cover oder Gradient-Fallback), damit
  * jedes große Cover dieselbe erkennbare Optik trägt. Spiegelt 1:1 den
  * Server-Renderer in lib/branded-cover.ts (Discord/OG-Bilder).
@@ -10,7 +11,7 @@
  * Thumbnails (w-10 h-10 o.ä.) würde das nur unruhig wirken, siehe
  * `brandBadge`-Prop an GameCover/EventCoverDefault.
  */
-export default function CoverBrandBadge() {
+export default function CoverBrandBadge({ omaOriginal = false }: { omaOriginal?: boolean }) {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
@@ -68,10 +69,18 @@ export default function CoverBrandBadge() {
         </text>
       </svg>
 
-      <div className="absolute bottom-2 right-2 flex items-center justify-center rounded-xl bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-3 py-3">
-        {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
-        <img src="/brand/logo-256.png" alt="" className="h-9 w-auto object-contain" />
-      </div>
+      {omaOriginal && (
+        <div
+          className="absolute bottom-2 right-2 flex flex-col items-center gap-1 rounded-xl bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-3 pt-2.5 pb-1.5"
+          title="OMA Original"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
+          <img src="/brand/logo-256.png" alt="OMA Original" className="h-9 w-auto object-contain" />
+          <span className="text-[9px] font-extrabold uppercase leading-none tracking-[0.18em] whitespace-nowrap">
+            <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

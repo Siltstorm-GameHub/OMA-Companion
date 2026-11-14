@@ -27,6 +27,8 @@ interface GameCoverProps {
    * (Listen, Icons) wirkt der Chip nur unruhig. Standard: aus.
    */
   brandBadge?: boolean;
+  /** Mit brandBadge: Logo-Siegel "OMA Original" unten rechts — nur für OMA Originals (lib/oma-original.ts) */
+  omaOriginal?: boolean;
   /**
    * Darstellung, wenn kein Cover gefunden wurde.
    * "brand" (Standard) = OMA-Standardcover mit Logo, "plain" = schlichter
@@ -46,6 +48,7 @@ export default function GameCover({
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
   brandBadge = false,
+  omaOriginal = false,
   fallbackVariant = "brand",
 }: GameCoverProps) {
   // Explizit übergebenes Cover schlägt fehl → auf Namens-Auflösung zurückfallen
@@ -111,12 +114,12 @@ export default function GameCover({
               else setImgError(true);
             }}
           />
-          {brandBadge && !coverHasOwnLogo(resolvedUrl) && <CoverBrandBadge />}
+          {brandBadge && <CoverBrandBadge omaOriginal={omaOriginal && !coverHasOwnLogo(resolvedUrl)} />}
         </>
       ) : fallbackVariant === "plain" ? (
         <div className="w-full h-full" style={{ background: getGameFallbackGradient(game) }} />
       ) : (
-        <EventCoverDefault brandBadge={brandBadge} />
+        <EventCoverDefault brandBadge={brandBadge} omaOriginal={omaOriginal} />
       )}
       {/* Subtiler Rand */}
       <div className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10 pointer-events-none" />
