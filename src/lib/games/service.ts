@@ -607,7 +607,10 @@ export async function updateGameAdmin(
   }
 
   if (input.subscriptions !== undefined) {
-    data.subscriptions = pickKeys(GAME_SUBSCRIPTIONS, input.subscriptions);
+    const next = pickKeys(GAME_SUBSCRIPTIONS, input.subscriptions);
+    data.subscriptions = next;
+    // Neu in einem Abo → GameSwipe zeigt das Spiel als "Neu im Abo" (deck-plan.ts)
+    if (next.some(s => !game.subscriptions.includes(s))) data.subscriptionsAddedAt = new Date();
   }
 
   if (input.status !== undefined) {

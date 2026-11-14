@@ -1,18 +1,21 @@
 /**
  * GameSwipe-Stapel der Spieleliste — nur serverseitig.
  *
- * Reihenfolge der eigenen Karten: Spiele mit einem Event in den nächsten 30 Tagen (nächstes zuerst),
- * dann beliebte (am Start, Wunschliste, Bewertungen), dann neue, zuletzt Spiele, deren Entscheidung älter
- * als RECHECK_DAYS ist. Dazwischen jede STEAM_EVERY-te Karte ein Steam-Trend, der noch nicht in der Liste
- * steht (steam-trends.ts). "Nicht meins" kommt nie wieder (shouldReask).
+ * Lädt alles, was die Planung braucht (Spiele, Events, Entdecken-Feeds, Drop der Woche, die eigenen
+ * Entscheidungen), ordnet mit planDeck (deck-plan.ts, dort steht die Reihenfolge) und reichert die
+ * nächsten Karten für die Anzeige an. "Nicht meins" kommt nie wieder (shouldReask).
  */
 
 import { prisma } from "@/lib/prisma";
 import type { GameFields } from "./draft";
+import {
+  discoverKey, planDeck, type DiscoverItem, type DiscoverSource, type GameReason, type PlanInput, type PlannedCard, type WeeklyDrop,
+} from "./deck-plan";
+import { getDiscoverItems } from "./discover";
+import { getWeeklyDrop } from "./drop";
 import { matchesGameName } from "./match";
 import { IN_WHERE, createGame, gameFieldsOf, recomputeGameAggregates } from "./service";
-import { getSteamTrends, type SteamTrendKind } from "./steam-trends";
-import { effectiveStatus, interleaveDeck, shouldReask, type SwipeStatus } from "./swipe";
+import { effectiveStatus, type SwipeStatus } from "./swipe";
 
 const EVENT_WINDOW_DAYS = 30;
 const PEOPLE_PER_CARD = 6;
@@ -36,82 +39,152 @@ export interface DeckGameCard extends Price {
   inCount: number;
   wishCount: number;
   myRating: number | null;
-  /** Bisherige Entscheidung (nur bei erneuter Abfrage nach RECHECK_DAYS) */
+  /** Bisherige Entscheidung (erneute Abfrage nach RECHECK_DAYS oder Hinweis-Karte) */
   myStatus: SwipeStatus | null;
   /** Wer schon am Start ist (öffentlich) */
   inPeople: { id: string; name: string; image: string | null }[];
   nextEvent: { id: string; title: string; startAt: string } | null;
-  reason: "event" | "popular" | "new" | "recheck";
+  reason: GameReason;
+  /** Teil des Drops der Woche */
+  drop: boolean;
+  /** Empfehlung (Drop) */
+  tip: { by: string | null; note: string | null } | null;
+  /** Abo-Schlüssel (GAME_SUBSCRIPTIONS) */
+  subscriptions: string[];
+  /** Laufende Gratis-Aktion (reason "free") */
+  promo: { freeUntil: string | null; store: "epic" | "steam" | null; storeUrl: string | null } | null;
 }
 
-export interface DeckSteamCard extends Price {
-  kind: "steam";
-  steamAppId: number;
+export interface DeckDiscoverCard extends Price {
+  kind: "discover";
+  source: DiscoverSource;
+  steamAppId: number | null;
+  igdbId: number | null;
   name: string;
   coverUrl: string | null;
   fields: GameFields;
   releaseYear: number | null;
-  trend: SteamTrendKind;
+  releaseDate: string | null;
+  freeUntil: string | null;
+  store: "epic" | "steam" | null;
+  storeUrl: string | null;
+  subscriptions: string[];
+  drop: boolean;
 }
 
-export type DeckCard = DeckGameCard | DeckSteamCard;
+export type DeckCard = DeckGameCard | DeckDiscoverCard;
 
-/** Stapel für ein Mitglied: die nächsten `limit` Karten und wie viele insgesamt offen sind. */
-export async function buildSwipeDeck(userId: string, limit = 20): Promise<{ cards: DeckCard[]; remaining: number }> {
-  const now = new Date();
+export interface DropInfo {
+  week: string;
+  endsAt: string;
+  total: number;
+  /** Davon noch offen für dieses Mitglied */
+  open: number;
+  /** Angefangene Tage bis zum Ende (1 = endet heute) */
+  daysLeft: number;
+}
+
+export interface SwipeDeckData {
+  cards: DeckCard[];
+  remaining: number;
+  drop: DropInfo | null;
+}
+
+// ── Laden ───────────────────────────────────────────────────────────────────────
+
+/** Was für alle Mitglieder gleich ist (einmal laden, z.B. für die Benachrichtigungen). */
+export async function loadDeckContext(now = new Date()) {
   const until = new Date(now.getTime() + EVENT_WINDOW_DAYS * 24 * 60 * 60_000);
-  const [games, reactions, events, trends, steamSwipes] = await Promise.all([
+  const [games, events, discover, drop] = await Promise.all([
     prisma.game.findMany({ where: { status: "APPROVED" } }),
-    prisma.gameReaction.findMany({ where: { userId } }),
     prisma.event.findMany({
       where: { game: { not: null }, hidden: false, startAt: { gte: now, lte: until } },
       select: { id: true, title: true, game: true, startAt: true },
       orderBy: { startAt: "asc" },
     }),
-    getSteamTrends(),
-    prisma.steamSwipe.findMany({ where: { userId }, select: { steamAppId: true } }),
+    getDiscoverItems(),
+    getWeeklyDrop(),
   ]);
-  const mine = new Map(reactions.map(r => [r.gameId, r]));
-
-  const open = games.filter(g => {
-    const r = mine.get(g.id);
-    return shouldReask(effectiveStatus(r), r?.decidedAt ?? null, now);
-  });
-  const nextEventOf = (g: (typeof games)[number]) => events.find(e => matchesGameName(g, e.game, true)) ?? null;
-  const popularity = (g: (typeof games)[number]) => g.inCount * 2 + g.wishCount + g.ratingCount;
-
-  const withEvent: typeof open = [];
-  const popular: typeof open = [];
-  const fresh: typeof open = [];
-  const recheck: typeof open = [];
-  for (const g of open) {
-    if (effectiveStatus(mine.get(g.id)) !== null) recheck.push(g);
-    else if (nextEventOf(g)) withEvent.push(g);
-    else if (popularity(g) > 0) popular.push(g);
-    else fresh.push(g);
+  const eventOf = new Map<string, (typeof events)[number]>();
+  for (const g of games) {
+    const ev = events.find(e => matchesGameName(g, e.game, true));
+    if (ev) eventOf.set(g.id, ev);
   }
-  withEvent.sort((a, b) => nextEventOf(a)!.startAt.getTime() - nextEventOf(b)!.startAt.getTime());
-  popular.sort((a, b) => popularity(b) - popularity(a));
-  fresh.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  const reasonOf = new Map<string, DeckGameCard["reason"]>([
-    ...withEvent.map(g => [g.id, "event"] as const),
-    ...popular.map(g => [g.id, "popular"] as const),
-    ...fresh.map(g => [g.id, "new"] as const),
-    ...recheck.map(g => [g.id, "recheck"] as const),
+  return { now, games, eventOf, discover, drop };
+}
+export type DeckContext = Awaited<ReturnType<typeof loadDeckContext>>;
+
+export interface DeckUserData {
+  reactions: PlanInput["reactions"];
+  steamSwiped: Set<number>;
+  igdbSwiped: Set<number>;
+  squadIn?: Set<string>;
+}
+
+async function loadUserData(userId: string): Promise<DeckUserData & { ratings: Map<string, number | null> }> {
+  const [reactions, steamSwipes, igdbSwipes, squadIn] = await Promise.all([
+    prisma.gameReaction.findMany({ where: { userId } }),
+    prisma.steamSwipe.findMany({ where: { userId }, select: { steamAppId: true } }),
+    prisma.igdbSwipe.findMany({ where: { userId }, select: { igdbId: true } }),
+    squadInGameIds(userId),
   ]);
-  const own = [...withEvent, ...popular, ...fresh, ...recheck];
+  return {
+    reactions,
+    steamSwiped: new Set(steamSwipes.map(s => s.steamAppId)),
+    igdbSwiped: new Set(igdbSwipes.map(s => s.igdbId)),
+    squadIn,
+    ratings: new Map(reactions.map(r => [r.gameId, r.rating])),
+  };
+}
 
-  const knownApps = new Set(games.map(g => g.steamAppId).filter((id): id is number => id !== null));
-  const swiped = new Set(steamSwipes.map(s => s.steamAppId));
-  const openTrends = trends.filter(t => !knownApps.has(t.steamAppId) && !swiped.has(t.steamAppId));
-  // "Gerade angesagt" und "Neu & angesagt" abwechselnd, damit beide Sorten früh auftauchen
-  const steam = interleaveDeck(openTrends.filter(t => t.trend === "top"), openTrends.filter(t => t.trend === "new"), 2);
+/** Spiele, bei denen jemand aus den eigenen Squads am Start ist. */
+async function squadInGameIds(userId: string): Promise<Set<string>> {
+  const memberships = await prisma.squadMembership.findMany({
+    where: { userId, squad: { hidden: false } },
+    select: { squad: { select: { memberships: { select: { userId: true } } } } },
+  });
+  const mates = [...new Set(memberships.flatMap(m => m.squad.memberships.map(x => x.userId)))].filter(id => id !== userId);
+  if (mates.length === 0) return new Set();
+  const rows = await prisma.gameReaction.findMany({
+    where: { userId: { in: mates }, ...IN_WHERE },
+    select: { gameId: true },
+    distinct: ["gameId"],
+  });
+  return new Set(rows.map(r => r.gameId));
+}
 
-  const deck = interleaveDeck(own, steam);
-  const page = deck.slice(0, limit);
+export function planFor(ctx: DeckContext, user: DeckUserData): PlannedCard[] {
+  return planDeck({
+    now: ctx.now,
+    games: ctx.games,
+    nextEventAt: new Map([...ctx.eventOf].map(([id, e]) => [id, e.startAt])),
+    squadIn: user.squadIn,
+    discover: ctx.discover,
+    drop: ctx.drop,
+    reactions: user.reactions,
+    steamSwiped: user.steamSwiped,
+    igdbSwiped: user.igdbSwiped,
+  });
+}
+
+export function dropInfoOf(drop: WeeklyDrop | null, plan: PlannedCard[], now = new Date()): DropInfo | null {
+  if (!drop || new Date(drop.endsAt) <= now || drop.items.length === 0) return null;
+  const daysLeft = Math.max(1, Math.ceil((new Date(drop.endsAt).getTime() - now.getTime()) / 86_400_000));
+  return { week: drop.week, endsAt: drop.endsAt, total: drop.items.length, open: plan.filter(c => c.drop).length, daysLeft };
+}
+
+// ── Stapel ──────────────────────────────────────────────────────────────────────
+
+/** Stapel für ein Mitglied: die nächsten `limit` Karten, wie viele insgesamt offen sind und der Drop. */
+export async function buildSwipeDeck(userId: string, limit = 20): Promise<SwipeDeckData> {
+  const [ctx, user] = await Promise.all([loadDeckContext(), loadUserData(userId)]);
+  const plan = planFor(ctx, user);
+  const page = plan.slice(0, limit);
+  const gameById = new Map(ctx.games.map(g => [g.id, g]));
+  const mine = new Map(user.reactions.map(r => [r.gameId, r]));
 
   // Wer ist bei den Spielen dieser Seite schon am Start?
-  const pageGameIds = page.filter((c): c is (typeof games)[number] => "slug" in c).map(g => g.id);
+  const pageGameIds = page.filter(c => c.kind === "game").map(c => (c as { gameId: string }).gameId);
   const inRows = pageGameIds.length
     ? await prisma.gameReaction.findMany({
         where: { gameId: { in: pageGameIds }, ...IN_WHERE, userId: { not: userId }, user: { deletedAt: null } },
@@ -125,67 +198,94 @@ export async function buildSwipeDeck(userId: string, limit = 20): Promise<{ card
       .slice(0, PEOPLE_PER_CARD)
       .map(r => ({ id: r.user.id, name: r.user.username ?? r.user.name ?? "Mitglied", image: r.user.image }));
 
-  const cards: DeckCard[] = page.map(c => {
-    if ("slug" in c) {
-      const r = mine.get(c.id);
-      const ev = nextEventOf(c);
-      return {
+  const cards: DeckCard[] = [];
+  for (const c of page) {
+    if (c.kind === "game") {
+      const g = gameById.get(c.gameId);
+      if (!g) continue;
+      const ev = ctx.eventOf.get(g.id);
+      cards.push({
         kind: "game",
-        id: c.id, slug: c.slug, name: c.name, coverUrl: c.coverUrl, fields: gameFieldsOf(c),
-        ratingSum: c.ratingSum, ratingCount: c.ratingCount, inCount: c.inCount, wishCount: c.wishCount,
-        myRating: r?.rating ?? null, myStatus: effectiveStatus(r), inPeople: peopleOf(c.id),
+        id: g.id, slug: g.slug, name: g.name, coverUrl: g.coverUrl, fields: gameFieldsOf(g),
+        ratingSum: g.ratingSum, ratingCount: g.ratingCount, inCount: g.inCount, wishCount: g.wishCount,
+        myRating: user.ratings.get(g.id) ?? null, myStatus: effectiveStatus(mine.get(g.id)), inPeople: peopleOf(g.id),
         nextEvent: ev ? { id: ev.id, title: ev.title, startAt: ev.startAt.toISOString() } : null,
-        reason: reasonOf.get(c.id) ?? "new",
-        priceCents: c.priceCents, priceInitialCents: c.priceInitialCents, discountPercent: c.discountPercent, priceCurrency: c.priceCurrency,
-      };
+        reason: c.reason, drop: c.drop, tip: c.tip, subscriptions: g.subscriptions,
+        promo: c.promo ? { freeUntil: c.promo.freeUntil, store: c.promo.store, storeUrl: c.promo.storeUrl } : null,
+        priceCents: g.priceCents, priceInitialCents: g.priceInitialCents, discountPercent: g.discountPercent, priceCurrency: g.priceCurrency,
+      });
+    } else {
+      cards.push(discoverCard(c.item, c.drop));
     }
-    const { steamAppId, trend, name, coverUrl, releaseYear, priceCents, priceInitialCents, discountPercent, priceCurrency, ...rest } = c;
-    return {
-      kind: "steam", steamAppId, trend, name, coverUrl, releaseYear,
-      fields: { ...rest, tags: [] },
-      priceCents, priceInitialCents, discountPercent, priceCurrency,
-    };
-  });
-  return { cards, remaining: deck.length };
+  }
+  return { cards, remaining: plan.length, drop: dropInfoOf(ctx.drop, plan, ctx.now) };
 }
 
-/** Wie viele Karten auf ein Mitglied warten (für den Hinweis auf Home) — ohne Karten-Details. */
-export async function countSwipeDeck(userId: string): Promise<number> {
+function discoverCard(item: DiscoverItem, drop: boolean): DeckDiscoverCard {
+  return {
+    kind: "discover", source: item.source, steamAppId: item.steamAppId, igdbId: item.igdbId, name: item.name, coverUrl: item.coverUrl,
+    releaseYear: item.releaseYear, releaseDate: item.releaseDate, freeUntil: item.freeUntil, store: item.store, storeUrl: item.storeUrl,
+    subscriptions: item.subscriptions, drop,
+    fields: {
+      description: item.description, genres: item.genres, tags: [], modes: item.modes, platforms: item.platforms,
+      crossplay: item.crossplay, isFree: item.isFree, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers,
+      sessionLength: item.sessionLength,
+    },
+    priceCents: item.priceCents, priceInitialCents: item.priceInitialCents, discountPercent: item.discountPercent, priceCurrency: item.priceCurrency,
+  };
+}
+
+/** Offene Karten und Drop-Stand eines Mitglieds (Hinweis auf Home) — ohne Karten-Details. */
+export async function getSwipeSummary(userId: string): Promise<{ open: number; drop: DropInfo | null }> {
+  const [ctx, user] = await Promise.all([loadDeckContext(), loadUserData(userId)]);
+  const plan = planFor(ctx, user);
+  return { open: plan.length, drop: dropInfoOf(ctx.drop, plan, ctx.now) };
+}
+
+/** GameSwipe angeschaut — Grundlage für "neue Karten seit dem letzten Besuch" (swipe-notify.ts). */
+export async function markSwipeSeen(userId: string): Promise<void> {
   const now = new Date();
-  const [games, reactions, trends, steamSwipes] = await Promise.all([
-    prisma.game.findMany({ where: { status: "APPROVED" }, select: { id: true, steamAppId: true } }),
-    prisma.gameReaction.findMany({ where: { userId }, select: { gameId: true, status: true, owns: true, wantPlay: true, decidedAt: true } }),
-    getSteamTrends(),
-    prisma.steamSwipe.findMany({ where: { userId }, select: { steamAppId: true } }),
-  ]);
-  const mine = new Map(reactions.map(r => [r.gameId, r]));
-  const own = games.filter(g => shouldReask(effectiveStatus(mine.get(g.id)), mine.get(g.id)?.decidedAt ?? null, now)).length;
-  const knownApps = new Set(games.map(g => g.steamAppId).filter((id): id is number => id !== null));
-  const swiped = new Set(steamSwipes.map(s => s.steamAppId));
-  return own + trends.filter(t => !knownApps.has(t.steamAppId) && !swiped.has(t.steamAppId)).length;
+  await prisma.gameSwipeState.upsert({ where: { userId }, create: { userId, seenAt: now }, update: { seenAt: now } }).catch(() => {});
+}
+
+// ── Aufnehmen ───────────────────────────────────────────────────────────────────
+
+/** Entdecken-Karte zu einer Steam-/IGDB-ID (aktuelle Feeds und Drop) */
+async function findDiscoverItem(ids: { steamAppId: number | null; igdbId: number | null }): Promise<DiscoverItem | null> {
+  const key = discoverKey(ids);
+  const [items, drop] = await Promise.all([getDiscoverItems(), getWeeklyDrop()]);
+  const dropItems = (drop?.items ?? []).flatMap(d => (d.kind === "discover" ? [d.item] : []));
+  return [...items, ...dropItems].find(i => discoverKey(i) === key || (ids.igdbId && i.igdbId === ids.igdbId)) ?? null;
 }
 
 /**
- * "Am Start" bei einem Steam-Trend: Spiel in die Spieleliste aufnehmen (oder das schon vorhandene nehmen).
- * Frühere "Würde ich holen"/"Nicht meins"-Entscheidungen anderer zu diesem Spiel (SteamSwipe) werden dabei
- * als Reaktionen übernommen.
+ * "Am Start" bei einer Entdecken-Karte: Spiel in die Spieleliste aufnehmen (oder das schon vorhandene
+ * nehmen). Frühere "Würde ich holen"/"Nicht meins"-Entscheidungen anderer zu diesem Spiel (SteamSwipe,
+ * IgdbSwipe) werden dabei als Reaktionen übernommen. Karten aus den Feeds zählen nicht gegen das
+ * Tageslimit fürs Hinzufügen; unbekannte IDs schon.
  */
-export async function adoptSteamGame(userId: string, steamAppId: number): Promise<{ ok: true; gameId: string; slug: string } | { ok: false; status: number; error: string }> {
-  const existing = await prisma.game.findFirst({ where: { steamAppId }, select: { id: true, slug: true, status: true } });
+export async function adoptCandidate(
+  userId: string, ids: { steamAppId: number | null; igdbId: number | null },
+): Promise<{ ok: true; gameId: string; slug: string } | { ok: false; status: number; error: string }> {
+  const existing = await findListGame(ids);
   let gameId = existing?.id ?? null;
   let slug = existing?.slug ?? null;
   if (!existing) {
-    // Angaben aus der Trendliste mitgeben (wie beim Hinzufügen über das Formular) — createGame holt von
-    // Steam selbst nur Name, Cover und Preis.
-    const trend = (await getSteamTrends()).find(t => t.steamAppId === steamAppId);
-    const fields = trend
+    // Angaben aus dem Feed mitgeben (wie beim Hinzufügen über das Formular) — createGame holt von
+    // Steam/IGDB selbst nur Name, Cover und Preis.
+    const item = await findDiscoverItem(ids);
+    const fields = item
       ? {
-          description: trend.description, genres: trend.genres, modes: trend.modes, platforms: trend.platforms,
-          crossplay: trend.crossplay, isFree: trend.isFree, minPlayers: trend.minPlayers, maxPlayers: trend.maxPlayers,
-          sessionLength: trend.sessionLength,
+          description: item.description, genres: item.genres, modes: item.modes, platforms: item.platforms,
+          crossplay: item.crossplay, isFree: item.isFree, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers,
+          sessionLength: item.sessionLength,
         }
       : undefined;
-    const created = await createGame({ id: userId, isModerator: false }, { steamAppId, fields }, { skipDailyLimit: true });
+    const created = await createGame(
+      { id: userId, isModerator: false },
+      { steamAppId: ids.steamAppId ?? item?.steamAppId ?? undefined, igdbId: ids.igdbId ?? item?.igdbId ?? undefined, fields },
+      { skipDailyLimit: !!item },
+    );
     if (!created.ok) {
       // Gleichzeitig von jemand anderem aufgenommen? Dann das vorhandene Spiel nehmen.
       if (created.status !== 409 || !created.slug) return { ok: false, status: created.status, error: created.error };
@@ -197,19 +297,38 @@ export async function adoptSteamGame(userId: string, steamAppId: number): Promis
   }
   if (!gameId || !slug) return { ok: false, status: 500, error: "Spiel konnte nicht aufgenommen werden." };
 
-  const pending = await prisma.steamSwipe.findMany({ where: { steamAppId } });
-  if (pending.length > 0) {
+  const game = await prisma.game.findUnique({ where: { id: gameId }, select: { steamAppId: true, igdbId: true } });
+  const steamAppId = game?.steamAppId ?? ids.steamAppId;
+  const igdbId = game?.igdbId ?? ids.igdbId;
+  const [steamPending, igdbPending] = await Promise.all([
+    steamAppId ? prisma.steamSwipe.findMany({ where: { steamAppId } }) : [],
+    igdbId ? prisma.igdbSwipe.findMany({ where: { igdbId } }) : [],
+  ]);
+  const pending = new Map<string, { status: string; createdAt: Date }>();
+  for (const p of [...steamPending, ...igdbPending]) if (!pending.has(p.userId)) pending.set(p.userId, p);
+  if (pending.size > 0) {
     await prisma.$transaction([
-      ...pending.map(p =>
+      ...[...pending].map(([uid, p]) =>
         prisma.gameReaction.upsert({
-          where: { userId_gameId: { userId: p.userId, gameId: gameId! } },
-          create: { userId: p.userId, gameId: gameId!, status: p.status, decidedAt: p.createdAt, firstDecidedAt: p.createdAt },
+          where: { userId_gameId: { userId: uid, gameId: gameId! } },
+          create: { userId: uid, gameId: gameId!, status: p.status, decidedAt: p.createdAt, firstDecidedAt: p.createdAt },
           update: {},
         }),
       ),
-      prisma.steamSwipe.deleteMany({ where: { steamAppId } }),
+      ...(steamAppId ? [prisma.steamSwipe.deleteMany({ where: { steamAppId } })] : []),
+      ...(igdbId ? [prisma.igdbSwipe.deleteMany({ where: { igdbId } })] : []),
     ]);
     await recomputeGameAggregates([gameId]);
   }
   return { ok: true, gameId, slug };
+}
+
+/** Listen-Spiel zu einer Steam- oder IGDB-ID */
+export async function findListGame(ids: { steamAppId: number | null; igdbId: number | null }) {
+  const or = [
+    ...(ids.steamAppId ? [{ steamAppId: ids.steamAppId }] : []),
+    ...(ids.igdbId ? [{ igdbId: ids.igdbId }] : []),
+  ];
+  if (or.length === 0) return null;
+  return prisma.game.findFirst({ where: { OR: or }, select: { id: true, slug: true, status: true } });
 }

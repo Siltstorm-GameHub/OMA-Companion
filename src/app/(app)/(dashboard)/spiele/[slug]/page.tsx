@@ -10,6 +10,7 @@ import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
 import GameReactionPanel from "./GameReactionPanel";
 import MissingFieldsPanel from "./MissingFieldsPanel";
 import CorrectFieldsPanel from "./CorrectFieldsPanel";
+import TipPanel from "./TipPanel";
 import { squadMatchesFor } from "@/lib/games/matches";
 import { planRoundUrl } from "@/lib/games/swipe";
 import { missingFields } from "@/lib/games/edits";
@@ -60,6 +61,10 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
   const missing = missingFields(fields);
   // Matches: genug aus einem eigenen Squad sind am Start → "Runde planen"
   const matches = user && game.status === "APPROVED" && detail.myReaction.status === "in" ? await squadMatchesFor(user.id, game.id) : [];
+  // Offene Empfehlung für den GameSwipe-Drop der Woche?
+  const openTip = user && game.status === "APPROVED"
+    ? await prisma.gameTip.findFirst({ where: { gameId: game.id, status: { in: ["pending", "approved"] } }, select: { status: true } })
+    : null;
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
@@ -187,6 +192,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         <MissingFieldsPanel slug={game.slug} current={fields} missing={missing} />
       )}
       {game.status === "APPROVED" && !!user && <CorrectFieldsPanel slug={game.slug} current={fields} />}
+      {game.status === "APPROVED" && !!user && (
+        <TipPanel slug={game.slug} initial={(openTip?.status as "approved" | "pending" | undefined) ?? null} isModerator={isModerator} />
+      )}
 
       {/* Am Start (aus GameSwipe, öffentlich) */}
       <section className="surface rounded-2xl p-4 space-y-3">

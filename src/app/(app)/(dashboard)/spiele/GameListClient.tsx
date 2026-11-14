@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
 import SwipeDeck from "@/components/games/SwipeDeck";
-import type { DeckCard } from "@/lib/games/deck";
+import type { SwipeDeckData } from "@/lib/games/deck";
 import AddGameModal from "@/components/games/AddGameModal";
 import { Chip } from "@/components/games/GameFieldsForm";
 import { ChevronDown, ChevronRight, Dices, Copy, Gamepad2, List, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
@@ -37,7 +37,7 @@ export default function GameListClient({
   /** Reiter des Games-Bereichs (serverseitig gerendert, siehe GamesSectionTabs) */
   tabs?: ReactNode;
   /** Erster Swipe-Stapel (nur für angemeldete Mitglieder) */
-  swipe?: { cards: DeckCard[]; remaining: number } | null;
+  swipe?: SwipeDeckData | null;
   /** Startansicht: Swipen (Standard für Mitglieder) oder Liste (Suche, Sortierung, ?ansicht=liste) */
   initialView?: "swipe" | "list";
 }) {

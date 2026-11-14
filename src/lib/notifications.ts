@@ -23,7 +23,7 @@ export const PREF_KEY: Record<NotificationType, string> = {
   clip:         "clip",
   admin:        "admin",
   server:       "server",
-  game:         "game", // Spieleliste: Angebote für "Würde ich zocken"-Spiele
+  game:         "game", // Spieleliste: Angebote, Matches, GameSwipe-Drop und neue Karten
 };
 
 function isTypeEnabled(prefs: Record<string, boolean>, type: NotificationType): boolean {

@@ -82,12 +82,15 @@ export interface GamePassCatalog {
   byKey: Map<string, Set<GameSubscription>>;
   /** Varianten, deren Katalog geladen werden konnte (nur diese dürfen angepasst werden) */
   loaded: Set<GameSubscription>;
+  /** Bereinigter Name → Anzeigename und Varianten (für "Neu im Game Pass" in GameSwipe) */
+  titles: Map<string, { title: string; subs: Set<GameSubscription> }>;
 }
 
 /** Lädt beide Game-Pass-Kataloge. Fällt einer aus, bleibt er unverändert (nicht in `loaded`). */
 export async function fetchGamePassCatalog(): Promise<GamePassCatalog> {
   const byKey = new Map<string, Set<GameSubscription>>();
   const loaded = new Set<GameSubscription>();
+  const titleMap: GamePassCatalog["titles"] = new Map();
   for (const [sub, siglId] of Object.entries(SIGLS) as [GameSubscription, string][]) {
     try {
       const ids = await fetchSiglProductIds(siglId);
@@ -95,6 +98,12 @@ export async function fetchGamePassCatalog(): Promise<GamePassCatalog> {
       // Ein fast leerer Katalog ist eher eine kaputte Antwort als die Wahrheit → nicht übernehmen
       if (titles.length < 20) throw new Error(`nur ${titles.length} Titel`);
       for (const title of titles) {
+        const clean = cleanStoreTitle(title);
+        const cleanKey = gameNameKey(clean);
+        if (cleanKey) {
+          if (!titleMap.has(cleanKey)) titleMap.set(cleanKey, { title: clean, subs: new Set() });
+          titleMap.get(cleanKey)!.subs.add(sub);
+        }
         for (const variant of new Set([title, cleanStoreTitle(title)])) {
           const key = gameNameKey(variant);
           if (!key) continue;
@@ -107,5 +116,5 @@ export async function fetchGamePassCatalog(): Promise<GamePassCatalog> {
       console.error(`[games] Game-Pass-Katalog ${sub}`, err);
     }
   }
-  return { byKey, loaded };
+  return { byKey, loaded, titles: titleMap };
 }

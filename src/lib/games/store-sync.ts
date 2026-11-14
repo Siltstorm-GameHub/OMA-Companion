@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/prisma";
 import { notifyGameUsers } from "./notify";
 import { parseFieldSources, type SteamPrice } from "./draft";
+import { recordSubscriptionCatalog } from "./discover";
 import { fetchGamePassCatalog } from "./gamepass";
 import { gameKeys } from "./match";
 import { AUTO_SUBSCRIPTIONS, GAME_SUBSCRIPTIONS, formatPrice, type GameSubscription } from "./options";
@@ -104,14 +105,21 @@ export function nextSubscriptions(current: string[], found: Set<GameSubscription
   return [...next].filter(s => s in GAME_SUBSCRIPTIONS).sort((a, b) => order.indexOf(a) - order.indexOf(b));
 }
 
-/** Game-Pass-Kennzeichnung aller Spiele aktualisieren (Abgleich über Namen und andere Schreibweisen). */
-export async function syncGamePass(): Promise<{ loaded: string[]; matched: number; changed: number }> {
+/** Ist mindestens ein Abo neu dazugekommen? (→ "Neu im Abo" in GameSwipe) */
+export function gainedSubscription(current: string[], next: string[]): boolean {
+  return next.some(s => !current.includes(s));
+}
+
+/** Game-Pass-Kennzeichnung aller Spiele aktualisieren (Abgleich über Namen und andere Schreibweisen).
+ *  Neue Katalog-Titel außerhalb der Liste merkt sich GameSwipe für "Neu im Game Pass" (discover.ts). */
+export async function syncGamePass(): Promise<{ loaded: string[]; matched: number; changed: number; freshTitles: number }> {
   const catalog = await fetchGamePassCatalog();
   if (catalog.loaded.size === 0) throw new Error("Game-Pass-Katalog nicht erreichbar");
 
   const games = await prisma.game.findMany({ select: { id: true, nameKey: true, aliases: true, subscriptions: true } });
   let matched = 0;
   let changed = 0;
+  const now = new Date();
   for (const g of games) {
     const found = new Set<GameSubscription>();
     for (const key of gameKeys(g)) for (const s of catalog.byKey.get(key) ?? []) found.add(s);
@@ -119,10 +127,18 @@ export async function syncGamePass(): Promise<{ loaded: string[]; matched: numbe
     const next = nextSubscriptions(g.subscriptions, found, catalog.loaded);
     if (next.join(",") !== g.subscriptions.join(",")) {
       changed++;
-      await prisma.game.update({ where: { id: g.id }, data: { subscriptions: next } });
+      await prisma.game.update({
+        where: { id: g.id },
+        data: { subscriptions: next, ...(gainedSubscription(g.subscriptions, next) ? { subscriptionsAddedAt: now } : {}) },
+      });
     }
   }
-  return { loaded: [...catalog.loaded], matched, changed };
+  const knownKeys = new Set(games.flatMap(g => gameKeys(g)));
+  const { fresh } = await recordSubscriptionCatalog(catalog, knownKeys).catch(err => {
+    console.error("[games] Game-Pass-Neuzugänge", err);
+    return { fresh: 0 };
+  });
+  return { loaded: [...catalog.loaded], matched, changed, freshTitles: fresh };
 }
 
 /** Beides nacheinander; ein Ausfall des einen Stores verhindert den anderen Abgleich nicht. */

@@ -6,6 +6,8 @@
 // Rechts = Am Start · Links = Nicht meins · Hoch = Würde ich holen (auch per Knopf und Pfeiltasten).
 // Antippen dreht die Karte um: Beschreibung, Steckbrief, wer am Start ist, Sterne, Angaben korrigieren.
 // Rückgängig holt die letzte Karte zurück. Daten: GET/POST /api/games/swipe (lib/games/deck.ts).
+// Oben der "Drop der Woche" (drop.ts); Entdecken-Karten sind Spiele, die noch nicht in der Liste stehen
+// (Gratis-Aktionen, neu im Abo, erscheint bald, Steam-Trends — discover.ts).
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,23 +15,23 @@ import { toast } from "sonner";
 import GameCover from "@/components/GameCover";
 import CorrectFieldsForm from "@/components/games/CorrectFieldsForm";
 import { StarDisplay, StarRatingInput } from "@/components/games/StarRating";
-import { CalendarPlus, Check, ChevronRight, Heart, Info, Pencil, RotateCcw, Users, X } from "@/components/icons";
-import type { DeckCard } from "@/lib/games/deck";
+import { CalendarPlus, Check, ChevronRight, ExternalLink, Flame, Heart, Info, Pencil, RotateCcw, Users, X } from "@/components/icons";
+import type { DeckCard, DropInfo, SwipeDeckData } from "@/lib/games/deck";
 import type { GameMatchInfo } from "@/lib/games/matches";
-import { GAME_GENRES, GAME_MODES, GAME_PLATFORMS, SESSION_LENGTHS, formatPlayers, formatPrice, labelOf } from "@/lib/games/options";
+import { GAME_GENRES, GAME_MODES, GAME_PLATFORMS, SESSION_LENGTHS, formatPlayers, formatPrice, labelOf, subscriptionBadges } from "@/lib/games/options";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
 import { SWIPE_LABELS, planRoundUrl, type SwipeStatus } from "@/lib/games/swipe";
 
 const THRESHOLD = 100;
 const FLY_MS = 220;
 
-const keyOf = (c: DeckCard) => (c.kind === "game" ? `g:${c.id}` : `s:${c.steamAppId}`);
+const keyOf = (c: DeckCard) => (c.kind === "game" ? `g:${c.id}` : c.steamAppId ? `s:${c.steamAppId}` : `i:${c.igdbId}`);
 
 interface Done {
   card: DeckCard;
   /** Status vor der Entscheidung (für Rückgängig) */
   before: SwipeStatus | null;
-  /** Steam-Trend, der durch "Am Start" aufgenommen wurde */
+  /** Entdecken-Karte, die durch "Am Start" aufgenommen wurde */
   adopted: { gameId: string; slug: string } | null;
 }
 
@@ -40,24 +42,66 @@ interface MatchHit extends GameMatchInfo {
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+const fmtDay = (iso: string) =>
+  new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+
+const STORE_NAME = { epic: "Epic", steam: "Steam" } as const;
+
+function freeLabel(store: "epic" | "steam" | null, until: string | null): string {
+  const where = store ? ` bei ${STORE_NAME[store]}` : "";
+  return until ? `Gratis${where} bis ${fmtDay(until)}` : `Gratis${where}`;
+}
+
+function subLabel(subs: string[]): string {
+  const badge = subscriptionBadges(subs)[0];
+  return badge ? `Neu im ${badge}` : "Neu im Abo";
+}
 
 function reasonLabel(c: DeckCard): string {
-  if (c.kind === "steam") return c.trend === "top" ? "Steam · Gerade angesagt" : "Steam · Neu & angesagt";
-  if (c.reason === "event" && c.nextEvent) return `Event am ${fmtDate(c.nextEvent.startAt)}`;
-  if (c.reason === "popular") return "Beliebt in der Community";
-  if (c.reason === "recheck") return "Noch aktuell?";
-  return "Neu in der Spieleliste";
+  if (c.kind === "discover") {
+    switch (c.source) {
+      case "free": return freeLabel(c.store, c.freeUntil);
+      case "subscription": return subLabel(c.subscriptions);
+      case "upcoming": return c.releaseDate ? `Erscheint am ${fmtDay(c.releaseDate)}` : "Erscheint bald";
+      case "steam_new": return "Steam · Neu & angesagt";
+      default: return "Steam · Gerade angesagt";
+    }
+  }
+  switch (c.reason) {
+    case "event": return c.nextEvent ? `Event am ${fmtDate(c.nextEvent.startAt)}` : "Event demnächst";
+    case "free": return freeLabel(c.promo?.store ?? null, c.promo?.freeUntil ?? null);
+    case "subscription": return subLabel(c.subscriptions);
+    case "sale": return c.myStatus === "wish" ? `Auf deiner Wunschliste · −${c.discountPercent} %` : `Im Angebot · −${c.discountPercent} %`;
+    case "popular": return "Beliebt in der Community";
+    case "recheck": return "Noch aktuell?";
+    default: return "Neu in der Spieleliste";
+  }
 }
+
+/** Link zum Store einer Karte (Gratis-Aktion, Steam oder IGDB) */
+function storeLink(c: DeckCard): { href: string; label: string } | null {
+  if (c.kind === "game") {
+    if (c.promo?.storeUrl) return { href: c.promo.storeUrl, label: c.promo.store ? `Bei ${STORE_NAME[c.promo.store]} holen` : "Gratis holen" };
+    return null;
+  }
+  if (c.source === "free" && c.storeUrl) return { href: c.storeUrl, label: c.store ? `Bei ${STORE_NAME[c.store]} holen` : "Gratis holen" };
+  if (c.storeUrl) return { href: c.storeUrl, label: c.store ? `Auf ${STORE_NAME[c.store]} ansehen` : "Im Store ansehen" };
+  if (c.steamAppId) return { href: `https://store.steampowered.com/app/${c.steamAppId}/`, label: "Auf Steam ansehen" };
+  return null;
+}
+
+const daysLeftLabel = (days: number) => (days <= 1 ? "endet heute" : `noch ${days} Tage`);
 
 export default function SwipeDeck({
   initial, onShowList,
 }: {
   /** Erster Stapel, serverseitig geladen (buildSwipeDeck) */
-  initial: { cards: DeckCard[]; remaining: number };
+  initial: SwipeDeckData;
   onShowList?: () => void;
 }) {
   const [cards, setCards] = useState<DeckCard[]>(initial.cards);
   const [remaining, setRemaining] = useState(initial.remaining);
+  const [drop, setDrop] = useState<DropInfo | null>(initial.drop);
   const [history, setHistory] = useState<Done[]>([]);
   const [flipped, setFlipped] = useState(false);
   const [drag, setDrag] = useState({ dx: 0, dy: 0 });
@@ -80,6 +124,7 @@ export default function SwipeDeck({
         return [...cur, ...(data.cards as DeckCard[]).filter(c => !have.has(keyOf(c)))];
       });
       setRemaining(data.remaining);
+      setDrop(data.drop ?? null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Stapel konnte nicht geladen werden");
     } finally {
@@ -90,7 +135,9 @@ export default function SwipeDeck({
   const top = cards[0] ?? null;
 
   const send = useCallback(async (card: DeckCard, status: SwipeStatus | null, gameId?: string) => {
-    const body = card.kind === "game" || gameId ? { gameId: gameId ?? (card as { id: string }).id, status } : { steamAppId: card.steamAppId, status };
+    const body = card.kind === "game" || gameId
+      ? { gameId: gameId ?? (card as { id: string }).id, status }
+      : card.steamAppId ? { steamAppId: card.steamAppId, status } : { igdbId: card.igdbId, status };
     const res = await fetch("/api/games/swipe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,13 +157,14 @@ export default function SwipeDeck({
     setTimeout(async () => {
       setCards(cur => cur.slice(1));
       setRemaining(r => Math.max(0, r - 1));
+      if (card.drop) setDrop(d => (d ? { ...d, open: Math.max(0, d.open - 1) } : d));
       setFly(null);
       setDrag({ dx: 0, dy: 0 });
       setFlipped(false);
       const before = card.kind === "game" ? card.myStatus : null;
       try {
         const data = await send(card, status);
-        const adopted = card.kind === "steam" && data.gameId && data.slug ? { gameId: data.gameId, slug: data.slug } : null;
+        const adopted = card.kind === "discover" && data.gameId && data.slug ? { gameId: data.gameId, slug: data.slug } : null;
         setHistory(h => [...h.slice(-19), { card, before, adopted }]);
         const hit = (data.matches ?? []).find(m => m.isNew);
         if (hit) {
@@ -129,6 +177,7 @@ export default function SwipeDeck({
         toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
         setCards(cur => [card, ...cur]);
         setRemaining(r => r + 1);
+        if (card.drop) setDrop(d => (d ? { ...d, open: d.open + 1 } : d));
       }
     }, FLY_MS);
   }, [cards, fly, send, remaining, load]);
@@ -139,6 +188,7 @@ export default function SwipeDeck({
     setHistory(h => h.slice(0, -1));
     setCards(cur => [last.card, ...cur.filter(c => keyOf(c) !== keyOf(last.card))]);
     setRemaining(r => r + 1);
+    if (last.card.drop) setDrop(d => (d ? { ...d, open: d.open + 1 } : d));
     setFlipped(false);
     try {
       await send(last.card, last.before, last.adopted?.gameId);
@@ -198,6 +248,20 @@ export default function SwipeDeck({
 
   return (
     <div className="space-y-4">
+      {drop && (
+        <div className="max-w-sm mx-auto flex items-center gap-3 rounded-2xl border border-orange-400/30 px-4 py-2.5"
+          style={{ background: "linear-gradient(110deg, rgba(249,115,22,0.16), transparent 75%)" }}>
+          <Flame className="w-5 h-5 text-orange-300 shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-white">Drop der Woche</span>
+            <span className="block text-[11px] text-gray-400">
+              {drop.open > 0 ? `${drop.open} von ${drop.total} Karten offen` : `Alle ${drop.total} Karten entschieden`} ·{" "}
+              {daysLeftLabel(drop.daysLeft)}
+            </span>
+          </span>
+          {drop.open === 0 && <Check className="w-5 h-5 text-emerald-300 shrink-0" />}
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
         <span>{remaining > 0 ? `Noch ${remaining} ${remaining === 1 ? "Spiel" : "Spiele"} zu entscheiden` : "Alles entschieden"}</span>
         <span className="hidden sm:inline">← nicht meins · ↑ würde ich holen · → am Start · I Details · Z rückgängig</span>
@@ -209,7 +273,7 @@ export default function SwipeDeck({
           <div className="absolute inset-0 rounded-3xl border border-white/[0.08] bg-white/[0.02] flex flex-col items-center justify-center text-center p-6 gap-3">
             <span className="text-4xl" aria-hidden>🎉</span>
             <p className="font-display text-lg font-bold text-white">Alles durch!</p>
-            <p className="text-xs text-gray-400">Neue Steam-Trends kommen täglich dazu. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
+            <p className="text-xs text-gray-400">Neue Karten kommen täglich dazu, jeden Montag gibt es den Drop der Woche. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
             {onShowList && (
               <button type="button" onClick={onShowList} className="text-sm font-semibold text-teal-300 hover:text-teal-200">
                 Zur Liste →
@@ -331,12 +395,20 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
   const players = formatPlayers(f.minPlayers, f.maxPlayers);
   const avg = card.kind === "game" && card.ratingCount >= MIN_RATINGS_FOR_AVERAGE ? averageRating(card.ratingSum, card.ratingCount) : null;
   const price = formatPrice(card.priceCents, card.priceCurrency);
+  const link = storeLink(card);
   return (
     <div className="h-full flex flex-col">
       <div className="relative">
         <GameCover game={card.name} coverUrl={card.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
-        <span className="absolute top-3 left-3 rounded-full bg-black/70 border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-white">
-          {reasonLabel(card)}
+        <span className="absolute top-3 left-3 flex flex-col items-start gap-1">
+          {card.drop && (
+            <span className="flex items-center gap-1 rounded-full bg-orange-600/90 px-2.5 py-1 text-[11px] font-bold text-white">
+              <Flame className="w-3 h-3" /> Drop der Woche
+            </span>
+          )}
+          <span className="rounded-full bg-black/70 border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-white">
+            {reasonLabel(card)}
+          </span>
         </span>
         {card.discountPercent > 0 && (
           <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-[11px] font-black text-white">−{card.discountPercent} %</span>
@@ -362,7 +434,19 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
           {avg !== null && <span className="flex items-center gap-1"><StarDisplay value={avg} className="w-3 h-3" /> {formatRating(avg)}</span>}
           {f.isFree === true ? <span>Kostenlos</span> : price && <span>{price}</span>}
         </div>
-        {f.description && <p className="text-xs text-gray-400 line-clamp-3">{f.description}</p>}
+        {card.kind === "game" && card.tip && (
+          <p className="text-xs text-orange-100/90 rounded-lg bg-orange-500/10 border border-orange-400/20 px-2.5 py-1.5 line-clamp-2">
+            💬 Empfohlen{card.tip.by ? ` von ${card.tip.by}` : ""}{card.tip.note ? `: „${card.tip.note}“` : ""}
+          </p>
+        )}
+        {f.description && <p className={`text-xs text-gray-400 ${card.kind === "game" && card.tip ? "line-clamp-2" : "line-clamp-3"}`}>{f.description}</p>}
+        {link && (card.kind === "game" || card.source === "free") && (
+          <a href={link.href} target="_blank" rel="noreferrer"
+            onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
+            className="self-start inline-flex items-center gap-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] px-2.5 py-1 text-[11px] font-semibold text-teal-200">
+            {link.label} <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
         <div className="mt-auto flex items-center gap-2 min-h-[28px]">
           {card.kind === "game" && card.inPeople.length > 0 ? (
             <>
@@ -374,7 +458,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
               <span className="text-[11px] text-emerald-300">{card.inCount} am Start</span>
             </>
           ) : (
-            <span className="text-[11px] text-gray-500">{card.kind === "steam" ? "Noch nicht in unserer Liste — sag „Am Start“, dann kommt es rein" : "Noch niemand am Start"}</span>
+            <span className="text-[11px] text-gray-500">{card.kind === "discover" ? "Noch nicht in unserer Liste — sag „Am Start“, dann kommt es rein" : "Noch niemand am Start"}</span>
           )}
         </div>
       </div>
@@ -485,10 +569,13 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
             ) : (
               <p className="text-gray-500">
                 Steht noch nicht in unserer Spieleliste. Sag „Am Start“, dann nehmen wir es auf — danach kannst du es bewerten und
-                Angaben ergänzen.{" "}
-                <a href={`https://store.steampowered.com/app/${card.steamAppId}/`} target="_blank" rel="noreferrer" className="text-teal-300 hover:text-teal-200">
-                  Auf Steam ansehen
-                </a>
+                Angaben ergänzen.
+                {card.releaseDate && <> Erscheint am {fmtDay(card.releaseDate)}.</>}{" "}
+                {storeLink(card) && (
+                  <a href={storeLink(card)!.href} target="_blank" rel="noreferrer" className="text-teal-300 hover:text-teal-200">
+                    {storeLink(card)!.label}
+                  </a>
+                )}
               </p>
             )}
           </>

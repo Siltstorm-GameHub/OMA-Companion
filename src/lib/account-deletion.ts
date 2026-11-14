@@ -39,6 +39,9 @@ export async function anonymizeUser(userId: string): Promise<void> {
     // Spieleliste: Bewertungen/"Würde ich zocken" (Schnitte werden unten neu berechnet)
     prisma.gameReaction.deleteMany({ where: { userId } }),
     prisma.steamSwipe.deleteMany({ where: { userId } }),
+    prisma.igdbSwipe.deleteMany({ where: { userId } }),
+    prisma.gameSwipeState.deleteMany({ where: { userId } }),
+    prisma.gameTip.deleteMany({ where: { byId: userId, status: { in: ["pending", "approved"] } } }),
 
     prisma.user.update({
       where: { id: userId },
@@ -93,6 +96,7 @@ export async function buildUserExport(userId: string) {
       lobbyMessages: true,
       gameReactions: { include: { game: { select: { name: true } } } },
       gameEdits: { include: { game: { select: { name: true } } } },
+      gameTips: { include: { game: { select: { name: true } } } },
       clipSubmissions: true,
       twitchClipperLinks: { select: { twitchLogin: true, createdAt: true } },
       eventPredictionsMade: true,

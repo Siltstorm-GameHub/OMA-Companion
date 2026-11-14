@@ -57,6 +57,8 @@ const RULE_TYPE: Record<string, NotificationType> = {
   server_denied:      "server",
   server_revoked:     "server",
   birthday:           "admin",
+  game_drop:          "game",
+  game_new_cards:     "game",
 };
 
 export function fillPlaceholders(text: string, values: Record<string, string>): string {

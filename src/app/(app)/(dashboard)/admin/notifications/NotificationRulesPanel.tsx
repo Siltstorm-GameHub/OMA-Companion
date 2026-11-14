@@ -40,11 +40,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   quests:         "🎯 Quests",
   community_jobs: "🧑‍💼 Community-Jobs",
   clips:          "🎬 Clip des Monats",
+  games:          "🃏 GameSwipe",
   system:         "⚙️ System",
 };
 
 // Feste Reihenfolge; unbekannte Kategorien werden danach alphabetisch angehängt (nie ausgeblendet)
-const CATEGORY_ORDER = ["events", "quests", "community_jobs", "clips", "system"];
+const CATEGORY_ORDER = ["events", "quests", "community_jobs", "clips", "games", "system"];
 
 type ChannelFilter = "all" | "push" | "inApp" | "dm" | "chan" | "off";
 const CHANNEL_FILTERS: { id: ChannelFilter; label: string }[] = [

@@ -200,3 +200,21 @@ export async function findIgdbGameBySteamId(steamAppId: number): Promise<GameDra
   const hit = rows.find(r => steamAppIdFromUrls((r.websites ?? []).map(w => w.url)) === steamAppId);
   return hit ? parseIgdbGame(hit) : null;
 }
+
+/**
+ * Bald erscheinende Mehrspieler-Spiele (Koop/PvP/MMO/Battle Royale) der nächsten `days` Tage, nach
+ * Vorfreude (IGDB "hypes") sortiert — für "Erscheint bald" in GameSwipe. Wirft bei IGDB-Fehlern.
+ */
+export async function fetchUpcomingMultiplayer(days = 90, limit = 15): Promise<(GameDraft & { releaseDate: string })[]> {
+  if (!igdbConfigured()) return [];
+  const now = Math.floor(Date.now() / 1000);
+  const until = now + days * 86400;
+  const rows = await igdbQuery<IgdbGameData[]>("games",
+    `fields ${DETAIL_FIELDS},hypes; ` +
+    `where first_release_date > ${now} & first_release_date < ${until} & game_modes = (2,3,5,6) ` +
+    `& version_parent = null & parent_game = null & hypes > 2; sort hypes desc; limit ${limit};`);
+  return rows
+    .filter(r => r.first_release_date)
+    .map(r => ({ ...parseIgdbGame(r), releaseDate: new Date(r.first_release_date! * 1000).toISOString() }))
+    .filter(d => (d.modes.includes("coop") || d.modes.includes("pvp")) && d.platforms.some(p => p !== "mobile"));
+}

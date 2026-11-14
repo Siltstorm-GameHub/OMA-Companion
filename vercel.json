@@ -65,6 +65,10 @@
     {
       "path": "/api/cron/game-trends",
       "schedule": "40 5 * * *"
+    },
+    {
+      "path": "/api/cron/game-discover",
+      "schedule": "10 6 * * *"
     }
   ]
 }

@@ -163,6 +163,10 @@ model User {
   createdEventSeries          EventSeries[]                @relation("EventSeriesCreator")
   gameReactions               GameReaction[]
   steamSwipes                 SteamSwipe[]
+  igdbSwipes                  IgdbSwipe[]
+  gameTips                    GameTip[]   @relation("GameTipBy")
+  gameTipsReviewed            GameTip[]   @relation("GameTipReviewedBy")
+  gameSwipeState              GameSwipeState?
   gamesAdded                  Game[]                       @relation("GameAddedBy")
   gameEdits                   GameEdit[]
 }
@@ -2265,6 +2269,7 @@ model Game {
   saleStartedAt     DateTime? // Beginn des aktuellen Angebots — für "Im Angebot"-Benachrichtigungen
   // Abos, in denen das Spiel enthalten ist (siehe GAME_SUBSCRIPTIONS). Game Pass wird automatisch abgeglichen.
   subscriptions     String[]  @default([])
+  subscriptionsAddedAt DateTime? // zuletzt ein Abo dazugekommen — GameSwipe zeigt "Neu im Abo"
   fieldSources  Json? // { feld: "steam" | "user" }
   enrichedAt    DateTime? // letzter Steam-Abgleich (auch erfolglos) — verhindert Endlos-Wiederholungen
   status        String    @default("APPROVED") // APPROVED | PENDING | HIDDEN
@@ -2282,6 +2287,7 @@ model Game {
   reactions GameReaction[]
   edits     GameEdit[]
   matches   GameMatch[]
+  tips      GameTip[]
 
   @@index([status])
   @@index([igdbId])
@@ -2324,6 +2330,51 @@ model SteamSwipe {
 
   @@id([userId, steamAppId])
   @@index([steamAppId])
+}
+
+/// Wie SteamSwipe, für Entdecken-Karten ohne Steam-ID (nur IGDB, z.B. Konsolen- oder Epic-Spiele).
+model IgdbSwipe {
+  userId    String
+  igdbId    Int
+  status    String // "wish" | "out"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, igdbId])
+  @@index([igdbId])
+}
+
+/// Empfehlung für den GameSwipe-Drop der Woche (lib/games/drop.ts). Tipps von Moderatoren sind sofort
+/// freigegeben, die von Mitgliedern prüft das Team. Ein freigegebener Tipp kommt in den nächsten Drop.
+model GameTip {
+  id           String    @id @default(cuid())
+  gameId       String
+  byId         String?
+  note         String? // kurzer Satz "Warum?" — steht auf der Karte
+  status       String    @default("pending") // pending | approved | used | rejected
+  usedWeek     String? // Drop-Woche (z.B. "2026-W47"), in der der Tipp lief
+  reviewedById String?
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+
+  game       Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  by         User? @relation("GameTipBy", fields: [byId], references: [id], onDelete: SetNull)
+  reviewedBy User? @relation("GameTipReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([gameId])
+}
+
+/// GameSwipe je Mitglied: wann zuletzt angeschaut und wann zuletzt auf neue Karten bzw. den Drop
+/// hingewiesen (lib/games/swipe-notify.ts) — damit niemand öfter als nötig benachrichtigt wird.
+model GameSwipeState {
+  userId           String    @id
+  seenAt           DateTime?
+  notifiedAt       DateTime?
+  dropNotifiedWeek String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Match: genug Mitglieder eines Squads sind bei einem Spiel "Am Start" (siehe lib/games/matches.ts).

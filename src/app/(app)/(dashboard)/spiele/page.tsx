@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { listApprovedGames } from "@/lib/games/service";
-import { buildSwipeDeck } from "@/lib/games/deck";
+import { buildSwipeDeck, markSwipeSeen } from "@/lib/games/deck";
 import GameListClient from "./GameListClient";
 import GamesSectionTabs from "@/components/games/GamesSectionTabs";
 import { GAME_SORTS, type GameSort } from "@/lib/games/filter";
@@ -23,7 +23,8 @@ export default async function SpielePage({ searchParams }: { searchParams: Promi
     isModerator ? prisma.game.count({ where: { status: "PENDING" } }) : Promise.resolve(0),
     user ? buildSwipeDeck(user.id, 20) : Promise.resolve(null),
   ]);
-  // Swipen ist die Startansicht — außer man kommt mit Suche, Sortierung, "Hinzufügen" oder ?ansicht=liste
+  if (user && swipe) await markSwipeSeen(user.id);
+  // GameSwipe ist die Startansicht — außer man kommt mit Suche, Sortierung, "Hinzufügen" oder ?ansicht=liste
   const listFirst = !!q || !!sort || neu === "1" || ansicht === "liste";
 
   return (

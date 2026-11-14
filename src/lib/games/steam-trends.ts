@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { GameFields } from "./draft";
+import { steamSearchAppIds } from "./discover-parse";
 import { fetchSteamGameDraft } from "./steam";
 
 const KEY = "games_steam_trends";
@@ -29,6 +30,8 @@ export interface SteamTrend extends Omit<GameFields, "tags"> {
   priceInitialCents: number | null;
   discountPercent: number;
   priceCurrency: string | null;
+  /** Seit wann das Spiel in der Trendliste steht (ISO) — für "neue Karten" in GameSwipe */
+  firstSeenAt?: string;
 }
 
 async function fetchMostPlayed(): Promise<number[]> {
@@ -45,11 +48,7 @@ async function fetchPopularNew(): Promise<number[]> {
     headers: UA, signal: AbortSignal.timeout(8000), cache: "no-store",
   });
   if (!res.ok) throw new Error(`Steam Suche ${res.status}`);
-  const json = await res.json() as { items?: { logo?: string }[] };
-  // Die App-ID steckt nur in der Bild-URL (…/apps/<id>/…)
-  return (json.items ?? [])
-    .map(i => Number(/\/apps\/(\d+)\//.exec(i.logo ?? "")?.[1]))
-    .filter(id => Number.isInteger(id) && id > 0);
+  return steamSearchAppIds(await res.json());
 }
 
 /** Trendliste neu aufbauen (Cron). Fehlt eine Quelle, bleibt die andere — ganz ohne Treffer der alte Stand. */
@@ -67,6 +66,8 @@ export async function refreshSteamTrends(): Promise<{ top: number; new: number; 
     ...pick(fresh).filter(id => !top.includes(id)).map(id => ({ id, trend: "new" as const })),
   ];
 
+  const previous = new Map((await getSteamTrends()).map(t => [t.steamAppId, t.firstSeenAt]));
+  const nowIso = new Date().toISOString();
   const items: SteamTrend[] = [];
   // In kleinen Gruppen abfragen — Steam drosselt sonst
   for (let i = 0; i < candidates.length; i += 4) {
@@ -80,6 +81,7 @@ export async function refreshSteamTrends(): Promise<{ top: number; new: number; 
         isFree: d.isFree, minPlayers: d.minPlayers, maxPlayers: d.maxPlayers, sessionLength: d.sessionLength,
         priceCents: d.steamPrice?.priceCents ?? null, priceInitialCents: d.steamPrice?.priceInitialCents ?? null,
         discountPercent: d.steamPrice?.discountPercent ?? 0, priceCurrency: d.steamPrice?.currency ?? null,
+        firstSeenAt: previous.get(d.steamAppId) ?? nowIso,
       });
     });
   }
