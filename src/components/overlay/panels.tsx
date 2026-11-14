@@ -3,6 +3,7 @@
 /**
  * Listen-Panels des Event-Overlays: Turnierbaum, Tabelle, Reihentabelle, Teilnehmer.
  */
+import { useEffect, useState } from "react";
 import { formatFixed } from "@/lib/format-number";
 import RankedAvatar from "@/components/RankedAvatar";
 import { AutoScrollViewport } from "./AutoScrollViewport";
@@ -15,7 +16,28 @@ import {
 } from "./types";
 
 /* ── Bracket-Panel: Runden nebeneinander, kompakt für Elimination-Formate ── */
-export function BracketPanel({ matches: allMatches, userOf }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined }) {
+/** Eigene Zeile des Streamers, der selbst mitspielt — in allen Panels gleich markiert. */
+const HIGHLIGHT_STYLE: React.CSSProperties = { background: "rgba(196,163,255,0.16)", boxShadow: "inset 3px 0 0 #c4a3ff" };
+
+/** Platzwechsel nach einem neuen Ergebnis (positiv = aufgestiegen) — kurz sichtbar, siehe useEventMoments. */
+function MoveBadge({ delta }: { delta: number | undefined }) {
+  if (!delta) return null;
+  const up = delta > 0;
+  return (
+    <span key={delta} className="oma-anim-pop" style={{ fontSize: 13, fontWeight: 800, color: up ? "#5eead4" : "#f87171", whiteSpace: "nowrap", flexShrink: 0 }}>
+      {up ? "▲" : "▼"}{Math.abs(delta)}
+    </span>
+  );
+}
+
+export type PanelMarks = {
+  /** Streamer, der selbst mitspielt — seine Zeilen werden markiert. */
+  highlightUserId?: string | null;
+  /** Platzwechsel je User nach dem letzten Ergebnis. */
+  movement?: Record<string, number>;
+};
+
+export function BracketPanel({ matches: allMatches, userOf, highlightUserId }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined } & PanelMarks) {
   // Nur K.O.-Matches (bei "Gruppenphase + K.O." stehen die Gruppenspiele in der Tabelle);
   // das Spiel um Platz 3 bekommt einen eigenen Abschnitt nach dem Finale.
   // Hin- und Rückspiel als eine Paarung mit Gesamtergebnis (siehe aggregateKnockoutTies)
@@ -38,7 +60,7 @@ export function BracketPanel({ matches: allMatches, userOf }: { matches: Overlay
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {section.items.map(m => (
-                <BracketRow key={m.id} match={m} userOf={userOf} />
+                <BracketRow key={m.id} match={m} userOf={userOf} highlightUserId={highlightUserId} />
               ))}
             </div>
           </div>
@@ -48,20 +70,20 @@ export function BracketPanel({ matches: allMatches, userOf }: { matches: Overlay
   );
 }
 
-function BracketRow({ match, userOf }: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined }) {
+function BracketRow({ match, userOf, highlightUserId }: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined; highlightUserId?: string | null }) {
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "7px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
-      <Row user={userOf(match.player1Id)} score={match.score1} winner={p1Winner} />
-      <Row user={userOf(match.player2Id)} score={match.score2} winner={p2Winner} />
+      <Row user={userOf(match.player1Id)} score={match.score1} winner={p1Winner} mine={!!highlightUserId && match.player1Id === highlightUserId} />
+      <Row user={userOf(match.player2Id)} score={match.score2} winner={p2Winner} mine={!!highlightUserId && match.player2Id === highlightUserId} />
     </div>
   );
 }
 
-function Row({ user, score, winner }: { user: OverlayUser | undefined; score: number | null; winner: boolean }) {
+function Row({ user, score, winner, mine }: { user: OverlayUser | undefined; score: number | null; winner: boolean; mine?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)", borderRadius: 6, margin: "0 -4px", padding: "0 4px", ...(mine ? HIGHLIGHT_STYLE : null) }}>
       <RankedAvatar userId={user?.id} src={user?.image} alt={displayName(user)} size={26} />
       <span style={{ flex: 1 }}>{displayName(user)}</span>
       {score != null && <span>{score}</span>}
@@ -86,8 +108,8 @@ type RankedRow = {
  *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
  *  die Logik aus LigaView/FfaView, nur kompakter fürs Overlay. */
 export function TablePanel({
-  matches, participants, format, statFields, avgDirection = "high", ligaPunkteByUser, compact = true,
-}: {
+  matches, participants, format, statFields, avgDirection = "high", ligaPunkteByUser, compact = true, highlightUserId, movement,
+}: PanelMarks & {
   matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null;
   /** Nur avg_stats: höchster oder niedrigster Ø vorn */
   avgDirection?: AvgDirection;
@@ -96,7 +118,9 @@ export function TablePanel({
    *  Feld statt nur des kombinierten Durchschnitts, und nutzt die groessere Listenhoehe. */
   compact?: boolean;
 }) {
-  if (format === GROUP_KNOCKOUT_FORMAT) return <GroupTablesPanel matches={matches} participants={participants} compact={compact} />;
+  if (format === GROUP_KNOCKOUT_FORMAT) {
+    return <GroupTablesPanel matches={matches} participants={participants} compact={compact} highlightUserId={highlightUserId} movement={movement} />;
+  }
   const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
   const ranked = isFfaFamily
@@ -113,9 +137,11 @@ export function TablePanel({
               display: "flex", alignItems: "center", gap: 13, width: "100%",
               padding: "5px 8px", borderRadius: 7,
               background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
+              ...(p.userId === highlightUserId ? HIGHLIGHT_STYLE : null),
             }}
           >
             <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+            <MoveBadge delta={movement?.[p.userId]} />
             <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={30} />
             <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
               {displayName(p.user)}
@@ -146,7 +172,8 @@ export function TablePanel({
 /** "Gruppenphase + K.O.": eine kompakte Tabelle je Gruppe (gleiche Berechnung wie Turnierseite/Admin,
  *  siehe lib/tournaments/groupStage.ts). Die Gruppen-Mitglieder ergeben sich aus den Gruppenspielen —
  *  dafür braucht das Overlay keine eigenen Teilnehmer-Gruppendaten. */
-function GroupTablesPanel({ matches, participants, compact }: { matches: OverlayMatch[]; participants: OverlayParticipant[]; compact: boolean }) {
+/** Gruppentabellen aus den Gruppenspielen — Mitglieder ergeben sich aus den Spielen selbst. */
+function groupStandingsOf(matches: OverlayMatch[]) {
   const groupMatches = matches.filter(m => m.groupIndex != null);
   const groupCount = groupMatches.reduce((n, m) => Math.max(n, (m.groupIndex ?? 0) + 1), 0);
   const members: string[][] = Array.from({ length: groupCount }, () => []);
@@ -155,21 +182,41 @@ function GroupTablesPanel({ matches, participants, compact }: { matches: Overlay
       if (uid && !members[m.groupIndex!].includes(uid)) members[m.groupIndex!].push(uid);
     }
   }
-  const standings = computeGroupStandings(members, groupMatches);
+  return computeGroupStandings(members, groupMatches);
+}
+
+/** Wie lange eine Gruppe in der kleinen Kachel steht, bevor die nächste kommt. */
+const GROUP_ROTATE_MS = 8000;
+
+function GroupTablesPanel({
+  matches, participants, compact, highlightUserId, movement,
+}: { matches: OverlayMatch[]; participants: OverlayParticipant[]; compact: boolean } & PanelMarks) {
+  const standings = groupStandingsOf(matches);
   const userById = new Map(participants.map(p => [p.userId, p.user]));
+  // Kleine Kachel: eine Gruppe nach der anderen (lesbar statt winzig gescrollt). Vollbild: alle.
+  const rotate = compact && standings.length > 1;
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!rotate) return;
+    const t = setInterval(() => setTick(n => n + 1), GROUP_ROTATE_MS);
+    return () => clearInterval(t);
+  }, [rotate]);
+  const current = standings.length > 0 ? tick % standings.length : 0;
+  const shown = rotate ? [current] : standings.map((_, gi) => gi);
   return (
-    <PanelShell title="Gruppen">
+    <PanelShell title={rotate ? `Gruppen · ${current + 1}/${standings.length}` : "Gruppen"}>
       <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={8}>
-        {standings.map((table, gi) => (
-          <div key={gi} style={{ width: "100%" }}>
+        {shown.map(gi => ({ gi, table: standings[gi] })).map(({ gi, table }) => (
+          <div key={gi} className={rotate ? "oma-anim-slidein" : undefined} style={{ width: "100%" }}>
             <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 3px" }}>
               {groupLabel(gi)}
             </p>
             {table.map((s, i) => {
               const user = userById.get(s.userId);
               return (
-                <div key={s.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 8px", borderRadius: 7, background: i === 0 ? "rgba(20,184,166,0.06)" : "transparent" }}>
+                <div key={s.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 8px", borderRadius: 7, background: i === 0 ? "rgba(20,184,166,0.06)" : "transparent", ...(s.userId === highlightUserId ? HIGHLIGHT_STYLE : null) }}>
                   <span style={{ width: 18, fontSize: 14, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+                  <MoveBadge delta={movement?.[s.userId]} />
                   <RankedAvatar userId={user?.id} src={user?.image} alt={displayName(user)} size={24} />
                   <span style={{ flex: 1, fontSize: 16 }}>{displayName(user)}</span>
                   <span style={{ fontSize: 13, opacity: 0.5, whiteSpace: "nowrap" }}>{s.scored}:{s.conceded}</span>
@@ -363,13 +410,13 @@ function buildFfaRanking(
 }
 
 /* ── Teilnehmer-Panel ── */
-export function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
+export function ParticipantsPanel({ participants, highlightUserId }: { participants: OverlayParticipant[] } & PanelMarks) {
   return (
     <PanelShell title="Teilnehmer">
       <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT_COMPACT}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px", width: "100%" }}>
           {participants.map(p => (
-            <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, borderRadius: 6, ...(p.userId === highlightUserId ? HIGHLIGHT_STYLE : null) }}>
               <RankedAvatar userId={p.user.id} src={p.user.image} alt={displayName(p.user)} size={28} />
               <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {displayName(p.user)}
@@ -380,4 +427,25 @@ export function ParticipantsPanel({ participants }: { participants: OverlayParti
       </AutoScrollViewport>
     </PanelShell>
   );
+}
+
+/** Aktuelle Tabellenplätze je User (gleiche Berechnung wie TablePanel) — für Platzwechsel-Pfeile
+ *  und "Mein Platz". Bei Gruppen der Platz innerhalb der eigenen Gruppe. Reine K.O.-Formate und
+ *  Events ohne Format haben keine Tabelle → leer. */
+export function computeTablePositions(
+  matches: OverlayMatch[], participants: OverlayParticipant[], format: string | null, statFields: string | null, avgDirection: AvgDirection = "high",
+): Map<string, { position: number; of: number; group: number | null }> {
+  const out = new Map<string, { position: number; of: number; group: number | null }>();
+  if (!format || format === "single_elimination" || format === "double_elimination") return out;
+  if (format === GROUP_KNOCKOUT_FORMAT) {
+    groupStandingsOf(matches).forEach((table, gi) =>
+      table.forEach((s, i) => out.set(s.userId, { position: i + 1, of: table.length, group: gi })));
+    return out;
+  }
+  const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
+  const ranked = isFfaFamily
+    ? buildFfaRanking(matches, participants, format, statFields, {}, true, avgDirection)
+    : buildMatchRanking(matches, participants, format, {});
+  ranked.forEach((r, i) => out.set(r.userId, { position: i + 1, of: ranked.length, group: null }));
+  return out;
 }

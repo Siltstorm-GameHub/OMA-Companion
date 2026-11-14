@@ -7,8 +7,9 @@
 import { useEffect, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import RankedAvatar from "@/components/RankedAvatar";
-import { Users } from "@/components/icons";
+import { Trophy, Users } from "@/components/icons";
 import { AutoScrollViewport } from "./AutoScrollViewport";
+import type { MyStatus } from "@/lib/overlay-moments";
 import {
   displayName, ELEMENT_SIZE, TICKER_ENTRIES_WIDTH,
   type OverlayMatch, type OverlayUser, type OverlayStreamer, type OverlayTogether,
@@ -63,9 +64,17 @@ export const FLIP_HEIGHT = ELEMENT_SIZE.brand.height;
  *  des Streamers, der diesen Link erzeugt hat. Ohne bekannten Streamer (sehr alte Links, oder
  *  wenn der User seither gelöscht wurde) bleibt sie als einzelne, nicht drehende OMA-Fläche
  *  stehen — ein Flip auf eine leere Rückseite wäre sinnlos. */
-export function IdentityFlipTile({ streamer, together }: { streamer: OverlayStreamer | null; together?: OverlayTogether | null }) {
+export function IdentityFlipTile({
+  streamer, together, myStatus,
+}: {
+  streamer: OverlayStreamer | null; together?: OverlayTogether | null;
+  /** Streamer spielt selbst mit: Die Rückseite wechselt jede zweite Runde auf "Mein Turnier". */
+  myStatus?: MyStatus | null;
+}) {
   const [flips, setFlips] = useState(0);
   const flipped = flips % 2 === 1;
+  // Getauscht wird, während die Rückseite abgewandt ist (Wechsel auf ungerade = Drehung beginnt).
+  const showMine = !!myStatus && Math.floor((flips - 1) / 2) % 2 === 1;
   // Gemeinsames Streamen: Die Vorderseite wechselt jede zweite Runde zwischen OMA und "Gemeinsam
   // live mit …" — getauscht wird beim Zurückdrehen, solange sie noch abgewandt ist.
   const showTogether = !!together?.partners.length && Math.floor(flips / 2) % 2 === 1;
@@ -112,6 +121,7 @@ export function IdentityFlipTile({ streamer, together }: { streamer: OverlayStre
         }}
       >
         {showTogether ? <TogetherFace together={together!} /> : omaFace}
+        {showMine ? <MyStatusFace status={myStatus!} /> : (
         <FlipFace back>
           <RankedAvatar userId={streamer.id} src={streamer.image} alt={name} size={48} />
           <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
@@ -126,8 +136,33 @@ export function IdentityFlipTile({ streamer, together }: { streamer: OverlayStre
             )}
           </div>
         </FlipFace>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Rückseite "Mein Turnier": Platz bzw. Status und nächstes Match des Streamers. */
+function MyStatusFace({ status }: { status: MyStatus }) {
+  return (
+    <FlipFace back breathe={status.live}>
+      {status.live ? <LiveBadge live /> : (
+        <Trophy size={30} style={{ color: "#c4a3ff", flexShrink: 0, filter: "drop-shadow(0 0 8px rgba(196,163,255,0.5))" }} />
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)" }}>
+          Mein Turnier
+        </span>
+        <span style={{ fontSize: 19, fontWeight: 700, color: "#c4a3ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {status.headline}
+        </span>
+        {status.detail && (
+          <span style={{ fontSize: 14, fontWeight: 500, color: status.live ? "#f87171" : "#5eead4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {status.detail}
+          </span>
+        )}
+      </div>
+    </FlipFace>
   );
 }
 

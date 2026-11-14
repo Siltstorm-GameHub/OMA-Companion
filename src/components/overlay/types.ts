@@ -82,9 +82,48 @@ export type EventOverlayState = {
   seriesTable: SeriesTable | null;
   /** Live-Steuerung durchs Touchscreen-Widget (Event.overlayControlJson, siehe schema.prisma) —
    *  `hidden` blendet Elemente unabhängig vom Layout aus, `zoom` zeigt genau ein Element als
-   *  Vollbild-Kachel. */
-  control: { hidden: ElementKey[]; zoom: ElementKey | null };
+   *  Vollbild-Kachel, `scene` = "Pause für alle", `announcement` = Durchsage. */
+  control: EventControl;
+  /** Erster Abschluss (ISO) — null, solange das Event läuft. Treibt die Siegerehrung. */
+  completedAt: string | null;
+  /** Endergebnis fürs Overlay (Siegerehrung) — null, solange das Event nicht abgeschlossen ist. */
+  ceremony: OverlayCeremony | null;
 };
+
+/** Durchsage des Veranstalters (Widget) — erscheint als Laufband in allen Overlays des Events. */
+export type OverlayAnnouncement = {
+  /** Wechselt bei jeder neuen Durchsage — lässt das Banner neu einfliegen. */
+  id: string;
+  text: string;
+  /** Ende der Anzeige (ms seit Epoch), null = bis zum Zurücknehmen. */
+  until: number | null;
+  /** Restzeit bis `until` als Countdown im Banner zeigen. */
+  countdown: boolean;
+};
+
+/** Event-weite Live-Steuerung (Event.overlayControlJson). */
+export type EventControl = {
+  hidden: ElementKey[];
+  zoom: ElementKey | null;
+  /** "pause" = alle Overlays des Events zeigen die Pausen-Szene, null = normal. */
+  scene: "pause" | null;
+  announcement: OverlayAnnouncement | null;
+};
+
+export const EMPTY_EVENT_CONTROL: EventControl = { hidden: [], zoom: null, scene: null, announcement: null };
+export const ANNOUNCEMENT_MAX_LENGTH = 120;
+
+/** Siegerehrung: Platzierungen (gleichplatzierte in einer Gruppe), MVP. */
+export type OverlayCeremony = {
+  /** Platzierungen von oben, je Platz eine Liste (Gleichstand = mehrere User). */
+  placements: string[][];
+  mvpUserId: string | null;
+};
+
+/** Wie lange die Siegerehrung nach dem Abschluss läuft und wie lange das Streamer-Overlay das
+ *  beendete Event danach noch zeigt (Siegerehrung + Endstand), bevor es ins Profil wechselt. */
+export const CEREMONY_MS = 60_000;
+export const COMPLETED_HOLD_MS = 4 * 60_000;
 
 export type UpcomingEvent = {
   id: string; title: string; startAt: string; game: string | null; coverUrl: string | null;

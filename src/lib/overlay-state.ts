@@ -19,7 +19,9 @@ import {
 import { defaultPauseLayout, defaultClipLayout } from "@/components/overlay/sceneLayouts";
 import { EMPTY_CONTROL } from "@/components/overlay/layout";
 import { buildDemoEventState, type DemoFormat } from "@/lib/overlay-demo";
-import { chooseActiveEvent, rankActiveEvents, runningEventWhere } from "@/lib/overlay-active-event";
+import { chooseActiveEvent, rankActiveEvents, recentlyCompletedWhere, runningEventWhere } from "@/lib/overlay-active-event";
+import { parseEventOverlayControl } from "@/lib/event-overlay-control";
+import { EMPTY_EVENT_CONTROL, type OverlayCeremony } from "@/components/overlay/types";
 
 /**
  * Datenquelle aller OBS-Overlays (Event-, Profil- und Streamer-Stream sowie der Startzustand
@@ -81,7 +83,7 @@ const plain = <T,>(v: unknown): T => JSON.parse(JSON.stringify(v)) as T;
 async function eventFingerprint(eventId: string): Promise<string | null> {
   const rows = await prisma.$queryRaw<{ fp: string | null; exists: boolean }[]>`
     SELECT EXISTS (SELECT 1 FROM "Event" WHERE id = ${eventId}) AS "exists", md5(
-      coalesce((SELECT row(e.title, e.status, e.format, e."tournamentStatus", e.game, e."statFields", e."completionData", e."statConfigJson", e."overlayControlJson", e."seriesId")::text FROM "Event" e WHERE e.id = ${eventId}), '')
+      coalesce((SELECT row(e.title, e.status, e.format, e."tournamentStatus", e.game, e."statFields", e."completionData", e."statConfigJson", e."overlayControlJson", e."seriesId", e."completedAt", e."finalRankingJson")::text FROM "Event" e WHERE e.id = ${eventId}), '')
       || '|' || coalesce((SELECT string_agg(row(m.id, m.round, m.position, m.title, m."player1Id", m."player2Id", m."winnerId", m.score1, m.score2, m."playedAt")::text, ',' ORDER BY m.id) FROM "Match" m WHERE m."eventId" = ${eventId}), '')
       || '|' || coalesce((SELECT string_agg(row(x.id, x."userId", x."teamId", x.placement, x.score, x."statsJson")::text, ',' ORDER BY x.id) FROM "MatchEntry" x JOIN "Match" m ON m.id = x."matchId" WHERE m."eventId" = ${eventId}), '')
       || '|' || coalesce((SELECT string_agg(row(r."userId", r.role)::text, ',' ORDER BY r."userId") FROM "EventRegistration" r WHERE r."eventId" = ${eventId}), '')
@@ -91,20 +93,34 @@ async function eventFingerprint(eventId: string): Promise<string | null> {
   return row?.exists ? row.fp : null;
 }
 
-/** Sicherer Default, falls overlayControlJson fehlt/leer/kaputt ist — Overlay verhält sich dann
- *  exakt wie vor Einführung der Live-Steuerung (siehe Feldkommentar in schema.prisma). */
-function parseOverlayControl(raw: string | null): EventOverlayState["control"] {
-  if (!raw) return { hidden: [], zoom: null };
-  try {
-    const parsed = JSON.parse(raw);
-    const isKey = (k: unknown): k is ElementKey => typeof k === "string" && (ELEMENT_KEYS as string[]).includes(k);
-    return {
-      hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter(isKey) : [],
-      zoom: isKey(parsed.zoom) ? parsed.zoom : null,
-    };
-  } catch {
-    return { hidden: [], zoom: null };
+/** Endergebnis für die Siegerehrung — dieselbe Reihenfolge wie die Turnierseite: Gruppen mit
+ *  Gleichstand (finalRankingGroups), sonst die Rangliste des Abschlusses bzw. die beim Abschluss
+ *  gespeicherte (K.O.-Modus). Disqualifizierte fallen raus. */
+function buildCeremony(completionData: string | null, finalRankingJson: string | null): OverlayCeremony | null {
+  if (!completionData) return null;
+  let data: { finalRanking?: unknown; finalRankingGroups?: unknown; mvpUserId?: unknown; excludedUserIds?: unknown; eventWinnerIds?: unknown; eventWinnerId?: unknown } = {};
+  try { data = JSON.parse(completionData); } catch { /* leeres Ergebnis */ }
+  const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  const excluded = new Set(ids(data.excludedUserIds));
+
+  let placements: string[][] = [];
+  if (Array.isArray(data.finalRankingGroups) && data.finalRankingGroups.length > 0) {
+    placements = data.finalRankingGroups.map(ids);
+  } else {
+    let ranking = ids(data.finalRanking);
+    if (ranking.length === 0 && finalRankingJson) {
+      try { ranking = ids(JSON.parse(finalRankingJson)); } catch { /* ignore */ }
+    }
+    placements = ranking.map(id => [id]);
   }
+  placements = placements.map(g => g.filter(id => !excluded.has(id))).filter(g => g.length > 0);
+  // Ohne Rangliste (z.B. reine Umfrage-Events) wenigstens die Sieger zeigen.
+  if (placements.length === 0) {
+    const winners = ids(data.eventWinnerIds);
+    if (winners.length === 0 && typeof data.eventWinnerId === "string") winners.push(data.eventWinnerId);
+    if (winners.length > 0) placements = [winners];
+  }
+  return { placements, mvpUserId: typeof data.mvpUserId === "string" ? data.mvpUserId : null };
 }
 
 const seriesCache = createCache<SeriesTable | null>();
@@ -117,6 +133,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
     select: {
       id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
       completionData: true, statConfigJson: true, overlayControlJson: true, seriesId: true,
+      completedAt: true, finalRankingJson: true,
       series: { select: { seriesStatConfig: true } },
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
@@ -176,7 +193,9 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
     tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
     avgDirection: resolveAvgDirection(event.completionData, event.statConfigJson),
     matches: event.matches, participants, ligaPunkteByUser, seriesTable,
-    control: parseOverlayControl(event.overlayControlJson),
+    control: parseEventOverlayControl(event.overlayControlJson),
+    completedAt: event.completedAt,
+    ceremony: buildCeremony(event.completionData, event.finalRankingJson),
   });
   return { state, seriesId: event.seriesId };
 }
@@ -437,8 +456,9 @@ export function invalidateStreamerActiveEvent(userId: string) {
 export function getStreamerEventCandidates(userId: string): Promise<{ id: string; title: string }[]> {
   return activeEventCache.get(userId, ACTIVE_EVENT_TTL_MS, async () => {
     const now = Date.now();
-    const event = runningEventWhere(now);
-    const select = { event: { select: { id: true, title: true, status: true, tournamentStatus: true, startAt: true } } };
+    // Laufende Events plus frisch abgeschlossene (Siegerehrung, siehe recentlyCompletedWhere).
+    const event = { OR: [runningEventWhere(now), recentlyCompletedWhere(now)] };
+    const select = { event: { select: { id: true, title: true, status: true, tournamentStatus: true, startAt: true, completedAt: true } } };
     const [streaming, registered, participant, teams] = await Promise.all([
       prisma.eventCommunityStreamer.findMany({ where: { userId, event }, select }),
       prisma.eventRegistration.findMany({ where: { userId, role: { not: "spectator" }, event }, select }),
@@ -531,9 +551,12 @@ export async function getStreamerOverlayPayload(
       // Event-Steuerung (Touchscreen-Widget, gilt für alle Overlays des Events) + eigene Steuerung
       // des Streamers: ausgeblendet ist, was eine der beiden ausblendet; der eigene Zoom hat Vorrang.
       const isKey = (k: string): k is ElementKey => (ELEMENT_KEYS as string[]).includes(k);
-      const mergedControl = preview ? { hidden: [], zoom: null } : {
+      // "Pause für alle" und Durchsagen gelten unverändert für jedes Overlay des Events.
+      const mergedControl = preview ? { ...EMPTY_EVENT_CONTROL } : {
         hidden: [...new Set([...event.control.hidden, ...control.hidden.filter(isKey)])],
         zoom: (zoom && isKey(zoom) ? zoom : null) ?? event.control.zoom,
+        scene: event.control.scene,
+        announcement: event.control.announcement,
       };
       return {
         mode: "event", eventId, event: { ...event, streamer, control: mergedControl },

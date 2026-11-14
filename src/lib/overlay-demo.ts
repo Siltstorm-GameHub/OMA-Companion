@@ -54,6 +54,8 @@ export function buildDemoEventState(streamer: OverlayStreamer, format: DemoForma
         totalPoints: 42 - i * 6, participations: 3, spectatorParticipations: 0, stats: {},
       })),
     },
-    control: { hidden: [], zoom: null },
+    control: { hidden: [], zoom: null, scene: null, announcement: null },
+    completedAt: null,
+    ceremony: null,
   };
 }

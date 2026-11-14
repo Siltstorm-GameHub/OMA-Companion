@@ -1,12 +1,19 @@
 "use client";
 
+import { useMemo } from "react";
 import StackedLayout from "./StackedLayout";
 import ZoomLayer, { useZoomTransition, ZoomBannerShell } from "./ZoomLayer";
 import { MotionStyles } from "./motion";
 import { IdentityFlipTile, LiveInfoTile, MatchTicker, LiveBadge, pickTickerMatch } from "./tiles";
-import { BracketPanel, TablePanel, SeriesTablePanel, ParticipantsPanel } from "./panels";
+import { BracketPanel, TablePanel, SeriesTablePanel, ParticipantsPanel, computeTablePositions } from "./panels";
+import { AnnouncementBanner, CeremonyView, MomentBanner, TopCenterStack, useCeremonyActive, useEventMoments } from "./EventMoments";
+import { buildMyStatus, type MyStatus } from "@/lib/overlay-moments";
+import PauseBackground from "./PauseBackground";
+import { DEFAULT_PAUSE_BACKGROUND } from "./pauseBackgrounds";
+import { BRAND_LOGO } from "@/lib/brand";
+import { isEliminationFormat } from "./layout";
 import {
-  ELEMENT_SIZE, STACKABLE_ELEMENTS,
+  ELEMENT_SIZE, STACKABLE_ELEMENTS, DEFAULT_PAUSE_TEXT, displayName,
   type ElementKey, type EventOverlayState, type OverlayLayout, type OverlayMatch, type OverlayUser,
   type OverlayParticipant, type OverlayStreamer, type SeriesTable, type OverlayTogether,
 } from "./types";
@@ -50,6 +57,20 @@ export default function EventOverlayView({
   const userByUserId = new Map(state.participants.map(p => [p.userId, p.user]));
   const userOf = (userId: string | null): OverlayUser | undefined => (userId ? userByUserId.get(userId) : undefined);
 
+  // Live-Momente: Ergebnis-/Phasen-Banner, Platzwechsel, Siegerehrung (siehe EventMoments.tsx).
+  const positions = useMemo(
+    () => computeTablePositions(state.matches, state.participants, state.format, state.statFields, state.avgDirection),
+    [state.matches, state.participants, state.format, state.statFields, state.avgDirection],
+  );
+  const ceremonyActive = useCeremonyActive(state);
+  const { moment, movement } = useEventMoments(state, positions, ceremonyActive);
+
+  // Streamer spielt selbst mit → eigene Zeilen markieren und "Mein Turnier" in der Marken-Kachel.
+  const myId = state.streamer && userByUserId.has(state.streamer.id) ? state.streamer.id : null;
+  const myStatus: MyStatus | null = myId
+    ? buildMyStatus(state, myId, id => displayName(userOf(id)), positions.get(myId) ?? null)
+    : null;
+
   const matches = state.matches;
   const ticker = pickTickerMatch(matches);
   const isLive = ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active";
@@ -80,13 +101,13 @@ export default function EventOverlayView({
       elementKey={key} matches={matches} userOf={userOf} format={state.format} statFields={state.statFields}
       avgDirection={state.avgDirection} participants={state.participants} streamer={state.streamer} eventTitle={state.title} game={state.game}
       isLive={isLive} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} compact={compact}
-      together={together}
+      together={together} highlightUserId={myId} movement={movement} myStatus={myStatus}
     />
   );
 
   return (
     <OverlayStage lite={lite}>
-      {!zoom.display && (
+      {!zoom.display && !ceremonyActive && (
         <StackedLayout
           elements={layout.elements}
           fixedKey="brand"
@@ -101,7 +122,7 @@ export default function EventOverlayView({
 
       {/* Vollbild-Zoom per Live-Steuerung, z.B. um zwischen zwei Runden kurz die Tabelle/den
          Turnierbaum groß zu zeigen. Rendert über allem Übrigen. */}
-      {zoom.display && contentAvailable[zoom.display] && (
+      {zoom.display && !ceremonyActive && contentAvailable[zoom.display] && (
         <ZoomLayer
           leaving={zoom.leaving}
           width={zoomWidthFor(zoom.display)}
@@ -110,6 +131,51 @@ export default function EventOverlayView({
           {content(zoom.display, false)}
         </ZoomLayer>
       )}
+
+      {ceremonyActive && <CeremonyView state={state} userOf={userOf} />}
+
+      <TopCenterStack>
+        <AnnouncementBanner announcement={state.control.announcement} />
+        {moment && !ceremonyActive && <MomentBanner key={moment.key} moment={moment} state={state} userOf={userOf} />}
+      </TopCenterStack>
+    </OverlayStage>
+  );
+}
+
+/**
+ * "Pause für alle" (Widget) auf dem Event-Link — der hat keine eigene Pausen-Szene wie der
+ * Streamer-Link (dort übernimmt PauseView). Deckt das Bild ab und zeigt Turnierstand und nächstes
+ * Match, damit Zuschauer in der Pause auf dem Laufenden bleiben.
+ */
+export function EventPauseScreen({ eventId, state, lite = false }: { eventId: string; state: EventOverlayState; lite?: boolean }) {
+  const users = new Map(state.participants.map(p => [p.userId, p.user]));
+  const userOf = (id: string | null): OverlayUser | undefined => (id ? users.get(id) : undefined);
+  const ticker = pickTickerMatch(state.matches);
+  const isLive = ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active";
+  const main: ElementKey = isEliminationFormat(state.format) ? "bracket" : state.format ? "table" : "participants";
+  const content = (key: ElementKey) => (
+    <ElementContent
+      elementKey={key} matches={state.matches} userOf={userOf} format={state.format} statFields={state.statFields}
+      avgDirection={state.avgDirection} participants={state.participants} streamer={state.streamer} eventTitle={state.title} game={state.game}
+      isLive={isLive} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} compact={false}
+    />
+  );
+  return (
+    <OverlayStage lite={lite}>
+      <PauseBackground backgroundKey={DEFAULT_PAUSE_BACKGROUND} lite={lite} />
+      <div style={{ position: "absolute", top: 150, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+        <img src={BRAND_LOGO} alt="" width={84} height={84} style={{ display: "block", filter: "drop-shadow(0 0 18px rgba(20,184,166,0.5))" }} />
+        <h1 className="oma-anim-breathe" style={{ margin: 0, fontSize: 64, fontWeight: 700, color: "#fff", textAlign: "center" }}>{DEFAULT_PAUSE_TEXT}</h1>
+        <ZoomBanner eventId={eventId} eventTitle={state.title} game={state.game} isLive={false} />
+      </div>
+      <div style={{ position: "absolute", top: 520, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 40 }}>
+        <div style={{ width: 560, height: 340 }}>{content(main)}</div>
+        {ticker && <div style={{ width: 560, height: 90 }}>{content("ticker")}</div>}
+      </div>
+      <TopCenterStack>
+        <AnnouncementBanner announcement={state.control.announcement} />
+      </TopCenterStack>
     </OverlayStage>
   );
 }
@@ -165,7 +231,7 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 export function ElementContent({
   elementKey, matches, userOf, format, statFields, avgDirection, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
-  seriesTable, compact = true, together,
+  seriesTable, compact = true, together, highlightUserId, movement, myStatus,
 }: {
   elementKey: ElementKey;
   matches: OverlayMatch[];
@@ -185,18 +251,24 @@ export function ElementContent({
    *  waere das zu viel Text fuer den verfuegbaren Platz. */
   compact?: boolean;
   together?: OverlayTogether | null;
+  /** Streamer, der selbst mitspielt — seine Zeilen werden markiert. */
+  highlightUserId?: string | null;
+  /** Platzwechsel je User nach dem letzten Ergebnis (Tabelle). */
+  movement?: Record<string, number>;
+  /** "Mein Turnier" auf der Rückseite der Marken-Kachel. */
+  myStatus?: MyStatus | null;
 }) {
   switch (elementKey) {
-    case "brand":        return <IdentityFlipTile streamer={streamer} together={together} />;
+    case "brand":        return <IdentityFlipTile streamer={streamer} together={together} myStatus={myStatus} />;
     case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
     case "ticker": {
       const match = pickTickerMatch(matches);
       return match ? <MatchTicker match={match} userOf={userOf} format={format} statFields={statFields} /> : null;
     }
-    case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
-    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} avgDirection={avgDirection} ligaPunkteByUser={ligaPunkteByUser} compact={compact} />;
+    case "bracket":      return <BracketPanel matches={matches} userOf={userOf} highlightUserId={highlightUserId} />;
+    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} avgDirection={avgDirection} ligaPunkteByUser={ligaPunkteByUser} compact={compact} highlightUserId={highlightUserId} movement={movement} />;
     case "seriesTable":  return seriesTable ? <SeriesTablePanel seriesTable={seriesTable} compact={compact} /> : null;
-    case "participants": return <ParticipantsPanel participants={participants} />;
+    case "participants": return <ParticipantsPanel participants={participants} highlightUserId={highlightUserId} />;
     default:              return null;
   }
 }

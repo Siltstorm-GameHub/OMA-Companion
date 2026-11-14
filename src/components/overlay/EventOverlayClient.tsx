@@ -1,6 +1,6 @@
 "use client";
 
-import EventOverlayView from "./EventOverlayView";
+import EventOverlayView, { EventPauseScreen } from "./EventOverlayView";
 import { useOverlayStream } from "./useOverlayStream";
 import type { ElementKey, EventOverlayState, OverlayLayout } from "./types";
 
@@ -17,5 +17,7 @@ export default function EventOverlayClient({
 }) {
   const streamerParam = streamerId ? `&streamer=${encodeURIComponent(streamerId)}` : "";
   const state = useOverlayStream(`/api/overlay/${eventId}/stream?token=${encodeURIComponent(token)}${streamerParam}`, initialState);
+  // "Pause für alle" aus dem Widget
+  if (state.control?.scene === "pause") return <EventPauseScreen eventId={eventId} state={state} lite={lite} />;
   return <EventOverlayView eventId={eventId} state={state} layout={layout} lite={lite} />;
 }

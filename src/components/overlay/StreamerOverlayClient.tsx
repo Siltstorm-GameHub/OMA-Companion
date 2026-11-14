@@ -4,6 +4,7 @@ import EventOverlayView from "./EventOverlayView";
 import ProfileOverlayView from "./ProfileOverlayView";
 import PauseView from "./PauseView";
 import ClipLoopView from "./ClipLoopView";
+import { AnnouncementBanner, TopCenterStack } from "./EventMoments";
 import { useOverlayStream } from "./useOverlayStream";
 import type { OverlayScene, StreamerOverlayPayload } from "./types";
 
@@ -26,13 +27,29 @@ export default function StreamerOverlayClient({
 
   // Feste Szene aus der URL (eigene OBS-Quelle je Szene), sonst die per Live-Steuerung gewählte —
   // so reicht EINE Browser-Quelle in OBS, und die Szene wechselt vom Handy aus.
-  const active = scene ?? payload.scene;
+  let active = scene ?? payload.scene;
+  // "Pause für alle" (Widget des Veranstalters) schaltet die Spiel-Szene in die Pause — eigene
+  // Intro-/Clip-/Outro-Szenen bleiben unberührt.
+  if (active === "gameplay" && payload.mode === "event" && payload.event.control.scene === "pause") active = "pause";
 
   // Clip-Szenen (Community-Clip-Loop).
   if (active === "intro" || active === "clips" || active === "outro") {
     return <ClipLoopView key={active} variant={active} userId={userId} token={token} payload={payload} />;
   }
-  if (active === "pause") return <PauseView payload={payload} />;
+  if (active === "pause") {
+    // Durchsagen des Events laufen auch in der Pause.
+    const announcement = payload.mode === "event" ? payload.event.control.announcement : null;
+    return (
+      <div style={{ position: "relative", width: 1920, height: 1080 }}>
+        <PauseView payload={payload} />
+        {announcement && (
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <TopCenterStack><AnnouncementBanner announcement={announcement} /></TopCenterStack>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Hinweis "Gemeinsam live mit …" in der Marken-Kachel (abschaltbar in den Einstellungen).
   const together = payload.togetherHint ? payload.together : null;

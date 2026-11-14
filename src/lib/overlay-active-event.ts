@@ -1,3 +1,5 @@
+import { COMPLETED_HOLD_MS } from "@/components/overlay/types";
+
 /**
  * Regeln, wann ein Event für das Streamer-Overlay als "läuft gerade" gilt — ohne Datenbank, damit
  * testbar. Die Abfrage selbst steht in lib/overlay-state.ts (getStreamerActiveEventId).
@@ -20,7 +22,23 @@ const AFTER_END_GRACE_HOURS = 2;
 const UPCOMING_BEFORE_MIN = 30;
 const UPCOMING_AFTER_HOURS = 6;
 
-export type ActiveEventCandidate = { id: string; status: string; tournamentStatus: string | null; startAt: Date };
+export type ActiveEventCandidate = {
+  id: string; status: string; tournamentStatus: string | null; startAt: Date;
+  /** Erster Abschluss — ein gerade beendetes Event bleibt COMPLETED_HOLD_MS lang Kandidat. */
+  completedAt?: Date | null;
+};
+
+/** Gerade abgeschlossen (Siegerehrung + Endstand im Overlay)? */
+export function isRecentlyCompleted(e: { completedAt?: Date | null }, now: number): boolean {
+  return !!e.completedAt && now - e.completedAt.getTime() < COMPLETED_HOLD_MS;
+}
+
+/** Prisma-Filter für frisch abgeschlossene Events — ergänzt runningEventWhere, damit das
+ *  Streamer-Overlay nach dem Abschluss nicht sofort ins Profil springt, sondern noch die
+ *  Siegerehrung zeigt. */
+export function recentlyCompletedWhere(now: number) {
+  return { completedAt: { gte: new Date(now - COMPLETED_HOLD_MS) } };
+}
 
 /** Prisma-Filter für Events, die überhaupt in Frage kommen (siehe Regeln oben). */
 export function runningEventWhere(now: number) {
@@ -39,7 +57,9 @@ export function runningEventWhere(now: number) {
 
 /** Kandidaten sortiert und ohne Duplikate — das erste ist die automatische Wahl. */
 export function rankActiveEvents<T extends ActiveEventCandidate>(candidates: T[], now: number): T[] {
-  const rank = (e: ActiveEventCandidate) => (e.tournamentStatus === "active" ? 0 : e.status === "active" ? 1 : 2);
+  // Gerade abgeschlossen hat Vorrang: Das ist das Event, das der Streamer eben noch gezeigt hat.
+  const rank = (e: ActiveEventCandidate) =>
+    (isRecentlyCompleted(e, now) ? -1 : e.tournamentStatus === "active" ? 0 : e.status === "active" ? 1 : 2);
   const sorted = [...candidates].sort((a, b) =>
     rank(a) - rank(b) || Math.abs(a.startAt.getTime() - now) - Math.abs(b.startAt.getTime() - now));
   return sorted.filter((e, i) => sorted.findIndex(o => o.id === e.id) === i);

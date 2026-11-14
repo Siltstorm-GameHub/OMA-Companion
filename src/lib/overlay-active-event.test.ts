@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { pickActiveEvent, rankActiveEvents, chooseActiveEvent, NO_EVENT_CHOICE, runningEventWhere, ENDED_EVENT_STATUSES, type ActiveEventCandidate } from "./overlay-active-event";
+import { pickActiveEvent, rankActiveEvents, chooseActiveEvent, NO_EVENT_CHOICE, runningEventWhere, ENDED_EVENT_STATUSES, isRecentlyCompleted, recentlyCompletedWhere, type ActiveEventCandidate } from "./overlay-active-event";
 
 const NOW = Date.parse("2026-10-17T20:00:00Z");
 const h = (hours: number) => new Date(NOW + hours * 3600_000);
@@ -70,5 +70,21 @@ describe("Overlay: läuft gerade ein Turnier?", () => {
     assert.equal(chooseActiveEvent(ranked, NO_EVENT_CHOICE), null, "kein Turnier");
     assert.equal(chooseActiveEvent(ranked, "vorbei"), "cup", "beendete Wahl → wieder automatisch");
     assert.equal(chooseActiveEvent([], "liga"), null);
+  });
+});
+
+describe("Overlay: Siegerehrung nach dem Abschluss", () => {
+  test("frisch abgeschlossenes Event bleibt kurz Kandidat und hat Vorrang", () => {
+    const done = { ...ev("cup", "finished", "active", h(-3)), completedAt: h(-1 / 60) };
+    assert.ok(isRecentlyCompleted(done, NOW));
+    assert.ok(recentlyCompletedWhere(NOW).completedAt.gte <= done.completedAt);
+    const running = ev("liga", "open", "active", h(-0.5));
+    assert.equal(pickActiveEvent([running, done], NOW), "cup");
+  });
+
+  test("nach der Haltezeit zählt es nicht mehr", () => {
+    const old = { ...ev("cup", "finished", "active", h(-5)), completedAt: h(-1) };
+    assert.equal(isRecentlyCompleted(old, NOW), false);
+    assert.ok(recentlyCompletedWhere(NOW).completedAt.gte > old.completedAt);
   });
 });

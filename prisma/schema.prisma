@@ -350,7 +350,9 @@ model Event {
   // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.
   overlayToken        String?       @unique
   // Live-Steuerungszustand des Overlays waehrend des Streams (Touchscreen-Widget) — JSON:
-  // { hidden: ElementKey[], zoom: ElementKey | null }. Ueberschreibt NUR Sichtbarkeit/Zoom
+  // { hidden: ElementKey[], zoom: ElementKey | null, scene: "pause" | null,
+  //   announcement: { id, text, until, countdown } | null } — scene = "Pause für alle",
+  // announcement = Durchsage (siehe parseEventOverlayControl). Ueberschreibt NUR Sichtbarkeit/Zoom
   // zur Laufzeit, das per URL festgelegte Standardlayout (Position/Groesse) bleibt Basis.
   // Fehlt das Feld oder ist es leer, verhaelt sich das Overlay exakt wie zuvor (safe default).
   overlayControlJson  String?
@@ -370,6 +372,9 @@ model Event {
   // Gesetzt, solange ein Abschluss läuft. Verhindert, dass zwei parallele Abschlüsse
   // beide gegen denselben Ausgangsstand rechnen und Belohnungen doppelt auszahlen.
   completionLockAt    DateTime?
+  // Zeitpunkt des ERSTEN Abschlusses (bleibt bei Re-Edit stehen). Treibt die Siegerehrung im
+  // OBS-Overlay und hält das Event danach kurz im Streamer-Overlay (lib/overlay-active-event.ts).
+  completedAt         DateTime?
   createdAt           DateTime      @default(now())
 
   // Ehem. Tournament-Felder (zusammengeführt)

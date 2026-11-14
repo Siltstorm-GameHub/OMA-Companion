@@ -1282,6 +1282,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
       where: { id: eventId },
       data: {
         status: hasPendingPollPhase ? "umfrage" : "finished",
+        // Nur beim ersten Abschluss — ein Re-Edit soll die Siegerehrung im Overlay nicht erneut auslösen.
+        ...(!event.completedAt && { completedAt: new Date() }),
         ...(body.finalRankingGroups !== undefined && {
           finalRankingJson: body.finalRankingGroups.length > 0 ? JSON.stringify(body.finalRankingGroups.flat()) : null,
         }),
