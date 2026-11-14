@@ -119,6 +119,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           checked={w.eventOmaOriginal}
           onChange={w.setEventOmaOriginal}
           inheritedFromSeries={seriesMode === "existing" && !!w.selectedSeries?.omaOriginal}
+          blocksGame={w.isBlocksEvent}
         />
       )}
 

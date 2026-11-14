@@ -15,6 +15,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import ImageUploadField from "@/components/ImageUploadField";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
+import { isBlocksGame } from "@/lib/oma-original";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
@@ -773,7 +774,7 @@ export default function SeriesDetailClient({
           {/* Eigenes Reihen-Cover */}
           <Section title="Reihen-Cover">
             {isModerator && (
-              <OmaOriginalToggle kind="series" checked={omaOriginal} onChange={saveOmaOriginal} />
+              <OmaOriginalToggle kind="series" checked={omaOriginal} onChange={saveOmaOriginal} blocksGame={isBlocksGame(series.fixedGame)} />
             )}
             <ImageUploadField
               value={coverImageUrl}

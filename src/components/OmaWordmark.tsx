@@ -1,9 +1,10 @@
-// Wortmarke für eigene OMA-Produkte (OMA Blocks, …): "OMA" klein, gesperrt, in Teal —
+// Wortmarke für eigene OMA-Produkte (OMA Blocks, OMA GameSwipe, …): "OMA" klein, gesperrt, in Teal —
 // der Produktname fett in der Zweitfarbe des Produkts. Ein Muster für alle Produkte, damit sie
 // sofort als Teil der Old Masters Allies erkennbar sind.
 
 export const OMA_PRODUCTS = {
   blocks: { name: "Blocks", color: "#a78bfa" }, // Violett
+  gameSwipe: { name: "GameSwipe", color: "#fb7185" }, // Rosé
 } as const;
 
 export type OmaProduct = keyof typeof OMA_PRODUCTS;

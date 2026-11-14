@@ -61,7 +61,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
     <section className="surface rounded-2xl p-4 space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2"><Flame className="w-4 h-4 text-orange-400" /> GameSwipe: Drop der Woche</h2>
+          <h2 className="text-base font-bold text-white flex items-center gap-2"><Flame className="w-4 h-4 text-orange-400" /> OMA GameSwipe: Drop der Woche</h2>
           <p className="text-xs text-gray-400 mt-1 max-w-xl">
             Jeden Montag entsteht automatisch ein Drop mit bis zu 8 Karten: zuerst freigegebene Empfehlungen, dann reihum Gratis-Aktionen,
             neu im Abo, Neuerscheinungen, Angebote und Trends. Neu zusammenstellen benachrichtigt niemanden erneut.

@@ -11,7 +11,7 @@ export async function POST() {
   const events = await prisma.event.findMany({
     where: { status: { in: ["open", "active"] }, hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
     orderBy: { startAt: "asc" },
-    include: { series: { select: { coverImageUrl: true, omaOriginal: true } } },
+    include: { series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } } },
   });
 
   let created = 0;

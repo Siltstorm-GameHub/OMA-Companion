@@ -41,7 +41,7 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
           {w.isBlocksChallenge && (
             <p>🧱 Challenge · gemeinsam {w.blocks.goal.toLocaleString("de-DE")} {w.blocks.metric === "score" ? "Punkte" : "Linien"} · Belohnung ab {w.blocks.minContribution.toLocaleString("de-DE")}: {w.blocks.rewardCoins} Münzen{w.blocks.rewardRankPoints ? ` + ${w.blocks.rewardRankPoints} Rang-Punkte` : ""}</p>
           )}
-          {(w.eventOmaOriginal || (seriesMode === "existing" && selectedSeries?.omaOriginal)) && !w.isCommunity && (
+          {(w.eventOmaOriginal || w.isBlocksEvent || (seriesMode === "existing" && selectedSeries?.omaOriginal)) && (
             <p className="text-teal-300 font-semibold">OMA Original · Logo auf dem Cover</p>
           )}
           {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}

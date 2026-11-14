@@ -7,6 +7,7 @@ export default function OmaOriginalToggle({
   onChange,
   kind,
   inheritedFromSeries = false,
+  blocksGame = false,
 }: {
   checked: boolean;
   onChange: (value: boolean) => void;
@@ -14,8 +15,11 @@ export default function OmaOriginalToggle({
   kind: "event" | "series";
   /** Event gehört zu einer Original-Reihe: Schalter ist dann fest an */
   inheritedFromSeries?: boolean;
+  /** Spielt OMA Blocks: immer ein Original, Schalter ist fest an */
+  blocksGame?: boolean;
 }) {
-  const on = checked || inheritedFromSeries;
+  const locked = inheritedFromSeries || blocksGame;
+  const on = checked || locked;
   return (
     <div
       className="rounded-xl p-4 border transition-colors"
@@ -24,11 +28,11 @@ export default function OmaOriginalToggle({
         borderColor: on ? "rgba(20,184,166,0.35)" : "rgba(255,255,255,0.08)",
       }}
     >
-      <label className={`flex items-start gap-3 select-none ${inheritedFromSeries ? "cursor-default" : "cursor-pointer"}`}>
+      <label className={`flex items-start gap-3 select-none ${locked ? "cursor-default" : "cursor-pointer"}`}>
         <input
           type="checkbox"
           checked={on}
-          disabled={inheritedFromSeries}
+          disabled={locked}
           onChange={e => onChange(e.target.checked)}
           className="w-4 h-4 mt-1 rounded accent-teal-500 shrink-0 disabled:opacity-60"
         />
@@ -45,7 +49,9 @@ export default function OmaOriginalToggle({
             <span className="font-semibold uppercase tracking-[0.12em]">Original</span>
           </p>
           <p className="text-[11px] text-gray-500 mt-0.5">
-            {inheritedFromSeries
+            {blocksGame
+              ? "OMA Blocks ist das eigene Spiel der Old Masters Allies, deshalb ist das immer ein OMA Original."
+              : inheritedFromSeries
               ? "Die Reihe ist ein OMA Original, deshalb gilt das auch für diesen Termin."
               : kind === "series"
               ? "Eigene Reihe der Old Masters Allies. Alle Termine tragen das OMA-Logo auf dem Cover, auch in Discord."

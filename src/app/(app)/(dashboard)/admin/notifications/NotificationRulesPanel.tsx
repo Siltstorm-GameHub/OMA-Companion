@@ -40,7 +40,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   quests:         "🎯 Quests",
   community_jobs: "🧑‍💼 Community-Jobs",
   clips:          "🎬 Clip des Monats",
-  games:          "🃏 GameSwipe",
+  games:          "🃏 OMA GameSwipe",
   system:         "⚙️ System",
 };
 

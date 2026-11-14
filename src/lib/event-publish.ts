@@ -41,7 +41,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true, omaOriginal: true } },
+      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true, omaOriginal: true, fixedGame: true } },
       gameVote: { select: { id: true } },
     },
   });

@@ -45,10 +45,10 @@ export default function TipPanel({ slug, initial, isModerator }: {
         <Flame className="w-4 h-4 text-orange-400 shrink-0" />
         <p className="flex-1 min-w-0 text-xs text-gray-300">
           {state === "approved"
-            ? <>Für den nächsten <span className="text-white font-semibold">Drop der Woche</span> in GameSwipe vorgemerkt.</>
+            ? <>Für den nächsten <span className="text-white font-semibold">Drop der Woche</span> in OMA GameSwipe vorgemerkt.</>
             : state === "pending"
               ? <>Für den Drop der Woche empfohlen <span className="text-gray-500">— das Team schaut drüber.</span></>
-              : <>Sollten mehr Leute das Spiel kennen? <span className="text-gray-500">Empfiehl es für den Drop der Woche in GameSwipe.</span></>}
+              : <>Sollten mehr Leute das Spiel kennen? <span className="text-gray-500">Empfiehl es für den Drop der Woche in OMA GameSwipe.</span></>}
         </p>
         {state === null && !open && <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Empfehlen</Button>}
       </div>

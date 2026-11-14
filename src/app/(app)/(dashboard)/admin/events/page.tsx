@@ -51,6 +51,7 @@ export default async function AdminEventsPage() {
         recurrenceType: true,
         hidden: true,
         omaOriginal: true,
+        fixedGame: true,
         _count: { select: { events: true } },
         events: {
           where: { status: { notIn: ["finished", "closed"] } },

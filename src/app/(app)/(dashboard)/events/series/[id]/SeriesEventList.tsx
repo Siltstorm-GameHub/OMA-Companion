@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp, ChevronRight } from "@/components/icons";
 import { CalendarDays, Check, Tv2 } from "@/components/icons";
 import GameCover from "@/components/GameCover";
 import OmaOriginalMark from "@/components/OmaOriginalMark";
+import { isBlocksGame } from "@/lib/oma-original";
 import { AvatarStack } from "@/components/AvatarStack";
 import ClientTime from "@/components/ClientTime";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -84,7 +85,7 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
             {ev.title}
             <span className="text-gray-500 font-normal"> · {formatBerlinDate(date, { day: "numeric", month: "numeric", year: "numeric" })}</span>
           </p>
-          {ev.omaOriginal && <OmaOriginalMark />}
+          {!isBlocksGame(fixedGame) && (ev.omaOriginal || isBlocksGame(ev.game)) && <OmaOriginalMark />}
         </div>
 
         {/* Game + Genre */}

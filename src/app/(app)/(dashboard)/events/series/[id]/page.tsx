@@ -1,4 +1,5 @@
 import React from "react";
+import { isOmaOriginalSeries } from "@/lib/oma-original";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
@@ -657,7 +658,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           rounded="rounded-none"
           imgClassName="w-full h-full object-cover"
           brandBadge
-          omaOriginal={series.omaOriginal}
+          omaOriginal={isOmaOriginalSeries(series)}
         />
         <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
       </div>

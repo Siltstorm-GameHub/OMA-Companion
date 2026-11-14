@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
 import SwipeDeck from "@/components/games/SwipeDeck";
+import OmaWordmark from "@/components/OmaWordmark";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
 import type { SwipeDeckData } from "@/lib/games/deck";
 import AddGameModal from "@/components/games/AddGameModal";
 import { Chip } from "@/components/games/GameFieldsForm";
@@ -115,7 +117,17 @@ export default function GameListClient({
       )}
 
       {view === "swipe" && swipe ? (
-        <SwipeDeck initial={swipe} onShowList={() => setView("list")} />
+        <div className="space-y-3">
+          {/* OMA GameSwipe als eigenes Produkt der Old Masters Allies */}
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <div className="space-y-1">
+              <h2><OmaWordmark product="gameSwipe" size="md" /></h2>
+              <p className="text-xs text-gray-500">Wisch dich durch die Spieleliste: am Start, würde ich holen oder nicht meins.</p>
+            </div>
+            <OmaOriginalMark />
+          </div>
+          <SwipeDeck initial={swipe} onShowList={() => setView("list")} />
+        </div>
       ) : (
       <>
       {/* Suche + Sortierung */}

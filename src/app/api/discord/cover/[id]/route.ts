@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const event = await prisma.event
     .findUnique({
       where:  { id },
-      select: { coverImageUrl: true, game: true, omaOriginal: true, series: { select: { coverImageUrl: true, omaOriginal: true } } },
+      select: { coverImageUrl: true, game: true, omaOriginal: true, series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } } },
     })
     .catch(() => null);
 

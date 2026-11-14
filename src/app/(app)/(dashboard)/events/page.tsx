@@ -66,7 +66,7 @@ export default async function EventsPage() {
         // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
         // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
         _count:        { select: { registrations: { where: { role: "player" } } } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true, omaOriginal: true } },
+        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true, omaOriginal: true, fixedGame: true } },
         createdBy:     { select: { username: true, name: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },

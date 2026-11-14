@@ -134,7 +134,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true, omaOriginal: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true, omaOriginal: true, fixedGame: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       blocksTournament: { select: { stage: true } },
       blocksChallenge: { select: { id: true } },

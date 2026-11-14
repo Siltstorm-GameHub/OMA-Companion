@@ -5,7 +5,7 @@ import { getCreatorUsage, isAwaitingApproval } from "@/lib/community-events";
 import { formatBerlinDate } from "@/lib/time";
 import GameCover from "@/components/GameCover";
 import OmaOriginalMark from "@/components/OmaOriginalMark";
-import { isOmaOriginal } from "@/lib/oma-original";
+import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import SeriesIcon from "@/components/SeriesIcon";
 import { Plus, Settings, Users, Clock, Check, ChevronRight } from "@/components/icons";
 
@@ -49,7 +49,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 20,
       select: {
-        id: true, name: true, icon: true, status: true, hidden: true, approvalStatus: true, seasonNumber: true, omaOriginal: true,
+        id: true, name: true, icon: true, status: true, hidden: true, approvalStatus: true, seasonNumber: true, omaOriginal: true, fixedGame: true,
         events: {
           where: { status: { notIn: CLOSED }, startAt: { gte: now } },
           orderBy: { startAt: "asc" },
@@ -65,7 +65,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
       take: 20,
       select: {
         role: true,
-        event: { select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true, omaOriginal: true, series: { select: { name: true, omaOriginal: true } } } },
+        event: { select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true, omaOriginal: true, series: { select: { name: true, omaOriginal: true, fixedGame: true } } } },
       },
     }),
   ]);
@@ -141,7 +141,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
                   <Link href={`/events/series/${s.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
                     {s.name}{s.seasonNumber ? ` · Saison ${s.seasonNumber}` : ""}
                   </Link>
-                  {s.omaOriginal && <OmaOriginalMark />}
+                  {isOmaOriginalSeries(s) && <OmaOriginalMark />}
                 </div>
                 <p className="text-[11px] text-gray-500">
                   {s._count.events} Termine
@@ -174,7 +174,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
                   <Link href={`/tournament/${e.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
                     {e.title}
                   </Link>
-                  {e.omaOriginal && <OmaOriginalMark />}
+                  {isOmaOriginal(e) && <OmaOriginalMark />}
                 </div>
                 <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
                   {formatBerlinDate(e.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}

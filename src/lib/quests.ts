@@ -53,7 +53,7 @@ const TEMPLATES: QuestTemplate[] = [
   {
     type: "GAME_SWIPE",
     titles: ["Spiele-Scout", "Geschmackstester", "Wisch-Profi", "Spielekenner"],
-    descriptions: ["Entscheide bei {target} Spielen in GameSwipe, ob du am Start bist"],
+    descriptions: ["Entscheide bei {target} Spielen in OMA GameSwipe, ob du am Start bist"],
     targets: [10, 20, 30],
     rewards: [100, 175, 250],
   },

@@ -25,6 +25,7 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
+import { isBlocksGame, isOmaOriginalSeries } from "@/lib/oma-original";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
@@ -1074,7 +1075,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               kind="event"
               checked={omaOriginal}
               onChange={saveOmaOriginal}
-              inheritedFromSeries={!!event.series?.omaOriginal}
+              inheritedFromSeries={isOmaOriginalSeries(event.series)}
+              blocksGame={isBlocksGame(event.game)}
             />
           )}
 
@@ -1286,7 +1288,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               kind="event"
               checked={omaOriginal}
               onChange={saveOmaOriginal}
-              inheritedFromSeries={!!event.series?.omaOriginal}
+              inheritedFromSeries={isOmaOriginalSeries(event.series)}
+              blocksGame={isBlocksGame(event.game)}
             />
           )}
 

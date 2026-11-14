@@ -81,7 +81,7 @@ const getGlobalDashboardData = unstable_cache(
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true, omaOriginal: true } },
+          series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
         },
       }),
       prisma.event.findMany({
@@ -91,7 +91,7 @@ const getGlobalDashboardData = unstable_cache(
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true, omaOriginal: true } },
+          series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
         },
       }),
       prisma.event.findMany({
@@ -512,14 +512,14 @@ export default async function DashboardPage() {
             <span className="text-2xl leading-none shrink-0" aria-hidden>🔥</span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-white">
-                Drop der Woche: {swipe.drop.open} {swipe.drop.open === 1 ? "neues Spiel" : "neue Spiele"} in GameSwipe
+                Drop der Woche: {swipe.drop.open} {swipe.drop.open === 1 ? "neues Spiel" : "neue Spiele"} in OMA GameSwipe
               </span>
               <span className="block text-xs text-gray-400">
                 Handverlesen für diese Woche · {swipe.drop.daysLeft <= 1 ? "endet heute" : `noch ${swipe.drop.daysLeft} Tage`}
               </span>
             </span>
             <span className="flex items-center gap-1 text-xs font-semibold text-orange-300 group-hover:text-orange-200 shrink-0">
-              GameSwipe <ChevronRight className="w-3.5 h-3.5" />
+              <span className="tracking-[0.15em] text-[10px]">OMA</span> GameSwipe <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </Link>
         ) : swipe && swipe.open > 0 ? (
@@ -529,12 +529,12 @@ export default async function DashboardPage() {
             <span className="text-2xl leading-none shrink-0" aria-hidden>🃏</span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-white">
-                {swipe.open} {swipe.open === 1 ? "Spiel wartet" : "Spiele warten"} in GameSwipe auf dich
+                {swipe.open} {swipe.open === 1 ? "Spiel wartet" : "Spiele warten"} in OMA GameSwipe auf dich
               </span>
               <span className="block text-xs text-gray-400">Bist du am Start? Finde Spiele, die dein Squad auch zockt.</span>
             </span>
             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-300 group-hover:text-emerald-200 shrink-0">
-              GameSwipe <ChevronRight className="w-3.5 h-3.5" />
+              <span className="tracking-[0.15em] text-[10px]">OMA</span> GameSwipe <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </Link>
         ) : null}

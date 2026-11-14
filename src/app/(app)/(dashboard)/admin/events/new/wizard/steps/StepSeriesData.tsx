@@ -5,6 +5,7 @@ import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
+import { isBlocksGame } from "@/lib/oma-original";
 import { PLATFORMS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
@@ -107,7 +108,8 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
       )}
 
       {!w.isCommunity && (
-        <OmaOriginalToggle kind="series" checked={w.seriesOmaOriginal} onChange={w.setSeriesOmaOriginal} />
+        <OmaOriginalToggle kind="series" checked={w.seriesOmaOriginal} onChange={w.setSeriesOmaOriginal}
+          blocksGame={!w.variousGames && isBlocksGame(w.fixedGame)} />
       )}
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">
