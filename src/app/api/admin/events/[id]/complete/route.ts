@@ -1316,11 +1316,16 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Event-Gesamtsieger-Vorhersagen auswerten — beim ersten Abschluss, oder erneut beim Re-Edit,
   // falls sich der Sieger nachträglich geändert hat (Pott wird dann automatisch zurückgebucht
   // und mit dem neuen Sieger neu verteilt, siehe resolveEventPredictions()).
-  const oldEventWinnerId = (oldCompletion.eventWinnerId as string | undefined) ?? null;
-  const newEventWinnerId = eventWinnerId ?? null;
-  if (!isReEdit || oldEventWinnerId !== newEventWinnerId) {
+  // Bei Gleichstand auf Platz 1 zählen ALLE Erstplatzierten als Sieger — jeder Tipp auf einen von
+  // ihnen ist richtig. Ältere Abschlüsse kennen nur eventWinnerId.
+  const winnerKey = (ids: string[]) => [...new Set(ids)].sort().join(",");
+  const oldWinnerIds = Array.isArray(oldCompletion.eventWinnerIds)
+    ? (oldCompletion.eventWinnerIds as string[])
+    : oldCompletion.eventWinnerId ? [oldCompletion.eventWinnerId as string] : [];
+  const newWinnerIds = eventWinnerIds.length > 0 ? eventWinnerIds : eventWinnerId ? [eventWinnerId] : [];
+  if (!isReEdit || winnerKey(oldWinnerIds) !== winnerKey(newWinnerIds)) {
     try {
-      await resolveEventPredictions(eventId, newEventWinnerId);
+      await resolveEventPredictions(eventId, newWinnerIds);
     } catch (err) {
       console.error("[Predictions] Auswertung fehlgeschlagen:", err);
     }

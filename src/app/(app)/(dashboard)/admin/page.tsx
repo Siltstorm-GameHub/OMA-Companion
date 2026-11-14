@@ -6,6 +6,7 @@ import { CalendarClock } from "@/components/icons";
 import { Trophy, Clock, Vote, Clapperboard, ArrowRight, Zap } from "@/components/icons";
 import ActivityFeed from "./ActivityFeed";
 import ResetSelectiveButton, { type SeriesGroupOption } from "./ResetSelectiveButton";
+import RecalcTiedPredictionsButton from "./RecalcTiedPredictionsButton";
 import { getResetSchedule } from "@/lib/reset-selective";
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
@@ -26,6 +27,7 @@ export default async function AdminPage() {
   // in ihrer Event-Verwaltung (der Layout-Gate lässt alle eingeloggten User in /admin).
   const me = await getSessionUser();
   if (!me || !hasMinRole(me.role, "moderator")) redirect("/admin/events");
+  const isAdminUser = hasMinRole(me.role, "admin");
   const now = new Date();
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -291,6 +293,7 @@ export default async function AdminPage() {
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
         <div className="space-y-3">
           <ResetSelectiveButton groups={seriesGroups} schedule={resetSchedule} />
+          {isAdminUser && <RecalcTiedPredictionsButton />}
         </div>
       </div>
     </div>

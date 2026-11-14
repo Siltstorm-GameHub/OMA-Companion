@@ -66,8 +66,9 @@ function computeSidePotPayouts(
 
 /**
  * Wertet alle Gesamtsieger-Vorhersagen zu einem Event aus, sobald der Sieger feststeht (oder sich
- * nachträglich ändert). winnerUserId = null bedeutet "kein eindeutiger Sieger" — der gesamte Pott
- * verfällt, alle Tipps gelten als falsch.
+ * nachträglich ändert). winnerUserIds = alle User auf Platz 1 — bei Gleichstand mehrere, dann ist
+ * jeder Tipp auf einen von ihnen richtig und alle diese Tipper teilen sich den Pott. Leer/null
+ * bedeutet "kein Sieger" — der gesamte Pott verfällt, alle Tipps gelten als falsch.
  *
  * Pott-Prinzip (wie beim Poker): alle Einsätze (bereits bei Abgabe als Escrow abgebucht) bilden
  * gemeinsam den Pott. Die richtigen Tipper teilen sich den Pott per Side-Pot-Logik nach Einsatzhöhe
@@ -133,7 +134,31 @@ export async function rollbackResolvedPredictions(eventId: string) {
   }
 }
 
-export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
+function toWinnerSet(winnerUserIds: string[] | string | null): Set<string> {
+  return new Set((Array.isArray(winnerUserIds) ? winnerUserIds : winnerUserIds ? [winnerUserIds] : []).filter(Boolean));
+}
+
+/** Ergebnis je Tipp für eine (geplante) Auflösung — gleiche Regeln wie resolveEventPredictions. */
+function planResolution(
+  predictions: { id: string; wager: number; predictedUserId: string }[],
+  winnerUserSet: Set<string>,
+): { winnerIds: Set<string>; payouts: Map<string, number> } {
+  const winnerIds = new Set(predictions.filter(p => winnerUserSet.has(p.predictedUserId)).map(p => p.id));
+  // Sonderfall: nur ein einziger Tipp insgesamt, und er ist richtig → Auszahlung verdoppelt,
+  // da kein Pott mit anderen Teilnehmern existiert.
+  const soloCorrect = predictions.length === 1 && winnerIds.has(predictions[0].id);
+  const payouts = soloCorrect
+    ? new Map([[predictions[0].id, predictions[0].wager * 2]])
+    : computeSidePotPayouts(predictions, winnerIds);
+  return { winnerIds, payouts };
+}
+
+export async function resolveEventPredictions(
+  eventId: string,
+  winnerUserIds: string[] | string | null,
+  { notify = true }: { notify?: boolean } = {},
+) {
+  const winnerUserSet = toWinnerSet(winnerUserIds);
   const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
   if (allPredictions.length === 0) return;
 
@@ -141,23 +166,15 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
     where:  { id: eventId },
     select: { hidden: true, series: { select: { hidden: true } } },
   });
-  const notifyParticipants = !!event && !isEventHidden(event);
+  const notifyParticipants = notify && !!event && !isEventHidden(event);
 
   // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
   await rollbackResolvedPredictions(eventId);
 
   // ── Schritt 2: frische Auflösung mit dem (neuen) Sieger ─────────────────────
   const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
-  const winnerIds = new Set(
-    predictions.filter(p => !!winnerUserId && p.predictedUserId === winnerUserId).map(p => p.id)
-  );
-
-  // Sonderfall: nur ein einziger Tipp insgesamt, und er ist richtig → Auszahlung verdoppelt,
-  // da kein Pott mit anderen Teilnehmern existiert.
-  const soloCorrect = predictions.length === 1 && winnerIds.has(predictions[0].id);
-  const payouts = soloCorrect
-    ? new Map([[predictions[0].id, predictions[0].wager * 2]])
-    : computeSidePotPayouts(predictions, winnerIds);
+  // Richtig ist jeder Tipp auf einen der (ggf. gleichauf liegenden) Erstplatzierten
+  const { winnerIds, payouts } = planResolution(predictions, winnerUserSet);
 
   for (const prediction of predictions) {
     const correct = winnerIds.has(prediction.id);
@@ -230,4 +247,56 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
       }).catch(() => {});
     }
   }
+}
+
+export type TieRecalcChange = {
+  predictionId: string; userId: string; predictedUserId: string; wager: number;
+  before: { resolved: boolean; correct: boolean | null; coins: number };
+  after: { correct: boolean; coins: number };
+};
+export type TieRecalcEvent = {
+  eventId: string; title: string; startAt: Date; winnerUserIds: string[];
+  predictionCount: number; changes: TieRecalcChange[];
+};
+
+/**
+ * Einmalige Nachkorrektur: Events, die vor der Gleichstand-Regel abgeschlossen wurden, haben ihre
+ * Tipps nur gegen den ersten von mehreren Erstplatzierten (eventWinnerId) ausgewertet. Sucht alle
+ * abgeschlossenen Events mit mehreren eventWinnerIds und Tipps, deren Auswertung sich nach der
+ * aktuellen Regel ändern würde. dryRun = nur berichten; sonst werden genau diese Events über
+ * resolveEventPredictions neu ausgewertet (Rückbuchung + Neuverteilung, ohne Benachrichtigung).
+ */
+export async function recalculateTiedEventPredictions({ dryRun }: { dryRun: boolean }): Promise<TieRecalcEvent[]> {
+  const events = await prisma.event.findMany({
+    where: { completionData: { not: null }, winnerPredictions: { some: {} } },
+    select: { id: true, title: true, startAt: true, completionData: true },
+    orderBy: { startAt: "asc" },
+  });
+
+  const report: TieRecalcEvent[] = [];
+  for (const e of events) {
+    let winnerUserIds: string[] = [];
+    try {
+      const cd = JSON.parse(e.completionData as string) as { eventWinnerIds?: unknown };
+      if (Array.isArray(cd.eventWinnerIds)) winnerUserIds = [...new Set(cd.eventWinnerIds.filter((x): x is string => typeof x === "string"))];
+    } catch { continue; }
+    if (winnerUserIds.length < 2) continue;
+
+    const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId: e.id } });
+    const { winnerIds, payouts } = planResolution(predictions, new Set(winnerUserIds));
+    const changes: TieRecalcChange[] = [];
+    for (const p of predictions) {
+      const after = { correct: winnerIds.has(p.id), coins: payouts.get(p.id) ?? 0 };
+      if (p.resolved && p.correct === after.correct && p.coinsAwarded === after.coins) continue;
+      changes.push({
+        predictionId: p.id, userId: p.userId, predictedUserId: p.predictedUserId, wager: p.wager,
+        before: { resolved: p.resolved, correct: p.correct, coins: p.coinsAwarded }, after,
+      });
+    }
+    if (changes.length === 0) continue;
+
+    report.push({ eventId: e.id, title: e.title, startAt: e.startAt, winnerUserIds, predictionCount: predictions.length, changes });
+    if (!dryRun) await resolveEventPredictions(e.id, winnerUserIds, { notify: false });
+  }
+  return report;
 }
