@@ -1,5 +1,5 @@
 /**
- * Swipe-Stapel der Spieleliste — nur serverseitig.
+ * GameSwipe-Stapel der Spieleliste — nur serverseitig.
  *
  * Reihenfolge der eigenen Karten: Spiele mit einem Event in den nächsten 30 Tagen (nächstes zuerst),
  * dann beliebte (am Start, Wunschliste, Bewertungen), dann neue, zuletzt Spiele, deren Entscheidung älter

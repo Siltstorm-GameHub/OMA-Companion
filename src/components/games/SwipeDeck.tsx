@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================
-// Spieleliste-Swipen: Karten-Stapel
+// GameSwipe: Karten-Stapel der Spieleliste
 // ============================================
 // Rechts = Am Start · Links = Nicht meins · Hoch = Würde ich holen (auch per Knopf und Pfeiltasten).
 // Antippen dreht die Karte um: Beschreibung, Steckbrief, wer am Start ist, Sterne, Angaben korrigieren.

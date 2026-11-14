@@ -188,7 +188,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
       )}
       {game.status === "APPROVED" && !!user && <CorrectFieldsPanel slug={game.slug} current={fields} />}
 
-      {/* Am Start (Spieleliste-Swipen, öffentlich) */}
+      {/* Am Start (aus GameSwipe, öffentlich) */}
       <section className="surface rounded-2xl p-4 space-y-3">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5 text-emerald-500/80" /> Am Start ({detail.inPeople.length})

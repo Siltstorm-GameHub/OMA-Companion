@@ -12,7 +12,7 @@ interface Stats { ratingSum: number; ratingCount: number; inCount: number; wishC
 interface Mine { rating: number | null; status: SwipeStatus | null }
 
 /** Bewertung (1–5 Sterne) und Entscheidung (Am Start / Würde ich holen / Nicht meins) mit sofortiger
- *  Rückmeldung — dieselben Entscheidungen wie beim Swipen in der Spieleliste. */
+ *  Rückmeldung — dieselben Entscheidungen wie in GameSwipe. */
 export default function GameReactionPanel({
   slug, initialStats, initialMine, initialDistribution, canReact,
 }: {

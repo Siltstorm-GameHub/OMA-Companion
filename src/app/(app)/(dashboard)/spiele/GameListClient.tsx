@@ -100,10 +100,10 @@ export default function GameListClient({
         </Link>
       )}
 
-      {/* Ansicht: Swipen oder Liste */}
+      {/* Ansicht: GameSwipe oder Liste */}
       {swipe && (
         <div className="grid grid-cols-2 gap-1 rounded-xl p-1 bg-white/[0.03] border border-white/[0.06] max-w-xs">
-          {([["swipe", "Swipen", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
+          {([["swipe", "GameSwipe", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => setView(key)} aria-pressed={view === key}
               className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
                 view === key ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white"

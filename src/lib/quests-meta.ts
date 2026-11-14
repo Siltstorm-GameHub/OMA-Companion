@@ -57,7 +57,7 @@ export const QUEST_TYPE_META: Record<
     color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
   },
   GAME_SWIPE: {
-    label: "Spieleliste", unit: "Spiele",      icon: "🃏",
+    label: "GameSwipe",   unit: "Spiele",      icon: "🃏",
     color: "text-emerald-300", bar: "from-emerald-600 to-emerald-400", bg: "from-emerald-500/10",
   },
   COMMUNITY_JOB_VOTE: {

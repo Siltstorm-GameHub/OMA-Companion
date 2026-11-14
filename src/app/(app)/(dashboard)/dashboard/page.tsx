@@ -298,7 +298,7 @@ export default async function DashboardPage() {
     userId
       ? prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } }, select: { id: true } }).then(Boolean).catch(() => true)
       : true,
-    // Spieleliste: wie viele Spiele warten auf eine Swipe-Entscheidung? (Hinweis unter dem Kopf)
+    // GameSwipe: wie viele Spiele warten auf eine Entscheidung? (Hinweis unter dem Kopf)
     userId ? countSwipeDeck(userId).catch(() => 0) : 0,
   ]);
 
@@ -502,7 +502,7 @@ export default async function DashboardPage() {
           </Link>
         )}
 
-        {/* ── Hinweis: Spiele zum Swipen in der Spieleliste ── */}
+        {/* ── Hinweis: offene Karten in GameSwipe ── */}
         {swipeOpen > 0 && (
           <Link href="/spiele"
             className={`group ${spunToday ? "mt-4 sm:mt-6" : "mt-3"} flex items-center gap-3 rounded-xl border border-emerald-500/30 px-4 py-3 transition-colors hover:border-emerald-400/60`}
@@ -510,12 +510,12 @@ export default async function DashboardPage() {
             <span className="text-2xl leading-none shrink-0" aria-hidden>🃏</span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-white">
-                {swipeOpen} {swipeOpen === 1 ? "Spiel wartet" : "Spiele warten"} auf deine Wischer
+                {swipeOpen} {swipeOpen === 1 ? "Spiel wartet" : "Spiele warten"} in GameSwipe auf dich
               </span>
               <span className="block text-xs text-gray-400">Bist du am Start? Finde Spiele, die dein Squad auch zockt.</span>
             </span>
             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-300 group-hover:text-emerald-200 shrink-0">
-              Swipen <ChevronRight className="w-3.5 h-3.5" />
+              GameSwipe <ChevronRight className="w-3.5 h-3.5" />
             </span>
           </Link>
         )}

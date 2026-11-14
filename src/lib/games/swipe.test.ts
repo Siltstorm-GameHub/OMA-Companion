@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_MIN, effectiveStatus, interleaveDeck, isSwipeStatus, matchRecipients, shouldReask } from "./swipe";
 
-describe("Spieleliste-Swipen", () => {
+describe("GameSwipe", () => {
   test("alte Markierungen gelten als Am Start, neue Entscheidungen gehen vor", () => {
     assert.equal(effectiveStatus(null), null);
     assert.equal(effectiveStatus({ status: null, owns: true }), "in");

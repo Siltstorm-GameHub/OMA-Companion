@@ -1,5 +1,5 @@
 /**
- * Steam-Trends für den Swipe-Stapel — nur serverseitig.
+ * Steam-Trends für den GameSwipe-Stapel — nur serverseitig.
  *
  * Zwei Quellen: die meistgespielten Spiele (ISteamChartsService, gleichzeitige Spieler) = "Gerade angesagt"
  * und Steams Filter "beliebte Neuerscheinungen" = "Neu & angesagt". Behalten wird nur, was ein echtes Spiel
