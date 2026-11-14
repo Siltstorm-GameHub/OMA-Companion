@@ -1,4 +1,5 @@
 import PlaceMedal from "@/components/PlaceMedal";
+import { isOmaOriginal } from "@/lib/oma-original";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import type { Metadata } from "next";
@@ -133,7 +134,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true, omaOriginal: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       blocksTournament: { select: { stage: true } },
       blocksChallenge: { select: { id: true } },
@@ -906,6 +907,7 @@ export default async function TournamentDetailPage({
           rounded="rounded-none"
           imgClassName="w-full h-full object-cover"
           brandBadge
+          omaOriginal={isOmaOriginal(event)}
         />
         <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
       </div>

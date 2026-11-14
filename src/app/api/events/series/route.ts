@@ -131,6 +131,8 @@ export async function POST(req: NextRequest) {
           seriesStatConfig: seriesStatConfig ?? null,
           hidden: hidden ?? false,
           registrationLocked: registrationLocked ?? false,
+          // OMA Original legen nur Mods fest; Termine der Reihe erben es (lib/oma-original.ts)
+          omaOriginal: isModerator && rawBody.omaOriginal === true,
           squadId: squadId || null,
           createdById: season ? season.createdById : currentUser.id,
           // Neue Saison einer bereits freigegebenen Community-Reihe braucht keine erneute Freigabe

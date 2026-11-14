@@ -29,6 +29,7 @@ import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile, { type EventTileItem } from "@/components/EventsTile";
+import { isOmaOriginal } from "@/lib/oma-original";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
@@ -80,7 +81,7 @@ const getGlobalDashboardData = unstable_cache(
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true } },
+          series: { select: { coverImageUrl: true, omaOriginal: true } },
         },
       }),
       prisma.event.findMany({
@@ -90,7 +91,7 @@ const getGlobalDashboardData = unstable_cache(
         include: {
           _count: { select: { registrations: true } },
           polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true } },
+          series: { select: { coverImageUrl: true, omaOriginal: true } },
         },
       }),
       prisma.event.findMany({
@@ -357,6 +358,7 @@ export default async function DashboardPage() {
     category: ev.category,
     status: ev.status,
     coverImageUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
+    omaOriginal: isOmaOriginal(ev),
     countdownText: ev.status === "umfrage" && ev.polls[0]
       ? formatCountdown(new Date(ev.polls[0].endAt), now, "Umfrage endet in")
       : formatCountdown(new Date(ev.startAt), now),

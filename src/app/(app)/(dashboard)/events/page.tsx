@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isOmaOriginal } from "@/lib/oma-original";
 import { getSessionUser } from "@/lib/roles";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
@@ -65,7 +66,7 @@ export default async function EventsPage() {
         // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
         // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
         _count:        { select: { registrations: { where: { role: "player" } } } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true } },
+        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true, omaOriginal: true } },
         createdBy:     { select: { username: true, name: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
@@ -222,7 +223,7 @@ export default async function EventsPage() {
           }}>
           <div className="absolute inset-0">
             <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-full h-full" rounded="rounded-none"
-              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge />
+              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge omaOriginal={isOmaOriginal(ev)} />
           </div>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />

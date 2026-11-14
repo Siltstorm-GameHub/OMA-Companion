@@ -48,6 +48,7 @@ async function loadTemplate(eventId: string): Promise<EventTemplate | null> {
     // Nur aktive Reihen anbieten — beendete Reihen tauchen in der Auswahl nicht auf
     seriesId: e.seriesId && e.series?.status === "active" ? e.seriesId : null,
     registrationLocked: e.registrationLocked,
+    omaOriginal: e.omaOriginal,
     squadId: e.squadId ?? "",
     spectatorMode: e.spectatorMode,
     spectatorCoins: spectator.coins ?? 5,
@@ -105,6 +106,7 @@ export default async function NewEventPage({
         placementRewardsJson: true,
         fixedFormat: true,
         tournamentTemplateJson: true,
+        omaOriginal: true,
         _count: { select: { events: true } },
       },
     }),

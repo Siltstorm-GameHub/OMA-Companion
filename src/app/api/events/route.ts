@@ -253,6 +253,8 @@ export async function POST(req: NextRequest) {
       // Mit geplanter Veröffentlichung in der Zukunft immer erst unsichtbar
       hidden:          hidden || scheduledPublishAt ? true : false,
       registrationLocked: registrationLocked ? true : false,
+      // OMA Original legen nur Mods fest (lib/oma-original.ts)
+      omaOriginal:     isModerator && body.omaOriginal === true,
       squadId:         squadId || null,
       spectatorMode:   spectatorMode ? true : false,
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,

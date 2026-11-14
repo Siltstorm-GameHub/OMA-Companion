@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createDiscordScheduledEvent, updateDiscordScheduledEvent } from "@/lib/discord-events";
+import { isOmaOriginal } from "@/lib/oma-original";
 
 // Push: WebApp-Events → Discord Scheduled Events
 export async function POST() {
@@ -10,7 +11,7 @@ export async function POST() {
   const events = await prisma.event.findMany({
     where: { status: { in: ["open", "active"] }, hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
     orderBy: { startAt: "asc" },
-    include: { series: { select: { coverImageUrl: true } } },
+    include: { series: { select: { coverImageUrl: true, omaOriginal: true } } },
   });
 
   let created = 0;
@@ -27,6 +28,7 @@ export async function POST() {
         game:        ev.game,
         coverImageUrl:       ev.coverImageUrl,
         seriesCoverImageUrl: ev.series?.coverImageUrl ?? null,
+        omaOriginal:         isOmaOriginal(ev),
       });
       if (ok) updated++;
       else failed++;
@@ -38,6 +40,7 @@ export async function POST() {
         game:        ev.game,
         coverImageUrl:       ev.coverImageUrl,
         seriesCoverImageUrl: ev.series?.coverImageUrl ?? null,
+        omaOriginal:         isOmaOriginal(ev),
       });
       if (discordEventId) {
         await prisma.event.update({ where: { id: ev.id }, data: { discordEventId } });

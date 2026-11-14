@@ -56,6 +56,7 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
           )}
           {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
           {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
+          {w.seriesOmaOriginal && !w.isCommunity && <p className="text-teal-300 font-semibold">OMA Original · Logo auf allen Termin-Covern</p>}
           {seriesHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
           {seriesRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
           {seriesSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === seriesSquadId)?.name}</p>}

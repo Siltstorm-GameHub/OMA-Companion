@@ -4,6 +4,7 @@ import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
+import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { PLATFORMS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
@@ -103,6 +104,10 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
           <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
             placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
         </div>
+      )}
+
+      {!w.isCommunity && (
+        <OmaOriginalToggle kind="series" checked={w.seriesOmaOriginal} onChange={w.setSeriesOmaOriginal} />
       )}
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">

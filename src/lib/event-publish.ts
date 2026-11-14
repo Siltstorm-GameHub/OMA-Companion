@@ -10,6 +10,7 @@
 // Event.publishStateJson protokolliert; ein erneuter Aufruf ("Erneut versuchen") holt genau die
 // fehlenden Schritte nach.
 
+import { isOmaOriginal } from "@/lib/oma-original";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true } },
+      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true, omaOriginal: true } },
       gameVote: { select: { id: true } },
     },
   });
@@ -69,6 +70,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
         game: event.game ?? null,
         coverImageUrl: event.coverImageUrl,
         seriesCoverImageUrl: event.series?.coverImageUrl ?? null,
+        omaOriginal: isOmaOriginal(event),
       });
       if (discordEventId) {
         await prisma.event.update({ where: { id: eventId }, data: { discordEventId } });

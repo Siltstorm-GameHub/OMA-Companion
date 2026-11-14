@@ -6,6 +6,7 @@ import { getEventPollWinners } from "@/lib/event-polls";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { prisma } from "@/lib/prisma";
+import { isOmaOriginal } from "@/lib/oma-original";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { editDiscordMessage } from "@/lib/discord-rest";
 
@@ -20,6 +21,8 @@ interface CoverSource {
   /** Cover der Eventreihe — greift nur, wenn das Event selbst keins hat. */
   seriesCoverImageUrl?: string | null;
   game?: string | null;
+  /** OMA Original (lib/oma-original.ts) — nur dann trägt das Cover das Logo-Siegel. */
+  omaOriginal?: boolean;
 }
 
 /** Beste verfügbare Bild-Quelle vor dem Marken-Rendering: eigenes Cover →
@@ -216,6 +219,7 @@ export async function createDiscordScheduledEvent(event: {
   game?: string | null;
   coverImageUrl?: string | null;
   seriesCoverImageUrl?: string | null;
+  omaOriginal?: boolean;
 }): Promise<string | null> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -229,7 +233,7 @@ export async function createDiscordScheduledEvent(event: {
   // Prozess gerendert statt wie bei Nachrichten-Embeds über eine HTTP-Route.
   const source       = await resolveCoverSource(event);
   // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
-  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+  const imageDataUri = await generateBrandedCoverDataUri(source, { omaOriginal: event.omaOriginal }).catch((err) => {
     console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
     return undefined;
   });
@@ -275,6 +279,7 @@ export async function updateDiscordScheduledEvent(
     game?: string | null;
     coverImageUrl?: string | null;
     seriesCoverImageUrl?: string | null;
+    omaOriginal?: boolean;
   }
 ): Promise<boolean> {
   const guildId  = process.env.DISCORD_GUILD_ID;
@@ -285,7 +290,7 @@ export async function updateDiscordScheduledEvent(
 
   const source       = await resolveCoverSource(event);
   // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
-  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+  const imageDataUri = await generateBrandedCoverDataUri(source, { omaOriginal: event.omaOriginal }).catch((err) => {
     console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
     return undefined;
   });
@@ -326,14 +331,14 @@ export async function refreshEventAnnouncement(eventId: string): Promise<void> {
   if (!process.env.DISCORD_BOT_TOKEN) return;
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, discordChannelId: true, placementRewardsJson: true } }, gameVote: { select: { status: true } } },
+    include: { series: { select: { coverImageUrl: true, discordChannelId: true, placementRewardsJson: true, omaOriginal: true } }, gameVote: { select: { status: true } } },
   });
   if (!event) return;
   const game = event.game ?? (event.gameVote ? GAME_VOTE_PLACEHOLDER : null);
   if (event.discordEventId) {
     await updateDiscordScheduledEvent(event.discordEventId, {
       title: event.title, startAt: event.startAt, description: event.description, game: event.game,
-      coverImageUrl: event.coverImageUrl, seriesCoverImageUrl: event.series?.coverImageUrl ?? null,
+      coverImageUrl: event.coverImageUrl, seriesCoverImageUrl: event.series?.coverImageUrl ?? null, omaOriginal: isOmaOriginal(event),
     }).catch(err => console.error("[Discord] Scheduled Event aktualisieren", err));
   }
   if (event.discordMessageId) {

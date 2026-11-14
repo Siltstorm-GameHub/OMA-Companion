@@ -51,6 +51,9 @@ export async function PATCH(req: NextRequest) {
   }
   // Ankündigungskanal und Legacy-Feld pointReward legen nur Mods fest
   if (!isModerator) delete data.pointReward;
+  // OMA Original (lib/oma-original.ts) ebenfalls nur Mods
+  if (!isModerator) delete data.omaOriginal;
+  else if ("omaOriginal" in data) data.omaOriginal = data.omaOriginal === true;
   // Cover: Nicht-Moderatoren nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
   if (!isModerator && "coverImageUrl" in data && data.coverImageUrl && !isPresetCover(data.coverImageUrl)) delete data.coverImageUrl;
 
