@@ -7,12 +7,12 @@ import BlocksTournamentPanel from "./BlocksTournamentPanel";
 import ChallengeCard from "./ChallengeCard";
 
 export default async function BlocksEventSection({
-  eventId, viewerId, isMod, hasTournament, hasChallenge,
-}: { eventId: string; viewerId: string; isMod: boolean; hasTournament: boolean; hasChallenge: boolean }) {
+  eventId, viewerId, canLead, hasTournament, hasChallenge,
+}: { eventId: string; viewerId: string; canLead: boolean; hasTournament: boolean; hasChallenge: boolean }) {
   if (hasTournament) {
     return (
       <div className="mb-5">
-        <BlocksTournamentPanel eventId={eventId} viewerId={viewerId} isMod={isMod} />
+        <BlocksTournamentPanel eventId={eventId} viewerId={viewerId} canLead={canLead} />
       </div>
     );
   }

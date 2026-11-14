@@ -134,7 +134,9 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
       {gamePrefill && !eventTemplate && (
         <p className="text-xs text-gray-500 -mt-3 mb-6">
-          Spiel aus der Spieleliste übernommen: <span className="text-gray-300">{gamePrefill.name}</span>. Titel, Termin und Format legst du jetzt fest.
+          {gamePrefill.slug
+            ? <>Spiel aus der Spieleliste übernommen: <span className="text-gray-300">{gamePrefill.name}</span>. Titel, Termin und Format legst du jetzt fest.</>
+            : <>OMA Blocks ist ausgewählt — als <span className="text-gray-300">Live-Turnier im Versus-Modus</span> oder Community-Challenge. Titel und Termin legst du jetzt fest.</>}
         </p>
       )}
 

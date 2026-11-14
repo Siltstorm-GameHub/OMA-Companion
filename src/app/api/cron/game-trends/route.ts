@@ -9,8 +9,8 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-// Steam-Trends für den GameSwipe-Stapel der Spieleliste neu aufbauen (meistgespielt + beliebte
-// Neuerscheinungen, siehe lib/games/steam-trends.ts). Wird täglich um 05:40 UTC von Vercel Cron aufgerufen.
+// Steam-Trends für den GameSwipe-Stapel der Spieleliste neu aufbauen (meistgespielt, beliebte
+// Neuerscheinungen, Topseller, beliebt und bald verfügbar — siehe lib/games/steam-trends.ts). Wird täglich um 05:40 UTC von Vercel Cron aufgerufen.
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

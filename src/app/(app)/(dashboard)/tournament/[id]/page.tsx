@@ -925,7 +925,7 @@ export default async function TournamentDetailPage({
         <BlocksEventSection
           eventId={event.id}
           viewerId={userId}
-          isMod={isMod}
+          canLead={canManage}
           hasTournament={!!event.blocksTournament}
           hasChallenge={!!event.blocksChallenge}
         />

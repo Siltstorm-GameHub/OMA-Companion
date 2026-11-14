@@ -11,7 +11,8 @@ import { Play, Swords } from "@/components/icons";
 import { groupLabel } from "@/lib/blocks/tournament-shared";
 import TournamentStandings, { PHASE_LABEL, useTournamentState } from "./TournamentStandings";
 
-export default function BlocksTournamentPanel({ eventId, viewerId, isMod }: { eventId: string; viewerId: string; isMod: boolean }) {
+/** canLead: darf das Turnier starten und Phasen beenden (wer das Event verwalten darf). */
+export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { eventId: string; viewerId: string; canLead: boolean }) {
   const [state, reload] = useTournamentState(eventId, 10_000);
   const [busy, setBusy] = useState<"start" | "advance" | null>(null);
 
@@ -78,7 +79,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, isMod }: { ev
 
       {phase !== "pending" && <TournamentStandings state={state} viewerId={viewerId} />}
 
-      {isMod && phase !== "done" && (
+      {canLead && phase !== "done" && (
         <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 space-y-2">
           <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Turnierleitung</p>
           {phase === "pending" ? (
@@ -103,7 +104,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, isMod }: { ev
           )}
         </div>
       )}
-      {isMod && phase === "done" && (
+      {canLead && phase === "done" && (
         <p className="text-xs text-amber-200/80">
           Endstand ist übernommen — schließe das Event jetzt wie gewohnt ab, dann werden die Belohnungen ausgezahlt.
         </p>

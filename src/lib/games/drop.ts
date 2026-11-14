@@ -110,7 +110,7 @@ export async function buildWeeklyDrop(now = new Date()): Promise<WeeklyDrop> {
         .map(listGame),
       ...bySource("subscription"),
     ],
-    bySource("upcoming"),
+    [...bySource("upcoming"), ...bySource("steam_soon")],
     games
       .filter(g => g.discountPercent >= SALE_MIN_PERCENT)
       .sort((a, b) => b.wishCount + b.inCount - (a.wishCount + a.inCount) || b.discountPercent - a.discountPercent)
@@ -120,7 +120,7 @@ export async function buildWeeklyDrop(now = new Date()): Promise<WeeklyDrop> {
       .filter(g => nowMs - g.createdAt.getTime() <= 14 * DAY)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map(listGame),
-    bySource("steam_top"),
+    [...bySource("steam_top"), ...bySource("steam_seller")],
     [...games].sort((a, b) => popularity(b) - popularity(a)).map(listGame),
   ];
   for (const d of roundRobin(groups)) {

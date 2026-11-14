@@ -26,9 +26,9 @@ const DAY = 24 * 60 * 60_000;
 
 // ── Entdecken-Karten (Spiele außerhalb der Liste) ───────────────────────────────
 
-export type DiscoverSource = "free" | "subscription" | "upcoming" | "steam_new" | "steam_top";
+export type DiscoverSource = "free" | "subscription" | "upcoming" | "steam_soon" | "steam_new" | "steam_seller" | "steam_top";
 
-export const DISCOVER_SOURCES: DiscoverSource[] = ["free", "subscription", "upcoming", "steam_new", "steam_top"];
+export const DISCOVER_SOURCES: DiscoverSource[] = ["free", "subscription", "upcoming", "steam_soon", "steam_new", "steam_seller", "steam_top"];
 
 export interface DiscoverItem extends Omit<GameFields, "tags"> {
   source: DiscoverSource;

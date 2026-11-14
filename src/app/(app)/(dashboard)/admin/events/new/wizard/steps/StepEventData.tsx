@@ -52,6 +52,12 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         <label className={labelCls}>Spiel</label>
         <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === BLOCKS_GAME) setEventType("tournament"); }}
           placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
+        {game !== BLOCKS_GAME && (
+          <button type="button" onClick={() => { setGame(BLOCKS_GAME); setEventType("tournament"); }}
+            className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-violet-300 hover:text-violet-200">
+            🧱 Event für unser App-Spiel OMA Blocks (Versus-Turnier oder Challenge)
+          </button>
+        )}
       </div>
 
       {w.isBlocksEvent && (

@@ -59,7 +59,10 @@ export function useEventWizard({
 
   // ── Shared (Step 0) ──────────────────────────────────────────────────────────
   const [category, setCategory]       = useState<EventCategory>(seasonPrefill?.category ?? tpl?.category ?? "casual");
-  const [eventType, setEventType]     = useState<"community" | "tournament">(seasonPrefill?.eventType ?? tpl?.eventType ?? "community");
+  // OMA Blocks läuft immer als Turnier bzw. Challenge (siehe StepEventData)
+  const [eventType, setEventType]     = useState<"community" | "tournament">(
+    seasonPrefill?.eventType ?? tpl?.eventType ?? (gamePrefill?.name === BLOCKS_GAME ? "tournament" : "community"),
+  );
   const [spectatorMode, setSpectatorMode] = useState(seasonPrefill?.spectatorMode ?? tpl?.spectatorMode ?? false);
 
   // ── Event mode state ─────────────────────────────────────────────────────────

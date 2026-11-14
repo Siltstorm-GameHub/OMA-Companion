@@ -63,7 +63,9 @@ function reasonLabel(c: DeckCard): string {
       case "free": return freeLabel(c.store, c.freeUntil);
       case "subscription": return subLabel(c.subscriptions);
       case "upcoming": return c.releaseDate ? `Erscheint am ${fmtDay(c.releaseDate)}` : "Erscheint bald";
-      case "steam_new": return "Steam · Neu & angesagt";
+      case "steam_new": return "Steam · Beliebte Neuerscheinung";
+      case "steam_seller": return "Steam · Topseller";
+      case "steam_soon": return "Steam · Bald verfügbar";
       default: return "Steam · Gerade angesagt";
     }
   }
@@ -458,7 +460,13 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
               <span className="text-[11px] text-emerald-300">{card.inCount} am Start</span>
             </>
           ) : (
-            <span className="text-[11px] text-gray-500">{card.kind === "discover" ? "Noch nicht in unserer Liste — sag „Am Start“, dann kommt es rein" : "Noch niemand am Start"}</span>
+            <span className="text-[11px] text-gray-500">
+              {card.kind !== "discover"
+                ? "Noch niemand am Start"
+                : card.source === "steam_soon" || card.source === "upcoming"
+                  ? "Erscheint bald — „Am Start“ heißt: du holst es dir zum Release"
+                  : "Noch nicht in unserer Liste — sag „Am Start“, dann kommt es rein"}
+            </span>
           )}
         </div>
       </div>

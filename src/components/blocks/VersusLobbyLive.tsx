@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronRight, Swords, Users } from "@/components/icons";
+import { ChevronRight, Swords, Trophy, Users } from "@/components/icons";
 import type { ClientMessage, PublicRoomInfo, ServerMessage } from "@/lib/blocks/protocol";
 
 type Live = { rooms: PublicRoomInfo[]; online: number } | null;
@@ -101,6 +101,14 @@ export default function VersusLobbyLive() {
           ))}
         </div>
       )}
+
+      {/* Eigenes Versus-Turnier als Event planen (Event-Assistent mit OMA Blocks vorausgewählt) */}
+      <Link href="/admin/events/new?mode=event&blocks=1"
+        className="flex items-center gap-2 border-t border-white/5 pt-3 text-xs text-gray-400 hover:text-white group">
+        <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+        <span className="flex-1">Versus-Turnier planen — mit Gruppen, Finale und Anmeldung</span>
+        <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-white shrink-0" />
+      </Link>
     </div>
   );
 }

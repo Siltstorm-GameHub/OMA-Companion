@@ -5,6 +5,7 @@ import { parseCommunityGoal } from "@/lib/community-goal";
 import EventSetupWizard from "./EventSetupWizard";
 import type { GamePrefill } from "./wizard/useEventWizard";
 import { eventGenreForGame } from "@/lib/games/event-genre";
+import { BLOCKS_GAME } from "@/lib/blocks/event-config";
 import type { EventTemplate, PlacementReward, PollConfig } from "./wizard/shared";
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -86,12 +87,12 @@ async function loadGamePrefill(slug: string): Promise<GamePrefill | null> {
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string }>;
+  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string; blocks?: string }>;
 }) {
   // Jeder eingeloggte User darf Events/Reihen anlegen (Community-Events). Nicht-Moderatoren sehen
   // nur Reihen, die sie selbst verwalten, und nur Squads, die sie captainen (Squad-Bindung optional).
   const { user, scope, captainedSquadIds } = await requireEventArea();
-  const { mode, squadId: initialSquadId, from, game: gameSlug } = await searchParams;
+  const { mode, squadId: initialSquadId, from, game: gameSlug, blocks } = await searchParams;
   const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
   const [series, squads, eventTemplate] = await Promise.all([
@@ -117,8 +118,13 @@ export default async function NewEventPage({
     }),
     from && (await canManageEvent(user, from)) ? loadTemplate(from) : Promise.resolve(null),
   ]);
-  // "Event mit diesem Spiel anlegen" aus der Spieleliste (/spiele/[slug])
-  const gamePrefill = !eventTemplate && gameSlug ? await loadGamePrefill(gameSlug) : null;
+  // "Event mit diesem Spiel anlegen" aus der Spieleliste (/spiele/[slug]) bzw. "Versus-Turnier planen" aus
+  // OMA Blocks (?blocks=1 — OMA Blocks steht als App-Spiel nicht in der Spieleliste)
+  const gamePrefill = eventTemplate
+    ? null
+    : blocks === "1"
+      ? { name: BLOCKS_GAME, slug: "", genre: null }
+      : gameSlug ? await loadGamePrefill(gameSlug) : null;
 
   return (
     <EventSetupWizard

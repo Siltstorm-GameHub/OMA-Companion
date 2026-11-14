@@ -9,7 +9,8 @@ import { getDiscoverItems } from "@/lib/games/discover";
 import { discoverKey, type DiscoverSource } from "@/lib/games/deck-plan";
 
 const SOURCE_LABEL: Record<DiscoverSource, string> = {
-  free: "Gratis-Aktionen", subscription: "Neu im Game Pass", upcoming: "Erscheint bald", steam_new: "Steam · Neu & angesagt", steam_top: "Steam · Gerade angesagt",
+  free: "Gratis-Aktionen", subscription: "Neu im Game Pass", upcoming: "Erscheint bald", steam_soon: "Steam · Bald verfügbar",
+  steam_new: "Steam · Beliebte Neuerscheinungen", steam_seller: "Steam · Topseller", steam_top: "Steam · Gerade angesagt",
 };
 
 export const dynamic = "force-dynamic";

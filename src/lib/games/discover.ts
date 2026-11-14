@@ -6,7 +6,7 @@
  *  - "upcoming":     Erscheint bald — Mehrspieler-Spiele der nächsten 90 Tage aus IGDB, nach Vorfreude
  *  - "subscription": Neu im Game Pass — Titel, die seit dem letzten Abgleich im Katalog dazugekommen sind
  *                    (der Abgleich in store-sync.ts merkt sie vor, hier werden sie Steam/IGDB zugeordnet)
- *  - Steam-Trends ("steam_top"/"steam_new") kommen aus steam-trends.ts.
+ *  - Steam-Trends ("steam_top", "steam_new", "steam_seller", "steam_soon") kommen aus steam-trends.ts.
  *
  * Jede Karte braucht eine Steam- oder IGDB-ID, damit "Am Start" das Spiel in die Liste aufnehmen kann.
  */
@@ -69,7 +69,7 @@ export async function getDiscoverItems(): Promise<DiscoverItem[]> {
   const steam: DiscoverItem[] = trends.map(t => {
     const { steamAppId, trend, firstSeenAt, ...rest } = t;
     return {
-      ...rest, source: trend === "top" ? "steam_top" : "steam_new", steamAppId, igdbId: null, releaseDate: null,
+      ...rest, source: `steam_${trend}` as const, steamAppId, igdbId: null, releaseDate: null,
       freeUntil: null, store: "steam", storeUrl: `https://store.steampowered.com/app/${steamAppId}/`, subscriptions: [],
       addedAt: firstSeenAt ?? new Date(0).toISOString(),
     };
