@@ -30,7 +30,7 @@ import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile, { type EventTileItem } from "@/components/EventsTile";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
-import OmaOriginalMark, { OmaTitlePrefix } from "@/components/OmaOriginalMark";
+import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
@@ -748,7 +748,6 @@ export default async function DashboardPage() {
                           {series.omaOriginal && <OmaTitlePrefix title={series.name} />}
                           {series.name}
                         </p>
-                        {series.omaOriginal && <OmaOriginalMark />}
                       </div>
                       <p className="text-[10px] text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
                         {nextDate ? (
