@@ -153,11 +153,7 @@ function planResolution(
   return { winnerIds, payouts };
 }
 
-export async function resolveEventPredictions(
-  eventId: string,
-  winnerUserIds: string[] | string | null,
-  { notify = true }: { notify?: boolean } = {},
-) {
+export async function resolveEventPredictions(eventId: string, winnerUserIds: string[] | string | null) {
   const winnerUserSet = toWinnerSet(winnerUserIds);
   const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
   if (allPredictions.length === 0) return;
@@ -166,7 +162,7 @@ export async function resolveEventPredictions(
     where:  { id: eventId },
     select: { hidden: true, series: { select: { hidden: true } } },
   });
-  const notifyParticipants = notify && !!event && !isEventHidden(event);
+  const notifyParticipants = !!event && !isEventHidden(event);
 
   // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
   await rollbackResolvedPredictions(eventId);
@@ -247,56 +243,4 @@ export async function resolveEventPredictions(
       }).catch(() => {});
     }
   }
-}
-
-export type TieRecalcChange = {
-  predictionId: string; userId: string; predictedUserId: string; wager: number;
-  before: { resolved: boolean; correct: boolean | null; coins: number };
-  after: { correct: boolean; coins: number };
-};
-export type TieRecalcEvent = {
-  eventId: string; title: string; startAt: Date; winnerUserIds: string[];
-  predictionCount: number; changes: TieRecalcChange[];
-};
-
-/**
- * Einmalige Nachkorrektur: Events, die vor der Gleichstand-Regel abgeschlossen wurden, haben ihre
- * Tipps nur gegen den ersten von mehreren Erstplatzierten (eventWinnerId) ausgewertet. Sucht alle
- * abgeschlossenen Events mit mehreren eventWinnerIds und Tipps, deren Auswertung sich nach der
- * aktuellen Regel ändern würde. dryRun = nur berichten; sonst werden genau diese Events über
- * resolveEventPredictions neu ausgewertet (Rückbuchung + Neuverteilung, ohne Benachrichtigung).
- */
-export async function recalculateTiedEventPredictions({ dryRun }: { dryRun: boolean }): Promise<TieRecalcEvent[]> {
-  const events = await prisma.event.findMany({
-    where: { completionData: { not: null }, winnerPredictions: { some: {} } },
-    select: { id: true, title: true, startAt: true, completionData: true },
-    orderBy: { startAt: "asc" },
-  });
-
-  const report: TieRecalcEvent[] = [];
-  for (const e of events) {
-    let winnerUserIds: string[] = [];
-    try {
-      const cd = JSON.parse(e.completionData as string) as { eventWinnerIds?: unknown };
-      if (Array.isArray(cd.eventWinnerIds)) winnerUserIds = [...new Set(cd.eventWinnerIds.filter((x): x is string => typeof x === "string"))];
-    } catch { continue; }
-    if (winnerUserIds.length < 2) continue;
-
-    const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId: e.id } });
-    const { winnerIds, payouts } = planResolution(predictions, new Set(winnerUserIds));
-    const changes: TieRecalcChange[] = [];
-    for (const p of predictions) {
-      const after = { correct: winnerIds.has(p.id), coins: payouts.get(p.id) ?? 0 };
-      if (p.resolved && p.correct === after.correct && p.coinsAwarded === after.coins) continue;
-      changes.push({
-        predictionId: p.id, userId: p.userId, predictedUserId: p.predictedUserId, wager: p.wager,
-        before: { resolved: p.resolved, correct: p.correct, coins: p.coinsAwarded }, after,
-      });
-    }
-    if (changes.length === 0) continue;
-
-    report.push({ eventId: e.id, title: e.title, startAt: e.startAt, winnerUserIds, predictionCount: predictions.length, changes });
-    if (!dryRun) await resolveEventPredictions(e.id, winnerUserIds, { notify: false });
-  }
-  return report;
 }

@@ -5,9 +5,6 @@ import Link from "next/link";
 import { CalendarClock } from "@/components/icons";
 import { Trophy, Clock, Vote, Clapperboard, ArrowRight, Zap } from "@/components/icons";
 import ActivityFeed from "./ActivityFeed";
-import ResetSelectiveButton, { type SeriesGroupOption } from "./ResetSelectiveButton";
-import RecalcTiedPredictionsButton from "./RecalcTiedPredictionsButton";
-import { getResetSchedule } from "@/lib/reset-selective";
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
 
@@ -27,7 +24,6 @@ export default async function AdminPage() {
   // in ihrer Event-Verwaltung (der Layout-Gate lässt alle eingeloggten User in /admin).
   const me = await getSessionUser();
   if (!me || !hasMinRole(me.role, "moderator")) redirect("/admin/events");
-  const isAdminUser = hasMinRole(me.role, "admin");
   const now = new Date();
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -83,29 +79,6 @@ export default async function AdminPage() {
       include: { user: { select: { id: true, name: true, username: true } } },
     }),
   ]);
-
-  const allSeries = await prisma.eventSeries.findMany({
-    orderBy: [{ status: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, status: true, groupId: true, createdAt: true, _count: { select: { events: true } } },
-  });
-  // Selektiver Reset: Saisons einer Reihe (gleiche groupId) als eine Auswahl, benannt nach der neuesten Saison
-  const groupedSeries = new Map<string, typeof allSeries>();
-  for (const s of allSeries) {
-    const key = s.groupId ?? s.id;
-    groupedSeries.set(key, [...(groupedSeries.get(key) ?? []), s]);
-  }
-  const seriesGroups: SeriesGroupOption[] = [...groupedSeries].map(([key, list]) => {
-    const newest = [...list].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-    return {
-      key,
-      name: newest.name,
-      seriesIds: list.map(s => s.id),
-      seasonCount: list.length,
-      eventCount: list.reduce((sum, s) => sum + s._count.events, 0),
-      active: list.some(s => s.status !== "archived"),
-    };
-  }).sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "de"));
-  const resetSchedule = await getResetSchedule();
 
   const hasActionItems =
     activeTournaments.length > 0 ||
@@ -286,15 +259,6 @@ export default async function AdminPage() {
           <Zap className="w-3.5 h-3.5 text-amber-400" /> Münzen & Punkte — letzte 7 Tage
         </h2>
         <ActivityFeed transactions={recentActivity} />
-      </div>
-
-      {/* Wartung */}
-      <div>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
-        <div className="space-y-3">
-          <ResetSelectiveButton groups={seriesGroups} schedule={resetSchedule} />
-          {isAdminUser && <RecalcTiedPredictionsButton />}
-        </div>
       </div>
     </div>
   );

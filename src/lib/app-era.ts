@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 
-// Beginn der aktuellen "Ära" der App — gesetzt vom selektiven Reset (lib/reset-selective.ts).
+// Beginn der aktuellen "Ära" der App — einmalig gesetzt beim Reset auf v1.0 (BotConfig app_era_start;
+// das Reset-Werkzeug selbst ist inzwischen entfernt, der Wert bleibt bestehen).
 // Auswertungen über ein Zeitfenster (z.B. das Ansehen der Community-Jobs) zählen nichts davor,
 // damit Daten, die beim Reset bewusst erhalten blieben (Kommentar-Stimmen im Ideen-Board),
 // zurückgesetzte Werte nicht wiederherstellen.

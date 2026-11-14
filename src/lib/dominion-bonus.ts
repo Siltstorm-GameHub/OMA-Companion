@@ -74,8 +74,8 @@ export async function recomputeSeriesDominionBonus(seriesId: string): Promise<vo
 
   const streak: Record<string, number> = {};
   // Kumulierte Dominion-Bonus-Liga-Punkte über die gesamte (neu berechnete) Historie — wird als
-  // "Dominion Bonus Punkte" in raw geschrieben (Anzeige). Der selektive Reset liest die tatsächlich
-  // gebuchten Rang-Punkte dagegen aus completionData.dominionChanges (siehe reset-ledger.ts).
+  // "Dominion Bonus Punkte" in raw geschrieben (Anzeige). Die tatsächlich gebuchten Rang-Punkte
+  // stehen dagegen in completionData.dominionChanges.
   const bonusPointsTotal: Record<string, number> = {};
   const txns: Prisma.PrismaPromise<unknown>[] = [];
 
@@ -212,7 +212,7 @@ export async function recomputeSeriesDominionBonus(seriesId: string): Promise<vo
 
   // Aktuellen (letzten) Streak-Stand + kumulierte Dominion-Bonus-Liga-Punkte für die Live-Anzeige
   // schreiben (Admin-Abschluss-Formular + öffentliche Reihen-Tabelle lesen beide _streak_[...] aus
-  // seriesStandingsJson.raw; "Dominion Bonus Punkte" liest reset-selective.ts für den Reset).
+  // seriesStandingsJson.raw).
   const existingJson: SeriesStandings = (() => {
     try {
       return series.seriesStandingsJson
