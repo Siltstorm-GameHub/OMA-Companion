@@ -19,6 +19,8 @@ export type EventTileItem = {
   category: EventCategory;
   status: string;
   coverImageUrl: string | null;
+  /** OMA Original: Logo-Siegel auf dem Cover (lib/oma-original.ts) */
+  omaOriginal: boolean;
   countdownText: string;
   registrationsCount: number;
   maxPlayers: number | null;
@@ -60,9 +62,10 @@ export default function EventsTile({ items, activeEvents }: Props) {
             rounded="rounded-none"
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
             brandBadge
+            omaOriginal={event.omaOriginal}
           />
         ) : (
-          <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
+          <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge omaOriginal={!!event?.omaOriginal} />
         )}
         {/* Status badge */}
         {event && event.status === "active" ? (

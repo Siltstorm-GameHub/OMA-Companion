@@ -10,6 +10,7 @@
 // Event.publishStateJson protokolliert; ein erneuter Aufruf ("Erneut versuchen") holt genau die
 // fehlenden Schritte nach.
 
+import { isOmaOriginal } from "@/lib/oma-original";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -39,7 +40,7 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
 export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true } } },
+    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true, omaOriginal: true } } },
   });
   if (!event || event.hidden) return parsePublishState(event?.publishStateJson);
   // Community-Events (von normalen Usern angelegt) werden erst nach Mod-Freigabe angekündigt —
@@ -64,6 +65,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
         game: event.game ?? null,
         coverImageUrl: event.coverImageUrl,
         seriesCoverImageUrl: event.series?.coverImageUrl ?? null,
+        omaOriginal: isOmaOriginal(event),
       });
       if (discordEventId) {
         await prisma.event.update({ where: { id: eventId }, data: { discordEventId } });

@@ -17,6 +17,8 @@ interface CoverSource {
   /** Cover der Eventreihe — greift nur, wenn das Event selbst keins hat. */
   seriesCoverImageUrl?: string | null;
   game?: string | null;
+  /** OMA Original (lib/oma-original.ts) — nur dann trägt das Cover das Logo-Siegel. */
+  omaOriginal?: boolean;
 }
 
 /** Beste verfügbare Bild-Quelle vor dem Marken-Rendering: eigenes Cover →
@@ -213,6 +215,7 @@ export async function createDiscordScheduledEvent(event: {
   game?: string | null;
   coverImageUrl?: string | null;
   seriesCoverImageUrl?: string | null;
+  omaOriginal?: boolean;
 }): Promise<string | null> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -226,7 +229,7 @@ export async function createDiscordScheduledEvent(event: {
   // Prozess gerendert statt wie bei Nachrichten-Embeds über eine HTTP-Route.
   const source       = await resolveCoverSource(event);
   // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
-  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+  const imageDataUri = await generateBrandedCoverDataUri(source, { omaOriginal: event.omaOriginal }).catch((err) => {
     console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
     return undefined;
   });
@@ -272,6 +275,7 @@ export async function updateDiscordScheduledEvent(
     game?: string | null;
     coverImageUrl?: string | null;
     seriesCoverImageUrl?: string | null;
+    omaOriginal?: boolean;
   }
 ): Promise<boolean> {
   const guildId  = process.env.DISCORD_GUILD_ID;
@@ -282,7 +286,7 @@ export async function updateDiscordScheduledEvent(
 
   const source       = await resolveCoverSource(event);
   // Cover ist optional: scheitert sharp (z.B. fehlende Binaries), Event ohne Bild anlegen.
-  const imageDataUri = await generateBrandedCoverDataUri(source).catch((err) => {
+  const imageDataUri = await generateBrandedCoverDataUri(source, { omaOriginal: event.omaOriginal }).catch((err) => {
     console.warn("[discord-events] Cover-Erzeugung fehlgeschlagen:", err);
     return undefined;
   });

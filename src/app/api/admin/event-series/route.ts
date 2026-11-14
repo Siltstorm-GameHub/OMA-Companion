@@ -84,6 +84,7 @@ export async function PATCH(req: NextRequest) {
   if (limits) {
     Object.assign(fields, capCaptainRewardFields(fields, seriesConfigLimits(limits)));
     delete fields.discordChannelId;
+    delete fields.omaOriginal;
     // Cover: nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
     if (fields.coverImageUrl && !isPresetCover(fields.coverImageUrl)) delete fields.coverImageUrl;
   }
@@ -141,6 +142,8 @@ export async function PATCH(req: NextRequest) {
       ...(fields.category              !== undefined && { category:              fields.category || null }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
       ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
+      // OMA Original — nur Mods (für Captains oben entfernt), siehe lib/oma-original.ts
+      ...(fields.omaOriginal           !== undefined && { omaOriginal:           fields.omaOriginal === true }),
       ...(fields.squadId               !== undefined && { squadId:               fields.squadId || null }),
       ...(fields.tournamentTemplateJson !== undefined && { tournamentTemplateJson: fields.tournamentTemplateJson }),
     },

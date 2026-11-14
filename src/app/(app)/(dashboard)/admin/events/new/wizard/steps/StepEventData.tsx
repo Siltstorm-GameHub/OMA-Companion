@@ -7,6 +7,7 @@ import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
+import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 import { NumberInput } from "@/components/ui/NumberInput";
@@ -104,6 +105,15 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           <label className={labelCls}>Discord-Textkanal (optional)</label>
           <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (Kanal der Reihe, sonst News-Kanal)" />
         </div>
+      )}
+
+      {!w.isCommunity && (
+        <OmaOriginalToggle
+          kind="event"
+          checked={w.eventOmaOriginal}
+          onChange={w.setEventOmaOriginal}
+          inheritedFromSeries={seriesMode === "existing" && !!w.selectedSeries?.omaOriginal}
+        />
       )}
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 space-y-2">

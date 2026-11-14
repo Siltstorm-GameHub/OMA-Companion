@@ -16,6 +16,8 @@ export type SeriesOption = {
   fixedFormat?: string | null;
   /** Turniervorlage der Reihe (siehe lib/series-seasons.ts) — füllt Check-in und Punktemodus vor */
   tournamentTemplateJson?: string | null;
+  /** OMA Original — Termine der Reihe gelten dann ebenfalls als Original (lib/oma-original.ts) */
+  omaOriginal?: boolean;
   _count: { events: number };
 };
 
@@ -60,6 +62,8 @@ export type SeasonPrefill = {
   seriesHidden: boolean;
   seriesRegistrationLocked: boolean;
   seriesSquadId: string;
+  /** OMA Original der Vorsaison */
+  seriesOmaOriginal?: boolean;
   spectatorMode: boolean;
   spectatorCoins: number;
   spectatorRankPts: number;
@@ -140,6 +144,8 @@ export type EventTemplate = {
   seriesId: string | null;
   registrationLocked: boolean;
   squadId: string;
+  /** OMA Original (nur das Event selbst, nicht über die Reihe geerbt) */
+  omaOriginal?: boolean;
   spectatorMode: boolean;
   spectatorCoins: number;
   spectatorRankPts: number;
