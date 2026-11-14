@@ -9,6 +9,7 @@ import type { EventCategory } from "@prisma/client";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
+import { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { CountUp } from "@/components/CountUp";
 import { acc } from "@/lib/accentColors";
 
@@ -48,7 +49,11 @@ export default function EventsTile({ items, activeEvents }: Props) {
   return (
     <Link href="/events"
       className="surface animate-slide-up stagger-1 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-      style={{ borderRadius: "6px", border: `1px solid ${acc("teal", 0.12)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+      style={{
+        borderRadius: "6px",
+        border: `1px solid ${acc("teal", event?.omaOriginal ? 0.45 : 0.12)}`,
+        boxShadow: event?.omaOriginal ? "0 4px 24px rgba(0,0,0,0.5), 0 0 24px rgba(20,184,166,0.14)" : "0 4px 24px rgba(0,0,0,0.5)",
+      }}>
 
       {/* Cover art area */}
       <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
@@ -62,10 +67,9 @@ export default function EventsTile({ items, activeEvents }: Props) {
             rounded="rounded-none"
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
             brandBadge
-            omaOriginal={event.omaOriginal}
           />
         ) : (
-          <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge omaOriginal={!!event?.omaOriginal} />
+          <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
         )}
         {/* Status badge */}
         {event && event.status === "active" ? (
@@ -115,11 +119,13 @@ export default function EventsTile({ items, activeEvents }: Props) {
 
       {/* Info area */}
       <div className="px-4 pb-4 pt-2 flex-1 min-h-0">
+        {event?.omaOriginal && <OmaOriginalSeal className="mb-2" />}
         <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">
           {event?.game ?? "Events"}
         </p>
         <div className="flex items-center gap-2">
           <p className="font-display text-base font-black text-white leading-tight truncate flex-1 min-w-0">
+            {event?.omaOriginal && <OmaTitlePrefix title={event.title} />}
             {event ? event.title : "Keine anstehenden Events"}
           </p>
           {event && <EventCategoryBadge category={event.category} className="shrink-0" />}

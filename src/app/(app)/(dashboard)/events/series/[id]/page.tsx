@@ -1,5 +1,6 @@
 import React from "react";
 import { isOmaOriginalSeries } from "@/lib/oma-original";
+import { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
@@ -675,7 +676,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             <SeriesIcon name={series.icon} className="w-4 h-4" />
             <span className="text-xs font-medium uppercase tracking-widest" style={{ color: `${seriesColor}b3` }}>Eventreihe</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-1" style={{ color: seriesColor }}>{series.name}</h1>
+          <div className="flex items-center gap-3 flex-wrap mb-1">
+            <h1 className="text-2xl font-bold tracking-tight" style={{ color: seriesColor }}>
+              {isOmaOriginalSeries(series) && <OmaTitlePrefix title={series.name} />}
+              {series.name}
+            </h1>
+            {isOmaOriginalSeries(series) && <OmaOriginalSeal />}
+          </div>
 
           {/* Badges */}
           {(series.fixedGame || series.fixedFormat) && (

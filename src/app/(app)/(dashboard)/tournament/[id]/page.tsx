@@ -1,5 +1,6 @@
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
+import { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import type { Metadata } from "next";
@@ -949,7 +950,11 @@ export default async function TournamentDetailPage({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h1 className="text-xl font-semibold text-white">{event.title}</h1>
+              <h1 className="text-xl font-semibold text-white">
+                {isOmaOriginal(event) && <OmaTitlePrefix title={event.title} />}
+                {event.title}
+              </h1>
+              {isOmaOriginal(event) && <OmaOriginalSeal />}
               {hasTournament && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-rose-900/30 text-rose-300 border border-rose-800/30">
                   {FORMAT_LABELS[format] ?? format}

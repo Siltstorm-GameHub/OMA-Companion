@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { isOmaOriginal } from "@/lib/oma-original";
+import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
+import OmaOriginalMark, { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
@@ -210,6 +211,8 @@ export default async function EventsPage() {
       // Community-Event (von einem normalen User erstellt, direkt oder über seine Reihe)
       const communityCreator = ev.approvalStatus || ev.series?.approvalStatus ? (ev.createdBy ?? null) : null;
       const communityBy = communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null;
+      const original = isOmaOriginal(ev);
+      const seriesOriginal = isOmaOriginalSeries(ev.series);
 
       return (
         <EventCardLink key={`ev-${ev.id}`}
@@ -217,13 +220,13 @@ export default async function EventsPage() {
           className="surface group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
           style={{
             borderRadius: 6,
-            border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
+            border: original ? "1px solid rgba(45,212,191,0.45)" : isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
+            boxShadow: original ? "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(45,212,191,0.12), 0 0 24px rgba(20,184,166,0.12)" : "0 4px 20px rgba(0,0,0,0.45)",
             aspectRatio: "1 / 1",
           }}>
           <div className="absolute inset-0">
             <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-full h-full" rounded="rounded-none"
-              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge omaOriginal={isOmaOriginal(ev)} />
+              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge />
           </div>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />
@@ -257,12 +260,19 @@ export default async function EventsPage() {
               <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/95 shrink-0">
                 <SeriesIcon name={ev.series?.icon} className="w-3 h-3" />
               </span>
-              <span className="text-xs font-bold text-white truncate">{ev.series?.name}</span>
+              <span className="text-xs font-bold text-white truncate">
+                {seriesOriginal && <OmaTitlePrefix title={ev.series?.name ?? ""} className="text-white/90" />}
+                {ev.series?.name}
+              </span>
             </GateLink>
           )}
           <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
+            {original && <OmaOriginalSeal className="mb-2" />}
             <div className="flex items-center gap-2 mb-1.5">
-              <p className="font-semibold text-white text-base truncate flex-1 min-w-0">{ev.title}</p>
+              <p className="font-semibold text-white text-base truncate flex-1 min-w-0">
+                {original && <OmaTitlePrefix title={ev.title} />}
+                {ev.title}
+              </p>
               {isTournament && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
             </div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -346,7 +356,13 @@ export default async function EventsPage() {
         <>
           <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-10 h-7 shrink-0" rounded="rounded" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
+                {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}
+                {ev.title}
+              </p>
+              {isOmaOriginal(ev) && <OmaOriginalMark />}
+            </div>
             <p className="text-[11px] text-gray-500">
               {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short" })}
               {ev.series && <> · {ev.series.name}</>}
@@ -499,6 +515,7 @@ export default async function EventsPage() {
                   <div className="flex-1 min-w-0">
                     <GateLink href={`/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
+                      {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}
                       {ev.title}
                     </GateLink>
                     <p className="text-[10px] text-gray-600">

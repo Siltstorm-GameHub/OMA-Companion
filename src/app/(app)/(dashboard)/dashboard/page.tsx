@@ -29,7 +29,8 @@ import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile, { type EventTileItem } from "@/components/EventsTile";
-import { isOmaOriginal } from "@/lib/oma-original";
+import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
+import OmaOriginalMark, { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
@@ -58,7 +59,7 @@ const getGlobalDashboardData = unstable_cache(
       prisma.eventSeries.findMany({
         where: { hidden: false, status: "active", events: { some: { status: { in: ["open", "active", "closed"] } } } },
         select: {
-          id: true, name: true, icon: true, fixedGame: true, category: true, coverImageUrl: true,
+          id: true, name: true, icon: true, fixedGame: true, category: true, coverImageUrl: true, omaOriginal: true,
           seriesStatConfig: true, legacyStandings: true,
           events: {
             orderBy: { startAt: "asc" },
@@ -159,6 +160,7 @@ const getGlobalDashboardData = unstable_cache(
       return {
         id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame, category: series.category,
         coverImageUrl: series.coverImageUrl,
+        omaOriginal: isOmaOriginalSeries(series),
         finishedCount, totalCount, leaderUserId, leaderPoints,
         nextEvent: nextEv ? {
           startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game, coverImageUrl: nextEv.coverImageUrl,
@@ -741,9 +743,13 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }} title={series.name}>
-                        {series.name}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }} title={series.name}>
+                          {series.omaOriginal && <OmaTitlePrefix title={series.name} />}
+                          {series.name}
+                        </p>
+                        {series.omaOriginal && <OmaOriginalMark />}
+                      </div>
                       <p className="text-[10px] text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
                         {nextDate ? (
                           <span className="flex items-center gap-1 shrink-0">
