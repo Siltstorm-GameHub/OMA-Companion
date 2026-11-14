@@ -18,6 +18,8 @@ import { getActiveTournaments } from "@/lib/blocks/tournament";
 import ChallengeCard from "./ChallengeCard";
 import TournamentTeaser from "./TournamentTeaser";
 import BlocksStartCard, { BlocksRewardsOverview } from "./BlocksStartCard";
+import OmaWordmark from "@/components/OmaWordmark";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
 import VersusLobbyLive from "./VersusLobbyLive";
 
 const PREVIEW = 10;
@@ -59,6 +61,15 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-8">
+      {/* Kopf: OMA Blocks als eigenes Produkt der Old Masters Allies */}
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div className="space-y-1.5">
+          <h2><OmaWordmark product="blocks" size="lg" /></h2>
+          <p className="text-xs text-gray-500">Das Community-Spiel der Old Masters Allies · Monatswertung, Versus und Live-Turniere</p>
+        </div>
+        <OmaOriginalMark />
+      </div>
+
       {/* Laufende / anstehende Events */}
       {(tournaments.length > 0 || challenges.length > 0) && (
         <div className="grid gap-3">

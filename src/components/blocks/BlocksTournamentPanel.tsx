@@ -3,6 +3,7 @@
 // OMA Blocks — Live-Turnier auf der Event-Seite (Stand, Zugang zum Turnier-Raum, Turnierleitung)
 // ============================================
 
+import OmaWordmark from "@/components/OmaWordmark";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -56,7 +57,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, isMod }: { ev
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest flex items-center gap-1">
-            <Swords className="w-3.5 h-3.5" /> OMA Blocks Live-Turnier
+            <Swords className="w-3.5 h-3.5" /> <OmaWordmark product="blocks" size="sm" className="normal-case" /> Live-Turnier
           </p>
           <p className="font-display text-lg font-bold text-white">{PHASE_LABEL[phase]}</p>
           <p className="text-xs text-gray-400">

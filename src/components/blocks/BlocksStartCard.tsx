@@ -50,7 +50,7 @@ export default function BlocksStartCard({ monthLabel, daysLeft, month, allTime, 
     >
       <div className="flex items-start gap-4 flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <p className="text-[10px] font-semibold text-teal-300/80 uppercase tracking-widest">OMA Blocks · Solo-Marathon</p>
+          <p className="text-[10px] font-semibold text-teal-300/80 uppercase tracking-widest">Solo-Marathon</p>
           {firstTime ? (
             <>
               <p className="font-display text-xl font-black text-white mt-0.5">Deine erste Runde</p>

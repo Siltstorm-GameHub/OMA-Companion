@@ -1,3 +1,5 @@
+import { OmaHex } from "@/components/OmaOriginalMark";
+
 /**
  * Marken-Rahmen für Cover: Diagonalstreifen in den oberen Ecken, farbige
  * Eckakzente, obere Trennlinie, "OLD MASTERS ALLIES"-Wasserzeichen und Vignette
@@ -11,7 +13,14 @@
  * Thumbnails (w-10 h-10 o.ä.) würde das nur unruhig wirken, siehe
  * `brandBadge`-Prop an GameCover/EventCoverDefault.
  */
-export default function CoverBrandBadge({ omaOriginal = false }: { omaOriginal?: boolean }) {
+export default function CoverBrandBadge({
+  omaOriginal = false,
+  coverHasLogo = false,
+}: {
+  omaOriginal?: boolean;
+  /** Logo-Vorlage: das Logo ist schon groß im Bild, deshalb nur der Schriftzug ohne zweites Logo */
+  coverHasLogo?: boolean;
+}) {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
@@ -69,7 +78,18 @@ export default function CoverBrandBadge({ omaOriginal = false }: { omaOriginal?:
         </text>
       </svg>
 
-      {omaOriginal && (
+      {omaOriginal && coverHasLogo && (
+        <div
+          className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-2.5 py-1.5"
+          title="OMA Original"
+        >
+          <OmaHex className="w-3 h-3.5" />
+          <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.18em] whitespace-nowrap">
+            <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
+          </span>
+        </div>
+      )}
+      {omaOriginal && !coverHasLogo && (
         <div
           className="absolute bottom-2 right-2 flex flex-col items-center gap-1 rounded-xl bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-3 pt-2.5 pb-1.5"
           title="OMA Original"

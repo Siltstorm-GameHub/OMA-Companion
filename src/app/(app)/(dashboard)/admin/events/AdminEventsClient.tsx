@@ -7,6 +7,7 @@ import ActionCountBadge from "@/components/ActionCountBadge";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
 import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ type Event = {
   category: string | null;
   completionData: boolean | string | number | null | object;
   hidden: boolean;
+  omaOriginal?: boolean;
   _count: { registrations: number };
 };
 
@@ -73,6 +75,7 @@ type Series = {
   category: string | null;
   recurrenceType: string | null;
   hidden: boolean;
+  omaOriginal?: boolean;
   _count: { events: number };
   events: Event[];
 };
@@ -132,6 +135,7 @@ function EventRow({ ev }: { ev: Event }) {
         <div className="flex items-center gap-2 flex-wrap">
           {attention && <ActionCountBadge count={1} title={attention.label} />}
           <span className="text-sm font-medium text-white truncate">{ev.title}</span>
+          {ev.omaOriginal && <OmaOriginalMark />}
           {ev.hidden && (
             <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
               <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
@@ -185,6 +189,7 @@ function SeriesRow({ s }: { s: Series }) {
             <ActionCountBadge count={attentionCount} title={`${attentionCount} Event(s) in dieser Reihe brauchen Aufmerksamkeit`} />
           )}
           <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
+          {s.omaOriginal && <OmaOriginalMark />}
           {s.hidden && (
             <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
               <EyeOff className="w-2.5 h-2.5" /> ausgeblendet

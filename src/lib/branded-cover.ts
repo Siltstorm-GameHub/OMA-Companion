@@ -159,6 +159,29 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
   return cachedBadge;
 }
 
+let cachedLabelBadge: { buffer: Buffer; width: number; height: number } | null = null;
+
+/** Nur der Schriftzug "OMA Original" mit dem Hexagon aus dem Logo — für Logo-Vorlagen, die das
+ *  Logo schon groß im Bild tragen (kein zweites Logo, aber trotzdem erkennbar als Original). */
+async function getLabelBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
+  const sharp = await loadSharp();
+  if (cachedLabelBadge) return cachedLabelBadge;
+  const chipW = 212;
+  const chipH = 44;
+  const svg = Buffer.from(
+    `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.25" y="1.25" width="${chipW - 2.5}" height="${chipH - 2.5}" rx="10" fill="#06080f" fill-opacity="0.85" stroke="#14b8a6" stroke-opacity="0.75" stroke-width="2.5"/>
+      <polygon points="30,9 41,15.5 41,28.5 30,35 19,28.5 19,15.5" fill="#9b1c24" stroke="#f4f5f5" stroke-width="2" stroke-linejoin="round"/>
+      <text x="52" y="28" font-family="system-ui,ui-sans-serif,sans-serif" font-size="15" font-weight="800" letter-spacing="3.5">
+        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="7">ORIGINAL</tspan>
+      </text>
+    </svg>`
+  );
+  const buffer = await sharp(svg).png().toBuffer();
+  cachedLabelBadge = { buffer, width: chipW, height: chipH };
+  return cachedLabelBadge;
+}
+
 let cachedGradientBg: Buffer | null = null;
 async function getGradientBackground(): Promise<Buffer> {
   const sharp = await loadSharp();
@@ -215,8 +238,8 @@ export async function generateBrandedCoverBuffer(
     ? (await fetchCoverFitBuffer(sourceUrl)) ?? (await getGradientBackground())
     : await getGradientBackground();
 
-  // Logo-Vorlagen tragen das Logo schon groß in der Mitte — kein zweites Badge
-  const badge  = omaOriginal && !coverHasOwnLogo(sourceUrl) ? await getLogoBadge() : null;
+  // Logo-Vorlagen tragen das Logo schon groß in der Mitte — dort nur der Schriftzug, kein zweites Logo
+  const badge  = !omaOriginal ? null : coverHasOwnLogo(sourceUrl) ? await getLabelBadge() : await getLogoBadge();
   const margin = 16;
 
   const result = await sharp(bg)
