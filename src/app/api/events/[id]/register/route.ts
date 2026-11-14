@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 import { isPeriodEvent } from "@/lib/event-period";
 import { addLateJoinerToCurrentRound } from "@/lib/tournaments/late-join";
+import { playerRegistrationBlock } from "@/lib/event-registration";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -22,27 +23,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
-  if (event.status === "finished" || event.status === "closed")
-    return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
   // Serverseitige Durchsetzung der Registrierungssperre bei Event-Start — unabhängig davon, ob
   // der Lazy-Sync (syncDueEventActivations, "open" → "active") für dieses Event schon gelaufen ist.
   // Ausnahme Zeitraum-Events (> 24 h mit Ende, lib/event-period.ts): Einstieg bis zum Ende möglich.
   const now = new Date();
   const lateJoinAllowed = isPeriodEvent(event) && !!event.endAt && event.endAt > now;
-  if (event.registrationLocked || event.series?.registrationLocked || (event.startAt <= now && !lateJoinAllowed))
-    return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
-  // Squad-Beschränkung gilt nur für Spieler, nicht für Zuschauer (siehe Event.squadId-Kommentar im Schema).
-  const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
-  if (role === "player" && restrictedSquadId) {
-    const membership = await prisma.squadMembership.findUnique({
-      where: { squadId_userId: { squadId: restrictedSquadId, userId } },
-    });
-    if (!membership) return NextResponse.json({ error: "Anmeldung nur für Mitglieder des zugehörigen Squads" }, { status: 403 });
+  if (role === "player") {
+    // Gemeinsame Prüfung mit der automatischen Anmeldung der Spielwahl (lib/event-registration.ts)
+    const block = await playerRegistrationBlock(event, userId, event._count.registrations, now);
+    if (block) return NextResponse.json({ error: block.error }, { status: block.status });
+  } else {
+    if (event.status === "finished" || event.status === "closed")
+      return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
+    // Squad-Beschränkung gilt nur für Spieler, nicht für Zuschauer (siehe Event.squadId-Kommentar im Schema).
+    if (event.registrationLocked || event.series?.registrationLocked || (event.startAt <= now && !lateJoinAllowed))
+      return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
+    if (!event.spectatorMode)
+      return NextResponse.json({ error: "Zuschauer-Registrierung nicht aktiviert" }, { status: 400 });
   }
-  if (role === "spectator" && !event.spectatorMode)
-    return NextResponse.json({ error: "Zuschauer-Registrierung nicht aktiviert" }, { status: 400 });
-  if (role === "player" && event.maxPlayers && event._count.registrations >= event.maxPlayers)
-    return NextResponse.json({ error: "Event ist voll" }, { status: 400 });
 
   const existing = await prisma.eventRegistration.findUnique({
     where: { userId_eventId: { userId, eventId } },

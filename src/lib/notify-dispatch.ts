@@ -58,6 +58,9 @@ const RULE_TYPE: Record<string, NotificationType> = {
   server_revoked:     "server",
   birthday:           "admin",
   game_drop:          "game",
+  game_vote_open:     "event_start",
+  game_vote_result:   "event_start",
+  game_vote_rules:    "admin",
   game_new_cards:     "game",
 };
 

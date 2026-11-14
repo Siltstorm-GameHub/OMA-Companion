@@ -63,6 +63,17 @@ export async function sendDiscordDM(
   }
 }
 
+/** Ändert die Embeds einer vorhandenen Bot-Nachricht (z.B. Event-Ankündigung nach der Spielwahl). */
+export async function editDiscordMessage(channelId: string, messageId: string, embed: DiscordEmbed): Promise<boolean> {
+  const res = await fetch(`${BASE}/channels/${channelId}/messages/${messageId}`, {
+    method:  "PATCH",
+    headers: { ...authHeader(), "Content-Type": "application/json" },
+    body:    JSON.stringify({ embeds: [embed] }),
+  });
+  if (!res.ok) console.error("[Discord] Nachricht bearbeiten fehlgeschlagen:", res.status, await res.text());
+  return res.ok;
+}
+
 /** Löscht eine Discord-Nachricht (z.B. Event-Ankündigung beim Löschen des Events). */
 export async function deleteDiscordMessage(channelId: string, messageId: string): Promise<void> {
   const res = await fetch(`${BASE}/channels/${channelId}/messages/${messageId}`, {

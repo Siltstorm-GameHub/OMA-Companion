@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { gameVoteDrawBlock } from "@/lib/game-vote/service";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,11 @@ export async function POST(req: NextRequest) {
   const statConfig = withSanitizedGoal(rawStatConfig, format ?? "single_elimination", statFields);
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
   const currentUser = await requireEventManager(eventId);
+  // Spielwahl: Turnier erst starten, wenn Spiel gewählt und Regeln freigegeben sind (lib/game-vote)
+  if (autoGenerate || status !== "pending") {
+    const block = await gameVoteDrawBlock(eventId);
+    if (block) return NextResponse.json({ error: block }, { status: 409 });
+  }
   // Squad-Captains: Münzen pro Match-Ergebnis auf die Obergrenze kappen (captain-reward-limits.ts)
   const pointsConfig = hasMinRole(currentUser.role, "moderator") ? rawPointsConfig : capMatchResultPoints(rawPointsConfig);
 

@@ -6,6 +6,8 @@ import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recur
 import { publishEvent } from "@/lib/event-publish";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
+import { parseGameVoteConfig } from "@/lib/game-vote/rules";
+import { createGameVote } from "@/lib/game-vote/service";
 
 /**
  * POST /api/admin/event-series/generate
@@ -88,7 +90,9 @@ export async function POST(req: NextRequest) {
   const nextEndAt = (nextDate as Date & { endAt?: Date }).endAt
     ?? (overrideDate && durationMs ? new Date(nextDate.getTime() + durationMs) : null);
 
-  const game            = series.fixedGame ?? lastEvent?.game ?? null;
+  // Spielwahl (lib/game-vote): Termin entsteht als Platzhalter ohne Spiel, Mitglieder wählen es
+  const gameVote        = parseGameVoteConfig(series.gameVoteJson).enabled;
+  const game            = gameVote ? null : series.fixedGame ?? lastEvent?.game ?? null;
   const discordChannelId = series.discordChannelId ?? lastEvent?.discordChannelId ?? null;
   // Umfragen-Konfiguration erben: Reihe hat Vorrang, sonst vom letzten Event übernehmen
   const pollsConfigJson = series.pollsConfigJson ?? lastEvent?.pollsConfigJson ?? null;
@@ -129,9 +133,12 @@ export async function POST(req: NextRequest) {
   // die Konfiguration, aber keine Umfrage, auf die tatsächlich abgestimmt werden könnte.
   await createPollsForEvent(newEvent.id, newEvent.startAt, parsePollsConfigJson(pollsConfigJson));
 
+  // Spielwahl vor der Ankündigung anlegen, damit Discord "Wird per Abstimmung gewählt" zeigt
+  const vote = gameVote ? await createGameVote(newEvent.id) : null;
+
   // Discord Scheduled Event + Kanal-Ankündigung + Push — gemeinsamer, fehlertoleranter Ablauf
   // (siehe lib/event-publish.ts), läuft nach der Antwort
   after(() => publishEvent(newEvent.id));
 
-  return NextResponse.json({ ok: true, event: newEvent });
+  return NextResponse.json({ ok: true, event: newEvent, gameVote: vote?.ok ? { shortened: vote.shortened } : vote ? { error: vote.error } : null });
 }

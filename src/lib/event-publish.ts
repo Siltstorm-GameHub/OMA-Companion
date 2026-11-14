@@ -13,7 +13,7 @@
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { announceNewEvent, createDiscordScheduledEvent } from "@/lib/discord-events";
+import { GAME_VOTE_PLACEHOLDER, announceNewEvent, createDiscordScheduledEvent } from "@/lib/discord-events";
 import { dispatchEventNotification, getNotificationRule } from "@/lib/notify-dispatch";
 
 import { parsePublishState, type PublishError, type PublishState } from "@/lib/event-publish-state";
@@ -39,9 +39,14 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
 export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true } } },
+    include: {
+      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true } },
+      gameVote: { select: { id: true } },
+    },
   });
   if (!event || event.hidden) return parsePublishState(event?.publishStateJson);
+  // Spielwahl läuft (lib/game-vote): Ankündigung mit Platzhalter, nach der Wahl wird sie aktualisiert
+  const gameLabel = event.game ?? (event.gameVote ? GAME_VOTE_PLACEHOLDER : null);
   // Community-Events (von normalen Usern angelegt) werden erst nach Mod-Freigabe angekündigt —
   // die Freigabe ruft publishEvent erneut auf (lib/community-events.ts). Bewusst inline statt
   // isAwaitingApproval, um keinen Import-Zyklus mit community-events.ts zu erzeugen.
@@ -84,7 +89,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
       const discordMessageId = await announceNewEvent({
         eventId: event.id,
         title: event.title,
-        game: event.game,
+        game: gameLabel,
         format: event.format,
         genre: event.genre,
         startAt: event.startAt,
@@ -114,7 +119,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
       await dispatchEventNotification("event_new", { id: event.id }, {
         placeholders: {
           "{eventName}": event.title,
-          "{game}":      event.game ?? "–",
+          "{game}":      gameLabel ?? "–",
           "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
         },
         skipDiscordChannel: true,

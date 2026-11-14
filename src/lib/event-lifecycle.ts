@@ -8,6 +8,7 @@
 // einzelne Event-Detail). Events ohne Spieler-Anmeldung bleiben bewusst "open" und werden beim
 // nächsten Aufruf erneut geprüft — kein Cleanup nötig, das ist gewünschtes Verhalten.
 
+import { syncGameVotes } from "@/lib/game-vote/service";
 import { prisma } from "@/lib/prisma";
 import { publishDueScheduledEvents } from "@/lib/event-publish";
 import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
@@ -27,6 +28,8 @@ export async function syncDueEventActivations(): Promise<void> {
   // Geplante Beiträge (Content Creator, z.B. Kampagnen-Erinnerung) — gleicher Lazy-Mechanismus
   await publishDueScheduledPosts().catch(() => {});
   await resolveDuePolls().catch(() => {});
+  // Spielwahl der Eventreihen: fällige Abstimmungen öffnen/auswerten (lib/game-vote/service.ts)
+  await syncGameVotes().catch(err => console.error("[game-vote] Sync", err));
 
   // Zeitraum-Events (Punktewertung/Durchschnittswerte): Runde 1 automatisch zum Starttermin eröffnen,
   // siehe lib/tournaments/period-rounds.ts — unabhängig davon, ob schon Spieler angemeldet sind

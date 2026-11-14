@@ -37,6 +37,8 @@ import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import CheckInButton from "./CheckInButton";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
+import GameVoteSection from "./GameVoteSection";
+import { addableGames, getGameVoteView } from "@/lib/game-vote/service";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
 import EventTippsList from "./EventTippsList";
 import EventPokalWinners from "@/components/EventPokalWinners";
@@ -240,6 +242,10 @@ export default async function TournamentDetailPage({
     resolved: p.resolved,
     correct: p.correct,
   }));
+
+  // Spielwahl (lib/game-vote): Termin einer Reihe, dessen Spiel die Mitglieder wählen
+  const gameVote = await getGameVoteView(event.id, userId);
+  const gameVoteAddable = gameVote && isMod && gameVote.status !== "closed" ? await addableGames(event.id) : [];
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
   const isRegistered  = !!myReg && myReg.role !== "spectator";
@@ -904,6 +910,11 @@ export default async function TournamentDetailPage({
         <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
       </div>
 
+      {/* ── Spielwahl (vor den Regeln — die werden nach der Wahl festgelegt) ── */}
+      {gameVote && (
+        <GameVoteSection eventId={event.id} view={gameVote} isMod={isMod} addable={gameVoteAddable} rules={event.rules} format={event.format} />
+      )}
+
       {/* ── Regelwerk (über dem Punktesystem) ─────────────────────────────── */}
       <RulesSection rules={event.rules} className="mb-5" />
 
@@ -947,6 +958,9 @@ export default async function TournamentDetailPage({
               )}
             </div>
             <div className="flex items-center gap-4 flex-wrap">
+              {!event.game && gameVote && (
+                <span className="text-sm text-amber-200">🗳️ Spiel wird per Abstimmung gewählt</span>
+              )}
               {(event.game || genreInfo) && (
                 <span className="flex items-center gap-1.5 text-sm text-gray-400">
                   {event.game && (gameListSlug

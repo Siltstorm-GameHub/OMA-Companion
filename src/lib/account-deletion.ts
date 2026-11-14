@@ -41,6 +41,8 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.steamSwipe.deleteMany({ where: { userId } }),
     prisma.igdbSwipe.deleteMany({ where: { userId } }),
     prisma.gameSwipeState.deleteMany({ where: { userId } }),
+    // Spielwahl: Stimmen offener Wahlen (beendete sind schon ausgezählt)
+    prisma.gameVoteBallot.deleteMany({ where: { userId, vote: { status: { not: "closed" } } } }),
     prisma.gameTip.deleteMany({ where: { byId: userId, status: { in: ["pending", "approved"] } } }),
 
     prisma.user.update({

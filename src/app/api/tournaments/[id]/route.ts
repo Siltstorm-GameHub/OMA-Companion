@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { gameVoteDrawBlock } from "@/lib/game-vote/service";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +22,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Community-Ziel in statConfig prüfen (nur Skill-Index, nur vorhandene Stat-Felder), siehe lib/community-goal.ts.
   // Ohne format im Body wird nur gegen die Stat-Felder geprüft — das Ziel wird ohnehin nur bei coop_stats angezeigt.
   const statConfig = withSanitizedGoal(body.statConfig, format === undefined ? "coop_stats" : format, statFields);
+
+  // Spielwahl: keine Auslosung, solange das Spiel gewählt wird bzw. die Regeln nicht freigegeben sind
+  if (GROUP_STAGE_ACTIONS.includes(generateMatches) || generateMatches === "single_elimination" || generateMatches === "round_robin" || generateMatches === "liga") {
+    const block = await gameVoteDrawBlock(eventId);
+    if (block) return NextResponse.json({ error: block }, { status: 409 });
+  }
 
   // Gruppenphase + K.O.: Gruppen auslosen / K.O.-Runde erzeugen / jeweils zurücksetzen
   if (GROUP_STAGE_ACTIONS.includes(generateMatches)) {

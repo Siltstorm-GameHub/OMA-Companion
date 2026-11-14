@@ -167,6 +167,7 @@ model User {
   gameTips                    GameTip[]   @relation("GameTipBy")
   gameTipsReviewed            GameTip[]   @relation("GameTipReviewedBy")
   gameSwipeState              GameSwipeState?
+  gameVoteBallots             GameVoteBallot[]
   gamesAdded                  Game[]                       @relation("GameAddedBy")
   gameEdits                   GameEdit[]
 }
@@ -285,6 +286,12 @@ model EventSeries {
   // Turniervorlage für neue Termine der Reihe, JSON: { groupStage?: GroupStageConfig,
   // checkInEnabled?: boolean, checkInMinutes?: number, matchResultPoints?: { win, draw } }
   tournamentTemplateJson String?
+  // Spielwahl (lib/game-vote): JSON { enabled, opensMode: "on_create" | "days_before", opensDaysBefore,
+  // closesHoursBefore, candidateCount, excludeLastN, voteCoins } — Mitglieder wählen das Spiel jedes Termins
+  gameVoteJson           String?
+  // Regeln je Spiel, die sich die Reihe nach der Freigabe merkt: JSON { [gameId]: { rules, format } }
+  gameRulesJson          String?
+  gameVotes              GameVote[]
   // Community-Reihen: von einem normalen User (ohne Mod-Rolle) angelegt. Der Ersteller darf die Reihe
   // verwalten; Belohnungen sind auf die Community-Obergrenzen gekappt (lib/community-event-limits.ts).
   createdById            String?
@@ -408,6 +415,10 @@ model Event {
   jobMediaAssets     JobMediaAsset[]
   jobMediaAlbums     JobMediaAlbum[]
   marketingCampaigns MarketingCampaign[]
+  gameVote           GameVote?
+  // Spielwahl beendet, Regeln/Format fürs gewählte Spiel noch nicht von einem Mod freigegeben —
+  // bis dahin keine Auslosung (lib/game-vote)
+  gameRulesPending   Boolean @default(false)
 
   @@index([createdById])
 }
@@ -2288,6 +2299,7 @@ model Game {
   edits     GameEdit[]
   matches   GameMatch[]
   tips      GameTip[]
+  voteCandidates GameVoteCandidate[]
 
   @@index([status])
   @@index([igdbId])
@@ -2330,6 +2342,59 @@ model SteamSwipe {
 
   @@id([userId, steamAppId])
   @@index([steamAppId])
+}
+
+/// Spielwahl eines Reihen-Termins (lib/game-vote): Mitglieder haken alle Kandidaten an, die sie spielen
+/// würden (Zustimmungswahl). Status: "prepared" (Mods stellen Kandidaten zusammen) → "open" → "closed".
+model GameVote {
+  id           String    @id @default(cuid())
+  eventId      String    @unique
+  seriesId     String
+  opensAt      DateTime
+  closesAt     DateTime
+  status       String    @default("prepared")
+  winnerGameId String?
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  event      Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  series     EventSeries         @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  candidates GameVoteCandidate[]
+  ballots    GameVoteBallot[]
+
+  @@index([seriesId])
+  @@index([status, closesAt])
+}
+
+model GameVoteCandidate {
+  id        String  @id @default(cuid())
+  voteId    String
+  gameId    String
+  origin    String // "auto" | "mod" | "carryover" (Platz 2/3 der vorigen Wahl)
+  fitScore  Int     @default(0)
+  fitLabel  String? // z.B. "5 von 8 Stammspielern sind am Start"
+  approvals Int? // Endstand (beim Schließen)
+  place     Int? // Endplatz (1 = gewählt)
+
+  vote    GameVote         @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  game    Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  ballots GameVoteBallot[]
+
+  @@unique([voteId, gameId])
+}
+
+model GameVoteBallot {
+  voteId      String
+  candidateId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  vote      GameVote          @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  candidate GameVoteCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, userId])
+  @@index([voteId, userId])
 }
 
 /// Wie SteamSwipe, für Entdecken-Karten ohne Steam-ID (nur IGDB, z.B. Konsolen- oder Epic-Spiele).

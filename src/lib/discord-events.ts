@@ -5,6 +5,9 @@ import { getNotificationRule, fillPlaceholders } from "@/lib/notify-dispatch";
 import { getEventPollWinners } from "@/lib/event-polls";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
+import { prisma } from "@/lib/prisma";
+import { resolveEventChannelId } from "@/lib/event-discord-channel";
+import { editDiscordMessage } from "@/lib/discord-rest";
 
 /** Felder, die die Cover-Priorität für ein Event bestimmen — von den
  *  Scheduled-Event-Funktionen unten geteilt, damit die Reihenfolge überall
@@ -310,4 +313,44 @@ export async function updateDiscordScheduledEvent(
     return false;
   }
   return true;
+}
+
+/** Spiel-Anzeige eines Events: Platzhalter, solange die Spielwahl (lib/game-vote) läuft. */
+export const GAME_VOTE_PLACEHOLDER = "🗳️ Wird per Abstimmung gewählt";
+
+/**
+ * Discord nach einer Änderung des Spiels nachziehen (Spielwahl): Scheduled Event (Titel/Cover) und die
+ * Ankündigung im Kanal (Embed) aktualisieren. Fehlertolerant — fehlende Teile werden übersprungen.
+ */
+export async function refreshEventAnnouncement(eventId: string): Promise<void> {
+  if (!process.env.DISCORD_BOT_TOKEN) return;
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: { series: { select: { coverImageUrl: true, discordChannelId: true, placementRewardsJson: true } }, gameVote: { select: { status: true } } },
+  });
+  if (!event) return;
+  const game = event.game ?? (event.gameVote ? GAME_VOTE_PLACEHOLDER : null);
+  if (event.discordEventId) {
+    await updateDiscordScheduledEvent(event.discordEventId, {
+      title: event.title, startAt: event.startAt, description: event.description, game: event.game,
+      coverImageUrl: event.coverImageUrl, seriesCoverImageUrl: event.series?.coverImageUrl ?? null,
+    }).catch(err => console.error("[Discord] Scheduled Event aktualisieren", err));
+  }
+  if (event.discordMessageId) {
+    const rule = await getNotificationRule("event_new");
+    const channelId = resolveEventChannelId(event) || rule?.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID;
+    if (!channelId) return;
+    let coins = 10;
+    try {
+      const raw = event.placementRewardsJson ?? event.series?.placementRewardsJson ?? null;
+      const parsed = raw ? JSON.parse(raw) as { participationCoins?: number } : null;
+      if (parsed?.participationCoins != null) coins = parsed.participationCoins;
+    } catch { /* Standardwert */ }
+    const players = await prisma.eventRegistration.count({ where: { eventId, role: "player" } });
+    const embed = await buildNewEventEmbed({
+      eventId: event.id, title: event.title, game, format: event.format, genre: event.genre, startAt: event.startAt,
+      maxPlayers: event.maxPlayers, pointReward: coins, teilnehmer: players,
+    });
+    await editDiscordMessage(channelId, event.discordMessageId, embed);
+  }
 }

@@ -5,6 +5,8 @@ import SeriesDetailClient from "./SeriesDetailClient";
 import ApprovalBanner from "../../events/ApprovalBanner";
 import { APPROVAL_PENDING } from "@/lib/community-events";
 import { parseSeriesCompletion, parseStatConfig } from "@/lib/series-seasons";
+import GameVoteSettings from "./GameVoteSettings";
+import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 
 export default async function AdminSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,6 +53,19 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
   const canUndoCompletion = series.status === "archived" && !groupSeasons.some(g =>
     g.id !== series.id && (g.status === "active" || (g.seasonNumber ?? 1) > (series.seasonNumber ?? 1)));
 
+  // Spielwahl: kommende Termine ohne Abstimmung (noch nicht ausgelost) — nur für Mods
+  const upcomingWithoutVote = isModerator
+    ? await prisma.event.findMany({
+        where: { seriesId: id, startAt: { gt: new Date() }, gameVote: null, matches: { none: {} } },
+        orderBy: { startAt: "asc" },
+        take: 5,
+        select: { id: true, title: true, startAt: true, game: true },
+      })
+    : [];
+  const squadName = series.squadId
+    ? (await prisma.squad.findUnique({ where: { id: series.squadId }, select: { name: true } }))?.name ?? null
+    : null;
+
   // Alle Stat-Felder der Saison-Gruppe — Auswahl für "Stat-Felder zusammenführen" (All-Time-Tabelle)
   const groupStatFields = [...new Set(groupSeasons.flatMap(g => {
     const cfg = parseStatConfig(g.seriesStatConfig);
@@ -68,6 +83,15 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
         seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
       />
+      {isModerator && series.status !== "archived" && (
+        <GameVoteSettings
+          seriesId={series.id}
+          initial={parseGameVoteConfig(series.gameVoteJson)}
+          fixedGame={series.fixedGame}
+          upcoming={upcomingWithoutVote.map(e => ({ ...e, startAt: e.startAt.toISOString() }))}
+          squadName={squadName}
+        />
+      )}
     </>
   );
 }
