@@ -8,6 +8,7 @@
 // Turnier-Modus (tournamentEventId, Seite /games/blocks/turnier/[eventId]): Statt Räume zu wählen, holt der
 // Client ein Ticket und betritt damit den Raum seiner Gruppe bzw. das Finale — Runden starten automatisch.
 
+import OmaWordmark from "@/components/OmaWordmark";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -712,7 +713,10 @@ export default function BlocksVersusClient({
     <div className="space-y-4">
       {header}
       <div className={fullscreen ? "hidden" : undefined}>
-        <h1 className="font-display text-2xl font-black text-white tracking-tight">{tourMode ? `OMA Blocks · ${tourState?.title ?? "Turnier"}` : "OMA Blocks · Versus"}</h1>
+        <h1 className="tracking-tight">
+          <span className="sr-only">OMA Blocks · </span>
+          <OmaWordmark product="blocks" size="md" suffix={tourMode ? (tourState?.title ?? "Turnier") : "Versus"} />
+        </h1>
         <p className="text-xs text-gray-500">
           {tourMode
             ? "Live-Turnier: Punkte je Runde nach Platz, die Besten jeder Gruppe kommen ins Finale."

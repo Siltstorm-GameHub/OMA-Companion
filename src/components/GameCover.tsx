@@ -114,7 +114,7 @@ export default function GameCover({
               else setImgError(true);
             }}
           />
-          {brandBadge && <CoverBrandBadge omaOriginal={omaOriginal && !coverHasOwnLogo(resolvedUrl)} />}
+          {brandBadge && <CoverBrandBadge omaOriginal={omaOriginal} coverHasLogo={coverHasOwnLogo(resolvedUrl)} />}
         </>
       ) : fallbackVariant === "plain" ? (
         <div className="w-full h-full" style={{ background: getGameFallbackGradient(game) }} />

@@ -9,6 +9,7 @@ import Image from "next/image";
 import { ChevronDown, ChevronUp, ChevronRight } from "@/components/icons";
 import { CalendarDays, Check, Tv2 } from "@/components/icons";
 import GameCover from "@/components/GameCover";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
 import { AvatarStack } from "@/components/AvatarStack";
 import ClientTime from "@/components/ClientTime";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -35,6 +36,8 @@ export type SeriesEventItem = {
   streamingPartners?: StreamingPartner[];
   registrations: { userId: string; user: EventUser }[];
   coverImageUrl?: string | null;
+  /** Einzeln als OMA Original markiert (eine Original-Reihe zeigt ihr Siegel schon im Kopf der Seite) */
+  omaOriginal?: boolean;
 };
 
 function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesEventItem; userId: string; fixedGame?: string | null; seriesCoverImageUrl?: string | null }) {
@@ -76,10 +79,13 @@ function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesE
       </div>
 
       <div className="relative flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">
-          {ev.title}
-          <span className="text-gray-500 font-normal"> · {formatBerlinDate(date, { day: "numeric", month: "numeric", year: "numeric" })}</span>
-        </p>
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-sm font-medium text-white truncate">
+            {ev.title}
+            <span className="text-gray-500 font-normal"> · {formatBerlinDate(date, { day: "numeric", month: "numeric", year: "numeric" })}</span>
+          </p>
+          {ev.omaOriginal && <OmaOriginalMark />}
+        </div>
 
         {/* Game + Genre */}
         {(ev.game ?? fixedGame ?? genreInfo) && (

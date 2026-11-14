@@ -4,6 +4,8 @@ import { getCommunityLimits } from "@/lib/community-event-limits";
 import { getCreatorUsage, isAwaitingApproval } from "@/lib/community-events";
 import { formatBerlinDate } from "@/lib/time";
 import GameCover from "@/components/GameCover";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
+import { isOmaOriginal } from "@/lib/oma-original";
 import SeriesIcon from "@/components/SeriesIcon";
 import { Plus, Settings, Users, Clock, Check, ChevronRight } from "@/components/icons";
 
@@ -38,7 +40,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
       orderBy: { startAt: "desc" },
       take: 30,
       select: {
-        id: true, title: true, startAt: true, status: true, game: true, coverImageUrl: true, hidden: true, approvalStatus: true,
+        id: true, title: true, startAt: true, status: true, game: true, coverImageUrl: true, hidden: true, approvalStatus: true, omaOriginal: true,
         _count: { select: { registrations: { where: { role: "player" } } } },
       },
     }),
@@ -47,7 +49,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 20,
       select: {
-        id: true, name: true, icon: true, status: true, hidden: true, approvalStatus: true, seasonNumber: true,
+        id: true, name: true, icon: true, status: true, hidden: true, approvalStatus: true, seasonNumber: true, omaOriginal: true,
         events: {
           where: { status: { notIn: CLOSED }, startAt: { gte: now } },
           orderBy: { startAt: "asc" },
@@ -63,7 +65,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
       take: 20,
       select: {
         role: true,
-        event: { select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true, series: { select: { name: true } } } },
+        event: { select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true, omaOriginal: true, series: { select: { name: true, omaOriginal: true } } } },
       },
     }),
   ]);
@@ -135,9 +137,12 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
                 <SeriesIcon name={s.icon} className="w-4 h-4" />
               </span>
               <div className="flex-1 min-w-0">
-                <Link href={`/events/series/${s.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
-                  {s.name}{s.seasonNumber ? ` · Saison ${s.seasonNumber}` : ""}
-                </Link>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Link href={`/events/series/${s.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
+                    {s.name}{s.seasonNumber ? ` · Saison ${s.seasonNumber}` : ""}
+                  </Link>
+                  {s.omaOriginal && <OmaOriginalMark />}
+                </div>
                 <p className="text-[11px] text-gray-500">
                   {s._count.events} Termine
                   {s.status === "archived" ? " · abgeschlossen" : s.events[0] ? ` · nächster: ${formatBerlinDate(s.events[0].startAt, { day: "2-digit", month: "short" })}` : ""}
@@ -165,9 +170,12 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
             <div key={e.id} className={`${rowCls} ${closed ? "opacity-60" : ""}`}>
               <GameCover game={e.game} coverUrl={e.coverImageUrl} className="w-12 h-8 shrink-0" rounded="rounded" />
               <div className="flex-1 min-w-0">
-                <Link href={`/tournament/${e.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
-                  {e.title}
-                </Link>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Link href={`/tournament/${e.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
+                    {e.title}
+                  </Link>
+                  {e.omaOriginal && <OmaOriginalMark />}
+                </div>
                 <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
                   {formatBerlinDate(e.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   <span>· {STATUS_LABEL[e.status] ?? e.status}</span>
@@ -192,7 +200,10 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
             <Link key={r.event.id} href={`/tournament/${r.event.id}`} className={`${rowCls} hover:bg-white/[0.04] transition-colors group`}>
               <GameCover game={r.event.game} coverUrl={r.event.coverImageUrl} className="w-12 h-8 shrink-0" rounded="rounded" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 font-medium truncate group-hover:text-white">{r.event.title}</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-sm text-gray-200 font-medium truncate group-hover:text-white">{r.event.title}</p>
+                  {isOmaOriginal(r.event) && <OmaOriginalMark />}
+                </div>
                 <p className="text-[11px] text-gray-500">
                   {formatBerlinDate(r.event.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                   {r.event.series && <> · {r.event.series.name}</>}
