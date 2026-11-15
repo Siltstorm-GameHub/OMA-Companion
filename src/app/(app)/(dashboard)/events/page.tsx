@@ -2,10 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
-import { CalendarDays, ExternalLink, Plus, Users, EyeOff, Lock } from "@/components/icons";
-import RegisterButton from "./RegisterButton";
+import { CalendarDays, ExternalLink, Plus, Users, EyeOff } from "@/components/icons";
 import SyncButton from "./SyncButton";
-import { GateLink, GateButton, GuestMoreCta } from "@/components/GuestGate";
+import { GateLink, GuestMoreCta } from "@/components/GuestGate";
+import EventCardActions from "@/components/events/EventCardActions";
 import { GUEST_UPCOMING_EVENTS_LIMIT, GUEST_FINISHED_EVENTS_LIMIT } from "@/lib/guest-access";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
@@ -23,16 +23,13 @@ import EventCard, { type EventCardData } from "@/components/events/EventCard";
 import NextEventHero from "@/components/events/NextEventHero";
 import RecentResultCard, { type RecentResultData } from "@/components/events/RecentResultCard";
 import EventFilterShell, { type EventFilterGame } from "@/components/events/EventFilterShell";
-import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
+import { EVENT_CARD_INCLUDE, eventDiscordUrl, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import { dayBucket, parseRanking, placementOf, startsInLabel } from "@/lib/event-display";
 import { gameNameKey } from "@/lib/games/slug";
 
-const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 const MAX_GAME_CHIPS = 5;
 
-const discordUrlOf = (ev: { discordEventId: string | null }) =>
-  ev.discordEventId && GUILD_ID ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
 
 export default async function EventsPage() {
   // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen), muss vor dem Event-Fetch
@@ -181,59 +178,6 @@ export default async function EventsPage() {
     hasResults: !!ev.completionData,
   }));
 
-  // ── Aktion je Zustand ──
-  const renderActions = (ev: EventCardSource, card: EventCardData) => {
-    const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
-    const isSquadMember = restrictedSquadId ? viewer.mySquadIds.has(restrictedSquadId) : true;
-    const isLocked = ev.registrationLocked || ev.series?.registrationLocked || false;
-    const canRegister = ev.status === "open" || ev.status === "active";
-    const running = card.phase.phase === "live" || card.phase.phase === "period";
-
-    if (card.phase.phase === "poll") {
-      return (
-        <GateLink href={`${card.href}#abstimmung`} className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors">
-          Abstimmen
-        </GateLink>
-      );
-    }
-    if (card.phase.phase === "gamevote" && !card.isRegistered) {
-      return (
-        <GateLink href={`${card.href}#spielwahl`} className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors">
-          Mitwählen
-        </GateLink>
-      );
-    }
-    if (!canRegister) return null;
-    if (!userId) {
-      return (
-        <GateButton
-          href={card.href}
-          title="Zum Mitspielen anmelden"
-          message="Für die Event-Anmeldung brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
-          className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400 transition-colors"
-        >
-          Mitmachen
-        </GateButton>
-      );
-    }
-    if (card.isRegistered || (!isLocked && isSquadMember)) {
-      return (
-        <RegisterButton
-          eventId={ev.id}
-          isRegistered={card.isRegistered}
-          isFull={card.phase.phase === "full"}
-          discordEventUrl={discordUrlOf(ev)}
-          joinLabel={running ? "Einsteigen" : "Anmelden"}
-          coins={card.coins}
-        />
-      );
-    }
-    return (
-      <span className="flex items-center gap-1 text-[11px] text-gray-500" title={isLocked ? "Anmeldung nur durch Admins" : "Anmeldung nur für Squad-Mitglieder"}>
-        <Lock className="w-3 h-3" /> {isLocked ? "Nur Admins" : "Nur Squad"}
-      </span>
-    );
-  };
 
   const hasAnything = recentFinishedItems.length > 0 || upcomingItems.length > 0 || finishedItems.length > 0;
 
@@ -279,7 +223,7 @@ export default async function EventsPage() {
           <NextEventHero
             ev={cards.get(heroItem.ev.id)!}
             startsIn={startsInLabel(heroItem.ev.startAt, now)}
-            discordUrl={discordUrlOf(heroItem.ev)}
+            discordUrl={eventDiscordUrl(heroItem.ev)}
           />
         )}
 
@@ -312,7 +256,7 @@ export default async function EventsPage() {
                         data-mine={card.relevance.length > 0 ? "1" : undefined}
                         data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}>
                         <ScrollReveal className="h-full">
-                          <EventCard ev={card} actions={renderActions(item.ev, card)} />
+                          <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />} />
                         </ScrollReveal>
                       </div>
                     );
@@ -370,7 +314,7 @@ export default async function EventsPage() {
           </div>
 
           {visibleFinished.map(({ ev }) => {
-              const discordUrl = discordUrlOf(ev);
+              const discordUrl = eventDiscordUrl(ev);
               const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
               return (
                 <EventCardLink key={`ev-fin-${ev.id}`}

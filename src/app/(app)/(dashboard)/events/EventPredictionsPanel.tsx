@@ -38,8 +38,8 @@ export default function EventPredictionsPanel({
                 <Target className="w-3.5 h-3.5 text-violet-400" /> Event-Sieger-Vorhersage
               </p>
               <ol className="list-decimal list-inside space-y-1.5">
-                <li>Öffne die Seite eines bevorstehenden Events (Tab "Events" oder <Link href="/events" className="text-violet-400 hover:text-violet-300">Eventliste</Link>).</li>
-                <li>Scrolle zum Bereich "Event-Gesamtsieger-Vorhersage" und wähle per Suche den Nutzer, der deiner Meinung nach das gesamte Event gewinnt.</li>
+                <li>Öffne die Seite eines bevorstehenden Events (Tab „Events“ oder <Link href="/events" className="text-violet-400 hover:text-violet-300">Eventliste</Link>).</li>
+                <li>Scrolle zum Bereich „Event-Gesamtsieger-Vorhersage“ und wähle per Suche den Nutzer, der deiner Meinung nach das gesamte Event gewinnt.</li>
                 <li>Lege einen Münzen-Einsatz fest und bestätige deinen Tipp.</li>
                 <li>Bis der Event-Start erreicht ist, kannst du deine Vorhersage jederzeit ändern oder löschen — danach ist sie gesperrt.</li>
                 <li>Liegst du nach Event-Ende richtig, bekommst du Münzen ausgezahlt und deine Serie wächst.</li>

@@ -182,7 +182,7 @@ function PollCard({
           {poll.myVote && (
             <p className="text-xs text-emerald-400 flex items-center gap-1">
               <Check className="w-3.5 h-3.5" />
-              Du hast für „{answers.find(a => a.id === poll.myVote)?.label ?? poll.myVote}" gestimmt
+              Du hast für „{answers.find(a => a.id === poll.myVote)?.label ?? poll.myVote}“ gestimmt
             </p>
           )}
 
@@ -291,7 +291,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
   if (polls.length === 0) return null;
 
   return (
-    <div id="abstimmung" className="space-y-3 scroll-mt-20">
+    <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Vote className="w-4 h-4 text-amber-400" />
         <h2 className="text-sm font-semibold text-white">Abstimmungen</h2>

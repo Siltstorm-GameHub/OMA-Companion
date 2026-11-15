@@ -1,6 +1,6 @@
 import React from "react";
 import { isOmaOriginalSeries } from "@/lib/oma-original";
-import { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
+import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
@@ -8,15 +8,25 @@ import Link from "next/link";
 import { TrendingUp } from "@/components/icons";
 import { Users } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
-import { ArrowLeft, Trophy, Crown, Flame, Swords, Gamepad2, Zap, Star, Archive, CheckCircle2, EyeOff } from "@/components/icons";
+import { ArrowLeft, Trophy, Crown, Swords, Gamepad2, Zap, Archive, CheckCircle2, EyeOff, CalendarPlus } from "@/components/icons";
 import RulesSection from "@/components/RulesSection";
-import { CountUp } from "@/components/CountUp";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameCover from "@/components/GameCover";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import PollsSection from "@/app/(app)/(dashboard)/tournament/[id]/PollsSection";
 import SeriesStandingsTable from "./SeriesStandingsTable";
-import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
+import SeriesEventList from "./SeriesEventList";
+import SeriesEventExtras from "./SeriesEventExtras";
+import SeasonTimeline, { type TimelineEvent } from "./SeasonTimeline";
+import { timelineStates } from "@/lib/series-timeline";
+import MyStandingCard, { type MyStanding } from "./MyStandingCard";
+import SectionTabs from "@/components/SectionTabs";
+import { parseRanking, startsInLabel } from "@/lib/event-display";
+import { formatBerlinDate } from "@/lib/time";
+import EventCard from "@/components/events/EventCard";
+import EventCardActions from "@/components/events/EventCardActions";
+import { EVENT_CARD_INCLUDE, toEventCardData } from "@/lib/event-card-data";
+import { loadEventViewerContext } from "@/lib/event-viewer";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
 import { computeEventPoints, computeStatStandings, resolveWinnerTargetKeys, type StatConfig } from "@/lib/series-event-points";
@@ -94,10 +104,9 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
 }
 
 /** Umschalter zwischen den Saisons einer Reihe und der All-Time-Tabelle */
-function SeasonSwitcher({ currentId, seasons, showAllTime }: {
+function SeasonSwitcher({ currentId, seasons }: {
   currentId: string;
   seasons: { id: string; name: string; seasonNumber: number | null; status: string }[];
-  showAllTime: boolean;
 }) {
   if (seasons.length < 2) return null;
   return (
@@ -116,12 +125,6 @@ function SeasonSwitcher({ currentId, seasons, showAllTime }: {
           </Link>
         );
       })}
-      {showAllTime && (
-        <a href="#all-time"
-          className="shrink-0 flex items-center gap-1 text-xs rounded-full px-3 py-1.5 border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 transition-colors whitespace-nowrap">
-          <Crown className="w-3 h-3" /> All-Time
-        </a>
-      )}
     </nav>
   );
 }
@@ -239,15 +242,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const standings = snapshotRows ?? live!.rows;
   const evStatFieldsSeen = live?.evStatFieldsSeen ?? new Set(snapshotRows!.flatMap(r => Object.keys(r.stats)));
 
-  // ── Hero Stats ─────────────────────────────────────────────────────────────
-  const gamePhaseCompleteCount = series.events.filter(e => {
-    if (!e.completionData) return false;
-    try { return (JSON.parse(e.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete === true; }
-    catch { return false; }
-  }).length;
-
+  // ── Eigener Rang ("Dein Stand") ────────────────────────────────────────────
   const myRank   = userId ? standings.findIndex(s => s.userId === userId) + 1 : 0;
-  const myPoints = userId ? (standings.find(s => s.userId === userId)?.totalPoints ?? 0) : 0;
 
   // ── Standings users ────────────────────────────────────────────────────────
   const standingUserIds = standings.map(s => s.userId);
@@ -405,25 +401,48 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const hasDelta = Object.keys(lastEventDelta).length > 0;
 
   // ── Event lists ────────────────────────────────────────────────────────────
-  // Events with user info for AvatarStack (cast to SeriesEventItem)
-  const eventsWithUsers = series.events as (typeof series.events[number] & {
-    registrations: { userId: string; user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number } }[];
-    streamingPartners: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[];
-  })[];
-
-  const activeEvents:   SeriesEventItem[] = eventsWithUsers
-    .filter(e => e.status === "active" || e.status === "umfrage")
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  const openEvents:     SeriesEventItem[] = eventsWithUsers
-    .filter(e => e.status === "open")
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  const finishedEventsAll = eventsWithUsers
+  const byStart = (a: { startAt: Date }, b: { startAt: Date }) => a.startAt.getTime() - b.startAt.getTime();
+  const activeEvents = series.events.filter(e => e.status === "active" || e.status === "umfrage").sort(byStart);
+  // "closed" = voll — bleibt bei den kommenden Terminen sichtbar
+  const openEvents = series.events.filter(e => e.status === "open" || e.status === "closed").sort(byStart);
+  const finishedEventsAll = series.events
     .filter(e => e.status === "finished")
     .sort((a, b) => getEventEndedAt(b).getTime() - getEventEndedAt(a).getTime());
   // Kürzlich beendete Events bleiben eine Zeit lang oben bei den anstehenden Events sichtbar,
   // bevor sie in die eingeklappten "Vergangenen Events" wandern.
-  const recentlyFinishedEvents: SeriesEventItem[] = finishedEventsAll.filter(e => isRecentlyFinished(e));
-  const finishedEvents: SeriesEventItem[] = finishedEventsAll.filter(e => !isRecentlyFinished(e));
+  const recentlyFinishedEvents = finishedEventsAll.filter(e => isRecentlyFinished(e));
+  const finishedEvents = finishedEventsAll.filter(e => !isRecentlyFinished(e));
+  // Max. 5 kommende Termine (laufende zuerst)
+  const upcomingEventIds = [
+    ...recentlyFinishedEvents,
+    ...activeEvents.slice(0, 5),
+    ...openEvents.slice(0, Math.max(0, 5 - activeEvents.length)),
+  ].map(e => e.id);
+  const pastEventIds = finishedEvents.map(e => e.id);
+
+  // Kacheln wie auf /events (EventCard, Zeilen-Variante) — eigene Abfrage mit den Kachel-Relationen
+  const [cardSources, viewer] = await Promise.all([
+    prisma.event.findMany({
+      where: { id: { in: [...upcomingEventIds, ...pastEventIds] } },
+      include: { ...EVENT_CARD_INCLUDE, streamingPartners: { include: { partner: { select: { id: true, name: true, twitchLogin: true, logoUrl: true } } } } },
+    }),
+    loadEventViewerContext(userId),
+  ]);
+  const sourceById = new Map(cardSources.map(e => [e.id, e]));
+  const seriesIsOriginal = isOmaOriginalSeries(series);
+  const renderSeriesCard = (eventId: string) => {
+    const ev = sourceById.get(eventId);
+    if (!ev) return null;
+    const card = toEventCardData(ev, viewer, userId, now);
+    // Auf der Reihenseite sind Reihe und Original-Siegel schon im Kopf — nicht auf jeder Kachel wiederholen
+    card.series = null;
+    if (seriesIsOriginal) card.omaOriginal = false;
+    return (
+      <EventCard key={ev.id} ev={card} variant="row"
+        extra={<SeriesEventExtras partners={ev.streamingPartners} placementRewardsJson={ev.placementRewardsJson} />}
+        actions={<EventCardActions ev={ev} card={card} viewer={viewer} userId={userId} />} />
+    );
+  };
 
   // ── Punktesystem ──────────────────────────────────────────────────────────
   const punkteItems: { emoji: string; label: string; pts: string; who: string }[] = [];
@@ -589,6 +608,116 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       })
     : [];
 
+  // ── Kopf: nächster Termin ─────────────────────────────────────────────────
+  const nextEventId = (activeEvents.find(e => e.status === "active") ?? openEvents[0])?.id ?? null;
+  const nextSource = nextEventId ? sourceById.get(nextEventId) ?? null : null;
+  const nextCard = nextSource ? toEventCardData(nextSource, viewer, userId, now) : null;
+  const nextStartsIn = nextSource ? startsInLabel(nextSource.startAt, now) : null;
+
+  // ── Saison-Verlauf ────────────────────────────────────────────────────────
+  const gamePhaseDoneIds = new Set(gamePhaseCompleteEvents.map(e => e.id));
+  const timelineSource = [...series.events].filter(e => !e.hidden).sort(byStart);
+  const timelineStateList = timelineStates(timelineSource.map(e => ({ status: e.status, gamePhaseDone: gamePhaseDoneIds.has(e.id) })));
+  const timelineEvents: TimelineEvent[] = timelineSource.map((e, i) => {
+    const state = timelineStateList[i];
+    const winnerId = state === "done" ? parseRanking(e.finalRankingJson)[0] : undefined;
+    const winner = winnerId ? e.registrations.find(r => r.userId === winnerId)?.user ?? null : null;
+    return { id: e.id, title: e.title, startAt: e.startAt, state, winner };
+  });
+
+  // ── Dein Stand ────────────────────────────────────────────────────────────
+  const myRow = myRank > 0 ? standings[myRank - 1] : null;
+  const myDelta = userId ? lastEventDelta[userId] : undefined;
+  const myStanding: MyStanding | null = myRow ? {
+    rank: myRank,
+    points: myRow.totalPoints,
+    participations: myRow.participations,
+    total: standings.length,
+    gapUp: myRank > 1 ? standings[myRank - 2].totalPoints - myRow.totalPoints : null,
+    gapDown: myRank < standings.length ? myRow.totalPoints - standings[myRank].totalPoints : null,
+    lastEvent: myDelta && gamePhaseCompleteEvents[0]
+      ? { title: gamePhaseCompleteEvents[0].title, pointsDelta: myDelta.pointsDelta, rankDelta: myDelta.rankDelta, participated: myDelta.participated }
+      : null,
+  } : null;
+
+  // ── Tabellen-Reiter ───────────────────────────────────────────────────────
+  const seasonTable = (
+    <div className="space-y-3">
+      {hasDelta && gamePhaseCompleteEvents[0] && (
+        <p className="flex items-center gap-1 text-[11px] text-emerald-500/80">
+          <TrendingUp className="w-3 h-3" /> Veränderung nach {gamePhaseCompleteEvents[0].title}
+        </p>
+      )}
+      <SeriesStandingsTable
+        rows={standings}
+        users={standingUsers}
+        statCols={statCfg.stats}
+        extraCols={extraCols}
+        currentUserId={userId}
+        showPoints={showPoints}
+        lastEventDelta={hasDelta ? lastEventDelta : undefined}
+        lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+        participationPoints={statCfg.participationPoints}
+        dominionStreaks={dominionStreaks}
+        dominionThreshold={statCfg.dominionBonus?.threshold}
+        fallbackStatField={fallbackStatField}
+        badges={isArchived ? undefined : standingBadges}
+        mode="compact"
+      />
+      {standings.length === 0 && (
+        <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
+          {isArchived ? "Keine Ergebnisse" : "Noch keine Ergebnisse"}
+        </div>
+      )}
+      {standings.length > 0 && (
+        <FullStandingsToggle
+          rows={standings}
+          users={standingUsers}
+          statCols={statCfg.stats}
+          extraCols={fullExtraCols}
+          currentUserId={userId}
+          showPoints={showPoints}
+          lastEventDelta={hasDelta ? lastEventDelta : undefined}
+          lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+          participationPoints={statCfg.participationPoints}
+          hasSpectatorTracking={hasSpectatorTracking}
+          dominionStreaks={dominionStreaks}
+          dominionThreshold={statCfg.dominionBonus?.threshold}
+          badges={standingBadges}
+        />
+      )}
+    </div>
+  );
+  const tableTabs = [
+    { key: "saison", label: isArchived ? "Endstand" : "Saison", panel: seasonTable },
+    ...(showAllTime ? [{
+      key: "all-time",
+      label: <span className="inline-flex items-center gap-1"><Crown className="w-3 h-3" /> All-Time</span>,
+      panel: (
+        <div id="all-time" className="space-y-2 scroll-mt-24">
+          <p className="text-[11px] text-gray-500">{groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</p>
+          <FullStandingsToggle
+            rows={allTimeStandings}
+            users={allTimeUsers}
+            statCols={allTimeStatCols}
+            extraCols={allTimeExtraCols}
+            currentUserId={userId}
+            showPoints={showPoints}
+            hasSpectatorTracking={allTimeHasSpectatorTracking}
+            defaultExpanded
+          />
+        </div>
+      ),
+    }] : []),
+    ...(archivedSeasons.length > 0 ? [{
+      key: "archiv",
+      label: "Archiv",
+      panel: <SaisonArchiv currentId={id} archivedSeasons={archivedSeasons} />,
+    }] : []),
+  ];
+
+  const participantCount = totalParticipantIds.size;
+
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
@@ -611,7 +740,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       <SeasonSwitcher
         currentId={id}
         seasons={groupSeasons.map(g => ({ id: g.id, name: g.name, seasonNumber: g.seasonNumber, status: g.status }))}
-        showAllTime={showAllTime}
       />
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────────── */}
@@ -624,136 +752,108 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Archiviert-Banner ────────────────────────────────────────────────── */}
-      {isArchived && (
-        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-amber-500/20 bg-amber-500/[0.04]">
-          <Archive className="w-4 h-4 text-amber-400 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-300">
-              Archiviert · Saison {series.seasonNumber ?? 1}
-              {series.archivedAt && (
-                <span className="text-amber-400/60 font-normal ml-2 text-xs">
-                  · abgeschlossen {new Date(series.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Berlin" })}
-                </span>
-              )}
+      {/* ── Kopf: Cover mit Name + nächster Termin (bzw. Gesamtsieger einer archivierten Saison) ── */}
+      <section aria-label={series.name} className="glass rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]">
+        {/* Cover-Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels → Default. Events der Reihe
+            ohne eigenes Cover erben dieses Cover auf ihrer eigenen Detailseite (tournament/[id]/page.tsx). */}
+        <div className="relative aspect-[16/8] lg:aspect-auto lg:min-h-[240px] overflow-hidden">
+          <GameCover
+            game={series.fixedGame}
+            coverUrl={series.coverImageUrl}
+            className="absolute inset-0 w-full h-full"
+            rounded="rounded-none"
+            imgClassName="w-full h-full object-cover"
+            brandBadge
+            omaOriginal={seriesIsOriginal}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d12]/95 via-[#0b0d12]/40 to-transparent pointer-events-none" />
+          <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full" style={{ background: seriesColor }} />
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest" style={{ color: seriesColor }}>
+              <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
+              Eventreihe{series.seasonNumber ? ` · Saison ${series.seasonNumber}` : ""}
             </p>
-            {overallWinners.length > 0 && (
-              <p className="text-xs text-amber-400/70 mt-0.5 flex items-center gap-1.5">
-                <Trophy className="w-3 h-3" />
-                Gesamtsieger: {overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Cover ──────────────────────────────────────────────────────── */}
-      {/* Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels (falls
-          gesetzt) → Default. Events der Reihe ohne eigenes Cover erben dieses
-          hier auf ihrer eigenen Detailseite (tournament/[id]/page.tsx). */}
-      <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden">
-        <GameCover
-          game={series.fixedGame}
-          coverUrl={series.coverImageUrl}
-          className="w-full h-full"
-          rounded="rounded-none"
-          imgClassName="w-full h-full object-cover"
-          brandBadge
-          omaOriginal={isOmaOriginalSeries(series)}
-        />
-        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
-      </div>
-
-      {/* ── Hero Banner ──────────────────────────────────────────────────────── */}
-      <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-rose-500/6 pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500/25 to-transparent pointer-events-none" />
-        <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-teal-500/5 blur-2xl pointer-events-none" />
-        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full" style={{ background: seriesColor }} />
-
-        <div className="relative pl-3">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <SeriesIcon name={series.icon} className="w-4 h-4" />
-            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: `${seriesColor}b3` }}>Eventreihe</span>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap mb-1">
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: seriesColor }}>
-              {isOmaOriginalSeries(series) && <OmaTitlePrefix title={series.name} />}
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight !text-white leading-tight mt-0.5">
+              {seriesIsOriginal && <OmaTitlePrefix title={series.name} />}
               {series.name}
             </h1>
-            {isOmaOriginalSeries(series) && <OmaOriginalSeal />}
-          </div>
-
-          {/* Badges */}
-          {(series.fixedGame || series.fixedFormat) && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {series.fixedGame && (
-                <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200">
                   <Gamepad2 className="w-3 h-3" /> {series.fixedGame}
                 </span>
               )}
               {series.fixedFormat && (
-                <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200">
                   <Swords className="w-3 h-3" /> {FORMAT_LABELS[series.fixedFormat] ?? series.fixedFormat}
                 </span>
               )}
+              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200 tabular-nums">
+                <Users className="w-3 h-3" /> {participantCount} {participantCount === 1 ? "Teilnehmer" : "Teilnehmende"}
+              </span>
             </div>
-          )}
-
-          {series.description && (
-            <p className="text-sm text-gray-400 mb-4 leading-relaxed">{series.description}</p>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { icon: Gamepad2, val: `${gamePhaseCompleteCount}/${series.events.length}`, label: "Events",      color: "text-teal-400"   },
-              { icon: Users,    val: totalParticipantIds.size,                            label: "Teilnehmer",  color: "text-blue-400"   },
-              { icon: Flame,    val: <CountUp to={myPoints} duration={900} />,            label: "Meine Punkte", color: "text-rose-400"  },
-              myRank > 0
-                ? { icon: Crown, val: `#${myRank}`, label: "Mein Rang", color: "text-amber-400" }
-                : { icon: Star,  val: "–",           label: "Mein Rang", color: "text-gray-500" },
-            ].map(({ icon: Icon, val, label, color }) => (
-              <div key={label} className="glass-heavy rounded-xl p-3 text-center">
-                <Icon className={`w-4 h-4 mx-auto mb-1.5 ${color}`} />
-                <p className="text-lg font-bold text-white tabular-nums leading-none">{val as React.ReactNode}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">{label}</p>
-              </div>
-            ))}
           </div>
         </div>
-      </div>
 
-      {/* ── Regelwerk ─────────────────────────────────────────────────────────── */}
-      <RulesSection rules={series.rules} />
-
-      {/* ── Eventreihen-Pokal (vergeben oder Vorschau) ────────────────────────── */}
-      {seriesPokale.length > 0 && (
-        <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
-      )}
-      {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
-        <PokalPreview category={series.category} isSeries={true} />
-      )}
-
-      {/* ── Punktesystem ─────────────────────────────────────────────────────── */}
-      {punkteItems.length > 0 && (
-        <div className="glass rounded-2xl p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-            <Zap className="w-3.5 h-3.5 text-teal-400" /> Punktesystem
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {punkteItems.map((p, i) => (
-              <div key={i} className="flex items-center gap-3 glass-heavy rounded-xl px-3 py-2.5">
-                <span className="text-xl shrink-0">{p.emoji}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white leading-tight truncate">{p.label}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 truncate">{p.who}</p>
+        <div className="flex flex-col gap-2 p-4 sm:p-5 border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+          {isArchived ? (
+            <>
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-400">
+                <Archive className="w-3.5 h-3.5" /> Saison abgeschlossen
+                {series.archivedAt && <span className="normal-case tracking-normal font-normal text-amber-400/60">· {formatBerlinDate(series.archivedAt, { day: "2-digit", month: "long", year: "numeric" })}</span>}
+              </p>
+              {overallWinners.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-300 shrink-0" />
+                  <p className="text-lg font-bold text-white">{overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}</p>
                 </div>
-                <span className="ml-auto text-sm font-bold text-teal-400 shrink-0">{p.pts}</span>
+              ) : (
+                <p className="text-sm text-gray-400">Kein Gesamtsieger eingetragen.</p>
+              )}
+              {activeSibling && (
+                <Link href={`/events/series/${activeSibling.id}`} className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400">
+                  Zur aktuellen Saison
+                </Link>
+              )}
+            </>
+          ) : nextCard && nextSource ? (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                {nextCard.phase.phase === "live" || nextCard.phase.phase === "period" ? "Läuft gerade" : "Nächster Termin"}
+              </p>
+              <Link href={nextCard.href} className="text-lg font-bold text-white leading-snug hover:underline line-clamp-2">
+                {nextCard.title}
+              </Link>
+              <p className="text-sm text-gray-300">
+                {nextCard.date.top === "HEUTE" ? "Heute" : nextCard.date.top === "MORGEN" ? "Morgen" : `${nextCard.date.weekday.charAt(0)}${nextCard.date.weekday.slice(1).toLowerCase()} ${nextCard.date.day}.`}
+                {" · "}{nextCard.date.time} Uhr
+                {nextStartsIn && <span className="text-teal-300"> · {nextStartsIn}</span>}
+              </p>
+              <p className="text-xs text-gray-500">
+                {nextCard.playerCount}{nextCard.maxPlayers ? `/${nextCard.maxPlayers}` : ""} dabei
+                {nextCard.friendNames.length > 0 && <> · <span className="text-gray-300">{nextCard.friendNames.join(", ")}</span></>}
+                {nextCard.urgency && <> · <span className="text-amber-300">{nextCard.urgency}</span></>}
+              </p>
+              <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+                <EventCardActions ev={nextSource} card={nextCard} viewer={viewer} userId={userId} />
+                <a href={`/api/events/${nextSource.id}/ics`} download
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08]">
+                  <CalendarPlus className="w-3.5 h-3.5" /> Kalender
+                </a>
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Nächster Termin</p>
+              <p className="text-sm text-gray-400">Gerade ist kein Termin geplant. Schau bald wieder vorbei.</p>
+            </>
+          )}
         </div>
-      )}
+
+        {series.description && (
+          <p className="lg:col-span-2 px-4 sm:px-5 py-3 border-t border-white/[0.06] text-sm text-gray-400 leading-relaxed">{series.description}</p>
+        )}
+      </section>
 
       {/* ── Umfragen (nur die aktuell aktive) — direkt hier abstimmbar ───────── */}
       {activePollGroups.length > 0 && (
@@ -776,124 +876,59 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Archivierte Saison: nur Reihentabelle, keine Einzel-Events ────────── */}
-      {isArchived ? (
-        <div className="space-y-3">
+      {/* ── Saison-Verlauf ────────────────────────────────────────────────────── */}
+      <SeasonTimeline events={timelineEvents} />
+
+      {/* ── Eventreihen-Pokal (vergeben) ──────────────────────────────────────── */}
+      {seriesPokale.length > 0 && (
+        <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
+      )}
+
+      {/* ── Tabelle (Reiter) | Dein Stand + Termine ───────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+        <section aria-label="Tabelle" className="lg:col-span-3 space-y-3 min-w-0">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Endstand der Saison
+            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
           </h2>
-          <SeriesStandingsTable
-            rows={standings}
-            users={standingUsers}
-            statCols={statCfg.stats}
-            extraCols={extraCols}
-            currentUserId={userId}
-            showPoints={showPoints}
-            participationPoints={statCfg.participationPoints}
-            dominionStreaks={dominionStreaks}
-            dominionThreshold={statCfg.dominionBonus?.threshold}
-            fallbackStatField={fallbackStatField}
-            mode="compact"
-          />
-          {standings.length === 0 && (
-            <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
-              Keine Ergebnisse
-            </div>
+          <SectionTabs ariaLabel="Tabelle" tabs={tableTabs} />
+        </section>
+
+        <div className="lg:col-span-2 space-y-5 min-w-0">
+          <MyStandingCard me={myStanding} loggedIn={!!userId} pointsLabel={showPoints ? "Punkte" : "Teilnahmen"} />
+          {!isArchived && (
+            <SeriesEventList
+              upcoming={upcomingEventIds.map(renderSeriesCard)}
+              past={pastEventIds.map(renderSeriesCard)}
+            />
           )}
         </div>
-      ) : (
-        /* ── Zweispalten: Events + Kompakte Tabelle ─────────────────────────── */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      </div>
 
-          {/* Linke Spalte: Events — max. 5 kommende Termine */}
-          <SeriesEventList
-            activeEvents={activeEvents.slice(0, 5)}
-            openEvents={openEvents.slice(0, Math.max(0, 5 - activeEvents.length))}
-            recentlyFinishedEvents={recentlyFinishedEvents}
-            finishedEvents={finishedEvents}
-            userId={userId ?? ""}
-            fixedGame={series.fixedGame}
-            seriesCoverImageUrl={series.coverImageUrl}
-          />
-
-          {/* Rechte Spalte: Kompakte Tabelle */}
-          <div className="space-y-3">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-              <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
-              {hasDelta && gamePhaseCompleteEvents[0] && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-normal normal-case tracking-normal">
-                  <TrendingUp className="w-3 h-3" /> nach {gamePhaseCompleteEvents[0].title}
-                </span>
-              )}
-            </h2>
-
-            <SeriesStandingsTable
-              rows={standings}
-              users={standingUsers}
-              statCols={statCfg.stats}
-              extraCols={extraCols}
-              currentUserId={userId}
-              showPoints={showPoints}
-              lastEventDelta={hasDelta ? lastEventDelta : undefined}
-              lastEventTitle={gamePhaseCompleteEvents[0]?.title}
-              participationPoints={statCfg.participationPoints}
-              dominionStreaks={dominionStreaks}
-              dominionThreshold={statCfg.dominionBonus?.threshold}
-              fallbackStatField={fallbackStatField}
-              badges={standingBadges}
-              mode="compact"
-            />
-            {standings.length === 0 && (
-              <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
-                Noch keine Ergebnisse
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Vollständige Tabelle (ausklappbar) ───────────────────────────────── */}
-      {standings.length > 0 && (
-        <FullStandingsToggle
-          rows={standings}
-          users={standingUsers}
-          statCols={statCfg.stats}
-          extraCols={fullExtraCols}
-          currentUserId={userId}
-          showPoints={showPoints}
-          lastEventDelta={hasDelta ? lastEventDelta : undefined}
-          lastEventTitle={gamePhaseCompleteEvents[0]?.title}
-          participationPoints={statCfg.participationPoints}
-          hasSpectatorTracking={hasSpectatorTracking}
-          dominionStreaks={dominionStreaks}
-          dominionThreshold={statCfg.dominionBonus?.threshold}
-          badges={standingBadges}
-        />
-      )}
-
-      {/* ── All-Time Leaderboard ─────────────────────────────────────────────── */}
-      {showAllTime && (
-        <div id="all-time" className="space-y-3 scroll-mt-24">
+      {/* ── So funktioniert's: Regeln, Punktesystem, Pokal ────────────────────── */}
+      {(series.rules || punkteItems.length > 0 || (isTournamentSeries && seriesPokale.length === 0 && !isArchived)) && (
+        <section id="regeln" aria-label="So funktioniert's" className="space-y-3 scroll-mt-24">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Crown className="w-3.5 h-3.5 text-amber-400" /> All-Time Leaderboard
-            <span className="text-[10px] text-gray-600 normal-case tracking-normal font-normal">· {groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</span>
+            <Zap className="w-3.5 h-3.5 text-teal-400" /> So funktioniert&apos;s
           </h2>
-          <FullStandingsToggle
-            rows={allTimeStandings}
-            users={allTimeUsers}
-            statCols={allTimeStatCols}
-            extraCols={allTimeExtraCols}
-            currentUserId={userId}
-            showPoints={showPoints}
-            hasSpectatorTracking={allTimeHasSpectatorTracking}
-            defaultExpanded
-          />
-        </div>
-      )}
-
-      {/* ── Vergangene Saisons ────────────────────────────────────────────────── */}
-      {archivedSeasons.length > 0 && (
-        <SaisonArchiv currentId={id} archivedSeasons={archivedSeasons} />
+          {punkteItems.length > 0 && (
+            <div className="glass rounded-2xl p-4">
+              <p className="text-[11px] font-semibold text-gray-500 mb-2.5">Punktesystem</p>
+              <div className="flex flex-wrap gap-2">
+                {punkteItems.map((p, i) => (
+                  <span key={i} className="flex items-center gap-2 glass-heavy rounded-lg px-2.5 py-1.5" title={p.who}>
+                    <span className="text-sm">{p.emoji}</span>
+                    <span className="text-xs text-gray-300">{p.label}</span>
+                    <span className="text-xs font-bold text-teal-400">{p.pts}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <RulesSection rules={series.rules} preview={4} />
+          {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
+            <PokalPreview category={series.category} isSeries={true} />
+          )}
+        </section>
       )}
 
     </div>

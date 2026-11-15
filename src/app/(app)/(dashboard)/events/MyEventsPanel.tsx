@@ -3,17 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { getCommunityLimits } from "@/lib/community-event-limits";
 import { getCreatorUsage, isAwaitingApproval } from "@/lib/community-events";
 import { formatBerlinDate } from "@/lib/time";
-import GameCover from "@/components/GameCover";
 import OmaOriginalMark from "@/components/OmaOriginalMark";
-import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
+import { isOmaOriginalSeries } from "@/lib/oma-original";
 import SeriesIcon from "@/components/SeriesIcon";
-import { Plus, Settings, Users, Clock, Check, ChevronRight } from "@/components/icons";
+import { Plus, Settings, Clock, Check, EyeOff } from "@/components/icons";
+import EventCard from "@/components/events/EventCard";
+import EventCardActions from "@/components/events/EventCardActions";
+import { EVENT_CARD_INCLUDE, toEventCardData } from "@/lib/event-card-data";
+import { loadEventViewerContext } from "@/lib/event-viewer";
 
 const CLOSED = ["finished", "closed"];
-
-const STATUS_LABEL: Record<string, string> = {
-  open: "Offen", active: "Läuft", closed: "Voll", umfrage: "Umfragephase", finished: "Beendet",
-};
 
 function ApprovalPill({ awaiting, community }: { awaiting: boolean; community: boolean }) {
   if (!community) return null;
@@ -32,17 +31,14 @@ function ApprovalPill({ awaiting, community }: { awaiting: boolean; community: b
  *  Limits und die eigenen Anmeldungen. */
 export default async function MyEventsPanel({ userId, isModerator = false }: { userId: string; isModerator?: boolean }) {
   const now = new Date();
-  const [limits, usage, myEvents, mySeries, registered] = await Promise.all([
+  const [limits, usage, myEvents, mySeries, registered, viewer] = await Promise.all([
     getCommunityLimits(),
     getCreatorUsage(userId),
     prisma.event.findMany({
       where: { createdById: userId, seriesId: null },
       orderBy: { startAt: "desc" },
       take: 30,
-      select: {
-        id: true, title: true, startAt: true, status: true, game: true, coverImageUrl: true, hidden: true, approvalStatus: true, omaOriginal: true,
-        _count: { select: { registrations: { where: { role: "player" } } } },
-      },
+      include: EVENT_CARD_INCLUDE,
     }),
     prisma.eventSeries.findMany({
       where: { createdById: userId },
@@ -59,15 +55,19 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
         _count: { select: { events: true } },
       },
     }),
-    prisma.eventRegistration.findMany({
-      where: { userId, event: { status: { notIn: CLOSED }, hidden: false } },
-      orderBy: { event: { startAt: "asc" } },
-      take: 20,
-      select: {
-        role: true,
-        event: { select: { id: true, title: true, startAt: true, game: true, coverImageUrl: true, omaOriginal: true, series: { select: { name: true, omaOriginal: true, fixedGame: true } } } },
+    // Eigene Anmeldungen: alles, was noch nicht beendet ist — auch volle ("closed") Events, für die
+    // man ja gerade deshalb einen Platz hat.
+    prisma.event.findMany({
+      where: {
+        status: { not: "finished" }, hidden: false,
+        OR: [{ seriesId: null }, { series: { hidden: false } }],
+        registrations: { some: { userId } },
       },
+      orderBy: { startAt: "asc" },
+      take: 20,
+      include: EVENT_CARD_INCLUDE,
     }),
+    loadEventViewerContext(userId),
   ]);
 
   const openEvents = myEvents.filter(e => !CLOSED.includes(e.status));
@@ -127,6 +127,24 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
         </div>
       </div>
 
+      {/* ── Eigene Anmeldungen — dieselben Kacheln wie auf der Events-Seite ── */}
+      {registered.length > 0 && (
+        <div className="space-y-2">
+          {sectionTitle("Angemeldet")}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+            {registered.map(e => {
+              const card = toEventCardData(e, viewer, userId, now);
+              const asSpectator = e.registrations.find(r => r.userId === userId)?.role === "spectator";
+              return (
+                <EventCard key={e.id} ev={card}
+                  extra={asSpectator ? <span className="text-[11px] text-gray-400">Als Zuschauer angemeldet</span> : undefined}
+                  actions={<EventCardActions ev={e} card={card} viewer={viewer} userId={userId} />} />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Eigene Reihen ── */}
       {mySeries.length > 0 && (
         <div className="space-y-1.5">
@@ -158,63 +176,38 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
         </div>
       )}
 
-      {/* ── Eigene Einzel-Events ── */}
+      {/* ── Eigene Einzel-Events (Zeilen-Kacheln mit Verwalten) ── */}
       <div className="space-y-1.5">
         {sectionTitle("Deine Events")}
         {openEvents.length === 0 && pastEvents.length === 0 && (
           <p className="text-sm text-gray-500 px-1">Du hast noch kein eigenes Event erstellt.</p>
         )}
-        {[...openEvents, ...pastEvents].map(e => {
-          const closed = CLOSED.includes(e.status);
-          return (
-            <div key={e.id} className={`${rowCls} ${closed ? "opacity-60" : ""}`}>
-              <GameCover game={e.game} coverUrl={e.coverImageUrl} className="w-12 h-8 shrink-0" rounded="rounded" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Link href={`/tournament/${e.id}`} className="text-sm text-gray-200 font-medium truncate block hover:text-white">
-                    {e.title}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          {[...openEvents, ...pastEvents].map(e => {
+            const closed = CLOSED.includes(e.status);
+            const card = toEventCardData(e, viewer, userId, now);
+            card.communityBy = null; // das bist du selbst
+            return (
+              <EventCard key={e.id} ev={card} variant="row"
+                extra={(e.hidden || (!closed && e.approvalStatus)) ? (
+                  <>
+                    {!closed && <ApprovalPill community={!!e.approvalStatus} awaiting={isAwaitingApproval(e)} />}
+                    {e.hidden && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-rose-300 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
+                        <EyeOff className="w-2.5 h-2.5" /> Ausgeblendet
+                      </span>
+                    )}
+                  </>
+                ) : undefined}
+                actions={
+                  <Link href={`/admin/events/${e.id}`} className={manageCls}>
+                    <Settings className="w-3.5 h-3.5" /> Verwalten
                   </Link>
-                  {isOmaOriginal(e) && <OmaOriginalMark />}
-                </div>
-                <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
-                  {formatBerlinDate(e.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  <span>· {STATUS_LABEL[e.status] ?? e.status}</span>
-                  <span className="flex items-center gap-0.5">· <Users className="w-3 h-3" />{e._count.registrations}</span>
-                  {e.hidden && <span>· ausgeblendet</span>}
-                </p>
-              </div>
-              {!closed && <ApprovalPill community={!!e.approvalStatus} awaiting={isAwaitingApproval(e)} />}
-              <Link href={`/admin/events/${e.id}`} className={manageCls}>
-                <Settings className="w-3.5 h-3.5" /> Verwalten
-              </Link>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── Eigene Anmeldungen ── */}
-      {registered.length > 0 && (
-        <div className="space-y-1.5">
-          {sectionTitle("Angemeldet")}
-          {registered.map(r => (
-            <Link key={r.event.id} href={`/tournament/${r.event.id}`} className={`${rowCls} hover:bg-white/[0.04] transition-colors group`}>
-              <GameCover game={r.event.game} coverUrl={r.event.coverImageUrl} className="w-12 h-8 shrink-0" rounded="rounded" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <p className="text-sm text-gray-200 font-medium truncate group-hover:text-white">{r.event.title}</p>
-                  {isOmaOriginal(r.event) && <OmaOriginalMark />}
-                </div>
-                <p className="text-[11px] text-gray-500">
-                  {formatBerlinDate(r.event.startAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  {r.event.series && <> · {r.event.series.name}</>}
-                  {r.role === "spectator" && " · Zuschauer"}
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-300 shrink-0" />
-            </Link>
-          ))}
+                } />
+            );
+          })}
         </div>
-      )}
+      </div>
     </div>
   );
 }

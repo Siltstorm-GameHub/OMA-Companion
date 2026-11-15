@@ -31,6 +31,12 @@ export const EVENT_CARD_INCLUDE = {
 
 export type EventCardSource = Prisma.EventGetPayload<{ include: typeof EVENT_CARD_INCLUDE }>;
 
+/** Link zum Discord-Event (falls synchronisiert) */
+export function eventDiscordUrl(ev: { discordEventId: string | null }): string | null {
+  const guild = process.env.DISCORD_GUILD_ID ?? "";
+  return ev.discordEventId && guild ? `https://discord.com/events/${guild}/${ev.discordEventId}` : null;
+}
+
 export function playersOf(ev: Pick<EventCardSource, "registrations">) {
   return ev.registrations.filter(r => r.role === "player");
 }
@@ -71,7 +77,8 @@ export function toEventCardData(
     id: ev.id,
     href: `/tournament/${ev.id}`,
     title: ev.title,
-    game: ev.game,
+    // Reihen mit festem Spiel: Termine ohne eigenes Spiel erben es (Cover, "Dein Spiel", Filter)
+    game: ev.game ?? ev.series?.fixedGame ?? null,
     coverUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
     omaOriginal: isOmaOriginal(ev),
     phase,
@@ -90,7 +97,7 @@ export function toEventCardData(
     urgency: isOpenPhase
       ? urgencyHint({ startAt: ev.startAt, maxPlayers: ev.maxPlayers, playerCount: players.length, isRegistered }, now)
       : null,
-    relevance: relevanceTags({ game: ev.game, squadId: ev.squadId ?? ev.series?.squadId ?? null }, viewer),
+    relevance: relevanceTags({ game: ev.game ?? ev.series?.fixedGame ?? null, squadId: ev.squadId ?? ev.series?.squadId ?? null }, viewer),
     avatars: sorted.slice(0, 3),
     friendNames,
     communityBy: communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null,
