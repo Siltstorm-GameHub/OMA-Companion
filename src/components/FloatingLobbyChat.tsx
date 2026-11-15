@@ -47,6 +47,7 @@ const NOTIF_ICONS: Record<string, string> = {
   clip:         "🎬",
   admin:        "📢",
   game:         "🎮",
+  event_comment: "💬",
 };
 
 function displayName(u: { name: string | null; username: string | null }) {

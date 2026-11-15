@@ -154,6 +154,9 @@ model User {
   communityIdeaVotes          CommunityIdeaVote[]
   communityBoardComments      CommunityBoardComment[]
   communityBoardCommentVotes  CommunityBoardCommentVote[]
+  eventComments               EventComment[]
+  eventCommentReactions       EventCommentReaction[]
+  eventCommentReads           EventCommentRead[]
   pokale                      Pokal[]
   blocksRuns                  BlocksRun[]
   blocksBests                 BlocksBest[]
@@ -431,8 +434,69 @@ model Event {
   // Spielwahl beendet, Regeln/Format fürs gewählte Spiel noch nicht von einem Mod freigegeben —
   // bis dahin keine Auslosung (lib/game-vote)
   gameRulesPending   Boolean @default(false)
+  comments           EventComment[]
+  commentReads       EventCommentRead[]
 
   @@index([createdById])
+}
+
+// ── Event-Absprachen (Kommentare je Event) ────────────────────────────────────
+// Freitext und Status-Meldungen ("komme später", "kann nicht", "bin bereit") für ein einzelnes Event —
+// bewusst getrennt von CommunityBoardComment (dort hängen Job-Gehälter/Einsprüche dran).
+// Logik: src/lib/event-comments.ts
+model EventComment {
+  id               String    @id @default(cuid())
+  eventId          String
+  userId           String
+  // Klartext, @-Erwähnungen als `[@Name](user:<id>)` (lib/report-mentions.ts)
+  content          String    @db.VarChar(1500)
+  kind             String    @default("text") // "text" | "status"
+  status           String? // bei kind = status: "late" | "absent" | "ready"
+  lateMin          Int? // bei status = late: ungefähre Verspätung in Minuten
+  pinned           Boolean   @default(false)
+  pinnedAt         DateTime?
+  // Gespiegelte Discord-Nachricht (nur angepinnte Nachrichten von Mods/Admins), zum Löschen beim Lösen
+  discordChannelId String?
+  discordMessageId String?
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  event     Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions EventCommentReaction[]
+
+  @@index([eventId, createdAt])
+  @@index([userId])
+}
+
+model EventCommentReaction {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  comment EventComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, emoji])
+}
+
+// Lesestand je User und Event: "neu"-Zähler auf den Eventkarten + Bündelung der Benachrichtigungen
+model EventCommentRead {
+  id             String    @id @default(cuid())
+  userId         String
+  eventId        String
+  lastReadAt     DateTime  @default(now())
+  // Letzte gebündelte Benachrichtigung — weitere erst nach 30 min bzw. nachdem gelesen wurde
+  lastNotifiedAt DateTime?
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────

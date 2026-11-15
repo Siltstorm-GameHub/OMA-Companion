@@ -26,6 +26,7 @@ import { formatBerlinDate } from "@/lib/time";
 import EventCard from "@/components/events/EventCard";
 import EventCardActions from "@/components/events/EventCardActions";
 import { EVENT_CARD_INCLUDE, toEventCardData } from "@/lib/event-card-data";
+import { getCommentCounts } from "@/lib/event-comments";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
@@ -429,11 +430,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     loadEventViewerContext(userId),
   ]);
   const sourceById = new Map(cardSources.map(e => [e.id, e]));
+  const commentCounts = await getCommentCounts(
+    userId ?? null,
+    cardSources.map(e => e.id),
+    new Set(cardSources.filter(e => e.registrations.some(r => r.userId === userId)).map(e => e.id)),
+  );
   const seriesIsOriginal = isOmaOriginalSeries(series);
   const renderSeriesCard = (eventId: string) => {
     const ev = sourceById.get(eventId);
     if (!ev) return null;
     const card = toEventCardData(ev, viewer, userId, now);
+    card.comments = commentCounts.get(ev.id) ?? null;
     // Auf der Reihenseite sind Reihe und Original-Siegel schon im Kopf — nicht auf jeder Kachel wiederholen
     card.series = null;
     if (seriesIsOriginal) card.omaOriginal = false;

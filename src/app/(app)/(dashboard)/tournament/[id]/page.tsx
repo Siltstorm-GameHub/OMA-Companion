@@ -12,11 +12,15 @@ import { isAwaitingApproval } from "@/lib/community-events";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Users, ChevronDown, ChevronRight, CalendarPlus, Lock, Gamepad2 } from "@/components/icons";
+import { Users, ChevronDown, ChevronRight, CalendarPlus, Lock, Gamepad2, MessageCircle } from "@/components/icons";
+import { GateButton } from "@/components/GuestGate";
 import { ArrowLeft, Clock, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
+import EventComments from "./EventComments";
+import { getCommentCounts, getLatestCommentStatuses } from "@/lib/event-comments";
+import { statusBadge } from "@/lib/event-comments-shared";
 import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
 import GameCover from "@/components/GameCover";
 import BotPreviewShell from "@/components/BotPreviewShell";
@@ -765,7 +769,17 @@ export default async function TournamentDetailPage({
   // rückt sie hinter die Turnieransicht und wird eingeklappt — außer es gibt keine eigene
   // Turnier-/Ziel-Ansicht, dann bleibt sie der Hauptinhalt. Desktop: immer Seitenspalte.
   const hasStarted = event.status === "finished" || event.startAt <= new Date();
+  // Status-Hinweise ("komme später" …) nach Eventende ausblenden
+  const pagePhaseForStatus = event.status === "finished" ? "after" : "open";
   const collapseParticipantsOnMobile = hasStarted && (hasTournament || !!communityGoalProgress);
+
+  // Event-Absprachen: Status je Teilnehmer ("komme später" …) + ungelesene Nachrichten (nur Mitglieder)
+  const [commentStatuses, commentCounts] = userId
+    ? await Promise.all([
+        getLatestCommentStatuses(event.id),
+        getCommentCounts(userId, [event.id], myReg ? new Set([event.id]) : new Set()),
+      ])
+    : [new Map<string, never>(), new Map<string, { total: number; unread: number }>()];
 
   const participantList = (
     <div className="glass rounded-2xl divide-y divide-white/5">
@@ -798,6 +812,16 @@ export default async function TournamentDetailPage({
                       Ungewertet
                     </span>
                   )}
+                  {(() => {
+                    const st = commentStatuses.get(user.id);
+                    if (!st || pagePhaseForStatus === "after") return null;
+                    const b = statusBadge(st.status, st.lateMin);
+                    return (
+                      <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${b.className}`}>
+                        {b.label}
+                      </span>
+                    );
+                  })()}
                   {votedUserIds.has(user.id) && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                       <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
@@ -1068,6 +1092,7 @@ export default async function TournamentDetailPage({
     { href: "#abstimmung", label: "Abstimmung", show: hasPollStuff },
     { href: "#turnier", label: hasTournament ? "Turnier" : "Ablauf", show: hasTournament || !!communityGoalProgress },
     { href: "#teilnehmer", label: "Teilnehmer", show: sortedRegistrations.length > 0 },
+    { href: "#absprachen", label: "Absprachen", show: !!userId },
     { href: "#beitraege", label: "Beiträge", show: true },
     { href: "#regeln", label: "Regeln", show: !!event.rules },
   ].filter(l => l.show);
@@ -1485,12 +1510,35 @@ export default async function TournamentDetailPage({
     </div>
   );
 
+  // ── Absprachen (Kommentare): vor dem Start weit oben und offen, danach mobil eingeklappt ──
+  const commentsNode = userId ? (
+    <div className="mb-5 lg:max-w-3xl">
+      <EventComments
+        eventId={event.id}
+        userId={userId}
+        isPlayer={isRegistered}
+        initialUnread={commentCounts.get(event.id)?.unread ?? 0}
+        collapsedOnMobile={pagePhase !== "before"}
+      />
+    </div>
+  ) : (
+    <div id="absprachen" className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 text-sm text-gray-400 lg:max-w-3xl">
+      <MessageCircle className="w-4 h-4 text-teal-300 shrink-0" />
+      <span className="flex-1">Absprachen zum Event gibt es für Mitglieder.</span>
+      <GateButton href={`/tournament/${event.id}`} title="Mitreden"
+        message="Für die Absprachen brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
+        className="text-xs px-3 py-1.5 rounded-lg font-semibold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors">
+        Mitreden
+      </GateButton>
+    </div>
+  );
+
   // ── Reihenfolge je Phase ──
   const sections: Record<PagePhase, React.ReactNode[]> = {
-    before: [descriptionNode, gameVoteNode, blocksNode, tournamentNode, predictionNode, rulesNode, pokalNode, pollsNode, postsNode],
-    live: [streamNode, resultsNode, blocksNode, tournamentNode, pollsNode, predictionNode, descriptionNode, rulesNode, postsNode, pokalNode],
-    voting: [pollsNode, resultsNode, streamNode, tournamentNode, blocksNode, postsNode, predictionNode, descriptionNode, rulesNode, pokalNode],
-    after: [resultsNode, pokalNode, summaryNode, clipNode, postsNode, pollsNode, tournamentNode, blocksNode, predictionNode, descriptionNode, rulesNode],
+    before: [descriptionNode, gameVoteNode, blocksNode, tournamentNode, commentsNode, predictionNode, rulesNode, pokalNode, pollsNode, postsNode],
+    live: [streamNode, resultsNode, blocksNode, tournamentNode, commentsNode, pollsNode, predictionNode, descriptionNode, rulesNode, postsNode, pokalNode],
+    voting: [pollsNode, resultsNode, streamNode, tournamentNode, commentsNode, blocksNode, postsNode, predictionNode, descriptionNode, rulesNode, pokalNode],
+    after: [resultsNode, pokalNode, summaryNode, clipNode, postsNode, commentsNode, pollsNode, tournamentNode, blocksNode, predictionNode, descriptionNode, rulesNode],
   };
   // Stream gehört vor dem Event und danach nicht nach oben — aber nicht verloren gehen lassen
   if (pagePhase === "before" && streamNode) sections.before.splice(1, 0, streamNode);

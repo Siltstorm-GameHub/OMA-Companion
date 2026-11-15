@@ -11,6 +11,7 @@ const DEFAULT_PREFS = {
   admin:     true,
   server:    true,
   game:      true,
+  eventComment: true,
   discordDm: true,
 };
 

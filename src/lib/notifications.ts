@@ -10,7 +10,8 @@ export type NotificationType =
   | "clip"
   | "admin"
   | "server"
-  | "game";
+  | "game"
+  | "event_comment";
 
 // Mapping von NotificationType auf den Präferenz-Key (auch von notify-dispatch.ts genutzt)
 export const PREF_KEY: Record<NotificationType, string> = {
@@ -24,6 +25,7 @@ export const PREF_KEY: Record<NotificationType, string> = {
   admin:        "admin",
   server:       "server",
   game:         "game", // Spieleliste: Angebote, Matches, GameSwipe-Drop und neue Karten
+  event_comment: "eventComment", // Event-Absprachen: neue Nachrichten, Erwähnungen, Status-Meldungen
 };
 
 function isTypeEnabled(prefs: Record<string, boolean>, type: NotificationType): boolean {

@@ -26,7 +26,7 @@ export async function sendDiscordMessage(
   channelId: string,
   embed: DiscordEmbed,
   content?: string,
-): Promise<void> {
+): Promise<string | null> {
   const body: Record<string, unknown> = { embeds: [{ ...embed, timestamp: embed.timestamp ?? new Date().toISOString() }] };
   if (content) body.content = content;
 
@@ -40,6 +40,9 @@ export async function sendDiscordMessage(
     const text = await res.text();
     throw new Error(`Discord API ${res.status}: ${text}`);
   }
+  // Message-ID zurückgeben (z.B. zum späteren Löschen) — Aufrufer, die sie nicht brauchen, ignorieren sie
+  const msg = (await res.json().catch(() => null)) as { id?: string } | null;
+  return msg?.id ?? null;
 }
 
 /** Direktnachricht an einen einzelnen Discord-User senden (ohne Präferenz-Prüfung). */

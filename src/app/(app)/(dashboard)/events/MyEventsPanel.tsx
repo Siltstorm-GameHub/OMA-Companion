@@ -10,6 +10,7 @@ import { Plus, Settings, Clock, Check, EyeOff } from "@/components/icons";
 import EventCard from "@/components/events/EventCard";
 import EventCardActions from "@/components/events/EventCardActions";
 import { EVENT_CARD_INCLUDE, toEventCardData } from "@/lib/event-card-data";
+import { getCommentCounts } from "@/lib/event-comments";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 
 const CLOSED = ["finished", "closed"];
@@ -71,6 +72,12 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
   ]);
 
   const openEvents = myEvents.filter(e => !CLOSED.includes(e.status));
+  // Absprachen-Zähler für alle Kacheln dieses Panels (eine Abfrage)
+  const commentCounts = await getCommentCounts(
+    userId,
+    [...new Set([...registered, ...myEvents].map(e => e.id))],
+    new Set(registered.map(e => e.id)),
+  );
   const pastEvents = myEvents.filter(e => CLOSED.includes(e.status));
   // Mods/Admins: keine Mengenlimits (der Server prüft sie ebenfalls nur für normale User)
   const canCreateEvent = isModerator || usage.openEvents < limits.maxOpenEvents;
@@ -134,6 +141,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
             {registered.map(e => {
               const card = toEventCardData(e, viewer, userId, now);
+              card.comments = commentCounts.get(e.id) ?? null;
               const asSpectator = e.registrations.find(r => r.userId === userId)?.role === "spectator";
               return (
                 <EventCard key={e.id} ev={card}
@@ -186,6 +194,7 @@ export default async function MyEventsPanel({ userId, isModerator = false }: { u
           {[...openEvents, ...pastEvents].map(e => {
             const closed = CLOSED.includes(e.status);
             const card = toEventCardData(e, viewer, userId, now);
+            card.comments = commentCounts.get(e.id) ?? null;
             card.communityBy = null; // das bist du selbst
             return (
               <EventCard key={e.id} ev={card} variant="row"

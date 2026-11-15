@@ -14,6 +14,7 @@ import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventsTabs from "./EventsTabs";
+import { attachCommentCounts } from "@/lib/event-comments";
 import MyEventsPanel from "./MyEventsPanel";
 import SquadsList from "../squads/SquadsList";
 import EventPredictionsPanel from "./EventPredictionsPanel";
@@ -115,6 +116,7 @@ export default async function EventsPage() {
   const guestHasMore = !userId && (upcomingItems.length > visibleUpcoming.length || finishedItems.length > visibleFinished.length);
 
   const cards = new Map<string, EventCardData>(visibleUpcoming.map(i => [i.ev.id, toEventCardData(i.ev, viewer, userId, now)]));
+  await attachCommentCounts([...cards.values()], userId);
 
   // ── "Dein nächstes Event": laufend vor anstehend, Umfragephase zählt nicht mehr ──
   const heroItem = userId

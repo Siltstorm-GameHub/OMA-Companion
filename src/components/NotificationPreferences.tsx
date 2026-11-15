@@ -10,11 +10,13 @@ type Prefs = {
   clip:      boolean;
   admin:     boolean;
   game:      boolean;
+  eventComment: boolean;
   discordDm: boolean;
 };
 
 const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string }[] = [
   { key: "event",  label: "Events",          desc: "Event startet & Ergebnis (nur bei Anmeldung)", icon: "📅" },
+  { key: "eventComment", label: "Event-Absprachen", desc: "Neue Nachrichten, Erwähnungen & „komme später“ bei deinen Events", icon: "💬" },
   { key: "badge",  label: "Battle Cards",     desc: "Stufenaufstieg deiner Community-Karte",         icon: "🃏" },
   { key: "quest",  label: "Quests",           desc: "Quest abgeschlossen & Belohnung erhalten",      icon: "⭐" },
   { key: "points", label: "Punkte & Münzen",  desc: "Münzen oder Rang-Punkte erhalten",              icon: "💰" },

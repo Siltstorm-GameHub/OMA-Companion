@@ -4,7 +4,7 @@ import { AvatarStack } from "@/components/AvatarStack";
 import CoinIcon from "@/components/CoinIcon";
 import { GateLink } from "@/components/GuestGate";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
-import { Check, Heart, Timer, Users } from "@/components/icons";
+import { Check, Heart, MessageCircle, Timer, Users } from "@/components/icons";
 import { TONE_CLASSES, type EventPhaseInfo, type RelevanceTag } from "@/lib/event-display";
 
 export type EventCardAvatar = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
@@ -34,6 +34,8 @@ export type EventCardData = {
   /** "Max, Lena" — Freunde unter den Teilnehmenden (max. 2) */
   friendNames: string[];
   communityBy: string | null;
+  /** Event-Absprachen: Nachrichten gesamt / ungelesen (nachträglich gesetzt, lib/event-comments.ts) */
+  comments?: { total: number; unread: number } | null;
 };
 
 /**
@@ -197,6 +199,13 @@ export default function EventCard({
           <span className="flex items-center gap-2 text-[11px] text-gray-400 tabular-nums min-w-0">
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{ev.playerCount}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""}</span>
             {ev.coins > 0 && !past && <span className="flex items-center gap-0.5 font-semibold text-amber-400">+{ev.coins}<CoinIcon size={11} /></span>}
+            {ev.comments && ev.comments.unread > 0 ? (
+              <span className="flex items-center gap-1 rounded-full bg-teal-500/15 px-1.5 py-px font-semibold text-teal-300" title="Neue Nachrichten in den Absprachen">
+                <MessageCircle className="w-3 h-3" />{ev.comments.unread} neu
+              </span>
+            ) : ev.comments && ev.comments.total > 0 ? (
+              <span className="flex items-center gap-1" title="Nachrichten in den Absprachen"><MessageCircle className="w-3 h-3" />{ev.comments.total}</span>
+            ) : null}
           </span>
           {actions && <div className="relative z-10 flex items-center gap-1.5 shrink-0">{actions}</div>}
         </div>
