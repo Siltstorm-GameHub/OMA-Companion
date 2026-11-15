@@ -9,7 +9,8 @@ function isAuthorized(req: NextRequest): boolean {
   return auth === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-// Löscht Lobby-Nachrichten die älter als 7 Tage sind.
+// Löscht Lobby-Nachrichten die älter als 7 Tage sind. Die Lobby ist durch die Event-Absprachen ersetzt —
+// der Job räumt nur noch die Altbestände ab und kann danach (samt Tabelle) entfernt werden.
 // Wird täglich um 03:00 UTC von Vercel Cron aufgerufen.
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {

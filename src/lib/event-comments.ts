@@ -15,7 +15,7 @@ import { extractMentionedUserIds } from "@/lib/report-mentions";
 import {
   COMMENT_MAX_LENGTH, COMMENT_RATE_LIMIT_MS, COMMENT_STATUSES, REACTION_EMOJIS,
   commentLockAt, normalizeCommentInput, plainCommentText, sanitizeLateMin, shouldNotifyBundled, statusMessage,
-  type CommentStatus, type EventCommentDTO, type EventCommentsResponse,
+  eventCommentsUrl, type CommentStatus, type EventCommentDTO, type EventCommentsResponse, type EventThreadDTO,
 } from "@/lib/event-comments-shared";
 
 export type CommentViewer = { id: string; role: string };
@@ -173,11 +173,117 @@ export async function attachCommentCounts<T extends { id: string; isRegistered: 
 }
 
 export async function markEventCommentsRead(userId: string, eventId: string) {
-  await prisma.eventCommentRead.upsert({
-    where: { userId_eventId: { userId, eventId } },
-    create: { userId, eventId, lastReadAt: new Date() },
-    update: { lastReadAt: new Date() },
+  await Promise.all([
+    prisma.eventCommentRead.upsert({
+      where: { userId_eventId: { userId, eventId } },
+      create: { userId, eventId, lastReadAt: new Date() },
+      update: { lastReadAt: new Date() },
+    }),
+    // Zugehörige Benachrichtigungen sind damit erledigt — sonst zählt der Knopf dieselbe Nachricht doppelt
+    prisma.inAppNotification.updateMany({
+      where: { userId, type: "event_comment", read: false, url: eventCommentsUrl(eventId) },
+      data: { read: true },
+    }),
+  ]);
+}
+
+// ── Schnellzugriff (Panel): Absprachen "meiner" Events ────────────────────────
+
+const THREAD_LIMIT = 20;
+const WROTE_WITHIN_MS = 14 * 24 * 60 * 60_000;
+
+/**
+ * Events, deren Absprachen für den User relevant sind: angemeldet (anstehend, laufend oder noch nicht
+ * gesperrt) oder selbst kürzlich geschrieben. Sortierung: ungelesen → laufend → nach Start.
+ */
+export async function listEventThreads(userId: string): Promise<EventThreadDTO[]> {
+  const since = new Date(Date.now() - WROTE_WITHIN_MS);
+  const [regs, wrote] = await Promise.all([
+    prisma.eventRegistration.findMany({
+      where: { userId, event: { OR: [{ status: { not: "finished" } }, { startAt: { gt: since } }] } },
+      select: { eventId: true, role: true },
+    }),
+    prisma.eventComment.findMany({
+      where: { userId, createdAt: { gt: since } },
+      distinct: ["eventId"],
+      select: { eventId: true },
+    }),
+  ]);
+  const roleBy = new Map(regs.map(r => [r.eventId, r.role]));
+  const ids = [...new Set([...regs.map(r => r.eventId), ...wrote.map(w => w.eventId)])];
+  if (!ids.length) return [];
+
+  const events = await prisma.event.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true, title: true, status: true, startAt: true, endAt: true, completionData: true, hidden: true,
+      series: { select: { hidden: true, name: true } },
+    },
   });
+  const now = new Date();
+  const visible = events.filter(ev => {
+    if (isEventHidden(ev)) return false;
+    const endedAt = new Date(Math.max(getEventEndedAt(ev).getTime(), ev.endAt?.getTime() ?? 0));
+    const lockAt = commentLockAt({ status: ev.status, endedAt });
+    return !lockAt || lockAt > now;
+  });
+  if (!visible.length) return [];
+  const visibleIds = visible.map(e => e.id);
+
+  const [counts, lastRows, pinnedRows] = await Promise.all([
+    getCommentCounts(userId, visibleIds, new Set(visibleIds.filter(id => roleBy.has(id)))),
+    prisma.eventComment.findMany({
+      where: { eventId: { in: visibleIds }, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      distinct: ["eventId"],
+      select: { eventId: true, content: true, createdAt: true, user: { select: { username: true, name: true } } },
+    }),
+    prisma.eventComment.findMany({
+      where: { eventId: { in: visibleIds }, deletedAt: null, pinned: true },
+      orderBy: { pinnedAt: "desc" },
+      distinct: ["eventId"],
+      select: { eventId: true, content: true },
+    }),
+  ]);
+  const lastBy = new Map(lastRows.map(r => [r.eventId, r]));
+  const pinnedBy = new Map(pinnedRows.map(r => [r.eventId, r]));
+  const statuses = await prisma.eventComment.findMany({
+    where: { userId, eventId: { in: visibleIds }, kind: "status", deletedAt: null },
+    orderBy: { createdAt: "asc" },
+    select: { eventId: true, status: true, lateMin: true },
+  });
+  const myStatusBy = new Map(statuses.map(s => [s.eventId, s]));
+
+  const threads: EventThreadDTO[] = visible.map(ev => {
+    const c = counts.get(ev.id) ?? { total: 0, unread: 0 };
+    const last = lastBy.get(ev.id);
+    const st = myStatusBy.get(ev.id);
+    const role = roleBy.get(ev.id);
+    const phase: EventThreadDTO["phase"] = ev.status === "finished" ? "finished"
+      : ev.status === "active" || ev.startAt <= now ? "live" : "upcoming";
+    return {
+      eventId: ev.id,
+      title: ev.title,
+      seriesName: ev.series?.name ?? null,
+      startAt: ev.startAt.toISOString(),
+      phase,
+      total: c.total,
+      unread: c.unread,
+      last: last ? { author: displayName(last.user), text: plainCommentText(last.content), createdAt: last.createdAt.toISOString() } : null,
+      pinned: pinnedBy.get(ev.id) ? plainCommentText(pinnedBy.get(ev.id)!.content) : null,
+      registered: !!role,
+      isPlayer: !!role && role !== "spectator",
+      myStatus: st?.status ? { status: st.status as CommentStatus, lateMin: st.lateMin } : null,
+    };
+  });
+  const rank = (t: EventThreadDTO) => (t.phase === "live" ? 0 : t.phase === "upcoming" ? 1 : 2);
+  threads.sort((a, b) =>
+    (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0)
+    || rank(a) - rank(b)
+    || (rank(a) === 2
+      ? new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
+      : new Date(a.startAt).getTime() - new Date(b.startAt).getTime()));
+  return threads.slice(0, THREAD_LIMIT);
 }
 
 // ── Schreiben ─────────────────────────────────────────────────────────────────
@@ -399,7 +505,7 @@ export async function notifyNewEventComment(created: CreatedComment): Promise<vo
 
   const author = displayName(comment.user);
   const text = plainCommentText(comment.content);
-  const url = `/tournament/${ev.id}#absprachen`;
+  const url = eventCommentsUrl(ev.id);
   const notified = new Set<string>([created.authorId]);
 
   // 1) Erwähnungen

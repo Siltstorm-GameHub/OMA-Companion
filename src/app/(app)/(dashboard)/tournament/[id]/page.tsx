@@ -18,7 +18,7 @@ import { ArrowLeft, Clock, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCi
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
-import EventComments from "./EventComments";
+import EventComments from "@/components/events/EventComments";
 import { getCommentCounts, getLatestCommentStatuses } from "@/lib/event-comments";
 import { statusBadge } from "@/lib/event-comments-shared";
 import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";

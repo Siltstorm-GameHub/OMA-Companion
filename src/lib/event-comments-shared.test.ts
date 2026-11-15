@@ -51,3 +51,10 @@ test("shouldNotifyBundled: höchstens alle 30 min, nicht bei aktivem Leser", () 
   assert.equal(shouldNotifyBundled({ lastReadAt: ago(3_600_000), lastNotifiedAt: ago(10 * 60_000) }, now), false);
   assert.equal(shouldNotifyBundled({ lastReadAt: ago(3_600_000), lastNotifiedAt: ago(NOTIFY_BUNDLE_MS) }, now), true);
 });
+
+test("eventCommentsUrl / eventIdFromCommentsUrl", async () => {
+  const { eventCommentsUrl, eventIdFromCommentsUrl } = await import("./event-comments-shared");
+  assert.equal(eventIdFromCommentsUrl(eventCommentsUrl("abc123")), "abc123");
+  assert.equal(eventIdFromCommentsUrl("/tournament/abc123"), null);
+  assert.equal(eventIdFromCommentsUrl(null), null);
+});

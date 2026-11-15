@@ -21,17 +21,22 @@ type FoundUser = { id: string; username: string | null; name: string | null; ima
  * angepinnte Orga-Infos, Reaktionen und @-Erwähnungen. Aktualisiert sich alle 20 s, solange sichtbar.
  *
  * collapsedOnMobile: unter lg zunächst eingeklappt (Event läuft bereits) — ab lg immer offen.
+ * variant "panel": im Schnellzugriff (Benachrichtigungs-Panel) — ohne Kopf, füllt die volle Höhe.
  */
 export default function EventComments({
-  eventId, userId, isPlayer, initialUnread, collapsedOnMobile,
+  eventId, userId, isPlayer, initialUnread = 0, collapsedOnMobile = false, variant = "page", onRead,
 }: {
   eventId: string;
   userId: string;
   /** Als Spieler angemeldet (für "Kann nicht" → Abmelden anbieten) */
   isPlayer: boolean;
-  initialUnread: number;
-  collapsedOnMobile: boolean;
+  initialUnread?: number;
+  collapsedOnMobile?: boolean;
+  variant?: "page" | "panel";
+  /** Wird aufgerufen, nachdem der Lesestand gesetzt wurde (z.B. Zähler im Panel aktualisieren) */
+  onRead?: () => void;
 }) {
+  const isPanel = variant === "panel";
   const router = useRouter();
   const [data, setData] = useState<EventCommentsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,22 +67,22 @@ export default function EventComments({
 
   // Direktlink (#absprachen, z.B. aus einer Benachrichtigung): aufklappen und hinscrollen
   useEffect(() => {
-    if (window.location.hash !== "#absprachen") return;
+    if (isPanel || window.location.hash !== "#absprachen") return;
     const t = setTimeout(() => {
       setOpen(true);
       rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 300);
     return () => clearTimeout(t);
-  }, []);
+  }, [isPanel]);
 
   // Sichtbar & neue Nachrichten → als gelesen markieren
-  const isVisibleNow = () => open || window.matchMedia("(min-width: 1024px)").matches;
+  const isVisibleNow = () => isPanel || open || window.matchMedia("(min-width: 1024px)").matches;
   useEffect(() => {
     if (!data || !isVisibleNow()) return;
     if (data.comments.length !== lastSeenCount.current || unread > 0) {
       lastSeenCount.current = data.comments.length;
       setUnread(0);
-      fetch(`/api/events/${eventId}/comments/read`, { method: "POST" }).catch(() => {});
+      fetch(`/api/events/${eventId}/comments/read`, { method: "POST" }).then(() => onRead?.()).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, open, eventId]);
@@ -92,9 +97,9 @@ export default function EventComments({
   const total = data?.comments.length ?? 0;
 
   return (
-    <section id="absprachen" ref={rootRef} className="scroll-mt-24">
+    <section id={isPanel ? undefined : "absprachen"} ref={rootRef} className={isPanel ? "flex-1 min-h-0 flex flex-col" : "scroll-mt-24"}>
       {/* Kopf: mobil (eingeklappt) ein Knopf, ab lg eine Überschrift */}
-      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+      {!isPanel && <><button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
         className={`w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 text-left lg:hidden ${open ? "mb-3" : ""}`}>
         <MessageCircle className="w-4 h-4 text-teal-300 shrink-0" />
         <span className="text-sm font-semibold text-white">Absprachen</span>
@@ -108,9 +113,9 @@ export default function EventComments({
       <h2 className="hidden lg:flex text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 items-center gap-2">
         <MessageCircle className="w-3.5 h-3.5" /> Absprachen
         {total > 0 && <span className="text-gray-600 normal-case tracking-normal">{total}</span>}
-      </h2>
+      </h2></>}
 
-      <div className={`${open ? "" : "hidden"} lg:block glass rounded-2xl overflow-hidden`}>
+      <div className={isPanel ? "flex-1 min-h-0 flex flex-col" : `${open ? "" : "hidden"} lg:block glass rounded-2xl overflow-hidden`}>
         {!data && !error && (
           <div className="p-6 flex justify-center text-gray-500"><Loader2 className="w-5 h-5 animate-spin" /></div>
         )}
@@ -118,7 +123,7 @@ export default function EventComments({
         {data && (
           <>
             {pinned.length > 0 && (
-              <div className="border-b border-amber-500/15 bg-amber-500/[0.05] divide-y divide-amber-500/10">
+              <div className="shrink-0 border-b border-amber-500/15 bg-amber-500/[0.05] divide-y divide-amber-500/10">
                 {pinned.map(c => <PinnedItem key={c.id} c={c} eventId={eventId} canPin={data.canPin} onChange={load} />)}
               </div>
             )}
@@ -131,7 +136,7 @@ export default function EventComments({
             <div ref={listRef} onScroll={e => {
               const el = e.currentTarget;
               stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-            }} className="max-h-[26rem] overflow-y-auto overscroll-contain px-3 py-2 space-y-0.5">
+            }} className={`${isPanel ? "flex-1 min-h-0" : "max-h-[26rem]"} overflow-y-auto overscroll-contain px-3 py-2 space-y-0.5`}>
               {data.comments.length === 0 && (
                 <p className="text-sm text-gray-500 text-center py-6">
                   Noch keine Nachrichten. Fragen, Absprachen oder „ich komme etwas später“ — hier rein damit.
@@ -149,7 +154,7 @@ export default function EventComments({
             </div>
 
             {data.locked ? (
-              <p className="border-t border-white/5 px-4 py-3 text-xs text-gray-500">🔒 Die Absprachen zu diesem Event sind geschlossen.</p>
+              <p className="shrink-0 border-t border-white/5 px-4 py-3 text-xs text-gray-500">🔒 Die Absprachen zu diesem Event sind geschlossen.</p>
             ) : (
               <Composer eventId={eventId} onSent={async () => { stickToBottom.current = true; await load(); }} />
             )}
@@ -303,7 +308,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
 
       {/* Aktionen: Desktop beim Hover, mobil dezent immer sichtbar */}
       {!locked && !editing && (
-        <div className="flex items-start gap-0.5 shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex items-start gap-0.5 shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity sm:absolute sm:right-1 sm:top-1 sm:rounded-lg sm:bg-[#121418]/95 sm:border sm:border-white/10">
           <IconBtn label="Reagieren" onClick={() => setPicker(p => !p)}><Smile className="w-3.5 h-3.5" /></IconBtn>
           {canPin && (
             <IconBtn label={c.pinned ? "Lösen" : "Anpinnen"} onClick={() => run(async () => {
@@ -336,11 +341,13 @@ function IconBtn({ label, onClick, children }: { label: string; onClick: () => v
 
 // ── Status-Knöpfe ─────────────────────────────────────────────────────────────
 
-function StatusBar({ eventId, myStatus, isPlayer, onPosted }: {
+export function StatusBar({ eventId, myStatus, isPlayer, onPosted, compact = false }: {
   eventId: string;
   myStatus: EventCommentsResponse["myStatus"];
   isPlayer: boolean;
   onPosted: () => Promise<void>;
+  /** Ohne Rahmen/Beschriftung (Schnellzugriff im Panel) */
+  compact?: boolean;
 }) {
   const [lateOpen, setLateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -370,9 +377,9 @@ function StatusBar({ eventId, myStatus, isPlayer, onPosted }: {
       active ? "bg-white/10 border-white/25 text-white" : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.07]"}`;
 
   return (
-    <div className="border-b border-white/5 px-3 py-2.5">
+    <div className={compact ? "" : "shrink-0 border-b border-white/5 px-3 py-2.5"}>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-gray-500 mr-1">Kurz Bescheid geben:</span>
+        {!compact && <span className="text-[11px] text-gray-500 mr-1">Kurz Bescheid geben:</span>}
         <button type="button" disabled={busy} onClick={() => setLateOpen(o => !o)} className={chip(myStatus?.status === "late")}>⏰ Komme später</button>
         <button type="button" disabled={busy} onClick={() => post("absent")} className={chip(myStatus?.status === "absent")}>❌ Kann nicht</button>
         <button type="button" disabled={busy} onClick={() => post("ready")} className={chip(myStatus?.status === "ready")}>✅ Bin bereit</button>
@@ -464,7 +471,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
   }
 
   return (
-    <div className="relative border-t border-white/5 p-2.5">
+    <div className="relative shrink-0 border-t border-white/5 p-2.5">
       {mentionQuery && results.length > 0 && (
         <div className="absolute bottom-full left-2.5 right-2.5 mb-1 glass-heavy rounded-xl border border-white/10 overflow-hidden z-20">
           {results.map(u => (
@@ -478,7 +485,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
       )}
       <div className="flex items-end gap-2">
         <textarea ref={ref} value={text} rows={1} maxLength={1500}
-          placeholder="Nachricht schreiben… (@ für Erwähnung)"
+          placeholder="Nachricht (@ zum Erwähnen)"
           onChange={e => { setText(e.target.value); updateMention(e.target.value, e.target.selectionStart); }}
           onKeyDown={e => {
             // Desktop: Enter sendet, Shift+Enter = neue Zeile. Auf Touch-Geräten macht Enter eine neue Zeile.

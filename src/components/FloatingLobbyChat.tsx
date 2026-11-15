@@ -1,23 +1,16 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, X, Send, Bell, Settings } from "@/components/icons";
+import { MessageCircle, X, Bell, Settings } from "@/components/icons";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
-import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { Tabs } from "@/components/admin/Tabs";
-import { formatBerlinTime } from "@/lib/time";
 import { usePolling } from "@/lib/usePolling";
+import EventThreadsPanel from "@/components/events/EventThreadsPanel";
+import { eventIdFromCommentsUrl, type EventThreadDTO } from "@/lib/event-comments-shared";
 
 const NOTIF_DISPLAY_LIMIT = 30;
-
-interface LobbyMsg {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
-}
 
 interface PresenceUser {
   id: string;
@@ -65,25 +58,22 @@ function timeAgo(dateStr: string) {
   return `vor ${d} Tag${d !== 1 ? "en" : ""}`;
 }
 
+/**
+ * Knopf unten rechts mit Panel: Benachrichtigungen + Event-Absprachen (Schnellzugriff auf die
+ * Kommentare der eigenen Events — ersetzt die frühere Community-Lobby) und die Online-Leiste.
+ */
 export function FloatingLobbyChat() {
   const { data: session } = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"notifications" | "lobby">("notifications");
-  const [messages, setMessages] = useState<LobbyMsg[]>([]);
-  const [text, setText] = useState("");
-  const [unread, setUnread] = useState(0);
-  const [sending, setSending] = useState(false);
+  const [activeTab, setActiveTab] = useState<"notifications" | "threads">("notifications");
+  const [threads, setThreads] = useState<EventThreadDTO[]>([]);
+  const [threadsLoaded, setThreadsLoaded] = useState(false);
+  const [threadsUnread, setThreadsUnread] = useState(0);
+  const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const lastTimestampRef = useRef<string | null>(null);
-  // Spiegelt `open` für den Polling-Callback, der sonst über seine Closure einen veralteten
-  // Wert sähe. Die Zuweisung gehört in einen Effekt: eine Ref-Mutation während des Renders
-  // ist bei abgebrochenen oder doppelten Renderdurchläufen nicht verlässlich.
-  const openRef = useRef(false);
-  useEffect(() => { openRef.current = open; }, [open]);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifUnread, setNotifUnread] = useState(0);
@@ -139,6 +129,13 @@ export function FloatingLobbyChat() {
 
   async function handleNotifClick(n: Notification) {
     if (!n.read) await markRead(n.id);
+    // Absprachen-Benachrichtigung: Verlauf direkt hier im Panel öffnen statt die Seite zu wechseln
+    const threadEventId = eventIdFromCommentsUrl(n.url);
+    if (threadEventId) {
+      setSelectedThread(threadEventId);
+      setActiveTab("threads");
+      return;
+    }
     setOpen(false);
     if (n.url) router.push(n.url);
   }
@@ -157,57 +154,24 @@ export function FloatingLobbyChat() {
     }
   }, [isLoggedIn]);
 
-  const fetchMessages = useCallback(async (mode: "initial" | "poll" | "baseline") => {
+  const fetchThreads = useCallback(async () => {
     try {
-      const url =
-        mode !== "initial" && lastTimestampRef.current
-          ? `/api/lobby?after=${encodeURIComponent(lastTimestampRef.current)}`
-          : "/api/lobby";
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch("/api/me/event-threads", { cache: "no-store" });
       if (!res.ok) return;
-      const data: LobbyMsg[] = await res.json();
-
-      if (mode === "baseline") {
-        // Nur Timestamp setzen – keine Nachrichten anzeigen, kein Unread-Count
-        if (data.length) lastTimestampRef.current = data[data.length - 1].createdAt;
-        return;
-      }
-
-      if (!data.length) return;
-      lastTimestampRef.current = data[data.length - 1].createdAt;
-
-      setMessages((prev) => {
-        if (mode === "initial") return data;
-        const ids = new Set(prev.map((m) => m.id));
-        const fresh = data.filter((m) => !ids.has(m.id));
-        if (!fresh.length) return prev;
-        if (!openRef.current) setUnread((u) => u + fresh.length);
-        return [...prev, ...fresh];
-      });
-    } catch {
-      // Netzwerkfehler ignorieren
-    }
+      const data = await res.json() as { threads: EventThreadDTO[]; unreadTotal: number };
+      setThreads(data.threads);
+      setThreadsUnread(data.unreadTotal);
+      setThreadsLoaded(true);
+    } catch { /* Netzwerkfehler ignorieren */ }
   }, []);
 
-  // Baseline beim ersten Mount setzen (ohne Unread zu zählen)
-  useEffect(() => {
-    fetchMessages("baseline");
-  }, [fetchMessages]);
+  // Nach dem Lesen eines Verlaufs: Zähler und (automatisch erledigte) Benachrichtigungen neu laden
+  const refreshAfterRead = useCallback(() => { fetchThreads(); fetchNotifications(); }, [fetchThreads, fetchNotifications]);
 
-  // Wenn Chat geöffnet: Verlauf laden & Unread zurücksetzen
-  useEffect(() => {
-    if (open) {
-      setUnread(0);
-      lastTimestampRef.current = null;
-      fetchMessages("initial");
-    }
-  }, [open, fetchMessages]);
-
-  // Polling läuft nur bei sichtbarem Tab (usePolling) und bei geschlossenem Fenster deutlich
-  // seltener — jede Abfrage ist ein Vercel-Function-Aufruf. Wechselt `open`, startet das
-  // Intervall neu und lädt Benachrichtigungen/Presence sofort.
-  // Nachrichten: 4 s offen, 30 s geschlossen (dann nur für den Unread-Zähler).
-  usePolling(() => fetchMessages("poll"), open ? 4_000 : 30_000, { immediate: false });
+  // Polling nur bei sichtbarem Tab (usePolling), bei geschlossenem Fenster seltener — jede Abfrage ist
+  // ein Vercel-Function-Aufruf. Wechselt `open`, startet das Intervall neu und lädt sofort.
+  // Absprachen-Übersicht: 30 s offen, 60 s geschlossen (dann nur für den Zähler am Knopf).
+  usePolling(fetchThreads, session ? (open ? 30_000 : 60_000) : null);
   // Benachrichtigungen: 30 s offen, 60 s geschlossen.
   usePolling(fetchNotifications, open ? 30_000 : 60_000);
   // Presence + Heartbeat: 20 s offen, 60 s geschlossen (Aktiv-Fenster serverseitig 2 min).
@@ -222,53 +186,28 @@ export function FloatingLobbyChat() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Auto-Scroll ans Ende (nur im Lobby-Tab relevant)
-  useEffect(() => {
-    if (open && activeTab === "lobby") bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open, activeTab]);
-
   function handleToggle() {
     setOpen((o) => {
       const next = !o;
-      if (next) setActiveTab(notifUnread > 0 ? "notifications" : "lobby");
+      if (next) {
+        // Ungelesene Absprachen zuerst — sonst offene Benachrichtigungen, sonst die Absprachen-Übersicht
+        setSelectedThread(null);
+        setActiveTab(threadsUnread > 0 ? "threads" : otherNotifUnread > 0 ? "notifications" : "threads");
+      }
       return next;
     });
   }
 
-  async function handleSend() {
-    const trimmed = text.trim();
-    if (!trimmed || !session || sending) return;
-    setSending(true);
-    try {
-      const res = await fetch("/api/lobby", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed }),
-      });
-      if (res.ok) {
-        setText("");
-        await fetchMessages("poll");
-      }
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }
-
-  const totalBadge = notifUnread + unread;
+  // Absprachen-Benachrichtigungen nicht doppelt zählen — die stecken schon in threadsUnread
+  const otherNotifUnread = Math.max(0, notifUnread - notifications.filter(n => !n.read && n.type === "event_comment").length);
+  const totalBadge = otherNotifUnread + threadsUnread;
 
   return (
     <>
       {/* ── FAB ─────────────────────────────────────────────────────── */}
       <button
         onClick={handleToggle}
-        aria-label={open ? "Fenster schließen" : `Benachrichtigungen & Lobby öffnen${totalBadge > 0 ? ` (${totalBadge} neu)` : ""}`}
+        aria-label={open ? "Fenster schließen" : `Benachrichtigungen & Absprachen öffnen${totalBadge > 0 ? ` (${totalBadge} neu)` : ""}`}
         className={`lobby-chat-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && totalBadge > 0 ? " lobby-fab-pulse" : ""}`}
         style={{
           background: open
@@ -317,7 +256,7 @@ export function FloatingLobbyChat() {
 
       {/* ── Panel ───────────────────────────────────────────────────── */}
       <div
-        className="lobby-chat-panel fixed left-0 right-0 max-h-[70vh] rounded-t-2xl z-50 flex flex-col overflow-hidden"
+        className={`lobby-chat-panel fixed left-0 right-0 max-h-[70vh] rounded-t-2xl z-50 flex flex-col overflow-hidden ${activeTab === "threads" && selectedThread ? "h-[70vh] lg:h-auto" : ""}`}
         style={{
           background: "rgba(13,13,15,0.97)",
           backdropFilter: "blur(24px)",
@@ -345,7 +284,7 @@ export function FloatingLobbyChat() {
               style={{ background: "#14b8a6", boxShadow: "0 0 6px #14b8a6" }}
             />
             <span className="font-semibold text-sm text-white">
-              {activeTab === "notifications" ? "Benachrichtigungen" : "Community-Lobby"}
+              {activeTab === "notifications" ? "Benachrichtigungen" : "Event-Absprachen"}
             </span>
           </div>
           <button
@@ -362,7 +301,7 @@ export function FloatingLobbyChat() {
           <Tabs
             variant="underline"
             active={activeTab}
-            onChange={(key) => setActiveTab(key as "notifications" | "lobby")}
+            onChange={(key) => { setActiveTab(key as "notifications" | "threads"); setSelectedThread(null); }}
             tabs={[
               {
                 key: "notifications",
@@ -371,8 +310,8 @@ export function FloatingLobbyChat() {
                 activeClassName: "border-teal-500 text-white",
               },
               {
-                key: "lobby",
-                label: unread > 0 ? `Lobby (${unread})` : "Lobby",
+                key: "threads",
+                label: threadsUnread > 0 ? `Absprachen (${threadsUnread})` : "Absprachen",
                 icon: MessageCircle,
                 activeClassName: "border-teal-500 text-white",
               },
@@ -462,138 +401,52 @@ export function FloatingLobbyChat() {
           </div>
         )}
 
-        {/* ── Lobby ───────────────────────────────────────────────────── */}
-        {activeTab === "lobby" && (
+        {/* ── Absprachen (ersetzt die frühere Lobby) ─────────────────────── */}
+        {activeTab === "threads" && (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {/* Online-Spieler */}
-            {onlineUsers.length > 0 && (
-                <div
-                  className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-                >
-                  <span className="text-[10px] text-gray-500 flex-shrink-0">
-                    {onlineCount} online
-                  </span>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {onlineUsers.map((u) => (
-                      <Link
-                        key={u.id}
-                        href={`/profile/${u.id}`}
-                        onClick={() => setOpen(false)}
-                        className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
-                        title={displayName(u)}
-                      >
-                        <RankedAvatar userId={u.id} src={u.image} alt={displayName(u)} size={24} />
-                        <span
-                          className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                          style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
-                        />
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Nachrichten-Liste */}
-              <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
-                {messages.length === 0 && (
-                  <p className="text-center text-xs text-gray-600 py-10">
-                    Noch keine Nachrichten – fang an!
-                  </p>
-                )}
-                {messages.map((msg) => {
-                  const isOwn = msg.user.id === session?.user?.id;
-                  return (
-                    <div key={msg.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
-                      <Link
-                        href={`/profile/${msg.user.id}`}
-                        onClick={() => setOpen(false)}
-                        className="flex-shrink-0 self-end rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
-                        title={displayName(msg.user)}
-                      >
-                        <RankedAvatar userId={msg.user.id} src={msg.user.image} alt={displayName(msg.user)} size={28} />
-                      </Link>
-                      <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
-                        <span className="text-[10px] text-gray-500 font-medium">
-                          <StyledUserName userId={msg.user.id} name={displayName(msg.user)} />
-                        </span>
-                        <div
-                          className="text-sm px-3 py-1.5 leading-snug"
-                          style={
-                            isOwn
-                              ? {
-                                  background: "rgba(20,184,166,0.18)",
-                                  color: "rgba(255,255,255,0.92)",
-                                  borderRadius: "14px 14px 4px 14px",
-                                }
-                              : {
-                                  background: "rgba(255,255,255,0.06)",
-                                  color: "rgba(255,255,255,0.85)",
-                                  borderRadius: "14px 14px 14px 4px",
-                                }
-                          }
-                        >
-                          {msg.content}
-                        </div>
-                        <span className="text-[10px] text-gray-600">
-                          {formatBerlinTime(msg.createdAt, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div ref={bottomRef} />
-              </div>
-
-              {/* Input */}
+            {onlineUsers.length > 0 && !selectedThread && (
               <div
-                className="flex-shrink-0 flex items-center gap-2 px-3 py-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                {session ? (
-                  <>
-                    <input
-                      type="text"
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      onKeyDown={handleKey}
-                      placeholder="Nachricht schreiben…"
-                      maxLength={500}
-                      className="flex-1 text-sm rounded-xl px-3 py-2 text-white placeholder-gray-600 outline-none transition-colors"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                      }}
-                      onFocus={(e) =>
-                        (e.currentTarget.style.borderColor = "rgba(20,184,166,0.4)")
-                      }
-                      onBlur={(e) =>
-                        (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")
-                      }
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!text.trim() || sending}
-                      className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-35"
-                      style={{
-                        background: "rgba(20,184,166,0.18)",
-                        border: "1px solid rgba(20,184,166,0.3)",
-                      }}
-                      aria-label="Senden"
+                <span className="text-[10px] text-gray-500 flex-shrink-0">
+                  {onlineCount} online
+                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {onlineUsers.map((u) => (
+                    <Link
+                      key={u.id}
+                      href={`/profile/${u.id}`}
+                      onClick={() => setOpen(false)}
+                      className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
+                      title={displayName(u)}
                     >
-                      <Send className="w-4 h-4 text-teal-400" />
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-600 text-center w-full py-1">
-                    Melde dich an um zu chatten
-                  </p>
-                )}
+                      <RankedAvatar userId={u.id} src={u.image} alt={displayName(u)} size={24} />
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
+                        style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
+                      />
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {session?.user?.id ? (
+              <EventThreadsPanel
+                userId={session.user.id}
+                threads={threads}
+                loaded={threadsLoaded}
+                selectedId={selectedThread}
+                onSelect={setSelectedThread}
+                onRefresh={refreshAfterRead}
+                onNavigate={() => setOpen(false)}
+              />
+            ) : (
+              <p className="flex-1 text-xs text-gray-600 text-center py-10">Melde dich an, um bei den Absprachen zu deinen Events mitzureden.</p>
+            )}
+          </div>
         )}
       </div>
     </>

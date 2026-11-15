@@ -51,6 +51,33 @@ export type EventCommentsResponse = {
   myStatus: { status: CommentStatus; lateMin: number | null } | null;
 };
 
+/** Eintrag im Schnellzugriff (Panel): Absprachen eines "meiner" Events. */
+export type EventThreadDTO = {
+  eventId: string;
+  title: string;
+  seriesName: string | null;
+  startAt: string;
+  phase: "upcoming" | "live" | "finished";
+  total: number;
+  unread: number;
+  last: { author: string; text: string; createdAt: string } | null;
+  pinned: string | null;
+  registered: boolean;
+  isPlayer: boolean;
+  myStatus: { status: CommentStatus; lateMin: number | null } | null;
+};
+
+/** Ziel-URL der Absprachen (auch Benachrichtigungs-Link — darüber werden sie als gelesen erkannt). */
+export function eventCommentsUrl(eventId: string): string {
+  return `/tournament/${eventId}#absprachen`;
+}
+
+/** Event-ID aus einem Absprachen-Link (Benachrichtigung) — null, wenn es keiner ist. */
+export function eventIdFromCommentsUrl(url: string | null | undefined): string | null {
+  const m = url?.match(/^\/tournament\/([^/#?]+)#absprachen$/);
+  return m ? m[1] : null;
+}
+
 /** Text mit Erwähnungen als "@Name" — für Längenprüfung, Benachrichtigungen und Discord. */
 export function plainCommentText(content: string): string {
   return content.replace(MENTION_RE, (_, name: string) => `@${name}`);
