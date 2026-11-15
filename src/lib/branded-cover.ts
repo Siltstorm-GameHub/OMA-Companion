@@ -9,7 +9,6 @@ function loadSharp(): Promise<SharpFn> {
 }
 import fs from "fs";
 import path from "path";
-import { coverHasOwnLogo } from "@/lib/event-cover-presets";
 
 const W = 680;
 const H = 400;
@@ -123,63 +122,45 @@ function vignetteSvg(): Buffer {
 
 let cachedBadge: { buffer: Buffer; width: number; height: number } | null = null;
 
-/** Siegel "OMA Original": abgerundeter Chip mit Logo und Schriftzug darunter —
- *  wird unten rechts auf die Cover von OMA Originals komponiert (lib/oma-original.ts).
- *  Normale Events bekommen nur den Rahmen, kein Logo.
+/** Siegel "OMA Original": kleiner Chip mit Logo und Schriftzug darunter — wird unten rechts auf
+ *  die Cover von OMA Originals komponiert (lib/oma-original.ts), auf allen Covern gleich (auch auf
+ *  Logo-Vorlagen). Gleiche Proportionen wie das Siegel in der App (components/CoverBrandBadge.tsx):
+ *  so klein, dass es das Spiel-Cover nicht verdeckt. Normale Events bekommen nur den Rahmen.
  *  Immer identisch, deshalb einmal gerendert und gecacht. */
 async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
   const sharp = await loadSharp();
   if (cachedBadge) return cachedBadge;
 
-  const logoPath  = path.join(process.cwd(), "public", "brand", "logo-256.png");
-  const logoWidth = Math.round(W * 0.3);
-  const logo = await sharp(fs.readFileSync(logoPath)).resize(logoWidth).png().toBuffer();
-  const logoHeight = (await sharp(logo).metadata()).height ?? logoWidth;
+  const logoPath   = path.join(process.cwd(), "public", "brand", "logo-256.png");
+  const logoHeight = 30;
+  const logo = await sharp(fs.readFileSync(logoPath)).resize({ height: logoHeight }).png().toBuffer();
+  const logoWidth = (await sharp(logo).metadata()).width ?? logoHeight;
 
-  const pad    = 14;
-  const labelH = 26;
-  const chipW  = logoWidth + pad * 2;
-  const chipH  = logoHeight + pad * 2 + labelH;
+  const padX   = 10;
+  const padTop = 8;
+  const gap    = 5;
+  const fontSize = 10;
+  const padBottom = 7;
+  const labelW = 104; // "OMA ORIGINAL" bei 10px, extrabold, Sperrung 1.5 (Server-Fallback-Schrift läuft breiter)
+  const chipW  = Math.max(logoWidth, labelW) + padX * 2;
+  const chipH  = padTop + logoHeight + gap + fontSize + padBottom;
   const chipSvg = Buffer.from(
     `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${chipW}" height="${chipH}" rx="14" fill="#06080f" fill-opacity="0.85" stroke="#14b8a6" stroke-opacity="0.75" stroke-width="2.5"/>
-      <text x="${chipW / 2}" y="${chipH - pad - 2}" text-anchor="middle"
-        font-family="system-ui,ui-sans-serif,sans-serif" font-size="15" font-weight="800" letter-spacing="3.5">
-        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="7">ORIGINAL</tspan>
+      <rect x="0.75" y="0.75" width="${chipW - 1.5}" height="${chipH - 1.5}" rx="8" fill="#06080f" fill-opacity="0.82" stroke="#14b8a6" stroke-opacity="0.7" stroke-width="1.5"/>
+      <text x="${chipW / 2}" y="${chipH - padBottom}" text-anchor="middle"
+        font-family="system-ui,ui-sans-serif,sans-serif" font-size="${fontSize}" font-weight="800" letter-spacing="1.5">
+        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="4">ORIGINAL</tspan>
       </text>
     </svg>`
   );
 
   const buffer = await sharp(chipSvg)
-    .composite([{ input: logo, left: pad, top: pad }])
+    .composite([{ input: logo, left: Math.round((chipW - logoWidth) / 2), top: padTop }])
     .png()
     .toBuffer();
 
   cachedBadge = { buffer, width: chipW, height: chipH };
   return cachedBadge;
-}
-
-let cachedLabelBadge: { buffer: Buffer; width: number; height: number } | null = null;
-
-/** Nur der Schriftzug "OMA Original" mit dem Hexagon aus dem Logo — für Logo-Vorlagen, die das
- *  Logo schon groß im Bild tragen (kein zweites Logo, aber trotzdem erkennbar als Original). */
-async function getLabelBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
-  const sharp = await loadSharp();
-  if (cachedLabelBadge) return cachedLabelBadge;
-  const chipW = 212;
-  const chipH = 44;
-  const svg = Buffer.from(
-    `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.25" y="1.25" width="${chipW - 2.5}" height="${chipH - 2.5}" rx="10" fill="#06080f" fill-opacity="0.85" stroke="#14b8a6" stroke-opacity="0.75" stroke-width="2.5"/>
-      <polygon points="30,9 41,15.5 41,28.5 30,35 19,28.5 19,15.5" fill="#9b1c24" stroke="#f4f5f5" stroke-width="2" stroke-linejoin="round"/>
-      <text x="52" y="28" font-family="system-ui,ui-sans-serif,sans-serif" font-size="15" font-weight="800" letter-spacing="3.5">
-        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="7">ORIGINAL</tspan>
-      </text>
-    </svg>`
-  );
-  const buffer = await sharp(svg).png().toBuffer();
-  cachedLabelBadge = { buffer, width: chipW, height: chipH };
-  return cachedLabelBadge;
 }
 
 let cachedGradientBg: Buffer | null = null;
@@ -238,9 +219,8 @@ export async function generateBrandedCoverBuffer(
     ? (await fetchCoverFitBuffer(sourceUrl)) ?? (await getGradientBackground())
     : await getGradientBackground();
 
-  // Logo-Vorlagen tragen das Logo schon groß in der Mitte — dort nur der Schriftzug, kein zweites Logo
-  const badge  = !omaOriginal ? null : coverHasOwnLogo(sourceUrl) ? await getLabelBadge() : await getLogoBadge();
-  const margin = 16;
+  const badge  = omaOriginal ? await getLogoBadge() : null;
+  const margin = 12;
 
   const result = await sharp(bg)
     .composite([

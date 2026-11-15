@@ -42,11 +42,6 @@ const MOTIF_PRESETS: EventCoverPreset[] = [
 
 export const EVENT_COVER_PRESETS: EventCoverPreset[] = [...LOGO_PRESETS, ...MOTIF_PRESETS];
 
-/** Cover, die das OMA-Logo schon groß im Bild tragen — dort kein zusätzliches Logo-Badge einblenden. */
-export function coverHasOwnLogo(url: string | null | undefined): boolean {
-  return !!url && url.startsWith("/event-covers/logo-");
-}
-
 /** Cover-URL aus einem Erstell-Request prüfen: nur Vorlagen-Pfade unter /event-covers/ oder
  *  https-URLs (Uploads im Blob-Store bzw. eingefügte Links). Alles andere → null. */
 export function sanitizeCoverUrl(raw: unknown): string | null {

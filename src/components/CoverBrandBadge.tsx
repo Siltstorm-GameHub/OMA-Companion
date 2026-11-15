@@ -1,13 +1,15 @@
-import { OmaHex } from "@/components/OmaOriginalMark";
-
 /**
  * Marken-Rahmen für Cover: Diagonalstreifen in den oberen Ecken, farbige
  * Eckakzente, obere Trennlinie, "OLD MASTERS ALLIES"-Wasserzeichen und Vignette
  * — auf jedes Cover ohne eigenes Branding komponiert. Das Logo-Siegel
  * "OMA Original" unten rechts kommt nur bei OMA Originals dazu (lib/oma-original.ts),
  * (Steam-Cover, eigener Upload, Reihen-Cover oder Gradient-Fallback), damit
- * jedes große Cover dieselbe erkennbare Optik trägt. Spiegelt 1:1 den
+ * jedes große Cover dieselbe erkennbare Optik trägt. Rahmen wie im
  * Server-Renderer in lib/branded-cover.ts (Discord/OG-Bilder).
+ *
+ * Das Siegel ist überall dasselbe (Logo + Schriftzug), auch auf Logo-Vorlagen, und wächst mit der
+ * Cover-Breite (Container-Einheiten): auf Kacheln klein, im Kopf einer Detailseite etwas größer —
+ * nie so groß, dass es das Spiel-Cover verdeckt.
  *
  * Nur für großformatige Cover gedacht (Hero-Banner, Karten) — bei kleinen
  * Thumbnails (w-10 h-10 o.ä.) würde das nur unruhig wirken, siehe
@@ -15,14 +17,11 @@ import { OmaHex } from "@/components/OmaOriginalMark";
  */
 export default function CoverBrandBadge({
   omaOriginal = false,
-  coverHasLogo = false,
 }: {
   omaOriginal?: boolean;
-  /** Logo-Vorlage: das Logo ist schon groß im Bild, deshalb nur der Schriftzug ohne zweites Logo */
-  coverHasLogo?: boolean;
 }) {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="@container absolute inset-0 pointer-events-none overflow-hidden">
       <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
 
       <svg
@@ -78,25 +77,14 @@ export default function CoverBrandBadge({
         </text>
       </svg>
 
-      {omaOriginal && coverHasLogo && (
+      {omaOriginal && (
         <div
-          className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-2.5 py-1.5"
-          title="OMA Original"
-        >
-          <OmaHex className="w-3 h-3.5" />
-          <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.18em] whitespace-nowrap">
-            <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
-          </span>
-        </div>
-      )}
-      {omaOriginal && !coverHasLogo && (
-        <div
-          className="absolute bottom-2 right-2 flex flex-col items-center gap-1 rounded-xl bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-3 pt-2.5 pb-1.5"
+          className="absolute bottom-[clamp(6px,1.5cqw,12px)] right-[clamp(6px,1.5cqw,12px)] flex flex-col items-center gap-[clamp(2px,0.5cqw,4px)] rounded-[clamp(6px,1.2cqw,10px)] bg-black/80 border-[1.5px] border-teal-400/70 shadow-md shadow-black/50 px-[clamp(5px,1.1cqw,9px)] pt-[clamp(4px,0.9cqw,7px)] pb-[clamp(3px,0.6cqw,5px)]"
           title="OMA Original"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
-          <img src="/brand/logo-256.png" alt="OMA Original" className="h-9 w-auto object-contain" />
-          <span className="text-[9px] font-extrabold uppercase leading-none tracking-[0.18em] whitespace-nowrap">
+          <img src="/brand/logo-256.png" alt="OMA Original" className="h-[clamp(16px,3.6cqw,30px)] w-auto object-contain" />
+          <span className="text-[clamp(7px,1.15cqw,9px)] font-extrabold uppercase leading-none tracking-[0.16em] whitespace-nowrap">
             <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
           </span>
         </div>
