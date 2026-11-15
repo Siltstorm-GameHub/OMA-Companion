@@ -24,17 +24,29 @@ export function ExitAppGuard() {
   const router = useRouter();
   const bypassRef = useRef(false);
   const pathnameRef = useRef(pathname);
+  // Zuletzt bekannte vollständige URL — um reine #-Sprünge auf derselben Seite zu erkennen
+  const hrefRef = useRef<string | null>(null);
 
   // Bei jedem Seitenwechsel den Trap neu oben auf den Stack legen und die
   // zuletzt bekannte Route für den (nur einmal registrierten) popstate-Handler
   // aktuell halten.
   useEffect(() => {
     pathnameRef.current = pathname;
+    hrefRef.current = window.location.href;
     window.history.pushState(TRAP_STATE, "", window.location.href);
   }, [pathname]);
 
   useEffect(() => {
     const handlePopState = () => {
+      // Ein #-Link (Sprung innerhalb derselben Seite) löst ebenfalls popstate aus — das ist kein
+      // Zurück-Tastendruck. Erkennbar daran, dass sich nur der Hash geändert hat (ein echtes Zurück
+      // vom Trap landet auf exakt derselben URL).
+      const prev = hrefRef.current;
+      const now = window.location.href;
+      if (prev && now !== prev && now.split("#")[0] === prev.split("#")[0]) {
+        hrefRef.current = now;
+        return;
+      }
       if (bypassRef.current) {
         bypassRef.current = false;
         return;

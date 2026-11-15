@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, Loader2, MessageCircle, Pencil, Send, Smile, Trash2, X } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
+import { SECTION_JUMP_EVENT } from "@/components/SectionJumpLink";
 import { mentionToken } from "@/lib/report-mentions";
 import { formatBerlinDateTime, formatBerlinTime, isSameBerlinDay } from "@/lib/time";
 import {
@@ -64,6 +65,14 @@ export default function EventComments({
     document.addEventListener("visibilitychange", onVis);
     return () => { clearTimeout(first); clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
   }, [load]);
+
+  // Sprungleiste der Eventseite: eingeklappten Bereich öffnen (Scrollen übernimmt SectionJumpLink)
+  useEffect(() => {
+    if (isPanel) return;
+    const onJump = (e: Event) => { if ((e as CustomEvent).detail === "absprachen") setOpen(true); };
+    window.addEventListener(SECTION_JUMP_EVENT, onJump);
+    return () => window.removeEventListener(SECTION_JUMP_EVENT, onJump);
+  }, [isPanel]);
 
   // Direktlink (#absprachen, z.B. aus einer Benachrichtigung): aufklappen und hinscrollen
   useEffect(() => {

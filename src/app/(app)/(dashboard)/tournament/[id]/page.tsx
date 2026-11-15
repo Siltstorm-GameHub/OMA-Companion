@@ -19,6 +19,7 @@ import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
 import EventComments from "@/components/events/EventComments";
+import SectionJumpLink from "@/components/SectionJumpLink";
 import { getCommentCounts, getLatestCommentStatuses } from "@/lib/event-comments";
 import { statusBadge } from "@/lib/event-comments-shared";
 import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
@@ -1099,10 +1100,10 @@ export default async function TournamentDetailPage({
   const jumpBar = (
     <nav aria-label="Abschnitte" className="sticky top-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-2 mb-4 bg-[#0b0d12]/90 backdrop-blur flex gap-1.5 overflow-x-auto scrollbar-none">
       {jumpLinks.map(l => (
-        <a key={l.href} href={l.href}
+        <SectionJumpLink key={l.href} target={l.href.slice(1)}
           className="shrink-0 rounded-full border border-white/[0.1] px-3 py-1 text-xs font-medium text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04] transition-colors">
           {l.label}
-        </a>
+        </SectionJumpLink>
       ))}
     </nav>
   );
@@ -1492,7 +1493,7 @@ export default async function TournamentDetailPage({
       </div>
 
       {collapseParticipantsOnMobile && (
-        <details className="lg:hidden group">
+        <details data-jump-target="teilnehmer" className="lg:hidden group scroll-mt-20">
           <summary className="glass rounded-2xl px-4 py-3 flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
             <Users className="w-4 h-4 text-gray-400 shrink-0" />
             <span className="text-sm font-semibold text-white">Teilnehmer</span>
