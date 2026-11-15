@@ -10,6 +10,12 @@ const CATEGORY_CONFIG: Record<EventCategory, { label: string; emoji: string; cla
   special:         { label: "Special",     emoji: "⭐", className: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" },
 };
 
+/** Reiner Text der Kategorie ("Kompetitiv") — für Meta-Zeilen ohne farbiges Badge. */
+export function categoryLabel(category: EventCategory | string | null | undefined): string | null {
+  if (!category) return null;
+  return CATEGORY_CONFIG[category as EventCategory]?.label ?? null;
+}
+
 export const CATEGORY_BORDER: Record<EventCategory, string> = {
   competitive:     "border-t-red-500",
   fun:             "border-t-amber-400",

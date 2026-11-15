@@ -1,54 +1,38 @@
 import { prisma } from "@/lib/prisma";
-import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
-import OmaOriginalMark, { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
+import { isOmaOriginal } from "@/lib/oma-original";
+import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
-import { Users } from "@/components/icons";
-import { ChevronRight } from "@/components/icons";
-import { CalendarDays, ExternalLink, Trophy, Check, Plus, Timer } from "@/components/icons";
-import { isPeriodEvent, periodInfo } from "@/lib/event-period";
-import SeriesIcon from "@/components/SeriesIcon";
-import { resolveSeriesColor } from "@/lib/series-icons";
+import { CalendarDays, ExternalLink, Plus, Users, EyeOff, Lock } from "@/components/icons";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
-import StreamRegisterButton from "@/components/StreamRegisterButton";
-import CoinIcon from "@/components/CoinIcon";
 import { GateLink, GateButton, GuestMoreCta } from "@/components/GuestGate";
 import { GUEST_UPCOMING_EVENTS_LIMIT, GUEST_FINISHED_EVENTS_LIMIT } from "@/lib/guest-access";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
 import EventCardLink from "./EventCardLink";
-import EventCategoryBadge from "@/components/EventCategoryBadge";
-import { EventCategory } from "@prisma/client";
-import { EyeOff } from "@/components/icons";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
-import { formatBerlinDate, formatBerlinRange, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
+import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
-import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
 import MyEventsPanel from "./MyEventsPanel";
 import SquadsList from "../squads/SquadsList";
 import EventPredictionsPanel from "./EventPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
 import { ScrollReveal } from "@/components/ScrollReveal";
-
-const CATEGORY_STRIP: Record<EventCategory, string> = {
-  competitive:     "bg-red-500",
-  fun:             "bg-amber-400",
-  casual:          "bg-emerald-500",
-  training:        "bg-indigo-500",
-  community_event: "bg-violet-500",
-  special:         "bg-yellow-400",
-};
-
-const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
-  open:     { label: "Offen",         badge: "text-white bg-blue-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-white"              },
-  active:   { label: "Läuft",         badge: "text-white bg-emerald-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",    bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", glow: "from-emerald-500/5", dot: "bg-white animate-pulse" },
-  closed:   { label: "Voll",          badge: "text-white bg-amber-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",          bar: "bg-amber-400",  glow: "from-amber-500/5",   dot: "bg-white"             },
-  umfrage:  { label: "Umfragephase",  badge: "text-white bg-violet-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",       bar: "bg-violet-400", glow: "from-violet-500/5",  dot: "bg-white animate-pulse" },
-  finished: { label: "Beendet",       badge: "text-gray-300 bg-gray-700 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",          bar: "bg-gray-700",   glow: "from-transparent",   dot: "bg-gray-400"              },
-};
+import EventCard, { type EventCardData } from "@/components/events/EventCard";
+import NextEventHero from "@/components/events/NextEventHero";
+import RecentResultCard, { type RecentResultData } from "@/components/events/RecentResultCard";
+import EventFilterShell, { type EventFilterGame } from "@/components/events/EventFilterShell";
+import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
+import { loadEventViewerContext } from "@/lib/event-viewer";
+import { dayBucket, parseRanking, placementOf, startsInLabel } from "@/lib/event-display";
+import { gameNameKey } from "@/lib/games/slug";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
+const MAX_GAME_CHIPS = 5;
+
+const discordUrlOf = (ev: { discordEventId: string | null }) =>
+  ev.discordEventId && GUILD_ID ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
 
 export default async function EventsPage() {
   // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen), muss vor dem Event-Fetch
@@ -58,21 +42,13 @@ export default async function EventsPage() {
   const me     = await getSessionUser();
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
+  const now    = new Date();
 
-  const [events, hiddenEvents] = await Promise.all([
+  const [events, hiddenEvents, viewer] = await Promise.all([
     prisma.event.findMany({
       where:   { hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
       orderBy: { startAt: "asc" },
-      include: {
-        // Nur Spieler zählen als "Anmeldung" für Anzeige/Filter (Zuschauer ausgeschlossen) —
-        // konsistent mit src/app/api/events/route.ts GET und der "still beenden ohne Teilnehmer"-Logik.
-        _count:        { select: { registrations: { where: { role: "player" } } } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true, coverImageUrl: true, omaOriginal: true, fixedGame: true } },
-        createdBy:     { select: { username: true, name: true } },
-        registrations: { select: { userId: true } },
-        streamingPartners: { include: { partner: { select: { userId: true } } } },
-        communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
-      },
+      include: EVENT_CARD_INCLUDE,
     }),
     isMod
       ? prisma.event.findMany({
@@ -84,6 +60,7 @@ export default async function EventsPage() {
           },
         })
       : Promise.resolve([]),
+    loadEventViewerContext(userId),
   ]);
 
   const emptyPredictionRows: { event: { id: string; title: string; startAt: Date }; predictedUser: { id: string; username: string | null; name: string | null; image: string | null }; wager: number; resolved: boolean; correct: boolean | null; coinsAwarded: number }[] = [];
@@ -104,10 +81,6 @@ export default async function EventsPage() {
       ])
     : [emptyPredictionRows, null, 0];
 
-  const mySquadIds = userId
-    ? new Set((await prisma.squadMembership.findMany({ where: { userId }, select: { squadId: true } })).map(m => m.squadId))
-    : new Set<string>();
-
   const myPredictions: MyPrediction[] = myPredictionRows.map(p => ({
     eventId: p.event.id,
     eventTitle: p.event.title,
@@ -119,274 +92,150 @@ export default async function EventsPage() {
     coinsAwarded: p.coinsAwarded,
   }));
 
-  type EventItem = { kind: "event"; date: Date; finished: boolean; endedAt: number; ev: typeof events[number] };
-  type AnyItem   = EventItem;
+  type Item = { ev: EventCardSource; finished: boolean; endedAt: number };
+  const allItems: Item[] = events.map(ev => ({
+    ev,
+    finished: ev.status === "finished",
+    endedAt:  getEventEndedAt(ev).getTime(),
+  }));
 
-  const allItems: AnyItem[] = [
-    ...events.map(ev => ({
-      kind:     "event" as const,
-      date:     new Date(ev.startAt),
-      finished: ev.status === "finished",
-      endedAt:  getEventEndedAt(ev).getTime(),
-      ev,
-    })),
-  ];
-
-  const now = Date.now();
   // Still beendete Events ohne Spieler-Anmeldung (siehe complete/route.ts) tauchen nicht im
   // "Kürzlich beendet"-Bereich auf — sie landen direkt im eingeklappten "Abgeschlossen"-Bereich.
-  const isRecentlyFinished = (i: AnyItem) =>
-    i.finished && (now - i.endedAt) <= RECENTLY_FINISHED_MS && i.ev._count.registrations > 0;
+  const isRecentlyFinished = (i: Item) =>
+    i.finished && (now.getTime() - i.endedAt) <= RECENTLY_FINISHED_MS && playersOf(i.ev).length > 0;
 
   // Kürzlich (≤3 Tage) beendete Events bleiben ganz oben sichtbar, damit Nutzer die Ergebnisse
   // nicht verpassen — erst danach wandern sie in den eingeklappten "Abgeschlossen"-Bereich.
-  const recentFinishedItems = allItems
-    .filter(isRecentlyFinished)
-    .sort((a, b) => b.endedAt - a.endedAt);
-
-  const upcomingItems = allItems
-    .filter(i => !i.finished)
-    .sort((a, b) => (a.date?.getTime() ?? Infinity) - (b.date?.getTime() ?? Infinity));
-
-  const finishedItems = allItems
-    .filter(i => i.finished && !isRecentlyFinished(i))
-    .sort((a, b) => b.endedAt - a.endedAt);
+  const recentFinishedItems = allItems.filter(isRecentlyFinished).sort((a, b) => b.endedAt - a.endedAt);
+  const upcomingItems = allItems.filter(i => !i.finished).sort((a, b) => a.ev.startAt.getTime() - b.ev.startAt.getTime());
+  const finishedItems = allItems.filter(i => i.finished && !isRecentlyFinished(i)).sort((a, b) => b.endedAt - a.endedAt);
 
   const openCount = upcomingItems.filter(i => i.ev.status === "open" || i.ev.status === "active").length;
 
-  // Anstehende Events nach Monat gruppieren, damit die Liste bei vielen
-  // Events pro Monat nicht unübersichtlich wird (Monate sind über Sticky-Header abgrenzbar).
-  const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: BERLIN_TZ });
-  const monthKey = (d: Date | null) => {
-    if (!d) return "tbd";
-    const p = getBerlinDateParts(d);
-    return `${p.year}-${p.month - 1}`;
-  };
-  const monthLabel = (d: Date | null) => {
-    if (!d) return "Termin TBD";
-    const label = MONTH_FORMATTER.format(d);
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  };
   // Gäste sehen nur einen Ausschnitt der Events als Vorgeschmack.
   const visibleUpcoming = userId ? upcomingItems : upcomingItems.slice(0, GUEST_UPCOMING_EVENTS_LIMIT);
   const visibleFinished = userId ? finishedItems : finishedItems.slice(0, GUEST_FINISHED_EVENTS_LIMIT);
   const guestHasMore = !userId && (upcomingItems.length > visibleUpcoming.length || finishedItems.length > visibleFinished.length);
-  const upcomingGroups: { key: string; label: string; items: AnyItem[] }[] = [];
+
+  const cards = new Map<string, EventCardData>(visibleUpcoming.map(i => [i.ev.id, toEventCardData(i.ev, viewer, userId, now)]));
+
+  // ── "Dein nächstes Event": laufend vor anstehend, Umfragephase zählt nicht mehr ──
+  const heroItem = userId
+    ? visibleUpcoming.find(i => i.ev.status === "active" && isUserRegistered(i.ev, userId))
+      ?? visibleUpcoming.find(i => (i.ev.status === "open" || i.ev.status === "closed") && isUserRegistered(i.ev, userId))
+    : undefined;
+
+  // ── Gruppen: Heute / Diese Woche / danach pro Monat ──
+  const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: BERLIN_TZ });
+  const groups: { key: string; label: string; items: Item[] }[] = [];
+  const groupOf = (i: Item) => {
+    const running = i.ev.status === "active" || i.ev.status === "umfrage";
+    const bucket = dayBucket(i.ev.startAt, now, running);
+    if (bucket === "today") return { key: "today", label: "Heute" };
+    if (bucket === "week") return { key: "week", label: "Diese Woche" };
+    const p = getBerlinDateParts(i.ev.startAt);
+    const label = MONTH_FORMATTER.format(i.ev.startAt);
+    return { key: `${p.year}-${p.month}`, label: label.charAt(0).toUpperCase() + label.slice(1) };
+  };
   for (const item of visibleUpcoming) {
-    const key = monthKey(item.date);
-    let group = upcomingGroups.find(g => g.key === key);
-    if (!group) {
-      group = { key, label: monthLabel(item.date), items: [] };
-      upcomingGroups.push(group);
-    }
+    const g = groupOf(item);
+    let group = groups.find(x => x.key === g.key);
+    if (!group) { group = { ...g, items: [] }; groups.push(group); }
     group.items.push(item);
   }
 
-  const renderItem = (item: AnyItem, idx: number) => {
-      const { ev } = item;
-      const s            = EVENT_STATUS[ev.status] ?? EVENT_STATUS.finished;
-      // Laufendes Zeitraum-Event (> 24 h mit Ende): Restlaufzeit statt "Läuft", Einstieg jederzeit
-      const period = ev.status === "active" && ev.endAt && isPeriodEvent(ev) ? periodInfo({ startAt: ev.startAt, endAt: ev.endAt }, now) : null;
-      const isRegistered = userId
-        ? (ev.registrations as { userId: string }[]).some(r => r.userId === userId)
-        : false;
-      const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
-      const isRegistrationLocked = ev.registrationLocked || ev.series?.registrationLocked || false;
-      const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
-      const isSquadMember = restrictedSquadId ? mySquadIds.has(restrictedSquadId) : true;
-      const canRegister  = ev.status === "open" || ev.status === "active";
-      const isPartnerStreamer = userId
-        ? (ev as unknown as { streamingPartners: { partner: { userId: string | null } }[] }).streamingPartners.some(sp => sp.partner.userId === userId)
-        : false;
-      const isCommunityStreamer = userId
-        ? (ev as unknown as { communityStreamers: { userId: string }[] }).communityStreamers.length > 0
-        : false;
-      const isTournament = !!ev.format;
-      const hasSeries    = !!ev.seriesId;
-      const seriesColor  = resolveSeriesColor(ev.series?.icon);
-      const cardHref     = `/tournament/${ev.id}`;
-      const discordUrl   = ev.discordEventId && GUILD_ID
-        ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
-      const date = item.date;
-      // Community-Event (von einem normalen User erstellt, direkt oder über seine Reihe)
-      const communityCreator = ev.approvalStatus || ev.series?.approvalStatus ? (ev.createdBy ?? null) : null;
-      const communityBy = communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null;
-      const original = isOmaOriginal(ev);
-      const seriesOriginal = isOmaOriginalSeries(ev.series);
+  // ── Spiel-Chips: die häufigsten Spiele unter den anstehenden Events ──
+  const gameCounts = new Map<string, { label: string; n: number }>();
+  for (const i of visibleUpcoming) {
+    if (!i.ev.game) continue;
+    const key = gameNameKey(i.ev.game);
+    if (!key) continue;
+    const cur = gameCounts.get(key);
+    gameCounts.set(key, { label: cur?.label ?? i.ev.game, n: (cur?.n ?? 0) + 1 });
+  }
+  const gameChips: EventFilterGame[] = [...gameCounts.entries()]
+    .filter(([, v]) => v.n >= 1)
+    .sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label, "de"))
+    .slice(0, MAX_GAME_CHIPS)
+    .map(([key, v]) => ({ key, label: v.label }));
 
-      return (
-        <EventCardLink key={`ev-${ev.id}`}
-          href={cardHref}
-          className="surface group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-          style={{
-            borderRadius: 6,
-            border: original ? "1px solid rgba(45,212,191,0.45)" : isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
-            boxShadow: original ? "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(45,212,191,0.12), 0 0 24px rgba(20,184,166,0.12)" : "0 4px 20px rgba(0,0,0,0.45)",
-            aspectRatio: "1 / 1",
-          }}>
-          <div className="absolute inset-0">
-            <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-full h-full" rounded="rounded-none"
-              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" brandBadge />
-          </div>
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />
-          <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
-          {period ? (
-            // Laufendes Zeitraum-Event: ruhig mit Restlaufzeit statt pulsierendem "Läuft"
-            <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium text-white bg-teal-600 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
-              <Timer className="w-3 h-3" />
-              {period.remainingLabel}
-            </span>
-          ) : (
-            <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-              {isFull && !isRegistered ? "Voll" : s.label}
-            </span>
-          )}
-          {period && (
-            <div className="absolute top-[2px] left-0 right-0 h-[3px] bg-black/40" title={`${Math.round(period.progress * 100)} % des Zeitraums vorbei`}>
-              <div className="h-full bg-teal-400/80" style={{ width: `${period.progress * 100}%` }} />
-            </div>
-          )}
-          {isRegistered && (
-            <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-white bg-emerald-500 px-2.5 py-1 rounded-full font-medium shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
-              <Check className="w-3 h-3" /> Angemeldet
-            </span>
-          )}
-          {hasSeries && (
-            <GateLink href={`/events/series/${ev.seriesId}`}
-              className="absolute top-10 left-2.5 right-2.5 z-10 inline-flex w-fit max-w-[calc(100%-1.25rem)] items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full transition-opacity hover:opacity-90 group/series shadow-[0_1px_6px_rgba(0,0,0,0.4)]"
-              style={{ background: seriesColor }}>
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-white/95 shrink-0">
-                <SeriesIcon name={ev.series?.icon} className="w-3 h-3" />
-              </span>
-              <span className="text-xs font-bold text-white truncate">
-                {seriesOriginal && <OmaTitlePrefix title={ev.series?.name ?? ""} className="text-white/90" />}
-                {ev.series?.name}
-              </span>
-            </GateLink>
-          )}
-          <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
-            {original && <OmaOriginalSeal className="mb-2" />}
-            <div className="flex items-center gap-2 mb-1.5">
-              <p className="font-semibold text-white text-base truncate flex-1 min-w-0">
-                {original && <OmaTitlePrefix title={ev.title} />}
-                {ev.title}
-              </p>
-              {isTournament && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
-              {communityBy && (
-                <span className="text-[10px] font-medium text-violet-200 bg-violet-500/25 border border-violet-400/30 px-1.5 py-0.5 rounded-full truncate max-w-[10rem]">
-                  Community · @{communityBy}
-                </span>
-              )}
-              {ev.game && <span className="text-xs text-gray-300 font-medium truncate">{ev.game}</span>}
-            </div>
-            <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
-              <span className="flex items-center gap-1 font-medium tabular-nums">
-                {ev.endAt
-                  ? formatBerlinRange(date, ev.endAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-                  : `${getBerlinDateParts(date).day}. ${formatBerlinDate(date, { month: "short" })}`}
-              </span>
-              <span className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                {ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
-              </span>
-              <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                +{eventParticipationCoins(ev)} <CoinIcon size={13} />
-              </span>
-              {discordUrl && (
-                <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-gray-400 hover:text-teal-300 transition-colors ml-auto">
-                  <ExternalLink className="w-3.5 h-3.5" /> Discord
-                </a>
-              )}
-            </div>
-            {userId && canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember)) && (
-              <div className="flex items-center gap-2 flex-wrap mt-2.5">
-                <RegisterButton
-                  eventId={ev.id}
-                  isRegistered={isRegistered}
-                  isFull={isFull && !isRegistered}
-                  discordEventUrl={discordUrl}
-                  joinLabel={period ? "Jetzt einsteigen" : undefined}
-                />
-                {!isPartnerStreamer && (
-                  <StreamRegisterButton eventId={ev.id} isStreaming={isCommunityStreamer} />
-                )}
-              </div>
-            )}
-            {!userId && canRegister && (
-              <div className="flex items-center gap-2 flex-wrap mt-2.5">
-                <GateButton
-                  href={cardHref}
-                  title="Zum Mitspielen anmelden"
-                  message="Für die Event-Anmeldung brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
-                  className="text-xs px-3 py-1.5 rounded-lg font-semibold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors"
-                >
-                  Anmelden &amp; mitmachen
-                </GateButton>
-              </div>
-            )}
-            {userId && canRegister && !isRegistered && isRegistrationLocked && (
-              <p className="flex items-center gap-1 text-xs text-gray-500 mt-2.5">
-                🔒 Anmeldung nur durch Admins
-              </p>
-            )}
-            {userId && canRegister && !isRegistered && !isRegistrationLocked && !isSquadMember && (
-              <p className="flex items-center gap-1 text-xs text-gray-500 mt-2.5">
-                🛡️ Anmeldung nur für Squad-Mitglieder
-              </p>
-            )}
-          </div>
-        </EventCardLink>
-      );
-  };
+  // ── Kürzlich beendet: Treppchen + eigene Platzierung ──
+  const podiumIds = [...new Set(recentFinishedItems.flatMap(i => parseRanking(i.ev.finalRankingJson).slice(0, 3)))];
+  const podiumUsers = podiumIds.length
+    ? await prisma.user.findMany({ where: { id: { in: podiumIds } }, select: { id: true, name: true, username: true, image: true } })
+    : [];
+  const podiumMap = new Map(podiumUsers.map(u => [u.id, u]));
+  const recentResults: RecentResultData[] = recentFinishedItems.map(({ ev }) => ({
+    id: ev.id,
+    // completionData wird nur beim Abschluss-Flow gesetzt — ohne ihn gibt es keine Ergebnisse zu zeigen.
+    href: ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`,
+    title: ev.title,
+    game: ev.game,
+    coverUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
+    omaOriginal: isOmaOriginal(ev),
+    dateLabel: formatBerlinDate(ev.startAt, { day: "2-digit", month: "short" }),
+    seriesName: ev.series?.name ?? null,
+    podium: parseRanking(ev.finalRankingJson).slice(0, 3).map(id => podiumMap.get(id)).filter((u): u is NonNullable<typeof u> => !!u),
+    myPlace: placementOf(ev.finalRankingJson, userId),
+    playerCount: playersOf(ev).length,
+    hasResults: !!ev.completionData,
+  }));
 
-  const renderRecentFinished = (item: AnyItem) => {
-      const { ev } = item;
-      // completionData wird nur beim Abschluss-Flow (Turnierbaum/Ergebnisse eintragen) gesetzt —
-      // ohne ihn gibt es keine Ergebnisse zu zeigen, also auch keinen "Ergebnisse ansehen"-Button.
-      const hasResults = !!ev.completionData;
-      const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
-      const cardCls = "flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] transition-all group";
-      const content = (
-        <>
-          <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-10 h-7 shrink-0" rounded="rounded" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
-                {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}
-                {ev.title}
-              </p>
-              {isOmaOriginal(ev) && <OmaOriginalMark />}
-            </div>
-            <p className="text-[11px] text-gray-500">
-              {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short" })}
-              {ev.series && <> · {ev.series.name}</>}
-            </p>
-          </div>
-          {hasResults && (
-            <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium shrink-0 group-hover:text-emerald-300">
-              Ergebnisse ansehen <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          )}
-        </>
-      );
-      if (!hasResults) {
-        return (
-          <div key={`ev-recent-${ev.id}`} className={cardCls}>{content}</div>
-        );
-      }
+  // ── Aktion je Zustand ──
+  const renderActions = (ev: EventCardSource, card: EventCardData) => {
+    const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
+    const isSquadMember = restrictedSquadId ? viewer.mySquadIds.has(restrictedSquadId) : true;
+    const isLocked = ev.registrationLocked || ev.series?.registrationLocked || false;
+    const canRegister = ev.status === "open" || ev.status === "active";
+    const running = card.phase.phase === "live" || card.phase.phase === "period";
+
+    if (card.phase.phase === "poll") {
       return (
-        <GateLink key={`ev-recent-${ev.id}`} href={cardHref}
-          className={`${cardCls} hover:opacity-100 hover:grayscale-0`}>
-          {content}
+        <GateLink href={`${card.href}#abstimmung`} className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors">
+          Abstimmen
         </GateLink>
       );
+    }
+    if (card.phase.phase === "gamevote" && !card.isRegistered) {
+      return (
+        <GateLink href={`${card.href}#spielwahl`} className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors">
+          Mitwählen
+        </GateLink>
+      );
+    }
+    if (!canRegister) return null;
+    if (!userId) {
+      return (
+        <GateButton
+          href={card.href}
+          title="Zum Mitspielen anmelden"
+          message="Für die Event-Anmeldung brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
+          className="rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400 transition-colors"
+        >
+          Mitmachen
+        </GateButton>
+      );
+    }
+    if (card.isRegistered || (!isLocked && isSquadMember)) {
+      return (
+        <RegisterButton
+          eventId={ev.id}
+          isRegistered={card.isRegistered}
+          isFull={card.phase.phase === "full"}
+          discordEventUrl={discordUrlOf(ev)}
+          joinLabel={running ? "Einsteigen" : "Anmelden"}
+          coins={card.coins}
+        />
+      );
+    }
+    return (
+      <span className="flex items-center gap-1 text-[11px] text-gray-500" title={isLocked ? "Anmeldung nur durch Admins" : "Anmeldung nur für Squad-Mitglieder"}>
+        <Lock className="w-3 h-3" /> {isLocked ? "Nur Admins" : "Nur Squad"}
+      </span>
+    );
   };
+
+  const hasAnything = recentFinishedItems.length > 0 || upcomingItems.length > 0 || finishedItems.length > 0;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -394,14 +243,14 @@ export default async function EventsPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <CalendarDays className="w-4 h-4 text-blue-400" />
+            <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <CalendarDays className="w-4 h-4 text-teal-400" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Events</h1>
           </div>
           <p className="text-sm text-gray-500 ml-10">
             {openCount > 0
-              ? <><span className="text-emerald-400 font-medium">{openCount}</span> aktive Events</>
+              ? <><span className="text-teal-300 font-medium">{openCount}</span> offene Events</>
               : "Alle Events"}
           </p>
         </div>
@@ -417,8 +266,8 @@ export default async function EventsPage() {
 
       <EventsTabs
         eventsPanel={<>
-      <div className="space-y-2">
-        {recentFinishedItems.length === 0 && upcomingItems.length === 0 && finishedItems.length === 0 && (
+      <div className="space-y-5">
+        {!hasAnything && (
           <EmptyState
             type="events"
             title="Noch keine Events"
@@ -426,36 +275,54 @@ export default async function EventsPage() {
           />
         )}
 
-        {recentFinishedItems.length > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center gap-3 pb-2">
-              <div className="h-px flex-1 bg-emerald-500/10" />
-              <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">Kürzlich beendet</span>
-              <div className="h-px flex-1 bg-emerald-500/10" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {recentFinishedItems.map(item => renderRecentFinished(item))}
-            </div>
-          </div>
+        {heroItem && (
+          <NextEventHero
+            ev={cards.get(heroItem.ev.id)!}
+            startsIn={startsInLabel(heroItem.ev.startAt, now)}
+            discordUrl={discordUrlOf(heroItem.ev)}
+          />
         )}
 
-        {upcomingGroups.map(group => (
-          <div key={group.key} className="mb-4 last:mb-0">
-            <div className="sticky top-0 z-10 flex items-center gap-3 py-1.5 -mx-5 px-5 sm:mx-0 sm:px-0 bg-[#0b0d12]/90 backdrop-blur">
-              <span className="text-xs font-semibold text-gray-300 tracking-wide">{group.label}</span>
-              <div className="h-px flex-1 bg-white/[0.06]" />
+        {recentResults.length > 0 && (
+          <section aria-label="Kürzlich beendet" className="space-y-2">
+            <h2 className="flex items-center gap-3 text-xs font-semibold text-gray-300">
+              Kürzlich beendet <span className="h-px flex-1 bg-white/[0.06]" />
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {recentResults.map(r => <RecentResultCard key={r.id} r={r} />)}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-              {group.items.map((item, idx) => (
-                <ScrollReveal key={`reveal-ev-${item.ev.id}`}>
-                  {renderItem(item, idx)}
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+          </section>
+        )}
 
+        {visibleUpcoming.length > 0 && (
+          <EventFilterShell games={gameChips} loggedIn={!!userId}>
+            {groups.map(group => (
+              <section key={group.key} data-ev-section aria-label={group.label} className="mb-5 last:mb-0">
+                <h2 className="sticky top-0 z-20 flex items-center gap-3 py-1.5 -mx-5 px-5 sm:mx-0 sm:px-0 bg-[#0b0d12]/90 backdrop-blur text-xs font-semibold text-gray-300 tracking-wide">
+                  {group.label}
+                  <span className="text-gray-600 font-normal">{group.items.length}</span>
+                  <span className="h-px flex-1 bg-white/[0.06]" />
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mt-2">
+                  {group.items.map(item => {
+                    const card = cards.get(item.ev.id)!;
+                    return (
+                      <div key={item.ev.id} data-ev
+                        data-registered={card.isRegistered ? "1" : undefined}
+                        data-mine={card.relevance.length > 0 ? "1" : undefined}
+                        data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}>
+                        <ScrollReveal className="h-full">
+                          <EventCard ev={card} actions={renderActions(item.ev, card)} />
+                        </ScrollReveal>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </EventFilterShell>
+        )}
+      </div>
 
       {isMod && hiddenEvents.length > 0 && (
         <div className="space-y-1.5">
@@ -502,10 +369,8 @@ export default async function EventsPage() {
             <div className="h-px flex-1 bg-white/[0.05]" />
           </div>
 
-          {visibleFinished.map(item => {
-              const { ev } = item;
-              const discordUrl = ev.discordEventId && GUILD_ID
-                ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
+          {visibleFinished.map(({ ev }) => {
+              const discordUrl = discordUrlOf(ev);
               const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
               return (
                 <EventCardLink key={`ev-fin-${ev.id}`}
@@ -525,7 +390,7 @@ export default async function EventsPage() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="flex items-center gap-1 text-[10px] text-gray-600">
-                      <Users className="w-3 h-3" />{ev._count.registrations}
+                      <Users className="w-3 h-3" />{playersOf(ev).length}
                     </span>
                     {discordUrl && (
                       <a href={discordUrl} target="_blank" rel="noopener noreferrer"

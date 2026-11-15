@@ -1,10 +1,9 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "@/components/icons";
-import { Clapperboard, Play } from "@/components/icons";
+import type { ReactNode } from "react";
+import { Clapperboard, Play, Trophy } from "@/components/icons";
 import { NewContentPing } from "@/components/NewContentPing";
+import HubTile, { type HubRow } from "@/components/HubTile";
+import { berlinDayDiff } from "@/lib/event-display";
 
 export type WinnerClip = {
   id: string;
@@ -15,14 +14,22 @@ export type WinnerClip = {
   submittedBy: { name: string | null; username: string | null } | null;
 };
 
+/** Platzierung des letzten abgeschlossenen Wettbewerbs (nach Stimmen) */
+export type ClipRankingEntry = { id: string; title: string; votes: number };
+
+export type ActiveClipContest = { id: string; monthLabel: string; votingEndsAt: string; nominationCount: number };
+
 interface Props {
   winners: WinnerClip[];
+  /** Monat des abgeschlossenen Wettbewerbs, z.B. "Oktober" */
   monthLabel: string;
   finishedContestId: string | null;
-  activeContestId: string | null;
+  active: ActiveClipContest | null;
+  ranking: ClipRankingEntry[];
+  nowIso: string;
 }
 
-const ROTATE_INTERVAL_MS = 6000;
+const BTN = "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
 
 function TwitchIcon({ className }: { className?: string }) {
   return (
@@ -33,114 +40,129 @@ function TwitchIcon({ className }: { className?: string }) {
   );
 }
 
-export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId, activeContestId }: Props) {
-  const [index, setIndex] = useState(0);
+function Pill({ children }: { children: ReactNode }) {
+  return (
+    <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-[#0b0d12]/90 px-2 py-1 text-[11px] font-semibold text-violet-300 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+      {children}
+    </span>
+  );
+}
 
-  // Solange eine Abstimmung läuft, soll die Kachel darauf verweisen — nicht auf den
-  // Gewinner-Clip des Vormonats.
-  const showWinner = !activeContestId && winners.length > 0;
+const daysLeftLabel = (endsAt: Date, now: Date) => {
+  const d = berlinDayDiff(now, endsAt);
+  if (endsAt.getTime() <= now.getTime()) return "endet gleich";
+  if (d <= 0) return "endet heute";
+  if (d === 1) return "endet morgen";
+  return `noch ${d} Tage`;
+};
 
-  useEffect(() => {
-    if (!showWinner || winners.length <= 1) return;
-    const t = setInterval(() => setIndex(i => (i + 1) % winners.length), ROTATE_INTERVAL_MS);
-    return () => clearInterval(t);
-  }, [showWinner, winners.length]);
+/**
+ * Startseiten-Kachel "Clip des Monats" im selben Gerüst wie die Events-Kachel (HubTile):
+ * fest der Sieger-Clip (kein Karussell mehr), darunter Platz 2 und der laufende Wettbewerb.
+ * Läuft gerade eine Abstimmung, steht sie vorne.
+ */
+export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId, active, ranking, nowIso }: Props) {
+  const now = new Date(nowIso);
+  const winner = winners[0] ?? null;
+  const showVoting = !!active;
+  const pingId = showVoting ? `voting-${active!.id}` : winner ? `winner-${finishedContestId}` : null;
 
-  const winner = showWinner ? winners[index] ?? null : null;
+  const thumb = (url: string) => url.replace("%{width}", "480").replace("%{height}", "270");
+
+  const media = (
+    <Link href="/clip-des-monats" className="group absolute inset-0 block" aria-label={showVoting ? "Zur Abstimmung" : "Clip ansehen"}>
+      {showVoting ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/clip-contest-voting.png" alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      ) : winner?.thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumb(winner.thumbnailUrl)} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1a0b3d]">
+          <Clapperboard className="w-8 h-8 text-gray-600" />
+        </div>
+      )}
+      {!showVoting && winner && (
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+            <Play className="w-4 h-4 text-black ml-0.5" fill="black" />
+          </span>
+        </span>
+      )}
+      <Pill>
+        <NewContentPing id={pingId} storageKey="clip-hub-ping-seen">
+          {showVoting
+            ? <>Abstimmung {active!.monthLabel}</>
+            : winner
+              ? <span className="inline-flex items-center gap-1"><Trophy className="w-3.5 h-3.5" />{monthLabel} · Platz 1</span>
+              : "Clip des Monats"}
+        </NewContentPing>
+      </Pill>
+    </Link>
+  );
+
+  const winnerVotes = ranking[0]?.votes;
+  const creator = winner
+    ? winner.twitchCreatorLogin
+      ? <span className="inline-flex items-center gap-1 text-violet-300"><TwitchIcon className="w-3 h-3 shrink-0" />{winner.twitchCreatorLogin}</span>
+      : <>von {winner.submittedBy?.username ?? winner.submittedBy?.name ?? "Unbekannt"}</>
+    : null;
+
+  const main = showVoting ? (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-white leading-tight">Welcher Clip gewinnt den {active!.monthLabel}?</p>
+        <p className="truncate text-[11px] text-gray-400">{active!.nominationCount} Clips im Rennen · {daysLeftLabel(new Date(active!.votingEndsAt), now)}</p>
+      </div>
+      <Link href="/clip-des-monats" className={`${BTN} bg-violet-500 text-white hover:bg-violet-400`}>Abstimmen</Link>
+    </>
+  ) : winner ? (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-white leading-tight">{winner.clipTitle ?? "Clip des Monats"}</p>
+        <p className="truncate text-[11px] text-gray-400">
+          {creator}{winnerVotes != null && <> · {winnerVotes} {winnerVotes === 1 ? "Stimme" : "Stimmen"}</>}
+          {winners.length > 1 && <> · Gleichstand mit {winners.length - 1}</>}
+        </p>
+      </div>
+      <Link href="/clip-des-monats" className={`${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`}>
+        <Play className="w-3 h-3" fill="currentColor" /> Ansehen
+      </Link>
+    </>
+  ) : (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] font-bold text-white leading-tight">Noch keine Clips</p>
+        <p className="truncate text-[11px] text-gray-400">Reich deinen besten Moment ein.</p>
+      </div>
+      <Link href="/clip-des-monats" className={`${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`}>Ansehen</Link>
+    </>
+  );
+
+  // Zeilen: im Abstimmungsmodus der Sieger des Vormonats (Rest: "Clip einreichen"); sonst Platz 2 und 3.
+  const rows: HubRow[] = showVoting
+    ? winner
+      ? [{ key: "last-winner", href: "/clip-des-monats", lead: <span className="text-yellow-300">{monthLabel.slice(0, 3)}</span>, label: winner.clipTitle ?? "Clip des Monats", hint: <span className="text-gray-500">Sieger</span> }]
+      : []
+    : ranking.slice(1, 3).map((entry, i) => ({
+        key: entry.id,
+        href: "/clip-des-monats",
+        lead: `#${i + 2}`,
+        label: entry.title,
+        hint: <span className="text-gray-500 tabular-nums">{entry.votes} {entry.votes === 1 ? "Stimme" : "Stimmen"}</span>,
+      }));
 
   return (
-    <Link href="/clip-des-monats"
-      className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-      style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-
-      {/* Cover art area */}
-      <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
-        {/* Clip-Thumbnail */}
-        {winner?.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={winner.id}
-            src={winner.thumbnailUrl.replace("%{width}", "400").replace("%{height}", "225")}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700 animate-fade-in"
-          />
-        ) : activeContestId ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src="/clip-contest-voting.png"
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #2e1065 0%, #1a0b3d 50%, #0d0d0f 100%)" }}>
-            <Clapperboard className="w-8 h-8 text-gray-700" />
-          </div>
-        )}
-        {/* Play-Overlay (rein visuell — Kachel navigiert zur Clip-Seite) */}
-        {winner && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <Play className="w-3.5 h-3.5 text-black ml-0.5" fill="black" />
-            </div>
-          </div>
-        )}
-        {/* Badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-          style={{ background: "rgba(145,70,255,0.18)", border: "1px solid rgba(145,70,255,0.35)", color: "#c4b5fd" }}>
-          <NewContentPing
-            id={winner ? `winner-${finishedContestId}` : activeContestId ? `voting-${activeContestId}` : null}
-            storageKey="clip-hub-ping-seen"
-          >
-            {winner ? "🏆 Clip des Monats" : activeContestId ? "Abstimmung läuft" : "Clips"}
-          </NewContentPing>
-        </div>
-        {showWinner && winners.length > 1 && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1">
-            {winners.map((w, i) => (
-              <span key={w.id} className="w-1 h-1 rounded-full transition-colors"
-                style={{ background: i === index ? "#c4b5fd" : "rgba(255,255,255,0.25)" }} />
-            ))}
-          </div>
-        )}
-        <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-[#9146ff] group-hover:translate-x-0.5 transition-all" />
-        <div className="absolute bottom-0 inset-x-0 h-14"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
-      </div>
-
-      {/* Info area */}
-      <div className="px-4 pb-4 pt-2 flex-1 min-h-0">
-        <p className="text-[9px] text-[#9146ff]/60 uppercase tracking-[0.18em] font-semibold mb-0.5">
-          {showWinner && finishedContestId ? monthLabel : "Clip des Monats"}
-        </p>
-        <p className="font-display text-base font-black text-white leading-tight truncate">
-          {winner
-            ? (winner.clipTitle ?? "Clip ansehen")
-            : activeContestId
-              ? "Abstimmung läuft"
-              : "Noch keine Clips"}
-        </p>
-        {winner ? (
-          <div className="flex items-center gap-1.5 mt-2 min-w-0">
-            {winner.twitchCreatorLogin ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold truncate" style={{ color: "#c4b5fd" }}>
-                <TwitchIcon className="w-3 h-3 shrink-0" /> {winner.twitchCreatorLogin}
-              </span>
-            ) : (
-              <span className="text-[11px] text-gray-500 truncate">
-                von {winner.submittedBy?.name ?? winner.submittedBy?.username ?? "Unbekannt"}
-              </span>
-            )}
-            {winners.length > 1 && (
-              <span className="text-[11px] text-gray-600 shrink-0">· +{winners.length - 1} weitere</span>
-            )}
-          </div>
-        ) : activeContestId ? (
-          <p className="text-[11px] text-gray-600 mt-1">Jetzt abstimmen →</p>
-        ) : (
-          <p className="text-[11px] text-gray-600 mt-1">Clips ansehen →</p>
-        )}
-      </div>
-    </Link>
+    <HubTile
+      ariaLabel="Clip des Monats"
+      accent="violet"
+      highlighted={showVoting}
+      className="animate-slide-up stagger-2"
+      media={media}
+      main={main}
+      rows={rows}
+      placeholderRow={{ label: "Clip einreichen", href: "/clip-des-monats" }}
+      footer={{ label: showVoting ? "Alle Clips ansehen" : "Clip einreichen", href: "/clip-des-monats" }}
+    />
   );
 }

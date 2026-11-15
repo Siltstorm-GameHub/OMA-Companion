@@ -87,7 +87,7 @@ export default function GameVoteSection({
   }
 
   return (
-    <section className="glass rounded-2xl p-5 mb-5 space-y-4">
+    <section id="spielwahl" className="glass rounded-2xl p-5 mb-5 space-y-4 scroll-mt-20">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-base font-bold text-white">🗳️ Spielwahl</h2>

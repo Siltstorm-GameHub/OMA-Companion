@@ -28,7 +28,12 @@ import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
-import EventsTile, { type EventTileItem } from "@/components/EventsTile";
+import EventsTile from "@/components/EventsTile";
+import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf } from "@/lib/event-card-data";
+import { loadEventViewerContext } from "@/lib/event-viewer";
+import { friendsFirst, parseRanking, relevanceTags } from "@/lib/event-display";
+import { eventParticipationCoins } from "@/lib/event-placeholders";
+import { homeRows, pickHomeFeature, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import ClipContestWidget from "@/components/ClipContestWidget";
@@ -53,7 +58,7 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, activeOrPollEvents, upcomingEvents, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
@@ -72,28 +77,6 @@ const getGlobalDashboardData = unstable_cache(
           },
         },
         take: 5,
-      }),
-      // Aktive/Umfrage-Events haben Vorrang vor rein anstehenden — bis zu 3 Events insgesamt
-      // für die rotierende Events-Kachel im Dashboard.
-      prisma.event.findMany({
-        where:   { hidden: false, status: { in: ["active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
-        orderBy: { startAt: "desc" },
-        take:    3,
-        include: {
-          _count: { select: { registrations: true } },
-          polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
-        },
-      }),
-      prisma.event.findMany({
-        where:   { hidden: false, status: { in: ["open", "active"] }, startAt: { gte: new Date() }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
-        orderBy: { startAt: "asc" },
-        take:    3,
-        include: {
-          _count: { select: { registrations: true } },
-          polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
-        },
       }),
       prisma.event.findMany({
         where:   {
@@ -123,17 +106,6 @@ const getGlobalDashboardData = unstable_cache(
         select:  { id: true, title: true, game: true, startAt: true, completionData: true, seriesId: true },
       }),
     ]);
-    // Aktive/Umfrage-Events zuerst, danach anstehende auffüllen — dedupliziert, max. 3
-    // Events für die rotierende Kachel.
-    const seenEventIds = new Set<string>();
-    const dashboardEvents = [...activeOrPollEvents, ...upcomingEvents]
-      .filter(ev => {
-        if (seenEventIds.has(ev.id)) return false;
-        seenEventIds.add(ev.id);
-        return true;
-      })
-      .slice(0, 3);
-
     // Pro Reihe: nächstes offenes/laufendes/volles Event, Season-Fortschritt (fertige/gesamte Events)
     // und aktueller Spitzenreiter (via computeStatStandings, dieselbe Logik wie die Reihentabelle).
     const enrichedSeries = activeSeries.map(series => {
@@ -169,7 +141,7 @@ const getGlobalDashboardData = unstable_cache(
       };
     });
 
-    return { memberCount, activeEvents, activeSeries: enrichedSeries, dashboardEvents, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
+    return { memberCount, activeEvents, activeSeries: enrichedSeries, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
   },
   ["dashboard-global"],
   { revalidate: 300, tags: ["dashboard-global"] }
@@ -207,7 +179,7 @@ export default async function DashboardPage() {
   const month = nowParts.month;
   const year  = nowParts.year;
 
-  const { memberCount, activeEvents, activeSeries, dashboardEvents, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
+  const { memberCount, activeEvents, activeSeries, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
     await getGlobalDashboardData();
 
   // Namen der Spitzenreiter außerhalb des globalen Caches auflösen, damit Namensänderungen sofort
@@ -242,7 +214,7 @@ export default async function DashboardPage() {
     nextRegisteredEvent,
     finishedClipContest,
     activeClipContest,
-    registeredDashboardEventIds,
+    homeEventRows,
     spunToday,
     swipe,
   ] = await Promise.all([
@@ -291,12 +263,31 @@ export default async function DashboardPage() {
     prisma.monthlyClipContest.findFirst({
       where:   { status: "voting" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
-      select:  { id: true, month: true, year: true },
+      select:  { id: true, month: true, year: true, votingEndsAt: true, _count: { select: { nominations: true } } },
     }),
-    userId && dashboardEvents.length
-      ? prisma.eventRegistration.findMany({ where: { userId, eventId: { in: dashboardEvents.map(ev => ev.id) } }, select: { eventId: true } })
-          .then(rows => new Set(rows.map(r => r.eventId)))
-      : new Set<string>(),
+    // Kandidaten für die Startseiten-Event-Kachel (lib/home-event-feature.ts) — pro Request, weil
+    // Anmeldung, offene Stimmen und Relevanz vom Betrachter abhängen.
+    prisma.event.findMany({
+      where: {
+        hidden: false,
+        status: { in: ["open", "active", "closed", "umfrage"] },
+        AND: [
+          { OR: [{ seriesId: null }, { series: { hidden: false } }] },
+          { OR: [{ status: { in: ["active", "umfrage"] } }, { startAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } }] },
+        ],
+      },
+      orderBy: { startAt: "asc" },
+      take: 30,
+      include: {
+        ...EVENT_CARD_INCLUDE,
+        gameVote: { select: { status: true, ballots: { where: { userId: userId ?? "" }, select: { userId: true }, take: 1 } } },
+        polls: {
+          where: { startAt: { lte: now }, endAt: { gt: now } },
+          orderBy: { endAt: "asc" },
+          select: { endAt: true, voterEligibility: true, votes: { where: { voterId: userId ?? "" }, select: { id: true }, take: 1 } },
+        },
+      },
+    }),
     // Tägliches Glücksrad schon gedreht? Sonst weist Home darauf hin (gedreht wird im Shop-Reiter).
     userId
       ? prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } }, select: { id: true } }).then(Boolean).catch(() => true)
@@ -317,7 +308,7 @@ export default async function DashboardPage() {
   const startOfLastMonth = fromDatetimeLocalBerlin(`${lastMonthYear}-${pad2(lastMonth)}-01T00:00`);
   const startOfNextMonth = fromDatetimeLocalBerlin(`${nextMonthYear}-${pad2(nextMonth)}-01T00:00`);
 
-  // Bei mehreren gleichauf liegenden Gewinner-Clips rotiert die Dashboard-Kachel client-seitig durch alle
+  // Bei Gleichstand gibt es mehrere Gewinner-Clips — die Kachel zeigt den ersten und nennt den Gleichstand
   const winnerNominationIds = finishedClipContest?.winnerNominationIds ?? [];
 
   // Unabhängige Follow-up-Queries parallelisieren
@@ -351,23 +342,91 @@ export default async function DashboardPage() {
     .filter((c): c is NonNullable<typeof c> => !!c)
     .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
-  // Plain-Object-Liste für die client-seitig rotierende Events-Kachel — Countdown wird hier
-  // (mit dem Server-"now") vorberechnet statt live im Client zu ticken.
-  const eventTileItems: EventTileItem[] = dashboardEvents.map(ev => ({
-    id: ev.id,
-    title: ev.title,
-    game: ev.game,
-    category: ev.category,
-    status: ev.status,
-    coverImageUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
-    omaOriginal: isOmaOriginal(ev),
-    countdownText: ev.status === "umfrage" && ev.polls[0]
-      ? formatCountdown(new Date(ev.polls[0].endAt), now, "Umfrage endet in")
-      : formatCountdown(new Date(ev.startAt), now),
-    registrationsCount: ev._count.registrations,
-    maxPlayers: ev.maxPlayers,
-    isRegistered: registeredDashboardEventIds.has(ev.id),
-  }));
+  // ── Startseiten-Kacheln: Events (eine Priorität statt Karussell) + Clip-Platzierung ──
+  const [viewer, myRecentResult, clipRankingRows] = await Promise.all([
+    loadEventViewerContext(userId),
+    // Ergebnis eines Events, bei dem du in den letzten 24 Std mitgespielt hast
+    userId
+      ? prisma.event.findFirst({
+          where: {
+            hidden: false, status: "finished", finalRankingJson: { not: null },
+            completedAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+            registrations: { some: { userId, role: "player" } },
+          },
+          orderBy: { completedAt: "desc" },
+          select: {
+            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, finalRankingJson: true,
+            series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
+            _count: { select: { registrations: { where: { role: "player" } } } },
+          },
+        })
+      : null,
+    finishedClipContest
+      ? prisma.clipNomination.findMany({
+          where:   { contestId: finishedClipContest.id },
+          orderBy: { votes: { _count: "desc" } },
+          take:    3,
+          select:  { id: true, clipTitle: true, customTitle: true, _count: { select: { votes: true } } },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const ranking = parseRanking(myRecentResult?.finalRankingJson);
+  const myPlace = myRecentResult && userId ? ranking.indexOf(userId) + 1 : 0;
+  const winnerUser = myPlace > 0 && ranking[0]
+    ? await prisma.user.findUnique({ where: { id: ranking[0] }, select: { username: true, name: true } })
+    : null;
+  const homeResult: HomeResult | null = myRecentResult && myPlace > 0
+    ? {
+        id: myRecentResult.id,
+        title: myRecentResult.title,
+        game: myRecentResult.game,
+        coverUrl: myRecentResult.coverImageUrl ?? myRecentResult.series?.coverImageUrl ?? null,
+        omaOriginal: isOmaOriginal(myRecentResult),
+        place: myPlace,
+        total: Math.max(ranking.length, myRecentResult._count.registrations),
+        winnerName: myPlace === 1 ? null : (winnerUser?.username ?? winnerUser?.name ?? null),
+      }
+    : null;
+
+  const homeCandidates: HomeEventCandidate[] = homeEventRows.map(ev => {
+    const players = playersOf(ev);
+    const isRegistered = isUserRegistered(ev, userId);
+    const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
+    const squadOk = restrictedSquadId ? viewer.mySquadIds.has(restrictedSquadId) : true;
+    const others = friendsFirst(players.map(p => p.user).filter(u => u.id !== userId), viewer.friendIds);
+    // Abstimmung: "all" darf jeder, sonst nur wer angemeldet war (Spieler/Zuschauer)
+    const openPoll = ev.polls.find(p => p.voterEligibility === "all" || isRegistered);
+    return {
+      id: ev.id,
+      title: ev.title,
+      game: ev.game,
+      coverUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,
+      omaOriginal: isOmaOriginal(ev),
+      status: ev.status,
+      startAt: ev.startAt,
+      endAt: ev.endAt,
+      maxPlayers: ev.maxPlayers,
+      playerCount: players.length,
+      isRegistered,
+      canSelfRegister: !(ev.registrationLocked || ev.series?.registrationLocked) && squadOk,
+      gameVoteOpen: ev.gameVote?.status === "open",
+      gameVoteMissing: !!userId && ev.gameVote?.status === "open" && squadOk && (ev.gameVote?.ballots.length ?? 0) === 0,
+      pollMissingVote: !!userId && !!openPoll && openPoll.votes.length === 0,
+      pollEndsAt: openPoll?.endAt ?? null,
+      relevance: relevanceTags({ game: ev.game, squadId: restrictedSquadId }, viewer),
+      coins: eventParticipationCoins(ev),
+      avatars: others.slice(0, 3),
+      friendNames: others.filter(u => viewer.friendIds.has(u.id)).slice(0, 2).map(u => u.username ?? u.name ?? "Mitglied"),
+      discordUrl: ev.discordEventId && process.env.DISCORD_GUILD_ID
+        ? `https://discord.com/events/${process.env.DISCORD_GUILD_ID}/${ev.discordEventId}` : null,
+    };
+  });
+  const homeFeature = pickHomeFeature(homeCandidates, homeResult, now);
+  const homeFeatureId = homeFeature.kind === "result" ? homeFeature.result.id : homeFeature.kind === "none" ? null : homeFeature.ev.id;
+  const homeEventRowsShown = homeRows(homeCandidates, homeFeatureId, now);
+  const homeWeekCount = weekCount(homeCandidates, now);
+  const clipRanking = clipRankingRows.map(n => ({ id: n.id, title: n.customTitle ?? n.clipTitle ?? "Clip", votes: n._count.votes }));
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
@@ -684,17 +743,31 @@ export default async function DashboardPage() {
         <CommunityBoardWidget />
 
         {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+        {/* Beide Kacheln teilen das HubTile-Gerüst (feste Feldhöhen) → immer gleich hoch */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
 
-          {/* Events Hub — rotiert client-seitig durch bis zu 3 anstehende/aktive Events */}
-          <EventsTile items={eventTileItems} activeEvents={activeEvents} />
+          {/* Events Hub — das eine Event, das für dich gerade zählt (lib/home-event-feature.ts) */}
+          <EventsTile
+            feature={homeFeature}
+            rows={homeEventRowsShown}
+            weekCount={homeWeekCount}
+            nowIso={now.toISOString()}
+            loggedIn={!!userId}
+          />
 
           {/* Clip des Monats Hub */}
           <ClipOfMonthTile
             winners={winnerClips}
             monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
             finishedContestId={finishedClipContest?.id ?? null}
-            activeContestId={activeClipContest?.id ?? null}
+            active={activeClipContest ? {
+              id: activeClipContest.id,
+              monthLabel: MONTH_NAMES[activeClipContest.month - 1],
+              votingEndsAt: activeClipContest.votingEndsAt.toISOString(),
+              nominationCount: activeClipContest._count.nominations,
+            } : null}
+            ranking={clipRanking}
+            nowIso={now.toISOString()}
           />
         </div>
 

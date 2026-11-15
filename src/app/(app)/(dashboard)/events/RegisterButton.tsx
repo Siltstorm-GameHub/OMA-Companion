@@ -10,58 +10,58 @@ export default function RegisterButton({
   isFull,
   discordEventUrl,
   joinLabel = "Anmelden",
+  coins,
 }: {
   eventId: string;
   isRegistered: boolean;
   isFull: boolean;
   discordEventUrl?: string | null;
-  /** Beschriftung des Anmelde-Knopfs, z.B. "Jetzt einsteigen" bei laufenden Zeitraum-Events */
+  /** Beschriftung des Anmelde-Knopfs, z.B. "Einsteigen" bei laufenden Events */
   joinLabel?: string;
+  /** Teilnahme-Münzen — fliegen nach der Anmeldung kurz als "+X" hoch */
+  coins?: number;
 }) {
-  const [loading, setLoading]           = useState(false);
-  const [registered, setRegistered]     = useState(isRegistered);
+  const [loading, setLoading]               = useState(false);
+  const [registered, setRegistered]         = useState(isRegistered);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [burst, setBurst]                   = useState(0);
   const router = useRouter();
 
   async function handleClick() {
     if (isFull && !registered) return;
+    const wasRegistered = registered;
+    // Optimistisch: Zustand sofort umschalten, bei Fehler zurückdrehen.
+    setRegistered(!wasRegistered);
+    setJustRegistered(!wasRegistered);
+    if (!wasRegistered) setBurst(b => b + 1);
     setLoading(true);
     try {
-      const method = registered ? "DELETE" : "POST";
-      const res    = await fetch(`/api/events/${eventId}/register`, { method });
+      const res = await fetch(`/api/events/${eventId}/register`, { method: wasRegistered ? "DELETE" : "POST" });
 
       if (res.ok) {
-        const wasRegistered = registered;
-        setRegistered(!registered);
-
         if (!wasRegistered) {
-          setJustRegistered(true);
-          toast.success("Erfolgreich angemeldet! 🎉", {
-            description: discordEventUrl
-              ? "Vergiss nicht, dich auch auf Discord anzumelden."
-              : undefined,
+          toast.success("Angemeldet", {
+            description: discordEventUrl ? "Melde dich auch auf Discord an, dann bekommst du die Erinnerung." : undefined,
             action: discordEventUrl
               ? { label: "Discord öffnen", onClick: () => window.open(discordEventUrl, "_blank") }
               : undefined,
           });
         } else {
-          setJustRegistered(false);
-          toast("Abmeldung erfolgreich", {
-            icon: <X className="w-4 h-4 text-gray-400" />,
-          });
+          toast("Abgemeldet", { icon: <X className="w-4 h-4 text-gray-400" /> });
         }
-        router.refresh();
       } else {
+        setRegistered(wasRegistered);
+        setJustRegistered(false);
         const err = await res.json().catch(() => ({}));
-        toast.error("Aktion fehlgeschlagen", {
-          description: (err as { error?: string }).error ?? "Bitte versuche es erneut.",
+        toast.error("Das hat nicht geklappt", {
+          description: (err as { error?: string }).error ?? "Versuch es gleich noch mal.",
         });
-        router.refresh();
       }
+      router.refresh();
     } catch {
-      toast.error("Netzwerkfehler", {
-        description: "Verbindung fehlgeschlagen.",
-      });
+      setRegistered(wasRegistered);
+      setJustRegistered(false);
+      toast.error("Keine Verbindung", { description: "Versuch es gleich noch mal." });
     } finally {
       setLoading(false);
     }
@@ -69,38 +69,45 @@ export default function RegisterButton({
 
   if (isFull && !registered) {
     return (
-      <button disabled className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-gray-600 cursor-not-allowed border border-white/[0.06]">
+      <span className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-gray-500 border border-white/[0.06]">
         Voll
-      </button>
+      </span>
     );
   }
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <button
-        onClick={handleClick}
-        disabled={loading}
-        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
-          registered
-            ? "bg-emerald-500/10 text-emerald-400 hover:bg-red-500/10 hover:text-red-400 border border-emerald-500/20 hover:border-red-500/20"
-            : "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.25)]"
-        } disabled:opacity-50`}
-      >
-        {loading ? (
-          <Loader2 className="w-3 h-3 animate-spin" />
-        ) : registered ? (
-          <><Check className="w-3 h-3" /> Angemeldet</>
-        ) : (
-          joinLabel
+      <span className="relative inline-flex">
+        <button
+          onClick={handleClick}
+          disabled={loading}
+          aria-pressed={registered}
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all active:scale-95 ${
+            registered
+              ? "bg-teal-500/10 text-teal-300 hover:bg-red-500/10 hover:text-red-400 border border-teal-500/25 hover:border-red-500/25"
+              : "bg-teal-500 hover:bg-teal-400 text-teal-950"
+          } disabled:opacity-70`}
+        >
+          {registered ? (
+            <><Check className="w-3 h-3" /> Dabei</>
+          ) : (
+            <>{loading && <Loader2 className="w-3 h-3 animate-spin" />}{joinLabel}</>
+          )}
+        </button>
+        {burst > 0 && !!coins && registered && (
+          <span key={burst} aria-hidden="true"
+            className="pointer-events-none absolute -top-1 left-1/2 text-[11px] font-bold text-amber-400 value-delta-pop">
+            +{coins}
+          </span>
         )}
-      </button>
+      </span>
 
       {justRegistered && discordEventUrl && (
         <a
           href={discordEventUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 transition-colors whitespace-nowrap"
+          className="flex items-center gap-1 text-xs text-teal-300 hover:text-teal-200 transition-colors whitespace-nowrap"
         >
           <ExternalLink className="w-3 h-3" />
           Auf Discord anmelden

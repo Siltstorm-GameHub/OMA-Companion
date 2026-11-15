@@ -291,7 +291,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
   if (polls.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div id="abstimmung" className="space-y-3 scroll-mt-20">
       <div className="flex items-center gap-2">
         <Vote className="w-4 h-4 text-amber-400" />
         <h2 className="text-sm font-semibold text-white">Abstimmungen</h2>

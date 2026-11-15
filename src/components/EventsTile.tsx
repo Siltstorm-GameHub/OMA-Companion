@@ -1,151 +1,238 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users } from "@/components/icons";
-import { ChevronRight } from "@/components/icons";
-import { Scroll, Timer, CheckCircle2 } from "@/components/icons";
-import type { EventCategory } from "@prisma/client";
+import type { ReactNode } from "react";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
-import EventCategoryBadge from "@/components/EventCategoryBadge";
-import { OmaOriginalSeal, OmaTitlePrefix } from "@/components/OmaOriginalMark";
-import { CountUp } from "@/components/CountUp";
-import { acc } from "@/lib/accentColors";
-
-export type EventTileItem = {
-  id: string;
-  title: string;
-  game: string | null;
-  category: EventCategory;
-  status: string;
-  coverImageUrl: string | null;
-  /** OMA Original: Logo-Siegel auf dem Cover (lib/oma-original.ts) */
-  omaOriginal: boolean;
-  countdownText: string;
-  registrationsCount: number;
-  maxPlayers: number | null;
-  isRegistered: boolean;
-};
+import { AvatarStack } from "@/components/AvatarStack";
+import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
+import HubTile, { type HubRow } from "@/components/HubTile";
+import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
+import { Clock, ExternalLink, Heart, Timer, Trophy } from "@/components/icons";
+import { dateBlock, eventPhase, startsInLabel, urgencyHint } from "@/lib/event-display";
+import type { HomeEventCandidate, HomeFeature } from "@/lib/home-event-feature";
+import { formatBerlinTime } from "@/lib/time";
 
 interface Props {
-  items: EventTileItem[];
-  activeEvents: number;
+  feature: HomeFeature;
+  rows: HomeEventCandidate[];
+  weekCount: number;
+  /** Server-"jetzt" als ISO-String (Countdown wird serverseitig berechnet) */
+  nowIso: string;
+  loggedIn: boolean;
 }
 
-const ROTATE_INTERVAL_MS = 6000;
+const BTN = "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
+const BTN_PRIMARY = `${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`;
+const BTN_VIOLET = `${BTN} bg-violet-500 text-white hover:bg-violet-400`;
+const BTN_SECONDARY = `${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`;
 
-export default function EventsTile({ items, activeEvents }: Props) {
-  const [index, setIndex] = useState(0);
+function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; children: ReactNode }) {
+  const cls = {
+    teal: "text-teal-300",
+    red: "text-red-400",
+    violet: "text-violet-300",
+    yellow: "text-yellow-300",
+  }[tone];
+  return (
+    <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-[#0b0d12]/90 px-2 py-1 text-[11px] font-semibold shadow-[0_1px_6px_rgba(0,0,0,0.4)] ${cls}`}>
+      {children}
+    </span>
+  );
+}
 
-  useEffect(() => {
-    if (items.length <= 1) return;
-    const t = setInterval(() => setIndex(i => (i + 1) % items.length), ROTATE_INTERVAL_MS);
-    return () => clearInterval(t);
-  }, [items.length]);
+function Cover({ game, coverUrl, omaOriginal, dim = false }: { game: string | null; coverUrl: string | null; omaOriginal: boolean; dim?: boolean }) {
+  return (
+    <>
+      {game || coverUrl
+        ? <GameCover game={game} coverUrl={coverUrl} className="absolute inset-0 w-full h-full" rounded="rounded-none" brandBadge omaOriginal={omaOriginal}
+            imgClassName="w-full h-full object-cover object-center" />
+        : <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge omaOriginal={omaOriginal} />}
+      {dim && <div className="absolute inset-0 bg-[#0b0d12]/60" />}
+    </>
+  );
+}
 
-  const event = items[index] ?? null;
+function Avatars({ ev }: { ev: HomeEventCandidate }) {
+  if (!ev.avatars.length) return null;
+  return (
+    <div className="absolute bottom-2.5 right-2.5 z-10">
+      <AvatarStack users={ev.avatars} max={3} size="xs" />
+    </div>
+  );
+}
+
+function Title({ title, omaOriginal, href }: { title: string; omaOriginal: boolean; href: string }) {
+  return (
+    <Link href={href} className="block truncate text-[15px] font-bold text-white leading-tight hover:underline">
+      {omaOriginal && <OmaTitlePrefix title={title} />}
+      {title}
+    </Link>
+  );
+}
+
+/** "Heute · 20:00" / "Morgen · 20:00" / "Sa 21. · 20:00" */
+const longDate = (d: Date, now: Date) => {
+  const b = dateBlock(d, now);
+  if (b.top === "HEUTE") return `Heute · ${b.time}`;
+  if (b.top === "MORGEN") return `Morgen · ${b.time}`;
+  return `${b.top.charAt(0)}${b.top.slice(1).toLowerCase()} ${b.day}. · ${b.time}`;
+};
+
+/**
+ * Startseiten-Kachel "Events": zeigt das EINE Event, das für dich gerade am wichtigsten ist
+ * (lib/home-event-feature.ts), darunter die nächsten zwei Events. Gerüst = HubTile, damit sie
+ * neben der Clip-Kachel immer gleich hoch ist.
+ */
+export default function EventsTile({ feature, rows, weekCount, nowIso, loggedIn }: Props) {
+  const now = new Date(nowIso);
+  let media: ReactNode;
+  let main: ReactNode;
+  let highlighted = false;
+
+  if (feature.kind === "result") {
+    const r = feature.result;
+    highlighted = true;
+    media = (
+      <>
+        <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-5xl font-black text-yellow-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] tabular-nums">{r.place}.</span>
+          <span className="text-xs font-semibold text-gray-200">von {r.total}</span>
+        </div>
+        <Pill tone="yellow"><Trophy className="w-3.5 h-3.5" /> Dein Ergebnis</Pill>
+      </>
+    );
+    main = (
+      <>
+        <div className="min-w-0 flex-1">
+          <Title title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
+          <p className="truncate text-[11px] text-gray-400">
+            Platz {r.place} von {r.total}{r.winnerName && <> · Sieg: <span className="text-yellow-300">{r.winnerName}</span></>}
+          </p>
+        </div>
+        <Link href={`/tournament/${r.id}`} className={BTN_SECONDARY}>Ergebnisse</Link>
+      </>
+    );
+  } else if (feature.kind === "none") {
+    media = (
+      <>
+        <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
+      </>
+    );
+    main = (
+      <>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-bold text-white leading-tight">Gerade ist nichts geplant</p>
+          <p className="truncate text-[11px] text-gray-400">Hast du eine Idee? Schlag ein Event vor.</p>
+        </div>
+        <Link href="/admin/events/new" className={BTN_SECONDARY}>Vorschlagen</Link>
+      </>
+    );
+  } else {
+    const ev = feature.ev;
+    const href = `/tournament/${ev.id}`;
+    const phase = eventPhase({ status: ev.status, startAt: ev.startAt, endAt: ev.endAt, maxPlayers: ev.maxPlayers, playerCount: ev.playerCount, isRegistered: ev.isRegistered }, now);
+    const running = phase.phase === "live" || phase.phase === "period";
+    const statusPill = running
+      ? phase.phase === "period"
+        ? <Pill tone="teal"><Timer className="w-3.5 h-3.5" />{phase.label}</Pill>
+        : <Pill tone="red"><span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />Live</Pill>
+      : null;
+    const register = (label: string) => loggedIn && ev.canSelfRegister && !ev.isRegistered
+      ? <RegisterButton eventId={ev.id} isRegistered={false} isFull={false} discordEventUrl={ev.discordUrl} joinLabel={label} coins={ev.coins} />
+      : <Link href={href} className={BTN_SECONDARY}>Details</Link>;
+
+    let pill: ReactNode = statusPill;
+    let sub: ReactNode;
+    let action: ReactNode;
+
+    switch (feature.kind) {
+      case "registered": {
+        highlighted = true;
+        const startsIn = startsInLabel(ev.startAt, now);
+        pill = statusPill ?? <Pill tone="teal"><Clock className="w-3.5 h-3.5" />{startsIn ? `startet ${startsIn}` : "startet gleich"}</Pill>;
+        sub = <>{running ? `${ev.playerCount} dabei` : longDate(ev.startAt, now)} · <span className="text-teal-300">du bist dabei</span></>;
+        action = ev.discordUrl
+          ? <a href={ev.discordUrl} target="_blank" rel="noopener noreferrer" className={BTN_PRIMARY}><ExternalLink className="w-3.5 h-3.5" />Discord</a>
+          : <Link href={href} className={BTN_SECONDARY}>Details</Link>;
+        break;
+      }
+      case "live":
+        sub = <>{ev.playerCount} dabei{ev.friendNames.length > 0 && <> · <span className="text-gray-300">{ev.friendNames.join(", ")}</span></>}</>;
+        action = register("Einsteigen");
+        break;
+      case "poll":
+        highlighted = true;
+        pill = <Pill tone="violet">Abstimmung läuft{ev.pollEndsAt && ` · bis ${formatBerlinTime(ev.pollEndsAt, { hour: "2-digit", minute: "2-digit" })}`}</Pill>;
+        sub = <span className="text-violet-300">Deine Stimme fehlt noch</span>;
+        action = <Link href={`${href}#abstimmung`} className={BTN_VIOLET}>Abstimmen</Link>;
+        break;
+      case "gamevote":
+        pill = <Pill tone="violet">Spielwahl läuft</Pill>;
+        sub = <>Wähl mit, was gespielt wird · {longDate(ev.startAt, now)}</>;
+        action = <Link href={`${href}#spielwahl`} className={BTN_VIOLET}>Mitwählen</Link>;
+        break;
+      case "recommend": {
+        const urgent = urgencyHint(ev, now);
+        pill = ev.relevance.length > 0
+          ? <Pill tone="teal"><Heart className="w-3.5 h-3.5" />Für dich · {ev.relevance.join(" · ")}</Pill>
+          : <Pill tone="teal"><Clock className="w-3.5 h-3.5" />Als Nächstes</Pill>;
+        sub = <>{longDate(ev.startAt, now)}{urgent ? <> · <span className="text-amber-300">{urgent}</span></> : ev.maxPlayers ? ` · ${ev.playerCount}/${ev.maxPlayers}` : ""}</>;
+        action = register("Anmelden");
+        break;
+      }
+    }
+
+    media = (
+      <>
+        <Cover game={ev.game} coverUrl={ev.coverUrl} omaOriginal={ev.omaOriginal} />
+        {pill}
+        <Avatars ev={ev} />
+      </>
+    );
+    main = (
+      <>
+        <div className="min-w-0 flex-1">
+          <Title title={ev.title} omaOriginal={ev.omaOriginal} href={href} />
+          <p className="truncate text-[11px] text-gray-400">{sub}</p>
+        </div>
+        {action}
+      </>
+    );
+  }
+
+  const hubRows: HubRow[] = rows.map(e => {
+    const b = dateBlock(e.startAt, now);
+    const running = e.status === "active";
+    const urgent = urgencyHint(e, now);
+    const full = !!e.maxPlayers && e.playerCount >= e.maxPlayers && !e.isRegistered;
+    return {
+      key: e.id,
+      href: `/tournament/${e.id}`,
+      lead: running ? <span className="font-bold text-red-400">LIVE</span> : b.top === "HEUTE" ? <span className="text-teal-300">{b.time}</span> : `${b.weekday} ${b.day}`,
+      label: <>{e.omaOriginal && <OmaTitlePrefix title={e.title} />}{e.title}</>,
+      hint: e.isRegistered
+        ? <span className="text-teal-300">dabei</span>
+        : full
+          ? <span className="text-gray-500">voll</span>
+          : urgent
+            ? <span className="text-amber-300">{urgent.replace("Noch ", "").replace(" Plätze", " frei").replace(" Platz", " frei")}</span>
+            : e.relevance.includes("Dein Spiel")
+              ? <span className="text-teal-300">Dein Spiel</span>
+              : <span className="text-gray-500 tabular-nums">{e.playerCount}{e.maxPlayers ? `/${e.maxPlayers}` : ""}</span>,
+    };
+  });
 
   return (
-    <Link href="/events"
-      className="surface animate-slide-up stagger-1 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-      style={{
-        borderRadius: "6px",
-        border: `1px solid ${acc("teal", event?.omaOriginal ? 0.45 : 0.12)}`,
-        boxShadow: event?.omaOriginal ? "0 4px 24px rgba(0,0,0,0.5), 0 0 24px rgba(20,184,166,0.14)" : "0 4px 24px rgba(0,0,0,0.5)",
-      }}>
-
-      {/* Cover art area */}
-      <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
-        {/* Game cover background */}
-        {event?.game || event?.coverImageUrl ? (
-          <GameCover
-            key={event.id}
-            game={event.game}
-            coverUrl={event.coverImageUrl}
-            className="absolute inset-0 w-full h-full"
-            rounded="rounded-none"
-            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
-            brandBadge
-          />
-        ) : (
-          <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
-        )}
-        {/* Status badge */}
-        {event && event.status === "active" ? (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: acc("red", 0.16), border: `1px solid ${acc("red", 0.3)}`, color: "#f87171" }}>
-            <span className="relative flex w-1.5 h-1.5">
-              <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 animate-ping" />
-              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-red-400" />
-            </span>
-            Live
-          </div>
-        ) : event && event.status === "umfrage" ? (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: acc("amber", 0.16), border: `1px solid ${acc("amber", 0.3)}`, color: "#fbbf24" }}>
-            <span className="relative flex w-1.5 h-1.5">
-              <span className="absolute inline-flex w-full h-full rounded-full bg-amber-400 animate-ping" />
-              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-amber-400" />
-            </span>
-            Umfragephase
-          </div>
-        ) : (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-            <CountUp to={activeEvents} duration={700} /> aktiv
-          </div>
-        )}
-        {event?.isRegistered && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
-            <CheckCircle2 className="w-3 h-3" /> Angemeldet
-          </div>
-        )}
-        {/* Rotations-Indikator, nur wenn mehr als ein Event ansteht */}
-        {items.length > 1 && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
-            {items.map((it, i) => (
-              <span key={it.id} className="w-1 h-1 rounded-full transition-colors"
-                style={{ background: i === index ? "#2dd4bf" : "rgba(255,255,255,0.3)" }} />
-            ))}
-          </div>
-        )}
-        <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
-        <div className="absolute bottom-0 inset-x-0 h-14"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
-      </div>
-
-      {/* Info area */}
-      <div className="px-4 pb-4 pt-2 flex-1 min-h-0">
-        {event?.omaOriginal && <OmaOriginalSeal className="mb-2" />}
-        <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">
-          {event?.game ?? "Events"}
-        </p>
-        <div className="flex items-center gap-2">
-          <p className="font-display text-base font-black text-white leading-tight truncate flex-1 min-w-0">
-            {event?.omaOriginal && <OmaTitlePrefix title={event.title} />}
-            {event ? event.title : "Keine anstehenden Events"}
-          </p>
-          {event && <EventCategoryBadge category={event.category} className="shrink-0" />}
-        </div>
-        {event ? (
-          <div className="flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-1 text-[12px] font-bold"
-              style={{ color: event.status === "umfrage" ? "#fbbf24" : "#2dd4bf" }}>
-              {event.status === "umfrage" ? <Scroll className="w-3.5 h-3.5" /> : <Timer className="w-3.5 h-3.5" />}
-              {event.countdownText}
-            </span>
-            <span className="flex items-center gap-1 ml-auto text-[11px] text-gray-500">
-              <Users className="w-3 h-3" />
-              {event.registrationsCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[11px] text-gray-600 mt-1">Alle Events ansehen →</p>
-        )}
-      </div>
-    </Link>
+    <HubTile
+      ariaLabel="Events"
+      accent="teal"
+      highlighted={highlighted}
+      className="animate-slide-up stagger-1"
+      media={media}
+      main={main}
+      rows={hubRows}
+      placeholderRow={{ label: "Neues Event vorschlagen", href: "/admin/events/new" }}
+      footer={{ label: weekCount > 0 ? `${weekCount} ${weekCount === 1 ? "Event" : "Events"} diese Woche` : "Alle Events", href: "/events" }}
+    />
   );
 }
