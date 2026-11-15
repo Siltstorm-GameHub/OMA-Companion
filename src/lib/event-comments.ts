@@ -9,7 +9,7 @@ import { checkInState } from "@/lib/checkin";
 import { createNotification, PREF_KEY } from "@/lib/notifications";
 import { sendPushToUsers } from "@/lib/push";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
-import { sendDiscordMessage, deleteDiscordMessage, resolveChannelId } from "@/lib/discord-rest";
+import { sendDiscordMessage, deleteDiscordMessage } from "@/lib/discord-rest";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { extractMentionedUserIds } from "@/lib/report-mentions";
 import {
@@ -319,7 +319,9 @@ export async function setEventCommentPinned(viewer: CommentViewer, commentId: st
 async function mirrorPinnedToDiscord(
   ev: LoadedEvent, commentId: string, content: string, author: { username: string | null; name: string | null; image: string | null },
 ): Promise<boolean> {
-  const channelId = resolveChannelId(resolveEventChannelId(ev));
+  // Nur in einen eigenen Kanal des Events bzw. der Reihe — ohne Kanal wird nichts gespiegelt
+  // (bewusst kein Rückfall auf den allgemeinen News-Kanal).
+  const channelId = resolveEventChannelId(ev);
   if (!channelId || !process.env.DISCORD_BOT_TOKEN) return false;
   const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
   try {
