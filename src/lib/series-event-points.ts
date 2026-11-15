@@ -104,9 +104,12 @@ export function extractPlacementPoints(stats: Record<string, unknown>, placement
 /** Ob die (mit applyEventStatOverride zusammengeführte) Konfiguration überhaupt Eventpunkte vergibt:
  *  mindestens ein Stat mit Punkten ≠ 0 oder Platzierungspunkte > 0 pro Runde. Sonst wären alle
  *  Eventpunkte 0 — dann gibt es keine Eventpunkte-Spalte/-Option, und die Platzierung ergibt sich
- *  direkt aus dem Sieger-Stat (siehe resolveRankStatField). */
-export function hasEventPoints(cfg: { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number> }): boolean {
-  return (cfg.stats ?? []).some(s => s.pointsPer !== 0)
+ *  direkt aus dem Sieger-Stat (siehe resolveRankStatField). 🏆 Sieger-Stats (winnerStatKeys) zählen
+ *  nicht: sie entstehen erst durch die Sieger-Wahl und fließen nie in die Eventpunkte ein (siehe
+ *  computeTurnierpunkte) — sonst gäbe es eine Eventpunkte-Spalte voller Nullen, nach der sortiert wird. */
+export function hasEventPoints(cfg: { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number>; winnerStatKeys?: string[] }): boolean {
+  const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
+  return (cfg.stats ?? []).some(s => s.pointsPer !== 0 && !winnerStatSet.has(s.field))
     || Object.values(cfg.placementPoints ?? {}).some(p => p > 0);
 }
 
@@ -176,7 +179,7 @@ export function computeTurnierpunkte(
           continue;
         }
         const val = Number(s[sourceKey] ?? 0);
-        if (val) rawTotals[entry.userId] = (rawTotals[entry.userId] ?? 0) + val * pointsPer;
+        if (val && pointsPer) rawTotals[entry.userId] = (rawTotals[entry.userId] ?? 0) + val * pointsPer;
       }
       const placementPts = extractPlacementPoints(s, cfg.placementPoints);
       if (placementPts) placementTotals[entry.userId] = (placementTotals[entry.userId] ?? 0) + placementPts;

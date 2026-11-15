@@ -205,6 +205,12 @@ describe("hasEventPoints / resolveRankStatField", () => {
     assert.equal(hasEventPoints({ stats: [], placementPoints: { "1": 5 } }), true);
   });
 
+  test("🏆 Sieger-Stats zählen nicht als Eventpunkte", () => {
+    const cfg = { stats: [{ field: "Score", pointsPer: 0 }, { field: "Sieg", pointsPer: 5 }], winnerStatKeys: ["Sieg"] };
+    assert.equal(hasEventPoints(cfg), false);
+    assert.deepEqual(computeTurnierpunkte([{ entries: [entry("a", { Score: 50 })] }], cfg), {});
+  });
+
   test("Sieger-Stat: Event vor Reihe vor Altfeld, nur echte Stat-Felder, sonst erstes Feld", () => {
     const fields = ["Kills", "Schüsse"];
     assert.equal(resolveRankStatField(fields, JSON.stringify({ winnerStatField: "Schüsse" }), { winnerStatField: "Kills" }), "Schüsse");
