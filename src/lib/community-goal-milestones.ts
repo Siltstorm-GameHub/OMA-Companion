@@ -32,6 +32,8 @@ export type GoalState = {
   rewardedUserIds: string[];
   /** Zeitpunkt der ersten Auszahlung */
   rewardedAt?: string;
+  /** Wann welche Stufe erreicht wurde (ISO-Zeit je Stufe) — für "gerade geschafft" auf der Startseite */
+  milestoneAt?: Record<string, string>;
 };
 
 export function parseGoalState(json: string | null | undefined): GoalState {
@@ -41,6 +43,9 @@ export function parseGoalState(json: string | null | undefined): GoalState {
       milestones: Array.isArray(raw.milestones) ? raw.milestones.filter(n => typeof n === "number") : [],
       rewardedUserIds: Array.isArray(raw.rewardedUserIds) ? raw.rewardedUserIds.filter(s => typeof s === "string") : [],
       ...(typeof raw.rewardedAt === "string" && { rewardedAt: raw.rewardedAt }),
+      ...(raw.milestoneAt && typeof raw.milestoneAt === "object" && !Array.isArray(raw.milestoneAt) && {
+        milestoneAt: Object.fromEntries(Object.entries(raw.milestoneAt).filter(([, v]) => typeof v === "string")),
+      }),
     };
   } catch {
     return { milestones: [], rewardedUserIds: [] };
@@ -144,8 +149,12 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
 
       const changed = newMilestone !== null || payees.length > 0;
       if (changed) {
+        const nowIso = new Date().toISOString();
+        const milestoneAt = { ...state.milestoneAt };
+        for (const p of milestones) if (!state.milestones.includes(p)) milestoneAt[String(p)] = nowIso;
         const next: GoalState = {
           milestones,
+          milestoneAt,
           rewardedUserIds: [...state.rewardedUserIds, ...payees],
           ...(state.rewardedAt || payees.length ? { rewardedAt: state.rewardedAt ?? new Date().toISOString() } : {}),
         };
