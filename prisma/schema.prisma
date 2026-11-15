@@ -98,7 +98,6 @@ model User {
   lulLegacyEntries            LulLegacyEntry[]
   dailySpins                  DailySpin[]
   donations                   Donation[]
-  lobbyMessages               LobbyMessage[]
   pushSubscriptions           PushSubscription[]
   clipSubmissions             EventClipSubmission[]
   clipNominations             ClipNomination[]
@@ -1194,19 +1193,6 @@ model LulPollVote {
   target User    @relation("LulPollTarget", fields: [targetId], references: [id])
 
   @@unique([pollId, voterId])
-}
-
-// ── Lobby-Chat ───────────────────────────────────────────────────────────────
-
-model LobbyMessage {
-  id        String   @id @default(cuid())
-  content   String   @db.VarChar(500)
-  userId    String   @map("userid")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("createdat")
-
-  @@index([createdAt])
-  @@map("lobbymessage")
 }
 
 // ── Wanderpokal ──────────────────────────────────────────────────────────────

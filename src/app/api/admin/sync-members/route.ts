@@ -112,9 +112,6 @@ export async function POST() {
         await prisma.pokal.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
-        await prisma.lobbyMessage.updateMany({
-          where: { userId: stub.id }, data: { userId: realUser.id },
-        });
         await prisma.pushSubscription.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
@@ -293,7 +290,6 @@ export async function POST() {
           await tx.dailySpin.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.donation.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.pokal.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
-          await tx.lobbyMessage.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.pushSubscription.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           try { await tx.tournamentParticipant.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } }); } catch { /* unique constraint */ }
           try { await tx.teamMember.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } }); } catch { /* unique constraint */ }

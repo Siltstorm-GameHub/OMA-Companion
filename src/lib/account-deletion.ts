@@ -34,8 +34,6 @@ export async function anonymizeUser(userId: string): Promise<void> {
     prisma.pushSubscription.deleteMany({ where: { userId } }),
     prisma.inAppNotification.deleteMany({ where: { userId } }),
     prisma.twitchClipperLink.deleteMany({ where: { userId } }),
-    // Freitext ohne Bezug für andere
-    prisma.lobbyMessage.deleteMany({ where: { userId } }),
     // Event-Absprachen: Lesestand ist rein persönlich (Nachrichten bleiben wie Beiträge erhalten)
     prisma.eventCommentRead.deleteMany({ where: { userId } }),
     // Spieleliste: Bewertungen/"Würde ich zocken" (Schnitte werden unten neu berechnet)
@@ -97,7 +95,6 @@ export async function buildUserExport(userId: string) {
       questProgress: true,
       dailySpins: true,
       donations: { omit: { note: true } },
-      lobbyMessages: true,
       eventComments: { include: { event: { select: { title: true, startAt: true } } } },
       eventCommentReactions: true,
       gameReactions: { include: { game: { select: { name: true } } } },

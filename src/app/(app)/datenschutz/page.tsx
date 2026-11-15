@@ -52,7 +52,6 @@ export default function DatenschutzPage() {
           Screenshots als Ergebnis-Nachweis — werden 7 Tage nach Abschluss der Turnierphase, spätestens nach
           14 Tagen, automatisch gelöscht
         </li>
-        <li>Lobby-Chat-Nachrichten — werden nach 7 Tagen automatisch gelöscht</li>
         <li>Beiträge, Kommentare, Ideen, Berichte, Fotos und Clips, die du selbst einstellst</li>
         <li>Zeitpunkt deiner letzten Aktivität (für den Online-Status)</li>
         <li>Spenden in den Community-Pool (Betrag und Monat; nur für Admins sichtbar)</li>
@@ -127,8 +126,8 @@ export default function DatenschutzPage() {
 
       <h2>6. Speicherdauer</h2>
       <p>
-        Wir speichern deine Daten, solange dein Konto besteht. Kürzere Fristen gelten für Screenshots,
-        Lobby-Nachrichten und technische Logs (siehe oben). Verlässt du den Discord-Server, bleibt dein Konto
+        Wir speichern deine Daten, solange dein Konto besteht. Kürzere Fristen gelten für Screenshots
+        und technische Logs (siehe oben). Verlässt du den Discord-Server, bleibt dein Konto
         mit Historie erhalten, bis du es löschst.
       </p>
 

@@ -64,7 +64,7 @@ export default function AccountDataSection() {
                 <div className="space-y-1">
                   <p className="font-semibold">Das kann nicht rückgängig gemacht werden.</p>
                   <p className="text-red-300/80">
-                    Name, Bild, Discord- und Twitch-Verknüpfung, Geburtstag, Profiltexte, Lobby-Nachrichten und
+                    Name, Bild, Discord- und Twitch-Verknüpfung, Geburtstag, Profiltexte und
                     Push-Abos werden entfernt; Münzen, Rang-Punkte und Karten verfallen. Turnierergebnisse und
                     Beiträge bleiben für die Community erhalten, erscheinen aber nur noch als „Gelöschtes Mitglied“.
                     Meldest du dich später erneut an, startest du mit einem neuen, leeren Konto.
