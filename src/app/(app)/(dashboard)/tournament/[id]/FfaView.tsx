@@ -38,6 +38,7 @@ export default function FfaView({
   statFields,
   statPointsPer = {},
   ligaPunkteByUser = {},
+  ligaPunkteBreakdownByUser = {},
   turnierpunkteByUser = {},
   rankStatField,
   placementPoints,
@@ -70,6 +71,9 @@ export default function FfaView({
   statPointsPer?: Record<string, number>;
   /** Tabellenpunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Reihentabelle) */
   ligaPunkteByUser?: Record<string, number>;
+  /** Aufschlüsselung der endgültigen Tabellenpunkte je User (Teilnahme, Sieger-Stat, …), siehe
+   *  computeEventPoints — zum Aufklappen in der Tabellenpunkte-Spalte. */
+  ligaPunkteBreakdownByUser?: Record<string, { label: string; points: number }[]>;
   /** Eventpunkte dieses Events je Spieler (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
    *  computeTurnierpunkte) — KEINE Tabellenpunkte, bestimmen nur die Endplatzierung/den Sieger dieses
    *  einzelnen Events. Anders als ligaPunkteByUser bereits sichtbar, solange das Event noch läuft. */
@@ -218,7 +222,11 @@ export default function FfaView({
   };
   // Gleichauf liegende Spieler teilen sich den Platz; innerhalb des Gleichstands nur zur Anzeige
   // nach den Stat-Feldern geordnet.
-  const ranked = [...totals.values()].sort((a, b) => rankCompare(a, b) || byStatFields(a, b));
+  // Nach Abschluss der Spielphase: Angemeldete ohne gespielte Runde und ohne Tabellenpunkte/Stimmabgabe
+  // haben nicht teilgenommen — sie tauchen nicht mehr (mit fiktivem Platz) in der Endtabelle auf.
+  const tookPart = (t: PlayerTotal) =>
+    isLigaPunkteLive || t.matchCount > 0 || (ligaPunkteByUser[t.userId] ?? 0) > 0 || votedSet.has(t.userId);
+  const ranked = [...totals.values()].filter(tookPart).sort((a, b) => rankCompare(a, b) || byStatFields(a, b));
 
   // Sobald der Admin eine Endplatzierung bestätigt hat (finalRankingGroups), hat diese
   // Vorrang vor der statistischen Sortierung — die Zeilenreihenfolge folgt dann 1. bis
@@ -447,7 +455,21 @@ export default function FfaView({
                         )}
                         <td className="px-3 py-3 text-center">
                           <div className="flex flex-col items-center gap-0">
-                            {eventLigapunkte > 0
+                            {eventLigapunkte > 0 && !isLigaPunkteLive && (ligaPunkteBreakdownByUser[r.userId]?.length ?? 0) > 0
+                              ? <details className="group text-center">
+                                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer tabular-nums font-bold inline-flex items-center gap-0.5 text-teal-400"
+                                    title="Aufschlüsselung anzeigen">
+                                    +{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />
+                                  </summary>
+                                  <div className="mt-1 space-y-0.5">
+                                    {ligaPunkteBreakdownByUser[r.userId].map(item => (
+                                      <div key={item.label} className="text-[9px] text-gray-500 whitespace-nowrap leading-tight">
+                                        {item.label}: <span className="tabular-nums text-teal-500/80">{item.points > 0 ? "+" : ""}{fmtUpTo2(item.points)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              : eventLigapunkte > 0
                               ? <span className={`tabular-nums font-bold inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
                                   title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
                                   {isLigaPunkteLive && "~"}+{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />

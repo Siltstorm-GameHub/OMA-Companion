@@ -684,14 +684,14 @@ export default async function TournamentDetailPage({
         avgLeaderIds,
       )
     : null;
-  const ligaPunkteByUser: Record<string, number> = event.series
-    ? (liveLigaPunkte
-        ? liveLigaPunkte.pointsByUser
-        : computeEventPoints(
-            { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
-            rawSeriesStatCfg,
-          ).pointsByUser)
-    : {};
+  const finalEventPoints = event.series && !liveLigaPunkte
+    ? computeEventPoints(
+        { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
+        rawSeriesStatCfg,
+      )
+    : null;
+  const ligaPunkteByUser: Record<string, number> = liveLigaPunkte?.pointsByUser ?? finalEventPoints?.pointsByUser ?? {};
+  const ligaPunkteBreakdownByUser = finalEventPoints?.breakdownByUser ?? {};
 
   // Dominion-Bonus-Ergebnis DIESES Events je User — direkt aus completionData.dominionChanges
   // (siehe complete/route.ts + dominion-bonus.ts), nicht aus dem aktuellen (live) Streak-Stand der
@@ -1438,6 +1438,7 @@ export default async function TournamentDetailPage({
             statFields={event.statFields ? JSON.parse(event.statFields) : []}
             statPointsPer={statPointsPer}
             ligaPunkteByUser={ligaPunkteByUser}
+            ligaPunkteBreakdownByUser={ligaPunkteBreakdownByUser}
             turnierpunkteByUser={turnierpunkteByUser}
             rankStatField={rankStatField}
             placementPoints={turnierpunkteCfg.placementPoints}

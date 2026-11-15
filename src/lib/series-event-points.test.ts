@@ -212,3 +212,23 @@ describe("hasEventPoints / resolveRankStatField", () => {
     assert.equal(resolveRankStatField(fields, null, { winnerStatField: "Turnierpunkte" }), "Kills");
   });
 });
+
+describe("computeEventPoints – Aufschlüsselung", () => {
+  test("Posten summieren sich zu pointsByUser, Nullposten fehlen", () => {
+    const cfg: StatConfig = { ...baseCfg, eventPlacementPoints: [{ place: 1, points: 3 }] };
+    const ev = {
+      registrations: [{ userId: "a", role: "player" }, { userId: "b", role: "player" }],
+      matches: [{ entries: [entry("a", { Kills: 2 }), entry("b", {})] }],
+      completionData: done({ eventWinnerIds: ["a"], eventPlacementPoints: { a: 3 } }),
+    };
+    const r = computeEventPoints(ev, cfg);
+    assert.deepEqual(r.breakdownByUser.a, [
+      { label: "Teilnahme", points: 10 },
+      { label: "Platzierungs-Bonus", points: 3 },
+      { label: "Kills", points: 2 },
+      { label: "Sieg", points: 25 },
+    ]);
+    assert.equal(r.pointsByUser.a, 40);
+    assert.deepEqual(r.breakdownByUser.b, [{ label: "Teilnahme", points: 10 }]);
+  });
+});

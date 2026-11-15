@@ -376,10 +376,14 @@ export type EventPointsResult = {
   /** User, die für dieses Event ausgeschlossen (disqualifiziert) wurden: ihre Teilnahme/Stats werden
    *  weiterhin oben getrackt (participationsByUser/statsByUser), tragen aber keine Tabellenpunkte bei. */
   excludedFromPointsUserIds: string[];
+  /** Aufschlüsselung von pointsByUser je User (nur Posten ≠ 0) — zur Anzeige, woher die
+   *  Tabellenpunkte eines Events stammen (Teilnahme, Sieger-Stat, Platzierung, Umfragen, …). */
+  breakdownByUser: Record<string, { label: string; points: number }[]>;
 };
 
 const EMPTY_RESULT: EventPointsResult = {
   pointsByUser: {}, participationsByUser: {}, spectatorParticipationsByUser: {}, statsByUser: {}, excludedFromPointsUserIds: [],
+  breakdownByUser: {},
 };
 
 /** Berechnet die Tabellenpunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
@@ -679,24 +683,30 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     ...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts),
   ]);
   const pointsByUser: Record<string, number> = {};
+  const breakdownByUser: Record<string, { label: string; points: number }[]> = {};
   for (const uid of allUids) {
     if (excludedSet.has(uid)) { pointsByUser[uid] = 0; continue; }
     const part = evPart[uid] ?? 0;
     const spectatorPart = evSpectatorPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
-    let pts = part * effectiveCfg.participationPoints
-      + spectatorPart * (effectiveCfg.spectatorParticipationPoints ?? 0)
-      + (pollBonusPts[uid] ?? 0)
-      + (dominionBonusPts[uid] ?? 0)
-      + (placementPts[uid] ?? 0);
+    const items: { label: string; points: number }[] = [
+      { label: "Teilnahme", points: part * effectiveCfg.participationPoints },
+      { label: "Zuschauer-Teilnahme", points: spectatorPart * (effectiveCfg.spectatorParticipationPoints ?? 0) },
+      { label: "Umfragen", points: pollBonusPts[uid] ?? 0 },
+      { label: "Dominion Bonus", points: dominionBonusPts[uid] ?? 0 },
+      { label: "Platzierungs-Bonus", points: placementPts[uid] ?? 0 },
+    ];
     for (const { field, pointsPer } of effectiveCfg.stats) {
-      pts += (es[field] ?? 0) * pointsPer;
+      items.push({ label: field, points: (es[field] ?? 0) * pointsPer });
     }
-    pointsByUser[uid] = pts;
+    const nonZero = items.filter(i => i.points !== 0);
+    pointsByUser[uid] = nonZero.reduce((sum, i) => sum + i.points, 0);
+    if (nonZero.length > 0) breakdownByUser[uid] = nonZero;
   }
 
   return {
     pointsByUser, participationsByUser: evPart, spectatorParticipationsByUser: evSpectatorPart, statsByUser: evStats,
     excludedFromPointsUserIds: [...excludedSet].filter(uid => allUids.has(uid)),
+    breakdownByUser,
   };
 }
