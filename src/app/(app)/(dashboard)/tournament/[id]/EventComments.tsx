@@ -435,12 +435,17 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
     pendingCaret.current = null;
   }, [text]);
 
-  // Höhe ans Textfeld anpassen (max. ~6 Zeilen)
+  // Höhe an den Text anpassen (max. ~6 Zeilen). Leeres Feld: Höhe aus dem CSS (min-h). Nicht messen,
+  // solange das Feld unsichtbar ist (eingeklappter Bereich, display: none) — sonst wird Höhe 0 fest-
+  // geschrieben. Rahmen mitrechnen (border-box), sonst ist das Feld 2 px zu niedrig.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (!text) { el.style.height = ""; return; }
+    if (el.offsetParent === null) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    const border = el.offsetHeight - el.clientHeight;
+    el.style.height = `${Math.min(el.scrollHeight + border, 160)}px`;
   }, [text]);
 
   async function send() {
@@ -483,7 +488,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
             }
             if (e.key === "Escape") setMentionQuery(null);
           }}
-          className="flex-1 resize-none rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
+          className="block flex-1 min-w-0 min-h-10 resize-none rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
         <button type="button" onClick={send} disabled={sending || !text.trim() || visibleLength > COMMENT_MAX_LENGTH}
           aria-label="Senden"
           className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-teal-500 text-teal-950 hover:bg-teal-400 disabled:opacity-40 transition-colors">
