@@ -85,7 +85,7 @@ export default function CoverBrandBadge({
           {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
           <img src="/brand/logo-256.png" alt="OMA Original" className="h-[clamp(16px,3.6cqw,30px)] w-auto object-contain" />
           <span className="text-[clamp(7px,1.15cqw,9px)] font-extrabold uppercase leading-none tracking-[0.16em] whitespace-nowrap">
-            <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
+            <span className="text-white">Original</span>
           </span>
         </div>
       )}

@@ -125,7 +125,8 @@ let cachedBadge: { buffer: Buffer; width: number; height: number } | null = null
 /** Siegel "OMA Original": kleiner Chip mit Logo und Schriftzug darunter — wird unten rechts auf
  *  die Cover von OMA Originals komponiert (lib/oma-original.ts), auf allen Covern gleich (auch auf
  *  Logo-Vorlagen). Gleiche Proportionen wie das Siegel in der App (components/CoverBrandBadge.tsx):
- *  so klein, dass es das Spiel-Cover nicht verdeckt. Normale Events bekommen nur den Rahmen.
+ *  so klein, dass es das Spiel-Cover nicht verdeckt. Logo oben mittig, darunter nur "Original".
+ *  Normale Events bekommen nur den Rahmen.
  *  Immer identisch, deshalb einmal gerendert und gecacht. */
 async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: number }> {
   const sharp = await loadSharp();
@@ -141,7 +142,7 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
   const gap    = 5;
   const fontSize = 10;
   const padBottom = 7;
-  const labelW = 104; // "OMA ORIGINAL" bei 10px, extrabold, Sperrung 1.5 (Server-Fallback-Schrift läuft breiter)
+  const labelW = 64; // "ORIGINAL" bei 10px, extrabold, Sperrung 1.5 (Server-Fallback-Schrift läuft breiter)
   const chipW  = Math.max(logoWidth, labelW) + padX * 2;
   const chipH  = padTop + logoHeight + gap + fontSize + padBottom;
   const chipSvg = Buffer.from(
@@ -149,7 +150,7 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
       <rect x="0.75" y="0.75" width="${chipW - 1.5}" height="${chipH - 1.5}" rx="8" fill="#06080f" fill-opacity="0.82" stroke="#14b8a6" stroke-opacity="0.7" stroke-width="1.5"/>
       <text x="${chipW / 2}" y="${chipH - padBottom}" text-anchor="middle"
         font-family="system-ui,ui-sans-serif,sans-serif" font-size="${fontSize}" font-weight="800" letter-spacing="1.5">
-        <tspan fill="#2dd4bf">OMA</tspan><tspan fill="#ffffff" dx="4">ORIGINAL</tspan>
+        <tspan fill="#ffffff">ORIGINAL</tspan>
       </text>
     </svg>`
   );
