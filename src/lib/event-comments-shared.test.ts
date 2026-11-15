@@ -58,3 +58,18 @@ test("eventCommentsUrl / eventIdFromCommentsUrl", async () => {
   assert.equal(eventIdFromCommentsUrl("/tournament/abc123"), null);
   assert.equal(eventIdFromCommentsUrl(null), null);
 });
+
+test("threadPhase und statusMessagesAllowed unterscheiden Live und Abstimmung", async () => {
+  const { threadPhase, statusMessagesAllowed } = await import("./event-comments-shared");
+  const now = new Date("2026-01-01T20:00:00Z");
+  const past = new Date("2026-01-01T19:00:00Z");
+  const future = new Date("2026-01-02T19:00:00Z");
+  assert.equal(threadPhase({ status: "open", startAt: future }, now), "upcoming");
+  assert.equal(threadPhase({ status: "open", startAt: past }, now), "live");
+  assert.equal(threadPhase({ status: "active", startAt: future }, now), "live");
+  assert.equal(threadPhase({ status: "umfrage", startAt: past }, now), "voting");
+  assert.equal(threadPhase({ status: "finished", startAt: past }, now), "finished");
+  assert.equal(statusMessagesAllowed("active"), true);
+  assert.equal(statusMessagesAllowed("umfrage"), false);
+  assert.equal(statusMessagesAllowed("finished"), false);
+});

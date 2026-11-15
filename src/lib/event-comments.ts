@@ -15,7 +15,7 @@ import { extractMentionedUserIds } from "@/lib/report-mentions";
 import {
   COMMENT_MAX_LENGTH, COMMENT_RATE_LIMIT_MS, COMMENT_STATUSES, REACTION_EMOJIS,
   commentLockAt, normalizeCommentInput, plainCommentText, sanitizeLateMin, shouldNotifyBundled, statusMessage,
-  eventCommentsUrl, type CommentStatus, type EventCommentDTO, type EventCommentsResponse, type EventThreadDTO,
+  eventCommentsUrl, statusMessagesAllowed, threadPhase, type CommentStatus, type EventCommentDTO, type EventCommentsResponse, type EventThreadDTO,
 } from "@/lib/event-comments-shared";
 
 export type CommentViewer = { id: string; role: string };
@@ -110,7 +110,7 @@ export async function listEventComments(viewer: CommentViewer, eventId: string):
       locked: ev.locked,
       canWrite: !ev.locked,
       canPin: canManage && !ev.locked,
-      canSetStatus: !!registration && !ev.locked,
+      canSetStatus: !!registration && !ev.locked && statusMessagesAllowed(ev.status),
       myStatus: myStatus?.status ? { status: myStatus.status as CommentStatus, lateMin: myStatus.lateMin } : null,
     },
   };
@@ -259,8 +259,7 @@ export async function listEventThreads(userId: string): Promise<EventThreadDTO[]
     const last = lastBy.get(ev.id);
     const st = myStatusBy.get(ev.id);
     const role = roleBy.get(ev.id);
-    const phase: EventThreadDTO["phase"] = ev.status === "finished" ? "finished"
-      : ev.status === "active" || ev.startAt <= now ? "live" : "upcoming";
+    const phase = threadPhase(ev, now);
     return {
       eventId: ev.id,
       title: ev.title,
@@ -276,11 +275,12 @@ export async function listEventThreads(userId: string): Promise<EventThreadDTO[]
       myStatus: st?.status ? { status: st.status as CommentStatus, lateMin: st.lateMin } : null,
     };
   });
-  const rank = (t: EventThreadDTO) => (t.phase === "live" ? 0 : t.phase === "upcoming" ? 1 : 2);
+  // Laufend → Abstimmung → anstehend → beendet
+  const rank = (t: EventThreadDTO) => ({ live: 0, voting: 1, upcoming: 2, finished: 3 })[t.phase];
   threads.sort((a, b) =>
     (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0)
     || rank(a) - rank(b)
-    || (rank(a) === 2
+    || (a.phase === "finished"
       ? new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
       : new Date(a.startAt).getTime() - new Date(b.startAt).getTime()));
   return threads.slice(0, THREAD_LIMIT);
@@ -333,6 +333,7 @@ export async function createEventStatus(
     select: { role: true, checkedInAt: true },
   });
   if (!registration) return fail("Status-Meldungen gibt es nur für Angemeldete", 403);
+  if (!statusMessagesAllowed(ev.status)) return fail("Die Spielphase ist vorbei — Status-Meldungen gibt es nur davor", 400);
   if (await rateLimited(viewer.id, eventId)) return fail("Bitte kurz warten, bevor du die nächste Nachricht schickst", 429);
 
   const lateMin = status === "late" ? sanitizeLateMin(rawLateMin) : null;

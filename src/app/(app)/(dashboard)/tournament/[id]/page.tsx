@@ -770,8 +770,8 @@ export default async function TournamentDetailPage({
   // rückt sie hinter die Turnieransicht und wird eingeklappt — außer es gibt keine eigene
   // Turnier-/Ziel-Ansicht, dann bleibt sie der Hauptinhalt. Desktop: immer Seitenspalte.
   const hasStarted = event.status === "finished" || event.startAt <= new Date();
-  // Status-Hinweise ("komme später" …) nach Eventende ausblenden
-  const pagePhaseForStatus = event.status === "finished" ? "after" : "open";
+  // Status-Hinweise ("komme später" …) nur bis zum Ende der Spielphase — in der Abstimmung und danach aus
+  const pagePhaseForStatus = event.status === "finished" || event.status === "umfrage" ? "after" : "open";
   const collapseParticipantsOnMobile = hasStarted && (hasTournament || !!communityGoalProgress);
 
   // Event-Absprachen: Status je Teilnehmer ("komme später" …) + ungelesene Nachrichten (nur Mitglieder)

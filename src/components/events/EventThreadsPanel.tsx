@@ -62,7 +62,7 @@ export default function EventThreadsPanel({
     );
   }
 
-  // Nächstes eigenes Event (anstehend oder laufend): Status-Knöpfe direkt hier
+  // Nächstes eigenes Event: anstehend/laufend → Status-Knöpfe, Abstimmung → direkt zur Abstimmung
   const next = threads
     .filter(t => t.registered && t.phase !== "finished")
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
@@ -75,12 +75,19 @@ export default function EventThreadsPanel({
           <p className="text-sm font-semibold text-white truncate">{next.title}</p>
           <p className="text-[11px] text-gray-500 mb-2">
             {whenLabel(next)}
-            {next.myStatus && <span className={`ml-2 px-1.5 py-px rounded-full ${statusBadge(next.myStatus.status, next.myStatus.lateMin).className}`}>
+            {next.myStatus && next.phase !== "voting" && <span className={`ml-2 px-1.5 py-px rounded-full ${statusBadge(next.myStatus.status, next.myStatus.lateMin).className}`}>
               {statusBadge(next.myStatus.status, next.myStatus.lateMin).label}
             </span>}
           </p>
-          <StatusBar compact eventId={next.eventId} myStatus={next.myStatus} isPlayer={next.isPlayer}
-            onPosted={async () => onRefresh()} />
+          {next.phase === "voting" ? (
+            <Link href={`/tournament/${next.eventId}#abstimmung`} onClick={onNavigate}
+              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 hover:bg-violet-500/25">
+              🗳️ Jetzt abstimmen <ChevronRight className="w-3 h-3" />
+            </Link>
+          ) : (
+            <StatusBar compact eventId={next.eventId} myStatus={next.myStatus} isPlayer={next.isPlayer}
+              onPosted={async () => onRefresh()} />
+          )}
         </div>
       )}
       <ul>
@@ -91,6 +98,7 @@ export default function EventThreadsPanel({
               <div className="flex-1 min-w-0">
                 <p className="flex items-center gap-2 min-w-0">
                   {t.phase === "live" && <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-rose-500 text-white">LIVE</span>}
+                  {t.phase === "voting" && <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-violet-500 text-white">ABSTIMMUNG</span>}
                   <span className={`text-sm truncate ${t.unread > 0 ? "font-semibold text-white" : "text-gray-200"}`}>{t.title}</span>
                 </p>
                 <p className="text-[11px] text-gray-500 truncate">{whenLabel(t)}</p>
@@ -117,6 +125,7 @@ export default function EventThreadsPanel({
 
 function whenLabel(t: EventThreadDTO): string {
   if (t.phase === "live") return "Läuft gerade";
+  if (t.phase === "voting") return "Abstimmung läuft";
   const d = new Date(t.startAt);
   const prefix = t.seriesName ? `${t.seriesName} · ` : "";
   if (t.phase === "finished") return `${prefix}beendet`;

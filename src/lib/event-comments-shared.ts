@@ -57,7 +57,8 @@ export type EventThreadDTO = {
   title: string;
   seriesName: string | null;
   startAt: string;
-  phase: "upcoming" | "live" | "finished";
+  /** voting = Event-Status "umfrage" (Spielphase vorbei, Abstimmung läuft) */
+  phase: "upcoming" | "live" | "voting" | "finished";
   total: number;
   unread: number;
   last: { author: string; text: string; createdAt: string } | null;
@@ -66,6 +67,22 @@ export type EventThreadDTO = {
   isPlayer: boolean;
   myStatus: { status: CommentStatus; lateMin: number | null } | null;
 };
+
+/**
+ * Status-Meldungen ("komme später", "kann nicht", "bin bereit") gibt es nur vor und während der
+ * Spielphase — in der Abstimmung und danach ergeben sie keinen Sinn mehr.
+ */
+export function statusMessagesAllowed(eventStatus: string): boolean {
+  return eventStatus !== "umfrage" && eventStatus !== "finished";
+}
+
+/** Phase eines Events für die Absprachen-Übersicht. */
+export function threadPhase(ev: { status: string; startAt: Date }, now: Date = new Date()): EventThreadDTO["phase"] {
+  if (ev.status === "finished") return "finished";
+  if (ev.status === "umfrage") return "voting";
+  if (ev.status === "active" || ev.startAt <= now) return "live";
+  return "upcoming";
+}
 
 /** Ziel-URL der Absprachen (auch Benachrichtigungs-Link — darüber werden sie als gelesen erkannt). */
 export function eventCommentsUrl(eventId: string): string {
