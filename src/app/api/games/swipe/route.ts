@@ -50,15 +50,15 @@ export async function POST(req: NextRequest) {
     } else {
       // Wunschliste / Nicht meins zu einem Spiel, das (noch) nicht in der Liste steht — nur merken
       await rememberCandidateSwipe(user.id, ids, status);
-      return NextResponse.json({ status, matches: [] });
+      return NextResponse.json({ status, match: null });
     }
   }
   if (!gameId) return NextResponse.json({ error: "Spiel fehlt" }, { status: 400 });
 
   const result = await setSwipeStatus(user.id, gameId, status);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-  const matches = await afterSwipe(user.id, gameId, result.status, result.firstDecision);
-  return NextResponse.json({ status: result.status, inCount: result.inCount, wishCount: result.wishCount, gameId, slug, matches });
+  const match = await afterSwipe(user.id, gameId, result.status, result.firstDecision);
+  return NextResponse.json({ status: result.status, inCount: result.inCount, wishCount: result.wishCount, gameId, slug, match });
 }
 
 /** Steam-ID vor IGDB-ID — wie der Schlüssel der Karte (discoverKey). */

@@ -20,7 +20,7 @@ import type { DeckCard, DropInfo, SwipeDeckData } from "@/lib/games/deck";
 import type { GameMatchInfo } from "@/lib/games/matches";
 import { GAME_GENRES, GAME_MODES, GAME_PLATFORMS, SESSION_LENGTHS, formatPlayers, formatPrice, labelOf, subscriptionBadges } from "@/lib/games/options";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
-import { SWIPE_LABELS, planRoundUrl, type SwipeStatus } from "@/lib/games/swipe";
+import { SWIPE_LABELS, othersLabel, planRoundUrl, type SwipeStatus } from "@/lib/games/swipe";
 
 const THRESHOLD = 100;
 const FLY_MS = 220;
@@ -147,7 +147,7 @@ export default function SwipeDeck({
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error ?? "Speichern fehlgeschlagen");
-    return data as { status: SwipeStatus | null; gameId?: string; slug?: string | null; matches?: GameMatchInfo[] };
+    return data as { status: SwipeStatus | null; gameId?: string; slug?: string | null; match?: GameMatchInfo | null };
   }, []);
 
   const decide = useCallback((status: SwipeStatus) => {
@@ -168,8 +168,8 @@ export default function SwipeDeck({
         const data = await send(card, status);
         const adopted = card.kind === "discover" && data.gameId && data.slug ? { gameId: data.gameId, slug: data.slug } : null;
         setHistory(h => [...h.slice(-19), { card, before, adopted }]);
-        const hit = (data.matches ?? []).find(m => m.isNew);
-        if (hit) {
+        const hit = data.match;
+        if (hit?.isNew) {
           const slug = card.kind === "game" ? card.slug : adopted?.slug ?? "";
           setMatch({ ...hit, gameName: card.name, gameSlug: slug });
         }
@@ -340,13 +340,13 @@ export default function SwipeDeck({
             <p className="text-4xl" aria-hidden>🎮</p>
             <p className="font-display text-2xl font-black text-white">Match!</p>
             <p className="text-sm text-gray-300">
-              {match.count} aus <span className="text-white font-semibold">{match.squadName}</span> sind bei{" "}
-              <span className="text-white font-semibold">{match.gameName}</span> am Start.
+              <span className="text-white font-semibold">{othersLabel(match)}</span>{" "}
+              {match.count > 2 ? "sind" : "ist"} bei{" "}
+              <span className="text-white font-semibold">{match.gameName}</span> auch am Start.
             </p>
-            <p className="text-xs text-gray-400">Mit dir: {match.others.map(o => o.name).join(", ")}</p>
             <div className="flex flex-col gap-2">
               {match.gameSlug && (
-                <Link href={planRoundUrl(match.gameSlug, match.squadId)}
+                <Link href={planRoundUrl(match.gameSlug)}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
                   <CalendarPlus className="w-4 h-4" /> Runde planen
                 </Link>

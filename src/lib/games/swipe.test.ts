@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { MATCH_MIN, effectiveStatus, interleaveDeck, isSwipeStatus, matchRecipients, shouldReask } from "./swipe";
+import { MATCH_MIN, effectiveStatus, interleaveDeck, isSwipeStatus, matchRecipients, othersLabel, shouldReask } from "./swipe";
 
 describe("GameSwipe", () => {
   test("alte Markierungen gelten als Am Start, neue Entscheidungen gehen vor", () => {
@@ -24,14 +24,21 @@ describe("GameSwipe", () => {
     assert.equal(shouldReask("in", null, now), false); // übernommene Alt-Markierung
   });
 
-  test("Match: erst ab MATCH_MIN, danach nur Neue", () => {
-    const three = ["a", "b", "c"].slice(0, MATCH_MIN);
-    assert.deepEqual(matchRecipients(three.slice(0, MATCH_MIN - 1), null, "a"), []);
-    assert.deepEqual(matchRecipients(three, null, "c"), three);
-    assert.deepEqual(matchRecipients([...three, "d"], MATCH_MIN, "d"), ["d"]);
-    assert.deepEqual(matchRecipients([...three, "d"], MATCH_MIN, "x"), []);
-    // Rückgängig und erneut "Am Start": Match ist nicht gewachsen → keine zweite Benachrichtigung
-    assert.deepEqual(matchRecipients(three, MATCH_MIN, "c"), []);
+  test("Match zwischen Usern: ab zwei, danach nur Neue", () => {
+    assert.equal(MATCH_MIN, 2);
+    assert.deepEqual(matchRecipients(["a"], new Set()), []); // allein am Start
+    assert.deepEqual(matchRecipients(["a", "b"], new Set()), ["a", "b"]); // erstes Match: beide
+    assert.deepEqual(matchRecipients(["a", "b", "c"], new Set(["a", "b"])), ["c"]); // nur wer dazukommt
+    // Rückgängig und erneut "Am Start": schon benachrichtigt → keine zweite Benachrichtigung
+    assert.deepEqual(matchRecipients(["a", "b", "c"], new Set(["a", "b", "c"])), []);
+  });
+
+  test("Mitspieler als Text", () => {
+    const o = (...names: string[]) => names.map(name => ({ name }));
+    assert.equal(othersLabel({ count: 2, others: o("Anna") }), "Anna");
+    assert.equal(othersLabel({ count: 3, others: o("Anna", "Ben") }), "Anna und Ben");
+    assert.equal(othersLabel({ count: 4, others: o("Anna", "Ben", "Cem") }), "Anna, Ben und Cem");
+    assert.equal(othersLabel({ count: 7, others: o("Anna", "Ben", "Cem", "Dana") }), "Anna, Ben, Cem und 3 weitere");
   });
 
   test("Stapel: jede 4. Karte ein Steam-Trend, Rest hinten an", () => {

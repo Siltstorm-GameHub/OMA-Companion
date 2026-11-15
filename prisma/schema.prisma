@@ -167,6 +167,7 @@ model User {
   gameTips                    GameTip[]   @relation("GameTipBy")
   gameTipsReviewed            GameTip[]   @relation("GameTipReviewedBy")
   gameSwipeState              GameSwipeState?
+  gameMatches                 GameMatch[]
   gameVoteBallots             GameVoteBallot[]
   gamesAdded                  Game[]                       @relation("GameAddedBy")
   gameEdits                   GameEdit[]
@@ -764,7 +765,6 @@ model Squad {
   memberships SquadMembership[]
   events      Event[]
   eventSeries EventSeries[]
-  gameMatches GameMatch[]
 }
 
 model SquadMembership {
@@ -2453,19 +2453,19 @@ model GameSwipeState {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// Match: genug Mitglieder eines Squads sind bei einem Spiel "Am Start" (siehe lib/games/matches.ts).
-/// Merkt sich, dass die Squad-Mitglieder schon benachrichtigt wurden.
+/// Match: ein User ist bei einem Spiel "Am Start" und mindestens ein anderer User auch (siehe
+/// lib/games/matches.ts). Merkt sich, dass der User für das Spiel schon über ein Match benachrichtigt wurde.
 model GameMatch {
   id         String   @id @default(cuid())
-  squadId    String
+  userId     String
   gameId     String
-  size       Int
   notifiedAt DateTime @default(now())
 
-  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  game  Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
-  @@unique([squadId, gameId])
+  @@unique([userId, gameId])
+  @@index([gameId])
 }
 
 /// Von Mitgliedern ergänzte Angaben (nur zuvor leere Felder) — das Team kann sie zurücksetzen.

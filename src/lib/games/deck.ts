@@ -118,39 +118,20 @@ export interface DeckUserData {
   reactions: PlanInput["reactions"];
   steamSwiped: Set<number>;
   igdbSwiped: Set<number>;
-  squadIn?: Set<string>;
 }
 
 async function loadUserData(userId: string): Promise<DeckUserData & { ratings: Map<string, number | null> }> {
-  const [reactions, steamSwipes, igdbSwipes, squadIn] = await Promise.all([
+  const [reactions, steamSwipes, igdbSwipes] = await Promise.all([
     prisma.gameReaction.findMany({ where: { userId } }),
     prisma.steamSwipe.findMany({ where: { userId }, select: { steamAppId: true } }),
     prisma.igdbSwipe.findMany({ where: { userId }, select: { igdbId: true } }),
-    squadInGameIds(userId),
   ]);
   return {
     reactions,
     steamSwiped: new Set(steamSwipes.map(s => s.steamAppId)),
     igdbSwiped: new Set(igdbSwipes.map(s => s.igdbId)),
-    squadIn,
     ratings: new Map(reactions.map(r => [r.gameId, r.rating])),
   };
-}
-
-/** Spiele, bei denen jemand aus den eigenen Squads am Start ist. */
-async function squadInGameIds(userId: string): Promise<Set<string>> {
-  const memberships = await prisma.squadMembership.findMany({
-    where: { userId, squad: { hidden: false } },
-    select: { squad: { select: { memberships: { select: { userId: true } } } } },
-  });
-  const mates = [...new Set(memberships.flatMap(m => m.squad.memberships.map(x => x.userId)))].filter(id => id !== userId);
-  if (mates.length === 0) return new Set();
-  const rows = await prisma.gameReaction.findMany({
-    where: { userId: { in: mates }, ...IN_WHERE },
-    select: { gameId: true },
-    distinct: ["gameId"],
-  });
-  return new Set(rows.map(r => r.gameId));
 }
 
 export function planFor(ctx: DeckContext, user: DeckUserData): PlannedCard[] {
@@ -158,7 +139,6 @@ export function planFor(ctx: DeckContext, user: DeckUserData): PlannedCard[] {
     now: ctx.now,
     games: ctx.games,
     nextEventAt: new Map([...ctx.eventOf].map(([id, e]) => [id, e.startAt])),
-    squadIn: user.squadIn,
     discover: ctx.discover,
     drop: ctx.drop,
     reactions: user.reactions,

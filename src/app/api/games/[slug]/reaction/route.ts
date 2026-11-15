@@ -37,8 +37,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ slug
     if (!game) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
     const s = await setSwipeStatus(user.id, game.id, body!.status as never);
     if (!s.ok) return NextResponse.json({ error: s.error }, { status: s.status });
-    const matches = await afterSwipe(user.id, game.id, s.status, s.firstDecision);
-    Object.assign(out, { inCount: s.inCount, wishCount: s.wishCount, status: s.status, matches });
+    const match = await afterSwipe(user.id, game.id, s.status, s.firstDecision);
+    Object.assign(out, { inCount: s.inCount, wishCount: s.wishCount, status: s.status, match });
   }
   return NextResponse.json(out);
 }

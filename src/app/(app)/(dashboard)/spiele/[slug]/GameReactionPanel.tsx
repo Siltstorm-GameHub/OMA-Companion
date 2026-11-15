@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { StarDisplay, StarRatingInput } from "@/components/games/StarRating";
 import SwipeStatusButtons from "@/components/games/SwipeStatusButtons";
 import { MIN_RATINGS_FOR_AVERAGE, averageRating, formatRating } from "@/lib/games/rating";
-import type { SwipeStatus } from "@/lib/games/swipe";
+import type { GameMatchInfo } from "@/lib/games/matches";
+import { othersLabel, type SwipeStatus } from "@/lib/games/swipe";
 
 interface Stats { ratingSum: number; ratingCount: number; inCount: number; wishCount: number }
 interface Mine { rating: number | null; status: SwipeStatus | null }
@@ -56,9 +57,8 @@ export default function GameReactionPanel({
       }));
       setMine(m => ({ rating: "rating" in data ? data.rating : m.rating, status: "status" in data ? data.status : m.status }));
       if ("rating" in change) toast.success(change.rating ? "Bewertung gespeichert" : "Bewertung entfernt");
-      for (const match of (data.matches ?? []) as { squadName: string; count: number; isNew: boolean }[]) {
-        if (match.isNew) toast.success(`Match: ${match.count} aus ${match.squadName} sind am Start!`);
-      }
+      const match = data.match as GameMatchInfo | null | undefined;
+      if (match?.isNew) toast.success(`Match: ${othersLabel(match)} ${match.count > 2 ? "sind" : "ist"} auch am Start!`);
       router.refresh();
     } catch (err) {
       setMine(prevMine);

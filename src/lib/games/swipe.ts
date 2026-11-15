@@ -38,22 +38,29 @@ export function shouldReask(status: SwipeStatus | null, decidedAt: Date | null, 
   return now.getTime() - decidedAt.getTime() > RECHECK_DAYS * 24 * 60 * 60_000;
 }
 
-/** Ab so vielen Squad-Mitgliedern, die bei einem Spiel "Am Start" sind, gibt es ein Match. */
-export const MATCH_MIN = 3;
+/** Ab so vielen Usern, die bei einem Spiel "Am Start" sind, gibt es ein Match (man selbst + einer). */
+export const MATCH_MIN = 2;
 
-/** Welche Mitglieder eines Matches (neu) benachrichtigt werden: beim ersten Erreichen der Schwelle alle,
- *  danach nur wer neu dazukommt — und nur, wenn das Match dadurch wächst (Rückgängig und erneut
- *  "Am Start" benachrichtigt nicht doppelt). Rein, siehe Tests. */
-export function matchRecipients(inMembers: string[], alreadyNotifiedSize: number | null, newcomer: string): string[] {
-  if (inMembers.length < MATCH_MIN) return [];
-  if (alreadyNotifiedSize === null) return inMembers;
-  if (inMembers.length <= alreadyNotifiedSize) return [];
-  return inMembers.includes(newcomer) ? [newcomer] : [];
+/** Wer über ein Match (neu) benachrichtigt wird: jeder, der am Start ist und für das Spiel noch nie
+ *  benachrichtigt wurde — also beim ersten Match beide, danach nur wer neu dazukommt (Rückgängig und
+ *  erneut "Am Start" benachrichtigt nicht doppelt). Rein, siehe Tests. */
+export function matchRecipients(inUsers: string[], alreadyNotified: Set<string>): string[] {
+  if (inUsers.length < MATCH_MIN) return [];
+  return inUsers.filter(id => !alreadyNotified.has(id));
 }
 
-/** Link "Runde planen": Event-Assistent mit Spiel und Squad vorbelegt. */
-export function planRoundUrl(gameSlug: string, squadId: string): string {
-  return `/admin/events/new?mode=event&game=${encodeURIComponent(gameSlug)}&squadId=${encodeURIComponent(squadId)}`;
+/** Mitspieler eines Matches als Text: "Anna", "Anna und Ben", "Anna, Ben, Cem und 3 weitere". */
+export function othersLabel(match: { count: number; others: { name: string }[] }): string {
+  const names = match.others.slice(0, 3).map(o => o.name);
+  const rest = match.count - 1 - names.length;
+  if (rest > 0) return `${names.join(", ")} und ${rest} weitere`;
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
+}
+
+/** Link "Runde planen": Event-Assistent mit dem Spiel vorbelegt. */
+export function planRoundUrl(gameSlug: string): string {
+  return `/admin/events/new?mode=event&game=${encodeURIComponent(gameSlug)}`;
 }
 
 /** Jede wievielte Karte des Stapels ein Steam-Trend ist (Spiele, die noch nicht in der Liste stehen). */

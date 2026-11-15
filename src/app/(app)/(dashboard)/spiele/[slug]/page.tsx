@@ -11,8 +11,8 @@ import GameReactionPanel from "./GameReactionPanel";
 import MissingFieldsPanel from "./MissingFieldsPanel";
 import CorrectFieldsPanel from "./CorrectFieldsPanel";
 import TipPanel from "./TipPanel";
-import { squadMatchesFor } from "@/lib/games/matches";
-import { planRoundUrl } from "@/lib/games/swipe";
+import { userMatchFor } from "@/lib/games/matches";
+import { othersLabel, planRoundUrl } from "@/lib/games/swipe";
 import { missingFields } from "@/lib/games/edits";
 import { ArrowLeft, CalendarDays, CalendarPlus, ChevronRight, ExternalLink, Pencil, Server, Users } from "@/components/icons";
 import {
@@ -59,8 +59,8 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
   const steamUrl = game.steamAppId ? `https://store.steampowered.com/app/${game.steamAppId}/` : null;
   const addedByName = game.addedBy ? game.addedBy.username ?? game.addedBy.name : null;
   const missing = missingFields(fields);
-  // Matches: genug aus einem eigenen Squad sind am Start → "Runde planen"
-  const matches = user && game.status === "APPROVED" && detail.myReaction.status === "in" ? await squadMatchesFor(user.id, game.id) : [];
+  // Match: man ist am Start und andere User auch → "Runde planen"
+  const match = user && game.status === "APPROVED" && detail.myReaction.status === "in" ? await userMatchFor(user.id, game.id) : null;
   // Offene Empfehlung für den GameSwipe-Drop der Woche?
   const openTip = user && game.status === "APPROVED"
     ? await prisma.gameTip.findFirst({ where: { gameId: game.id, status: { in: ["pending", "approved"] } }, select: { status: true } })
@@ -173,20 +173,20 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         canReact={game.status === "APPROVED" && !!user}
       />
 
-      {matches.map(m => (
-        <div key={m.squadId} className="rounded-2xl border border-emerald-400/30 p-4 flex items-center gap-3 flex-wrap"
+      {match && (
+        <div className="rounded-2xl border border-emerald-400/30 p-4 flex items-center gap-3 flex-wrap"
           style={{ background: "linear-gradient(110deg, rgba(16,185,129,0.14), transparent 70%)" }}>
           <span className="text-2xl leading-none" aria-hidden>🎮</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white">Match mit {m.squadName}: {m.count} sind am Start</p>
-            <p className="text-xs text-gray-400 truncate">Mit dir: {m.others.map(o => o.name).join(", ")}</p>
+            <p className="text-sm font-bold text-white">Match: {match.count} sind am Start</p>
+            <p className="text-xs text-gray-400 truncate">Mit dir: {othersLabel(match)}</p>
           </div>
-          <Link href={planRoundUrl(game.slug, m.squadId)}
+          <Link href={planRoundUrl(game.slug)}
             className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
             <CalendarPlus className="w-4 h-4" /> Runde planen
           </Link>
         </div>
-      ))}
+      )}
 
       {game.status === "APPROVED" && !!user && missing.length > 0 && (
         <MissingFieldsPanel slug={game.slug} current={fields} missing={missing} />

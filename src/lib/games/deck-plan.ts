@@ -108,8 +108,6 @@ export interface PlanInput {
   games: PlanGame[];
   /** Spiel-ID → Beginn des nächsten Events (nur die nächsten 30 Tage) */
   nextEventAt: Map<string, Date>;
-  /** Spiele, bei denen jemand aus den eigenen Squads am Start ist (Sortierung der Angebote) */
-  squadIn?: Set<string>;
   /** Alle Entdecken-Feeds (Reihenfolge innerhalb einer Quelle = Priorität) */
   discover: DiscoverItem[];
   drop: WeeklyDrop | null;
@@ -194,7 +192,6 @@ export function planDeck(input: PlanInput): PlannedCard[] {
   const { now, games } = input;
   const mine = new Map(input.reactions.map(r => [r.gameId, r]));
   const findGame = makeGameFinder(games);
-  const squadIn = input.squadIn ?? new Set<string>();
 
   // Gratis-Aktionen zu Spielen, die schon in der Liste stehen
   const freeByGame = new Map<string, DiscoverItem>();
@@ -272,8 +269,8 @@ export function planDeck(input: PlanInput): PlannedCard[] {
   // 2. Eigene Karten
   const bucket = (reason: GameReason) => [...openById.values()].filter(o => o.reason === reason && !used.has(`g:${o.g.id}`));
   const withEvent = bucket("event").sort((a, b) => input.nextEventAt.get(a.g.id)!.getTime() - input.nextEventAt.get(b.g.id)!.getTime());
-  // Hinweise: Wunschliste zuerst, dann Squad am Start, dann beliebt
-  const hintRank = (o: Open) => (effectiveStatus(mine.get(o.g.id)) === "wish" ? 2 : 0) + (squadIn.has(o.g.id) ? 1 : 0);
+  // Hinweise: Wunschliste zuerst, dann Spiele mit jemandem am Start (mögliches Match), dann beliebt
+  const hintRank = (o: Open) => (effectiveStatus(mine.get(o.g.id)) === "wish" ? 2 : 0) + (o.g.inCount > 0 ? 1 : 0);
   const hints = [...bucket("free"), ...bucket("subscription"), ...bucket("sale")]
     .sort((a, b) => hintRank(b) - hintRank(a) || ORDER[a.reason] - ORDER[b.reason] || popularity(b.g) - popularity(a.g));
   const popular = bucket("popular").sort((a, b) => popularity(b.g) - popularity(a.g));
