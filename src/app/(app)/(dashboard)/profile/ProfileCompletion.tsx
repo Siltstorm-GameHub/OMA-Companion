@@ -20,9 +20,9 @@ interface Props {
   rewardPerItem: number;
 }
 
-function openSection(sectionId: string, openEvent: string) {
-  // Lieblingsspiele liegen im Reiter "Übersicht" — erst dorthin wechseln, dann scrollen.
-  window.dispatchEvent(new CustomEvent(PROFILE_SHOW_TAB_EVENT, { detail: "overview" }));
+function openSection(sectionId: string, openEvent: string, tab: string) {
+  // Erst in den Reiter der Sektion wechseln (Editor: Einstellungen, "Zockt gerade": Übersicht), dann scrollen.
+  window.dispatchEvent(new CustomEvent(PROFILE_SHOW_TAB_EVENT, { detail: tab }));
   window.dispatchEvent(new Event(openEvent));
   requestAnimationFrame(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "center" }));
 }
@@ -88,7 +88,7 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
             {items.map((item) => (
               <button
                 key={item.key}
-                onClick={() => !item.done && openSection(item.sectionId, item.openEvent)}
+                onClick={() => !item.done && openSection(item.sectionId, item.openEvent, item.tab)}
                 disabled={item.done}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors ${
                   item.done ? "cursor-default" : "hover:bg-white/[0.04] cursor-pointer"

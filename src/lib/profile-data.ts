@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { getBerlinDateParts, formatBerlinDate } from "./time";
-import { parseFavoriteGames } from "./favorite-games";
+import { parseFavoriteGames, steamCoverUrl } from "./favorite-games";
+import { IN_WHERE, favoriteMatchesGame } from "./games/service";
+import { gameNameKey } from "./games/slug";
 import { loadWanderpokalStatus } from "./wanderpokal-status";
 import { getAvailableReviewYears } from "./year-review";
 import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "./trophy-models";
@@ -19,9 +21,9 @@ export async function loadProfileData(userId: string) {
   const { month, year } = getBerlinDateParts(now);
 
   const [
-    user, eventRegs, eventCount, startedEvents, tournamentParticipations, questsWithProgress, pokale,
+    user, eventRegs, eventCount, startedEvents, questsWithProgress, pokale,
     wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships,
-    totalUsers, wanderpokalStatusData,
+    totalUsers, wanderpokalStatusData, inReactions,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
@@ -33,18 +35,13 @@ export async function loadProfileData(userId: string) {
     }),
     prisma.eventRegistration.findMany({
       where: { userId },
-      include: { event: { select: { id: true, title: true, startAt: true, game: true, finalRankingJson: true } } },
-      orderBy: { joinedAt: "desc" }, take: 5,
+      include: { event: { select: { id: true, title: true, startAt: true, game: true, status: true, finalRankingJson: true } } },
+      orderBy: { joinedAt: "desc" }, take: 6,
     }),
     prisma.eventRegistration.count({ where: { userId } }),
     prisma.event.findMany({
       where: { startAt: { lte: now }, registrations: { some: { userId } } },
       select: { game: true, finalRankingJson: true, completionData: true },
-    }),
-    prisma.tournamentParticipant.findMany({
-      where: { userId },
-      include: { event: { include: { matches: { where: { OR: [{ player1Id: userId }, { player2Id: userId }] } } } } },
-      orderBy: { id: "desc" }, take: 10,
     }),
     prisma.quest.findMany({
       where: { month, year },
@@ -65,6 +62,12 @@ export async function loadProfileData(userId: string) {
     prisma.user.count({ where: { deletedAt: null } }),
     // Für den 3D-Pokal-Viewer + "wer hält den Rest" — für den PROFILEIGENTÜMER.
     loadWanderpokalStatus(userId),
+    // GameSwipe "Am Start" (öffentlich) — Bewertete zuerst, dann zuletzt entschieden
+    prisma.gameReaction.findMany({
+      where: { userId, ...IN_WHERE, game: { status: "APPROVED" } },
+      orderBy: [{ rating: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
+      select: { game: { select: { id: true, slug: true, name: true, coverUrl: true, steamAppId: true, nameKey: true, aliases: true } } },
+    }),
   ]);
   if (!user || user.deletedAt) return null;
 
@@ -116,6 +119,32 @@ export async function loadProfileData(userId: string) {
   }));
 
   const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
+  const inGames = inReactions.map(r => r.game);
+
+  // "Zockt gerade" den Einträgen der Spieleliste zuordnen (Steam-ID oder Name/Alias) → Link + Cover.
+  // Spiele, die (noch) nicht in der Liste stehen, bleiben mit Name und Steam-Cover sichtbar.
+  const favCandidates = favoriteGames.length
+    ? await prisma.game.findMany({
+        where: {
+          status: { not: "HIDDEN" },
+          OR: [
+            { steamAppId: { in: favoriteGames.map(g => g.appId).filter((x): x is number => x !== null) } },
+            { nameKey: { in: favoriteGames.map(g => gameNameKey(g.name)) } },
+            { aliases: { hasSome: favoriteGames.map(g => g.name) } },
+          ],
+        },
+        select: { slug: true, name: true, coverUrl: true, steamAppId: true, nameKey: true, aliases: true },
+      })
+    : [];
+  const currentGames: ProfileGameRef[] = favoriteGames.map(fav => {
+    const g = favCandidates.find(c => favoriteMatchesGame(fav, c));
+    return {
+      name: g?.name ?? fav.name,
+      slug: g?.slug ?? null,
+      coverUrl: g?.coverUrl ?? (fav.appId ? steamCoverUrl(fav.appId) : null),
+      appId: fav.appId,
+    };
+  });
 
   return {
     user,
@@ -131,7 +160,7 @@ export async function loadProfileData(userId: string) {
     eventRegs, eventCount, eventWins,
     pollMasterCount: pollWinsFromEvents + lulPollWins,
     topGames,
-    tournamentParticipations, questsWithProgress, pokale,
+    questsWithProgress, pokale,
     wanderpocalTrophies, wanderpocalStats,
     wanderpocalRankMap: Object.fromEntries(wanderpocalRankEntries) as Record<string, number>,
     wanderpocalHolders, wanderpokalItems, eventPokalItems,
@@ -141,6 +170,10 @@ export async function loadProfileData(userId: string) {
     coinsSpent: Math.abs(coinsSpentAgg._sum.amount ?? 0),
     squads: squadMemberships.map(m => ({ ...m.squad, role: m.role })),
     favoriteGames,
+    /** "Zockt gerade" (max. 5, selbst gewählt), aufgelöst gegen die Spieleliste */
+    currentGames,
+    /** GameSwipe "Am Start" — öffentlich */
+    inGames: inGames.map(g => ({ id: g.id, slug: g.slug, name: g.name, coverUrl: g.coverUrl, appId: g.steamAppId })),
     reviewYears: getAvailableReviewYears(user.createdAt),
     profileCompletionDone: {
       bio: !!user.bio, birthday: !!user.birthday, twitch: !!user.twitchLogin, favoriteGames: favoriteGames.length > 0,
@@ -150,5 +183,28 @@ export async function loadProfileData(userId: string) {
       : null,
   };
 }
+
+export type ProfileGameRef = { name: string; slug: string | null; coverUrl: string | null; appId: number | null };
+
+/**
+ * Was Betrachter und Profil-Inhaber verbindet (nur fremde Profile): gemeinsam gespielte Events und
+ * Spiele, bei denen beide in GameSwipe "Am Start" sind.
+ */
+export async function loadProfileRelation(viewerId: string, userId: string, profileInGameIds: string[]) {
+  const [sharedEvents, viewerIn] = await Promise.all([
+    prisma.event.count({
+      where: { AND: [
+        { registrations: { some: { userId: viewerId, role: "player" } } },
+        { registrations: { some: { userId, role: "player" } } },
+      ] },
+    }),
+    profileInGameIds.length
+      ? prisma.gameReaction.findMany({ where: { userId: viewerId, gameId: { in: profileInGameIds }, ...IN_WHERE }, select: { gameId: true } })
+      : Promise.resolve([]),
+  ]);
+  return { sharedEvents, sharedInGameIds: viewerIn.map(r => r.gameId) };
+}
+
+export type ProfileRelation = Awaited<ReturnType<typeof loadProfileRelation>>;
 
 export type ProfileData = NonNullable<Awaited<ReturnType<typeof loadProfileData>>>;

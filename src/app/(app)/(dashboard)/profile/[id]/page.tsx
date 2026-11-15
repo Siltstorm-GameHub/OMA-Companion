@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import BotPreviewShell from "@/components/BotPreviewShell";
-import { loadProfileData } from "@/lib/profile-data";
+import { loadProfileData, loadProfileRelation } from "@/lib/profile-data";
 import { listKnownCoaches } from "@/lib/community-job-access";
 import { levelTitle } from "@/lib/job-badges";
 import ProfileView from "../ProfileView";
@@ -69,12 +69,14 @@ export default async function PublicProfilePage({
       : Promise.resolve([]),
   ]);
   if (!data) notFound();
+  const relation = viewerId ? await loadProfileRelation(viewerId, id, data.inGames.map(g => g.id)) : undefined;
 
   return (
     <ProfileView
       data={data}
       isOwn={false}
       viewerId={viewerId}
+      relation={relation}
       topBar={<div><ProfileBackLink /></div>}
       actions={
         <ProfileActions

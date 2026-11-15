@@ -12,11 +12,13 @@ export interface ProfileCompletionItem {
   sectionId: string;
   /** Custom-Event, das die Zielsektion in den Bearbeitungsmodus schaltet. */
   openEvent: string;
+  /** Profil-Reiter, in dem die Sektion liegt (Editor: Einstellungen, "Zockt gerade": Übersicht) */
+  tab: "overview" | "settings";
 }
 
 export const PROFILE_COMPLETION_ITEMS: ProfileCompletionItem[] = [
-  { key: "bio",           label: "Bio schreiben",              rule: "PROFILE_BIO",            sectionId: "profile-editor",        openEvent: "profile-open-editor" },
-  { key: "birthday",      label: "Geburtstag hinterlegen",      rule: "PROFILE_BIRTHDAY",       sectionId: "profile-editor",        openEvent: "profile-open-editor" },
-  { key: "twitch",        label: "Twitch-Kanal verknüpfen",     rule: "PROFILE_TWITCH",         sectionId: "profile-editor",        openEvent: "profile-open-editor" },
-  { key: "favoriteGames", label: "Lieblingsspiele auswählen",   rule: "PROFILE_FAVORITE_GAMES", sectionId: "favorite-games-section", openEvent: "profile-open-favorite-games" },
+  { key: "bio",           label: "Bio schreiben",              rule: "PROFILE_BIO",            sectionId: "profile-editor",        openEvent: "profile-open-editor", tab: "settings" },
+  { key: "birthday",      label: "Geburtstag hinterlegen",      rule: "PROFILE_BIRTHDAY",       sectionId: "profile-editor",        openEvent: "profile-open-editor", tab: "settings" },
+  { key: "twitch",        label: "Twitch-Kanal verknüpfen",     rule: "PROFILE_TWITCH",         sectionId: "profile-editor",        openEvent: "profile-open-editor", tab: "settings" },
+  { key: "favoriteGames", label: "„Zockt gerade“ eintragen",   rule: "PROFILE_FAVORITE_GAMES", sectionId: "favorite-games-section", openEvent: "profile-open-favorite-games", tab: "overview" },
 ];

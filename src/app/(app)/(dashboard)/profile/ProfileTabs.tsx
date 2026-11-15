@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutGrid, Briefcase, Settings } from "@/components/icons";
+import { LayoutGrid, Briefcase, Settings, Award, BarChart2 } from "@/components/icons";
 
-export type ProfileTabKey = "overview" | "community_jobs" | "settings";
+export type ProfileTabKey = "overview" | "achievements" | "activity" | "community_jobs" | "settings";
 
 const TAB_META: Record<ProfileTabKey, { label: string; icon: typeof LayoutGrid }> = {
   overview: { label: "Übersicht", icon: LayoutGrid },
+  achievements: { label: "Erfolge", icon: Award },
+  activity: { label: "Aktivität", icon: BarChart2 },
   community_jobs: { label: "Community-Jobs", icon: Briefcase },
   settings: { label: "Einstellungen", icon: Settings },
 };
@@ -45,13 +47,13 @@ export default function ProfileTabs({ panels, initialTab }: {
     <div className="space-y-5">
       {keys.length > 1 && (
         <div role="tablist" aria-label="Profilbereiche"
-          className="grid grid-cols-3 sm:flex gap-1.5 bg-gray-900 border border-white/5 rounded-xl p-1 sm:w-fit">
+          className="flex gap-1 overflow-x-auto scrollbar-none bg-gray-900 border border-white/5 rounded-xl p-1 sm:w-fit">
           {keys.map(key => {
             const active = tab === key;
             const { label, icon: Icon } = TAB_META[key];
             return (
               <button key={key} role="tab" aria-selected={active} onClick={() => select(key)}
-                className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-[11px] sm:text-sm font-medium transition-colors ${
+                className={`shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
                 }`}>
                 <Icon className={`w-4 h-4 ${active ? "text-teal-400" : "text-gray-600"}`} />
