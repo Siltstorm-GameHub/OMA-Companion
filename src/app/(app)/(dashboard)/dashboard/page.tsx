@@ -5,44 +5,43 @@ import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
 import { Repeat, Server } from "@/components/icons";
-import { CalendarDays, Clock, Scroll, CheckCircle2, Newspaper, Gamepad2, ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy } from "@/components/icons";
+import { Scroll, Newspaper, ArrowUp, ArrowDown, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
-import EventCategoryBadge from "@/components/EventCategoryBadge";
 import Link from "next/link";
 import Image from "next/image";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import WatchTogetherTeaser from "@/components/watch/WatchTogetherTeaser";
-import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import { getBerlinDateParts, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
-import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
-import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { spinDateKey } from "@/lib/daily-spin";
 import { getSwipeSummary } from "@/lib/games/deck";
 import RankRing from "@/components/RankRing";
 import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { getVisibleServers } from "@/lib/gameservers";
-import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile from "@/components/EventsTile";
 import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
-import { friendsFirst, parseRanking, relevanceTags } from "@/lib/event-display";
+import { friendsFirst, parseRanking, relevanceTags, startsInLabel } from "@/lib/event-display";
+import { buildHomeTasks, closestQuests } from "@/lib/home-tasks";
+import HomeTaskBar from "./HomeTaskBar";
+import { DailyMessageBanner } from "@/components/DailyMessageBanner";
+import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import { homeRows, pickHomeFeature, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
-import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
 import CommunityBoardWidget from "./CommunityBoardWidget";
-import GuestLockOverlay from "@/components/GuestLockOverlay";
-import { acc } from "@/lib/accentColors";
+
+/** Kürzlich abgeschlossenes Event mit Ergebnis — Chip "Ergebnisse: …" in der Aufgabenleiste */
+type RecentResultEvent = { id: string; title: string; game: string | null; href: string };
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -58,9 +57,8 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
+    const [memberCount, activeSeries, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
       prisma.user.count(),
-      prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
         where: { hidden: false, status: "active", events: { some: { status: { in: ["open", "active", "closed"] } } } },
         select: {
@@ -117,11 +115,14 @@ const getGlobalDashboardData = unstable_cache(
 
       let leaderUserId: string | null = null;
       let leaderPoints = 0;
+      // Reihenfolge der Tabelle (nur wer Punkte hat) — für "Deine Reihen" (eigener Platz) auf Home
+      let standingUserIds: string[] = [];
       if (series.seriesStatConfig) {
         try {
           const statCfg = JSON.parse(series.seriesStatConfig) as StatConfig;
           const legacyRows: LegacyStandingRow[] = series.legacyStandings ? JSON.parse(series.legacyStandings) : [];
           const { rows } = computeStatStandings(series.events, statCfg, legacyRows);
+          standingUserIds = rows.filter(r => r.totalPoints > 0 || r.participations > 0).map(r => r.userId);
           if (rows[0] && rows[0].totalPoints > 0) {
             leaderUserId = rows[0].userId;
             leaderPoints = rows[0].totalPoints;
@@ -133,7 +134,7 @@ const getGlobalDashboardData = unstable_cache(
         id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame, category: series.category,
         coverImageUrl: series.coverImageUrl,
         omaOriginal: isOmaOriginalSeries(series),
-        finishedCount, totalCount, leaderUserId, leaderPoints,
+        finishedCount, totalCount, leaderUserId, leaderPoints, standingUserIds,
         nextEvent: nextEv ? {
           startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game, coverImageUrl: nextEv.coverImageUrl,
           registeredUserIds: nextEv.registrations.map(r => r.userId),
@@ -141,29 +142,11 @@ const getGlobalDashboardData = unstable_cache(
       };
     });
 
-    return { memberCount, activeEvents, activeSeries: enrichedSeries, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
+    return { memberCount, activeSeries: enrichedSeries, recentSummaries, recentlyFinishedCandidates };
   },
   ["dashboard-global"],
   { revalidate: 300, tags: ["dashboard-global"] }
 );
-
-function formatFreshness(fetchedAt: number): string {
-  const minutes = Math.max(0, Math.round((Date.now() - fetchedAt) / 60000));
-  if (minutes < 1) return "gerade eben";
-  if (minutes === 1) return "vor 1 Min.";
-  return `vor ${minutes} Min.`;
-}
-
-function formatCountdown(target: Date, now: Date, prefix: string = "in"): string {
-  const diffMs = target.getTime() - now.getTime();
-  if (diffMs <= 0) return "Läuft jetzt";
-  const days  = Math.floor(diffMs / 86_400_000);
-  const hours = Math.floor((diffMs % 86_400_000) / 3_600_000);
-  if (days >= 1) return `${prefix} ${days}d ${hours}h`;
-  const minutes = Math.floor((diffMs % 3_600_000) / 60_000);
-  if (hours >= 1) return `${prefix} ${hours}h ${minutes}m`;
-  return `${prefix} ${minutes}m`;
-}
 
 export default async function DashboardPage() {
   // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen) — muss abgeschlossen
@@ -179,7 +162,7 @@ export default async function DashboardPage() {
   const month = nowParts.month;
   const year  = nowParts.year;
 
-  const { memberCount, activeEvents, activeSeries, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
+  const { memberCount, activeSeries, recentSummaries, recentlyFinishedCandidates } =
     await getGlobalDashboardData();
 
   // Namen der Spitzenreiter außerhalb des globalen Caches auflösen, damit Namensänderungen sofort
@@ -210,8 +193,6 @@ export default async function DashboardPage() {
     myMonthQuests,
     activeDailyMessage,
     servers,
-    myEventCount,
-    nextRegisteredEvent,
     finishedClipContest,
     activeClipContest,
     homeEventRows,
@@ -225,7 +206,6 @@ export default async function DashboardPage() {
     prisma.quest.findMany({
       where:   { month, year },
       orderBy: { reward: "desc" },
-      take: 4,
       include: { progress: userId ? { where: { userId }, take: 1 } : false },
     }),
     prisma.dailyMessage.findFirst({
@@ -238,23 +218,6 @@ export default async function DashboardPage() {
       select: { id: true, title: true, content: true, endDate: true },
     }),
     getVisibleServers(userId),
-    userId
-      ? prisma.eventRegistration.count({ where: { userId } })
-      : 0,
-    userId
-      ? prisma.event.findFirst({
-          where: {
-            hidden: false,
-            status: { in: ["open", "active", "umfrage"] },
-            registrations: { some: { userId } },
-          },
-          orderBy: { startAt: "asc" },
-          select: {
-            id: true, title: true, startAt: true, endAt: true, status: true,
-            polls: { where: { endAt: { gt: now } }, orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
-          },
-        })
-      : null,
     prisma.monthlyClipContest.findFirst({
       where:   { status: "finished" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
@@ -343,7 +306,7 @@ export default async function DashboardPage() {
     .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
   // ── Startseiten-Kacheln: Events (eine Priorität statt Karussell) + Clip-Platzierung ──
-  const [viewer, myRecentResult, clipRankingRows] = await Promise.all([
+  const [viewer, myRecentResult, clipRankingRows, openDailyPolls, myClipVote] = await Promise.all([
     loadEventViewerContext(userId),
     // Ergebnis eines Events, bei dem du in den letzten 24 Std mitgespielt hast
     userId
@@ -369,6 +332,16 @@ export default async function DashboardPage() {
           select:  { id: true, clipTitle: true, customTitle: true, _count: { select: { votes: true } } },
         })
       : Promise.resolve([]),
+    // Aufgabenleiste: laufende Tagesumfragen, in denen deine Stimme fehlt
+    userId
+      ? prisma.dailyPoll.count({
+          where: { isActive: true, startDate: { lte: now }, endDate: { gte: now }, votes: { none: { userId } } },
+        })
+      : 0,
+    // Aufgabenleiste: schon für den Clip des Monats abgestimmt?
+    userId && activeClipContest
+      ? prisma.clipContestVote.findUnique({ where: { contestId_userId: { contestId: activeClipContest.id, userId } }, select: { id: true } })
+      : null,
   ]);
 
   const ranking = parseRanking(myRecentResult?.finalRankingJson);
@@ -431,321 +404,130 @@ export default async function DashboardPage() {
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
   const avatarUrl   = sessionUser?.image ?? null;
+
+  // ── Aufgabenleiste ("Heute für dich") ──
+  type QuestRow = (typeof myMonthQuests)[number] & { progress?: { completed: boolean; current: number }[] };
+  const questRows = (myMonthQuests as QuestRow[]).map(q => ({
+    id: q.id, title: q.title, reward: q.reward, target: q.target,
+    current: q.progress?.[0]?.current ?? 0, completed: q.progress?.[0]?.completed ?? false,
+  }));
+  const homeTasks = buildHomeTasks({
+    loggedIn: !!userId,
+    spunToday,
+    swipe,
+    clipVotingOpen: !!activeClipContest,
+    clipVoted: !!myClipVote,
+    recentResults: recentResultEvents.map(r => ({ title: r.title, href: r.href })),
+    quests: questRows,
+  });
+  const nextQuests = closestQuests(questRows, 2);
+  const questCoinsEarned = questRows.filter(q => q.completed).reduce((s, q) => s + q.reward, 0);
+
+  // ── Deine Reihen: Reihen, in denen du Punkte hast oder für den nächsten Termin angemeldet bist ──
+  const seriesRows = activeSeries.map(s => {
+    const place = userId ? s.standingUserIds.indexOf(userId) + 1 : 0;
+    const registered = !!(userId && s.nextEvent?.registeredUserIds.includes(userId));
+    return { s, place, registered, mine: place > 0 || registered };
+  });
+  const mySeriesRows = seriesRows.filter(r => r.mine);
+  const shownSeries = (mySeriesRows.length > 0 ? mySeriesRows : seriesRows)
+    .sort((a, b) => Number(b.mine) - Number(a.mine) || (a.place || 999) - (b.place || 999));
+
+  const rankTrend = rankGainThisMonth > rankGainLastMonth ? "up" : rankGainThisMonth < rankGainLastMonth ? "down" : "same";
+  const SECTION_H = "text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5";
+  const ALL_LINK = "text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors";
+
   return (
     <div className="animate-fade-in">
+      <div className="px-4 sm:px-6 pt-0 sm:pt-6 pb-6 max-w-7xl mx-auto space-y-5">
 
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative px-5 pt-0 sm:pt-8 pb-6 max-w-7xl mx-auto">
-        {/* Dezente Trennlinie unten */}
-        <div className="absolute bottom-0 inset-x-5 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${acc("teal", 0.18)}, transparent)` }} />
-
-        {!userId && (
-          <div className="relative rounded-xl overflow-hidden" style={{ minHeight: "168px" }}>
-            {/* Skeleton-Platzhalter statt echter Hero-Daten */}
-            <div className="animate-pulse">
-              <div className="flex items-start gap-5">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-white/[0.06] shrink-0" />
-                <div className="flex-1 min-w-0 pt-1 space-y-2.5">
-                  <div className="h-2.5 w-16 rounded bg-white/[0.06]" />
-                  <div className="h-7 w-40 rounded bg-white/[0.08]" />
-                  <div className="flex items-center gap-2 mt-3">
-                    <div className="h-5 w-16 rounded bg-white/[0.06]" />
-                    <div className="h-5 w-14 rounded bg-white/[0.06]" />
-                    <div className="h-5 w-14 rounded bg-white/[0.06]" />
+        {/* ── Kopf: Name, Rang, Punkte, Coins — kompakt, auf allen Größen gleich ── */}
+        {userId ? (
+          <section aria-label="Dein Konto" className="flex items-center gap-3 sm:gap-4">
+            <div className="relative shrink-0">
+              <RankRing userId={userId} width={3} rounded="rounded-lg" faceClassName="card-cut w-12 h-12 sm:w-14 sm:h-14">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt={displayName} width={56} height={56} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-black text-white"
+                    style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
+                    {firstName[0]?.toUpperCase()}
                   </div>
-                </div>
-                <div className="hidden sm:block w-20 h-16 rounded bg-white/[0.06] shrink-0" />
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 sm:mt-6">
-                {[0, 1, 2, 3].map(i => (
-                  <div key={i} className="h-16 rounded-sm bg-white/[0.05]" />
-                ))}
-              </div>
+                )}
+              </RankRing>
             </div>
-            <GuestLockOverlay
-              title="Login erforderlich"
-              message="Melde dich mit Discord an, um dein Profil, Punkte und Rang zu sehen."
-            />
-          </div>
-        )}
-
-        {userId && (
-        <>
-        <div className="flex items-start gap-5">
-          {/* Avatar mit Cut-Corner + Rang-Ring */}
-          <div className="relative shrink-0">
-            <RankRing
-              userId={userId}
-              width={4}
-              rounded="rounded-lg"
-              faceClassName="card-cut w-16 h-16 sm:w-20 sm:h-20"
-            >
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
-                  style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
-                  {firstName[0]?.toUpperCase()}
-                </div>
-              )}
-            </RankRing>
-            {/* Online-Dot */}
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
-              style={{ borderColor: "var(--bg-base)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
-          </div>
-
-          {/* Name + Badges */}
-          <div className="flex-1 min-w-0 pt-1">
-            <p className="text-[10px] text-teal-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Spieler</p>
-            <h1 className="font-display text-3xl sm:text-4xl font-black text-white leading-none tracking-tight">
-              <StyledUserName userId={userId} name={firstName} />
-            </h1>
-            <div className="flex items-center gap-3 mt-3 flex-wrap">
-              <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight truncate">
+                Hey <StyledUserName userId={userId} name={firstName} />
+              </h1>
+              <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                 {ROLE_LABEL[userRole] ?? "Mitglied"}
               </span>
-              <span className="text-xs font-bold tabular-nums text-teal-300">
-                <HeroStatValue value={myRankPoints} storageKey={`hero-rp-${userId ?? "anon"}`}> Pts</HeroStatValue>
-              </span>
-              <span className="text-xs text-amber-400 font-bold tabular-nums flex items-center gap-1">
-                <CoinIcon size={12} />
-                <HeroStatValue value={myPoints} storageKey={`hero-coins-${userId ?? "anon"}`} />
-              </span>
             </div>
-          </div>
-
-          {/* Rang-Badge mit Cut-Corner → Rangliste */}
-          {leaderboardRank && (
-            <Link href="/leaderboard"
-              className="group card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-              style={{ boxShadow: `0 0 0 1px ${acc("teal", 0.15)}, 0 0 24px ${acc("teal", 0.05)}` }}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style={{ background: `radial-gradient(circle at 50% 20%, ${acc("teal", 0.22)}, transparent 70%)` }} />
-              <div className="relative">
-                <p className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mb-1">Rang</p>
-                <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
-                  #{leaderboardRank}
-                </p>
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <p className="text-[9px] text-gray-700 group-hover:text-gray-500 transition-colors">von {memberCount}</p>
-                  {rankGainThisMonth > rankGainLastMonth ? (
-                    <span className="flex items-center text-emerald-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
-                      <ArrowUp className="w-2.5 h-2.5" />
-                    </span>
-                  ) : rankGainThisMonth < rankGainLastMonth ? (
-                    <span className="flex items-center text-red-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
-                      <ArrowDown className="w-2.5 h-2.5" />
-                    </span>
-                  ) : (
-                    <span className="flex items-center text-gray-700" title="Kein Unterschied zum Vormonat">
-                      <Minus className="w-2.5 h-2.5" />
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )}
-
-        </div>
-
-        {/* ── Hinweis: tägliches Glücksrad noch nicht gedreht ── */}
-        {!spunToday && (
-          <Link href="/shop#gluecksrad"
-            className="group mt-4 sm:mt-6 flex items-center gap-3 rounded-xl border border-amber-500/30 px-4 py-3 transition-colors hover:border-amber-400/60"
-            style={{ background: `linear-gradient(110deg, ${acc("amber", 0.14)}, transparent 70%)` }}>
-            <span className="text-2xl leading-none shrink-0" aria-hidden>🎰</span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold text-white">Dein tägliches Glücksrad wartet</span>
-              <span className="block text-xs text-gray-400">Einmal am Tag gratis drehen und Münzen gewinnen.</span>
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold text-amber-300 group-hover:text-amber-200 shrink-0">
-              Drehen <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
-        )}
-
-        {/* ── Hinweis: Drop der Woche bzw. offene Karten in GameSwipe ── */}
-        {swipe?.drop && swipe.drop.open > 0 ? (
-          <Link href="/spiele"
-            className={`group ${spunToday ? "mt-4 sm:mt-6" : "mt-3"} flex items-center gap-3 rounded-xl border border-orange-400/35 px-4 py-3 transition-colors hover:border-orange-300/60`}
-            style={{ background: "linear-gradient(110deg, rgba(249,115,22,0.16), transparent 70%)" }}>
-            <span className="text-2xl leading-none shrink-0" aria-hidden>🔥</span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold text-white">
-                Drop der Woche: {swipe.drop.open} {swipe.drop.open === 1 ? "neues Spiel" : "neue Spiele"} in OMA GameSwipe
-              </span>
-              <span className="block text-xs text-gray-400">
-                Handverlesen für diese Woche · {swipe.drop.daysLeft <= 1 ? "endet heute" : `noch ${swipe.drop.daysLeft} Tage`}
-              </span>
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold text-orange-300 group-hover:text-orange-200 shrink-0">
-              <span className="tracking-[0.15em] text-[10px]">OMA</span> GameSwipe <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
-        ) : swipe && swipe.open > 0 ? (
-          <Link href="/spiele"
-            className={`group ${spunToday ? "mt-4 sm:mt-6" : "mt-3"} flex items-center gap-3 rounded-xl border border-emerald-500/30 px-4 py-3 transition-colors hover:border-emerald-400/60`}
-            style={{ background: `linear-gradient(110deg, ${acc("teal", 0.12)}, transparent 70%)` }}>
-            <span className="text-2xl leading-none shrink-0" aria-hidden>🃏</span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold text-white">
-                {swipe.open} {swipe.open === 1 ? "Spiel wartet" : "Spiele warten"} in OMA GameSwipe auf dich
-              </span>
-              <span className="block text-xs text-gray-400">Bist du am Start? Finde Spiele, die dein Squad auch zockt.</span>
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-300 group-hover:text-emerald-200 shrink-0">
-              <span className="tracking-[0.15em] text-[10px]">OMA</span> GameSwipe <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </Link>
-        ) : null}
-
-        {/* ── Stat-Streifen ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 sm:mt-6">
-
-          {/* Teilgenommene Events → Profil */}
-          <Link href="/profile"
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("teal", 0.22)}, transparent 70%)` }} />
-            <div className="relative">
-              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
-                {myEventCount}
-              </p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
-                Eventteilnahmen
-              </p>
-            </div>
-          </Link>
-
-          {/* Nächstes angemeldetes Event → Event-Übersicht / Event-Liste */}
-          <Link href={nextRegisteredEvent ? `/tournament/${nextRegisteredEvent.id}` : "/events"}
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/25 active:scale-[0.98]">
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("amber", 0.22)}, transparent 70%)` }} />
-            <div className="relative">
-              {nextRegisteredEvent ? (() => {
-                const nextPeriod = nextRegisteredEvent.status === "active" && nextRegisteredEvent.endAt && isPeriodEvent(nextRegisteredEvent)
-                  ? periodInfo({ startAt: nextRegisteredEvent.startAt, endAt: nextRegisteredEvent.endAt }, now)
-                  : null;
-                // Zeitraum-Events: ruhige Restlaufzeit statt rot blinkendem "Live"
-                const phase = nextPeriod
-                  ? { label: "Läuft", color: "text-teal-400", extra: nextPeriod.remainingLabel as string | null }
-                  : nextRegisteredEvent.status === "active"
-                  ? { label: "Live", color: "text-red-400", extra: null as string | null }
-                  : nextRegisteredEvent.status === "umfrage"
-                    ? {
-                        label: "Umfrage", color: "text-amber-400",
-                        extra: nextRegisteredEvent.polls[0] ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now, "noch") : null,
-                      }
-                    : { label: "Start", color: "text-teal-400", extra: formatCountdown(new Date(nextRegisteredEvent.startAt), now) };
-                return (
-                  <>
-                    <p className={`font-display text-sm font-black uppercase tracking-wide leading-tight flex items-center gap-1.5 ${phase.color}`}>
-                      {phase.label === "Live" ? (
-                        <span className="relative flex w-4 h-4 shrink-0 items-center justify-center">
-                          <span className="absolute inline-flex w-2 h-2 rounded-full bg-red-400 animate-ping" />
-                          <span className="relative inline-flex w-2 h-2 rounded-full bg-red-400" />
-                        </span>
-                      ) : (
-                        <Timer className="w-4 h-4 shrink-0" />
-                      )}
-                      {phase.label}{phase.extra ? ` · ${phase.extra}` : ""}
-                    </p>
-                    <p className="text-xs font-semibold text-white mt-1.5 truncate group-hover:text-amber-200 transition-colors">
-                      {nextRegisteredEvent.title}
-                    </p>
-                  </>
-                );
-              })() : (
-                <>
-                  <p className="font-display text-sm font-black uppercase tracking-wide leading-tight text-amber-400 flex items-center gap-1.5">
-                    <UserPlus className="w-4 h-4 shrink-0" />
-                    Kein Event
-                  </p>
-                  <p className="text-xs font-semibold text-gray-500 mt-1.5 group-hover:text-gray-400 transition-colors">
-                    Jetzt anmelden →
-                  </p>
-                </>
+            <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+              {leaderboardRank && (
+                <Link href="/leaderboard" className="text-right group" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
+                  <span className="flex items-center justify-end gap-1 font-display text-lg sm:text-2xl font-black text-white tabular-nums leading-none group-hover:text-teal-200">
+                    #{leaderboardRank}
+                    {rankTrend === "up" && <ArrowUp className="w-3.5 h-3.5 text-emerald-400" />}
+                    {rankTrend === "down" && <ArrowDown className="w-3.5 h-3.5 text-red-400" />}
+                  </span>
+                  <span className="block text-[10px] text-gray-500 mt-1">Rang von {memberCount}</span>
+                </Link>
               )}
+              <Link href="/points" className="text-right group">
+                <span className="block font-display text-lg sm:text-2xl font-black text-teal-300 tabular-nums leading-none">
+                  <HeroStatValue value={myRankPoints} storageKey={`hero-rp-${userId}`} />
+                </span>
+                <span className="block text-[10px] text-gray-500 mt-1">Pts</span>
+              </Link>
+              <Link href="/shop" className="text-right group">
+                <span className="flex items-center justify-end gap-1 font-display text-lg sm:text-2xl font-black text-amber-400 tabular-nums leading-none">
+                  <CoinIcon size={16} />
+                  <HeroStatValue value={myPoints} storageKey={`hero-coins-${userId}`} />
+                </span>
+                <span className="block text-[10px] text-gray-500 mt-1">Coins</span>
+              </Link>
             </div>
-          </Link>
-
-          {/* Quests + Countdown bis Monatsende → Quests */}
-          <Link href="/quests"
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-500/25 active:scale-[0.98]">
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("violetLight", 0.22)}, transparent 70%)` }} />
-            <div className="relative">
-              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-violet-400">
-                {myQuestsDone}<span className="text-gray-600 text-base">/{totalMonthQuests}</span>
-              </p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
-                Quests · {formatCountdown(startOfNextMonth, now)}
-              </p>
-            </div>
-          </Link>
-
-          {/* Aktive Events (Community) → Events */}
-          <Link href="/events"
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-500/25 active:scale-[0.98]">
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("rose", 0.22)}, transparent 70%)` }} />
-            <div className="relative">
-              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-rose-400">
-                {activeEvents}
-              </p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
-                Aktive Events
+          </section>
+        ) : (
+          /* Gäste: Einladung statt gesperrter Platzhalter */
+          <section aria-label="Willkommen" className="glass rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 border border-teal-500/20">
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-teal-400">Old Masters Allies</p>
+              <h1 className="font-display text-2xl sm:text-3xl font-black text-white leading-tight mt-1">Zocken, Events, Community</h1>
+              <p className="text-sm text-gray-400 mt-1.5">
+                Melde dich mit Discord an, um bei Events mitzumachen, Punkte zu sammeln und in der Rangliste aufzusteigen.
               </p>
             </div>
-          </Link>
-        </div>
-        </>
+            <Link href="/login?callbackUrl=%2Fdashboard"
+              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] px-5 py-2.5 text-sm font-semibold text-white transition-colors">
+              Mit Discord anmelden
+            </Link>
+          </section>
         )}
 
-        {/* Freshness-Hinweis statt starrem Cache */}
-        {userId && (
-          <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-gray-700">
-            <span className="w-1 h-1 rounded-full bg-teal-500/50 animate-pulse" />
-            Daten aktualisiert {formatFreshness(fetchedAt)}
-          </div>
+        {/* ── Mitteilung des Teams (nur wenn es eine gibt, wegklickbar) ── */}
+        {activeDailyMessage && (
+          <DailyMessageBanner message={{ ...activeDailyMessage, endDate: activeDailyMessage.endDate.toISOString() }} />
         )}
+
+        {/* ── Heute für dich ── */}
+        <HomeTaskBar tasks={homeTasks} openPolls={openDailyPolls} />
       </div>
 
-      {/* ── Rotierender Banner-Slider ─────────────────────────────────
-          Bündelt alle Dashboard-Hinweise außer den Live-Stream-Bannern in einer Kachel:
-          Ergebnisse, Mitteilung, Umfragen, Clip-Contest und WhatsApp. */}
-      <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-        <PromoBannerCarousel
-          recentResultEvents={recentResultEvents}
-          dailyMessage={activeDailyMessage ? {
-            ...activeDailyMessage,
-            endDate: activeDailyMessage.endDate.toISOString(),
-          } : null}
-          hasClipContest={!!activeClipContest}
-          clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill insetLeft /> : null}
-        />
-      </div>
-
-      {/* ── Live-Streams (Partner & Community) ───────────────────── */}
+      {/* ── Gerade los: Live-Streams, gemeinsam schauen (blenden sich ohne Inhalt selbst aus) ── */}
       <LiveStreamsBanner />
-      {/* ── Mehrere Community-Streams gleichzeitig (/zusammen) ── */}
       <WatchTogetherTeaser />
 
       {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
+      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-6 relative">
 
         {/* ── Laufende Community-Ziele: "Gemeinsam schaffen wir …" mit Fortschritt ── */}
         <CommunityGoalsBanner userId={userId} />
 
-        {/* ── Community-Feed: prominent, direkt unter "was ist gerade los" ── */}
-        <CommunityBoardWidget />
-
-        {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
-        {/* Beide Kacheln teilen das HubTile-Gerüst (feste Feldhöhen) → immer gleich hoch */}
+        {/* ── Hub-Kacheln: Events + Clip, gleiches HubTile-Gerüst → immer gleich hoch ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
-
           {/* Events Hub — das eine Event, das für dich gerade zählt (lib/home-event-feature.ts) */}
           <EventsTile
             feature={homeFeature}
@@ -754,8 +536,6 @@ export default async function DashboardPage() {
             nowIso={now.toISOString()}
             loggedIn={!!userId}
           />
-
-          {/* Clip des Monats Hub */}
           <ClipOfMonthTile
             winners={winnerClips}
             monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
@@ -771,273 +551,146 @@ export default async function DashboardPage() {
           />
         </div>
 
-        {/* ── 3-Spalten: Eventreihen | Gameserver | Quests ──────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* ── Deine Reihen | Quests | Gameserver ──────────── */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${userId ? "lg:grid-cols-3" : ""} gap-4`}>
 
-          {/* Aktive Eventreihen */}
-          <div className="animate-slide-up stagger-3">
+          {/* Deine Reihen (bzw. aktive Reihen, solange du in keiner mitspielst) */}
+          <section aria-label="Eventreihen" className="animate-slide-up stagger-3 min-w-0">
             <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Repeat className="w-3.5 h-3.5 text-teal-500/70" /> Eventreihen
+              <h2 className={SECTION_H}>
+                <Repeat className="w-3.5 h-3.5 text-teal-500/70" /> {mySeriesRows.length > 0 ? "Deine Reihen" : "Eventreihen"}
               </h2>
-              <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
-                Alle <ChevronRight className="w-3 h-3" />
-              </Link>
+              <Link href="/events" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
             </div>
-            <div className="surface overflow-hidden divide-y"
-              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)", borderColor: "rgba(255,255,255,0.06)" }}>
-              {activeSeries.length === 0 ? (
-                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("teal", 0.06) }}>
-                    <Repeat className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite" }} />
-                  </div>
-                  <p className="text-xs text-gray-600">Keine aktiven Eventreihen</p>
-                  <Link href="/events" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
-                    Events entdecken →
-                  </Link>
+            <div className="surface rounded-lg overflow-hidden divide-y divide-white/[0.05] shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+              {shownSeries.length === 0 ? (
+                <div className="p-6 text-center">
+                  <p className="text-xs text-gray-500">Gerade läuft keine Eventreihe.</p>
+                  <Link href="/events" className="text-[11px] text-teal-500 hover:text-teal-300">Events entdecken →</Link>
                 </div>
-              ) : activeSeries.map(series => {
-                const nextEv   = series.nextEvent;
-                const nextDate = nextEv ? new Date(nextEv.startAt) : null;
-                const seriesColor = resolveSeriesColor(series.icon);
-                const game = nextEv?.game ?? series.fixedGame;
-                const isRegistered = !!(userId && nextEv?.registeredUserIds.includes(userId));
-                const leader = series.leaderUserId ? leaderMap.get(series.leaderUserId) : null;
+              ) : shownSeries.map(({ s, place, registered }) => {
+                const nextEv = s.nextEvent;
+                const seriesColor = resolveSeriesColor(s.icon);
+                const leader = s.leaderUserId ? leaderMap.get(s.leaderUserId) : null;
+                const nextIn = nextEv ? startsInLabel(new Date(nextEv.startAt), now) : null;
                 return (
-                  <Link key={series.id} href={`/events/series/${series.id}`}
-                    className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
-                    style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all duration-200 group-hover:w-1" style={{ background: seriesColor }} />
-                    <div className="relative w-10 h-10 shrink-0 transition-transform duration-200 group-hover:scale-105">
-                      <GameCover game={game} coverUrl={nextEv?.coverImageUrl ?? series.coverImageUrl ?? null} className="w-10 h-10" rounded="rounded-md" />
-                      <div className="absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center"
-                        style={{ background: "#111318", border: `1.5px solid ${seriesColor}` }}>
-                        <SeriesIcon name={series.icon} className="w-2.5 h-2.5" />
-                      </div>
-                    </div>
+                  <Link key={s.id} href={`/events/series/${s.id}`}
+                    className="relative flex items-center gap-3 pl-4 pr-3 py-2.5 transition-colors group hover:bg-white/[0.035]">
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
+                    <GameCover game={nextEv?.game ?? s.fixedGame} coverUrl={nextEv?.coverImageUrl ?? s.coverImageUrl ?? null} className="w-9 h-9 shrink-0" rounded="rounded-md" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }} title={series.name}>
-                          {series.omaOriginal && <OmaTitlePrefix title={series.name} />}
-                          {series.name}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
-                        {nextDate ? (
-                          <span className="flex items-center gap-1 shrink-0">
-                            <Clock className="w-2.5 h-2.5" />
-                            {formatCountdown(nextDate, now)}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 shrink-0"><CalendarDays className="w-2.5 h-2.5" />Keine Termine</span>
-                        )}
-                        {series.totalCount > 0 && (
-                          <span className="shrink-0">{series.finishedCount}/{series.totalCount} Events</span>
-                        )}
-                        {leader && (
-                          <span className="flex items-center gap-1 text-amber-500/80 shrink-0">
-                            <Trophy className="w-2.5 h-2.5" />
-                            {leader.name ?? leader.username ?? "Unbekannt"}
-                          </span>
-                        )}
-                        {isRegistered && (
-                          <span className="flex items-center gap-1 text-teal-500/80 shrink-0">
-                            <CheckCircle2 className="w-2.5 h-2.5" />Angemeldet
-                          </span>
-                        )}
+                      <p className="text-xs font-semibold truncate" style={{ color: seriesColor }}>
+                        {s.omaOriginal && <OmaTitlePrefix title={s.name} />}{s.name}
+                      </p>
+                      <p className="text-[11px] text-gray-500 truncate">
+                        {nextEv
+                          ? nextEv.status === "active" ? <span className="text-red-400">läuft gerade</span> : <>nächster Termin {nextIn ?? "bald"}</>
+                          : "keine Termine geplant"}
+                        {registered && <span className="text-teal-300"> · dabei</span>}
+                        {!place && leader && <> · <Trophy className="inline w-2.5 h-2.5 text-amber-500/80" /> {leader.username ?? leader.name}</>}
                       </p>
                     </div>
-                    <EventCategoryBadge category={series.category} className="shrink-0" />
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-700 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                    {place > 0 && (
+                      <span className={`shrink-0 text-xs font-bold tabular-nums ${place === 1 ? "text-yellow-300" : "text-teal-300"}`}>Platz {place}</span>
+                    )}
                   </Link>
                 );
               })}
             </div>
-          </div>
+          </section>
+
+          {/* Quests: Fortschritt + die zwei, die am nächsten am Ziel sind */}
+          {userId && (
+            <section aria-label="Quests" className="animate-slide-up stagger-4 min-w-0">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className={SECTION_H}>
+                  <Scroll className="w-3.5 h-3.5 text-teal-500/70" /> Quests
+                  <span className="normal-case tracking-normal font-normal text-gray-600">· Monat endet {startsInLabel(startOfNextMonth, now)}</span>
+                </h2>
+                <Link href="/quests" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
+              </div>
+              <div className="surface rounded-lg overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+                <div className="px-3.5 py-3 flex items-center gap-3 border-b border-white/[0.06]">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-1.5">
+                      <span>Abgeschlossen</span>
+                      <span className="text-white font-semibold tabular-nums">{myQuestsDone} / {totalMonthQuests}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden bg-white/[0.06]">
+                      <AnimatedBar pct={totalMonthQuests > 0 ? Math.round((myQuestsDone / totalMonthQuests) * 100) : 0} className="h-full rounded-full bg-teal-400" />
+                    </div>
+                  </div>
+                  <span className="shrink-0 flex items-center gap-1 text-xs font-bold text-amber-400 tabular-nums" title="Diesen Monat mit Quests verdient">
+                    <CoinIcon size={12} />{questCoinsEarned.toLocaleString("de-DE")}
+                  </span>
+                </div>
+                {nextQuests.length === 0 ? (
+                  <p className="px-3.5 py-4 text-xs text-gray-500">
+                    {totalMonthQuests > 0 ? "Alle Quests erledigt. Stark!" : "Diesen Monat gibt es keine Quests."}
+                  </p>
+                ) : nextQuests.map(q => {
+                  const pct = q.target ? Math.min(100, Math.round((q.current / q.target) * 100)) : 0;
+                  return (
+                    <Link key={q.id} href="/quests" className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-white/[0.05] last:border-b-0 hover:bg-white/[0.025] transition-colors">
+                      <Circle className="w-4 h-4 text-gray-600 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-white truncate">{q.title}</p>
+                        <div className="mt-1 h-1 rounded-full overflow-hidden bg-white/[0.05]">
+                          <AnimatedBar pct={pct} className="h-full rounded-full bg-teal-500/70" />
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-gray-500 tabular-nums shrink-0">{q.current}/{q.target}</span>
+                      <span className="text-[11px] font-semibold text-amber-400/90 shrink-0 flex items-center gap-0.5 tabular-nums">+{q.reward}<CoinIcon size={10} /></span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Community-Gameserver */}
-          <div className="animate-slide-up stagger-4">
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-teal-500/70" /> Gameserver
-              </h2>
-              <Link href="/servers" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
-                Alle <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="surface overflow-hidden relative"
-              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-              {!userId ? (
-                <>
-                  <div className="animate-pulse divide-y divide-white/[0.05]">
-                    {[0, 1, 2].map(i => (
-                      <div key={i} className="flex items-center gap-3 px-3.5 py-3">
-                        <div className="w-8 h-8 rounded-md bg-white/[0.06] shrink-0" />
-                        <div className="flex-1 space-y-1.5">
-                          <div className="h-2.5 w-24 rounded bg-white/[0.06]" />
-                          <div className="h-2 w-14 rounded bg-white/[0.05]" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <GuestLockOverlay message="Melde dich mit Discord an, um alle Gameserver live zu sehen." />
-                </>
-              ) : servers.length === 0 ? (
-                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("teal", 0.06) }}>
-                    <Gamepad2 className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.3s" }} />
-                  </div>
-                  <p className="text-xs text-gray-600">Keine Gameserver verfügbar</p>
-                  <Link href="/servers" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
-                    Server ansehen →
-                  </Link>
-                </div>
-              ) : (
-                <GameserverWidget servers={servers} />
-              )}
-            </div>
-          </div>
-
-          {/* Quests diesen Monat */}
-          <div className="animate-slide-up stagger-5">
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Scroll className="w-3.5 h-3.5 text-red-500/70" /> Quests
-              </h2>
-              <Link href="/quests" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
-                Alle <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="surface overflow-hidden relative"
-              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-              {!userId && (
-                <>
-                  <div className="animate-pulse">
-                    <div className="px-3.5 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div className="h-1.5 rounded-full bg-white/[0.06]" />
-                    </div>
-                    {[0, 1, 2, 3].map(i => (
-                      <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                        <div className="w-4 h-4 rounded-full bg-white/[0.06] shrink-0" />
-                        <div className="flex-1 h-2.5 rounded bg-white/[0.06]" />
-                        <div className="w-8 h-2.5 rounded bg-white/[0.05] shrink-0" />
-                      </div>
-                    ))}
-                  </div>
-                  <GuestLockOverlay message="Melde dich mit Discord an, um deine Quests zu sehen und Belohnungen zu sammeln." />
-                </>
-              )}
-              {userId && (
-              <>
-              {/* Fortschrittsanzeige oben */}
-              <div className="px-3.5 py-3 flex items-center gap-3"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="flex-1">
-                  <div className="flex justify-between text-[10px] text-gray-500 mb-1.5">
-                    <span>Abgeschlossen</span>
-                    <span className="text-white font-semibold">{myQuestsDone} / {totalMonthQuests}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <AnimatedBar
-                      pct={totalMonthQuests > 0 ? Math.round((myQuestsDone / totalMonthQuests) * 100) : 0}
-                      className="h-full rounded-full progress-shimmer"
-                    />
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-gray-600">Verdient</p>
-                  <p className="text-xs font-bold text-amber-400 tabular-nums flex items-center gap-1">
-                    <CoinIcon size={12} />
-                    {myMonthQuests
-                      .filter(q => (q as { progress?: { completed: boolean }[] }).progress?.[0]?.completed)
-                      .reduce((s, q) => s + q.reward, 0)
-                      .toLocaleString("de-DE")}
-                  </p>
-                </div>
+          {userId && (
+            <section aria-label="Gameserver" className="animate-slide-up stagger-5 min-w-0">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className={SECTION_H}><Server className="w-3.5 h-3.5 text-teal-500/70" /> Gameserver</h2>
+                <Link href="/servers" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
               </div>
-
-              {/* Quest-Liste */}
-              {myMonthQuests.length === 0 ? (
-                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("red", 0.06) }}>
-                    <Scroll className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.6s" }} />
+              <div className="surface rounded-lg overflow-hidden relative shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
+                {servers.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-xs text-gray-500">Gerade sind keine Gameserver verfügbar.</p>
+                    <Link href="/servers" className="text-[11px] text-teal-500 hover:text-teal-300">Server ansehen →</Link>
                   </div>
-                  <p className="text-xs text-gray-600">Keine Quests diesen Monat</p>
-                  <Link href="/quests" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
-                    Alle Quests →
-                  </Link>
-                </div>
-              ) : myMonthQuests.map((quest, i) => {
-                const prog      = (quest as { progress?: { completed: boolean; current: number }[] }).progress?.[0];
-                const completed = prog?.completed ?? false;
-                const current   = prog?.current   ?? 0;
-                const pct       = Math.min(Math.round((current / quest.target) * 100), 100);
-                return (
-                  <div key={quest.id}
-                    className="flex items-center gap-2.5 px-3.5 py-2.5 transition-colors duration-200 hover:bg-white/[0.025]"
-                    style={{ borderBottom: i < myMonthQuests.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
-                    <div className="shrink-0">
-                      {completed
-                        ? <CheckCircle2 className="w-4 h-4 text-teal-400" />
-                        : <Circle className="w-4 h-4 text-gray-700" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-medium truncate ${completed ? "text-gray-500 line-through" : "text-white"}`}>
-                        {quest.title}
-                      </p>
-                      {!completed && (
-                        <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                          <AnimatedBar pct={pct} className="h-full rounded-full bg-teal-500/60" />
-                        </div>
-                      )}
-                    </div>
-                    <span className={`text-[10px] font-semibold shrink-0 flex items-center gap-0.5 tabular-nums ${completed ? "text-amber-500" : "text-gray-700"}`}>
-                      +{quest.reward} <CoinIcon size={10} />
-                    </span>
-                  </div>
-                );
-              })}
-              </>
-              )}
-            </div>
-          </div>
-
+                ) : (
+                  <GameserverWidget servers={servers} />
+                )}
+              </div>
+            </section>
+          )}
         </div>
 
-        {/* ── Neueste Berichte ──────────────────────────────────────── */}
-        {recentSummaries.length > 0 && (
-          <div className="animate-slide-up stagger-5">
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Newspaper className="w-3.5 h-3.5 text-teal-500/70" /> Neueste Berichte
-              </h2>
-              <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
-                Alle Events <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
+        {/* ── Aus der Community: Feed, neueste Berichte, WhatsApp ───────── */}
+        <section aria-label="Aus der Community" className="space-y-4">
+          <h2 className={SECTION_H}><Newspaper className="w-3.5 h-3.5 text-teal-500/70" /> Aus der Community</h2>
+          <CommunityBoardWidget />
+          {recentSummaries.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {recentSummaries.map(ev => (
                 <Link key={ev.id} href={`/tournament/${ev.id}`}
-                  className="surface group block p-4 hover:border-teal-500/20 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
-                  style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-                  <div className="flex items-start gap-2 mb-2">
-                    <Newspaper className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5 transition-transform duration-200 group-hover:scale-110" />
-                    <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors leading-snug line-clamp-2">
-                      {ev.title}
-                    </p>
-                  </div>
-                  <p className="text-[11px] text-gray-500 line-clamp-3 leading-relaxed">
-                    {ev.summary}
-                  </p>
-                  <p className="text-[10px] text-gray-700 mt-2">
+                  className="surface rounded-lg group block p-4 hover:border-teal-500/20 transition-colors">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-400/80 mb-1">Eventbericht</p>
+                  <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors leading-snug line-clamp-2">{ev.title}</p>
+                  <p className="text-[11px] text-gray-500 line-clamp-3 leading-relaxed mt-1.5">{ev.summary}</p>
+                  <p className="text-[10px] text-gray-600 mt-2">
                     {formatBerlinDate(ev.startAt, { day: "numeric", month: "short", year: "numeric" })}
                     {ev.game ? ` · ${ev.game}` : ""}
                   </p>
                 </Link>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          <WhatsAppCommunityBanner />
+        </section>
 
       </div>
     </div>
