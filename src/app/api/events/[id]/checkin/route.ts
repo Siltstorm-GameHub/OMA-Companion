@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireEventManager } from "@/lib/roles";
 import { checkInState } from "@/lib/checkin";
+import { syncReadyStatus } from "@/lib/event-comments";
 
 async function loadEvent(eventId: string) {
   const event = await prisma.event.findUnique({
@@ -21,22 +22,24 @@ async function selfCheckIn(eventId: string, checkIn: boolean) {
   const event = await loadEvent(eventId);
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   const state = checkInState(event, event.drawn);
-  if (state === "disabled") return NextResponse.json({ error: "Für dieses Event gibt es keinen Check-in" }, { status: 400 });
-  if (state === "not_yet_open") return NextResponse.json({ error: "Der Check-in ist noch nicht geöffnet" }, { status: 400 });
-  if (state === "closed") return NextResponse.json({ error: "Der Check-in ist geschlossen — das Turnier wurde bereits ausgelost" }, { status: 400 });
+  if (state === "disabled") return NextResponse.json({ error: "Für dieses Event gibt es keine Bereit-Meldung" }, { status: 400 });
+  if (state === "not_yet_open") return NextResponse.json({ error: "„Bin bereit“ ist noch nicht geöffnet" }, { status: 400 });
+  if (state === "closed") return NextResponse.json({ error: "Die Bereit-Meldung ist geschlossen — das Turnier wurde bereits ausgelost" }, { status: 400 });
 
   const registration = await prisma.eventRegistration.findUnique({
     where: { userId_eventId: { userId, eventId } },
     select: { role: true },
   });
   if (!registration || registration.role === "spectator") {
-    return NextResponse.json({ error: "Nur angemeldete Spieler können einchecken" }, { status: 403 });
+    return NextResponse.json({ error: "Nur angemeldete Spieler können sich bereit melden" }, { status: 403 });
   }
   const updated = await prisma.eventRegistration.update({
     where: { userId_eventId: { userId, eventId } },
     data: { checkedInAt: checkIn ? new Date() : null },
     select: { checkedInAt: true },
   });
+  // Gleicher Stand in den Absprachen: "bereit"-Status setzen bzw. zurücknehmen
+  await syncReadyStatus(userId, eventId, checkIn).catch(() => {});
   return NextResponse.json(updated);
 }
 

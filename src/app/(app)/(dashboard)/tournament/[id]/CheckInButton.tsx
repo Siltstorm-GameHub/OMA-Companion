@@ -6,7 +6,10 @@ import { Check, Loader2 } from "@/components/icons";
 import { checkInOpensAt, checkInState } from "@/lib/checkin";
 import { formatBerlinDateTime } from "@/lib/time";
 
-/** Check-in vor Turnierstart für angemeldete Spieler (nur bei Event.checkInEnabled sichtbar). */
+/**
+ * "Bin bereit" vor Turnierstart für angemeldete Spieler (= Check-in, nur bei Event.checkInEnabled sichtbar).
+ * Gleicher Weg wie der Status-Knopf in den Absprachen — beide setzen Check-in und "bereit"-Status.
+ */
 export default function CheckInButton({
   eventId, startAt, checkInMinutes, drawn, checkedIn: initialCheckedIn,
 }: {
@@ -29,26 +32,26 @@ export default function CheckInButton({
     setLoading(false);
     if (!res.ok) {
       const e = await res.json().catch(() => ({}));
-      toast.error(e.error ?? "Check-in fehlgeschlagen");
+      toast.error(e.error ?? "Das hat nicht geklappt");
       router.refresh();
       return;
     }
     setCheckedIn(!checkedIn);
-    toast.success(checkedIn ? "Ausgecheckt" : "Eingecheckt — viel Erfolg! 🎮");
+    toast.success(checkedIn ? "Bereit-Meldung zurückgenommen" : "Bereit gemeldet — viel Erfolg! 🎮");
     router.refresh();
   }
 
   if (state === "not_yet_open") {
     return (
       <span className="text-xs text-gray-400">
-        ⏳ Check-in ab {formatBerlinDateTime(checkInOpensAt(event), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
+        ⏳ „Bin bereit“ ab {formatBerlinDateTime(checkInOpensAt(event), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
       </span>
     );
   }
   if (state === "closed") {
     return (
       <span className={`text-xs ${checkedIn ? "text-teal-300" : "text-gray-500"}`}>
-        {checkedIn ? "✓ Eingecheckt" : "Check-in geschlossen"}
+        {checkedIn ? "✓ Bereit" : "Bereit-Meldung geschlossen"}
       </span>
     );
   }
@@ -60,7 +63,7 @@ export default function CheckInButton({
           : "bg-amber-500 border-amber-400 text-gray-950 hover:bg-amber-400 animate-pulse"
       }`}>
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : checkedIn ? <Check className="w-4 h-4" /> : null}
-      {checkedIn ? "Eingecheckt (auschecken)" : "Jetzt einchecken"}
+      {checkedIn ? "Bereit (zurücknehmen)" : "Bin bereit"}
     </button>
   );
 }

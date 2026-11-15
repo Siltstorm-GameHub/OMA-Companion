@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, Loader2, MessageCircle, Pencil, Send, Smile, Trash2, X } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
+import { usePolling } from "@/lib/usePolling";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { SECTION_JUMP_EVENT } from "@/components/SectionJumpLink";
 import { mentionToken } from "@/lib/report-mentions";
 import { formatBerlinDateTime, formatBerlinTime, isSameBerlinDay } from "@/lib/time";
 import {
   COMMENT_MAX_LENGTH, LATE_OPTIONS, REACTION_EMOJIS, parseCommentSegments, plainCommentText,
-  type CommentStatus, type EventCommentDTO, type EventCommentsResponse,
+  type AttendanceSummary, type CommentStatus, type EventCommentDTO, type EventCommentsResponse,
 } from "@/lib/event-comments-shared";
 
+/** Polling: sichtbar alle 20 s, mobil eingeklappt nur jede Minute (dann zählt nur der "neu"-Hinweis). */
 const POLL_MS = 20_000;
+const POLL_COLLAPSED_MS = 60_000;
 
 type FoundUser = { id: string; username: string | null; name: string | null; image: string | null };
 
@@ -47,24 +51,26 @@ export default function EventComments({
   const stickToBottom = useRef(true);
   const lastSeenCount = useRef(0);
   const rootRef = useRef<HTMLElement>(null);
+  const etagRef = useRef<string | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
+  // Mit ETag: Hat sich nichts geändert, antwortet der Server mit 304 ohne Inhalt
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${eventId}/comments`, { cache: "no-store" });
+      const res = await fetch(`/api/events/${eventId}/comments`, {
+        cache: "no-store",
+        headers: etagRef.current ? { "If-None-Match": etagRef.current } : undefined,
+      });
+      if (res.status === 304) return;
       if (!res.ok) { setError((await res.json().catch(() => ({}))).error ?? "Absprachen konnten nicht geladen werden"); return; }
+      etagRef.current = res.headers.get("ETag");
       setError(null);
       setData(await res.json());
     } catch { /* offline — beim nächsten Intervall erneut */ }
   }, [eventId]);
 
-  // Laden + Polling, nur solange der Tab sichtbar ist
-  useEffect(() => {
-    const first = setTimeout(load, 0);
-    const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, POLL_MS);
-    const onVis = () => { if (document.visibilityState === "visible") load(); };
-    document.addEventListener("visibilitychange", onVis);
-    return () => { clearTimeout(first); clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
-  }, [load]);
+  // Laden + Polling, nur solange der Tab sichtbar ist (usePolling)
+  usePolling(load, isPanel || open || isDesktop ? POLL_MS : POLL_COLLAPSED_MS);
 
   // Sprungleiste der Eventseite: eingeklappten Bereich öffnen (Scrollen übernimmt SectionJumpLink)
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function EventComments({
   }, [isPanel]);
 
   // Sichtbar & neue Nachrichten → als gelesen markieren
-  const isVisibleNow = () => isPanel || open || window.matchMedia("(min-width: 1024px)").matches;
+  const isVisibleNow = () => isPanel || open || isDesktop;
   useEffect(() => {
     if (!data || !isVisibleNow()) return;
     if (data.comments.length !== lastSeenCount.current || unread > 0) {
@@ -136,6 +142,8 @@ export default function EventComments({
                 {pinned.map(c => <PinnedItem key={c.id} c={c} eventId={eventId} canPin={data.canPin} onChange={load} />)}
               </div>
             )}
+
+            {data.summary && <AttendanceBar summary={data.summary} />}
 
             {data.canSetStatus && (
               <StatusBar eventId={eventId} myStatus={data.myStatus} isPlayer={isPlayer}
@@ -345,6 +353,40 @@ function IconBtn({ label, onClick, children }: { label: string; onClick: () => v
       className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10">
       {children}
     </button>
+  );
+}
+
+// ── Veranstalter-Übersicht ────────────────────────────────────────────────────
+
+type AttendanceKey = "ready" | "late" | "absent" | "none";
+
+/** Für Event-Verwalter: Rückmeldungen der Spieler auf einen Blick, Antippen zeigt die Namen. */
+function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
+  const [openKey, setOpenKey] = useState<AttendanceKey | null>(null);
+  const total = summary.ready.length + summary.late.length + summary.absent.length + summary.none.length;
+  if (total === 0) return null;
+  const items: { key: AttendanceKey; icon: string; label: string; count: number; tone: string }[] = [
+    { key: "ready", icon: "✅", label: "bereit", count: summary.ready.length, tone: "text-emerald-300" },
+    { key: "late", icon: "⏰", label: "später", count: summary.late.length, tone: "text-amber-300" },
+    { key: "absent", icon: "❌", label: "sagen ab", count: summary.absent.length, tone: "text-rose-300" },
+    { key: "none", icon: "❔", label: "ohne Rückmeldung", count: summary.none.length, tone: "text-gray-300" },
+  ];
+  const names = openKey === "late"
+    ? summary.late.map(l => `${l.name}${l.lateMin ? ` (+${l.lateMin} min)` : ""}`)
+    : openKey ? summary[openKey] : [];
+  return (
+    <div className="shrink-0 border-b border-white/5 px-3 py-2 bg-white/[0.015]">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-[11px] text-gray-500 mr-1">Rückmeldungen ({total} Spieler):</span>
+        {items.filter(i => i.count > 0).map(i => (
+          <button key={i.key} type="button" onClick={() => setOpenKey(k => (k === i.key ? null : i.key))} aria-expanded={openKey === i.key}
+            className={`px-2 py-1 rounded-lg border transition-colors ${openKey === i.key ? "bg-white/10 border-white/25" : "border-white/10 hover:bg-white/[0.05]"} ${i.tone}`}>
+            {i.icon} {i.count} {i.label}
+          </button>
+        ))}
+      </div>
+      {openKey && names.length > 0 && <p className="text-xs text-gray-300 mt-1.5 leading-relaxed">{names.join(", ")}</p>}
+    </div>
   );
 }
 

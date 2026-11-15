@@ -49,7 +49,35 @@ export type EventCommentsResponse = {
   /** Darf Status-Meldungen abgeben (nur Angemeldete: Spieler oder Zuschauer) */
   canSetStatus: boolean;
   myStatus: { status: CommentStatus; lateMin: number | null } | null;
+  /** Nur für Event-Verwalter, bis zum Ende der Spielphase: Rückmeldungen der angemeldeten Spieler */
+  summary: AttendanceSummary | null;
 };
+
+export type AttendanceSummary = {
+  ready: string[];
+  late: { name: string; lateMin: number | null }[];
+  absent: string[];
+  none: string[];
+};
+
+/**
+ * Rückmeldungen der Spieler: der letzte Status zählt; ohne Status gilt ein Check-in als "bereit".
+ * Namen alphabetisch, damit die Liste ruhig bleibt.
+ */
+export function buildAttendanceSummary(
+  players: { name: string; checkedIn: boolean; status: { status: CommentStatus; lateMin: number | null } | null }[],
+): AttendanceSummary {
+  const out: AttendanceSummary = { ready: [], late: [], absent: [], none: [] };
+  const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  for (const p of sorted) {
+    const st = p.status?.status ?? (p.checkedIn ? "ready" : null);
+    if (st === "ready") out.ready.push(p.name);
+    else if (st === "late") out.late.push({ name: p.name, lateMin: p.status?.lateMin ?? null });
+    else if (st === "absent") out.absent.push(p.name);
+    else out.none.push(p.name);
+  }
+  return out;
+}
 
 /** Eintrag im Schnellzugriff (Panel): Absprachen eines "meiner" Events. */
 export type EventThreadDTO = {

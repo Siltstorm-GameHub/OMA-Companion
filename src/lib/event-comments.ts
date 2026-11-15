@@ -1,6 +1,7 @@
 // Event-Absprachen — Server-Logik: Rechte, Lesen/Schreiben, Status-Meldungen, Anpinnen (inkl.
 // Discord-Spiegelung), Reaktionen, Lesestand und Benachrichtigungen.
 // Reine Regeln/Typen: src/lib/event-comments-shared.ts
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { canManageEvent, hasMinRole } from "@/lib/roles";
 import { isEventHidden } from "@/lib/event-visibility";
@@ -15,7 +16,7 @@ import { extractMentionedUserIds } from "@/lib/report-mentions";
 import {
   COMMENT_MAX_LENGTH, COMMENT_RATE_LIMIT_MS, COMMENT_STATUSES, REACTION_EMOJIS,
   commentLockAt, normalizeCommentInput, plainCommentText, sanitizeLateMin, shouldNotifyBundled, statusMessage,
-  eventCommentsUrl, statusMessagesAllowed, threadPhase, type CommentStatus, type EventCommentDTO, type EventCommentsResponse, type EventThreadDTO,
+  buildAttendanceSummary, eventCommentsUrl, statusMessagesAllowed, threadPhase, type CommentStatus, type EventCommentDTO, type EventCommentsResponse, type EventThreadDTO,
 } from "@/lib/event-comments-shared";
 
 export type CommentViewer = { id: string; role: string };
@@ -75,6 +76,23 @@ export async function listEventComments(viewer: CommentViewer, eventId: string):
   ]);
   rows.reverse();
 
+  // Veranstalter-Übersicht: wer ist bereit, kommt später, sagt ab, hat sich nicht gemeldet
+  let summary: EventCommentsResponse["summary"] = null;
+  if (canManage && statusMessagesAllowed(ev.status)) {
+    const [players, statuses] = await Promise.all([
+      prisma.eventRegistration.findMany({
+        where: { eventId, role: { not: "spectator" } },
+        select: { userId: true, checkedInAt: true, user: { select: { username: true, name: true } } },
+      }),
+      getLatestCommentStatuses(eventId),
+    ]);
+    summary = buildAttendanceSummary(players.map(p => ({
+      name: displayName(p.user),
+      checkedIn: !!p.checkedInAt,
+      status: statuses.get(p.userId) ?? null,
+    })));
+  }
+
   const comments: EventCommentDTO[] = rows.map(r => {
     const byEmoji = new Map<string, { count: number; mine: boolean; users: string[] }>();
     for (const re of r.reactions) {
@@ -112,8 +130,35 @@ export async function listEventComments(viewer: CommentViewer, eventId: string):
       canPin: canManage && !ev.locked,
       canSetStatus: !!registration && !ev.locked && statusMessagesAllowed(ev.status),
       myStatus: myStatus?.status ? { status: myStatus.status as CommentStatus, lateMin: myStatus.lateMin } : null,
+      summary,
     },
   };
+}
+
+/**
+ * Günstige Versionskennung der Absprachen eines Events für den ETag (Polling): ändert sich bei neuen,
+ * bearbeiteten, gepinnten oder gelöschten Nachrichten, Reaktionen, An-/Abmeldungen und Check-ins sowie
+ * bei Rechten/Sperre des Betrachters. Ohne Rechte → null (dann normal antworten, inkl. Fehler).
+ */
+export async function eventCommentsVersion(viewer: CommentViewer, eventId: string): Promise<string | null> {
+  const { ev, canView, canManage } = await access(viewer, eventId);
+  if (!ev || !canView) return null;
+  const [c, r, reg] = await Promise.all([
+    prisma.eventComment.aggregate({ where: { eventId }, _count: { _all: true }, _max: { updatedAt: true } }),
+    prisma.eventCommentReaction.aggregate({ where: { comment: { eventId } }, _count: { _all: true }, _max: { createdAt: true } }),
+    prisma.eventRegistration.aggregate({ where: { eventId }, _count: { _all: true, checkedInAt: true } }),
+  ]);
+  return hashVersion([
+    viewer.id, canManage, ev.status, ev.locked,
+    c._count._all, c._max.updatedAt?.getTime(),
+    r._count._all, r._max.createdAt?.getTime(),
+    reg._count._all, reg._count.checkedInAt,
+  ]);
+}
+
+/** Kurzer, stabiler Hash (ETag) aus beliebigen Werten bzw. einer fertigen Antwort. */
+export function hashVersion(value: unknown): string {
+  return `"${createHash("sha1").update(JSON.stringify(value)).digest("base64url").slice(0, 22)}"`;
 }
 
 /** Letzter Status je User (für die Teilnehmerliste). */
@@ -353,6 +398,24 @@ export async function createEventStatus(
     checkedIn = true;
   }
   return { ok: true, data: { id: c.id, eventId, authorId: viewer.id, kind: "status", checkedIn } };
+}
+
+/**
+ * "Bin bereit"-Knopf (Check-in) auf der Eventseite: hält den Absprachen-Status gleich.
+ * ready = true → "bereit"-Status anlegen (falls nicht schon der letzte Status), false → zurücknehmen.
+ */
+export async function syncReadyStatus(userId: string, eventId: string, ready: boolean): Promise<void> {
+  const last = await prisma.eventComment.findFirst({
+    where: { userId, eventId, kind: "status", deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true },
+  });
+  if (ready) {
+    if (last?.status === "ready") return;
+    await prisma.eventComment.create({ data: { eventId, userId, kind: "status", status: "ready", content: statusMessage("ready") } });
+  } else if (last?.status === "ready") {
+    await prisma.eventComment.update({ where: { id: last.id }, data: { deletedAt: new Date() } });
+  }
 }
 
 export async function editEventComment(viewer: CommentViewer, commentId: string, rawContent: unknown): Promise<Result<{ id: string }>> {

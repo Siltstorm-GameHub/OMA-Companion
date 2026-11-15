@@ -73,3 +73,14 @@ test("threadPhase und statusMessagesAllowed unterscheiden Live und Abstimmung", 
   assert.equal(statusMessagesAllowed("umfrage"), false);
   assert.equal(statusMessagesAllowed("finished"), false);
 });
+
+test("buildAttendanceSummary: letzter Status zählt, Check-in ohne Status = bereit", async () => {
+  const { buildAttendanceSummary } = await import("./event-comments-shared");
+  const s = buildAttendanceSummary([
+    { name: "Zora", checkedIn: false, status: null },
+    { name: "Anna", checkedIn: true, status: null },
+    { name: "Ben", checkedIn: true, status: { status: "absent", lateMin: null } },
+    { name: "Cem", checkedIn: false, status: { status: "late", lateMin: 15 } },
+  ]);
+  assert.deepEqual(s, { ready: ["Anna"], late: [{ name: "Cem", lateMin: 15 }], absent: ["Ben"], none: ["Zora"] });
+});

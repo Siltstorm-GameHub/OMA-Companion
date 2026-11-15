@@ -460,6 +460,8 @@ model EventComment {
   editedAt         DateTime?
   deletedAt        DateTime?
   createdAt        DateTime  @default(now())
+  // Jede Änderung (bearbeiten, pinnen, löschen, spiegeln) — Grundlage der ETag-Version fürs Polling
+  updatedAt        DateTime  @default(now()) @updatedAt
 
   event     Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)

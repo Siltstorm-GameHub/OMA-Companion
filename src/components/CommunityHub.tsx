@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Bell, Settings } from "@/components/icons";
@@ -7,6 +7,7 @@ import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
 import { Tabs } from "@/components/admin/Tabs";
 import { usePolling } from "@/lib/usePolling";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import EventThreadsPanel from "@/components/events/EventThreadsPanel";
 import { eventIdFromCommentsUrl, type EventThreadDTO } from "@/lib/event-comments-shared";
 
@@ -62,7 +63,7 @@ function timeAgo(dateStr: string) {
  * Knopf unten rechts mit Panel: Benachrichtigungen + Event-Absprachen (Schnellzugriff auf die
  * Kommentare der eigenen Events — ersetzt die frühere Community-Lobby) und die Online-Leiste.
  */
-export function FloatingLobbyChat() {
+export function CommunityHub() {
   const { data: session } = useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -73,7 +74,8 @@ export function FloatingLobbyChat() {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const threadsEtagRef = useRef<string | null>(null);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifUnread, setNotifUnread] = useState(0);
@@ -156,8 +158,14 @@ export function FloatingLobbyChat() {
 
   const fetchThreads = useCallback(async () => {
     try {
-      const res = await fetch("/api/me/event-threads", { cache: "no-store" });
+      // ETag: unverändert → 304 ohne Inhalt
+      const res = await fetch("/api/me/event-threads", {
+        cache: "no-store",
+        headers: threadsEtagRef.current ? { "If-None-Match": threadsEtagRef.current } : undefined,
+      });
+      if (res.status === 304) { setThreadsLoaded(true); return; }
       if (!res.ok) return;
+      threadsEtagRef.current = res.headers.get("ETag");
       const data = await res.json() as { threads: EventThreadDTO[]; unreadTotal: number };
       setThreads(data.threads);
       setThreadsUnread(data.unreadTotal);
@@ -177,14 +185,6 @@ export function FloatingLobbyChat() {
   // Presence + Heartbeat: 20 s offen, 60 s geschlossen (Aktiv-Fenster serverseitig 2 min).
   usePolling(fetchPresence, open ? 20_000 : 60_000);
 
-  // Desktop-Breakpoint überwachen (Slide-Richtung: rechts vs. unten)
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    setIsDesktop(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   function handleToggle() {
     setOpen((o) => {
@@ -208,7 +208,7 @@ export function FloatingLobbyChat() {
       <button
         onClick={handleToggle}
         aria-label={open ? "Fenster schließen" : `Benachrichtigungen & Absprachen öffnen${totalBadge > 0 ? ` (${totalBadge} neu)` : ""}`}
-        className={`lobby-chat-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && totalBadge > 0 ? " lobby-fab-pulse" : ""}`}
+        className={`hub-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && totalBadge > 0 ? " hub-fab-pulse" : ""}`}
         style={{
           background: open
             ? "rgba(20,184,166,0.22)"
@@ -256,7 +256,7 @@ export function FloatingLobbyChat() {
 
       {/* ── Panel ───────────────────────────────────────────────────── */}
       <div
-        className={`lobby-chat-panel fixed left-0 right-0 max-h-[70vh] rounded-t-2xl z-50 flex flex-col overflow-hidden ${activeTab === "threads" && selectedThread ? "h-[70vh] lg:h-auto" : ""}`}
+        className={`hub-panel fixed left-0 right-0 max-h-[70vh] rounded-t-2xl z-50 flex flex-col overflow-hidden ${activeTab === "threads" && selectedThread ? "h-[70vh] lg:h-auto" : ""}`}
         style={{
           background: "rgba(13,13,15,0.97)",
           backdropFilter: "blur(24px)",

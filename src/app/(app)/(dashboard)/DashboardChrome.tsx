@@ -4,7 +4,7 @@ import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import MobileTopBar from "@/components/MobileTopBar";
 import BottomNav from "@/components/BottomNav";
 import { BackToTop } from "@/components/BackToTop";
-import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
+import { CommunityHub } from "@/components/CommunityHub";
 import AuroraBackground from "@/components/AuroraBackground";
 import { GuestGateProvider, GuestBanner } from "@/components/GuestGate";
 
@@ -61,8 +61,8 @@ export default function DashboardChrome({
       {/* Back to top */}
       <BackToTop />
 
-      {/* Community-Lobby-Chat */}
-      <FloatingLobbyChat />
+      {/* Benachrichtigungen, Event-Absprachen, Online-Leiste (Knopf unten rechts) */}
+      <CommunityHub />
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">
