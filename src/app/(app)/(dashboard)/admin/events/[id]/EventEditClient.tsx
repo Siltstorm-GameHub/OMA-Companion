@@ -882,7 +882,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           <span>/</span>
           <span className="text-gray-300 truncate max-w-[200px]">{event.title}</span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
           <EventCategoryBadge category={event.category ?? "casual"} />
           {/* Punkt 6: Diese drei Controls speichern sofort (eigener PATCH pro Klick) — anders als der
               Rest des Formulars, das erst über den "Speichern"-Button unten persistiert wird. Damit das
