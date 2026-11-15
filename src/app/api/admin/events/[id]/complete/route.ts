@@ -202,6 +202,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     pollResults?: PollResult[];
     finalRanking?: string[];
     finalRankingGroups?: string[][];
+    /** Ob die Finale Platzierung im Abschluss-Dialog von Hand von der Auto-Sortierung abweicht — nur
+     *  gespeichert, damit der Dialog beim erneuten Öffnen weiß, ob er neu auto-sortieren darf. */
+    rankingManual?: boolean;
     finalRankingNote?: string;
     participationCoins?: number;
     placements?: PlacementReward[];
@@ -1231,6 +1234,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const completionData = {
     mvpUserId:               body.mvpUserId ?? null,
     winnerStatField:         body.winnerStatField ?? null,
+    rankingManual:           typeof body.rankingManual === "boolean" ? body.rankingManual : null,
     avgWinnerDirection:      body.avgWinnerDirection ?? null,
     seriesWinnerTargetField: body.seriesWinnerTargetField ?? null,
     eventWinnerId:           eventWinnerId ?? null,

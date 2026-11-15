@@ -473,8 +473,11 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   }
 
   // completionData löschen, damit die Reihentabelle (computeStatStandings) das Event
-  // nicht mehr zählt — die Anzeige liest ausschließlich aus event.completionData.
-  await prisma.event.update({ where: { id: eventId }, data: { completionData: null } });
+  // nicht mehr zählt — die Anzeige liest ausschließlich aus event.completionData. Die Finale
+  // Platzierung gehört zum Abschluss und fällt mit weg — sonst tauchte sie beim erneuten Abschließen
+  // als "manuell geänderte" Platzierung (ohne Gleichstände) wieder auf und Profil/Reihe zeigten
+  // weiterhin Plätze eines nicht mehr abgeschlossenen Events.
+  await prisma.event.update({ where: { id: eventId }, data: { completionData: null, finalRankingJson: null } });
 
   // Dominion Bonus der ganzen Reihe chronologisch neu berechnen — das Event fällt jetzt aus der
   // Historie heraus, was verschieben kann, welches (spätere) Event einen Bonus auslöst.

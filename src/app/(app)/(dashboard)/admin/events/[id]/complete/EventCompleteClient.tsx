@@ -127,6 +127,12 @@ function computeGroups(order: string[], tiedAbove: Set<string>): string[][] {
   return groups;
 }
 
+/** Gleiche Platzierungsgruppen (Reihenfolge innerhalb eines Gleichstands egal)? */
+function sameGroups(a: string[][], b: string[][]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((g, i) => g.length === b[i].length && g.every(uid => b[i].includes(uid)));
+}
+
 /** Standard competition ranking: tied users share a placement, next group skips */
 function computePlacementMap(groups: string[][]): Map<string, number> {
   const map = new Map<string, number>();
@@ -179,9 +185,15 @@ export default function EventCompleteClient({
   const willFinalizePolls = isPollOnly && (isMod || openEventPolls.length === 0);
 
   /* ── Gewinner-Stat ── */
-  const [winnerStatField, setWinnerStatField] = useState<string>(
-    (initialData?.winnerStatField as string) ?? defaultWinnerStatField ?? seriesStatConfig?.defaultWinnerStatField ?? ""
-  );
+  // Gespeicherter Wert nur, wenn er noch eine wählbare Option ist (z.B. "Eventpunkte", die es bei
+  // geänderter Reihen-Konfiguration nicht mehr gibt, oder ein umbenanntes Stat-Feld) — sonst bliebe die
+  // Auswahl leer und die Platzierung unsortiert, obwohl die Reihe eine Voreinstellung hat.
+  const [winnerStatField, setWinnerStatField] = useState<string>(() => {
+    const options = winnerStatFieldOptions ?? tournamentStatFields;
+    const saved = initialData?.winnerStatField as string | undefined;
+    if (saved && options.includes(saved)) return saved;
+    return defaultWinnerStatField ?? "";
+  });
   const [avgDirection, setAvgDirection] = useState<AvgDirection>(
     parseAvgDirection(initialData?.avgWinnerDirection) ?? defaultAvgDirection
   );
@@ -240,7 +252,17 @@ export default function EventCompleteClient({
     return tied;
   });
   const [rankingNote, setRankingNote] = useState(initialFinalRankingNote ?? "");
-  const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
+  // Als "manuell geändert" gilt eine gespeicherte Platzierung nur, wenn sie von der automatischen
+  // Sortierung nach dem Gewinner-Stat abweicht — eine einfach bestätigte Auto-Sortierung bleibt "auto".
+  const [rankingManuallyEdited, setRankingManuallyEdited] = useState(() => {
+    if (!initialFinalRanking?.length) return false;
+    // Seit dem Speichern des Flags: gespeicherte Entscheidung übernehmen. Ältere Abschlüsse: Vergleich
+    // mit der Auto-Sortierung.
+    if (typeof initialData?.rankingManual === "boolean") return initialData.rankingManual;
+    if (!isAvgFormat && !winnerStatField) return true;
+    const auto = computeAutoRanking(rankingOrder, winnerStatField, avgDirection);
+    return !sameGroups(computeGroups(rankingOrder, tiedAbove), computeGroups(auto.sorted, auto.tied));
+  });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   // Verfolgt, ob in dieser Sitzung (nicht historisch) an Finaler Platzierung/Begründung/Disqualifikation
@@ -273,7 +295,8 @@ export default function EventCompleteClient({
     return registeredUsers.some(u => !savedIds.has(u.id));
   })();
   useEffect(() => {
-    if ((isAvgFormat || winnerStatField) && (!initialFinalRanking?.length || hasMissingUsers)) {
+    // Nicht manuell geänderte Platzierungen folgen immer den aktuellen Stats und Voreinstellungen
+    if ((isAvgFormat || winnerStatField) && (!initialFinalRanking?.length || hasMissingUsers || !rankingManuallyEdited)) {
       autoSort(winnerStatField);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -368,13 +391,12 @@ export default function EventCompleteClient({
     return isAvgFormat ? (userAvgScore[uid] ?? 0) : (userStats[uid]?.[field] ?? 0);
   }
   // direction explizit übergebbar: direkt nach setAvgDirection() hält avgDirection noch den alten Wert
-  function autoSort(field = winnerStatField, direction = avgDirection) {
-    if (!isAvgFormat && !field) return;
+  function computeAutoRanking(order: string[], field: string, direction: AvgDirection) {
     const dirMul = isAvgFormat && direction === "low" ? 1 : -1;
     // avg_stats: Spieler ohne gespielte Runde (kein Ø) immer ans Ende — sonst würde ihre fiktive 0
     // bei "niedrigster Ø gewinnt" ganz oben landen.
     const unscored = (uid: string) => isAvgFormat && userAvgScore[uid] === undefined;
-    const sorted = [...rankingOrder].sort(
+    const sorted = [...order].sort(
       (a, b) => (Number(unscored(a)) - Number(unscored(b))) || dirMul * (scoreOf(a, field) - scoreOf(b, field))
     );
     const newTied = new Set<string>();
@@ -383,7 +405,12 @@ export default function EventCompleteClient({
         newTied.add(sorted[i]);
       }
     }
-    setTiedAbove(newTied);
+    return { sorted, tied: newTied };
+  }
+  function autoSort(field = winnerStatField, direction = avgDirection) {
+    if (!isAvgFormat && !field) return;
+    const { sorted, tied } = computeAutoRanking(rankingOrder, field, direction);
+    setTiedAbove(tied);
     setRankingOrder(sorted);
     setRankingManuallyEdited(false);
   }
@@ -452,6 +479,7 @@ export default function EventCompleteClient({
         body: JSON.stringify({
           mvpUserId:               mvpUserId || undefined,
           winnerStatField:         isAvgFormat ? undefined : (winnerStatField || undefined),
+          rankingManual:           rankingManuallyEdited,
           avgWinnerDirection:      isAvgFormat ? avgDirection : undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
           // keepPollOpen: Legacy-Umfrage-Sieger bewusst nicht mitschicken — sonst würde das Übermitteln

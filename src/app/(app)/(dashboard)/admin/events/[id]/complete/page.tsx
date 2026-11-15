@@ -174,11 +174,12 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     const seriesCfg = rawSeriesStatConfig as { winnerStatField?: string; defaultWinnerStatField?: string } | null;
     const candidates = [eventCfg?.winnerStatField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField];
     return candidates.find((f): f is string => !!f && winnerStatFieldOptions.includes(f))
-      // Ohne Eventpunkte: war "Eventpunkte" als Sieger-Stat eingestellt, entscheidet der passende
-      // echte Stat (gleiche Regel wie die Sortierung auf der Eventseite)
-      ?? (!hasTurnierpunkteOption && candidates.includes(TURNIERPUNKTE_STAT)
-        ? resolveRankStatField(tournamentStatFields, event.seriesEventConfigJson, seriesCfg)
-        : undefined)
+      // Keine gültige Voreinstellung (z.B. "Eventpunkte" ohne Eventpunkte, umbenanntes Feld): gleiche
+      // Regel wie die Sortierung der Endtabelle auf der Eventseite — mit Eventpunkten nach diesen,
+      // sonst nach dem passenden echten Stat (bzw. dem ersten Stat-Feld).
+      ?? (hasTurnierpunkteOption
+        ? TURNIERPUNKTE_STAT
+        : resolveRankStatField(tournamentStatFields, event.seriesEventConfigJson, seriesCfg))
       ?? "";
   })();
 
@@ -234,8 +235,10 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return null; } })()
     : null;
 
+  // Nur bei bestehendem Abschluss: nach "Abschluss zurücksetzen" ist completionData leer, eine alte
+  // finalRankingJson darf dann nicht als (manuelle, gleichstandslose) Platzierung wieder auftauchen.
   const initialFinalRanking: string[] | null = (() => {
-    if (!event.finalRankingJson) return null;
+    if (!isReEdit || !event.finalRankingJson) return null;
     try { return JSON.parse(event.finalRankingJson); } catch { return null; }
   })();
 
