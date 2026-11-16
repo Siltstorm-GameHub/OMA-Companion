@@ -17,6 +17,8 @@ import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { DropMenu, InlineSubmissions, StatStandingsTable, TournamentHeader, type InlineSubmission } from "./TournamentOverview";
 import { duelProgress, nextDuelMatches, statProgress, statStandings } from "@/lib/tournaments/progress";
+import { bracketColumns } from "@/lib/tournaments/bracket-tree";
+import BracketTree from "./BracketTree";
 import { computeTurnierpunkte } from "@/lib/series-event-points";
 import { computeCommunityGoalProgress, goalUnit, type CommunityGoal } from "@/lib/community-goal";
 import type { AvgDirection } from "@/lib/avg-stats";
@@ -62,7 +64,6 @@ type Event = { id: string; startAt?: Date | string; endAt?: Date | string | null
 
 
 
-const STATUS_OPTIONS = ["active", "finished", "pending"];
 
 export const userName = (u: User) => u.username ?? u.name ?? "?";
 
@@ -141,6 +142,9 @@ export default function TournamentManager({
   const [showAdd, setShowAdd]               = useState(false);
   // Stat-Formate: Live-Tabelle oder Runden-Liste
   const [statView, setStatView]             = useState<"table" | "rounds">("table");
+  // K.O.-Formate: visueller Baum oder Liste je Runde; im Baum gewählte Paarung
+  const [duelView, setDuelView]             = useState<"tree" | "list">("tree");
+  const [treeSel, setTreeSel]               = useState<string | null>(null);
   const addRef = useRef<HTMLDivElement>(null);
 
   // Ansicht: "auto" (Touch-UI bei schmalem Viewport oder Finger-Eingabe) oder manuell erzwungen.
@@ -1240,7 +1244,9 @@ export default function TournamentManager({
   const stage = dp
     ? (dp.current ? duelStageLabel(dp.current) : dp.total > 0 ? "alle Matches gespielt" : "noch keine Matches")
     : sp ? (sp.next ? `Runde ${sp.next.position} als Nächstes` : sp.total > 0 ? "alle Runden eingetragen" : "noch keine Runden") : "";
-  const statusLine = [statusDe, stage].filter(Boolean).join(" · ");
+  // Liga mit Sieg/Unentschieden-Münzen: Münzen je Match (stand früher im alten Kopf)
+  const matchCoins = supportsDraw ? `Sieg ${getCoinsVal("win")} · Unentschieden ${getCoinsVal("draw")} Münzen pro Match` : "";
+  const statusLine = [statusDe, stage, matchCoins].filter(Boolean).join(" · ");
   const hasEventPoints = !!pointsCfg && (pointsCfg.stats.some(st => st.pointsPer) || Object.keys(pointsCfg.placementPoints ?? {}).length > 0);
   const eventPoints = isFfa && hasEventPoints ? computeTurnierpunkte(statRounds, pointsCfg!, tournament.format) : null;
   const standings = isFfa ? statStandings(statRounds, visibleStatFields, tournament.format, { points: eventPoints, direction: avgDirection }) : [];
@@ -1249,6 +1255,51 @@ export default function TournamentManager({
     const u = allUsers.find(x => x.id === uid) ?? tournament.participants.find(pp => pp.userId === uid)?.user;
     return u ? userName(u) : "?";
   };
+  // Visueller K.O.-Baum (K.O.-System und K.O.-Phase von Gruppenphase + K.O.)
+  const treeSource = isBracketFormat ? tournament.matches : isGroupKnockout ? knockoutMatches : [];
+  const hasTree = treeSource.length > 0;
+  const showTree = hasTree && duelView === "tree";
+  const tree = hasTree ? bracketColumns(treeSource) : null;
+  const treeSlot = tree && treeSel
+    ? [...tree.columns.flatMap(c => c.slots), ...(tree.thirdPlace ? [tree.thirdPlace] : [])].find(s => s.key === treeSel) ?? null
+    : null;
+  const treeAllowDraw = (m: Match) => isGroupKnockout ? m.leg === 1 : supportsDraw;
+  const duelViewToggle = hasTree && (
+    <div className="flex items-center gap-1">
+      {([["tree", "Baum"], ["list", "Liste"]] as const).map(([k, label]) => (
+        <button key={k} type="button" onClick={() => setDuelView(k)} aria-pressed={duelView === k}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            duelView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+          }`}>
+          {label}
+        </button>
+      ))}
+      <span className="ml-auto text-[11px] text-gray-600">{duelView === "tree" ? "Paarung antippen zum Eintragen" : "Alle Matches nach Runde"}</span>
+    </div>
+  );
+  const treeView = showTree && tree && (
+    <div className="space-y-3">
+      <BracketTree columns={tree.columns} thirdPlace={tree.thirdPlace} nameOf={nameOfUser}
+        selectedKey={treeSlot?.key ?? null} onSelect={k => setTreeSel(cur => cur === k ? null : k)} />
+      {treeSlot && (
+        <section aria-label="Gewählte Paarung" className="space-y-2">
+          <p className="flex items-center gap-2 text-[11px] text-gray-500">
+            <span className="min-w-0 flex-1">{treeSlot.key === "third" ? "Spiel um Platz 3" : tree.columns.find(c => c.round === treeSlot.round)?.label}
+              {treeSlot.matches.length > 1 && " · Hin- und Rückspiel"}</span>
+            <button type="button" onClick={() => setTreeSel(null)} className="text-gray-500 hover:text-gray-300">Schließen</button>
+          </p>
+          <div className={`grid gap-2 ${treeSlot.matches.length > 1 ? "md:grid-cols-2" : ""}`}>
+            {treeSlot.matches.map(m => (
+              <div key={m.id} className="space-y-1">
+                {treeSlot.matches.length > 1 && <p className="text-[11px] text-gray-500">{m.leg === 2 ? "Rückspiel" : "Hinspiel"}</p>}
+                {renderDuelCard(m, treeAllowDraw(m))}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
   const resultsHref = `/events/verwalten/${event.id}/results`;
   const openAdd = () => {
     if (isFfa) openAddStatRound();
@@ -1489,7 +1540,9 @@ export default function TournamentManager({
               </div>
             </div>
           ))}
-          {Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
+          {duelViewToggle}
+          {treeView}
+          {!showTree && Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
             <div key={`ko${round}`}>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
               <div className="space-y-2">
@@ -1546,7 +1599,15 @@ export default function TournamentManager({
         </div>
       )}
 
-      {!isGroupKnockout && (!isFfa || statView === "rounds") && (
+      {/* ── K.O.-System: visueller Baum (Umschalter auf die Liste) ── */}
+      {isBracketFormat && hasTree && (
+        <div className="space-y-3">
+          {duelViewToggle}
+          {treeView}
+        </div>
+      )}
+
+      {!isGroupKnockout && (!isFfa || statView === "rounds") && !showTree && (
       <div className="space-y-2">
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">

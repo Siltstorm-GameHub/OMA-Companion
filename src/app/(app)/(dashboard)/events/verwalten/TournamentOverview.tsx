@@ -144,7 +144,8 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
             <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">gemeldet</span>
             <span className="min-w-0 flex-1 text-sm text-gray-300">
               <span className="text-gray-500">{s.matchLabel} · </span>{what}
-              <span className="block text-[11px] text-gray-500">von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
+              {/* Relative Zeit weicht zwischen Server und Browser minimal ab — kein Hydration-Fehler */}
+              <span className="block text-[11px] text-gray-500" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
             </span>
             <button type="button" onClick={() => act(s.id, "approve")} disabled={!!busy}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">

@@ -341,8 +341,11 @@ export default function TournamentManagerMobile({
             const played = is1v1 ? !!(m.winnerId || m.playedAt) : !!m.playedAt;
             const isFocused = idx === focusIdx;
             return (
-              <button key={m.id} onClick={() => setFocusIdx(idx)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors ${
+              // Kein <button> als Hülle: darin steckt der Löschen-Button (verschachtelte Buttons sind
+              // ungültiges HTML und brachen die Hydration)
+              <div key={m.id} role="button" tabIndex={0} onClick={() => setFocusIdx(idx)}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFocusIdx(idx); } }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
                   isFocused ? "border-teal-500/50 bg-teal-500/10" : "border-gray-700 bg-gray-800/60"
                 }`}>
                 <span className={`w-2 h-2 rounded-full shrink-0 ${played ? "bg-teal-500" : "bg-gray-600"}`} />
@@ -364,7 +367,7 @@ export default function TournamentManagerMobile({
                   className="p-1.5 -m-1 text-gray-600 active:text-red-500 shrink-0">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
-              </button>
+              </div>
             );
           })}
         </div>

@@ -20,7 +20,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
-import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
+import { parseAvgDirection, resolveAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
@@ -42,6 +42,7 @@ import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
+import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
 import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { NumberInput } from "@/components/ui/NumberInput";
 
@@ -411,6 +412,14 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [tmtGoal, setTmtGoal] = useState<CommunityGoalForm>(() => goalToForm(parseCommunityGoal(event.statConfigJson)));
   // Ziel eines Reihen-Termins: eigenes, geerbtes oder abgeschaltetes (lib/event-goal.ts)
   const resolvedGoal = resolveEventGoal({ format: event.format, statConfigJson: event.statConfigJson, series: event.series });
+  // Wertung der Live-Tabelle im Reiter "Turnier" — dieselbe wie beim Abschluss (lib/series-event-points)
+  const tmPointsCfg = (() => {
+    let raw: { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number>; winnerStatKeys?: string[]; matchWinStatKeys?: string[] } | null = null;
+    try { raw = event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { raw = null; }
+    const cfg = applyEventStatOverride({ ...(raw ?? {}), stats: raw?.stats ?? [] }, event.statConfigJson);
+    return hasEventPoints(cfg) ? cfg : null;
+  })();
+  const tmAvgDirection = resolveAvgDirection(null, event.statConfigJson);
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
@@ -1767,6 +1776,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 matchWinStatKeys={bracketMatchWinStatKeys}
                 standaloneEvent={!event.series}
                 placementPoints={bracketPlacementPoints}
+                pointsCfg={tmPointsCfg}
+                goal={resolvedGoal.goal}
+                avgDirection={tmAvgDirection}
               />
             </div>
           )}
@@ -1790,6 +1802,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             matchWinStatKeys={bracketMatchWinStatKeys}
             standaloneEvent={!event.series}
             placementPoints={bracketPlacementPoints}
+                pointsCfg={tmPointsCfg}
+                goal={resolvedGoal.goal}
+                avgDirection={tmAvgDirection}
           />
         </div>
       )}

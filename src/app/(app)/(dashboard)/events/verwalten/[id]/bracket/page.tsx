@@ -5,6 +5,11 @@ import Link from "next/link";
 import { ChevronLeft } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import TournamentManager from "../../TournamentManager";
+import type { InlineSubmission } from "../../TournamentOverview";
+import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
+import { resolveEventGoal } from "@/lib/event-goal";
+import { resolveAvgDirection } from "@/lib/avg-stats";
+import { loadReviewData } from "@/lib/tournaments/review-data";
 
 export default async function AdminEventBracketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +19,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true, icon: true, seriesStatConfig: true } },
+        series: { select: { id: true, name: true, icon: true, seriesStatConfig: true, tournamentTemplateJson: true } },
         registrations: { select: { userId: true, role: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
@@ -77,34 +82,45 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     matches: event.matches,
   } : null;
 
+  // Eventpunkte wie beim Abschluss (Reihen-Konfiguration + Event-eigene Abweichung) — für die
+  // Live-Tabelle der Stat-Formate, damit beide immer dieselbe Wertung zeigen
+  const rawSeriesCfg = (() => {
+    try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { return null; }
+  })() as { stats?: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number>; winnerStatKeys?: string[]; matchWinStatKeys?: string[] } | null;
+  const eventPointsCfg = applyEventStatOverride({ ...(rawSeriesCfg ?? {}), stats: rawSeriesCfg?.stats ?? [] }, event.statConfigJson);
+  const pointsCfg = hasEventPoints(eventPointsCfg) ? eventPointsCfg : null;
+  // Community-Ziel (eigenes oder von der Reihe geerbtes) für den Fortschrittsbalken
+  const goal = resolveEventGoal({ format: event.format, statConfigJson: event.statConfigJson, series: event.series }).goal;
+  const avgDirection = resolveAvgDirection(null, event.statConfigJson);
+
+  // Offene Ergebnis-Meldungen der Spieler — direkt auf dieser Seite übernehmen/ablehnen
+  const review = pendingCount > 0 ? await loadReviewData(id, { onlyPending: true }) : null;
+  const pendingSubmissions: InlineSubmission[] = (review?.matches ?? []).flatMap(m =>
+    m.submissions.filter(s => s.status === "pending").map(s => ({
+      id: s.id,
+      matchLabel: m.label,
+      isDuel: m.isDuel,
+      by: s.user.name,
+      forUser: s.forUser?.name ?? null,
+      player1: m.player1?.name ?? null,
+      player2: m.player2?.name ?? null,
+      score1: s.score1,
+      score2: s.score2,
+      stats: s.stats,
+      createdAt: s.createdAt,
+      hasScreenshots: s.screenshotUrls.length > 0,
+    })),
+  );
+
   return (
     <div className="space-y-4">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        {event.series ? (
-          <Link href={`/events/verwalten/reihen/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-            {event.series.name}
-          </Link>
-        ) : (
-          <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-            <ChevronLeft className="w-4 h-4" /> Events
-          </Link>
-        )}
-        <span>/</span>
-        <Link href={`/events/verwalten/${event.id}`} className="hover:text-gray-300 transition-colors truncate max-w-[160px]">
+      <div className="space-y-1">
+        <Link href={`/events/verwalten/${event.id}`} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5" />
+          {event.series && <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />}
           {event.title}
         </Link>
-        <span>/</span>
-        <span className="text-gray-300">Turnierbaum</span>
-        <Link
-          href={`/events/verwalten/${event.id}/results`}
-          className="ml-auto px-3 py-1 rounded-lg bg-teal-600/20 text-teal-300 hover:bg-teal-600/30 text-xs font-medium"
-        >
-          Ergebnis-Prüfung
-          {pendingCount > 0 && <span className="ml-1.5 px-1.5 rounded-full bg-amber-500 text-black">{pendingCount}</span>}
-        </Link>
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Turnier</h1>
       </div>
 
       <TournamentManager
@@ -115,6 +131,11 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         matchWinStatKeys={matchWinStatKeys}
         standaloneEvent={!event.series}
         placementPoints={placementPoints}
+        pendingSubmissions={pendingSubmissions}
+        pendingCount={pendingCount}
+        pointsCfg={pointsCfg}
+        goal={goal}
+        avgDirection={avgDirection}
       />
     </div>
   );
