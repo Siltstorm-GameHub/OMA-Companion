@@ -985,6 +985,24 @@ model PoolExpense {
   amount      Float // in Euro
   date        DateTime // Datum der Ausgabe
   createdAt   DateTime @default(now())
+  fixedCostId String? // gesetzt, wenn die Ausgabe eine Fixkosten-Zahlung ist ("Bezahlt" im Admin)
+
+  fixedCost PoolFixedCost? @relation(fields: [fixedCostId], references: [id], onDelete: SetNull)
+}
+
+/// Wiederkehrende Kosten (Hosting, Domains …). Werden auf der Spenden-Seite immer zuerst
+/// aus dem Guthaben gedeckt, erst der Rest fließt in die Ziele (PoolIdea) — siehe lib/donation-pool.ts.
+model PoolFixedCost {
+  id          String   @id @default(cuid())
+  title       String // z.B. "Hosting Gameserver"
+  description String? // öffentlich sichtbar
+  amount      Float // in Euro je Fälligkeit
+  interval    String   @default("monthly") // "monthly" | "yearly"
+  nextDueAt   DateTime // nächste Fälligkeit; "Bezahlt" schiebt sie um ein Intervall weiter
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  payments PoolExpense[]
 }
 
 model PoolIdea {

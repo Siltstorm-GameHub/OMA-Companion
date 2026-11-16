@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getEventOverlayState, getOverlayStreamer } from "@/lib/overlay-state";
-import { overlayStreamResponse } from "@/lib/overlay-sse";
+import { overlayStreamResponse, type StreamPacing } from "@/lib/overlay-sse";
 
 export const dynamic = "force-dynamic";
 
 /** Live-Daten des Event-Overlays (/overlay/[id]?token=…). Die Abfragelast liegt gecacht und
- *  per Fingerprint gedrosselt in lib/overlay-state.ts — dieser Takt kostet daher kaum etwas. */
-const POLL_MS = 1500;
+ *  per Fingerprint gedrosselt in lib/overlay-state.ts. Nach einer Minute ohne Änderung reicht 3s. */
+const PACING: StreamPacing = { fast: 1500, idle: 3000 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return new Response("Invalid token", { status: 403 });
   }
 
-  return overlayStreamResponse(req, POLL_MS, async () => {
+  return overlayStreamResponse(req, PACING, async () => {
     const [state, streamer] = await Promise.all([
       getEventOverlayState(eventId),
       streamerId ? getOverlayStreamer(streamerId).catch(() => null) : Promise.resolve(null),

@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfileOverlayState } from "@/lib/overlay-state";
-import { overlayStreamResponse } from "@/lib/overlay-sse";
+import { overlayStreamResponse, type StreamPacing } from "@/lib/overlay-sse";
 
 export const dynamic = "force-dynamic";
 
-/** Profildaten ändern sich selten (siehe Cache-Dauer in lib/overlay-state.ts) — 5s reicht. */
-const POLL_MS = 5000;
+/** Profildaten ändern sich selten (siehe Cache-Dauer in lib/overlay-state.ts) — 5s reicht, in
+ *  Ruhe 15s (der Profil-Cache hält ohnehin 30s). */
+const PACING: StreamPacing = { fast: 5000, idle: 15_000 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
@@ -18,5 +19,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     return new Response("Invalid token", { status: 403 });
   }
 
-  return overlayStreamResponse(req, POLL_MS, () => getProfileOverlayState(userId));
+  return overlayStreamResponse(req, PACING, () => getProfileOverlayState(userId));
 }

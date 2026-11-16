@@ -27,7 +27,7 @@ export default function OverlaySetupWizard({
   const [step, setStep] = useState(0);
   const [preset, setPreset] = useState<string | null>(() => matchingPreset(layouts.event, layouts.profile));
   const [background, setBackground] = useState(initialBackground);
-  const connection = useOverlayConnection(3000);
+  const connection = useOverlayConnection(5000);
 
   async function save(body: Record<string, unknown>) {
     const res = await fetch("/api/profile/overlay", {

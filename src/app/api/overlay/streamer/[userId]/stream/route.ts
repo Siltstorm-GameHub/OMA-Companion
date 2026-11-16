@@ -2,12 +2,18 @@ import { NextRequest } from "next/server";
 import { getStreamerConfig, getStreamerOverlayPayload, type OverlayPreview } from "@/lib/overlay-state";
 import { prisma } from "@/lib/prisma";
 import { OVERLAY_SCENES, type OverlayScene } from "@/components/overlay/types";
-import { overlayStreamResponse, CLOSE_STREAM } from "@/lib/overlay-sse";
+import { overlayStreamResponse, CLOSE_STREAM, type StreamPacing } from "@/lib/overlay-sse";
+import type { StreamerOverlayPayload } from "@/components/overlay/types";
 import { withTogether } from "@/lib/overlay-together";
 
 export const dynamic = "force-dynamic";
 
-const POLL_MS = 1500;
+/** Schnell, solange sich etwas tut (Live-Steuerung, Turnier). Ruhig: im Turnier 3s, sonst 6s —
+ *  der erste Klick in der Live-Steuerung nach längerer Ruhe braucht also bis zu 6s. */
+const PACING: StreamPacing = {
+  fast: 1500,
+  idle: (last) => ((last as StreamerOverlayPayload | null)?.mode === "event" ? 3000 : 6000),
+};
 /** Wie oft eine offene Quelle ihr Lebenszeichen schreibt ("In OBS verbunden ✓"). */
 const PRESENCE_MS = 30_000;
 
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
   const isObs = /\bOBS\//.test(req.headers.get("user-agent") ?? "");
   let lastPresence = 0;
 
-  return overlayStreamResponse(req, POLL_MS, async () => {
+  return overlayStreamResponse(req, PACING, async () => {
     const current = await getStreamerConfig(userId);
     // Link wurde neu erzeugt (oder User gelöscht) → alte OBS-Quelle sofort abhängen.
     if (!current?.token || current.token !== token) return CLOSE_STREAM;

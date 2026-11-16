@@ -2,45 +2,26 @@ import { Skeleton } from "@/components/Skeleton";
 
 export default function DonationsLoading() {
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-4 pb-8 sm:py-8 space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="text-center space-y-3">
-        <Skeleton className="h-4 w-40 mx-auto" />
-        <Skeleton className="h-7 w-64 mx-auto" />
-        <Skeleton className="h-4 w-72 mx-auto" />
-        <Skeleton className="h-10 w-36 rounded-xl mx-auto mt-2" />
-      </div>
+    <div className="px-4 pt-0 pb-8 sm:py-8 animate-fade-in">
+      {/* Reiter */}
+      <Skeleton className="h-12 max-w-sm mx-auto rounded-2xl mb-7" />
 
-      {/* Bilanz-Karten */}
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="rounded-2xl h-20" />
-        ))}
-      </div>
+      <div className="mx-auto max-w-5xl space-y-4">
+        {/* Nächstes Ziel + Spenden-Button */}
+        <Skeleton className="h-48 lg:h-40 rounded-2xl" />
 
-      {/* Ideen */}
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-56 mb-3" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-14 rounded-xl" />
-        ))}
-      </div>
-
-      {/* Monats-Historie */}
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-40 mb-3" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
-          ))}
+        {/* Bilanz + Meine Unterstützung */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-20 rounded-2xl" />
         </div>
-      </div>
 
-      {/* Spender */}
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-44 mb-3" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-14 rounded-xl" />
+        {/* Laufende Kosten + Ziele, Kassenbuch + Unterstützer */}
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-56 rounded-2xl" />
+            <Skeleton className="h-56 rounded-2xl" />
+          </div>
         ))}
       </div>
     </div>

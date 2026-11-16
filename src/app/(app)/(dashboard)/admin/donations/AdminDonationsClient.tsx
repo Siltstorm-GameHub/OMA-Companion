@@ -9,6 +9,7 @@ import { Trash2, Plus, ShoppingCart, Wallet, Lightbulb, Pencil, Check, X } from 
 import { useRouter } from "next/navigation";
 import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
 import { NumberInput } from "@/components/ui/NumberInput";
+import AdminFixedCosts, { type FixedCost } from "./AdminFixedCosts";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni",
   "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -20,7 +21,7 @@ type Donation = {
 };
 type Expense = {
   id: string; title: string; description: string | null;
-  amount: number; date: Date | string;
+  amount: number; date: Date | string; fixedCostId?: string | null;
 };
 type Idea = { id: string; title: string; description: string | null; estimatedCost: number | null };
 type User = { id: string; name: string | null; image: string | null };
@@ -49,11 +50,13 @@ export default function AdminDonationsClient({
   users,
   expenses: initialExpenses,
   ideas: initialIdeas,
+  fixedCosts,
 }: {
   donations: Donation[];
   users: User[];
   expenses: Expense[];
   ideas: Idea[];
+  fixedCosts: FixedCost[];
 }) {
   const router = useRouter();
   const [donations, setDonations] = useState(initial);
@@ -342,10 +345,13 @@ export default function AdminDonationsClient({
         )}
       </section>
 
+      {/* ── Laufende Kosten ─────────────────────────────────────── */}
+      <AdminFixedCosts initial={fixedCosts} onPaid={(e) => setExpenses(prev => [e, ...prev])} />
+
       {/* ── Ideen verwalten ─────────────────────────────────────── */}
       <section>
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Lightbulb className="w-4 h-4 text-yellow-400" /> Ideen für mögliche Ausgaben
+          <Lightbulb className="w-4 h-4 text-yellow-400" /> Ziele (der Reihe nach, nach den laufenden Kosten)
         </h2>
         <form onSubmit={handleAddIdea} className="rounded-2xl p-5 space-y-3 mb-4"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(234,179,8,0.18)" }}>

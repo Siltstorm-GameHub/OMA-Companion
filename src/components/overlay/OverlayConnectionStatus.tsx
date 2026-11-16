@@ -20,6 +20,8 @@ export function useOverlayConnection(pollMs = 5000): OverlayConnection | null {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      // Hintergrund-Tab: nicht abfragen (jede Anfrage kostet Vercel-CPU), beim Zurückkehren sofort.
+      if (document.hidden) return;
       try {
         const res = await fetch("/api/profile/overlay/status", { cache: "no-store" });
         if (res.ok && !cancelled) setState(await res.json());
@@ -27,7 +29,8 @@ export function useOverlayConnection(pollMs = 5000): OverlayConnection | null {
     };
     const first = setTimeout(load, 0);
     const t = setInterval(load, pollMs);
-    return () => { cancelled = true; clearTimeout(first); clearInterval(t); };
+    document.addEventListener("visibilitychange", load);
+    return () => { cancelled = true; clearTimeout(first); clearInterval(t); document.removeEventListener("visibilitychange", load); };
   }, [pollMs]);
   return state;
 }
