@@ -3,77 +3,51 @@ import { prisma } from "@/lib/prisma";
 import SyncMembersButton from "./SyncMembersButton";
 import SyncDiscordRolesButton from "./SyncDiscordRolesButton";
 import AdminUsersClient from "./AdminUsersClient";
-import { UserX } from "@/components/icons";
-import { LogIn } from "@/components/icons";
+import type { AdminUserRow } from "@/lib/admin-users";
 
 export default async function AdminUsersPage() {
-  await requireRole("admin");
+  const me = await requireRole("admin");
 
   const rawUsers = await prisma.user.findMany({
+    // Auf eigenen Wunsch gelöschte (anonymisierte) Konten gehören nicht mehr in die Verwaltung
+    where: { deletedAt: null },
     select: {
       id: true, name: true, username: true, email: true,
-      image: true, role: true, points: true,
+      image: true, role: true, points: true, rankPoints: true,
       discordId: true, createdAt: true, lastLoginAt: true, leftServerAt: true,
       _count: { select: { eventRegistrations: true } },
       // Nur prüfen ob irgendein Account existiert (kein access_token laden)
       accounts: { select: { id: true }, take: 1 },
     },
-    orderBy: { createdAt: "asc" },
   });
 
-  const hasLogin = (u: typeof rawUsers[number]) => u.accounts.length > 0;
-
-  const users = [...rawUsers].sort((a, b) => {
-    const aLogin = hasLogin(a) ? 0 : 1;
-    const bLogin = hasLogin(b) ? 0 : 1;
-    if (aLogin !== bLogin) return aLogin - bLogin;
-    return (a.username ?? a.name ?? "").localeCompare(b.username ?? b.name ?? "", "de");
-  });
-
-  const loginCount    = users.filter(hasLogin).length;
-  const noLoginCount  = users.length - loginCount;
-  const firstNoLoginIdx = users.findIndex(u => !hasLogin(u));
-
-  // Flatten in serialisierbares Format für den Client
-  const clientUsers = users.map(u => ({
-    id:         u.id,
-    name:       u.name,
-    username:   u.username,
-    email:      u.email,
-    image:      u.image,
-    role:       u.role,
-    points:     u.points,
-    discordId:  u.discordId,
-    hasLogin:   hasLogin(u),
-    leftServerAt: u.leftServerAt ? u.leftServerAt.toISOString() : null,
+  // Serialisierbar für den Client; Suche, Filter und Sortierung passieren dort
+  const users: AdminUserRow[] = rawUsers.map(u => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    email: u.email,
+    image: u.image,
+    role: u.role,
+    points: u.points,
+    rankPoints: u.rankPoints,
+    discordId: u.discordId,
+    hasLogin: u.accounts.length > 0,
+    createdAt: u.createdAt.toISOString(),
     lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+    leftServerAt: u.leftServerAt ? u.leftServerAt.toISOString() : null,
     eventCount: u._count.eventRegistrations,
   }));
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4 text-sm text-gray-400">
-          <span>{users.length} Mitglieder gesamt</span>
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <LogIn className="w-3.5 h-3.5" /> {loginCount} eingeloggt
-          </span>
-          <span className="flex items-center gap-1.5 text-gray-600">
-            <UserX className="w-3.5 h-3.5" /> {noLoginCount} noch nicht
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <SyncDiscordRolesButton />
-          <SyncMembersButton />
-        </div>
-      </div>
-
-      <AdminUsersClient
-        users={clientUsers}
-        loginCount={loginCount}
-        noLoginCount={noLoginCount}
-        firstNoLoginIdx={firstNoLoginIdx}
-      />
-    </div>
+    <AdminUsersClient
+      users={users}
+      meId={me.id}
+      syncTools={<>
+        <p className="text-[11px] text-gray-500">Mitglieder und Ansehens-Rollen mit dem Discord-Server abgleichen.</p>
+        <SyncMembersButton />
+        <SyncDiscordRolesButton />
+      </>}
+    />
   );
 }

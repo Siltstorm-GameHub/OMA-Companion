@@ -1,276 +1,132 @@
 "use client";
+// Nutzer & Rollen: Suche, Filter und Sortierung links, Details des gewählten Mitglieds rechts
+// (mobil nacheinander). Rolle ändern und Münzen buchen passiert im Detailbereich.
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { UserX, UserMinus } from "@/components/icons";
-import { LogIn } from "@/components/icons";
-import { History } from "@/components/icons";
-import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
-import { Badge, Select, Button } from "@/components/ui";
-import { formatBerlinDateTime } from "@/lib/time";
+import { useState, type ReactNode } from "react";
+import { Search, X } from "@/components/icons";
+import {
+  USER_FILTERS, USER_SORTS, ROLE_INFO, displayName, filterCounts, relativeSince, visibleUsers,
+  type AdminUserRow, type UserFilter, type UserSort,
+} from "@/lib/admin-users";
+import UserDetail from "./UserDetail";
 
-type Role = "user" | "moderator" | "admin";
+const ROLE_TONE: Record<string, string> = {
+  admin: "bg-rose-500/15 text-rose-300",
+  moderator: "bg-violet-500/15 text-violet-300",
+};
 
-interface UserRow {
-  id: string;
-  name: string | null;
-  username: string | null;
-  email: string | null;
-  image: string | null;
-  role: string;
-  points: number;
-  discordId: string | null;
-  hasLogin: boolean;
-  lastLoginAt: string | null;
-  leftServerAt: string | null;
-  eventCount: number;
-}
+export default function AdminUsersClient({ users: initial, meId, syncTools }: {
+  users: AdminUserRow[];
+  meId: string;
+  /** Discord-Abgleich (selten gebraucht) — im Menü oben */
+  syncTools: ReactNode;
+}) {
+  // Zeitpunkt einmal festhalten (Render bleibt rein)
+  const [now] = useState(() => Date.now());
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<UserFilter>("all");
+  const [sort, setSort] = useState<UserSort>("recent");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Rollenwechsel sofort in der Liste zeigen (router.refresh lädt danach frisch)
+  const [roleOverride, setRoleOverride] = useState<Record<string, string>>({});
+  const users = initial.map(u => (roleOverride[u.id] ? { ...u, role: roleOverride[u.id] } : u));
 
-function formatLastLogin(iso: string | null): string {
-  if (!iso) return "–";
-  return formatBerlinDateTime(iso, {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-interface Props {
-  users: UserRow[];
-  loginCount: number;
-  noLoginCount: number;
-  firstNoLoginIdx: number;
-}
-
-export default function AdminUsersClient({ users, loginCount, noLoginCount, firstNoLoginIdx }: Props) {
-  const router = useRouter();
-
-  // Single modal state — only one open at a time
-  const [modalUser, setModalUser] = useState<{ id: string; name: string; image: string | null } | null>(null);
-
-  // Role change — per-row but lightweight (no component per row, just a handler)
-  const [roleLoading, setRoleLoading] = useState<string | null>(null);
-  const [roles, setRoles] = useState<Record<string, string>>(
-    () => Object.fromEntries(users.map(u => [u.id, u.role]))
-  );
-
-  const handleRoleChange = useCallback(async (userId: string, newRole: Role) => {
-    setRoleLoading(userId);
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, role: newRole }),
-    });
-    setRoles(r => ({ ...r, [userId]: newRole }));
-    setRoleLoading(null);
-    router.refresh();
-  }, [router]);
+  const counts = filterCounts(users, now);
+  const shown = visibleUsers(users, { query, filter, sort, now });
+  const selected = users.find(u => u.id === selectedId) ?? null;
 
   return (
-    <>
-      <div className="glass card-shine rounded-2xl overflow-hidden">
-        {/* Mobile: stacked cards (below sm) */}
-        <div className="sm:hidden divide-y divide-white/[0.04]">
-          {users.map((user, idx) => {
-            const isFirstNoLogin = idx === firstNoLoginIdx;
-            const currentRole = roles[user.id] ?? user.role;
-            return (
-              <div key={user.id}>
-                {isFirstNoLogin && (
-                  <div className="px-4 py-2 bg-white/[0.02] flex items-center gap-2 text-[10px] text-gray-600 uppercase tracking-widest">
-                    <UserX className="w-3 h-3" />
-                    Noch nicht eingeloggt — {noLoginCount} Mitglieder
-                  </div>
-                )}
-                <div className={`px-4 py-3 space-y-3 ${!user.hasLogin ? "opacity-60" : ""}`}>
-                  <div className="flex items-center gap-3">
-                    <Link href={`/profile/${user.id}`} className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity">
-                      {user.image ? (
-                        <img src={user.image} alt="" loading="lazy" width={32} height={32} className="w-8 h-8 rounded-full ring-1 ring-white/10 shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300 shrink-0">
-                          {(user.username ?? user.name ?? "?")[0].toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
-                      </div>
-                    </Link>
-                    {user.leftServerAt ? (
-                      <Badge tone="warning" icon={<UserMinus className="w-3 h-3" />}>Ausgetreten</Badge>
-                    ) : user.hasLogin ? (
-                      <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
-                    ) : (
-                      <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Münzen: <span className="text-white font-medium tabular-nums">{user.points.toLocaleString("de-DE")}</span></span>
-                    <span>Events: <span className="text-gray-400 tabular-nums">{user.eventCount}</span></span>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Zuletzt aktiv: <span className="text-gray-400">{formatLastLogin(user.lastLoginAt)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Select
-                      className="flex-1"
-                      value={currentRole}
-                      onChange={e => handleRoleChange(user.id, e.target.value as Role)}
-                      disabled={roleLoading === user.id}
-                    >
-                      <option value="user">Mitglied</option>
-                      <option value="moderator">Moderator</option>
-                      <option value="admin">Admin</option>
-                    </Select>
-                    <Button
-                      variant="accent"
-                      size="sm"
-                      icon={<History className="w-3.5 h-3.5" />}
-                      onClick={() => setModalUser({ id: user.id, name: user.username ?? user.name ?? "?", image: user.image })}
-                    >
-                      Verlauf
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Desktop: table (sm and up) */}
-        <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.05] text-xs text-gray-500 uppercase tracking-wide">
-              <th className="text-left px-4 py-3 font-medium">Nutzer</th>
-              <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Discord ID</th>
-              <th className="text-center px-4 py-3 font-medium">Status</th>
-              <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Zuletzt aktiv</th>
-              <th className="text-left px-4 py-3 font-medium">Rolle</th>
-              <th className="text-center px-4 py-3 font-medium">Münzen</th>
-              <th className="text-center px-4 py-3 font-medium hidden sm:table-cell">Events</th>
-              <th className="text-left px-4 py-3 font-medium">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.04]">
-            {users.map((user, idx) => {
-              const isFirstNoLogin = idx === firstNoLoginIdx;
-              const currentRole = roles[user.id] ?? user.role;
-              return (
-                <>
-                  {isFirstNoLogin && (
-                    <tr key="divider">
-                      <td colSpan={8} className="px-4 py-2 bg-white/[0.02]">
-                        <div className="flex items-center gap-2 text-[10px] text-gray-600 uppercase tracking-widest">
-                          <UserX className="w-3 h-3" />
-                          Noch nicht eingeloggt — {noLoginCount} Mitglieder
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  <tr key={user.id} className={`hover:bg-white/[0.02] transition-colors ${!user.hasLogin ? "opacity-60" : ""}`}>
-                    {/* Avatar + Name */}
-                    <td className="px-4 py-3">
-                      <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-fit">
-                        {user.image ? (
-                          <img
-                            src={user.image}
-                            alt=""
-                            loading="lazy"
-                            width={32}
-                            height={32}
-                            className="w-8 h-8 rounded-full ring-1 ring-white/10"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300 shrink-0">
-                            {(user.username ?? user.name ?? "?")[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
-                          <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
-                        </div>
-                      </Link>
-                    </td>
-
-                    {/* Discord ID */}
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-xs text-gray-600 font-mono">{user.discordId ?? "–"}</span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3 text-center">
-                      {user.leftServerAt ? (
-                        <Badge tone="warning" icon={<UserMinus className="w-3 h-3" />}>Ausgetreten</Badge>
-                      ) : user.hasLogin ? (
-                        <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
-                      ) : (
-                        <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>
-                      )}
-                    </td>
-
-                    {/* Zuletzt aktiv */}
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-xs text-gray-500">{formatLastLogin(user.lastLoginAt)}</span>
-                    </td>
-
-                    {/* Rolle */}
-                    <td className="px-4 py-3">
-                      <Select
-                        value={currentRole}
-                        onChange={e => handleRoleChange(user.id, e.target.value as Role)}
-                        disabled={roleLoading === user.id}
-                      >
-                        <option value="user">Mitglied</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                      </Select>
-                    </td>
-
-                    {/* Münzen */}
-                    <td className="px-4 py-3 text-center">
-                      <span className="text-white font-medium tabular-nums">{user.points.toLocaleString("de-DE")}</span>
-                    </td>
-
-                    {/* Events */}
-                    <td className="px-4 py-3 text-center text-gray-400 tabular-nums hidden sm:table-cell">
-                      {user.eventCount}
-                    </td>
-
-                    {/* Aktionen */}
-                    <td className="px-4 py-3">
-                      <Button
-                        variant="accent"
-                        size="sm"
-                        icon={<History className="w-3.5 h-3.5" />}
-                        onClick={() => setModalUser({ id: user.id, name: user.username ?? user.name ?? "?", image: user.image })}
-                      >
-                        Verlauf
-                      </Button>
-                    </td>
-                  </tr>
-                </>
-              );
-            })}
-          </tbody>
-        </table>
-        </div>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="relative min-w-0 flex-1 basis-60">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <span className="sr-only">Mitglieder suchen</span>
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, Discord-ID oder E-Mail"
+            className="w-full rounded-xl bg-white/[0.03] border border-white/[0.1] pl-8 pr-8 py-2 text-sm text-white focus:border-teal-500/40 focus:outline-none" />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} aria-label="Suche leeren"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+          )}
+        </label>
+        <details className="relative">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden rounded-xl border border-white/[0.1] px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-white/[0.04]">
+            Discord abgleichen
+          </summary>
+          <div className="absolute right-0 top-full z-30 mt-1 w-max max-w-[90vw] space-y-2 rounded-xl border border-white/[0.1] bg-gray-900 p-3 shadow-xl">
+            {syncTools}
+          </div>
+        </details>
       </div>
 
-      {/* Single modal instance — only rendered once */}
-      {modalUser && (
-        <UserPointsHistoryModal
-          key={modalUser.id}
-          userId={modalUser.id}
-          userName={modalUser.name}
-          userImage={modalUser.image}
-          defaultOpen
-          onClose={() => setModalUser(null)}
-        />
-      )}
-    </>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {USER_FILTERS.map(f => (
+          <button key={f.key} type="button" onClick={() => setFilter(f.key)} aria-pressed={filter === f.key}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              filter === f.key ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-white/[0.08] text-gray-400 hover:text-white"
+            }`}>
+            {f.label} <span className="tabular-nums text-gray-500">{counts[f.key]}</span>
+          </button>
+        ))}
+        <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
+          Sortieren
+          <select value={sort} onChange={e => setSort(e.target.value as UserSort)}
+            className="rounded-lg bg-white/[0.03] border border-white/[0.1] px-2 py-1 text-xs text-white">
+            {USER_SORTS.map(s => <option key={s.key} value={s.key} className="bg-gray-900">{s.label}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-3 items-start lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <section aria-label="Mitglieder" className={`glass rounded-2xl overflow-hidden ${selected ? "hidden lg:block" : ""}`}>
+          {shown.length === 0 ? (
+            <p className="p-6 text-center text-sm text-gray-500">Niemand gefunden.</p>
+          ) : (
+            <ul className="divide-y divide-white/[0.04]">
+              {shown.map(u => {
+                const name = displayName(u);
+                const on = u.id === selectedId;
+                const sub = u.leftServerAt
+                  ? "ausgetreten"
+                  : u.hasLogin ? `${relativeSince(u.lastLoginAt, now)} · ${u.eventCount} ${u.eventCount === 1 ? "Event" : "Events"}`
+                  : "noch nie eingeloggt";
+                return (
+                  <li key={u.id}>
+                    <button type="button" onClick={() => setSelectedId(on ? null : u.id)} aria-pressed={on}
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-teal-500/[0.08]" : "hover:bg-white/[0.03]"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
+                      {u.image
+                        ? <img src={u.image} alt="" loading="lazy" width={28} height={28} className="w-7 h-7 rounded-full ring-1 ring-white/10 shrink-0" />
+                        : <span className="w-7 h-7 shrink-0 rounded-full bg-rose-600/40 flex items-center justify-center text-[11px] font-semibold text-rose-300">{name[0]?.toUpperCase()}</span>}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-white">{name}{u.id === meId && <span className="font-normal text-gray-500"> (du)</span>}</span>
+                        <span className="block truncate text-[11px] text-gray-500">{sub}</span>
+                      </span>
+                      {ROLE_TONE[u.role] && (
+                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${ROLE_TONE[u.role]}`}>
+                          {u.role === "moderator" ? "Mod" : ROLE_INFO[u.role].label}
+                        </span>
+                      )}
+                      {u.leftServerAt && <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">Ausgetreten</span>}
+                      <span className="w-14 shrink-0 text-right text-xs tabular-nums text-gray-300">{u.points.toLocaleString("de-DE")}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {selected ? (
+          <div className="lg:sticky lg:top-4">
+            <UserDetail key={selected.id} user={selected} meId={meId} now={now}
+              onBack={() => setSelectedId(null)}
+              onRoleChanged={role => setRoleOverride(r => ({ ...r, [selected.id]: role }))} />
+          </div>
+        ) : (
+          <p className="hidden lg:block glass rounded-2xl p-6 text-center text-sm text-gray-500">
+            Mitglied antippen, um Rolle, Münzen und Verlauf zu sehen.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

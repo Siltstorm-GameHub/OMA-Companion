@@ -17,10 +17,14 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const { userId, role } = await req.json();
   if (!["user", "moderator", "admin"].includes(role)) {
     return NextResponse.json({ error: "Ungültige Rolle" }, { status: 400 });
+  }
+  // Eigene Rolle nicht ändern — sonst sperrt man sich versehentlich selbst aus
+  if (userId === me.id) {
+    return NextResponse.json({ error: "Deine eigene Rolle kannst du nicht ändern" }, { status: 400 });
   }
   const user = await prisma.user.update({
     where: { id: userId },
