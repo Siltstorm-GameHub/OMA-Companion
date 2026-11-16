@@ -24,15 +24,18 @@ const when = (d: Date | string | null) =>
  * feststehenden Gegnern gibt.
  */
 export default function NextMatches({
-  upcoming, canReport,
+  upcoming, canReport, shownMineId = null,
 }: {
   upcoming: UpcomingMatch[];
   /** Ergebnis-Meldung ist für den User verfügbar (Anker #ergebnis-melden auf der Seite) */
   canReport: boolean;
+  /** Eigenes Match steht schon in der Karte "Dein Match" — hier nur noch die übrigen */
+  shownMineId?: string | null;
 }) {
   if (upcoming.length === 0) return null;
-  const mine = upcoming.find(m => m.mine) ?? null;
-  const others = upcoming.filter(m => m !== mine).slice(0, 5);
+  const mine = shownMineId ? null : upcoming.find(m => m.mine) ?? null;
+  const others = upcoming.filter(m => m !== mine && m.id !== shownMineId).slice(0, 5);
+  if (!mine && others.length === 0) return null;
 
   return (
     <div className="space-y-3 mb-6">

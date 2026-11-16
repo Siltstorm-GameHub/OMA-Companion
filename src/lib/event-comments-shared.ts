@@ -49,6 +49,8 @@ export type EventCommentsResponse = {
   /** Darf Status-Meldungen abgeben (nur Angemeldete: Spieler oder Zuschauer) */
   canSetStatus: boolean;
   myStatus: { status: CommentStatus; lateMin: number | null } | null;
+  /** Events mit Check-in: ab wann „Bin bereit“ geht (ISO, 30 Min. vor Start). null = keine Sperre. */
+  readyOpensAt: string | null;
   /** Nur für Event-Verwalter, bis zum Ende der Spielphase: Rückmeldungen der angemeldeten Spieler */
   summary: AttendanceSummary | null;
 };
@@ -94,7 +96,14 @@ export type EventThreadDTO = {
   registered: boolean;
   isPlayer: boolean;
   myStatus: { status: CommentStatus; lateMin: number | null } | null;
+  /** Events mit Check-in: ab wann „Bin bereit“ geht (ISO, 30 Min. vor Start). null = keine Sperre. */
+  readyOpensAt: string | null;
 };
+
+/** Ist „Bin bereit“ noch gesperrt (Check-in-Fenster noch nicht offen)? */
+export function readyLocked(readyOpensAt: string | null, now: Date = new Date()): boolean {
+  return !!readyOpensAt && now < new Date(readyOpensAt);
+}
 
 /**
  * Status-Meldungen ("komme später", "kann nicht", "bin bereit") gibt es nur vor und während der

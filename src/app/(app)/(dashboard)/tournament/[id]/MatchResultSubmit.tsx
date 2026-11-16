@@ -50,10 +50,12 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 const inputCls =
   "w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
-function MatchForm({
-  eventId, m, subject, s, statFields, locked, beforeSubmit,
+export function MatchForm({
+  eventId, m, subject, s, statFields, locked, beforeSubmit, bare = false,
 }: {
   beforeSubmit: () => Promise<boolean>;
+  /** Ohne eigenen Rahmen und Titel (in der Karte "Dein Match") */
+  bare?: boolean;
   eventId: string;
   m: ReportMatch;
   subject: U | null;
@@ -72,7 +74,8 @@ function MatchForm({
   const [note, setNote] = useState(s?.note ?? "");
   const [urls, setUrls] = useState<string[]>(s?.screenshotUrls ?? []);
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(!s);
+  // In der Karte "Dein Match" bleibt das Formular zu, bis man auf "Ergebnis melden" tippt
+  const [open, setOpen] = useState(!s && !bare);
 
   /** Ergebnis des Gegners bestätigen — stimmen beide Meldungen überein, gilt es sofort (ohne Admin) */
   async function confirmOpponent() {
@@ -119,18 +122,29 @@ function MatchForm({
   }
 
   return (
-    <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-white truncate">
-          {m.label}
-          {!m.isDuel && subject && <span className="text-gray-400 font-normal"> · {uname(subject)}</span>}
-        </p>
-        {s && (
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
-            {STATUS[s.status]?.label ?? s.status}
-          </span>
-        )}
-      </div>
+    <div className={bare ? "space-y-3" : "rounded-xl border border-white/[0.08] p-3 space-y-3"}>
+      {bare ? (
+        s && (
+          <p className="flex items-center gap-2 text-xs text-gray-400">
+            Deine Meldung{m.isDuel && s.score1 != null && <> {s.score1} : {s.score2}</>}
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${STATUS[s.status]?.cls ?? ""}`}>
+              {STATUS[s.status]?.label ?? s.status}
+            </span>
+          </p>
+        )
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-white truncate">
+            {m.label}
+            {!m.isDuel && subject && <span className="text-gray-400 font-normal"> · {uname(subject)}</span>}
+          </p>
+          {s && (
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
+              {STATUS[s.status]?.label ?? s.status}
+            </span>
+          )}
+        </div>
+      )}
 
       {s?.reviewNote && <p className="text-xs text-gray-400">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Admin: ${s.reviewNote}`}</p>}
 
@@ -157,7 +171,7 @@ function MatchForm({
 
       {!locked && !open && (
         <button onClick={() => setOpen(true)} className="text-xs text-teal-300 hover:underline">
-          {s?.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
+          {!s ? "Ergebnis selbst melden" : s.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
         </button>
       )}
 
@@ -213,6 +227,22 @@ function MatchForm({
         </div>
       )}
     </div>
+  );
+}
+
+/** Kurzer Hinweis zum Melden, Details zum Aufklappen */
+export function ReportHint() {
+  return (
+    <details className="text-xs text-gray-500 group">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        Mit Screenshot melden — sofort sichtbar, ein Admin bestätigt. <span className="text-teal-300 group-open:hidden">Mehr</span>
+      </summary>
+      <p className="mt-1">
+        Du kannst dein Ergebnis oder das eines anderen Spielers eintragen. Punkte gibt es erst nach der Bestätigung durch einen Admin.
+        Danach sehen die anderen Teilnehmer dieses Events die Screenshots — achte darauf, dass keine privaten Daten darauf stehen.
+        Screenshots werden nach einiger Zeit automatisch gelöscht.
+      </p>
+    </details>
   );
 }
 
@@ -395,9 +425,7 @@ export default function MatchResultSubmit({
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3">
-          <p className="text-xs text-gray-500">
-            Trage dein Ergebnis oder das eines anderen Spielers ein und lade Screenshots als Nachweis hoch. Das Ergebnis ist sofort für alle sichtbar. Ein Admin prüft es anhand der Screenshots und bestätigt oder korrigiert es; Punkte gibt es erst nach der Bestätigung. Nach der Bestätigung können die anderen Teilnehmer dieses Events deine Screenshots sehen — achte darauf, dass keine privaten Daten darauf stehen. Screenshots werden nach einiger Zeit automatisch gelöscht.
-          </p>
+          <ReportHint />
 
           <div className={`grid gap-2 ${match.isDuel ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
             <label className="text-xs text-gray-400 space-y-1">

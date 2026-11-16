@@ -8,7 +8,6 @@ import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
 import { fromDatetimeLocalBerlin } from "@/lib/time";
-import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
 import type { AvgDirection } from "@/lib/avg-stats";
 import { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
@@ -96,7 +95,6 @@ export function useEventWizard({
   const [coinsWin, setCoinsWin]         = useState(tpl?.matchResultPoints?.win ?? 30);
   const [coinsDraw, setCoinsDraw]       = useState(tpl?.matchResultPoints?.draw ?? 10);
   const [checkInEnabled, setCheckInEnabled] = useState(tpl?.checkInEnabled ?? false);
-  const [checkInMinutes, setCheckInMinutes] = useState(tpl?.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(tpl?.registrationLocked ?? false);
   const [eventOmaOriginal, setEventOmaOriginal] = useState(tpl?.omaOriginal ?? false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
@@ -259,7 +257,6 @@ export function useEventWizard({
     coinsWin,
     coinsDraw,
     checkInEnabled,
-    checkInMinutes,
     eventRegistrationLocked,
     eventOmaOriginal,
     eventSquadId,
@@ -330,7 +327,6 @@ export function useEventWizard({
     coinsWin: setCoinsWin,
     coinsDraw: setCoinsDraw,
     checkInEnabled: setCheckInEnabled,
-    checkInMinutes: setCheckInMinutes,
     eventRegistrationLocked: setEventRegistrationLocked,
     eventOmaOriginal: setEventOmaOriginal,
     eventSquadId: setEventSquadId,
@@ -384,7 +380,6 @@ export function useEventWizard({
     const t = parseTournamentTemplate(series.find(s => s.id === id)?.tournamentTemplateJson);
     if (t.checkInEnabled) {
       setCheckInEnabled(true);
-      setCheckInMinutes(t.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
     }
     if (t.matchResultPoints) {
       setPointsMode("matchResult");
@@ -513,7 +508,6 @@ export function useEventWizard({
       if (isRoundRobinFamily && pointsMode === "matchResult") body.matchResultPoints = { win: coinsWin, draw: coinsDraw };
       if (checkInEnabled) {
         body.checkInEnabled = true;
-        body.checkInMinutes = checkInMinutes;
       }
       if (hasStat) {
         body.statFields = JSON.stringify(statFields);
@@ -531,7 +525,6 @@ export function useEventWizard({
       body.blocks = blocks;
       if (blocks.kind === "tournament" && checkInEnabled) {
         body.checkInEnabled = true;
-        body.checkInMinutes = checkInMinutes;
       }
     }
 
@@ -642,7 +635,7 @@ export function useEventWizard({
     gamePrefill,
     publishMode, setPublishMode, publishAt, setPublishAt,
     playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw,
-    checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes,
+    checkInEnabled, setCheckInEnabled,
     isRoundRobinFamily, startInPast, pendingDraft, restoreDraft, discardDraft,
     series,
     squads,

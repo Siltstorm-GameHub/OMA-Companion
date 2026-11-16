@@ -1,6 +1,7 @@
 // "Was ändert sich gegenüber der Vorsaison?" — vergleicht die aus der alten Saison übernommenen Werte
 // (SeasonPrefill) mit dem aktuellen Stand im Saison-Assistenten. Reine Funktion, siehe seasonDiff.test.ts.
 import type { TournamentTemplate } from "@/lib/series-seasons";
+import { CHECK_IN_MINUTES } from "@/lib/checkin";
 import type { PlacementReward, PollConfig, SeasonPrefill, StatRow } from "./shared";
 
 export type SeasonState = {
@@ -38,7 +39,7 @@ function templateLabel(t: TournamentTemplate): string[] {
       + (gs.knockoutLegs === 2 ? `, K.O. Hin & Rück${gs.singleLegFinal !== false ? " (Finale einfach)" : ""}` : "")
       + (gs.thirdPlaceMatch ? ", Spiel um Platz 3" : ""));
   }
-  if (t.checkInEnabled) out.push(`Check-in ${t.checkInMinutes ?? 30} Min.`);
+  if (t.checkInEnabled) out.push(`Check-in ${CHECK_IN_MINUTES} Min.`);
   if (t.matchResultPoints) out.push(`Liga ${t.matchResultPoints.win}/${t.matchResultPoints.draw} Münzen je Sieg/Remis`);
   return out;
 }

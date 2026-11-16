@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { Trophy } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
@@ -8,6 +9,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { formatBerlinDateTime } from "@/lib/time";
 import { knockoutRoundLabel } from "@/lib/tournaments/groupStage";
+import { feederMatches } from "@/lib/tournaments/player-path";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -45,6 +47,8 @@ export default function BracketView({
   userId: string;
   holders?: WanderpocalHolder[];
 }) {
+  // Angetippte Paarung: Details unter dem Baum
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   if (!matches.length) {
     return (
       <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
@@ -52,6 +56,7 @@ export default function BracketView({
       </div>
     );
   }
+  const selected = matches.find(m => m.id === selectedId) ?? null;
 
   const totalRounds = Math.max(...matches.map(m => m.round));
   // Matches je Runde nach Position; Lücken (gelöschte Matches) bleiben als leere Plätze stehen
@@ -69,6 +74,7 @@ export default function BracketView({
     <div>
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
         <Trophy className="w-3.5 h-3.5 text-amber-400" /> Turnierbaum
+        <span className="ml-auto normal-case tracking-normal font-normal text-[11px] text-gray-600">Paarung antippen für Details</span>
       </h2>
       <div className="overflow-x-auto pb-2">
         <div className="flex min-w-max">
@@ -85,7 +91,10 @@ export default function BracketView({
                   </p>
                   {roundMatches.map((match, idx) => (
                     <div key={match?.id ?? `empty-${round}-${idx}`} className="flex items-center justify-center" style={{ height: slotH }}>
-                      {match ? <MatchCard match={match} userId={userId} findUser={findUser} holders={holders} /> : <div className="w-52" style={{ height: CARD_H }} />}
+                      {match
+                        ? <MatchCard match={match} userId={userId} findUser={findUser} holders={holders}
+                            selected={selectedId === match.id} onSelect={() => setSelectedId(id => id === match.id ? null : match.id)} />
+                        : <div className="w-52" style={{ height: CARD_H }} />}
                     </div>
                   ))}
                 </div>
@@ -108,17 +117,94 @@ export default function BracketView({
           })}
         </div>
       </div>
+      {selected && (
+        <MatchDetails match={selected} matches={matches} totalRounds={totalRounds} userId={userId}
+          findUser={findUser} onClose={() => setSelectedId(null)} />
+      )}
     </div>
   );
 }
 
+/** Details der angetippten Paarung: Spieler mit Profil-Link, Termin, Einzelspiele, Weg dorthin */
+function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }: {
+  match: Match; matches: Match[]; totalRounds: number; userId: string;
+  findUser: (id: string | null) => User | undefined; onClose: () => void;
+}) {
+  const p1 = findUser(match.player1Id);
+  const p2 = findUser(match.player2Id);
+  const isBye = !!match.winnerId && (!match.player1Id || !match.player2Id);
+  const isLive = !!match.startedAt && !match.playedAt && !match.winnerId;
+  const scoreOf = (m: { player1Id: string | null; score1: number | null; score2: number | null }, uid: string | null) =>
+    (uid === m.player1Id ? m.score1 : m.score2);
+  const won = (m: Match, uid: string | null) => !!m.winnerId && m.winnerId === uid;
+  const feeders = feederMatches(matches, match);
+  const status = isBye ? "Freilos — kampflos weiter"
+    : match.winnerId ? `Entschieden: ${uname(findUser(match.winnerId))} kommt weiter`
+    : isLive ? "Läuft gerade"
+    : p1 && p2 ? "Noch kein Ergebnis"
+    : "Gegner stehen noch nicht fest";
+  const when = match.scheduledAt
+    ? formatBerlinDateTime(match.scheduledAt, { weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    : null;
+  const person = (u: User | undefined, id: string | null) => u
+    ? <Link href={id === userId ? "/profile" : `/profile/${u.id}`} className="text-white hover:underline">{uname(u)}{id === userId ? " (du)" : ""}</Link>
+    : <span className="text-gray-500 italic">{isBye ? "Freilos" : "offen"}</span>;
+
+  return (
+    <section aria-label="Paarung" className="glass rounded-2xl p-4 mt-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-widest text-gray-500">
+          {match.title ?? `${knockoutRoundLabel(match.round, totalRounds)} · Match ${match.position}`}
+        </p>
+        <button type="button" onClick={onClose} className="text-xs text-gray-500 hover:text-gray-300">Schließen</button>
+      </div>
+      <p className="text-base font-semibold">
+        {person(p1, match.player1Id)} <span className="text-gray-500 font-normal">gegen</span> {person(p2, match.player2Id)}
+        {match.score1 != null && !isBye && (
+          <span className="ml-2 font-mono text-sm text-gray-300">{match.score1} : {match.score2}</span>
+        )}
+      </p>
+      <p className={`text-xs ${isLive ? "text-red-400 font-semibold" : "text-gray-400"}`}>
+        {status}{when && <span className="text-gray-500"> · {when}</span>}
+      </p>
+      {match.legs?.second && (
+        <p className="text-xs text-gray-500">
+          Hinspiel {match.legs.first.playedAt ? `${scoreOf(match.legs.first, match.player1Id) ?? 0}:${scoreOf(match.legs.first, match.player2Id) ?? 0}` : "offen"}
+          {" · "}Rückspiel {match.legs.second.playedAt ? `${scoreOf(match.legs.second, match.player1Id) ?? 0}:${scoreOf(match.legs.second, match.player2Id) ?? 0}` : "offen"}
+        </p>
+      )}
+      {feeders.length > 0 && (
+        <div className="border-t border-white/[0.05] pt-2 space-y-0.5">
+          <p className="text-[11px] text-gray-500">Weg hierher</p>
+          {feeders.map(f => {
+            const a = findUser(f.player1Id), b = findUser(f.player2Id);
+            const fBye = !!f.winnerId && (!f.player1Id || !f.player2Id);
+            return (
+              <p key={f.id} className="text-xs text-gray-400">
+                {fBye
+                  ? <>{uname(findUser(f.winnerId))} per Freilos</>
+                  : f.winnerId
+                    ? <><span className="text-white">{uname(findUser(f.winnerId))}</span> schlug {uname(f.winnerId === f.player1Id ? b : a)}{f.score1 != null && <> {scoreOf(f, f.winnerId)}:{scoreOf(f, f.winnerId === f.player1Id ? f.player2Id : f.player1Id)}{f.score1 === f.score2 && " n.E."}</>}</>
+                    : <>{uname(a)} gegen {uname(b)} — noch offen</>}
+                {won(f, userId) && <span className="text-rose-300"> (du)</span>}
+              </p>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MatchCard({
-  match, userId, findUser, holders,
+  match, userId, findUser, holders, selected, onSelect,
 }: {
   match: Match;
   userId: string;
   findUser: (id: string | null) => User | undefined;
   holders: WanderpocalHolder[];
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const p1 = findUser(match.player1Id);
   const p2 = findUser(match.player2Id);
@@ -143,8 +229,14 @@ function MatchCard({
       : null;
 
   return (
-    <div
-      className={`w-52 rounded-xl border overflow-hidden flex flex-col ${
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={`${uname(p1)} gegen ${uname(p2)} — Details`}
+      className={`w-52 rounded-xl border overflow-hidden flex flex-col text-left transition-[filter] hover:brightness-125 ${
+        selected ? "ring-2 ring-teal-400/60" : ""
+      } ${
         isLive    ? "border-red-500/60 shadow-[0_0_12px_rgba(239,68,68,0.2)]" :
         isMyMatch ? "border-rose-700/60 shadow-[0_0_12px_rgba(190,18,60,0.15)]" :
         isBye     ? "border-white/5 opacity-60" :
@@ -164,7 +256,7 @@ function MatchCard({
         const isMe     = id === userId;
         const rowInner = (
           <>
-            <div className="flex items-center gap-1.5 min-w-0">
+            <span className="flex items-center gap-1.5 min-w-0">
               <RankedAvatar
                 userId={user?.id}
                 src={user?.image}
@@ -184,8 +276,8 @@ function MatchCard({
                       {isWinner || isLoser ? uname(user) : <StyledUserName userId={user.id} name={uname(user)} />}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</>
                   : isBye ? "Freilos" : "TBD"}
               </span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
+            </span>
+            <span className="flex items-center gap-1 shrink-0">
               {isWinner && <WinIcon size={12} />}
               {!isBye && (
                 <span className={`font-mono text-xs font-semibold ${
@@ -197,30 +289,26 @@ function MatchCard({
                   {isWinner && afterPenalties && <span className="ml-0.5 text-[9px] font-normal text-gray-500">n.E.</span>}
                 </span>
               )}
-            </div>
+            </span>
           </>
         );
         const rowCls = `flex-1 flex items-center justify-between px-2.5 ${
           idx === 0 ? "border-b border-white/5" : ""
         } ${isWinner ? "bg-emerald-900/20" : "glass"}`;
-        return user ? (
-          <Link key={idx} href={isMe ? "/profile" : `/profile/${user.id}`}
-            className={`${rowCls} hover:brightness-125 transition-[filter]`}>
+        // Profil-Links stehen in den Details — die ganze Karte öffnet die Paarung
+        return (
+          <span key={idx} className={rowCls}>
             {rowInner}
-          </Link>
-        ) : (
-          <div key={idx} className={rowCls}>
-            {rowInner}
-          </div>
+          </span>
         );
       })}
       {(footer || isLive || isBye) && (
-        <div className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-white/5 text-[10px] text-gray-500 bg-white/[0.02]">
+        <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-white/5 text-[10px] text-gray-500 bg-white/[0.02]">
           {isLive && <span className="font-bold text-red-400 animate-pulse">● LIVE</span>}
           {isBye && <span>kampflos weiter</span>}
           {!isBye && footer && <span className="truncate">{footer}</span>}
-        </div>
+        </span>
       )}
-    </div>
+    </button>
   );
 }

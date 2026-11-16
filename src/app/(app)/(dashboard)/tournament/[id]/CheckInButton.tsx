@@ -11,11 +11,10 @@ import { formatBerlinDateTime } from "@/lib/time";
  * Gleicher Weg wie der Status-Knopf in den Absprachen — beide setzen Check-in und "bereit"-Status.
  */
 export default function CheckInButton({
-  eventId, startAt, checkInMinutes, drawn, checkedIn: initialCheckedIn,
+  eventId, startAt, drawn, checkedIn: initialCheckedIn,
 }: {
   eventId: string;
   startAt: string;
-  checkInMinutes: number;
   /** Turnier bereits ausgelost (es gibt Matches) → Check-in geschlossen */
   drawn: boolean;
   checkedIn: boolean;
@@ -23,7 +22,7 @@ export default function CheckInButton({
   const router = useRouter();
   const [checkedIn, setCheckedIn] = useState(initialCheckedIn);
   const [loading, setLoading] = useState(false);
-  const event = { checkInEnabled: true, checkInMinutes, startAt };
+  const event = { checkInEnabled: true, startAt };
   const state = checkInState(event, drawn);
 
   async function toggle() {

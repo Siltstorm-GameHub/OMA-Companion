@@ -163,5 +163,4 @@ export type EventTemplate = {
   /** Nur coop_stats: Community-Ziel, siehe lib/community-goal.ts */
   communityGoal?: CommunityGoalForm;
   checkInEnabled: boolean;
-  checkInMinutes: number;
 };

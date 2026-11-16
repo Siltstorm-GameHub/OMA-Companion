@@ -31,7 +31,7 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import EventGoalPanel from "./EventGoalPanel";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
-import { DEFAULT_CHECK_IN_MINUTES, MAX_CHECK_IN_MINUTES, sanitizeCheckInMinutes } from "@/lib/checkin";
+import { CHECK_IN_MINUTES } from "@/lib/checkin";
 import PublishStatusPanel from "./PublishStatusPanel";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
@@ -448,24 +448,23 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
   // ── Check-in vor Turnierstart ──
   const [checkInEnabled, setCheckInEnabled] = useState<boolean>(event.checkInEnabled ?? false);
-  const [checkInMinutes, setCheckInMinutes] = useState<number>(event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
   const [checkInBusy, setCheckInBusy] = useState(false);
   const [checkedInIds, setCheckedInIds] = useState<Set<string>>(() => new Set(
     (event.registrations as { userId: string; checkedInAt?: string | Date | null }[])
       .filter(r => r.checkedInAt).map(r => r.userId),
   ));
 
-  async function saveCheckInSettings(enabled: boolean, minutes: number) {
+  async function saveCheckInSettings(enabled: boolean) {
     setCheckInBusy(true);
     const res = await fetch("/api/admin/events", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: event.id, checkInEnabled: enabled, checkInMinutes: minutes }),
+      body: JSON.stringify({ eventId: event.id, checkInEnabled: enabled }),
     });
     setCheckInBusy(false);
     if (res.ok) {
       setCheckInEnabled(enabled);
-      toast.success(enabled ? `Check-in aktiv (${minutes} Min. vor Start)` : "Check-in deaktiviert");
+      toast.success(enabled ? `Check-in aktiv (ab ${CHECK_IN_MINUTES} Min. vor Start)` : "Check-in deaktiviert");
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -1505,30 +1504,18 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-2">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked={checkInEnabled} disabled={checkInBusy}
-                onChange={e => saveCheckInSettings(e.target.checked, checkInMinutes)}
+                onChange={e => saveCheckInSettings(e.target.checked)}
                 className="rounded shrink-0" />
               <span className="text-sm text-white">Check-in vor Turnierstart</span>
+              {checkInEnabled && (
+                <span className="text-xs text-gray-500 ml-auto">{checkedInIds.size}/{registeredIds.size} eingecheckt</span>
+              )}
             </label>
             <p className="text-[11px] text-gray-500">
-              Spieler checken selbst auf der Event-Seite ein. Das Fenster öffnet vor dem Start und schließt mit der
-              Auslosung. Ist der Check-in aktiv, werden nur eingecheckte Spieler ausgelost — Admins können im Reiter
-              „Teilnehmer“ manuell ein- und auschecken.
+              Spieler checken selbst auf der Event-Seite ein („Bin bereit“). Das Fenster öffnet {CHECK_IN_MINUTES} Minuten
+              vor dem Start und schließt mit der Auslosung. Ist der Check-in aktiv, werden nur eingecheckte Spieler
+              ausgelost — Admins können im Reiter „Teilnehmer“ manuell ein- und auschecken.
             </p>
-            {checkInEnabled && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Öffnet</span>
-                <NumberInput min={5} max={MAX_CHECK_IN_MINUTES} value={checkInMinutes}
-                  onChange={e => setCheckInMinutes(Number(e.target.value))}
-                  className="w-20 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1 text-center" />
-                <span className="text-xs text-gray-400">Min. vor Start</span>
-                <button type="button" disabled={checkInBusy || checkInMinutes === (event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES)}
-                  onClick={() => saveCheckInSettings(true, sanitizeCheckInMinutes(checkInMinutes))}
-                  className="text-xs text-teal-300 border border-teal-700/60 rounded-lg px-2.5 py-1 hover:bg-teal-900/20 disabled:opacity-40">
-                  Speichern
-                </button>
-                <span className="text-xs text-gray-500 ml-auto">{checkedInIds.size}/{registeredIds.size} eingecheckt</span>
-              </div>
-            )}
           </div>
 
           {!hasTournament && (

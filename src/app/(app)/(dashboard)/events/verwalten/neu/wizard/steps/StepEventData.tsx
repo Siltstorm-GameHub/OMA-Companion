@@ -64,7 +64,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         <BlocksEventSettings
           value={w.blocks}
           onChange={w.setBlocks}
-          checkIn={{ enabled: w.checkInEnabled, setEnabled: w.setCheckInEnabled, minutes: w.checkInMinutes, setMinutes: w.setCheckInMinutes }}
+          checkIn={{ enabled: w.checkInEnabled, setEnabled: w.setCheckInEnabled }}
           inputCls={inputCls}
           labelCls={labelCls}
           inputStyle={inputStyle}

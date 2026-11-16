@@ -70,6 +70,9 @@ import BlocksEventSection from "@/components/blocks/BlocksEventSection";
 import { eventPayout } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import NextMatches, { type UpcomingMatch } from "./NextMatches";
+import MyMatchCard from "./MyMatchCard";
+import { duelProgress, statProgress } from "@/lib/tournaments/progress";
+import { koStatus, nextOpponents } from "@/lib/tournaments/player-path";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
 import ResultReviewClient from "@/app/(app)/(dashboard)/events/verwalten/[id]/results/ResultReviewClient";
 import { loadReviewData } from "@/lib/tournaments/review-data";
@@ -467,19 +470,20 @@ export default async function TournamentDetailPage({
   const excludedUserIds     = new Set(completionData.excludedUserIds ?? []);
 
   // Anstehende Spiele mit feststehenden Gegnern (für "Dein nächstes Match" / "Nächste Spiele")
+  const koRounds = Math.max(0, ...event.matches.filter(m => m.groupIndex == null && !m.isThirdPlace).map(m => m.round));
+  /** Stufe eines Matches in Klartext (Spieltag, Gruppe, K.O.-Runde, Stat-Runde) */
+  const matchStage = (m: (typeof event.matches)[number], withTitle = true) => {
+    if (isFfa) return statRoundLabel(m);
+    if (withTitle && m.title) return m.title;
+    if (isGroupKnockout && m.groupIndex != null) return `Gruppe ${groupLetter(m.groupIndex)} · Spieltag ${m.round}`;
+    if (isLiga || isRoundRobin) return `Spieltag ${m.round}`;
+    return (m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, koRounds))
+      + (m.leg === 1 ? " · Hinspiel" : m.leg === 2 ? " · Rückspiel" : "");
+  };
   const upcomingMatches: UpcomingMatch[] = (() => {
     if (!hasTournament) return [];
     const userOf = (id: string | null) => (id ? mergedParticipants.find(p => p.userId === id)?.user ?? null : null);
-    const koRounds = Math.max(0, ...event.matches.filter(m => m.groupIndex == null && !m.isThirdPlace).map(m => m.round));
-    const label = (m: (typeof event.matches)[number]) => {
-      if (isFfa) return statRoundLabel(m);
-      if (m.title) return m.title;
-      if (isGroupKnockout && m.groupIndex != null) return `Gruppe ${groupLetter(m.groupIndex)} · Spieltag ${m.round}`;
-      if (isLiga || isRoundRobin) return `Spieltag ${m.round}`;
-      if (isFfa) return `Runde ${m.round}`;
-      return (m.isThirdPlace ? "Spiel um Platz 3" : knockoutRoundLabel(m.round, koRounds))
-        + (m.leg === 1 ? " · Hinspiel" : m.leg === 2 ? " · Rückspiel" : "");
-    };
+    const label = (m: (typeof event.matches)[number]) => matchStage(m);
     return event.matches
       .filter(m => !m.playedAt && !m.winnerId)
       .map(m => {
@@ -498,6 +502,38 @@ export default async function TournamentDetailPage({
         || a.round - b.round || a.leg - b.leg || a.position - b.position)
       .map(({ round: _r, position: _p, leg: _l, ...m }) => { void _r; void _p; void _l; return m; });
   })();
+
+  // ── Spieler-Sicht: Stand des Turniers, eigenes Match, eigener Weg im K.O.-Baum ──
+  const isDuelFormat = hasTournament && !isFfa;
+  const duelStand = isDuelFormat ? duelProgress(event.matches) : null;
+  const statStand = hasTournament && isFfa ? statProgress(event.matches) : null;
+  const standStage = duelStand
+    ? (duelStand.current
+        ? (isGroupKnockout && duelStand.current.groupIndex != null ? "Gruppenphase" : matchStage(duelStand.current, false).replace(/ · (Hin|Rück)spiel$/, "")) + " läuft"
+        : duelStand.total > 0 ? "alle Matches gespielt" : null)
+    : statStand
+      ? (statStand.next ? `${statRoundLabel(statStand.next)} als Nächstes` : statStand.total > 0 ? "alle Runden eingetragen" : null)
+      : null;
+  const myOpenMatch = upcomingMatches.find(m => m.mine) ?? null;
+  const myOpenReport = myOpenMatch ? reportMatches.find(r => r.id === myOpenMatch.id) ?? null : null;
+  const myOpenSubmission = myOpenReport
+    ? mySubmissions.find(s => s.matchId === myOpenReport.id && (myOpenReport.isDuel || s.subjectId === userId)) ?? null
+    : null;
+  const koNameOf = (id: string) => {
+    const u = mergedParticipants.find(p => p.userId === id)?.user;
+    return u ? userName(u) : "?";
+  };
+  const hasKoTree = (isElimination || isGroupKnockout) && bracketMatches.length > 0;
+  const myKo = hasKoTree ? koStatus(bracketMatches, userId) : { kind: "none" as const };
+  const myNextHint = (() => {
+    if (!hasKoTree || !myOpenMatch) return null;
+    const tie = bracketMatches.find(m => m.id === myOpenMatch.id || m.legs?.second?.id === myOpenMatch.id);
+    const next = tie ? nextOpponents(bracketMatches, tie) : null;
+    return next ? `Sieger trifft im ${next.roundLabel} auf ${next.userIds.map(koNameOf).join(" oder ")}` : null;
+  })();
+  const eliminatedCount = hasKoTree
+    ? new Set(bracketMatches.flatMap(m => m.winnerId && m.player1Id && m.player2Id ? [m.winnerId === m.player1Id ? m.player2Id : m.player1Id] : [])).size
+    : 0;
 
   // Turniersieger — nur wenn er wirklich feststeht:
   //  1. nach dem Abschluss die festgelegte Endplatzierung (inkl. Korrekturen/Disqualifikationen)
@@ -771,7 +807,8 @@ export default async function TournamentDetailPage({
 
   // Mobil: Vor dem Start ist die Teilnehmerliste zentral und steht oben. Sobald das Event läuft,
   // rückt sie hinter die Turnieransicht und wird eingeklappt — außer es gibt keine eigene
-  // Turnier-/Ziel-Ansicht, dann bleibt sie der Hauptinhalt. Desktop: immer Seitenspalte.
+  // Turnier-/Ziel-Ansicht, dann bleibt sie der Hauptinhalt. Gilt auch am Desktop, damit Baum und
+  // Tabellen nach dem Start die volle Breite bekommen; vorher steht die Liste als Seitenspalte.
   const hasStarted = event.status === "finished" || event.startAt <= new Date();
   // Status-Hinweise ("komme später" …) nur bis zum Ende der Spielphase — in der Abstimmung und danach aus
   const pagePhaseForStatus = event.status === "finished" || event.status === "umfrage" ? "after" : "open";
@@ -1014,7 +1051,6 @@ export default async function TournamentDetailPage({
         <CheckInButton
           eventId={event.id}
           startAt={event.startAt.toISOString()}
-          checkInMinutes={event.checkInMinutes}
           drawn={event.matches.length > 0 || (!!event.blocksTournament && event.blocksTournament.stage !== "pending")}
           checkedIn={!!myReg?.checkedInAt}
         />
@@ -1403,7 +1439,8 @@ export default async function TournamentDetailPage({
   const tournamentNode = (
     <div id="turnier" className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5 scroll-mt-20">
       {/* Teilnehmerliste — mobil vor dem Start oben, danach eingeklappt unter der Turnieransicht */}
-      <div id="teilnehmer" className={`lg:col-span-1 scroll-mt-20 ${collapseParticipantsOnMobile ? "hidden lg:block" : ""}`}>
+      {/* Nach dem Start eingeklappt (unten), damit Baum und Tabellen die volle Breite haben */}
+      <div id="teilnehmer" className={`lg:col-span-1 scroll-mt-20 ${collapseParticipantsOnMobile ? "hidden" : ""}`}>
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
           <Users className="w-3.5 h-3.5" /> Teilnehmer
         </h2>
@@ -1411,8 +1448,52 @@ export default async function TournamentDetailPage({
       </div>
 
       {/* Format-spezifische Ansicht */}
-      <div className="lg:col-span-3 min-w-0">
-        <NextMatches upcoming={upcomingMatches} canReport={reportMatches.length > 0} />
+      <div className={`min-w-0 ${collapseParticipantsOnMobile ? "lg:col-span-4" : "lg:col-span-3"}`}>
+        {/* Stand in Klartext — wie auf der Verwaltungsseite, ohne Werkzeuge */}
+        {(duelStand?.total || statStand?.total) ? (() => {
+          const played = duelStand?.played ?? statStand!.played;
+          const total = duelStand?.total ?? statStand!.total;
+          const pct = Math.round((played / total) * 100);
+          return (
+            <section aria-label="Turnier-Stand" className="mb-4 space-y-1.5">
+              <p className="text-sm text-gray-300">
+                <span className="font-semibold text-white">{FORMAT_LABELS[format] ?? format}</span>
+                {event.status === "finished" ? " · beendet" : standStage ? ` · ${standStage}` : ""}
+                <span className="text-gray-500"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
+              </p>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
+              </div>
+            </section>
+          );
+        })() : null}
+
+        {/* Eigenes offenes Match als Arbeitskarte: bestätigen oder melden direkt hier */}
+        {myOpenMatch && (
+          <div className="mb-4">
+            <MyMatchCard
+              match={myOpenMatch}
+              report={myOpenReport}
+              submission={myOpenSubmission}
+              eventId={event.id}
+              userId={userId}
+              statFields={event.statFields ? JSON.parse(event.statFields) : []}
+              locked={isParticipantEditLocked(event)}
+              startAt={event.startAt.toISOString()}
+              nextHint={myNextHint}
+            />
+          </div>
+        )}
+        {/* K.O.: kein offenes Match mehr — kurz sagen, wo man steht */}
+        {!myOpenMatch && (myKo.kind === "eliminated" || myKo.kind === "champion") && (
+          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-white/[0.08] bg-white/[0.02] text-gray-300"}`}>
+            {myKo.kind === "champion"
+              ? "Du hast das Turnier gewonnen — Glückwunsch!"
+              : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-white">{koNameOf(myKo.byUserId)}</span></>}.</>}
+          </p>
+        )}
+
+        <NextMatches upcoming={upcomingMatches} canReport={reportMatches.length > 0} shownMineId={myOpenMatch?.id ?? null} />
         {!hasTournament && !communityGoalProgress && (
           <div className="glass rounded-2xl p-8 text-center">
             <Swords className="w-8 h-8 mx-auto mb-2 text-gray-700" />
@@ -1422,7 +1503,7 @@ export default async function TournamentDetailPage({
         )}
         {isElimination && (
           <BracketView
-            matches={event.matches as Parameters<typeof BracketView>[0]["matches"]}
+            matches={bracketMatches as Parameters<typeof BracketView>[0]["matches"]}
             participants={mergedParticipants}
             userId={userId}
             holders={holdersList}
@@ -1515,11 +1596,13 @@ export default async function TournamentDetailPage({
       </div>
 
       {collapseParticipantsOnMobile && (
-        <details data-jump-target="teilnehmer" className="lg:hidden group scroll-mt-20">
+        <details data-jump-target="teilnehmer" className="lg:col-span-4 group scroll-mt-20">
           <summary className="glass rounded-2xl px-4 py-3 flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
             <Users className="w-4 h-4 text-gray-400 shrink-0" />
             <span className="text-sm font-semibold text-white">Teilnehmer</span>
-            <span className="text-xs text-gray-500 tabular-nums">{sortedRegistrations.length}</span>
+            <span className="text-xs text-gray-500 tabular-nums">
+              {sortedRegistrations.length}{eliminatedCount > 0 && ` · ${eliminatedCount} ausgeschieden`}
+            </span>
             <span className="flex -space-x-1.5 ml-1 min-w-0 overflow-hidden">
               {sortedRegistrations.slice(0, 6).map(({ user }) => (
                 <RankedAvatar key={user.id} userId={user.id} src={user.image} alt={userName(user)} size={22} variant="flat" />

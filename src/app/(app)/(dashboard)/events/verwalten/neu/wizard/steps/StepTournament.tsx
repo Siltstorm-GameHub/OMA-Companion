@@ -9,7 +9,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 2 (Event): Turnier ───────────────────────────────────────────────────
 export default function StepTournament({ w }: { w: EventWizard }) {
-  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, avgDirection, setAvgDirection, communityGoal, setCommunityGoal, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled, checkInMinutes, setCheckInMinutes } = w;
+  const { format, setFormat, statFields, setStatFields, statPointsByField, setStatPointsByField, avgDirection, setAvgDirection, communityGoal, setCommunityGoal, selectedSeries, seriesFixedFormat, formatObj, hasStat, playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw, checkInEnabled, setCheckInEnabled } = w;
   return (
     <div className="space-y-6">
       {seriesFixedFormat ? (
@@ -115,20 +115,11 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           <div>
             <p className="text-sm text-white">Check-in vor Turnierstart</p>
             <p className="text-[11px] text-gray-500 mt-0.5">
-              Angemeldete Spieler bestätigen kurz vor dem Start ihre Teilnahme. Ausgelost werden dann nur
-              Eingecheckte — wer nicht erscheint, landet nicht im Turnierbaum.
+              Angemeldete Spieler bestätigen ab 30 Minuten vor dem Start ihre Teilnahme („Bin bereit“). Ausgelost
+              werden dann nur Eingecheckte — wer nicht erscheint, landet nicht im Turnierbaum.
             </p>
           </div>
         </label>
-        {checkInEnabled && (
-          <div className="flex items-center gap-2 pl-7">
-            <span className="text-xs text-gray-400">Öffnet</span>
-            <NumberInput min={5} max={1440} value={checkInMinutes}
-              onChange={e => setCheckInMinutes(Number(e.target.value) || 0)}
-              className="w-20 rounded-lg px-2 py-1 text-sm text-white text-center outline-none" style={inputStyle} />
-            <span className="text-xs text-gray-400">Minuten vor dem Start</span>
-          </div>
-        )}
       </div>
     </div>
   );

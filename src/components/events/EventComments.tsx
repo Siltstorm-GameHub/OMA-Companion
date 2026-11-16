@@ -11,7 +11,7 @@ import { SECTION_JUMP_EVENT } from "@/components/SectionJumpLink";
 import { mentionToken } from "@/lib/report-mentions";
 import { formatBerlinDateTime, formatBerlinTime, isSameBerlinDay } from "@/lib/time";
 import {
-  COMMENT_MAX_LENGTH, LATE_OPTIONS, REACTION_EMOJIS, parseCommentSegments, plainCommentText,
+  COMMENT_MAX_LENGTH, LATE_OPTIONS, REACTION_EMOJIS, parseCommentSegments, plainCommentText, readyLocked,
   type AttendanceSummary, type CommentStatus, type EventCommentDTO, type EventCommentsResponse,
 } from "@/lib/event-comments-shared";
 
@@ -146,7 +146,7 @@ export default function EventComments({
             {data.summary && <AttendanceBar summary={data.summary} />}
 
             {data.canSetStatus && (
-              <StatusBar eventId={eventId} myStatus={data.myStatus} isPlayer={isPlayer}
+              <StatusBar eventId={eventId} myStatus={data.myStatus} isPlayer={isPlayer} readyOpensAt={data.readyOpensAt}
                 onPosted={async () => { stickToBottom.current = true; await load(); router.refresh(); }} />
             )}
 
@@ -392,10 +392,12 @@ function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
 
 // ── Status-Knöpfe ─────────────────────────────────────────────────────────────
 
-export function StatusBar({ eventId, myStatus, isPlayer, onPosted, compact = false }: {
+export function StatusBar({ eventId, myStatus, isPlayer, readyOpensAt, onPosted, compact = false }: {
   eventId: string;
   myStatus: EventCommentsResponse["myStatus"];
   isPlayer: boolean;
+  /** Events mit Check-in: „Bin bereit“ erst ab diesem Zeitpunkt (30 Min. vor Start) */
+  readyOpensAt: string | null;
   onPosted: () => Promise<void>;
   /** Ohne Rahmen/Beschriftung (Schnellzugriff im Panel) */
   compact?: boolean;
@@ -433,7 +435,13 @@ export function StatusBar({ eventId, myStatus, isPlayer, onPosted, compact = fal
         {!compact && <span className="text-[11px] text-gray-500 mr-1">Kurz Bescheid geben:</span>}
         <button type="button" disabled={busy} onClick={() => setLateOpen(o => !o)} className={chip(myStatus?.status === "late")}>⏰ Komme später</button>
         <button type="button" disabled={busy} onClick={() => post("absent")} className={chip(myStatus?.status === "absent")}>❌ Kann nicht</button>
-        <button type="button" disabled={busy} onClick={() => post("ready")} className={chip(myStatus?.status === "ready")}>✅ Bin bereit</button>
+        {readyLocked(readyOpensAt) ? (
+          <span className="text-xs px-2.5 py-1.5 rounded-lg border border-white/5 text-gray-500" title="„Bin bereit“ ist erst 30 Minuten vor Eventbeginn möglich">
+            ⏳ Bereit ab {formatBerlinTime(readyOpensAt!)} Uhr
+          </span>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => post("ready")} className={chip(myStatus?.status === "ready")}>✅ Bin bereit</button>
+        )}
       </div>
       {lateOpen && (
         <div className="flex items-center gap-1.5 mt-2">

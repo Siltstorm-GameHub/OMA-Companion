@@ -18,7 +18,7 @@ export interface BlocksEventSettingsProps {
   /** Grund, warum die Werte nicht mehr änderbar sind (Turnier läuft, Challenge abgerechnet) — null = änderbar */
   lockedReason?: string | null;
   /** Check-in nur im Assistenten — im Editor gibt es dafür den Turnier-Reiter */
-  checkIn?: { enabled: boolean; setEnabled: (v: boolean) => void; minutes: number; setMinutes: (v: number) => void };
+  checkIn?: { enabled: boolean; setEnabled: (v: boolean) => void };
   inputCls: string;
   labelCls: string;
   inputStyle?: CSSProperties;
@@ -83,12 +83,7 @@ export default function BlocksEventSettings({
               <input type="checkbox" checked={checkIn.enabled} onChange={(e) => checkIn.setEnabled(e.target.checked)} className="accent-teal-400" />
               Check-in vor dem Start
               {checkIn.enabled && (
-                <>
-                  <NumberInput min={5} max={180} value={checkIn.minutes}
-                    onChange={(e) => checkIn.setMinutes(Number(e.target.value))}
-                    className={`${inputCls} !w-20 !py-1`} style={inputStyle} />
-                  <span className="text-gray-400 text-xs">Min. vorher — nur Eingecheckte werden ausgelost</span>
-                </>
+                <span className="text-gray-400 text-xs">ab 30 Min. vorher — nur Eingecheckte werden ausgelost</span>
               )}
             </label>
           )}

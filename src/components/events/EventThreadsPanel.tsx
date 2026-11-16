@@ -126,7 +126,7 @@ function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
             🗳️ Jetzt abstimmen <ChevronRight className="w-3 h-3" />
           </Link>
         ) : (
-          <StatusBar compact eventId={t.eventId} myStatus={t.myStatus} isPlayer={t.isPlayer}
+          <StatusBar compact eventId={t.eventId} myStatus={t.myStatus} isPlayer={t.isPlayer} readyOpensAt={t.readyOpensAt}
             onPosted={async () => onRefresh()} />
         )}
       </div>

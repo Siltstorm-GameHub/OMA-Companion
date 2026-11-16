@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { canManageEvent, hasMinRole } from "@/lib/roles";
 import { isEventHidden } from "@/lib/event-visibility";
 import { getEventEndedAt } from "@/lib/event-completion";
-import { checkInState } from "@/lib/checkin";
+import { checkInOpensAt, checkInState } from "@/lib/checkin";
+import { formatBerlinDateTime } from "@/lib/time";
 import { createNotification, PREF_KEY } from "@/lib/notifications";
 import { sendPushToUsers } from "@/lib/push";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
@@ -33,7 +34,7 @@ async function loadEvent(eventId: string) {
     where: { id: eventId },
     select: {
       id: true, title: true, status: true, startAt: true, endAt: true, completionData: true, hidden: true,
-      createdById: true, checkInEnabled: true, checkInMinutes: true, discordChannelId: true,
+      createdById: true, checkInEnabled: true, discordChannelId: true,
       series: { select: { hidden: true, createdById: true, discordChannelId: true } },
       _count: { select: { matches: true } },
     },
@@ -130,6 +131,7 @@ export async function listEventComments(viewer: CommentViewer, eventId: string):
       canPin: canManage && !ev.locked,
       canSetStatus: !!registration && !ev.locked && statusMessagesAllowed(ev.status),
       myStatus: myStatus?.status ? { status: myStatus.status as CommentStatus, lateMin: myStatus.lateMin } : null,
+      readyOpensAt: ev.checkInEnabled ? checkInOpensAt(ev).toISOString() : null,
       summary,
     },
   };
@@ -262,6 +264,7 @@ export async function listEventThreads(userId: string): Promise<EventThreadDTO[]
     where: { id: { in: ids } },
     select: {
       id: true, title: true, status: true, startAt: true, endAt: true, completionData: true, hidden: true,
+      checkInEnabled: true,
       series: { select: { hidden: true, name: true } },
     },
   });
@@ -318,6 +321,7 @@ export async function listEventThreads(userId: string): Promise<EventThreadDTO[]
       registered: !!role,
       isPlayer: !!role && role !== "spectator",
       myStatus: st?.status ? { status: st.status as CommentStatus, lateMin: st.lateMin } : null,
+      readyOpensAt: ev.checkInEnabled ? checkInOpensAt(ev).toISOString() : null,
     };
   });
   // Laufend → Abstimmung → anstehend → beendet
@@ -379,6 +383,12 @@ export async function createEventStatus(
   });
   if (!registration) return fail("Status-Meldungen gibt es nur für Angemeldete", 403);
   if (!statusMessagesAllowed(ev.status)) return fail("Die Spielphase ist vorbei — Status-Meldungen gibt es nur davor", 400);
+  // "Bin bereit" bei Events mit Check-in erst ab 30 Min. vor Start — sonst stünde man als bereit da,
+  // ohne eingecheckt zu sein, und würde nicht ausgelost.
+  if (status === "ready" && checkInState(ev, ev._count.matches > 0) === "not_yet_open") {
+    const at = formatBerlinDateTime(checkInOpensAt(ev), { hour: "2-digit", minute: "2-digit" });
+    return fail(`„Bin bereit“ geht erst ab ${at} Uhr (30 Min. vor Start)`);
+  }
   if (await rateLimited(viewer.id, eventId)) return fail("Bitte kurz warten, bevor du die nächste Nachricht schickst", 429);
 
   const lateMin = status === "late" ? sanitizeLateMin(rawLateMin) : null;

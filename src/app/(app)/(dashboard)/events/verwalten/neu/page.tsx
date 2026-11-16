@@ -74,7 +74,6 @@ async function loadTemplate(eventId: string): Promise<EventTemplate | null> {
       return g ? { enabled: true, title: g.title ?? "", fields: g.fields, target: g.target, scope: g.scope, unit: g.unit ?? "", rewardCoins: g.rewardCoins ?? 0 } : undefined;
     })(),
     checkInEnabled: e.checkInEnabled,
-    checkInMinutes: e.checkInMinutes,
   };
 }
 

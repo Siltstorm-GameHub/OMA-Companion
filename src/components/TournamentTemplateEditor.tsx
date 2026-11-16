@@ -1,6 +1,6 @@
 "use client";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tournaments/groupStage";
-import { DEFAULT_CHECK_IN_MINUTES } from "@/lib/checkin";
+import { CHECK_IN_MINUTES } from "@/lib/checkin";
 import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
@@ -114,16 +114,10 @@ export default function TournamentTemplateEditor({
       <div className="space-y-2">
         <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
           <input type="checkbox" className="accent-teal-500" checked={value.checkInEnabled === true}
-            onChange={e => onChange({ ...value, checkInEnabled: e.target.checked, checkInMinutes: value.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES })} />
+            onChange={e => onChange({ ...value, checkInEnabled: e.target.checked })} />
           Check-in vor Turnierstart
+          {value.checkInEnabled && <span className="text-[11px] text-gray-500">(öffnet {CHECK_IN_MINUTES} Min. vor Start)</span>}
         </label>
-        {value.checkInEnabled && (
-          <label className="pl-6 flex items-center gap-2 text-[11px] text-gray-500">
-            <NumberInput min={5} max={1440} value={value.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES} className={numCls}
-              onChange={e => onChange({ ...value, checkInMinutes: Math.floor(Number(e.target.value) || DEFAULT_CHECK_IN_MINUTES) })} />
-            Minuten vor Start öffnet der Check-in
-          </label>
-        )}
       </div>
 
       {showPoints && (
