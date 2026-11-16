@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import { appBaseUrl } from "@/lib/brand";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
+// Space Grotesk selbst gehostet (variable Schrift 400–700, Zeichensatz Latein, SIL Open Font License,
+// Quelle: Google Fonts). Vorher next/font/google — das lädt die Datei bei jedem Build von Google
+// und hat Vercel-Builds hängen bzw. scheitern lassen, wenn Google Fonts nicht erreichbar war.
+const spaceGrotesk = localFont({
+  src: "./fonts/SpaceGrotesk.woff2",
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
   display: "swap",
 });
 

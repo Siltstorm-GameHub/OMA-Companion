@@ -213,19 +213,28 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
   const periodRow: HubRow | null = periodEvents.length > 0 ? (() => {
     const first = periodEvents[0];
     const left = first.endAt ? remainingLabel(first.endAt.getTime() - now.getTime()) : null;
+    const multi = periodEvents.length > 1;
+    const chipCls = "truncate rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-0.5";
     return {
       key: "period",
-      href: periodEvents.length === 1 ? `/tournament/${first.id}` : "/events",
+      // Ein Event: ganze Zeile führt hin. Mehrere: jeder Chip ist ein eigener Link zu seinem Event
+      // (die Zeile selbst ist dann kein Link — sonst wären die Links verschachtelt).
+      href: multi ? undefined : `/tournament/${first.id}`,
       lead: <span className="font-semibold text-teal-300">läuft</span>,
       // Jeder Name als eigener Chip — bei mehreren Events auf einen Blick getrennt (max. 2 + "+N")
       label: (
         <span className="flex items-center gap-1.5 min-w-0">
-          {periodEvents.slice(0, 2).map(e => (
-            <span key={e.id} className={`truncate rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-0.5 ${periodEvents.length > 1 ? "max-w-[48%]" : ""}`}>
+          {periodEvents.slice(0, 2).map(e => multi ? (
+            <Link key={e.id} href={`/tournament/${e.id}`} title={e.title}
+              className={`${chipCls} max-w-[48%] transition-colors hover:border-teal-400/40 hover:bg-teal-500/10 hover:text-white`}>
               {e.title}
-            </span>
+            </Link>
+          ) : (
+            <span key={e.id} className={chipCls}>{e.title}</span>
           ))}
-          {periodEvents.length > 2 && <span className="shrink-0 text-gray-500">+{periodEvents.length - 2}</span>}
+          {periodEvents.length > 2 && (
+            <Link href="/events" className="shrink-0 text-gray-500 hover:text-gray-300" title="Alle laufenden Events">+{periodEvents.length - 2}</Link>
+          )}
         </span>
       ),
       hint: <span className="text-gray-500">{periodEvents.length > 1 ? `${periodEvents.length} Events` : left}</span>,
