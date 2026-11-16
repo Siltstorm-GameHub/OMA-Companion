@@ -36,7 +36,9 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
           </Link>
         )}
       </div>
-      <ol className="flex items-start overflow-x-auto scrollbar-none pb-1">
+      {/* overflow-x schneidet auch senkrecht ab: Innenabstand, damit Avatar-Ring (oben) und
+          Datum am Rand (breiter als der Punkt) nicht angeschnitten werden */}
+      <ol className="flex items-start overflow-x-auto scrollbar-none pt-1 pb-1 px-2 -mx-2">
         {events.map((e, i) => {
           const last = i === events.length - 1;
           const lineDone = e.state === "done" && events[i + 1]?.state === "done";
