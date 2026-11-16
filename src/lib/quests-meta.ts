@@ -12,6 +12,28 @@ export type QuestType =
   | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
   | "JOB_CLAIM" | "BATTLE_CARD_DUEL" | "COMMUNITY_JOB_VOTE" | "GAME_SWIPE";
 
+/**
+ * Was man für eine Quest tun kann: Los-Button + "So zählt's" — EINE Quelle für die Quests-Seite
+ * (statt einer separaten, schnell veraltenden Infobox). href "discord" = Discord-Server öffnen
+ * (löst die Seite mit DISCORD_GUILD_ID auf). Abgeschaffte Typen haben keine Aktion.
+ */
+export const QUEST_ACTIONS: Partial<Record<QuestType, { label: string; href: string; counts: string }>> = {
+  VOICE_MINUTES:      { label: "Discord",   href: "discord",            counts: "Minuten werden beim Verlassen des Sprachkanals gezählt." },
+  MESSAGES:           { label: "Discord",   href: "discord",            counts: "Jede Nachricht in den Textkanälen des Servers zählt." },
+  EVENT_ATTEND:       { label: "Anmelden",  href: "/events",            counts: "Zählt, sobald du dich für ein Event anmeldest." },
+  POLL_VOTE:          { label: "Abstimmen", href: "/events",            counts: "Zählt bei deiner ersten Stimme in einer Event-Abstimmung." },
+  DAILY_SPIN:         { label: "Drehen",    href: "/shop#gluecksrad",   counts: "Zählt bei jedem täglichen Dreh am Glücksrad im Shop." },
+  PREDICTION_MADE:    { label: "Tippen",    href: "/events",            counts: "Zählt bei deiner ersten Sieger-Vorhersage zu einem Event." },
+  GAME_SWIPE:         { label: "Swipen",    href: "/spiele",            counts: "Zählt bei deiner ersten Entscheidung zu einem Spiel in OMA GameSwipe." },
+  COMMUNITY_JOB_VOTE: { label: "Bewerten",  href: "/community-board",   counts: "Zählt, wenn du Beiträge aus den Community-Jobs bewertest." },
+};
+
+/** Mengen-Quests, bei denen eine Tagesrate ("~15 Min pro Tag") hilft */
+export const QUEST_PACED: Partial<Record<QuestType, { unit: string }>> = {
+  VOICE_MINUTES: { unit: "Min" },
+  MESSAGES: { unit: "Nachrichten" },
+};
+
 export const QUEST_TYPE_META: Record<
   QuestType,
   { label: string; unit: string; icon: string; color: string; bar: string; bg: string }

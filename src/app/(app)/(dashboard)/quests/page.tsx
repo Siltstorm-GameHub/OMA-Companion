@@ -1,16 +1,30 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "@/components/icons";
+import { QUEST_ACTIONS, QUEST_PACED } from "@/lib/quests-meta";
+import { CheckCircle2, ChevronDown, ChevronRight, Scroll } from "@/components/icons";
+import CoinIcon from "@/components/CoinIcon";
 import { EmptyState } from "@/components/EmptyState";
 import QuestRegenerateButton from "./QuestRegenerateButton";
-import { getBerlinDateParts } from "@/lib/time";
+import { formatBerlinDate, getBerlinDateParts } from "@/lib/time";
+import { spinDateKey } from "@/lib/daily-spin";
+import { getSwipeSummary } from "@/lib/games/deck";
+import { dailyRate, questCoins, questRatio, sortOpenQuests } from "@/lib/quest-view";
 
 const MONTH_NAMES = [
   "Januar","Februar","März","April","Mai","Juni",
   "Juli","August","September","Oktober","November","Dezember",
 ];
+
+type QuestWithProgress = { id: string; title: string; description: string; type: string; target: number; reward: number; progress: { current: number; completed: boolean }[] };
+
+const toRow = (q: QuestWithProgress) => ({
+  ...q,
+  current: Math.min(q.progress[0]?.current ?? 0, q.target),
+  completed: q.progress[0]?.completed ?? false,
+});
 
 export default async function QuestsPage() {
   const me = await getSessionUser();
@@ -18,15 +32,19 @@ export default async function QuestsPage() {
   const userId = me.id;
   const isStaff = me.role === "admin" || me.role === "moderator";
 
-  const nowParts = getBerlinDateParts();
+  const now = new Date();
+  const nowParts = getBerlinDateParts(now);
   const month = nowParts.month;
   const year  = nowParts.year;
 
   // Letzter Tag des Monats (UTC-Kalenderarithmetik ist zeitzonenunabhängig für reine Tageszahlen).
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const daysLeft    = daysInMonth - nowParts.day;
+  const daysLeft    = daysInMonth - nowParts.day;       // ohne heute → "neue Quests in X Tagen"
+  const daysToGo    = daysLeft + 1;                     // inkl. heute → Tagesrate
 
-  const [, currentQuests, historyQuests] = await Promise.all([
+  const visibleEvent = { hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] };
+
+  const [, currentQuests, historyQuests, spunToday, swipe, nextEvent, nextTournament, activePoll] = await Promise.all([
     generateMonthlyQuests(month, year),
     prisma.quest.findMany({
       where: { month, year },
@@ -43,249 +61,220 @@ export default async function QuestsPage() {
       },
       include: { progress: { where: { userId } } },
       orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: 9,
+      take: 40,
+    }),
+    // ── Hinweise "wo geht das gerade" ──
+    prisma.dailySpin.findUnique({ where: { userId_date: { userId, date: spinDateKey() } }, select: { id: true } }).then(Boolean).catch(() => false),
+    getSwipeSummary(userId).catch(() => null),
+    prisma.event.findFirst({
+      where: { ...visibleEvent, status: "open", startAt: { gt: now }, registrations: { none: { userId } } },
+      orderBy: { startAt: "asc" },
+      select: { id: true, title: true, startAt: true },
+    }),
+    prisma.event.findFirst({
+      where: { ...visibleEvent, type: "tournament", status: { in: ["open", "closed"] }, startAt: { gt: now } },
+      orderBy: { startAt: "asc" },
+      select: { id: true, title: true, startAt: true },
+    }),
+    prisma.eventPoll.findFirst({
+      where: { startAt: { lte: now }, endAt: { gt: now }, event: { hidden: false }, votes: { none: { voterId: userId } } },
+      orderBy: { endAt: "asc" },
+      select: { eventId: true, label: true, event: { select: { title: true } } },
     }),
   ]);
 
-  const completedCount = currentQuests.filter(q => q.progress[0]?.completed).length;
-  const allDone        = completedCount === currentQuests.length && currentQuests.length > 0;
+  const rows = currentQuests.map(toRow);
+  const open = sortOpenQuests(rows);
+  const done = rows.filter(q => q.completed);
+  const coins = questCoins(rows);
+  const allDone = rows.length > 0 && done.length === rows.length;
+  const nextMonthName = MONTH_NAMES[month % 12];
 
-  const historyByMonth = new Map<string, typeof historyQuests>();
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const discordUrl = guildId ? `https://discord.com/channels/${guildId}` : null;
+  const when = (d: Date) => formatBerlinDate(d, { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  /** Ziel des Los-Buttons + Hinweis aus echten Daten */
+  const actionFor = (type: QuestType): { label: string; href: string; external: boolean; hint: string | null } | null => {
+    const a = QUEST_ACTIONS[type];
+    if (!a) return null;
+    switch (type) {
+      case "DAILY_SPIN":
+        return { label: a.label, href: a.href, external: false, hint: spunToday ? "heute schon gedreht" : "heute noch nicht gedreht" };
+      case "GAME_SWIPE":
+        return { label: a.label, href: a.href, external: false, hint: swipe && swipe.open > 0 ? `${swipe.open} ${swipe.open === 1 ? "Karte wartet" : "Karten warten"}` : null };
+      case "EVENT_ATTEND":
+        return nextEvent
+          ? { label: a.label, href: `/tournament/${nextEvent.id}`, external: false, hint: `nächstes: ${nextEvent.title}, ${when(nextEvent.startAt)}` }
+          : { label: a.label, href: a.href, external: false, hint: null };
+      case "PREDICTION_MADE":
+        return nextTournament
+          ? { label: a.label, href: `/tournament/${nextTournament.id}`, external: false, hint: `z.B. ${nextTournament.title}` }
+          : { label: a.label, href: a.href, external: false, hint: "gerade kein Turnier zum Tippen" };
+      case "POLL_VOTE":
+        return activePoll
+          ? { label: a.label, href: `/tournament/${activePoll.eventId}#abstimmung`, external: false, hint: `läuft: ${activePoll.label} · ${activePoll.event.title}` }
+          : { label: a.label, href: a.href, external: false, hint: "gerade läuft keine Abstimmung" };
+      default:
+        if (a.href === "discord") return discordUrl ? { label: a.label, href: discordUrl, external: true, hint: null } : null;
+        return { label: a.label, href: a.href, external: false, hint: null };
+    }
+  };
+
+  // Verlauf: ein Monat pro Zeile
+  const historyByMonth = new Map<string, ReturnType<typeof toRow>[]>();
   for (const q of historyQuests) {
     const key = `${q.year}-${q.month}`;
     if (!historyByMonth.has(key)) historyByMonth.set(key, []);
-    historyByMonth.get(key)!.push(q);
+    historyByMonth.get(key)!.push(toRow(q));
   }
 
+  const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
+
   return (
-    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-2xl mx-auto space-y-6 animate-fade-in">
+    <div className="px-4 pb-6 pt-0 sm:p-6 max-w-3xl mx-auto space-y-5 animate-fade-in">
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <Scroll className="w-4 h-4 text-amber-400" />
+      {/* ── Kopf: Fortschritt + Münzen ── */}
+      <section aria-label="Quest-Fortschritt" className="glass rounded-2xl p-4 sm:p-5">
+        <div className="flex items-start gap-4 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <div className="flex items-center gap-2">
+              <Scroll className="w-5 h-5 text-amber-400" />
+              <h1 className="font-display text-2xl font-black text-white tracking-tight">Quests im {MONTH_NAMES[month - 1]}</h1>
             </div>
-            <h1 className="font-display text-2xl font-black text-white tracking-tight">Quests</h1>
+            <p className="text-sm text-gray-400 mt-1">
+              <span className={allDone ? "text-emerald-400 font-semibold" : "text-white font-semibold"}>{done.length} von {rows.length}</span> erledigt
+              <span className="text-gray-600"> · </span>
+              neue Quests {daysLeft === 0 ? "morgen" : `in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`}
+            </p>
+            <div className="mt-2.5 h-2 max-w-sm rounded-full bg-white/[0.06] overflow-hidden">
+              <div className={`h-full rounded-full ${allDone ? "bg-emerald-400" : "bg-teal-400"}`} style={{ width: `${rows.length ? (done.length / rows.length) * 100 : 0}%` }} />
+            </div>
           </div>
-          <div className="flex items-center gap-3 mt-1.5 flex-wrap ml-10">
-            <span className={`text-sm ${allDone ? "text-emerald-400 font-medium" : "text-gray-500"}`}>
-              {completedCount} von {currentQuests.length} abgeschlossen
-            </span>
-            <span className="text-gray-700">·</span>
-            <span className="flex items-center gap-1 text-xs text-gray-600">
-              <Clock className="w-3 h-3" />
-              Reset in {daysLeft} {daysLeft === 1 ? "Tag" : "Tagen"}
-            </span>
-            <span className="text-xs text-gray-700">{MONTH_NAMES[month - 1]} {year}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Progress ring */}
-          <div className="relative w-16 h-16">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
-              <circle
-                cx="18" cy="18" r="15.9" fill="none"
-                stroke={allDone ? "#10b981" : "#14b8a6"}
-                strokeWidth="2.5"
-                strokeDasharray={`${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0} 100`}
-                strokeLinecap="round"
-                className="transition-all duration-700"
-                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #14b8a6)" }}
-              />
-            </svg>
-            <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-              <span className="text-sm font-black text-white">{completedCount}/{currentQuests.length}</span>
-              <span className="text-[8px] text-gray-600 mt-0.5">Quests</span>
-            </span>
+          <div className="text-right">
+            <p className="flex items-center justify-end gap-1 text-xl font-black tabular-nums text-amber-400">
+              <CoinIcon size={16} />{coins.earned.toLocaleString("de-DE")}
+              <span className="text-sm font-semibold text-gray-500">/ {coins.total.toLocaleString("de-DE")}</span>
+            </p>
+            <p className="text-[11px] text-gray-500 mt-0.5">Münzen verdient</p>
           </div>
           {isStaff && <QuestRegenerateButton />}
         </div>
-      </div>
+        {allDone && (
+          <p className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20 px-3 py-2 text-sm text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> Alles erledigt. Neue Quests gibt es am 1. {nextMonthName}.
+          </p>
+        )}
+      </section>
 
-      {/* "Alle abgeschlossen"-Banner */}
-      {allDone && (
-        <div className="flex items-center gap-3 card-cut surface p-4" style={{ borderColor: "rgba(16,185,129,0.20)", background: "rgba(16,185,129,0.05)" }}>
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-300">Alle Quests diesen Monat abgeschlossen! 🎉</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
-              Neue Quests erscheinen am 1. {MONTH_NAMES[month % 12]}
-            </p>
-          </div>
-        </div>
+      {rows.length === 0 && (
+        <EmptyState
+          type="quests"
+          title="Keine Quests verfügbar"
+          description="Quests werden am Anfang jeden Monats erstellt. Schau später noch mal vorbei."
+        />
       )}
 
-      {/* ── Aktuelle Quest-Karten ─────────────────────────────────── */}
-      <div className="space-y-3">
-        {currentQuests.length === 0 && (
-          <EmptyState
-            type="quests"
-            title="Keine Quests verfügbar"
-            description="Quests werden am Anfang jeden Monats generiert. Schau später nochmal vorbei!"
-          />
-        )}
-        {currentQuests.map((quest, idx) => {
-          const type      = quest.type as QuestType;
-          const meta      = QUEST_TYPE_META[type];
-          const progress  = quest.progress[0];
-          const current   = Math.min(progress?.current ?? 0, quest.target);
-          const completed = progress?.completed ?? false;
-          const pct       = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
-
-          return (
-            <div key={quest.id}
-              className={`card-cut surface card-hover relative overflow-hidden animate-slide-up`}
-              style={{ animationDelay: `${idx * 50}ms` }}>
-
-              {completed && (
-                <div className="absolute inset-0 bg-emerald-500/[0.04] pointer-events-none" />
-              )}
-
-              <div className="relative pl-5 pr-5 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ${meta.bg} border border-white/[0.06]`}>
-                      <span className="text-xl">{meta.icon}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className={`font-semibold ${completed ? "text-emerald-300" : "text-white"}`}>
-                          {quest.title}
-                        </h3>
-                        {completed && (
-                          <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
-                            <CheckCircle2 className="w-3 h-3" /> Abgeschlossen
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-400 mt-0.5">{quest.description}</p>
-                    </div>
+      {/* ── Offen: am nächsten am Ziel zuerst, mit Los-Button ── */}
+      {open.length > 0 && (
+        <section aria-label="Offene Quests" className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+          {open.map(q => {
+            const type = q.type as QuestType;
+            const meta = QUEST_TYPE_META[type];
+            const action = actionFor(type);
+            const paced = QUEST_PACED[type];
+            const rate = paced ? dailyRate(q, daysToGo) : null;
+            const pct = Math.round(questRatio(q) * 100);
+            return (
+              <div key={q.id} className="flex items-start gap-3 px-4 py-3.5">
+                <span className="text-xl leading-none mt-0.5 shrink-0" aria-hidden>{meta?.icon ?? "📜"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{q.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    <span className="tabular-nums">{q.current}/{q.target} {meta?.unit}</span>
+                    {rate !== null && <> · <span className="text-gray-200">~{rate} {paced!.unit} pro Tag</span> bis Monatsende</>}
+                    {action?.hint && <> · <span className="text-teal-300">{action.hint}</span></>}
+                  </p>
+                  <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
                   </div>
-
-                  <div className={`shrink-0 flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border ${
-                    completed
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-white/[0.04] text-amber-400 border-white/[0.08]"
-                  }`}>
-                    {completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Trophy className="w-3.5 h-3.5" />}
-                    +{quest.reward} Münzen
-                  </div>
+                  {QUEST_ACTIONS[type] && <p className="text-[11px] text-gray-600 mt-1.5">{QUEST_ACTIONS[type]!.counts}</p>}
                 </div>
-
-                {/* Fortschrittsbalken */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-1.5 text-xs">
-                    <span className="text-gray-500">{current} / {quest.target} {meta.unit}</span>
-                    <span className={`font-semibold ${completed ? "text-emerald-400" : meta.color}`}>{pct}%</span>
-                  </div>
-                  <div className="h-2 bg-white/[0.05] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all duration-700 ${completed ? "" : "shadow-[0_0_8px_rgba(244,63,94,0.3)]"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <span className="flex items-center gap-0.5 text-xs font-bold text-amber-400 tabular-nums">+{q.reward}<CoinIcon size={12} /></span>
+                  {action && (action.external
+                    ? <a href={action.href} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-white/[0.1] bg-white/[0.05] text-gray-200 hover:bg-white/[0.1]`}>{action.label} ↗</a>
+                    : <Link href={action.href} className={`${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`}>{action.label} <ChevronRight className="w-3.5 h-3.5" /></Link>)}
                 </div>
-
-                {completed && (
-                  <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-700">
-                    <Lock className="w-3 h-3" />
-                    Für diesen Monat abgeschlossen · Münzen wurden gutgeschrieben
-                  </div>
-                )}
               </div>
+            );
+          })}
+        </section>
+      )}
+
+      {/* ── Erledigt: eingeklappt ── */}
+      {done.length > 0 && !allDone && (
+        <details className="group glass rounded-2xl overflow-hidden">
+          <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-semibold text-white">{done.length} erledigt</span>
+            <span className="text-xs text-gray-500">· +{coins.earned.toLocaleString("de-DE")} Münzen gutgeschrieben</span>
+            <ChevronDown className="w-4 h-4 text-gray-500 ml-auto transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="divide-y divide-white/[0.05] border-t border-white/[0.05]">
+            {done.map(q => (
+              <li key={q.id} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+                <span className="flex-1 min-w-0 truncate text-sm text-gray-300">{q.title}</span>
+                <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 tabular-nums">+{q.reward}<CoinIcon size={11} /></span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {allDone && (
+        <section aria-label="Erledigte Quests" className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+          {done.map(q => (
+            <div key={q.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+              <span className="flex-1 min-w-0 truncate text-sm text-gray-300">{q.title}</span>
+              <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 tabular-nums">+{q.reward}<CoinIcon size={11} /></span>
             </div>
-          );
-        })}
-      </div>
-
-      {/* ── Info-Box ──────────────────────────────────────────────── */}
-      <div className="surface p-4">
-        <p className="text-xs font-semibold text-gray-400 mb-3">So funktionieren Quests</p>
-        <ul className="space-y-2 text-xs text-gray-500">
-          {[
-            { icon: "🎙️", label: "Sprachkanal", desc: "Minuten werden beim Verlassen des Voice automatisch gezählt" },
-            { icon: "💬", label: "Nachrichten",  desc: "Jede Nachricht im Discord-Server zählt" },
-            { icon: "📅", label: "Events",       desc: "Zählt bei der Anmeldung" },
-            { icon: "🗳️", label: "Umfragen",     desc: "Zählt bei der ersten Abstimmung in einer Event-Umfrage" },
-            { icon: "🎰", label: "Glücksrad",    desc: "Zählt bei jedem täglichen Dreh im Shop" },
-            { icon: "🃏", label: "OMA GameSwipe", desc: "Zählt bei der ersten Entscheidung zu einem Spiel (am Start, würde ich holen oder nicht meins)" },
-            { icon: "🎯", label: "Vorhersagen",  desc: "Zählt bei der ersten Sieger-Vorhersage zu einem Event" },
-          ].map(item => (
-            <li key={item.label} className="flex items-start gap-2">
-              <span className="shrink-0">{item.icon}</span>
-              <span><span className="text-gray-400">{item.label}:</span> {item.desc}</span>
-            </li>
           ))}
-        </ul>
-        <p className="mt-3 text-xs text-gray-600 flex items-center gap-1.5 border-t border-white/[0.04] pt-3">
-          <Lock className="w-3 h-3" />
-          Jede Quest ist nur einmal pro Monat abschließbar. Am 1. des Monats gibt es neue Quests.
-        </p>
-      </div>
+        </section>
+      )}
 
-      {/* ── Verlauf vergangener Monate ────────────────────────────── */}
+      {/* ── Verlauf: ein Monat pro Zeile ── */}
       {historyByMonth.size > 0 && (
-        <div>
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-            Vergangene Monate
-          </h2>
-          <div className="space-y-3">
+        <section aria-label="Vergangene Monate" className="space-y-2">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Vergangene Monate</h2>
+          <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
             {Array.from(historyByMonth.entries()).map(([key, quests]) => {
-              const [y, m]        = key.split("-").map(Number);
-              const monthCompleted = quests.filter(q => q.progress[0]?.completed).length;
-              const totalPts       = quests.reduce((sum, q) => sum + (q.progress[0]?.completed ? q.reward : 0), 0);
-
+              const [y, m] = key.split("-").map(Number);
+              const monthDone = quests.filter(q => q.completed).length;
+              const monthCoins = questCoins(quests).earned;
               return (
-                <div key={key} className="surface overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">{MONTH_NAMES[m - 1]} {y}</span>
-                      <span className="text-xs text-gray-600">{monthCompleted}/{quests.length} abgeschlossen</span>
-                    </div>
-                    {totalPts > 0 && (
-                      <span className="text-xs font-semibold text-amber-400">+{totalPts} Münzen</span>
-                    )}
-                  </div>
-                  <div className="divide-y divide-white/[0.04]">
-                    {quests.map(quest => {
-                      const meta    = QUEST_TYPE_META[quest.type as QuestType];
-                      const p       = quest.progress[0];
-                      const done    = p?.completed ?? false;
-                      const current = Math.min(p?.current ?? 0, quest.target);
-                      const pct     = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
-
-                      return (
-                        <div key={quest.id} className={`flex items-center gap-3 px-4 py-3 ${!done ? "opacity-40" : ""}`}>
-                          <span className="text-lg shrink-0">{meta.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-white truncate">{quest.title}</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden max-w-24">
-                                <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar}`} style={{ width: `${pct}%` }} />
-                              </div>
-                              <span className="text-[10px] text-gray-600">{current}/{quest.target}</span>
-                            </div>
-                          </div>
-                          {done ? (
-                            <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold shrink-0">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> +{quest.reward} Münzen
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-600 shrink-0">Nicht abgeschlossen</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <details key={key} className="group">
+                  <summary className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-white/[0.02]">
+                    <span className="text-sm font-medium text-white w-28">{MONTH_NAMES[m - 1]} {y}</span>
+                    <span className="text-xs text-gray-500 tabular-nums">{monthDone}/{quests.length} erledigt</span>
+                    {monthCoins > 0 && <span className="text-xs font-semibold text-amber-400 tabular-nums">+{monthCoins.toLocaleString("de-DE")}</span>}
+                    <ChevronDown className="w-4 h-4 text-gray-600 ml-auto transition-transform group-open:rotate-180" />
+                  </summary>
+                  <ul className="pb-2">
+                    {quests.map(q => (
+                      <li key={q.id} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${q.completed ? "text-gray-300" : "text-gray-600"}`}>
+                        <span aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+                        <span className="flex-1 min-w-0 truncate">{q.title}</span>
+                        <span className="tabular-nums">{q.completed ? `+${q.reward}` : `${q.current}/${q.target}`}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

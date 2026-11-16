@@ -122,8 +122,24 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
   const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
   const visibleNominations = nominations.filter((n) => !excludedIds.has(n.id));
 
+  const myTitle = votedId ? (titles[votedId] ?? "Clip") : null;
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      {/* Status: hast du schon abgestimmt? */}
+      <div className={`rounded-xl border px-3.5 py-2.5 text-sm ${
+        !isLoggedIn ? "border-white/[0.08] bg-white/[0.03] text-gray-400"
+          : hasVoted ? "border-[#9146ff]/30 bg-[#9146ff]/[0.07] text-purple-200"
+            : "border-violet-400/40 bg-violet-500/10 text-violet-100"
+      }`}>
+        {!isLoggedIn
+          ? "Melde dich an, um abzustimmen."
+          : hasVoted
+            ? <><Check className="inline w-4 h-4 -mt-0.5 mr-1" />Deine Stimme: <span className="font-semibold">{myTitle}</span> · du kannst sie bis zum Ende noch ändern.</>
+            : <>Du hast noch nicht abgestimmt. Wähl deinen Favoriten, die Ergebnisse siehst du danach.</>}
+      </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {visibleNominations.map((nom) => {
         const isMyVote = votedId === nom.id;
         const credit = clipCredit(nom);
@@ -234,12 +250,13 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                     : "bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white"
                 } disabled:opacity-50`}
               >
-                {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : "Abstimmen"}
+                {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : hasVoted ? "Stimme ändern" : "Wählen"}
               </button>
             </div>
           </div>
         );
       })}
+    </div>
       {ConfirmDialogElement}
     </div>
   );

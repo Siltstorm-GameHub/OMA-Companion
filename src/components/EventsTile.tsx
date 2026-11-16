@@ -217,7 +217,17 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       key: "period",
       href: periodEvents.length === 1 ? `/tournament/${first.id}` : "/events",
       lead: <span className="font-semibold text-teal-300">läuft</span>,
-      label: <>{periodEvents.map(e => e.title).join(" · ")}</>,
+      // Jeder Name als eigener Chip — bei mehreren Events auf einen Blick getrennt (max. 2 + "+N")
+      label: (
+        <span className="flex items-center gap-1.5 min-w-0">
+          {periodEvents.slice(0, 2).map(e => (
+            <span key={e.id} className={`truncate rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-0.5 ${periodEvents.length > 1 ? "max-w-[48%]" : ""}`}>
+              {e.title}
+            </span>
+          ))}
+          {periodEvents.length > 2 && <span className="shrink-0 text-gray-500">+{periodEvents.length - 2}</span>}
+        </span>
+      ),
       hint: <span className="text-gray-500">{periodEvents.length > 1 ? `${periodEvents.length} Events` : left}</span>,
     };
   })() : null;

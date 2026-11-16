@@ -2,25 +2,26 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Clapperboard } from "@/components/icons";
+import { Trophy, Clapperboard, ChevronRight } from "@/components/icons";
 import ClipVotingClient from "../clip-des-monats/ClipVotingClient";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
-import CountdownBadge from "@/components/CountdownBadge";
+import ClipsNav from "@/components/clips/ClipsNav";
+import ClipVoteHeader from "@/components/clips/ClipVoteHeader";
+import { seededShuffle } from "@/lib/clip-order";
 
+/**
+ * Clips → Reiter "Clip des Jahres": laufende Jahreswahl zuerst (alle Monatssieger Dez–Nov),
+ * darunter der letzte Clip des Jahres.
+ */
 export default async function ClipDesJahresPage() {
   const session = await auth();
   const userId = session?.user?.id ?? null;
   const embedParent = ((await headers()).get("host") ?? "localhost").split(":")[0];
 
-  const activeContest = await prisma.yearlyClipContest.findFirst({
-    where: { status: "voting" },
-    orderBy: { year: "desc" },
-  });
-
-  const finishedContest = await prisma.yearlyClipContest.findFirst({
-    where: { status: "finished" },
-    orderBy: { year: "desc" },
-  });
+  const [activeContest, finishedContest] = await Promise.all([
+    prisma.yearlyClipContest.findFirst({ where: { status: "voting" }, orderBy: { year: "desc" } }),
+    prisma.yearlyClipContest.findFirst({ where: { status: "finished" }, orderBy: { year: "desc" } }),
+  ]);
 
   const [activeNominations, finishedWinners] = await Promise.all([
     activeContest
@@ -55,74 +56,27 @@ export default async function ClipDesJahresPage() {
     }
   }
 
+  const nominations = activeContest ? seededShuffle(activeNominations, `${userId ?? "gast"}:${activeContest.id}`) : [];
+
   return (
-    <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <ClipsNav active="jahr" />
 
-      {/* ── Clip des Jahres (letzte Wahl) ──────────────────────────────── */}
-      {finishedWinners.length > 0 && finishedContest && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold text-white">Clip des Jahres {finishedContest.year}</h2>
-            {finishedWinners.length > 1 && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20">
-                Gleichstand · {finishedWinners.length} Gewinner
-              </span>
-            )}
-          </div>
-          <div className={`grid gap-4 ${finishedWinners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-            {finishedWinners.map((winner) => (
-              <ClipWinnerCard
-                key={winner.id}
-                winner={winner}
-                embedParent={embedParent}
-                rewardCoins={finishedContest.rewardCoins}
-                badgeLabel="Clip des Jahres"
-              />
-            ))}
-          </div>
-          <Link href="/clip-galerie" className="inline-block text-sm text-gray-500 hover:text-gray-300 transition-colors">
-            Zur Clip-Galerie →
-          </Link>
-        </section>
-      )}
-
-      {/* ── Laufende Abstimmung ────────────────────────────────────────── */}
+      {/* ── Laufende Jahreswahl ── */}
       {activeContest ? (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-lg font-bold text-white">Clip des Jahres {activeContest.year}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {activeNominations.length} Clips zur Auswahl — alle Clips des Monats aus Dezember {activeContest.year - 1} bis November {activeContest.year}
-              </p>
-            </div>
-            <CountdownBadge endsAt={activeContest.votingEndsAt} />
-          </div>
-
-          {(activeContest.participationCoins > 0 || activeContest.rewardCoins > 0) && (
-            <div className={`glass rounded-2xl p-4 grid ${
-              activeContest.participationCoins > 0 && activeContest.rewardCoins > 0 ? "grid-cols-2 divide-x divide-white/[0.06]" : "grid-cols-1"
-            }`}>
-              {activeContest.participationCoins > 0 && (
-                <div className="text-center px-2">
-                  <p className="text-2xl font-black text-[#9146ff] tabular-nums">{activeContest.participationCoins}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Münzen fürs Abstimmen</p>
-                </div>
-              )}
-              {activeContest.rewardCoins > 0 && (
-                <div className="text-center px-2">
-                  <p className="text-2xl font-black text-amber-400 tabular-nums">{activeContest.rewardCoins}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Münzen für den Gewinner</p>
-                </div>
-              )}
-            </div>
-          )}
-
+        <section aria-label="Abstimmung" className="space-y-4">
+          <ClipVoteHeader
+            title={`Clip des Jahres ${activeContest.year}`}
+            subtitle={`Zur Wahl stehen alle Clips des Monats von Dezember ${activeContest.year - 1} bis November ${activeContest.year}.`}
+            clipCount={nominations.length}
+            endsAt={activeContest.votingEndsAt}
+            participationCoins={activeContest.participationCoins}
+            rewardCoins={activeContest.rewardCoins}
+          />
           <ClipVotingClient
             contestId={activeContest.id}
             voteEndpoint="/api/clip-of-year/vote"
-            nominations={activeNominations.map((n) => ({
+            nominations={nominations.map((n) => ({
               id: n.id,
               clipUrl: n.clipUrl,
               thumbnailUrl: n.thumbnailUrl,
@@ -140,11 +94,37 @@ export default async function ClipDesJahresPage() {
           />
         </section>
       ) : (
-        <div className="glass rounded-2xl p-8 text-center text-gray-500">
+        <div className="glass rounded-2xl p-6 text-center text-gray-400">
           <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Aktuell läuft keine Abstimmung.</p>
-          <p className="text-sm mt-1">Die nächste Wahl zum Clip des Jahres startet im Dezember, sobald die Abstimmung zum Clip des Monats November beendet ist.</p>
+          <p>Gerade läuft keine Wahl zum Clip des Jahres.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Sie startet im Dezember, sobald der Clip des Monats November feststeht. Zur Wahl stehen alle Monatssieger des Jahres.
+          </p>
+          <Link href="/clip-galerie" className="mt-3 inline-flex items-center gap-1 text-sm text-violet-300 hover:text-violet-200">
+            Alle Monatssieger in der Galerie <ChevronRight className="w-4 h-4" />
+          </Link>
         </div>
+      )}
+
+      {/* ── Letzter Clip des Jahres ── */}
+      {finishedWinners.length > 0 && finishedContest && (
+        <section aria-label="Letzter Clip des Jahres" className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Trophy className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-bold text-white">Clip des Jahres {finishedContest.year}</h2>
+            {finishedWinners.length > 1 && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20">
+                Gleichstand · {finishedWinners.length} Sieger
+              </span>
+            )}
+          </div>
+          <div className={`grid gap-4 ${finishedWinners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 max-w-3xl"}`}>
+            {finishedWinners.map((winner) => (
+              <ClipWinnerCard key={winner.id} winner={winner} embedParent={embedParent}
+                rewardCoins={finishedContest.rewardCoins} badgeLabel="Clip des Jahres" />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { Images } from "@/components/icons";
+import { Images, Trophy } from "@/components/icons";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
+import ClipsNav from "@/components/clips/ClipsNav";
+import { clipYearOf } from "@/lib/clip-order";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -16,101 +18,83 @@ type Nomination = {
   partnerTwitchLogin: string | null;
 };
 
-type GalleryEntry = {
-  key: string;
-  sortDate: Date;
-  label: string;
-  badgeLabel: string;
-  rewardCoins: number;
-  winnerIds: string[];
-};
-
+/**
+ * Clips → Reiter "Galerie": nach Clip-Jahren (Dez–Nov) gruppiert. Oben im Jahr der Clip des Jahres
+ * groß, darunter ALLE Monatssieger als Raster — Monatssieger bleiben dauerhaft sichtbar (früher
+ * verschwanden sie, sobald der Clip des Jahres gewählt war).
+ */
 export default async function ClipGaleriePage() {
   const embedParent = ((await headers()).get("host") ?? "localhost").split(":")[0];
 
   const [finishedYearly, finishedMonthly] = await Promise.all([
-    prisma.yearlyClipContest.findMany({
-      where: { status: "finished" },
-      orderBy: { year: "desc" },
-    }),
-    prisma.monthlyClipContest.findMany({
-      where: { status: "finished" },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-    }),
+    prisma.yearlyClipContest.findMany({ where: { status: "finished" }, orderBy: { year: "desc" } }),
+    prisma.monthlyClipContest.findMany({ where: { status: "finished" }, orderBy: [{ year: "desc" }, { month: "desc" }] }),
   ]);
 
-  // Ein Monatssieger verschwindet aus der Galerie, sobald die Clip-des-Jahres-Wahl
-  // für seinen Zeitraum abgeschlossen ist (Dez(Y-1)–Nov(Y) → Jahr Y).
-  const finishedYearlyYears = new Set(finishedYearly.map((c) => c.year));
-  const visibleMonthly = finishedMonthly.filter((c) => {
-    const coveringYear = c.month === 12 ? c.year + 1 : c.year;
-    return !finishedYearlyYears.has(coveringYear);
-  });
-
-  const entries: GalleryEntry[] = [
-    ...finishedYearly.map((c): GalleryEntry => ({
-      key: `year-${c.id}`,
-      sortDate: new Date(c.year, 10, 30),
-      label: `Clip des Jahres ${c.year}`,
-      badgeLabel: "Clip des Jahres",
-      rewardCoins: c.rewardCoins,
-      winnerIds: c.winnerNominationIds,
-    })),
-    ...visibleMonthly.map((c): GalleryEntry => ({
-      key: `month-${c.id}`,
-      sortDate: c.periodEnd,
-      label: `Clip des Monats – ${MONTH_NAMES[c.month - 1]} ${c.year}`,
-      badgeLabel: "Gewinner",
-      rewardCoins: c.rewardCoins,
-      winnerIds: c.winnerNominationIds,
-    })),
-  ].sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
-
-  const allWinnerIds = [...new Set(entries.flatMap((e) => e.winnerIds))];
-  const nominations = await prisma.clipNomination.findMany({
-    where: { id: { in: allWinnerIds } },
-    include: { submittedBy: { select: { name: true, username: true } } },
-  });
+  const allWinnerIds = [...new Set([...finishedYearly, ...finishedMonthly].flatMap((c) => c.winnerNominationIds))];
+  const nominations = allWinnerIds.length
+    ? await prisma.clipNomination.findMany({
+        where: { id: { in: allWinnerIds } },
+        include: { submittedBy: { select: { name: true, username: true } } },
+      })
+    : [];
   const nominationById = new Map<string, Nomination>(nominations.map((n) => [n.id, n]));
+  const resolve = (ids: string[]) => ids.map((id) => nominationById.get(id)).filter((n): n is Nomination => !!n);
+
+  // Clip-Jahre: Jahressieger + Monatssieger (Dezember zählt zum Folgejahr)
+  const years = new Map<number, { yearly: (typeof finishedYearly)[number] | null; months: (typeof finishedMonthly)[number][] }>();
+  for (const y of finishedYearly) years.set(y.year, { yearly: y, months: [] });
+  for (const m of finishedMonthly) {
+    const cy = clipYearOf(m.month, m.year);
+    if (!years.has(cy)) years.set(cy, { yearly: null, months: [] });
+    years.get(cy)!.months.push(m);
+  }
+  const sortedYears = [...years.entries()].sort((a, b) => b[0] - a[0]);
 
   return (
-    <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center gap-2">
-        <Images className="w-5 h-5 text-amber-400" />
-        <h1 className="text-lg font-bold text-white">Clip-Galerie</h1>
-      </div>
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <ClipsNav active="galerie" />
 
-      {entries.length === 0 && (
-        <div className="glass rounded-2xl p-8 text-center text-gray-500">
+      {sortedYears.length === 0 && (
+        <div className="glass rounded-2xl p-8 text-center text-gray-400">
           <Images className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Noch keine Gewinner-Clips vorhanden.</p>
+          <p>Noch keine Sieger-Clips.</p>
         </div>
       )}
 
-      {entries.map((entry) => {
-        const winners = entry.winnerIds.map((id) => nominationById.get(id)).filter((n): n is Nomination => !!n);
-        if (winners.length === 0) return null;
+      {sortedYears.map(([year, { yearly, months }]) => {
+        const yearlyWinners = yearly ? resolve(yearly.winnerNominationIds) : [];
         return (
-          <section key={entry.key} className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white">{entry.label}</h2>
-              {winners.length > 1 && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20">
-                  Gleichstand · {winners.length} Gewinner
-                </span>
-              )}
-            </div>
-            <div className={`grid gap-4 ${winners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-              {winners.map((winner) => (
-                <ClipWinnerCard
-                  key={winner.id}
-                  winner={winner}
-                  embedParent={embedParent}
-                  rewardCoins={entry.rewardCoins}
-                  badgeLabel={entry.badgeLabel}
-                />
-              ))}
-            </div>
+          <section key={year} aria-label={`Clip-Jahr ${year}`} className="space-y-4">
+            <h2 className="flex items-center gap-3 text-sm font-semibold text-gray-300">
+              {year} <span className="h-px flex-1 bg-white/[0.06]" />
+            </h2>
+
+            {yearlyWinners.length > 0 && yearly && (
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+                  <Trophy className="w-3.5 h-3.5" /> Clip des Jahres {year}
+                  {yearlyWinners.length > 1 && <span className="font-normal text-amber-300/70">· Gleichstand</span>}
+                </p>
+                <div className={`grid gap-4 ${yearlyWinners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 lg:max-w-3xl"}`}>
+                  {yearlyWinners.map((w) => (
+                    <ClipWinnerCard key={w.id} winner={w} embedParent={embedParent} rewardCoins={yearly.rewardCoins} badgeLabel="Clip des Jahres" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {months.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-400">Clips des Monats</p>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {months.flatMap((m) => resolve(m.winnerNominationIds).map((w) => (
+                    <ClipWinnerCard key={`${m.id}-${w.id}`} winner={w} embedParent={embedParent} rewardCoins={m.rewardCoins}
+                      badgeLabel={`${MONTH_NAMES[m.month - 1]} ${m.year}`} />
+                  )))}
+                </div>
+              </div>
+            )}
           </section>
         );
       })}

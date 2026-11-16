@@ -161,8 +161,8 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
       media={media}
       main={main}
       rows={rows}
-      placeholderRow={{ label: "Clip einreichen", href: "/clip-des-monats" }}
-      footer={{ label: showVoting ? "Alle Clips ansehen" : "Clip einreichen", href: "/clip-des-monats" }}
+      placeholderRow={{ label: "Clip einreichen", href: "/clip-des-monats#einreichen" }}
+      footer={{ label: showVoting ? "Alle Clips ansehen" : "Clip einreichen", href: showVoting ? "/clip-des-monats" : "/clip-des-monats#einreichen" }}
     />
   );
 }
