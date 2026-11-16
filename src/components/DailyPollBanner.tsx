@@ -1,44 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { Vote as VoteIcon, X, ExternalLink, Loader2, Undo2 } from "@/components/icons";
+import { Vote as VoteIcon, X, ExternalLink, Loader2, Undo2, Check, ChevronRight } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
 import { NewContentPing } from "@/components/NewContentPing";
+import type { DailyPollView as Poll, PollGameSuggestion as GameSuggestion } from "@/lib/daily-poll";
 
-type PollOption = { id: string; label: string; gameName: string | null; steamAppId: number | null };
-type GameSuggestion = { name: string; appId: number | null };
-type GameSuggestionCount = GameSuggestion & { count: number };
-
-type Poll = {
-  id: string;
-  title: string;
-  question: string;
-  endDate: string;
-  allowMultiple: boolean;
-  allowFreeText: boolean;
-  freeTextGameMode: boolean;
-  rewardCoins: number;
-  ended: boolean;
-  options: PollOption[];
-  hasVoted: boolean;
-  myOptionIds: string[];
-  myFreeText: string | null;
-  myFreeTextGames: GameSuggestion[];
-  results: { optionCounts: Record<string, number>; totalVotes: number; freeTextAnswers: string[]; gameSuggestions: GameSuggestionCount[] } | null;
-};
+/** So viele Freitext-Antworten / Spielvorschläge stehen sofort da, der Rest per "Alle anzeigen". */
+const FREE_TEXT_PREVIEW = 3;
+const GAME_SUGGESTION_PREVIEW = 5;
 
 function coverUrl(appId: number) {
   return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/capsule_616x353.jpg`;
 }
 
-async function refetchPoll(id: string): Promise<Poll | null> {
-  const fresh = await fetch("/api/daily-poll/active").then(r => r.json()) as Poll[];
-  return fresh.find(p => p.id === id) ?? null;
+function steamUrl(appId: number) {
+  return `https://store.steampowered.com/app/${appId}`;
 }
 
-function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted: (p: Poll) => void; onDismiss: () => void; insetLeft: boolean }) {
+/** Ergebnisbalken + Zahlen unter einer Antwort */
+function ResultLine({ pct, count, leading, mine }: { pct: number; count: number; leading: boolean; mine: boolean }) {
+  return (
+    <div className="mt-1.5">
+      <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${leading ? "bg-amber-400" : "bg-purple-400"}`} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] text-gray-500 tabular-nums">
+        <span className={leading ? "text-amber-300 font-semibold" : ""}>{pct}%</span>
+        <span>· {count} Stimme{count === 1 ? "" : "n"}</span>
+        {leading && <span className="text-amber-300/90">· vorne</span>}
+        {mine && <span className="text-purple-300">· deine Wahl</span>}
+      </p>
+    </div>
+  );
+}
+
+/** Lange Listen (Freitext, Spielvorschläge) kürzen, aber per Klick komplett aufklappbar */
+function ShowAllToggle({ total, shown, open, onToggle }: { total: number; shown: number; open: boolean; onToggle: () => void }) {
+  if (total <= shown) return null;
+  return (
+    <button type="button" onClick={onToggle} className="text-[11px] font-medium text-purple-300 hover:text-purple-200 transition-colors">
+      {open ? "Weniger anzeigen" : `Alle ${total} anzeigen`}
+    </button>
+  );
+}
+
+function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
+  poll: Poll;
+  onVoted: (p: Poll) => void;
+  onDismiss: () => void;
+  loggedIn: boolean;
+  showEventLink: boolean;
+}) {
+  const pathname = usePathname();
   const [selected, setSelected]         = useState<string[]>(poll.myOptionIds);
   const [freeText, setFreeText]         = useState(poll.myFreeText ?? "");
   const [freeTextGames, setFreeTextGames] = useState<GameSuggestion[]>(poll.myFreeTextGames);
@@ -47,16 +65,28 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
   const [gameDraft, setGameDraft]       = useState("");
   const [submitting, setSubmitting]     = useState(false);
   const [resetting, setResetting]       = useState(false);
-  const dismissed = poll.ended; // nur nach Ablauf wegklickbar
+  const [allFreeText, setAllFreeText]   = useState(false);
+  const [allGames, setAllGames]         = useState(false);
+
+  const canVote = loggedIn && !poll.hasVoted && !poll.ended;
 
   function toggle(id: string) {
-    if (poll.hasVoted) return;
+    if (!canVote) return;
     setSelected(prev => {
       if (poll.allowMultiple) {
         return prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
       }
       return prev.includes(id) ? [] : [id];
     });
+  }
+
+  function applyServerPoll(updated: Poll | null | undefined) {
+    if (!updated) return;
+    setSelected(updated.myOptionIds);
+    setFreeText(updated.myFreeText ?? "");
+    setFreeTextGames(updated.myFreeTextGames);
+    setGameDraft("");
+    onVoted(updated);
   }
 
   async function submit() {
@@ -84,10 +114,9 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler beim Abstimmen");
-      const data = await res.json() as { rewardCoins: number };
+      const data = await res.json() as { rewardCoins: number; poll: Poll | null };
       toast.success(data.rewardCoins > 0 ? `Danke fürs Mitmachen! +${data.rewardCoins} Coins` : "Danke fürs Mitmachen!");
-      const updated = await refetchPoll(poll.id);
-      if (updated) onVoted(updated);
+      applyServerPoll(data.poll);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -100,16 +129,9 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
     try {
       const res = await fetch(`/api/daily-poll/${poll.id}/vote`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler beim Zurückziehen");
-      const data = await res.json() as { coinsDeducted: number };
+      const data = await res.json() as { coinsDeducted: number; poll: Poll | null };
       toast.success(data.coinsDeducted > 0 ? `Stimme zurückgezogen, -${data.coinsDeducted} Coins` : "Stimme zurückgezogen");
-      const updated = await refetchPoll(poll.id);
-      if (updated) {
-        setSelected(updated.myOptionIds);
-        setFreeText(updated.myFreeText ?? "");
-        setFreeTextGames(updated.myFreeTextGames);
-        setGameDraft("");
-        onVoted(updated);
-      }
+      applyServerPoll(data.poll);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -119,9 +141,43 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
 
   const showResults = poll.results !== null;
   const total = poll.results?.totalVotes ?? 0;
+  const counts = poll.results?.optionCounts ?? {};
+  const maxCount = Math.max(0, ...Object.values(counts));
+  // Umfragen ohne einziges Spielcover als Liste — Kacheln wären dort leer und unterschiedlich hoch
+  const withCovers = poll.options.some(o => o.steamAppId);
+
+  const freeTextAnswers = poll.results?.freeTextAnswers ?? [];
+  const gameSuggestions = poll.results?.gameSuggestions ?? [];
+
+  function optionState(id: string) {
+    const count = counts[id] ?? 0;
+    return {
+      count,
+      pct: showResults && total > 0 ? Math.round((count / total) * 100) : 0,
+      leading: showResults && maxCount > 0 && count === maxCount,
+      mine: selected.includes(id),
+    };
+  }
+
+  function optionProps(id: string, mine: boolean) {
+    return {
+      role: "button" as const,
+      tabIndex: canVote ? 0 : -1,
+      "aria-pressed": mine,
+      "aria-disabled": !canVote,
+      onClick: () => toggle(id),
+      onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(id); } },
+    };
+  }
+
+  const optionBorder = (mine: boolean) => ({
+    border: mine ? "1px solid rgba(168,85,247,0.6)" : "1px solid rgba(255,255,255,0.08)",
+    background: mine ? "rgba(168,85,247,0.1)" : "rgba(255,255,255,0.03)",
+    boxShadow: mine ? "0 0 0 1px rgba(168,85,247,0.25), 0 4px 16px rgba(168,85,247,0.15)" : undefined,
+  });
 
   return (
-    <div className={`${insetLeft ? "pl-11 pr-4" : "px-4"} py-3.5 rounded-xl`}
+    <div className="px-4 py-3.5 rounded-xl"
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
@@ -143,77 +199,80 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
           </p>
           <p className="text-sm font-semibold text-white leading-snug">{poll.title}</p>
           <p className="text-xs text-gray-400 mt-1 leading-relaxed">{poll.question}</p>
-          {poll.rewardCoins > 0 && !poll.hasVoted && !poll.ended && (
-            <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1">
-              <CoinIcon size={11} /> +{poll.rewardCoins} Coins fürs Abstimmen
-            </p>
-          )}
 
-          {/* Optionen */}
-          {poll.options.length > 0 && (
+          {/* Hinweise: Auswahlmodus, Belohnung, Event */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            {canVote && poll.options.length > 0 && (
+              <span className="text-gray-500">
+                {poll.allowMultiple ? "Mehrfachauswahl möglich" : "Eine Antwort wählen"}
+              </span>
+            )}
+            {poll.rewardCoins > 0 && !poll.hasVoted && !poll.ended && (
+              <span className="text-amber-400 flex items-center gap-1">
+                <CoinIcon size={11} /> +{poll.rewardCoins} Coins fürs Abstimmen
+              </span>
+            )}
+            {showEventLink && poll.event && (
+              <Link href={`/tournament/${poll.event.id}`}
+                className="inline-flex items-center gap-0.5 text-teal-300 hover:text-teal-200 transition-colors min-w-0">
+                <span className="truncate">Zum Event: {poll.event.title}</span>
+                <ChevronRight className="w-3 h-3 shrink-0" />
+              </Link>
+            )}
+          </div>
+
+          {/* Optionen mit Spielcovern: Kacheln */}
+          {poll.options.length > 0 && withCovers && (
             <div className="mt-3 grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
               {poll.options.map(o => {
-                const count = poll.results?.optionCounts[o.id] ?? 0;
-                const pct   = showResults && total > 0 ? Math.round((count / total) * 100) : 0;
-                const mine  = selected.includes(o.id);
-
+                const { count, pct, leading, mine } = optionState(o.id);
                 return (
-                  <div
-                    key={o.id}
-                    role="button"
-                    tabIndex={poll.hasVoted || poll.ended ? -1 : 0}
-                    onClick={() => toggle(o.id)}
-                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(o.id); } }}
-                    aria-disabled={poll.hasVoted || poll.ended}
-                    className={`group text-left rounded-xl overflow-hidden relative transition-all ${poll.hasVoted || poll.ended ? "cursor-default" : "cursor-pointer hover:-translate-y-0.5"}`}
-                    style={{
-                      border: mine ? "1px solid rgba(168,85,247,0.6)" : "1px solid rgba(255,255,255,0.08)",
-                      background: mine ? "rgba(168,85,247,0.1)" : "rgba(255,255,255,0.03)",
-                      boxShadow: mine ? "0 0 0 1px rgba(168,85,247,0.25), 0 4px 16px rgba(168,85,247,0.15)" : undefined,
-                    }}
-                  >
-                    {o.steamAppId ? (
+                  <div key={o.id} {...optionProps(o.id, mine)}
+                    className={`text-left rounded-xl overflow-hidden relative transition-all ${canVote ? "cursor-pointer hover:-translate-y-0.5" : "cursor-default"}`}
+                    style={optionBorder(mine)}>
+                    {o.steamAppId && (
                       <div className="relative w-full aspect-video">
                         <img src={coverUrl(o.steamAppId)} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                        {/* Auswahl-Overlay */}
+                        {mine && <div className="absolute inset-0 bg-purple-500/15 ring-2 ring-inset ring-purple-400/60" />}
                         {mine && (
-                          <div className="absolute inset-0 bg-purple-500/15 ring-2 ring-inset ring-purple-400/60" />
-                        )}
-                        {/* Ergebnis-Balken */}
-                        {showResults && (
-                          <div className="absolute bottom-0 inset-x-0 h-1 bg-black/40">
-                            <div className="h-full bg-purple-400 transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                        )}
-                        {/* Steam-Link Hover-Effekt direkt im Cover */}
-                        <a
-                          href={`https://store.steampowered.com/app/${o.steamAppId}`}
-                          target="_blank" rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          title="Zur Steam-Seite"
-                          className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/0 opacity-0 group-hover:opacity-100 group-hover:bg-black/60 transition-all duration-200"
-                        >
-                          <ExternalLink className="w-5 h-5 text-white drop-shadow scale-90 group-hover:scale-100 transition-transform duration-200" />
-                          <span className="text-[10px] font-semibold text-white/90 uppercase tracking-wide drop-shadow">Zur Steam-Seite</span>
-                        </a>
-                        {/* Kleines Steam-Icon-Badge, immer sichtbar */}
-                        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-md flex items-center justify-center bg-black/50 pointer-events-none">
-                          <ExternalLink className="w-2.5 h-2.5 text-white/80" />
-                        </div>
-                        {showResults && (
-                          <span className="absolute bottom-1.5 right-1.5 text-[10px] font-semibold text-white bg-black/60 rounded px-1.5 py-0.5 tabular-nums">
-                            {pct}%
+                          <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow">
+                            <Check className="w-3 h-3 text-white" />
                           </span>
                         )}
+                        {/* Nur dieses Icon führt zu Steam — ein Tipp aufs Cover wählt die Antwort aus */}
+                        <a href={steamUrl(o.steamAppId)} target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}
+                          title="Zur Steam-Seite" aria-label={`${o.label} auf Steam ansehen`}
+                          className="absolute top-1 right-1 w-7 h-7 rounded-md flex items-center justify-center bg-black/55 hover:bg-black/80 transition-colors">
+                          <ExternalLink className="w-3.5 h-3.5 text-white/85" />
+                        </a>
                       </div>
-                    ) : (
-                      mine && <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-purple-400" />
                     )}
                     <div className="px-2.5 py-2">
-                      <p className="text-xs text-white/90 leading-snug line-clamp-2">{o.label}</p>
-                      {showResults && (
-                        <p className="text-[10px] text-gray-500 tabular-nums mt-0.5">{pct}% · {count} Stimme{count === 1 ? "" : "n"}</p>
-                      )}
+                      <p className="text-xs text-white/90 leading-snug whitespace-normal [overflow-wrap:anywhere]">{o.label}</p>
+                      {showResults && <ResultLine pct={pct} count={count} leading={leading} mine={mine} />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Reine Textoptionen: Liste mit Auswahlpunkt und Balken */}
+          {poll.options.length > 0 && !withCovers && (
+            <div className="mt-3 space-y-1.5">
+              {poll.options.map(o => {
+                const { count, pct, leading, mine } = optionState(o.id);
+                return (
+                  <div key={o.id} {...optionProps(o.id, mine)}
+                    className={`flex items-start gap-2.5 rounded-lg px-3 py-2 transition-colors ${canVote ? "cursor-pointer hover:bg-white/[0.06]" : "cursor-default"}`}
+                    style={optionBorder(mine)}>
+                    <span className={`mt-0.5 w-4 h-4 shrink-0 flex items-center justify-center border ${poll.allowMultiple ? "rounded" : "rounded-full"} ${mine ? "bg-purple-500 border-purple-400" : "border-white/25"}`}>
+                      {mine && <Check className="w-2.5 h-2.5 text-white" />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/90 leading-snug [overflow-wrap:anywhere]">{o.label}</p>
+                      {showResults && <ResultLine pct={pct} count={count} leading={leading} mine={mine} />}
                     </div>
                   </div>
                 );
@@ -222,7 +281,7 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
           )}
 
           {/* Freitext (Plain) */}
-          {poll.allowFreeText && !poll.freeTextGameMode && !poll.hasVoted && !poll.ended && (
+          {poll.allowFreeText && !poll.freeTextGameMode && canVote && (
             <textarea
               value={freeText}
               onChange={e => setFreeText(e.target.value)}
@@ -234,7 +293,7 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
           )}
 
           {/* Freitext als Spielsuche (mehrere Vorschläge) */}
-          {poll.allowFreeText && poll.freeTextGameMode && !poll.hasVoted && !poll.ended && (
+          {poll.allowFreeText && poll.freeTextGameMode && canVote && (
             <div className="mt-2">
               <PollGameSuggestInput value={freeTextGames} onChange={setFreeTextGames} onDraftChange={setGameDraft} />
               <p className="text-[10px] text-gray-600 mt-1">
@@ -244,25 +303,28 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
           )}
 
           {/* Freitext-Antworten (nach Abstimmung/Ende sichtbar) */}
-          {showResults && poll.results!.freeTextAnswers.length > 0 && (
-            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-              {poll.results!.freeTextAnswers.map((t, i) => (
-                <p key={i} className="text-[11px] text-gray-400 bg-white/[0.03] rounded-md px-2 py-1">{t}</p>
+          {freeTextAnswers.length > 0 && (
+            <div className="mt-2.5 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Eigene Antworten</p>
+              {(allFreeText ? freeTextAnswers : freeTextAnswers.slice(0, FREE_TEXT_PREVIEW)).map((t, i) => (
+                <p key={i} className="text-[11px] text-gray-400 bg-white/[0.03] rounded-md px-2 py-1 [overflow-wrap:anywhere]">{t}</p>
               ))}
+              <ShowAllToggle total={freeTextAnswers.length} shown={FREE_TEXT_PREVIEW} open={allFreeText} onToggle={() => setAllFreeText(o => !o)} />
             </div>
           )}
 
           {/* Spielevorschläge (aggregiert, nach Abstimmung/Ende sichtbar) */}
-          {showResults && poll.results!.gameSuggestions.length > 0 && (
-            <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
-              {poll.results!.gameSuggestions.map((g, i) => (
+          {gameSuggestions.length > 0 && (
+            <div className="mt-2.5 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Vorschläge</p>
+              {(allGames ? gameSuggestions : gameSuggestions.slice(0, GAME_SUGGESTION_PREVIEW)).map((g, i) => (
                 <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.06]">
                   {g.appId && (
                     <img src={coverUrl(g.appId)} alt="" className="w-10 h-6 rounded object-cover shrink-0" />
                   )}
-                  <span className="text-[11px] text-white/85 flex-1 min-w-0 truncate">{g.name}</span>
+                  <span className="text-[11px] text-white/85 flex-1 min-w-0 [overflow-wrap:anywhere]">{g.name}</span>
                   {g.appId && (
-                    <a href={`https://store.steampowered.com/app/${g.appId}`} target="_blank" rel="noopener noreferrer"
+                    <a href={steamUrl(g.appId)} target="_blank" rel="noopener noreferrer"
                       className="text-gray-500 hover:text-purple-300 transition-colors shrink-0" title="Zur Steam-Seite">
                       <ExternalLink className="w-3 h-3" />
                     </a>
@@ -270,12 +332,18 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
                   <span className="text-[11px] text-gray-500 tabular-nums shrink-0">{g.count}x</span>
                 </div>
               ))}
+              <ShowAllToggle total={gameSuggestions.length} shown={GAME_SUGGESTION_PREVIEW} open={allGames} onToggle={() => setAllGames(o => !o)} />
             </div>
           )}
 
-          {/* Abstimmen / Zurückziehen */}
+          {/* Abstimmen / Zurückziehen / Anmelden */}
           {!poll.ended && (
-            poll.hasVoted ? (
+            !loggedIn ? (
+              <Link href={`/login?callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#5865F2] hover:bg-[#4752c4] text-white transition-colors">
+                Mit Discord anmelden zum Abstimmen
+              </Link>
+            ) : poll.hasVoted ? (
               <button
                 type="button"
                 onClick={resetVote}
@@ -299,7 +367,8 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
           )}
         </div>
 
-        {dismissed && (
+        {/* Nur nach Ablauf wegklickbar */}
+        {poll.ended && (
           <button onClick={onDismiss}
             className="shrink-0 self-start p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors"
             aria-label="Schließen">
@@ -311,32 +380,37 @@ function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted
   );
 }
 
-export function DailyPollBanner({
-  onVisibilityChange,
-  fill = false,
-  insetLeft = false,
-}: {
-  onVisibilityChange?: (visible: boolean) => void;
-  /** Streckt die Box auf 100% der Höhe des Elternelements (z.B. im Banner-Slider). */
-  fill?: boolean;
-  /** Rückt den Inhalt links etwas ein, damit er nicht unter den Slider-Pfeilen verschwindet. */
-  insetLeft?: boolean;
-} = {}) {
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+const noopSubscribe = () => () => {};
 
-  useEffect(() => {
-    fetch("/api/daily-poll/active")
-      .then(r => r.json())
-      .then((data: Poll[]) => {
-        setPolls(data);
-        setDismissedIds(new Set(data.filter(p => localStorage.getItem(`daily-poll-dismissed-${p.id}`)).map(p => p.id)));
-      })
-      .catch(() => {});
-  }, []);
+/**
+ * Community-Umfragen, immer aufgeklappt. Die Daten kommen serverseitig mit (kein Nachladen,
+ * kein Springen der Seite); blendet sich ohne Umfrage selbst aus.
+ * - Startseite: alle laufenden Umfragen, an ein Event geknüpfte mit Link dorthin.
+ * - Event-Seite: nur die Umfragen dieses Events (showEventLink=false).
+ */
+export function DailyPollBanner({
+  initialPolls,
+  loggedIn = true,
+  showEventLink = true,
+}: {
+  initialPolls: Poll[];
+  loggedIn?: boolean;
+  showEventLink?: boolean;
+}) {
+  const [polls, setPolls] = useState<Poll[]>(initialPolls);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  // Weggeklickte (beendete) Umfragen stehen nur im Browser — erst nach der Hydration lesen,
+  // sonst weicht das Server-HTML ab
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+
+  function isDismissed(p: Poll) {
+    if (dismissedIds.has(p.id)) return true;
+    if (!hydrated || !p.ended) return false;
+    try { return !!localStorage.getItem(`daily-poll-dismissed-${p.id}`); } catch { return false; }
+  }
 
   function dismiss(id: string) {
-    localStorage.setItem(`daily-poll-dismissed-${id}`, "1");
+    try { localStorage.setItem(`daily-poll-dismissed-${id}`, "1"); } catch { /* ignore */ }
     setDismissedIds(prev => new Set(prev).add(id));
   }
 
@@ -344,19 +418,14 @@ export function DailyPollBanner({
     setPolls(prev => prev.map(p => p.id === updated.id ? updated : p));
   }
 
-  const visible = polls.filter(p => !dismissedIds.has(p.id));
-
-  useEffect(() => {
-    onVisibilityChange?.(visible.length > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible.length]);
-
+  const visible = polls.filter(p => !isDismissed(p));
   if (visible.length === 0) return null;
 
   return (
-    <div className={`space-y-2.5 ${fill ? "h-full flex flex-col justify-center" : ""}`}>
+    <div className="space-y-2.5">
       {visible.map(p => (
-        <PollCard key={p.id} poll={p} onVoted={updatePoll} onDismiss={() => dismiss(p.id)} insetLeft={insetLeft} />
+        <PollCard key={p.id} poll={p} onVoted={updatePoll} onDismiss={() => dismiss(p.id)}
+          loggedIn={loggedIn} showEventLink={showEventLink} />
       ))}
     </div>
   );

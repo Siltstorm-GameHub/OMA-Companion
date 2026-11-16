@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { loadDailyPoll } from "@/lib/daily-poll";
 
 type GameSuggestion = { name: string; appId: number | null };
 
@@ -70,7 +71,8 @@ export async function POST(
     }
   });
 
-  return NextResponse.json({ ok: true, rewardCoins: poll.rewardCoins });
+  // Aktualisierte Umfrage gleich mitliefern — der Client muss dann nicht alle Umfragen neu laden
+  return NextResponse.json({ ok: true, rewardCoins: poll.rewardCoins, poll: await loadDailyPoll(pollId, userId) });
 }
 
 export async function DELETE(
@@ -102,5 +104,5 @@ export async function DELETE(
     }
   });
 
-  return NextResponse.json({ ok: true, coinsDeducted: poll.rewardCoins });
+  return NextResponse.json({ ok: true, coinsDeducted: poll.rewardCoins, poll: await loadDailyPoll(pollId, userId) });
 }

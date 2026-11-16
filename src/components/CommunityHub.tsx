@@ -273,39 +273,18 @@ export function CommunityHub() {
           transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease",
         }}
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <div className="flex items-center gap-2">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ background: "#14b8a6", boxShadow: "0 0 6px #14b8a6" }}
-            />
-            <span className="font-semibold text-sm text-white">
-              {activeTab === "notifications" ? "Benachrichtigungen" : "Event-Absprachen"}
-            </span>
-          </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
-            aria-label="Fenster schließen"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex-shrink-0 px-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        {/* Tabs (ersetzen den früheren Fensterkopf) + Schließen */}
+        <div className="flex-shrink-0 flex items-center gap-1 pl-2 pr-2 pt-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           <Tabs
             variant="underline"
+            className="flex-1 min-w-0 !border-b-0"
             active={activeTab}
             onChange={(key) => { setActiveTab(key as "notifications" | "threads"); setSelectedThread(null); }}
             tabs={[
               {
                 key: "notifications",
-                label: notifUnread > 0 ? `Benachrichtigungen (${notifUnread})` : "Benachrichtigungen",
+                // Absprachen-Benachrichtigungen zählen schon beim Absprachen-Tab mit
+                label: otherNotifUnread > 0 ? `Benachrichtigungen (${otherNotifUnread})` : "Benachrichtigungen",
                 icon: Bell,
                 activeClassName: "border-teal-500 text-white",
               },
@@ -317,6 +296,13 @@ export function CommunityHub() {
               },
             ]}
           />
+          <button
+            onClick={() => setOpen(false)}
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+            aria-label="Fenster schließen"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* ── Benachrichtigungen ──────────────────────────────────────── */}

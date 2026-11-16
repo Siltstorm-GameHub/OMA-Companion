@@ -29,6 +29,7 @@ import { loadEventViewerContext } from "@/lib/event-viewer";
 import { friendsFirst, parseRanking, relevanceTags, startsInLabel } from "@/lib/event-display";
 import { buildHomeTasks, closestQuests } from "@/lib/home-tasks";
 import HomeTaskBar from "./HomeTaskBar";
+import { loadDailyPolls } from "@/lib/daily-poll";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { eventPayout } from "@/lib/placement-rewards";
@@ -306,7 +307,7 @@ export default async function DashboardPage() {
     .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
   // ── Startseiten-Kacheln: Events (eine Priorität statt Karussell) + Clip-Platzierung ──
-  const [viewer, myRecentResult, clipRankingRows, openDailyPolls, myClipVote] = await Promise.all([
+  const [viewer, myRecentResult, clipRankingRows, myClipVote, dailyPolls] = await Promise.all([
     loadEventViewerContext(userId),
     // Ergebnis eines Events, bei dem du in den letzten 24 Std mitgespielt hast
     userId
@@ -332,16 +333,12 @@ export default async function DashboardPage() {
           select:  { id: true, clipTitle: true, customTitle: true, _count: { select: { votes: true } } },
         })
       : Promise.resolve([]),
-    // Aufgabenleiste: laufende Tagesumfragen, in denen deine Stimme fehlt
-    userId
-      ? prisma.dailyPoll.count({
-          where: { isActive: true, startDate: { lte: now }, endDate: { gte: now }, votes: { none: { userId } } },
-        })
-      : 0,
     // Aufgabenleiste: schon für den Clip des Monats abgestimmt?
     userId && activeClipContest
       ? prisma.clipContestVote.findUnique({ where: { contestId_userId: { contestId: activeClipContest.id, userId } }, select: { id: true } })
       : null,
+    // Community-Umfragen, direkt aufgeklappt — serverseitig, damit die Startseite nicht nachträglich springt
+    loadDailyPolls({ userId }),
   ]);
 
   const ranking = parseRanking(myRecentResult?.finalRankingJson);
@@ -515,7 +512,7 @@ export default async function DashboardPage() {
         )}
 
         {/* ── Heute für dich ── */}
-        <HomeTaskBar tasks={homeTasks} openPolls={openDailyPolls} />
+        <HomeTaskBar tasks={homeTasks} polls={dailyPolls} loggedIn={!!userId} />
       </div>
 
       {/* ── Gerade los: Live-Streams, gemeinsam schauen (blenden sich ohne Inhalt selbst aus) ── */}

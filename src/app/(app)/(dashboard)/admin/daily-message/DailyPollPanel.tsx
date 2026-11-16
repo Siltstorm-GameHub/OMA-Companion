@@ -35,6 +35,8 @@ type Poll = {
   allowFreeText: boolean;
   freeTextGameMode: boolean;
   rewardCoins:   number;
+  eventId:       string | null;
+  event:         { id: string; title: string } | null;
   createdAt:     string;
   creator:       { username: string | null; name: string | null };
   options:       Option[];
@@ -53,6 +55,8 @@ type FormState = {
   allowFreeText: boolean;
   freeTextGameMode: boolean;
   rewardCoins: number;
+  /** "" = an kein Event geknüpft */
+  eventId: string;
   sendPush: boolean;
   options: FormOption[];
 };
@@ -74,7 +78,7 @@ function defaultForm(): FormState {
     startDate: toLocalInputValue(now.toISOString()),
     endDate:   toLocalInputValue(end.toISOString()),
     isActive: true, allowMultiple: false, allowFreeText: false, freeTextGameMode: false,
-    rewardCoins: 0, sendPush: false,
+    rewardCoins: 0, eventId: "", sendPush: false,
     options: [{ label: "", gameName: null, steamAppId: null }, { label: "", gameName: null, steamAppId: null }],
   };
 }
@@ -107,7 +111,9 @@ function voteAnswerText(v: Vote, options: Option[]): string {
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
-export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
+type EventChoice = { id: string; title: string; startAt: string };
+
+export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; events: EventChoice[] }) {
   const [polls, setPolls]     = useState(initial);
   const [form, setForm]       = useState<FormState>(defaultForm());
   const [editId, setEditId]   = useState<string | null>(null);
@@ -128,7 +134,7 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
       startDate: toLocalInputValue(p.startDate), endDate: toLocalInputValue(p.endDate),
       isActive: p.isActive, allowMultiple: p.allowMultiple, allowFreeText: p.allowFreeText,
       freeTextGameMode: p.freeTextGameMode,
-      rewardCoins: p.rewardCoins, sendPush: false,
+      rewardCoins: p.rewardCoins, eventId: p.eventId ?? "", sendPush: false,
       options: p.options.length > 0
         ? p.options.map(o => ({ label: o.label, gameName: o.gameName, steamAppId: o.steamAppId }))
         : [{ label: "", gameName: null, steamAppId: null }, { label: "", gameName: null, steamAppId: null }],
@@ -156,6 +162,7 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
         ...form,
         startDate: fromDatetimeLocalBerlin(form.startDate).toISOString(),
         endDate:   fromDatetimeLocalBerlin(form.endDate).toISOString(),
+        eventId: form.eventId || null,
         options: form.options.filter(o => o.label.trim()),
       };
 
@@ -250,6 +257,29 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
           <textarea required value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
             maxLength={300} rows={2} placeholder="Die Frage, die alle beantworten sollen …"
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none" />
+        </div>
+
+        {/* Event-Verknüpfung */}
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block">Zu einem Event (optional)</label>
+          <select value={form.eventId} onChange={e => setForm(f => ({ ...f, eventId: e.target.value }))}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors">
+            <option value="" className="bg-gray-900">Kein Event, nur Startseite</option>
+            {/* Beim Bearbeiten älterer Umfragen: verknüpftes Event auch dann anbieten, wenn es nicht mehr in der Auswahl ist */}
+            {editId && form.eventId && !events.some(ev => ev.id === form.eventId) && (
+              <option value={form.eventId} className="bg-gray-900">
+                {polls.find(p => p.id === editId)?.event?.title ?? "Verknüpftes Event"}
+              </option>
+            )}
+            {events.map(ev => (
+              <option key={ev.id} value={ev.id} className="bg-gray-900">
+                {formatDate(ev.startAt)} · {ev.title}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-gray-700 mt-1">
+            Verknüpfte Umfragen erscheinen auf der Startseite und zusätzlich auf der Event-Seite.
+          </p>
         </div>
 
         {/* Antwortoptionen */}
@@ -425,6 +455,7 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
                   {p.rewardCoins > 0 && (
                     <span className="text-amber-500 flex items-center gap-1"><CoinIcon size={10} /> {p.rewardCoins}</span>
                   )}
+                  {p.event && <span className="text-teal-500/80">Event: {p.event.title}</span>}
                   {!p.isActive && <span className="text-amber-600">Inaktiv</span>}
                   {active && <span className="text-purple-400 font-medium">Wird gerade angezeigt</span>}
                 </div>

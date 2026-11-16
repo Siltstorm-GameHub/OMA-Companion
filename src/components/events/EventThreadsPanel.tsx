@@ -62,65 +62,149 @@ export default function EventThreadsPanel({
     );
   }
 
-  // Nächstes eigenes Event: anstehend/laufend → Status-Knöpfe, Abstimmung → direkt zur Abstimmung
+  // Nächstes eigenes Event: steht als hervorgehobener erster Eintrag oben und fehlt dafür in den Gruppen
   const next = threads
     .filter(t => t.registered && t.phase !== "finished")
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
 
+  // Gruppen in Server-Reihenfolge (innerhalb: ungelesen zuerst)
+  const rest = threads.filter(t => t !== next);
+  const active = rest.filter(t => t.phase === "live" || t.phase === "voting");
+  const upcoming = rest.filter(t => t.phase === "upcoming");
+  const finished = rest.filter(t => t.phase === "finished");
+  const finishedUnread = finished.some(t => t.unread > 0);
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-      {next && (
-        <div className="px-4 py-3 border-b border-white/[0.06] bg-teal-500/[0.04]">
-          <p className="text-[10px] uppercase tracking-wider text-teal-300/80 font-semibold mb-0.5">Dein nächstes Event</p>
-          <p className="text-sm font-semibold text-white truncate">{next.title}</p>
-          <p className="text-[11px] text-gray-500 mb-2">
-            {whenLabel(next)}
-            {next.myStatus && next.phase !== "voting" && <span className={`ml-2 px-1.5 py-px rounded-full ${statusBadge(next.myStatus.status, next.myStatus.lateMin).className}`}>
-              {statusBadge(next.myStatus.status, next.myStatus.lateMin).label}
-            </span>}
-          </p>
-          {next.phase === "voting" ? (
-            <Link href={`/tournament/${next.eventId}#abstimmung`} onClick={onNavigate}
-              className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 hover:bg-violet-500/25">
-              🗳️ Jetzt abstimmen <ChevronRight className="w-3 h-3" />
-            </Link>
-          ) : (
-            <StatusBar compact eventId={next.eventId} myStatus={next.myStatus} isPlayer={next.isPlayer}
-              onPosted={async () => onRefresh()} />
-          )}
-        </div>
+      {next && <NextEventCard t={next} onSelect={onSelect} onRefresh={onRefresh} onNavigate={onNavigate} />}
+      <ThreadGroup label="Läuft gerade" threads={active} onSelect={onSelect} />
+      <ThreadGroup label="Anstehend" threads={upcoming} onSelect={onSelect} />
+      {finished.length > 0 && (
+        // Beendete Events: nur noch kurz beschreibbar → eingeklappt, außer dort ist etwas Neues
+        <details open={finishedUnread || undefined} className="group/fin">
+          <summary className="list-none cursor-pointer select-none flex items-center gap-1.5 px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-wider font-semibold text-gray-500 hover:text-gray-300 [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="w-3 h-3 transition-transform group-open/fin:rotate-90" />
+            Beendet ({finished.length})
+          </summary>
+          <ThreadList threads={finished} onSelect={onSelect} />
+        </details>
       )}
-      <ul>
-        {threads.map(t => (
-          <li key={t.eventId}>
-            <button type="button" onClick={() => onSelect(t.eventId)}
-              className={`w-full text-left flex gap-3 items-start px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${t.unread > 0 ? "bg-teal-500/[0.04]" : ""}`}>
-              <div className="flex-1 min-w-0">
-                <p className="flex items-center gap-2 min-w-0">
-                  {t.phase === "live" && <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-rose-500 text-white">LIVE</span>}
-                  {t.phase === "voting" && <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-violet-500 text-white">ABSTIMMUNG</span>}
-                  <span className={`text-sm truncate ${t.unread > 0 ? "font-semibold text-white" : "text-gray-200"}`}>{t.title}</span>
-                </p>
-                <p className="text-[11px] text-gray-500 truncate">{whenLabel(t)}</p>
-                {t.pinned && <p className="text-[11px] text-amber-300/80 truncate mt-0.5">📌 {t.pinned}</p>}
-                <p className={`text-xs truncate mt-0.5 ${t.unread > 0 ? "text-gray-300" : "text-gray-500"}`}>
-                  {t.last ? <><span className="text-gray-400">{t.last.author}:</span> {t.last.text}</> : <span className="italic">Noch keine Nachrichten</span>}
-                </p>
-              </div>
-              <div className="shrink-0 flex flex-col items-end gap-1">
-                {t.last && <span className="text-[10px] text-gray-600">{shortTime(t.last.createdAt)}</span>}
-                {t.unread > 0 && (
-                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-teal-950 text-[10px] font-bold flex items-center justify-center">
-                    {t.unread > 99 ? "99+" : t.unread}
-                  </span>
-                )}
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   );
+}
+
+function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
+  t: EventThreadDTO;
+  onSelect: (eventId: string) => void;
+  onRefresh: () => void;
+  onNavigate: () => void;
+}) {
+  const badge = t.myStatus && t.phase !== "voting" ? statusBadge(t.myStatus.status, t.myStatus.lateMin) : null;
+  return (
+    <div className="m-2 rounded-xl border border-teal-400/20 bg-teal-500/[0.06] overflow-hidden">
+      <button type="button" onClick={() => onSelect(t.eventId)}
+        className="w-full text-left px-3 pt-2.5 pb-2 hover:bg-white/[0.03] transition-colors">
+        <div className="flex items-center gap-2">
+          <p className="flex-1 min-w-0 text-[10px] uppercase tracking-wider text-teal-300/80 font-semibold">Dein nächstes Event</p>
+          <UnreadCount n={t.unread} />
+        </div>
+        <p className="flex items-center gap-2 min-w-0 mt-0.5">
+          <PhaseBadge t={t} />
+          <span className="text-sm font-semibold text-white truncate">{t.title}</span>
+          {t.pinned && <span className="shrink-0 text-[11px]" title={`Angepinnt: ${t.pinned}`}>📌</span>}
+        </p>
+        <p className="text-[11px] text-gray-400">
+          {whenLabel(t)}
+          {badge && <span className={`ml-2 px-1.5 py-px rounded-full ${badge.className}`}>{badge.label}</span>}
+        </p>
+        <LastMessage t={t} />
+      </button>
+      <div className="px-3 pb-2.5">
+        {t.phase === "voting" ? (
+          <Link href={`/tournament/${t.eventId}#abstimmung`} onClick={onNavigate}
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 hover:bg-violet-500/25">
+            🗳️ Jetzt abstimmen <ChevronRight className="w-3 h-3" />
+          </Link>
+        ) : (
+          <StatusBar compact eventId={t.eventId} myStatus={t.myStatus} isPlayer={t.isPlayer}
+            onPosted={async () => onRefresh()} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ThreadGroup({ label, threads, onSelect }: { label: string; threads: EventThreadDTO[]; onSelect: (eventId: string) => void }) {
+  if (threads.length === 0) return null;
+  return (
+    <section>
+      <h3 className="px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-wider font-semibold text-gray-500">{label}</h3>
+      <ThreadList threads={threads} onSelect={onSelect} />
+    </section>
+  );
+}
+
+/** Kompakter Eintrag: Zeile 1 Titel (+ Zeitpunkt, 📌) und Uhrzeit, Zeile 2 letzte Nachricht und Zähler. */
+function ThreadList({ threads, onSelect }: { threads: EventThreadDTO[]; onSelect: (eventId: string) => void }) {
+  return (
+    <ul>
+      {threads.map(t => {
+        const unread = t.unread > 0;
+        return (
+          <li key={t.eventId}>
+            <button type="button" onClick={() => onSelect(t.eventId)}
+              className={`relative w-full text-left px-4 py-2 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${unread ? "bg-teal-500/[0.05]" : ""}`}>
+              {unread && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-teal-400" />}
+              <span className="flex items-center gap-2 min-w-0">
+                <PhaseBadge t={t} />
+                <span className={`text-sm truncate ${unread ? "font-semibold text-white" : "text-gray-300"}`}>{t.title}</span>
+                {t.phase === "upcoming" && <span className="shrink-0 text-[10px] text-gray-500">{shortWhen(t.startAt)}</span>}
+                {t.pinned && <span className="shrink-0 text-[11px]" title={`Angepinnt: ${t.pinned}`}>📌</span>}
+                <span className="flex-1" />
+                {t.last && <span className={`shrink-0 text-[10px] ${unread ? "text-teal-300" : "text-gray-600"}`}>{shortTime(t.last.createdAt)}</span>}
+              </span>
+              <span className="flex items-center gap-2 min-w-0">
+                <LastMessage t={t} />
+                <UnreadCount n={t.unread} />
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function PhaseBadge({ t }: { t: EventThreadDTO }) {
+  if (t.phase === "live") return <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-rose-500 text-white">LIVE</span>;
+  if (t.phase === "voting") return <span className="shrink-0 text-[9px] font-bold px-1.5 py-px rounded-full bg-violet-500 text-white">ABSTIMMUNG</span>;
+  return null;
+}
+
+function LastMessage({ t }: { t: EventThreadDTO }) {
+  return (
+    <span className={`block flex-1 min-w-0 text-xs truncate ${t.unread > 0 ? "text-gray-300" : "text-gray-500"}`}>
+      {t.last ? <><span className="text-gray-400">{t.last.author}:</span> {t.last.text}</> : <span className="italic">Noch keine Nachrichten</span>}
+    </span>
+  );
+}
+
+function UnreadCount({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-teal-950 text-[10px] font-bold flex items-center justify-center">
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
+
+/** Kurzer Startzeitpunkt für die Liste: heute → "20:00", diese Woche → "Sa 20:00", später → "Sa 21.11.". */
+function shortWhen(iso: string): string {
+  const d = new Date(iso);
+  const time = formatBerlinTime(d, { hour: "2-digit", minute: "2-digit" });
+  if (isSameBerlinDay(d, new Date())) return time;
+  if (d.getTime() - Date.now() < 6 * 24 * 60 * 60_000) return `${formatBerlinDateTime(d, { weekday: "short" })} ${time}`;
+  return formatBerlinDateTime(d, { weekday: "short", day: "2-digit", month: "2-digit" });
 }
 
 function whenLabel(t: EventThreadDTO): string {

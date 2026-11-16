@@ -422,6 +422,7 @@ model Event {
   communityStreamers EventCommunityStreamer[]
   clipSubmissions    EventClipSubmission[]
   polls              EventPoll[]
+  dailyPolls         DailyPoll[]
   winnerPredictions  EventWinnerPrediction[]
   blocksTournament   BlocksTournament?
   blocksChallenge    BlocksChallenge?
@@ -1294,12 +1295,17 @@ model DailyPoll {
   // true: Freitext wird durch eine Steam-Spielsuche ersetzt, Nutzer können mehrere Spiele vorschlagen
   freeTextGameMode Boolean           @default(false)
   rewardCoins      Int               @default(0)
+  // Optional an ein Event geknüpft: erscheint dann zusätzlich auf der Event-Seite
+  eventId          String?
+  event            Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
   createdBy        String
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   creator          User              @relation(fields: [createdBy], references: [id])
   options          DailyPollOption[]
   votes            DailyPollVote[]
+
+  @@index([eventId])
 }
 
 model DailyPollOption {

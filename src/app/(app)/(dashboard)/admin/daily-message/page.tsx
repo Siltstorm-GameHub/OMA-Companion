@@ -6,7 +6,8 @@ import { DailyPollPanel } from "./DailyPollPanel";
 export default async function DailyMessageAdminPage() {
   await requireRole("admin");
 
-  const [messages, polls] = await Promise.all([
+  const now = new Date();
+  const [messages, polls, events] = await Promise.all([
     prisma.dailyMessage.findMany({
       orderBy: { createdAt: "desc" },
       include: { creator: { select: { username: true, name: true } } },
@@ -15,12 +16,20 @@ export default async function DailyMessageAdminPage() {
       orderBy: { createdAt: "desc" },
       include: {
         creator: { select: { username: true, name: true } },
+        event:   { select: { id: true, title: true } },
         options: { orderBy: { order: "asc" } },
         votes:   {
           orderBy: { createdAt: "asc" },
           include: { user: { select: { id: true, username: true, name: true, image: true } } },
         },
       },
+    }),
+    // Auswahl fürs Verknüpfen: Events der letzten 14 Tage und alle kommenden
+    prisma.event.findMany({
+      where:   { startAt: { gte: new Date(now.getTime() - 14 * 24 * 3600_000) } },
+      orderBy: { startAt: "asc" },
+      select:  { id: true, title: true, startAt: true },
+      take:    100,
     }),
   ]);
 
@@ -53,7 +62,7 @@ export default async function DailyMessageAdminPage() {
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🗳️ Umfragen (Banner)
         </h2>
-        <DailyPollPanel polls={serializedPolls} />
+        <DailyPollPanel polls={serializedPolls} events={events.map(e => ({ ...e, startAt: e.startAt.toISOString() }))} />
       </section>
     </div>
   );

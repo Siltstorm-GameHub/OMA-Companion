@@ -21,10 +21,11 @@ export async function PUT(
     allowFreeText?: boolean;
     freeTextGameMode?: boolean;
     rewardCoins?: number;
+    eventId?: string | null;
     options?: OptionInput[];
   };
 
-  const { title, question, startDate, endDate, isActive, allowMultiple, allowFreeText, freeTextGameMode, rewardCoins, options } = body;
+  const { title, question, startDate, endDate, isActive, allowMultiple, allowFreeText, freeTextGameMode, rewardCoins, eventId, options } = body;
 
   if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
     return NextResponse.json({ error: "Enddatum muss nach dem Startdatum liegen" }, { status: 400 });
@@ -59,8 +60,9 @@ export async function PUT(
         ...(allowFreeText !== undefined && { allowFreeText }),
         ...(freeTextGameMode !== undefined && { freeTextGameMode }),
         ...(rewardCoins   !== undefined && { rewardCoins: Math.max(0, Math.trunc(rewardCoins)) }),
+        ...(eventId       !== undefined && { eventId: eventId || null }),
       },
-      include: { options: { orderBy: { order: "asc" } } },
+      include: { options: { orderBy: { order: "asc" } }, event: { select: { id: true, title: true } } },
     });
   });
 

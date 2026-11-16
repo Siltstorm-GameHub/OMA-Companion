@@ -48,6 +48,8 @@ import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import CheckInButton from "./CheckInButton";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
+import { DailyPollBanner } from "@/components/DailyPollBanner";
+import { loadDailyPolls } from "@/lib/daily-poll";
 import GameVoteSection from "./GameVoteSection";
 import { addableGames, getGameVoteView } from "@/lib/game-vote/service";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
@@ -206,7 +208,7 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions, eventPokale] = await Promise.all([
+  const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions, eventPokale, communityPolls] = await Promise.all([
     getWanderpocalHoldersMap(),
     prisma.eventWinnerPrediction.findUnique({
       where: { userId_eventId: { userId, eventId } },
@@ -235,6 +237,7 @@ export default async function TournamentDetailPage({
           where: { eventId, isSeries: false },
           include: { user: { select: { name: true, username: true } } },
         }),
+    loadDailyPolls({ userId, eventId }),
   ]);
   const showPokalPreview = !event.seriesId && event.type === "tournament"
     && eventPokale.length === 0 && event.status !== "finished";
@@ -1264,6 +1267,13 @@ export default async function TournamentDetailPage({
     </section>
   ) : null;
 
+  // ── Community-Umfragen, die im Admin an dieses Event geknüpft wurden (stehen auch auf der Startseite) ──
+  const communityPollsNode = communityPolls.length > 0 ? (
+    <section aria-label="Umfragen zum Event" className="mb-5">
+      <DailyPollBanner initialPolls={communityPolls} showEventLink={false} />
+    </section>
+  ) : null;
+
   // ── Streams ──
   const streamNode = (streamingPartners.length > 0 || filteredCommunityStreamers.length > 0) ? (
     <section aria-label="Streams" className="glass rounded-2xl px-4 py-3 mb-5 space-y-2" style={{ border: "1px solid rgba(145,70,255,0.18)" }}>
@@ -1549,10 +1559,10 @@ export default async function TournamentDetailPage({
 
   // ── Reihenfolge je Phase ──
   const sections: Record<PagePhase, React.ReactNode[]> = {
-    before: [descriptionNode, gameVoteNode, blocksNode, tournamentNode, commentsNode, predictionNode, rulesNode, pokalNode, pollsNode, postsNode],
-    live: [streamNode, resultsNode, blocksNode, tournamentNode, commentsNode, pollsNode, predictionNode, descriptionNode, rulesNode, postsNode, pokalNode],
-    voting: [pollsNode, resultsNode, streamNode, tournamentNode, commentsNode, blocksNode, postsNode, predictionNode, descriptionNode, rulesNode, pokalNode],
-    after: [resultsNode, pokalNode, summaryNode, clipNode, postsNode, commentsNode, pollsNode, tournamentNode, blocksNode, predictionNode, descriptionNode, rulesNode],
+    before: [descriptionNode, communityPollsNode, gameVoteNode, blocksNode, tournamentNode, commentsNode, predictionNode, rulesNode, pokalNode, pollsNode, postsNode],
+    live: [streamNode, communityPollsNode, resultsNode, blocksNode, tournamentNode, commentsNode, pollsNode, predictionNode, descriptionNode, rulesNode, postsNode, pokalNode],
+    voting: [pollsNode, communityPollsNode, resultsNode, streamNode, tournamentNode, commentsNode, blocksNode, postsNode, predictionNode, descriptionNode, rulesNode, pokalNode],
+    after: [resultsNode, communityPollsNode, pokalNode, summaryNode, clipNode, postsNode, commentsNode, pollsNode, tournamentNode, blocksNode, predictionNode, descriptionNode, rulesNode],
   };
   // Stream gehört vor dem Event und danach nicht nach oben — aber nicht verloren gehen lassen
   if (pagePhase === "before" && streamNode) sections.before.splice(1, 0, streamNode);

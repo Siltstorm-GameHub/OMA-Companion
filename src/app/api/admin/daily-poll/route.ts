@@ -12,6 +12,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     include: {
       creator: { select: { username: true, name: true } },
+      event:   { select: { id: true, title: true } },
       options: { orderBy: { order: "asc" } },
       votes:   {
         orderBy: { createdAt: "asc" },
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     allowFreeText?: boolean;
     freeTextGameMode?: boolean;
     rewardCoins?: number;
+    eventId?: string | null;
     sendPush?: boolean;
     options?: OptionInput[];
   };
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
   const {
     title, question, startDate, endDate,
     isActive = true, allowMultiple = false, allowFreeText = false, freeTextGameMode = false,
-    rewardCoins = 0, sendPush = false, options = [],
+    rewardCoins = 0, eventId = null, sendPush = false, options = [],
   } = body;
 
   if (!title?.trim() || !question?.trim() || !startDate || !endDate) {
@@ -67,6 +69,7 @@ export async function POST(req: NextRequest) {
       allowFreeText,
       freeTextGameMode: allowFreeText && freeTextGameMode,
       rewardCoins:   Math.max(0, Math.trunc(rewardCoins)),
+      eventId:       eventId || null,
       createdBy:     user.id,
       options: {
         create: cleanOptions.map((o, i) => ({
@@ -77,14 +80,16 @@ export async function POST(req: NextRequest) {
         })),
       },
     },
-    include: { options: { orderBy: { order: "asc" } } },
+    include: { options: { orderBy: { order: "asc" } }, event: { select: { id: true, title: true } } },
   });
 
   if (sendPush && isActive) {
     const pushTitle = `🗳️ ${title.trim()}`;
     const pushBody  = question.trim().slice(0, 120);
-    sendPushToAll({ title: pushTitle, body: pushBody, url: "/dashboard" }).catch(() => {});
-    sendDiscordDMToAll({ title: pushTitle, description: pushBody, url: "/dashboard", color: 0x2dd4bf }).catch(() => {});
+    // Event-Umfragen führen direkt auf die Event-Seite, sonst auf die Startseite
+    const url = poll.eventId ? `/tournament/${poll.eventId}` : "/dashboard";
+    sendPushToAll({ title: pushTitle, body: pushBody, url }).catch(() => {});
+    sendDiscordDMToAll({ title: pushTitle, description: pushBody, url, color: 0x2dd4bf }).catch(() => {});
   }
 
   return NextResponse.json(poll, { status: 201 });

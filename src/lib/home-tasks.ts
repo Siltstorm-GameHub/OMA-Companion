@@ -1,6 +1,6 @@
 // Aufgabenleiste der Startseite ("Heute für dich"): welche offenen Dinge als Chip auftauchen.
-// Reine Funktion — getestet in home-tasks.test.ts. Die Tagesumfrage zählt der Aufrufer separat,
-// weil sie direkt auf der Startseite aufgeklappt wird.
+// Reine Funktion — getestet in home-tasks.test.ts. Die Tagesumfrage ist kein Chip,
+// sie steht immer direkt aufgeklappt auf der Startseite (HomeTaskBar → DailyPollBanner).
 
 export type HomeTaskTone = "amber" | "violet" | "orange" | "teal" | "twitch";
 
