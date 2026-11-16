@@ -28,6 +28,7 @@ import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf } from "@/lib/event-car
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import { friendsFirst, parseRanking, relevanceTags, startsInLabel } from "@/lib/event-display";
 import { buildHomeTasks, closestQuests } from "@/lib/home-tasks";
+import { getShopConfig } from "@/lib/shop-config";
 import HomeTaskBar from "./HomeTaskBar";
 import { loadDailyPolls } from "@/lib/daily-poll";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
@@ -410,14 +411,21 @@ export default async function DashboardPage() {
     id: q.id, title: q.title, reward: q.reward, target: q.target,
     current: q.progress?.[0]?.current ?? 0, completed: q.progress?.[0]?.completed ?? false,
   }));
+  // Höchster Münz-Gewinn am Glücksrad — nur laden, wenn heute noch gedreht werden kann
+  const spinMaxCoins = userId && !spunToday
+    ? Math.max(0, ...(await getShopConfig()).wheelPrizes.filter(p => p.type === "points").map(p => Number(p.value) || 0))
+    : 0;
   const homeTasks = buildHomeTasks({
     loggedIn: !!userId,
     spunToday,
+    spinMaxCoins,
     swipe,
     clipVotingOpen: !!activeClipContest,
     clipVoted: !!myClipVote,
+    clipVotingEndsAt: activeClipContest?.votingEndsAt ?? null,
     recentResults: recentResultEvents.map(r => ({ title: r.title, href: r.href })),
     quests: questRows,
+    now: now.getTime(),
   });
   const nextQuests = closestQuests(questRows, 2);
   const questCoinsEarned = questRows.filter(q => q.completed).reduce((s, q) => s + q.reward, 0);
