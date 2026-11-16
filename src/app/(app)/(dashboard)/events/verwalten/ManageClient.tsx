@@ -167,6 +167,8 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   const [pastOpen, setPastOpen] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
+  // Reihen-Filter: nur die anstehenden Termine der ausgewählten Reihen (leer = alle Events)
+  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
 
   const all: ManageEvent[] = events.map((e) => ({ ...e, startAt: new Date(e.startAt), endAt: e.endAt ? new Date(e.endAt) : null }));
   const q = query.trim().toLowerCase();
@@ -175,7 +177,25 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   const approvalsShown = approvals.filter((a) => !q || a.title.toLowerCase().includes(q) || a.by.toLowerCase().includes(q));
   const seasonsDone = seriesShown.filter((s) => s.seasonDone);
   const attentionCount = approvalsShown.length + seasonsDone.length + groups.action.length;
-  const upcomingCount = groups.upcoming.today.length + groups.upcoming.week.length + groups.upcoming.later.length;
+  const filtering = selectedSeries.size > 0;
+  const inFilter = (ev: ManageEvent) => !filtering || (!!ev.series && selectedSeries.has(ev.series.id));
+  const upcoming: Record<DayBucket, ManageEvent[]> = {
+    today: groups.upcoming.today.filter(inFilter),
+    week: groups.upcoming.week.filter(inFilter),
+    later: groups.upcoming.later.filter(inFilter),
+  };
+  const upcomingCount = upcoming.today.length + upcoming.week.length + upcoming.later.length;
+  // Anstehende Termine je Reihe (Zahl in der Reihen-Zeile)
+  const upcomingBySeries = new Map<string, number>();
+  for (const ev of [...groups.upcoming.today, ...groups.upcoming.week, ...groups.upcoming.later]) {
+    if (ev.series) upcomingBySeries.set(ev.series.id, (upcomingBySeries.get(ev.series.id) ?? 0) + 1);
+  }
+  const toggleSeries = (id: string) => setSelectedSeries((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectedNames = series.filter((s) => selectedSeries.has(s.id)).map((s) => s.name);
   const pastShown = showAllPast || q ? groups.past : groups.past.slice(0, PAST_VISIBLE);
 
   async function approve(a: ManageApproval) {
@@ -259,57 +279,96 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
         </Section>
       )}
 
-      {/* ── Anstehend ── */}
-      {(upcomingCount > 0 || (!empty && !q)) && (
-        <Section title="Anstehend" count={upcomingCount}>
-          {upcomingCount === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">Kein Event geplant.</p>
-          ) : BUCKETS.map(({ key, label }) => groups.upcoming[key].length > 0 && (
-            <div key={key} className="mt-2">
-              <p className="text-[11px] font-semibold text-gray-500">{label}</p>
-              <ul className="divide-y divide-white/[0.05]">
-                {groups.upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
+      {/* ── Eventreihen (Filter) und Anstehend — große Bildschirme nebeneinander ── */}
+      {(seriesShown.length > 0 || upcomingCount > 0 || (!empty && !q)) && (
+        <div className={`grid gap-4 items-start ${seriesShown.length > 0 ? "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" : ""}`}>
+          {seriesShown.length > 0 && (
+            <section aria-label="Eventreihen" className="glass rounded-2xl p-4 lg:sticky lg:top-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-white">
+                  Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
+                </h2>
+                {filtering && (
+                  <button type="button" onClick={() => setSelectedSeries(new Set())}
+                    className="ml-auto text-[11px] font-semibold text-teal-300 hover:text-teal-200">
+                    Alle Events zeigen
+                  </button>
+                )}
+              </div>
+              <p className="mt-0.5 text-[11px] text-gray-500">Antippen filtert die anstehenden Termine nach dieser Reihe.</p>
+              <ul className="mt-1 divide-y divide-white/[0.05]">
+                {seriesShown.map((s) => {
+                  const color = resolveSeriesColor(s.icon);
+                  const pct = s.total > 0 ? Math.round((s.played / s.total) * 100) : 0;
+                  const on = selectedSeries.has(s.id);
+                  const upcomingN = upcomingBySeries.get(s.id) ?? 0;
+                  return (
+                    <li key={s.id} className="flex items-center gap-1">
+                      <button type="button" onClick={() => toggleSeries(s.id)} aria-pressed={on}
+                        className={`group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-2 text-left transition-colors ${on ? "bg-teal-500/10 ring-1 ring-teal-500/30" : "hover:bg-white/[0.03]"}`}>
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? "border-teal-400 bg-teal-500 text-black" : "border-white/20"}`}>
+                          {on && <Check className="w-3 h-3" />}
+                        </span>
+                        <span className="w-1 h-8 rounded-full shrink-0" style={{ background: color }} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <SeriesIcon name={s.icon} className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate text-sm font-medium text-white">{s.name}</span>
+                          </span>
+                          <span className="block truncate text-[11px] text-gray-500">
+                            {s.seasonDone ? "Alle Termine gespielt, Endwertung offen"
+                              : s.next ? `Nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
+                              : "Kein Termin geplant"}
+                            {s.total > 0 && ` · ${Math.min(s.played + 1, s.total)}/${s.total}`}
+                            {upcomingN > 0 && ` · ${upcomingN} anstehend`}
+                            {s.awaitingApproval && " · Freigabe offen"}
+                            {s.hidden && " · ausgeblendet"}
+                          </span>
+                          <span className="mt-1 block h-1 w-full rounded-full bg-white/[0.06] overflow-hidden" title={`${s.played} von ${s.total} Terminen gespielt`}>
+                            <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                          </span>
+                        </span>
+                      </button>
+                      <Link href={`/events/verwalten/reihen/${s.id}`} aria-label={`${s.name} verwalten`} title="Reihe verwalten"
+                        className="w-7 h-7 shrink-0 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] flex items-center justify-center">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
-            </div>
-          ))}
-        </Section>
-      )}
+            </section>
+          )}
 
-      {/* ── Eventreihen ── */}
-      {seriesShown.length > 0 && (
-        <Section title="Eventreihen" count={seriesShown.length}>
-          <ul className="mt-1 divide-y divide-white/[0.05]">
-            {seriesShown.map((s) => {
-              const color = resolveSeriesColor(s.icon);
-              const pct = s.total > 0 ? Math.round((s.played / s.total) * 100) : 0;
-              return (
-                <li key={s.id}>
-                  <Link href={`/events/verwalten/reihen/${s.id}`} className="group flex items-center gap-3 py-2.5">
-                    <span className="w-1 h-9 rounded-full shrink-0" style={{ background: color }} />
-                    <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-white group-hover:text-teal-200">{s.name}</span>
-                      <span className="block truncate text-[11px] text-gray-500">
-                        {s.seasonDone ? "Alle Termine gespielt, Endwertung offen"
-                          : s.next ? `Nächster Termin ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
-                          : "Kein Termin geplant"}
-                        {s.total > 0 && ` · Termin ${Math.min(s.played + 1, s.total)} von ${s.total}`}
-                        {s.createdBy && ` · von ${s.createdBy}`}
-                      </span>
-                    </span>
-                    <span className="hidden sm:flex items-center gap-1">
-                      {s.awaitingApproval && <Tag tone="amber">Freigabe offen</Tag>}
-                      {s.hidden && <Tag tone="rose">Ausgeblendet</Tag>}
-                    </span>
-                    <span className="w-20 shrink-0 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" title={`${s.played} von ${s.total} Terminen gespielt`}>
-                      <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </Section>
+          <section aria-label="Anstehend" className="glass rounded-2xl p-4 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm font-semibold text-white">
+                Anstehend <span className="ml-1 font-normal text-gray-500">· {upcomingCount}</span>
+              </h2>
+              {filtering && (
+                <span className="min-w-0 truncate rounded-md bg-teal-500/10 px-2 py-0.5 text-[11px] text-teal-200">
+                  {selectedNames.join(", ")}
+                </span>
+              )}
+              {filtering && (
+                <button type="button" onClick={() => setSelectedSeries(new Set())}
+                  className="ml-auto text-[11px] font-semibold text-teal-300 hover:text-teal-200">
+                  Filter aufheben
+                </button>
+              )}
+            </div>
+            {upcomingCount === 0 ? (
+              <p className="mt-2 text-sm text-gray-500">{filtering ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
+            ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
+              <div key={key} className="mt-2">
+                <p className="text-[11px] font-semibold text-gray-500">{label}</p>
+                <ul className="divide-y divide-white/[0.05]">
+                  {upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
+                </ul>
+              </div>
+            ))}
+          </section>
+        </div>
       )}
 
       {/* ── Beendet ── */}
