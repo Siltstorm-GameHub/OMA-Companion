@@ -2,7 +2,7 @@ import { formatFixed } from "@/lib/format-number";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { placementRewardFor } from "@/lib/placement-rewards";
+import { eventPayout, payoutForPlace } from "@/lib/placement-rewards";
 import { compareAvg, computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 import { GROUP_KNOCKOUT_FORMAT, computeLeagueStandings, groupKnockoutRanking, leagueMemberIds } from "@/lib/tournaments/groupStage";
 
@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     include: {
       participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
       matches: { include: { entries: true }, where: { playedAt: { not: null } } },
-      series: { select: { placementRewardsJson: true } },
+      series: { select: { seriesStatConfig: true, placementRewardsJson: true } },
     },
   });
 
@@ -129,10 +129,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     for (const u of fetchedUsers) userMap.set(u.id, u);
   }
 
+  // Reihen-Termin: Platzierungs-Bonus je Event (die Endwertung der Reihe zahlt erst der Reihen-Abschluss)
+  const payout = eventPayout(event);
   const result = ranking.map((r, i) => {
     const placement = i + 1;
     // Vorschau der Belohnung, die der Event-Abschluss für diesen Platz auszahlen würde
-    const { coins, rankPoints: rankPts } = placementRewardFor(placement, event.placementRewardsJson, event.series?.placementRewardsJson);
+    const { coins, rankPoints: rankPts } = payoutForPlace(payout, placement);
     const user    = userMap.get(r.userId);
     return {
       placement,

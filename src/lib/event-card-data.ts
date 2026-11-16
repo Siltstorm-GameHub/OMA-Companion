@@ -6,7 +6,8 @@ import type { EventCardData } from "@/components/events/EventCard";
 import { categoryLabel } from "@/components/EventCategoryBadge";
 import { dateBlock, eventPhase, friendsFirst, relevanceTags, urgencyHint } from "@/lib/event-display";
 import type { EventViewerContext } from "@/lib/event-viewer";
-import { eventParticipationCoins, formatLabel } from "@/lib/event-placeholders";
+import { formatLabel } from "@/lib/event-placeholders";
+import { eventPayout } from "@/lib/placement-rewards";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { resolveSeriesColor } from "@/lib/series-icons";
 
@@ -16,6 +17,8 @@ export const EVENT_CARD_INCLUDE = {
     select: {
       id: true, name: true, icon: true, registrationLocked: true, squadId: true, approvalStatus: true,
       coverImageUrl: true, omaOriginal: true, fixedGame: true,
+      // Für eventPayout(): Reihen-Termine zahlen Teilnahme + Bonus je Event aus der Reihentabelle
+      seriesStatConfig: true, placementRewardsJson: true,
     },
   },
   createdBy: { select: { username: true, name: true } },
@@ -92,7 +95,8 @@ export function toEventCardData(
     metaLine: meta,
     playerCount: players.length,
     maxPlayers: ev.maxPlayers,
-    coins: eventParticipationCoins(ev),
+    // Was DIESES Event fürs Mitmachen zahlt (Reihen-Termin: aus der Reihentabelle, lib/placement-rewards.ts)
+    coins: eventPayout(ev).participationCoins,
     isRegistered,
     urgency: isOpenPhase
       ? urgencyHint({ startAt: ev.startAt, maxPlayers: ev.maxPlayers, playerCount: players.length, isRegistered }, now)

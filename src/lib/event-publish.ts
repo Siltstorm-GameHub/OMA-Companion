@@ -16,13 +16,15 @@ import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { GAME_VOTE_PLACEHOLDER, announceNewEvent, createDiscordScheduledEvent } from "@/lib/discord-events";
 import { dispatchEventNotification, getNotificationRule } from "@/lib/notify-dispatch";
+import { eventPayout } from "@/lib/placement-rewards";
 
 import { parsePublishState, type PublishError, type PublishState } from "@/lib/event-publish-state";
 
 export { parsePublishState, PUBLISH_STEP_LABELS } from "@/lib/event-publish-state";
 export type { PublishStep, PublishError, PublishState } from "@/lib/event-publish-state";
 
-/** Teilnahme-Münzen für die Ankündigung — wie bisher: aus placementRewardsJson (Event, sonst Reihe), sonst 10. */
+/** Teilnahme-Münzen für die Ankündigung eines Einzel-Events: aus placementRewardsJson, sonst 10.
+ *  Reihen-Termine nehmen stattdessen eventPayout() (Reihentabelle). */
 function announcedParticipationCoins(placementRewardsJson: string | null): number {
   try {
     const parsed = placementRewardsJson ? JSON.parse(placementRewardsJson) as { participationCoins?: number } : null;
@@ -41,7 +43,7 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, discordChannelId: true, omaOriginal: true, fixedGame: true } },
+      series: { select: { coverImageUrl: true, placementRewardsJson: true, seriesStatConfig: true, approvalStatus: true, discordChannelId: true, omaOriginal: true, fixedGame: true } },
       gameVote: { select: { id: true } },
     },
   });
@@ -96,7 +98,8 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
         genre: event.genre,
         startAt: event.startAt,
         maxPlayers: event.maxPlayers,
-        pointReward: announcedParticipationCoins(event.placementRewardsJson ?? event.series?.placementRewardsJson ?? null),
+        // Reihen-Termin: Teilnahme-Münzen aus der Reihentabelle — genau die zahlt der Event-Abschluss aus
+        pointReward: event.seriesId ? eventPayout(event).participationCoins : announcedParticipationCoins(event.placementRewardsJson),
         teilnehmer: 0,
         discordChannelId: resolveEventChannelId(event),
       });

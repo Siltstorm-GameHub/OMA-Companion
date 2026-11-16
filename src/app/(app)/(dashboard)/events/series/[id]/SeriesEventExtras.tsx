@@ -1,25 +1,23 @@
 import Image from "next/image";
 import PlaceMedal from "@/components/PlaceMedal";
-import RankPointsIcon from "@/components/RankPointsIcon";
 import { Tv2 } from "@/components/icons";
+import type { PlacementReward } from "@/lib/placement-rewards";
 
 type StreamingPartner = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } };
 
-/** Zusatzzeile der Reihen-Kacheln: Streaming-Partner und Siegprämie (Platz 1). */
+/**
+ * Zusatzzeile der Reihen-Kacheln: Streaming-Partner und der "Platzierungs-Bonus je Event"
+ * (Reihentabellen-Konfiguration, wird mit jedem Event ausgezahlt). Die Platzierungs-Belohnungen der
+ * Endwertung gehören NICHT hierher — die gibt es erst zum Abschluss der Reihe.
+ */
 export default function SeriesEventExtras({
-  partners, placementRewardsJson,
+  partners, bonus,
 }: {
   partners: StreamingPartner[];
-  placementRewardsJson: string | null;
+  /** eventPayout(ev).placements — nur Münzen, nur Plätze mit Bonus */
+  bonus: PlacementReward[];
 }) {
-  let firstPlace: { coins: number; rankPoints: number } | null = null;
-  if (placementRewardsJson) {
-    try {
-      const data = JSON.parse(placementRewardsJson) as { placements?: { place: number; coins: number; rankPoints: number }[] };
-      firstPlace = data.placements?.find(p => p.place === 1) ?? null;
-    } catch { /* kaputtes JSON → keine Prämie anzeigen */ }
-  }
-  if (partners.length === 0 && !(firstPlace && (firstPlace.coins > 0 || firstPlace.rankPoints > 0))) return null;
+  if (partners.length === 0 && bonus.length === 0) return null;
 
   return (
     <>
@@ -32,22 +30,17 @@ export default function SeriesEventExtras({
           {sp.partner.name}
         </a>
       ))}
-      {firstPlace && (firstPlace.coins > 0 || firstPlace.rankPoints > 0) && (
-        <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300" title="Prämie für Platz 1">
-          <PlaceMedal place={1} />
-          {firstPlace.coins > 0 && (
-            <>
+      {bonus.length > 0 && (
+        <span className="flex items-center gap-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300"
+          title="Platzierungs-Bonus je Event: gibt es direkt nach diesem Termin">
+          <span className="font-semibold">Bonus</span>
+          {bonus.slice(0, 3).map(b => (
+            <span key={b.place} className="flex items-center gap-0.5">
+              <PlaceMedal place={b.place} />
               <Image src="/Muenze Icon.png" alt="Münzen" width={10} height={10} className="object-contain" />
-              {firstPlace.coins}
-            </>
-          )}
-          {firstPlace.rankPoints > 0 && (
-            <>
-              {firstPlace.coins > 0 && <span className="text-amber-500/60">·</span>}
-              <RankPointsIcon size={10} />
-              {firstPlace.rankPoints}
-            </>
-          )}
+              {b.coins}
+            </span>
+          ))}
         </span>
       )}
     </>

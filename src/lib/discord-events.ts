@@ -7,6 +7,7 @@ import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { prisma } from "@/lib/prisma";
 import { isOmaOriginal } from "@/lib/oma-original";
+import { eventPayout } from "@/lib/placement-rewards";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { editDiscordMessage } from "@/lib/discord-rest";
 
@@ -331,7 +332,7 @@ export async function refreshEventAnnouncement(eventId: string): Promise<void> {
   if (!process.env.DISCORD_BOT_TOKEN) return;
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { series: { select: { coverImageUrl: true, discordChannelId: true, placementRewardsJson: true, omaOriginal: true } }, gameVote: { select: { status: true } } },
+    include: { series: { select: { coverImageUrl: true, discordChannelId: true, placementRewardsJson: true, seriesStatConfig: true, omaOriginal: true } }, gameVote: { select: { status: true } } },
   });
   if (!event) return;
   const game = event.game ?? (event.gameVote ? GAME_VOTE_PLACEHOLDER : null);
@@ -346,11 +347,15 @@ export async function refreshEventAnnouncement(eventId: string): Promise<void> {
     const channelId = resolveEventChannelId(event) || rule?.discordChannelId || process.env.DISCORD_NEWS_CHANNEL_ID;
     if (!channelId) return;
     let coins = 10;
-    try {
-      const raw = event.placementRewardsJson ?? event.series?.placementRewardsJson ?? null;
-      const parsed = raw ? JSON.parse(raw) as { participationCoins?: number } : null;
-      if (parsed?.participationCoins != null) coins = parsed.participationCoins;
-    } catch { /* Standardwert */ }
+    if (event.seriesId) {
+      // Reihen-Termin: Teilnahme-Münzen aus der Reihentabelle — genau die zahlt der Event-Abschluss aus
+      coins = eventPayout(event).participationCoins;
+    } else {
+      try {
+        const parsed = event.placementRewardsJson ? JSON.parse(event.placementRewardsJson) as { participationCoins?: number } : null;
+        if (parsed?.participationCoins != null) coins = parsed.participationCoins;
+      } catch { /* Standardwert */ }
+    }
     const players = await prisma.eventRegistration.count({ where: { eventId, role: "player" } });
     const embed = await buildNewEventEmbed({
       eventId: event.id, title: event.title, game, format: event.format, genre: event.genre, startAt: event.startAt,

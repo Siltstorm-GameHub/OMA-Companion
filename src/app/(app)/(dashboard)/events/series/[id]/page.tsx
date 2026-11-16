@@ -17,6 +17,10 @@ import PollsSection from "@/app/(app)/(dashboard)/tournament/[id]/PollsSection";
 import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList from "./SeriesEventList";
 import SeriesEventExtras from "./SeriesEventExtras";
+import { eventPayout } from "@/lib/placement-rewards";
+import PlaceMedal from "@/components/PlaceMedal";
+import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import SeasonTimeline, { type TimelineEvent } from "./SeasonTimeline";
 import { timelineStates } from "@/lib/series-timeline";
 import MyStandingCard, { type MyStanding } from "./MyStandingCard";
@@ -446,7 +450,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     if (seriesIsOriginal) card.omaOriginal = false;
     return (
       <EventCard key={ev.id} ev={card} variant="row"
-        extra={<SeriesEventExtras partners={ev.streamingPartners} placementRewardsJson={ev.placementRewardsJson} />}
+        extra={<SeriesEventExtras partners={ev.streamingPartners} bonus={eventPayout(ev).placements} />}
         actions={<EventCardActions ev={ev} card={card} viewer={viewer} userId={userId} />} />
     );
   };
@@ -480,6 +484,19 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       pts: `+${statCfg.dominionBonus.seriesPoints}`,
       who: `${statCfg.dominionBonus.threshold}× in Folge`,
     });
+  }
+  // Münzen: was es nach JEDEM Termin gibt vs. was erst die Endwertung der Reihe bringt
+  const coinList = (list: { place: number; coins: number; rankPoints?: number }[]) =>
+    list.map(p => `${p.place}. ${p.coins.toLocaleString("de-DE")}${p.rankPoints ? ` +${p.rankPoints} RP` : ""}`).join(" · ");
+  // Dieselbe Quelle wie die Auszahlung (lib/placement-rewards.ts): Reihentabelle bzw. Reihen-Belohnungen
+  const seriesPayout = eventPayout({ seriesId: series.id, placementRewardsJson: null, series });
+  const bonusPerEvent = seriesPayout.placements;
+  if (bonusPerEvent.length > 0) {
+    punkteItems.push({ emoji: "🪙", label: "Platzierungs-Bonus je Event", pts: coinList(bonusPerEvent), who: "Münzen direkt nach jedem Termin" });
+  }
+  const seriesFinalRewards = (seriesPayout.seriesFinal ?? []).sort((a, b) => a.place - b.place);
+  if (seriesFinalRewards.length > 0) {
+    punkteItems.push({ emoji: "🏁", label: "Endwertung der Reihe", pts: coinList(seriesFinalRewards), who: "Münzen zum Abschluss der Reihe" });
   }
 
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
@@ -725,6 +742,37 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const participantCount = totalParticipantIds.size;
 
+  // Belohnungen im Kopf: Endwertung der Reihe (zum Abschluss) + Bonus je Termin (direkt nach jedem Event)
+  const finalTop = (seriesPayout.seriesFinal ?? []).slice().sort((a, b) => a.place - b.place).slice(0, 3);
+  const rewardsBlock = (finalTop.length > 0 || seriesPayout.placements.length > 0) ? (
+    <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.05] px-3 py-2.5 space-y-2">
+      {finalTop.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-amber-300">Belohnung der Eventreihe <span className="font-normal text-gray-500">· zum Abschluss</span></p>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            {finalTop.map(r => (
+              <span key={r.place} className="flex items-center gap-1 text-sm font-semibold text-white tabular-nums">
+                <PlaceMedal place={r.place} />
+                {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400"><CoinIcon size={13} />{r.coins.toLocaleString("de-DE")}</span>}
+                {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400"><RankPointsIcon size={13} />{r.rankPoints}</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {seriesPayout.placements.length > 0 && (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+          <span>Bonus je Termin:</span>
+          {seriesPayout.placements.slice(0, 3).map(p => (
+            <span key={p.place} className="flex items-center gap-0.5 text-amber-300 tabular-nums">
+              <PlaceMedal place={p.place} /><CoinIcon size={11} />{p.coins.toLocaleString("de-DE")}
+            </span>
+          ))}
+        </p>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
@@ -841,6 +889,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 {nextCard.friendNames.length > 0 && <> · <span className="text-gray-300">{nextCard.friendNames.join(", ")}</span></>}
                 {nextCard.urgency && <> · <span className="text-amber-300">{nextCard.urgency}</span></>}
               </p>
+              {rewardsBlock && <div className="pt-1">{rewardsBlock}</div>}
               <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                 <EventCardActions ev={nextSource} card={nextCard} viewer={viewer} userId={userId} />
                 <a href={`/api/events/${nextSource.id}/ics`} download
@@ -853,6 +902,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             <>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Nächster Termin</p>
               <p className="text-sm text-gray-400">Gerade ist kein Termin geplant. Schau bald wieder vorbei.</p>
+              {rewardsBlock && <div className="mt-auto pt-2">{rewardsBlock}</div>}
             </>
           )}
         </div>

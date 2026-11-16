@@ -63,7 +63,7 @@ import { resolveEventGoal } from "@/lib/event-goal";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
 import BlocksEventSection from "@/components/blocks/BlocksEventSection";
-import { placementRewardFor } from "@/lib/placement-rewards";
+import { eventPayout } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import NextMatches, { type UpcomingMatch } from "./NextMatches";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
@@ -592,16 +592,10 @@ export default async function TournamentDetailPage({
   // daher aus der Abstimmungs-Übersicht (PollsSection) ausschließen, um Doppelanzeige zu vermeiden
   const completedPollIds = new Set(completedPolls.map(p => p.id));
 
-  // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
-  const participationCoins: number = (() => {
-    if (event.placementRewardsJson) {
-      try {
-        const r = JSON.parse(event.placementRewardsJson) as { participationCoins?: number };
-        if (r.participationCoins != null) return r.participationCoins;
-      } catch { /* ignore */ }
-    }
-    return event.pointReward ?? 0;
-  })();
+  // Was DIESES Event auszahlt — bei Reihen-Terminen Teilnahme + "Platzierungs-Bonus je Event" aus der
+  // Reihentabelle; die Platzierungs-Belohnungen der Reihe gibt es erst zur Endwertung (lib/placement-rewards.ts)
+  const payout = eventPayout(event);
+  const participationCoins = payout.participationCoins;
 
   // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — Grundlage für die echten Tabellenpunkte
   // der Reihe (Teilnahme, Stats mit seriesweitem pointsPer, Sieger-Ziel-Feld). Die Event-eigene
@@ -728,9 +722,11 @@ export default async function TournamentDetailPage({
   const partnerUserIds = new Set(streamingPartners.map(sp => sp.partner.user?.id).filter(Boolean));
   const filteredCommunityStreamers = communityStreamers.filter(cs => !partnerUserIds.has(cs.user.id));
   // 1.-Platz-Preis genau so, wie der Event-Abschluss ihn auszahlt (Event-, sonst Reihen-Konfiguration)
-  const firstPlace = placementRewardFor(1, event.placementRewardsJson, event.series?.placementRewardsJson);
-  const heroFirstPlaceCoins    = firstPlace.coins;
-  const heroFirstPlaceRankPts  = firstPlace.rankPoints;
+  // 1.-Platz-Preis genau so, wie der Event-Abschluss ihn auszahlt (Reihen-Termin: Bonus je Event)
+  const firstPlace = payout.placements.find(p => p.place === 1);
+  const heroFirstPlaceCoins    = firstPlace?.coins ?? 0;
+  const heroFirstPlaceRankPts  = firstPlace?.rankPoints ?? 0;
+  const seriesFinalFirst = payout.seriesFinal?.find(p => p.place === 1) ?? null;
   const hasHeroFirstPlace      = heroFirstPlaceCoins > 0 || heroFirstPlaceRankPts > 0;
   const date = new Date(event.startAt);
   const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
@@ -1072,7 +1068,8 @@ export default async function TournamentDetailPage({
         )}
       </span>
       {hasHeroFirstPlace ? (
-        <span className={`${FACT} text-amber-200`}>
+        <span className={`${FACT} text-amber-200`} title={event.seriesId ? "Platzierungs-Bonus je Event: gibt es direkt nach diesem Termin" : "Preis für Platz 1"}>
+          {event.seriesId && <span className="font-semibold">Bonus</span>}
           <PlaceMedal place={1} className="text-xs" />
           {heroFirstPlaceCoins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{heroFirstPlaceCoins}</span>}
           {heroFirstPlaceRankPts > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{heroFirstPlaceRankPts}</span>}
@@ -1080,6 +1077,15 @@ export default async function TournamentDetailPage({
       ) : participationCoins > 0 ? (
         <span className={`${FACT} font-semibold text-amber-400`}>+{participationCoins} <CoinIcon size={12} /> fürs Mitmachen</span>
       ) : null}
+      {/* Reihen-Termin: Preise der Endwertung — erst zum Abschluss der Reihe */}
+      {event.series && seriesFinalFirst && (
+        <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-white/[0.15]`}
+          title="Platzierungs-Belohnungen der Reihe: gibt es zum Abschluss der Reihe">
+          Endwertung der Reihe: <PlaceMedal place={1} className="text-xs" />
+          {seriesFinalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{seriesFinalFirst.coins}</span>}
+          {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
+        </Link>
+      )}
       {hasTournament && totalMatches > 0 && (
         <span className={FACT}><span className="tabular-nums">{playedMatches}/{totalMatches}</span> Matches gespielt</span>
       )}

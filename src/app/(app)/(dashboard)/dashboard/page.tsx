@@ -31,7 +31,7 @@ import { buildHomeTasks, closestQuests } from "@/lib/home-tasks";
 import HomeTaskBar from "./HomeTaskBar";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
-import { eventParticipationCoins } from "@/lib/event-placeholders";
+import { eventPayout } from "@/lib/placement-rewards";
 import { homeRows, pickHomeFeature, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
@@ -388,7 +388,7 @@ export default async function DashboardPage() {
       pollMissingVote: !!userId && !!openPoll && openPoll.votes.length === 0,
       pollEndsAt: openPoll?.endAt ?? null,
       relevance: relevanceTags({ game: ev.game, squadId: restrictedSquadId }, viewer),
-      coins: eventParticipationCoins(ev),
+      coins: eventPayout(ev).participationCoins,
       avatars: others.slice(0, 3),
       friendNames: others.filter(u => viewer.friendIds.has(u.id)).slice(0, 2).map(u => u.username ?? u.name ?? "Mitglied"),
       discordUrl: ev.discordEventId && process.env.DISCORD_GUILD_ID
