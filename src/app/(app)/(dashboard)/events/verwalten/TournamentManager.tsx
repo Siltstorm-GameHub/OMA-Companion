@@ -1,13 +1,11 @@
 "use client";
 import { useRef, useState, useSyncExternalStore } from "react";
-import CoinIcon from "@/components/CoinIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Trophy, Plus, Trash2, Clock, Save, X, RotateCcw, RefreshCw, Pencil, History, Play, Square, CalendarClock } from "@/components/icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { confirmEventTiming } from "@/lib/event-timing-warning";
-import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { formatLabel as centralFormatLabel } from "@/lib/tournament-formats";
 import { GROUP_KNOCKOUT_FORMAT, groupLabel, knockoutRoundLabel } from "@/lib/tournaments/groupStage";
@@ -17,6 +15,12 @@ import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } 
 import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { DropMenu, InlineSubmissions, StatStandingsTable, TournamentHeader, type InlineSubmission } from "./TournamentOverview";
+import { duelProgress, nextDuelMatches, statProgress, statStandings } from "@/lib/tournaments/progress";
+import { computeTurnierpunkte } from "@/lib/series-event-points";
+import { computeCommunityGoalProgress, goalUnit, type CommunityGoal } from "@/lib/community-goal";
+import type { AvgDirection } from "@/lib/avg-stats";
+import { formatDecimal } from "@/lib/format-number";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -91,7 +95,17 @@ export function nowForDatetimeLocal(): string {
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
   event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints, standaloneEvent = false,
+  pendingSubmissions = [], pendingCount = 0, pointsCfg = null, goal = null, avgDirection = "high",
 }: {
+  /** Offene Ergebnis-Meldungen der Spieler (nur Turnier-Seite) — direkt übernehmen/ablehnen */
+  pendingSubmissions?: InlineSubmission[];
+  pendingCount?: number;
+  /** Eventpunkte-Konfiguration (wie beim Abschluss) — für die Live-Tabelle der Stat-Formate */
+  pointsCfg?: { stats: { field: string; pointsPer: number }[]; placementPoints?: Record<string, number>; winnerStatKeys?: string[]; matchWinStatKeys?: string[] } | null;
+  /** Community-Ziel (Punktewertung) — Fortschrittsbalken über der Tabelle */
+  goal?: CommunityGoal | null;
+  /** Durchschnittswerte: höchster oder niedrigster Ø gewinnt */
+  avgDirection?: AvgDirection;
   event: Event;
   tournament: Tournament | null;
   allUsers: User[];
@@ -125,6 +139,9 @@ export default function TournamentManager({
   // ── Panel visibility ──────────────────────────────────────────────────
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
+  // Stat-Formate: Live-Tabelle oder Runden-Liste
+  const [statView, setStatView]             = useState<"table" | "rounds">("table");
+  const addRef = useRef<HTMLDivElement>(null);
 
   // Ansicht: "auto" (Touch-UI bei schmalem Viewport oder Finger-Eingabe) oder manuell erzwungen.
   // Pro Gerät im Browser gemerkt; gilt für alle Nutzer inkl. Desktop-PC.
@@ -803,45 +820,33 @@ export default function TournamentManager({
             )}
             {isByeMatch && <span className="text-[10px] text-gray-500">Freilos</span>}
             {isLive && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LIVE</span>}
+            {/* Live-Markierung als beschrifteter Schalter (Turnierseite & Overlay) */}
             {!isPlayed && p1 && p2 && (
               <button onClick={() => setLive(match.id, !isLive)} disabled={loading}
                 title={isLive ? "Live-Markierung beenden" : "Als „läuft gerade“ markieren (Turnierseite & Overlay)"}
-                className={`p-2.5 -m-1 transition-colors ${isLive ? "text-red-400 hover:text-gray-400" : "text-gray-600 hover:text-red-400"}`}>
-                {isLive ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </button>
-            )}
-            {isPlayed && !isByeMatch && !isEditing && (
-              <button onClick={() => startEdit(match)} disabled={loading}
-                title="Ergebnis bearbeiten"
-                className="p-2.5 -m-1 text-gray-600 hover:text-teal-400 transition-colors">
-                <Pencil className="w-3.5 h-3.5" />
+                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
+                  isLive ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-gray-700 text-gray-500 hover:text-red-300 hover:border-red-500/40"
+                }`}>
+                {isLive ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />} Live
               </button>
             )}
             {isEditing && (
               <button onClick={() => cancelEdit(match.id)} disabled={loading}
-                title="Bearbeiten abbrechen"
-                className="p-2.5 -m-1 text-teal-400 hover:text-gray-400 transition-colors">
-                <X className="w-3.5 h-3.5" />
+                className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
+                <X className="w-3 h-3" /> Abbrechen
               </button>
             )}
-            {!isByeMatch && (
-              <button onClick={() => toggleLog(match.id)} disabled={loading}
-                title="Änderungsprotokoll"
-                className={`p-2.5 -m-1 transition-colors ${matchLog ? "text-teal-400" : "text-gray-600 hover:text-gray-300"}`}>
-                <History className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {isPlayed && !isByeMatch && (
-              <button onClick={() => resetMatch(match.id)} disabled={loading}
-                title="Ergebnis zurücksetzen"
-                className="p-2.5 -m-1 text-gray-600 hover:text-amber-500 transition-colors">
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
-            <button onClick={() => deleteMatch(match.id)} disabled={loading}
-              className="p-2.5 -m-1 text-gray-600 hover:text-red-500 transition-colors">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            {/* Seltene Aktionen im ⋯-Menü (Zurücksetzen und Löschen fragen nach) */}
+            <DropMenu
+              label="Weitere Aktionen"
+              trigger={<span className="w-7 h-6 flex items-center justify-center text-base leading-none">⋯</span>}
+              items={[
+                ...(isPlayed && !isByeMatch && !isEditing ? [{ label: "Ergebnis bearbeiten", onClick: () => startEdit(match), icon: <Pencil className="w-3.5 h-3.5 text-gray-500" /> }] : []),
+                ...(!isByeMatch ? [{ label: matchLog ? "Verlauf ausblenden" : "Verlauf anzeigen", onClick: () => toggleLog(match.id), icon: <History className="w-3.5 h-3.5 text-gray-500" /> }] : []),
+                ...(isPlayed && !isByeMatch ? [{ label: "Ergebnis zurücksetzen", onClick: () => resetMatch(match.id), icon: <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> }] : []),
+                { label: "Match löschen", onClick: () => deleteMatch(match.id), danger: true, disabled: loading, icon: <Trash2 className="w-3.5 h-3.5" /> },
+              ]}
+            />
           </div>
         </div>
 
@@ -968,260 +973,9 @@ export default function TournamentManager({
     );
   }
 
-  return (
-    <div className="tm-root space-y-4" data-tm-view={viewMode}>
-
-      <div className="flex items-center justify-end gap-1.5 text-[11px] text-gray-500">
-        <span>Ansicht:</span>
-        {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
-          <button key={v} type="button" onClick={() => changeViewMode(v)}
-            className={`px-2.5 py-1 rounded-md border transition-colors ${
-              viewMode === v ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
-            }`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Nachzügler (Punktewertung/Durchschnittswerte): angemeldete Spieler, die in noch keiner Runde
-          stehen — z.B. bei Zeitraum-Events nach dem Start eingestiegen. Per Knopf in eine Runde aufnehmen. */}
-      {isFfa && statRounds.length > 0 && latecomers.length > 0 && (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 space-y-2">
-          <p className="text-sm font-semibold text-amber-300">
-            Neu dabei — noch in keiner Runde ({latecomers.length})
-          </p>
-          <div className="space-y-1.5">
-            {latecomers.map(u => (
-              <div key={u.id} className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-white flex-1 min-w-[120px] truncate">{u.username ?? u.name ?? "?"}</span>
-                <select
-                  value={latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id}
-                  onChange={e => setLatecomerRound(prev => ({ ...prev, [u.id]: e.target.value }))}
-                  className="rounded-lg px-2 py-1.5 text-xs text-white bg-gray-800 border border-gray-700 outline-none focus:border-amber-500/50">
-                  {[...statRounds].reverse().map(m => <option key={m.id} value={m.id}>{statRoundLabel(m)}</option>)}
-                </select>
-                <button type="button" disabled={loading}
-                  onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50">
-                  <Plus className="w-3.5 h-3.5" /> Zur Runde
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════
-          Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
-          Desktop-Tabelle, siehe TournamentManagerMobile.
-          ══════════════════════════════════════════════════════════════ */}
-      <div className="tm-touch-only">
-        <TournamentManagerMobile
-          tournament={isGroupKnockout
-            ? { ...tournament, matches: [...groupMatches, ...knockoutMatches] }
-            : tournament}
-          groupStage={isGroupKnockout ? {
-            panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact />,
-            roundLabel: groupKnockoutLabel,
-            // Gruppenspiele und Hinspiele dürfen unentschieden enden; das Rückspiel entscheidet per Gesamtergebnis
-            allowDraw: m => m.groupIndex != null || m.leg === 1,
-          } : undefined}
-          allUsers={allUsers}
-          loading={loading}
-          isFfa={isFfa}
-          isCoop={isCoop}
-          trackMatchWin={trackMatchWin}
-          trackPlacement={trackPlacement}
-          isLiga={isLiga}
-          is1v1={is1v1}
-          isRoundRobin={isRoundRobin}
-          formatLabel={formatLabel}
-          visibleStatFields={visibleStatFields}
-          placementPoints={placementPoints}
-          supportsDraw={supportsDraw}
-          rounds={rounds}
-          scores1v1={scores1v1}
-          setScores1v1={setScores1v1}
-          ffaEdits={ffaEdits}
-          setFfaField={setFfaField}
-          teamAssign={teamAssign}
-          setTeamAssign={setTeamAssign}
-          matchWin={matchWin}
-          setMatchWin={setMatchWin}
-          matchWinAll={matchWinAll}
-          setMatchWinAll={setMatchWinAll}
-          validateTeamAssignment={validateTeamAssignment}
-          submit1v1={submit1v1}
-          submitFfa={submitFfa}
-          changeMatchPlayer={changeMatchPlayer}
-          resetMatch={resetMatch}
-          deleteMatch={deleteMatch}
-          generateRoundRobinMatches={generateRoundRobinMatches}
-          canGenerate={canGenerate}
-          isBracketFormat={isBracketFormat}
-          showAdd={showAdd}
-          setShowAdd={setShowAdd}
-          mTitle={mTitle}
-          setMTitle={setMTitle}
-          mScheduled={mScheduled}
-          setMScheduled={setMScheduled}
-          mNotes={mNotes}
-          setMNotes={setMNotes}
-          mRound={mRound}
-          setMRound={setMRound}
-          mP1={mP1}
-          setMP1={setMP1}
-          mP2={mP2}
-          setMP2={setMP2}
-          mFfaIds={mFfaIds}
-          setMFfaIds={setMFfaIds}
-          addMatch={addMatch}
-          openAddStatRound={openAddStatRound}
-          updateRoundMeta={updateRoundMeta}
-          usedRoundNumbers={usedRoundNumbers}
-        />
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          Desktop — bestehende Tabellen-/Bracket-Ansicht.
-          ══════════════════════════════════════════════════════════════ */}
-      <div className="tm-desktop-only space-y-4">
-
-      {/* ── Header bar ───────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <InfoTooltip text='Status "pending" = Turnier hat noch nicht begonnen. "active" = läuft, Ergebnisse können eingetragen werden. "finished" = abgeschlossen. Klicke bei einem Match auf die Spieler/Platzierung, um ein Ergebnis einzutragen, dann auf "Ergebnisse speichern".' />
-          <span className="text-xs bg-rose-900/40 text-rose-300 px-2 py-1 rounded-full">{formatLabel}</span>
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            tournament.status === "active"   ? "bg-green-900/40 text-green-300" :
-            tournament.status === "finished" ? "bg-gray-800 text-gray-500"      :
-                                               "bg-amber-900/40 text-amber-300"
-          }`}>{tournament.status}</span>
-          {supportsDraw && (
-            <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /> pro Match</span>
-          )}
-          {visibleStatFields.length > 0 && (
-            <span className="text-xs text-gray-600">Stats: {visibleStatFields.join(", ")}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Terminplanung: Startzeit + Abstand je Spieltag/Runde */}
-      {is1v1 && tournament.matches.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/30">
-          <button type="button" onClick={() => {
-            if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal());
-            setShowSchedule(v => !v);
-          }}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-300">
-            <span className="flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Termine planen</span>
-            {showSchedule ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-          {showSchedule && (
-            <div className="px-3 pb-3 space-y-2">
-              <p className="text-[11px] text-gray-500">
-                Jeder Spieltag bzw. jede K.O.-Runde bekommt ein eigenes Zeitfenster (Gruppen spielen gleichzeitig,
-                Hin- und Rückspiel getrennt). Freilose werden nicht terminiert.
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
-                  className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
-                <span className="text-xs text-gray-400">alle</span>
-                <NumberInput min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
-                  className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
-                <span className="text-xs text-gray-400">Minuten</span>
-              </div>
-              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-                <input type="checkbox" checked={scheduleOverwrite} onChange={e => setScheduleOverwrite(e.target.checked)} className="rounded" />
-                Vorhandene Termine überschreiben
-              </label>
-              <button type="button" onClick={scheduleMatches} disabled={loading || !scheduleStart || scheduleInterval < 5}
-                className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
-                Termine setzen
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* K.O.-Baum / Liga aus den angemeldeten Spielern generieren (direkt sichtbar wenn relevant) */}
-      {canGenerate && (
-        <button onClick={generateRoundRobinMatches} disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
-          <RefreshCw className="w-3.5 h-3.5" />
-          {isBracketFormat
-            ? `K.O.-Baum auslosen (bis zu ${poolSize} Spieler)`
-            : isLiga
-            ? `Alle Spieltage generieren (bis zu ${poolSize} Spieler)`
-            : `Alle Paarungen generieren (bis zu ${poolSize} Spieler)`}
-        </button>
-      )}
-
-      {/* ── Gruppenphase + K.O.: Auslosung/Tabellen, Gruppenspiele (mit Unentschieden), K.O.-Runde ── */}
-      {isGroupKnockout && (
-        <div className="space-y-4">
-          <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} />
-          {groupIndexes.map(gi => (
-            <div key={`g${gi}`}>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {groupMatches.filter(m => m.groupIndex === gi).map(m => renderDuelCard(m, true))}
-              </div>
-            </div>
-          ))}
-          {Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
-            <div key={`ko${round}`}>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
-              <div className="space-y-2">
-                {knockoutMatches.filter(m => m.round === round).map(m => renderDuelCard(m, m.leg === 1))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Match list ───────────────────────────────────────────────── */}
-      {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
-      {!is1v1 && expanded.size > 0 && (
-        <button onClick={saveAllExpanded} disabled={loading}
-          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
-          <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
-        </button>
-      )}
-      {!isGroupKnockout && (
-      <div className="space-y-2">
-        {tournament.matches.length === 0 && (
-          <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
-            {(isRoundRobin || isLiga)
-              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann hier auf "Paarungen generieren" klicken.'
-              : isBracketFormat
-              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann oben auf "K.O.-Baum auslosen" klicken — oder Matches unten von Hand anlegen.'
-              : 'Noch keine Matches. Klicke unten auf "Match hinzufügen".'}
-          </div>
-        )}
-
-        {is1v1
-          ? /* ── 1v1 / bracket / liga ────────────────────────────────── */
-            Array.from({ length: rounds }, (_, i) => i + 1).map(round => {
-              const rMatches = tournament.matches.filter(m => m.round === round);
-              const rLabel = isLiga
-                ? `Spieltag ${round}`
-                : round === rounds       ? "Finale"
-                : round === rounds - 1  ? "Halbfinale"
-                : round === rounds - 2  ? "Viertelfinale"
-                : `Runde ${round}`;
-              return (
-                <div key={round}>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{rLabel}</p>
-                  <div className="space-y-2">
-                    {rMatches.map(match => renderDuelCard(match, supportsDraw))}
-                  </div>
-                </div>
-              );
-            })
-          : /* ── FFA / coop view ─────────────────────────────────────── */
-            statRounds.map((match, matchIdx) => {
-              const isExp    = expanded.has(match.id);
+  /** Stat-Runde: Eingabe und Korrektur. forceOpen = immer aufgeklappt ("Als Nächstes"). */
+  function renderStatRound(match: Match, matchIdx: number, forceOpen = false) {
+              const isExp    = forceOpen || expanded.has(match.id);
               const isPlayed = !!match.playedAt;
               const ed       = ffaEdits[match.id] ?? {};
               // Punkt 4: Team-Zuordnung live validieren statt erst beim Speichern per Toast zu melden
@@ -1277,7 +1031,7 @@ export default function TournamentManager({
                           <div className="mb-3 space-y-2">
                             <div className="flex flex-wrap gap-1.5">
                               {match.entries.map(e => {
-                                const u = tournament.participants.find(p => p.userId === e.userId)?.user
+                                const u = tournament!.participants.find(p => p.userId === e.userId)?.user
                                   ?? allUsers.find(x => x.id === e.userId);
                                 return (
                                   <span key={e.id} className="inline-flex items-center gap-1 text-xs bg-gray-800 border border-gray-700 rounded-full pl-2.5 pr-1 py-0.5 text-gray-200">
@@ -1304,7 +1058,7 @@ export default function TournamentManager({
                       })()}
                       {visibleStatFields.length === 0 && !trackMatchWin && !trackPlacement ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
-                          Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
+                          Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern“ klicken.
                         </div>
                       ) : (
                       <>
@@ -1472,12 +1226,365 @@ export default function TournamentManager({
                   )}
                 </div>
               );
-            })}
+  }
+
+  /* ── Überblick: Stand, Als Nächstes, Live-Tabelle, Werkzeuge ── */
+  const dp = is1v1 ? duelProgress(tournament.matches) : null;
+  const sp = isFfa ? statProgress(statRounds) : null;
+  const nextDuels = is1v1 ? nextDuelMatches(isGroupKnockout ? [...groupMatches, ...knockoutMatches] : tournament.matches) : [];
+  const duelStageLabel = (m: Match) => isGroupKnockout
+    ? groupKnockoutLabel(m)
+    : (isLiga || isRoundRobin) ? `Spieltag ${m.round}`
+    : m.round === rounds ? "Finale" : m.round === rounds - 1 ? "Halbfinale" : m.round === rounds - 2 ? "Viertelfinale" : `Runde ${m.round}`;
+  const statusDe = tournament.status === "active" ? "Läuft" : tournament.status === "finished" ? "Beendet" : "Noch nicht gestartet";
+  const stage = dp
+    ? (dp.current ? duelStageLabel(dp.current) : dp.total > 0 ? "alle Matches gespielt" : "noch keine Matches")
+    : sp ? (sp.next ? `Runde ${sp.next.position} als Nächstes` : sp.total > 0 ? "alle Runden eingetragen" : "noch keine Runden") : "";
+  const statusLine = [statusDe, stage].filter(Boolean).join(" · ");
+  const hasEventPoints = !!pointsCfg && (pointsCfg.stats.some(st => st.pointsPer) || Object.keys(pointsCfg.placementPoints ?? {}).length > 0);
+  const eventPoints = isFfa && hasEventPoints ? computeTurnierpunkte(statRounds, pointsCfg!, tournament.format) : null;
+  const standings = isFfa ? statStandings(statRounds, visibleStatFields, tournament.format, { points: eventPoints, direction: avgDirection }) : [];
+  const goalProgress = isFfa && goal ? computeCommunityGoalProgress(statRounds, goal) : null;
+  const nameOfUser = (uid: string) => {
+    const u = allUsers.find(x => x.id === uid) ?? tournament.participants.find(pp => pp.userId === uid)?.user;
+    return u ? userName(u) : "?";
+  };
+  const resultsHref = `/events/verwalten/${event.id}/results`;
+  const openAdd = () => {
+    if (isFfa) openAddStatRound();
+    else { setMScheduled(nowForDatetimeLocal()); setShowAdd(true); }
+    setTimeout(() => addRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+  const tools = [
+    ...(is1v1 && tournament.matches.length > 0 ? [{
+      label: showSchedule ? "Terminplanung schließen" : "Termine planen",
+      onClick: () => { if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal()); setShowSchedule(v => !v); },
+    }] : []),
+    ...(canGenerate ? [{
+      label: isBracketFormat ? "K.O.-Baum neu auslosen" : isLiga ? "Spieltage neu generieren" : "Paarungen neu generieren",
+      onClick: generateRoundRobinMatches, disabled: loading,
+    }] : []),
+    ...(!isGroupKnockout ? [{ label: isFfa ? "Runde hinzufügen" : "Match hinzufügen", onClick: openAdd }] : []),
+  ];
+
+  return (
+    <div className="tm-root space-y-4" data-tm-view={viewMode}>
+
+      <div className="flex items-center justify-end gap-1.5 text-[11px] text-gray-500">
+        <span>Ansicht:</span>
+        {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
+          <button key={v} type="button" onClick={() => changeViewMode(v)}
+            className={`px-2.5 py-1 rounded-md border transition-colors ${
+              viewMode === v ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Stand, Ergebnis-Meldungen, Werkzeuge (für Desktop und Touch) ── */}
+      <TournamentHeader
+        formatLabel={formatLabel}
+        statusLine={statusLine}
+        played={dp ? dp.played : sp ? sp.played : 0}
+        total={dp ? dp.total : sp ? sp.total : 0}
+        unit={isFfa ? "Runden" : "Matches"}
+        resultsHref={resultsHref}
+        pendingCount={pendingCount}
+        tools={tools}
+      />
+      {pendingSubmissions.length > 0 && (
+        <section aria-label="Gemeldete Ergebnisse" className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] px-3 py-2">
+          <p className="text-[11px] font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
+          <InlineSubmissions eventId={event.id} items={pendingSubmissions} resultsHref={resultsHref} />
+        </section>
+      )}
+
+      {/* Terminplanung: Startzeit + Abstand je Spieltag/Runde */}
+      {showSchedule && is1v1 && tournament.matches.length > 0 && (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/30">
+          <button type="button" onClick={() => {
+            if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal());
+            setShowSchedule(v => !v);
+          }}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-300">
+            <span className="flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Termine planen</span>
+            {showSchedule ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          {showSchedule && (
+            <div className="px-3 pb-3 space-y-2">
+              <p className="text-[11px] text-gray-500">
+                Jeder Spieltag bzw. jede K.O.-Runde bekommt ein eigenes Zeitfenster (Gruppen spielen gleichzeitig,
+                Hin- und Rückspiel getrennt). Freilose werden nicht terminiert.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
+                  className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
+                <span className="text-xs text-gray-400">alle</span>
+                <NumberInput min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
+                  className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
+                <span className="text-xs text-gray-400">Minuten</span>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                <input type="checkbox" checked={scheduleOverwrite} onChange={e => setScheduleOverwrite(e.target.checked)} className="rounded" />
+                Vorhandene Termine überschreiben
+              </label>
+              <button type="button" onClick={scheduleMatches} disabled={loading || !scheduleStart || scheduleInterval < 5}
+                className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+                Termine setzen
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {/* Nachzügler (Punktewertung/Durchschnittswerte): angemeldete Spieler, die in noch keiner Runde
+          stehen — z.B. bei Zeitraum-Events nach dem Start eingestiegen. Per Knopf in eine Runde aufnehmen. */}
+      {isFfa && statRounds.length > 0 && latecomers.length > 0 && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 space-y-2">
+          <p className="text-sm font-semibold text-amber-300">
+            Neu dabei — noch in keiner Runde ({latecomers.length})
+          </p>
+          <div className="space-y-1.5">
+            {latecomers.map(u => (
+              <div key={u.id} className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-white flex-1 min-w-[120px] truncate">{u.username ?? u.name ?? "?"}</span>
+                <select
+                  value={latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id}
+                  onChange={e => setLatecomerRound(prev => ({ ...prev, [u.id]: e.target.value }))}
+                  className="rounded-lg px-2 py-1.5 text-xs text-white bg-gray-800 border border-gray-700 outline-none focus:border-amber-500/50">
+                  {[...statRounds].reverse().map(m => <option key={m.id} value={m.id}>{statRoundLabel(m)}</option>)}
+                </select>
+                <button type="button" disabled={loading}
+                  onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50">
+                  <Plus className="w-3.5 h-3.5" /> Zur Runde
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
+          Desktop-Tabelle, siehe TournamentManagerMobile.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="tm-touch-only">
+        <TournamentManagerMobile
+          tournament={isGroupKnockout
+            ? { ...tournament, matches: [...groupMatches, ...knockoutMatches] }
+            : tournament}
+          groupStage={isGroupKnockout ? {
+            panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact />,
+            roundLabel: groupKnockoutLabel,
+            // Gruppenspiele und Hinspiele dürfen unentschieden enden; das Rückspiel entscheidet per Gesamtergebnis
+            allowDraw: m => m.groupIndex != null || m.leg === 1,
+          } : undefined}
+          allUsers={allUsers}
+          loading={loading}
+          isFfa={isFfa}
+          isCoop={isCoop}
+          trackMatchWin={trackMatchWin}
+          trackPlacement={trackPlacement}
+          isLiga={isLiga}
+          is1v1={is1v1}
+          isRoundRobin={isRoundRobin}
+          formatLabel={formatLabel}
+          visibleStatFields={visibleStatFields}
+          placementPoints={placementPoints}
+          supportsDraw={supportsDraw}
+          rounds={rounds}
+          scores1v1={scores1v1}
+          setScores1v1={setScores1v1}
+          ffaEdits={ffaEdits}
+          setFfaField={setFfaField}
+          teamAssign={teamAssign}
+          setTeamAssign={setTeamAssign}
+          matchWin={matchWin}
+          setMatchWin={setMatchWin}
+          matchWinAll={matchWinAll}
+          setMatchWinAll={setMatchWinAll}
+          validateTeamAssignment={validateTeamAssignment}
+          submit1v1={submit1v1}
+          submitFfa={submitFfa}
+          changeMatchPlayer={changeMatchPlayer}
+          resetMatch={resetMatch}
+          deleteMatch={deleteMatch}
+          generateRoundRobinMatches={generateRoundRobinMatches}
+          canGenerate={canGenerate}
+          isBracketFormat={isBracketFormat}
+          showAdd={showAdd}
+          setShowAdd={setShowAdd}
+          mTitle={mTitle}
+          setMTitle={setMTitle}
+          mScheduled={mScheduled}
+          setMScheduled={setMScheduled}
+          mNotes={mNotes}
+          setMNotes={setMNotes}
+          mRound={mRound}
+          setMRound={setMRound}
+          mP1={mP1}
+          setMP1={setMP1}
+          mP2={mP2}
+          setMP2={setMP2}
+          mFfaIds={mFfaIds}
+          setMFfaIds={setMFfaIds}
+          addMatch={addMatch}
+          openAddStatRound={openAddStatRound}
+          updateRoundMeta={updateRoundMeta}
+          usedRoundNumbers={usedRoundNumbers}
+        />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          Desktop — bestehende Tabellen-/Bracket-Ansicht.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="tm-desktop-only space-y-4">
+
+      {/* ── Als Nächstes ── */}
+      {is1v1 && nextDuels.length > 0 && (
+        <section aria-label="Als Nächstes" className="space-y-2">
+          <p className="text-xs font-semibold text-amber-300">Als Nächstes</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {nextDuels.map(m => (
+              <div key={m.id} className="space-y-1">
+                <p className="text-[11px] text-gray-500">{duelStageLabel(m)}</p>
+                {renderDuelCard(m, isGroupKnockout ? (m.groupIndex != null || m.leg === 1) : supportsDraw)}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {isFfa && sp?.next && (
+        <section aria-label="Als Nächstes" className="space-y-2">
+          <p className="text-xs font-semibold text-amber-300">Als Nächstes · {statRoundLabel(sp.next)} eintragen</p>
+          {renderStatRound(sp.next, statRounds.findIndex(r => r.id === sp.next!.id), true)}
+        </section>
+      )}
+
+      {/* K.O.-Baum / Liga aus den angemeldeten Spielern generieren (direkt sichtbar wenn relevant) */}
+      {canGenerate && tournament.matches.length === 0 && (
+        <button onClick={generateRoundRobinMatches} disabled={loading}
+          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
+          <RefreshCw className="w-3.5 h-3.5" />
+          {isBracketFormat
+            ? `K.O.-Baum auslosen (bis zu ${poolSize} Spieler)`
+            : isLiga
+            ? `Alle Spieltage generieren (bis zu ${poolSize} Spieler)`
+            : `Alle Paarungen generieren (bis zu ${poolSize} Spieler)`}
+        </button>
+      )}
+
+      {/* ── Gruppenphase + K.O.: Auslosung/Tabellen, Gruppenspiele (mit Unentschieden), K.O.-Runde ── */}
+      {isGroupKnockout && (
+        <div className="space-y-4">
+          <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} />
+          {groupIndexes.map(gi => (
+            <div key={`g${gi}`}>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {groupMatches.filter(m => m.groupIndex === gi).map(m => renderDuelCard(m, true))}
+              </div>
+            </div>
+          ))}
+          {Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
+            <div key={`ko${round}`}>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
+              <div className="space-y-2">
+                {knockoutMatches.filter(m => m.round === round).map(m => renderDuelCard(m, m.leg === 1))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Match list ───────────────────────────────────────────────── */}
+      {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
+      {!is1v1 && statView === "rounds" && expanded.size > 0 && (
+        <button onClick={saveAllExpanded} disabled={loading}
+          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
+          <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
+        </button>
+      )}
+      {/* ── Stat-Formate: Live-Tabelle oder Runden ── */}
+      {isFfa && statRounds.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-1">
+            {([["table", "Tabelle"], ["rounds", "Runden"]] as const).map(([k, label]) => (
+              <button key={k} type="button" onClick={() => setStatView(k)} aria-pressed={statView === k}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  statView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                }`}>
+                {label}
+              </button>
+            ))}
+            <span className="ml-auto text-[11px] text-gray-600">
+              {statView === "table"
+                ? (hasEventPoints ? "Wertung nach Eventpunkten, wie beim Abschluss" : tournament.format === "avg_stats" ? `Wertung nach Ø pro Runde · ${avgDirection === "low" ? "niedrigster" : "höchster"} gewinnt` : `Wertung nach ${visibleStatFields[0] ?? "erstem Stat"}`)
+                : "Runde aufklappen zum Korrigieren"}
+            </span>
+          </div>
+          {goalProgress && (
+            <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] px-3 py-2 space-y-1">
+              <p className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
+                <span className="tabular-nums text-gray-300">{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</span>
+              </p>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />
+              </div>
+            </div>
+          )}
+          {statView === "table" && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <StatStandingsTable rows={standings} fields={visibleStatFields} isAvg={tournament.format === "avg_stats"}
+                hasPoints={!!eventPoints} nameOf={nameOfUser} maxRounds={sp?.played ?? 0} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isGroupKnockout && (!isFfa || statView === "rounds") && (
+      <div className="space-y-2">
+        {tournament.matches.length === 0 && (
+          <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
+            {(isRoundRobin || isLiga)
+              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann hier auf "Paarungen generieren" klicken.'
+              : isBracketFormat
+              ? 'Spieler im Reiter "Teilnehmer" anmelden, dann oben auf "K.O.-Baum auslosen" klicken — oder Matches unten von Hand anlegen.'
+              : 'Noch keine Matches. Klicke unten auf "Match hinzufügen".'}
+          </div>
+        )}
+
+        {is1v1
+          ? /* ── 1v1 / bracket / liga ────────────────────────────────── */
+            Array.from({ length: rounds }, (_, i) => i + 1).map(round => {
+              const rMatches = tournament.matches.filter(m => m.round === round);
+              const rLabel = isLiga
+                ? `Spieltag ${round}`
+                : round === rounds       ? "Finale"
+                : round === rounds - 1  ? "Halbfinale"
+                : round === rounds - 2  ? "Viertelfinale"
+                : `Runde ${round}`;
+              return (
+                <div key={round}>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{rLabel}</p>
+                  <div className="space-y-2">
+                    {rMatches.map(match => renderDuelCard(match, supportsDraw))}
+                  </div>
+                </div>
+              );
+            })
+          : /* ── FFA / coop view ─────────────────────────────────────── */
+            statRounds.map((match, matchIdx) => renderStatRound(match, matchIdx))}
       </div>
       )}
 
       {/* ── Add Match ────────────────────────────────────────────────── */}
       {/* Gruppenphase + K.O.: Matches entstehen nur über Auslosung bzw. K.O.-Runde */}
+      <div ref={addRef} className="scroll-mt-24">
       {!isGroupKnockout && (!showAdd ? (
         <button onClick={() => {
           if (isFfa) { openAddStatRound(); return; }
@@ -1581,6 +1688,7 @@ export default function TournamentManager({
           </button>
         </div>
       ))}
+      </div>
       </div>
       {ConfirmDialogElement}
     </div>
