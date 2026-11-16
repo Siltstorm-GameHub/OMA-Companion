@@ -12,7 +12,7 @@ import { isAwaitingApproval } from "@/lib/community-events";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Users, ChevronDown, ChevronRight, CalendarPlus, Lock, Gamepad2, MessageCircle } from "@/components/icons";
+import { Users, ChevronDown, CalendarPlus, Lock, Gamepad2, MessageCircle } from "@/components/icons";
 import { GateButton } from "@/components/GuestGate";
 import { ArrowLeft, Clock, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
@@ -34,6 +34,8 @@ import { FORMAT_LABELS } from "@/lib/tournament-formats";
 import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { TONE_CLASSES, dateBlock, eventPhase, parseRanking, startsInLabel } from "@/lib/event-display";
+import { loadSeriesContext } from "@/lib/series-context";
+import SeriesStrip from "./SeriesStrip";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
@@ -248,6 +250,8 @@ export default async function TournamentDetailPage({
 
   // Spielwahl (lib/game-vote): Termin einer Reihe, dessen Spiel die Mitglieder wählen
   const gameVote = await getGameVoteView(event.id, userId);
+  // Reihen-Termin: Kontext für Kopf und Reihen-Leiste (Termin x von y, Nachbarn, eigener Platz)
+  const seriesCtx = event.seriesId ? await loadSeriesContext(event.seriesId, event.id, userId) : null;
   const gameVoteAddable = gameVote && isMod && gameVote.status !== "closed" ? await addableGames(event.id) : [];
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
@@ -931,13 +935,8 @@ export default async function TournamentDetailPage({
           <div className="text-[11px] text-gray-400 tabular-nums"><ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /></div>
         </div>
 
-        {event.series && (
-          <Link href={`/events/series/${event.series.id}`}
-            className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-[#0b0d12]/90 px-3 py-1 text-xs font-semibold text-gray-100 hover:text-white shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
-            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-            {event.series.name} <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-          </Link>
-        )}
+        {/* Reihen-Termin: Akzent in Reihenfarbe (wie auf der Reihen-Seite) */}
+        {seriesCtx && <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full" style={{ background: seriesCtx.color }} />}
 
         <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -959,6 +958,12 @@ export default async function TournamentDetailPage({
               </span>
             )}
           </div>
+          {seriesCtx && event.series && (
+            <Link href={`/events/series/${seriesCtx.id}`} className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-semibold hover:underline" style={{ color: seriesCtx.color }}>
+              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
+              Eventreihe {seriesCtx.name} · Termin {seriesCtx.position} von {seriesCtx.total}
+            </Link>
+          )}
           <h1 className="text-2xl sm:text-3xl font-bold !text-white leading-tight">
             {isOmaOriginal(event) && <OmaTitlePrefix title={event.title} />}
             {event.title}
@@ -1520,7 +1525,8 @@ export default async function TournamentDetailPage({
 
   // ── Absprachen (Kommentare): vor dem Start weit oben und offen, danach mobil eingeklappt ──
   const commentsNode = userId ? (
-    <div className="mb-5 lg:max-w-3xl">
+    // Volle Breite wie die übrigen Abschnitte (vorher lg:max-w-3xl → schmaler als Turnieransicht/Regeln)
+    <div className="mb-5">
       <EventComments
         eventId={event.id}
         userId={userId}
@@ -1530,7 +1536,7 @@ export default async function TournamentDetailPage({
       />
     </div>
   ) : (
-    <div id="absprachen" className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 text-sm text-gray-400 lg:max-w-3xl">
+    <div id="absprachen" className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 text-sm text-gray-400">
       <MessageCircle className="w-4 h-4 text-teal-300 shrink-0" />
       <span className="flex-1">Absprachen zum Event gibt es für Mitglieder.</span>
       <GateButton href={`/tournament/${event.id}`} title="Mitreden"
@@ -1585,6 +1591,7 @@ export default async function TournamentDetailPage({
       )}
 
       {heroNode}
+      {seriesCtx && <SeriesStrip ctx={seriesCtx} currentId={event.id} />}
       {actionBar}
       {factsRow}
       {jumpLinks.length > 2 && jumpBar}
