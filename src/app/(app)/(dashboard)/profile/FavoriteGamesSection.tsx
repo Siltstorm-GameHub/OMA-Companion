@@ -3,19 +3,23 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, X, Check, Plus, Loader2, Gamepad2, Search } from "@/components/icons";
+import { Pencil, X, Check, Plus, Loader2, Gamepad2, Search, Users } from "@/components/icons";
 import GameCover from "@/components/GameCover";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
 import { MAX_FAVORITE_GAMES, steamCoverUrl, type FavoriteGame } from "@/lib/favorite-games";
 import type { ProfileGameRef } from "@/lib/profile-data";
+
+type InGame = ProfileGameRef & { id: string };
 
 interface Props {
   /** Gespeicherte Auswahl (Name + Steam-ID) — Grundlage fürs Bearbeiten */
   games: FavoriteGame[];
   /** Dieselbe Auswahl, aufgelöst gegen die Spieleliste (Link + Cover) — für die Anzeige */
   current: ProfileGameRef[];
-  /** Schnellauswahl beim Bearbeiten: deine GameSwipe-"Am Start"-Spiele */
-  quickPicks?: ProfileGameRef[];
+  /** GameSwipe "Am Start": alle Spiele, die jemand hat und spielen würde (öffentlich) */
+  inGames: InGame[];
+  /** Fremdes Profil: Spiele, bei denen ihr beide am Start seid */
+  sharedIds?: string[];
   /** Fremdes Profil → nur Anzeige, kein Bearbeiten */
   readOnly?: boolean;
   displayName?: string;
@@ -25,13 +29,20 @@ type Suggestion = { name: string; coverUrl: string | null };
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
+/** So viele "Am Start"-Spiele stehen als Chips da, der Rest als "+N" */
+const CHIPS_SHOWN = 18;
+
 /**
- * "Zockt gerade": bis zu 5 selbst gewählte Spiele, an denen jemand gerade sitzt. Gewählt wird aus der
- * Spieleliste (Schnellauswahl = eigene GameSwipe-"Am Start"-Spiele, dazu Suche); nur für Spiele, die
- * noch nicht in der Liste stehen, gibt es die Steam-Suche. Gespeichert wird wie bisher Name + Steam-ID
- * (favoriteGamesJson) — die Zuordnung zur Spieleliste passiert beim Anzeigen (lib/profile-data.ts).
+ * Profil → "Spiele": oben "Zockt gerade" (bis zu 5 selbst gewählte Spiele, groß mit Cover), darunter
+ * GameSwipe "Am Start" als kompakte Chips — ohne die Spiele, die schon oben stehen. Auf fremden
+ * Profilen stehen gemeinsame Spiele vorn und sind markiert.
+ *
+ * "Zockt gerade" wird aus der Spieleliste gewählt (Schnellauswahl = eigene "Am Start"-Spiele, dazu
+ * Suche); nur für Spiele, die noch nicht in der Liste stehen, gibt es die Steam-Suche. Gespeichert wird
+ * Name + Steam-ID (favoriteGamesJson) — die Zuordnung zur Spieleliste passiert beim Anzeigen.
  */
-export default function FavoriteGamesSection({ games, current, quickPicks = [], readOnly = false, displayName }: Props) {
+export default function FavoriteGamesSection({ games, current, inGames, sharedIds = [], readOnly = false, displayName }: Props) {
+  const quickPicks = readOnly ? [] : inGames;
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<FavoriteGame[]>(games);
@@ -107,11 +118,21 @@ export default function FavoriteGamesSection({ games, current, quickPicks = [], 
     ? draft.map((g, index) => ({ key: `${g.name}-${index}`, name: g.name, cover: coverFor(g), slug: null, index }))
     : current.map((g, index) => ({ key: `${g.name}-${index}`, name: g.name, cover: g.coverUrl, slug: g.slug, index }));
 
+  // "Am Start" ohne die Spiele, die schon unter "Zockt gerade" stehen; gemeinsame zuerst
+  const shared = new Set(sharedIds);
+  const restInGames = inGames
+    .filter(g => !current.some(c => sameName(c.name, g.name)))
+    .sort((a, b) => Number(shared.has(b.id)) - Number(shared.has(a.id)));
+  const chips = restInGames.slice(0, CHIPS_SHOWN);
+  const sharedCount = inGames.filter(g => shared.has(g.id)).length;
+
+  if (readOnly && current.length === 0 && inGames.length === 0) return null;
+
   return (
-    <section id="favorite-games-section" className="scroll-mt-24">
+    <section id="favorite-games-section" aria-label="Spiele" className="scroll-mt-24">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-          <Gamepad2 className="w-3.5 h-3.5 text-teal-500/70" /> Zockt gerade
+          <Gamepad2 className="w-3.5 h-3.5 text-teal-500/70" /> Spiele
         </h2>
         {!readOnly && (editing ? (
           <div className="flex items-center gap-2">
@@ -133,13 +154,17 @@ export default function FavoriteGamesSection({ games, current, quickPicks = [], 
         ))}
       </div>
 
-      <div className="glass rounded-2xl p-3 sm:p-4 space-y-4">
+      <div className="glass rounded-2xl p-3 sm:p-4 flex flex-col gap-3">
+        {(tiles.length > 0 || editing || !readOnly) && (
+          <p className="text-[11px] font-semibold text-gray-500 -mb-1">Zockt gerade</p>
+        )}
         {tiles.length === 0 && !editing ? (
-          <p className="text-sm text-gray-500 text-center py-4">
-            {readOnly
-              ? `${displayName ?? "Dieses Mitglied"} hat noch nicht eingetragen, was gerade läuft.`
-              : `Was zockst du gerade? Wähl bis zu ${MAX_FAVORITE_GAMES} Spiele.`}
-          </p>
+          !readOnly && (
+            <button type="button" onClick={() => { setDraft(games); setEditing(true); }}
+              className="w-full rounded-xl border border-dashed border-white/[0.1] px-3 py-3 text-sm text-gray-500 hover:border-teal-400/40 hover:text-gray-300 transition-colors">
+              Was zockst du gerade? Wähl bis zu {MAX_FAVORITE_GAMES} Spiele.
+            </button>
+          )
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
             {tiles.map(t => {
@@ -241,6 +266,50 @@ export default function FavoriteGamesSection({ games, current, quickPicks = [], 
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── GameSwipe "Am Start" als Chips ── */}
+        {!editing && (inGames.length > 0 || !readOnly) && (
+          <div className={tiles.length > 0 || !readOnly ? "pt-3 border-t border-white/[0.06]" : ""}>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-[11px] font-semibold text-gray-500">
+                Am Start <span className="font-normal text-gray-600">· {inGames.length} {inGames.length === 1 ? "Spiel" : "Spiele"}</span>
+              </p>
+              <Link href={readOnly ? "/spiele/gruppe" : "/spiele"} className="text-[11px] text-teal-500 hover:text-teal-300">
+                {readOnly ? "Gemeinsam finden" : "GameSwipe"} →
+              </Link>
+            </div>
+            {readOnly && sharedCount > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-teal-300 mb-1.5">
+                <Users className="w-3.5 h-3.5" /> Ihr seid beide bei {sharedCount} {sharedCount === 1 ? "Spiel" : "Spielen"} am Start
+              </p>
+            )}
+            {inGames.length === 0 ? (
+              <p className="text-xs text-gray-500">
+                Sag in <Link href="/spiele" className="text-teal-400 hover:text-teal-300">GameSwipe</Link>, welche Spiele du hast und spielen würdest.
+              </p>
+            ) : chips.length === 0 ? (
+              <p className="text-xs text-gray-600">Alle stehen schon oben unter „Zockt gerade“.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {chips.map(g => {
+                  const both = shared.has(g.id);
+                  const cls = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                    both ? "border-teal-400/40 bg-teal-500/10 text-teal-200 hover:border-teal-300/60" : "border-white/[0.08] text-gray-300 hover:border-white/[0.2] hover:text-white"
+                  }`;
+                  const label = <>{both && <span className="h-1.5 w-1.5 rounded-full bg-teal-400" aria-label="ihr beide" />}{g.name}</>;
+                  return g.slug
+                    ? <Link key={g.id} href={`/spiele/${g.slug}`} className={cls} title={both ? `${g.name}: ihr seid beide am Start` : g.name}>{label}</Link>
+                    : <span key={g.id} className={cls}>{label}</span>;
+                })}
+                {restInGames.length > CHIPS_SHOWN && (
+                  <span className="rounded-full px-2 py-1 text-xs text-gray-500" title={readOnly ? `weitere bei ${displayName ?? "diesem Mitglied"}` : undefined}>
+                    +{restInGames.length - CHIPS_SHOWN} weitere
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

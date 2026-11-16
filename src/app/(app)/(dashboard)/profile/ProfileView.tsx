@@ -19,7 +19,6 @@ import ProfileEditor from "./ProfileEditor";
 import ProfileCompletion from "./ProfileCompletion";
 import SquadsSection from "./SquadsSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
-import InGamesSection from "./InGamesSection";
 import ProfileQuestsAndTournaments from "./ProfileQuestsAndTournaments";
 import ProfileRecentEvents from "./ProfileRecentEvents";
 import CommunityJobsPanel from "./CommunityJobsPanel";
@@ -131,11 +130,8 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
   const overview = (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
       <div className="lg:col-span-2 space-y-5 min-w-0">
-        {(isOwn || data.currentGames.length > 0) && (
-          <FavoriteGamesSection games={data.favoriteGames} current={data.currentGames} quickPicks={isOwn ? data.inGames : []}
-            readOnly={!isOwn} displayName={displayName} />
-        )}
-        <InGamesSection games={data.inGames} sharedIds={relation?.sharedInGameIds} isOwn={isOwn} displayName={displayName} />
+        <FavoriteGamesSection games={data.favoriteGames} current={data.currentGames} inGames={data.inGames}
+          sharedIds={relation?.sharedInGameIds} readOnly={!isOwn} displayName={displayName} />
         {(isOwn || data.eventRegs.length > 0) && (
           <ProfileRecentEvents eventRegs={data.eventRegs} userId={user.id} isOwn={isOwn} />
         )}

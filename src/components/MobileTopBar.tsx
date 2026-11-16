@@ -19,7 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/leaderboard":"Rangliste",
   "/donations":  "Support",
   "/profile":    "Mein Profil",
-  "/points":     "Punktesystem",
+  "/points":     "Münzen",
   "/admin":      "Admin",
 };
 

@@ -1,10 +1,12 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CoinIcon from "@/components/CoinIcon";
+import Shortfall from "@/components/shop/Shortfall";
 import { Tabs } from "@/components/admin/Tabs";
-import { Check, Clock, Crown, Lock, ShoppingBag, Sparkles, Undo2 } from "@/components/icons";
+import { Check, ChevronRight, Clock, Crown, Lock, ShoppingBag, Sparkles, Undo2 } from "@/components/icons";
 import { CosmeticName, CosmeticTitle } from "@/components/cosmetics/CosmeticName";
 import LookPreview, { PreviewAvatar, lookOfSet } from "@/components/cosmetics/LookPreview";
 import { setCachedLook } from "@/components/cosmetics/useUserLook";
@@ -242,15 +244,14 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             className="px-2 py-1.5 rounded-lg text-gray-400 bg-white/[0.05] hover:bg-white/[0.1] transition-colors">✕</button>
         </div>
       );
+    } else if (!affordable && a.price !== null) {
+      action = <Shortfall price={a.price} balance={state.balance} basePrice={a.discountPct ? a.basePrice : null} />;
     } else {
       action = (
         <button
           onClick={() => { setConfirmBuy(item.id); setPreviewSet(null); setPreview(item.id); }}
-          disabled={!affordable || !!busy}
-          title={affordable ? undefined : "Nicht genug Münzen"}
-          className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors ${
-            affordable ? "text-amber-200 bg-amber-500/15 hover:bg-amber-500/25" : "text-gray-500 bg-white/[0.03] cursor-not-allowed"
-          }`}
+          disabled={!!busy}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors text-amber-200 bg-amber-500/15 hover:bg-amber-500/25"
         >
           <CoinIcon size={13} /> {fmt(a.price ?? 0)}
           {a.discountPct && a.basePrice !== null && <span className="text-[10px] line-through opacity-60">{fmt(a.basePrice)}</span>}
@@ -333,14 +334,13 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               <button onClick={() => setConfirmBuy(null)} disabled={!!busy} aria-label="Abbrechen"
                 className="px-2 py-1.5 rounded-lg text-gray-400 bg-white/[0.05] hover:bg-white/[0.1] transition-colors">✕</button>
             </div>
+          ) : !affordable ? (
+            <Shortfall price={s.price} balance={state.balance} basePrice={s.price < s.fullPrice ? s.fullPrice : null} />
           ) : (
             <button
               onClick={() => { setConfirmBuy(confirmKey); setPreview(null); setPreviewSet(s.id); }}
-              disabled={!affordable || !!busy}
-              title={affordable ? undefined : "Nicht genug Münzen"}
-              className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors ${
-                affordable ? "text-amber-200 bg-amber-500/15 hover:bg-amber-500/25" : "text-gray-500 bg-white/[0.03] cursor-not-allowed"
-              }`}
+              disabled={!!busy}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors text-amber-200 bg-amber-500/15 hover:bg-amber-500/25"
             >
               <CoinIcon size={13} /> {fmt(s.price)}
               {s.price < s.fullPrice && <span className="text-[10px] line-through opacity-60">{fmt(s.fullPrice)}</span>}
@@ -374,10 +374,14 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             <p className="text-[11px] text-gray-500 mt-1">Rahmen, Auren, Hintergründe, Titel und Namensfarben</p>
           </div>
         </div>
-        <div className="glass rounded-xl px-4 py-2 flex items-center gap-2">
+        <Link href="/points" title="Woher kommen Münzen?"
+          className="group glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-white/[0.05] transition-colors">
           <CoinIcon size={18} />
           <span className="text-lg font-black text-amber-300 tabular-nums">{fmt(state.balance)}</span>
-        </div>
+          <span className="flex items-center gap-0.5 border-l border-white/10 pl-2 text-[11px] font-semibold text-amber-200/80 group-hover:text-amber-200">
+            Münzen verdienen <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[17rem_1fr] gap-5 items-start">
