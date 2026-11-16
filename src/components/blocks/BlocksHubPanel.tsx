@@ -9,7 +9,7 @@ import Link from "next/link";
 import { seasonDaysLeft, seasonKey, seasonLabel } from "@/lib/month-season";
 import { ALL_TIME, getBlocksPlace, getBlocksRanking, getFinishedBlocksSeasons, getVersusWins, type BlocksRankingRow } from "@/lib/blocks/scores";
 import LeaderboardList, { type LeaderboardEntry } from "@/components/games/LeaderboardList";
-import { Crown, Trophy } from "@/components/icons";
+import { Crown } from "@/components/icons";
 import BlocksRankingTabs from "./BlocksRankingTabs";
 import { getBlocksRewards, rewardLabel } from "@/lib/blocks/rewards-config";
 import { getBlocksGoals } from "@/lib/blocks/goals-config";
@@ -59,15 +59,23 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
     detail: `${v.played} ${v.played === 1 ? "Runde" : "Runden"} gespielt`,
   }));
 
+  // Letzte Monatssieger als eine Zeile unter der Rangliste
+  const pastWinners = finished.filter((s) => s.top.length > 0);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Kopf: OMA Blocks als eigenes Produkt der Old Masters Allies */}
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div className="space-y-1.5">
-          <h2><OmaWordmark product="blocks" size="lg" /></h2>
+          <h1><OmaWordmark product="blocks" size="lg" /></h1>
           <p className="text-xs text-gray-500">Das Community-Spiel der Old Masters Allies · Monatswertung, Versus und Live-Turniere</p>
         </div>
-        <OmaOriginalMark />
+        <div className="flex items-center gap-2">
+          <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+            {label} · noch {daysLeft} {daysLeft === 1 ? "Tag" : "Tage"}
+          </span>
+          <OmaOriginalMark />
+        </div>
       </div>
 
       {/* Laufende / anstehende Events */}
@@ -78,80 +86,72 @@ export default async function BlocksHubPanel({ userId }: { userId: string }) {
         </div>
       )}
 
-      {/* Start: eigener Monatsstand, nächstes Ziel (für Neue: Einstieg mit Steuerung) */}
-      <BlocksStartCard
-        monthLabel={label}
-        daysLeft={daysLeft}
-        month={monthPlace}
-        allTime={allPlace}
-        neighbourScore={neighbourScore}
-        goals={goals}
-      />
+      {/* Spielen: Solo und Versus gleichrangig nebeneinander */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] items-stretch">
+        <BlocksStartCard
+          monthLabel={label}
+          daysLeft={daysLeft}
+          month={monthPlace}
+          allTime={allPlace}
+          neighbourScore={neighbourScore}
+          goals={goals}
+        />
+        <VersusLobbyLive />
+      </div>
 
-      {/* Versus mit Live-Raumliste */}
-      <VersusLobbyLive />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] items-start">
+        {/* Belohnungen zum Monatsende: Top 3 und persönliche Monatsziele */}
+        <BlocksRewardsOverview monthLabel={label} places={rewardRows} goals={goals} score={monthPlace?.score ?? 0} />
 
-      {/* Belohnungen zum Monatsende: Top 3 und Monatsziele */}
-      <BlocksRewardsOverview monthLabel={label} places={rewardRows} goals={goals} />
-
-      {/* Ranglisten */}
-      <BlocksRankingTabs
-        monthLabel={label}
-        month={
-          <LeaderboardList
-            rows={monthRows.map(toEntry)}
-            viewerId={userId}
-            limit={PREVIEW}
-            note={`Höchster Score im ${label} · am Monatsende gibt es Belohnungen für die Top 3, danach beginnt die Wertung neu`}
-            emptyText="In diesem Monat hat noch niemand gespielt — hol dir Platz 1!"
-            absentText="Spiel eine Solo-Runde, um in der Monatswertung zu erscheinen."
+        {/* Ranglisten + letzte Monatssieger */}
+        <div className="space-y-3 min-w-0">
+          <BlocksRankingTabs
+            monthLabel={label}
+            month={
+              <LeaderboardList
+                rows={monthRows.map(toEntry)}
+                viewerId={userId}
+                limit={PREVIEW}
+                note={`Höchster Score im ${label} · am Monatsende gibt es Belohnungen für die Top 3, danach beginnt die Wertung neu`}
+                emptyText="In diesem Monat hat noch niemand gespielt — hol dir Platz 1!"
+                absentText="Spiel eine Solo-Runde, um in der Monatswertung zu erscheinen."
+              />
+            }
+            allTime={
+              <LeaderboardList
+                rows={allRows.map(toEntry)}
+                viewerId={userId}
+                limit={PREVIEW}
+                note="Höchster Score aller Zeiten"
+                emptyText="Noch keine Einträge."
+                absentText="Spiel eine Solo-Runde, um in der All-Time-Wertung zu erscheinen."
+              />
+            }
+            versus={
+              <LeaderboardList
+                rows={versusEntries}
+                viewerId={userId}
+                limit={PREVIEW}
+                note={`Gewonnene Versus-Runden im ${label}`}
+                emptyText="In diesem Monat wurde noch keine Versus-Runde gewonnen."
+                absentText="Gewinne eine Versus-Runde, um hier zu erscheinen."
+              />
+            }
           />
-        }
-        allTime={
-          <LeaderboardList
-            rows={allRows.map(toEntry)}
-            viewerId={userId}
-            limit={PREVIEW}
-            note="Höchster Score aller Zeiten"
-            emptyText="Noch keine Einträge."
-            absentText="Spiel eine Solo-Runde, um in der All-Time-Wertung zu erscheinen."
-          />
-        }
-        versus={
-          <LeaderboardList
-            rows={versusEntries}
-            viewerId={userId}
-            limit={PREVIEW}
-            note={`Gewonnene Versus-Runden im ${label}`}
-            emptyText="In diesem Monat wurde noch keine Versus-Runde gewonnen."
-            absentText="Gewinne eine Versus-Runde, um hier zu erscheinen."
-          />
-        }
-      />
-
-      {/* Monatssieger */}
-      {finished.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="font-display text-lg font-bold text-white flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-300" /> Monatssieger
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-2">
-            {finished.map((s) => (
-              <div key={s.season} className="glass rounded-xl p-3 space-y-1.5">
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{s.label}</p>
-                {s.top.length === 0 && <p className="text-xs text-gray-500">Keine Teilnehmer</p>}
-                {s.top.map((t, i) => (
-                  <Link key={t.userId} href={`/profile/${t.userId}`} className="flex items-center gap-2 text-xs hover:text-white">
-                    {i === 0 ? <Crown className="w-3.5 h-3.5 text-amber-300" /> : <span className="w-3.5 text-center text-gray-500">{i + 1}</span>}
-                    <span className="flex-1 truncate text-white font-semibold">{t.name}</span>
-                    <span className="tabular-nums text-gray-300">{fmt(t.score)}</span>
-                  </Link>
-                ))}
-              </div>
-            ))}
-          </div>
+          {pastWinners.length > 0 && (
+            <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-0.5 text-[11px] text-gray-500">
+              <Crown className="w-3.5 h-3.5 text-amber-300 shrink-0" /> Letzte Sieger:
+              {pastWinners.map((s, i) => (
+                <span key={s.season}>
+                  {s.label.split(" ")[0].slice(0, 3)}{" "}
+                  <Link href={`/profile/${s.top[0].userId}`} className="text-gray-300 hover:text-white">{s.top[0].name}</Link>
+                  {i < pastWinners.length - 1 && " ·"}
+                </span>
+              ))}
+            </p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

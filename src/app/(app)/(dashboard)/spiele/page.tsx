@@ -5,6 +5,7 @@ import { listApprovedGames } from "@/lib/games/service";
 import { buildSwipeDeck, markSwipeSeen } from "@/lib/games/deck";
 import GameListClient from "./GameListClient";
 import GamesSectionTabs from "@/components/games/GamesSectionTabs";
+import GameSalesStrip from "@/components/games/GameSalesStrip";
 import { GAME_SORTS, type GameSort } from "@/lib/games/filter";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export default async function SpielePage({ searchParams }: { searchParams: Promi
       pendingCount={pendingCount}
       isModerator={isModerator}
       tabs={<GamesSectionTabs active="spieleliste" userId={user?.id} />}
+      sales={user ? <GameSalesStrip userId={user.id} /> : null}
       swipe={swipe}
       initialView={listFirst ? "list" : "swipe"}
     />

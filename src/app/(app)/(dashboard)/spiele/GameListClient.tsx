@@ -28,7 +28,7 @@ function toggle<T>(list: T[], v: T): T[] {
 }
 
 export default function GameListClient({
-  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator, tabs, swipe, initialView = "list",
+  games, initialQuery, initialSort = "popular", openAdd, pendingCount, isModerator, tabs, sales, swipe, initialView = "list",
 }: {
   games: GameListItem[];
   initialQuery: string;
@@ -38,6 +38,8 @@ export default function GameListClient({
   isModerator: boolean;
   /** Reiter des Games-Bereichs (serverseitig gerendert, siehe GamesSectionTabs) */
   tabs?: ReactNode;
+  /** "Gerade im Angebot" (serverseitig gerendert, siehe GameSalesStrip) — nur in der Listenansicht */
+  sales?: ReactNode;
   /** Erster Swipe-Stapel (nur für angemeldete Mitglieder) */
   swipe?: SwipeDeckData | null;
   /** Startansicht: Swipen (Standard für Mitglieder) oder Liste (Suche, Sortierung, ?ansicht=liste) */
@@ -115,6 +117,8 @@ export default function GameListClient({
           ))}
         </div>
       )}
+
+      {view === "list" && sales}
 
       {view === "swipe" && swipe ? (
         <div className="space-y-3">

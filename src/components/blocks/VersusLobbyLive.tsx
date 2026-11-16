@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronRight, Swords, Trophy, Users } from "@/components/icons";
+import { ChevronRight, Plus, Swords, Trophy, Users } from "@/components/icons";
 import type { ClientMessage, PublicRoomInfo, ServerMessage } from "@/lib/blocks/protocol";
 
 type Live = { rooms: PublicRoomInfo[]; online: number } | null;
@@ -54,26 +54,24 @@ export default function VersusLobbyLive() {
   const running = live ? live.rooms.length - open.length : 0;
 
   return (
-    <div className="glass rounded-2xl p-4 space-y-3">
-      <Link href="/games/blocks/versus" className="flex items-center gap-4 group">
-        <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
+    <section aria-label="Versus" className="glass rounded-2xl p-4 sm:p-5 flex flex-col gap-3 h-full">
+      <div className="flex items-start gap-3">
+        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
           <Swords className="w-5 h-5 text-violet-300" />
         </span>
-        <span className="flex-1 min-w-0">
-          <span className="block font-display text-lg font-bold text-white">Versus</span>
-          <span className="block text-xs text-gray-400">Echtzeit gegen bis zu 7 Leute — Linien schicken Garbage rüber.</span>
-        </span>
-        <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white shrink-0" />
-      </Link>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-violet-300/90">Versus</p>
+          <p className="text-xs text-gray-400">Echtzeit gegen bis zu 7 Leute, volle Linien schicken Garbage rüber.</p>
+        </div>
+      </div>
 
-      {live && (
-        <div className="space-y-2 border-t border-white/5 pt-3">
-          <p className="flex items-center gap-1.5 text-[11px] text-gray-400">
+      {live ? (
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs text-gray-300">
             <span className={`w-2 h-2 rounded-full ${live.online > 0 ? "bg-emerald-400 animate-pulse" : "bg-gray-600"}`} />
             {live.online === 0
-              ? "Gerade spielt niemand Versus — öffne einen Raum und teile den Link im Discord."
-              : `${live.online} Spieler online` +
-                (running > 0 ? ` · ${running} ${running === 1 ? "Runde läuft" : "Runden laufen"}` : "")}
+              ? "Gerade spielt niemand. Öffne einen Raum und teile den Link im Discord."
+              : `${live.online} online` + (running > 0 ? ` · ${running} ${running === 1 ? "Runde läuft" : "Runden laufen"}` : "")}
           </p>
           {open.slice(0, 3).map((r) => (
             <Link
@@ -100,15 +98,22 @@ export default function VersusLobbyLive() {
             </Link>
           ))}
         </div>
+      ) : (
+        <p className="text-xs text-gray-500">Öffne einen Raum oder tritt über einen geteilten Link bei.</p>
       )}
+
+      <Link href="/games/blocks/versus"
+        className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/15 hover:bg-violet-500/25 text-violet-100 font-semibold text-sm px-5 py-2.5 transition-colors">
+        <Plus className="w-4 h-4" /> Raum öffnen
+      </Link>
 
       {/* Eigenes Versus-Turnier als Event planen (Event-Assistent mit OMA Blocks vorausgewählt) */}
       <Link href="/admin/events/new?mode=event&blocks=1"
-        className="flex items-center gap-2 border-t border-white/5 pt-3 text-xs text-gray-400 hover:text-white group">
+        className="flex items-center gap-2 text-[11px] text-gray-500 hover:text-white group">
         <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-        <span className="flex-1">Versus-Turnier planen — mit Gruppen, Finale und Anmeldung</span>
+        <span className="flex-1">Versus-Turnier planen, mit Gruppen, Finale und Anmeldung</span>
         <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-white shrink-0" />
       </Link>
-    </div>
+    </section>
   );
 }
