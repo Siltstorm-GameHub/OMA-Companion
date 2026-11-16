@@ -2,7 +2,7 @@
 import PlaceMedal from "@/components/PlaceMedal";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -11,7 +11,7 @@ import Link from "next/link";
 import { UserMinus } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
 import { Repeat } from "@/components/icons";
-import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, Copy, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
+import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, Copy, AlertCircle, Plus, Tv2, Clapperboard } from "@/components/icons";
 import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -36,7 +36,9 @@ import PublishStatusPanel from "./PublishStatusPanel";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
 import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
-import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
+import { LIFECYCLE_STEPS, lifecycleStep } from "@/lib/event-manage";
+import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
@@ -253,9 +255,66 @@ function parseSpectatorReward(json: string | null | undefined) {
 }
 type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SquadOption = { id: string; name: string };
 
+const STATUS_LABELS_DE: Record<string, string> = { open: "Anmeldung offen", active: "Läuft", umfrage: "Umfragephase", finished: "Beendet" };
+
+/** Karte einer Formular-Gruppe (Grunddaten, Zeit und Teilnahme, …) */
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title} className="rounded-2xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+      <h2 className="text-sm font-semibold text-white">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+/** Schalter mit Beschriftung — Teil des Formulars, gespeichert über die Speicherleiste */
+function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string }) {
+  return (
+    <label className="flex items-start justify-between gap-3 cursor-pointer">
+      <span className="min-w-0">
+        <span className="block text-sm text-gray-300">{label}</span>
+        {hint && <span className="block text-[11px] text-gray-500">{hint}</span>}
+      </span>
+      <input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
+      <span aria-hidden className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/[0.12] transition-colors peer-checked:bg-teal-500 peer-focus-visible:ring-2 peer-focus-visible:ring-teal-400/60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />
+    </label>
+  );
+}
+
+/** ⋯-Menü im Kopf: Duplizieren, Absagen/Löschen */
+function HeaderMenu({ duplicateHref, deleteLabel, onDelete }: { duplicateHref: string; deleteLabel: string | null; onDelete: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/[0.06]";
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-label="Weitere Aktionen" aria-expanded={open}
+        className="h-[30px] w-8 rounded-lg border border-white/[0.1] text-gray-300 hover:text-white hover:border-white/20 flex items-center justify-center">⋯</button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-white/[0.1] bg-gray-900 shadow-xl">
+          <Link role="menuitem" href={duplicateHref} className={`${item} text-gray-200`}><Copy className="w-3.5 h-3.5 text-gray-500" /> Duplizieren</Link>
+          {deleteLabel && (
+            <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className={`${item} border-t border-white/[0.06] text-red-300`}>
+              <Trash2 className="w-3.5 h-3.5" /> {deleteLabel}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function EventEditClient({ event, allUsers, squads = [] }: { event: any; allUsers: User[]; squads?: SquadOption[] }) {
   const router        = useRouter();
   const { data: session } = useSession();
@@ -360,13 +419,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const usesMatchResultPoints = isRoundRobinFamily && tmtPointsMode === "matchResult";
   const resolvedTmtFormat = isLiga ? "liga" : tmtFormat;
 
+  // Sichtbarkeit, Selbst-Anmeldung, Squad und OMA Original laufen (wie alle Formularfelder) über
+  // EINEN Speichern-Weg — die Speicherleiste unten (früher wurden diese sofort einzeln gespeichert)
   const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
-  const [hiddenBusy, setHiddenBusy] = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
-  const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
   const [omaOriginal, setOmaOriginal] = useState<boolean>(event.omaOriginal ?? false);
   const [squadId, setSquadId] = useState<string>(event.squadId ?? "");
-  const [squadIdBusy, setSquadIdBusy] = useState(false);
 
   /* ── Series config state ── */
   const initialSeriesCfg = (() => {
@@ -378,24 +436,6 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   );
   const [seriesWinnerStatField, setSeriesWinnerStatField] = useState<string>(initialSeriesCfg?.winnerStatField ?? "");
   const [seriesCfgLoading, setSeriesCfgLoading] = useState(false);
-
-  async function toggleHidden() {
-    setHiddenBusy(true);
-    const next = !hidden;
-    const res = await fetch("/api/admin/events", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: event.id, hidden: next }),
-    });
-    setHiddenBusy(false);
-    if (res.ok) {
-      setHidden(next);
-      toast.success(next ? "Event ausgeblendet" : "Event sichtbar — Ankündigung auf Discord/Push läuft");
-      router.refresh();
-    } else {
-      toast.error("Fehler");
-    }
-  }
 
   // ── Check-in vor Turnierstart ──
   const [checkInEnabled, setCheckInEnabled] = useState<boolean>(event.checkInEnabled ?? false);
@@ -437,56 +477,6 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     });
   }
 
-  async function toggleRegistrationLocked() {
-    setRegistrationLockedBusy(true);
-    const next = !registrationLocked;
-    const res = await fetch("/api/admin/events", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: event.id, registrationLocked: next }),
-    });
-    setRegistrationLockedBusy(false);
-    if (res.ok) {
-      setRegistrationLocked(next);
-      toast.success(next ? "Selbst-Anmeldung deaktiviert" : "Selbst-Anmeldung wieder aktiv");
-    } else {
-      toast.error("Fehler");
-    }
-  }
-
-  // OMA Original — wird sofort gespeichert, nur Mods (lib/oma-original.ts)
-  async function saveOmaOriginal(next: boolean) {
-    setOmaOriginal(next);
-    const res = await fetch("/api/admin/events", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: event.id, omaOriginal: next }),
-    });
-    if (res.ok) {
-      toast.success(next ? "Als OMA Original markiert" : "Kein OMA Original mehr");
-      router.refresh();
-    } else {
-      setOmaOriginal(!next);
-      toast.error("Fehler beim Speichern");
-    }
-  }
-
-  async function saveSquadId(next: string) {
-    setSquadIdBusy(true);
-    const res = await fetch("/api/admin/events", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId: event.id, squadId: next || null }),
-    });
-    setSquadIdBusy(false);
-    if (res.ok) {
-      setSquadId(next);
-      toast.success(next ? "Auf Squad beschränkt" : "Squad-Beschränkung entfernt");
-    } else {
-      toast.error("Fehler");
-    }
-  }
-
     /* ── Clip URL state ── */
   const [twitchClipUrl, setTwitchClipUrl] = useState<string>(event.twitchClipUrl ?? "");
 
@@ -499,7 +489,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     (event.streamingPartners ?? []).map((ep: { partnerId: string }) => ep.partnerId)
   );
   const [partnersLoaded, setPartnersLoaded] = useState(false);
-  const [partnerSaving, setPartnerSaving] = useState(false);
+  const [partnersOpen, setPartnersOpen] = useState(false);
 
   /* ── Participants state ── */
   const [search, setSearch]             = useState("");
@@ -525,24 +515,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const seriesGame    = event.series?.fixedGame;
   const seriesDiscord = event.series?.discordChannelId;
 
-  async function loadPartners() {
-    if (partnersLoaded) return;
-    const res = await fetch("/api/partners");
-    if (res.ok) { setAllPartners(await res.json()); }
-    setPartnersLoaded(true);
-  }
-
-  async function savePartners() {
-    setPartnerSaving(true);
-    const res = await fetch(`/api/admin/events/${event.id}/partners`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ partnerIds: selectedPartnerIds }),
-    });
-    setPartnerSaving(false);
-    if (res.ok) toast.success("Streaming-Partner gespeichert");
-    else toast.error("Fehler beim Speichern");
-  }
+  // Partnerliste einmal beim Öffnen der Seite laden (für Namen in der Zusammenfassung und die Auswahl)
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/partners")
+      .then(res => (res.ok ? res.json() : []))
+      .then((rows: { id: string; name: string; twitchLogin: string; logoUrl: string }[]) => { if (!cancelled) { setAllPartners(rows); setPartnersLoaded(true); } })
+      .catch(() => { if (!cancelled) setPartnersLoaded(true); });
+    return () => { cancelled = true; };
+  }, []);
 
   function updatePlacement(place: number, key: keyof PlacementReward, value: number) {
     setPlacements(prev => prev.map(p => p.place === place ? { ...p, [key]: value } : p));
@@ -569,15 +550,62 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     setPolls(p => p.filter((_, idx) => idx !== i));
   }
 
+  /* ── Ungespeicherte Änderungen ──
+   * Alle Felder aus Details und Belohnungen (inkl. Sichtbarkeit, Anmeldung, Squad, OMA Original und
+   * Streaming-Partner) als ein Schnappschuss — weicht er vom zuletzt gespeicherten ab, erscheint die
+   * Speicherleiste. Turnier-, Check-in- und Reihen-Einstellungen sind eigene Aktionen mit eigenem Button. */
+  const formSnapshot = JSON.stringify({
+    status, title, description, rules, game, genre, category, startAt, endAt, maxPlayers, discordChannelId,
+    participationCoins, placements, polls, spectatorCoins, spectatorRankPts, twitchClipUrl, coverImageUrl,
+    blocks: isBlocksEvent ? blocks : null, hidden, registrationLocked, squadId, omaOriginal,
+    partners: [...selectedPartnerIds].sort(),
+  });
+  const [savedSnapshot, setSavedSnapshot] = useState(formSnapshot);
+  const dirty = formSnapshot !== savedSnapshot;
+  const changedCount = useMemo(() => {
+    if (!dirty) return 0;
+    const a = JSON.parse(formSnapshot) as Record<string, unknown>;
+    const b = JSON.parse(savedSnapshot) as Record<string, unknown>;
+    return Object.keys(a).filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k])).length;
+  }, [dirty, formSnapshot, savedSnapshot]);
+  const savedRef = useRef(JSON.parse(savedSnapshot) as Record<string, unknown>);
+  useEffect(() => { savedRef.current = JSON.parse(savedSnapshot); }, [savedSnapshot]);
+
+  // Beim Verlassen der Seite mit ungespeicherten Änderungen warnen
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  /** Änderungen verwerfen: zurück auf den zuletzt gespeicherten Stand */
+  function discardChanges() {
+    const s = savedRef.current as Record<string, never>;
+    setStatus(s.status); setTitle(s.title); setDescription(s.description); setRules(s.rules); setGame(s.game);
+    setGenre(s.genre); setCategory(s.category); setStartAt(s.startAt); setEndAt(s.endAt); setMaxPlayers(s.maxPlayers);
+    setDiscordChannelId(s.discordChannelId); setParticipationCoins(s.participationCoins); setPlacements(s.placements);
+    setPolls(s.polls); setSpectatorCoins(s.spectatorCoins); setSpectatorRankPts(s.spectatorRankPts);
+    setTwitchClipUrl(s.twitchClipUrl); setCoverImageUrl(s.coverImageUrl); if (s.blocks) setBlocks(s.blocks);
+    setHidden(s.hidden); setRegistrationLocked(s.registrationLocked); setSquadId(s.squadId); setOmaOriginal(s.omaOriginal);
+    setSelectedPartnerIds(s.partners); setPropagateTitleDesc(false);
+  }
+
   /* ── Save handlers ── */
   async function handleSave() {
     setLoading(true);
+    const before = savedRef.current;
     const scope = (event.series && titleDescChanged && propagateTitleDesc) ? "all" : "single";
+    const partnersChanged = JSON.stringify([...selectedPartnerIds].sort()) !== JSON.stringify(before.partners);
     const res = await fetch("/api/admin/events", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         eventId: event.id,
+        ...(hidden !== before.hidden && { hidden }),
+        ...(registrationLocked !== before.registrationLocked && { registrationLocked }),
+        ...(squadId !== before.squadId && { squadId: squadId || null }),
+        ...(isModerator && omaOriginal !== before.omaOriginal && { omaOriginal }),
         status,
         title,
         description: description || null,
@@ -601,14 +629,29 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         ...(isBlocksEvent && !blocksLockedReason && { blocks }),
       }),
     });
-    setLoading(false);
-    if (res.ok) {
-      toast.success(scope === "all" ? "Für gesamte Reihe gespeichert" : "Event gespeichert");
-      setPropagateTitleDesc(false);
-      router.refresh();
-    } else {
-      toast.error("Fehler beim Speichern");
+    if (!res.ok) {
+      setLoading(false);
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Fehler beim Speichern");
+      return;
     }
+    // Streaming-Partner haben eine eigene Route — nur bei Änderung
+    if (partnersChanged) {
+      const pr = await fetch(`/api/admin/events/${event.id}/partners`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerIds: selectedPartnerIds }),
+      });
+      if (!pr.ok) toast.error("Streaming-Partner konnten nicht gespeichert werden");
+    }
+    setLoading(false);
+    setSavedSnapshot(formSnapshot);
+    setPropagateTitleDesc(false);
+    toast.success(
+      before.hidden === true && !hidden ? "Gespeichert — das Event ist jetzt sichtbar, Discord-Post und Push laufen"
+        : scope === "all" ? "Für die gesamte Reihe gespeichert" : "Gespeichert",
+    );
+    router.refresh();
   }
 
   /** Start/Ende aus dem Formular (ungespeicherte Änderungen zählen schon), sonst aus dem Event. */
@@ -762,10 +805,22 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     router.refresh();
   }
 
+  // Vor dem Start heißt Löschen "Absagen" (Angemeldete werden benachrichtigt, siehe DELETE in
+  // api/admin/events). Abgeschlossene Events löschen nur Mods (Belohnungen müssten zurückgebucht werden).
+  // Zeitpunkt einmal beim Laden festhalten (Render bleibt rein; nach Speichern lädt router.refresh neu)
+  const [loadedAt] = useState(() => Date.now());
+  const isUpcoming = new Date(event.startAt).getTime() > loadedAt;
+  const canDelete = isModerator || !event.completionData;
   async function deleteEvent() {
-    if (!(await confirm({
+    const regs = event._count.registrations;
+    if (!(await confirm(isUpcoming ? {
+      title: "Event absagen",
+      description: `„${event.title}“ absagen?\n\n${regs > 0 ? `${regs} Angemeldete bekommen eine Benachrichtigung. ` : ""}Das Event und die Discord-Ankündigung werden entfernt. Das lässt sich nicht rückgängig machen.`,
+      variant: "danger",
+      confirmLabel: "Absagen",
+    } : {
       title: "Event löschen",
-      description: `Event "${event.title}" unwiderruflich löschen?\n\nDies entfernt ${event._count.registrations} Anmeldung(en)${event.format ? " und das Turnier" : ""}.`,
+      description: `„${event.title}“ unwiderruflich löschen?\n\nDies entfernt ${regs} Anmeldung(en)${event.format ? " und das Turnier" : ""}.`,
       variant: "danger",
       typedConfirmText: "LÖSCHEN",
     }))) return;
@@ -773,10 +828,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
     setLoading(false);
     if (res.ok) {
-      toast.success(`"${event.title}" wurde gelöscht`);
+      setSavedSnapshot(formSnapshot); // keine Verlassen-Warnung mehr
+      toast.success(isUpcoming ? `„${event.title}“ wurde abgesagt` : `„${event.title}“ wurde gelöscht`);
       router.push(event.series ? `/events/verwalten/reihen/${event.series.id}` : "/events/verwalten");
     } else {
-      toast.error("Fehler beim Löschen");
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Fehler beim Löschen");
     }
   }
 
@@ -797,9 +854,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
      Reihe verwaltet — das Einzelevent zeigt nur noch Details + Teilnehmer. */
   const isSeriesEvent = !!event.series?.fixedGame;
 
-  /* ── Tab definitions ── */
+  /* ── Tab definitions ── einheitlich: Details · Belohnungen · Teilnehmer · Turnier (· Reihe) */
   const bracketTab = event.format
-    ? [{ key: "bracket" as TabKey, label: "Turnierbaum" }]
+    ? [{ key: "bracket" as TabKey, label: "Turnier" }]
     : [];
   const tabs: { key: TabKey; label: string }[] = isSeriesEvent
     ? [
@@ -809,7 +866,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       ]
     : [
         { key: "details",     label: "Details" },
-        { key: "rewards",     label: event.series ? "Umfragen" : "Belohnungen" },
+        // Reihen-Termine: Teilnahme/Platzierung legt die Reihe fest, hier nur die Umfragen
+        { key: "rewards",     label: "Belohnungen" },
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         // Turnier-Einstellungen und Turnierbaum sind ein gemeinsamer Reiter
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
@@ -863,126 +921,96 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const bracketRegisteredUsers = allUsers.filter(u => registeredIds.has(u.id));
 
   /* ── Render ── */
+  const nowDate = new Date(loadedAt);
+  const savedStart = new Date(event.startAt);
+  const savedEnd = event.endAt ? new Date(event.endAt) : null;
+  const step = lifecycleStep({ status: event.status, startAt: savedStart, endAt: savedEnd }, nowDate);
+  const playerCount = registeredIds.size;
+  const completeHref = `/events/verwalten/${event.id}/complete`;
+  const tournamentTab: TabKey = isSeriesEvent ? "bracket" : "tournament";
+  const relTime = (d: Date) => {
+    const ms = d.getTime() - nowDate.getTime();
+    const abs = Math.abs(ms);
+    const h = Math.round(abs / 3_600_000);
+    const txt = h < 1 ? `${Math.max(1, Math.round(abs / 60_000))} Min` : h < 48 ? `${h} Std` : `${Math.round(h / 24)} Tagen`;
+    return ms >= 0 ? `in ${txt}` : `seit ${txt}`;
+  };
+  const statusLine = [
+    step === 0 && `${playerCount}${event.maxPlayers ? ` von ${event.maxPlayers}` : ""} angemeldet`,
+    step === 0 && `startet ${relTime(savedStart)}`,
+    step === 1 && `läuft ${relTime(savedStart)}`,
+    step === 1 && `${playerCount} dabei`,
+    step === 2 && (event.status === "umfrage" ? "Umfragephase läuft" : `vorbei ${relTime(savedEnd ?? savedStart)}, noch nicht abgeschlossen`),
+    step === 3 && (event.completionData ? "abgeschlossen, Belohnungen vergeben" : "beendet, ohne Abschluss"),
+    step < 3 && (event.hidden ? "ausgeblendet" : event.discordMessageId ? "im Discord angekündigt" : "noch nicht im Discord angekündigt"),
+  ].filter(Boolean).join(" · ");
+  const nextStep: { label: string; href?: string; tab?: TabKey } | null =
+    step === 2 ? { label: event.completionData ? "Abschluss bearbeiten" : "Event abschließen", href: completeHref }
+    : step === 3 && event.completionData ? { label: "Ergebnisse ansehen", href: completeHref }
+    : step === 1 && event.format ? { label: "Zum Turnier", tab: tournamentTab }
+    : step === 1 ? { label: "Event abschließen", href: completeHref }
+    : null;
+  const selectedPartners = allPartners.filter(p => selectedPartnerIds.includes(p.id));
+  const backHref = event.series ? `/events/verwalten/reihen/${event.series.id}` : "/events/verwalten";
+
   return (
-    <div className="space-y-4">
-      {/* Breadcrumb */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          {event.series ? (
-            <Link href={`/events/verwalten/reihen/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-              {event.series.name}
+    <div className="space-y-4 pb-28">
+      {/* ── Kopf ── */}
+      <div className="space-y-2">
+        <Link href={backHref} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5" />
+          {event.series ? <><SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" /> {event.series.name}</> : "Events verwalten"}
+        </Link>
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{event.title}</h1>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <EventCategoryBadge category={event.category ?? "casual"} />
+              {event.hidden && <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">Ausgeblendet</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href={`/tournament/${event.id}`}
+              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-white/[0.1] hover:border-white/20 rounded-lg px-3 py-1.5 transition-colors">
+              <ExternalLink className="w-3.5 h-3.5" /> Öffentliche Seite
             </Link>
-          ) : (
-            <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-              <ChevronLeft className="w-4 h-4" /> Events
-            </Link>
-          )}
-          <span>/</span>
-          <span className="text-gray-300 truncate max-w-[200px]">{event.title}</span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
-          <EventCategoryBadge category={event.category ?? "casual"} />
-          {/* Punkt 6: Diese drei Controls speichern sofort (eigener PATCH pro Klick) — anders als der
-              Rest des Formulars, das erst über den "Speichern"-Button unten persistiert wird. Damit das
-              nicht wie ein fehlendes Speichern wirkt, ist das hier explizit gekennzeichnet. */}
-          <span className="text-[9px] uppercase tracking-widest text-gray-600 hidden sm:inline" title="Diese drei Einstellungen werden bei jedem Klick sofort übernommen, unabhängig vom Speichern-Button unten.">
-            Sofort gespeichert:
-          </span>
-          <button
-            onClick={toggleHidden}
-            disabled={hiddenBusy}
-            title={(hidden ? "Event einblenden (für alle sichtbar machen)" : "Event ausblenden (nur in der Verwaltung sichtbar)") + " — wird sofort gespeichert"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
-              hidden
-                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
-            }`}
-          >
-            {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            {hidden ? "Ausgeblendet" : "Sichtbar"}
-          </button>
-          <button
-            onClick={toggleRegistrationLocked}
-            disabled={registrationLockedBusy}
-            title={(registrationLocked ? "Selbst-Anmeldung wieder erlauben" : "Selbst-Anmeldung deaktivieren (nur Admins tragen Teilnehmer ein)") + " — wird sofort gespeichert"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
-              registrationLocked
-                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
-            }`}
-          >
-            {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
-          </button>
-          {squads.length > 0 && (
-            <select value={squadId} disabled={squadIdBusy}
-              onChange={e => saveSquadId(e.target.value)}
-              title="Spieler-Anmeldung auf ein Squad beschränken — wird sofort gespeichert"
-              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
-                squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
-              }`}>
-              <option value="">Für alle offen</option>
-              {squads.map(s => <option key={s.id} value={s.id}>Nur: {s.name}</option>)}
-            </select>
-          )}
-          <Link href={`/tournament/${event.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
-            <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
-          </Link>
-          <Link href={`/events/verwalten/neu?from=${event.id}`}
-            title="Neues Event mit denselben Einstellungen und Belohnungen anlegen (ohne Teilnehmer/Ergebnisse)"
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
-            <Copy className="w-3.5 h-3.5" /> Duplizieren
-          </Link>
+            <HeaderMenu
+              duplicateHref={`/events/verwalten/neu?from=${event.id}`}
+              deleteLabel={canDelete ? (isUpcoming ? "Event absagen" : "Event löschen") : null}
+              onDelete={deleteEvent}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Veröffentlichung: Planung (unsichtbar) bzw. fehlgeschlagene Discord-/Push-Schritte (sichtbar) */}
-      <PublishStatusPanel
-        eventId={event.id}
-        hidden={hidden}
-        publishAt={event.publishAt ?? null}
-        publishStateJson={event.publishStateJson ?? null}
-        startAt={event.startAt}
-      />
-
-      {/* Abschließen-CTA — nicht mehr editierbar, wenn das Event bereits beendet ist;
-          dafür muss der Status erst wieder auf aktiv gesetzt werden (Status-Buttons unten) */}
-      {(event.status === "active" || event.status === "umfrage") && (
-        <Link href={`/events/verwalten/${event.id}/complete`}
-          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-teal-600/40 bg-teal-700/20 hover:bg-teal-700/30 transition-colors">
-          <div>
-            <p className="text-sm font-semibold text-teal-300 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              {event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">Platzierungen, Belohnungen und Umfragen vergeben</p>
-          </div>
-          <ExternalLink className="w-4 h-4 text-teal-400 shrink-0" />
-        </Link>
-      )}
-      {/* Beendetes Event: Ergebnis-Übersicht — erneutes Bestätigen rechnet mit den aktuellen
-          Reihen-Einstellungen neu (Diff-Buchung, siehe complete/route.ts) */}
-      {event.status === "finished" && !!event.completionData && (
-        <Link href={`/events/verwalten/${event.id}/complete`}
-          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
-          <div>
-            <p className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-teal-400" />
-              Ergebnisse
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Vergebene Belohnungen ansehen, Finale Platzierung anpassen{event.series ? " oder mit den aktuellen Reihen-Einstellungen neu berechnen" : ""}
-            </p>
-          </div>
-          <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
-        </Link>
-      )}
+      {/* ── Ablauf ── */}
+      <section aria-label="Ablauf" className="glass rounded-2xl p-3 sm:p-4 space-y-3">
+        <ol className="grid grid-cols-4 gap-1.5">
+          {LIFECYCLE_STEPS.map((label, i) => (
+            <li key={label} className={`border-t-[3px] pt-1.5 text-center text-[11px] ${
+              i < step ? "border-teal-500/60 text-gray-400" : i === step ? "border-teal-400 text-white font-semibold" : "border-white/[0.08] text-gray-600"
+            }`} aria-current={i === step ? "step" : undefined}>
+              {label}
+            </li>
+          ))}
+        </ol>
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="flex-1 min-w-0 text-xs text-gray-400">{statusLine}</p>
+          {nextStep && (nextStep.href ? (
+            <Link href={nextStep.href} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors">
+              <CheckCircle2 className="w-3.5 h-3.5" /> {nextStep.label}
+            </Link>
+          ) : (
+            <button type="button" onClick={() => setActiveTab(nextStep.tab!)}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-gray-200 transition-colors">
+              <Trophy className="w-3.5 h-3.5" /> {nextStep.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
+      <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto scrollbar-none">
         {tabs.map(tab => (
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
@@ -995,117 +1023,183 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         ))}
       </div>
 
-      {/* ── Streaming-Partner (geteilt zwischen beiden Details-Varianten) ── */}
-      {/* Wird weiter unten inline gerendert — definiert als Fragment-Helfer */}
-
-      {/* ── Tab: Details (Reihen-Event: reduzierte Ansicht) ── */}
-      {activeTab === "details" && isSeriesEvent && (
-        <div className="space-y-4">
-          {/* Turnier fehlt (z.B. versehentlich gelöscht) — für Reihen mit festem Spiel gibt es sonst
-              keinen Reiter, über den sich das Format erneut setzen ließe, da der "Turnierbaum"-Reiter
-              erst erscheint, sobald ein Format gesetzt ist. */}
-          {!hasTournament && (
-            <div className="rounded-xl p-4 border border-red-500/20 bg-red-500/5 space-y-3">
-              <p className="text-sm font-medium text-red-300 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4" /> Kein Turnier vorhanden
-              </p>
-              <p className="text-xs text-gray-500">
-                Dieses Event hat aktuell kein Turnier-Format gesetzt — der Reiter „Turnierbaum" fehlt
-                deshalb. Format wählen und erstellen, um ihn wiederherzustellen. Vorherige Matches/
-                Ergebnisse sind dabei nicht wiederherstellbar und müssen neu eingetragen werden.
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {TMT_FORMATS.map(f => (
-                  <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
-                    className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                      tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
-                    }`}>
-                    <p className="text-xs font-medium leading-tight">{f.label}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
-                <Trophy className="w-4 h-4" />
-                {tmtLoading ? "Wird erstellt…" : "Turnier erstellen & Reiter wiederherstellen"}
-              </button>
-            </div>
-          )}
-
-          {/* Status */}
-          <div className="flex items-center gap-3">
-            <label className="text-xs text-gray-500 shrink-0">Status</label>
-            <div className="flex gap-2 flex-wrap">
-              {STATUS_OPTIONS.map(s => (
-                <button key={s} type="button" onClick={() => pickStatus(s)}
-                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                    status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
-                  }`}>
-                  {s === "open" ? "Offen" : s === "active" ? "Aktiv" : s === "umfrage" ? "Umfrage" : "Beendet"}
+      {/* ── Tab: Details (eine Ansicht für Einzel- und Reihen-Events) ── */}
+      {activeTab === "details" && (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] items-start">
+          <div className="space-y-4 min-w-0">
+            {/* Reihen-Termin ohne Turnier (z.B. versehentlich gelöscht) — sonst gäbe es keinen Weg zurück */}
+            {isSeriesEvent && !hasTournament && (
+              <div className="rounded-xl p-4 border border-red-500/20 bg-red-500/5 space-y-3">
+                <p className="text-sm font-medium text-red-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4" /> Kein Turnier vorhanden
+                </p>
+                <p className="text-xs text-gray-500">
+                  Dieser Termin hat kein Turnier-Format, deshalb fehlt der Reiter „Turnier“. Format wählen und erstellen,
+                  um ihn wiederherzustellen. Vorherige Matches und Ergebnisse lassen sich dabei nicht wiederherstellen.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {TMT_FORMATS.map(f => (
+                    <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                      className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                        tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                      }`}>
+                      <p className="text-xs font-medium leading-tight">{f.label}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
+                  <Trophy className="w-4 h-4" />
+                  {tmtLoading ? "Wird erstellt…" : "Turnier erstellen und Reiter wiederherstellen"}
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
-              <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Ende (optional)</label>
-              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
-            </div>
-          </div>
+            {/* ── Grunddaten ── */}
+            <Panel title="Grunddaten">
+              {isSeriesEvent ? (
+                <p className="text-xs text-gray-500">
+                  Titel, Spiel, Regeln und Belohnungen kommen aus der Eventreihe{" "}
+                  <Link href={backHref} className="text-teal-400 hover:text-teal-300">{event.series.name}</Link>.
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <label className={labelCls}>Titel</label>
+                    <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={`${labelCls} flex items-center justify-between`}>
+                        <span>Spiel</span>
+                        {seriesGame && game && seriesGame !== game && (
+                          <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                            <AlertCircle className="w-3 h-3" /> Abweichend von Reihe ({seriesGame})
+                          </span>
+                        )}
+                      </label>
+                      <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Kategorie</label>
+                      <select value={category} onChange={e => setCategory(e.target.value as EventCategory)} className={inputCls}>
+                        {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {isBlocksEvent && (
+                    <BlocksEventSettings value={blocks} onChange={setBlocks} kindLocked={blocksKindLocked}
+                      lockedReason={blocksLockedReason} inputCls={inputCls} labelCls={labelCls} />
+                  )}
+                  {game && (
+                    <div>
+                      <label className={labelCls}>Genre</label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {GENRES.map(g => (
+                          <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
+                            className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                              genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                            }`}>
+                            <AppIcon kind="genre" name={g.value} size={28} />
+                            <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className={labelCls}>Beschreibung</label>
+                    <textarea value={description} onChange={e => setDescription(e.target.value)}
+                      rows={3} placeholder="Wird auch im Discord angezeigt" className={`${inputCls} resize-none`} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Regelwerk</label>
+                    <textarea value={rules} onChange={e => setRules(e.target.value)}
+                      rows={4} placeholder="Wird über dem Punktesystem angezeigt" className={`${inputCls} resize-none`} />
+                  </div>
+                  {event.series && titleDescChanged && (
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input type="checkbox" checked={propagateTitleDesc} onChange={e => setPropagateTitleDesc(e.target.checked)}
+                        className="rounded accent-teal-500" />
+                      <span className="text-teal-400 text-xs flex items-center gap-1">
+                        <Repeat className="w-3 h-3" />
+                        Titel und Beschreibung auf alle Events von „{event.series.name}“ anwenden
+                      </span>
+                    </label>
+                  )}
+                </>
+              )}
+            </Panel>
 
-          {/* ── Twitch Clip ── */}
-          <div>
-            <label className={`${labelCls} flex items-center gap-1.5`}>
-              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
-            </label>
-            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
-              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
-            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
-          </div>
+            {/* ── Zeit und Teilnahme ── */}
+            <Panel title="Zeit und Teilnahme">
+              <div className={`grid gap-3 ${isSeriesEvent ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+                <div>
+                  <label className={labelCls}>Start</label>
+                  <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Ende (optional)</label>
+                  <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
+                </div>
+                {!isSeriesEvent && (
+                  <div>
+                    <label className={labelCls}>Max. Spieler</label>
+                    <NumberInput min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)} placeholder="unbegrenzt" className={inputCls} />
+                  </div>
+                )}
+              </div>
+              <Switch checked={!registrationLocked} onChange={v => setRegistrationLocked(!v)}
+                label="Selbst anmelden erlaubt"
+                hint={registrationLocked ? "Nur du trägst Teilnehmer ein (Reiter Teilnehmer)" : "Mitglieder melden sich selbst an"} />
+              {squads.length > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-300">Nur für ein Squad</span>
+                  <select value={squadId} onChange={e => setSquadId(e.target.value)}
+                    className="rounded-lg px-2.5 py-1.5 text-xs text-white outline-none bg-gray-800 border border-gray-700 max-w-[55%]">
+                    <option value="">Für alle offen</option>
+                    {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </Panel>
 
-          {/* ── OMA Original (sofort gespeichert) ── */}
-          {isModerator && (
-            <OmaOriginalToggle
-              kind="event"
-              checked={omaOriginal}
-              onChange={saveOmaOriginal}
-              inheritedFromSeries={isOmaOriginalSeries(event.series)}
-              blocksGame={isBlocksGame(event.game)}
-            />
-          )}
-
-          {/* ── Eigenes Event-Cover ── */}
-          <ImageUploadField
-            value={coverImageUrl}
-            onChange={setCoverImageUrl}
-            kind="event-cover"
-            presetsOnly={!isModerator}
-            presets={EVENT_COVER_PRESETS}
-            label="Eigenes Event-Bild"
-            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
-            previewAspect="1200/630"
-          />
-
-          {/* ── Streaming-Partner ── */}
-          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
-            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
-              <Tv2 className="w-4 h-4 text-[#9146ff]" />
-              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
-              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
-            </button>
-            {partnersLoaded && (
-              <>
-                {allPartners.length === 0 ? (
-                  <p className="text-xs text-gray-600">Keine Partner eingetragen.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {allPartners.map(p => (
+            {/* ── Darstellung und Stream ── */}
+            <Panel title="Darstellung und Stream">
+              <ImageUploadField
+                value={coverImageUrl}
+                onChange={setCoverImageUrl}
+                kind="event-cover"
+                presetsOnly={!isModerator}
+                presets={EVENT_COVER_PRESETS}
+                label="Eigenes Event-Bild"
+                hint="Optional. Ohne eigenes Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+                previewAspect="1200/630"
+              />
+              <div>
+                <label className={`${labelCls} flex items-center gap-1.5`}>
+                  <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Highlight des Events)
+                </label>
+                <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
+                  placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
+              </div>
+              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                <button type="button" onClick={() => setPartnersOpen(o => !o)} aria-expanded={partnersOpen}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left">
+                  <Tv2 className="w-4 h-4 text-[#9146ff]" />
+                  <span className="text-sm text-gray-300">Streaming-Partner</span>
+                  <span className="ml-auto truncate text-xs text-gray-500">
+                    {selectedPartnerIds.length === 0 ? "keine" : selectedPartners.length > 0 ? selectedPartners.map(p => p.name).join(", ") : `${selectedPartnerIds.length} ausgewählt`}
+                  </span>
+                </button>
+                {partnersOpen && (
+                  <div className="border-t border-white/[0.06] px-3 py-2 space-y-1.5">
+                    {!partnersLoaded ? (
+                      <p className="text-xs text-gray-600">Lädt…</p>
+                    ) : allPartners.length === 0 ? (
+                      <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Twitch &amp; Clips → Partner anlegen.</p>
+                    ) : allPartners.map(p => (
                       <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
                         <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
                           onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
@@ -1115,244 +1209,107 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                         <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
                       </label>
                     ))}
-                    <button type="button" onClick={savePartners} disabled={partnerSaving}
-                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
-                      <Save className="w-3.5 h-3.5" />
-                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
-                    </button>
                   </div>
                 )}
-              </>
-            )}
-          </div>
-
-          <button onClick={handleSave} disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
-            <Save className="w-4 h-4" />
-            {loading ? "Speichert…" : "Speichern"}
-          </button>
-          <p className="text-[10px] text-gray-600 text-center -mt-2">
-            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
-          </p>
-        </div>
-      )}
-
-      {/* ── Tab: Details (Vollansicht für Einzelevents / Reihen ohne festes Spiel) ── */}
-      {activeTab === "details" && !isSeriesEvent && (
-        <div className="space-y-4">
-          {/* Status */}
-          <div className="flex items-center gap-3">
-            <label className="text-xs text-gray-500 shrink-0">Status</label>
-            <div className="flex gap-2 flex-wrap">
-              {STATUS_OPTIONS.map(s => (
-                <button key={s} type="button" onClick={() => pickStatus(s)}
-                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                    status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
-                  }`}>
-                  {s === "open" ? "Offen" : s === "active" ? "Aktiv" : s === "umfrage" ? "Umfrage" : "Beendet"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className={labelCls}>Titel</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} />
-          </div>
-
-          <div>
-            <label className={labelCls}>Beschreibung</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)}
-              rows={3} placeholder="Wird auch in Discord angezeigt"
-              className={`${inputCls} resize-none`} />
-          </div>
-
-          <div>
-            <label className={labelCls}>Regelwerk</label>
-            <textarea value={rules} onChange={e => setRules(e.target.value)}
-              rows={4} placeholder="Wird Usern über dem Punktesystem angezeigt"
-              className={`${inputCls} resize-none`} />
-          </div>
-
-          {event.series && titleDescChanged && (
-            <label className="flex items-center gap-2 cursor-pointer text-sm">
-              <input type="checkbox" checked={propagateTitleDesc} onChange={e => setPropagateTitleDesc(e.target.checked)}
-                className="rounded accent-teal-500" />
-              <span className="text-teal-400 text-xs flex items-center gap-1">
-                <Repeat className="w-3 h-3" />
-                Titel & Beschreibung auf alle Events von „{event.series.name}" anwenden
-              </span>
-            </label>
-          )}
-
-          <div>
-            <label className={`${labelCls} flex items-center justify-between`}>
-              <span>Spiel</span>
-              {seriesGame && game && seriesGame !== game && (
-                <span className="flex items-center gap-1 text-amber-400 text-[10px]">
-                  <AlertCircle className="w-3 h-3" /> Abweichend von Reihe ({seriesGame})
-                </span>
-              )}
-            </label>
-            <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
-          </div>
-
-          {isBlocksEvent && (
-            <BlocksEventSettings
-              value={blocks}
-              onChange={setBlocks}
-              kindLocked={blocksKindLocked}
-              lockedReason={blocksLockedReason}
-              inputCls={inputCls}
-              labelCls={labelCls}
-            />
-          )}
-
-          {game && (
-            <div>
-              <label className={labelCls}>Genre</label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {GENRES.map(g => (
-                  <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl p2 border transition-all ${
-                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
-                    }`}>
-                    <AppIcon kind="genre" name={g.value} size={28} />
-                    <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
-                  </button>
-                ))}
               </div>
-            </div>
-          )}
-
-          <div>
-            <label className={labelCls}>Kategorie</label>
-            <div className="flex gap-2 flex-wrap">
-              {CATEGORIES.map(cat => (
-                <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    category === cat.value ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-white/10 text-gray-500 hover:border-white/20"
-                  }`}>
-                  <AppIcon kind="category" name={cat.value} size={16} className="mr-1 align-text-bottom" />{cat.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
-              <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Ende (optional)</label>
-              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
-            </div>
-          </div>
-
-          <div>
-            <label className={labelCls}>Max. Spieler</label>
-            <NumberInput min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
-              placeholder="unbegrenzt" className={inputCls} />
-          </div>
-
-          <div>
-            <label className={`${labelCls} flex items-center justify-between`}>
-              <span>Discord-Kanal</span>
-              {seriesDiscord && discordChannelId && seriesDiscord !== discordChannelId && (
-                <span className="flex items-center gap-1 text-amber-400 text-[10px]">
-                  <AlertCircle className="w-3 h-3" /> Abweichend von Reihe
-                </span>
+              {isModerator && (
+                <OmaOriginalToggle
+                  kind="event"
+                  checked={omaOriginal}
+                  onChange={setOmaOriginal}
+                  inheritedFromSeries={isOmaOriginalSeries(event.series)}
+                  blocksGame={isBlocksGame(event.game)}
+                />
               )}
-            </label>
-            <DiscordChannelSelect
-              value={discordChannelId}
-              onChange={setDiscordChannelId}
-              emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"}
-            />
+            </Panel>
           </div>
 
-          {/* ── Twitch Clip ── */}
-          <div>
-            <label className={`${labelCls} flex items-center gap-1.5`}>
-              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
-            </label>
-            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
-              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
-            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
-          </div>
-
-          {/* ── OMA Original (sofort gespeichert) ── */}
-          {isModerator && (
-            <OmaOriginalToggle
-              kind="event"
-              checked={omaOriginal}
-              onChange={saveOmaOriginal}
-              inheritedFromSeries={isOmaOriginalSeries(event.series)}
-              blocksGame={isBlocksGame(event.game)}
-            />
-          )}
-
-          {/* ── Eigenes Event-Cover ── */}
-          <ImageUploadField
-            value={coverImageUrl}
-            onChange={setCoverImageUrl}
-            kind="event-cover"
-            presetsOnly={!isModerator}
-            presets={EVENT_COVER_PRESETS}
-            label="Eigenes Event-Bild"
-            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
-            previewAspect="1200/630"
-          />
-
-          {/* ── Streaming-Partner ── */}
-          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
-            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
-              <Tv2 className="w-4 h-4 text-[#9146ff]" />
-              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
-              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
-            </button>
-            {partnersLoaded && (
-              <>
-                {allPartners.length === 0 ? (
-                  <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Twitch &amp; Clips → Partner anlegen.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {allPartners.map(p => (
-                      <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
-                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
-                          onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
-                          className="rounded accent-violet-500" />
-                        <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
-                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
-                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
-                      </label>
-                    ))}
-                    <button type="button" onClick={savePartners} disabled={partnerSaving}
-                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
-                      <Save className="w-3.5 h-3.5" />
-                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
-                    </button>
+          {/* ── Rechte Spalte: Vorschau, Sichtbarkeit, Erweitert ── */}
+          <aside className="space-y-4 min-w-0">
+            <Panel title="So sieht es aus">
+              <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+                <div className="relative">
+                  <GameCover game={game || title} coverUrl={coverImageUrl || null} className="w-full aspect-[1200/630]" rounded="rounded-none" fallbackVariant="plain" />
+                  <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
+                    <p className="truncate text-sm font-semibold text-white">{title || "Ohne Titel"}</p>
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                </div>
+                <p className="px-2.5 py-2 text-[11px] text-gray-400">
+                  {startAt ? formatBerlinDate(fromDatetimeLocalBerlin(startAt), { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "kein Termin"}
+                  {" · "}{playerCount}{maxPlayers ? `/${maxPlayers}` : ""} Spieler
+                  {!event.series && participationCoins > 0 && <> · +{participationCoins} Münzen</>}
+                </p>
+              </div>
+              {!coverImageUrl && <p className="text-[11px] text-gray-600">Ohne eigenes Bild zeigt die App das Spiel-Cover.</p>}
+            </Panel>
 
-          <button onClick={handleSave} disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
-            <Save className="w-4 h-4" />
-            {loading ? "Speichert…" : "Speichern"}
-          </button>
-          <p className="text-[10px] text-gray-600 text-center -mt-2">
-            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
-          </p>
+            <Panel title="Sichtbarkeit">
+              <Switch checked={!hidden} onChange={v => setHidden(!v)} label="Für alle sichtbar"
+                hint={hidden ? "Nur in der Verwaltung sichtbar. Beim Einblenden gehen Discord-Post und Push raus." : "In der App, im Discord und per Push angekündigt"} />
+              <PublishStatusPanel
+                eventId={event.id}
+                hidden={event.hidden}
+                publishAt={event.publishAt ?? null}
+                publishStateJson={event.publishStateJson ?? null}
+                startAt={event.startAt}
+              />
+            </Panel>
+
+            <Panel title="Erweitert">
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-500">Status von Hand setzen</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {STATUS_OPTIONS.map(s => (
+                    <button key={s} type="button" onClick={() => pickStatus(s)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
+                      }`}>
+                      {STATUS_LABELS_DE[s]}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-600">Normalerweise nicht nötig: Der Ablauf oben ergibt sich aus Startzeit und Abschluss.</p>
+              </div>
+              {isModerator && !isSeriesEvent && (
+                <div>
+                  <label className={`${labelCls} flex items-center justify-between`}>
+                    <span>Discord-Kanal</span>
+                    {seriesDiscord && discordChannelId && seriesDiscord !== discordChannelId && (
+                      <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                        <AlertCircle className="w-3 h-3" /> Abweichend von Reihe
+                      </span>
+                    )}
+                  </label>
+                  <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId}
+                    emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"} />
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Link href={`/events/verwalten/neu?from=${event.id}`}
+                  title="Neues Event mit denselben Einstellungen und Belohnungen (ohne Teilnehmer und Ergebnisse)"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-300 border border-white/[0.1] hover:border-white/20 rounded-lg px-2.5 py-1.5">
+                  <Copy className="w-3.5 h-3.5" /> Duplizieren
+                </Link>
+                {canDelete && (
+                  <button type="button" onClick={deleteEvent} disabled={loading}
+                    className="inline-flex items-center gap-1.5 text-xs text-red-300 border border-red-500/30 hover:bg-red-500/10 rounded-lg px-2.5 py-1.5 disabled:opacity-50">
+                    <Trash2 className="w-3.5 h-3.5" /> {isUpcoming ? "Event absagen" : "Event löschen"}
+                  </button>
+                )}
+              </div>
+            </Panel>
+          </aside>
         </div>
       )}
 
       {/* ── Tab: Belohnungen ── */}
       {activeTab === "rewards" && (
         <div className="space-y-4">
+          {event.series && (
+            <p className="text-xs text-gray-500">
+              Teilnahme- und Platzierungsbelohnungen legt die Eventreihe „{event.series.name}“ fest. Hier stellst du nur die Umfragen dieses Termins ein.
+            </p>
+          )}
           {!event.series && (
             <>
               {/* Teilnahme */}
@@ -1529,10 +1486,6 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             ))}
           </div>
 
-          <button onClick={handleSave} disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
-            <Save className="w-4 h-4" /> {loading ? "Speichert…" : "Speichern"}
-          </button>
         </div>
       )}
 
@@ -1728,7 +1681,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <span>Endplatzierung tracken</span>
                 </label>
                 <p className="text-[10px] text-gray-500 -mt-2">
-                  Im Reiter „Turnier" kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
+                  Im Reiter „Turnier“ kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
                   hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
                   Eventpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
                   Events, nicht die Tabellenpunkte der Reihe.
@@ -2099,21 +2052,21 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         </div>
       )}
 
-      {/* ── Danger Zone (always visible) ── */}
-      {isAdmin && (
-        <div className="rounded-xl border border-red-900/50 bg-red-950/10 p-3 mt-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-red-300 flex items-center gap-2">
-                <AlertTriangle className="w-3.5 h-3.5" /> Event löschen
-              </p>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Entfernt {event._count.registrations} Anmeldung(en){event.format ? " und das Turnier" : ""} dauerhaft.
-              </p>
-            </div>
-            <button onClick={deleteEvent} disabled={loading}
-              className="flex items-center gap-1.5 text-sm text-white bg-red-700 hover:bg-red-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 shrink-0">
-              <Trash2 className="w-3.5 h-3.5" /> Löschen
+      {/* ── Speicherleiste: erscheint bei ungespeicherten Änderungen (Details + Belohnungen) ── */}
+      {dirty && (
+        <div className="sticky bottom-20 lg:bottom-4 z-30">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+            <span className="flex-1 min-w-0 truncate text-sm text-gray-200">
+              {changedCount === 1 ? "1 ungespeicherte Änderung" : `${changedCount} ungespeicherte Änderungen`}
+            </span>
+            <button type="button" onClick={discardChanges} disabled={loading}
+              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-50">
+              Verwerfen
+            </button>
+            <button type="button" onClick={handleSave} disabled={loading}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+              <Save className="w-3.5 h-3.5" /> {loading ? "Speichert…" : "Speichern"}
             </button>
           </div>
         </div>

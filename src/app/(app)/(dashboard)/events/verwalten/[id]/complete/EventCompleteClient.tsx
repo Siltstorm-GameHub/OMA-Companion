@@ -16,7 +16,8 @@ import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
 import { GripVertical } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronLeft } from "@/components/icons";
-import { CheckCircle2, Trophy, Vote, ListOrdered, Coins, AlertTriangle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
+import { CheckCircle2, Trophy, Vote, AlertTriangle, AlertCircle, RotateCcw, Equal, Lock, Flame } from "@/components/icons";
+import { checkWinnerStat, rewardTotals } from "@/lib/event-complete-checks";
 import { statDisplayName } from "@/lib/series-event-points";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
@@ -71,6 +72,10 @@ interface Props {
   winnerStatFieldOptions?: string[];
   /** Vorbelegter Gewinner-Stat (Event → Reihe → Altfeld), siehe page.tsx */
   defaultWinnerStatField?: string;
+  /** Woher die Vorbelegung stammt: Event-Einstellung, Reihe oder automatisch gewählt */
+  winnerStatSource?: "event" | "series" | "auto";
+  /** Gewinner-Stat der Eventreihe — Vergleich im Gewinner-Stat-Kasten, falls abweichend */
+  seriesWinnerStatField?: string | null;
   userStats: Record<string, Record<string, number>>;
   format: string | null;
   /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
@@ -146,7 +151,8 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, eventStartAt, eventEndAt, seriesId, seriesName, seriesIcon,
-  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField, userStats, format, userAvgScore, defaultAvgDirection = "high",
+  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField,
+  winnerStatSource = "auto", seriesWinnerStatField = null, userStats, format, userAvgScore, defaultAvgDirection = "high",
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
   isAdmin, isMod, isReEdit, status,
@@ -386,6 +392,24 @@ export default function EventCompleteClient({
     return rewardsConfig.placements.find(p => p.place === place);
   }
 
+  /* ── Prüfung des Gewinner-Stats (Vergleich mit dem Stat der Reihe, fehlende Werte) ── */
+  const winnerCheck = useMemo(
+    () => checkWinnerStat(registeredUsers.map(u => u.id), userStats, winnerStatField, seriesWinnerStatField, excludedUsers),
+    [registeredUsers, userStats, winnerStatField, seriesWinnerStatField, excludedUsers],
+  );
+
+  /* ── Summe der Belohnungen für die feste Zusammenfassung ── */
+  const totals = rewardTotals({
+    order: rankingOrder,
+    placementOf: uid => placementMap.get(uid) ?? rankingOrder.indexOf(uid) + 1,
+    rewardForPlace: getPlacementReward,
+    excluded: excludedUsers,
+    participationCoins: effectiveParticipationCoins,
+    spectatorsAttended: spectatorRewardJson ? spectatorAttended.size : 0,
+    spectatorCoins: effectiveSpectatorCoins,
+    spectatorRankPoints: spectatorRewardJson?.rankPoints ?? 0,
+  });
+
   /* ── Ranking auto-sort with tie detection ── */
   function scoreOf(uid: string, field: string): number {
     return isAvgFormat ? (userAvgScore[uid] ?? 0) : (userStats[uid]?.[field] ?? 0);
@@ -530,30 +554,47 @@ export default function EventCompleteClient({
   }
 
   /* ── Render ── */
+  const backHref = `/events/verwalten/${eventId}`;
+  const pageTitle = isPollOnly ? "Umfrage abschließen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen";
+  const hasExtras = !!seriesStatConfig?.mvpStatField || !!dominionCfg?.enabled || (spectatorUsers.length > 0 && !!spectatorRewardJson);
+  const hasPolls = pollsConfig.length > 0 || pendingEventPolls.length > 0 || (pollConfig.enabled && pollsConfig.length === 0);
+  const steps = ["Platzierung", ...(hasExtras ? ["Extras"] : []), ...(hasPolls ? ["Umfrage"] : [])];
+  const stepNo = (name: string) => steps.indexOf(name) + 1;
+  const noRanking = !isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0;
+  const mainLabel = loading
+    ? "Wird gespeichert…"
+    : willFinalizePolls ? "Umfrage beenden und Event abschließen"
+    : isFinishedSummary ? "Ergebnisse bestätigen"
+    : isPollOnly ? "Änderungen speichern"
+    : pollPhasePending ? "Abschließen, Umfrage startet"
+    : "Abschließen und Belohnungen vergeben";
+  const winnerSourceText = winnerStatSource === "event" ? "aus den Einstellungen dieses Events"
+    : winnerStatSource === "series" ? "aus den Einstellungen der Eventreihe" : "automatisch gewählt";
+  const nameOf = (uid: string) => userName(registeredUsers.find(u => u.id === uid) ?? { id: uid, name: uid, username: null, image: null });
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-36">
       {ConfirmDialogElement}
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        {seriesId ? (
-          <Link href={`/events/verwalten/reihen/${seriesId}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-            <ChevronLeft className="w-4 h-4" />
-            <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5" />
-            {seriesName}
-          </Link>
-        ) : (
-          <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
-            <ChevronLeft className="w-4 h-4" /> Standalone Events
-          </Link>
-        )}
-        <span>/</span>
-        <Link href={`/events/verwalten/${eventId}`} className="hover:text-gray-300 transition-colors truncate max-w-[160px]">
+
+      {/* ── Kopf ── */}
+      <div className="space-y-2">
+        <Link href={backHref} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5" />
+          {seriesId && <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5" />}
           {eventTitle}
         </Link>
-        <span>/</span>
-        <span className="text-gray-300">
-          {isPollOnly ? "Umfrage nachtragen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen"}
-        </span>
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{pageTitle}</h1>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {steps.map((label, i) => (
+            <span key={label} className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-gray-300">
+              <span className="font-semibold text-teal-300">{i + 1}</span> {label}
+            </span>
+          ))}
+          <span className="text-[11px] text-gray-500">
+            · {registeredUsers.length} {registeredUsers.length === 1 ? "Spieler" : "Spieler"}
+            {spectatorUsers.length > 0 && ` · ${spectatorUsers.length} Zuschauer`}
+          </span>
+        </div>
       </div>
 
       {timingWarning && (
@@ -566,88 +607,48 @@ export default function EventCompleteClient({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <CheckCircle2 className="w-5 h-5 text-teal-400" />
-        <h1 className="text-lg font-bold text-white">
-          {isPollOnly ? "Umfrage nachtragen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen"}
-        </h1>
-      </div>
-
-      {/* Status banners */}
+      {/* Modus in Klartext */}
       {isPollOnly && (
-        <div className="flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-300">
+        <p className="flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-200">
           <Vote className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen, Reihentabelle und der Event-Gewinner
-            wurden bereits festgelegt und sind nicht mehr änderbar. Umfrageergebnisse unten einsehen bzw. Stimmen
-            nachtragen und Finale Platzierung bei Bedarf anpassen (z.B. Disqualifikation). Beim Speichern wird
-            {isMod ? " die Umfragephase beendet und das Event komplett abgeschlossen." : " die Umfragephase abgeschlossen, sobald alle Umfragen abgelaufen sind."}
+            Das Spiel ist abgeschlossen, jetzt läuft die Umfrage. Gewinner, Teilnahme und Tabelle stehen fest. Du kannst
+            die Stimmen einsehen und die Platzierung noch korrigieren (z.B. bei einer Disqualifikation).
           </span>
-        </div>
+        </p>
       )}
       {isFinishedSummary && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <p className="flex items-start gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-xs text-gray-300">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-teal-400" />
           <span>
-            Dieses Event ist abgeschlossen. Unten eine Übersicht der vergebenen Belohnungen — nur die Finale
-            Platzierung kann bei Bedarf noch angepasst werden (z.B. bei nachträglicher Disqualifikation).
-            {seriesId && (
-              <> „Ergebnisse bestätigen“ rechnet das Event außerdem mit den <b>aktuellen</b> Einstellungen der
-              Eventreihe neu (Tabellenpunkte, Teilnahme- und Platzierungs-Belohnungen) — Unterschiede werden
-              automatisch nach- bzw. zurückgebucht.</>
-            )}
+            Abgeschlossen. Unten siehst du, was vergeben wurde. Die Platzierung lässt sich noch korrigieren — beim
+            Bestätigen werden Unterschiede automatisch nach- oder zurückgebucht
+            {seriesId ? ", gerechnet mit den aktuellen Einstellungen der Eventreihe" : ""}.
           </span>
-        </div>
-      )}
-      {openEventPolls.length > 0 && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
-          <Vote className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>
-            {openEventPolls.length === 1 ? "Es läuft noch eine Umfrage" : "Es laufen noch Umfragen"} auf der Event-Seite: {" "}
-            {openEventPolls.map(p => `„${p.label}" bis ${new Date(p.endAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
-            {" "}{isPollOnly && isMod
-              ? "Als Moderator/Admin wird sie beim Speichern hier trotzdem sofort zwangsweise beendet und mit abgeschlossen."
-              : <>Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Tabellenpunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.</>}
-          </span>
-        </div>
+        </p>
       )}
 
-      {(isPollOnly || isFinishedSummary) && (
-        <LivePollsPanel
-          eventId={eventId}
-          isAdmin={isAdmin}
-          isMod={isMod}
-          readOnly={isFinishedSummary}
-          registeredUsers={registeredUsers}
-          spectatorUsers={spectatorUsers}
-          allUsers={allUsers}
-        />
-      )}
+      {/* ── Schritt 1: Platzierung ── */}
+      <section aria-label="Platzierung" className="space-y-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Platzierung")}</span>
+          Platzierung festlegen
+        </h2>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-
-        {/* ── Left column ── */}
-        <div className="space-y-4">
-
-          {/* Gewinner-Stat */}
-          {(tournamentStatFields.length > 0 || isAvgFormat) && (
-            <div className={`rounded-xl p-4 space-y-3 ${winnerLocked ? "opacity-70" : ""}`} style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
-              <div className="flex items-center gap-2">
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-semibold text-amber-300">Event-Gewinner</span>
-                {winnerLocked && (
-                  <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
-                    <Lock className="w-3 h-3" /> gesperrt
-                  </span>
-                )}
-              </div>
-              {winnerLocked && (
-                <p className="text-[10px] text-gray-600 -mt-1">
-                  Wurde beim Abschluss der Spielphase festgelegt und ist nicht mehr änderbar.
-                </p>
+        {/* Gewinner-Stat: bewusst prominent — ein falscher Stat hat schon zu falschen Platzierungen geführt */}
+        {(tournamentStatFields.length > 0 || isAvgFormat) && (
+          <div className={`rounded-xl border p-4 space-y-3 ${winnerLocked ? "border-white/[0.08] bg-white/[0.02]" : "border-amber-500/30 bg-amber-500/[0.04]"}`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-semibold text-white">Gewinner-Stat</span>
+              {winnerLocked ? (
+                <span className="flex items-center gap-1 text-[11px] text-gray-500"><Lock className="w-3 h-3" /> steht fest</span>
+              ) : (
+                <span className="text-[11px] text-gray-500">{winnerSourceText}</span>
               )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
               {isAvgFormat ? (
                 <div>
                   <AvgDirectionToggle
@@ -658,13 +659,11 @@ export default function EventCompleteClient({
                       if (!rankingManuallyEdited) autoSort(winnerStatField, v);
                     }}
                   />
-                  <p className="text-[10px] text-gray-600 mt-1">
-                    Bewertet wird der kombinierte Durchschnitt pro Runde über alle Stat-Felder (nicht die Summe). Vorbelegt aus den Turnier-Einstellungen.
-                  </p>
+                  <p className="text-[10px] text-gray-600 mt-1">Bewertet wird der Durchschnitt pro Runde über alle Stats.</p>
                 </div>
               ) : (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">Welches Stat-Feld bestimmt den Gewinner?</label>
+                  <label className="text-[11px] text-gray-500 block mb-1">Wer am meisten hiervon hat, gewinnt</label>
                   <select
                     value={winnerStatField}
                     disabled={winnerLocked}
@@ -681,36 +680,263 @@ export default function EventCompleteClient({
               )}
               {seriesStatFields.length > 0 && (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">…Sieg in Reihentabelle tracken als</label>
+                  <label className="text-[11px] text-gray-500 block mb-1">Sieg in der Reihen-Tabelle zählen als</label>
                   <select
                     value={seriesWinnerTargetField}
                     disabled={winnerLocked}
                     onChange={e => setSeriesWinnerTargetField(e.target.value)}
                     className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-60`}
                   >
-                    <option value="">– nicht tracken –</option>
+                    <option value="">– nicht zählen –</option>
                     {seriesStatFields.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
               )}
-              {previewWinners.length > 0 && (isAvgFormat || winnerStatField) && (
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-[10px] text-gray-500">{previewWinners.length > 1 ? "Aktuelle Gewinner (Gleichstand):" : "Aktueller Gewinner:"}</p>
-                  {previewWinners.map(uid => {
-                    const u = registeredUsers.find(u => u.id === uid);
-                    return (
-                      <p key={uid} className="text-xs text-amber-400 flex items-center gap-1.5">
-                        <Trophy className="w-3.5 h-3.5 shrink-0" />
-                        <strong>{u ? userName(u) : uid}</strong>
-                        {" "}({isAvgFormat ? `Ø ${formatFixed((userAvgScore[uid] ?? 0), 2)}` : `${formatDecimal(userStats[uid]?.[winnerStatField] ?? 0)} ${statDisplayName(winnerStatField)}`})
-                      </p>
-                    );
-                  })}
-                </div>
+            </div>
+
+            {/* Gewinner-Vorschau */}
+            {previewWinners.length > 0 && (isAvgFormat || winnerStatField) && (
+              <p className="text-sm text-gray-200">
+                {previewWinners.length > 1 ? "Gewinner (Gleichstand): " : "Gewinner danach: "}
+                <b className="text-amber-300">{previewWinners.map(nameOf).join(", ")}</b>
+                {!isAvgFormat && winnerStatField && (
+                  <span className="text-xs text-gray-500">
+                    {" "}({formatDecimal(userStats[previewWinners[0]]?.[winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
+                    {winnerCheck.runnerUp && <>, vor {nameOf(winnerCheck.runnerUp.id)} mit {formatDecimal(winnerCheck.runnerUp.value)}</>})
+                  </span>
+                )}
+                {isAvgFormat && <span className="text-xs text-gray-500"> (Ø {formatFixed(userAvgScore[previewWinners[0]] ?? 0, 2)})</span>}
+              </p>
+            )}
+
+            {/* Prüfungen */}
+            {!winnerLocked && !isAvgFormat && winnerStatField && winnerCheck.compareField && winnerCheck.compareWinnerDiffers && (
+              <p className="flex items-start gap-1.5 text-xs text-amber-300">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>
+                  Die Eventreihe entscheidet nach „{statDisplayName(winnerCheck.compareField)}“. Danach würde{" "}
+                  <b>{winnerCheck.compareWinners.map(nameOf).join(", ")}</b> gewinnen.{" "}
+                  <button type="button" className="underline hover:text-amber-200"
+                    onClick={() => { const f = winnerCheck.compareField!; setWinnerStatField(f); autoSort(f); setRankingDirty(true); }}>
+                    Nach „{statDisplayName(winnerCheck.compareField)}“ sortieren
+                  </button>
+                </span>
+              </p>
+            )}
+            {!winnerLocked && !isAvgFormat && winnerStatField && winnerCheck.missing > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-gray-400">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                {winnerCheck.missing === registeredUsers.length - excludedUsers.size
+                  ? <>Bei „{statDisplayName(winnerStatField)}“ hat niemand einen Wert. Stimmt der Stat?</>
+                  : <>{winnerCheck.missing} {winnerCheck.missing === 1 ? "Spieler hat" : "Spieler haben"} bei „{statDisplayName(winnerStatField)}“ keinen Wert und {winnerCheck.missing === 1 ? "steht" : "stehen"} unten.</>}
+              </p>
+            )}
+            {!isFinishedSummary && !isPollOnly && !isAvgFormat && !winnerStatField && (
+              <p className="flex items-start gap-1.5 text-xs text-amber-300">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                Kein Gewinner-Stat gewählt: Die Platzierung wird nicht automatisch sortiert, bitte von Hand prüfen.
+              </p>
+            )}
+          </div>
+        )}
+
+          <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-blue-300">Reihenfolge</span>
+              {!rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
+                <span className="text-[10px] text-gray-600">
+                  — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : statDisplayName(winnerStatField)}“
+                </span>
+              )}
+              {rankingManuallyEdited && (
+                <span className="flex items-center gap-1 text-[10px] text-amber-400">
+                  <AlertTriangle className="w-3 h-3" /> manuell geändert
+                </span>
+              )}
+              {rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
+                <button
+                  onClick={() => { autoSort(); setRankingDirty(true); }}
+                  className="ml-auto flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" /> Auto-Sortierung zurücksetzen
+                </button>
               )}
             </div>
-          )}
 
+            {tiedAbove.size > 0 && (
+              <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
+                <Equal className="w-3 h-3" />
+                {tiedAbove.size} Gleichstand{tiedAbove.size > 1 ? "s" : ""} – beide erhalten dieselbe Platzierung
+              </p>
+            )}
+
+            {seriesId && (
+              <p className="text-[10px] text-gray-600">
+                Fließt in die Tabelle der Eventreihe ein. Die großen Platzierungs-Belohnungen der Reihe gibt es erst
+                zum Abschluss der ganzen Reihe, hier nur den Bonus je Termin (falls eingestellt).
+              </p>
+            )}
+
+            <p className="text-[10px] text-gray-600">Ziehen oder ▲▼ zum Umsortieren · <Equal className="w-3 h-3 inline" /> Gleichstand mit dem Platz darüber · <Ban className="w-3 h-3 inline" /> disqualifizieren (keine Belohnung)</p>
+
+            {registeredUsers.length === 0 ? (
+              <p className="text-sm text-gray-600 text-center py-4">Keine Teilnehmer registriert.</p>
+            ) : (
+              <div className="space-y-1">
+                {rankingOrder.map((uid, idx) => {
+                  const u = registeredUsers.find(u => u.id === uid);
+                  if (!u) return null;
+                  const place = placementMap.get(uid) ?? idx + 1;
+                  const isExcluded = excludedUsers.has(uid);
+                  const reward = isExcluded ? undefined : getPlacementReward(place);
+                  const isTied = tiedAbove.has(uid);
+
+                  return (
+                    <div key={uid}>
+                      {/* Tied-with-above indicator */}
+                      {isTied && (
+                        <div className="flex items-center gap-1 py-0.5 px-8">
+                          <div className="flex-1 border-t border-blue-500/20 border-dashed" />
+                          <Equal className="w-3 h-3 text-blue-400/40" />
+                          <div className="flex-1 border-t border-blue-500/20 border-dashed" />
+                        </div>
+                      )}
+                      <div
+                        draggable
+                        onDragStart={() => setDragIdx(idx)}
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={() => {
+                          if (dragIdx === null || dragIdx === idx) return;
+                          setRankingManuallyEdited(true);
+                          setRankingDirty(true);
+                          setRankingOrder(prev => {
+                            const next = [...prev];
+                            const [removed] = next.splice(dragIdx, 1);
+                            next.splice(idx, 0, removed);
+                            return next;
+                          });
+                          // Clear ties for moved elements
+                          setTiedAbove(t => {
+                            const s = new Set(t);
+                            s.delete(uid);
+                            if (rankingOrder[dragIdx]) s.delete(rankingOrder[dragIdx]);
+                            return s;
+                          });
+                          setDragIdx(null);
+                        }}
+                        className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors select-none ${
+                          isExcluded
+                            ? "border-red-900/40 bg-red-950/20"
+                            : isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05] bg-white/[0.03]"
+                        } cursor-grab active:cursor-grabbing`}
+                      >
+                        <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                        <span className="text-sm w-6 text-center shrink-0">
+                          {place <= 3
+                            ? <span>{MEDALS[place - 1]}</span>
+                            : <span className="text-xs text-gray-500">{place}</span>
+                          }
+                        </span>
+                        <Avatar u={u} size={5} />
+                        <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : "text-white"}`}>{userName(u)}</span>
+                        {!isExcluded && dominionCfg?.enabled && (currentDominionStreaks[uid] ?? 0) > 0 && (
+                          <span
+                            title={`Dominion-Streak: ${currentDominionStreaks[uid]}x in Folge „${dominionTriggerLabel}" — noch ${Math.max(dominionCfg.threshold - currentDominionStreaks[uid], 0)}x bis zum Bonus`}
+                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[10px] font-semibold text-orange-400 shrink-0"
+                          >
+                            <Flame className="w-2.5 h-2.5" /> {currentDominionStreaks[uid]}
+                          </span>
+                        )}
+                        {isExcluded && (
+                          <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>
+                        )}
+                        {isAvgFormat && userAvgScore[uid] != null && (
+                          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
+                            Ø {formatFixed(userAvgScore[uid], 2)}
+                          </span>
+                        )}
+                        {!isAvgFormat && winnerStatField && (
+                          <span className="text-[10px] text-gray-400 tabular-nums shrink-0">
+                            {formatDecimal(userStats[uid]?.[winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
+                            {winnerCheck.compareField && (
+                              <span className="text-gray-600"> · {formatDecimal(userStats[uid]?.[winnerCheck.compareField] ?? 0)} {statDisplayName(winnerCheck.compareField)}</span>
+                            )}
+                          </span>
+                        )}
+                        <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
+                          {!isExcluded && effectiveParticipationCoins > 0 && (
+                            <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
+                              +{(reward?.coins ?? 0) + effectiveParticipationCoins} <CoinIcon size={11} />
+                            </span>
+                          )}
+                          {!isExcluded && reward && reward.rankPoints > 0 && (
+                            <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
+                              +{reward.rankPoints} <RankPointsIcon size={11} />
+                            </span>
+                          )}
+                          {!isExcluded && reward?.tablePoints ? (
+                            <span className="text-[10px] text-indigo-300 tabular-nums leading-tight" title="Tabellenpunkte für die Reihentabelle">
+                              +{reward.tablePoints} Tab.
+                            </span>
+                          ) : null}
+                        </span>
+                        <div className="flex gap-0.5 shrink-0">
+                            <button
+                              onClick={() => toggleExcluded(uid)}
+                              title={isExcluded ? "Disqualifikation aufheben" : "Disqualifizieren (keine Münzen/Punkte)"}
+                              className={`p-2.5 -m-1 transition-colors ${isExcluded ? "text-red-400" : "text-gray-600 hover:text-red-400"}`}
+                            >
+                              <Ban className="w-3 h-3" />
+                            </button>
+                            {/* Tie toggle (only for non-first rows) */}
+                            {idx > 0 && (
+                              <button
+                                onClick={() => toggleTied(uid)}
+                                title={isTied ? "Gleichstand aufheben" : "Gleichstand mit Platz darüber"}
+                                className={`p-2.5 -m-1 transition-colors ${isTied ? "text-blue-400" : "text-gray-600 hover:text-blue-400"}`}
+                              >
+                                <Equal className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
+                            <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
+                          </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Ranking note */}
+            <div>
+                <label className="text-[11px] text-gray-500 block mb-1">
+                  Begründung / Notiz (optional)
+                </label>
+                <textarea
+                  value={rankingNote}
+                  onChange={e => { setRankingNote(e.target.value); setRankingDirty(true); }}
+                  placeholder="z.B. Spieler X nachträglich disqualifiziert wegen …"
+                  rows={2}
+                  className={`${inputCls} resize-none ${rankingManuallyEdited && rankingNote ? "border-amber-600/50" : ""}`}
+                />
+                {(rankingManuallyEdited || excludedUsers.size > 0) && !rankingNote && (
+                  <p className="text-[10px] text-amber-500/70 mt-1">
+                    Empfohlen: Begründung für manuelle Änderung{excludedUsers.size > 0 ? " / Disqualifikation" : ""} eintragen.
+                  </p>
+                )}
+              </div>
+          </div>
+      </section>
+
+      {/* ── Schritt 2: Extras ── */}
+      {hasExtras && (
+        <section aria-label="Extras" className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Extras")}</span>
+            Extras
+          </h2>
+          <div className="grid gap-3 lg:grid-cols-2 items-start">
           {/* MVP */}
           {seriesStatConfig?.mvpStatField && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
@@ -718,7 +944,7 @@ export default function EventCompleteClient({
                 <RankPointsIcon size={14} />
                 <span className="text-xs font-semibold text-teal-300">
                   MVP{" "}
-                  <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}" in Reihentabelle)</span>
+                  <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}“ in der Reihen-Tabelle)</span>
                 </span>
               </div>
               {isFinishedSummary ? (
@@ -796,13 +1022,111 @@ export default function EventCompleteClient({
             </div>
           )}
 
+          {/* Zuschauer-Anwesenheit */}
+          {spectatorUsers.length > 0 && spectatorRewardJson && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
+              <p className="text-xs font-semibold text-teal-300">
+                👁️ Zuschauer-Anwesenheit
+                <span className="font-normal text-gray-500 ml-1">({effectiveSpectatorCoins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
+              </p>
+              {isFinishedSummary ? (
+                <div className="space-y-1">
+                  {spectatorUsers.filter(u => spectatorAttended.has(u.id)).map(u => (
+                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                      <Avatar u={u} size={5} />
+                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                    </div>
+                  ))}
+                  {spectatorUsers.every(u => !spectatorAttended.has(u.id)) && (
+                    <p className="text-sm text-gray-500 italic">Niemand anwesend.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Punkt 5: Bulk-Aktionen statt jeden Zuschauer einzeln anklicken zu müssen */}
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => setSpectatorAttended(new Set(spectatorUsers.map(u => u.id)))}
+                      className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
+                      Alle anwesend
+                    </button>
+                    <span className="text-gray-700">·</span>
+                    <button type="button"
+                      onClick={() => setSpectatorAttended(new Set())}
+                      className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                      Keiner anwesend
+                    </button>
+                    <span className="text-[10px] text-gray-600 ml-auto">
+                      {spectatorAttended.size}/{spectatorUsers.length} anwesend
+                    </span>
+                  </div>
+                  {spectatorUsers.map(u => (
+                    <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
+                    }`}>
+                      <input type="checkbox" checked={spectatorAttended.has(u.id)}
+                        onChange={e => setSpectatorAttended(prev => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(u.id); else next.delete(u.id);
+                          return next;
+                        })}
+                        className="accent-teal-500 shrink-0" />
+                      <Avatar u={u} size={5} />
+                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          </div>
+        </section>
+      )}
+
+      {/* ── Schritt 3: Umfrage ── */}
+      {hasPolls && (
+        <section aria-label="Umfrage" className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Umfrage")}</span>
+            Umfrage
+          </h2>
+          {!isPollOnly && !isFinishedSummary && pollsConfig.length > 0 && (
+            <p className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-xs text-gray-300">
+              Nach dem Abschluss {pollsConfig.length === 1 ? "startet die Umfrage" : "starten die Umfragen"}{" "}
+              {pollsConfig.map(pc => `„${pc.label || pc.question}“`).join(", ")}. Die Sieger-Belohnung wird nach Ablauf
+              automatisch vergeben, du musst danach nichts mehr tun.
+            </p>
+          )}
+          {openEventPolls.length > 0 && (
+            <p className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+              <Vote className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Läuft noch: {openEventPolls.map(op => `„${op.label}“ bis ${new Date(op.endAt).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
+                {" "}{isPollOnly && isMod
+                  ? "Als Mod kannst du sie hier vorzeitig beenden, dann werden die Belohnungen sofort vergeben."
+                  : "Die Belohnungen kommen automatisch nach dem Ende."}
+              </span>
+            </p>
+          )}
+          {(isPollOnly || isFinishedSummary) && (
+            <LivePollsPanel
+              eventId={eventId}
+              isAdmin={isAdmin}
+              isMod={isMod}
+              readOnly={isFinishedSummary}
+              registeredUsers={registeredUsers}
+              spectatorUsers={spectatorUsers}
+              allUsers={allUsers}
+            />
+          )}
           {/* Poll (legacy – nur wenn kein pollsConfig vorhanden) */}
           {pollConfig.enabled && pollsConfig.length === 0 && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
               <div className="flex items-center gap-2">
                 <Vote className="w-3.5 h-3.5 text-violet-400" />
                 <span className="text-xs font-semibold text-violet-300">
-                  Poll (Alt-System): „{pollConfig.question}"
+                  Umfrage (älteres Format): „{pollConfig.question}“
                 </span>
                 {isPollOnly && <span className="text-[10px] text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
@@ -895,379 +1219,64 @@ export default function EventCompleteClient({
             </div>
           )}
 
-          {/* Zuschauer-Anwesenheit */}
-          {spectatorUsers.length > 0 && spectatorRewardJson && (
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
-              <p className="text-xs font-semibold text-teal-300">
-                👁️ Zuschauer-Anwesenheit
-                <span className="font-normal text-gray-500 ml-1">({effectiveSpectatorCoins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
-              </p>
-              {isFinishedSummary ? (
-                <div className="space-y-1">
-                  {spectatorUsers.filter(u => spectatorAttended.has(u.id)).map(u => (
-                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
-                      <Avatar u={u} size={5} />
-                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
-                    </div>
-                  ))}
-                  {spectatorUsers.every(u => !spectatorAttended.has(u.id)) && (
-                    <p className="text-sm text-gray-500 italic">Niemand anwesend.</p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {/* Punkt 5: Bulk-Aktionen statt jeden Zuschauer einzeln anklicken zu müssen */}
-                  <div className="flex items-center gap-2">
-                    <button type="button"
-                      onClick={() => setSpectatorAttended(new Set(spectatorUsers.map(u => u.id)))}
-                      className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
-                      Alle anwesend
-                    </button>
-                    <span className="text-gray-700">·</span>
-                    <button type="button"
-                      onClick={() => setSpectatorAttended(new Set())}
-                      className="text-[11px] text-gray-500 hover:text-white transition-colors">
-                      Keiner anwesend
-                    </button>
-                    <span className="text-[10px] text-gray-600 ml-auto">
-                      {spectatorAttended.size}/{spectatorUsers.length} anwesend
-                    </span>
-                  </div>
-                  {spectatorUsers.map(u => (
-                    <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
-                    }`}>
-                      <input type="checkbox" checked={spectatorAttended.has(u.id)}
-                        onChange={e => setSpectatorAttended(prev => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.add(u.id); else next.delete(u.id);
-                          return next;
-                        })}
-                        className="accent-teal-500 shrink-0" />
-                      <Avatar u={u} size={5} />
-                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        </section>
+      )}
 
-          {/* Summary (bei isFinishedSummary ausgeblendet — Info steht direkt in den Karten oben
-              sowie in der Finale-Platzierung-Spalte) */}
-          {!isFinishedSummary && (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
-                {isPollOnly ? "Wird vergeben (Umfrage)" : "Wird vergeben"}
-              </p>
+      {/* ── Feste Zusammenfassung mit Hauptbutton ── */}
+      <div className="sticky bottom-20 lg:bottom-4 z-30">
+        <div className="rounded-xl border border-white/[0.12] bg-gray-900/95 px-3 sm:px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur space-y-2">
+          {noRanking && (
+            <p className="flex items-center gap-1.5 text-xs text-red-300">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Niemand in der Platzierung, es würden keine Platzierungs-Belohnungen vergeben.
+            </p>
+          )}
+          <div className="flex items-center gap-x-3 gap-y-2 flex-wrap">
+            {/* Handy: Zusammenfassung über volle Breite, Buttons darunter */}
+            <div className="min-w-0 flex-1 basis-full sm:basis-0">
               {isPollOnly ? (
-                <ul className="space-y-1 text-xs text-gray-400">
-                  {pollWinners.length > 0 ? (
-                    <li className="flex items-center gap-2">
-                      <Vote className="w-3 h-3 text-violet-400 shrink-0" />
-                      Poll-Sieger: {pollWinners.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null })).join(", ")}
-                      {" "}({pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}{pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}{pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""})
-                    </li>
-                  ) : (
-                    <li className="text-gray-600 italic">Stimmen eingeben um Gewinner zu bestimmen.</li>
-                  )}
-                </ul>
+                <p className="text-sm text-gray-200">
+                  {pollWinners.length > 0 ? <>Umfrage-Sieger: <b>{pollWinners.map(nameOf).join(", ")}</b></> : "Platzierung und Umfrage prüfen"}
+                </p>
               ) : (
-                <ul className="space-y-1 text-xs text-gray-400">
-                  {effectiveParticipationCoins > 0 && (
-                    <li className="flex items-center gap-2">
-                      <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                      Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
-                    </li>
-                  )}
-                  {rankingGroups.map((group, gi) => {
-                    const place = placementMap.get(group[0]) ?? gi + 1;
-                    const reward = getPlacementReward(place);
-                    if (!reward || (reward.coins === 0 && reward.rankPoints === 0 && !reward.tablePoints)) return null;
-                    const names = group.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null }));
-                    return (
-                      <li key={gi} className="flex items-center gap-2">
-                        <span className="shrink-0">{MEDALS[place - 1] ?? `${place}.`}</span>
-                        {names.join(" & ")}:{" "}
-                        {reward.coins > 0 ? `${reward.coins} Münzen` : ""}
-                        {reward.coins > 0 && reward.rankPoints > 0 ? " + " : ""}
-                        {reward.rankPoints > 0 ? `${reward.rankPoints} Punkte` : ""}
-                        {reward.tablePoints ? `${reward.coins > 0 || reward.rankPoints > 0 ? " + " : ""}${reward.tablePoints} Tabellenpunkte` : ""}
-                      </li>
-                    );
-                  })}
-                  {seriesId && (
-                    <li className="flex items-center gap-2 text-gray-500 italic">
-                      <ListOrdered className="w-3 h-3 shrink-0" />
-                      Endplatzierung der Eventreihe (Punkte + weitere Münzen): erst bei Abschluss der gesamten Eventreihe
-                    </li>
-                  )}
-                  {pollConfig.enabled && (
-                    <li className="flex items-center gap-2">
-                      <Vote className="w-3 h-3 text-violet-400 shrink-0" />
-                      Poll-Sieger:{" "}
-                      {pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}
-                      {pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}
-                      {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}
-                      {pollConfig.coins === 0 && pollConfig.rankPoints === 0 ? "keine Belohnung" : ""}
-                    </li>
-                  )}
-                </ul>
+                <>
+                  <p className="text-sm font-semibold text-white tabular-nums">
+                    {totals.players} {totals.players === 1 ? "Spieler" : "Spieler"}
+                    {totals.coins > 0 && <> · {totals.coins.toLocaleString("de-DE")} Münzen</>}
+                    {totals.rankPoints > 0 && <> · {totals.rankPoints} Rang-Punkte</>}
+                    {totals.tablePoints > 0 && <> · {totals.tablePoints} Tabellenpunkte</>}
+                  </p>
+                  <p className="text-[11px] text-gray-500">
+                    {[
+                      excludedUsers.size > 0 && `${excludedUsers.size} disqualifiziert`,
+                      mvpUserId && `MVP ${nameOf(mvpUserId)}`,
+                      spectatorUsers.length > 0 && spectatorRewardJson && `${spectatorAttended.size} Zuschauer`,
+                      pollPhasePending && "Umfrage startet danach",
+                      isFinishedSummary && "Unterschiede werden nach- oder zurückgebucht",
+                    ].filter(Boolean).join(" · ") || "Teilnahme und Platzierung"}
+                  </p>
+                </>
               )}
             </div>
-          )}
-
-          {/* Punkt 4: Inline-Validierung statt stiller 0-Belohnungsvorschau — wird sichtbar,
-              bevor gespeichert wird, nicht erst danach. */}
-          {!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0 && (
-            <div className="flex items-center gap-2 text-xs text-red-300 bg-red-900/20 border border-red-700/40 rounded-xl px-4 py-3">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              Keine Teilnehmer in der Finalen Platzierung — es würden keine Platzierungs-Belohnungen vergeben.
-            </div>
-          )}
-          {!isFinishedSummary && !isPollOnly && !isAvgFormat && tournamentStatFields.length > 0 && !winnerStatField && (
-            <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              Kein Gewinner-Stat ausgewählt — die Rangliste rechts wird nicht automatisch sortiert, bitte manuell prüfen.
-            </div>
-          )}
-
-          {/* Confirm buttons */}
-          <div className="space-y-2">
-            {/* Moderatoren/Admins schließen mit dem Haupt-Button während der Umfragephase sonst automatisch
-                die Umfrage mit ab — dieser Button erlaubt es, Änderungen an Finaler Platzierung/Begründung
-                zwischendurch zu sichern, ohne die Umfragephase zu beenden. */}
             {isPollOnly && isMod && rankingDirty && (
-              <button
-                onClick={() => handleConfirm(false, true)}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-blue-300 border border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50 hover:bg-blue-500/10 transition-colors disabled:opacity-50"
-              >
-                <ListOrdered className="w-3.5 h-3.5" />
-                Nur Änderungen speichern (Umfrage läuft weiter)
+              <button onClick={() => handleConfirm(false, true)} disabled={loading}
+                className="shrink-0 rounded-lg border border-white/[0.12] px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/[0.06] disabled:opacity-50">
+                Nur Platzierung speichern
+              </button>
+            )}
+            {canDeferPoll && (
+              <button onClick={() => handleConfirm(true)} disabled={loading}
+                title="Spiel jetzt abschließen, den Sieger der Umfrage später eintragen"
+                className="shrink-0 rounded-lg border border-white/[0.12] px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-white/[0.06] disabled:opacity-50">
+                Umfrage-Sieger später
               </button>
             )}
             <button
               onClick={() => handleConfirm(false)}
-              disabled={loading || (!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0)}
-              title={(!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0) ? "Keine Teilnehmer in der Finalen Platzierung" : undefined}
-              className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50"
+              disabled={loading || noRanking}
+              className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-500 px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              {loading
-                ? "Wird gespeichert…"
-                : willFinalizePolls
-                ? "Umfragephase abschließen & Event beenden"
-                : isFinishedSummary
-                ? "Ergebnisse bestätigen"
-                : isPollOnly
-                ? "Änderungen speichern"
-                : pollPhasePending
-                ? "Spielphase abschließen – Umfrage startet"
-                : "Abschließen & Belohnungen vergeben"}
+              <CheckCircle2 className="w-4 h-4" /> {mainLabel}
             </button>
-            {/* Secondary: confirm game phase now, decide poll winner later */}
-            {canDeferPoll && (
-              <button
-                onClick={() => handleConfirm(true)}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-gray-400 border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:text-gray-200 transition-colors disabled:opacity-50"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Nur Spielphase abschließen, Umfrage-Sieger später eintragen
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Right column: Finale Platzierung ── */}
-        <div className="space-y-3">
-          <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ListOrdered className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <span className="text-xs font-semibold text-blue-300">Finale Platzierung</span>
-              {!rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
-                <span className="text-[10px] text-gray-600">
-                  — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : statDisplayName(winnerStatField)}"
-                </span>
-              )}
-              {rankingManuallyEdited && (
-                <span className="flex items-center gap-1 text-[10px] text-amber-400">
-                  <AlertTriangle className="w-3 h-3" /> manuell geändert
-                </span>
-              )}
-              {rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
-                <button
-                  onClick={() => { autoSort(); setRankingDirty(true); }}
-                  className="ml-auto flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" /> Auto-Sortierung zurücksetzen
-                </button>
-              )}
-            </div>
-
-            {tiedAbove.size > 0 && (
-              <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
-                <Equal className="w-3 h-3" />
-                {tiedAbove.size} Gleichstand{tiedAbove.size > 1 ? "s" : ""} – beide erhalten dieselbe Platzierung
-              </p>
-            )}
-
-            {seriesId && (
-              <p className="text-[10px] text-gray-600">
-                Fließt in die Reihentabelle ein. Die volle Platzierungs-Belohnung („Belohnungen
-                (Endplatzierung der Eventreihe)") wird erst bei Abschluss der gesamten Eventreihe anhand der
-                finalen Gesamtplatzierung vergeben — zusätzliche, seriesweit konfigurierte Platzierungs-Münzen
-                für dieses einzelne Event (falls eingestellt) werden direkt hier vergeben.
-              </p>
-            )}
-
-            <p className="text-[10px] text-gray-600">Drag & Drop oder Pfeile nutzen · <Equal className="w-3 h-3 inline" /> = Gleichstand</p>
-
-            {registeredUsers.length === 0 ? (
-              <p className="text-sm text-gray-600 text-center py-4">Keine Teilnehmer registriert.</p>
-            ) : (
-              <div className="space-y-1">
-                {rankingOrder.map((uid, idx) => {
-                  const u = registeredUsers.find(u => u.id === uid);
-                  if (!u) return null;
-                  const place = placementMap.get(uid) ?? idx + 1;
-                  const isExcluded = excludedUsers.has(uid);
-                  const reward = isExcluded ? undefined : getPlacementReward(place);
-                  const isTied = tiedAbove.has(uid);
-
-                  return (
-                    <div key={uid}>
-                      {/* Tied-with-above indicator */}
-                      {isTied && (
-                        <div className="flex items-center gap-1 py-0.5 px-8">
-                          <div className="flex-1 border-t border-blue-500/20 border-dashed" />
-                          <Equal className="w-3 h-3 text-blue-400/40" />
-                          <div className="flex-1 border-t border-blue-500/20 border-dashed" />
-                        </div>
-                      )}
-                      <div
-                        draggable
-                        onDragStart={() => setDragIdx(idx)}
-                        onDragOver={e => e.preventDefault()}
-                        onDrop={() => {
-                          if (dragIdx === null || dragIdx === idx) return;
-                          setRankingManuallyEdited(true);
-                          setRankingDirty(true);
-                          setRankingOrder(prev => {
-                            const next = [...prev];
-                            const [removed] = next.splice(dragIdx, 1);
-                            next.splice(idx, 0, removed);
-                            return next;
-                          });
-                          // Clear ties for moved elements
-                          setTiedAbove(t => {
-                            const s = new Set(t);
-                            s.delete(uid);
-                            if (rankingOrder[dragIdx]) s.delete(rankingOrder[dragIdx]);
-                            return s;
-                          });
-                          setDragIdx(null);
-                        }}
-                        className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors select-none ${
-                          isExcluded
-                            ? "border-red-900/40 bg-red-950/20"
-                            : isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05] bg-white/[0.03]"
-                        } cursor-grab active:cursor-grabbing`}
-                      >
-                        <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                        <span className="text-sm w-6 text-center shrink-0">
-                          {place <= 3
-                            ? <span>{MEDALS[place - 1]}</span>
-                            : <span className="text-xs text-gray-500">{place}</span>
-                          }
-                        </span>
-                        <Avatar u={u} size={5} />
-                        <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : "text-white"}`}>{userName(u)}</span>
-                        {!isExcluded && dominionCfg?.enabled && (currentDominionStreaks[uid] ?? 0) > 0 && (
-                          <span
-                            title={`Dominion-Streak: ${currentDominionStreaks[uid]}x in Folge „${dominionTriggerLabel}" — noch ${Math.max(dominionCfg.threshold - currentDominionStreaks[uid], 0)}x bis zum Bonus`}
-                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[10px] font-semibold text-orange-400 shrink-0"
-                          >
-                            <Flame className="w-2.5 h-2.5" /> {currentDominionStreaks[uid]}
-                          </span>
-                        )}
-                        {isExcluded && (
-                          <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>
-                        )}
-                        {isAvgFormat && userAvgScore[uid] != null && (
-                          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                            Ø {formatFixed(userAvgScore[uid], 2)}
-                          </span>
-                        )}
-                        {!isAvgFormat && winnerStatField && userStats[uid]?.[winnerStatField] != null && (
-                          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
-                            {formatDecimal(userStats[uid][winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
-                          </span>
-                        )}
-                        <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
-                          {!isExcluded && effectiveParticipationCoins > 0 && (
-                            <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
-                              +{(reward?.coins ?? 0) + effectiveParticipationCoins} <CoinIcon size={11} />
-                            </span>
-                          )}
-                          {!isExcluded && reward && reward.rankPoints > 0 && (
-                            <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
-                              +{reward.rankPoints} <RankPointsIcon size={11} />
-                            </span>
-                          )}
-                          {!isExcluded && reward?.tablePoints ? (
-                            <span className="text-[10px] text-indigo-300 tabular-nums leading-tight" title="Tabellenpunkte für die Reihentabelle">
-                              +{reward.tablePoints} Tab.
-                            </span>
-                          ) : null}
-                        </span>
-                        <div className="flex gap-0.5 shrink-0">
-                            <button
-                              onClick={() => toggleExcluded(uid)}
-                              title={isExcluded ? "Disqualifikation aufheben" : "Disqualifizieren (keine Münzen/Punkte)"}
-                              className={`p-2.5 -m-1 transition-colors ${isExcluded ? "text-red-400" : "text-gray-600 hover:text-red-400"}`}
-                            >
-                              <Ban className="w-3 h-3" />
-                            </button>
-                            {/* Tie toggle (only for non-first rows) */}
-                            {idx > 0 && (
-                              <button
-                                onClick={() => toggleTied(uid)}
-                                title={isTied ? "Gleichstand aufheben" : "Gleichstand mit Platz darüber"}
-                                className={`p-2.5 -m-1 transition-colors ${isTied ? "text-blue-400" : "text-gray-600 hover:text-blue-400"}`}
-                              >
-                                <Equal className="w-3 h-3" />
-                              </button>
-                            )}
-                            <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
-                            <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
-                          </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Ranking note */}
-            <div>
-                <label className="text-[11px] text-gray-500 block mb-1">
-                  Begründung / Notiz (optional)
-                </label>
-                <textarea
-                  value={rankingNote}
-                  onChange={e => { setRankingNote(e.target.value); setRankingDirty(true); }}
-                  placeholder="z.B. Spieler X nachträglich disqualifiziert wegen …"
-                  rows={2}
-                  className={`${inputCls} resize-none ${rankingManuallyEdited && rankingNote ? "border-amber-600/50" : ""}`}
-                />
-                {(rankingManuallyEdited || excludedUsers.size > 0) && !rankingNote && (
-                  <p className="text-[10px] text-amber-500/70 mt-1">
-                    Empfohlen: Begründung für manuelle Änderung{excludedUsers.size > 0 ? " / Disqualifikation" : ""} eintragen.
-                  </p>
-                )}
-              </div>
           </div>
         </div>
       </div>

@@ -166,12 +166,22 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // Vorbelegung des Gewinner-Stats: Event-eigene Einstellung (Reiter "Reihe" im Event) → Sieger-
   // Ermittlung der Reihe (winnerStatField, Wizard/Reihen-Einstellungen) → Altfeld defaultWinnerStatField.
   // Vorher wurde nur das Altfeld gelesen, die Sieger-Ermittlung der Reihe kam beim Abschluss nie an.
+  // Für den Gewinner-Stat-Kasten der Abschluss-Seite: woher die Vorbelegung stammt und welchen Stat
+  // die Reihe vorsieht (Vergleich, falls beides auseinanderläuft — häufige Ursache falscher Platzierungen)
+  const seriesCfgForWinner = rawSeriesStatConfig as { winnerStatField?: string; defaultWinnerStatField?: string } | null;
+  const eventCfgForWinner = (() => {
+    try { return event.seriesEventConfigJson ? JSON.parse(event.seriesEventConfigJson) as { winnerStatField?: string } : null; }
+    catch { return null; }
+  })();
+  const seriesWinnerStatField = [seriesCfgForWinner?.winnerStatField, seriesCfgForWinner?.defaultWinnerStatField]
+    .find((f): f is string => !!f && winnerStatFieldOptions.includes(f)) ?? null;
+  const winnerStatSource: "event" | "series" | "auto" =
+    eventCfgForWinner?.winnerStatField && winnerStatFieldOptions.includes(eventCfgForWinner.winnerStatField) ? "event"
+      : seriesWinnerStatField ? "series" : "auto";
+
   const defaultWinnerStatField = (() => {
-    const eventCfg = (() => {
-      try { return event.seriesEventConfigJson ? JSON.parse(event.seriesEventConfigJson) as { winnerStatField?: string } : null; }
-      catch { return null; }
-    })();
-    const seriesCfg = rawSeriesStatConfig as { winnerStatField?: string; defaultWinnerStatField?: string } | null;
+    const eventCfg = eventCfgForWinner;
+    const seriesCfg = seriesCfgForWinner;
     const candidates = [eventCfg?.winnerStatField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField];
     return candidates.find((f): f is string => !!f && winnerStatFieldOptions.includes(f))
       // Keine gültige Voreinstellung (z.B. "Eventpunkte" ohne Eventpunkte, umbenanntes Feld): gleiche
@@ -262,6 +272,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       tournamentStatFields={tournamentStatFields}
       winnerStatFieldOptions={winnerStatFieldOptions}
       defaultWinnerStatField={defaultWinnerStatField}
+      winnerStatSource={winnerStatSource}
+      seriesWinnerStatField={seriesWinnerStatField}
       userStats={userStats}
       format={event.format}
       userAvgScore={userAvgScore}

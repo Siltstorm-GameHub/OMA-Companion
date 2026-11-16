@@ -8,6 +8,8 @@ import { sanitizeCheckInMinutes } from "@/lib/checkin";
 import { publishEvent } from "@/lib/event-publish";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
+import { createNotificationForUsers } from "@/lib/notifications";
+import { formatBerlinDateTime } from "@/lib/time";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 
 export async function PATCH(req: NextRequest) {
@@ -235,7 +237,28 @@ export async function DELETE(req: NextRequest) {
     }
   }
 
+  // Absage (Event hat noch nicht begonnen): Angemeldete vorher benachrichtigen — sonst erfahren sie
+  // davon nur, wenn das Event plötzlich aus ihrer Liste verschwindet. Der Veranstalter selbst nicht.
+  const upcoming = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { title: true, startAt: true, registrations: { select: { userId: true } } },
+  });
+  const now = new Date();
+
   await deleteEventRecord(eventId);
+
+  if (upcoming && upcoming.startAt > now) {
+    const recipients = upcoming.registrations.map((r) => r.userId).filter((id) => id !== currentUser.id);
+    if (recipients.length > 0) {
+      const when = formatBerlinDateTime(upcoming.startAt, { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+      await createNotificationForUsers(recipients, {
+        type: "event_start",
+        title: "Event abgesagt",
+        body: `„${upcoming.title}“ am ${when} findet nicht statt.`,
+        url: "/events",
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
