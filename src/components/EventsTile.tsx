@@ -8,12 +8,15 @@ import HubTile, { type HubRow } from "@/components/HubTile";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import { Clock, ExternalLink, Heart, Timer, Trophy } from "@/components/icons";
 import { dateBlock, eventPhase, startsInLabel, urgencyHint } from "@/lib/event-display";
+import { remainingLabel } from "@/lib/event-period";
 import type { HomeEventCandidate, HomeFeature } from "@/lib/home-event-feature";
 import { formatBerlinTime } from "@/lib/time";
 
 interface Props {
   feature: HomeFeature;
   rows: HomeEventCandidate[];
+  /** Laufende Zeitraum-Events (Woche/Monat) für die Zeile "läuft" — siehe runningPeriodEvents */
+  periodEvents?: HomeEventCandidate[];
   weekCount: number;
   /** Server-"jetzt" als ISO-String (Countdown wird serverseitig berechnet) */
   nowIso: string;
@@ -82,7 +85,7 @@ const longDate = (d: Date, now: Date) => {
  * (lib/home-event-feature.ts), darunter die nächsten zwei Events. Gerüst = HubTile, damit sie
  * neben der Clip-Kachel immer gleich hoch ist.
  */
-export default function EventsTile({ feature, rows, weekCount, nowIso, loggedIn }: Props) {
+export default function EventsTile({ feature, rows, periodEvents = [], weekCount, nowIso, loggedIn }: Props) {
   const now = new Date(nowIso);
   let media: ReactNode;
   let main: ReactNode;
@@ -132,9 +135,15 @@ export default function EventsTile({ feature, rows, weekCount, nowIso, loggedIn 
     const href = `/tournament/${ev.id}`;
     const phase = eventPhase({ status: ev.status, startAt: ev.startAt, endAt: ev.endAt, maxPlayers: ev.maxPlayers, playerCount: ev.playerCount, isRegistered: ev.isRegistered }, now);
     const running = phase.phase === "live" || phase.phase === "period";
+    // Zeitraum-Events stehen nur aus Anlass oben: frisch gestartet oder endet bald (home-event-feature.ts)
+    const highlight = "highlight" in feature ? feature.highlight : undefined;
     const statusPill = running
       ? phase.phase === "period"
-        ? <Pill tone="teal"><Timer className="w-3.5 h-3.5" />{phase.label}</Pill>
+        ? highlight === "ending"
+          ? <Pill tone="yellow"><Timer className="w-3.5 h-3.5" />Endet bald · {phase.label}</Pill>
+          : highlight === "new"
+            ? <Pill tone="teal"><Timer className="w-3.5 h-3.5" />Neu gestartet · {phase.label}</Pill>
+            : <Pill tone="teal"><Timer className="w-3.5 h-3.5" />{phase.label}</Pill>
         : <Pill tone="red"><span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />Live</Pill>
       : null;
     const register = (label: string) => loggedIn && ev.canSelfRegister && !ev.isRegistered
@@ -200,7 +209,20 @@ export default function EventsTile({ feature, rows, weekCount, nowIso, loggedIn 
     );
   }
 
-  const hubRows: HubRow[] = rows.map(e => {
+  // Laufende Zeitraum-Events (Woche/Monat) gebündelt in EINER Zeile statt fester Plätze
+  const periodRow: HubRow | null = periodEvents.length > 0 ? (() => {
+    const first = periodEvents[0];
+    const left = first.endAt ? remainingLabel(first.endAt.getTime() - now.getTime()) : null;
+    return {
+      key: "period",
+      href: periodEvents.length === 1 ? `/tournament/${first.id}` : "/events",
+      lead: <span className="font-semibold text-teal-300">läuft</span>,
+      label: <>{periodEvents.map(e => e.title).join(" · ")}</>,
+      hint: <span className="text-gray-500">{periodEvents.length > 1 ? `${periodEvents.length} Events` : left}</span>,
+    };
+  })() : null;
+
+  const hubRows: HubRow[] = [...(periodRow ? [periodRow] : []), ...rows.map(e => {
     const b = dateBlock(e.startAt, now);
     const running = e.status === "active";
     const urgent = urgencyHint(e, now);
@@ -220,7 +242,7 @@ export default function EventsTile({ feature, rows, weekCount, nowIso, loggedIn 
               ? <span className="text-teal-300">Dein Spiel</span>
               : <span className="text-gray-500 tabular-nums">{e.playerCount}{e.maxPlayers ? `/${e.maxPlayers}` : ""}</span>,
     };
-  });
+  })];
 
   return (
     <HubTile

@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { homeRows, pickHomeFeature, weekCount, type HomeEventCandidate } from "./home-event-feature";
+import { homeRows, periodHighlight, pickHomeFeature, runningPeriodEvents, weekCount, type HomeEventCandidate } from "./home-event-feature";
 
 const NOW = new Date("2026-11-15T12:00:00Z");
 const day = (n: number, h = 19) => new Date(Date.UTC(2026, 10, 15 + n, h));
@@ -57,5 +57,52 @@ describe("Startseiten-Event: Priorität", () => {
     const p = ev({ status: "umfrage", startAt: day(-1) });
     assert.deepEqual(homeRows([c, b, a, p], a.id, NOW).map(e => e.id), [b.id, c.id]);
     assert.equal(weekCount([a, b, c, p], NOW), 2);
+  });
+});
+
+describe("Zeitraum-Events (Woche/Monat) als Hintergrund", () => {
+  // NOW = 15.11. 12:00 UTC
+  const hours = (h: number) => new Date(NOW.getTime() + h * 3600_000);
+  const week = (startH: number) => ev({ status: "active", startAt: hours(startH), endAt: hours(startH + 7 * 24) });
+
+  test("Mittendrin: Zeitraum-Event verdrängt kein festes Event", () => {
+    const fitness = week(-72); // seit 3 Tagen, noch 4 Tage
+    const cup = ev({ startAt: day(2) });
+    const f = pickHomeFeature([fitness, cup], null, NOW);
+    assert.ok(f.kind === "recommend" && f.ev.id === cup.id);
+    // auch angemeldet: das feste Event gewinnt
+    const mine = pickHomeFeature([{ ...fitness, isRegistered: true }, { ...cup, isRegistered: true }], null, NOW);
+    assert.ok(mine.kind === "registered" && mine.ev.id === cup.id);
+  });
+
+  test("Frisch gestartet oder endet bald → darf nach oben", () => {
+    const fresh = week(-5);
+    const f = pickHomeFeature([fresh, ev({ startAt: day(2) })], null, NOW);
+    assert.ok(f.kind === "live" && f.ev.id === fresh.id && f.highlight === "new");
+    const ending = week(-7 * 24 + 30); // endet in 30 Std
+    const g = pickHomeFeature([fresh, ending], null, NOW);
+    assert.ok(g.kind === "live" && g.ev.id === ending.id && g.highlight === "ending");
+  });
+
+  test("Festes laufendes Event schlägt Zeitraum-Event mit Anlass", () => {
+    const fresh = week(-5);
+    const tonight = ev({ status: "active", startAt: hours(-1) });
+    const f = pickHomeFeature([fresh, tonight], null, NOW);
+    assert.ok(f.kind === "live" && f.ev.id === tonight.id);
+  });
+
+  test("Steht sonst nichts an, bleibt die Kachel nicht leer", () => {
+    const fitness = week(-72);
+    const f = pickHomeFeature([fitness], null, NOW);
+    assert.ok(f.kind === "live" && f.ev.id === fitness.id && !("highlight" in f && f.highlight));
+  });
+
+  test("Zeilen nur feste Termine, Zeitraum-Events separat", () => {
+    const fitness = week(-72);
+    const monat = ev({ status: "active", startAt: hours(-10 * 24), endAt: hours(20 * 24) });
+    const a = ev({ startAt: day(1) });
+    assert.deepEqual(homeRows([fitness, monat, a], null, NOW).map(e => e.id), [a.id]);
+    assert.deepEqual(runningPeriodEvents([monat, fitness, a], null).map(e => e.id), [fitness.id, monat.id]);
+    assert.equal(periodHighlight(a, NOW), null);
   });
 });

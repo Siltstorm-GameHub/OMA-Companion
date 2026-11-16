@@ -8,6 +8,8 @@
  *  2. Eigene Karten: Event in den nächsten 30 Tagen → Hinweise (gratis, neu im Abo, im Angebot) →
  *     beliebt → neu in der Liste → erneut fragen. Dazwischen jede STEAM_EVERY-te Karte eine
  *     Entdecken-Karte (Spiel, das noch nicht in der Liste steht).
+ *  Mehrspieler-Spiele werden bevorzugt (multiplayerRank): innerhalb jeder Gruppe zuerst, reine
+ *  Solo-Entdecken-Karten erst nach allen anderen Entdecken-Karten.
  *
  * Hinweis-Karten kommen auch zu Spielen, die man schon entschieden hat: Wer "Würde ich holen" gesagt
  * hat, bekommt das Spiel erneut, sobald es danach reduziert, gratis oder in einem Abo ist.
@@ -92,6 +94,23 @@ export interface PlanGame {
   saleStartedAt: Date | null;
   subscriptions: string[];
   subscriptionsAddedAt: Date | null;
+  modes: string[];
+  minPlayers: number | null;
+  maxPlayers: number | null;
+}
+
+// ── Multiplayer bevorzugen ──────────────────────────────────────────────────────
+
+/** 2 = Mehrspieler (Koop/PvP oder ab 2 Spielern), 1 = unbekannt, 0 = reines Solospiel. */
+export function multiplayerRank(g: { modes: readonly string[]; minPlayers: number | null; maxPlayers: number | null }): 0 | 1 | 2 {
+  if (g.modes.includes("coop") || g.modes.includes("pvp") || (g.maxPlayers ?? 0) >= 2 || (g.minPlayers ?? 0) >= 2) return 2;
+  if (g.modes.includes("solo") || g.maxPlayers === 1) return 0;
+  return 1;
+}
+
+/** Stabil umsortieren: Mehrspieler vor Unbekanntem vor Solo, sonst bleibt die Reihenfolge. */
+export function multiplayerFirst<T>(items: T[], fieldsOf: (t: T) => Parameters<typeof multiplayerRank>[0]): T[] {
+  return items.map((t, i) => ({ t, i, r: multiplayerRank(fieldsOf(t)) })).sort((a, b) => b.r - a.r || a.i - b.i).map(x => x.t);
 }
 
 export interface PlanReaction {
@@ -271,19 +290,25 @@ export function planDeck(input: PlanInput): PlannedCard[] {
   const withEvent = bucket("event").sort((a, b) => input.nextEventAt.get(a.g.id)!.getTime() - input.nextEventAt.get(b.g.id)!.getTime());
   // Hinweise: Wunschliste zuerst, dann Spiele mit jemandem am Start (mögliches Match), dann beliebt
   const hintRank = (o: Open) => (effectiveStatus(mine.get(o.g.id)) === "wish" ? 2 : 0) + (o.g.inCount > 0 ? 1 : 0);
-  const hints = [...bucket("free"), ...bucket("subscription"), ...bucket("sale")]
-    .sort((a, b) => hintRank(b) - hintRank(a) || ORDER[a.reason] - ORDER[b.reason] || popularity(b.g) - popularity(a.g));
-  const popular = bucket("popular").sort((a, b) => popularity(b.g) - popularity(a.g));
-  const fresh = bucket("new").sort((a, b) => b.g.createdAt.getTime() - a.g.createdAt.getTime());
-  const recheck = bucket("recheck");
+  // Innerhalb jeder Gruppe: Mehrspieler zuerst, reine Solospiele ans Ende
+  const mpFirst = (list: Open[]) => multiplayerFirst(list, o => o.g);
+  const hints = mpFirst([...bucket("free"), ...bucket("subscription"), ...bucket("sale")]
+    .sort((a, b) => hintRank(b) - hintRank(a) || ORDER[a.reason] - ORDER[b.reason] || popularity(b.g) - popularity(a.g)));
+  const popular = mpFirst(bucket("popular").sort((a, b) => popularity(b.g) - popularity(a.g)));
+  const fresh = mpFirst(bucket("new").sort((a, b) => b.g.createdAt.getTime() - a.g.createdAt.getTime()));
+  const recheck = mpFirst(bucket("recheck"));
   const own: PlannedCard[] = [...withEvent, ...hints, ...popular, ...fresh, ...recheck].map(o => ({
     kind: "game", gameId: o.g.id, reason: o.reason, since: o.since, drop: false, tip: null, promo: o.promo,
   }));
 
-  const bySource = DISCOVER_SOURCES.map(src => input.discover.filter(i => i.source === src));
+  // Entdecken: erst alle Mehrspieler-/unbekannten Karten (gratis zuerst, übrige Quellen reihum), reine
+  // Solospiele erst ganz am Schluss
+  const ordered = (items: DiscoverItem[]) => {
+    const bySource = DISCOVER_SOURCES.map(src => multiplayerFirst(items.filter(i => i.source === src), i => i));
+    return [...bySource[0], ...roundRobin(bySource.slice(1))];
+  };
   const discover: PlannedCard[] = [];
-  // Gratis zuerst (läuft ab), die übrigen Quellen reihum
-  for (const item of [...bySource[0], ...roundRobin(bySource.slice(1))]) {
+  for (const item of [...ordered(input.discover.filter(i => multiplayerRank(i) > 0)), ...ordered(input.discover.filter(i => multiplayerRank(i) === 0))]) {
     if (!openDiscover(item)) continue;
     seenKeys.add(discoverKey(item)!);
     discover.push({ kind: "discover", item, since: new Date(item.addedAt), drop: false });

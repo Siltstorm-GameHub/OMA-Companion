@@ -5,12 +5,13 @@
  * DROP_SIZE Karten zusammen: zuerst freigegebene Tipps (Mitglieder/Moderatoren empfehlen ein Spiel der
  * Liste, Karte zeigt "Empfohlen von …"), dann reihum je ein Spiel aus den Quellen gratis, neu im Abo,
  * erscheint bald, im Angebot, Steam-Neuheiten, neu in der Liste, Steam-Trends, beliebt. Was im Drop der
- * Vorwoche war, kommt nicht direkt wieder. Der Drop liegt in BotConfig; der Stapel zeigt ihn zuerst.
+ * Vorwoche war, kommt nicht direkt wieder. Mehrspieler-Spiele gehen vor; reine Solospiele füllen nur auf,
+ * wenn sonst nicht genug Karten da sind (Tipps sind davon ausgenommen). Der Drop liegt in BotConfig; der Stapel zeigt ihn zuerst.
  */
 
 import { prisma } from "@/lib/prisma";
 import {
-  SALE_MIN_PERCENT, SUBSCRIPTION_NEW_DAYS, discoverKey, makeGameFinder, roundRobin,
+  SALE_MIN_PERCENT, SUBSCRIPTION_NEW_DAYS, discoverKey, makeGameFinder, multiplayerRank, roundRobin,
   type DiscoverItem, type DropItem, type PlanGame, type WeeklyDrop,
 } from "./deck-plan";
 import { berlinWeek } from "./discover-parse";
@@ -29,6 +30,7 @@ const DAY = 86_400_000;
 export const PLAN_GAME_SELECT = {
   id: true, nameKey: true, aliases: true, steamAppId: true, igdbId: true, createdAt: true, inCount: true, wishCount: true,
   ratingCount: true, discountPercent: true, saleStartedAt: true, subscriptions: true, subscriptionsAddedAt: true,
+  modes: true, minPlayers: true, maxPlayers: true,
 } as const;
 
 export async function getWeeklyDrop(): Promise<WeeklyDrop | null> {
@@ -123,7 +125,17 @@ export async function buildWeeklyDrop(now = new Date()): Promise<WeeklyDrop> {
     [...bySource("steam_top"), ...bySource("steam_seller")],
     [...games].sort((a, b) => popularity(b) - popularity(a)).map(listGame),
   ];
-  for (const d of roundRobin(groups)) {
+  // Mehrspieler bevorzugen: erst reihum nur Mehrspieler/Unbekanntes, reine Solospiele nur zum Auffüllen
+  const gameById = new Map(games.map(g => [g.id, g]));
+  const rankOf = (d: DropItem) => {
+    if (d.kind === "discover") return multiplayerRank(d.item);
+    const g = gameById.get(d.gameId);
+    return g ? multiplayerRank(g) : 1;
+  };
+  const ranked = groups.map(list => list.map(d => ({ d, r: rankOf(d) })).sort((a, b) => b.r - a.r).map(x => x.d));
+  const multi = roundRobin(ranked.map(list => list.filter(d => rankOf(d) > 0)));
+  const solo = roundRobin(ranked.map(list => list.filter(d => rankOf(d) === 0)));
+  for (const d of [...multi, ...solo]) {
     if (items.length >= DROP_SIZE) break;
     add(d);
   }

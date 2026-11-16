@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  countNewCards, highlightOf, planDeck, plannedKey, roundRobin,
+  countNewCards, highlightOf, multiplayerRank, planDeck, plannedKey, roundRobin,
   type DiscoverItem, type PlanGame, type PlanInput, type WeeklyDrop,
 } from "./deck-plan";
 import { berlinWeek, parseEpicFreeGames, steamSearchAppIds } from "./discover-parse";
@@ -15,7 +15,8 @@ const ago = (days: number) => new Date(NOW.getTime() - days * DAY);
 function game(id: string, over: Partial<PlanGame> = {}): PlanGame {
   return {
     id, nameKey: id, aliases: [], steamAppId: null, igdbId: null, createdAt: ago(100), inCount: 0, wishCount: 0, ratingCount: 0,
-    discountPercent: 0, saleStartedAt: null, subscriptions: [], subscriptionsAddedAt: null, ...over,
+    discountPercent: 0, saleStartedAt: null, subscriptions: [], subscriptionsAddedAt: null, modes: [], minPlayers: null, maxPlayers: null,
+    ...over,
   };
 }
 
@@ -132,6 +133,31 @@ describe("GameSwipe-Planung", () => {
 
     const expired = planDeck(input({ games: [game("tipp")], drop: { ...drop, endsAt: ago(0.1).toISOString() } }));
     assert.ok(expired.every(c => !c.drop));
+  });
+
+  test("Multiplayer: Einstufung aus Modi und Spielerzahl", () => {
+    assert.equal(multiplayerRank({ modes: ["solo", "coop"], minPlayers: 1, maxPlayers: null }), 2);
+    assert.equal(multiplayerRank({ modes: [], minPlayers: null, maxPlayers: 4 }), 2);
+    assert.equal(multiplayerRank({ modes: [], minPlayers: null, maxPlayers: null }), 1);
+    assert.equal(multiplayerRank({ modes: ["solo"], minPlayers: 1, maxPlayers: 1 }), 0);
+  });
+
+  test("Multiplayer bevorzugt: Solo-Entdecken-Karten zuletzt, Listen-Spiele je Gruppe Mehrspieler zuerst", () => {
+    const plan = planDeck(input({
+      games: [
+        game("solo-beliebt", { inCount: 9, modes: ["solo"] }),
+        game("koop-beliebt", { inCount: 1, modes: ["coop"] }),
+      ],
+      discover: [
+        item("Solo gratis", { steamAppId: 1, source: "free", modes: ["solo"], maxPlayers: 1 }),
+        item("Solo Trend", { steamAppId: 2, modes: ["solo"] }),
+        item("PvP Trend", { steamAppId: 3, source: "steam_new", modes: ["pvp"] }),
+        item("Unbekannt", { steamAppId: 4 }),
+      ],
+    }));
+    assert.deepEqual(plan.filter(c => c.kind === "game").map(plannedKey), ["g:koop-beliebt", "g:solo-beliebt"]);
+    // PvP (steam_new) und Unbekanntes (steam_top) reihum, Solo erst danach — auch die Gratis-Aktion
+    assert.deepEqual(plan.filter(c => c.kind === "discover").map(plannedKey), ["d:s:3", "d:s:4", "d:s:1", "d:s:2"]);
   });
 
   test("roundRobin zieht reihum", () => {

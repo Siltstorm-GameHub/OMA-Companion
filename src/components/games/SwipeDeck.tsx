@@ -5,6 +5,7 @@
 // ============================================
 // Rechts = Am Start · Links = Nicht meins · Hoch = Würde ich holen (auch per Knopf und Pfeiltasten).
 // Antippen dreht die Karte um: Beschreibung, Steckbrief, wer am Start ist, Sterne, Angaben korrigieren.
+// Erneutes Antippen der Rückseite (außerhalb von Knöpfen/Links) dreht sie zurück.
 // Rückgängig holt die letzte Karte zurück. Daten: GET/POST /api/games/swipe (lib/games/deck.ts).
 // Oben der "Drop der Woche" (drop.ts); Entdecken-Karten sind Spiele, die noch nicht in der Liste stehen
 // (Gratis-Aktionen, neu im Abo, erscheint bald, Steam-Trends — discover.ts).
@@ -515,8 +516,18 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
     }
   }
 
+  // Antippen der Rückseite dreht zurück — außer auf Bedienelementen, beim Korrigieren oder beim Markieren von Text
+  function onBackClick(e: React.MouseEvent) {
+    if (correcting) return;
+    if ((e.target as HTMLElement).closest("a, button, input, textarea, select, label, form, [role='radiogroup'], [role='slider']")) return;
+    if (window.getSelection()?.toString()) return;
+    onClose();
+  }
+
+  const store = card.kind === "discover" ? storeLink(card) : null;
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col cursor-pointer" onClick={onBackClick}>
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-white/[0.06]">
         <p className="font-display text-base font-bold text-white truncate">{card.name}</p>
         <button type="button" onClick={onClose} className="text-xs font-semibold text-teal-300 hover:text-teal-200 shrink-0">Zurück zur Karte</button>
@@ -575,16 +586,19 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
                 </div>
               </>
             ) : (
-              <p className="text-gray-500">
-                Steht noch nicht in unserer Spieleliste. Sag „Am Start“, dann nehmen wir es auf — danach kannst du es bewerten und
-                Angaben ergänzen.
-                {card.releaseDate && <> Erscheint am {fmtDay(card.releaseDate)}.</>}{" "}
-                {storeLink(card) && (
-                  <a href={storeLink(card)!.href} target="_blank" rel="noreferrer" className="text-teal-300 hover:text-teal-200">
-                    {storeLink(card)!.label}
+              <>
+                {store && (
+                  <a href={store.href} target="_blank" rel="noreferrer"
+                    className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-sky-900/40 ring-1 ring-sky-300/40 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 active:scale-[0.98] transition">
+                    <ExternalLink className="w-4 h-4" /> {store.label}
                   </a>
                 )}
-              </p>
+                <p className="text-gray-500">
+                  Steht noch nicht in unserer Spieleliste. Sag „Am Start“, dann nehmen wir es auf — danach kannst du es bewerten und
+                  Angaben ergänzen.
+                  {card.releaseDate && <> Erscheint am {fmtDay(card.releaseDate)}.</>}
+                </p>
+              </>
             )}
           </>
         )}

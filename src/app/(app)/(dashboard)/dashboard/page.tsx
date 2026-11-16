@@ -32,7 +32,7 @@ import HomeTaskBar from "./HomeTaskBar";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { eventPayout } from "@/lib/placement-rewards";
-import { homeRows, pickHomeFeature, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
+import { homeRows, pickHomeFeature, runningPeriodEvents, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { HeroStatValue } from "@/components/HeroStatValue";
@@ -397,7 +397,9 @@ export default async function DashboardPage() {
   });
   const homeFeature = pickHomeFeature(homeCandidates, homeResult, now);
   const homeFeatureId = homeFeature.kind === "result" ? homeFeature.result.id : homeFeature.kind === "none" ? null : homeFeature.ev.id;
-  const homeEventRowsShown = homeRows(homeCandidates, homeFeatureId, now);
+  // Laufende Wochen-/Monats-Events teilen sich eine Zeile → dann nur noch ein fester Termin darunter
+  const homePeriodEvents = runningPeriodEvents(homeCandidates, homeFeatureId);
+  const homeEventRowsShown = homeRows(homeCandidates, homeFeatureId, now).slice(0, homePeriodEvents.length > 0 ? 1 : 2);
   const homeWeekCount = weekCount(homeCandidates, now);
   const clipRanking = clipRankingRows.map(n => ({ id: n.id, title: n.customTitle ?? n.clipTitle ?? "Clip", votes: n._count.votes }));
 
@@ -532,6 +534,7 @@ export default async function DashboardPage() {
           <EventsTile
             feature={homeFeature}
             rows={homeEventRowsShown}
+            periodEvents={homePeriodEvents}
             weekCount={homeWeekCount}
             nowIso={now.toISOString()}
             loggedIn={!!userId}
