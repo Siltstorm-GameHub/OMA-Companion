@@ -1,0 +1,313 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight } from "@/components/icons";
+import { Edit2, Eye, EyeOff } from "@/components/icons";
+import ActionCountBadge from "@/components/ActionCountBadge";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
+import SeriesIcon from "@/components/SeriesIcon";
+import { resolveSeriesColor } from "@/lib/series-icons";
+import OmaOriginalMark from "@/components/OmaOriginalMark";
+import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
+import { EventCategory } from "@prisma/client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
+import { formatBerlinDate, formatBerlinTime, formatBerlinRange } from "@/lib/time";
+
+const STATUS_LABELS: Record<string, string> = {
+  open:     "Offen",
+  active:   "Aktiv",
+  umfrage:  "Umfrage",
+  finished: "Beendet",
+  closed:   "Geschlossen",
+};
+const STATUS_STYLES: Record<string, string> = {
+  open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  active:   "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  finished: "text-gray-500 bg-white/[0.03] border-white/[0.06]",
+  closed:   "text-gray-600 bg-white/[0.02] border-white/[0.04]",
+};
+
+type Event = {
+  id: string;
+  title: string;
+  status: string;
+  startAt: Date;
+  endAt: Date | null;
+  game: string | null;
+  format: string | null;
+  tournamentStatus: string | null;
+  category: string | null;
+  completionData: boolean | string | number | null | object;
+  hidden: boolean;
+  omaOriginal?: boolean;
+  /** null = von Mods angelegt; "pending"/"approved" = Community-Event */
+  approvalStatus?: string | null;
+  _count: { registrations: number };
+};
+
+const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+
+// Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
+// auch direkt in der Eventliste sieht, welches Event/Turnier gerade Handlung braucht.
+function needsAttention(ev: Event): { label: string; href: string } | null {
+  if (NOT_ACTIVE_STATUSES.includes(ev.status)) return null;
+
+  if (ev.tournamentStatus === "active" || ev.tournamentStatus === "pending") {
+    return {
+      label: ev.tournamentStatus === "active" ? "Turnier läuft — Ergebnisse eintragen" : "Turnier bereit zum Start",
+      href: `/events/verwalten/${ev.id}/bracket`,
+    };
+  }
+  if (ev.status === "umfrage") {
+    return { label: "Umfragephase läuft", href: `/events/verwalten/${ev.id}/complete` };
+  }
+  if (!ev.tournamentStatus && new Date(ev.startAt) < new Date()) {
+    const running = ev.endAt && new Date(ev.endAt) > new Date();
+    return { label: running ? "Läuft gerade" : "Vorbei, noch nicht abgeschlossen", href: `/events/verwalten/${ev.id}` };
+  }
+  return null;
+}
+
+type Series = {
+  id: string;
+  name: string;
+  icon: string | null;
+  category: string | null;
+  recurrenceType: string | null;
+  hidden: boolean;
+  omaOriginal?: boolean;
+  approvalStatus?: string | null;
+  fixedGame?: string | null;
+  _count: { events: number };
+  events: Event[];
+};
+
+/** Community-Events/-Reihen: Freigabe-Status (Discord-Post und Push erst nach Freigabe) */
+function ApprovalTag({ status }: { status?: string | null }) {
+  if (status !== "pending") return null;
+  return (
+    <span className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0" title="Discord-Ankündigung und Push gibt es nach der Freigabe durch einen Mod">
+      Wartet auf Freigabe
+    </span>
+  );
+}
+
+function HiddenToggle({ id, type, hidden }: { id: string; type: "event" | "series"; hidden: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setBusy(true);
+    const url  = type === "event" ? "/api/admin/events" : "/api/admin/event-series";
+    const body = type === "event"
+      ? { eventId: id, hidden: !hidden }
+      : { seriesId: id, hidden: !hidden };
+    const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(hidden ? "Wieder sichtbar" : "Ausgeblendet");
+      router.refresh();
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      title={hidden ? "Einblenden (für alle sichtbar machen)" : "Ausblenden (nur in der Verwaltung sichtbar)"}
+      className={`shrink-0 p-1.5 rounded transition-colors disabled:opacity-40 ${
+        hidden
+          ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.05]"
+      }`}
+    >
+      {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+function EventRow({ ev }: { ev: Event }) {
+  const statusStyle = STATUS_STYLES[ev.status] ?? STATUS_STYLES.finished;
+  const statusLabel = STATUS_LABELS[ev.status] ?? ev.status;
+  const date = formatBerlinDate(ev.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = ev.endAt
+    ? formatBerlinRange(ev.startAt, ev.endAt, { hour: "2-digit", minute: "2-digit" })
+    : formatBerlinTime(ev.startAt, { hour: "2-digit", minute: "2-digit" });
+  const attention = needsAttention(ev);
+  return (
+    <Link
+      href={attention?.href ?? `/events/verwalten/${ev.id}`}
+      className={`flex items-center gap-2 sm:gap-4 flex-wrap px-4 py-3 hover:bg-white/[0.02] transition-colors group ${ev.hidden ? "opacity-60" : ""}`}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {attention && <ActionCountBadge count={1} title={attention.label} />}
+          <span className="text-sm font-medium text-white truncate">{ev.title}</span>
+          {isOmaOriginal(ev) && <OmaOriginalMark />}
+          {!NOT_ACTIVE_STATUSES.includes(ev.status) && <ApprovalTag status={ev.approvalStatus} />}
+          {ev.hidden && (
+            <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+              <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+            </span>
+          )}
+          {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
+          {ev.game && (
+            <span className="text-[10px] text-gray-500 border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
+              {ev.game}
+            </span>
+          )}
+          {ev.format && (
+            <span className="text-[10px] text-teal-600 border border-teal-800/40 rounded px-1.5 py-0.5 shrink-0">
+              Turnier
+            </span>
+          )}
+          {ev.completionData && (
+            <span className="text-[10px] text-gray-600 border border-white/[0.04] rounded px-1.5 py-0.5 shrink-0">
+              ✓ abgeschlossen
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 mt-0.5">
+          <span className="text-[11px] text-gray-500">{date} {time}</span>
+          <span className="text-[11px] text-gray-600">{ev._count.registrations} Teilnehmer</span>
+        </div>
+      </div>
+      <HiddenToggle id={ev.id} type="event" hidden={ev.hidden} />
+      <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${statusStyle}`}>
+        {statusLabel}
+      </span>
+      <Edit2 className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
+    </Link>
+  );
+}
+
+function SeriesRow({ s }: { s: Series }) {
+  const upcomingCount = s.events.length;
+  const seriesColor = resolveSeriesColor(s.icon);
+  const attentionCount = s.events.filter(ev => needsAttention(ev) !== null).length;
+  return (
+    <Link
+      href={`/events/verwalten/reihen/${s.id}`}
+      className={`relative flex items-center gap-3 flex-wrap pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0 hover:bg-white/[0.02] transition-colors ${s.hidden ? "opacity-60" : ""}`}
+    >
+      <div className="absolute left-2 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
+      <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {attentionCount > 0 && (
+            <ActionCountBadge count={attentionCount} title={`${attentionCount} Event(s) in dieser Reihe brauchen Aufmerksamkeit`} />
+          )}
+          <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
+          {isOmaOriginalSeries(s) && <OmaOriginalMark />}
+          <ApprovalTag status={s.approvalStatus} />
+          {s.hidden && (
+            <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+              <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+            </span>
+          )}
+          {s.category && <EventCategoryBadge category={s.category as EventCategory} />}
+          {s.recurrenceType && (
+            <span className="text-[10px] text-violet-500 border border-violet-800/40 rounded px-1.5 py-0.5 shrink-0">
+              {s.recurrenceType === "weekly" ? "wöchentlich" : s.recurrenceType === "biweekly" ? "2-wöchentl." : s.recurrenceType === "monthly" ? "monatlich" : s.recurrenceType}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-600 mt-0.5">
+          {s._count.events} Events gesamt · {upcomingCount} kommend{upcomingCount !== 1 ? "e" : ""}
+        </p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+    </Link>
+  );
+}
+
+export default function AdminEventsClient({
+  standaloneEvents,
+  allSeries,
+  pastEvents,
+}: {
+  standaloneEvents: Event[];
+  allSeries: Series[];
+  pastEvents: Event[];
+}) {
+  const [pastOpen, setPastOpen] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      {/* Standalone Events */}
+      <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-white/[0.05]">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Standalone Events ({standaloneEvents.length})
+          </h2>
+        </div>
+        {standaloneEvents.length === 0 ? (
+          // Kompakt statt großer Illustration — der "Neues Event"-Button steht ohnehin oben
+          <p className="px-4 py-3 text-xs text-gray-500">
+            Keine aktiven Standalone-Events.{" "}
+            <Link href="/events/verwalten/neu?mode=event" className="text-teal-400 hover:text-teal-300 font-medium">
+              Neues Event erstellen
+            </Link>
+          </p>
+        ) : (
+          <div className="divide-y divide-white/[0.04]">
+            {standaloneEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Eventreihen */}
+      <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-white/[0.05] flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Eventreihen ({allSeries.length})
+          </h2>
+          <Link href="/events/verwalten/neu?mode=series"
+            className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+            + Neue Reihe
+          </Link>
+        </div>
+        {allSeries.length === 0 ? (
+          <EmptyState
+            type="generic"
+            title="Keine Eventreihen vorhanden"
+            description="Erstelle eine wiederkehrende Reihe, z.B. für wöchentliche Turniere."
+            action={{ label: "Neue Reihe erstellen", href: "/events/verwalten/neu?mode=series" }}
+          />
+        ) : (
+          <div>
+            {allSeries.map(s => <SeriesRow key={s.id} s={s} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Vergangene Events */}
+      {pastEvents.length > 0 && (
+        <div className="rounded-xl border border-white/[0.04] overflow-hidden opacity-70">
+          <button
+            type="button"
+            onClick={() => setPastOpen(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors"
+          >
+            <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              Vergangene Events ({pastEvents.length})
+            </h2>
+            {pastOpen ? <ChevronDown className="w-4 h-4 text-gray-600" /> : <ChevronRight className="w-4 h-4 text-gray-600" />}
+          </button>
+          {pastOpen && (
+            <div className="divide-y divide-white/[0.03]">
+              {pastEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

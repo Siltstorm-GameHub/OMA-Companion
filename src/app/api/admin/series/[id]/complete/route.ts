@@ -218,7 +218,7 @@ export async function POST(
   }
 
   // Die neue Saison wird nicht hier angelegt, sondern über den Saison-Setup-Assistenten unter
-  // /admin/series/[id]/new-season, wo der Admin alle Einstellungen vor dem Erstellen anpassen kann.
+  // /events/verwalten/reihen/[id]/new-season, wo der Admin alle Einstellungen vor dem Erstellen anpassen kann.
 
   revalidateTag("dashboard-global", { expire: 0 });
 

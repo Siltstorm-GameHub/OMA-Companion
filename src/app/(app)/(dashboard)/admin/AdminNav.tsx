@@ -1,177 +1,194 @@
 "use client";
-import { HeartColor as Heart } from "@/components/icons-color";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
-import { Handshake } from "@/components/icons";
-import { Users, Users2 } from "@/components/icons";
-import { Server } from "@/components/icons";
-import { LayoutDashboard, Bell, CalendarDays, Shield, Wrench, Megaphone, Clapperboard, Gamepad2, ShoppingBag, Briefcase, Tv2, Scale } from "@/components/icons";
-import ServerApplicationBadge from "@/components/ServerApplicationBadge";
-import EventsActionBadge from "@/components/EventsActionBadge";
-import DailyPollActionBadge from "@/components/DailyPollActionBadge";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Bell, Briefcase, CalendarDays, ChevronDown, Clapperboard, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
+  Megaphone, Scale, Search, Server, Shield, ShoppingBag, Tv2, Users, X,
+} from "@/components/icons";
+import { usePolling } from "@/lib/usePolling";
+import {
+  EMPTY_COUNTS, activeAdminChild, activeAdminItem, isAdminItemActive, itemCount, searchAdminNav, visibleAdminNav,
+  type AdminCounts, type AdminNavGroup, type AdminNavItem,
+} from "@/lib/admin-nav";
 
-type Role = "user" | "moderator" | "admin";
-const HIERARCHY: Role[] = ["user", "moderator", "admin"];
-function hasRole(userRole: string, minRole: Role) {
-  return HIERARCHY.indexOf(userRole as Role) >= HIERARCHY.indexOf(minRole);
+const ICONS = {
+  Bell, Briefcase, CalendarDays, Clapperboard, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
+  Megaphone, Scale, Server, Shield, ShoppingBag, Tv2, Users,
+} as const;
+
+function Icon({ name, className }: { name: string; className?: string }) {
+  const C = ICONS[name as keyof typeof ICONS] ?? LayoutDashboard;
+  return <C className={className} />;
 }
 
-type Tab = {
-  href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role; allowCaptain?: boolean;
-  /** Weitere URL-Präfixe, bei denen dieser Reiter als aktiv gilt (Unterseiten ohne eigenen Reiter) */
-  alsoActive?: string[];
-};
-const isTabActive = (tab: Tab, pathname: string) =>
-  pathname.startsWith(tab.href) || !!tab.alsoActive?.some(p => pathname.startsWith(p));
-
-const CATEGORIES: {
-  key: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  minRole: Role;
-  allowCaptain?: boolean; // true = reine Squad-Captains (globale Rolle "user") sehen diese Kategorie auch
-  direct?: string; // if set, clicking the category goes directly here (no sub-nav)
-  tabs?: Tab[];
-  prefixes?: string[]; // url prefixes that mark this category as active
-}[] = [
-  {
-    key: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    minRole: "moderator",
-    direct: "/admin",
-    prefixes: ["/admin"],
-  },
-  {
-    key: "events",
-    label: "Events",
-    icon: CalendarDays,
-    minRole: "moderator",
-    allowCaptain: true,
-    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips", "/admin/overlay-clips", "/admin/squads", "/admin/community-limits"],
-    tabs: [
-      { href: "/admin/events",          label: "Events",          icon: CalendarDays,  minRole: "moderator", allowCaptain: true },
-      { href: "/admin/community-limits", label: "Community-Limits", icon: Scale,       minRole: "moderator" },
-      { href: "/admin/squads",          label: "Squads",          icon: Shield,        minRole: "moderator" },
-      { href: "/admin/highlight-clips", label: "Highlight Clips", icon: Clapperboard,  minRole: "moderator" },
-      { href: "/admin/overlay-clips",   label: "Overlay-Clips",   icon: Tv2,           minRole: "moderator" },
-    ],
-  },
-  {
-    key: "community",
-    label: "Community",
-    icon: Users2,
-    minRole: "moderator",
-    prefixes: ["/admin/daily-message", "/admin/partners", "/admin/servers", "/admin/spiele", "/admin/donations"],
-    tabs: [
-      { href: "/admin/servers",       label: "Gameserver",   icon: Server,    minRole: "moderator" },
-      { href: "/admin/spiele",        label: "Spieleliste",  icon: Gamepad2,  minRole: "moderator" },
-      { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
-      { href: "/admin/donations",     label: "Spendenpool",  icon: Heart,     minRole: "moderator" },
-      { href: "/admin/daily-message", label: "Mitteilungen & Umfragen", icon: Megaphone, minRole: "admin"     },
-    ],
-  },
-  {
-    key: "tools",
-    label: "Tools",
-    icon: Wrench,
-    minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/users", "/admin/minigames", "/admin/shop", "/admin/community-jobs"],
-    tabs: [
-      { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
-      { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
-      { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
-      { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
-      { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
-    ],
-  },
-];
-
-export default function AdminNav({ isCaptainOnly = false }: { isCaptainOnly?: boolean }) {
-  const pathname = usePathname();
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string })?.role ?? "user";
-
-  const canSee = (item: { minRole: Role; allowCaptain?: boolean }) =>
-    hasRole(userRole, item.minRole) || (isCaptainOnly && !!item.allowCaptain);
-
-  const activeCategory = CATEGORIES.find(cat =>
-    cat.prefixes?.some(p =>
-      cat.key === "dashboard" ? pathname === p : pathname.startsWith(p)
-    )
-  ) ?? CATEGORIES[0];
-
-  // Dynamischer Tab-Titel, damit man mehrere offene Admin-Tabs unterscheiden kann.
-  useEffect(() => {
-    const activeTab = activeCategory.tabs?.find(t => isTabActive(t, pathname));
-    const label = activeTab?.label ?? activeCategory.label;
-    document.title = `${label} · Admin`;
-  }, [pathname, activeCategory]);
-
-  const visibleCategories = CATEGORIES.filter(cat => {
-    if (!canSee(cat)) return false;
-    // Hide category if user has no access to any of its tabs
-    if (cat.tabs) return cat.tabs.some(canSee);
-    return true;
-  });
-
-  const visibleSubTabs = activeCategory.tabs?.filter(canSee) ?? [];
-
+function Count({ n }: { n: number }) {
+  if (n <= 0) return null;
   return (
-    <div className="mb-4 sm:mb-6 space-y-1">
-      {/* ── Kategorie-Leiste ── */}
-      <div className="flex gap-1 bg-gray-900 border border-white/5 rounded-xl p-1 w-full overflow-x-auto scrollbar-none">
-        {visibleCategories.map(cat => {
-          const isActive = cat.key === activeCategory.key;
-          const Icon = cat.icon;
-          const href = cat.direct
-            ?? cat.tabs?.find(canSee)?.href
-            ?? "/admin";
-          return (
-            <Link key={cat.key} href={href}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap flex-1 sm:flex-none justify-center sm:justify-start ${
-                isActive
-                  ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
-                  : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
-              }`}>
-              <span className="relative shrink-0">
-                <Icon className={`w-4 h-4 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
-                {cat.key === "community" && <ServerApplicationBadge />}
-                {cat.key === "events" && <EventsActionBadge />}
-              </span>
-              <span>{cat.label}</span>
-            </Link>
-          );
-        })}
-      </div>
+    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-[10px] font-bold text-black flex items-center justify-center tabular-nums">
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
 
-      {/* ── Sub-Navigation ── */}
-      {visibleSubTabs.length > 0 && (
-        <div className="flex gap-1 px-1 overflow-x-auto scrollbar-none">
-          {visibleSubTabs.map(tab => {
-            const active = isTabActive(tab, pathname);
-            const Icon = tab.icon;
-            return (
-              <Link key={tab.href} href={tab.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 ${
-                  active
-                    ? "text-white bg-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
-                }`}>
-                <span className="relative shrink-0">
-                  <Icon className={`w-3.5 h-3.5 ${active ? "text-purple-400" : "text-gray-600"}`} />
-                  {tab.href === "/admin/servers" && <ServerApplicationBadge />}
-                  {tab.href === "/admin/events" && <EventsActionBadge />}
-                  {tab.href === "/admin/daily-message" && <DailyPollActionBadge />}
-                </span>
-                <span>{tab.label}</span>
-              </Link>
-            );
-          })}
+function ItemLink({ item, active, count, onNavigate }: { item: AdminNavItem; active: boolean; count: number; onNavigate?: () => void }) {
+  return (
+    <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+        active ? "bg-purple-600/20 text-purple-200 ring-1 ring-purple-500/25" : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
+      }`}>
+      <Icon name={item.icon} className={`w-4 h-4 shrink-0 ${active ? "text-purple-300" : "text-gray-500"}`} />
+      <span className="truncate">{item.label}</span>
+      <Count n={count} />
+    </Link>
+  );
+}
+
+function NavList({ groups, pathname, counts, onNavigate }: { groups: AdminNavGroup[]; pathname: string; counts: AdminCounts; onNavigate?: () => void }) {
+  const active = activeAdminItem(groups, pathname);
+  return (
+    <div className="space-y-3">
+      {groups.map((g) => (
+        <div key={g.key}>
+          {g.label && <p className="px-2.5 pb-1 text-[11px] font-semibold text-gray-600">{g.label}</p>}
+          <ul className="space-y-0.5">
+            {g.items.map((i) => {
+              const isActive = active?.key === i.key || (!active && isAdminItemActive(i, pathname));
+              const child = isActive ? activeAdminChild(i, pathname) : null;
+              return (
+                <li key={i.key}>
+                  <ItemLink item={i} active={isActive} count={itemCount(i, counts)} onNavigate={onNavigate} />
+                  {/* Unterseiten (z.B. Community-Jobs) klappen auf, sobald der Punkt aktiv ist */}
+                  {isActive && i.children && (
+                    <ul className="mt-0.5 mb-1 ml-[1.15rem] border-l border-white/[0.08] pl-2 space-y-0.5">
+                      {i.children.map((c) => {
+                        const on = child?.href === c.href;
+                        return (
+                          <li key={c.href}>
+                            <Link href={c.href} onClick={onNavigate} aria-current={on ? "page" : undefined}
+                              className={`block rounded-md px-2 py-1 text-xs transition-colors ${on ? "text-white bg-white/[0.06]" : "text-gray-500 hover:text-gray-200"}`}>
+                              {c.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
+      ))}
+    </div>
+  );
+}
+
+/** Schnellsuche über alle Admin-Seiten; Enter springt zum ersten Treffer. */
+function SearchBox({ groups, counts, inputRef, onNavigate }: {
+  groups: AdminNavGroup[]; counts: AdminCounts; inputRef: React.RefObject<HTMLInputElement | null>; onNavigate?: () => void;
+}) {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const hits = searchAdminNav(groups, q);
+  return (
+    <div className="space-y-1">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+        <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && hits[0]) { router.push(hits[0].href); setQ(""); onNavigate?.(); }
+            if (e.key === "Escape") { setQ(""); (e.target as HTMLInputElement).blur(); }
+          }}
+          placeholder="Seite suchen" aria-label="Admin-Seite suchen"
+          className="w-full rounded-lg bg-white/[0.04] border border-white/[0.08] pl-8 pr-12 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-400/50" />
+        <kbd className="hidden lg:block absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Strg K</kbd>
+      </div>
+      {q.trim() && (
+        <ul className="rounded-lg border border-white/[0.08] bg-gray-950/80 p-1 space-y-0.5">
+          {hits.length === 0
+            ? <li className="px-2.5 py-1.5 text-xs text-gray-500">Nichts gefunden</li>
+            : hits.map((i) => (
+              <li key={i.key}><ItemLink item={i} active={false} count={itemCount(i, counts)} onNavigate={() => { setQ(""); onNavigate?.(); }} /></li>
+            ))}
+        </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * Admin-Navigation: Seitenleiste nach Aufgaben gruppiert (Übersicht · Twitch & Clips · Community ·
+ * Inhalte · Einstellungen) mit Zählern offener Aufgaben und Schnellsuche (Strg+K). Auf dem Handy ein
+ * Menü-Button mit dem aktuellen Seitennamen. Die Event-Verwaltung liegt unter /events/verwalten
+ * (Punkt "Events verwalten"). Struktur und Rechte: lib/admin-nav.ts.
+ */
+export default function AdminNav({ role }: { role: string }) {
+  const pathname = usePathname();
+  const groups = visibleAdminNav(role);
+  const isStaff = role === "moderator" || role === "admin";
+  const [counts, setCounts] = useState<AdminCounts>(EMPTY_COUNTS);
+  const [open, setOpen] = useState(false);
+  const desktopSearch = useRef<HTMLInputElement>(null);
+  const mobileSearch = useRef<HTMLInputElement>(null);
+
+  const loadCounts = useCallback(async () => {
+    if (!isStaff) return;
+    try {
+      const res = await fetch("/api/admin/nav-counts", { cache: "no-store" });
+      if (res.ok) setCounts(await res.json());
+    } catch { /* Zähler sind nur ein Hinweis */ }
+  }, [isStaff]);
+  usePolling(loadCounts, 60_000);
+
+  const active = activeAdminItem(groups, pathname);
+
+  // Tab-Titel, damit man mehrere offene Admin-Tabs unterscheiden kann
+  useEffect(() => {
+    document.title = `${active?.label ?? "Admin"} · Admin`;
+  }, [active?.label]);
+
+  // Strg/Cmd+K: Suche fokussieren (Handy: Menü öffnen)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (window.matchMedia("(min-width: 1024px)").matches) desktopSearch.current?.focus();
+        else { setOpen(true); setTimeout(() => mobileSearch.current?.focus(), 0); }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  if (!isStaff) return null;
+  const total = itemCount({ key: "all", href: "", label: "", icon: "", minRole: "moderator",
+    counts: ["eventActions", "eventApprovals", "serverApplications", "gameSuggestions", "jobDisputes"] }, counts);
+
+  return (
+    <>
+      {/* ── Handy/Tablet: Menü-Button mit aktuellem Seitennamen ── */}
+      <div className="lg:hidden mb-4">
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+          className="w-full flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-gray-900 px-3 py-2.5 text-sm text-white">
+          <Icon name={active?.icon ?? "LayoutDashboard"} className="w-4 h-4 text-purple-300" />
+          <span className="flex-1 text-left truncate">{active?.label ?? "Admin"}</span>
+          {total > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{total}</span>}
+          {open ? <X className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        </button>
+        {open && (
+          <div className="mt-2 rounded-xl border border-white/[0.08] bg-gray-900 p-2 space-y-3">
+            <SearchBox groups={groups} counts={counts} inputRef={mobileSearch} onNavigate={() => setOpen(false)} />
+            <NavList groups={groups} pathname={pathname} counts={counts} onNavigate={() => setOpen(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Desktop: Seitenleiste ── */}
+      <nav aria-label="Admin-Bereich" className="hidden lg:block w-56 shrink-0 self-start sticky top-4 space-y-3">
+        <SearchBox groups={groups} counts={counts} inputRef={desktopSearch} />
+        <NavList groups={groups} pathname={pathname} counts={counts} />
+      </nav>
+    </>
   );
 }

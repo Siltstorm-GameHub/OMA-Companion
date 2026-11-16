@@ -1,11 +1,11 @@
-// Daten für die Ergebnis-Prüfung (Admin-Seite /admin/events/[id]/results und Prüf-Bereich auf der
+// Daten für die Ergebnis-Prüfung (Admin-Seite /events/verwalten/[id]/results und Prüf-Bereich auf der
 // Eventseite) — eine Quelle, damit beide Ansichten exakt dasselbe zeigen.
 
 import { prisma } from "@/lib/prisma";
 import { parseScreenshotUrls, isDuelMatch, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { statRoundLabel } from "@/lib/tournaments/stat-rounds";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
-import type { ReviewMatch } from "@/app/(app)/(dashboard)/admin/events/[id]/results/ResultReviewClient";
+import type { ReviewMatch } from "@/app/(app)/(dashboard)/events/verwalten/[id]/results/ResultReviewClient";
 
 export async function loadReviewData(eventId: string, opts: { onlyPending?: boolean } = {}) {
   const event = await prisma.event.findUnique({

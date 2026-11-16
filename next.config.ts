@@ -49,6 +49,14 @@ const nextConfig: NextConfig = {
       { source: "/admin/gems", destination: "/admin/minigames", permanent: true },
       { source: "/admin/gems/:path+", destination: "/admin/minigames", permanent: true },
       { source: "/admin/battle-cards/:path*", destination: "/admin/minigames", permanent: true },
+      // Bis 2026-11 lag die Event-Verwaltung im Admin-Bereich — jetzt Events → Reiter "Verwalten".
+      // Alte Links (Discord-Posts, Benachrichtigungen, Lesezeichen) leiten weiter.
+      { source: "/admin/events", destination: "/events/verwalten", permanent: true },
+      { source: "/admin/events/new", destination: "/events/verwalten/neu", permanent: true },
+      { source: "/admin/events/:path+", destination: "/events/verwalten/:path+", permanent: true },
+      { source: "/admin/series", destination: "/events/verwalten", permanent: true },
+      { source: "/admin/series/:id", destination: "/events/verwalten/reihen/:id", permanent: true },
+      { source: "/admin/series/:id/:path+", destination: "/events/verwalten/reihen/:id/:path+", permanent: true },
     ];
   },
   images: {

@@ -60,7 +60,7 @@ export function othersLabel(match: { count: number; others: { name: string }[] }
 
 /** Link "Runde planen": Event-Assistent mit dem Spiel vorbelegt. */
 export function planRoundUrl(gameSlug: string): string {
-  return `/admin/events/new?mode=event&game=${encodeURIComponent(gameSlug)}`;
+  return `/events/verwalten/neu?mode=event&game=${encodeURIComponent(gameSlug)}`;
 }
 
 /** Jede wievielte Karte des Stapels ein Steam-Trend ist (Spiele, die noch nicht in der Liste stehen). */

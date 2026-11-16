@@ -127,7 +127,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
           <p className="truncate text-[15px] font-bold text-white leading-tight">Gerade ist nichts geplant</p>
           <p className="truncate text-[11px] text-gray-400">Hast du eine Idee? Schlag ein Event vor.</p>
         </div>
-        <Link href="/admin/events/new" className={BTN_SECONDARY}>Vorschlagen</Link>
+        <Link href="/events/verwalten/neu" className={BTN_SECONDARY}>Vorschlagen</Link>
       </>
     );
   } else {
@@ -272,7 +272,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       media={media}
       main={main}
       rows={hubRows}
-      placeholderRow={{ label: "Neues Event vorschlagen", href: "/admin/events/new" }}
+      placeholderRow={{ label: "Neues Event vorschlagen", href: "/events/verwalten/neu" }}
       footer={{ label: weekCount > 0 ? `${weekCount} ${weekCount === 1 ? "Event" : "Events"} diese Woche` : "Alle Events", href: "/events" }}
     />
   );

@@ -16,11 +16,12 @@ const ITEMS = [
 const TAB_ON = "bg-teal-500 text-black border-teal-500 font-semibold";
 const TAB_OFF = "bg-white/[0.04] text-gray-300 border-white/10 hover:text-white";
 
-/** Unter-Navigation der Community-Jobs-Administration. */
+/** Unter-Navigation der Community-Jobs-Administration — nur auf dem Handy; am Desktop stehen die
+ *  Unterseiten eingerückt in der Admin-Seitenleiste (lib/admin-nav.ts, children). */
 export default function AdminJobsNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Community-Jobs" className="flex flex-wrap gap-1.5">
+    <nav aria-label="Community-Jobs" className="flex flex-wrap gap-1.5 lg:hidden">
       {ITEMS.map(i => {
         const active = i.href === BASE ? pathname === BASE : pathname.startsWith(i.href);
         return (

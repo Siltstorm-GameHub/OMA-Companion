@@ -1,78 +1,50 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { CalendarClock } from "@/components/icons";
-import { Trophy, Clock, Vote, Clapperboard, ArrowRight, Zap } from "@/components/icons";
+import { loadAdminInbox, type InboxTone } from "@/lib/admin-inbox";
+import {
+  CalendarClock, CalendarPlus, ChevronDown, ChevronRight, Coins, Flag, Gamepad2, Megaphone, Server, Trophy, UserCheck, Vote, Zap,
+} from "@/components/icons";
 import ActivityFeed from "./ActivityFeed";
+import AdminInboxRow from "./AdminInboxRow";
 
-const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+const ICONS = { CalendarClock, Flag, Gamepad2, Server, Trophy, UserCheck, Vote } as const;
 
-function formatCountdown(target: Date, now: Date): string {
-  const diffMs = target.getTime() - now.getTime();
-  if (diffMs <= 0) return "endet in Kürze";
-  const minutes = Math.floor(diffMs / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  if (days > 0) return `endet in ${days} Tg ${hours % 24} Std`;
-  if (hours > 0) return `endet in ${hours} Std ${minutes % 60} Min`;
-  return `endet in ${minutes} Min`;
+const TONES: Record<InboxTone, string> = {
+  amber: "text-amber-300 bg-amber-500/10 border-amber-500/20",
+  teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
+  blue: "text-sky-300 bg-sky-500/10 border-sky-500/20",
+  red: "text-red-300 bg-red-500/10 border-red-500/20",
+  violet: "text-purple-300 bg-purple-500/10 border-purple-500/20",
+};
+
+function endsIn(target: Date, now: Date): string {
+  const min = Math.floor((target.getTime() - now.getTime()) / 60000);
+  if (min <= 0) return "endet gleich";
+  const h = Math.floor(min / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `noch ${d} ${d === 1 ? "Tag" : "Tage"}`;
+  if (h > 0) return `noch ${h} Std`;
+  return `noch ${min} Min`;
 }
 
+/**
+ * Admin → Übersicht: Aufgaben-Eingang. Oben alles, was eine Entscheidung braucht (Turniere,
+ * Abschlüsse, Freigaben, Bewerbungen, Vorschläge, Einsprüche — dieselbe Quelle wie die Zähler in der
+ * Seitenleiste, lib/admin-inbox.ts), dann was gerade läuft, Schnellaktionen und eingeklappt das
+ * Münz-Protokoll der letzten 7 Tage.
+ */
 export default async function AdminPage() {
-  // Das Admin-Dashboard ist Mods vorbehalten — normale User (Community-Ersteller, Captains) landen
-  // in ihrer Event-Verwaltung (der Layout-Gate lässt alle eingeloggten User in /admin).
+  // Die Übersicht ist Mods vorbehalten — Mitglieder/Captains landen in ihrer Event-Verwaltung
   const me = await getSessionUser();
-  if (!me || !hasMinRole(me.role, "moderator")) redirect("/admin/events");
+  if (!me || !hasMinRole(me.role, "moderator")) redirect("/events/verwalten");
+  const isAdmin = hasMinRole(me.role, "admin");
   const now = new Date();
-
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [activeTournaments, pollPhaseEvents, overdueEvents, votingClipContests, votingYearlyContests, activeDailyPolls, recentActivity] = await Promise.all([
-    prisma.event.findMany({
-      where: {
-        tournamentStatus: { in: ["pending", "active"] },
-        // tournamentStatus (Turnierbaum-Status) wird beim Abschluss der Spielphase NICHT mitgeändert
-        // — bleibt also "active", obwohl event.status schon auf "umfrage" gewechselt ist. Ohne den
-        // expliziten Ausschluss hier würde dasselbe Event doppelt auftauchen (hier UND unten bei
-        // pollPhaseEvents), siehe deren "status: umfrage"-Filter.
-        status: { notIn: [...NOT_ACTIVE_STATUSES, "umfrage"] },
-      },
-      orderBy: { startAt: "asc" },
-      select: { id: true, title: true, game: true, startAt: true, tournamentStatus: true },
-    }),
-    prisma.event.findMany({
-      where: { status: "umfrage" },
-      orderBy: { startAt: "asc" },
-      select: {
-        id: true, title: true, game: true, startAt: true,
-        polls: { where: { endAt: { gt: now } }, orderBy: { endAt: "desc" }, select: { endAt: true }, take: 1 },
-      },
-    }),
-    prisma.event.findMany({
-      where: {
-        tournamentStatus: null,
-        status: { notIn: [...NOT_ACTIVE_STATUSES, "umfrage"] },
-        startAt: { lt: now },
-      },
-      orderBy: { startAt: "asc" },
-      select: { id: true, title: true, game: true, startAt: true, endAt: true },
-    }),
-    prisma.monthlyClipContest.findMany({
-      where: { status: "voting" },
-      orderBy: { votingEndsAt: "asc" },
-      select: { id: true, month: true, year: true, votingEndsAt: true },
-    }),
-    prisma.yearlyClipContest.findMany({
-      where: { status: "voting" },
-      orderBy: { votingEndsAt: "asc" },
-      select: { id: true, year: true, votingEndsAt: true },
-    }),
-    prisma.dailyPoll.findMany({
-      where: { isActive: true, startDate: { lte: now }, endDate: { gt: now } },
-      orderBy: { endDate: "asc" },
-      select: { id: true, title: true, endDate: true },
-    }),
+  const [{ todo, running }, recentActivity] = await Promise.all([
+    loadAdminInbox(now),
     prisma.pointTransaction.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
       orderBy: { createdAt: "desc" },
@@ -80,186 +52,80 @@ export default async function AdminPage() {
     }),
   ]);
 
-  const hasActionItems =
-    activeTournaments.length > 0 ||
-    pollPhaseEvents.length > 0 ||
-    overdueEvents.length > 0 ||
-    votingClipContests.length > 0 ||
-    votingYearlyContests.length > 0 ||
-    activeDailyPolls.length > 0;
+  const quick = [
+    { href: "/events/verwalten/neu", label: "Event anlegen", icon: CalendarPlus, show: true },
+    { href: "/admin/daily-message", label: "Mitteilung senden", icon: Megaphone, show: isAdmin },
+    { href: "/admin/users", label: "Münzen buchen", icon: Coins, show: isAdmin },
+  ].filter((q) => q.show);
 
   return (
-    <div className="space-y-6">
-      {/* Action-Kacheln */}
-      <div>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <Clock className="w-3.5 h-3.5 text-amber-400" /> Braucht Aufmerksamkeit
+    <div className="space-y-4">
+      <h1 className="font-display text-2xl font-black text-white">Übersicht</h1>
+
+      {/* ── Zu erledigen ── */}
+      <section aria-label="Zu erledigen" className="glass rounded-2xl p-4">
+        <h2 className="text-sm font-semibold text-white">
+          Zu erledigen {todo.length > 0 && <span className="ml-1 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-black tabular-nums">{todo.length}</span>}
         </h2>
-
-        {!hasActionItems && (
-          <div className="card-shine glass rounded-2xl p-4 text-sm text-gray-400">
-            Aktuell nichts zu tun — alle Events und Turniere sind auf dem neuesten Stand.
-          </div>
-        )}
-
-        {activeTournaments.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {activeTournaments.map(event => (
-              <Link
-                key={event.id}
-                href={`/admin/events/${event.id}/bracket`}
-                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/8 to-transparent pointer-events-none" />
-                <div className="relative flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-amber-400 bg-amber-500/10 border-amber-500/15 shrink-0">
-                    <Trophy className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{event.title}</p>
-                    <p className="text-xs text-gray-400">
-                      {event.tournamentStatus === "active" ? "Turnier läuft — Ergebnisse eintragen" : "Turnier bereit zum Start"}
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {pollPhaseEvents.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {pollPhaseEvents.map(event => {
-              const pollEndAt = event.polls[0]?.endAt;
+        {todo.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-400">Gerade nichts zu tun. Alle Events, Freigaben und Meldungen sind erledigt.</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-white/[0.05]">
+            {todo.map((t) => {
+              const I = ICONS[t.icon as keyof typeof ICONS] ?? CalendarClock;
               return (
-                <Link
-                  key={event.id}
-                  href={`/admin/events/${event.id}/complete`}
-                  className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500/8 to-transparent pointer-events-none" />
-                  <div className="relative flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-teal-400 bg-teal-500/10 border-teal-500/15 shrink-0">
-                      <Vote className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{event.title}</p>
-                      <p className="text-xs text-gray-400">
-                        Umfragephase läuft{pollEndAt ? ` — ${formatCountdown(pollEndAt, now)}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
-                </Link>
+                <AdminInboxRow key={t.key} href={t.href} title={t.title} hint={t.hint} action={t.action}
+                  icon={<span className={`w-8 h-8 rounded-lg border flex items-center justify-center ${TONES[t.tone]}`}><I className="w-4 h-4" /></span>} />
               );
             })}
-          </div>
+          </ul>
         )}
+      </section>
 
-        {overdueEvents.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {overdueEvents.map(event => (
-              <Link
-                key={event.id}
-                href={`/admin/events/${event.id}`}
-                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
-                <div className="relative flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-blue-400 bg-blue-500/10 border-blue-500/15 shrink-0">
-                    <CalendarClock className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{event.title}</p>
-                    <p className="text-xs text-gray-400">
-                      {event.endAt && event.endAt > now ? "Läuft gerade" : "Vorbei, noch nicht abgeschlossen"}
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
+        {/* ── Läuft gerade ── */}
+        <section aria-label="Läuft gerade" className="glass rounded-2xl p-4">
+          <h2 className="text-sm font-semibold text-white">Läuft gerade</h2>
+          {running.length === 0 ? (
+            <p className="mt-2 text-sm text-gray-500">Keine Abstimmung und keine Umfrage aktiv.</p>
+          ) : (
+            <ul className="mt-1 divide-y divide-white/[0.05]">
+              {running.map((r) => (
+                <li key={r.key}>
+                  <Link href={r.href} className="group flex items-center gap-3 py-2 text-sm">
+                    <span className="flex-1 truncate text-gray-200 group-hover:text-white">{r.title}</span>
+                    <span className="shrink-0 text-[11px] text-gray-500">{endsIn(r.endsAt, now)}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-300" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        {(votingClipContests.length > 0 || votingYearlyContests.length > 0) && (
-          <div className="space-y-2">
-            {votingClipContests.map(contest => (
-              <Link
-                key={contest.id}
-                href="/admin/highlight-clips"
-                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
-                <div className="relative flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-purple-400 bg-purple-500/10 border-purple-500/15 shrink-0">
-                    <Clapperboard className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">Clip des Monats — {contest.month}/{contest.year}</p>
-                    <p className="text-xs text-gray-400">Umfrage läuft — {formatCountdown(contest.votingEndsAt, now)}</p>
-                  </div>
-                </div>
-                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
-              </Link>
-            ))}
-            {votingYearlyContests.map(contest => (
-              <Link
-                key={contest.id}
-                href="/admin/highlight-clips"
-                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
-                <div className="relative flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-purple-400 bg-purple-500/10 border-purple-500/15 shrink-0">
-                    <Clapperboard className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">Clip des Jahres — {contest.year}</p>
-                    <p className="text-xs text-gray-400">Umfrage läuft — {formatCountdown(contest.votingEndsAt, now)}</p>
-                  </div>
-                </div>
-                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
+        {/* ── Schnellaktionen ── */}
+        <section aria-label="Schnellaktionen" className="glass rounded-2xl p-4">
+          <h2 className="text-sm font-semibold text-white">Schnellaktionen</h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {quick.map((q) => (
+              <Link key={q.href} href={q.href}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-white/[0.07] hover:text-white">
+                <q.icon className="w-3.5 h-3.5 text-purple-300" /> {q.label}
               </Link>
             ))}
           </div>
-        )}
-
-        {activeDailyPolls.length > 0 && (
-          <div className="space-y-2 mt-3">
-            {activeDailyPolls.map(poll => (
-              <Link
-                key={poll.id}
-                href="/admin/daily-message"
-                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/8 to-transparent pointer-events-none" />
-                <div className="relative flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/15 shrink-0">
-                    <Vote className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{poll.title}</p>
-                    <p className="text-xs text-gray-400">
-                      Umfrage läuft — {formatCountdown(poll.endDate, now)}
-                    </p>
-                  </div>
-                </div>
-                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
-              </Link>
-            ))}
-          </div>
-        )}
+        </section>
       </div>
 
-      {/* Münzen & Punkte Historie */}
-      <div>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5 text-amber-400" /> Münzen & Punkte — letzte 7 Tage
-        </h2>
-        <ActivityFeed transactions={recentActivity} />
-      </div>
+      {/* ── Münz-Protokoll (eingeklappt) ── */}
+      <details className="group glass rounded-2xl p-4">
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-white [&::-webkit-details-marker]:hidden">
+          <Zap className="w-4 h-4 text-amber-400" /> Münzen und Punkte, letzte 7 Tage
+          <span className="font-normal text-gray-500">· {recentActivity.length} Buchungen</span>
+          <ChevronDown className="ml-auto w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-3"><ActivityFeed transactions={recentActivity} /></div>
+      </details>
     </div>
   );
 }

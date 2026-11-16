@@ -100,7 +100,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             </div>
             <div className="flex flex-col items-end gap-1.5">
               {game.status === "APPROVED" && user && (
-                <Link href={`/admin/events/new?mode=event&game=${encodeURIComponent(game.slug)}`}
+                <Link href={`/events/verwalten/neu?mode=event&game=${encodeURIComponent(game.slug)}`}
                   className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors">
                   <CalendarPlus className="w-3.5 h-3.5" /> Event anlegen
                 </Link>

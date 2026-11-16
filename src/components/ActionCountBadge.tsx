@@ -1,4 +1,4 @@
-// Rein visuelles Pendant zu EventsActionBadge/ServerApplicationBadge (kein eigener Fetch) —
+// Rein visuelles Zähler-Badge (kein eigener Fetch) —
 // für Stellen, an denen die Zahl bereits vom Server mitgeliefert wurde (z.B. pro Event/Eventreihe).
 export default function ActionCountBadge({ count, title }: { count: number; title?: string }) {
   if (count <= 0) return null;

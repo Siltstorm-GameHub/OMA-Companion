@@ -76,7 +76,7 @@ export default function IdeasBoardClient() {
                     {i.votes > 0 ? <>{formatFixed(i.average, 1)}<Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> · {i.votes}</> : "keine Stimmen"}
                     {(i.participants + i.helpers) > 0 && <span> · 🙋 {i.participants}/{i.helpers}</span>}
                   </p>
-                  {i.draftEventId && <Link href={`/admin/events/${i.draftEventId}`} className="block text-[10px] text-teal-400 hover:text-teal-300">Event-Entwurf →</Link>}
+                  {i.draftEventId && <Link href={`/events/verwalten/${i.draftEventId}`} className="block text-[10px] text-teal-400 hover:text-teal-300">Event-Entwurf →</Link>}
                   <Select size="sm" value={i.lifecycle} onChange={e => move(i.id, e.target.value)} className="w-full" aria-label="Status">
                     {IDEA_LIFECYCLES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                   </Select>

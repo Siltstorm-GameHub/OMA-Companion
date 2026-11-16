@@ -146,7 +146,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
               <CalendarDays className="w-3.5 h-3.5" /> Events
             </p>
             {canManage && (
-              <Link href={`/admin/events/new?squadId=${squad.id}`}
+              <Link href={`/events/verwalten/neu?squadId=${squad.id}`}
                 className="flex items-center gap-1 text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
                 <Plus className="w-3 h-3" /> Neues Event
               </Link>
@@ -167,7 +167,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
                   </span>
                 </Link>
                 {canManage && (
-                  <Link href={`/admin/events/${e.id}`} title="Bearbeiten"
+                  <Link href={`/events/verwalten/${e.id}`} title="Bearbeiten"
                     className="p-1.5 rounded text-gray-600 hover:text-teal-400 transition-colors shrink-0">
                     <Pencil className="w-3.5 h-3.5" />
                   </Link>

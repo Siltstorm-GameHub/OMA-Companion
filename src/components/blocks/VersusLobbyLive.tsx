@@ -108,7 +108,7 @@ export default function VersusLobbyLive() {
       </Link>
 
       {/* Eigenes Versus-Turnier als Event planen (Event-Assistent mit OMA Blocks vorausgewählt) */}
-      <Link href="/admin/events/new?mode=event&blocks=1"
+      <Link href="/events/verwalten/neu?mode=event&blocks=1"
         className="flex items-center gap-2 text-[11px] text-gray-500 hover:text-white group">
         <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
         <span className="flex-1">Versus-Turnier planen, mit Gruppen, Finale und Anmeldung</span>

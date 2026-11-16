@@ -201,7 +201,7 @@ export default async function EventsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <GateLink href="/admin/events/new"
+          <GateLink href="/events/verwalten/neu"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 transition-colors text-sm font-medium text-white">
             <Plus className="w-3.5 h-3.5" />
             <span>Neues Event</span>

@@ -1,8 +1,8 @@
 "use client";
 import { Suspense, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
-import { CalendarDays, Target, Users, User } from "@/components/icons";
+import { CalendarDays, Settings, Target, Users, User } from "@/components/icons";
 
 const TAB_KEYS = ["events", "mine", "predictions", "squads"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -27,18 +27,22 @@ function EventsTabsInner({
     ? (tabParam as TabKey)
     : "events";
   const [active, setActive] = useState<string>(initialTab);
+  const router = useRouter();
+  // "Verwalten" hat eine eigene Route (/events/verwalten mit Unterseiten) — der Reiter führt dorthin
+  const onChange = (key: string) => (key === "manage" ? router.push("/events/verwalten") : setActive(key));
 
   return (
     <div className="space-y-5">
       <Tabs
         active={active}
-        onChange={setActive}
+        onChange={onChange}
         className="overflow-x-auto scrollbar-none whitespace-nowrap"
         tabs={[
           { key: "events", label: "Events", icon: CalendarDays },
           ...(myEventsPanel ? [{ key: "mine", label: "Meine Events", icon: User }] : []),
           { key: "predictions", label: "Vorhersagen", icon: Target },
           { key: "squads", label: "Squads", icon: Users },
+          ...(myEventsPanel ? [{ key: "manage", label: "Verwalten", icon: Settings }] : []),
         ]}
       />
       <TabPanel tabKey="events" active={active}>{eventsPanel}</TabPanel>

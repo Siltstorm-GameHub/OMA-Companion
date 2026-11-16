@@ -227,7 +227,7 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
     try {
       const d = await api<{ eventId: string }>(`/api/community-jobs/ideas/${entry.id}/event-draft`, { method: "POST" });
       toast.success("Event-Entwurf angelegt");
-      window.location.href = `/admin/events/${d.eventId}`;
+      window.location.href = `/events/verwalten/${d.eventId}`;
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
     finally { setDraftBusy(false); }
   }
@@ -245,7 +245,7 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {entry.draftEventId
-          ? <Link href={`/admin/events/${entry.draftEventId}`} className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">Event-Entwurf öffnen →</Link>
+          ? <Link href={`/events/verwalten/${entry.draftEventId}`} className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">Event-Entwurf öffnen →</Link>
           : <Button size="sm" variant="ghost" loading={draftBusy} onClick={createDraft}>Event-Entwurf aus dieser Idee anlegen</Button>}
       </div>
     </div>

@@ -1,0 +1,2124 @@
+"use client";
+import PlaceMedal from "@/components/PlaceMedal";
+import { GENRES } from "@/lib/app-icons";
+import AppIcon from "@/components/AppIcon";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import Link from "next/link";
+import { UserMinus } from "@/components/icons";
+import { ChevronLeft } from "@/components/icons";
+import { Repeat } from "@/components/icons";
+import { Save, Trophy, CheckCircle2, AlertTriangle, Trash2, Search, UserPlus, ExternalLink, Copy, AlertCircle, Plus, Tv2, Clapperboard, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
+import { EventCategory, EventGenre } from "@prisma/client";
+import SeriesIcon from "@/components/SeriesIcon";
+import GameNameInput from "@/components/GameNameInput";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
+import StatFieldEditor from "@/components/StatFieldEditor";
+import { deriveEventStatFields } from "@/lib/series-stat-fields";
+import StatPointsTable from "@/components/StatPointsTable";
+import AvgDirectionToggle from "@/components/AvgDirectionToggle";
+import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
+import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
+import ImageUploadField from "@/components/ImageUploadField";
+import OmaOriginalToggle from "@/components/OmaOriginalToggle";
+import { isBlocksGame, isOmaOriginalSeries } from "@/lib/oma-original";
+import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
+import TournamentManager from "../TournamentManager";
+import EventGoalPanel from "./EventGoalPanel";
+import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import { DEFAULT_CHECK_IN_MINUTES, MAX_CHECK_IN_MINUTES, sanitizeCheckInMinutes } from "@/lib/checkin";
+import PublishStatusPanel from "./PublishStatusPanel";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
+import BlocksEventSettings from "@/components/blocks/BlocksEventSettings";
+import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
+import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin } from "@/lib/time";
+import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
+import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
+import { resolveEventGoal } from "@/lib/event-goal";
+import { confirmEventTiming } from "@/lib/event-timing-warning";
+import { NumberInput } from "@/components/ui/NumberInput";
+
+/* ── Types ── */
+type User = { id: string; name: string | null; username: string | null; image: string | null };
+type PlacementReward = { place: number; coins: number; rankPoints: number };
+type RewardsConfig   = { participationCoins: number; placements: PlacementReward[] };
+type PollConfig = {
+  label: string;
+  question: string;
+  voterEligibility: "all" | "participants" | "players" | "spectators";
+  answerType: "players" | "spectators" | "custom";
+  customAnswers: string[];
+  startOffsetHours: number;
+  endOffsetHours: number;
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
+};
+
+const DEFAULT_REWARDS: RewardsConfig = {
+  participationCoins: 10,
+  placements: [
+    { place: 1, coins: 500, rankPoints: 3 },
+    { place: 2, coins: 250, rankPoints: 2 },
+    { place: 3, coins: 100, rankPoints: 1 },
+  ],
+};
+
+// Punkt 3: zentrale Format-Liste (siehe @/lib/tournament-formats) statt eigener Kopie —
+// verhindert, dass dieser Reiter, TournamentManager.tsx und der Erstellungs-Wizard auseinanderlaufen.
+const TMT_FORMATS = TOURNAMENT_FORMATS;
+
+const CATEGORIES: { value: EventCategory; label: string; emoji: string }[] = [
+  { value: "competitive",     label: "Kompetitiv", emoji: "🏆" },
+  { value: "fun",             label: "Fun",        emoji: "🎉" },
+  { value: "casual",          label: "Casual",     emoji: "🛋️" },
+  { value: "training",        label: "Training",   emoji: "🎓" },
+  { value: "community_event", label: "Community",  emoji: "🤝" },
+  { value: "special",         label: "Special",    emoji: "⭐" },
+];
+
+/** Sieg/Unentschieden-Münzen pro Match (Liga-Modus "Sieg/Unentschieden-Münzen") aus pointsConfig.
+ *  Platzierungsbelohnungen stehen NICHT mehr in pointsConfig, sondern im Reiter "Belohnungen"
+ *  (placementRewardsJson, siehe lib/placement-rewards.ts). */
+function parseTmtConfig(pc: string | null) {
+  const d = { win: 30, draw: 10 };
+  if (!pc) return d;
+  try {
+    const p = JSON.parse(pc) as Record<string, unknown>;
+    const n = (v: unknown, fb: number) => (typeof v === "number" ? v : fb);
+    return { win: n(p["win"], 30), draw: n(p["draw"], 10) };
+  } catch { return d; }
+}
+
+/** Leitet die Statistik-Felder aus den Eventreihen-Wizard-Einstellungen (seriesStatConfig) ab. */
+function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null } | null | undefined): string[] | null {
+  if (!series?.seriesStatConfig) return null;
+  try {
+    const parsed = JSON.parse(series.seriesStatConfig) as {
+      stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
+      eventStatFields?: string[];
+    };
+    // Prefer explicit eventStatFields if configured
+    if (parsed.eventStatFields?.length) {
+      return parsed.eventStatFields.filter(Boolean);
+    }
+    // Fall back to stats but exclude winner stats (set automatically) and match-win stats
+    // (fed from the per-round "Match Win" checkbox, not manually entered)
+    const fields = parsed.stats
+      ?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field)
+      .map(s => s.field) ?? [];
+    return fields.length ? fields : null;
+  } catch { return null; }
+}
+
+/** Statistiken der Reihe, die jedes Event fest erfasst — mit den Punkten, die im Event (Skill-Index)
+ *  gelten (eventPointsPer ?? pointsPer). Einzelne Events können nur ZUSÄTZLICHE Stats ergänzen. */
+function seriesEventStatRows(series: { seriesStatConfig?: string | null } | null | undefined): { field: string; points: number }[] {
+  if (!series?.seriesStatConfig) return [];
+  try {
+    const parsed = JSON.parse(series.seriesStatConfig) as {
+      stats?: { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
+      eventStatFields?: string[];
+    };
+    const stats = parsed.stats ?? [];
+    const fields = deriveEventStatFields(stats);
+    // Altbestand: separat gepflegte Event-Felder ohne gleichnamigen Reihen-Stat
+    for (const f of parsed.eventStatFields ?? []) if (f && !fields.includes(f)) fields.push(f);
+    return fields.map(field => {
+      const s = stats.find(x => x.field.trim() === field);
+      return { field, points: s ? (typeof s.eventPointsPer === "number" ? s.eventPointsPer : s.pointsPer) : 0 };
+    });
+  } catch { return []; }
+}
+
+type PlacementPointRow = { place: number; points: number };
+
+type EventStatConfigForm = {
+  pointsByField: Record<string, number>;
+  /** Optionale Endplatzierung je Teilnehmer (z.B. 1./2./3. Platz) mit frei konfigurierbaren Punkten
+   *  pro Platz — unabhängig von den laufend erfassten Stats, wird beim Event-Abschluss eingetragen. */
+  placementEnabled: boolean;
+  placementPoints: PlacementPointRow[];
+  /** Nur avg_stats: höchster oder niedrigster Ø gewinnt — gilt schon live, nicht erst beim Abschluss */
+  avgDirection: AvgDirection;
+};
+
+const EMPTY_EVENT_STAT_CONFIG: EventStatConfigForm = {
+  pointsByField: {},
+  placementEnabled: false,
+  placementPoints: [{ place: 1, points: 10 }, { place: 2, points: 6 }, { place: 3, points: 3 }],
+  avgDirection: "high",
+};
+
+/** Parst die Event-eigene Stat-Konfiguration (statConfigJson) für die Bearbeitungsform — siehe
+ * schema.prisma. */
+function parseEventStatConfig(json: string | null | undefined): EventStatConfigForm {
+  if (!json) return EMPTY_EVENT_STAT_CONFIG;
+  try {
+    const cfg = JSON.parse(json) as {
+      stats?: { field: string; pointsPer: number }[];
+      placementPoints?: Record<string, number>;
+      avgDirection?: unknown;
+    };
+    const pointsByField: Record<string, number> = {};
+    for (const s of cfg.stats ?? []) pointsByField[s.field] = s.pointsPer;
+    const placementEntries = Object.entries(cfg.placementPoints ?? {});
+    const placementEnabled = placementEntries.length > 0;
+    const placementPoints = placementEnabled
+      ? placementEntries
+          .map(([place, points]) => ({ place: Number(place), points }))
+          .sort((a, b) => a.place - b.place)
+      : EMPTY_EVENT_STAT_CONFIG.placementPoints;
+    return { pointsByField, placementEnabled, placementPoints, avgDirection: parseAvgDirection(cfg.avgDirection) ?? "high" };
+  } catch { return EMPTY_EVENT_STAT_CONFIG; }
+}
+
+/** Baut statConfigJson (siehe schema.prisma) aus der Bearbeitungsform. Gibt null zurück, wenn weder
+ * Stat-Punkte noch Platzierungspunkte noch "niedrigster Ø gewinnt" noch ein Community-Ziel gesetzt
+ * sind — dann gilt weiter die Reihen-Konfiguration. */
+function buildEventStatConfig(fields: string[], form: EventStatConfigForm, isAvg: boolean, goal: CommunityGoal | null): {
+  stats: { field: string; pointsPer: number }[];
+  placementPoints: Record<string, number>;
+  avgDirection?: AvgDirection;
+  goal?: CommunityGoal;
+} | null {
+  const stats = fields
+    .filter(f => (form.pointsByField[f] ?? 0) !== 0)
+    .map(f => ({ field: f, pointsPer: form.pointsByField[f] }));
+  const placementPoints: Record<string, number> = {};
+  if (form.placementEnabled) {
+    for (const row of form.placementPoints) {
+      if (row.place > 0) placementPoints[String(row.place)] = row.points;
+    }
+  }
+  const avgDirection = isAvg ? form.avgDirection : undefined;
+  if (stats.length === 0 && Object.keys(placementPoints).length === 0 && avgDirection !== "low" && !goal) return null;
+  return { stats, placementPoints, ...(avgDirection && { avgDirection }), ...(goal && { goal }) };
+}
+
+const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
+const STATUS_STYLES: Record<string, string> = {
+  open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  active:   "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  finished: "text-gray-500 bg-white/[0.03] border-white/[0.06]",
+};
+
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const labelCls = "text-xs text-gray-500 mb-1 block";
+
+function parseRewards(json: string | null | undefined): RewardsConfig {
+  if (!json) return DEFAULT_REWARDS;
+  try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
+}
+/** Normalisiert einen Poll-Eintrag auf das moderne Format (voterEligibility/answerType/...),
+ * da ältere gespeicherte Konfigurationen noch das Legacy-Format (coins/rankPoints/type) nutzen. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizePoll(raw: any): PollConfig {
+  return {
+    label: raw.label ?? "",
+    question: raw.question ?? "",
+    voterEligibility: raw.voterEligibility ?? "participants",
+    answerType: raw.answerType ?? (raw.type === "spectator" ? "spectators" : "players"),
+    customAnswers: raw.customAnswers ?? [],
+    startOffsetHours: raw.startOffsetHours ?? 0,
+    endOffsetHours: raw.endOffsetHours ?? 24,
+    participationCoins: raw.participationCoins ?? 0,
+    participationSeriesPoints: raw.participationSeriesPoints ?? 0,
+    winnerCoins: raw.winnerCoins ?? raw.coins ?? 100,
+    winnerRankPoints: raw.winnerRankPoints ?? raw.rankPoints ?? 0,
+  };
+}
+function parsePolls(json: string | null | undefined): PollConfig[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    if (Array.isArray(parsed)) return parsed.map(normalizePoll);
+    // legacy single-poll format
+    if (parsed.enabled) return [normalizePoll({ label: parsed.question ?? "MVP", question: parsed.question ?? "", coins: parsed.coins ?? 250, rankPoints: parsed.rankPoints ?? 3 })];
+    return [];
+  } catch { return []; }
+}
+function parseSpectatorReward(json: string | null | undefined) {
+  if (!json) return { coins: 5, rankPoints: 0 };
+  try { return JSON.parse(json) as { coins: number; rankPoints: number }; }
+  catch { return { coins: 5, rankPoints: 0 }; }
+}
+type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SquadOption = { id: string; name: string };
+
+export default function EventEditClient({ event, allUsers, squads = [] }: { event: any; allUsers: User[]; squads?: SquadOption[] }) {
+  const router        = useRouter();
+  const { data: session } = useSession();
+  const isAdmin       = session?.user?.role === "admin";
+  // Community-Ersteller und Squad-Captains (keine Mod-Rolle) wählen Cover nur aus den Vorlagen
+  const isModerator   = session?.user?.role === "moderator" || isAdmin;
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const { confirm, ConfirmDialogElement } = useConfirm();
+
+  /* ── Details state ── */
+  const [status, setStatus]           = useState<string>(event.status);
+  const [title, setTitle]             = useState<string>(event.title);
+  const [description, setDescription] = useState<string>(event.description ?? "");
+  const [rules, setRules]             = useState<string>(event.rules ?? "");
+  const [game, setGame]               = useState<string>(event.game ?? "");
+  const [genre, setGenre]             = useState<EventGenre | null>(event.genre ?? null);
+  const [category, setCategory]       = useState<EventCategory>(event.category ?? "casual");
+  const [startAt, setStartAt]         = useState<string>(toDatetimeLocalBerlin(event.startAt));
+  // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar.
+  const [endAt, setEndAt] = useState<string>(event.endAt ? toDatetimeLocalBerlin(event.endAt) : "");
+  const [maxPlayers, setMaxPlayers]   = useState<string>(event.maxPlayers?.toString() ?? "");
+  const [discordChannelId, setDiscordChannelId] = useState<string>(event.discordChannelId ?? "");
+  const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
+
+  /* ── OMA Blocks (nur bei game === "OMA Blocks"): Live-Turnier oder Community-Challenge ── */
+  const isBlocksEvent = game === BLOCKS_GAME;
+  const [blocks, setBlocks] = useState<BlocksEventConfig>(() => ({
+    ...DEFAULT_BLOCKS_EVENT,
+    ...(event.blocksTournament && {
+      kind: "tournament" as const,
+      groupRounds: event.blocksTournament.groupRounds,
+      finalRounds: event.blocksTournament.finalRounds,
+      advancePerGroup: event.blocksTournament.advancePerGroup,
+    }),
+    ...(event.blocksChallenge && {
+      kind: "challenge" as const,
+      metric: event.blocksChallenge.metric === "score" ? ("score" as const) : ("lines" as const),
+      goal: event.blocksChallenge.goal,
+      minContribution: event.blocksChallenge.minContribution,
+      rewardCoins: event.blocksChallenge.rewardCoins,
+      rewardRankPoints: event.blocksChallenge.rewardRankPoints,
+    }),
+  }));
+  const blocksKindLocked = !!(event.blocksTournament || event.blocksChallenge);
+  const blocksLockedReason: string | null =
+    event.blocksTournament && event.blocksTournament.stage !== "pending"
+      ? "Das Turnier läuft bereits — Runden und Aufsteiger sind festgeschrieben."
+      : event.blocksChallenge?.finalizedAt
+        ? "Die Challenge ist abgerechnet — die Einstellungen sind festgeschrieben."
+        : null;
+
+  const titleDescChanged = title !== event.title || description !== (event.description ?? "");
+
+  /* ── Rewards state ── */
+  const initialRewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
+  const [participationCoins, setParticipationCoins] = useState<number>(
+    event.placementRewardsJson ? parseRewards(event.placementRewardsJson).participationCoins : (event.pointReward ?? initialRewards.participationCoins)
+  );
+  const [placements, setPlacements] = useState<PlacementReward[]>(initialRewards.placements);
+  const [polls, setPolls] = useState<PollConfig[]>(parsePolls(event.pollsConfigJson ?? event.pollConfigJson));
+  const initialSpectatorReward = parseSpectatorReward(event.spectatorRewardJson);
+  const [spectatorCoins, setSpectatorCoins] = useState(initialSpectatorReward.coins);
+  const [spectatorRankPts, setSpectatorRankPts] = useState(initialSpectatorReward.rankPoints);
+
+  /* ── Tournament state (übernimmt Format/Punkte/Stats der Eventreihe, falls am Event selbst noch nichts gesetzt ist) ── */
+  const initialTmtFormat = event.format ?? event.series?.fixedFormat ?? "single_elimination";
+  // "liga" ist kein eigenständiger Auswahlwert mehr (siehe TMT_FORMATS) — intern bleibt es aber
+  // weiterhin der gespeicherte Format-String für Hin-/Rückrunde-Turniere (unverändertes Backend).
+  const [tmtFormat, setTmtFormat]       = useState<string>(initialTmtFormat === "liga" ? "round_robin" : initialTmtFormat);
+  const [tmtPlayHomeAway, setTmtPlayHomeAway] = useState<boolean>(initialTmtFormat === "liga");
+  const [tmtPointsMode, setTmtPointsMode] = useState<"placement" | "matchResult">(initialTmtFormat === "liga" ? "matchResult" : "placement");
+  const [tmtPoints, setTmtPoints]       = useState(() =>
+    parseTmtConfig(event.pointsConfig)
+  );
+  // Reihen-Stats sind in jedem Event der Reihe fest dabei; das Event kann nur Zusatz-Stats ergänzen
+  const seriesStatRows = seriesEventStatRows(event.series);
+  const seriesStatFieldSet = new Set(seriesStatRows.map(r => r.field));
+  const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
+    let own: string[] | null = null;
+    if (event.statFields) {
+      try { own = JSON.parse(event.statFields) as string[]; } catch { /* fällt durch */ }
+    }
+    if (seriesStatRows.length > 0) {
+      return [...seriesStatRows.map(r => r.field), ...(own ?? []).filter(f => !seriesStatFieldSet.has(f))];
+    }
+    return own ?? deriveStatFieldsFromSeries(event.series) ?? ["Kills", "Assists", "Punkte"];
+  });
+  const tmtExtraStatFields = tmtStatFields.filter(f => !seriesStatFieldSet.has(f));
+  /* Event-eigene Stat-Punkte-Konfiguration (nur relevant bei coop_stats) — überschreibt für dieses
+   * Event die Reihen-weite seriesStatConfig, siehe schema.prisma statConfigJson. */
+  const [tmtStatConfig, setTmtStatConfig] = useState<EventStatConfigForm>(() => parseEventStatConfig(event.statConfigJson));
+  /* Community-Ziel (nur Skill-Index / coop_stats) — liegt ebenfalls in statConfigJson, siehe lib/community-goal.ts */
+  const [tmtGoal, setTmtGoal] = useState<CommunityGoalForm>(() => goalToForm(parseCommunityGoal(event.statConfigJson)));
+  // Ziel eines Reihen-Termins: eigenes, geerbtes oder abgeschaltetes (lib/event-goal.ts)
+  const resolvedGoal = resolveEventGoal({ format: event.format, statConfigJson: event.statConfigJson, series: event.series });
+  const [tmtLoading, setTmtLoading] = useState(false);
+  const hasTournament = !!event.format;
+  const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
+  const isRoundRobinFamily = tmtFormat === "round_robin";
+  const isLiga        = isRoundRobinFamily && tmtPlayHomeAway;
+  const usesMatchResultPoints = isRoundRobinFamily && tmtPointsMode === "matchResult";
+  const resolvedTmtFormat = isLiga ? "liga" : tmtFormat;
+
+  const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
+  const [hiddenBusy, setHiddenBusy] = useState(false);
+  const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
+  const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
+  const [omaOriginal, setOmaOriginal] = useState<boolean>(event.omaOriginal ?? false);
+  const [squadId, setSquadId] = useState<string>(event.squadId ?? "");
+  const [squadIdBusy, setSquadIdBusy] = useState(false);
+
+  /* ── Series config state ── */
+  const initialSeriesCfg = (() => {
+    try { return event.seriesEventConfigJson ? JSON.parse(event.seriesEventConfigJson) as { winnerMode?: string; winnerStatField?: string } : null; }
+    catch { return null; }
+  })();
+  const [seriesWinnerMode, setSeriesWinnerMode] = useState<"manual" | "bracket" | "stat">(
+    (initialSeriesCfg?.winnerMode as "manual" | "bracket" | "stat") ?? "manual"
+  );
+  const [seriesWinnerStatField, setSeriesWinnerStatField] = useState<string>(initialSeriesCfg?.winnerStatField ?? "");
+  const [seriesCfgLoading, setSeriesCfgLoading] = useState(false);
+
+  async function toggleHidden() {
+    setHiddenBusy(true);
+    const next = !hidden;
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, hidden: next }),
+    });
+    setHiddenBusy(false);
+    if (res.ok) {
+      setHidden(next);
+      toast.success(next ? "Event ausgeblendet" : "Event sichtbar — Ankündigung auf Discord/Push läuft");
+      router.refresh();
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  // ── Check-in vor Turnierstart ──
+  const [checkInEnabled, setCheckInEnabled] = useState<boolean>(event.checkInEnabled ?? false);
+  const [checkInMinutes, setCheckInMinutes] = useState<number>(event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES);
+  const [checkInBusy, setCheckInBusy] = useState(false);
+  const [checkedInIds, setCheckedInIds] = useState<Set<string>>(() => new Set(
+    (event.registrations as { userId: string; checkedInAt?: string | Date | null }[])
+      .filter(r => r.checkedInAt).map(r => r.userId),
+  ));
+
+  async function saveCheckInSettings(enabled: boolean, minutes: number) {
+    setCheckInBusy(true);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, checkInEnabled: enabled, checkInMinutes: minutes }),
+    });
+    setCheckInBusy(false);
+    if (res.ok) {
+      setCheckInEnabled(enabled);
+      toast.success(enabled ? `Check-in aktiv (${minutes} Min. vor Start)` : "Check-in deaktiviert");
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Speichern");
+    }
+  }
+
+  async function setPlayerCheckIn(userId: string, checkedIn: boolean) {
+    const res = await fetch(`/api/events/${event.id}/checkin`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, checkedIn }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler"); return; }
+    setCheckedInIds(prev => {
+      const next = new Set(prev);
+      if (checkedIn) next.add(userId); else next.delete(userId);
+      return next;
+    });
+  }
+
+  async function toggleRegistrationLocked() {
+    setRegistrationLockedBusy(true);
+    const next = !registrationLocked;
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, registrationLocked: next }),
+    });
+    setRegistrationLockedBusy(false);
+    if (res.ok) {
+      setRegistrationLocked(next);
+      toast.success(next ? "Selbst-Anmeldung deaktiviert" : "Selbst-Anmeldung wieder aktiv");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  // OMA Original — wird sofort gespeichert, nur Mods (lib/oma-original.ts)
+  async function saveOmaOriginal(next: boolean) {
+    setOmaOriginal(next);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, omaOriginal: next }),
+    });
+    if (res.ok) {
+      toast.success(next ? "Als OMA Original markiert" : "Kein OMA Original mehr");
+      router.refresh();
+    } else {
+      setOmaOriginal(!next);
+      toast.error("Fehler beim Speichern");
+    }
+  }
+
+  async function saveSquadId(next: string) {
+    setSquadIdBusy(true);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, squadId: next || null }),
+    });
+    setSquadIdBusy(false);
+    if (res.ok) {
+      setSquadId(next);
+      toast.success(next ? "Auf Squad beschränkt" : "Squad-Beschränkung entfernt");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+    /* ── Clip URL state ── */
+  const [twitchClipUrl, setTwitchClipUrl] = useState<string>(event.twitchClipUrl ?? "");
+
+  /* ── Eigenes Event-Cover ── */
+  const [coverImageUrl, setCoverImageUrl] = useState<string>(event.coverImageUrl ?? "");
+
+  /* ── Partners state ── */
+  const [allPartners, setAllPartners] = useState<{ id: string; name: string; twitchLogin: string; logoUrl: string }[]>([]);
+  const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>(
+    (event.streamingPartners ?? []).map((ep: { partnerId: string }) => ep.partnerId)
+  );
+  const [partnersLoaded, setPartnersLoaded] = useState(false);
+  const [partnerSaving, setPartnerSaving] = useState(false);
+
+  /* ── Participants state ── */
+  const [search, setSearch]             = useState("");
+  const [bulkSelected, setBulkSelected] = useState<string[]>([]);
+  const [bulkSelectedSpectators, setBulkSelectedSpectators] = useState<string[]>([]);
+  // Punkt 5: "Nicht angemeldet"-Liste wird bei großer Community sonst komplett ungepaginiert
+  // gerendert — hier nur ein anfängliches Kontingent zeigen, Rest per Klick nachladen.
+  const [notRegisteredLimit, setNotRegisteredLimit] = useState(40);
+  // Punkt 5: Liste von Namen/Usernamen einfügen (z.B. aus Discord kopiert) statt jeden Teilnehmer
+  // einzeln in der Liste suchen und anklicken zu müssen.
+  const [pasteImportOpen, setPasteImportOpen] = useState(false);
+  const [pasteImportText, setPasteImportText] = useState("");
+  const [pasteImportResult, setPasteImportResult] = useState<{ matched: number; unmatched: string[] } | null>(null);
+  const registeredIds  = new Set(event.registrations.filter((r: { role: string }) => r.role !== "spectator").map((r: { userId: string }) => r.userId));
+  const spectatorIds   = new Set(event.registrations.filter((r: { role: string }) => r.role === "spectator").map((r: { userId: string }) => r.userId));
+  const userName = (u: User) => u.username ?? u.name ?? "?";
+  const filteredUsers = useMemo(() => {
+    if (!search.trim()) return allUsers;
+    const q = search.toLowerCase();
+    return allUsers.filter(u => userName(u).toLowerCase().includes(q));
+  }, [allUsers, search]);
+
+  const seriesGame    = event.series?.fixedGame;
+  const seriesDiscord = event.series?.discordChannelId;
+
+  async function loadPartners() {
+    if (partnersLoaded) return;
+    const res = await fetch("/api/partners");
+    if (res.ok) { setAllPartners(await res.json()); }
+    setPartnersLoaded(true);
+  }
+
+  async function savePartners() {
+    setPartnerSaving(true);
+    const res = await fetch(`/api/admin/events/${event.id}/partners`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partnerIds: selectedPartnerIds }),
+    });
+    setPartnerSaving(false);
+    if (res.ok) toast.success("Streaming-Partner gespeichert");
+    else toast.error("Fehler beim Speichern");
+  }
+
+  function updatePlacement(place: number, key: keyof PlacementReward, value: number) {
+    setPlacements(prev => prev.map(p => p.place === place ? { ...p, [key]: value } : p));
+  }
+  function addPoll() {
+    if (polls.length >= 3) return;
+    setPolls(p => [...p, {
+      label: "", question: "",
+      voterEligibility: "participants",
+      answerType: "players",
+      customAnswers: [],
+      startOffsetHours: 0,
+      endOffsetHours: 24,
+      participationCoins: 0,
+      participationSeriesPoints: 0,
+      winnerCoins: 50,
+      winnerRankPoints: 0,
+    }]);
+  }
+  function updatePoll(i: number, patch: Partial<PollConfig>) {
+    setPolls(p => p.map((poll, idx) => idx === i ? { ...poll, ...patch } : poll));
+  }
+  function removePoll(i: number) {
+    setPolls(p => p.filter((_, idx) => idx !== i));
+  }
+
+  /* ── Save handlers ── */
+  async function handleSave() {
+    setLoading(true);
+    const scope = (event.series && titleDescChanged && propagateTitleDesc) ? "all" : "single";
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: event.id,
+        status,
+        title,
+        description: description || null,
+        rules: rules || null,
+        game: game.trim() || null,
+        genre: genre || null,
+        category,
+        startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
+        endAt: endAt ? fromDatetimeLocalBerlin(endAt).toISOString() : null,
+        maxPlayers: maxPlayers ? Number(maxPlayers) : null,
+        discordChannelId: discordChannelId.trim() || null,
+        placementRewardsJson: JSON.stringify({
+          participationCoins,
+          placements,
+        }),
+        pollsConfigJson: polls.length > 0 ? polls : null,
+        spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
+        twitchClipUrl: twitchClipUrl.trim() || null,
+        coverImageUrl: coverImageUrl.trim() || null,
+        seriesScope: scope,
+        ...(isBlocksEvent && !blocksLockedReason && { blocks }),
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      toast.success(scope === "all" ? "Für gesamte Reihe gespeichert" : "Event gespeichert");
+      setPropagateTitleDesc(false);
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Speichern");
+    }
+  }
+
+  /** Start/Ende aus dem Formular (ungespeicherte Änderungen zählen schon), sonst aus dem Event. */
+  function formTiming() {
+    try {
+      return {
+        startAt: startAt ? fromDatetimeLocalBerlin(startAt) : event.startAt,
+        endAt: endAt ? fromDatetimeLocalBerlin(endAt) : null,
+      };
+    } catch {
+      return { startAt: event.startAt, endAt: event.endAt ?? null };
+    }
+  }
+
+  /** Status wählen — warnt vor "aktiv" vor dem Start bzw. "Umfrage"/"Beendet" vor Start/Ende. */
+  async function pickStatus(s: string) {
+    if (s !== status && s !== event.status) {
+      const action = s === "active" ? "activate" : (s === "umfrage" || s === "finished") ? "complete" : null;
+      if (action && !(await confirmEventTiming(confirm, action, formTiming()))) return;
+    }
+    setStatus(s);
+  }
+
+  /** startStatus: "pending" legt das Turnier nur an (noch nicht gestartet), "active" startet es direkt. */
+  async function saveTmtSettings(startStatus: "pending" | "active" = "active") {
+    if (startStatus === "active" && event.tournamentStatus !== "active"
+      && !(await confirmEventTiming(confirm, "activate", formTiming()))) return;
+    setTmtLoading(true);
+    // pointsConfig nur noch für Sieg/Unentschieden-Münzen pro Match — Platzierungen zahlt der
+    // Event-Abschluss aus dem Reiter "Belohnungen"
+    const config = usesMatchResultPoints ? { win: tmtPoints.win, draw: tmtPoints.draw } : null;
+    // Event-eigene Stat-Punkte-Konfiguration nur bei coop_stats — überschreibt für dieses Event die
+    // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
+    // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
+    const builtStatConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
+      ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats",
+          tmtFormat === "coop_stats" && !event.series ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
+    // Termin einer Reihe: Ziel-Abweichung (eigenes Ziel / "kein Ziel") gehört dem Ziel-Panel und darf
+    // beim Speichern der Turnier-Einstellungen nicht verloren gehen (lib/event-goal.ts)
+    const keptGoalKeys: Record<string, unknown> = event.series && tmtFormat === "coop_stats"
+      ? {
+          ...(resolvedGoal.ownGoal && resolvedGoal.source === "event" && { goal: resolvedGoal.ownGoal }),
+          ...(resolvedGoal.source === "off" && { goalOff: true }),
+        }
+      : {};
+    const statConfig = builtStatConfig || Object.keys(keptGoalKeys).length > 0
+      ? { ...(builtStatConfig ?? { stats: [], placementPoints: {} }), ...keptGoalKeys }
+      : null;
+    if (!hasTournament) {
+      const res = await fetch("/api/tournaments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id, format: resolvedTmtFormat, pointsConfig: config,
+          statFields: hasStat ? tmtStatFields : null, statConfig, status: startStatus }),
+      });
+      if (res.ok) { toast.success(startStatus === "pending" ? "Einstellungen gespeichert — Turnier noch nicht gestartet" : "Turnier erstellt"); router.refresh(); }
+      else { const e = await res.json(); toast.error(e.error ?? "Fehler"); }
+    } else {
+      const res = await fetch(`/api/tournaments/${event.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: resolvedTmtFormat, pointsConfig: config,
+          statFields: hasStat ? tmtStatFields : null, statConfig }),
+      });
+      if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
+      else { toast.error("Fehler beim Speichern"); }
+    }
+    setTmtLoading(false);
+  }
+
+  async function startTournament() {
+    if (!(await confirmEventTiming(confirm, "activate", formTiming()))) return;
+    setTmtLoading(true);
+    const res = await fetch(`/api/tournaments/${event.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    setTmtLoading(false);
+    if (res.ok) { toast.success("Turnier gestartet"); router.refresh(); }
+    else toast.error("Fehler beim Starten");
+  }
+
+  async function removeUser(userId: string, name: string, role: "player" | "spectator" = "player") {
+    if (!(await confirm({ title: "Teilnehmer entfernen", description: `"${name}" wirklich entfernen?`, variant: "danger" }))) return;
+    setLoading(true);
+    await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, removeUserId: userId }),
+    });
+    setLoading(false);
+    toast.success(`${name} entfernt`);
+    router.refresh();
+  }
+
+  async function addSingleUser(userId: string, role: "player" | "spectator" = "player") {
+    setLoading(true);
+    const res = await fetch(`/api/events/${event.id}/bulk-register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userIds: [userId], role }),
+    });
+    const data = await res.json();
+    toast.success(data.added ? `${role === "spectator" ? "Zuschauer" : "Teilnehmer"} hinzugefügt` : "Bereits angemeldet");
+    setLoading(false);
+    router.refresh();
+  }
+
+  /** Punkt 5: Namen/Usernamen (z.B. aus Discord kopiert, per Zeile/Komma getrennt) gegen allUsers
+   *  matchen und Treffer in die Bulk-Auswahl übernehmen — spart das einzelne Durchsuchen+Anklicken
+   *  bei großen Listen. Reine Client-Vorauswahl, das eigentliche Hinzufügen läuft weiter über bulkAdd(). */
+  function applyPasteImport() {
+    const names = pasteImportText.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const matchedIds: string[] = [];
+    const unmatched: string[] = [];
+    for (const raw of names) {
+      const q = raw.toLowerCase();
+      const match = allUsers.find(u => userName(u).toLowerCase() === q);
+      if (match) matchedIds.push(match.id);
+      else unmatched.push(raw);
+    }
+    setBulkSelected(prev => [...new Set([...prev, ...matchedIds])]);
+    setPasteImportResult({ matched: matchedIds.length, unmatched });
+  }
+
+  async function bulkAdd() {
+    if (!bulkSelected.length) return;
+    setLoading(true);
+    const res = await fetch(`/api/events/${event.id}/bulk-register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userIds: bulkSelected }),
+    });
+    const data = await res.json();
+    toast.success(`${data.added} hinzugefügt${data.skipped ? `, ${data.skipped} bereits dabei` : ""}`);
+    setBulkSelected([]);
+    setLoading(false);
+    router.refresh();
+  }
+
+  async function bulkAddSpectators() {
+    if (!bulkSelectedSpectators.length) return;
+    setLoading(true);
+    const res = await fetch(`/api/events/${event.id}/bulk-register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userIds: bulkSelectedSpectators, role: "spectator" }),
+    });
+    const data = await res.json();
+    toast.success(`${data.added} Zuschauer hinzugefügt${data.skipped ? `, ${data.skipped} bereits dabei` : ""}`);
+    setBulkSelectedSpectators([]);
+    setLoading(false);
+    router.refresh();
+  }
+
+  async function deleteEvent() {
+    if (!(await confirm({
+      title: "Event löschen",
+      description: `Event "${event.title}" unwiderruflich löschen?\n\nDies entfernt ${event._count.registrations} Anmeldung(en)${event.format ? " und das Turnier" : ""}.`,
+      variant: "danger",
+      typedConfirmText: "LÖSCHEN",
+    }))) return;
+    setLoading(true);
+    const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
+    setLoading(false);
+    if (res.ok) {
+      toast.success(`"${event.title}" wurde gelöscht`);
+      router.push(event.series ? `/events/verwalten/reihen/${event.series.id}` : "/events/verwalten");
+    } else {
+      toast.error("Fehler beim Löschen");
+    }
+  }
+
+  async function saveSeriesConfig() {
+    setSeriesCfgLoading(true);
+    const cfg = { winnerMode: seriesWinnerMode, ...(seriesWinnerMode === "stat" ? { winnerStatField: seriesWinnerStatField } : {}) };
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, seriesEventConfigJson: JSON.stringify(cfg) }),
+    });
+    setSeriesCfgLoading(false);
+    if (res.ok) toast.success("Reihen-Einstellungen gespeichert");
+    else toast.error("Fehler beim Speichern");
+  }
+
+  /* Wenn die Eventreihe ein festes Spiel hat, werden Belohnungen/Turnier/Reihe zentral in der
+     Reihe verwaltet — das Einzelevent zeigt nur noch Details + Teilnehmer. */
+  const isSeriesEvent = !!event.series?.fixedGame;
+
+  /* ── Tab definitions ── */
+  const bracketTab = event.format
+    ? [{ key: "bracket" as TabKey, label: "Turnierbaum" }]
+    : [];
+  const tabs: { key: TabKey; label: string }[] = isSeriesEvent
+    ? [
+        { key: "details",      label: "Details" },
+        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+        ...bracketTab,
+      ]
+    : [
+        { key: "details",     label: "Details" },
+        { key: "rewards",     label: event.series ? "Umfragen" : "Belohnungen" },
+        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+        // Turnier-Einstellungen und Turnierbaum sind ein gemeinsamer Reiter
+        ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
+        // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
+        // gewinnt am Ende schlicht, wer die meisten Rang-Punkte gesammelt hat.
+        ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination" || event.format === "group_knockout")
+          ? [{ key: "series" as TabKey, label: "Reihe" }]
+          : []),
+      ];
+
+  /* ── Turnierbaum-Daten (für Inline-Tab, analog zur admin/events/[id]/bracket-Seite) ── */
+  const bracketWinnerStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { winnerStatKeys?: string[] };
+      return cfg.winnerStatKeys ?? [];
+    } catch { return []; }
+  })();
+
+  const bracketMatchWinStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { matchWinStatKeys?: string[] };
+      return cfg.matchWinStatKeys ?? [];
+    } catch { return []; }
+  })();
+
+  // Punkte je Platz — ausschließlich aus der Event-eigenen statConfigJson (Reiter "Turnier"), NIE aus
+  // der Reihen-weiten seriesStatConfig: die Platzierungs-Erfassung pro Runde ist bewusst pro Event
+  // konfigurierbar (siehe buildEventStatConfig/parseEventStatConfig oben).
+  const bracketPlacementPoints: Record<string, number> | null = (() => {
+    if (!event.statConfigJson) return null;
+    try {
+      const cfg = JSON.parse(event.statConfigJson) as { placementPoints?: Record<string, number> };
+      return cfg.placementPoints && Object.keys(cfg.placementPoints).length > 0 ? cfg.placementPoints : null;
+    } catch { return null; }
+  })();
+
+  const bracketTournament = event.format ? {
+    id: event.id,
+    status: event.tournamentStatus ?? "active",
+    format: event.format,
+    pointsConfig: event.pointsConfig,
+    statFields: event.statFields,
+    finalRankingJson: event.finalRankingJson,
+    finalRankingNote: event.finalRankingNote,
+    groupStageJson: event.groupStageJson,
+    participants: event.participants,
+    matches: event.matches,
+  } : null;
+  const bracketRegisteredUsers = allUsers.filter(u => registeredIds.has(u.id));
+
+  /* ── Render ── */
+  return (
+    <div className="space-y-4">
+      {/* Breadcrumb */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          {event.series ? (
+            <Link href={`/events/verwalten/reihen/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
+              {event.series.name}
+            </Link>
+          ) : (
+            <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+              <ChevronLeft className="w-4 h-4" /> Events
+            </Link>
+          )}
+          <span>/</span>
+          <span className="text-gray-300 truncate max-w-[200px]">{event.title}</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
+          <EventCategoryBadge category={event.category ?? "casual"} />
+          {/* Punkt 6: Diese drei Controls speichern sofort (eigener PATCH pro Klick) — anders als der
+              Rest des Formulars, das erst über den "Speichern"-Button unten persistiert wird. Damit das
+              nicht wie ein fehlendes Speichern wirkt, ist das hier explizit gekennzeichnet. */}
+          <span className="text-[9px] uppercase tracking-widest text-gray-600 hidden sm:inline" title="Diese drei Einstellungen werden bei jedem Klick sofort übernommen, unabhängig vom Speichern-Button unten.">
+            Sofort gespeichert:
+          </span>
+          <button
+            onClick={toggleHidden}
+            disabled={hiddenBusy}
+            title={(hidden ? "Event einblenden (für alle sichtbar machen)" : "Event ausblenden (nur in der Verwaltung sichtbar)") + " — wird sofort gespeichert"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              hidden
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {hidden ? "Ausgeblendet" : "Sichtbar"}
+          </button>
+          <button
+            onClick={toggleRegistrationLocked}
+            disabled={registrationLockedBusy}
+            title={(registrationLocked ? "Selbst-Anmeldung wieder erlauben" : "Selbst-Anmeldung deaktivieren (nur Admins tragen Teilnehmer ein)") + " — wird sofort gespeichert"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              registrationLocked
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
+          </button>
+          {squads.length > 0 && (
+            <select value={squadId} disabled={squadIdBusy}
+              onChange={e => saveSquadId(e.target.value)}
+              title="Spieler-Anmeldung auf ein Squad beschränken — wird sofort gespeichert"
+              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
+                squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
+              }`}>
+              <option value="">Für alle offen</option>
+              {squads.map(s => <option key={s.id} value={s.id}>Nur: {s.name}</option>)}
+            </select>
+          )}
+          <Link href={`/tournament/${event.id}`}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
+            <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
+          </Link>
+          <Link href={`/events/verwalten/neu?from=${event.id}`}
+            title="Neues Event mit denselben Einstellungen und Belohnungen anlegen (ohne Teilnehmer/Ergebnisse)"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
+            <Copy className="w-3.5 h-3.5" /> Duplizieren
+          </Link>
+        </div>
+      </div>
+
+      {/* Veröffentlichung: Planung (unsichtbar) bzw. fehlgeschlagene Discord-/Push-Schritte (sichtbar) */}
+      <PublishStatusPanel
+        eventId={event.id}
+        hidden={hidden}
+        publishAt={event.publishAt ?? null}
+        publishStateJson={event.publishStateJson ?? null}
+        startAt={event.startAt}
+      />
+
+      {/* Abschließen-CTA — nicht mehr editierbar, wenn das Event bereits beendet ist;
+          dafür muss der Status erst wieder auf aktiv gesetzt werden (Status-Buttons unten) */}
+      {(event.status === "active" || event.status === "umfrage") && (
+        <Link href={`/events/verwalten/${event.id}/complete`}
+          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-teal-600/40 bg-teal-700/20 hover:bg-teal-700/30 transition-colors">
+          <div>
+            <p className="text-sm font-semibold text-teal-300 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              {event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">Platzierungen, Belohnungen und Umfragen vergeben</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-teal-400 shrink-0" />
+        </Link>
+      )}
+      {/* Beendetes Event: Ergebnis-Übersicht — erneutes Bestätigen rechnet mit den aktuellen
+          Reihen-Einstellungen neu (Diff-Buchung, siehe complete/route.ts) */}
+      {event.status === "finished" && !!event.completionData && (
+        <Link href={`/events/verwalten/${event.id}/complete`}
+          className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+          <div>
+            <p className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-teal-400" />
+              Ergebnisse
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Vergebene Belohnungen ansehen, Finale Platzierung anpassen{event.series ? " oder mit den aktuellen Reihen-Einstellungen neu berechnen" : ""}
+            </p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
+        </Link>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
+        {tabs.map(tab => (
+          <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.key
+                ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                : "text-gray-500 hover:text-gray-300"
+            }`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Streaming-Partner (geteilt zwischen beiden Details-Varianten) ── */}
+      {/* Wird weiter unten inline gerendert — definiert als Fragment-Helfer */}
+
+      {/* ── Tab: Details (Reihen-Event: reduzierte Ansicht) ── */}
+      {activeTab === "details" && isSeriesEvent && (
+        <div className="space-y-4">
+          {/* Turnier fehlt (z.B. versehentlich gelöscht) — für Reihen mit festem Spiel gibt es sonst
+              keinen Reiter, über den sich das Format erneut setzen ließe, da der "Turnierbaum"-Reiter
+              erst erscheint, sobald ein Format gesetzt ist. */}
+          {!hasTournament && (
+            <div className="rounded-xl p-4 border border-red-500/20 bg-red-500/5 space-y-3">
+              <p className="text-sm font-medium text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" /> Kein Turnier vorhanden
+              </p>
+              <p className="text-xs text-gray-500">
+                Dieses Event hat aktuell kein Turnier-Format gesetzt — der Reiter „Turnierbaum" fehlt
+                deshalb. Format wählen und erstellen, um ihn wiederherzustellen. Vorherige Matches/
+                Ergebnisse sind dabei nicht wiederherstellbar und müssen neu eingetragen werden.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {TMT_FORMATS.map(f => (
+                  <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                    className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                      tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    <p className="text-xs font-medium leading-tight">{f.label}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
+                <Trophy className="w-4 h-4" />
+                {tmtLoading ? "Wird erstellt…" : "Turnier erstellen & Reiter wiederherstellen"}
+              </button>
+            </div>
+          )}
+
+          {/* Status */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-gray-500 shrink-0">Status</label>
+            <div className="flex gap-2 flex-wrap">
+              {STATUS_OPTIONS.map(s => (
+                <button key={s} type="button" onClick={() => pickStatus(s)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                    status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
+                  }`}>
+                  {s === "open" ? "Offen" : s === "active" ? "Aktiv" : s === "umfrage" ? "Umfrage" : "Beendet"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
+              <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Ende (optional)</label>
+              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+
+          {/* ── Twitch Clip ── */}
+          <div>
+            <label className={`${labelCls} flex items-center gap-1.5`}>
+              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
+            </label>
+            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
+              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
+            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
+          </div>
+
+          {/* ── OMA Original (sofort gespeichert) ── */}
+          {isModerator && (
+            <OmaOriginalToggle
+              kind="event"
+              checked={omaOriginal}
+              onChange={saveOmaOriginal}
+              inheritedFromSeries={isOmaOriginalSeries(event.series)}
+              blocksGame={isBlocksGame(event.game)}
+            />
+          )}
+
+          {/* ── Eigenes Event-Cover ── */}
+          <ImageUploadField
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            kind="event-cover"
+            presetsOnly={!isModerator}
+            presets={EVENT_COVER_PRESETS}
+            label="Eigenes Event-Bild"
+            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            previewAspect="1200/630"
+          />
+
+          {/* ── Streaming-Partner ── */}
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
+              <Tv2 className="w-4 h-4 text-[#9146ff]" />
+              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
+              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
+            </button>
+            {partnersLoaded && (
+              <>
+                {allPartners.length === 0 ? (
+                  <p className="text-xs text-gray-600">Keine Partner eingetragen.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {allPartners.map(p => (
+                      <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
+                          onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
+                          className="rounded accent-violet-500" />
+                        <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
+                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
+                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
+                      </label>
+                    ))}
+                    <button type="button" onClick={savePartners} disabled={partnerSaving}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
+                      <Save className="w-3.5 h-3.5" />
+                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <button onClick={handleSave} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+            <Save className="w-4 h-4" />
+            {loading ? "Speichert…" : "Speichern"}
+          </button>
+          <p className="text-[10px] text-gray-600 text-center -mt-2">
+            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
+          </p>
+        </div>
+      )}
+
+      {/* ── Tab: Details (Vollansicht für Einzelevents / Reihen ohne festes Spiel) ── */}
+      {activeTab === "details" && !isSeriesEvent && (
+        <div className="space-y-4">
+          {/* Status */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-gray-500 shrink-0">Status</label>
+            <div className="flex gap-2 flex-wrap">
+              {STATUS_OPTIONS.map(s => (
+                <button key={s} type="button" onClick={() => pickStatus(s)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                    status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
+                  }`}>
+                  {s === "open" ? "Offen" : s === "active" ? "Aktiv" : s === "umfrage" ? "Umfrage" : "Beendet"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Titel</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputCls} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Beschreibung</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)}
+              rows={3} placeholder="Wird auch in Discord angezeigt"
+              className={`${inputCls} resize-none`} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Regelwerk</label>
+            <textarea value={rules} onChange={e => setRules(e.target.value)}
+              rows={4} placeholder="Wird Usern über dem Punktesystem angezeigt"
+              className={`${inputCls} resize-none`} />
+          </div>
+
+          {event.series && titleDescChanged && (
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" checked={propagateTitleDesc} onChange={e => setPropagateTitleDesc(e.target.checked)}
+                className="rounded accent-teal-500" />
+              <span className="text-teal-400 text-xs flex items-center gap-1">
+                <Repeat className="w-3 h-3" />
+                Titel & Beschreibung auf alle Events von „{event.series.name}" anwenden
+              </span>
+            </label>
+          )}
+
+          <div>
+            <label className={`${labelCls} flex items-center justify-between`}>
+              <span>Spiel</span>
+              {seriesGame && game && seriesGame !== game && (
+                <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                  <AlertCircle className="w-3 h-3" /> Abweichend von Reihe ({seriesGame})
+                </span>
+              )}
+            </label>
+            <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
+          </div>
+
+          {isBlocksEvent && (
+            <BlocksEventSettings
+              value={blocks}
+              onChange={setBlocks}
+              kindLocked={blocksKindLocked}
+              lockedReason={blocksLockedReason}
+              inputCls={inputCls}
+              labelCls={labelCls}
+            />
+          )}
+
+          {game && (
+            <div>
+              <label className={labelCls}>Genre</label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {GENRES.map(g => (
+                  <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl p2 border transition-all ${
+                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                    }`}>
+                    <AppIcon kind="genre" name={g.value} size={28} />
+                    <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className={labelCls}>Kategorie</label>
+            <div className="flex gap-2 flex-wrap">
+              {CATEGORIES.map(cat => (
+                <button key={cat.value} type="button" onClick={() => setCategory(cat.value)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                    category === cat.value ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-white/10 text-gray-500 hover:border-white/20"
+                  }`}>
+                  <AppIcon kind="category" name={cat.value} size={16} className="mr-1 align-text-bottom" />{cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Datum & Uhrzeit (Start)</label>
+              <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Ende (optional)</label>
+              <input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Max. Spieler</label>
+            <NumberInput min={2} value={maxPlayers} onChange={e => setMaxPlayers(e.target.value)}
+              placeholder="unbegrenzt" className={inputCls} />
+          </div>
+
+          <div>
+            <label className={`${labelCls} flex items-center justify-between`}>
+              <span>Discord-Kanal</span>
+              {seriesDiscord && discordChannelId && seriesDiscord !== discordChannelId && (
+                <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                  <AlertCircle className="w-3 h-3" /> Abweichend von Reihe
+                </span>
+              )}
+            </label>
+            <DiscordChannelSelect
+              value={discordChannelId}
+              onChange={setDiscordChannelId}
+              emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"}
+            />
+          </div>
+
+          {/* ── Twitch Clip ── */}
+          <div>
+            <label className={`${labelCls} flex items-center gap-1.5`}>
+              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
+            </label>
+            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
+              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
+            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
+          </div>
+
+          {/* ── OMA Original (sofort gespeichert) ── */}
+          {isModerator && (
+            <OmaOriginalToggle
+              kind="event"
+              checked={omaOriginal}
+              onChange={saveOmaOriginal}
+              inheritedFromSeries={isOmaOriginalSeries(event.series)}
+              blocksGame={isBlocksGame(event.game)}
+            />
+          )}
+
+          {/* ── Eigenes Event-Cover ── */}
+          <ImageUploadField
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            kind="event-cover"
+            presetsOnly={!isModerator}
+            presets={EVENT_COVER_PRESETS}
+            label="Eigenes Event-Bild"
+            hint="Optional — eigenes Bild hochladen oder eine Vorlage wählen. Ohne Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            previewAspect="1200/630"
+          />
+
+          {/* ── Streaming-Partner ── */}
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
+              <Tv2 className="w-4 h-4 text-[#9146ff]" />
+              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
+              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
+            </button>
+            {partnersLoaded && (
+              <>
+                {allPartners.length === 0 ? (
+                  <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Twitch &amp; Clips → Partner anlegen.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {allPartners.map(p => (
+                      <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
+                          onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
+                          className="rounded accent-violet-500" />
+                        <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
+                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
+                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
+                      </label>
+                    ))}
+                    <button type="button" onClick={savePartners} disabled={partnerSaving}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
+                      <Save className="w-3.5 h-3.5" />
+                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <button onClick={handleSave} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+            <Save className="w-4 h-4" />
+            {loading ? "Speichert…" : "Speichern"}
+          </button>
+          <p className="text-[10px] text-gray-600 text-center -mt-2">
+            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
+          </p>
+        </div>
+      )}
+
+      {/* ── Tab: Belohnungen ── */}
+      {activeTab === "rewards" && (
+        <div className="space-y-4">
+          {!event.series && (
+            <>
+              {/* Teilnahme */}
+              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CoinIcon size={16} />
+                  <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
+                </div>
+                <p className="text-[11px] text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Münzen</label>
+                    <NumberInput min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Platzierungen */}
+              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
+                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
+                  <span />
+                  <span>Platz</span>
+                  <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> RP</span>
+                  <span className="flex items-center gap-1 justify-center"><CoinIcon size={12} /> Münzen</span>
+                </div>
+                {placements.map((p, i) => (
+                  <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
+                    <span className="text-base"><PlaceMedal place={p.place} /></span>
+                    <span className="text-sm text-gray-300">{p.place}. Platz</span>
+                    <NumberInput min={0} value={p.rankPoints}
+                      onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}
+                      className={numCls} />
+                    <NumberInput min={0} value={p.coins}
+                      onChange={e => updatePlacement(p.place, "coins", Number(e.target.value))}
+                      className={numCls} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Zuschauer-Belohnung */}
+              {event.spectatorMode && (
+                <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Münzen</label>
+                      <NumberInput min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Rang-Punkte</label>
+                      <NumberInput min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Polls */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-300">Umfragen</h3>
+              {polls.length < 3 && (
+                <button type="button" onClick={addPoll}
+                  className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> Hinzufügen
+                </button>
+              )}
+            </div>
+            {polls.length === 0 && <p className="text-xs text-gray-600">Keine Umfragen konfiguriert.</p>}
+            {polls.map((poll, i) => (
+              <div key={i} className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-violet-300">Umfrage {i + 1}</p>
+                  <button type="button" onClick={() => removePoll(i)} className="text-gray-600 hover:text-red-400 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Label (z.B. MVP)</label>
+                    <input type="text" value={poll.label} onChange={e => updatePoll(i, { label: e.target.value })}
+                      placeholder="MVP" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Frage</label>
+                    <input type="text" value={poll.question} onChange={e => updatePoll(i, { question: e.target.value })}
+                      placeholder="Wer war der MVP?" className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Wer darf abstimmen?</label>
+                    <select value={poll.voterEligibility}
+                      onChange={e => updatePoll(i, { voterEligibility: e.target.value as PollConfig["voterEligibility"] })}
+                      className={inputCls}>
+                      <option value="all">Alle App-Mitglieder</option>
+                      <option value="participants">Mitspieler + Zuschauer</option>
+                      <option value="players">Nur Mitspieler</option>
+                      <option value="spectators">Nur Zuschauer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Antwortoptionen</label>
+                    <select value={poll.answerType}
+                      onChange={e => updatePoll(i, { answerType: e.target.value as PollConfig["answerType"], customAnswers: [] })}
+                      className={inputCls}>
+                      <option value="players">Mitspieler des Events</option>
+                      <option value="spectators">Zuschauer des Events</option>
+                      <option value="custom">Eigene Antworten</option>
+                    </select>
+                  </div>
+                </div>
+                {poll.answerType === "custom" && (
+                  <div className="space-y-1.5">
+                    {poll.customAnswers.map((ans, ai) => (
+                      <div key={ai} className="flex gap-2">
+                        <input type="text" value={ans}
+                          onChange={e => {
+                            const ca = [...poll.customAnswers]; ca[ai] = e.target.value;
+                            updatePoll(i, { customAnswers: ca });
+                          }}
+                          placeholder={`Antwort ${ai + 1}`} className={inputCls} />
+                        <button type="button"
+                          onClick={() => updatePoll(i, { customAnswers: poll.customAnswers.filter((_, k) => k !== ai) })}
+                          className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                    <button type="button"
+                      onClick={() => updatePoll(i, { customAnswers: [...poll.customAnswers, ""] })}
+                      className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300">
+                      <Plus className="w-3 h-3" /> Antwort hinzufügen
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Start (Std. nach Event-Start)</label>
+                    <NumberInput min={0} value={poll.startOffsetHours}
+                      onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Ende (Std. nach Event-Start)</label>
+                    <NumberInput min={1} value={poll.endOffsetHours}
+                      onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Münzen</label>
+                    <NumberInput min={0} value={poll.participationCoins}
+                      onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
+                    <NumberInput min={0} value={poll.participationSeriesPoints}
+                      onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Münzen</label>
+                    <NumberInput min={0} value={poll.winnerCoins}
+                      onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>
+                    <NumberInput min={0} value={poll.winnerRankPoints}
+                      onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={handleSave} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+            <Save className="w-4 h-4" /> {loading ? "Speichert…" : "Speichern"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Tab: Turnier ── */}
+      {activeTab === "tournament" && (
+        <div className="space-y-4">
+          {/* Check-in vor Turnierstart — nur Eingecheckte werden ausgelost */}
+          <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={checkInEnabled} disabled={checkInBusy}
+                onChange={e => saveCheckInSettings(e.target.checked, checkInMinutes)}
+                className="rounded shrink-0" />
+              <span className="text-sm text-white">Check-in vor Turnierstart</span>
+            </label>
+            <p className="text-[11px] text-gray-500">
+              Spieler checken selbst auf der Event-Seite ein. Das Fenster öffnet vor dem Start und schließt mit der
+              Auslosung. Ist der Check-in aktiv, werden nur eingecheckte Spieler ausgelost — Admins können im Reiter
+              „Teilnehmer“ manuell ein- und auschecken.
+            </p>
+            {checkInEnabled && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Öffnet</span>
+                <NumberInput min={5} max={MAX_CHECK_IN_MINUTES} value={checkInMinutes}
+                  onChange={e => setCheckInMinutes(Number(e.target.value))}
+                  className="w-20 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1 text-center" />
+                <span className="text-xs text-gray-400">Min. vor Start</span>
+                <button type="button" disabled={checkInBusy || checkInMinutes === (event.checkInMinutes ?? DEFAULT_CHECK_IN_MINUTES)}
+                  onClick={() => saveCheckInSettings(true, sanitizeCheckInMinutes(checkInMinutes))}
+                  className="text-xs text-teal-300 border border-teal-700/60 rounded-lg px-2.5 py-1 hover:bg-teal-900/20 disabled:opacity-40">
+                  Speichern
+                </button>
+                <span className="text-xs text-gray-500 ml-auto">{checkedInIds.size}/{registeredIds.size} eingecheckt</span>
+              </div>
+            )}
+          </div>
+
+          {!hasTournament && (
+          <div>
+            <label className={labelCls}>Format</label>
+            <div className="grid grid-cols-2 gap-2">
+              {TMT_FORMATS.map(f => (
+                <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                  className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                    tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                  }`}>
+                  <p className="text-xs font-medium leading-tight">{f.label}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+          )}
+
+          {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus, ersetzt das ehemalige Format "liga") */}
+          {isRoundRobinFamily && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={tmtPlayHomeAway}
+                  onChange={e => setTmtPlayHomeAway(e.target.checked)}
+                  className="rounded shrink-0" />
+                <span className="text-sm text-white">Hin- und Rückrunde spielen</span>
+              </label>
+              <div>
+                <label className={labelCls}>Punktemodus</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setTmtPointsMode("placement")}
+                    className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                      tmtPointsMode === "placement" ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    Platzierungspunkte
+                  </button>
+                  <button type="button" onClick={() => setTmtPointsMode("matchResult")}
+                    className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                      tmtPointsMode === "matchResult" ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    Sieg/Unentschieden-Münzen
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Belohnungen pro Platzierung werden zentral im Reiter "Belohnungen" gepflegt */}
+          <p className="text-[11px] text-gray-500">
+            Platzierungsbelohnungen (Münzen/Rang-Punkte je Platz) kommen ausschließlich aus dem Reiter
+            {event.series ? " der Eventreihe" : " „Belohnungen“"} und werden beim Abschluss des Events ausgezahlt.
+            {usesMatchResultPoints && " Die Münzen pro Match-Ergebnis unten kommen zusätzlich, direkt beim Eintragen."}
+          </p>
+          {usesMatchResultPoints && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <label className="text-xs text-gray-500 block mb-3">Münzen pro Match-Ergebnis</label>
+              <div className="grid grid-cols-2 gap-3">
+                {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
+                  <div key={key}>
+                    <label className={labelCls}>{label}</label>
+                    <NumberInput min={0} value={tmtPoints[key]}
+                      onChange={e => setTmtPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
+                      className={inputCls} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasStat && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              {seriesStatRows.length > 0 ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className={labelCls}>Statistiken der Reihe</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {seriesStatRows.map(r => (
+                        <span key={r.field} className="text-xs px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-300">
+                          {r.field} <span className="text-gray-500">· {r.points} Pkt.</span>
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Werden in jedem Event der Reihe erfasst und zählen für die Eventpunkte und die Reihentabelle.
+                      Ändern kannst du sie in den Einstellungen der Eventreihe.
+                    </p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Zusatz-Stats nur für dieses Event</label>
+                    <StatFieldEditor
+                      fields={tmtExtraStatFields}
+                      onChange={extra => setTmtStatFields([...seriesStatRows.map(r => r.field), ...extra.filter(f => !seriesStatFieldSet.has(f))])}
+                      isAvg={tmtFormat === "avg_stats"}
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      Zählen nur für die Eventpunkte dieses Events, nicht für die Reihentabelle.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <label className={labelCls}>Statistik-Felder</label>
+                  <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+                </>
+              )}
+              {tmtFormat === "avg_stats" && (
+                <div className="mt-3">
+                  <AvgDirectionToggle
+                    value={tmtStatConfig.avgDirection}
+                    onChange={v => setTmtStatConfig(c => ({ ...c, avgDirection: v }))}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {tmtFormat === "coop_stats" && (event.series ? (
+            // Termin einer Reihe: Ziel wird von der Reihe geerbt, hier nur übernehmen/überschreiben/abschalten
+            <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
+              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
+          ) : (
+            <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
+              <CommunityGoalEditor value={tmtGoal} onChange={setTmtGoal} statFields={tmtStatFields} />
+            </div>
+          ))}
+
+          {/* Event-eigene Stat-Punkte-Konfiguration (Eventpunkte) — für alle Stats-Formate (ffa,
+              coop_stats, avg_stats): legt fest, wie viele Punkte jeder Stat gibt, und optional wie
+              viele Punkte welche Endplatzierung gibt. Für Reihen ohne festes Format/Spiel überschreibt
+              das die Reihen-weite Konfiguration nur für dieses eine Event. */}
+          {["ffa", "coop_stats", "avg_stats"].includes(tmtFormat) && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-4">
+              <div>
+                <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
+                <p className="text-[11px] text-gray-500 -mt-1 mb-2">
+                  {seriesStatRows.length > 0
+                    ? "Punkte für die Zusatz-Stats dieses Events. Die Statistiken der Reihe bringen ihre Punkte aus der Reihe mit."
+                    : "Wie viele Punkte gibt jede Einheit einer Statistik in diesem Event (Eventpunkte)?"}
+                </p>
+              </div>
+
+              {(seriesStatRows.length === 0 || tmtExtraStatFields.length > 0) && (
+              <div className="space-y-2">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Statistik</p>
+                <StatPointsTable
+                  fields={seriesStatRows.length > 0 ? tmtExtraStatFields : tmtStatFields}
+                  values={tmtStatConfig.pointsByField}
+                  onChange={(f, v) => setTmtStatConfig(c => ({ ...c, pointsByField: { ...c.pointsByField, [f]: v } }))}
+                />
+              </div>
+              )}
+
+              <div className="pt-2 border-t border-white/[0.06] space-y-3">
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
+                  <input type="checkbox" checked={tmtStatConfig.placementEnabled}
+                    onChange={e => setTmtStatConfig(c => ({ ...c, placementEnabled: e.target.checked }))}
+                    className="rounded" />
+                  <span>Endplatzierung tracken</span>
+                </label>
+                <p className="text-[10px] text-gray-500 -mt-2">
+                  Im Reiter „Turnier" kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
+                  hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
+                  Eventpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
+                  Events, nicht die Tabellenpunkte der Reihe.
+                </p>
+
+                {tmtStatConfig.placementEnabled && (
+                  <div className="space-y-2">
+                    {tmtStatConfig.placementPoints.map((row, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-14 shrink-0">Platz</span>
+                        <div className="w-16 shrink-0">
+                          <NumberInput min={1} value={row.place}
+                            onChange={e => setTmtStatConfig(c => ({
+                              ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, place: Number(e.target.value) } : r),
+                            }))}
+                            className={`${inputCls} text-center`} />
+                        </div>
+                        <span className="text-xs text-gray-500 shrink-0">Punkte</span>
+                        <div className="flex-1">
+                          <NumberInput step="0.1" value={row.points}
+                            onChange={e => setTmtStatConfig(c => ({
+                              ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, points: Number(e.target.value) } : r),
+                            }))}
+                            className={`${inputCls} text-center`} />
+                        </div>
+                        <button type="button"
+                          onClick={() => setTmtStatConfig(c => ({ ...c, placementPoints: c.placementPoints.filter((_, ri) => ri !== i) }))}
+                          className="p-2 text-gray-500 hover:text-red-400 transition-colors shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button"
+                      onClick={() => setTmtStatConfig(c => ({
+                        ...c,
+                        placementPoints: [...c.placementPoints, { place: (c.placementPoints.at(-1)?.place ?? 0) + 1, points: 1 }],
+                      }))}
+                      className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Platz hinzufügen
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {hasTournament ? (
+              <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
+                <Trophy className="w-4 h-4" />
+                {tmtLoading ? "Speichert…" : "Turnier-Einstellungen speichern"}
+              </button>
+            ) : (
+              <>
+                <button onClick={() => saveTmtSettings("pending")} disabled={tmtLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
+                  <Trophy className="w-4 h-4" />
+                  {tmtLoading ? "Speichert…" : "Einstellungen speichern (Turnier noch nicht starten)"}
+                </button>
+                <button onClick={() => saveTmtSettings("active")} disabled={tmtLoading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-amber-300 border border-amber-700/60 hover:bg-amber-900/20 transition-colors disabled:opacity-50">
+                  Turnier erstellen & direkt starten
+                </button>
+              </>
+            )}
+            {hasTournament && event.tournamentStatus !== "active" && event.tournamentStatus !== "finished" && event.tournamentStatus !== "finalized" && (
+              <button onClick={startTournament} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900/20 transition-colors disabled:opacity-50">
+                Turnier jetzt starten
+              </button>
+            )}
+          </div>
+
+          {/* Turnierbaum — im selben Reiter wie die Turnier-Einstellungen */}
+          {bracketTournament && (
+            <div className="pt-4 border-t border-white/[0.06]">
+              <TournamentManager
+                event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
+                tournament={bracketTournament}
+                allUsers={bracketRegisteredUsers}
+                winnerStatKeys={bracketWinnerStatKeys}
+                matchWinStatKeys={bracketMatchWinStatKeys}
+                standaloneEvent={!event.series}
+                placementPoints={bracketPlacementPoints}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Turnierbaum (Reihen-Event: reduzierte Ansicht ohne Turnier-Einstellungen) ── */}
+      {activeTab === "bracket" && bracketTournament && (
+        <div className="space-y-4">
+          {/* Termine einer Reihe mit festem Spiel haben keinen "Turnier"-Reiter — das Ziel des
+              Termins lässt sich deshalb hier anpassen (nur Punktewertung) */}
+          {isSeriesEvent && event.format === "coop_stats" && (
+            <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
+              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
+          )}
+          <TournamentManager
+            event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
+            tournament={bracketTournament}
+            allUsers={bracketRegisteredUsers}
+            winnerStatKeys={bracketWinnerStatKeys}
+            matchWinStatKeys={bracketMatchWinStatKeys}
+            standaloneEvent={!event.series}
+            placementPoints={bracketPlacementPoints}
+          />
+        </div>
+      )}
+
+      {/* ── Tab: Teilnehmer ── */}
+      {activeTab === "participants" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-400">
+              Spieler ({[...registeredIds].length}{event.maxPlayers ? `/${event.maxPlayers}` : ""})
+            </h2>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPasteImportOpen(o => !o)}
+                className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                {pasteImportOpen ? "Liste schließen" : "Liste einfügen"}
+              </button>
+              {bulkSelected.length > 0 && (
+                <button onClick={bulkAdd} disabled={loading}
+                  className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                  <UserPlus className="w-3.5 h-3.5" /> {bulkSelected.length} hinzufügen
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Punkt 5: Namen-Liste einfügen (z.B. aus Discord kopiert) statt einzeln zu suchen */}
+          {pasteImportOpen && (
+            <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+              <p className="text-[11px] text-gray-500">
+                Namen/Usernamen einfügen (Zeilenumbruch oder Komma getrennt) — Treffer werden unten in der Liste vorausgewählt.
+              </p>
+              <textarea value={pasteImportText} onChange={e => setPasteImportText(e.target.value)}
+                rows={3} placeholder={"z.B.\nMaxMustermann\nErikaM"}
+                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 placeholder:text-gray-600 resize-none" />
+              <div className="flex items-center gap-2">
+                <button onClick={applyPasteImport} disabled={!pasteImportText.trim()}
+                  className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-40 text-white rounded-lg px-3 py-1.5 transition-colors">
+                  Abgleichen &amp; auswählen
+                </button>
+                {pasteImportResult && (
+                  <span className="text-[11px] text-gray-500">
+                    {pasteImportResult.matched} gefunden
+                    {pasteImportResult.unmatched.length > 0 && `, nicht gefunden: ${pasteImportResult.unmatched.join(", ")}`}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input type="text" placeholder="Spieler suchen…" value={search}
+              onChange={e => { setSearch(e.target.value); setNotRegisteredLimit(40); }}
+              className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-9 pr-3 py-2 placeholder:text-gray-600" />
+          </div>
+
+          {/* Registered players */}
+          {filteredUsers.filter(u => registeredIds.has(u.id)).length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mb-1.5">
+                Angemeldet ({filteredUsers.filter(u => registeredIds.has(u.id)).length})
+              </p>
+              <div className="space-y-1">
+                {filteredUsers.filter(u => registeredIds.has(u.id)).map(u => (
+                  <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-emerald-900/10 border border-emerald-900/20">
+                    {u.image
+                      ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                      : <div className="w-7 h-7 rounded-full bg-emerald-900/40 flex items-center justify-center text-xs font-semibold text-emerald-400 shrink-0">{userName(u)[0].toUpperCase()}</div>
+                    }
+                    <span className="flex-1 text-sm text-emerald-300 truncate font-medium">{userName(u)}</span>
+                    {checkInEnabled && (
+                      <button type="button" onClick={() => setPlayerCheckIn(u.id, !checkedInIds.has(u.id))}
+                        className={`shrink-0 text-[10px] font-semibold rounded-full px-2 py-0.5 border transition-colors ${
+                          checkedInIds.has(u.id)
+                            ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                            : "border-gray-700 text-gray-500 hover:text-gray-300"
+                        }`}
+                        title={checkedInIds.has(u.id) ? "Auschecken" : "Manuell einchecken"}>
+                        {checkedInIds.has(u.id) ? "✓ eingecheckt" : "nicht eingecheckt"}
+                      </button>
+                    )}
+                    <button onClick={() => removeUser(u.id, userName(u))} disabled={loading}
+                      className="shrink-0 text-gray-600 hover:text-red-400 p-1.5 rounded transition-colors disabled:opacity-50">
+                      <UserMinus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Not registered */}
+          {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Nicht angemeldet</p>
+                <button onClick={() => setBulkSelected(filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => u.id))}
+                  className="text-[10px] text-gray-500 hover:text-white transition-colors">
+                  Alle auswählen
+                </button>
+              </div>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).slice(0, notRegisteredLimit).map(u => {
+                  const isSel = bulkSelected.includes(u.id);
+                  return (
+                    <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                      isSel ? "bg-teal-900/20 border border-teal-800/30" : "bg-gray-800 hover:bg-gray-700/50 border border-transparent"
+                    }`}>
+                      <input type="checkbox" checked={isSel}
+                        onChange={e => setBulkSelected(e.target.checked ? [...bulkSelected, u.id] : bulkSelected.filter(id => id !== u.id))}
+                        className="rounded accent-teal-500 shrink-0" />
+                      {u.image
+                        ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                        : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">{userName(u)[0].toUpperCase()}</div>
+                      }
+                      <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
+                      <button onClick={() => addSingleUser(u.id)} disabled={loading}
+                        className="shrink-0 text-gray-500 hover:text-teal-400 p-1.5 rounded transition-colors disabled:opacity-50">
+                        <UserPlus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > notRegisteredLimit && (
+                <button onClick={() => setNotRegisteredLimit(n => n + 40)}
+                  className="w-full text-center text-[11px] text-gray-500 hover:text-white py-1.5 transition-colors">
+                  {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length - notRegisteredLimit} weitere laden…
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Spectators section */}
+          {event.spectatorMode && (
+            <div className="pt-2 border-t border-white/[0.05]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest">
+                  👁️ Zuschauer ({[...spectatorIds].length})
+                </p>
+                {bulkSelectedSpectators.length > 0 && (
+                  <button onClick={bulkAddSpectators} disabled={loading}
+                    className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                    <UserPlus className="w-3.5 h-3.5" /> {bulkSelectedSpectators.length} hinzufügen
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1 mb-2">
+                {filteredUsers.filter(u => spectatorIds.has(u.id)).map(u => (
+                  <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-900/10 border border-teal-900/20">
+                    {u.image
+                      ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                      : <div className="w-7 h-7 rounded-full bg-teal-900/40 flex items-center justify-center text-xs font-semibold text-teal-400 shrink-0">{userName(u)[0].toUpperCase()}</div>
+                    }
+                    <span className="flex-1 text-sm text-teal-300/80 truncate">{userName(u)}</span>
+                    <button onClick={() => removeUser(u.id, userName(u), "spectator")} disabled={loading}
+                      className="shrink-0 text-gray-600 hover:text-red-400 p-1.5 rounded transition-colors disabled:opacity-50">
+                      <UserMinus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Nicht angemeldet</p>
+                    <button onClick={() => setBulkSelectedSpectators(filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => u.id))}
+                      className="text-[10px] text-gray-500 hover:text-white transition-colors">
+                      Alle auswählen
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).slice(0, notRegisteredLimit).map(u => {
+                      const isSel = bulkSelectedSpectators.includes(u.id);
+                      return (
+                        <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                          isSel ? "bg-teal-900/20 border border-teal-800/30" : "bg-gray-800 hover:bg-gray-700/50 border border-transparent"
+                        }`}>
+                          <input type="checkbox" checked={isSel}
+                            onChange={e => setBulkSelectedSpectators(e.target.checked ? [...bulkSelectedSpectators, u.id] : bulkSelectedSpectators.filter(id => id !== u.id))}
+                            className="rounded accent-teal-500 shrink-0" />
+                          {u.image
+                            ? <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                            : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-semibold text-gray-300 shrink-0">{userName(u)[0].toUpperCase()}</div>
+                          }
+                          <span className="flex-1 text-sm text-gray-400 truncate">{userName(u)}</span>
+                          <button onClick={() => addSingleUser(u.id, "spectator")} disabled={loading}
+                            className="shrink-0 text-gray-500 hover:text-teal-400 p-1.5 rounded transition-colors disabled:opacity-50">
+                            <UserPlus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > notRegisteredLimit && (
+                    <button onClick={() => setNotRegisteredLimit(n => n + 40)}
+                      className="w-full text-center text-[11px] text-gray-500 hover:text-white py-1.5 transition-colors">
+                      {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length - notRegisteredLimit} weitere laden…
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {filteredUsers.length === 0 && (
+            <p className="text-sm text-gray-600 text-center py-6">Keine Spieler gefunden.</p>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Reihe ── */}
+      {activeTab === "series" && event.series &&
+        (event.format === "single_elimination" || event.format === "double_elimination" || event.format === "group_knockout") && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300 mb-1">Sieger-Ermittlung für die Reihe</h3>
+              <p className="text-xs text-gray-500">Wie wird der Sieger eines einzelnen Events in dieser Reihe ermittelt?</p>
+            </div>
+            <div className="space-y-2">
+              {([
+                { value: "manual",  label: "Manuell",          desc: "Admin wählt Sieger beim Abschluss aus" },
+                { value: "bracket", label: "Turnier-Bracket",  desc: "Finalist des Brackets gewinnt" },
+                { value: "stat",    label: "Höchste Stat",     desc: "Spieler mit höchstem Wert einer Stat gewinnt" },
+              ] as const).map(opt => (
+                <button key={opt.value} type="button" onClick={() => setSeriesWinnerMode(opt.value)}
+                  className={`w-full flex items-start gap-3 rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    seriesWinnerMode === opt.value
+                      ? "border-teal-500/60 bg-teal-500/10"
+                      : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                  }`}>
+                  <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${seriesWinnerMode === opt.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
+                  <div>
+                    <p className={`text-sm font-medium ${seriesWinnerMode === opt.value ? "text-teal-300" : "text-gray-300"}`}>{opt.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {seriesWinnerMode === "stat" && (
+              <div>
+                <label className={labelCls}>Stat-Name (Feldname)</label>
+                <input
+                  type="text"
+                  value={seriesWinnerStatField}
+                  onChange={e => setSeriesWinnerStatField(e.target.value)}
+                  placeholder="z.B. Kills"
+                  className={inputCls}
+                />
+                <p className="text-[10px] text-gray-600 mt-1">Der Spieler mit dem höchsten Wert in diesem Feld gewinnt das Event.</p>
+              </div>
+            )}
+            <button onClick={saveSeriesConfig} disabled={seriesCfgLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+              <Save className="w-4 h-4" />
+              {seriesCfgLoading ? "Speichert…" : "Reihen-Einstellungen speichern"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Danger Zone (always visible) ── */}
+      {isAdmin && (
+        <div className="rounded-xl border border-red-900/50 bg-red-950/10 p-3 mt-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5" /> Event löschen
+              </p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Entfernt {event._count.registrations} Anmeldung(en){event.format ? " und das Turnier" : ""} dauerhaft.
+              </p>
+            </div>
+            <button onClick={deleteEvent} disabled={loading}
+              className="flex items-center gap-1.5 text-sm text-white bg-red-700 hover:bg-red-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 shrink-0">
+              <Trash2 className="w-3.5 h-3.5" /> Löschen
+            </button>
+          </div>
+        </div>
+      )}
+      {ConfirmDialogElement}
+    </div>
+  );
+}

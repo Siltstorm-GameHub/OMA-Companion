@@ -69,7 +69,7 @@ import { eventPayout } from "@/lib/placement-rewards";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT, aggregateKnockoutTies, computeLeagueStandings, groupLetter, groupMembers, knockoutRoundLabel, leagueMemberIds, parseGroupStageConfig, resolveGroupCount } from "@/lib/tournaments/groupStage";
 import NextMatches, { type UpcomingMatch } from "./NextMatches";
 import MatchResultSubmit, { type ReportMatch, type MySubmission } from "./MatchResultSubmit";
-import ResultReviewClient from "@/app/(app)/(dashboard)/admin/events/[id]/results/ResultReviewClient";
+import ResultReviewClient from "@/app/(app)/(dashboard)/events/verwalten/[id]/results/ResultReviewClient";
 import { loadReviewData } from "@/lib/tournaments/review-data";
 import { parseScreenshotUrls, isParticipantEditLocked, submissionSubject } from "@/lib/tournaments/matchSubmissions";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
@@ -1495,7 +1495,7 @@ export default async function TournamentDetailPage({
               <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-semibold">
                 {reviewData.matches.reduce((n, m) => n + m.submissions.length, 0)} offen
               </span>
-              <Link href={`/admin/events/${event.id}/results`} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
+              <Link href={`/events/verwalten/${event.id}/results`} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
                 Alle Meldungen (auch erledigte) →
               </Link>
             </div>
@@ -1565,7 +1565,7 @@ export default async function TournamentDetailPage({
         </Link>
         {canManage && (
           <Link
-            href={`/admin/events/${event.id}`}
+            href={`/events/verwalten/${event.id}`}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition-colors font-medium"
           >
             <Settings className="w-3.5 h-3.5" /> Verwalten
