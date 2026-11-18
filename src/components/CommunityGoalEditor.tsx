@@ -113,8 +113,8 @@ export default function CommunityGoalEditor({
             {avg && (
               <p className="text-[10px] text-gray-500 mt-1.5">
                 Je Teilnehmer zählt der Ø seiner Einträge, daraus wird der gemeinsame Ø gebildet — jeder zählt
-                gleich viel, egal wie oft er meldet. Da ein Durchschnitt wieder fallen kann, wird das Ziel erst
-                am Ende des Zeitraums abgerechnet.
+                gleich viel, egal wie oft er meldet. Abgerechnet wird am Ende des Zeitraums: Liegt der gemeinsame Ø
+                dann {value.direction === "atMost" ? "genau auf oder unter" : "genau auf oder über"} dem Ziel, ist es geschafft.
               </p>
             )}
           </div>

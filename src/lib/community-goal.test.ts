@@ -123,3 +123,23 @@ describe("Durchschnitts-Ziele (mode avg)", () => {
     assert.equal(solo.main.total, 2);
   });
 });
+
+describe("Ø-Ziel: genau auf der Marke", () => {
+  test("Ø genau gleich dem Ziel gilt als erreicht", () => {
+    const m = [{ entries: [entry("a", { Kills: 2 }), entry("b", { Kills: 4 })] }];
+    const p = computeCommunityGoalProgress(m, { fields: ["Kills"], target: 3, scope: "community", mode: "avg" });
+    assert.equal(p.reached, true);
+  });
+  test("angezeigter (gerundeter) Ø zählt: 2,996 → 3 erreicht das Ziel 3", () => {
+    // 1000 Einträge: 996 × 3 und 4 × 2 → Ø 2,996
+    const entries = Array.from({ length: 1000 }, (_, i) => ({ userId: "a", statsJson: JSON.stringify({ Kills: i < 4 ? 2 : 3 }) }));
+    const p = computeCommunityGoalProgress(entries.map(e => ({ entries: [e] })), { fields: ["Kills"], target: 3, scope: "community", mode: "avg" });
+    assert.equal(p.reached, true);
+    assert.equal(p.main.percent, 100);
+  });
+  test("knapp darunter bleibt verfehlt", () => {
+    const m = [{ entries: [entry("a", { Kills: 2 }), entry("b", { Kills: 3 })] }];
+    const p = computeCommunityGoalProgress(m, { fields: ["Kills"], target: 2.51, scope: "community", mode: "avg" });
+    assert.equal(p.reached, false);
+  });
+});

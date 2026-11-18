@@ -144,9 +144,17 @@ export type CommunityGoalProgress = {
   missingParticipants: number;
 };
 
-/** Erfüllt ein Wert die Zielmarke? Berücksichtigt bei Ø-Zielen die Richtung. */
+/** Ø-Werte werden mit 2 Nachkommastellen angezeigt — verglichen wird mit genau diesem Wert, damit
+ *  "Ø 3" bei Ziel 3 auch als erreicht gilt (und keine Rundungsfehler der Division stören). */
+function comparable(value: number, goal: Pick<CommunityGoal, "mode">): number {
+  return isAvgGoal(goal) ? Math.round(value * 100) / 100 : value;
+}
+
+/** Erfüllt ein Wert die Zielmarke? Genau auf der Marke zählt als erreicht. Bei Ø-Zielen mit Richtung
+ *  (Standard: mindestens = genau auf oder über der Marke). */
 export function meetsGoal(value: number, goal: CommunityGoal): boolean {
-  return goal.direction === "atMost" ? value <= goal.target : value >= goal.target;
+  const v = comparable(value, goal);
+  return goal.direction === "atMost" ? v <= goal.target : v >= goal.target;
 }
 
 /** Fortschritt in % (0–100). "höchstens"-Ziele: 100 %, sobald der Ø unter der Marke liegt, sonst
@@ -154,6 +162,7 @@ export function meetsGoal(value: number, goal: CommunityGoal): boolean {
 export function goalPercent(value: number, goal: CommunityGoal, hasData = true): number {
   const t = goal.target;
   if (t <= 0) return 0;
+  value = comparable(value, goal);
   let pct: number;
   if (goal.direction === "atMost") {
     if (!hasData) return 0;
