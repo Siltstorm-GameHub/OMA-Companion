@@ -13,7 +13,7 @@ export type StatConfig = {
   spectatorParticipationPoints?: number;
   /** pointsPer = Punkte in der Reihentabelle. eventPointsPer (optional) = abweichende Punkte
    *  im einzelnen Event (Skill-Index/Eventpunkte); fehlt es, gilt pointsPer für beides. */
-  stats: { field: string; pointsPer: number; eventPointsPer?: number }[];
+  stats: { field: string; pointsPer: number; eventPointsPer?: number; latest?: boolean }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
@@ -130,6 +130,16 @@ export function resolveRankStatField(
   catch { eventField = undefined; }
   return [eventField, seriesCfg?.winnerStatField, seriesCfg?.defaultWinnerStatField]
     .find((f): f is string => !!f && statFields.includes(f)) ?? statFields[0];
+}
+
+/**
+ * Stats, die in der Reihentabelle nicht addiert, sondern vom neuesten Event überschrieben werden
+ * (z.B. "Insgesamt verdientes Geld" laut Screenshot — das Spiel zählt selbst schon hoch). Innerhalb
+ * eines Events zählt der höchste gemeldete Wert, in der Reihe der Wert aus dem neuesten Event, in dem
+ * der Spieler ihn gemeldet hat; Tabellenpunkte gibt es nur einmal auf diesen Wert.
+ */
+export function latestStatFields(cfg: { stats?: { field: string; latest?: boolean }[] } | null | undefined): Set<string> {
+  return new Set((cfg?.stats ?? []).filter(s => s.latest && s.field).map(s => s.field));
 }
 
 /** Name der berechneten Gewinner-Stat-Option "Eventpunkte" beim Event-Abschluss (kein echtes Stat-Feld). */
@@ -272,6 +282,9 @@ export function computeLiveLigaPunkte(
     if (!evStats[uid]) evStats[uid] = {};
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
+  // "Neuester Wert"-Stats (aktuelle Reihen-Konfiguration): im Event zählt der höchste gemeldete Wert
+  const latestFields = latestStatFields(cfg);
+  const latestMax: Record<string, Record<string, number>> = {};
   for (const match of ev.matches) {
     for (const entry of match.entries) {
       if (!entry.userId || !entry.statsJson) continue;
@@ -279,13 +292,21 @@ export function computeLiveLigaPunkte(
       try { s = JSON.parse(entry.statsJson); } catch { continue; }
       for (const field of fieldsToAggregate) {
         const v = Number(s[field] ?? 0);
-        if (v) addEv(entry.userId, field, v);
+        if (!v) continue;
+        if (latestFields.has(field)) {
+          const m = (latestMax[entry.userId] ??= {});
+          m[field] = Math.max(m[field] ?? -Infinity, v);
+        } else addEv(entry.userId, field, v);
       }
       if (matchWinStatSet.size > 0) {
         const mw = Number(s["Match Win"] ?? 0);
         if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
       }
     }
+  }
+
+  for (const [uid, fields] of Object.entries(latestMax)) {
+    for (const [field, v] of Object.entries(fields)) addEv(uid, field, v);
   }
 
   // Aktuell führender Spieler (nach den — mit der Event-eigenen Konfiguration berechneten —
@@ -399,7 +420,8 @@ const EMPTY_RESULT: EventPointsResult = {
 /** Berechnet die Tabellenpunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
  *  Spielphase des Events noch nicht abgeschlossen ist (gamePhaseComplete). */
 export type LegacyStandingRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
-export type SeriesEventForStandings = EventForPoints & { id: string; status: string; finalRankingJson: string | null };
+/** startAt: Reihenfolge für "neuester Wert"-Stats (latestStatFields) — fehlt es, gilt die übergebene Reihenfolge */
+export type SeriesEventForStandings = EventForPoints & { id: string; status: string; finalRankingJson: string | null; startAt?: Date | string };
 export type SeriesStandingRow = {
   userId: string;
   totalPoints: number;
@@ -426,11 +448,23 @@ export function computeStatStandings(
   const evStats: Record<string, Record<string, number>> = {};
   const evTotalPoints: Record<string, number> = {};
   const evExcludedCount: Record<string, number> = {};
+  // "Neuester Wert"-Stats: Wert und Tabellenpunkte aus dem jüngsten Event mit diesem Wert (überschreiben)
+  const latest = latestStatFields(cfg);
+  const latestStat: Record<string, Record<string, number>> = {};
+  const latestPts: Record<string, Record<string, number>> = {};
+  const ordered = latest.size > 0 && events.every(e => e.startAt != null)
+    ? [...events].sort((a, b) => new Date(a.startAt!).getTime() - new Date(b.startAt!).getTime())
+    : events;
 
-  for (const ev of events) {
-    const { pointsByUser, participationsByUser, spectatorParticipationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
+  for (const ev of ordered) {
+    const { pointsByUser, participationsByUser, spectatorParticipationsByUser, statsByUser, excludedFromPointsUserIds, breakdownByUser } = computeEventPoints(ev, cfg);
     for (const [uid, pts] of Object.entries(pointsByUser)) {
-      evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
+      let p = pts;
+      for (const item of breakdownByUser[uid] ?? []) {
+        if (!latest.has(item.label)) continue;
+        p -= item.points; // Punkte für "neuester Wert"-Stats zählen nur einmal, aus dem neuesten Event
+      }
+      evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + p;
     }
     for (const [uid, part] of Object.entries(participationsByUser)) {
       evPart[uid] = (evPart[uid] ?? 0) + part;
@@ -441,12 +475,24 @@ export function computeStatStandings(
     for (const [uid, stats] of Object.entries(statsByUser)) {
       if (!evStats[uid]) evStats[uid] = {};
       for (const [field, val] of Object.entries(stats)) {
+        if (latest.has(field)) {
+          (latestStat[uid] ??= {})[field] = val;
+          (latestPts[uid] ??= {})[field] = (breakdownByUser[uid] ?? []).find(i => i.label === field)?.points ?? 0;
+          continue;
+        }
         evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
       }
     }
     for (const uid of excludedFromPointsUserIds) {
       evExcludedCount[uid] = (evExcludedCount[uid] ?? 0) + 1;
     }
+  }
+
+  for (const [uid, fields] of Object.entries(latestStat)) {
+    for (const [field, val] of Object.entries(fields)) (evStats[uid] ??= {})[field] = val;
+  }
+  for (const [uid, fields] of Object.entries(latestPts)) {
+    evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + Object.values(fields).reduce((a, b) => a + b, 0);
   }
 
   const legPts: Record<string, number> = {};
@@ -481,7 +527,8 @@ export function computeStatStandings(
       displayStats[f] = (displayStats[f] ?? 0) + v;
     }
     for (const [f, v] of Object.entries(es)) {
-      displayStats[f] = (displayStats[f] ?? 0) + v;
+      // "Neuester Wert": der Event-Wert ersetzt einen Altstand, statt ihn zu erhöhen
+      displayStats[f] = latest.has(f) ? v : (displayStats[f] ?? 0) + v;
     }
     return {
       userId: uid, totalPoints, participations: displayPart,
@@ -498,7 +545,7 @@ export function computeStatStandings(
 /** Fasst die Reihentabellen mehrerer Saisons zu einer saisonübergreifenden (All-Time-)Tabelle
  *  zusammen. Jede Saison wird vorher mit IHRER eigenen Reihen-Konfiguration und ihrem eigenen
  *  Altstand berechnet (computeStatStandings) — so zählen alte Saisons nach ihren damaligen Regeln. */
-export function mergeStandingRows(seasons: SeriesStandingRow[][]): SeriesStandingRow[] {
+export function mergeStandingRows(seasons: SeriesStandingRow[][], latestFields: Set<string> = new Set()): SeriesStandingRow[] {
   const byUser = new Map<string, SeriesStandingRow>();
   for (const rows of seasons) {
     for (const r of rows) {
@@ -509,7 +556,8 @@ export function mergeStandingRows(seasons: SeriesStandingRow[][]): SeriesStandin
       acc.spectatorParticipations += r.spectatorParticipations;
       acc.disqualifiedEventCount += r.disqualifiedEventCount;
       acc.hasLegacy = acc.hasLegacy || r.hasLegacy;
-      for (const [f, v] of Object.entries(r.stats)) acc.stats[f] = (acc.stats[f] ?? 0) + v;
+      // "Neuester Wert"-Stats: spätere Saison überschreibt (Saisons kommen aufsteigend)
+      for (const [f, v] of Object.entries(r.stats)) acc.stats[f] = latestFields.has(f) ? v : (acc.stats[f] ?? 0) + v;
     }
   }
   return [...byUser.values()].sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
@@ -580,6 +628,9 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // Platzierung (PLACEMENT_STAT_KEY) fließt bewusst NICHT hier ein — sie ist keine Tabellenpunkte-Quelle,
   // sondern nur Grundlage der Eventpunkte (siehe computeTurnierpunkte), die ausschließlich die
   // Endplatzierung/den Sieger dieses einzelnen Events bestimmen.
+  // "Neuester Wert"-Stats (aktuelle Reihen-Konfiguration): im Event zählt der höchste gemeldete Wert
+  const latestFields = latestStatFields(cfg);
+  const latestMax: Record<string, Record<string, number>> = {};
   for (const match of ev.matches) {
     for (const entry of match.entries) {
       if (!entry.userId || !entry.statsJson) continue;
@@ -587,7 +638,11 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
       try { s = JSON.parse(entry.statsJson); } catch { continue; }
       for (const field of fieldsToAggregate) {
         const v = Number(s[field] ?? 0);
-        if (v) addEv(entry.userId, field, v);
+        if (!v) continue;
+        if (latestFields.has(field)) {
+          const m = (latestMax[entry.userId] ??= {});
+          m[field] = Math.max(m[field] ?? -Infinity, v);
+        } else addEv(entry.userId, field, v);
       }
       // Match-Win-Stats: gespeist aus dem "Match Win"-Haken pro Runde, nicht aus einem gleichnamigen Feld
       if (matchWinStatSet.size > 0) {
@@ -595,6 +650,10 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
         if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
       }
     }
+  }
+
+  for (const [uid, fields] of Object.entries(latestMax)) {
+    for (const [field, v] of Object.entries(fields)) addEv(uid, field, v);
   }
 
   // MVP-/Sieger-/Umfrage-Boni sind Auszeichnungen (keine rohen Stats) — ausgeschlossene User erhalten

@@ -34,7 +34,7 @@ import { getCommentCounts } from "@/lib/event-comments";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
-import { computeEventPoints, computeStatStandings, resolveWinnerTargetKeys, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeStatStandings, latestStatFields, resolveWinnerTargetKeys, type StatConfig } from "@/lib/series-event-points";
 import {
   ALL_TIME_COLS, buildAllTimeStandings, parseSeriesCompletion, parseStatAliases, parseStatConfig, previousSeasonBadges,
   resolveStatAlias, seasonPlacements, seasonStandings,
@@ -548,6 +548,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     allTimeStandings = buildAllTimeStandings(
       groupSeasons.map(g => ({ rows: g.id === id ? standings : seasonStandings(g), placements: placementsBySeason.get(g.id) ?? null })),
       statAliases,
+      latestStatFields(statCfg),
     );
     allTimeStatCols = [...colsByField.values()];
     const statColFields = new Set(allTimeStatCols.map(c => c.field));

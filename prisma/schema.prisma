@@ -260,6 +260,9 @@ model EventSeries {
   platform               String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
   recurrenceType         String? // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode  String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
+  // Zyklus-Automatik (lib/series-cycles.ts), JSON: { enabled, aheadCount, carryParticipants, endsAt? } —
+  // legt laufend die nächsten Termine nach der Wiederholungsregel an und veröffentlicht sie vorab
+  cycleConfigJson        String?
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2, isWinnerStat?, isMatchWinStat? }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege", winnerStatKeys?: string[], matchWinStatKeys?: string[] }
   seriesStatConfig       String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]

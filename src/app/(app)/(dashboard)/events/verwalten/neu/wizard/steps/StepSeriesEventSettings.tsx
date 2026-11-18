@@ -49,6 +49,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
           showWinnerToggle={eventType === "tournament"}
           showMatchWinToggle={eventType === "tournament"}
           showLeagueOverride
+          showLatestToggle
           accentClassName="text-amber-400 hover:text-amber-300"
           inputClassName={inputCls}
           inputStyle={inputStyle}

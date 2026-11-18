@@ -3,7 +3,8 @@ import { Plus, Trash2 } from "@/components/icons";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 /** pointsPer = Punkte in der Reihentabelle; eventPointsPer = abweichende Punkte im Event (Skill-Index), leer = gleich */
-export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
+/** latest = in der Reihentabelle nicht addieren, sondern der Wert aus dem neuesten Event (latestStatFields) */
+export type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean; latest?: boolean };
 
 /**
  * Gemeinsamer Editor für die Statistiken einer Eventreihe (Wizard + Reihen-Bearbeitung): Feldname,
@@ -20,6 +21,7 @@ export default function StatRowsEditor({
   showWinnerToggle = true,
   showMatchWinToggle = true,
   showLeagueOverride = false,
+  showLatestToggle = false,
   accentClassName = "text-teal-400 hover:text-teal-300",
   inputClassName = "rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors",
   inputStyle,
@@ -30,6 +32,8 @@ export default function StatRowsEditor({
   showMatchWinToggle?: boolean;
   /** Pro Zeile "Reihentabelle abweichend" anbieten (nur sinnvoll bei Eventreihen) */
   showLeagueOverride?: boolean;
+  /** Pro Zeile "⟳ neuester Wert statt Summe" anbieten (nur bei Eventreihen) */
+  showLatestToggle?: boolean;
   accentClassName?: string;
   inputClassName?: string;
   /** Für Hosts mit eigenem inline-Style statt reiner Tailwind-Klassen (z.B. der Erstellungs-Wizard). */
@@ -73,6 +77,7 @@ export default function StatRowsEditor({
           {showWinnerToggle && " — 🏆 = +1 bei Event-Sieg"}
           {showMatchWinToggle && " — ⚔️ = +1 pro Match Win aus einzelnen Runden"}
           {showLeagueOverride && " — ⇄ = eigene Punkte für die Reihentabelle"}
+          {showLatestToggle && " — ⟳ = in der Reihentabelle der neueste Wert statt Summe"}
         </p>
       )}
       {rows.map((row, i) => (
@@ -127,11 +132,28 @@ export default function StatRowsEditor({
                 ⇄
               </button>
             )}
+            {showLatestToggle && (
+              <button type="button"
+                title={row.latest
+                  ? "Reihentabelle zeigt den Wert aus dem neuesten Event (z.B. Gesamtgeld laut Screenshot) — klicken für Summe"
+                  : "Reihentabelle addiert die Werte aller Events — klicken für „neuester Wert“ (z.B. Gesamtgeld laut Screenshot)"}
+                aria-pressed={!!row.latest}
+                onClick={() => update(i, { latest: !row.latest || undefined })}
+                className={`shrink-0 text-sm font-semibold transition-colors ${row.latest ? "text-amber-300" : "text-gray-600 hover:text-gray-400"}`}>
+                ⟳
+              </button>
+            )}
             <button type="button" onClick={() => remove(i)} aria-label="Statistik entfernen"
               className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
+          {showLatestToggle && row.latest && (
+            <p className="pl-3 text-[11px] text-amber-300/80">
+              ⟳ Reihentabelle: neuester Wert statt Summe — es zählt der Wert aus dem jüngsten Event (im Event der höchste
+              gemeldete), Tabellenpunkte nur einmal darauf.
+            </p>
+          )}
           {showLeagueOverride && isDivergent(row) && (
             <div className="flex items-center gap-2 pl-3">
               <span className="flex-1 text-[11px] text-indigo-300/80 text-right">

@@ -2,6 +2,7 @@ import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-li
 import { isPresetCover } from "@/lib/event-cover-presets";
 import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
 import { GOAL_FORMATS } from "@/lib/community-goal";
+import { ensureSeriesCycles, sanitizeCycleConfig } from "@/lib/series-cycles";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
@@ -86,6 +87,8 @@ export async function PATCH(req: NextRequest) {
     Object.assign(fields, capCaptainRewardFields(fields, seriesConfigLimits(limits)));
     delete fields.discordChannelId;
     delete fields.omaOriginal;
+    // Zyklus-Automatik legt Termine an — wie "Nächsten Termin generieren" nur für Mods
+    delete fields.cycleConfigJson;
     // Cover: nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
     if (fields.coverImageUrl && !isPresetCover(fields.coverImageUrl)) delete fields.coverImageUrl;
   }
@@ -107,6 +110,14 @@ export async function PATCH(req: NextRequest) {
     const currentPlan = parseTournamentTemplate(current.tournamentTemplateJson).goalPlan;
     if (currentPlan?.length) t.goalPlan = currentPlan; else delete t.goalPlan;
     fields.tournamentTemplateJson = serializeTournamentTemplate(t);
+  }
+
+  // Zyklus-Automatik (lib/series-cycles.ts) — normalisiert
+  if (fields.cycleConfigJson !== undefined) {
+    let raw: unknown = null;
+    try { raw = typeof fields.cycleConfigJson === "string" ? JSON.parse(fields.cycleConfigJson) : fields.cycleConfigJson; } catch { raw = null; }
+    const cfg = sanitizeCycleConfig(raw);
+    fields.cycleConfigJson = cfg?.enabled ? JSON.stringify(cfg) : cfg ? JSON.stringify({ ...cfg, enabled: false }) : null;
   }
 
   // Stat-Aliase der All-Time-Tabelle gelten für die ganze Saison-Gruppe
@@ -150,6 +161,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.omaOriginal           !== undefined && { omaOriginal:           fields.omaOriginal === true }),
       ...(fields.squadId               !== undefined && { squadId:               fields.squadId || null }),
       ...(fields.tournamentTemplateJson !== undefined && { tournamentTemplateJson: fields.tournamentTemplateJson }),
+      ...(fields.cycleConfigJson       !== undefined && { cycleConfigJson:       fields.cycleConfigJson }),
     },
   });
 
@@ -284,7 +296,11 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
+  // 7) Zyklus-Automatik: fehlende kommende Zyklen sofort anlegen (nicht erst beim nächsten Cron)
+  const cyclesCreated = (fields.cycleConfigJson !== undefined || fields.recurrenceType !== undefined)
+    ? await ensureSeriesCycles(seriesId) : 0;
+
   revalidateTag("dashboard-global", { expire: 0 });
 
-  return NextResponse.json({ ok: true, series });
+  return NextResponse.json({ ok: true, series, cyclesCreated });
 }

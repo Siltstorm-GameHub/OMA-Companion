@@ -1,5 +1,6 @@
 "use client";
 import PlaceMedal from "@/components/PlaceMedal";
+import { MAX_CYCLES_AHEAD, parseCycleConfig, type CycleConfig } from "@/lib/series-cycles-config";
 import SeriesCycleGoals, { type CycleEvent } from "./SeriesCycleGoals";
 import { supportsCommunityGoal } from "@/lib/community-goal";
 import { GENRES } from "@/lib/app-icons";
@@ -245,6 +246,8 @@ export default function SeriesDetailClient({
   );
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
   const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
+  // Zyklus-Automatik (lib/series-cycles.ts) — nur Mods
+  const [cycleConfig, setCycleConfig] = useState<CycleConfig>(() => parseCycleConfig(series.cycleConfigJson ?? null));
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
@@ -397,6 +400,7 @@ export default function SeriesDetailClient({
         discordChannelId:     discordChannelId.trim() || null,
         recurrenceType:       recurrenceType || null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
+        ...(isModerator && { cycleConfigJson: JSON.stringify(cycleConfig) }),
         genre:    genre.trim() || null,
         platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
@@ -905,6 +909,60 @@ export default function SeriesDetailClient({
                 );
               })()}
             </Field>
+            {isModerator && recurrenceType && (
+              <Field label={<><RefreshCw className="w-3 h-3" /> Zyklen automatisch fortführen</>}>
+                <label className="flex items-start gap-2 text-sm text-gray-300 cursor-pointer select-none">
+                  <input type="checkbox" checked={cycleConfig.enabled} className="rounded mt-0.5"
+                    onChange={e => setCycleConfig(c => ({ ...c, enabled: e.target.checked }))} />
+                  <span>
+                    Reihe läuft dauerhaft — neue Zyklen legt das System selbst an
+                    <span className="block text-[11px] text-gray-500">
+                      Jeder Zyklus bleibt ein eigener Termin mit Anmeldung, Meldungen, Sieger und Abschluss. Startzeit und
+                      Dauer folgen dem letzten Termin und der Wiederholung. Abschließen musst du die Zyklen weiterhin selbst.
+                    </span>
+                  </span>
+                </label>
+                {cycleConfig.enabled && (
+                  <div className="mt-3 space-y-3 pl-6">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Vorab veröffentlichte Zyklen</label>
+                      <select value={cycleConfig.aheadCount} className={inputCls}
+                        onChange={e => setCycleConfig(c => ({ ...c, aheadCount: Number(e.target.value) }))}>
+                        {Array.from({ length: MAX_CYCLES_AHEAD }, (_, i) => i + 1).map(n => (
+                          <option key={n} value={n}>{n === 1 ? "Immer der nächste Zyklus" : `Immer die nächsten ${n} Zyklen`}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-600 mt-1">
+                        So lange vorher können sich User anmelden und das Ziel des Zyklus sehen. In der Events-Übersicht
+                        erscheint trotzdem nur der nächste Zyklus der Reihe.
+                      </p>
+                    </div>
+                    <label className="flex items-start gap-2 text-sm text-gray-300 cursor-pointer select-none">
+                      <input type="checkbox" checked={cycleConfig.carryParticipants} className="rounded mt-0.5"
+                        onChange={e => setCycleConfig(c => ({ ...c, carryParticipants: e.target.checked }))} />
+                      <span>
+                        Teilnehmer automatisch übernehmen
+                        <span className="block text-[11px] text-gray-500">Wer im laufenden oder einem kommenden Zyklus angemeldet ist, ist im neuen Zyklus direkt dabei.</span>
+                      </span>
+                    </label>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Reihe endet am (optional)</label>
+                      <input type="date" className={inputCls}
+                        value={cycleConfig.endsAt ? cycleConfig.endsAt.slice(0, 10) : ""}
+                        onChange={e => setCycleConfig(c => {
+                          const { endsAt: _drop, ...rest } = c;
+                          void _drop;
+                          return e.target.value ? { ...rest, endsAt: new Date(`${e.target.value}T23:59:59`).toISOString() } : rest;
+                        })} />
+                      <p className="text-[11px] text-gray-600 mt-1">Danach entstehen keine neuen Zyklen mehr.</p>
+                    </div>
+                    {series.events.length === 0 && (
+                      <p className="text-[11px] text-amber-400">Lege den ersten Zyklus einmal selbst an — Start, Ende und Einstellungen werden dann übernommen.</p>
+                    )}
+                  </div>
+                )}
+              </Field>
+            )}
           </Section>
           </>
           )}
@@ -1200,6 +1258,7 @@ export default function SeriesDetailClient({
                 if (winnerStatField && winnerStatField !== TURNIERPUNKTE_STAT && !deriveEventStatFields(rows).includes(winnerStatField)) setWinnerStatField("");
               }}
               showLeagueOverride
+              showLatestToggle
             />
           </Section>
 

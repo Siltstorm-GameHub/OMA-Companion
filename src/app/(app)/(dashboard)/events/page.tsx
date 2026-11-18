@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { parseCycleConfig } from "@/lib/series-cycles-config";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
@@ -105,7 +107,21 @@ export default async function EventsPage() {
   // Kürzlich (≤3 Tage) beendete Events bleiben ganz oben sichtbar, damit Nutzer die Ergebnisse
   // nicht verpassen — erst danach wandern sie in den eingeklappten "Abgeschlossen"-Bereich.
   const recentFinishedItems = allItems.filter(isRecentlyFinished).sort((a, b) => b.endedAt - a.endedAt);
-  const upcomingItems = allItems.filter(i => !i.finished).sort((a, b) => a.ev.startAt.getTime() - b.ev.startAt.getTime());
+  // Dauer-Reihen (Zyklus-Automatik): Kommende Zyklen sind vorab veröffentlicht, damit man sich früh
+  // anmelden kann — in der Übersicht steht aber nur der nächste (bzw. laufende) Zyklus je Reihe, damit
+  // einzelne Events nicht untergehen. Die weiteren Zyklen erreicht man über die Reihe.
+  const upcomingAll = allItems.filter(i => !i.finished).sort((a, b) => a.ev.startAt.getTime() - b.ev.startAt.getTime());
+  const moreCyclesBySeries = new Map<string, number>();
+  const upcomingItems = upcomingAll.filter(i => {
+    const sid = i.ev.series && parseCycleConfig(i.ev.series.cycleConfigJson).enabled ? i.ev.series.id : null;
+    if (!sid) return true;
+    const seen = moreCyclesBySeries.get(sid);
+    if (seen === undefined) { moreCyclesBySeries.set(sid, 0); return true; }
+    // Weitere Zyklen, für die der User schon angemeldet ist, bleiben trotzdem ausgeblendet — sie stehen
+    // unter "Meine Events" und in der Reihe
+    moreCyclesBySeries.set(sid, seen + 1);
+    return false;
+  });
   const finishedItems = allItems.filter(i => i.finished && !isRecentlyFinished(i)).sort((a, b) => b.endedAt - a.endedAt);
 
   const openCount = upcomingItems.filter(i => i.ev.status === "open" || i.ev.status === "active").length;
@@ -258,7 +274,12 @@ export default async function EventsPage() {
                         data-mine={card.relevance.length > 0 ? "1" : undefined}
                         data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}>
                         <ScrollReveal className="h-full">
-                          <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />} />
+                          <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />}
+                            extra={item.ev.seriesId && (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) > 0 ? (
+                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-[11px] text-teal-300 hover:text-white">
+                                🔁 +{moreCyclesBySeries.get(item.ev.seriesId)} weitere {moreCyclesBySeries.get(item.ev.seriesId) === 1 ? "Zyklus" : "Zyklen"} · Anmeldung offen
+                              </Link>
+                            ) : undefined} />
                         </ScrollReveal>
                       </div>
                     );

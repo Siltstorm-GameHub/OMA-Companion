@@ -149,8 +149,11 @@ export const ALL_TIME_COLS = [ALL_TIME_SEASONS_COL, ALL_TIME_TITLES_COL, ALL_TIM
 export function buildAllTimeStandings(
   seasons: { rows: SeriesStandingRow[]; placements: Map<string, number> | null }[],
   aliases: StatAliases = {},
+  /** "Neuester Wert"-Stats (latestStatFields) — in der All-Time-Tabelle zählt die neueste Saison */
+  latestFields: Set<string> = new Set(),
 ): SeriesStandingRow[] {
-  const merged = mergeStandingRows(seasons.map(s => applyStatAliases(s.rows, aliases)));
+  const latest = new Set([...latestFields].map(f => resolveStatAlias(f, aliases)));
+  const merged = mergeStandingRows(seasons.map(s => applyStatAliases(s.rows, aliases)), latest);
   return merged.map(row => {
     let played = 0;
     let titles = 0;
