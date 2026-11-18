@@ -7,7 +7,7 @@ import { publishDueScheduledEvents } from "@/lib/event-publish";
 import { notAwaitingApprovalWhere } from "@/lib/community-events";
 import { endsSoonLabel, isPeriodEvent } from "@/lib/event-period";
 import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
-import { settleEndedAverageGoals } from "@/lib/community-goal-milestones";
+import { settleEndedGoals } from "@/lib/community-goal-milestones";
 
 const ENDING_SOON_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
   // Zeitraum-Events (> 24 h): einmalige "Endet bald"-Erinnerung an die Teilnehmer, sobald weniger als
   // 2 Tage übrig sind (der Cron läuft 1×/Tag) — unabhängig von der Start-Erinnerung unten.
   const endingSoon = await remindEndingSoon();
-  // Community-Ziele mit Durchschnitt: nach Ende des Zeitraums einmalig abrechnen (Meldung + Münzen)
-  await settleEndedAverageGoals().catch(err => console.error("[cron] Ø-Ziele abrechnen fehlgeschlagen", err));
+  // Community-Ziele: nach Ende des Zeitraums einmalig abrechnen (Ø-Ziele, Endstand-Meldung)
+  await settleEndedGoals().catch(err => console.error("[cron] Community-Ziele abrechnen fehlgeschlagen", err));
 
   const rule  = await getNotificationRule("event_reminder");
   if (!rule) return NextResponse.json({ ok: true, skipped: "no rule configured", endingSoon });

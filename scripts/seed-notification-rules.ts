@@ -86,6 +86,16 @@ const RULES: RuleSeed[] = [
     isEventNotification: true, eventAudience: "all",
   },
   {
+    key: "event_goal_result",
+    label: "Community-Ziel: Endstand",
+    description: "Am Ende des Zeitraums eines Events mit Community-Ziel — nur wenn im Ziel „Ergebnis am Ende melden“ aktiv ist. Kommt auch, wenn das Ziel verfehlt wurde.",
+    category: "events",
+    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: true,
+    titleTemplate: "🎯 {goalTitle}: {resultTitle}",
+    bodyTemplate: "🎯 **{goalTitle}** — {resultText}\nEndstand: {current} von {target} {unit} ({percent} %).",
+    isEventNotification: true, eventAudience: "all",
+  },
+  {
     key: "event_ending_soon",
     label: "Zeitraum-Event endet bald",
     description: "Kurz vor dem Ende eines Events, das länger als 24 Stunden läuft (z.B. Monats-Challenges).",

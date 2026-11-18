@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireEventManager } from "@/lib/roles";
-import { sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
+import { goalFieldsFor, sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { withGoalMode } from "@/lib/event-goal";
@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   if (!supportsCommunityGoal(event.format)) {
-    return NextResponse.json({ error: "Community-Ziele gibt es nur in den Formaten Punktewertung und Durchschnittswerte" }, { status: 400 });
+    return NextResponse.json({ error: "Für dieses Format gibt es kein Community-Ziel" }, { status: 400 });
   }
 
   let goal = null;
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     try {
       if (event.statFields) fields = [...new Set([...fields, ...(JSON.parse(event.statFields) as string[])])];
     } catch { /* nur Reihen-Felder */ }
-    goal = sanitizeCommunityGoal(body?.goal, fields);
+    goal = sanitizeCommunityGoal(body?.goal, goalFieldsFor(event.format, fields));
     if (!goal) {
       return NextResponse.json({ error: "Ziel unvollständig — mindestens ein Stat-Feld und eine Zielmarke über 0" }, { status: 400 });
     }

@@ -1,4 +1,4 @@
-import { computeCommunityGoalProgress, goalPace, GOAL_FORMATS, isAvgGoal } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace, GOAL_FORMATS, GOAL_MATCH_SELECT, isAvgGoal } from "@/lib/community-goal";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -76,7 +76,7 @@ const getGlobalNewsData = unstable_cache(
           AND: [mayHaveGoalWhere, { OR: [{ seriesId: null }, { series: { hidden: false } }] }],
         },
         orderBy: { startAt: "desc" },
-        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true, series: { select: { tournamentTemplateJson: true } }, matches: { select: { entries: { select: { userId: true, statsJson: true } } } } },
+        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true, series: { select: { tournamentTemplateJson: true } }, matches: { select: GOAL_MATCH_SELECT } },
       });
       const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;

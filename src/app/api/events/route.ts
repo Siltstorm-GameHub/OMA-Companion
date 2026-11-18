@@ -13,7 +13,8 @@ import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { createPollsForEvent } from "@/lib/event-polls";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
-import { sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
+import { RESULT_SCORE_FIELD, isResultGoalFormat, sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
+import { applyPlannedGoal } from "@/lib/goal-plan";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -182,6 +183,11 @@ export async function POST(req: NextRequest) {
         eventStatConfigJson = JSON.stringify({ stats, ...(avgDirection && { avgDirection }), ...(goal && { goal }) });
       }
     }
+    // Liga, K.O. & Co.: Community-Ziel auf die Tore laut Spielergebnis
+    if (isResultGoalFormat(eventFormat) && bodyStatConfig?.goal) {
+      const goal = sanitizeCommunityGoal(bodyStatConfig.goal, [RESULT_SCORE_FIELD]);
+      if (goal) eventStatConfigJson = JSON.stringify({ stats: [], goal });
+    }
   }
 
   // Liga-Modus mit Sieg/Unentschieden-Münzen pro Match (pointsConfig { win, draw }) — Platzierungs-
@@ -303,6 +309,8 @@ export async function POST(req: NextRequest) {
   });
 
   await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
+  // Termin einer Reihe: geplantes Community-Ziel für diesen Zyklus übernehmen (lib/goal-plan.ts)
+  if (event.seriesId) await applyPlannedGoal(event.id);
 
   // Unsichtbar erstellte (bzw. geplante) Events sind noch nicht veröffentlicht — keine Discord-
   // Ankündigung/Scheduled Event/Push, bis sie sichtbar geschaltet werden (manuell oder per publishAt).

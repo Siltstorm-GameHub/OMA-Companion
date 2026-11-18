@@ -2,7 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import EventGoalPanel, { goalSummary } from "../../[id]/EventGoalPanel";
-import { supportsCommunityGoal } from "@/lib/community-goal";
+import { goalFieldsFor, supportsCommunityGoal } from "@/lib/community-goal";
+import { parseTournamentTemplate } from "@/lib/series-seasons";
+import GoalPlanEditor from "./GoalPlanEditor";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { parseGoalState } from "@/lib/goal-state";
 import { formatBerlinDate } from "@/lib/time";
@@ -24,9 +26,13 @@ const SOURCE_LABEL = { event: "eigenes Ziel", series: "Ziel der Reihe", off: "ke
 /**
  * Community-Ziel je Zyklus (Termin) einer Eventreihe auf einen Blick: welches Ziel gilt (geerbt,
  * eigenes oder keins) und wie es ausgegangen ist. Jeder Zyklus lässt sich direkt hier anpassen —
- * gespeichert wird wie im Termin selbst über EventGoalPanel (PATCH /api/events/[id]/goal).
+ * gespeichert wird wie im Termin selbst über EventGoalPanel (PATCH /api/events/[id]/goal). Darunter die
+ * Ziel-Planung für noch nicht angelegte Zyklen (GoalPlanEditor, lib/goal-plan.ts).
  */
-export default function SeriesCycleGoals({ events, tournamentTemplateJson, statFields, disabled }: {
+export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tournamentTemplateJson, statFields, disabled }: {
+  seriesId: string;
+  /** Festes Format der Reihe — bestimmt, was geplante Ziele auswerten (Stat-Felder oder Spielergebnis) */
+  fixedFormat: string | null;
   events: CycleEvent[];
   /** Turniervorlage der Reihe (enthält das Reihen-Ziel) — gespeicherter Stand, nicht der ungespeicherte Formularstand */
   tournamentTemplateJson: string | null;
@@ -41,7 +47,8 @@ export default function SeriesCycleGoals({ events, tournamentTemplateJson, statF
   const cycles = events
     .filter(e => supportsCommunityGoal(e.format))
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  if (cycles.length === 0) return null;
+  const goalPlan = parseTournamentTemplate(tournamentTemplateJson).goalPlan ?? [];
+  const planFields = fixedFormat ? goalFieldsFor(fixedFormat, statFields) : statFields;
 
   const isPast = (e: CycleEvent) =>
     e.status === "finished" || e.status === "closed" || (!!e.endAt && new Date(e.endAt).getTime() <= now);
@@ -50,6 +57,7 @@ export default function SeriesCycleGoals({ events, tournamentTemplateJson, statF
   const shown = showPast ? [...past, ...current] : current;
 
   return (
+    <div className="space-y-5">
     <div className="space-y-2">
       <p className="text-[11px] text-gray-500">
         Jeder Zyklus übernimmt das Ziel der Reihe. Für einzelne Zyklen kannst du hier ein eigenes Ziel setzen
@@ -86,6 +94,7 @@ export default function SeriesCycleGoals({ events, tournamentTemplateJson, statF
                     {ended && resolved.goal && (
                       <span className={reached ? "text-amber-300" : "text-gray-500"}>
                         {" · "}{reached ? "🏆 erreicht" : state.settledAt || ev.status === "finished" ? "verfehlt" : "wird abgerechnet"}
+                        {reached && (state.streak ?? 0) >= 2 && ` · 🔥 ${state.streak}× in Folge`}
                       </span>
                     )}
                   </p>
@@ -103,7 +112,7 @@ export default function SeriesCycleGoals({ events, tournamentTemplateJson, statF
               {open && (
                 <div className="px-3 pb-3">
                   <EventGoalPanel eventId={ev.id} source={resolved.source} ownGoal={resolved.ownGoal}
-                    seriesGoal={resolved.seriesGoal} statFields={statFields} />
+                    seriesGoal={resolved.seriesGoal} statFields={goalFieldsFor(ev.format, statFields)} />
                 </div>
               )}
             </div>
@@ -115,6 +124,12 @@ export default function SeriesCycleGoals({ events, tournamentTemplateJson, statF
           {showPast ? "Vergangene Zyklen ausblenden" : `${past.length} vergangene Zyklen anzeigen`}
         </button>
       )}
+    </div>
+
+    <div className="space-y-2 pt-4 border-t border-white/[0.06]">
+      <p className="text-sm font-semibold text-gray-200">🗓️ Ziele im Voraus planen</p>
+      <GoalPlanEditor key={JSON.stringify(goalPlan)} seriesId={seriesId} initialPlan={goalPlan} goalFields={planFields} disabled={disabled} />
+    </div>
     </div>
   );
 }

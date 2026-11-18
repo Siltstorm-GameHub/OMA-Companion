@@ -3,7 +3,7 @@ import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tourname
 import { CHECK_IN_MINUTES } from "@/lib/checkin";
 import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
-import { supportsCommunityGoal } from "@/lib/community-goal";
+import { goalFieldsFor, supportsCommunityGoal } from "@/lib/community-goal";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { NumberInput } from "@/components/ui/NumberInput";
 
@@ -27,18 +27,20 @@ export default function TournamentTemplateEditor({
 }) {
   const anyFormat = !format;
   const showGoal = anyFormat || supportsCommunityGoal(format);
+  // Auswertbare Felder: bei Liga/K.O. & Co. das Spielergebnis, sonst die Stat-Felder der Reihe
+  const goalFields = format ? goalFieldsFor(format, statFields) : statFields;
   // Lokaler Formularzustand: ein unvollständiges Ziel (z.B. noch kein Feld gewählt) ergibt in der
   // Vorlage null, darf das Formular aber nicht zurücksetzen
   const [goalForm, setGoalForm] = useState<CommunityGoalForm>(() => goalToForm(value.communityGoal ?? null));
   const changeGoal = (form: CommunityGoalForm) => {
     setGoalForm(form);
-    onChange({ ...value, communityGoal: formToGoal(form, statFields) });
+    onChange({ ...value, communityGoal: formToGoal(form, goalFields) });
   };
   // Ändern sich die Stat-Felder NACH dem Ausfüllen des Ziels (z.B. Ziel zuerst ausgefüllt, Statistiken
   // danach angelegt oder umbenannt), muss das gespeicherte Ziel neu berechnet werden — sonst zeigt das
   // Formular ein vollständiges Ziel, in der Vorlage steht aber keins (bzw. eins mit veralteten Feldern).
-  const statFieldsKey = statFields.join("\u0000");
-  const derivedGoal = formToGoal(goalForm, statFields);
+  const statFieldsKey = goalFields.join("\u0000");
+  const derivedGoal = formToGoal(goalForm, goalFields);
   const derivedGoalKey = JSON.stringify(derivedGoal);
   useEffect(() => {
     if (JSON.stringify(value.communityGoal ?? null) !== derivedGoalKey) {
@@ -147,8 +149,8 @@ export default function TournamentTemplateEditor({
 
       {showGoal && (
         <div className="space-y-1">
-          {anyFormat && <p className="text-[11px] text-gray-600">Community-Ziel greift nur bei Terminen im Format „Punktewertung“.</p>}
-          <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={statFields} />
+          {anyFormat && <p className="text-[11px] text-gray-600">Ohne festes Format wertet das Ziel die Stat-Felder der Reihe aus (Punktewertung/Durchschnittswerte). Für ein Ziel auf Spielergebnisse lege das Format der Reihe fest.</p>}
+          <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={goalFields} inSeries />
           <p className="text-[10px] text-gray-500">
             Gilt automatisch für alle Termine der Reihe. Einzelne Termine können es in ihren Einstellungen überschreiben oder abschalten.
           </p>

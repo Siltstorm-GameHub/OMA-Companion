@@ -132,7 +132,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
     where: { id: eventId },
     select: {
       id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
-      completionData: true, statConfigJson: true, overlayControlJson: true, seriesId: true,
+      completionData: true, statConfigJson: true, overlayControlJson: true, seriesId: true, goalStateJson: true,
       completedAt: true, finalRankingJson: true,
       series: { select: { seriesStatConfig: true } },
       matches: {
@@ -176,6 +176,7 @@ async function loadEventOverlayState(eventId: string): Promise<{ state: EventSta
         completionData: event.completionData,
         registrations: event.registrations.map(r => ({ userId: r.userId, role: r.role })),
         matches: event.matches.map(m => ({ entries: m.entries.map(e => ({ userId: e.userId, statsJson: e.statsJson })) })),
+        goalStateJson: event.goalStateJson,
       },
       cfg,
     ).pointsByUser;

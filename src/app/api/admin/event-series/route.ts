@@ -103,6 +103,9 @@ export async function PATCH(req: NextRequest) {
   if (fields.tournamentTemplateJson !== undefined) {
     const t = parseTournamentTemplate(fields.tournamentTemplateJson);
     if (limits && t.matchResultPoints) t.matchResultPoints = capMatchResultPoints(t.matchResultPoints, limits.seriesEvent);
+    // Geplante Ziele ändert nur die Ziel-Planung (goal-plan/route.ts) — der Stand im Formular kann veraltet sein
+    const currentPlan = parseTournamentTemplate(current.tournamentTemplateJson).goalPlan;
+    if (currentPlan?.length) t.goalPlan = currentPlan; else delete t.goalPlan;
     fields.tournamentTemplateJson = serializeTournamentTemplate(t);
   }
 

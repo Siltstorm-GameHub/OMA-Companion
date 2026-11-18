@@ -43,7 +43,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     where: { seriesId, status: "finished", completionData: { not: null } },
     orderBy: { startAt: "asc" },
     select: {
-      id: true, title: true, completionData: true, finalRankingNote: true,
+      id: true, title: true, completionData: true, finalRankingNote: true, goalStateJson: true,
       registrations: { select: { userId: true, role: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
     },

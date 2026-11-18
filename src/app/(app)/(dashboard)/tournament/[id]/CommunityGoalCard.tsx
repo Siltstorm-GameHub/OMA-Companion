@@ -29,8 +29,11 @@ export default function CommunityGoalCard({
   pace = null,
   rewardCoins,
   settled = null,
+  streak = null,
 }: {
-  /** Nur Ø-Ziele: Ergebnis der Abrechnung am Ende des Zeitraums (null = noch offen) */
+  /** Geschaffte Zyklen in Folge inkl. diesem (nur Eventreihen mit Serien-Bonus, sobald erreicht) */
+  streak?: number | null;
+  /** Ergebnis der Abrechnung am Ende des Zeitraums (null = noch offen) */
   settled?: { reached: boolean } | null;
   progress: CommunityGoalProgress;
   /** Tempo im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events), siehe goalPace */
@@ -47,7 +50,7 @@ export default function CommunityGoalCard({
   const atMost = goal.direction === "atMost";
   // Ø-Ziel: bei "höchstens" ist der kleinste Ø der beste
   const sortDesc = !(avg && atMost);
-  const reached = avg && settled ? settled.reached : progress.reached;
+  const reached = settled ? settled.reached : progress.reached;
   const avgPrefix = avg ? "Ø " : "";
   const userById = new Map(participants.map(p => [p.userId, p.user]));
   const ranked = Object.entries(byUser).sort((a, b) => (sortDesc ? b[1] - a[1] : a[1] - b[1]));
@@ -76,6 +79,15 @@ export default function CommunityGoalCard({
               <span className="font-normal text-gray-500"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
             </p>
           )}
+          {!!goal.rewardSeriesPoints && !reached && !settled && (
+            <p className="text-[11px] text-amber-300/80 mt-0.5">🏆 +{goal.rewardSeriesPoints} Tabellenpunkte für die Eventreihe bei Erreichen</p>
+          )}
+          {goal.streakBonus && (
+            <p className="text-[11px] text-orange-300/80 mt-0.5">
+              🔥 Serien-Bonus: alle {goal.streakBonus.length} geschafften Zyklen in Folge +{goal.streakBonus.coins} Münzen
+              {reached && streak && streak >= 2 ? ` · jetzt ${streak}× in Folge!` : ""}
+            </p>
+          )}
           {!!rewardCoins && rewardCoins > 0 && !reached && !settled && (
             <p className="text-[11px] text-amber-300/80 mt-0.5">🪙 {rewardCoins} Münzen {goal.scope === "team" ? "für alle im Siegerteam" : goal.scope === "solo" ? "für jeden, der die Marke erreicht" : "für alle Mitwirkenden, wenn das Ziel erreicht wird"}</p>
           )}
@@ -84,7 +96,7 @@ export default function CommunityGoalCard({
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30">
             🏆 {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
           </span>
-        ) : avg && settled ? (
+        ) : settled ? (
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-white/5 border border-white/10">
             Ziel verfehlt
           </span>

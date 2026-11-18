@@ -1307,7 +1307,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       : []),
   ]);
 
-  // Community-Ziel mit Durchschnitt: wird mit dem Abschluss der Spielphase abgerechnet (no-op sonst, wirft nie)
+  // Community-Ziel: Abrechnung zum Abschluss der Spielphase (Ø-Ziele, Endstand-Meldung; no-op ohne Ziel, wirft nie)
   await checkCommunityGoal(eventId);
 
   // Dominion Bonus: komplette Event-Historie der Reihe chronologisch (event.startAt) neu berechnen —

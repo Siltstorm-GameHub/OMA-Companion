@@ -698,9 +698,9 @@ export default async function TournamentDetailPage({
   // Eigenes Ziel des Termins oder geerbt aus der Eventreihe (lib/event-goal.ts)
   const communityGoal = resolveEventGoal({ format, statConfigJson: event.statConfigJson, series: event.series }).goal;
   const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
-  // Ø-Ziel: Ergebnis der Abrechnung am Ende des Zeitraums (lib/community-goal-milestones.ts)
+  // Ergebnis der Abrechnung am Ende des Zeitraums (lib/community-goal-milestones.ts)
   const communityGoalSettled = (() => {
-    if (!communityGoal || !isAvgGoal(communityGoal)) return null;
+    if (!communityGoal) return null;
     const st = parseGoalState(event.goalStateJson);
     return st.settledAt ? { reached: st.settledReached === true } : null;
   })();
@@ -730,7 +730,7 @@ export default async function TournamentDetailPage({
     : null;
   const finalEventPoints = event.series && !liveLigaPunkte
     ? computeEventPoints(
-        { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
+        { completionData: event.completionData, registrations: event.registrations, matches: event.matches, goalStateJson: event.goalStateJson },
         rawSeriesStatCfg,
       )
     : null;
@@ -1538,7 +1538,7 @@ export default async function TournamentDetailPage({
         {communityGoalProgress && (
           <CommunityGoalCard progress={communityGoalProgress} participants={mergedParticipants} userId={userId}
             pace={communityGoalPace} rewardCoins={communityGoal?.rewardCoins}
-            settled={communityGoalSettled} />
+            settled={communityGoalSettled} streak={parseGoalState(event.goalStateJson).streak ?? null} />
         )}
         {isFfa && (
           <FfaView

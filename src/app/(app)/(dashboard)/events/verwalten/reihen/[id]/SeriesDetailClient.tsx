@@ -866,10 +866,10 @@ export default function SeriesDetailClient({
           )}
 
           {/* Community-Ziel je Zyklus (Termin) — Reihen mit Skill-Index/Durchschnittswerte */}
-          {isTournamentSeries && (!fixedFormat || supportsCommunityGoal(fixedFormat))
-            && (series.events as CycleEvent[]).some(e => supportsCommunityGoal(e.format)) && (
+          {isTournamentSeries && (!fixedFormat || supportsCommunityGoal(fixedFormat)) && (
             <Section title="🎯 Community-Ziel je Zyklus">
-              <SeriesCycleGoals events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}
+              <SeriesCycleGoals seriesId={series.id} fixedFormat={fixedFormat || null}
+                events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}
                 statFields={eventStatFields} disabled={isArchived} />
             </Section>
           )}

@@ -40,7 +40,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 import { LIFECYCLE_STEPS, lifecycleStep } from "@/lib/event-manage";
 import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import { parseCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
+import { goalFieldsFor, isResultGoalFormat, parseCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
 import { confirmEventTiming } from "@/lib/event-timing-warning";
@@ -705,8 +705,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           ...(resolvedGoal.source === "off" && { goalOff: true }),
         }
       : {};
-    const statConfig = builtStatConfig || Object.keys(keptGoalKeys).length > 0
-      ? { ...(builtStatConfig ?? { stats: [], placementPoints: {} }), ...keptGoalKeys }
+    // Liga, K.O. & Co. (Einzel-Event): Ziel auf die Tore laut Ergebnis — sonst gäbe es keine statConfig
+    const resultGoal = !builtStatConfig && !event.series && isResultGoalFormat(tmtFormat)
+      ? formToGoal(tmtGoal, goalFieldsFor(tmtFormat, tmtStatFields)) : null;
+    const statConfig = builtStatConfig || resultGoal || Object.keys(keptGoalKeys).length > 0
+      ? { ...(builtStatConfig ?? { stats: [], placementPoints: {} }), ...(resultGoal && { goal: resultGoal }), ...keptGoalKeys }
       : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
@@ -1636,10 +1639,10 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           {supportsCommunityGoal(tmtFormat) && (event.series ? (
             // Termin einer Reihe: Ziel wird von der Reihe geerbt, hier nur übernehmen/überschreiben/abschalten
             <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
-              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
+              seriesGoal={resolvedGoal.seriesGoal} statFields={goalFieldsFor(tmtFormat, tmtStatFields)} />
           ) : (
             <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4">
-              <CommunityGoalEditor value={tmtGoal} onChange={setTmtGoal} statFields={tmtStatFields} />
+              <CommunityGoalEditor value={tmtGoal} onChange={setTmtGoal} statFields={goalFieldsFor(tmtFormat, tmtStatFields)} />
             </div>
           ))}
 
@@ -1779,7 +1782,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
               Termins lässt sich deshalb hier anpassen (Punktewertung/Durchschnittswerte) */}
           {isSeriesEvent && supportsCommunityGoal(event.format) && (
             <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
-              seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
+              seriesGoal={resolvedGoal.seriesGoal} statFields={goalFieldsFor(event.format, tmtStatFields)} />
           )}
           <TournamentManager
             event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}

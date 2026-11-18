@@ -1,4 +1,5 @@
 import { readStatValue } from "./avg-stats";
+import { parseGoalState } from "./goal-state";
 
 // Gemeinsame Logik zur Berechnung der Tabellenpunkte, die ein einzelnes Event zur Eventreihe
 // beisteuert (Teilnahme + Stats + Sieger-Zielfeld + MVP + Umfrage-Belohnungen, alt & neu).
@@ -87,6 +88,9 @@ export function applyEventStatOverride<T extends { stats?: { field: string; poin
  *  Platzierung eines Spielers ablegt (analog zu "Match Win") — kein normales Stat-Feld, wird über
  *  StatConfig.placementPoints in Punkte umgerechnet, siehe extractPlacementPoints. */
 export const PLACEMENT_STAT_KEY = "Platzierung";
+
+/** Spalte der Reihentabelle für die Tabellenpunkte aus erreichten Community-Zielen (goal.rewardSeriesPoints) */
+export const GOAL_BONUS_POINTS_FIELD = "Ziel-Bonus";
 
 /** Spalte der Reihentabelle für die Tabellenpunkte je Endplatzierung im Einzel-Event */
 export const EVENT_PLACEMENT_POINTS_FIELD = "Platzierungspunkte";
@@ -329,6 +333,9 @@ export type EventForPoints = {
    *  Einführung des Zuschauer-Trackings), nur ein explizites "spectator" zählt als Zuschauer. */
   registrations: { userId: string; role?: string }[];
   matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
+  /** Community-Ziel-Zustand — enthält die beim Erreichen eingefrorenen Tabellenpunkte (seriesPoints),
+   *  siehe lib/community-goal-milestones.ts. Abfragen für die Reihentabelle müssen es mitladen. */
+  goalStateJson?: string | null;
 };
 
 export type EventCompletionData = {
@@ -682,6 +689,14 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     placementPts[uid] = (placementPts[uid] ?? 0) + pts;
   }
 
+  // Community-Ziel erreicht: beim Erreichen eingefrorene Tabellenpunkte (goalStateJson.seriesPoints)
+  const goalPts: Record<string, number> = {};
+  for (const [uid, pts] of Object.entries(parseGoalState(ev.goalStateJson).seriesPoints ?? {})) {
+    if (!pts || excludedSet.has(uid)) continue;
+    addEv(uid, GOAL_BONUS_POINTS_FIELD, pts);
+    goalPts[uid] = (goalPts[uid] ?? 0) + pts;
+  }
+
   const allUids = new Set([
     ...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts),
   ]);
@@ -698,6 +713,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
       { label: "Umfragen", points: pollBonusPts[uid] ?? 0 },
       { label: "Dominion Bonus", points: dominionBonusPts[uid] ?? 0 },
       { label: "Platzierungs-Bonus", points: placementPts[uid] ?? 0 },
+      { label: "Community-Ziel", points: goalPts[uid] ?? 0 },
     ];
     for (const { field, pointsPer } of effectiveCfg.stats) {
       items.push({ label: field, points: (es[field] ?? 0) * pointsPer });

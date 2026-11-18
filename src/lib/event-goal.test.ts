@@ -1,4 +1,5 @@
 import { describe, test } from "node:test";
+import { RESULT_SCORE_FIELD } from "./community-goal";
 import assert from "node:assert/strict";
 import { resolveEventGoal, withGoalMode } from "./event-goal";
 
@@ -27,6 +28,12 @@ describe("Community-Ziel mit Vererbung", () => {
     assert.equal(resolveEventGoal({ format: "single_elimination", statConfigJson: null, series }).goal, null);
     assert.equal(resolveEventGoal({ format: "coop_stats", statConfigJson: null, series }, ["Kills"]).goal, null);
     assert.equal(resolveEventGoal({ format: "coop_stats", statConfigJson: null, series: null }).source, "none");
+  });
+
+  test("Liga/K.O. erben nur Ziele auf das Spielergebnis, Stat-Formate keine Ergebnis-Ziele", () => {
+    const resultSeries = { tournamentTemplateJson: JSON.stringify({ communityGoal: { fields: [RESULT_SCORE_FIELD], target: 100 } }) };
+    assert.equal(resolveEventGoal({ format: "liga", statConfigJson: null, series: resultSeries }).goal?.target, 100);
+    assert.equal(resolveEventGoal({ format: "coop_stats", statConfigJson: null, series: resultSeries }).goal, null);
   });
 
   test("withGoalMode setzt nur die Abweichung, Rest bleibt", () => {

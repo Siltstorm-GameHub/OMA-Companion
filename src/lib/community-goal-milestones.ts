@@ -8,16 +8,23 @@
 //   - sobald das Ziel erreicht ist: Münzen an alle Mitwirkenden (goal.rewardCoins), jede Person nur
 //     einmal; Community-Events (von normalen Usern angelegt) auf die Community-Obergrenze gekappt.
 //
-// Ø-Ziele (goal.mode "avg") können wieder fallen — sie melden keine Zwischenstufen und werden erst
-// abgerechnet, wenn der Zeitraum vorbei ist (Event.endAt) oder die Spielphase abgeschlossen wurde:
-// dann einmalig "erreicht" (Meldung + Münzen) oder "verfehlt" (nur settledAt). Ausgelöst vom Cron
-// event-reminders (settleEndedAverageGoals) und vom Event-Abschluss.
+// Ende des Zeitraums (Event.endAt vorbei oder Spielphase abgeschlossen): einmalige Abrechnung
+// (settledAt/settledReached). Ausgelöst vom Cron event-reminders (settleEndedGoals) und vom Abschluss.
+//   - Ø-Ziele (goal.mode "avg") können wieder fallen — sie melden keine Zwischenstufen und werden erst
+//     hier "erreicht" (Meldung + Münzen) oder "verfehlt"
+//   - goal.announceResult: Endstand melden (Regel "event_goal_result"), auch wenn verfehlt
+// Zusätzlich beim Erreichen (nur Termine einer Eventreihe):
+//   - goal.rewardSeriesPoints: Tabellenpunkte je Belohntem, eingefroren in goalStateJson.seriesPoints
+//     und von computeEventPoints (series-event-points.ts) in die Reihentabelle gezählt
+//   - goal.streakBonus: alle N geschafften Zyklen in Folge Bonus-Münzen für die Belohnten
 // Der Zustand liegt in Event.goalStateJson (nicht in statConfigJson — das wird beim Speichern der
 // Turnier-Einstellungen neu geschrieben und würde Meldungen/Auszahlungen sonst wiederholen).
 
 import { prisma } from "@/lib/prisma";
 import {
   computeCommunityGoalProgress,
+  GOAL_MATCH_SELECT,
+  toGoalMatches,
   formatGoalNumber,
   goalUnit,
   isAvgGoal,
@@ -29,7 +36,7 @@ import { capValue } from "@/lib/captain-reward-limits";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { parseEntryStats } from "@/lib/avg-stats";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
-import { parseGoalState, type GoalState } from "@/lib/goal-state";
+import { goalStreakAfter, parseGoalState, streakBonusDue, type GoalState } from "@/lib/goal-state";
 
 export const GOAL_MILESTONES = [25, 50, 75, 100] as const;
 
@@ -78,13 +85,15 @@ export function evaluateGoal(
   };
 }
 
-/** Ist ein Ø-Ziel abrechenbar? Erst wenn der Zeitraum vorbei ist oder die Spielphase abgeschlossen wurde. */
-export function avgGoalDue(ev: { endAt: Date | string | null; completionData: string | null }, now = Date.now()): boolean {
+/** Ist der Zeitraum eines Ziels vorbei? Ende (endAt) erreicht oder Spielphase abgeschlossen. */
+export function goalDue(ev: { endAt: Date | string | null; completionData: string | null }, now = Date.now()): boolean {
   if (ev.endAt && new Date(ev.endAt).getTime() <= now) return true;
   if (!ev.completionData) return false;
   try { return (JSON.parse(ev.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete === true; }
   catch { return false; }
 }
+/** @deprecated Name aus der ersten Version — gilt inzwischen für alle Ziele */
+export const avgGoalDue = goalDue;
 
 function milestoneText(p: number, goal: CommunityGoal): string {
   const who = goal.scope === "team" ? "Ein Team hat" : goal.scope === "solo" ? "Der Beste hat" : "Wir haben";
@@ -96,9 +105,19 @@ function milestoneText(p: number, goal: CommunityGoal): string {
   return `${who} ${p} % geschafft.`;
 }
 
+/** Text der Endstand-Meldung (goal.announceResult) */
+export function resultText(progress: CommunityGoalProgress): { title: string; text: string } {
+  const pct = Math.floor(progress.main.percent);
+  if (progress.reached) return { title: "Geschafft 🎉", text: "Der Zeitraum ist vorbei — wir haben das Ziel erreicht!" };
+  if (pct >= 90) return { title: "Knapp verfehlt", text: `Der Zeitraum ist vorbei — so knapp! Uns haben nur ${100 - pct} % gefehlt.` };
+  return { title: "Verfehlt", text: "Der Zeitraum ist vorbei — diesmal hat es nicht gereicht. Nächstes Mal packen wir es!" };
+}
+
+const isClosed = (status: string) => status === "finished" || status === "closed";
+
 /**
- * Prüft das Community-Ziel eines Events nach einer Ergebnis-Änderung. Wirft nie (Fehler werden nur
- * geloggt), damit das Speichern eines Rundenwerts nie daran scheitert.
+ * Prüft das Community-Ziel eines Events nach einer Ergebnis-Änderung bzw. am Ende des Zeitraums. Wirft
+ * nie (Fehler werden nur geloggt), damit das Speichern eines Rundenwerts nie daran scheitert.
  */
 export async function checkCommunityGoal(eventId: string): Promise<void> {
   try {
@@ -112,14 +131,11 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
     // Eigenes oder von der Reihe geerbtes Ziel (lib/event-goal.ts)
     const peekGoal = peek ? resolveEventGoal(peek).goal : null;
     if (!peek || !peekGoal) return;
-    if (isAvgGoal(peekGoal)) {
-      // Ø-Ziel: live nur anzeigen, abgerechnet wird am Ende des Zeitraums — auch wenn das Event da
-      // schon beendet ist, aber nur einmal (danach nur noch Nachträge zu bereits erreichten Zielen)
-      if (!avgGoalDue(peek)) return;
-      if ((peek.status === "finished" || peek.status === "closed") && parseGoalState(peek.goalStateJson).settledAt) return;
-    } else if (peek.status === "finished" || peek.status === "closed") {
-      return;
-    }
+    const due = goalDue(peek);
+    // Ø-Ziel: live nur anzeigen, abgerechnet wird am Ende des Zeitraums
+    if (isAvgGoal(peekGoal) && !due) return;
+    // Beendete Events: nur noch die einmalige Abrechnung
+    if (isClosed(peek.status) && parseGoalState(peek.goalStateJson).settledAt) return;
 
     const result = await prisma.$transaction(async (tx) => {
       // Parallele Speichervorgänge desselben Events serialisieren — sonst doppelte Meldung/Auszahlung
@@ -127,33 +143,64 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
       const ev = await tx.event.findUnique({
         where: { id: eventId },
         select: {
-          title: true, format: true, statConfigJson: true, goalStateJson: true, approvalStatus: true, seriesId: true,
+          title: true, format: true, statConfigJson: true, goalStateJson: true, approvalStatus: true, seriesId: true, startAt: true,
           series: { select: { approvalStatus: true, tournamentTemplateJson: true } },
-          matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+          matches: { select: GOAL_MATCH_SELECT },
         },
       });
       const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;
       const progress = computeCommunityGoalProgress(ev.matches, goal);
       const state = parseGoalState(ev.goalStateJson);
-      const { newMilestone, milestones, rewardUserIds } = evaluateGoal(progress, state, userTeams(ev.matches));
+      const { newMilestone, milestones, rewardUserIds } = evaluateGoal(progress, state, userTeams(toGoalMatches(ev.matches)));
 
       // Belohnung — Community-Events (von normalen Usern angelegt) auf die Community-Obergrenze kappen
-      let coins = goal.rewardCoins ?? 0;
       const isCommunity = !!(ev.approvalStatus || ev.series?.approvalStatus);
-      if (coins > 0 && isCommunity) {
-        const limits = await getCommunityLimits();
-        coins = capValue(coins, (ev.seriesId ? limits.seriesEvent : limits.standalone).goalRewardCoins);
-      }
-      const payees = coins > 0 ? rewardUserIds : [];
-      if (payees.length > 0) {
-        const reason = `Community-Ziel erreicht: ${goal.title || ev.title}`;
-        await tx.user.updateMany({ where: { id: { in: payees } }, data: { points: { increment: coins } } });
-        await tx.pointTransaction.createMany({ data: payees.map(userId => ({ userId, amount: coins, reason })) });
+      const limits = isCommunity ? await getCommunityLimits() : null;
+      const cap = (coins: number) => limits ? capValue(coins, (ev.seriesId ? limits.seriesEvent : limits.standalone).goalRewardCoins) : coins;
+      const coins = cap(goal.rewardCoins ?? 0);
+      const payCoins = async (ids: string[], amount: number, reason: string) => {
+        if (amount <= 0 || ids.length === 0) return;
+        await tx.user.updateMany({ where: { id: { in: ids } }, data: { points: { increment: amount } } });
+        await tx.pointTransaction.createMany({ data: ids.map(userId => ({ userId, amount, reason })) });
+      };
+      await payCoins(rewardUserIds, coins, `Community-Ziel erreicht: ${goal.title || ev.title}`);
+
+      // Tabellenpunkte der Reihe für jeden neu Belohnten (eingefroren — spätere Ziel-Änderungen wirken nicht zurück)
+      const seriesPoints = { ...state.seriesPoints };
+      if (ev.seriesId && (goal.rewardSeriesPoints ?? 0) > 0) {
+        for (const uid of rewardUserIds) seriesPoints[uid] = goal.rewardSeriesPoints!;
       }
 
-      const settleNow = isAvgGoal(goal) && !state.settledAt;
-      const changed = newMilestone !== null || payees.length > 0 || settleNow || (isAvgGoal(goal) && state.settledReached !== progress.reached);
+      // Serie: beim ersten Erreichen die geschafften Zyklen in Folge zählen, ggf. Bonus
+      let streak = state.streak;
+      let streakBonusUserIds = state.streakBonusUserIds ?? [];
+      let streakPaid: { coins: number; ids: string[] } | null = null;
+      const justReached = newMilestone === 100;
+      if (justReached && ev.seriesId && goal.streakBonus) {
+        const previous = await tx.event.findMany({
+          where: { seriesId: ev.seriesId, id: { not: eventId }, startAt: { lt: ev.startAt } },
+          orderBy: { startAt: "desc" },
+          take: 100,
+          select: { format: true, statConfigJson: true, goalStateJson: true, series: { select: { tournamentTemplateJson: true } } },
+        });
+        const history = previous
+          .filter(p => resolveEventGoal(p).goal) // Zyklen ohne Ziel unterbrechen die Serie nicht
+          .map(p => parseGoalState(p.goalStateJson).milestones.includes(100));
+        streak = goalStreakAfter(history);
+        if (streakBonusDue(streak, goal.streakBonus)) {
+          const already = new Set(streakBonusUserIds);
+          const ids = [...state.rewardedUserIds, ...rewardUserIds].filter(id => !already.has(id));
+          const bonus = cap(goal.streakBonus.coins);
+          await payCoins(ids, bonus, `Community-Ziel ${streak}× in Folge: ${goal.title || ev.title}`);
+          streakBonusUserIds = [...streakBonusUserIds, ...ids];
+          if (bonus > 0 && ids.length > 0) streakPaid = { coins: bonus, ids };
+        }
+      }
+
+      const settleNow = due && !state.settledAt;
+      const changed = newMilestone !== null || rewardUserIds.length > 0 || settleNow
+        || (!!state.settledAt && state.settledReached !== progress.reached);
       if (changed) {
         const nowIso = new Date().toISOString();
         const milestoneAt = { ...state.milestoneAt };
@@ -161,31 +208,50 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
         const next: GoalState = {
           milestones,
           milestoneAt,
-          rewardedUserIds: [...state.rewardedUserIds, ...payees],
-          ...(state.rewardedAt || payees.length ? { rewardedAt: state.rewardedAt ?? new Date().toISOString() } : {}),
-          ...(isAvgGoal(goal) && { settledAt: state.settledAt ?? nowIso, settledReached: progress.reached }),
+          rewardedUserIds: [...state.rewardedUserIds, ...rewardUserIds],
+          ...(state.rewardedAt || (coins > 0 && rewardUserIds.length) ? { rewardedAt: state.rewardedAt ?? nowIso } : {}),
+          ...((settleNow || state.settledAt) && { settledAt: state.settledAt ?? nowIso, settledReached: progress.reached }),
+          ...(Object.keys(seriesPoints).length > 0 && { seriesPoints }),
+          ...(streak !== undefined && { streak }),
+          ...(streakBonusUserIds.length > 0 && { streakBonusUserIds }),
         };
         await tx.event.update({ where: { id: eventId }, data: { goalStateJson: JSON.stringify(next) } });
       }
       const awaitingApproval = ev.approvalStatus === "pending" || ev.series?.approvalStatus === "pending";
-      return { goal, progress, newMilestone, awaitingApproval, payees, coins };
+      return { goal, progress, newMilestone, awaitingApproval, payees: rewardUserIds, coins, settleNow, streak, streakPaid };
     });
 
-    // Meldung nach der Transaktion (Push/Discord dürfen den Lock nicht halten). Community-Events ohne
+    // Meldungen nach der Transaktion (Push/Discord dürfen den Lock nicht halten). Community-Events ohne
     // Mod-Freigabe melden nichts nach außen — wie alle anderen Ankündigungen.
-    if (result?.newMilestone && !result.awaitingApproval) {
-      const { goal, progress, newMilestone } = result;
+    if (!result || result.awaitingApproval) return;
+    const { goal, progress, newMilestone } = result;
+    const common = {
+      "{goalTitle}": goal.title || "Community-Ziel",
+      "{current}": formatGoalNumber(progress.main.total, goal),
+      "{target}": formatGoalNumber(goal.target, goal),
+      "{unit}": goalUnit(goal),
+      "{percent}": String(Math.floor(progress.main.percent)),
+    };
+    if (newMilestone) {
+      const extras = [
+        newMilestone >= 100 && result.coins > 0 && result.payees.length > 0 ? `Alle Mitwirkenden bekommen ${result.coins} Münzen.` : "",
+        newMilestone >= 100 && (goal.rewardSeriesPoints ?? 0) > 0 && result.payees.length > 0 ? `Dazu ${goal.rewardSeriesPoints} Tabellenpunkte für die Eventreihe.` : "",
+        result.streakPaid ? `🔥 ${result.streak}× in Folge geschafft — ${result.streakPaid.coins} Bonus-Münzen obendrauf!` : "",
+      ].filter(Boolean).join(" ");
       await dispatchEventNotification("event_goal_milestone", { id: eventId }, {
         placeholders: {
-          "{goalTitle}": goal.title || "Community-Ziel",
+          ...common,
           "{percent}": String(newMilestone),
-          "{milestoneText}": milestoneText(newMilestone, goal)
-            + (newMilestone >= 100 && result.coins > 0 && result.payees.length > 0 ? ` Alle Mitwirkenden bekommen ${result.coins} Münzen.` : ""),
-          "{current}": formatGoalNumber(progress.main.total, goal),
-          "{target}": formatGoalNumber(goal.target, goal),
-          "{unit}": goalUnit(goal),
+          "{milestoneText}": milestoneText(newMilestone, goal) + (extras ? ` ${extras}` : ""),
         },
       }).catch(err => console.error("[community-goal] Meldung fehlgeschlagen", err));
+    }
+    // Endstand — nicht doppelt, wenn gerade eben (Ø-Ziel bei der Abrechnung) schon "geschafft" gemeldet wurde
+    if (result.settleNow && goal.announceResult && newMilestone !== 100) {
+      const r = resultText(progress);
+      await dispatchEventNotification("event_goal_result", { id: eventId }, {
+        placeholders: { ...common, "{resultTitle}": r.title, "{resultText}": r.text },
+      }).catch(err => console.error("[community-goal] Endstand-Meldung fehlgeschlagen", err));
     }
   } catch (err) {
     console.error("[community-goal] Prüfung fehlgeschlagen", eventId, err);
@@ -193,22 +259,18 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
 }
 
 /**
- * Cron: Ø-Ziele von Terminen abrechnen, deren Zeitraum vorbei ist (siehe Kopfkommentar). Schaut nur
+ * Cron: Ziele von Terminen abrechnen, deren Zeitraum vorbei ist (siehe Kopfkommentar). Schaut nur
  * auf die letzten 30 Tage, damit alte Events ohne Abrechnung nicht ewig geprüft werden.
  */
-export async function settleEndedAverageGoals(now = new Date()): Promise<number> {
+export async function settleEndedGoals(now = new Date()): Promise<number> {
   const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const candidates = await prisma.event.findMany({
-    where: {
-      endAt: { lte: now, gte: since },
-      ...mayHaveGoalWhere,
-    },
+    where: { endAt: { lte: now, gte: since }, ...mayHaveGoalWhere },
     select: { id: true, format: true, statConfigJson: true, goalStateJson: true, series: { select: { tournamentTemplateJson: true } } },
   });
   let settled = 0;
   for (const ev of candidates) {
-    const goal = resolveEventGoal(ev).goal;
-    if (!goal || !isAvgGoal(goal) || parseGoalState(ev.goalStateJson).settledAt) continue;
+    if (!resolveEventGoal(ev).goal || parseGoalState(ev.goalStateJson).settledAt) continue;
     await checkCommunityGoal(ev.id);
     settled++;
   }

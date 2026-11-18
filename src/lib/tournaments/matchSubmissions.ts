@@ -183,6 +183,7 @@ export async function applySubmissionValues(
   });
   await prisma.matchResultSubmission.update({ where: { id: submissionId }, data: { applied: true } });
   // Community-Ziel: neue Meilensteine melden / Belohnung auszahlen (no-op ohne Ziel, wirft nie)
+  // (1v1-Meldungen laufen über applyMatchResult, das selbst prüft)
   if (plan.kind === "entry") await checkCommunityGoal(eventId);
 }
 

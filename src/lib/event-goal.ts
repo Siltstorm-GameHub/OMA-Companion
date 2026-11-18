@@ -11,7 +11,9 @@
 // schon läuft, friert die Reihen-Route das alte Ziel in den bereits gestarteten Terminen ein
 // (siehe freezeStartedEventGoals) — kommende Termine übernehmen das neue.
 
-import { sanitizeCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
+import {
+  RESULT_SCORE_FIELD, isResultGoalFormat, sanitizeCommunityGoal, supportsCommunityGoal, type CommunityGoal,
+} from "@/lib/community-goal";
 import { parseTournamentTemplate } from "@/lib/series-seasons";
 
 export type EventGoalSource = "event" | "series" | "off" | "none";
@@ -50,8 +52,16 @@ export function resolveEventGoal(ev: {
   series?: { tournamentTemplateJson?: string | null } | null;
 }, statFields?: string[]): ResolvedEventGoal {
   const rawSeriesGoal = ev.series ? parseTournamentTemplate(ev.series.tournamentTemplateJson).communityGoal ?? null : null;
-  const seriesGoal = rawSeriesGoal ? sanitizeCommunityGoal(rawSeriesGoal, statFields) : null;
-  const own = parseOwnGoalConfig(ev.statConfigJson);
+  // Nur Ziele, die dieses Format auch messen kann: Liga/K.O. & Co. nur das Spielergebnis, Stat-Formate
+  // nur Stat-Felder (eine Reihe ohne festes Format kann Termine beider Arten haben)
+  const fitsFormat = (g: CommunityGoal | null): CommunityGoal | null => {
+    if (!g) return null;
+    if (isResultGoalFormat(ev.format)) return sanitizeCommunityGoal(g, [RESULT_SCORE_FIELD]);
+    return sanitizeCommunityGoal({ ...g, fields: g.fields.filter(f => f !== RESULT_SCORE_FIELD) }, statFields);
+  };
+  const seriesGoal = fitsFormat(rawSeriesGoal);
+  const parsedOwn = parseOwnGoalConfig(ev.statConfigJson);
+  const own = { ...parsedOwn, goal: fitsFormat(parsedOwn.goal) };
   if (!supportsCommunityGoal(ev.format)) return { goal: null, source: "none", seriesGoal, ownGoal: own.goal };
   if (own.off) return { goal: null, source: "off", seriesGoal, ownGoal: own.goal };
   if (own.goal) return { goal: own.goal, source: "event", seriesGoal, ownGoal: own.goal };

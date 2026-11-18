@@ -78,7 +78,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
       </div>
 
       {mode === "override" && (
-        <CommunityGoalEditor value={{ ...form, enabled: true }} onChange={f => setForm({ ...f, enabled: true })} statFields={statFields} />
+        <CommunityGoalEditor value={{ ...form, enabled: true }} onChange={f => setForm({ ...f, enabled: true })} statFields={statFields} inSeries hideToggle />
       )}
 
       <div className="flex justify-end">

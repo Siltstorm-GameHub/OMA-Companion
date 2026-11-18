@@ -43,7 +43,7 @@ export async function loadSeriesContext(seriesId: string, eventId: string, userI
         where: { OR: [{ hidden: false }, { id: eventId }] },
         orderBy: { startAt: "asc" },
         select: {
-          id: true, title: true, startAt: true, status: true, completionData: true, finalRankingJson: true,
+          id: true, title: true, startAt: true, status: true, completionData: true, finalRankingJson: true, goalStateJson: true,
           registrations: { select: { userId: true, role: true } },
           matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
         },

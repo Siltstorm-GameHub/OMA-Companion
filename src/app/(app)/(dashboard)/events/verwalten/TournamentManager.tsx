@@ -1250,7 +1250,8 @@ export default function TournamentManager({
   const hasEventPoints = !!pointsCfg && (pointsCfg.stats.some(st => st.pointsPer) || Object.keys(pointsCfg.placementPoints ?? {}).length > 0);
   const eventPoints = isFfa && hasEventPoints ? computeTurnierpunkte(statRounds, pointsCfg!, tournament.format) : null;
   const standings = isFfa ? statStandings(statRounds, visibleStatFields, tournament.format, { points: eventPoints, direction: avgDirection }) : [];
-  const goalProgress = isFfa && goal ? computeCommunityGoalProgress(statRounds, goal) : null;
+  // Stat-Formate: Runden-Stats · Liga/K.O. & Co.: Tore laut Ergebnis (lib/community-goal.ts)
+  const goalProgress = goal ? computeCommunityGoalProgress(isFfa ? statRounds : tournament.matches, goal) : null;
   const nameOfUser = (uid: string) => {
     const u = allUsers.find(x => x.id === uid) ?? tournament.participants.find(pp => pp.userId === uid)?.user;
     return u ? userName(u) : "?";
@@ -1318,6 +1319,22 @@ export default function TournamentManager({
     ...(!isGroupKnockout ? [{ label: isFfa ? "Runde hinzufügen" : "Match hinzufügen", onClick: openAdd }] : []),
   ];
 
+  const goalBar = goalProgress && goal ? (
+            <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] px-3 py-2 space-y-1">
+              <p className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
+                <span className="tabular-nums text-gray-300">
+                  {isAvgGoal(goal!)
+                    ? <>Ø {formatDecimal(goalProgress.main.total)} · Ziel {goal!.direction === "atMost" ? "höchstens" : "mind."} {formatDecimal(goal!.target)} {goalUnit(goal!)}</>
+                    : <>{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</>}
+                </span>
+              </p>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />
+              </div>
+            </div>
+  ) : null;
+
   return (
     <div className="tm-root space-y-4" data-tm-view={viewMode}>
 
@@ -1344,6 +1361,7 @@ export default function TournamentManager({
         pendingCount={pendingCount}
         tools={tools}
       />
+      {!isFfa && goalBar}
       {pendingSubmissions.length > 0 && (
         <section aria-label="Gemeldete Ergebnisse" className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] px-3 py-2">
           <p className="text-[11px] font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
@@ -1579,21 +1597,7 @@ export default function TournamentManager({
                 : "Runde aufklappen zum Korrigieren"}
             </span>
           </div>
-          {goalProgress && (
-            <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] px-3 py-2 space-y-1">
-              <p className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
-                <span className="tabular-nums text-gray-300">
-                  {isAvgGoal(goal!)
-                    ? <>Ø {formatDecimal(goalProgress.main.total)} · Ziel {goal!.direction === "atMost" ? "höchstens" : "mind."} {formatDecimal(goal!.target)} {goalUnit(goal!)}</>
-                    : <>{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</>}
-                </span>
-              </p>
-              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />
-              </div>
-            </div>
-          )}
+          {goalBar}
           {statView === "table" && (
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
               <StatStandingsTable rows={standings} fields={visibleStatFields} isAvg={tournament.format === "avg_stats"}

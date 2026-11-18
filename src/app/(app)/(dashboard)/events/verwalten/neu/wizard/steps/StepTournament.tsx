@@ -3,7 +3,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import CommunityGoalEditor from "@/components/CommunityGoalEditor";
-import { supportsCommunityGoal } from "@/lib/community-goal";
+import { RESULT_SCORE_FIELD, isResultGoalFormat, supportsCommunityGoal } from "@/lib/community-goal";
 import { FORMATS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 import { NumberInput } from "@/components/ui/NumberInput";
@@ -62,9 +62,16 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           )}
           {supportsCommunityGoal(format) && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} />
+              <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} inSeries={!!selectedSeries} />
             </div>
           )}
+        </div>
+      )}
+
+      {/* Liga, K.O. & Co.: Community-Ziel auf die Tore laut Spielergebnis (lib/community-goal.ts) */}
+      {!hasStat && !seriesFixedFormat && isResultGoalFormat(format) && (
+        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
+          <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={[RESULT_SCORE_FIELD]} inSeries={!!selectedSeries} />
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { goalToForm } from "@/lib/community-goal-form";
 import { requireEventArea, seriesScopeWhere, canManageEvent } from "@/lib/roles";
 import { toDatetimeLocalBerlin } from "@/lib/time";
 import { parseCommunityGoal } from "@/lib/community-goal";
@@ -68,14 +69,10 @@ async function loadTemplate(eventId: string): Promise<EventTemplate | null> {
     statFields: parseJson<string[]>(e.statFields, []),
     statPointsByField: Object.fromEntries((statConfig.stats ?? []).map(s => [s.field, s.pointsPer])),
     avgDirection: statConfig.avgDirection === "low" ? "low" : "high",
-    // Community-Ziel mit übernehmen (Skill-Index/Durchschnittswerte), Formularform wie goalToForm in CommunityGoalEditor
+    // Community-Ziel mit übernehmen, Formularform siehe lib/community-goal-form.ts
     communityGoal: (() => {
       const g = parseCommunityGoal(e.statConfigJson);
-      return g ? {
-        enabled: true, title: g.title ?? "", fields: g.fields, target: g.target, scope: g.scope,
-        mode: g.mode ?? "sum", direction: g.direction ?? "atLeast", minParticipants: g.minParticipants ?? 1,
-        unit: g.unit ?? "", rewardCoins: g.rewardCoins ?? 0,
-      } : undefined;
+      return g ? goalToForm(g) : undefined;
     })(),
     checkInEnabled: e.checkInEnabled,
   };

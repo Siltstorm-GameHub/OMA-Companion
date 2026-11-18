@@ -61,7 +61,7 @@ export async function POST(
     where: { seriesId },
     orderBy: { startAt: "asc" },
     select: {
-      id: true, status: true, completionData: true, finalRankingJson: true,
+      id: true, status: true, completionData: true, finalRankingJson: true, goalStateJson: true,
       registrations: { select: { userId: true, role: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
     },

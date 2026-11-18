@@ -12,7 +12,7 @@ import {
 } from "@/lib/community-goal";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
-import { GOAL_FORMATS } from "@/lib/community-goal";
+import { GOAL_FORMATS, GOAL_MATCH_SELECT } from "@/lib/community-goal";
 import { parseGoalState } from "@/lib/community-goal-milestones";
 import { goalHideCookie, goalSpotlight, goalStreak, type GoalSpotlight, type SpotlightKind } from "@/lib/goal-spotlight";
 import GoalSpotlightDismiss from "@/components/GoalSpotlightDismiss";
@@ -64,7 +64,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
       id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true, goalStateJson: true, seriesId: true,
       series: { select: { tournamentTemplateJson: true } },
       registrations: userId ? { where: { userId }, select: { userId: true } } : { take: 0, select: { userId: true } },
-      matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+      matches: { select: GOAL_MATCH_SELECT },
     },
   });
 

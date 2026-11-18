@@ -70,7 +70,7 @@ const getGlobalDashboardData = unstable_cache(
             orderBy: { startAt: "asc" },
             select: {
               id: true, startAt: true, status: true, game: true, coverImageUrl: true,
-              completionData: true, finalRankingJson: true,
+              completionData: true, finalRankingJson: true, goalStateJson: true,
               registrations: { select: { userId: true, role: true } },
               matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
             },

@@ -190,8 +190,9 @@ export async function applyMatchResult(input: ApplyMatchResultInput) {
       },
     });
   }
-  // Community-Ziel: neue Meilensteine melden / Belohnung auszahlen (no-op ohne Ziel, wirft nie)
-  if (input.entries) await checkCommunityGoal(input.eventId);
+  // Community-Ziel: neue Meilensteine melden / Belohnung auszahlen — auch bei 1v1-Ergebnissen
+  // (Ergebnis-Ziele "Tore insgesamt"). No-op ohne Ziel, wirft nie.
+  await checkCommunityGoal(input.eventId);
   return result;
 }
 

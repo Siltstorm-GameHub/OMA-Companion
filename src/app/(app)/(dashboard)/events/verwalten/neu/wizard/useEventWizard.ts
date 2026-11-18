@@ -10,7 +10,7 @@ import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib
 import { fromDatetimeLocalBerlin } from "@/lib/time";
 import type { AvgDirection } from "@/lib/avg-stats";
 import { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import { supportsCommunityGoal } from "@/lib/community-goal";
+import { RESULT_SCORE_FIELD, isResultGoalFormat, supportsCommunityGoal } from "@/lib/community-goal";
 import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-seasons";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
@@ -519,6 +519,10 @@ export function useEventWizard({
         const avgDir = (seriesFixedFormat ?? format) === "avg_stats" && avgDirection === "low" ? avgDirection : undefined;
         const goal = !seriesFixedFormat && supportsCommunityGoal(format) ? formToGoal(communityGoal, statFields) : null;
         if (stats.length || avgDir || goal) body.statConfig = { stats, ...(avgDir && { avgDirection: avgDir }), ...(goal && { goal }) };
+      } else if (!seriesFixedFormat && isResultGoalFormat(format)) {
+        // Liga, K.O. & Co.: Ziel auf die Tore laut Ergebnis
+        const goal = formToGoal(communityGoal, [RESULT_SCORE_FIELD]);
+        if (goal) body.statConfig = { stats: [], goal };
       }
     }
 

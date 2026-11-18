@@ -512,7 +512,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           events: {
             orderBy: { startAt: "asc" },
             select: {
-              id: true, status: true, startAt: true, completionData: true, finalRankingJson: true, spectatorMode: true,
+              id: true, status: true, startAt: true, completionData: true, finalRankingJson: true, spectatorMode: true, goalStateJson: true,
               registrations: { select: { userId: true, role: true } },
               matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
             },

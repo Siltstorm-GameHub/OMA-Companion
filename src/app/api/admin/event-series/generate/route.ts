@@ -8,6 +8,7 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 import { createGameVote } from "@/lib/game-vote/service";
+import { applyPlannedGoal } from "@/lib/goal-plan";
 
 /**
  * POST /api/admin/event-series/generate
@@ -132,6 +133,9 @@ export async function POST(req: NextRequest) {
   // Legt die echten, abstimmbaren EventPoll-Datensätze an — ohne diesen Schritt gäbe es nur
   // die Konfiguration, aber keine Umfrage, auf die tatsächlich abgestimmt werden könnte.
   await createPollsForEvent(newEvent.id, newEvent.startAt, parsePollsConfigJson(pollsConfigJson));
+
+  // Geplantes Community-Ziel für diesen Zyklus übernehmen (lib/goal-plan.ts)
+  await applyPlannedGoal(newEvent.id);
 
   // Spielwahl vor der Ankündigung anlegen, damit Discord "Wird per Abstimmung gewählt" zeigt
   const vote = gameVote ? await createGameVote(newEvent.id) : null;

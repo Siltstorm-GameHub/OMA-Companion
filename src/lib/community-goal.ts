@@ -16,6 +16,16 @@
  *           Ein Durchschnitt kann wieder fallen — deshalb wird ein Ø-Ziel erst mit dem Ende des
  *           Zeitraums (bzw. Abschluss der Spielphase) abgerechnet, siehe community-goal-milestones.ts.
  *
+ * Ergebnis-Ziele: Formate ohne frei wählbare Stats (Liga, Round Robin, K.O., Gruppenphase + K.O.)
+ * zählen die Spielergebnisse — Feld RESULT_SCORE_FIELD steht für "eigene Tore/Punkte laut Ergebnis".
+ * Aus jedem gewerteten 1v1-Match (score1/score2 gesetzt) entstehen zwei virtuelle Einträge:
+ * Spieler 1 mit score1, Spieler 2 mit score2 (siehe toGoalMatches).
+ *
+ * Optionen (alle optional, in den Turniereinstellungen):
+ *  - announceResult:    am Ende des Zeitraums das Ergebnis melden — auch wenn das Ziel verfehlt wurde
+ *  - streakBonus:       Bonus-Münzen, wenn das Ziel in einer Eventreihe N Zyklen in Folge geschafft wurde
+ *  - rewardSeriesPoints: Tabellenpunkte der Eventreihe für jeden, der beim Erreichen belohnt wird
+ *
  * scope:
  *  - "community": alle zusammen — eine gemeinsame Summe bzw. ein gemeinsamer Ø über alle Teilnehmer
  *  - "team":      Team A und Team B zählen getrennt (Team-Zuordnung pro Runde, "_team" im statsJson)
@@ -47,6 +57,12 @@ export type CommunityGoal = {
    *  des Siegerteams, solo: wer die Marke selbst erreicht). Bei Community-Events gekappt, siehe
    *  lib/community-goal-milestones.ts */
   rewardCoins?: number;
+  /** Ergebnis am Ende des Zeitraums melden, auch wenn das Ziel verfehlt wurde */
+  announceResult?: boolean;
+  /** Serie: alle `length` geschafften Zyklen in Folge gibt es `coins` Bonus-Münzen (nur Eventreihen) */
+  streakBonus?: { length: number; coins: number };
+  /** Tabellenpunkte der Eventreihe je Belohntem, wenn das Ziel erreicht ist (nur Eventreihen) */
+  rewardSeriesPoints?: number;
 };
 
 export const COMMUNITY_GOAL_SCOPES: { value: CommunityGoalScope; label: string; desc: string }[] = [
@@ -60,11 +76,34 @@ export const COMMUNITY_GOAL_MODES: { value: CommunityGoalMode; label: string; de
   { value: "avg", label: "Durchschnitt", desc: "Gemeinsamer Ø der Teilnehmer" },
 ];
 
-/** Formate mit Community-Ziel: Skill-Index (Punktewertung) und Durchschnittswerte. */
-export const GOAL_FORMATS = ["coop_stats", "avg_stats"] as const;
+/** Formate, deren Ziel frei wählbare Stat-Felder auswertet. */
+export const STAT_GOAL_FORMATS = ["coop_stats", "avg_stats", "ffa"] as const;
+/** Formate mit 1v1-Ergebnissen — das Ziel zählt die Tore/Punkte laut Ergebnis. */
+export const RESULT_GOAL_FORMATS = ["round_robin", "liga", "single_elimination", "double_elimination", "group_knockout"] as const;
+/** Alle Formate mit Community-Ziel. */
+export const GOAL_FORMATS = [...STAT_GOAL_FORMATS, ...RESULT_GOAL_FORMATS] as const;
+
+/** Virtuelles Stat-Feld der Ergebnis-Ziele: eigene Tore/Punkte laut Spielergebnis. */
+export const RESULT_SCORE_FIELD = "__ergebnis";
+/** Anzeigename von RESULT_SCORE_FIELD */
+export const RESULT_SCORE_LABEL = "Tore laut Ergebnis";
 
 export function supportsCommunityGoal(format: string | null | undefined): boolean {
   return !!format && (GOAL_FORMATS as readonly string[]).includes(format);
+}
+
+export function isResultGoalFormat(format: string | null | undefined): boolean {
+  return !!format && (RESULT_GOAL_FORMATS as readonly string[]).includes(format);
+}
+
+/** Felder, die ein Ziel in diesem Format auswerten darf: Ergebnis-Formate nur das Ergebnis, sonst die Stat-Felder. */
+export function goalFieldsFor(format: string | null | undefined, statFields: string[]): string[] {
+  return isResultGoalFormat(format) ? [RESULT_SCORE_FIELD] : statFields;
+}
+
+/** Anzeigename eines Ziel-Felds */
+export function goalFieldLabel(field: string): string {
+  return field === RESULT_SCORE_FIELD ? RESULT_SCORE_LABEL : field;
 }
 
 export function isAvgGoal(goal: Pick<CommunityGoal, "mode">): boolean {
@@ -90,6 +129,10 @@ export function sanitizeCommunityGoal(raw: unknown, allowedFields?: string[]): C
   const title = typeof r.title === "string" ? r.title.trim().slice(0, 120) : "";
   const unit  = typeof r.unit  === "string" ? r.unit.trim().slice(0, 40)   : "";
   const rewardCoins = Math.min(1_000_000, Math.max(0, Math.floor(Number(r.rewardCoins) || 0)));
+  const rewardSeriesPoints = Math.min(100_000, Math.max(0, Math.floor(Number(r.rewardSeriesPoints) || 0)));
+  const sb = r.streakBonus && typeof r.streakBonus === "object" ? r.streakBonus as Record<string, unknown> : null;
+  const streakLength = sb ? Math.min(100, Math.max(0, Math.floor(Number(sb.length) || 0))) : 0;
+  const streakCoins = sb ? Math.min(1_000_000, Math.max(0, Math.floor(Number(sb.coins) || 0))) : 0;
   const avg = r.mode === "avg";
   const atMost = avg && r.direction === "atMost";
   const minParticipants = avg ? Math.min(10_000, Math.max(1, Math.floor(Number(r.minParticipants) || 1))) : 1;
@@ -99,6 +142,9 @@ export function sanitizeCommunityGoal(raw: unknown, allowedFields?: string[]): C
     ...(atMost && { direction: "atMost" as const }),
     ...(minParticipants > 1 && { minParticipants }),
     ...(title && { title }), ...(unit && { unit }), ...(rewardCoins > 0 && { rewardCoins }),
+    ...(r.announceResult === true && { announceResult: true }),
+    ...(streakLength >= 2 && streakCoins > 0 && { streakBonus: { length: streakLength, coins: streakCoins } }),
+    ...(rewardSeriesPoints > 0 && { rewardSeriesPoints }),
   };
 }
 
@@ -108,7 +154,9 @@ export function withSanitizedGoal<T>(statConfig: T, format: string | null | unde
   if (!statConfig || typeof statConfig !== "object" || !("goal" in statConfig)) return statConfig;
   const { goal, ...rest } = statConfig as Record<string, unknown>;
   const fields = Array.isArray(statFields) ? statFields.filter((f): f is string => typeof f === "string") : undefined;
-  const clean = supportsCommunityGoal(format) ? sanitizeCommunityGoal(goal, fields) : null;
+  const clean = supportsCommunityGoal(format)
+    ? sanitizeCommunityGoal(goal, isResultGoalFormat(format) ? [RESULT_SCORE_FIELD] : fields)
+    : null;
   return (clean ? { ...rest, goal: clean } : rest) as T;
 }
 
@@ -193,12 +241,40 @@ function entryValue(stats: Record<string, unknown> | null, fields: string[]): nu
   return any ? sum : null;
 }
 
+type GoalEntry = { userId: string | null; statsJson: string | null };
+/** Match, wie es das Ziel braucht: Stat-Einträge und/oder (1v1) Spieler + Ergebnis */
+export type GoalMatch = {
+  entries: GoalEntry[];
+  player1Id?: string | null;
+  player2Id?: string | null;
+  score1?: number | null;
+  score2?: number | null;
+};
+
+/** Prisma-Select für die Matches eines Ziels (Stat-Einträge + 1v1-Ergebnisse). */
+export const GOAL_MATCH_SELECT = {
+  player1Id: true, player2Id: true, score1: true, score2: true,
+  entries: { select: { userId: true, statsJson: true } },
+} as const;
+
+/** 1v1-Matches mit Ergebnis → zwei virtuelle Einträge (eigene Tore je Spieler). Stat-Runden bleiben, wie sie sind. */
+export function toGoalMatches(matches: GoalMatch[]): { entries: GoalEntry[] }[] {
+  return matches.map(m => {
+    if (m.entries.length > 0 || m.score1 == null || m.score2 == null) return { entries: m.entries };
+    const entries: GoalEntry[] = [];
+    if (m.player1Id) entries.push({ userId: m.player1Id, statsJson: JSON.stringify({ [RESULT_SCORE_FIELD]: m.score1 }) });
+    if (m.player2Id) entries.push({ userId: m.player2Id, statsJson: JSON.stringify({ [RESULT_SCORE_FIELD]: m.score2 }) });
+    return { entries };
+  });
+}
+
 /** Zählt die Ziel-Felder über alle Runden. Werden auch für noch nicht abgeschlossene Runden gezählt —
  *  ein eingetragener Wert ist ein eingetragener Wert, das Ziel soll live mitlaufen. */
 export function computeCommunityGoalProgress(
-  matches: { entries: { userId: string | null; statsJson: string | null }[] }[],
+  rawMatches: GoalMatch[],
   goal: CommunityGoal,
 ): CommunityGoalProgress {
+  const matches = toGoalMatches(rawMatches);
   return isAvgGoal(goal) ? computeAvgProgress(matches, goal) : computeSumProgress(matches, goal);
 }
 
@@ -289,7 +365,9 @@ function computeAvgProgress(
 
 /** Einheit für die Anzeige: explizite Einheit, sonst die Feldnamen ("Tore + Assists"). */
 export function goalUnit(goal: CommunityGoal): string {
-  return goal.unit || goal.fields.join(" + ");
+  if (goal.unit) return goal.unit;
+  if (goal.fields.length === 1 && goal.fields[0] === RESULT_SCORE_FIELD) return "Tore";
+  return goal.fields.map(goalFieldLabel).join(" + ");
 }
 
 /** Zahl eines Ziels anzeigen: immer mit höchstens 2 Nachkommastellen (ganze Zahlen ohne ",00"). */
