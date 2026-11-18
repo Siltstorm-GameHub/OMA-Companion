@@ -156,7 +156,7 @@ export default function CommunityGoalEditor({
                     <option value="atMost">höchstens</option>
                   </select>
                 )}
-                <NumberInput min={avg ? 0.01 : 1} step={avg ? "any" : 1} value={value.target}
+                <NumberInput min={avg ? 0.01 : 1} step={avg ? 0.01 : 1} value={value.target}
                   onChange={e => set({ target: Number(e.target.value) })} className={inputCls} />
               </div>
             </div>

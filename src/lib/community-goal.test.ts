@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { computeCommunityGoalProgress, parseCommunityGoal, sanitizeCommunityGoal, type CommunityGoal } from "./community-goal";
+import { computeCommunityGoalProgress, formatGoalNumber, parseCommunityGoal, sanitizeCommunityGoal, type CommunityGoal } from "./community-goal";
 
 const entry = (userId: string, stats: Record<string, unknown>) => ({ userId, statsJson: JSON.stringify(stats) });
 
@@ -141,5 +141,17 @@ describe("Ø-Ziel: genau auf der Marke", () => {
     const m = [{ entries: [entry("a", { Kills: 2 }), entry("b", { Kills: 3 })] }];
     const p = computeCommunityGoalProgress(m, { fields: ["Kills"], target: 2.51, scope: "community", mode: "avg" });
     assert.equal(p.reached, false);
+  });
+});
+
+describe("Anzeige/Zielmarke: max. 2 Nachkommastellen", () => {
+  test("Zielmarke wird auf 2 Nachkommastellen gerundet gespeichert", () => {
+    assert.equal(sanitizeCommunityGoal({ fields: ["Kills"], target: 2.555, mode: "avg" })?.target, 2.56);
+    assert.equal(sanitizeCommunityGoal({ fields: ["Kills"], target: 0.001, mode: "avg" }), null);
+  });
+  test("formatGoalNumber", () => {
+    assert.equal(formatGoalNumber(2.34567), "2,35");
+    assert.equal(formatGoalNumber(3), "3");
+    assert.equal(formatGoalNumber(1234.5, { mode: "sum" }), "1.234,5");
   });
 });

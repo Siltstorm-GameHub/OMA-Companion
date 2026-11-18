@@ -78,7 +78,8 @@ const SCOPES = new Set<string>(COMMUNITY_GOAL_SCOPES.map(s => s.value));
 export function sanitizeCommunityGoal(raw: unknown, allowedFields?: string[]): CommunityGoal | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
-  const target = Number(r.target);
+  // Zielmarke mit höchstens 2 Nachkommastellen — genau so, wie sie angezeigt wird
+  const target = Math.round(Number(r.target) * 100) / 100;
   if (!Number.isFinite(target) || target <= 0) return null;
   const scope = typeof r.scope === "string" && SCOPES.has(r.scope) ? (r.scope as CommunityGoalScope) : "community";
   const fields = Array.isArray(r.fields)
@@ -291,9 +292,10 @@ export function goalUnit(goal: CommunityGoal): string {
   return goal.unit || goal.fields.join(" + ");
 }
 
-/** Zahl eines Ziels anzeigen: Summen ganzzahlig, Durchschnitte mit bis zu 2 Nachkommastellen. */
-export function formatGoalNumber(n: number, goal: Pick<CommunityGoal, "mode">): string {
-  return n.toLocaleString("de-DE", { maximumFractionDigits: isAvgGoal(goal) ? 2 : 0 });
+/** Zahl eines Ziels anzeigen: immer mit höchstens 2 Nachkommastellen (ganze Zahlen ohne ",00"). */
+export function formatGoalNumber(n: number, goal?: Pick<CommunityGoal, "mode">): string {
+  void goal;
+  return n.toLocaleString("de-DE", { maximumFractionDigits: 2 });
 }
 
 /** Kurzbeschreibung der Zielmarke: "1.000 Tore" bzw. "Ø mind. 2,5 Kills" / "Ø höchstens 3 Platzierung". */
