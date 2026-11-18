@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  rankingWithTies,
   dateBlock, dayBucket, eventPhase, friendsFirst, placementOf, recommendationScore, relevanceTags,
   startsInLabel, urgencyHint,
 } from "./event-display";
@@ -77,5 +78,19 @@ describe("Dringlichkeit, Relevanz, Ergebnisse", () => {
     assert.equal(placementOf("kaputt", "a"), null);
     const users = [{ id: "a" }, { id: "b" }, { id: "c" }];
     assert.deepEqual(friendsFirst(users, new Set(["c"])).map(u => u.id), ["c", "a", "b"]);
+  });
+});
+
+describe("rankingWithTies", () => {
+  test("ohne Gruppen: flache Rangliste", () => {
+    assert.deepEqual(rankingWithTies(["a", "b", "c"], null, "c"), { place: 3, winnerIds: ["a"] });
+    assert.deepEqual(rankingWithTies([], null, "c"), { place: 0, winnerIds: [] });
+  });
+  test("Gleichstand: geteilte Plätze, alle Erstplatzierten", () => {
+    const groups = [["a", "b"], ["c"], ["d", "e"], ["f"]];
+    assert.deepEqual(rankingWithTies(["a", "b", "c", "d", "e", "f"], groups, "b"), { place: 1, winnerIds: ["a", "b"] });
+    assert.deepEqual(rankingWithTies([], groups, "c"), { place: 3, winnerIds: ["a", "b"] });
+    assert.deepEqual(rankingWithTies([], groups, "e"), { place: 4, winnerIds: ["a", "b"] });
+    assert.deepEqual(rankingWithTies([], groups, "x"), { place: 0, winnerIds: ["a", "b"] });
   });
 });

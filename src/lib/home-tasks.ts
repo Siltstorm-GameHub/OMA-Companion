@@ -17,7 +17,25 @@ export type HomeTask = {
   coins?: number;
   /** Fortschritt 0–1 (Quest) */
   progress?: number;
+  /** Wegklickbar: diese Event-IDs werden beim ✕ ausgeblendet (Cookie RESULTS_HIDE_COOKIE) */
+  dismissIds?: string[];
 };
+
+/** Cookie mit den Event-IDs, deren "Ergebnisse sind da"-Erinnerung weggeklickt wurde (kommagetrennt) */
+export const RESULTS_HIDE_COOKIE = "home_results_hidden";
+/** Höchstens so viele IDs merken — ältere Events fallen ohnehin aus "kürzlich beendet" raus */
+export const RESULTS_HIDE_MAX = 30;
+
+export function parseHiddenResults(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try { value = decodeURIComponent(value); } catch { /* roh verwenden */ }
+  return value.split(",").map(s => s.trim()).filter(Boolean).slice(-RESULTS_HIDE_MAX);
+}
+
+/** Neue Cookie-Liste: bisherige + neue IDs, ohne Duplikate, auf RESULTS_HIDE_MAX gekürzt */
+export function addHiddenResults(current: string[], ids: string[]): string[] {
+  return [...current.filter(id => !ids.includes(id)), ...ids].slice(-RESULTS_HIDE_MAX);
+}
 
 export interface HomeTaskInput {
   loggedIn: boolean;
@@ -30,7 +48,9 @@ export interface HomeTaskInput {
   /** Ende des Clip-Votings (für "endet in 2 Tagen") */
   clipVotingEndsAt?: string | Date | null;
   /** "Ergebnisse sind da" — kürzlich abgeschlossene Events mit Ergebnis (neuestes zuerst) */
-  recentResults: { title: string; href: string }[];
+  recentResults: { id: string; title: string; href: string }[];
+  /** Weggeklickte Ergebnis-Erinnerungen (Event-IDs) */
+  hiddenResultIds?: string[];
   quests: { title: string; current: number; target: number; completed: boolean; reward?: number }[];
   /** Bezugszeitpunkt für Fristen (ms) */
   now?: number;
@@ -78,12 +98,16 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
     tasks.push({ key: "swipe", label: "GameSwipe", sub: `${n} ${n === 1 ? "Spiel" : "Spiele"} bewerten`, href: "/spiele", tone: "orange" });
   }
 
-  const result = input.recentResults[0];
+  const hidden = new Set(input.hiddenResultIds ?? []);
+  const results = input.recentResults.filter(r => !hidden.has(r.id));
+  const result = results[0];
   if (result) {
-    const more = input.recentResults.length - 1;
+    const more = results.length - 1;
     tasks.push({
       key: "results", label: "Ergebnisse sind da", href: result.href, tone: "teal",
       sub: `${result.title}${more > 0 ? ` +${more} weitere` : ""}`,
+      // ✕ blendet alle Ergebnisse aus, auf die die Kachel gerade hinweist
+      dismissIds: results.map(r => r.id),
     });
   }
 

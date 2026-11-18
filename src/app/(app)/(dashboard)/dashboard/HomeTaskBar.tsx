@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
 import { Clapperboard, Dices, Gamepad2, Target, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
+import HomeTaskDismiss from "@/components/HomeTaskDismiss";
 import { homeTaskCoins, type HomeTask, type HomeTaskTone } from "@/lib/home-tasks";
 import type { DailyPollView } from "@/lib/daily-poll";
 
@@ -61,23 +62,25 @@ export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTas
               const tone = TONE[t.tone];
               // Ungerade Anzahl: die letzte Kachel mobil über die volle Breite
               const wide = tasks.length % 2 === 1 && i === tasks.length - 1;
-              return (
-                <li key={t.key} className={wide ? "col-span-2 lg:col-span-1" : ""}>
-                  <Link href={t.href}
-                    className={`group flex h-full flex-col gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 sm:p-3 transition-colors hover:bg-white/[0.06] ${tone.hover}`}>
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone.icon}`}>
-                      <Icon className="w-4 h-4" />
+              const liClass = wide ? "col-span-2 lg:col-span-1" : "";
+              const tile = (
+                <Link href={t.href}
+                  className={`group flex h-full flex-col gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 sm:p-3 transition-colors hover:bg-white/[0.06] ${tone.hover}`}>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone.icon}`}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <span className="text-[13px] font-semibold leading-tight text-white">{t.label}</span>
+                  <span className="line-clamp-2 text-[11px] leading-snug text-gray-400">{t.sub}</span>
+                  {t.progress != null && (
+                    <span className="mt-auto h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                      <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(t.progress * 100)}%` }} />
                     </span>
-                    <span className="text-[13px] font-semibold leading-tight text-white">{t.label}</span>
-                    <span className="line-clamp-2 text-[11px] leading-snug text-gray-400">{t.sub}</span>
-                    {t.progress != null && (
-                      <span className="mt-auto h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
-                        <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(t.progress * 100)}%` }} />
-                      </span>
-                    )}
-                  </Link>
-                </li>
+                  )}
+                </Link>
               );
+              return t.dismissIds?.length
+                ? <HomeTaskDismiss key={t.key} ids={t.dismissIds} label={t.label} className={liClass}>{tile}</HomeTaskDismiss>
+                : <li key={t.key} className={liClass}>{tile}</li>;
             })}
           </ul>
         </div>

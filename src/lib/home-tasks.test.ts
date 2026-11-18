@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildHomeTasks, closestQuests, endsIn, homeTaskCoins, type HomeTaskInput } from "./home-tasks";
+import { addHiddenResults, buildHomeTasks, closestQuests, endsIn, homeTaskCoins, parseHiddenResults, type HomeTaskInput } from "./home-tasks";
 
 const base: HomeTaskInput = {
   loggedIn: true, spunToday: true, swipe: null, clipVotingOpen: false, clipVoted: false, recentResults: [], quests: [],
@@ -17,7 +17,7 @@ describe("Aufgabenleiste der Startseite", () => {
     const tasks = buildHomeTasks({
       ...base, now, spunToday: false, spinMaxCoins: 200, clipVotingOpen: true, clipVotingEndsAt: "2026-11-18T12:00:00Z",
       swipe: { open: 4, drop: null },
-      recentResults: [{ title: "Valorant Clash", href: "/tournament/x" }, { title: "B", href: "/b" }],
+      recentResults: [{ id: "x", title: "Valorant Clash", href: "/tournament/x" }, { id: "b", title: "B", href: "/b" }],
       quests: [{ title: "Voice 3 Std", current: 2, target: 3, completed: false, reward: 50 }],
     });
     assert.deepEqual(tasks.map(t => [t.key, t.label, t.sub]), [
@@ -56,5 +56,25 @@ describe("Aufgabenleiste der Startseite", () => {
       { id: "d", current: 1, target: 2, completed: false },
     ];
     assert.deepEqual(closestQuests(q).map(x => x.id), ["b", "d"]);
+  });
+
+  test("Ergebnisse wegklicken: ausgeblendete Events fallen raus, ✕ deckt alle gezeigten ab", () => {
+    const recentResults = [
+      { id: "a", title: "A", href: "/tournament/a" },
+      { id: "b", title: "B", href: "/tournament/b" },
+      { id: "c", title: "C", href: "/tournament/c" },
+    ];
+    const t = buildHomeTasks({ ...base, recentResults, hiddenResultIds: ["a"] });
+    assert.deepEqual(t.map(x => [x.sub, x.href, x.dismissIds]), [["B +1 weitere", "/tournament/b", ["b", "c"]]]);
+    assert.deepEqual(buildHomeTasks({ ...base, recentResults, hiddenResultIds: ["a", "b", "c"] }), []);
+  });
+
+  test("Cookie-Liste der ausgeblendeten Ergebnisse", () => {
+    assert.deepEqual(parseHiddenResults(undefined), []);
+    assert.deepEqual(parseHiddenResults(encodeURIComponent("a,b, ,c")), ["a", "b", "c"]);
+    assert.deepEqual(addHiddenResults(["a", "b"], ["b", "c"]), ["a", "b", "c"]);
+    const many = Array.from({ length: 40 }, (_, i) => `e${i}`);
+    assert.equal(addHiddenResults(many, ["neu"]).length, 30);
+    assert.equal(addHiddenResults(many, ["neu"]).at(-1), "neu");
   });
 });

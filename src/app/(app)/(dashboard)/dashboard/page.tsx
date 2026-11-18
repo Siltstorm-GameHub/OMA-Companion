@@ -26,8 +26,9 @@ import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile from "@/components/EventsTile";
 import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
-import { friendsFirst, parseRanking, relevanceTags, startsInLabel } from "@/lib/event-display";
-import { buildHomeTasks, closestQuests } from "@/lib/home-tasks";
+import { friendsFirst, parseRanking, rankingWithTies, relevanceTags, startsInLabel } from "@/lib/event-display";
+import { buildHomeTasks, closestQuests, parseHiddenResults, RESULTS_HIDE_COOKIE } from "@/lib/home-tasks";
+import { cookies } from "next/headers";
 import { getShopConfig } from "@/lib/shop-config";
 import HomeTaskBar from "./HomeTaskBar";
 import { loadDailyPolls } from "@/lib/daily-poll";
@@ -44,6 +45,15 @@ import CommunityBoardWidget from "./CommunityBoardWidget";
 
 /** Kürzlich abgeschlossenes Event mit Ergebnis — Chip "Ergebnisse: …" in der Aufgabenleiste */
 type RecentResultEvent = { id: string; title: string; game: string | null; href: string };
+
+function parseJsonObject<T extends object>(raw: string | null | undefined): Partial<T> {
+  if (!raw) return {};
+  try { const v = JSON.parse(raw); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch { return {}; }
+}
+function parseJsonArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []; } catch { return []; }
+}
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -320,9 +330,11 @@ export default async function DashboardPage() {
           },
           orderBy: { completedAt: "desc" },
           select: {
-            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, finalRankingJson: true,
+            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, finalRankingJson: true, completionData: true,
             series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
             _count: { select: { registrations: { where: { role: "player" } } } },
+            // Ausgewertete Umfragen (winnerIds gesetzt) — "Umfrage gewonnen" auf der Ergebnis-Kachel
+            polls: { where: { winnerIds: { not: null } }, select: { label: true, winnerIds: true } },
           },
         })
       : null,
@@ -343,10 +355,28 @@ export default async function DashboardPage() {
   ]);
 
   const ranking = parseRanking(myRecentResult?.finalRankingJson);
-  const myPlace = myRecentResult && userId ? ranking.indexOf(userId) + 1 : 0;
-  const winnerUser = myPlace > 0 && ranking[0]
-    ? await prisma.user.findUnique({ where: { id: ranking[0] }, select: { username: true, name: true } })
-    : null;
+  const resultCompletion = parseJsonObject<{
+    finalRankingGroups?: string[][] | null; pollWinnerIds?: string[] | null; pollLabel?: string | null;
+  }>(myRecentResult?.completionData);
+  const { place: myPlace, winnerIds: firstPlaceIds } = myRecentResult && userId
+    ? rankingWithTies(ranking, resultCompletion.finalRankingGroups, userId)
+    : { place: 0, winnerIds: [] };
+  // Alle Erstplatzierten (Gleichstand) außer dir selbst
+  const otherWinnerIds = firstPlaceIds.filter(id => id !== userId);
+  const winnerUsers = myPlace > 0 && otherWinnerIds.length > 0
+    ? await prisma.user.findMany({ where: { id: { in: otherWinnerIds } }, select: { id: true, username: true, name: true } })
+    : [];
+  const winnerNames = otherWinnerIds
+    .map(id => winnerUsers.find(u => u.id === id))
+    .filter((u): u is NonNullable<typeof u> => !!u)
+    .map(u => u.username ?? u.name ?? "?");
+  // Gewonnene Umfragen: DB-Umfragen (EventPoll.winnerIds) + Legacy-Einzelumfrage aus completionData
+  const pollWins = userId && myRecentResult
+    ? [
+        ...myRecentResult.polls.filter(p => parseJsonArray(p.winnerIds).includes(userId)).map(p => p.label),
+        ...(resultCompletion.pollWinnerIds?.includes(userId) ? [resultCompletion.pollLabel || "Umfrage"] : []),
+      ]
+    : [];
   const homeResult: HomeResult | null = myRecentResult && myPlace > 0
     ? {
         id: myRecentResult.id,
@@ -356,7 +386,8 @@ export default async function DashboardPage() {
         omaOriginal: isOmaOriginal(myRecentResult),
         place: myPlace,
         total: Math.max(ranking.length, myRecentResult._count.registrations),
-        winnerName: myPlace === 1 ? null : (winnerUser?.username ?? winnerUser?.name ?? null),
+        winnerNames,
+        pollWins: [...new Set(pollWins)],
       }
     : null;
 
@@ -423,7 +454,8 @@ export default async function DashboardPage() {
     clipVotingOpen: !!activeClipContest,
     clipVoted: !!myClipVote,
     clipVotingEndsAt: activeClipContest?.votingEndsAt ?? null,
-    recentResults: recentResultEvents.map(r => ({ title: r.title, href: r.href })),
+    recentResults: recentResultEvents.map(r => ({ id: r.id, title: r.title, href: r.href })),
+    hiddenResultIds: parseHiddenResults((await cookies()).get(RESULTS_HIDE_COOKIE)?.value),
     quests: questRows,
     now: now.getTime(),
   });

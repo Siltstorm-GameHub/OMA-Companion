@@ -55,9 +55,13 @@ export interface HomeResult {
   game: string | null;
   coverUrl: string | null;
   omaOriginal: boolean;
+  /** Platz bei Gleichstand geteilt: 1, 1, 3, … */
   place: number;
   total: number;
-  winnerName: string | null;
+  /** Alle Erstplatzierten (bei Gleichstand mehrere) — ohne dich selbst */
+  winnerNames: string[];
+  /** Labels der Event-Umfragen, die du gewonnen hast (z.B. "MVP") */
+  pollWins: string[];
 }
 
 /** Warum ein Zeitraum-Event gerade oben steht */

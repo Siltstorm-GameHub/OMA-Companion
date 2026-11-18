@@ -18,7 +18,7 @@ function ev(p: Partial<HomeEventCandidate>): HomeEventCandidate {
 
 describe("Startseiten-Event: Priorität", () => {
   test("Ergebnis schlägt alles", () => {
-    const f = pickHomeFeature([ev({ isRegistered: true })], { id: "r", title: "x", game: null, coverUrl: null, omaOriginal: false, place: 4, total: 12, winnerName: "Tobi" }, NOW);
+    const f = pickHomeFeature([ev({ isRegistered: true })], { id: "r", title: "x", game: null, coverUrl: null, omaOriginal: false, place: 4, total: 12, winnerNames: ["Tobi"], pollWins: [] }, NOW);
     assert.equal(f.kind, "result");
   });
 

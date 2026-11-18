@@ -176,6 +176,29 @@ export function parseRanking(finalRankingJson: string | null | undefined): strin
   }
 }
 
+/**
+ * Endplatzierung mit Gleichstand: rankingGroups (completionData.finalRankingGroups) bündelt
+ * gleichplatzierte User, Platz zählt wie im Sport (1, 1, 3). Ohne Gruppen gilt die flache
+ * Rangliste (jeder ein eigener Platz). Liefert deinen Platz (0 = nicht platziert) und alle
+ * Erstplatzierten.
+ */
+export function rankingWithTies(
+  ranking: string[],
+  rankingGroups: string[][] | null | undefined,
+  userId: string | null | undefined,
+): { place: number; winnerIds: string[] } {
+  const groups = rankingGroups?.length
+    ? rankingGroups.filter(g => Array.isArray(g) && g.length > 0)
+    : ranking.map(id => [id]);
+  let place = 0;
+  let pos = 1;
+  for (const g of groups) {
+    if (userId && g.includes(userId)) { place = pos; break; }
+    pos += g.length;
+  }
+  return { place, winnerIds: groups[0] ?? [] };
+}
+
 /** Platz des Users (1-basiert) oder null */
 export function placementOf(finalRankingJson: string | null | undefined, userId: string | null | undefined): number | null {
   if (!userId) return null;
