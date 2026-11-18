@@ -1,5 +1,7 @@
 "use client";
 import PlaceMedal from "@/components/PlaceMedal";
+import SeriesCycleGoals, { type CycleEvent } from "./SeriesCycleGoals";
+import { supportsCommunityGoal } from "@/lib/community-goal";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { useState } from "react";
@@ -841,14 +843,14 @@ export default function SeriesDetailClient({
                 Eine neue Saison übernimmt die Vorlage automatisch.
               </p>
               <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} />
-              {(fixedFormat === "coop_stats" || !fixedFormat) && (
+              {(supportsCommunityGoal(fixedFormat) || !fixedFormat) && (
                 <p className="text-[11px] text-teal-300/80 mt-2">
                   🎯 Das Community-Ziel gilt automatisch für alle Termine der Reihe. Änderst du es, während ein Termin
                   schon läuft, behalten laufende und vergangene Termine ihr bisheriges Ziel — alle kommenden
                   übernehmen das neue. Einzelne Termine können es in ihren Einstellungen überschreiben.
                 </p>
               )}
-              {!isArchived && upcomingTermineCount > 0 && (fixedFormat === "coop_stats" || !fixedFormat) && (
+              {!isArchived && upcomingTermineCount > 0 && (supportsCommunityGoal(fixedFormat) || !fixedFormat) && (
                 <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-white/[0.06]">
                   <p className="text-[11px] text-gray-500 flex-1 min-w-[200px]">
                     Einzelne kommende Termine haben ein eigenes Ziel oder keins? Hier setzt du alle {upcomingTermineCount}
@@ -860,6 +862,15 @@ export default function SeriesDetailClient({
                   </button>
                 </div>
               )}
+            </Section>
+          )}
+
+          {/* Community-Ziel je Zyklus (Termin) — Reihen mit Skill-Index/Durchschnittswerte */}
+          {isTournamentSeries && (!fixedFormat || supportsCommunityGoal(fixedFormat))
+            && (series.events as CycleEvent[]).some(e => supportsCommunityGoal(e.format)) && (
+            <Section title="🎯 Community-Ziel je Zyklus">
+              <SeriesCycleGoals events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}
+                statFields={eventStatFields} disabled={isArchived} />
             </Section>
           )}
 

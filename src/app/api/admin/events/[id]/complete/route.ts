@@ -17,6 +17,7 @@ import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { isPeriodEvent } from "@/lib/event-period";
+import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
 
@@ -1305,6 +1306,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
         })]
       : []),
   ]);
+
+  // Community-Ziel mit Durchschnitt: wird mit dem Abschluss der Spielphase abgerechnet (no-op sonst, wirft nie)
+  await checkCommunityGoal(eventId);
 
   // Dominion Bonus: komplette Event-Historie der Reihe chronologisch (event.startAt) neu berechnen —
   // muss NACH der obigen Transaktion laufen, da hier alle Events der Reihe frisch aus der DB gelesen

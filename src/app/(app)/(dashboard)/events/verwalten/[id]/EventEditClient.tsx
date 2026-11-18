@@ -40,7 +40,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 import { LIFECYCLE_STEPS, lifecycleStep } from "@/lib/event-manage";
 import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import { parseCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
+import { parseCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
 import { confirmEventTiming } from "@/lib/event-timing-warning";
@@ -408,7 +408,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   /* Event-eigene Stat-Punkte-Konfiguration (nur relevant bei coop_stats) — überschreibt für dieses
    * Event die Reihen-weite seriesStatConfig, siehe schema.prisma statConfigJson. */
   const [tmtStatConfig, setTmtStatConfig] = useState<EventStatConfigForm>(() => parseEventStatConfig(event.statConfigJson));
-  /* Community-Ziel (nur Skill-Index / coop_stats) — liegt ebenfalls in statConfigJson, siehe lib/community-goal.ts */
+  /* Community-Ziel (Skill-Index / Durchschnittswerte) — liegt ebenfalls in statConfigJson, siehe lib/community-goal.ts */
   const [tmtGoal, setTmtGoal] = useState<CommunityGoalForm>(() => goalToForm(parseCommunityGoal(event.statConfigJson)));
   // Ziel eines Reihen-Termins: eigenes, geerbtes oder abgeschaltetes (lib/event-goal.ts)
   const resolvedGoal = resolveEventGoal({ format: event.format, statConfigJson: event.statConfigJson, series: event.series });
@@ -696,10 +696,10 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
     const builtStatConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
       ? buildEventStatConfig(tmtStatFields, tmtStatConfig, tmtFormat === "avg_stats",
-          tmtFormat === "coop_stats" && !event.series ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
+          supportsCommunityGoal(tmtFormat) && !event.series ? formToGoal(tmtGoal, tmtStatFields) : null) : null;
     // Termin einer Reihe: Ziel-Abweichung (eigenes Ziel / "kein Ziel") gehört dem Ziel-Panel und darf
     // beim Speichern der Turnier-Einstellungen nicht verloren gehen (lib/event-goal.ts)
-    const keptGoalKeys: Record<string, unknown> = event.series && tmtFormat === "coop_stats"
+    const keptGoalKeys: Record<string, unknown> = event.series && supportsCommunityGoal(tmtFormat)
       ? {
           ...(resolvedGoal.ownGoal && resolvedGoal.source === "event" && { goal: resolvedGoal.ownGoal }),
           ...(resolvedGoal.source === "off" && { goalOff: true }),
@@ -1633,7 +1633,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           )}
 
-          {tmtFormat === "coop_stats" && (event.series ? (
+          {supportsCommunityGoal(tmtFormat) && (event.series ? (
             // Termin einer Reihe: Ziel wird von der Reihe geerbt, hier nur übernehmen/überschreiben/abschalten
             <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
               seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
@@ -1776,8 +1776,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       {activeTab === "bracket" && bracketTournament && (
         <div className="space-y-4">
           {/* Termine einer Reihe mit festem Spiel haben keinen "Turnier"-Reiter — das Ziel des
-              Termins lässt sich deshalb hier anpassen (nur Punktewertung) */}
-          {isSeriesEvent && event.format === "coop_stats" && (
+              Termins lässt sich deshalb hier anpassen (Punktewertung/Durchschnittswerte) */}
+          {isSeriesEvent && supportsCommunityGoal(event.format) && (
             <EventGoalPanel eventId={event.id} source={resolvedGoal.source} ownGoal={resolvedGoal.ownGoal}
               seriesGoal={resolvedGoal.seriesGoal} statFields={tmtStatFields} />
           )}

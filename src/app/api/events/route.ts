@@ -13,7 +13,7 @@ import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { createPollsForEvent } from "@/lib/event-polls";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
-import { sanitizeCommunityGoal } from "@/lib/community-goal";
+import { sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -176,8 +176,8 @@ export async function POST(req: NextRequest) {
         : [];
       // avg_stats: "niedrigster Ø gewinnt" schon ab Event-Erstellung, siehe resolveAvgDirection
       const avgDirection = eventFormat === "avg_stats" && bodyStatConfig?.avgDirection === "low" ? "low" : undefined;
-      // Skill-Index: optionales Community-Ziel (Zähler bis zur Zielmarke), siehe lib/community-goal.ts
-      const goal = eventFormat === "coop_stats" ? sanitizeCommunityGoal(bodyStatConfig?.goal, fields) : null;
+      // Skill-Index / Durchschnittswerte: optionales Community-Ziel (Zähler bis zur Zielmarke), siehe lib/community-goal.ts
+      const goal = supportsCommunityGoal(eventFormat) ? sanitizeCommunityGoal(bodyStatConfig?.goal, fields) : null;
       if (stats.length || avgDirection || goal) {
         eventStatConfigJson = JSON.stringify({ stats, ...(avgDirection && { avgDirection }), ...(goal && { goal }) });
       }

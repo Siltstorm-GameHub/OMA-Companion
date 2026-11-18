@@ -1,10 +1,9 @@
-import { goalPercent, goalUnit, type CommunityGoalProgress, type GoalPace } from "@/lib/community-goal";
+import { formatGoalNumber, goalPercent, goalTargetLabel, goalUnit, isAvgGoal, meetsGoal, type CommunityGoalProgress, type GoalPace } from "@/lib/community-goal";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
-const fmt = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 2 });
 
 function Bar({ percent, reached, color = "teal" }: { percent: number; reached: boolean; color?: "teal" | "sky" | "rose" }) {
   const fill = reached
@@ -19,8 +18,9 @@ function Bar({ percent, reached, color = "teal" }: { percent: number; reached: b
 }
 
 /**
- * Fortschritt des Community-Ziels (Skill-Index-Zusatz, siehe lib/community-goal.ts) auf der
- * Turnierseite — oberhalb der normalen Skill-Index-Tabelle.
+ * Fortschritt des Community-Ziels (Zusatz zu Skill-Index/Durchschnittswerte, siehe lib/community-goal.ts)
+ * auf der Turnierseite — oberhalb der normalen Tabelle. Summen-Ziele zeigen Beiträge, Ø-Ziele den
+ * aktuellen Durchschnitt (abgerechnet erst am Ende des Zeitraums).
  */
 export default function CommunityGoalCard({
   progress,
@@ -28,7 +28,10 @@ export default function CommunityGoalCard({
   userId,
   pace = null,
   rewardCoins,
+  settled = null,
 }: {
+  /** Nur Ø-Ziele: Ergebnis der Abrechnung am Ende des Zeitraums (null = noch offen) */
+  settled?: { reached: boolean } | null;
   progress: CommunityGoalProgress;
   /** Tempo im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events), siehe goalPace */
   pace?: GoalPace | null;
@@ -39,61 +42,90 @@ export default function CommunityGoalCard({
 }) {
   const { goal, byUser, byTeam, main } = progress;
   const unit = goalUnit(goal);
+  const avg = isAvgGoal(goal);
+  const fmt = (n: number) => formatGoalNumber(n, goal);
+  const atMost = goal.direction === "atMost";
+  // Ø-Ziel: bei "höchstens" ist der kleinste Ø der beste
+  const sortDesc = !(avg && atMost);
+  const reached = avg && settled ? settled.reached : progress.reached;
+  const avgPrefix = avg ? "Ø " : "";
   const userById = new Map(participants.map(p => [p.userId, p.user]));
-  const ranked = Object.entries(byUser).sort((a, b) => b[1] - a[1]);
+  const ranked = Object.entries(byUser).sort((a, b) => (sortDesc ? b[1] - a[1] : a[1] - b[1]));
   const myValue = userId ? byUser[userId] ?? 0 : 0;
+  const hasMine = !!userId && userId in byUser;
   const scopeLabel = goal.scope === "team" ? "Team-Ziel" : goal.scope === "solo" ? "Einzel-Ziel" : "Community-Ziel";
 
   return (
-    <div className={`glass rounded-2xl p-5 mb-5 border ${progress.reached ? "border-amber-400/30" : "border-teal-500/20"}`}>
+    <div className={`glass rounded-2xl p-5 mb-5 border ${reached ? "border-amber-400/30" : "border-teal-500/20"}`}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wide text-teal-400">🎯 {scopeLabel}</p>
           <h3 className="text-base font-semibold text-white truncate">
-            {goal.title || `${fmt(goal.target)} ${unit}`}
+            {goal.title || goalTargetLabel(goal)}
           </h3>
+          {avg && goal.title && <p className="text-xs text-gray-400 mt-0.5">{goalTargetLabel(goal)}</p>}
+          {avg && !settled && (
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Zwischenstand — abgerechnet wird am Ende des Zeitraums
+              {progress.missingParticipants > 0 && ` · noch ${progress.missingParticipants} Teilnehmer mit Werten nötig`}
+            </p>
+          )}
           {pace && (
             <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-emerald-300" : pace.status === "on_track" ? "text-teal-300" : "text-amber-300"}`}>
               {pace.status === "ahead" ? "🚀" : pace.status === "on_track" ? "✅" : "⚠️"} {pace.label}
               <span className="font-normal text-gray-500"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
             </p>
           )}
-          {!!rewardCoins && rewardCoins > 0 && !progress.reached && (
+          {!!rewardCoins && rewardCoins > 0 && !reached && !settled && (
             <p className="text-[11px] text-amber-300/80 mt-0.5">🪙 {rewardCoins} Münzen {goal.scope === "team" ? "für alle im Siegerteam" : goal.scope === "solo" ? "für jeden, der die Marke erreicht" : "für alle Mitwirkenden, wenn das Ziel erreicht wird"}</p>
           )}
         </div>
-        {progress.reached && (
+        {reached ? (
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30">
-            🏆 Ziel erreicht
+            🏆 {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
           </span>
-        )}
+        ) : avg && settled ? (
+          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-white/5 border border-white/10">
+            Ziel verfehlt
+          </span>
+        ) : null}
       </div>
 
       {goal.scope === "community" && (
         <>
           <div className="flex items-baseline justify-between gap-2 mb-1.5">
             <p className="text-2xl font-bold text-white tabular-nums">
-              {fmt(main.total)} <span className="text-sm font-normal text-gray-500">/ {fmt(goal.target)} {unit}</span>
+              {avgPrefix}{fmt(main.total)} <span className="text-sm font-normal text-gray-500">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
             </p>
             <p className="text-sm text-gray-400 tabular-nums">{Math.floor(main.percent)} %</p>
           </div>
           <Bar percent={main.percent} reached={main.reached} />
-          {!main.reached && (
+          {!main.reached && !avg && (
             <p className="text-xs text-gray-500 mt-1.5">Noch {fmt(goal.target - main.total)} {unit} bis zum Ziel.</p>
+          )}
+          {!meetsGoal(main.total, goal) && avg && progress.contributorIds.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1.5">
+              Der gemeinsame Ø muss noch um {fmt(Math.abs(goal.target - main.total))} {atMost ? "sinken" : "steigen"}.
+            </p>
+          )}
+          {avg && progress.contributorIds.length > 0 && (
+            <p className="text-[11px] text-gray-500 mt-1">Aus {progress.contributorIds.length} Teilnehmern mit Werten.</p>
           )}
           {ranked.length > 0 && (
             <div className="mt-4">
-              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1.5">Top-Beiträge</p>
+              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1.5">{avg ? "Ø je Teilnehmer" : "Top-Beiträge"}</p>
               <ul className="space-y-1">
                 {ranked.slice(0, 5).map(([uid, v]) => (
                   <li key={uid} className={`flex justify-between text-sm ${uid === userId ? "text-teal-300" : "text-gray-300"}`}>
                     <span className="truncate">{uname(userById.get(uid))}</span>
-                    <span className="tabular-nums text-gray-400">{fmt(v)} · {Math.round((v / Math.max(main.total, 1)) * 100)} %</span>
+                    <span className="tabular-nums text-gray-400">
+                      {avg ? `Ø ${fmt(v)}` : `${fmt(v)} · ${Math.round((v / Math.max(main.total, 1)) * 100)} %`}
+                    </span>
                   </li>
                 ))}
               </ul>
-              {userId && myValue > 0 && !ranked.slice(0, 5).some(([uid]) => uid === userId) && (
-                <p className="text-xs text-teal-300 mt-1.5">Dein Beitrag: {fmt(myValue)} {unit}</p>
+              {hasMine && !ranked.slice(0, 5).some(([uid]) => uid === userId) && (avg || myValue > 0) && (
+                <p className="text-xs text-teal-300 mt-1.5">{avg ? `Dein Ø: ${fmt(myValue)}` : `Dein Beitrag: ${fmt(myValue)}`} {unit}</p>
               )}
             </div>
           )}
@@ -104,8 +136,9 @@ export default function CommunityGoalCard({
         <div className="space-y-3">
           {(["A", "B"] as const).map(t => {
             const v = byTeam[t];
-            const pct = goalPercent(v, goal.target);
-            const done = v >= goal.target;
+            const teamHasData = avg ? progress.contributorIds.length > 0 && v !== 0 : true;
+            const pct = goalPercent(v, goal, teamHasData);
+            const done = progress.reachedTeams.includes(t);
             return (
               <div key={t}>
                 <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -113,7 +146,7 @@ export default function CommunityGoalCard({
                     Team {t} {done && "🏆"}
                   </p>
                   <p className="text-sm text-gray-300 tabular-nums">
-                    {fmt(v)} <span className="text-gray-500">/ {fmt(goal.target)} {unit}</span>
+                    {avgPrefix}{fmt(v)} <span className="text-gray-500">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
                   </p>
                 </div>
                 <Bar percent={pct} reached={done} color={t === "A" ? "sky" : "rose"} />
@@ -129,7 +162,7 @@ export default function CommunityGoalCard({
       {goal.scope === "solo" && (
         <div>
           <p className="text-xs text-gray-500 mb-2">
-            Jeder für sich: {fmt(goal.target)} {unit} pro Spieler
+            Jeder für sich: {avg ? goalTargetLabel(goal) : `${fmt(goal.target)} ${unit}`} pro Spieler
             {progress.reachedUserIds.length > 0 && ` · ${progress.reachedUserIds.length} ${progress.reachedUserIds.length === 1 ? "hat" : "haben"} es geschafft`}
           </p>
           {ranked.length === 0 ? (
@@ -137,23 +170,23 @@ export default function CommunityGoalCard({
           ) : (
             <ul className="space-y-2.5">
               {ranked.slice(0, 10).map(([uid, v]) => {
-                const done = v >= goal.target;
+                const done = progress.reachedUserIds.includes(uid);
                 return (
                   <li key={uid}>
                     <div className="flex justify-between gap-2 text-sm mb-1">
                       <span className={`truncate ${uid === userId ? "text-teal-300 font-medium" : "text-gray-300"}`}>
                         {uname(userById.get(uid))} {done && "🏆"}
                       </span>
-                      <span className="tabular-nums text-gray-400">{fmt(v)} / {fmt(goal.target)}</span>
+                      <span className="tabular-nums text-gray-400">{avgPrefix}{fmt(v)} / {fmt(goal.target)}</span>
                     </div>
-                    <Bar percent={goalPercent(v, goal.target)} reached={done} />
+                    <Bar percent={goalPercent(v, goal)} reached={done} />
                   </li>
                 );
               })}
             </ul>
           )}
-          {userId && myValue > 0 && !ranked.slice(0, 10).some(([uid]) => uid === userId) && (
-            <p className="text-xs text-teal-300 mt-2">Dein Stand: {fmt(myValue)} / {fmt(goal.target)} {unit}</p>
+          {hasMine && !ranked.slice(0, 10).some(([uid]) => uid === userId) && (
+            <p className="text-xs text-teal-300 mt-2">Dein Stand: {avgPrefix}{fmt(myValue)} / {fmt(goal.target)} {unit}</p>
           )}
         </div>
       )}

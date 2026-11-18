@@ -3,6 +3,7 @@ import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tourname
 import { CHECK_IN_MINUTES } from "@/lib/checkin";
 import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
+import { supportsCommunityGoal } from "@/lib/community-goal";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { NumberInput } from "@/components/ui/NumberInput";
 
@@ -25,7 +26,7 @@ export default function TournamentTemplateEditor({
   statFields?: string[];
 }) {
   const anyFormat = !format;
-  const showGoal = anyFormat || format === "coop_stats";
+  const showGoal = anyFormat || supportsCommunityGoal(format);
   // Lokaler Formularzustand: ein unvollständiges Ziel (z.B. noch kein Feld gewählt) ergibt in der
   // Vorlage null, darf das Formular aber nicht zurücksetzen
   const [goalForm, setGoalForm] = useState<CommunityGoalForm>(() => goalToForm(value.communityGoal ?? null));

@@ -3,15 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import { goalUnit, type CommunityGoal } from "@/lib/community-goal";
+import { goalTargetLabel, type CommunityGoal } from "@/lib/community-goal";
 import type { EventGoalSource } from "@/lib/event-goal";
 import { Save } from "@/components/icons";
 
 type Mode = "inherit" | "override" | "off";
 
-const fmt = (n: number) => n.toLocaleString("de-DE");
-const goalSummary = (g: CommunityGoal) =>
-  `${g.title ? `${g.title} · ` : ""}${fmt(g.target)} ${goalUnit(g)}${g.rewardCoins ? ` · ${g.rewardCoins} Münzen` : ""}`;
+export const goalSummary = (g: CommunityGoal) =>
+  `${g.title ? `${g.title} · ` : ""}${goalTargetLabel(g)}${g.rewardCoins ? ` · ${g.rewardCoins} Münzen` : ""}`;
 
 /**
  * Community-Ziel eines Termins einer Eventreihe: Standard ist das Ziel der Reihe (wird automatisch

@@ -1,6 +1,7 @@
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
 import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
+import { GOAL_FORMATS } from "@/lib/community-goal";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
@@ -175,7 +176,7 @@ export async function PATCH(req: NextRequest) {
   const goalNow = new Date();
   if (oldTemplateGoal && JSON.stringify(oldTemplateGoal) !== JSON.stringify(newTemplateGoal)) {
     const started = await prisma.event.findMany({
-      where: { seriesId, format: "coop_stats", startAt: { lte: goalNow } },
+      where: { seriesId, format: { in: [...GOAL_FORMATS] }, startAt: { lte: goalNow } },
       select: { id: true, statConfigJson: true },
     });
     for (const ev of started) {
@@ -189,7 +190,7 @@ export async function PATCH(req: NextRequest) {
   }
   if (fields.applyGoalToOpenEvents === true) {
     const upcoming = await prisma.event.findMany({
-      where: { seriesId, format: "coop_stats", startAt: { gt: goalNow }, status: OPEN_EVENT_STATUS_FILTER },
+      where: { seriesId, format: { in: [...GOAL_FORMATS] }, startAt: { gt: goalNow }, status: OPEN_EVENT_STATUS_FILTER },
       select: { id: true, statConfigJson: true },
     });
     for (const ev of upcoming) {

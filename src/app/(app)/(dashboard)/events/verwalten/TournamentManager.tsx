@@ -20,7 +20,7 @@ import { duelProgress, nextDuelMatches, statProgress, statStandings } from "@/li
 import { bracketColumns } from "@/lib/tournaments/bracket-tree";
 import BracketTree from "./BracketTree";
 import { computeTurnierpunkte } from "@/lib/series-event-points";
-import { computeCommunityGoalProgress, goalUnit, type CommunityGoal } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalUnit, isAvgGoal, type CommunityGoal } from "@/lib/community-goal";
 import type { AvgDirection } from "@/lib/avg-stats";
 import { formatDecimal } from "@/lib/format-number";
 
@@ -1583,7 +1583,11 @@ export default function TournamentManager({
             <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] px-3 py-2 space-y-1">
               <p className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
-                <span className="tabular-nums text-gray-300">{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</span>
+                <span className="tabular-nums text-gray-300">
+                  {isAvgGoal(goal!)
+                    ? <>Ø {formatDecimal(goalProgress.main.total)} · Ziel {goal!.direction === "atMost" ? "höchstens" : "mind."} {formatDecimal(goal!.target)} {goalUnit(goal!)}</>
+                    : <>{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</>}
+                </span>
               </p>
               <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                 <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />

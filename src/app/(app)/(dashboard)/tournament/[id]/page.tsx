@@ -62,7 +62,8 @@ import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import FfaView from "./FfaView";
 import CommunityGoalCard from "./CommunityGoalCard";
-import { computeCommunityGoalProgress, goalPace } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace, isAvgGoal } from "@/lib/community-goal";
+import { parseGoalState } from "@/lib/community-goal-milestones";
 import { resolveEventGoal } from "@/lib/event-goal";
 import LigaView from "./LigaView";
 import GroupKnockoutView from "./GroupKnockoutView";
@@ -697,8 +698,14 @@ export default async function TournamentDetailPage({
   // Eigenes Ziel des Termins oder geerbt aus der Eventreihe (lib/event-goal.ts)
   const communityGoal = resolveEventGoal({ format, statConfigJson: event.statConfigJson, series: event.series }).goal;
   const communityGoalProgress = communityGoal ? computeCommunityGoalProgress(event.matches, communityGoal) : null;
+  // Ø-Ziel: Ergebnis der Abrechnung am Ende des Zeitraums (lib/community-goal-milestones.ts)
+  const communityGoalSettled = (() => {
+    if (!communityGoal || !isAvgGoal(communityGoal)) return null;
+    const st = parseGoalState(event.goalStateJson);
+    return st.settledAt ? { reached: st.settledReached === true } : null;
+  })();
   // Tempo: Ziel-Fortschritt im Vergleich zur verstrichenen Zeit (nur Zeitraum-Events mit Ende)
-  const communityGoalPace = communityGoalProgress && event.endAt && isPeriodEvent(event) && event.status !== "finished"
+  const communityGoalPace = communityGoalProgress && communityGoal && !isAvgGoal(communityGoal) && event.endAt && isPeriodEvent(event) && event.status !== "finished"
     ? goalPace(communityGoalProgress.main.percent, periodInfo({ startAt: event.startAt, endAt: event.endAt }).progress)
     : null;
   const standaloneMatchWinUsed = !event.series && supportsMatchWin(format) && event.matches.some(m =>
@@ -1530,7 +1537,8 @@ export default async function TournamentDetailPage({
         )}
         {communityGoalProgress && (
           <CommunityGoalCard progress={communityGoalProgress} participants={mergedParticipants} userId={userId}
-            pace={communityGoalPace} rewardCoins={communityGoal?.rewardCoins} />
+            pace={communityGoalPace} rewardCoins={communityGoal?.rewardCoins}
+            settled={communityGoalSettled} />
         )}
         {isFfa && (
           <FfaView

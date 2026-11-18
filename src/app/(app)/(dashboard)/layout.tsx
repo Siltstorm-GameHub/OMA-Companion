@@ -1,4 +1,4 @@
-import { computeCommunityGoalProgress, goalPace } from "@/lib/community-goal";
+import { computeCommunityGoalProgress, goalPace, GOAL_FORMATS, isAvgGoal } from "@/lib/community-goal";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -72,7 +72,7 @@ const getGlobalNewsData = unstable_cache(
     const goalTicker = await (async () => {
       const ev = await prisma.event.findFirst({
         where: {
-          hidden: false, format: "coop_stats", status: { in: ["open", "active"] }, startAt: { lte: new Date() },
+          hidden: false, format: { in: [...GOAL_FORMATS] }, status: { in: ["open", "active"] }, startAt: { lte: new Date() },
           AND: [mayHaveGoalWhere, { OR: [{ seriesId: null }, { series: { hidden: false } }] }],
         },
         orderBy: { startAt: "desc" },
@@ -81,7 +81,7 @@ const getGlobalNewsData = unstable_cache(
       const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;
       const progress = computeCommunityGoalProgress(ev.matches, goal);
-      const pace = ev.endAt && isPeriodEvent(ev) ? goalPace(progress.main.percent, periodInfo({ startAt: ev.startAt, endAt: ev.endAt }).progress) : null;
+      const pace = ev.endAt && isPeriodEvent(ev) && !isAvgGoal(goal) ? goalPace(progress.main.percent, periodInfo({ startAt: ev.startAt, endAt: ev.endAt }).progress) : null;
       return { eventId: ev.id, title: goal.title || ev.title, percent: Math.floor(progress.main.percent), reached: progress.reached, paceLabel: pace?.label ?? null };
     })();
 

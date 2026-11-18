@@ -62,3 +62,64 @@ describe("computeCommunityGoalProgress", () => {
     assert.equal(p.main.percent, 100);
   });
 });
+
+describe("Durchschnitts-Ziele (mode avg)", () => {
+  const avgMatches = [
+    { entries: [entry("a", { Kills: 4, _team: "A" }), entry("b", { Kills: 1, _team: "B" }), entry("c", { Kills: "" })] },
+    { entries: [entry("a", { Kills: 2, _team: "A" }), entry("b", { Kills: 3, _team: "B" })] },
+  ];
+
+  test("sanitize: mode/direction/minParticipants nur bei avg, sum bleibt kompatibel", () => {
+    assert.deepEqual(sanitizeCommunityGoal({ fields: ["Kills"], target: 2.5, mode: "avg", direction: "atMost", minParticipants: "3" }),
+      { fields: ["Kills"], target: 2.5, scope: "community", mode: "avg", direction: "atMost", minParticipants: 3 });
+    assert.deepEqual(sanitizeCommunityGoal({ fields: ["Kills"], target: 5, mode: "sum", direction: "atMost", minParticipants: 4 }),
+      { fields: ["Kills"], target: 5, scope: "community" });
+    assert.deepEqual(sanitizeCommunityGoal({ fields: ["Kills"], target: 2, mode: "avg", minParticipants: 0 }),
+      { fields: ["Kills"], target: 2, scope: "community", mode: "avg" });
+  });
+
+  test("community: Ø je Spieler, dann Ø über alle — leere Werte zählen nicht", () => {
+    const p = computeCommunityGoalProgress(avgMatches, { fields: ["Kills"], target: 2.5, scope: "community", mode: "avg" });
+    assert.deepEqual(p.byUser, { a: 3, b: 2 });
+    assert.deepEqual(p.contributorIds.sort(), ["a", "b"]);
+    assert.equal(p.total, 2.5);
+    assert.equal(p.reached, true);
+    assert.equal(p.main.percent, 100);
+  });
+
+  test("jeder Teilnehmer zählt gleich viel, egal wie viele Einträge", () => {
+    const many = [{ entries: [entry("a", { Kills: 10 })] }, { entries: [entry("a", { Kills: 10 }), entry("b", { Kills: 0 })] }];
+    const p = computeCommunityGoalProgress(many, { fields: ["Kills"], target: 6, scope: "community", mode: "avg" });
+    assert.equal(p.total, 5);
+    assert.equal(p.reached, false);
+    assert.ok(Math.abs(p.main.percent - 83.33) < 0.01);
+  });
+
+  test("Mindestanzahl Teilnehmer", () => {
+    const p = computeCommunityGoalProgress(avgMatches, { fields: ["Kills"], target: 2, scope: "community", mode: "avg", minParticipants: 3 });
+    assert.equal(p.reached, false);
+    assert.equal(p.missingParticipants, 1);
+  });
+
+  test("höchstens: kleiner ist besser", () => {
+    const goal: CommunityGoal = { fields: ["Kills"], target: 2.5, scope: "community", mode: "avg", direction: "atMost" };
+    const p = computeCommunityGoalProgress(avgMatches, goal);
+    assert.equal(p.reached, true);
+    const worse = computeCommunityGoalProgress(avgMatches, { ...goal, target: 2 });
+    assert.equal(worse.reached, false);
+    assert.equal(worse.main.percent, 80);
+    const empty = computeCommunityGoalProgress([], goal);
+    assert.equal(empty.reached, false);
+    assert.equal(empty.main.percent, 0);
+  });
+
+  test("team und solo", () => {
+    const team = computeCommunityGoalProgress(avgMatches, { fields: ["Kills"], target: 2.5, scope: "team", mode: "avg" });
+    assert.deepEqual(team.byTeam, { A: 3, B: 2 });
+    assert.deepEqual(team.reachedTeams, ["A"]);
+    assert.equal(team.main.total, 3);
+    const solo = computeCommunityGoalProgress(avgMatches, { fields: ["Kills"], target: 2, scope: "solo", mode: "avg", direction: "atMost" });
+    assert.deepEqual(solo.reachedUserIds, ["b"]);
+    assert.equal(solo.main.total, 2);
+  });
+});

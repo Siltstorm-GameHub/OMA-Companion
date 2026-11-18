@@ -1,29 +1,46 @@
 /**
- * Community-Ziel — Zusatz zum Skill-Index Modus (coop_stats). Die Runden und Stats werden ganz normal
- * im Skill-Index erfasst (MatchEntry.statsJson); das Ziel ist nur ein Zähler, der die Werte
- * ausgewählter Stat-Felder über alle Runden aufaddiert, bis eine Zielmarke erreicht ist — egal ob
- * Tore, Kills oder Schritte im echten Leben.
+ * Community-Ziel — Zusatz zu den Stat-Formaten Skill-Index (coop_stats) und Durchschnittswerte
+ * (avg_stats). Die Runden und Stats werden ganz normal erfasst (MatchEntry.statsJson); das Ziel wertet
+ * ausgewählte Stat-Felder über alle Runden aus, bis eine Zielmarke erreicht ist — egal ob Tore, Kills
+ * oder Schritte im echten Leben.
  *
- * Gespeichert in Event.statConfigJson unter "goal" (siehe schema.prisma). Kein eigener Format-Wert:
- * das Event bleibt "coop_stats", damit Ranking, Overlay, Abschluss usw. unverändert funktionieren.
+ * Gespeichert in Event.statConfigJson unter "goal" bzw. (Eventreihe) in der Turniervorlage, siehe
+ * lib/event-goal.ts. Kein eigener Format-Wert: Ranking, Overlay, Abschluss usw. bleiben unverändert.
+ *
+ * mode (Berechnungsart):
+ *  - "sum" (Standard, fehlt im JSON): alle eingetragenen Werte werden zusammengezählt
+ *  - "avg": gemeinsamer Durchschnitt — je Teilnehmer der Ø seiner Einträge (Wert je Eintrag = Summe der
+ *           gewählten Felder), dann der Ø über alle Teilnehmer (jeder zählt gleich viel, egal wie viele
+ *           Runden er gemeldet hat). Nicht eingetragene Felder zählen nicht als 0.
+ *           direction "atMost" dreht das Ziel um ("Ø Platzierung höchstens 3").
+ *           Ein Durchschnitt kann wieder fallen — deshalb wird ein Ø-Ziel erst mit dem Ende des
+ *           Zeitraums (bzw. Abschluss der Spielphase) abgerechnet, siehe community-goal-milestones.ts.
  *
  * scope:
- *  - "community": alle zusammen — eine gemeinsame Summe über alle Teilnehmer
+ *  - "community": alle zusammen — eine gemeinsame Summe bzw. ein gemeinsamer Ø über alle Teilnehmer
  *  - "team":      Team A und Team B zählen getrennt (Team-Zuordnung pro Runde, "_team" im statsJson)
  *  - "solo":      jeder Spieler für sich — jeder versucht die Zielmarke allein zu erreichen
  */
 import { parseEntryStats, readStatValue } from "./avg-stats";
 
 export type CommunityGoalScope = "community" | "team" | "solo";
+export type CommunityGoalMode = "sum" | "avg";
+export type CommunityGoalDirection = "atLeast" | "atMost";
 
 export type CommunityGoal = {
   /** Kurzer Name des Ziels, z.B. "1.000 Tore für die Community" — optional */
   title?: string;
-  /** Stat-Felder, deren Werte aufaddiert werden (mind. eins) */
+  /** Stat-Felder, deren Werte gezählt werden (mind. eins; bei mehreren: Summe je Eintrag) */
   fields: string[];
   /** Zielmarke (> 0) */
   target: number;
   scope: CommunityGoalScope;
+  /** Berechnungsart — fehlt = "sum" (Altdaten) */
+  mode?: CommunityGoalMode;
+  /** Nur mode "avg": "atMost" = der Ø darf die Marke nicht überschreiten — fehlt = "atLeast" */
+  direction?: CommunityGoalDirection;
+  /** Nur mode "avg": so viele Teilnehmer müssen Werte haben, damit das Ziel zählen kann (fehlt = 1) */
+  minParticipants?: number;
   /** Einheit für die Anzeige, z.B. "Tore", "Schritte" — fehlt = Feldname(n) */
   unit?: string;
   /** Münzen für jeden Mitwirkenden, sobald das Ziel erreicht ist (community: alle mit Beitrag, team: Mitglieder
@@ -33,10 +50,26 @@ export type CommunityGoal = {
 };
 
 export const COMMUNITY_GOAL_SCOPES: { value: CommunityGoalScope; label: string; desc: string }[] = [
-  { value: "community", label: "Alle zusammen", desc: "Eine gemeinsame Summe aller Teilnehmer" },
+  { value: "community", label: "Alle zusammen", desc: "Ein gemeinsamer Wert aller Teilnehmer" },
   { value: "team",      label: "Im Team",       desc: "Team A und Team B zählen getrennt" },
   { value: "solo",      label: "Alleine",       desc: "Jeder Spieler versucht das Ziel für sich" },
 ];
+
+export const COMMUNITY_GOAL_MODES: { value: CommunityGoalMode; label: string; desc: string }[] = [
+  { value: "sum", label: "Summe",        desc: "Alle Werte werden zusammengezählt" },
+  { value: "avg", label: "Durchschnitt", desc: "Gemeinsamer Ø der Teilnehmer" },
+];
+
+/** Formate mit Community-Ziel: Skill-Index (Punktewertung) und Durchschnittswerte. */
+export const GOAL_FORMATS = ["coop_stats", "avg_stats"] as const;
+
+export function supportsCommunityGoal(format: string | null | undefined): boolean {
+  return !!format && (GOAL_FORMATS as readonly string[]).includes(format);
+}
+
+export function isAvgGoal(goal: Pick<CommunityGoal, "mode">): boolean {
+  return goal.mode === "avg";
+}
 
 const SCOPES = new Set<string>(COMMUNITY_GOAL_SCOPES.map(s => s.value));
 
@@ -56,16 +89,25 @@ export function sanitizeCommunityGoal(raw: unknown, allowedFields?: string[]): C
   const title = typeof r.title === "string" ? r.title.trim().slice(0, 120) : "";
   const unit  = typeof r.unit  === "string" ? r.unit.trim().slice(0, 40)   : "";
   const rewardCoins = Math.min(1_000_000, Math.max(0, Math.floor(Number(r.rewardCoins) || 0)));
-  return { fields, target, scope, ...(title && { title }), ...(unit && { unit }), ...(rewardCoins > 0 && { rewardCoins }) };
+  const avg = r.mode === "avg";
+  const atMost = avg && r.direction === "atMost";
+  const minParticipants = avg ? Math.min(10_000, Math.max(1, Math.floor(Number(r.minParticipants) || 1))) : 1;
+  return {
+    fields, target, scope,
+    ...(avg && { mode: "avg" as const }),
+    ...(atMost && { direction: "atMost" as const }),
+    ...(minParticipants > 1 && { minParticipants }),
+    ...(title && { title }), ...(unit && { unit }), ...(rewardCoins > 0 && { rewardCoins }),
+  };
 }
 
 /** Für API-Routen, die eine komplette statConfig vom Client übernehmen: das "goal" darin wird
- *  geprüft (nur bei coop_stats und nur mit vorhandenen Stat-Feldern) bzw. entfernt. */
+ *  geprüft (nur in Formaten mit Ziel und nur mit vorhandenen Stat-Feldern) bzw. entfernt. */
 export function withSanitizedGoal<T>(statConfig: T, format: string | null | undefined, statFields: unknown): T {
   if (!statConfig || typeof statConfig !== "object" || !("goal" in statConfig)) return statConfig;
   const { goal, ...rest } = statConfig as Record<string, unknown>;
   const fields = Array.isArray(statFields) ? statFields.filter((f): f is string => typeof f === "string") : undefined;
-  const clean = format === "coop_stats" ? sanitizeCommunityGoal(goal, fields) : null;
+  const clean = supportsCommunityGoal(format) ? sanitizeCommunityGoal(goal, fields) : null;
   return (clean ? { ...rest, goal: clean } : rest) as T;
 }
 
@@ -82,29 +124,75 @@ export type GoalBucket = { total: number; reached: boolean; percent: number };
 
 export type CommunityGoalProgress = {
   goal: CommunityGoal;
-  /** Summe aller gezählten Werte (alle Teilnehmer, alle Runden) */
+  /** sum: Summe aller gezählten Werte · avg: gemeinsamer Ø aller Teilnehmer (0 ohne Werte) */
   total: number;
-  /** Beitrag je Spieler (für "Top-Beiträge" bzw. den Solo-Fortschritt) */
+  /** Je Spieler: sum = sein Beitrag · avg = sein Ø (für "Top-Beiträge" bzw. den Solo-Fortschritt) */
   byUser: Record<string, number>;
-  /** Nur scope "team": Summe je Team; Einträge ohne Team-Zuordnung zählen in keinem Team */
+  /** Nur scope "team": Summe bzw. Ø je Team; Einträge ohne Team-Zuordnung zählen in keinem Team */
   byTeam: { A: number; B: number };
-  /** Hauptfortschritt: community = total, team = bestes Team, solo = bester Spieler */
+  /** Spieler mit mindestens einem gezählten Wert */
+  contributorIds: string[];
+  /** Hauptfortschritt: community = gesamt, team = bestes Team, solo = bester Spieler */
   main: GoalBucket;
-  /** Gilt das Ziel als erreicht? community: Summe ≥ Ziel; team: ein Team hat es geschafft; solo: mind. ein Spieler */
+  /** Gilt das Ziel (gerade) als erreicht? Bei Ø-Zielen nur ein Zwischenstand bis zum Ende des Zeitraums */
   reached: boolean;
   /** Nur team: welche Teams das Ziel erreicht haben */
   reachedTeams: ("A" | "B")[];
   /** Nur solo: welche Spieler das Ziel erreicht haben */
   reachedUserIds: string[];
+  /** Nur avg: Mindestanzahl Teilnehmer noch nicht erreicht (dann zählt das Ziel nicht als erreicht) */
+  missingParticipants: number;
 };
 
-function bucket(total: number, target: number): GoalBucket {
-  return { total, reached: total >= target, percent: target > 0 ? Math.max(0, Math.min(100, (total / target) * 100)) : 0 };
+/** Erfüllt ein Wert die Zielmarke? Berücksichtigt bei Ø-Zielen die Richtung. */
+export function meetsGoal(value: number, goal: CommunityGoal): boolean {
+  return goal.direction === "atMost" ? value <= goal.target : value >= goal.target;
+}
+
+/** Fortschritt in % (0–100). "höchstens"-Ziele: 100 %, sobald der Ø unter der Marke liegt, sonst
+ *  Marke / Wert (je weiter darüber, desto weniger). hasData = false (noch keine Werte) → 0 %. */
+export function goalPercent(value: number, goal: CommunityGoal, hasData = true): number {
+  const t = goal.target;
+  if (t <= 0) return 0;
+  let pct: number;
+  if (goal.direction === "atMost") {
+    if (!hasData) return 0;
+    pct = value <= t ? 100 : (t / value) * 100;
+  } else {
+    pct = (value / t) * 100;
+  }
+  return Math.max(0, Math.min(100, pct));
+}
+
+function bucket(total: number, goal: CommunityGoal, hasData = true): GoalBucket {
+  return { total, reached: hasData && meetsGoal(total, goal), percent: goalPercent(total, goal, hasData) };
+}
+
+const mean = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+
+/** Wert eines Eintrags: Summe der eingetragenen Ziel-Felder — null, wenn keins eingetragen ist. */
+function entryValue(stats: Record<string, unknown> | null, fields: string[]): number | null {
+  let sum = 0;
+  let any = false;
+  for (const f of fields) {
+    const v = readStatValue(stats, f);
+    if (v === null) continue;
+    sum += v;
+    any = true;
+  }
+  return any ? sum : null;
 }
 
 /** Zählt die Ziel-Felder über alle Runden. Werden auch für noch nicht abgeschlossene Runden gezählt —
  *  ein eingetragener Wert ist ein eingetragener Wert, das Ziel soll live mitlaufen. */
 export function computeCommunityGoalProgress(
+  matches: { entries: { userId: string | null; statsJson: string | null }[] }[],
+  goal: CommunityGoal,
+): CommunityGoalProgress {
+  return isAvgGoal(goal) ? computeAvgProgress(matches, goal) : computeSumProgress(matches, goal);
+}
+
+function computeSumProgress(
   matches: { entries: { userId: string | null; statsJson: string | null }[] }[],
   goal: CommunityGoal,
 ): CommunityGoalProgress {
@@ -131,17 +219,79 @@ export function computeCommunityGoalProgress(
     goal.scope === "team" ? Math.max(byTeam.A, byTeam.B)
     : goal.scope === "solo" ? Math.max(0, ...Object.values(byUser))
     : total;
-  const main = bucket(mainTotal, goal.target);
-  return { goal, total, byUser, byTeam, main, reached: main.reached, reachedTeams, reachedUserIds };
+  const main = bucket(mainTotal, goal);
+  const contributorIds = Object.entries(byUser).filter(([, v]) => v > 0).map(([id]) => id);
+  return { goal, total, byUser, byTeam, contributorIds, main, reached: main.reached, reachedTeams, reachedUserIds, missingParticipants: 0 };
 }
 
-export function goalPercent(value: number, target: number): number {
-  return bucket(value, target).percent;
+function computeAvgProgress(
+  matches: { entries: { userId: string | null; statsJson: string | null }[] }[],
+  goal: CommunityGoal,
+): CommunityGoalProgress {
+  const perUser = new Map<string, number[]>();
+  const teamOf: Record<string, "A" | "B"> = {};
+  for (const m of matches) {
+    for (const e of m.entries) {
+      if (!e.userId) continue;
+      const stats = parseEntryStats(e.statsJson);
+      const v = entryValue(stats, goal.fields);
+      if (v === null) continue;
+      const list = perUser.get(e.userId) ?? [];
+      list.push(v);
+      perUser.set(e.userId, list);
+      const team = stats?.["_team"];
+      if (team === "A" || team === "B") teamOf[e.userId] = team;
+    }
+  }
+
+  const byUser: Record<string, number> = {};
+  for (const [uid, vals] of perUser) byUser[uid] = mean(vals);
+  const contributorIds = Object.keys(byUser);
+  const minP = goal.minParticipants ?? 1;
+  const enough = (n: number) => n >= minP;
+
+  const teamIds = { A: contributorIds.filter(id => teamOf[id] === "A"), B: contributorIds.filter(id => teamOf[id] === "B") };
+  const byTeam = { A: mean(teamIds.A.map(id => byUser[id])), B: mean(teamIds.B.map(id => byUser[id])) };
+  const reachedTeams = (["A", "B"] as const).filter(t => enough(teamIds[t].length) && meetsGoal(byTeam[t], goal));
+  // Solo: jeder für sich — die Mindestanzahl gilt hier für die Runde insgesamt
+  const reachedUserIds = enough(contributorIds.length) ? contributorIds.filter(id => meetsGoal(byUser[id], goal)) : [];
+  const total = mean(contributorIds.map(id => byUser[id]));
+
+  // Bester Wert je nach Richtung (höchstens → kleinster Ø)
+  const best = (vals: number[]) => (vals.length === 0 ? 0 : goal.direction === "atMost" ? Math.min(...vals) : Math.max(...vals));
+  let main: GoalBucket;
+  let missingParticipants: number;
+  if (goal.scope === "team") {
+    const teams = (["A", "B"] as const).filter(t => teamIds[t].length > 0);
+    const value = best(teams.map(t => byTeam[t]));
+    missingParticipants = Math.max(0, minP - Math.max(teamIds.A.length, teamIds.B.length));
+    main = { ...bucket(value, goal, teams.length > 0), reached: reachedTeams.length > 0 };
+  } else if (goal.scope === "solo") {
+    missingParticipants = Math.max(0, minP - contributorIds.length);
+    main = { ...bucket(best(contributorIds.map(id => byUser[id])), goal, contributorIds.length > 0), reached: reachedUserIds.length > 0 };
+  } else {
+    missingParticipants = Math.max(0, minP - contributorIds.length);
+    const b = bucket(total, goal, contributorIds.length > 0);
+    main = { ...b, reached: b.reached && missingParticipants === 0 };
+  }
+  return { goal, total, byUser, byTeam, contributorIds, main, reached: main.reached, reachedTeams, reachedUserIds, missingParticipants };
 }
 
 /** Einheit für die Anzeige: explizite Einheit, sonst die Feldnamen ("Tore + Assists"). */
 export function goalUnit(goal: CommunityGoal): string {
   return goal.unit || goal.fields.join(" + ");
+}
+
+/** Zahl eines Ziels anzeigen: Summen ganzzahlig, Durchschnitte mit bis zu 2 Nachkommastellen. */
+export function formatGoalNumber(n: number, goal: Pick<CommunityGoal, "mode">): string {
+  return n.toLocaleString("de-DE", { maximumFractionDigits: isAvgGoal(goal) ? 2 : 0 });
+}
+
+/** Kurzbeschreibung der Zielmarke: "1.000 Tore" bzw. "Ø mind. 2,5 Kills" / "Ø höchstens 3 Platzierung". */
+export function goalTargetLabel(goal: CommunityGoal): string {
+  const n = formatGoalNumber(goal.target, goal);
+  if (!isAvgGoal(goal)) return `${n} ${goalUnit(goal)}`;
+  return `Ø ${goal.direction === "atMost" ? "höchstens" : "mind."} ${n} ${goalUnit(goal)}`;
 }
 
 export type GoalPace = {

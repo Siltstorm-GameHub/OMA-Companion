@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireEventManager } from "@/lib/roles";
-import { sanitizeCommunityGoal } from "@/lib/community-goal";
+import { sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { withGoalMode } from "@/lib/event-goal";
@@ -29,8 +29,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     select: { format: true, statFields: true, statConfigJson: true, series: { select: { seriesStatConfig: true } } },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
-  if (event.format !== "coop_stats") {
-    return NextResponse.json({ error: "Community-Ziele gibt es nur im Format Punktewertung" }, { status: 400 });
+  if (!supportsCommunityGoal(event.format)) {
+    return NextResponse.json({ error: "Community-Ziele gibt es nur in den Formaten Punktewertung und Durchschnittswerte" }, { status: 400 });
   }
 
   let goal = null;

@@ -3,6 +3,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import CommunityGoalEditor from "@/components/CommunityGoalEditor";
+import { supportsCommunityGoal } from "@/lib/community-goal";
 import { FORMATS, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 import { NumberInput } from "@/components/ui/NumberInput";
@@ -59,7 +60,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
               />
             </div>
           )}
-          {format === "coop_stats" && (
+          {supportsCommunityGoal(format) && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} />
             </div>

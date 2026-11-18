@@ -3,19 +3,21 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import {
   computeCommunityGoalProgress,
+  formatGoalNumber,
   goalPace,
   goalUnit,
+  isAvgGoal,
   type GoalPace,
   type CommunityGoalProgress,
 } from "@/lib/community-goal";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
+import { GOAL_FORMATS } from "@/lib/community-goal";
 import { parseGoalState } from "@/lib/community-goal-milestones";
 import { goalHideCookie, goalSpotlight, goalStreak, type GoalSpotlight, type SpotlightKind } from "@/lib/goal-spotlight";
 import GoalSpotlightDismiss from "@/components/GoalSpotlightDismiss";
 import { ChevronRight, Target } from "@/components/icons";
 
-const fmt = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 0 });
 
 const PACE_COLOR: Record<GoalPace["status"], string> = { ahead: "text-emerald-300", on_track: "text-teal-300", behind: "text-amber-300" };
 const PACE_ICON: Record<GoalPace["status"], string> = { ahead: "🚀", on_track: "✅", behind: "⚠️" };
@@ -50,7 +52,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
   const events = await prisma.event.findMany({
     where: {
       hidden: false,
-      format: "coop_stats",
+      format: { in: [...GOAL_FORMATS] },
       status: { in: ["open", "active"] },
       startAt: { lte: now },
       // Eigenes oder von der Reihe geerbtes Ziel (Feinprüfung per resolveEventGoal)
@@ -78,7 +80,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
     where: {
       seriesId: { in: seriesIds },
       hidden: false,
-      format: "coop_stats",
+      format: { in: [...GOAL_FORMATS] },
       id: { notIn: candidates.map(c => c.ev.id) },
       startAt: { lt: now },
       OR: [{ status: { in: ["finished", "closed"] } }, { endAt: { lt: now } }],
@@ -103,7 +105,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
   const items: GoalItem[] = candidates.map(({ ev, goal }) => {
     const progress = computeCommunityGoalProgress(ev.matches, goal);
     const period = ev.endAt && isPeriodEvent(ev) ? periodInfo({ startAt: ev.startAt, endAt: ev.endAt }, now) : null;
-    const pace = period && !period.ended ? goalPace(progress.main.percent, period.progress) : null;
+    const pace = period && !period.ended && !isAvgGoal(goal) ? goalPace(progress.main.percent, period.progress) : null;
     const spotlight = goalSpotlight({
       startAt: ev.startAt,
       endAt: ev.endAt,
@@ -142,6 +144,11 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
   );
 }
 
+/** "Ø 2,4" bzw. "1.250" */
+function valueLabel(n: number, goal: CommunityGoalProgress["goal"]): string {
+  return `${isAvgGoal(goal) ? "Ø " : ""}${formatGoalNumber(n, goal)}`;
+}
+
 /** Große Karte zu einem Anlass */
 function SpotlightCard({ item }: { item: GoalItem }) {
   const { goal, main, reached } = item.progress;
@@ -167,7 +174,7 @@ function SpotlightCard({ item }: { item: GoalItem }) {
           </div>
           <div className="text-right shrink-0">
             <p className="text-sm font-bold text-white tabular-nums">{Math.floor(main.percent)} %</p>
-            <p className="text-[10px] text-gray-500 tabular-nums">{fmt(main.total)} / {fmt(goal.target)}</p>
+            <p className="text-[10px] text-gray-500 tabular-nums">{valueLabel(main.total, goal)} / {formatGoalNumber(goal.target, goal)}</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-300 shrink-0" />
         </div>
@@ -184,9 +191,9 @@ function SpotlightCard({ item }: { item: GoalItem }) {
         <div className="mt-1.5 flex items-center justify-between gap-3">
           <p className="text-[11px] text-gray-400 min-w-0">
             {item.myValue > 0
-              ? <>Dein Beitrag: <span className="text-teal-300 font-semibold tabular-nums">{fmt(item.myValue)} {unit}</span></>
+              ? <>{isAvgGoal(goal) ? "Dein Ø" : "Dein Beitrag"}: <span className="text-teal-300 font-semibold tabular-nums">{formatGoalNumber(item.myValue, goal)} {unit}</span></>
               : item.isParticipant
-                ? <>Du bist dabei — jeder {unit}-Wert zählt mit.</>
+                ? <>Du bist dabei — {isAvgGoal(goal) ? "dein Ø zählt mit" : `jeder ${unit}-Wert zählt mit`}.</>
                 : <>Mach mit: Jeder Beitrag zählt — {unit}.</>}
           </p>
           <HistoryDots history={item.history} current={reached} withStreak />
@@ -215,12 +222,12 @@ function CompactRow({ item }: { item: GoalItem }) {
         </p>
         <p className="text-[10px] text-gray-500 truncate">
           {status}
-          {item.myValue > 0 && <> · dein Beitrag <span className="text-teal-300/90 tabular-nums">{fmt(item.myValue)}</span></>}
+          {item.myValue > 0 && <> · {isAvgGoal(goal) ? "dein Ø" : "dein Beitrag"} <span className="text-teal-300/90 tabular-nums">{formatGoalNumber(item.myValue, goal)}</span></>}
         </p>
       </div>
       <HistoryDots history={item.history} current={reached} />
       <span className="text-xs font-bold text-white tabular-nums shrink-0">{Math.floor(main.percent)} %</span>
-      <span className="sr-only">{fmt(main.total)} von {fmt(goal.target)}</span>
+      <span className="sr-only">{valueLabel(main.total, goal)} von {formatGoalNumber(goal.target, goal)}</span>
       <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-300 shrink-0" />
     </Link>
   );

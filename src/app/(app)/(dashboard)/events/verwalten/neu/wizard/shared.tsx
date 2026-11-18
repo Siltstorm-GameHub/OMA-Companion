@@ -160,7 +160,7 @@ export type EventTemplate = {
   statPointsByField: Record<string, number>;
   /** Nur avg_stats: höchster oder niedrigster Ø gewinnt */
   avgDirection?: "high" | "low";
-  /** Nur coop_stats: Community-Ziel, siehe lib/community-goal.ts */
+  /** Nur coop_stats/avg_stats: Community-Ziel, siehe lib/community-goal.ts */
   communityGoal?: CommunityGoalForm;
   checkInEnabled: boolean;
 };

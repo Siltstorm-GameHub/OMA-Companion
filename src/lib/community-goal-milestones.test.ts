@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { computeCommunityGoalProgress, type CommunityGoal } from "./community-goal";
-import { evaluateGoal, parseGoalState, userTeams } from "./community-goal-milestones";
+import { avgGoalDue, evaluateGoal, parseGoalState, userTeams } from "./community-goal-milestones";
 
 const entry = (userId: string, stats: Record<string, unknown>) => ({ userId, statsJson: JSON.stringify(stats) });
 const goal = (scope: CommunityGoal["scope"]): CommunityGoal => ({ fields: ["Schritte"], target: 1000, scope, rewardCoins: 20 });
@@ -55,5 +55,37 @@ describe("Tempo-Anzeige", () => {
     assert.equal(goalPace(20, 0.4)?.status, "behind");
     assert.equal(goalPace(100, 0.4), null);
     assert.equal(goalPace(10, 0), null);
+  });
+});
+
+describe("Ø-Ziele: Abrechnung", () => {
+  const m = [{ entries: [
+    { userId: "a", statsJson: JSON.stringify({ Kills: 3 }) },
+    { userId: "b", statsJson: JSON.stringify({ Kills: 0 }) },
+  ] }];
+
+  test("keine Zwischenstufen, bei Erreichen alle Teilnehmer mit Werten (auch 0) belohnt", () => {
+    const progress = computeCommunityGoalProgress(m, { fields: ["Kills"], target: 1.5, scope: "community", mode: "avg" });
+    const r = evaluateGoal(progress, { milestones: [], rewardedUserIds: [] }, {});
+    assert.equal(r.newMilestone, 100);
+    assert.deepEqual(r.milestones, [100]);
+    assert.deepEqual(r.rewardUserIds.sort(), ["a", "b"]);
+    const miss = evaluateGoal(computeCommunityGoalProgress(m, { fields: ["Kills"], target: 2, scope: "community", mode: "avg" }),
+      { milestones: [], rewardedUserIds: [] }, {});
+    assert.equal(miss.newMilestone, null);
+    assert.deepEqual(miss.milestones, []);
+  });
+
+  test("avgGoalDue: erst nach Ende des Zeitraums oder abgeschlossener Spielphase", () => {
+    const now = Date.parse("2026-11-18T12:00:00Z");
+    assert.equal(avgGoalDue({ endAt: "2026-11-19T00:00:00Z", completionData: null }, now), false);
+    assert.equal(avgGoalDue({ endAt: "2026-11-18T11:00:00Z", completionData: null }, now), true);
+    assert.equal(avgGoalDue({ endAt: null, completionData: JSON.stringify({ gamePhaseComplete: true }) }, now), true);
+    assert.equal(avgGoalDue({ endAt: null, completionData: "{kaputt" }, now), false);
+  });
+
+  test("parseGoalState liest die Abrechnung", () => {
+    assert.deepEqual(parseGoalState(JSON.stringify({ milestones: [100], rewardedUserIds: [], settledAt: "x", settledReached: true })),
+      { milestones: [100], rewardedUserIds: [], settledAt: "x", settledReached: true });
   });
 });

@@ -1,10 +1,14 @@
 "use client";
-import { COMMUNITY_GOAL_SCOPES, sanitizeCommunityGoal, type CommunityGoal, type CommunityGoalScope } from "@/lib/community-goal";
+import {
+  COMMUNITY_GOAL_MODES, COMMUNITY_GOAL_SCOPES, sanitizeCommunityGoal,
+  type CommunityGoal, type CommunityGoalDirection, type CommunityGoalMode, type CommunityGoalScope,
+} from "@/lib/community-goal";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 /**
- * Einstellungen für das Community-Ziel (Zusatz zum Skill-Index Modus, siehe lib/community-goal.ts).
- * Gemeinsam genutzt vom Event-Wizard und vom Event-Editor (Reiter "Turnier").
+ * Einstellungen für das Community-Ziel (Zusatz zu Skill-Index und Durchschnittswerte, siehe
+ * lib/community-goal.ts). Gemeinsam genutzt vom Event-Wizard, vom Event-Editor (Reiter "Turnier"),
+ * von der Turniervorlage einer Eventreihe und vom Ziel eines einzelnen Termins.
  */
 export type CommunityGoalForm = {
   enabled: boolean;
@@ -12,18 +16,28 @@ export type CommunityGoalForm = {
   fields: string[];
   target: number;
   scope: CommunityGoalScope;
+  /** Summe oder gemeinsamer Durchschnitt */
+  mode: CommunityGoalMode;
+  /** Nur Durchschnitt: mindestens / höchstens */
+  direction: CommunityGoalDirection;
+  /** Nur Durchschnitt: so viele Teilnehmer brauchen Werte, damit das Ziel zählt */
+  minParticipants: number;
   unit: string;
   /** Münzen pro Mitwirkendem bei Erreichen (0 = keine Belohnung) */
   rewardCoins: number;
 };
 
 export const EMPTY_COMMUNITY_GOAL_FORM: CommunityGoalForm = {
-  enabled: false, title: "", fields: [], target: 100, scope: "community", unit: "", rewardCoins: 0,
+  enabled: false, title: "", fields: [], target: 100, scope: "community", mode: "sum", direction: "atLeast", minParticipants: 1, unit: "", rewardCoins: 0,
 };
 
 export function goalToForm(goal: CommunityGoal | null): CommunityGoalForm {
   if (!goal) return EMPTY_COMMUNITY_GOAL_FORM;
-  return { enabled: true, title: goal.title ?? "", fields: goal.fields, target: goal.target, scope: goal.scope, unit: goal.unit ?? "", rewardCoins: goal.rewardCoins ?? 0 };
+  return {
+    enabled: true, title: goal.title ?? "", fields: goal.fields, target: goal.target, scope: goal.scope,
+    mode: goal.mode ?? "sum", direction: goal.direction ?? "atLeast", minParticipants: goal.minParticipants ?? 1,
+    unit: goal.unit ?? "", rewardCoins: goal.rewardCoins ?? 0,
+  };
 }
 
 /** Formular → gespeichertes Ziel (null = kein Ziel / unvollständig). Nur Felder, die das Event hat. */
@@ -47,6 +61,7 @@ export default function CommunityGoalEditor({
   // Felder, die nach Umbenennen/Löschen eines Stat-Felds nicht mehr existieren, fallen still raus
   const selected = value.fields.filter(f => statFields.includes(f));
   const incomplete = value.enabled && (selected.length === 0 || !(value.target > 0));
+  const avg = value.mode === "avg";
 
   return (
     <div className="space-y-3">
@@ -55,9 +70,9 @@ export default function CommunityGoalEditor({
         <span>🎯 Community-Ziel aktivieren</span>
       </label>
       <p className="text-[11px] text-gray-500 -mt-2">
-        Zählt die Werte der gewählten Stat-Felder über alle Runden zusammen, bis die Zielmarke erreicht
-        ist — egal ob Tore, Kills oder Schritte im echten Leben. Die Werte trägst du wie gewohnt pro
-        Runde in der Punktewertung ein.
+        Wertet die gewählten Stat-Felder über alle Runden aus — als Summe („1.000 Tore zusammen“) oder als
+        gemeinsamer Durchschnitt („Ø mindestens 2 Kills pro Spieler“). Die Werte kommen wie gewohnt aus
+        den Runden bzw. den Screenshot-Meldungen der Teilnehmer.
       </p>
 
       {value.enabled && (
@@ -83,7 +98,29 @@ export default function CommunityGoalEditor({
           </div>
 
           <div>
-            <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Gezählte Stat-Felder</p>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Berechnung</p>
+            <div className="grid grid-cols-2 gap-2">
+              {COMMUNITY_GOAL_MODES.map(m => (
+                <button key={m.value} type="button" onClick={() => set({ mode: m.value })}
+                  className={`flex flex-col items-start gap-0.5 rounded-lg p-2.5 border text-left transition-all ${
+                    value.mode === m.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  }`}>
+                  <span className={`text-sm font-semibold ${value.mode === m.value ? "text-amber-300" : "text-gray-300"}`}>{m.label}</span>
+                  <span className="text-[11px] text-gray-500">{m.desc}</span>
+                </button>
+              ))}
+            </div>
+            {avg && (
+              <p className="text-[10px] text-gray-500 mt-1.5">
+                Je Teilnehmer zählt der Ø seiner Einträge, daraus wird der gemeinsame Ø gebildet — jeder zählt
+                gleich viel, egal wie oft er meldet. Da ein Durchschnitt wieder fallen kann, wird das Ziel erst
+                am Ende des Zeitraums abgerechnet.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">{avg ? "Ausgewertete Stat-Felder" : "Gezählte Stat-Felder"}</p>
             {statFields.length === 0 ? (
               <p className="text-[11px] text-gray-600">Lege zuerst Statistik-Felder an (z.B. „Tore“ oder „Schritte“).</p>
             ) : (
@@ -104,11 +141,24 @@ export default function CommunityGoalEditor({
             )}
           </div>
 
+          {avg && selected.length > 1 && (
+            <p className="text-[10px] text-gray-500 -mt-1">Mehrere Felder werden je Eintrag addiert, bevor der Ø gebildet wird.</p>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Zielmarke</label>
-              <NumberInput min={1} value={value.target}
-                onChange={e => set({ target: Number(e.target.value) })} className={inputCls} />
+              <label className="text-xs text-gray-500 mb-1 block">{avg ? "Ziel-Durchschnitt" : "Zielmarke"}</label>
+              <div className="flex gap-2">
+                {avg && (
+                  <select value={value.direction} onChange={e => set({ direction: e.target.value as CommunityGoalDirection })}
+                    aria-label="Richtung" className={`${inputCls} w-auto`}>
+                    <option value="atLeast">mindestens</option>
+                    <option value="atMost">höchstens</option>
+                  </select>
+                )}
+                <NumberInput min={avg ? 0.01 : 1} step={avg ? "any" : 1} value={value.target}
+                  onChange={e => set({ target: Number(e.target.value) })} className={inputCls} />
+              </div>
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Einheit (optional)</label>
@@ -116,9 +166,17 @@ export default function CommunityGoalEditor({
                 onChange={e => set({ unit: e.target.value })} className={inputCls} />
             </div>
           </div>
+          {avg && (
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Mindestanzahl Teilnehmer mit Werten</label>
+              <NumberInput min={1} value={value.minParticipants}
+                onChange={e => set({ minParticipants: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} className={inputCls} />
+              <p className="text-[10px] text-gray-500 mt-1">Damit nicht schon ein einzelner Spieler das Ziel allein entscheidet.</p>
+            </div>
+          )}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Titel (optional)</label>
-            <input type="text" value={value.title} maxLength={120} placeholder="z.B. 1.000 Tore für die Community"
+            <input type="text" value={value.title} maxLength={120} placeholder={avg ? "z.B. Ø 2 Kills pro Spieler" : "z.B. 1.000 Tore für die Community"}
               onChange={e => set({ title: e.target.value })} className={inputCls} />
           </div>
           <div>
@@ -129,7 +187,9 @@ export default function CommunityGoalEditor({
               {value.scope === "team" ? "Jeder im Team, das die Marke erreicht und etwas beigetragen hat."
                 : value.scope === "solo" ? "Jeder, der die Marke selbst erreicht."
                 : "Jeder, der etwas beigetragen hat — sobald die Community die Marke gemeinsam erreicht."}
-              {" "}Bei 25 %, 50 %, 75 % und 100 % gibt es automatisch eine Meldung an alle Teilnehmer.
+              {avg
+                ? " Ausgezahlt und gemeldet wird am Ende des Zeitraums, wenn der Durchschnitt dann passt."
+                : " Bei 25 %, 50 %, 75 % und 100 % gibt es automatisch eine Meldung an alle Teilnehmer."}
             </p>
           </div>
 
