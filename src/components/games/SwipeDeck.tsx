@@ -236,11 +236,19 @@ export default function SwipeDeck({
     start.current = null;
     setDragging(false);
     const { dx, dy } = drag;
-    if (!moved.current) { setFlipped(true); return; }
+    // Ein reines Antippen dreht die Karte erst im folgenden click-Event um (onCardClick). Würde sie schon hier
+    // umgedreht, landete der nachfolgende click des Browsers auf der frisch gerenderten Rückseite und drehte sie
+    // sofort wieder zurück.
+    if (!moved.current) { setDrag({ dx: 0, dy: 0 }); return; }
     if (dy < -THRESHOLD && Math.abs(dy) > Math.abs(dx)) decide("wish");
     else if (dx > THRESHOLD) decide("in");
     else if (dx < -THRESHOLD) decide("out");
     else setDrag({ dx: 0, dy: 0 });
+  }
+
+  function onCardClick() {
+    if (flipped || fly || moved.current) return;
+    setFlipped(true);
   }
 
   const hint: SwipeStatus | null =
@@ -301,6 +309,7 @@ export default function SwipeDeck({
               onPointerDown={isTop ? onPointerDown : undefined}
               onPointerMove={isTop ? onPointerMove : undefined}
               onPointerUp={isTop ? onPointerUp : undefined}
+              onClick={isTop ? onCardClick : undefined}
               onPointerCancel={isTop ? () => { start.current = null; setDragging(false); setDrag({ dx: 0, dy: 0 }); } : undefined}
             >
               {isTop && flipped ? (
