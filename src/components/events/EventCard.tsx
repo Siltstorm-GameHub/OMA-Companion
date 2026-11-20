@@ -165,12 +165,7 @@ export default function EventCard({
             </span>
           )}
           {ev.urgency && <span className={`inline-flex items-center rounded px-1.5 py-px text-[11px] font-medium ${TONE_CLASSES.amber.pill}`}>{ev.urgency}</span>}
-          {/* "Dein Spiel" wird bewusst nicht als Abzeichen gezeigt (wirkt nur auf Sortierung/Filter) */}
-          {ev.relevance.filter(tag => tag !== "Dein Spiel").map(tag => (
-            <span key={tag} className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${TONE_CLASSES.teal.pill}`}>
-              {tag}
-            </span>
-          ))}
+          {/* "Dein Spiel"/"Dein Squad" bewusst ohne Abzeichen — wirken nur auf Sortierung und Filter */}
           {ev.isRegistered && (
             <span className={`${tile("sm:hidden")} inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${past ? TONE_CLASSES.muted.pill : TONE_CLASSES.teal.pill}`}>
               <Check className="w-3 h-3" />{past ? "Mitgespielt" : "Dabei"}

@@ -8,7 +8,7 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import HubTile, { type HubRow } from "@/components/HubTile";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
-import { Clock, ExternalLink, Heart, Timer, Trophy } from "@/components/icons";
+import { Clock, ExternalLink, Timer, Trophy } from "@/components/icons";
 import { dateBlock, eventPhase, startsInLabel, urgencyHint } from "@/lib/event-display";
 import { remainingLabel } from "@/lib/event-period";
 import type { HomeEventCandidate, HomeFeature } from "@/lib/home-event-feature";
@@ -233,11 +233,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
         break;
       case "recommend": {
         const urgent = urgencyHint(ev, now);
-        // "Dein Spiel" wird nicht als Abzeichen gezeigt (wirkt nur auf die Auswahl)
-        const shownTags = ev.relevance.filter(tag => tag !== "Dein Spiel");
-        pill = shownTags.length > 0
-          ? <Pill tone="teal"><Heart className="w-3.5 h-3.5" />Für dich · {shownTags.join(" · ")}</Pill>
-          : <Pill tone="teal"><Clock className="w-3.5 h-3.5" />Als Nächstes</Pill>;
+        // "Dein Spiel"/"Dein Squad" ohne Abzeichen — wirken nur auf die Auswahl (recommendationScore)
+        pill = <Pill tone="teal"><Clock className="w-3.5 h-3.5" />Als Nächstes</Pill>;
         sub = <>{longDate(ev.startAt, now)}{urgent ? <> · <span className="text-amber-300">{urgent}</span></> : ev.maxPlayers ? ` · ${ev.playerCount}/${ev.maxPlayers}` : ""}</>;
         action = register("Anmelden");
         break;
