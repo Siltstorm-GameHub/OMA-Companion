@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import GameCover from "@/components/GameCover";
+import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import { AvatarStack } from "@/components/AvatarStack";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
@@ -91,7 +93,47 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
   let main: ReactNode;
   let highlighted = false;
 
-  if (feature.kind === "result") {
+  if (feature.kind === "result" && feature.result.kind === "participation") {
+    // Community-Event ohne Platzierung: "Du warst dabei" + Teilnahme-Belohnung + Mitspieler
+    const r = feature.result;
+    highlighted = true;
+    media = (
+      <>
+        <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+          <span className="text-4xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]" aria-hidden>🤝</span>
+          <span className="text-lg font-black text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">Du warst dabei!</span>
+          {r.reward && (r.reward.coins > 0 || r.reward.rankPoints > 0) && (
+            <span className="flex items-center gap-2 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold tabular-nums">
+              {r.reward.coins > 0 && <span className="flex items-center gap-0.5 text-amber-300">+{r.reward.coins} <CoinIcon size={12} /></span>}
+              {r.reward.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-300">+{r.reward.rankPoints} <RankPointsIcon size={12} /></span>}
+            </span>
+          )}
+          {r.pollWins.length > 0 && (
+            <span className="flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-[11px] font-semibold text-violet-200">
+              <Trophy className="w-3.5 h-3.5 shrink-0 text-violet-300" />
+              <span className="truncate">Umfrage gewonnen: {r.pollWins.join(", ")}</span>
+            </span>
+          )}
+        </div>
+        <Pill tone="violet"><span aria-hidden>🤝</span> Community-Event</Pill>
+        {r.avatars && r.avatars.length > 0 && (
+          <div className="absolute bottom-2.5 right-2.5 z-10">
+            <AvatarStack users={r.avatars} max={5} size="xs" />
+          </div>
+        )}
+      </>
+    );
+    main = (
+      <>
+        <div className="min-w-0 flex-1">
+          <Title title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
+          <p className="truncate text-[11px] text-gray-400">Danke fürs Mitmachen · {r.total} dabei</p>
+        </div>
+        <Link href={`/tournament/${r.id}`} className={BTN_SECONDARY}>Ansehen</Link>
+      </>
+    );
+  } else if (feature.kind === "result") {
     const r = feature.result;
     highlighted = true;
     media = (

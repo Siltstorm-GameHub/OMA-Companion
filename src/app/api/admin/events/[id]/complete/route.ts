@@ -1383,8 +1383,11 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // (Eventreihen-Events zeigen auf die Reihen-Standings, sonst auf die Event-Detailseite).
   const resultUrl = event.seriesId ? `/events/series/${event.seriesId}` : `/tournament/${eventId}`;
   const participantIds = event.registrations.map(r => r.userId);
-  const eventNotifTitle = `✅ Event abgeschlossen: ${event.title}`;
-  const eventNotifBody  = "Schau dir deine Punkte und das Ergebnis an!";
+  // Community-Events haben kein Ergebnis/keine Platzierung — dort nur Dank + Belohnungshinweis
+  const eventNotifTitle = hasPlacement ? `✅ Event abgeschlossen: ${event.title}` : `🤝 Danke fürs Mitmachen: ${event.title}`;
+  const eventNotifBody  = hasPlacement
+    ? "Schau dir deine Punkte und das Ergebnis an!"
+    : "Deine Teilnahme-Belohnung ist gutgeschrieben.";
   // Nur beim tatsächlichen Übergang von "aktiv" in die Umfrage-/Ergebnisphase benachrichtigen —
   // damit ist die Spielphase abgeschlossen und erste Ergebnisse stehen fest. Bei erneutem
   // Abschließen/Korrigieren eines Events, das schon "umfrage" oder "finished" war, keine erneute Meldung.

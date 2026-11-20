@@ -62,6 +62,12 @@ export interface HomeResult {
   winnerNames: string[];
   /** Labels der Event-Umfragen, die du gewonnen hast (z.B. "MVP") */
   pollWins: string[];
+  /** "participation" = Community-Event ohne Platzierung: "Du warst dabei" statt Platz/Sieger */
+  kind?: "placement" | "participation";
+  /** Teilnahme-Belohnung (nur "participation") */
+  reward?: { coins: number; rankPoints: number } | null;
+  /** Mitspieler (nur "participation") */
+  avatars?: HomeAvatar[];
 }
 
 /** Warum ein Zeitraum-Event gerade oben steht */

@@ -77,4 +77,17 @@ describe("Aufgabenleiste der Startseite", () => {
     assert.equal(addHiddenResults(many, ["neu"]).length, 30);
     assert.equal(addHiddenResults(many, ["neu"]).at(-1), "neu");
   });
+
+  test("Community-Events: \"Danke fürs Mitmachen\" mit Belohnung, wegklickbar", () => {
+    const communityThanks = [
+      { id: "c1", title: "Spieleabend", href: "/tournament/c1", coins: 20, rankPoints: 2 },
+      { id: "c2", title: "Quiz", href: "/tournament/c2", coins: 0, rankPoints: 0 },
+    ];
+    const t = buildHomeTasks({ ...base, communityThanks });
+    assert.deepEqual(t.map(x => [x.key, x.label, x.sub, x.dismissIds]), [
+      ["thanks", "Danke fürs Mitmachen", "Spieleabend · +20 Münzen · +2 RP +1 weitere", ["c1", "c2"]],
+    ]);
+    assert.deepEqual(buildHomeTasks({ ...base, communityThanks, hiddenResultIds: ["c1"] }).map(x => x.sub), ["Quiz"]);
+    assert.deepEqual(buildHomeTasks({ ...base, communityThanks, hiddenResultIds: ["c1", "c2"] }), []);
+  });
 });

@@ -40,7 +40,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 import { LIFECYCLE_STEPS, lifecycleStep } from "@/lib/event-manage";
 import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import { eventHasPlacement } from "@/lib/event-placement";
+import { EVENT_KIND_LABEL, eventHasPlacement, eventKindOf, type EventKind } from "@/lib/event-placement";
 import { goalFieldsFor, isResultGoalFormat, parseCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
@@ -380,8 +380,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [participationRankPts, setParticipationRankPts] = useState<number>(
     event.placementRewardsJson ? (parseRewards(event.placementRewardsJson).participationRankPts ?? 0) : 0
   );
+  // Event-Typ: änderbar, solange das Event nicht abgeschlossen ist (Server prüft das ebenfalls)
+  const [eventKind, setEventKind] = useState<EventKind>(eventKindOf(event));
+  const kindLocked = !!event.completionData;
   // Community-Events haben keine Platzierung (lib/event-placement.ts) — keine Platzierungs-Belohnungen
-  const hasPlacement = eventHasPlacement(event);
+  const hasPlacement = eventHasPlacement({ type: eventKind });
   const [polls, setPolls] = useState<PollConfig[]>(parsePolls(event.pollsConfigJson ?? event.pollConfigJson));
   const initialSpectatorReward = parseSpectatorReward(event.spectatorRewardJson);
   const [spectatorCoins, setSpectatorCoins] = useState(initialSpectatorReward.coins);
@@ -570,7 +573,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
    * Speicherleiste. Turnier-, Check-in- und Reihen-Einstellungen sind eigene Aktionen mit eigenem Button. */
   const formSnapshot = JSON.stringify({
     status, title, description, rules, game, genre, category, startAt, endAt, maxPlayers, discordChannelId,
-    participationCoins, placements, polls, spectatorCoins, spectatorRankPts, twitchClipUrl, coverImageUrl,
+    eventKind, participationCoins, participationRankPts, placements, polls, spectatorCoins, spectatorRankPts, twitchClipUrl, coverImageUrl,
     blocks: isBlocksEvent ? blocks : null, hidden, registrationLocked, squadId, omaOriginal,
     partners: [...selectedPartnerIds].sort(),
   });
@@ -597,6 +600,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   function discardChanges() {
     const s = savedRef.current as Record<string, never>;
     setStatus(s.status); setTitle(s.title); setDescription(s.description); setRules(s.rules); setGame(s.game);
+    setEventKind(s.eventKind); setParticipationRankPts(s.participationRankPts);
     setGenre(s.genre); setCategory(s.category); setStartAt(s.startAt); setEndAt(s.endAt); setMaxPlayers(s.maxPlayers);
     setDiscordChannelId(s.discordChannelId); setParticipationCoins(s.participationCoins); setPlacements(s.placements);
     setPolls(s.polls); setSpectatorCoins(s.spectatorCoins); setSpectatorRankPts(s.spectatorRankPts);
@@ -620,6 +624,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         ...(registrationLocked !== before.registrationLocked && { registrationLocked }),
         ...(squadId !== before.squadId && { squadId: squadId || null }),
         ...(isModerator && omaOriginal !== before.omaOriginal && { omaOriginal }),
+        ...(eventKind !== before.eventKind && { type: eventKind }),
         status,
         title,
         description: description || null,
@@ -1098,6 +1103,20 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                         )}
                       </label>
                       <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Event-Typ</label>
+                      <select value={eventKind} disabled={kindLocked} onChange={e => setEventKind(e.target.value as EventKind)}
+                        title={kindLocked ? "Nach dem Abschluss nicht mehr änderbar" : undefined}
+                        className={`${inputCls} disabled:opacity-60`}>
+                        {(["community", "tournament"] as const).map(k => (
+                          <option key={k} value={k}>{EVENT_KIND_LABEL[k].emoji} {EVENT_KIND_LABEL[k].label}</option>
+                        ))}
+                      </select>
+                      {eventKind === "community" && !kindLocked && (
+                        <p className="mt-1 text-[11px] text-violet-300/80">Keine Platzierung — alle Teilnehmer bekommen nur die Teilnahme-Belohnung.</p>
+                      )}
+                      {kindLocked && <p className="mt-1 text-[11px] text-gray-500">Nach dem Abschluss nicht mehr änderbar.</p>}
                     </div>
                     <div>
                       <label className={labelCls}>Kategorie</label>

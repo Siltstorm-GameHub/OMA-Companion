@@ -1,5 +1,5 @@
 import React from "react";
-import { eventHasPlacement } from "@/lib/event-placement";
+import { eventHasPlacement, participationRewardOf } from "@/lib/event-placement";
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
@@ -543,7 +543,8 @@ export default async function TournamentDetailPage({
   //  3. Liga: erst wenn alle Spiele gespielt sind, dann der Tabellenerste (gleiche Tabelle wie unten)
   //  Stat-Formate haben vor dem Abschluss keinen eindeutigen Sieger.
   const winner: { name: string | null; username: string | null; image: string | null } | null = (() => {
-    if (!hasTournament) return null;
+    // Community-Events haben keinen Sieger (lib/event-placement.ts)
+    if (!hasTournament || !eventHasPlacement(event)) return null;
     const userOf = (id: string | null | undefined) =>
       id && !excludedUserIds.has(id) ? (mergedParticipants.find(p => p.userId === id)?.user ?? null) : null;
     if (gamePhaseComplete && event.finalRankingJson) {
@@ -1167,8 +1168,15 @@ export default async function TournamentDetailPage({
     </nav>
   );
 
+  // ── Community-Event abgeschlossen: kein Ergebnis, sondern "Mit dabei waren" + Umfrage-Highlights ──
+  const isCommunityDone = !eventHasPlacement(event) && gamePhaseComplete;
+  const communityPlayers = isCommunityDone
+    ? event.registrations.filter(r => r.role === "player" && !excludedUserIds.has(r.userId)).map(r => r.user)
+    : [];
+  const myParticipationReward = isCommunityDone ? participationRewardOf(event.completionData, userId) : null;
+
   // ── Ergebnis (Podest, dein Platz, Sieger der Abstimmungen) ──
-  const showResults = podium.length > 0 || !!winner || pollWinnerCards.length > 0;
+  const showResults = isCommunityDone || podium.length > 0 || !!winner || pollWinnerCards.length > 0;
   const PODIUM_STEP = [
     { h: "h-10", bg: "bg-yellow-400/20", text: "text-yellow-300", ring: "ring-yellow-400/70", size: 44 },
     { h: "h-7", bg: "bg-slate-300/15", text: "text-slate-300", ring: "ring-slate-300/60", size: 36 },
@@ -1176,6 +1184,39 @@ export default async function TournamentDetailPage({
   ];
   const resultsNode = showResults ? (
     <section aria-label="Ergebnis" className="glass rounded-2xl p-5 mb-5 border border-yellow-400/20 space-y-4">
+      {isCommunityDone ? (
+        <>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <span aria-hidden>🤝</span> Mit dabei waren
+              <span className="text-xs font-normal text-gray-500">{communityPlayers.length}</span>
+            </h2>
+            {myParticipationReward && (
+              <span className="flex items-center gap-1.5 rounded-lg bg-teal-400/15 px-2.5 py-1 text-xs font-semibold text-teal-300 tabular-nums">
+                Danke fürs Mitmachen
+                {myParticipationReward.coins > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.coins} <CoinIcon size={12} /></span>}
+                {myParticipationReward.rankPoints > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.rankPoints} <RankPointsIcon size={12} /></span>}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-500">Community-Event: keine Platzierung — alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
+          {communityPlayers.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-2">
+              {communityPlayers.map(u => {
+                const isMe = u.id === userId;
+                return (
+                  <span key={u.id} className="flex items-center gap-1.5 min-w-0">
+                    <RankedAvatar userId={u.id} src={u.image} alt={userName(u)} size={24} className="w-6 h-6" />
+                    <span className={`truncate text-xs font-medium ${isMe ? "text-teal-300" : "text-gray-200"}`}>
+                      <StyledUserName userId={u.id} name={userName(u)} />{isMe && <span className="text-gray-500 ml-1">(du)</span>}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
           <WinIcon size={18} /> {pagePhase === "after" ? "Ergebnis" : "Ergebnis (vorläufig)"}
@@ -1186,6 +1227,7 @@ export default async function TournamentDetailPage({
           </span>
         )}
       </div>
+      )}
       {podium.length > 0 ? (
         <div className="flex items-end justify-center gap-3 pt-2">
           {[1, 0, 2].filter(i => podium[i]).map(i => {
@@ -1214,6 +1256,9 @@ export default async function TournamentDetailPage({
           </div>
         </div>
       ) : null}
+      {isCommunityDone && pollWinnerCards.length > 0 && (
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-300/80">Highlights aus den Umfragen</p>
+      )}
       {pollWinnerCards.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {pollWinnerCards.map(poll => (

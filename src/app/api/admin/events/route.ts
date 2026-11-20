@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { parseEventKind } from "@/lib/event-placement";
 import { requireEventManager, hasMinRole, getCaptainedSquadIds, canManageSeries } from "@/lib/roles";
 import { getCommunityLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
@@ -112,6 +113,21 @@ export async function PATCH(req: NextRequest) {
   }
 
   if ("checkInEnabled" in data) data.checkInEnabled = data.checkInEnabled === true;
+  // Event-Typ (Turnier ↔ Community-Event, lib/event-placement.ts): nur gültige Werte und nur, solange
+  // das Event noch nicht abgeschlossen ist — sonst passten Platzierung/Belohnungen nicht mehr zum Typ.
+  if ("type" in data) {
+    const kind = parseEventKind(data.type);
+    if (!kind) {
+      delete data.type;
+    } else {
+      const current = await prisma.event.findUnique({ where: { id: eventId }, select: { type: true, completionData: true } });
+      if (current && current.type !== kind && current.completionData) {
+        return NextResponse.json({ error: "Der Event-Typ kann nach dem Abschluss nicht mehr geändert werden." }, { status: 409 });
+      }
+      data.type = kind;
+    }
+  }
+
   if ("checkInMinutes" in data) data.checkInMinutes = sanitizeCheckInMinutes(data.checkInMinutes);
 
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;

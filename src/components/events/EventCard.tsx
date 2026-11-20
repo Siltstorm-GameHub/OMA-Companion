@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EVENT_KIND_LABEL, type EventKind } from "@/lib/event-placement";
 import GameCover from "@/components/GameCover";
 import { AvatarStack } from "@/components/AvatarStack";
 import CoinIcon from "@/components/CoinIcon";
@@ -34,6 +35,8 @@ export type EventCardData = {
   /** "Max, Lena" — Freunde unter den Teilnehmenden (max. 2) */
   friendNames: string[];
   communityBy: string | null;
+  /** Event-Typ: Turnier (mit Platzierung) oder Community-Event (nur Teilnahme), lib/event-placement.ts */
+  kind?: EventKind;
   /** Event-Absprachen: Nachrichten gesamt / ungelesen (nachträglich gesetzt, lib/event-comments.ts) */
   comments?: { total: number; unread: number } | null;
 };
@@ -170,6 +173,13 @@ export default function EventCard({
           {ev.isRegistered && (
             <span className={`${tile("sm:hidden")} inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${past ? TONE_CLASSES.muted.pill : TONE_CLASSES.teal.pill}`}>
               <Check className="w-3 h-3" />{past ? "Mitgespielt" : "Dabei"}
+            </span>
+          )}
+          {ev.kind && (
+            <span
+              title={ev.kind === "community" ? "Keine Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
+              className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${ev.kind === "community" ? "bg-violet-500/15 text-violet-300" : "bg-amber-500/15 text-amber-300"}`}>
+              <span aria-hidden>{EVENT_KIND_LABEL[ev.kind].emoji}</span>{ev.kind === "community" ? "Community" : "Turnier"}
             </span>
           )}
           {ev.metaLine && <span className={`${row ? "inline" : "hidden sm:inline"} text-[11px] text-gray-500 truncate`}>{ev.metaLine}</span>}

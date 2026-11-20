@@ -1,6 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import CommunityGoalsBanner from "@/components/CommunityGoalsBanner";
-import { eventHasPlacement } from "@/lib/event-placement";
+import { participationRewardOf } from "@/lib/event-placement";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
@@ -321,7 +321,7 @@ export default async function DashboardPage() {
     .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
   // ── Startseiten-Kacheln: Events (eine Priorität statt Karussell) + Clip-Platzierung ──
-  const [viewer, myRecentResult, clipRankingRows, myClipVote, dailyPolls] = await Promise.all([
+  const [viewer, myRecentResult, clipRankingRows, myClipVote, dailyPolls, myCommunityEvents] = await Promise.all([
     loadEventViewerContext(userId),
     // Ergebnis eines Events, bei dem du in den letzten 24 Std mitgespielt hast
     userId
@@ -334,7 +334,7 @@ export default async function DashboardPage() {
           },
           orderBy: { completedAt: "desc" },
           select: {
-            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, finalRankingJson: true, completionData: true,
+            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, finalRankingJson: true, completionData: true, completedAt: true,
             series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
             _count: { select: { registrations: { where: { role: "player" } } } },
             // Ausgewertete Umfragen (winnerIds gesetzt) — "Umfrage gewonnen" auf der Ergebnis-Kachel
@@ -356,6 +356,28 @@ export default async function DashboardPage() {
       : null,
     // Community-Umfragen, direkt aufgeklappt — serverseitig, damit die Startseite nicht nachträglich springt
     loadDailyPolls({ userId }),
+    // Kürzlich abgeschlossene Community-Events, bei denen du mitgespielt hast (keine Platzierung):
+    // "Danke fürs Mitmachen" in "Heute für dich" (3 Tage) und "Du warst dabei" auf der Event-Kachel (24 Std)
+    userId
+      ? prisma.event.findMany({
+          where: {
+            hidden: false, status: "finished", type: "community",
+            completedAt: { gte: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+            registrations: { some: { userId, role: "player" } },
+          },
+          orderBy: { completedAt: "desc" },
+          take: 5,
+          select: {
+            id: true, title: true, game: true, coverImageUrl: true, omaOriginal: true, completionData: true, completedAt: true,
+            series: { select: { coverImageUrl: true, omaOriginal: true, fixedGame: true } },
+            registrations: {
+              where: { role: "player" },
+              select: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
+            },
+            polls: { where: { winnerIds: { not: null } }, select: { label: true, winnerIds: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const ranking = parseRanking(myRecentResult?.finalRankingJson);
@@ -381,7 +403,36 @@ export default async function DashboardPage() {
         ...(resultCompletion.pollWinnerIds?.includes(userId) ? [resultCompletion.pollLabel || "Umfrage"] : []),
       ]
     : [];
-  const homeResult: HomeResult | null = myRecentResult && myPlace > 0
+  // Community-Events: Disqualifizierte bekommen weder Dank noch Kachel
+  const myCommunityDone = myCommunityEvents.filter(ev =>
+    !(parseJsonObject<{ excludedUserIds?: string[] | null }>(ev.completionData).excludedUserIds ?? []).includes(userId ?? ""));
+  const communityThanks = myCommunityDone.map(ev => {
+    const r = participationRewardOf(ev.completionData, userId);
+    return { id: ev.id, title: ev.title, href: `/tournament/${ev.id}`, coins: r?.coins ?? 0, rankPoints: r?.rankPoints ?? 0 };
+  });
+  // "Du warst dabei" auf der Event-Kachel: neuestes Community-Event der letzten 24 Std, sofern es nach
+  // dem letzten Turnier-Ergebnis abgeschlossen wurde
+  const latestCommunity = myCommunityDone.find(ev => ev.completedAt && ev.completedAt.getTime() >= now.getTime() - 24 * 60 * 60 * 1000);
+  const communityIsNewer = !!latestCommunity && (!myRecentResult || myPlace <= 0
+    || (latestCommunity.completedAt?.getTime() ?? 0) > (myRecentResult.completedAt?.getTime() ?? 0));
+  const communityHomeResult: HomeResult | null = latestCommunity && communityIsNewer
+    ? {
+        id: latestCommunity.id,
+        title: latestCommunity.title,
+        game: latestCommunity.game,
+        coverUrl: latestCommunity.coverImageUrl ?? latestCommunity.series?.coverImageUrl ?? null,
+        omaOriginal: isOmaOriginal(latestCommunity),
+        place: 0,
+        total: latestCommunity.registrations.length,
+        winnerNames: [],
+        pollWins: [...new Set(latestCommunity.polls.filter(p => parseJsonArray(p.winnerIds).includes(userId ?? "")).map(p => p.label))],
+        kind: "participation",
+        reward: participationRewardOf(latestCommunity.completionData, userId),
+        avatars: friendsFirst(latestCommunity.registrations.map(r => r.user).filter(u => u.id !== userId), viewer.friendIds).slice(0, 5),
+      }
+    : null;
+
+  const homeResult: HomeResult | null = communityHomeResult ?? (myRecentResult && myPlace > 0
     ? {
         id: myRecentResult.id,
         title: myRecentResult.title,
@@ -393,7 +444,7 @@ export default async function DashboardPage() {
         winnerNames,
         pollWins: [...new Set(pollWins)],
       }
-    : null;
+    : null);
 
   const homeCandidates: HomeEventCandidate[] = homeEventRows.map(ev => {
     const players = playersOf(ev);
@@ -459,6 +510,7 @@ export default async function DashboardPage() {
     clipVoted: !!myClipVote,
     clipVotingEndsAt: activeClipContest?.votingEndsAt ?? null,
     recentResults: recentResultEvents.map(r => ({ id: r.id, title: r.title, href: r.href })),
+    communityThanks,
     hiddenResultIds: parseHiddenResults((await cookies()).get(RESULTS_HIDE_COOKIE)?.value),
     quests: questRows,
     now: now.getTime(),

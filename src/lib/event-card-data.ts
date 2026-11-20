@@ -2,6 +2,7 @@
 // Server-seitig — Status, Datum, Relevanz und Dringlichkeit kommen aus lib/event-display.ts.
 
 import type { Prisma } from "@prisma/client";
+import { eventKindOf } from "@/lib/event-placement";
 import type { EventCardData } from "@/components/events/EventCard";
 import { categoryLabel } from "@/components/EventCategoryBadge";
 import { dateBlock, eventPhase, friendsFirst, relevanceTags, urgencyHint } from "@/lib/event-display";
@@ -72,7 +73,7 @@ export function toEventCardData(
 
   const communityCreator = ev.approvalStatus || ev.series?.approvalStatus ? ev.createdBy : null;
   const meta = [
-    ev.format ? `Turnier · ${formatLabel(ev.format)}` : null,
+    ev.format ? formatLabel(ev.format) : null,
     categoryLabel(ev.category),
   ].filter(Boolean).join(" · ");
 
@@ -107,5 +108,6 @@ export function toEventCardData(
     avatars: sorted.slice(0, 3),
     friendNames,
     communityBy: communityCreator ? (communityCreator.username ?? communityCreator.name ?? "Mitglied") : null,
+    kind: eventKindOf(ev),
   };
 }

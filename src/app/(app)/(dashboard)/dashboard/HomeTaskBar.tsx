@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
-import { Clapperboard, Dices, Gamepad2, Target, Trophy } from "@/components/icons";
+import { Clapperboard, Dices, Gamepad2, Heart, Target, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import HomeTaskDismiss from "@/components/HomeTaskDismiss";
 import { homeTaskCoins, type HomeTask, type HomeTaskTone } from "@/lib/home-tasks";
@@ -12,6 +12,7 @@ const ICON: Record<HomeTask["key"], ComponentType<{ className?: string }>> = {
   clip: Clapperboard,
   swipe: Gamepad2,
   results: Trophy,
+  thanks: Heart,
   quest: Target,
 };
 

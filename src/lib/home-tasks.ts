@@ -6,7 +6,7 @@
 export type HomeTaskTone = "amber" | "violet" | "orange" | "teal" | "twitch";
 
 export type HomeTask = {
-  key: "spin" | "clip" | "swipe" | "results" | "quest";
+  key: "spin" | "clip" | "swipe" | "results" | "thanks" | "quest";
   /** Kurzer Titel der Kachel */
   label: string;
   /** Zweite Zeile: Nutzen oder Frist */
@@ -49,7 +49,10 @@ export interface HomeTaskInput {
   clipVotingEndsAt?: string | Date | null;
   /** "Ergebnisse sind da" — kürzlich abgeschlossene Events mit Ergebnis (neuestes zuerst) */
   recentResults: { id: string; title: string; href: string }[];
-  /** Weggeklickte Ergebnis-Erinnerungen (Event-IDs) */
+  /** "Danke fürs Mitmachen" — kürzlich abgeschlossene Community-Events, bei denen du dabei warst
+   *  (keine Platzierung, nur Teilnahme-Belohnung; neuestes zuerst) */
+  communityThanks?: { id: string; title: string; href: string; coins: number; rankPoints: number }[];
+  /** Weggeklickte Ergebnis-/Danke-Erinnerungen (Event-IDs) */
   hiddenResultIds?: string[];
   quests: { title: string; current: number; target: number; completed: boolean; reward?: number }[];
   /** Bezugszeitpunkt für Fristen (ms) */
@@ -108,6 +111,18 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
       sub: `${result.title}${more > 0 ? ` +${more} weitere` : ""}`,
       // ✕ blendet alle Ergebnisse aus, auf die die Kachel gerade hinweist
       dismissIds: results.map(r => r.id),
+    });
+  }
+
+  const thanks = (input.communityThanks ?? []).filter(t => !hidden.has(t.id));
+  if (thanks[0]) {
+    const t = thanks[0];
+    const reward = [t.coins > 0 ? `+${t.coins} Münzen` : null, t.rankPoints > 0 ? `+${t.rankPoints} RP` : null].filter(Boolean).join(" · ");
+    const more = thanks.length - 1;
+    tasks.push({
+      key: "thanks", label: "Danke fürs Mitmachen", href: t.href, tone: "teal",
+      sub: `${t.title}${reward ? ` · ${reward}` : ""}${more > 0 ? ` +${more} weitere` : ""}`,
+      dismissIds: thanks.map(x => x.id),
     });
   }
 
