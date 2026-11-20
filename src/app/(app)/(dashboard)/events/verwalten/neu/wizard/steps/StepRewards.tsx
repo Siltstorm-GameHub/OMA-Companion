@@ -26,7 +26,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
         </div>
         <p className="text-[11px] text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
-        <div className={(belongsToSeries || eventType === "community") ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
+        <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
           {!belongsToSeries && (
             <div>
               <label className={labelCls}>Münzen</label>
@@ -35,7 +35,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                 className={inputCls} style={inputStyle} />
             </div>
           )}
-          {eventType !== "community" && (
+          {!belongsToSeries && (
             <div>
               <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
               <NumberInput min="0" value={participationRankPts}
@@ -52,6 +52,9 @@ export default function StepRewards({ w }: { w: EventWizard }) {
         )}
       </div>
 
+      {eventType === "community" ? (
+        <p className="text-[11px] text-gray-500 -mt-3 px-1">Community-Event: keine Platzierung — es gibt nur die Teilnahme-Belohnung.</p>
+      ) : (
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">
         <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
           Platzierungs-Belohnungen
@@ -61,26 +64,25 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           {placements.map((p, i) => (
             <div key={p.place} className="flex items-center gap-3">
               <span className="text-sm w-5 shrink-0"><PlaceMedal place={i + 1} /></span>
-              <div className={eventType === "community" ? "flex-1 grid grid-cols-1 gap-2" : "flex-1 grid grid-cols-2 gap-2"}>
+              <div className="flex-1 grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelCls}>Münzen</label>
                   <NumberInput min="0" value={p.coins}
                     onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, coins: Number(e.target.value) } : pp))}
                     className={inputCls} style={inputStyle} />
                 </div>
-                {eventType !== "community" && (
-                  <div>
-                    <label className={labelCls}>Rang-Punkte</label>
-                    <NumberInput min="0" value={p.rankPoints}
-                      onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
-                      className={inputCls} style={inputStyle} />
-                  </div>
-                )}
+                <div>
+                  <label className={labelCls}>Rang-Punkte</label>
+                  <NumberInput min="0" value={p.rankPoints}
+                    onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
+                    className={inputCls} style={inputStyle} />
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+      )}
 
       {spectatorMode && (
         <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">

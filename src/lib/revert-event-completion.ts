@@ -55,6 +55,7 @@ type CompletionData = {
    *  User stehen gar nicht erst drin. */
   rewardLedger?: {
     participationCoins?: Record<string, number>;
+    participationRankPoints?: Record<string, number>;
     spectatorRewards?:   Record<string, { coins: number; rankPoints: number }>;
     placementRewards?:   Record<string, { coins: number; rankPoints: number }>;
   } | null;
@@ -215,6 +216,9 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   if (includeBaseRewards && ledger) {
     for (const [userId, coins] of Object.entries(ledger.participationCoins ?? {})) {
       reverse(userId, coins, 0);
+    }
+    for (const [userId, rankPoints] of Object.entries(ledger.participationRankPoints ?? {})) {
+      reverse(userId, 0, rankPoints);
     }
     for (const [userId, r] of Object.entries(ledger.placementRewards ?? {})) {
       reverse(userId, r.coins ?? 0, r.rankPoints ?? 0);

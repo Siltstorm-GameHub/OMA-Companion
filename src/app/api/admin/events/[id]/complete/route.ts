@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
 import { getCommunityLimits } from "@/lib/community-event-limits";
+import { eventHasPlacement } from "@/lib/event-placement";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
@@ -22,7 +23,7 @@ import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, TURNIERPU
 import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+type RewardsConfig = { participationCoins: number; participationRankPts?: number; placements: PlacementReward[] };
 
 const DEFAULT_REWARDS: RewardsConfig = {
   participationCoins: 10,
@@ -226,6 +227,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Nicht-Moderatoren (Ersteller, Squad-Captains): Beträge aus dem Request (Überschreibungen der
   // Event-Konfiguration) auf die Community-Obergrenzen kappen — Einzel-Event bzw. Reihen-Termin,
   // siehe lib/community-event-limits.ts
+  // Teilnahme-Rang-Punkte kommen nur aus der gespeicherten Event-Konfiguration — für Nicht-Moderatoren
+  // ebenfalls auf die Community-Obergrenze gekappt (siehe unten)
+  let participationRankPtsCap = (n: number) => n;
   if (!hasMinRole(currentUser.role, "moderator")) {
     const limits = await getCommunityLimits();
     const ev = await prisma.event.findUnique({
@@ -238,6 +242,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     const stored = parseRewards(ev?.placementRewardsJson ?? ev?.series?.placementRewardsJson);
     body.participationCoins = capParticipationCoins(body.participationCoins ?? stored.participationCoins, L);
     body.placements = capPlacements(Array.isArray(body.placements) ? body.placements : stored.placements, L);
+    participationRankPtsCap = n => capValue(n, L.participationRankPts);
     if (body.pollBonusCoins !== undefined) body.pollBonusCoins = capValue(body.pollBonusCoins, L.pollBonusCoins);
     if (body.pollBonusRankPoints !== undefined) body.pollBonusRankPoints = capValue(body.pollBonusRankPoints, L.pollBonusRankPoints);
     if (Array.isArray(body.pollResults)) {
@@ -276,6 +281,20 @@ async function completeEvent(req: NextRequest, eventId: string) {
   })() as { winnerMode?: string; winnerStatField?: string } | null;
 
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
+
+  // Community-Events haben keine Platzierung (lib/event-placement.ts): Rangliste, Sieger und
+  // Platzierungs-Belohnungen aus dem Request werden verworfen — es gibt nur Teilnahme-Belohnungen.
+  // Leere Liste statt undefined, damit eine früher gespeicherte Rangliste beim Re-Edit gelöscht und
+  // bereits gebuchte Platzierungs-Belohnungen über den Ledger-Diff zurückgebucht werden.
+  const hasPlacement = eventHasPlacement(event);
+  if (!hasPlacement) {
+    body.finalRanking = [];
+    body.finalRankingGroups = [];
+    body.placements = [];
+    body.winnerStatField = undefined;
+    body.avgWinnerDirection = undefined;
+    body.rankingManual = undefined;
+  }
 
   // Reihentabellen-Konfiguration der Reihe (Tabellenpunkte + Teilnahme-Münzen, seriesweit fix) — die
   // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats) fließt hier BEWUSST NICHT ein: sie
@@ -476,7 +495,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Ausgeschlossene User können nie Event-Gewinner sein (unabhängig vom Winner-Modus) — keine
   // automatische Beförderung des nächsten Platzes, der Admin kann die Platzierung bei Bedarf zusätzlich
   // manuell anpassen.
-  eventWinnerIds = eventWinnerIds.filter(id => !excludedSet.has(id));
+  eventWinnerIds = hasPlacement ? eventWinnerIds.filter(id => !excludedSet.has(id)) : [];
   eventWinnerId = eventWinnerIds[0];
 
   // ── Coin/RankPoint-Vergabe ───────────────────────────────────────────────────
@@ -486,12 +505,14 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // (Disqualifikation) und bereits vergebene Belohnungen dadurch zurückzunehmen.
   const oldRewardLedger = (oldCompletion.rewardLedger ?? {}) as {
     participationCoins?: Record<string, number>;
+    participationRankPoints?: Record<string, number>;
     spectatorRewards?: Record<string, { coins: number; rankPoints: number }>;
     placementRewards?: Record<string, { coins: number; rankPoints: number }>;
   };
 
   const rewards: RewardsConfig = {
     participationCoins: body.participationCoins ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).participationCoins,
+    participationRankPts: participationRankPtsCap(parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).participationRankPts ?? 0),
     placements: body.placements ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).placements,
   };
 
@@ -509,6 +530,24 @@ async function completeEvent(req: NextRequest, eventId: string) {
     const oldMap = oldRewardLedger.participationCoins ?? {};
     for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newParticipationCoins)])) {
       await applyCoinDelta(userId, (newParticipationCoins[userId] ?? 0) - (oldMap[userId] ?? 0), `[Münzen] Teilnahme: ${event.title}`);
+    }
+  }
+
+  // Teilnahme-Rang-Punkte (Event-Belohnung "Rang-Punkte → Rangliste") — nur eigenständige Events;
+  // in einer Eventreihe laufen Teilnahme-Punkte über die Reihentabelle (statCfg.participationPoints).
+  // Gleiche Regeln wie die Teilnahme-Münzen (keine Ausgeschlossenen, keine No-Shows).
+  const newParticipationRankPoints: Record<string, number> = {};
+  const participationRankPts = event.seriesId ? 0 : Math.max(0, Number(rewards.participationRankPts) || 0);
+  if (participationRankPts > 0) {
+    for (const userId of playerIds) {
+      if (excludedSet.has(userId) || noShowSet.has(userId)) continue;
+      newParticipationRankPoints[userId] = participationRankPts;
+    }
+  }
+  {
+    const oldMap = oldRewardLedger.participationRankPoints ?? {};
+    for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newParticipationRankPoints)])) {
+      await applyRankDelta(userId, (newParticipationRankPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Teilnahme: ${event.title}`);
     }
   }
 
@@ -1259,6 +1298,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     // Ledger der zuletzt vergebenen Beträge, für Diff-basiertes Nachbuchen/Rückbuchen bei jedem Speichern
     rewardLedger: {
       participationCoins: newParticipationCoins,
+      participationRankPoints: newParticipationRankPoints,
       spectatorRewards:   newSpectatorRewards,
       placementRewards:   newPlacementRewards,
     },

@@ -466,11 +466,10 @@ export function useEventWizard({
       ? { name: newSeriesName.trim(), description: newSeriesDesc.trim() || null }
       : null;
 
-    const effectiveParticipationRankPts = eventType === "community" ? 0 : participationRankPts;
-    const effectivePlacementsBase = eventType === "community"
-      ? placements.map(p => ({ ...p, rankPoints: 0 }))
-      : placements;
-    const effectivePlacements = effectivePlacementsBase;
+    // Community-Events: keine Platzierung → keine Platzierungs-Belohnungen (lib/event-placement.ts);
+    // Teilnahme gibt Münzen und Rang-Punkte
+    const effectiveParticipationRankPts = participationRankPts;
+    const effectivePlacements = eventType === "community" ? [] : placements;
 
     const body: Record<string, unknown> = {
       title: title.trim(),
@@ -600,7 +599,7 @@ export function useEventWizard({
         discordChannelId: seriesDiscordId || null,
         recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        placementRewardsJson: { placements: eventType === "community" ? placements.map(p => ({ ...p, rankPoints: 0 })) : placements },
+        placementRewardsJson: { placements: eventType === "community" ? [] : placements },
         pollsConfigJson: polls.length > 0 ? polls : null,
         seriesStatConfig,
         startDate: seriesStartDate ? fromDatetimeLocalBerlin(seriesStartDate).toISOString() : null,

@@ -1,4 +1,5 @@
 import React from "react";
+import { eventHasPlacement } from "@/lib/event-placement";
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
@@ -463,7 +464,7 @@ export default async function TournamentDetailPage({
   const pollLabel         = completionData.pollLabel ?? null;
   const pollBonusCoins    = completionData.pollBonusCoins ?? completionData.pollBonusPoints ?? null;
   const pollBonusRankPts  = completionData.pollBonusRankPoints ?? null;
-  const rankingGroups     = completionData.finalRankingGroups ?? null;
+  const rankingGroups     = eventHasPlacement(event) ? (completionData.finalRankingGroups ?? null) : null;
   const gamePhaseComplete   = completionData.gamePhaseComplete === true;
   const pollPhaseComplete   = completionData.pollPhaseComplete === true;
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
@@ -941,7 +942,8 @@ export default async function TournamentDetailPage({
   const statusTone = phaseInfo.label ? TONE_CLASSES[phaseInfo.tone] : TONE_CLASSES.teal;
 
   // Ergebnis: Endplatzierung (ohne Ungewertete), Podest + eigener Platz
-  const finalRanking = gamePhaseComplete ? parseRanking(event.finalRankingJson).filter(id => !excludedUserIds.has(id)) : [];
+  // Community-Events haben keine Platzierung (lib/event-placement.ts)
+  const finalRanking = gamePhaseComplete && eventHasPlacement(event) ? parseRanking(event.finalRankingJson).filter(id => !excludedUserIds.has(id)) : [];
   const personById = (id: string) => mergedParticipants.find(p => p.userId === id)?.user
     ?? event.registrations.find(r => r.userId === id)?.user ?? null;
   const podium = finalRanking.slice(0, 3).map(id => ({ id, user: personById(id) })).filter(p => !!p.user);

@@ -26,7 +26,7 @@ import { confirmEventTiming, eventTimingWarning } from "@/lib/event-timing-warni
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type PlacementReward = { place: number; coins: number; rankPoints: number; /** Tabellenpunkte der Reihe (eventPlacementPoints) */ tablePoints?: number };
-type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+type RewardsConfig = { participationCoins: number; participationRankPts?: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
 type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
@@ -52,6 +52,8 @@ type SeriesStatConfig = {
 type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
 
 interface Props {
+  /** false bei Community-Events: keine Platzierung, nur Teilnahme-Belohnung (lib/event-placement.ts) */
+  hasPlacement?: boolean;
   eventId: string;
   eventTitle: string;
   /** Für die Warnung "Abschluss vor Start/Ende" (ISO) */
@@ -155,7 +157,7 @@ export default function EventCompleteClient({
   winnerStatSource = "auto", seriesWinnerStatField = null, userStats, format, userAvgScore, defaultAvgDirection = "high",
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
-  isAdmin, isMod, isReEdit, status,
+  isAdmin, isMod, isReEdit, status, hasPlacement = true,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
   const router = useRouter();
@@ -515,8 +517,8 @@ export default function EventCompleteClient({
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
           pollExcludedUserIds:     pollConfig.enabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
           spectatorAttendedIds:    spectatorUsers.length > 0 ? [...spectatorAttended] : undefined,
-          finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
-          finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
+          finalRanking:            !hasPlacement ? [] : rankingOrder.length > 0 ? rankingOrder : undefined,
+          finalRankingGroups:      !hasPlacement ? [] : rankingGroups.length > 0 ? rankingGroups : undefined,
           finalRankingNote:        rankingNote || undefined,
           excludedUserIds:         excludedUsers.size > 0 ? [...excludedUsers] : undefined,
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
@@ -558,9 +560,12 @@ export default function EventCompleteClient({
   const pageTitle = isPollOnly ? "Umfrage abschließen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen";
   const hasExtras = !!seriesStatConfig?.mvpStatField || !!dominionCfg?.enabled || (spectatorUsers.length > 0 && !!spectatorRewardJson);
   const hasPolls = pollsConfig.length > 0 || pendingEventPolls.length > 0 || (pollConfig.enabled && pollsConfig.length === 0);
-  const steps = ["Platzierung", ...(hasExtras ? ["Extras"] : []), ...(hasPolls ? ["Umfrage"] : [])];
+  const firstStep = hasPlacement ? "Platzierung" : "Teilnehmer";
+  const steps = [firstStep, ...(hasExtras ? ["Extras"] : []), ...(hasPolls ? ["Umfrage"] : [])];
   const stepNo = (name: string) => steps.indexOf(name) + 1;
-  const noRanking = !isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0;
+  const noRanking = hasPlacement && !isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0;
+  // Teilnahme-Rang-Punkte gibt es nur bei eigenständigen Events (in einer Reihe: Reihentabelle)
+  const participationRankPts = seriesId ? 0 : (rewardsConfig.participationRankPts ?? 0);
   const mainLabel = loading
     ? "Wird gespeichert…"
     : willFinalizePolls ? "Umfrage beenden und Event abschließen"
@@ -628,7 +633,68 @@ export default function EventCompleteClient({
         </p>
       )}
 
+      {/* ── Schritt 1 (Community-Event): Teilnehmer — keine Platzierung, nur Teilnahme-Belohnung ── */}
+      {!hasPlacement && (
+        <section aria-label="Teilnehmer" className="space-y-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Teilnehmer")}</span>
+            Teilnehmer
+          </h2>
+          <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
+            <p className="text-xs text-gray-400">
+              Community-Event: Es gibt keine Platzierung und keinen Sieger. Alle Teilnehmer erhalten die Teilnahme-Belohnung
+              {seriesId ? " (laut Eventreihe)" : ""}.
+            </p>
+            <p className="text-[10px] text-gray-600"><Ban className="w-3 h-3 inline" /> disqualifizieren (keine Belohnung)</p>
+            {registeredUsers.length === 0 ? (
+              <p className="text-sm text-gray-600 text-center py-4">Keine Teilnehmer registriert.</p>
+            ) : (
+              <div className="space-y-1">
+                {registeredUsers.map(u => {
+                  const isExcluded = excludedUsers.has(u.id);
+                  return (
+                    <div key={u.id} className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors ${
+                      isExcluded ? "border-red-900/40 bg-red-950/20" : "border-white/[0.05] bg-white/[0.03]"
+                    }`}>
+                      <Avatar u={u} size={5} />
+                      <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : "text-white"}`}>{userName(u)}</span>
+                      {isExcluded && <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>}
+                      <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
+                        {!isExcluded && effectiveParticipationCoins > 0 && (
+                          <span className="text-[10px] text-amber-400 tabular-nums leading-tight">+{effectiveParticipationCoins} <CoinIcon size={11} /></span>
+                        )}
+                        {!isExcluded && participationRankPts > 0 && (
+                          <span className="text-[10px] text-teal-400 tabular-nums leading-tight">+{participationRankPts} <RankPointsIcon size={11} /></span>
+                        )}
+                      </span>
+                      <button
+                        onClick={() => toggleExcluded(u.id)}
+                        title={isExcluded ? "Disqualifikation aufheben" : "Disqualifizieren (keine Münzen/Punkte)"}
+                        className={`p-2.5 -m-1 shrink-0 transition-colors ${isExcluded ? "text-red-400" : "text-gray-600 hover:text-red-400"}`}
+                      >
+                        <Ban className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div>
+              <label className="text-[11px] text-gray-500 block mb-1">Begründung / Notiz (optional)</label>
+              <textarea
+                value={rankingNote}
+                onChange={e => { setRankingNote(e.target.value); setRankingDirty(true); }}
+                placeholder="z.B. Spieler X disqualifiziert wegen …"
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Schritt 1: Platzierung ── */}
+      {hasPlacement && (
       <section aria-label="Platzierung" className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
           <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Platzierung")}</span>
@@ -928,6 +994,7 @@ export default function EventCompleteClient({
               </div>
           </div>
       </section>
+      )}
 
       {/* ── Schritt 2: Extras ── */}
       {hasExtras && (

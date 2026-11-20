@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventHasPlacement } from "@/lib/event-placement";
 import { prisma } from "@/lib/prisma";
 import { parseCycleConfig } from "@/lib/series-cycles-config";
 import { isOmaOriginal } from "@/lib/oma-original";
@@ -175,7 +176,9 @@ export default async function EventsPage() {
     .map(([key, v]) => ({ key, label: v.label }));
 
   // ── Kürzlich beendet: Treppchen + eigene Platzierung ──
-  const podiumIds = [...new Set(recentFinishedItems.flatMap(i => parseRanking(i.ev.finalRankingJson).slice(0, 3)))];
+  // Community-Events haben keine Platzierung (lib/event-placement.ts) — kein Treppchen, kein eigener Platz
+  const rankingJsonOf = (ev: { type: string; finalRankingJson: string | null }) => eventHasPlacement(ev) ? ev.finalRankingJson : null;
+  const podiumIds = [...new Set(recentFinishedItems.flatMap(i => parseRanking(rankingJsonOf(i.ev)).slice(0, 3)))];
   const podiumUsers = podiumIds.length
     ? await prisma.user.findMany({ where: { id: { in: podiumIds } }, select: { id: true, name: true, username: true, image: true } })
     : [];
@@ -190,8 +193,8 @@ export default async function EventsPage() {
     omaOriginal: isOmaOriginal(ev),
     dateLabel: formatBerlinDate(ev.startAt, { day: "2-digit", month: "short" }),
     seriesName: ev.series?.name ?? null,
-    podium: parseRanking(ev.finalRankingJson).slice(0, 3).map(id => podiumMap.get(id)).filter((u): u is NonNullable<typeof u> => !!u),
-    myPlace: placementOf(ev.finalRankingJson, userId),
+    podium: parseRanking(rankingJsonOf(ev)).slice(0, 3).map(id => podiumMap.get(id)).filter((u): u is NonNullable<typeof u> => !!u),
+    myPlace: placementOf(rankingJsonOf(ev), userId),
     playerCount: playersOf(ev).length,
     hasResults: !!ev.completionData,
   }));

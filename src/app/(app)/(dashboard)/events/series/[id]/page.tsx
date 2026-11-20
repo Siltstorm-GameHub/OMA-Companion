@@ -1,4 +1,5 @@
 import React from "react";
+import { eventHasPlacement } from "@/lib/event-placement";
 import { isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { prisma } from "@/lib/prisma";
@@ -645,7 +646,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const timelineStateList = timelineStates(timelineSource.map(e => ({ status: e.status, gamePhaseDone: gamePhaseDoneIds.has(e.id) })));
   const timelineEvents: TimelineEvent[] = timelineSource.map((e, i) => {
     const state = timelineStateList[i];
-    const winnerId = state === "done" ? parseRanking(e.finalRankingJson)[0] : undefined;
+    const winnerId = state === "done" && eventHasPlacement(e) ? parseRanking(e.finalRankingJson)[0] : undefined;
     const winner = winnerId ? e.registrations.find(r => r.userId === winnerId)?.user ?? null : null;
     return { id: e.id, title: e.title, startAt: e.startAt, state, winner };
   });

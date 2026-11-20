@@ -1,5 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import CommunityGoalsBanner from "@/components/CommunityGoalsBanner";
+import { eventHasPlacement } from "@/lib/event-placement";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
@@ -324,7 +325,8 @@ export default async function DashboardPage() {
     userId
       ? prisma.event.findFirst({
           where: {
-            hidden: false, status: "finished", finalRankingJson: { not: null },
+            // Community-Events haben keine Platzierung (lib/event-placement.ts) → keine "Dein Ergebnis"-Kachel
+            hidden: false, status: "finished", finalRankingJson: { not: null }, type: { not: "community" },
             completedAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
             registrations: { some: { userId, role: "player" } },
           },

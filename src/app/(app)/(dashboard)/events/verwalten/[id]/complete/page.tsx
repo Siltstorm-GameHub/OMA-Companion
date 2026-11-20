@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
 import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, resolveRankStatField, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
+import { eventHasPlacement } from "@/lib/event-placement";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+type RewardsConfig = { participationCoins: number; participationRankPts?: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
 type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
@@ -281,6 +282,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       currentDominionStreaks={currentDominionStreaks}
       seriesStatConfig={rawSeriesStatConfig}
       rewardsConfig={rewardsConfig}
+      hasPlacement={eventHasPlacement(event)}
       pollConfig={pollConfig}
       pollsConfig={pollsConfig}
       pendingEventPolls={pendingEventPolls}

@@ -40,6 +40,7 @@ import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from
 import { LIFECYCLE_STEPS, lifecycleStep } from "@/lib/event-manage";
 import GameCover from "@/components/GameCover";
 import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
+import { eventHasPlacement } from "@/lib/event-placement";
 import { goalFieldsFor, isResultGoalFormat, parseCommunityGoal, supportsCommunityGoal, type CommunityGoal } from "@/lib/community-goal";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { applyEventStatOverride, hasEventPoints } from "@/lib/series-event-points";
@@ -49,7 +50,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig   = { participationCoins: number; placements: PlacementReward[] };
+type RewardsConfig   = { participationCoins: number; participationRankPts?: number; placements: PlacementReward[] };
 type PollConfig = {
   label: string;
   question: string;
@@ -376,6 +377,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     event.placementRewardsJson ? parseRewards(event.placementRewardsJson).participationCoins : (event.pointReward ?? initialRewards.participationCoins)
   );
   const [placements, setPlacements] = useState<PlacementReward[]>(initialRewards.placements);
+  const [participationRankPts, setParticipationRankPts] = useState<number>(
+    event.placementRewardsJson ? (parseRewards(event.placementRewardsJson).participationRankPts ?? 0) : 0
+  );
+  // Community-Events haben keine Platzierung (lib/event-placement.ts) — keine Platzierungs-Belohnungen
+  const hasPlacement = eventHasPlacement(event);
   const [polls, setPolls] = useState<PollConfig[]>(parsePolls(event.pollsConfigJson ?? event.pollConfigJson));
   const initialSpectatorReward = parseSpectatorReward(event.spectatorRewardJson);
   const [spectatorCoins, setSpectatorCoins] = useState(initialSpectatorReward.coins);
@@ -627,7 +633,8 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         discordChannelId: discordChannelId.trim() || null,
         placementRewardsJson: JSON.stringify({
           participationCoins,
-          placements,
+          participationRankPts,
+          placements: hasPlacement ? placements : [],
         }),
         pollsConfigJson: polls.length > 0 ? polls : null,
         spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
@@ -1335,10 +1342,18 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     <label className={labelCls}>Münzen</label>
                     <NumberInput min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
                   </div>
+                  <div>
+                    <label className={labelCls}>Rang-Punkte</label>
+                    <NumberInput min={0} value={participationRankPts} onChange={e => setParticipationRankPts(Number(e.target.value))} className={inputCls} />
+                  </div>
                 </div>
+                {!hasPlacement && (
+                  <p className="text-[11px] text-gray-500">Community-Event: keine Platzierung — alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
+                )}
               </div>
 
-              {/* Platzierungen */}
+              {/* Platzierungen (nur Turniere) */}
+              {hasPlacement && (
               <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
                 <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
@@ -1360,6 +1375,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   </div>
                 ))}
               </div>
+              )}
 
               {/* Zuschauer-Belohnung */}
               {event.spectatorMode && (
