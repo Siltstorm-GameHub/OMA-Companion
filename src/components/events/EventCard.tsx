@@ -5,7 +5,7 @@ import { AvatarStack } from "@/components/AvatarStack";
 import CoinIcon from "@/components/CoinIcon";
 import { GateLink } from "@/components/GuestGate";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
-import { Check, Heart, MessageCircle, Timer, Users } from "@/components/icons";
+import { Check, MessageCircle, Timer, Users } from "@/components/icons";
 import { TONE_CLASSES, type EventPhaseInfo, type RelevanceTag } from "@/lib/event-display";
 
 export type EventCardAvatar = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
@@ -165,9 +165,10 @@ export default function EventCard({
             </span>
           )}
           {ev.urgency && <span className={`inline-flex items-center rounded px-1.5 py-px text-[11px] font-medium ${TONE_CLASSES.amber.pill}`}>{ev.urgency}</span>}
-          {ev.relevance.map(tag => (
+          {/* "Dein Spiel" wird bewusst nicht als Abzeichen gezeigt (wirkt nur auf Sortierung/Filter) */}
+          {ev.relevance.filter(tag => tag !== "Dein Spiel").map(tag => (
             <span key={tag} className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${TONE_CLASSES.teal.pill}`}>
-              {tag === "Dein Spiel" && <Heart className="w-3 h-3" />}{tag}
+              {tag}
             </span>
           ))}
           {ev.isRegistered && (

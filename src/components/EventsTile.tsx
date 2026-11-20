@@ -233,8 +233,10 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
         break;
       case "recommend": {
         const urgent = urgencyHint(ev, now);
-        pill = ev.relevance.length > 0
-          ? <Pill tone="teal"><Heart className="w-3.5 h-3.5" />Für dich · {ev.relevance.join(" · ")}</Pill>
+        // "Dein Spiel" wird nicht als Abzeichen gezeigt (wirkt nur auf die Auswahl)
+        const shownTags = ev.relevance.filter(tag => tag !== "Dein Spiel");
+        pill = shownTags.length > 0
+          ? <Pill tone="teal"><Heart className="w-3.5 h-3.5" />Für dich · {shownTags.join(" · ")}</Pill>
           : <Pill tone="teal"><Clock className="w-3.5 h-3.5" />Als Nächstes</Pill>;
         sub = <>{longDate(ev.startAt, now)}{urgent ? <> · <span className="text-amber-300">{urgent}</span></> : ev.maxPlayers ? ` · ${ev.playerCount}/${ev.maxPlayers}` : ""}</>;
         action = register("Anmelden");
@@ -308,9 +310,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
           ? <span className="text-gray-500">voll</span>
           : urgent
             ? <span className="text-amber-300">{urgent.replace("Noch ", "").replace(" Plätze", " frei").replace(" Platz", " frei")}</span>
-            : e.relevance.includes("Dein Spiel")
-              ? <span className="text-teal-300">Dein Spiel</span>
-              : <span className="text-gray-500 tabular-nums">{e.playerCount}{e.maxPlayers ? `/${e.maxPlayers}` : ""}</span>,
+            : <span className="text-gray-500 tabular-nums">{e.playerCount}{e.maxPlayers ? `/${e.maxPlayers}` : ""}</span>,
     };
   })];
 
