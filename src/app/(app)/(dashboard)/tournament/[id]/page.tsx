@@ -455,6 +455,8 @@ export default async function TournamentDetailPage({
     pollPhaseComplete?: boolean;
     /** Aus dem Event ausgeschlossene (disqualifizierte) User — öffentlich als „Ungewertet"-Badge sichtbar */
     excludedUserIds?: string[] | null;
+    /** Beim Abschluss als anwesend markierte Zuschauer */
+    spectatorAttendedIds?: string[] | null;
   };
   const completionData: CompletionData = (() => {
     try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
@@ -1170,9 +1172,15 @@ export default async function TournamentDetailPage({
 
   // ── Community-Event abgeschlossen: kein Ergebnis, sondern "Mit dabei waren" + Umfrage-Highlights ──
   const isCommunityDone = !eventHasPlacement(event) && gamePhaseComplete;
-  const communityPlayers = isCommunityDone
-    ? event.registrations.filter(r => r.role === "player" && !excludedUserIds.has(r.userId)).map(r => r.user)
+  // Mitspieler + beim Abschluss als anwesend markierte Zuschauer (mit Zuschauer-Markierung)
+  const spectatorAttended = new Set(completionData.spectatorAttendedIds ?? []);
+  const communityPeople = isCommunityDone
+    ? [
+        ...event.registrations.filter(r => r.role === "player" && !excludedUserIds.has(r.userId)).map(r => ({ user: r.user, spectator: false })),
+        ...event.registrations.filter(r => r.role === "spectator" && spectatorAttended.has(r.userId) && !excludedUserIds.has(r.userId)).map(r => ({ user: r.user, spectator: true })),
+      ]
     : [];
+  const communitySpectatorCount = communityPeople.filter(p => p.spectator).length;
   const myParticipationReward = isCommunityDone ? participationRewardOf(event.completionData, userId) : null;
 
   // ── Ergebnis (Podest, dein Platz, Sieger der Abstimmungen) ──
@@ -1189,7 +1197,9 @@ export default async function TournamentDetailPage({
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
               <span aria-hidden>🤝</span> Mit dabei waren
-              <span className="text-xs font-normal text-gray-500">{communityPlayers.length}</span>
+              <span className="text-xs font-normal text-gray-500">
+                {communityPeople.length - communitySpectatorCount}{communitySpectatorCount > 0 && ` + ${communitySpectatorCount} Zuschauer`}
+              </span>
             </h2>
             {myParticipationReward && (
               <span className="flex items-center gap-1.5 rounded-lg bg-teal-400/15 px-2.5 py-1 text-xs font-semibold text-teal-300 tabular-nums">
@@ -1200,9 +1210,9 @@ export default async function TournamentDetailPage({
             )}
           </div>
           <p className="text-[11px] text-gray-500">Community-Event: keine Platzierung — alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
-          {communityPlayers.length > 0 && (
+          {communityPeople.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-2">
-              {communityPlayers.map(u => {
+              {communityPeople.map(({ user: u, spectator }) => {
                 const isMe = u.id === userId;
                 return (
                   <span key={u.id} className="flex items-center gap-1.5 min-w-0">
@@ -1210,6 +1220,11 @@ export default async function TournamentDetailPage({
                     <span className={`truncate text-xs font-medium ${isMe ? "text-teal-300" : "text-gray-200"}`}>
                       <StyledUserName userId={u.id} name={userName(u)} />{isMe && <span className="text-gray-500 ml-1">(du)</span>}
                     </span>
+                    {spectator && (
+                      <span title="War als Zuschauer dabei" className="flex shrink-0 items-center gap-0.5 rounded bg-white/[0.06] px-1 py-px text-[10px] font-medium text-gray-400">
+                        <Eye className="w-3 h-3" /> Zuschauer
+                      </span>
+                    )}
                   </span>
                 );
               })}
