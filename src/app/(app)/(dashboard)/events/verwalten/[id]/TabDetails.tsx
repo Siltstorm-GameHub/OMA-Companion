@@ -23,7 +23,7 @@ import type { EventEdit } from "./useEventEdit";
 
 /** Reiter "Details": Grunddaten, Zeit und Teilnahme, Darstellung, Vorschau, Sichtbarkeit, Erweitert. */
 export default function TabDetails({ ctx }: { ctx: EventEdit }) {
-  const { event, squads, isModerator, status, loading, undoCompletion, title, setTitle, description, setDescription, rules, setRules, game, setGame, genre, setGenre, category, setCategory, startAt, setStartAt, endAt, setEndAt, maxPlayers, setMaxPlayers, discordChannelId, setDiscordChannelId, propagateTitleDesc, setPropagateTitleDesc, isBlocksEvent, blocks, setBlocks, blocksKindLocked, blocksLockedReason, titleDescChanged, participationCoins, eventKind, setEventKind, kindLocked, tmtFormat, setTmtFormat, tmtLoading, hasTournament, hidden, setHidden, registrationLocked, setRegistrationLocked, omaOriginal, setOmaOriginal, squadId, setSquadId, twitchClipUrl, setTwitchClipUrl, coverImageUrl, setCoverImageUrl, allPartners, selectedPartnerIds, setSelectedPartnerIds, partnersLoaded, partnersOpen, setPartnersOpen, seriesGame, seriesDiscord, pickStatus, saveTmtSettings, isUpcoming, isSeriesEvent, playerCount, selectedPartners, backHref } = ctx;
+  const { registrationClosesAt, setRegistrationClosesAt, event, squads, isModerator, status, loading, undoCompletion, title, setTitle, description, setDescription, rules, setRules, game, setGame, genre, setGenre, category, setCategory, startAt, setStartAt, endAt, setEndAt, maxPlayers, setMaxPlayers, discordChannelId, setDiscordChannelId, propagateTitleDesc, setPropagateTitleDesc, isBlocksEvent, blocks, setBlocks, blocksKindLocked, blocksLockedReason, titleDescChanged, participationCoins, eventKind, setEventKind, kindLocked, tmtFormat, setTmtFormat, tmtLoading, hasTournament, hidden, setHidden, registrationLocked, setRegistrationLocked, omaOriginal, setOmaOriginal, squadId, setSquadId, twitchClipUrl, setTwitchClipUrl, coverImageUrl, setCoverImageUrl, allPartners, selectedPartnerIds, setSelectedPartnerIds, partnersLoaded, partnersOpen, setPartnersOpen, seriesGame, seriesDiscord, pickStatus, saveTmtSettings, isUpcoming, isSeriesEvent, playerCount, selectedPartners, backHref } = ctx;
   // Mitglieder: von einem Mod ausgeblendet → nicht selbst einblendbar; wartet auf Freigabe → keine Ankündigung
   const lockedByMod = !isModerator && !!(event.hiddenByModAt || event.series?.hiddenByModAt);
   const awaitingApproval = event.approvalStatus === "pending" || event.series?.approvalStatus === "pending";
@@ -167,6 +167,16 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   </div>
                 )}
               </div>
+              {!registrationLocked && (
+                <div>
+                  <label className={labelCls}>Anmeldeschluss (optional)</label>
+                  <input type="datetime-local" value={registrationClosesAt} onChange={e => setRegistrationClosesAt(e.target.value)} className={inputCls} />
+                  <p className="text-[11px] text-gray-500 mt-1">Leer = Anmeldung bis zum Start. Praktisch bei Turnieren, damit vor der Auslosung niemand mehr dazukommt.</p>
+                  {registrationClosesAt && startAt && registrationClosesAt > startAt && (
+                    <p className="text-[11px] text-amber-300 mt-1">Liegt nach dem Start, die Anmeldung schließt trotzdem schon beim Start.</p>
+                  )}
+                </div>
+              )}
               <Switch checked={!registrationLocked} onChange={v => setRegistrationLocked(!v)}
                 label="Selbst anmelden erlaubt"
                 hint={registrationLocked ? "Nur du trägst Teilnehmer ein (Reiter Teilnehmer)" : "Mitglieder melden sich selbst an"} />

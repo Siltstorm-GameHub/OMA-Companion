@@ -87,10 +87,14 @@ export interface Props {
   initialFinalRankingNote: string | null;
   /** Screenshot-/Ergebnis-Meldungen, die noch auf Prüfung warten */
   pendingSubmissions?: number;
+  /** Spiele ohne Ergebnis (open) bzw. nur vorläufig eingetragen (provisional) */
+  matchCheck?: { open: number; provisional: number } | null;
   /** Protokoll der Belohnungs-Buchungen dieses Events (neueste zuerst) */
   rewardHistory?: RewardHistoryEntry[] | null;
   /** Mitglied: angezeigte Beträge sind auf die Obergrenzen gekürzt (so wird auch ausgezahlt) */
   rewardsCapped?: boolean;
+  /** Beim ersten Abschluss vorbelegt als "nicht da": bei aktivem Check-in nicht eingecheckt und nicht ausgelost */
+  defaultAbsentIds?: string[];
 }
 export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 export const MEDALS = [<PlaceMedal key="1" place={1} />, <PlaceMedal key="2" place={2} />, <PlaceMedal key="3" place={3} />];

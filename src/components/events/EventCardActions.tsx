@@ -1,5 +1,6 @@
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import { GateButton, GateLink } from "@/components/GuestGate";
+import Link from "next/link";
 import { Lock } from "@/components/icons";
 import { eventDiscordUrl, type EventCardSource } from "@/lib/event-card-data";
 import type { EventViewerContext } from "@/lib/event-viewer";
@@ -24,8 +25,12 @@ export default function EventCardActions({
   const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
   const isSquadMember = restrictedSquadId ? viewer.mySquadIds.has(restrictedSquadId) : true;
   const isLocked = ev.registrationLocked || ev.series?.registrationLocked || false;
-  const canRegister = ev.status === "open" || ev.status === "active";
-  const running = card.phase.phase === "live" || card.phase.phase === "period";
+  const canRegister = ev.status === "open" || ev.status === "active" || ev.status === "closed";
+  // Live (kein Zeitraum-Event): Anmelden und Abmelden gehen nicht mehr — nur Zeitraum-Events nehmen bis
+  // zum Ende Einsteiger an (lib/event-registration.ts)
+  const live = card.phase.phase === "live";
+  const period = card.phase.phase === "period";
+  const deadlinePassed = !!ev.registrationClosesAt && new Date(ev.registrationClosesAt) <= new Date();
 
   if (card.phase.phase === "poll") {
     return <GateLink href={`${card.href}#abstimmung`} className={VIOLET}>Abstimmen</GateLink>;
@@ -46,21 +51,36 @@ export default function EventCardActions({
       </GateButton>
     );
   }
-  if (card.isRegistered || (!isLocked && isSquadMember)) {
+  if (card.isRegistered) {
+    return (
+      <RegisterButton eventId={ev.id} isRegistered isFull={false} discordEventUrl={eventDiscordUrl(ev)} coins={card.coins}
+        canUnregister={!live} />
+    );
+  }
+  if ((live && !period) || deadlinePassed) {
+    return <span className="text-[11px] text-gray-500">{deadlinePassed && !live ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span>;
+  }
+  if (!isLocked && isSquadMember) {
     return (
       <RegisterButton
         eventId={ev.id}
-        isRegistered={card.isRegistered}
+        isRegistered={false}
         isFull={card.phase.phase === "full"}
         discordEventUrl={eventDiscordUrl(ev)}
-        joinLabel={running ? "Einsteigen" : "Anmelden"}
+        joinLabel={period ? "Einsteigen" : "Anmelden"}
         coins={card.coins}
+        waitlistHref={card.href}
       />
     );
   }
-  return (
-    <span className="flex items-center gap-1 text-[11px] text-gray-500" title={isLocked ? "Anmeldung nur durch Admins" : "Anmeldung nur für Squad-Mitglieder"}>
-      <Lock className="w-3 h-3" /> {isLocked ? "Nur Admins" : "Nur Squad"}
+  // Gesperrt bzw. nur für ein Squad: sagen, wie man trotzdem dabei sein kann
+  return isLocked ? (
+    <span className="flex items-center gap-1 text-[11px] text-gray-500" title="Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.">
+      <Lock className="w-3 h-3" /> Veranstalter trägt ein
     </span>
+  ) : (
+    <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white" title="Nur für Mitglieder dieses Squads. Zum Squad und Beitritt anfragen.">
+      <Lock className="w-3 h-3" /> Nur Squad · ansehen
+    </Link>
   );
 }

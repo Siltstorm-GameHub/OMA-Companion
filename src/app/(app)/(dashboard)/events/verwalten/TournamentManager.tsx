@@ -23,6 +23,7 @@ import { computeTurnierpunkte } from "@/lib/series-event-points";
 import { computeCommunityGoalProgress, goalUnit, isAvgGoal, type CommunityGoal } from "@/lib/community-goal";
 import type { AvgDirection } from "@/lib/avg-stats";
 import { formatDecimal } from "@/lib/format-number";
+import { drawPreview, type DrawSeeding } from "@/lib/tournaments/draw-plan";
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -44,6 +45,8 @@ export type Match = {
   leg?: number | null;
   /** "Läuft gerade" (vom Admin markiert) */
   startedAt?: string | Date | null;
+  /** Kampflos entschieden (Gegner nicht angetreten) */
+  walkover?: boolean;
 };
 
 /** Eintrag im Änderungsprotokoll eines Matches (GET /api/tournaments/[id]/matches?matchId=…) */
@@ -96,8 +99,10 @@ export function nowForDatetimeLocal(): string {
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
   event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints, standaloneEvent = false,
-  pendingSubmissions = [], pendingCount = 0, pointsCfg = null, goal = null, avgDirection = "high",
+  pendingSubmissions = [], pendingCount = 0, pointsCfg = null, goal = null, avgDirection = "high", notReadyNames = null,
 }: {
+  /** Check-in an: Namen der angemeldeten Spieler, die noch nicht bereit sind (werden nicht ausgelost). null = kein Check-in */
+  notReadyNames?: string[] | null;
   /** Offene Ergebnis-Meldungen der Spieler (nur Turnier-Seite) — direkt übernehmen/ablehnen */
   pendingSubmissions?: InlineSubmission[];
   pendingCount?: number;
@@ -134,6 +139,12 @@ export default function TournamentManager({
     setTournament(initial);
   }
   const [loading, setLoading] = useState(false);
+  // Auslosung: zufällig oder nach Rangpunkten gesetzt
+  const [seeding, setSeeding] = useState<DrawSeeding>("random");
+  // Spieler ersetzen (nach der Auslosung)
+  const [showReplace, setShowReplace] = useState(false);
+  const [replaceFrom, setReplaceFrom] = useState("");
+  const [replaceTo, setReplaceTo] = useState("");
   const { confirm, ConfirmDialogElement } = useConfirm();
   const resultsTimingOk = useRef(false);
 
@@ -266,7 +277,12 @@ export default function TournamentManager({
   // Wer ausgelost werden kann: angemeldete Spieler (allUsers) + direkt eingetragene Teilnehmer.
   // Bei aktivem Check-in filtert der Server zusätzlich auf Eingecheckte.
   const poolSize = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
-  const canGenerate = poolSize >= 2 && ((isRoundRobin || isLiga) || (isBracketFormat && tournament.matches.length === 0));
+  // So viele kommen tatsächlich in die Auslosung (bei Check-in nur Bereite)
+  const drawCount = notReadyNames ? Math.max(0, poolSize - notReadyNames.length) : poolSize;
+  const canGenerate = poolSize >= 2 && tournament.matches.length === 0 && (isRoundRobin || isLiga || isBracketFormat);
+  // Ausgelost, aber noch kein Ergebnis: Auslosung lässt sich zurücksetzen
+  const isDrawn = is1v1 && tournament.matches.length > 0;
+  const canResetDraw = isDrawn && !isGroupKnockout && !tournament.matches.some(m => m.playedAt);
   // Gruppenphase + K.O.: Gruppenspiele (nach Gruppe, Spieltag) vor der K.O.-Runde
   const groupMatches    = isGroupKnockout
     ? tournament.matches.filter(m => m.groupIndex != null)
@@ -320,29 +336,110 @@ export default function TournamentManager({
     router.refresh();
   }
 
+  /** Hinweis für die Auslosung: wer bei aktivem Check-in noch nicht bereit ist, fällt raus */
+  function notReadyWarning(): string {
+    if (!notReadyNames?.length) return "";
+    const shown = notReadyNames.slice(0, 8).join(", ") + (notReadyNames.length > 8 ? ` und ${notReadyNames.length - 8} weitere` : "");
+    return `
+
+⚠️ ${notReadyNames.length} Spieler noch nicht bereit und werden nicht ausgelost: ${shown}. Einchecken geht oben im Check-in-Kasten oder im Reiter „Teilnehmer“.`;
+  }
+
+  /** Hinweis, wenn vor dem Start ausgelost wird: der Check-in endet damit sofort */
+  function earlyWarning(): string {
+    if (!event.startAt) return "";
+    const mins = Math.round((new Date(event.startAt).getTime() - Date.now()) / 60_000);
+    if (mins <= 0) return "";
+    const when = mins < 120 ? `${mins} Minuten` : mins < 48 * 60 ? `${Math.round(mins / 60)} Stunden` : `${Math.round(mins / 1440)} Tagen`;
+    return `\n\n⏰ Der Start ist erst in ${when}.${notReadyNames ? " Mit der Auslosung endet der Check-in sofort." : ""} Danach kann sich niemand mehr als Spieler anmelden.`;
+  }
+
+  /** Auslosung zurücksetzen (K.O.-Baum, Liga, Jeder gegen jeden) — nur vor dem ersten Ergebnis */
+  async function resetDrawAction() {
+    if (!tournament || !(await confirm({
+      title: "Auslosung zurücksetzen?",
+      description: "Alle Spiele werden gelöscht. Ist der Start noch nicht erreicht, sind Anmeldung und Check-in wieder offen. Danach kannst du neu auslosen.",
+      confirmLabel: "Zurücksetzen",
+      variant: "danger",
+    }))) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ generateMatches: "reset_draw" }),
+    });
+    setLoading(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast.error(data.error ?? "Zurücksetzen hat nicht geklappt"); return; }
+    toast.success("Auslosung zurückgesetzt", { description: "Du kannst jetzt neu auslosen." });
+    router.refresh();
+  }
+
+  /** Nach der Auslosung: ausgefallenen Spieler in allen offenen Spielen ersetzen */
+  async function replacePlayerAction() {
+    if (!tournament || !replaceFrom || !replaceTo) return;
+    const fromName = nameOfUser(replaceFrom), toName = nameOfUser(replaceTo);
+    if (!(await confirm({
+      title: "Spieler ersetzen?",
+      description: `${toName} übernimmt alle offenen Spiele von ${fromName}. Bereits gespielte Spiele bleiben bei ${fromName}. Beide bekommen eine Meldung.`,
+      confirmLabel: "Ersetzen",
+    }))) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}/participants`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromUserId: replaceFrom, toUserId: replaceTo }),
+    });
+    setLoading(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast.error(data.error ?? "Ersetzen hat nicht geklappt"); return; }
+    toast.success(`${toName} spielt für ${fromName}`, { description: `${data.replaced} offene${data.replaced === 1 ? "s Spiel" : " Spiele"} übernommen.` });
+    setReplaceFrom(""); setReplaceTo(""); setShowReplace(false);
+    router.refresh();
+  }
+
+  /** Gegner nicht angetreten: winnerId kommt kampflos weiter */
+  async function walkoverAction(match: Match, winnerId: string) {
+    if (!tournament) return;
+    const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
+    if (!(await confirm({
+      title: "Kampflos weiter?",
+      description: `${nameOfUser(loserId ?? "")} ist nicht angetreten. ${nameOfUser(winnerId)} gewinnt das Match kampflos (ohne Tore)${isBracketFormat || (isGroupKnockout && match.groupIndex == null) ? " und rückt auf" : ""}.`,
+      confirmLabel: "Kampflos werten",
+    }))) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId: match.id, action: "walkover", winnerId }),
+    });
+    setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Das hat nicht geklappt"); return; }
+    toast.success(`${nameOfUser(winnerId)} kommt kampflos weiter`);
+    router.refresh();
+  }
+
   /** Spielplan aus den angemeldeten Spielern erzeugen (bei aktivem Check-in nur Eingecheckte):
    *  K.O.-Baum (Einzel-Eliminierung) bzw. Paarungen/Spieltage (Liga). */
   async function generateRoundRobinMatches() {
     if (!tournament) return;
-    const desc = isBracketFormat
-      ? "Den K.O.-Baum jetzt zufällig aus den angemeldeten Spielern auslosen? Bei aktivem Check-in werden nur eingecheckte Spieler berücksichtigt."
-      : isLiga
-      ? "Alle Spieltage (Hin- & Rückrunde) aus den angemeldeten Spielern generieren? Bei aktivem Check-in nur eingecheckte Spieler."
-      : "Alle Paarungen aus den angemeldeten Spielern generieren? Bei aktivem Check-in nur eingecheckte Spieler.";
-    if (!(await confirm({ title: isBracketFormat ? "K.O.-Baum auslosen" : "Paarungen generieren", description: desc }))) return;
+    const how = isBracketFormat
+      ? (seeding === "rank" ? "Gesetzt nach Rangpunkten: die Stärksten treffen erst spät aufeinander und bekommen die Freilose." : "Zufällig ausgelost.")
+      : isLiga ? "Zufällig ausgelost, mit Hin- und Rückrunde." : "Zufällig ausgelost.";
+    const desc = `${drawPreview(tournament.format, drawCount)}. ${how}`
+      + earlyWarning() + notReadyWarning()
+      + "\n\nAlle Ausgelosten bekommen eine Meldung mit ihrem ersten Gegner. Zurücksetzen geht bis zum ersten Ergebnis.";
+    if (!(await confirm({ title: isBracketFormat ? "K.O.-Baum auslosen" : isLiga ? "Spieltage auslosen" : "Paarungen auslosen", description: desc, confirmLabel: "Auslosen" }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ generateMatches: isBracketFormat ? "single_elimination" : isLiga ? "liga" : "round_robin" }),
+      body: JSON.stringify({ generateMatches: isBracketFormat ? "single_elimination" : isLiga ? "liga" : "round_robin", seeding }),
     });
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
-      toast.success(`${data.generated} Matches generiert`);
+      toast.success(`${isBracketFormat ? "K.O.-Baum" : "Spielplan"} ausgelost: ${data.players} Spieler`, { description: "Alle haben eine Meldung mit ihrem ersten Gegner bekommen." });
     } else {
-      const e = await res.json();
-      toast.error(e.error ?? "Fehler beim Generieren");
+      const e = await res.json().catch(() => ({}));
+      toast.error(e.error ?? "Auslosen hat nicht geklappt");
     }
     router.refresh();
   }
@@ -357,17 +454,25 @@ export default function TournamentManager({
       reset_knockout: { title: "K.O.-Runde verwerfen", description: "Alle Matches der K.O.-Runde löschen? Die Gruppenphase bleibt erhalten.", variant: "danger" },
       rebuild_knockout: { title: "K.O.-Runde neu erstellen", description: "Die bestehende K.O.-Runde löschen und aus den aktuellen Gruppentabellen neu setzen? Termine und Live-Markierungen der K.O.-Matches gehen dabei verloren.", variant: "danger" },
     };
-    if (!(await confirm(prompts[body.generateMatches]))) return;
+    const prompt = prompts[body.generateMatches];
+    if (body.generateMatches === "groups") {
+      prompt.description = `${drawPreview(GROUP_KNOCKOUT_FORMAT, drawCount, { groupCount: body.groupCount, groupLegs: body.groupLegs })}. `
+        + (seeding === "rank" ? "Lostöpfe nach Rangpunkten: die Stärksten landen in verschiedenen Gruppen." : "Zufällig verteilt.")
+        + earlyWarning() + notReadyWarning() + "\n\nAlle Ausgelosten bekommen eine Meldung mit Gruppe und erstem Gegner.";
+    }
+    if (body.generateMatches === "reset_groups") prompt.description += " Ist der Start noch nicht erreicht, sind Anmeldung und Check-in wieder offen.";
+    if (!(await confirm(prompt))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body.generateMatches === "groups" ? { ...body, seeding } : body),
     });
     setLoading(false);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
-    if (data.generated) toast.success(`${data.generated} Matches erstellt`);
+    if (body.generateMatches === "groups") toast.success(`Gruppen ausgelost: ${data.generated} Gruppenspiele`, { description: "Alle haben eine Meldung mit Gruppe und erstem Gegner bekommen." });
+    else if (data.generated) toast.success(`${data.generated} Matches erstellt`);
     else if (data.deleted !== undefined) toast.success(`${data.deleted} Matches gelöscht`);
     router.refresh();
   }
@@ -500,10 +605,51 @@ export default function TournamentManager({
     });
     setLoading(false);
     if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return false; }
+    toast.success(savedResultMessage(matchId, winnerId, isDraw, s));
     setEditing(prev => { const n = new Set(prev); n.delete(matchId); return n; });
     setLogs(prev => { const n = { ...prev }; delete n[matchId]; return n; });
     router.refresh();
     return true;
+  }
+
+  /** Erfolgsmeldung nach dem Speichern, z.B. "Gespeichert: Max 2:1 Tom · Max rückt ins Halbfinale". */
+  function savedResultMessage(matchId: string, winnerId: string | null, isDraw: boolean, s?: { s1?: string; s2?: string }): string {
+    const m = tournament?.matches.find(x => x.id === matchId);
+    if (!m) return "Gespeichert";
+    const n1 = nameOfUser(m.player1Id ?? ""), n2 = nameOfUser(m.player2Id ?? "");
+    const score = s?.s1 && s?.s2 ? ` ${s.s1}:${s.s2} ` : " – ";
+    let text = `Gespeichert: ${n1}${score}${n2}`;
+    if (isDraw) return text + " · Unentschieden";
+    const ko = isBracketFormat || (isGroupKnockout && m.groupIndex == null);
+    if (ko && winnerId && m.leg !== 1 && !m.isThirdPlace) {
+      const koRounds = Math.max(0, ...tournament!.matches.filter(x => x.groupIndex == null && !x.isThirdPlace).map(x => x.round));
+      text += m.round < koRounds
+        ? ` · ${nameOfUser(winnerId)} rückt auf (${knockoutRoundLabel(m.round + 1, koRounds)})`
+        : ` · ${nameOfUser(winnerId)} gewinnt das Turnier`;
+    } else if (winnerId && !ko) {
+      text += ` · ${nameOfUser(winnerId)} gewinnt`;
+    }
+    return text;
+  }
+
+  /** Vorläufiges Ergebnis (Spieler-Meldung) direkt bestätigen — ohne Umweg über die Prüfseite */
+  async function confirmProvisional(matchId: string) {
+    if (!tournament) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, action: "confirm" }),
+    });
+    setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Bestätigen hat nicht geklappt"); return; }
+    toast.success("Ergebnis bestätigt", { description: "Es zählt jetzt endgültig, Punkte sind gebucht." });
+    router.refresh();
+  }
+
+  /** Beide Tore eingetragen? Dann gibt es "Speichern" statt der Sieger-Knöpfe. */
+  function hasBothScores(matchId: string) {
+    const s = scores1v1[matchId];
+    return !!s && s.s1 != null && s.s1 !== "" && s.s2 != null && s.s2 !== "";
   }
 
   /** Bearbeiten: Ergebnis-Eingabe mit den aktuellen Werten öffnen (statt erst zurückzusetzen). */
@@ -823,6 +969,16 @@ export default function TournamentManager({
               </span>
             )}
             {isByeMatch && <span className="text-[10px] text-gray-500">Freilos</span>}
+            {match.walkover && <span className="text-[10px] text-gray-400" title="Gegner nicht angetreten">kampflos</span>}
+            {isPlayed && match.resultConfirmed === false && !isByeMatch && (
+              <>
+                <span className="text-[10px] text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt — Punkte gibt es erst nach der Bestätigung">vorläufig</span>
+                <button onClick={() => confirmProvisional(match.id)} disabled={loading}
+                  className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 hover:bg-teal-500/20">
+                  Bestätigen
+                </button>
+              </>
+            )}
             {isLive && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LIVE</span>}
             {/* Live-Markierung als beschrifteter Schalter (Turnierseite & Overlay) */}
             {!isPlayed && p1 && p2 && (
@@ -845,6 +1001,11 @@ export default function TournamentManager({
               label="Weitere Aktionen"
               trigger={<span className="w-7 h-6 flex items-center justify-center text-base leading-none">⋯</span>}
               items={[
+                // Gegner nicht angetreten: der andere kommt ohne Tore weiter (nicht bei Hin-/Rückspiel)
+                ...(!isPlayed && p1 && p2 && !match.leg ? [p1, p2].map(pl => ({
+                  label: `${userName(pl)} kampflos weiter`, onClick: () => walkoverAction(match, pl.id),
+                  icon: <Trophy className="w-3.5 h-3.5 text-gray-500" />,
+                })) : []),
                 ...(isPlayed && !isByeMatch && !isEditing ? [{ label: "Ergebnis bearbeiten", onClick: () => startEdit(match), icon: <Pencil className="w-3.5 h-3.5 text-gray-500" /> }] : []),
                 ...(!isByeMatch ? [{ label: matchLog ? "Verlauf ausblenden" : "Verlauf anzeigen", onClick: () => toggleLog(match.id), icon: <History className="w-3.5 h-3.5 text-gray-500" /> }] : []),
                 ...(isPlayed && !isByeMatch ? [{ label: "Ergebnis zurücksetzen", onClick: () => resetMatch(match.id), icon: <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> }] : []),
@@ -926,8 +1087,34 @@ export default function TournamentManager({
           </div>
         )}
 
-        {/* Win buttons */}
-        {isPending && match.leg !== 2 && (
+        {/* Tore eingetragen: ein Knopf "Speichern", der Sieger ergibt sich aus den Toren. Bei Gleichstand im
+            K.O.-Spiel Auswahl, wer nach Elfmeterschießen weiterkommt; sonst Unentschieden. */}
+        {isPending && match.leg !== 2 && hasBothScores(match.id) && (() => {
+          const n1 = Number(scores1v1[match.id]!.s1), n2 = Number(scores1v1[match.id]!.s2);
+          const koSingle = (isBracketFormat || (isGroupKnockout && match.groupIndex == null)) && !match.leg;
+          const btn = "flex-1 text-xs bg-rose-600/80 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate";
+          return (
+            <div className="flex gap-1 p-2 bg-gray-800/50">
+              {n1 !== n2 ? (
+                <button onClick={() => submit1v1(match.id, n1 > n2 ? match.player1Id! : match.player2Id!)} disabled={loading} className={btn}>
+                  Speichern · {userName((n1 > n2 ? p1 : p2)!)} gewinnt {n1}:{n2}
+                </button>
+              ) : koSingle ? (
+                <>
+                  <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading} className={btn}>{userName(p1!)} weiter (n.E.)</button>
+                  <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading} className={btn}>{userName(p2!)} weiter (n.E.)</button>
+                </>
+              ) : (
+                <button onClick={() => submit1v1(match.id, null, true)} disabled={loading} className={btn}>
+                  Speichern · Unentschieden {n1}:{n2}
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Ohne Tore: Sieger direkt wählen */}
+        {isPending && match.leg !== 2 && !hasBothScores(match.id) && (
           <div className="flex gap-1 p-2 bg-gray-800/50">
             <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
               className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
@@ -998,9 +1185,11 @@ export default function TournamentManager({
                           <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
                         </span>
                       )}
-                      {isPlayed && (
+                      {isPlayed && (match.resultConfirmed === false ? (
+                        <span className="text-xs bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded-full" title="Von Spielern gemeldet, noch nicht bestätigt">Vorläufig</span>
+                      ) : (
                         <span className="text-xs bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full">Gespielt</span>
-                      )}
+                      ))}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-gray-500">{match.entries.length} Spieler</span>
@@ -1302,6 +1491,24 @@ export default function TournamentManager({
     </div>
   );
   const resultsHref = `/events/verwalten/${event.id}/results`;
+  // Auslosung: zufällig oder gesetzt (K.O.-Baum und Gruppen)
+  const seedingToggle = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] text-gray-500">Auslosung:</span>
+      {([["random", "Zufällig"], ["rank", "Nach Rangpunkten setzen"]] as const).map(([k, label]) => (
+        <button key={k} type="button" onClick={() => setSeeding(k)} aria-pressed={seeding === k}
+          title={k === "rank" ? "Die Stärksten (Rangpunkte) treffen erst spät aufeinander bzw. landen in verschiedenen Gruppen" : undefined}
+          className={`rounded-md px-2 py-1 text-[11px] transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+  // Ersetzen: wer noch offene Spiele hat → wer angemeldet, aber nicht im Spielplan ist
+  const inPlan = new Set(tournament.matches.flatMap(m => [m.player1Id, m.player2Id]).filter((id): id is string => !!id));
+  const replaceFromOptions = [...new Set(tournament.matches.filter(m => !m.playedAt)
+    .flatMap(m => [m.player1Id, m.player2Id]).filter((id): id is string => !!id))];
+  const replaceToOptions = allUsers.filter(u => !inPlan.has(u.id) && !tournament.participants.some(p => p.userId === u.id));
   const openAdd = () => {
     if (isFfa) openAddStatRound();
     else { setMScheduled(nowForDatetimeLocal()); setShowAdd(true); }
@@ -1312,10 +1519,8 @@ export default function TournamentManager({
       label: showSchedule ? "Terminplanung schließen" : "Termine planen",
       onClick: () => { if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal()); setShowSchedule(v => !v); },
     }] : []),
-    ...(canGenerate ? [{
-      label: isBracketFormat ? "K.O.-Baum neu auslosen" : isLiga ? "Spieltage neu generieren" : "Paarungen neu generieren",
-      onClick: generateRoundRobinMatches, disabled: loading,
-    }] : []),
+    ...(canResetDraw ? [{ label: "Auslosung zurücksetzen", onClick: resetDrawAction, disabled: loading }] : []),
+    ...(isDrawn ? [{ label: showReplace ? "Ersetzen schließen" : "Spieler ersetzen", onClick: () => setShowReplace(v => !v) }] : []),
     ...(!isGroupKnockout ? [{ label: isFfa ? "Runde hinzufügen" : "Match hinzufügen", onClick: openAdd }] : []),
   ];
 
@@ -1367,6 +1572,37 @@ export default function TournamentManager({
           <p className="text-[11px] font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
           <InlineSubmissions eventId={event.id} items={pendingSubmissions} resultsHref={resultsHref} />
         </section>
+      )}
+
+      {/* Spieler ersetzen: Ausfall nach der Auslosung, Nachrücker übernimmt die offenen Spiele */}
+      {showReplace && isDrawn && (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/30 p-3 space-y-2">
+          <p className="text-xs text-gray-300 font-medium">Spieler ersetzen</p>
+          <p className="text-[11px] text-gray-500">
+            Der Nachrücker übernimmt alle noch offenen Spiele, gespielte bleiben beim alten Spieler. Zur Wahl stehen
+            angemeldete Spieler, die nicht ausgelost sind. Andere Mitglieder erst im Reiter „Teilnehmer“ eintragen.
+            Wer nur ein Spiel verpasst, wird besser über ⋯ → „kampflos weiter“ gewertet.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <select value={replaceFrom} onChange={e => setReplaceFrom(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              <option value="">Wer fällt aus?</option>
+              {replaceFromOptions.map(id => <option key={id} value={id}>{nameOfUser(id)}</option>)}
+            </select>
+            <select value={replaceTo} onChange={e => setReplaceTo(e.target.value)}
+              className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              <option value="">Wer rückt nach?</option>
+              {replaceToOptions.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
+            </select>
+          </div>
+          {replaceToOptions.length === 0 && (
+            <p className="text-[11px] text-amber-300">Kein angemeldeter Spieler ohne Platz. Trag den Nachrücker zuerst im Reiter „Teilnehmer“ ein.</p>
+          )}
+          <button type="button" onClick={replacePlayerAction} disabled={loading || !replaceFrom || !replaceTo}
+            className="text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+            Ersetzen
+          </button>
+        </div>
       )}
 
       {/* Terminplanung: Startzeit + Abstand je Spieltag/Runde */}
@@ -1446,7 +1682,8 @@ export default function TournamentManager({
             ? { ...tournament, matches: [...groupMatches, ...knockoutMatches] }
             : tournament}
           groupStage={isGroupKnockout ? {
-            panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact />,
+            panel: <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} compact
+              drawCount={drawCount} seedingToggle={seedingToggle} />,
             roundLabel: groupKnockoutLabel,
             // Gruppenspiele und Hinspiele dürfen unentschieden enden; das Rückspiel entscheidet per Gesamtergebnis
             allowDraw: m => m.groupIndex != null || m.leg === 1,
@@ -1533,23 +1770,24 @@ export default function TournamentManager({
         </section>
       )}
 
-      {/* K.O.-Baum / Liga aus den angemeldeten Spielern generieren (direkt sichtbar wenn relevant) */}
-      {canGenerate && tournament.matches.length === 0 && (
-        <button onClick={generateRoundRobinMatches} disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
-          <RefreshCw className="w-3.5 h-3.5" />
-          {isBracketFormat
-            ? `K.O.-Baum auslosen (bis zu ${poolSize} Spieler)`
-            : isLiga
-            ? `Alle Spieltage generieren (bis zu ${poolSize} Spieler)`
-            : `Alle Paarungen generieren (bis zu ${poolSize} Spieler)`}
-        </button>
+      {/* K.O.-Baum / Liga aus den angemeldeten Spielern auslosen (direkt sichtbar wenn relevant) */}
+      {canGenerate && (
+        <div className="rounded-lg border border-blue-900/40 bg-blue-900/10 p-3 space-y-2">
+          {isBracketFormat && seedingToggle}
+          <p className="text-[11px] text-gray-400">{drawPreview(tournament.format, drawCount)}</p>
+          <button onClick={generateRoundRobinMatches} disabled={loading}
+            className="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 bg-blue-900/30 hover:bg-blue-900/40 border border-blue-900/50 rounded-lg px-3 py-2 transition-colors w-full justify-center">
+            <RefreshCw className="w-3.5 h-3.5" />
+            {isBracketFormat ? "K.O.-Baum auslosen" : isLiga ? "Spieltage auslosen" : "Paarungen auslosen"}
+          </button>
+        </div>
       )}
 
       {/* ── Gruppenphase + K.O.: Auslosung/Tabellen, Gruppenspiele (mit Unentschieden), K.O.-Runde ── */}
       {isGroupKnockout && (
         <div className="space-y-4">
-          <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction} />
+          <GroupStagePanel tournament={tournament} allUsers={allUsers} loading={loading} onAction={groupStageAction}
+            drawCount={drawCount} seedingToggle={seedingToggle} />
           {groupIndexes.map(gi => (
             <div key={`g${gi}`}>
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>

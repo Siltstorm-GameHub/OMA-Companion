@@ -1,4 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+type Db = typeof prisma | Prisma.TransactionClient;
 
 /**
  * Einzige Quelle für "wer wird ausgelost" — genutzt von allen Spielplan-Generatoren (K.O.-Baum,
@@ -13,10 +16,10 @@ import { prisma } from "@/lib/prisma";
  * berechtigte entfernt (z.B. nicht eingecheckt). Darf deshalb NUR aufgerufen werden, solange das
  * Turnier noch keine Matches hat — die Aufrufer prüfen das vorher.
  *
- * Gibt die userIds in Anmelde-Reihenfolge zurück.
+ * Gibt die userIds in Anmelde-Reihenfolge zurück. `db`: innerhalb der Auslosungs-Sperre die Transaktion.
  */
-export async function prepareTournamentPool(eventId: string): Promise<{ ids: string[]; notCheckedIn: number }> {
-  const event = await prisma.event.findUnique({
+export async function prepareTournamentPool(eventId: string, db: Db = prisma): Promise<{ ids: string[]; notCheckedIn: number }> {
+  const event = await db.event.findUnique({
     where: { id: eventId },
     select: {
       checkInEnabled: true,
@@ -34,13 +37,13 @@ export async function prepareTournamentPool(eventId: string): Promise<{ ids: str
 
   const existing = new Set(event.participants.map(p => p.userId));
   const missing = ids.filter(id => !existing.has(id));
-  await prisma.$transaction([
-    prisma.tournamentParticipant.deleteMany({ where: { eventId, userId: { notIn: ids } } }),
-    ...(missing.length ? [prisma.tournamentParticipant.createMany({
+  await db.tournamentParticipant.deleteMany({ where: { eventId, userId: { notIn: ids } } });
+  if (missing.length) {
+    await db.tournamentParticipant.createMany({
       data: missing.map(userId => ({ eventId, userId, seed: ids.indexOf(userId) + 1 })),
       skipDuplicates: true,
-    })] : []),
-  ]);
+    });
+  }
 
   return { ids, notCheckedIn: players.length - eligible.length };
 }

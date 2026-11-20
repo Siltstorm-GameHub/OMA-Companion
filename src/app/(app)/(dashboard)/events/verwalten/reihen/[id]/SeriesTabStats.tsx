@@ -6,11 +6,12 @@ import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { inputCls, Section } from "./series-shared";
+import { LimitHint } from "../../neu/wizard/shared";
 import type { SeriesDetail } from "./useSeriesDetail";
 
 /** Reiter "Stats & Bonus": Statistiken, Sieger-Ermittlung, Dominion Bonus. */
 export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
-  const { isArchived, statRows, setStatRows, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, polls, lockedNotice, aliasSection } = ctx;
+  const { rewardLimits, isArchived, statRows, setStatRows, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, polls, lockedNotice, aliasSection } = ctx;
   return (
     <>
           {lockedNotice}
@@ -100,6 +101,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                       <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
                       <NumberInput min={0} value={dominionCoins}
                         onChange={e => setDominionCoins(Number(e.target.value))} className={inputCls} />
+                      <LimitHint value={dominionCoins} max={rewardLimits?.dominionCoins} />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpkt.</label>

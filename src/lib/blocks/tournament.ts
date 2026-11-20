@@ -13,6 +13,7 @@
 // Admins können jede Phase vorzeitig beenden (z.B. wenn eine Gruppe hängt) — es zählt dann der Stand.
 
 import { prisma } from "@/lib/prisma";
+import { notifyNotDrawn } from "@/lib/checkin-notify";
 import { createNotification } from "@/lib/notifications";
 import { MAX_ROOM_PLAYERS } from "./protocol";
 import type { TournamentStage, TournamentTicket } from "./mp-token";
@@ -218,6 +219,8 @@ export async function startTournament(eventId: string): Promise<string | null> {
   if (claim.count !== 1) return "Das Turnier läuft bereits.";
 
   await prisma.event.update({ where: { id: eventId }, data: { status: "active" } }).catch(() => {});
+  // Check-in: wer nicht eingecheckt war und fehlt, erfährt es
+  await notifyNotDrawn(eventId, players);
   const url = `/games/blocks/turnier/${eventId}`;
   await Promise.all(
     players.map((id) => {

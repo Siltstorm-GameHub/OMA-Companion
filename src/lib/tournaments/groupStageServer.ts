@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { notifyNotDrawn } from "@/lib/checkin-notify";
 import { ApplyMatchResultError } from "./applyMatchResult";
 import { prepareTournamentPool } from "./participants";
 import { notifyKnockoutCreated } from "./matchNotifications";
+import { markDrawn, rankScores, unmarkDrawn, withDrawLock } from "./draw";
+import { orderBySeed, parseSeeding, potGroups, tooFewPlayersMessage } from "./draw-plan";
+import { notifyDrawResult } from "./drawNotifications";
 import {
   GROUP_KNOCKOUT_FORMAT, computeGroupStandings, drawGroups, generateGroupMatches, generateKnockoutMatches,
   groupMembers, parseGroupStageConfig, resolveGroupCount, validateGroupStageConfig, type GroupStageConfig,
@@ -27,7 +31,7 @@ export async function runGroupStageAction(
   action: GroupStageAction,
   input: {
     groupCount?: unknown; advancePerGroup?: unknown; thirdPlaceMatch?: unknown;
-    groupLegs?: unknown; knockoutLegs?: unknown; singleLegFinal?: unknown;
+    groupLegs?: unknown; knockoutLegs?: unknown; singleLegFinal?: unknown; seeding?: unknown;
   },
 ): Promise<{ generated?: number; deleted?: number }> {
   if (action === "rebuild_knockout") {
@@ -58,9 +62,6 @@ export async function runGroupStageAction(
   const knockoutMatches = event.matches.filter(m => m.groupIndex == null);
 
   if (action === "groups") {
-    if (event.matches.length > 0) {
-      throw new ApplyMatchResultError("Es existieren bereits Matches. Zuerst die Auslosung zurücksetzen.", 409);
-    }
     const cfg: GroupStageConfig = {
       groupCount: Number(input.groupCount),
       advancePerGroup: Number(input.advancePerGroup),
@@ -69,39 +70,54 @@ export async function runGroupStageAction(
       knockoutLegs: input.knockoutLegs === 2 ? 2 : 1,
       singleLegFinal: input.singleLegFinal !== false,
     };
-    // Ausgelost werden die angemeldeten Spieler (bei aktivem Check-in nur Eingecheckte) plus von
-    // Admins direkt eingetragene Teilnehmer — gemeinsame Quelle aller Generatoren, siehe participants.ts
-    const { ids, notCheckedIn } = await prepareTournamentPool(eventId);
-    const error = validateGroupStageConfig(ids.length, cfg);
-    if (error) {
-      throw new ApplyMatchResultError(
-        notCheckedIn > 0 ? `${error} (${notCheckedIn} angemeldete Spieler sind nicht eingecheckt.)` : error,
-        400,
-      );
-    }
-
-    const groups = drawGroups(ids, cfg.groupCount);
-    const matches = generateGroupMatches(groups, eventId, cfg.groupLegs);
-    await prisma.$transaction([
-      ...groups.flatMap((members, groupIndex) => members.length
-        ? [prisma.tournamentParticipant.updateMany({ where: { eventId, userId: { in: members } }, data: { groupIndex } })]
-        : []),
-      prisma.match.createMany({ data: matches }),
-      prisma.event.update({ where: { id: eventId }, data: { groupStageJson: JSON.stringify(cfg) } }),
-    ]);
-    return { generated: matches.length };
+    const seeding = parseSeeding(input.seeding);
+    // Unter der Anmelde-/Auslosungs-Sperre (draw.ts): kein doppeltes Auslosen, keine Anmeldung dazwischen.
+    // Ausgelost werden die angemeldeten Spieler (bei aktivem Check-in nur Bereite) plus von Admins
+    // direkt eingetragene Teilnehmer — gemeinsame Quelle aller Generatoren, siehe participants.ts
+    const { ids, generated } = await withDrawLock(eventId, async (tx) => {
+      if (await tx.match.count({ where: { eventId } }) > 0) {
+        throw new ApplyMatchResultError("Die Gruppen sind schon ausgelost. Zum Neu-Auslosen erst „Neu auslosen“.", 409);
+      }
+      const { ids, notCheckedIn } = await prepareTournamentPool(eventId, tx);
+      if (ids.length < 3) throw new ApplyMatchResultError(tooFewPlayersMessage(ids.length, notCheckedIn, 3), 400);
+      const error = validateGroupStageConfig(ids.length, cfg);
+      if (error) {
+        throw new ApplyMatchResultError(
+          notCheckedIn > 0 ? `${error} (${notCheckedIn} angemeldete Spieler sind noch nicht bereit.)` : error,
+          400,
+        );
+      }
+      // Zufällig oder aus Lostöpfen nach Rangpunkten (starke Spieler auf verschiedene Gruppen)
+      const groups = seeding === "rank"
+        ? potGroups(orderBySeed(ids, await rankScores(ids, tx)), cfg.groupCount)
+        : drawGroups(ids, cfg.groupCount);
+      const matches = generateGroupMatches(groups, eventId, cfg.groupLegs);
+      for (const [groupIndex, members] of groups.entries()) {
+        if (members.length) await tx.tournamentParticipant.updateMany({ where: { eventId, userId: { in: members } }, data: { groupIndex } });
+      }
+      await tx.match.createMany({ data: matches });
+      await tx.event.update({ where: { id: eventId }, data: { groupStageJson: JSON.stringify(cfg) } });
+      await markDrawn(tx, eventId);
+      return { ids, generated: matches.length };
+    });
+    // Wer nicht bereit war und fehlt, erfährt es; alle Ausgelosten bekommen Gruppe und ersten Gegner
+    await notifyNotDrawn(eventId, ids);
+    notifyDrawResult(eventId);
+    return { generated };
   }
 
   if (action === "reset_groups") {
     if (event.matches.some(m => m.playedAt)) {
       throw new ApplyMatchResultError("Es wurden bereits Ergebnisse eingetragen — die Auslosung kann nicht mehr zurückgesetzt werden.", 409);
     }
-    const [deleted] = await prisma.$transaction([
-      prisma.match.deleteMany({ where: { eventId } }),
-      prisma.tournamentParticipant.updateMany({ where: { eventId }, data: { groupIndex: null } }),
-      prisma.event.update({ where: { id: eventId }, data: { groupStageJson: null } }),
-    ]);
-    return { deleted: deleted.count };
+    const deleted = await withDrawLock(eventId, async (tx) => {
+      const d = await tx.match.deleteMany({ where: { eventId } });
+      await tx.tournamentParticipant.updateMany({ where: { eventId }, data: { groupIndex: null } });
+      await tx.event.update({ where: { id: eventId }, data: { groupStageJson: null } });
+      await unmarkDrawn(tx, eventId);
+      return d.count;
+    });
+    return { deleted };
   }
 
   if (action === "knockout") {

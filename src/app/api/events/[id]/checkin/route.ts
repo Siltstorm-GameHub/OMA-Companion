@@ -8,7 +8,8 @@ import { syncReadyStatus } from "@/lib/event-comments";
 async function loadEvent(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { checkInEnabled: true, checkInMinutes: true, startAt: true, _count: { select: { matches: true } } },
+    // checkInMinutes (DB) wird nicht mehr ausgewertet — das Fenster ist fest (lib/checkin.ts)
+    select: { checkInEnabled: true, startAt: true, _count: { select: { matches: true } } },
   });
   return event ? { ...event, drawn: event._count.matches > 0 } : null;
 }
@@ -73,5 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     data: { checkedInAt: checkedIn ? new Date() : null },
     select: { checkedInAt: true },
   });
+  // Gleicher Stand in den Absprachen wie beim Selbst-Einchecken ("bereit"-Status setzen bzw. zurücknehmen)
+  await syncReadyStatus(userId, eventId, checkedIn).catch(() => {});
   return NextResponse.json(updated);
 }

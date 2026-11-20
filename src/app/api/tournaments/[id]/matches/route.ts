@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
+import { closeSubmissionsAfterAdminEntry, confirmProvisionalMatch } from "@/lib/tournaments/matchSubmissions";
 import { isStatFormat } from "@/lib/tournaments/stat-rounds";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -69,6 +70,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated);
   }
 
+  // Kampflos: Gegner nicht angetreten → winnerId kommt ohne Tore weiter (im K.O.-Baum rückt er auf)
+  if (action === "walkover") {
+    const match = await prisma.match.findFirst({
+      where: { id: matchId, eventId },
+      select: { id: true, player1Id: true, player2Id: true, playedAt: true, leg: true },
+    });
+    if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+    if (!match.player1Id || !match.player2Id) return NextResponse.json({ error: "Beide Gegner müssen feststehen." }, { status: 400 });
+    if (match.playedAt) return NextResponse.json({ error: "Das Match hat schon ein Ergebnis. Erst zurücksetzen." }, { status: 409 });
+    if (match.leg) return NextResponse.json({ error: "Bei Hin- und Rückspiel bitte beide Spiele eintragen." }, { status: 400 });
+    if (winnerId !== match.player1Id && winnerId !== match.player2Id) {
+      return NextResponse.json({ error: "Wer kommt weiter? Der Spieler muss in diesem Match stehen." }, { status: 400 });
+    }
+    try {
+      await applyMatchResult({ eventId, matchId, winnerId, score1: null, score2: null, actor: { id: user.id, label: "Admin (kampflos)" } });
+    } catch (err) {
+      if (err instanceof ApplyMatchResultError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
+    }
+    const updated = await prisma.match.update({ where: { id: match.id }, data: { walkover: true } });
+    await closeSubmissionsAfterAdminEntry(eventId, match.id, user.id);
+    return NextResponse.json(updated);
+  }
+
+  // Vorläufiges Ergebnis (Spieler-Meldung) direkt bestätigen
+  if (action === "confirm") {
+    try {
+      return NextResponse.json({ confirmed: await confirmProvisionalMatch(eventId, matchId, user.id) });
+    } catch (err) {
+      if (err instanceof ApplyMatchResultError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
+    }
+  }
+
   // Stat-Formate: Rundennummer und Zusatz einer bestehenden Runde nachträglich ändern
   if (action === "meta") {
     const { position, title } = body as { position?: unknown; title?: unknown };
@@ -93,6 +128,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       eventId, matchId, winnerId, score1, score2, isDraw, entries, action,
       actor: { id: user.id, label: "Admin" },
     });
+    // Ergebnis direkt eingetragen: offene Spieler-Meldungen zu diesem Match sind erledigt
+    if (action !== "reset") await closeSubmissionsAfterAdminEntry(eventId, matchId, user.id);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof ApplyMatchResultError) {

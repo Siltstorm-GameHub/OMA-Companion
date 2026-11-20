@@ -7,7 +7,8 @@ import {
   MAX_SCREENSHOTS,
   applySubmissionValues,
   checkSubmissionValues,
-  revertProvisional,
+  fallbackAfterReject,
+  submissionValues,
   cleanInt,
   cleanStats,
   isParticipantEditLocked,
@@ -16,6 +17,7 @@ import {
   submissionSubject,
   type SubmissionValues,
 } from "@/lib/tournaments/matchSubmissions";
+import { notifyManagersOfSubmission } from "@/lib/tournaments/submissionNotifications";
 
 function fail(err: unknown) {
   if (err instanceof ApplyMatchResultError) {
@@ -99,6 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     body.score1 = opponentSub.score1;
     body.score2 = opponentSub.score2;
+    body.advancerId = opponentSub.advancerId;
     body.note = "Ergebnis des Gegners bestätigt";
   }
 
@@ -107,6 +110,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       eventId,
       score1: cleanInt(body.score1),
       score2: cleanInt(body.score2),
+      // Nur bei Gleichstand im K.O.-Spiel von Bedeutung (Elfmeterschießen)
+      advancerId: isDuel && (body.advancerId === match.player1Id || body.advancerId === match.player2Id) ? body.advancerId as string : null,
       placement: cleanInt(body.placement, 1000),
       score: cleanInt(body.score, 10_000_000),
       statsJson: (() => {
@@ -125,7 +130,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!hasValue) return NextResponse.json({ error: "Bitte ein Ergebnis angeben" }, { status: 400 });
 
     const values: SubmissionValues = {
-      score1: data.score1, score2: data.score2, placement: data.placement, score: data.score,
+      score1: data.score1, score2: data.score2, advancerId: data.advancerId, placement: data.placement, score: data.score,
       statsJson: data.statsJson ? JSON.parse(data.statsJson) : null,
     };
     // Vorab prüfen (z.B. Unentschieden im K.-o.-Baum), damit keine unbrauchbare Meldung gespeichert wird.
@@ -141,15 +146,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // dann bleibt die Korrektur offen, bis ein Admin sie prüft.
     const fresh = await prisma.match.findUnique({ where: { id: match.id }, select: { resultConfirmed: true, playedAt: true } });
     const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed;
+    // Kann das Ergebnis gerade nicht eingetragen werden (z.B. Folgespiel schon gespielt), bleibt die Meldung
+    // gespeichert und wartet auf die Prüfung — statt dem Spieler einen Fehler zu zeigen, obwohl sie gespeichert ist
+    let heldBack: string | null = null;
     if (!adminConfirmed) {
-      await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true, { id: user.id, label: "Spieler-Meldung" });
+      try {
+        await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true, { id: user.id, label: "Spieler-Meldung" });
+      } catch (err) {
+        if (!(err instanceof ApplyMatchResultError)) throw err;
+        heldBack = err.message;
+      }
     }
 
     // Beide Spieler haben übereinstimmend gemeldet → ohne Admin endgültig übernehmen (mit Punkten).
     // Weichen die Meldungen ab oder hat ein Admin das Match schon bestätigt, bleibt es bei der Prüfung.
     let confirmedByBoth = false;
-    if (!adminConfirmed && opponentSub && opponentSub.status === "pending"
-        && opponentSub.score1 === values.score1 && opponentSub.score2 === values.score2) {
+    if (!adminConfirmed && !heldBack && opponentSub && opponentSub.status === "pending"
+        && opponentSub.score1 === values.score1 && opponentSub.score2 === values.score2
+        && (opponentSub.advancerId ?? null) === (values.advancerId ?? null)) {
       try {
         await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, false, { id: null, label: "Beide Spieler" });
         await prisma.matchResultSubmission.updateMany({
@@ -162,7 +176,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (!(err instanceof ApplyMatchResultError)) throw err;
       }
     }
-    return NextResponse.json({ ...submission, visible: !adminConfirmed, confirmedByBoth }, { status: existing ? 200 : 201 });
+    // Gegner hat etwas anderes gemeldet → beide sehen den Widerspruch, der Verwalter wird sofort informiert
+    const conflict = !!opponentSub && opponentSub.status === "pending" && !confirmedByBoth
+      && (opponentSub.score1 !== values.score1 || opponentSub.score2 !== values.score2);
+    await notifyManagersOfSubmission(eventId, { reporterId: user.id, conflict }).catch(() => {});
+    return NextResponse.json({
+      ...submission, visible: !adminConfirmed && !heldBack, confirmedByBoth, heldBack, conflict,
+    }, { status: existing ? 200 : 201 });
   } catch (err) {
     return fail(err);
   }
@@ -200,18 +220,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let data: Record<string, unknown>;
 
     if (body.action === "reject") {
-      if (sub.applied) await revertProvisional(eventId, submissionSubject(sub), sub.matchId, { id: reviewer.id, label: "Prüfung" });
+      // War sie eingetragen: eine andere offene Meldung zum selben Match übernimmt vorläufig, sonst zurücksetzen
+      if (sub.applied) await fallbackAfterReject(eventId, sub, { id: reviewer.id, label: "Prüfung" });
       data = { ...base, status: "rejected", applied: false };
     } else {
-      const original = {
-        score1: sub.score1, score2: sub.score2, placement: sub.placement, score: sub.score,
-        statsJson: sub.statsJson ? JSON.parse(sub.statsJson) : null,
-      };
+      const original = submissionValues(sub);
       const values =
         body.action === "correct"
           ? {
               score1: cleanInt(body.score1),
               score2: cleanInt(body.score2),
+              advancerId: typeof body.advancerId === "string" ? body.advancerId : null,
               placement: cleanInt(body.placement, 1000),
               score: cleanInt(body.score, 10_000_000),
               statsJson: cleanStats(body.statsJson),

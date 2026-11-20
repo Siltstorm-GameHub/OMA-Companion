@@ -20,7 +20,7 @@ export type QuestType =
 export const QUEST_ACTIONS: Partial<Record<QuestType, { label: string; href: string; counts: string }>> = {
   VOICE_MINUTES:      { label: "Discord",   href: "discord",            counts: "Minuten werden beim Verlassen des Sprachkanals gezählt." },
   MESSAGES:           { label: "Discord",   href: "discord",            counts: "Jede Nachricht in den Textkanälen des Servers zählt." },
-  EVENT_ATTEND:       { label: "Anmelden",  href: "/events",            counts: "Zählt, sobald du dich für ein Event anmeldest." },
+  EVENT_ATTEND:       { label: "Anmelden",  href: "/events",            counts: "Zählt, wenn ein Event, bei dem du dabei warst, abgeschlossen ist." },
   POLL_VOTE:          { label: "Abstimmen", href: "/events",            counts: "Zählt bei deiner ersten Stimme in einer Event-Abstimmung." },
   DAILY_SPIN:         { label: "Drehen",    href: "/shop#gluecksrad",   counts: "Zählt bei jedem täglichen Dreh am Glücksrad im Shop." },
   PREDICTION_MADE:    { label: "Tippen",    href: "/events",            counts: "Zählt bei deiner ersten Sieger-Vorhersage zu einem Event." },

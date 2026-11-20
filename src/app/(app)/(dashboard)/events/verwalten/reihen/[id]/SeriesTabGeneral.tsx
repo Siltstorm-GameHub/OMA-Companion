@@ -3,7 +3,7 @@ import { MAX_CYCLES_AHEAD } from "@/lib/series-cycles-config";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { Hash } from "@/components/icons";
-import { RefreshCw, Gamepad2, Swords, Monitor } from "@/components/icons";
+import { RefreshCw, Gamepad2, Swords, Monitor, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
 import ImageUploadField from "@/components/ImageUploadField";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { isBlocksGame } from "@/lib/oma-original";
@@ -20,9 +20,54 @@ import type { SeriesDetail } from "./useSeriesDetail";
 /** Reiter "Allgemein": Kategorie, Cover, Spiel und Format, Turniervorlage, Discord und Wiederholung.
  *  Das Community-Ziel hat einen eigenen Reiter (SeriesTabGoal). */
 export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
-  const { series, isModerator, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, omaOriginal, eventStatFields, latestStartAt, saveOmaOriginal, lockedNotice, setActiveSettingsTab } = ctx;
+  const { series, isModerator, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, omaOriginal, eventStatFields, latestStartAt, saveOmaOriginal, lockedNotice, setActiveSettingsTab,
+    name, setName, description, setDescription, rules, setRules, hidden, hiddenBusy, toggleHidden, registrationLocked,
+    registrationLockedBusy, toggleRegistrationLocked, squads, squadId, squadIdBusy, saveSquadId } = ctx;
   return (
     <>
+          {/* Name, Beschreibung, Regeln — gespeichert über die Speicherleiste */}
+          <Section title="Name und Regeln">
+            <Field label="Name der Reihe">
+              <input value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Reihen-Name" />
+            </Field>
+            <Field label="Beschreibung (optional)">
+              <input value={description} onChange={e => setDescription(e.target.value)} className={inputCls} placeholder="Kurz, worum es geht" />
+            </Field>
+            <Field label="Regelwerk (optional)">
+              <textarea value={rules} onChange={e => setRules(e.target.value)} rows={3} className={`${inputCls} resize-none`}
+                placeholder="Wird den Spielern über dem Punktesystem angezeigt" />
+            </Field>
+          </Section>
+
+          {/* Sofort wirksam (eigene Knöpfe, nicht über die Speicherleiste) */}
+          <Section title="Sichtbarkeit und Anmeldung">
+            <p className="text-[11px] text-gray-500 -mt-1">Diese Schalter gelten sofort für die Reihe und alle Termine.</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
+                className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+                  hidden ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-white/[0.08] hover:border-white/20"
+                }`}>
+                {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {hidden ? "Ausgeblendet · einblenden" : "Sichtbar · ausblenden"}
+              </button>
+              <button type="button" onClick={toggleRegistrationLocked} disabled={registrationLockedBusy}
+                className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+                  registrationLocked ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-white/[0.08] hover:border-white/20"
+                }`}>
+                {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                {registrationLocked ? "Anmeldung gesperrt · freigeben" : "Selbst-Anmeldung offen · sperren"}
+              </button>
+              {squads.length > 0 && (
+                <select value={squadId} disabled={squadIdBusy} onChange={e => saveSquadId(e.target.value)}
+                  aria-label="Anmeldung auf ein Squad beschränken"
+                  className="text-xs rounded-lg px-2.5 py-1.5 border outline-none bg-gray-800 border-gray-700 text-gray-200 disabled:opacity-50">
+                  <option value="">Für alle offen</option>
+                  {squads.map(s => <option key={s.id} value={s.id}>Nur Squad: {s.name}</option>)}
+                </select>
+              )}
+            </div>
+          </Section>
+
           {/* Kategorie */}
           <Section title="Kategorie">
             <Field label="Kategorie">

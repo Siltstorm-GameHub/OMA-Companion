@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { promoteFromWaitlist } from "@/lib/event-waitlist";
 import { parseEventKind } from "@/lib/event-placement";
 import { requireEventManager, hasMinRole, getCaptainedSquadIds, canManageSeries } from "@/lib/roles";
 import { getCommunityLimits } from "@/lib/community-event-limits";
@@ -154,7 +155,16 @@ export async function PATCH(req: NextRequest) {
   // Teilnehmer aus Event entfernen (Moderator-Aktion)
   if (removeUserId) {
     await prisma.eventRegistration.deleteMany({ where: { eventId, userId: removeUserId } });
+    // Frei gewordener Platz → Erster der Warteliste rückt nach (lib/event-waitlist.ts)
+    after(() => promoteFromWaitlist(eventId).catch(err => console.error("[waitlist]", err)));
     return NextResponse.json({ ok: true });
+  }
+
+  // Anmeldeschluss (optional, vor dem Start)
+  if ("registrationClosesAt" in data) {
+    const at = data.registrationClosesAt ? new Date(data.registrationClosesAt) : null;
+    if (at && isNaN(at.getTime())) return NextResponse.json({ error: "Ungültiger Anmeldeschluss" }, { status: 400 });
+    data.registrationClosesAt = at;
   }
 
   // Status wird aus einem bereits abgeschlossenen Zustand VOR die Spielphase zurückgesetzt (z.B.
@@ -253,6 +263,9 @@ export async function PATCH(req: NextRequest) {
       });
     }
   }
+
+  // Höchstzahl erhöht oder aufgehoben → Warteliste nachrücken lassen
+  if ("maxPlayers" in data) after(() => promoteFromWaitlist(eventId).catch(err => console.error("[waitlist]", err)));
 
   return NextResponse.json(event);
 }

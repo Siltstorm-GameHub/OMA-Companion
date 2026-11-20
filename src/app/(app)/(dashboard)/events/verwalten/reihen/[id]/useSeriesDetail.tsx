@@ -1,7 +1,7 @@
 "use client";
 import { parseCycleConfig, type CycleConfig } from "@/lib/series-cycles-config";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Lock } from "@/components/icons";
@@ -17,7 +17,7 @@ import { SeriesEvent, SettingsTabKey, PlacementReward, PollConfig, parseRewards,
 /** Zustand, abgeleitete Werte und Aktionen von SeriesDetailClient (aufgeteilt in Hook + Reiter-Komponenten). */
 export function useSeriesDetail({
   series, allUsers, squads = [], hasActiveSibling = true, isModerator = true,
-  isAdmin = false, canUndoCompletion = false, seasonCount = 1, groupStatFields = [], goalLimits = null,
+  isAdmin = false, canUndoCompletion = false, seasonCount = 1, groupStatFields = [], goalLimits = null, rewardLimits = null,
 }: SeriesDetailProps) {
   const router = useRouter();
   // Abgeschlossene Saison: Punkteregeln, Belohnungen, Umfragen, Legacy, Spiel und Format sind gesperrt
@@ -194,13 +194,11 @@ export function useSeriesDetail({
     else toast.error("Fehler beim Zurücksetzen");
   }
 
-  async function saveSettings() {
-    setSaving(true);
-    const res = await fetch("/api/admin/event-series", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        seriesId: series.id,
+  /* ── Einstellungen + ungespeicherte Änderungen ──
+   * Alles, was "Speichern" schickt, als ein Objekt — weicht es vom zuletzt gespeicherten Stand ab, erscheint
+   * die Speicherleiste und das Verlassen der Seite wird gewarnt. Sichtbarkeit, Anmeldung und Squad im
+   * Reiter "Allgemein" speichern dagegen sofort (eigene Knöpfe). */
+  const settingsBody = {
         name:                 name.trim() || series.name,
         description:          description.trim() || null,
         rules:                rules.trim() || null,
@@ -247,14 +245,36 @@ export function useSeriesDetail({
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
         }),
-      }),
+  };
+  const settingsSnapshot = JSON.stringify(settingsBody);
+  const [savedSettings, setSavedSettings] = useState(settingsSnapshot);
+  const settingsDirty = settingsSnapshot !== savedSettings;
+  useEffect(() => {
+    if (!settingsDirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [settingsDirty]);
+  /** Änderungen verwerfen: Seite mit dem gespeicherten Stand neu laden */
+  function discardSettings() {
+    setSavedSettings(settingsSnapshot); // keine Verlassen-Warnung beim Neuladen
+    window.location.reload();
+  }
+
+  async function saveSettings() {
+    setSaving(true);
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, ...settingsBody }),
     });
     setSaving(false);
     if (res.ok) {
+      setSavedSettings(settingsSnapshot);
       toast.success(isArchived ? "Saison gespeichert" : "Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
       router.refresh();
     } else {
-      toast.error("Fehler beim Speichern");
+      toast.error((await res.json().catch(() => null))?.error ?? "Fehler beim Speichern");
     }
   }
 
@@ -430,7 +450,7 @@ export function useSeriesDetail({
     }
   }
 
-  return { series, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, oldestEvent, suggestedNextDate, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
+  return { series, rewardLimits, settingsDirty, discardSettings, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, oldestEvent, suggestedNextDate, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
 }
 
 export type SeriesDetail = ReturnType<typeof useSeriesDetail>;

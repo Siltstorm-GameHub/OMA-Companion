@@ -12,6 +12,8 @@ type Sub = {
   status: string;
   applied: boolean;
   score1: number | null; score2: number | null; placement: number | null; score: number | null;
+  /** Gleichstand im K.O.-Spiel: wer (nach Elfmeterschießen) weiterkommt */
+  advancerId: string | null;
   stats: Record<string, number>;
   note: string | null;
   reviewNote: string | null;
@@ -48,11 +50,13 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
     Object.fromEntries(Object.entries(sub.stats).map(([k, v]) => [k, String(v)])),
   );
   const [reviewNote, setReviewNote] = useState(sub.reviewNote ?? "");
+  const [advancerId, setAdvancerId] = useState(sub.advancerId ?? "");
+  const tie = match.isDuel && score1 !== "" && score1 === score2;
   const [zoom, setZoom] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const changed =
-    (match.isDuel && (score1 !== (sub.score1?.toString() ?? "") || score2 !== (sub.score2?.toString() ?? ""))) ||
+    (match.isDuel && (score1 !== (sub.score1?.toString() ?? "") || score2 !== (sub.score2?.toString() ?? "") || advancerId !== (sub.advancerId ?? ""))) ||
     (!match.isDuel && statFields.some((f) => (stats[f] ?? "") !== String(sub.stats[f] ?? "")));
 
   async function act(action: "approve" | "correct" | "reject") {
@@ -64,7 +68,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
         body: JSON.stringify({
           submissionId: sub.id, action, reviewNote,
           ...(action === "correct"
-            ? match.isDuel ? { score1, score2 } : { statsJson: stats }
+            ? match.isDuel ? { score1, score2, advancerId: tie ? advancerId || null : null } : { statsJson: stats }
             : {}),
         }),
       });
@@ -123,6 +127,17 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
         </div>
       )}
 
+      {/* Gleichstand: im K.O.-Spiel entscheidet, wer nach Elfmeterschießen weiterkommt */}
+      {tie && match.player1 && match.player2 && (
+        <label className="block text-xs text-gray-400 space-y-1">Wer kommt weiter? (nur im K.O.-Spiel, z.B. nach Elfmeterschießen)
+          <select value={advancerId} disabled={done} onChange={(e) => setAdvancerId(e.target.value)} className={inputCls}>
+            <option value="">— niemand (Unentschieden)</option>
+            <option value={match.player1.id}>{match.player1.name}</option>
+            <option value={match.player2.id}>{match.player2.name}</option>
+          </select>
+        </label>
+      )}
+
       {sub.original && (
         <p className="text-xs text-blue-300/80">
           Ursprünglich gemeldet: {match.isDuel
@@ -159,14 +174,73 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
   );
 }
 
+/** Offene Meldungen eines Matches widersprechen sich (1v1: anderes Ergebnis; FFA/Coop: andere Werte für denselben Spieler). */
+function conflictOf(m: ReviewMatch): boolean {
+  const pending = m.submissions.filter((s) => s.status === "pending");
+  if (m.isDuel) return new Set(pending.map((s) => `${s.score1}:${s.score2}:${s.advancerId ?? ""}`)).size > 1;
+  const bySubject = new Map<string, Set<string>>();
+  for (const s of pending) {
+    const key = s.forUser?.id ?? s.user.id;
+    const vals = bySubject.get(key) ?? new Set<string>();
+    vals.add(JSON.stringify(Object.keys(s.stats).sort().map((k) => [k, s.stats[k]])));
+    bySubject.set(key, vals);
+  }
+  return [...bySubject.values()].some((v) => v.size > 1);
+}
+
 export default function ResultReviewClient({ eventId, matches, statFields }: { eventId: string; matches: ReviewMatch[]; statFields: string[] }) {
+  const router = useRouter();
+  const [filter, setFilter] = useState<"open" | "all">("open");
+  const [bulkBusy, setBulkBusy] = useState(false);
   if (matches.length === 0) {
     return <div className="glass rounded-2xl p-8 text-center text-gray-400 text-sm">Noch keine Ergebnis-Meldungen.</div>;
   }
+  const openMatches = matches.filter((m) => m.submissions.some((s) => s.status === "pending"));
+  const shown = filter === "open" ? openMatches : matches;
+  // Sammelaktion: alle offenen Meldungen ohne Widerspruch so übernehmen
+  const bulkSubs = openMatches.filter((m) => !conflictOf(m)).flatMap((m) => m.submissions.filter((s) => s.status === "pending"));
+
+  async function approveAll() {
+    setBulkBusy(true);
+    let ok = 0;
+    const failed: string[] = [];
+    for (const s of bulkSubs) {
+      const res = await fetch(`/api/tournaments/${eventId}/submissions`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId: s.id, action: "approve" }),
+      });
+      if (res.ok) ok++;
+      else failed.push((await res.json().catch(() => ({}))).error ?? "Fehler");
+    }
+    setBulkBusy(false);
+    if (ok) toast.success(`${ok} ${ok === 1 ? "Meldung" : "Meldungen"} übernommen`);
+    if (failed.length) toast.error(`${failed.length} nicht übernommen: ${[...new Set(failed)].join(" · ")}`);
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
-      {matches.map((m) => {
-        const conflict = m.isDuel && new Set(m.submissions.filter((s) => s.status === "pending").map((s) => `${s.score1}:${s.score2}`)).size > 1;
+      <div className="flex flex-wrap items-center gap-2">
+        {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`]] as const).map(([k, label]) => (
+          <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"}`}>
+            {label}
+          </button>
+        ))}
+        {bulkSubs.length > 0 && (
+          <button type="button" onClick={approveAll} disabled={bulkBusy}
+            title="Übernimmt jede offene Meldung so, wie sie gemeldet wurde. Matches mit Widerspruch bleiben offen."
+            className="ml-auto rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-white">
+            {bulkBusy ? "Übernehme …" : `Alle offenen ohne Widerspruch übernehmen (${bulkSubs.length})`}
+          </button>
+        )}
+      </div>
+      {shown.length === 0 && (
+        <div className="glass rounded-2xl p-6 text-center text-gray-400 text-sm">Alles geprüft, keine offenen Meldungen.</div>
+      )}
+      {shown.map((m) => {
+        const conflict = conflictOf(m);
+        const pendingDuel = m.isDuel ? m.submissions.filter((s) => s.status === "pending") : [];
         return (
           <div key={m.id} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
@@ -176,7 +250,17 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
               </h3>
               {m.current && <span className="text-xs text-gray-500">Aktuell: {m.current.score1 ?? "–"} : {m.current.score2 ?? "–"}</span>}
             </div>
-            {conflict && <p className="text-xs text-amber-300">⚠ Die Meldungen widersprechen sich — bitte anhand der Screenshots prüfen.</p>}
+            {conflict && (
+              <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 space-y-0.5">
+                <p className="font-semibold">⚠ Die Meldungen widersprechen sich — bitte anhand der Screenshots prüfen:</p>
+                {m.isDuel
+                  ? pendingDuel.map((s) => (
+                      <p key={s.id}>{s.user.name}: {m.player1?.name} <span className="font-mono">{s.score1 ?? "–"}:{s.score2 ?? "–"}</span> {m.player2?.name}
+                        {s.advancerId && <> · weiter: {s.advancerId === m.player1?.id ? m.player1?.name : m.player2?.name}</>}</p>
+                    ))
+                  : <p>Für denselben Spieler wurden unterschiedliche Werte gemeldet.</p>}
+              </div>
+            )}
             {m.submissions.map((s) => (
               <SubmissionCard key={s.id} eventId={eventId} match={m} sub={s} statFields={statFields} />
             ))}

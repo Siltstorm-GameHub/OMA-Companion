@@ -27,6 +27,8 @@ type Match = {
   id: string; round: number; position: number;
   title: string | null; scheduledAt: string | Date | null; notes: string | null;
   playedAt: string | Date | null; entries: Entry[];
+  /** false = von Spielern gemeldet, noch nicht bestätigt (vorläufig) */
+  resultConfirmed?: boolean;
 };
 
 const uname  = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
@@ -595,6 +597,10 @@ export default function FfaView({
                         Runde {match.position}
                         {statRoundNote(match) && <span className="text-gray-400 font-normal"> · {statRoundNote(match)}</span>}
                       </span>
+                      {match.resultConfirmed === false && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-900/30 text-amber-300 shrink-0"
+                          title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>
+                      )}
                       {match.playedAt && (
                         <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />

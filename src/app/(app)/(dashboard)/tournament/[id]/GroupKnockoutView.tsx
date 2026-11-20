@@ -15,6 +15,8 @@ type Match = {
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: unknown[];
   groupIndex: number | null;
+  /** false = von Spielern gemeldet, noch nicht bestätigt (vorläufig) */
+  resultConfirmed?: boolean;
   isThirdPlace?: boolean;
   leg?: number | null;
   startedAt?: string | Date | null;
@@ -139,6 +141,9 @@ export default function GroupKnockoutView({
                         <span className={`flex-1 truncate text-right ${nameCls(m.player1Id)}`}>{uname(p1)}</span>
                         <span className={`w-12 text-center shrink-0 tabular-nums font-semibold ${isDraw ? "text-amber-400" : "text-white"}`}>
                           {m.playedAt ? `${m.score1 ?? "–"}:${m.score2 ?? "–"}` : <span className="text-gray-600 font-normal">vs</span>}
+                          {m.playedAt && m.resultConfirmed === false && (
+                            <span className="text-amber-300 font-normal" title="Vorläufig: von Spielern gemeldet, noch nicht bestätigt">*</span>
+                          )}
                         </span>
                         <span className={`flex-1 truncate ${nameCls(m.player2Id)}`}>{uname(p2)}</span>
                       </div>

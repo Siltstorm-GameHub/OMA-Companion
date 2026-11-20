@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
+import { replacePlayer } from "@/lib/tournaments/replace-player";
+
+/** Nach der Auslosung: Spieler in allen offenen Spielen ersetzen ({ fromUserId, toUserId }). */
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: eventId } = await params;
+  await requireEventManager(eventId);
+  const { fromUserId, toUserId } = await req.json();
+  try {
+    return NextResponse.json(await replacePlayer(eventId, String(fromUserId ?? ""), String(toUserId ?? "")));
+  } catch (err) {
+    if (err instanceof ApplyMatchResultError) return NextResponse.json({ error: err.message }, { status: err.status });
+    throw err;
+  }
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;

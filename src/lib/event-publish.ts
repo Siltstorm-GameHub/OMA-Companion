@@ -137,7 +137,8 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
     }
   }
 
-  const next: PublishState = { notifiedAt, errors };
+  // Check-in-Vermerke (lib/checkin-notify.ts) beibehalten
+  const next: PublishState = { ...state, notifiedAt, errors };
   await prisma.event.update({ where: { id: eventId }, data: { publishStateJson: JSON.stringify(next) } });
   return next;
 }

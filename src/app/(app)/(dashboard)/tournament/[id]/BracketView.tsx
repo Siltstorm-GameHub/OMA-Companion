@@ -22,6 +22,10 @@ type Match = {
   playedAt?: string | Date | null;
   /** Vom Admin als "läuft gerade" markiert */
   startedAt?: string | Date | null;
+  /** Kampflos entschieden (Gegner nicht angetreten) */
+  walkover?: boolean;
+  /** false = von Spielern gemeldet, noch nicht bestätigt (vorläufig) */
+  resultConfirmed?: boolean;
   /** Hin- und Rückspiel (aus aggregateKnockoutTies): Einzelergebnisse */
   legs?: { first: Leg; second: Leg | null };
   entries: unknown[];
@@ -139,7 +143,7 @@ function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }
   const won = (m: Match, uid: string | null) => !!m.winnerId && m.winnerId === uid;
   const feeders = feederMatches(matches, match);
   const status = isBye ? "Freilos — kampflos weiter"
-    : match.winnerId ? `Entschieden: ${uname(findUser(match.winnerId))} kommt weiter`
+    : match.winnerId ? `${match.walkover ? "Kampflos" : "Entschieden"}: ${uname(findUser(match.winnerId))} kommt weiter${match.playedAt && match.resultConfirmed === false ? " (vorläufig, von Spielern gemeldet)" : ""}`
     : isLive ? "Läuft gerade"
     : p1 && p2 ? "Noch kein Ergebnis"
     : "Gegner stehen noch nicht fest";
@@ -212,6 +216,8 @@ function MatchCard({
   const isBye = !!match.winnerId && (!match.player1Id || !match.player2Id);
   const pending = !match.winnerId && p1 && p2;
   const isLive = !!match.startedAt && !match.playedAt && !match.winnerId;
+  // Von Spielern gemeldet, noch nicht bestätigt
+  const provisional = !!match.playedAt && match.resultConfirmed === false;
   // Entschieden bei Gleichstand (Einzelspiel oder Gesamtergebnis) → nach Elfmeterschießen o.ä.
   const afterPenalties = !!match.winnerId && !isBye && match.score1 != null && match.score1 === match.score2;
   const legs = match.legs?.second ? match.legs : null;
@@ -302,9 +308,10 @@ function MatchCard({
           </span>
         );
       })}
-      {(footer || isLive || isBye) && (
+      {(footer || isLive || isBye || provisional) && (
         <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-white/5 text-[10px] text-gray-500 bg-white/[0.02]">
           {isLive && <span className="font-bold text-red-400 animate-pulse">● LIVE</span>}
+          {provisional && <span className="text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>}
           {isBye && <span>kampflos weiter</span>}
           {!isBye && footer && <span className="truncate">{footer}</span>}
         </span>

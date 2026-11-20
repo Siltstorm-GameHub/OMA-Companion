@@ -1,14 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Loader2 } from "@/components/icons";
 import { checkInOpensAt, checkInState } from "@/lib/checkin";
 import { formatBerlinDateTime } from "@/lib/time";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 /**
  * "Bin bereit" vor Turnierstart für angemeldete Spieler (= Check-in, nur bei Event.checkInEnabled sichtbar).
  * Gleicher Weg wie der Status-Knopf in den Absprachen — beide setzen Check-in und "bereit"-Status.
+ * Schaltet sich von selbst frei, sobald das Fenster aufgeht (ohne Neuladen der Seite).
  */
 export default function CheckInButton({
   eventId, startAt, drawn, checkedIn: initialCheckedIn,
@@ -22,10 +24,29 @@ export default function CheckInButton({
   const router = useRouter();
   const [checkedIn, setCheckedIn] = useState(initialCheckedIn);
   const [loading, setLoading] = useState(false);
+  const [, setTick] = useState(0);
+  const { confirm, ConfirmDialogElement } = useConfirm();
   const event = { checkInEnabled: true, startAt };
   const state = checkInState(event, drawn);
+  const opensAt = checkInOpensAt(event).getTime();
+
+  // Noch nicht offen: genau zum Öffnungszeitpunkt neu rendern (max. alle 60 s prüfen)
+  useEffect(() => {
+    if (state !== "not_yet_open") return;
+    const id = setInterval(() => {
+      setTick(t => t + 1);
+      if (Date.now() >= opensAt) router.refresh();
+    }, Math.min(60_000, Math.max(1_000, opensAt - Date.now())));
+    return () => clearInterval(id);
+  }, [state, opensAt, router]);
 
   async function toggle() {
+    if (checkedIn && !(await confirm({
+      title: "Bereit-Meldung zurücknehmen?",
+      description: "Wer bei der Auslosung nicht bereit ist, kommt nicht in den Turnierbaum. Du kannst dich bis dahin wieder bereit melden.",
+      confirmLabel: "Zurücknehmen",
+      variant: "danger",
+    }))) return;
     setLoading(true);
     const res = await fetch(`/api/events/${eventId}/checkin`, { method: checkedIn ? "DELETE" : "POST" });
     setLoading(false);
@@ -42,8 +63,8 @@ export default function CheckInButton({
 
   if (state === "not_yet_open") {
     return (
-      <span className="text-xs text-gray-400">
-        ⏳ „Bin bereit“ ab {formatBerlinDateTime(checkInOpensAt(event), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
+      <span className="text-xs text-gray-400" title="Wer bei der Auslosung nicht bereit ist, kommt nicht in den Turnierbaum.">
+        ⏳ „Bin bereit“ ab {formatBerlinDateTime(new Date(opensAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
       </span>
     );
   }
@@ -55,14 +76,20 @@ export default function CheckInButton({
     );
   }
   return (
-    <button type="button" onClick={toggle} disabled={loading}
-      className={`flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 border transition-colors disabled:opacity-50 ${
-        checkedIn
-          ? "bg-teal-500/15 border-teal-500/40 text-teal-300 hover:bg-teal-500/25"
-          : "bg-amber-500 border-amber-400 text-gray-950 hover:bg-amber-400 animate-pulse"
-      }`}>
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : checkedIn ? <Check className="w-4 h-4" /> : null}
-      {checkedIn ? "Bereit (zurücknehmen)" : "Bin bereit"}
-    </button>
+    <div className="flex flex-col items-start gap-1">
+      <button type="button" onClick={toggle} disabled={loading}
+        className={`flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 border transition-colors disabled:opacity-50 ${
+          checkedIn
+            ? "bg-teal-500/15 border-teal-500/40 text-teal-300 hover:bg-teal-500/25"
+            : "bg-amber-500 border-amber-400 text-gray-950 hover:bg-amber-400 animate-pulse"
+        }`}>
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : checkedIn ? <Check className="w-4 h-4" /> : null}
+        {checkedIn ? "Bereit (zurücknehmen)" : "Bin bereit"}
+      </button>
+      {!checkedIn && (
+        <span className="text-[11px] text-gray-400">Bis zur Auslosung möglich. Wer nicht bereit ist, wird nicht ausgelost.</span>
+      )}
+      {ConfirmDialogElement}
+    </div>
   );
 }

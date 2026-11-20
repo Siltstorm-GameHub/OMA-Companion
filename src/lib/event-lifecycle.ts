@@ -14,6 +14,7 @@ import { publishDueScheduledEvents } from "@/lib/event-publish";
 import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 import { publishDueScheduledPosts } from "@/lib/journalist-service";
 import { resolveDuePolls } from "@/lib/post-poll-service";
+import { notifyOpenCheckIns } from "@/lib/checkin-notify";
 
 /**
  * Setzt alle fälligen ("open" + startAt <= jetzt) Events mit mindestens einer Spieler-
@@ -34,6 +35,9 @@ export async function syncDueEventActivations(): Promise<void> {
   // Zeitraum-Events (Punktewertung/Durchschnittswerte): Runde 1 automatisch zum Starttermin eröffnen,
   // siehe lib/tournaments/period-rounds.ts — unabhängig davon, ob schon Spieler angemeldet sind
   await autoStartPeriodRounds();
+
+  // Check-in: "Check-in ist offen" an alle noch nicht Bereiten (einmal je Event, lib/checkin-notify.ts)
+  await notifyOpenCheckIns().catch(() => {});
 
   const dueEvents = await prisma.event.findMany({
     where: { status: "open", startAt: { lte: new Date() } },

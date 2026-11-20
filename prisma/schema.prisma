@@ -87,6 +87,7 @@ model User {
   accounts                    Account[]
   sessions                    Session[]
   eventRegistrations          EventRegistration[]
+  eventWaitlist               EventWaitlistEntry[]
   pointTransactions           PointTransaction[]
   tournamentParticipants      TournamentParticipant[]
   teamMemberships             TeamMember[]
@@ -336,6 +337,8 @@ model Event {
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
   registrationLocked  Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  // Optionaler Anmeldeschluss vor dem Start (z.B. 1 Std vorher für die Auslosung). null = bis zum Start.
+  registrationClosesAt DateTime?
   // Check-in vor Turnierstart: Fenster öffnet checkInMinutes vor startAt und schließt mit der Auslosung.
   // Ist es aktiv, werden nur eingecheckte Spieler (EventRegistration.checkedInAt) ausgelost.
   checkInEnabled      Boolean       @default(false)
@@ -423,6 +426,7 @@ model Event {
   series             EventSeries?             @relation(fields: [seriesId], references: [id])
   lulSpieltag        LulSpieltag?
   registrations      EventRegistration[]
+  waitlist           EventWaitlistEntry[]
   participants       TournamentParticipant[]
   matches            Match[]
   teams              Team[]
@@ -795,6 +799,20 @@ model EventRegistration {
   @@unique([userId, eventId])
 }
 
+/// Warteliste eines vollen Events: wird ein Spielerplatz frei, rückt der Erste automatisch nach
+/// (lib/event-waitlist.ts) und bekommt eine Meldung.
+model EventWaitlistEntry {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, createdAt])
+}
+
 model TournamentParticipant {
   id         String  @id @default(cuid())
   eventId    String
@@ -894,6 +912,8 @@ model Match {
   // "Läuft gerade": vom Admin gesetzt, solange das Match gespielt wird (Turnierseite/Overlay heben es
   // hervor). Ein Match gilt als live, solange startedAt gesetzt und playedAt leer ist.
   startedAt       DateTime?
+  // Kampflos entschieden (Gegner nicht angetreten): Sieger ohne Tore, vom Verwalter gesetzt
+  walkover        Boolean                 @default(false)
   event           Event                   @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries         MatchEntry[]
@@ -2116,6 +2136,8 @@ model MatchResultSubmission {
   // 1v1 / Liga / Round Robin: Score in Match-Orientierung (score1 = player1Id)
   score1         Int?
   score2         Int?
+  // K.O.-Spiel mit Gleichstand (Elfmeterschießen) bzw. Rückspiel mit Gleichstand im Gesamtergebnis: wer kommt weiter
+  advancerId     String?
   // FFA / Coop: Werte des gemeldeten Spielers (forUserId bzw. Melder)
   placement      Int?
   score          Int?

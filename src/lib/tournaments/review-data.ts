@@ -46,7 +46,7 @@ export async function loadReviewData(eventId: string, opts: { onlyPending?: bool
       forUser: isDuelMatch(m) ? null : { id: submissionSubject(s), name: s.forUserId ? nameOf.get(s.forUserId) ?? "?" : s.user.username ?? s.user.name ?? "?" },
       status: s.status,
       applied: s.applied,
-      score1: s.score1, score2: s.score2, placement: s.placement, score: s.score,
+      score1: s.score1, score2: s.score2, placement: s.placement, score: s.score, advancerId: s.advancerId,
       stats: s.statsJson ? (JSON.parse(s.statsJson) as Record<string, number>) : {},
       note: s.note,
       reviewNote: s.reviewNote,

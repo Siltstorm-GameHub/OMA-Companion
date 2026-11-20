@@ -17,6 +17,10 @@ export type ManageEventDTO = Omit<ManageEvent, "startAt" | "endAt"> & { startAt:
 export type ManageSeriesDTO = {
   id: string; name: string; icon: string | null; hidden: boolean; awaitingApproval: boolean; rejected: boolean;
   played: number; total: number; next: string | null; seasonDone: boolean; createdBy: string | null;
+  /** Saison abgeschlossen, keine Folgesaison */
+  archived: boolean;
+  /** Mods: Saison kürzlich abgeschlossen, an neue Saison erinnern */
+  newSeasonDue: boolean;
 };
 /** Freigabe-Eintrag; `facts` = das Wichtigste auf einen Blick (Termin, Art, Anmeldungen, Belohnungen) */
 export type ManageApproval = { kind: "events" | "series"; id: string; title: string; by: string; since: string; facts: string[]; href: string };
@@ -194,7 +198,8 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   const approvalsShown = approvals.filter((a) => !q || a.title.toLowerCase().includes(q) || a.by.toLowerCase().includes(q));
   // Saisonabschluss (Endwertung, Auszahlung) machen nur Mods — Mitglieder sehen den Stand in der Reihen-Liste
   const seasonsDone = isStaff ? seriesShown.filter((s) => s.seasonDone) : [];
-  const attentionCount = approvalsShown.length + seasonsDone.length + groups.action.length;
+  const newSeasons = seriesShown.filter((s) => s.newSeasonDue);
+  const attentionCount = approvalsShown.length + seasonsDone.length + newSeasons.length + groups.action.length;
   const filterSeries = series.find((s) => s.id === seriesFilter) ?? null;
   const inFilter = (ev: ManageEvent) => !filterSeries || ev.series?.id === filterSeries.id;
   const upcoming: Record<DayBucket, ManageEvent[]> = {
@@ -275,6 +280,16 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 <Link href={`/events/verwalten/reihen/${s.id}/complete`} className={BTN}>Saison abschließen</Link>
               </li>
             ))}
+            {newSeasons.map((s) => (
+              <li key={`n-${s.id}`} className="flex items-center gap-3 py-2.5">
+                <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><Flag className="w-4 h-4" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-white">{s.name}</span>
+                  <span className="block truncate text-[11px] text-gray-500">Saison abgeschlossen · noch keine neue Saison</span>
+                </span>
+                <Link href={`/events/verwalten/reihen/${s.id}/new-season`} className={BTN}>Neue Saison</Link>
+              </li>
+            ))}
             {groups.action.map(({ ev, action }) => {
               const I = ACTION_ICON[action.kind];
               const tone = action.late ? "border-red-500/20 bg-red-500/10 text-red-300" : action.kind === "tournament" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-sky-500/20 bg-sky-500/10 text-sky-300";
@@ -318,8 +333,8 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                             <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{s.name}</span>
                           </span>
                           <span className="block truncate text-[11px] text-gray-500">
-                            {s.total > 0 ? `${s.played} von ${s.total} gespielt` : "Noch keine Termine"}
-                            {s.seasonDone ? (isStaff ? " · Endwertung offen" : " · ein Mod schließt die Saison ab")
+                            {s.archived ? `Saison abgeschlossen · ${s.total} Termine` : s.total > 0 ? `${s.played} von ${s.total} gespielt` : "Noch keine Termine"}
+                            {s.archived ? "" : s.seasonDone ? (isStaff ? " · Endwertung offen" : " · ein Mod schließt die Saison ab")
                               : s.next ? ` · nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
                               : s.total > 0 ? " · kein Termin geplant" : ""}
                           </span>

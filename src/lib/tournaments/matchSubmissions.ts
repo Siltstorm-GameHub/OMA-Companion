@@ -80,6 +80,8 @@ export function cleanStats(v: unknown): Record<string, number> | null {
 export type SubmissionValues = {
   score1: number | null;
   score2: number | null;
+  /** Gleichstand im K.O.-Spiel (Elfmeter) bzw. im Gesamtergebnis nach dem Rückspiel: wer kommt weiter */
+  advancerId?: string | null;
   placement: number | null;
   score: number | null;
   statsJson: Record<string, number> | null;
@@ -91,7 +93,7 @@ export function isDuelMatch(m: { player1Id: string | null; player2Id: string | n
 }
 
 type Plan =
-  | { kind: "duel"; winnerId: string | null; isDraw: boolean; score1: number; score2: number }
+  | { kind: "duel"; winnerId: string | null; isDraw: boolean; score1: number; score2: number; advancerId: string | null }
   | { kind: "entry"; entryId: string };
 
 /**
@@ -121,15 +123,39 @@ async function planFor(eventId: string, subjectUserId: string, matchId: string, 
     if (!match.player1Id || !match.player2Id) {
       throw new ApplyMatchResultError("Match hat noch nicht beide Spieler", 400);
     }
-    const isDraw = v.score1 === v.score2;
-    // Einzelspiele im K.O.-Baum brauchen einen Sieger. Bei Hin-/Rückspiel ist ein Unentschieden im
-    // einzelnen Spiel möglich — im Rückspiel entscheidet das Gesamtergebnis (bei Gleichstand nach
-    // beiden Spielen lehnt applyMatchResult ab, dann entscheidet ein Admin).
-    if (isDraw && isKnockoutMatch(event?.format, match.groupIndex) && !match.leg) {
-      throw new ApplyMatchResultError("Im K.-o.-Baum ist kein Unentschieden möglich", 400);
+    const tie = v.score1 === v.score2;
+    const scoreWinner = tie ? null : v.score1 > v.score2 ? match.player1Id : match.player2Id;
+    const advancer = v.advancerId === match.player1Id || v.advancerId === match.player2Id ? v.advancerId : null;
+    const knockout = isKnockoutMatch(event?.format, match.groupIndex);
+    const plan = (winnerId: string | null, isDraw: boolean) =>
+      ({ match, plan: { kind: "duel", winnerId, isDraw, score1: v.score1!, score2: v.score2!, advancerId: advancer } as Plan });
+
+    if (!knockout) return plan(scoreWinner, tie);
+
+    // Hin- und Rückspiel: beide Spiele derselben Paarung (gleiche Runde/Position)
+    if (match.leg) {
+      const other = await prisma.match.findFirst({
+        where: { eventId, groupIndex: null, round: match.round, position: match.position, isThirdPlace: match.isThirdPlace, leg: match.leg === 1 ? 2 : 1 },
+      });
+      if (match.leg === 1) {
+        if (other?.playedAt) throw new ApplyMatchResultError("Das Rückspiel ist schon eingetragen. Melde dich beim Veranstalter, um das Hinspiel zu ändern.", 409);
+        return plan(scoreWinner, tie); // Hinspiel: Unentschieden möglich, entscheidet nichts
+      }
+      if (!other?.playedAt) throw new ApplyMatchResultError("Erst das Hinspiel eintragen.", 400);
+      const goalsOf = (uid: string | null) =>
+        (uid === other.player1Id ? other.score1 ?? 0 : other.score2 ?? 0) + (uid === match.player1Id ? v.score1! : v.score2!);
+      const g1 = goalsOf(match.player1Id), g2 = goalsOf(match.player2Id);
+      if (g1 === g2 && !advancer) {
+        throw new ApplyMatchResultError(`Gesamtergebnis ${g1}:${g2} — bitte angeben, wer weiterkommt (z.B. nach Elfmeterschießen).`, 400);
+      }
+      return plan(g1 === g2 ? advancer : g1 > g2 ? match.player1Id : match.player2Id, false);
     }
-    const winnerId = isDraw ? null : v.score1 > v.score2 ? match.player1Id : match.player2Id;
-    return { match, plan: { kind: "duel", winnerId, isDraw, score1: v.score1, score2: v.score2 } as Plan };
+
+    // Einzelspiel im K.O.-Baum: Gleichstand nur mit Angabe, wer (nach Elfmeterschießen) weiterkommt
+    if (tie && !advancer) {
+      throw new ApplyMatchResultError("Gleichstand im K.O.-Spiel — bitte angeben, wer nach Elfmeterschießen weiterkommt.", 400);
+    }
+    return plan(tie ? advancer : scoreWinner, false);
   }
 
   const entry = match.entries.find((e) => e.userId === subjectUserId);
@@ -187,6 +213,77 @@ export async function applySubmissionValues(
   if (plan.kind === "entry") await checkCommunityGoal(eventId);
 }
 
+/** Werte einer gespeicherten Meldung. */
+export function submissionValues(sub: {
+  score1: number | null; score2: number | null; advancerId?: string | null; placement: number | null; score: number | null; statsJson: string | null;
+}): SubmissionValues {
+  return {
+    score1: sub.score1, score2: sub.score2, advancerId: sub.advancerId ?? null, placement: sub.placement, score: sub.score,
+    statsJson: sub.statsJson ? JSON.parse(sub.statsJson) : null,
+  };
+}
+
+const sameStats = (a: string | null, b: string | null) => {
+  const norm = (s: string | null) => {
+    if (!s) return "";
+    const o = JSON.parse(s) as Record<string, number>;
+    return JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]]));
+  };
+  try { return norm(a) === norm(b); } catch { return false; }
+};
+
+/**
+ * Ein Verwalter hat das Ergebnis direkt eingetragen (Turnier-Manager): offene Meldungen zu diesem Match
+ * sind damit erledigt — passende gelten als übernommen, abweichende als überholt (abgelehnt mit Hinweis).
+ * Sonst warten sie weiter auf Prüfung und der Abschluss warnt vor "offenen Meldungen".
+ */
+export async function closeSubmissionsAfterAdminEntry(eventId: string, matchId: string, reviewerId: string | null) {
+  const [match, subs] = await Promise.all([
+    prisma.match.findFirst({ where: { id: matchId, eventId }, include: { entries: true } }),
+    prisma.matchResultSubmission.findMany({ where: { matchId, status: "pending" } }),
+  ]);
+  if (!match || subs.length === 0) return;
+  const duel = isDuelMatch(match);
+  const now = new Date();
+  for (const s of subs) {
+    const fits = duel
+      ? s.score1 === match.score1 && s.score2 === match.score2
+      : sameStats(s.statsJson, match.entries.find(e => e.userId === submissionSubject(s))?.statsJson ?? null);
+    await prisma.matchResultSubmission.updateMany({
+      where: { id: s.id, status: "pending" },
+      data: fits
+        ? { status: "approved", applied: false, reviewedById: reviewerId, reviewedAt: now, reviewNote: "Vom Verwalter so eingetragen" }
+        : { status: "rejected", applied: false, reviewedById: reviewerId, reviewedAt: now, reviewNote: "Der Verwalter hat ein anderes Ergebnis eingetragen" },
+    });
+  }
+}
+
+/**
+ * Abgelehnte Meldung war eingetragen: gibt es noch eine andere offene Meldung zum selben Match (1v1) bzw.
+ * Spieler (FFA/Coop), gilt deren Ergebnis vorläufig — sonst wird das vorläufige Ergebnis zurückgesetzt.
+ */
+export async function fallbackAfterReject(
+  eventId: string, rejected: { id: string; matchId: string; userId: string; forUserId: string }, actor?: { id: string | null; label: string },
+) {
+  const subject = submissionSubject(rejected);
+  const match = await prisma.match.findFirst({ where: { id: rejected.matchId, eventId }, include: { entries: true } });
+  if (!match) return;
+  const duel = isDuelMatch(match);
+  const other = await prisma.matchResultSubmission.findFirst({
+    where: { matchId: rejected.matchId, status: "pending", id: { not: rejected.id }, ...(duel ? {} : subjectFilter(subject)) },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (other) {
+    try {
+      await applySubmissionValues(eventId, other.id, subject, rejected.matchId, submissionValues(other), true, actor);
+      return;
+    } catch (err) {
+      if (!(err instanceof ApplyMatchResultError)) throw err;
+    }
+  }
+  await revertProvisional(eventId, subject, rejected.matchId, actor);
+}
+
 /** Macht ein vorläufig eingetragenes Ergebnis rückgängig (abgelehnte Meldung). Bestätigte Ergebnisse bleiben unberührt. */
 export async function revertProvisional(
   eventId: string, subjectUserId: string, matchId: string, actor?: { id: string | null; label: string },
@@ -199,4 +296,32 @@ export async function revertProvisional(
     const entry = match.entries.find((e) => e.userId === subjectUserId);
     if (entry) await prisma.matchEntry.update({ where: { id: entry.id }, data: { placement: null, score: null, statsJson: null } });
   }
+}
+
+/**
+ * Vorläufiges Ergebnis (aus Spieler-Meldungen) direkt bestätigen — Knopf "Bestätigen" im Turnier-Manager:
+ * die eingetragenen Meldungen werden regulär übernommen (Punkte, Match bestätigt). Gibt die Anzahl zurück.
+ */
+export async function confirmProvisionalMatch(eventId: string, matchId: string, reviewerId: string): Promise<number> {
+  const applied = await prisma.matchResultSubmission.findMany({ where: { eventId, matchId, status: "pending", applied: true } });
+  let done = 0;
+  for (const sub of applied) {
+    const claimed = await prisma.matchResultSubmission.updateMany({ where: { id: sub.id, status: "pending" }, data: { status: "processing" } });
+    if (claimed.count === 0) continue;
+    try {
+      await applySubmissionValues(eventId, sub.id, submissionSubject(sub), matchId, submissionValues(sub), false, { id: reviewerId, label: "Bestätigt im Turnier-Manager" });
+      await prisma.matchResultSubmission.update({
+        where: { id: sub.id },
+        data: { status: "approved", reviewedById: reviewerId, reviewedAt: new Date(), reviewNote: "Im Turnier-Manager bestätigt" },
+      });
+      done++;
+    } catch (err) {
+      await prisma.matchResultSubmission.updateMany({ where: { id: sub.id, status: "processing" }, data: { status: "pending" } });
+      throw err;
+    }
+  }
+  if (done === 0) throw new ApplyMatchResultError("Zu diesem Match gibt es kein vorläufiges Ergebnis zum Bestätigen.", 400);
+  // Weitere offene Meldungen zum Match sind damit erledigt (passend → übernommen, sonst überholt)
+  await closeSubmissionsAfterAdminEntry(eventId, matchId, reviewerId);
+  return done;
 }

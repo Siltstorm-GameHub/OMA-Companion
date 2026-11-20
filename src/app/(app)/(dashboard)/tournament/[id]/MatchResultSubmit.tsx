@@ -22,7 +22,11 @@ export type ReportMatch = {
   /** Der aktuelle User spielt in diesem Match mit */
   mine: boolean;
   /** 1v1: offene Meldung des Gegners — der User kann sie mit einem Klick bestätigen */
-  opponentReport?: { score1: number | null; score2: number | null; reporterName: string } | null;
+  opponentReport?: { score1: number | null; score2: number | null; reporterName: string; advancerId?: string | null } | null;
+  /** Spiel im K.O.-Baum: bei Gleichstand muss angegeben werden, wer (nach Elfmeterschießen) weiterkommt */
+  knockout?: boolean;
+  /** Hin-/Rückspiel: 1 = Hinspiel, 2 = Rückspiel (entscheidet nach Gesamtergebnis) */
+  leg?: number | null;
 };
 export type MySubmission = {
   matchId: string;
@@ -31,6 +35,7 @@ export type MySubmission = {
   status: string;
   score1: number | null;
   score2: number | null;
+  advancerId?: string | null;
   statsJson: string | null;
   note: string | null;
   screenshotUrls: string[];
@@ -72,6 +77,13 @@ export function MatchForm({
     Object.fromEntries(Object.entries(initialStats).map(([k, v]) => [k, String(v)])),
   );
   const [note, setNote] = useState(s?.note ?? "");
+  const [advancerId, setAdvancerId] = useState(s?.advancerId ?? "");
+  // K.O.-Spiel: Einzelspiel mit Gleichstand bzw. Rückspiel (Gleichstand im Gesamtergebnis möglich) → wer kommt weiter?
+  const askAdvancer = m.isDuel && !!m.knockout && m.leg !== 1
+    && (m.leg === 2 || (score1 !== "" && score1 === score2));
+  // Eigene offene Meldung weicht von der des Gegners ab → beide sehen den Widerspruch
+  const opp = m.opponentReport;
+  const conflict = !!opp && !!s && s.status === "pending" && (s.score1 !== opp.score1 || s.score2 !== opp.score2);
   const [urls, setUrls] = useState<string[]>(s?.screenshotUrls ?? []);
   const [busy, setBusy] = useState(false);
   // In der Karte "Dein Match" bleibt das Formular zu, bis man auf "Ergebnis melden" tippt
@@ -89,7 +101,7 @@ export function MatchForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return toast.error(data.error ?? "Bestätigen fehlgeschlagen");
-      toast.success(data.confirmedByBoth ? "Bestätigt — das Ergebnis gilt jetzt endgültig" : "Bestätigung gemeldet — ein Admin prüft das Ergebnis");
+      toast.success(data.confirmedByBoth ? "Bestätigt — das Ergebnis gilt jetzt endgültig" : "Bestätigung gespeichert — ein Verwalter prüft das Ergebnis");
       router.refresh();
     } finally {
       setBusy(false);
@@ -98,6 +110,7 @@ export function MatchForm({
 
   async function submit() {
     if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
+    if (askAdvancer && m.leg !== 2 && !advancerId) return toast.error("Gleichstand im K.O.-Spiel: bitte angeben, wer nach Elfmeterschießen weiterkommt");
     if (!(await beforeSubmit())) return;
     setBusy(true);
     try {
@@ -106,14 +119,18 @@ export function MatchForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matchId: m.id,
-          ...(m.isDuel ? { score1, score2 } : { statsJson: stats, forUserId: subject?.id }),
+          ...(m.isDuel ? { score1, score2, advancerId: askAdvancer && advancerId ? advancerId : null } : { statsJson: stats, forUserId: subject?.id }),
           note,
           screenshotUrls: urls,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return toast.error(data.error ?? "Senden fehlgeschlagen");
-      toast.success(data.visible === false ? "Korrektur gemeldet — ein Admin prüft sie, bis dahin gilt das bestätigte Ergebnis" : "Ergebnis eingetragen — es ist sofort sichtbar, ein Admin prüft es anhand deiner Screenshots");
+      if (data.confirmedByBoth) toast.success("Passt zur Meldung deines Gegners — das Ergebnis gilt jetzt endgültig");
+      else if (data.conflict) toast.warning("Gespeichert, aber dein Gegner hat etwas anderes gemeldet", { description: "Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots." });
+      else if (data.heldBack) toast.success("Meldung gespeichert — ein Verwalter trägt sie ein", { description: data.heldBack });
+      else if (data.visible === false) toast.success("Korrektur gemeldet — ein Verwalter prüft sie, bis dahin gilt das bestätigte Ergebnis");
+      else toast.success("Ergebnis eingetragen und sofort sichtbar", { description: "Bestätigt dein Gegner, gilt es endgültig. Sonst prüft ein Verwalter anhand deiner Screenshots." });
       setOpen(false);
       router.refresh();
     } finally {
@@ -146,27 +163,46 @@ export function MatchForm({
         </div>
       )}
 
-      {s?.reviewNote && <p className="text-xs text-gray-400">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Admin: ${s.reviewNote}`}</p>}
+      {s?.reviewNote && <p className="text-xs text-gray-400">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Verwalter: ${s.reviewNote}`}</p>}
+
+      {/* Widerspruch: eigene Meldung und die des Gegners passen nicht zusammen */}
+      {!locked && conflict && opp && s && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 space-y-1.5">
+          <p className="text-xs text-amber-200 font-semibold">Eure Meldungen passen nicht zusammen</p>
+          <p className="text-xs text-amber-200/90">
+            Du: {uname(m.player1)} {s.score1 ?? "–"} : {s.score2 ?? "–"} {uname(m.player2)}<br />
+            {opp.reporterName}: {uname(m.player1)} {opp.score1 ?? "–"} : {opp.score2 ?? "–"} {uname(m.player2)}
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button onClick={confirmOpponent} disabled={busy}
+              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium disabled:opacity-50">
+              Seins stimmt — übernehmen
+            </button>
+            <span className="text-[11px] text-amber-200/70">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
+          </div>
+        </div>
+      )}
 
       {/* Gegner hat schon gemeldet: mit einem Klick bestätigen (kein eigener Screenshot nötig) */}
-      {!locked && m.isDuel && m.opponentReport && s?.status !== "approved" && s?.status !== "corrected" && (
+      {!locked && m.isDuel && m.opponentReport && !conflict && s?.status !== "approved" && s?.status !== "corrected" && (
         <div className="rounded-lg border border-teal-700/40 bg-teal-900/15 px-3 py-2 space-y-1.5">
           <p className="text-xs text-teal-200">
             {m.opponentReport.reporterName} hat gemeldet: {uname(m.player1)} {m.opponentReport.score1 ?? "–"} : {m.opponentReport.score2 ?? "–"} {uname(m.player2)}
+            {m.opponentReport.advancerId && <> · weiter: {m.opponentReport.advancerId === m.player1?.id ? uname(m.player1) : uname(m.player2)}</>}
           </p>
           <div className="flex items-center gap-3">
             <button onClick={confirmOpponent} disabled={busy}
               className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium disabled:opacity-50">
               Stimmt — bestätigen
             </button>
-            <span className="text-[11px] text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Admin entscheidet.</span>
+            <span className="text-[11px] text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Verwalter entscheidet.</span>
           </div>
         </div>
       )}
 
       {locked && <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>}
       {!locked && (s?.status === "approved" || s?.status === "corrected") && !open && (
-        <p className="text-xs text-gray-500">Bis zum Abschluss der aktiven Eventphase kannst du die Meldung korrigieren — sie wird dann erneut von einem Admin geprüft.</p>
+        <p className="text-xs text-gray-500">Bis zum Abschluss der aktiven Eventphase kannst du die Meldung korrigieren — sie wird dann erneut von einem Verwalter geprüft.</p>
       )}
 
       {!locked && !open && (
@@ -204,6 +240,17 @@ export function MatchForm({
             </div>
           )}
 
+          {askAdvancer && m.player1 && m.player2 && (
+            <label className="block text-xs text-gray-400 space-y-1">
+              {m.leg === 2 ? "Nur bei Gleichstand im Gesamtergebnis: wer kam weiter?" : "Gleichstand — wer kam nach Elfmeterschießen weiter?"}
+              <select value={advancerId} onChange={(e) => setAdvancerId(e.target.value)} className={inputCls}>
+                <option value="">{m.leg === 2 ? "— kein Gleichstand" : "Bitte wählen"}</option>
+                <option value={m.player1.id}>{uname(m.player1)}</option>
+                <option value={m.player2.id}>{uname(m.player2)}</option>
+              </select>
+            </label>
+          )}
+
           <div>
             <p className="text-xs text-gray-400 mb-1">Nachweis (Screenshots, max. 4)</p>
             <ProofUploader value={urls} onChange={setUrls} />
@@ -235,10 +282,11 @@ export function ReportHint() {
   return (
     <details className="text-xs text-gray-500 group">
       <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-        Mit Screenshot melden — sofort sichtbar, ein Admin bestätigt. <span className="text-teal-300 group-open:hidden">Mehr</span>
+        Mit Screenshot melden — sofort sichtbar. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-teal-300 group-open:hidden">Mehr</span>
       </summary>
       <p className="mt-1">
-        Du kannst dein Ergebnis oder das eines anderen Spielers eintragen. Punkte gibt es erst nach der Bestätigung durch einen Admin.
+        Du kannst dein Ergebnis oder das eines anderen Spielers eintragen. Bis es endgültig ist, steht es als „vorläufig“ da.
+        Endgültig wird es, wenn beide Spieler dasselbe melden (bzw. dein Gegner bestätigt) oder ein Verwalter es geprüft hat. Erst dann gibt es Punkte.
         Danach sehen die anderen Teilnehmer dieses Events die Screenshots — achte darauf, dass keine privaten Daten darauf stehen.
         Screenshots werden nach einiger Zeit automatisch gelöscht.
       </p>

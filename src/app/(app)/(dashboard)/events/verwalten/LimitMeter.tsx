@@ -38,9 +38,10 @@ export default function LimitMeter({ openEvents, maxOpenEvents, activeSeries, ma
       <p className="mt-3 flex gap-1.5 text-[11px] text-gray-500 leading-relaxed">
         <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
         <span>
-          Es zählen Events, die noch nicht abgeschlossen sind (auch vorbeigegangene ohne Ergebnis), und Reihen, deren
-          Saison läuft. Schließ ein Event ab, dann wird sein Platz frei. Eine Reihe zählt, bis ein Mod die Saison
-          abschließt. Deine Events sind sofort in der App sichtbar, Discord-Ankündigung und Push gibt es nach der
+          Es zählen Events, die noch nicht abgeschlossen sind (auch vorbeigegangene ohne Ergebnis), und Reihen mit
+          offenen Terminen. Schließ ein Event ab, dann wird sein Platz frei. Eine Reihe zählt, bis alle ihre Termine
+          abgeschlossen sind; den Saisonabschluss macht danach ein Mod. Eine Reihe ohne abgeschlossene Termine kannst du
+          auch selbst löschen. Deine Events sind sofort in der App sichtbar, Discord-Ankündigung und Push gibt es nach der
           Freigabe durch einen Mod.
         </span>
       </p>

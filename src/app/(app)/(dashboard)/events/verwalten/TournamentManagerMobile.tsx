@@ -235,7 +235,7 @@ export default function TournamentManagerMobile({
       {canGenerate && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-900/20 border border-blue-900/40 rounded-lg px-3 py-2.5 w-full justify-center">
-          <RefreshCw className="w-3.5 h-3.5" /> {isBracketFormat ? "K.O.-Baum auslosen" : "Paarungen generieren"}
+          <RefreshCw className="w-3.5 h-3.5" /> {isBracketFormat ? "K.O.-Baum auslosen" : "Spielplan auslosen"}
         </button>
       )}
 
@@ -243,7 +243,7 @@ export default function TournamentManagerMobile({
         <div className="text-center py-8 text-gray-500 text-sm space-y-2 border border-dashed border-gray-700 rounded-xl bg-gray-800/50">
           <Swords className="w-7 h-7 mx-auto text-gray-700" />
           <p>{(isRoundRobin || isLiga || isBracketFormat)
-            ? 'Spieler im Reiter „Teilnehmer" anmelden, dann Spielplan generieren.'
+            ? 'Spieler im Reiter „Teilnehmer" anmelden, dann auslosen.'
             : 'Noch keine Matches — unten anlegen.'}</p>
         </div>
       )}

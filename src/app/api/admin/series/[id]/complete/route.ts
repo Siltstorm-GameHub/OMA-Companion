@@ -66,7 +66,11 @@ export async function POST(
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
     },
   });
-  const openEventIds = isReEdit ? [] : seasonEvents.filter(isOpenSeasonEvent).map(e => e.id);
+  // Nur KOMMENDE offene Termine werden verschoben/gelöscht. Bereits gespielte, aber nicht abgeschlossene
+  // Termine bleiben immer in der Saison — sie sollen abgeschlossen werden, nicht samt Ergebnissen verschwinden
+  // (die Abschluss-Seite weist darauf hin und verlinkt sie).
+  const nowTs = new Date();
+  const openEventIds = isReEdit ? [] : seasonEvents.filter(e => isOpenSeasonEvent(e) && e.startAt > nowTs).map(e => e.id);
   const openEventsAction = openEventIds.length > 0 ? (body.openEvents ?? "keep") : "keep";
   // Endtabelle ohne die offenen Termine, die gleich verschoben oder gelöscht werden
   const leavingIds = new Set(openEventsAction === "keep" ? [] : openEventIds);
@@ -242,7 +246,7 @@ export async function POST(
 class CompletionConflict extends Error {}
 
 /**
- * DELETE /api/admin/series/[id]/complete — Abschluss rückgängig machen (nur Admins): die Saison wird
+ * DELETE /api/admin/series/[id]/complete — Abschluss rückgängig machen (Mods und Admins): die Saison wird
  * wieder aktiv, Endplatzierungs- und Abstimmungs-Belohnungen werden zurückgebucht, der Eventreihen-Pokal
  * entfällt. Nur möglich, solange in der Saison-Gruppe keine spätere Saison existiert — sonst gäbe es zwei
  * aktive Saisons bzw. eine Lücke in der Reihenfolge. Beim Abschluss gelöschte Termine kommen nicht zurück.
@@ -251,7 +255,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await requireRole("admin");
+  // Wer eine Saison abschließen darf (Mods), darf den Abschluss auch wieder aufheben
+  await requireRole("moderator");
   const { id: seriesId } = await params;
 
   const series = await prisma.eventSeries.findUnique({ where: { id: seriesId } });

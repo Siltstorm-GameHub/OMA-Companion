@@ -1,5 +1,5 @@
 import { requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
-import { getCommunityLimits } from "@/lib/community-event-limits";
+import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
@@ -80,7 +80,9 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
   }))].filter(fld => fld && !fld.startsWith("_streak_")).sort((a, b) => a.localeCompare(b, "de"));
 
   // Mitglieder: Obergrenzen der Ziel-Belohnungen (je Termin einer Reihe) — Anzeige an den Feldern
-  const memberLimits = isModerator ? null : (await getCommunityLimits()).seriesEvent;
+  const allLimits = isModerator ? null : await getCommunityLimits();
+  const memberLimits = allLimits?.seriesEvent ?? null;
+  const rewardLimits = allLimits ? seriesConfigLimits(allLimits) : null;
   const goalLimits = memberLimits ? { coins: memberLimits.goalRewardCoins, seriesPoints: memberLimits.goalSeriesPoints } : null;
 
   return (
@@ -93,7 +95,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
         isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
         seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
-        goalLimits={goalLimits}
+        goalLimits={goalLimits} rewardLimits={rewardLimits}
       />
       {isModerator && series.status !== "archived" && (
         <GameVoteSettings

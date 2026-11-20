@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyNotDrawn } from "@/lib/checkin-notify";
 import { gameVoteDrawBlock } from "@/lib/game-vote/service";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { prisma } from "@/lib/prisma";
-import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate";
+import { bracketFromSlots, generateBracket, generateRoundRobin, shuffle } from "@/lib/tournaments/generate";
+import { orderBySeed, parseSeeding, seededBracketSlots, tooFewPlayersMessage } from "@/lib/tournaments/draw-plan";
+import { markDrawn, rankScores, resetDraw, withDrawLock } from "@/lib/tournaments/draw";
+import { notifyDrawResult } from "@/lib/tournaments/drawNotifications";
 import { prepareTournamentPool } from "@/lib/tournaments/participants";
-import { notifyKnockoutCreated } from "@/lib/tournaments/matchNotifications";
 import { planSchedule } from "@/lib/tournaments/schedule";
 import { ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { GROUP_STAGE_ACTIONS, runGroupStageAction } from "@/lib/tournaments/groupStageServer";
@@ -24,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const statConfig = withSanitizedGoal(body.statConfig, format === undefined ? "coop_stats" : format, statFields);
 
   // Spielwahl: keine Auslosung, solange das Spiel gewählt wird bzw. die Regeln nicht freigegeben sind
-  if (GROUP_STAGE_ACTIONS.includes(generateMatches) || generateMatches === "single_elimination" || generateMatches === "round_robin" || generateMatches === "liga") {
+  if ((GROUP_STAGE_ACTIONS.includes(generateMatches) && generateMatches !== "reset_groups" && generateMatches !== "reset_knockout") || generateMatches === "single_elimination" || generateMatches === "round_robin" || generateMatches === "liga") {
     const block = await gameVoteDrawBlock(eventId);
     if (block) return NextResponse.json({ error: block }, { status: 409 });
   }
@@ -63,37 +66,60 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ scheduled: plan.length });
   }
 
-  // Auto-generate: K.O.-Baum, Liga (round_robin) bzw. Hin-/Rückrunde (liga). Ausgelost werden die
-  // angemeldeten Spieler (bei aktivem Check-in nur Eingecheckte) + direkt eingetragene Teilnehmer.
+  // Auslosung zurücksetzen (K.O.-Baum, Liga, Jeder gegen jeden) — nur vor dem ersten Ergebnis.
+  // Gruppenphase hat dafür "reset_groups".
+  if (generateMatches === "reset_draw") {
+    try {
+      return NextResponse.json(await resetDraw(eventId));
+    } catch (err) {
+      if (err instanceof ApplyMatchResultError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
+    }
+  }
+
+  // Auslosung: K.O.-Baum, Liga (round_robin) bzw. Hin-/Rückrunde (liga). Ausgelost werden die
+  // angemeldeten Spieler (bei aktivem Check-in nur Bereite) + direkt eingetragene Teilnehmer.
+  // Unter der Anmelde-Sperre (lib/tournaments/draw.ts): kein doppelter Baum, keine Anmeldung dazwischen.
   if (generateMatches === "single_elimination" || generateMatches === "round_robin" || generateMatches === "liga") {
-    const existing = await prisma.match.count({ where: { eventId } });
-    if (existing > 0) {
-      return NextResponse.json({ error: "Es existieren bereits Matches. Zuerst alle löschen." }, { status: 409 });
+    const seeding = parseSeeding(body.seeding);
+    let drawn: { ids: string[]; generated: number };
+    try {
+      drawn = await withDrawLock(eventId, async (tx) => {
+        if (await tx.match.count({ where: { eventId } }) > 0) {
+          throw new ApplyMatchResultError("Das Turnier ist schon ausgelost. Zum Neu-Auslosen erst „Auslosung zurücksetzen“.", 409);
+        }
+        const { ids, notCheckedIn } = await prepareTournamentPool(eventId, tx);
+        if (ids.length < 2) throw new ApplyMatchResultError(tooFewPlayersMessage(ids.length, notCheckedIn), 400);
+        let matchData;
+        if (generateMatches === "single_elimination") {
+          matchData = seeding === "rank"
+            ? bracketFromSlots(seededBracketSlots(orderBySeed(ids, await rankScores(ids, tx))), eventId)
+            : generateBracket(ids, eventId);
+        } else {
+          // Gemischt: sonst bestimmt die Anmelde-Reihenfolge den Spielplan (wer zuerst kam, hat immer denselben Platz)
+          const order = shuffle(ids);
+          const hinrunde = generateRoundRobin(order, eventId);
+          if (generateMatches === "liga") {
+            const maxRound   = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
+            // Rückrunde: dieselben Paarungen mit getauschtem Heimrecht
+            const rueckrunde = hinrunde.map(m => ({ ...m, round: m.round + maxRound, player1Id: m.player2Id, player2Id: m.player1Id }));
+            matchData = [...hinrunde, ...rueckrunde];
+          } else {
+            matchData = hinrunde;
+          }
+        }
+        await tx.match.createMany({ data: matchData });
+        await markDrawn(tx, eventId);
+        return { ids, generated: matchData.length };
+      });
+    } catch (err) {
+      if (err instanceof ApplyMatchResultError) return NextResponse.json({ error: err.message }, { status: err.status });
+      throw err;
     }
-    const { ids: participantIds, notCheckedIn } = await prepareTournamentPool(eventId);
-    if (participantIds.length < 2) {
-      return NextResponse.json({
-        error: "Mindestens 2 Teilnehmer benötigt." + (notCheckedIn > 0 ? ` (${notCheckedIn} angemeldete Spieler sind nicht eingecheckt.)` : ""),
-      }, { status: 400 });
-    }
-    let matchData;
-    if (generateMatches === "single_elimination") {
-      matchData = generateBracket(participantIds, eventId);
-    } else if (generateMatches === "liga") {
-      const hinrunde   = generateRoundRobin(participantIds, eventId);
-      const maxRound   = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
-      const rueckrunde = generateRoundRobin([...participantIds].reverse(), eventId).map(m => ({
-        ...m,
-        round: m.round + maxRound,
-      }));
-      matchData = [...hinrunde, ...rueckrunde];
-    } else {
-      matchData = generateRoundRobin(participantIds, eventId);
-    }
-    await prisma.match.createMany({ data: matchData });
-    // K.O.-Baum: Spieler der ersten Runde erfahren ihren Gegner
-    if (generateMatches === "single_elimination") await notifyKnockoutCreated(eventId);
-    return NextResponse.json({ generated: matchData.length });
+    // Wer nicht bereit war und fehlt, erfährt es; alle Ausgelosten bekommen ihren Einstieg (erster Gegner/Freilos)
+    await notifyNotDrawn(eventId, drawn.ids);
+    notifyDrawResult(eventId);
+    return NextResponse.json({ generated: drawn.generated, players: drawn.ids.length });
   }
 
   // Event muss existieren

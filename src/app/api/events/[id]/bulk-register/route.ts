@@ -1,25 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireEventManager } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { requireEventManager } from "@/lib/roles";
+import { createNotificationForUsers } from "@/lib/notifications";
+import { sendPushToUsers } from "@/lib/push";
 
+/**
+ * Verwalter tragen Mitglieder als Spieler oder Zuschauer ein (Reiter "Teilnehmer"). Bewusst ohne die
+ * Sperren der Selbst-Anmeldung (voll, Squad, Anmeldeschluss) — der Verwalter entscheidet. Die Antwort sagt
+ * aber, wenn dabei die Höchstzahl überschritten oder Nicht-Squad-Mitglieder eingetragen wurden, und die
+ * Eingetragenen bekommen eine Meldung.
+ */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   await requireEventManager(eventId);
   const { userIds, role } = await req.json();
-  if (!userIds?.length) return NextResponse.json({ error: "Keine User angegeben" }, { status: 400 });
+  if (!Array.isArray(userIds) || !userIds.length) return NextResponse.json({ error: "Keine User angegeben" }, { status: 400 });
   const registrationRole = role === "spectator" ? "spectator" : "player";
 
-  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { title: true, maxPlayers: true, squadId: true, series: { select: { squadId: true } } },
+  });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
-  let added = 0, skipped = 0;
-  for (const userId of userIds) {
-    const exists = await prisma.eventRegistration.findUnique({
-      where: { userId_eventId: { userId, eventId } },
-    });
-    if (exists) { skipped++; continue; }
+  const addedIds: string[] = [];
+  let skipped = 0;
+  for (const userId of userIds as string[]) {
+    const exists = await prisma.eventRegistration.findUnique({ where: { userId_eventId: { userId, eventId } } });
+    if (exists) {
+      // Zuschauer als Spieler eintragen = umwandeln
+      if (registrationRole === "player" && exists.role === "spectator") {
+        await prisma.eventRegistration.update({ where: { id: exists.id }, data: { role: "player" } });
+        addedIds.push(userId);
+      } else skipped++;
+      continue;
+    }
     await prisma.eventRegistration.create({ data: { userId, eventId, role: registrationRole } });
-    added++;
+    addedIds.push(userId);
   }
-  return NextResponse.json({ success: true, added, skipped });
+  // Wer jetzt dabei ist, steht nicht mehr auf der Warteliste
+  if (registrationRole === "player" && addedIds.length) {
+    await prisma.eventWaitlistEntry.deleteMany({ where: { eventId, userId: { in: addedIds } } });
+  }
+
+  // Hinweise für den Verwalter
+  const playerCount = await prisma.eventRegistration.count({ where: { eventId, role: { not: "spectator" } } });
+  const overCapacity = registrationRole === "player" && event.maxPlayers ? Math.max(0, playerCount - event.maxPlayers) : 0;
+  const squadId = event.squadId ?? event.series?.squadId ?? null;
+  const notInSquad = squadId && registrationRole === "player" && addedIds.length
+    ? addedIds.length - await prisma.squadMembership.count({ where: { squadId, userId: { in: addedIds } } })
+    : 0;
+
+  // Meldung an die Eingetragenen
+  if (addedIds.length) {
+    const title = "Du wurdest eingetragen";
+    const body = `Du bist bei „${event.title}“ ${registrationRole === "spectator" ? "als Zuschauer" : "als Spieler"} dabei.`;
+    const url = `/tournament/${eventId}`;
+    await Promise.allSettled([
+      createNotificationForUsers(addedIds, { type: "event_start", title, body, url }),
+      sendPushToUsers(addedIds, { title, body, url }),
+    ]);
+  }
+
+  return NextResponse.json({ success: true, added: addedIds.length, skipped, overCapacity, notInSquad });
 }

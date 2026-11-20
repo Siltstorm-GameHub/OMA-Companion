@@ -119,10 +119,14 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
     } catch { /* ungültige JSON-Daten – ignorieren */ }
   }
 
-  // Münzen aus dem Community-Ziel zurückbuchen (lib/community-goal-milestones.ts) — sonst blieben sie
-  // nach dem Löschen bei den Spielern
-  await revertGoalRewards(eventId, "Community-Ziel zurückgebucht (Event gelöscht)").catch(err =>
-    console.error("[delete-event] Ziel-Rückbuchung fehlgeschlagen", eventId, err));
+  // Münzen aus dem Community-Ziel (lib/community-goal-milestones.ts): folgen derselben Wahl wie die
+  // übrigen Belohnungen (revertCoins, z.B. "Reihe löschen" mit "Münzen behalten"). Ein noch nicht
+  // abgeschlossenes Event (Absage) hat keine Abschluss-Belohnungen — dort werden die live ausgezahlten
+  // Ziel-Münzen immer zurückgebucht, weil das Event ja nicht stattfindet bzw. nicht zählt.
+  if (revertCoins || !event.completionData) {
+    await revertGoalRewards(eventId, "Community-Ziel zurückgebucht (Event gelöscht)").catch(err =>
+      console.error("[delete-event] Ziel-Rückbuchung fehlgeschlagen", eventId, err));
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { eventId } });

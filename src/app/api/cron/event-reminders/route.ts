@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
         { name: "📆 Start",       value: fmtDateDE(event.startAt),                      inline: true },
         { name: "👥 Anmeldungen", value: registrationsStr,                              inline: true },
         { name: "⭐ Münzen",      value: `+${coins} Münzen bei Teilnahme`,               inline: true },
+        ...(event.checkInEnabled ? [{ name: "✅ Check-in", value: "Ab 30 Min. vor Start auf der Eventseite „Bin bereit“ drücken, sonst wirst du nicht ausgelost.", inline: false }] : []),
       ],
     }).catch(() => {});
 

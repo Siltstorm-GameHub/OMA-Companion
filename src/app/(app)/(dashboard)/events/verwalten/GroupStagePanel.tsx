@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Dices, LayoutGrid, RotateCcw, Swords } from "@/components/icons";
 import {
   DEFAULT_ADVANCE_PER_GROUP, computeGroupStandings, groupLabel, groupMatchCount, groupMembers, parseGroupStageConfig,
@@ -20,8 +20,12 @@ export type GroupStageActionBody =
  * Übergang in die K.O.-Runde. Die Matches selbst (Ergebnis-Eingabe) rendert der Turnier-Manager.
  */
 export default function GroupStagePanel({
-  tournament, allUsers, loading, onAction, compact = false,
+  tournament, allUsers, loading, onAction, compact = false, drawCount, seedingToggle,
 }: {
+  /** So viele werden tatsächlich ausgelost (bei Check-in nur Bereite) — sonst alle Angemeldeten */
+  drawCount?: number;
+  /** Umschalter "Zufällig / Nach Rangpunkten" (vom Turnier-Manager) */
+  seedingToggle?: ReactNode;
   tournament: Tournament;
   allUsers: User[];
   loading: boolean;
@@ -30,7 +34,7 @@ export default function GroupStagePanel({
   compact?: boolean;
 }) {
   // Ausgelost werden Turnier-Teilnehmer UND angemeldete Spieler (allUsers) — siehe groupStageServer
-  const participantCount = new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
+  const participantCount = drawCount ?? new Set([...tournament.participants.map(p => p.userId), ...allUsers.map(u => u.id)]).size;
   // Vor der Auslosung kann groupStageJson schon aus der Turniervorlage der Reihe stammen — dann als Vorbelegung
   const cfg = parseGroupStageConfig(tournament.groupStageJson);
   const [groupCount, setGroupCount] = useState(() => cfg?.groupCount ?? suggestedGroupCount(participantCount));
@@ -106,10 +110,11 @@ export default function GroupStagePanel({
             {qualifiers & (qualifiers - 1) ? " (Freilose für die besten Gruppensieger)" : ""}
           </p>
         )}
+        {seedingToggle}
         <button type="button" disabled={loading || !!error}
           onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup, thirdPlaceMatch, groupLegs, knockoutLegs, singleLegFinal })}
           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
-          <Dices className="w-3.5 h-3.5" /> Gruppen auslosen &amp; Spielplan erstellen
+          <Dices className="w-3.5 h-3.5" /> Gruppen auslosen ({participantCount} Spieler)
         </button>
       </div>
     );

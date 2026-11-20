@@ -16,6 +16,8 @@ type Match = {
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: unknown[];
   startedAt?: string | Date | null;
+  /** false = von Spielern gemeldet, noch nicht bestätigt (vorläufig) */
+  resultConfirmed?: boolean;
 };
 
 const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "Unbekannt";
@@ -237,12 +239,17 @@ export default function LigaView({
                                   <span className="text-sm font-bold text-amber-400 tabular-nums">
                                     {match.score1 ?? "–"} : {match.score2 ?? "–"}
                                   </span>
-                                  <p className="text-[10px] text-amber-600 mt-0.5">Unentschieden</p>
+                                  <p className="text-[10px] text-amber-600 mt-0.5">Unentschieden{match.resultConfirmed === false ? " · vorläufig" : ""}</p>
                                 </div>
                               ) : (
-                                <span className="text-sm font-bold text-white tabular-nums">
-                                  {match.score1 ?? "–"} : {match.score2 ?? "–"}
-                                </span>
+                                <div>
+                                  <span className="text-sm font-bold text-white tabular-nums">
+                                    {match.score1 ?? "–"} : {match.score2 ?? "–"}
+                                  </span>
+                                  {match.resultConfirmed === false && (
+                                    <p className="text-[10px] text-amber-300 mt-0.5" title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</p>
+                                  )}
+                                </div>
                               )
                             ) : (
                               isLive

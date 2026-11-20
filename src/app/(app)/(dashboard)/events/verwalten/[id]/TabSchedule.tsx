@@ -5,7 +5,7 @@ import StatPointsTable from "@/components/StatPointsTable";
 import AvgDirectionToggle from "@/components/AvgDirectionToggle";
 import TournamentManager from "../TournamentManager";
 import GoalSummaryLink from "./GoalSummaryLink";
-import { CHECK_IN_MINUTES } from "@/lib/checkin";
+import CheckInPanel from "./CheckInPanel";
 import { supportsCommunityGoal } from "@/lib/community-goal";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { TMT_FORMATS, inputCls, labelCls } from "./edit-shared";
@@ -13,29 +13,15 @@ import type { EventEdit } from "./useEventEdit";
 
 /** Reiter "Spielplan" (Einzel-Event): Check-in, Format, Wertung und Turnierbaum. */
 export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
-  const { event, tmtFormat, setTmtFormat, tmtPlayHomeAway, setTmtPlayHomeAway, tmtPointsMode, setTmtPointsMode, tmtPoints, setTmtPoints, seriesStatRows, seriesStatFieldSet, tmtStatFields, setTmtStatFields, tmtExtraStatFields, tmtStatConfig, setTmtStatConfig, resolvedGoal, tmPointsCfg, tmAvgDirection, tmtLoading, hasTournament, hasStat, isRoundRobinFamily, usesMatchResultPoints, checkInEnabled, setCheckInEnabled, checkedInIds, registeredIds, saveTmtSettings, startTournament, bracketWinnerStatKeys, bracketMatchWinStatKeys, bracketPlacementPoints, bracketTournament, bracketRegisteredUsers } = ctx;
+  const { event, tmtFormat, setTmtFormat, tmtPlayHomeAway, setTmtPlayHomeAway, tmtPointsMode, setTmtPointsMode, tmtPoints, setTmtPoints, seriesStatRows, seriesStatFieldSet, tmtStatFields, setTmtStatFields, tmtExtraStatFields, tmtStatConfig, setTmtStatConfig, resolvedGoal, tmPointsCfg, tmAvgDirection, tmtLoading, hasTournament, hasStat, isRoundRobinFamily, usesMatchResultPoints, saveTmtSettings, startTournament, bracketWinnerStatKeys, bracketMatchWinStatKeys, bracketPlacementPoints, bracketTournament, bracketRegisteredUsers } = ctx;
+  const notReadyNames = event.checkInEnabled ? bracketRegisteredUsers.filter(u => !ctx.checkedInIds.has(u.id)).map(ctx.userName) : null;
   return (
     <div className="space-y-4">
           <p className="text-[11px] text-gray-500">
             Den Check-in speichert die Leiste unten. Format und Wertung haben eigene Knöpfe, weil sie den Spielplan anlegen oder ändern.
           </p>
-          {/* Check-in vor Turnierstart — nur Eingecheckte werden ausgelost */}
-          <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" checked={checkInEnabled}
-                onChange={e => setCheckInEnabled(e.target.checked)}
-                className="rounded shrink-0" />
-              <span className="text-sm text-white">Check-in vor Turnierstart</span>
-              {checkInEnabled && (
-                <span className="text-xs text-gray-500 ml-auto">{checkedInIds.size}/{registeredIds.size} eingecheckt</span>
-              )}
-            </label>
-            <p className="text-[11px] text-gray-500">
-              Spieler checken selbst auf der Event-Seite ein („Bin bereit“). Das Fenster öffnet {CHECK_IN_MINUTES} Minuten
-              vor dem Start und schließt mit der Auslosung. Ist der Check-in aktiv, werden nur eingecheckte Spieler
-              ausgelost — Admins können im Reiter „Teilnehmer“ manuell ein- und auschecken.
-            </p>
-          </div>
+          {/* Check-in vor Turnierstart — nur Bereite werden ausgelost */}
+          <CheckInPanel ctx={ctx} drawn={(bracketTournament?.matches.length ?? 0) > 0} />
 
           {!hasTournament && (
           <div>
@@ -280,6 +266,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                 pointsCfg={tmPointsCfg}
                 goal={resolvedGoal.goal}
                 avgDirection={tmAvgDirection}
+                notReadyNames={notReadyNames}
               />
             </div>
           )}

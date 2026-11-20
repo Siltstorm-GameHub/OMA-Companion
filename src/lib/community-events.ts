@@ -78,7 +78,15 @@ export async function getCreatorUsage(userId: string) {
     prisma.event.count({
       where: { createdById: userId, seriesId: null, status: { notIn: DONE_EVENT_STATUSES } },
     }),
-    prisma.eventSeries.count({ where: { createdById: userId, status: "active" } }),
+    // Aktive Reihen zählen nur, solange noch ein Termin offen ist (oder noch keiner angelegt wurde).
+    // Sind alle Termine gespielt, wartet die Reihe nur noch auf den Saisonabschluss durch einen Mod —
+    // das Mitglied soll deshalb nicht am Anlegen einer neuen Reihe gehindert werden.
+    prisma.eventSeries.count({
+      where: {
+        createdById: userId, status: "active",
+        OR: [{ events: { none: {} } }, { events: { some: { status: { notIn: DONE_EVENT_STATUSES } } } }],
+      },
+    }),
   ]);
   return { openEvents, activeSeries };
 }

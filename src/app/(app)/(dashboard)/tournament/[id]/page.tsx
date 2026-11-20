@@ -17,6 +17,7 @@ import { Users, ChevronDown, CalendarPlus, Lock, Gamepad2, MessageCircle } from 
 import { GateButton } from "@/components/GuestGate";
 import { ArrowLeft, Clock, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
+import { waitlistPosition } from "@/lib/event-waitlist";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
 import EventComments from "@/components/events/EventComments";
@@ -32,7 +33,7 @@ import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
-import { formatBerlinDate, formatBerlinTime } from "@/lib/time";
+import { formatBerlinDate, formatBerlinDateTime, formatBerlinTime } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { TONE_CLASSES, dateBlock, eventPhase, parseRanking, startsInLabel } from "@/lib/event-display";
 import { loadSeriesContext } from "@/lib/series-context";
@@ -47,6 +48,8 @@ import GameListInfo from "@/components/games/GameListInfo";
 import RegisterButton from "@/app/(app)/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import CheckInButton from "./CheckInButton";
+import { isDrawFormat } from "@/lib/tournaments/draw-plan";
+import { isKnockoutMatch } from "@/lib/tournaments/applyMatchResult";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
@@ -267,12 +270,24 @@ export default async function TournamentDetailPage({
   const isSpectator    = !!myReg && myReg.role === "spectator";
   const isFullEvent    = !!(event.maxPlayers && event.registrations.filter(r => r.role !== "spectator").length >= event.maxPlayers);
   // OMA-Blocks-Challenge: Jeder trägt automatisch mit Solo-Läufen bei — keine Anmeldung nötig.
-  const canRegister    = (event.status === "open" || event.status === "active") && !event.blocksChallenge;
+  const canRegister    = (event.status === "open" || event.status === "active" || event.status === "closed") && !event.blocksChallenge;
   const isRegistrationLocked = event.registrationLocked || event.series?.registrationLocked || false;
   const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
   const isSquadMember = restrictedSquadId
     ? !!(await prisma.squadMembership.findUnique({ where: { squadId_userId: { squadId: restrictedSquadId, userId } } }))
     : true;
+  // Anmelden/Abmelden nach dem Start: nur Zeitraum-Events nehmen bis zum Ende Einsteiger an; abmelden
+  // geht nach Start, Auslosung oder Abschluss nicht mehr (gleiche Regeln wie lib/event-registration.ts)
+  const regNow = new Date();
+  const regStarted = event.startAt <= regNow;
+  const regPeriodOpen = isPeriodEvent(event) && !!event.endAt && event.endAt > regNow;
+  const deadlinePassed = !!event.registrationClosesAt && event.registrationClosesAt <= regNow;
+  // Ausgelost (1-gegen-1-Spielplan steht): neue Spieler kämen nicht mehr in den Spielplan
+  const isDrawn = isDrawFormat(event.format) && event.matches.length > 0;
+  const joinClosed = (regStarted && !regPeriodOpen) || deadlinePassed || isDrawn;
+  const canUnregister = !(regStarted && !regPeriodOpen) && event.matches.length === 0 && !event.completionData;
+  // Warteliste: eigener Platz, falls voll und noch nicht dabei
+  const myWaitlistPos = userId && isFullEvent && !isRegistered ? await waitlistPosition(userId, event.id) : null;
   const discordEventUrl = event.discordEventId && GUILD_ID
     ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
   const discordChannelId = event.discordChannelId ?? event.series?.discordChannelId ?? null;
@@ -302,7 +317,7 @@ export default async function TournamentDetailPage({
   const opponentReportRows = canReportResults && myDuelMatchIds.length > 0
     ? await prisma.matchResultSubmission.findMany({
         where: { eventId, matchId: { in: myDuelMatchIds }, userId: { not: userId }, forUserId: "", status: "pending" },
-        select: { matchId: true, userId: true, score1: true, score2: true },
+        select: { matchId: true, userId: true, score1: true, score2: true, advancerId: true },
       })
     : [];
   const userById = new Map<string, { id: string; name: string | null; username: string | null }>([
@@ -333,8 +348,10 @@ export default async function TournamentDetailPage({
             opponentReport: (() => {
               const opp = isDuel ? (m.player1Id === userId ? m.player2Id : m.player2Id === userId ? m.player1Id : null) : null;
               const r = opp ? opponentReportRows.find(x => x.matchId === m.id && x.userId === opp) : null;
-              return r ? { score1: r.score1, score2: r.score2, reporterName: nm(toU(r.userId)) } : null;
+              return r ? { score1: r.score1, score2: r.score2, reporterName: nm(toU(r.userId)), advancerId: r.advancerId } : null;
             })(),
+            knockout: isDuel && isKnockoutMatch(event.format, m.groupIndex),
+            leg: m.leg,
           };
         })
     : [];
@@ -343,7 +360,7 @@ export default async function TournamentDetailPage({
     return {
       matchId: sub.matchId,
       subjectId: m && m.entries.length > 0 ? submissionSubject(sub) : null,
-      status: sub.status, score1: sub.score1, score2: sub.score2, statsJson: sub.statsJson,
+      status: sub.status, score1: sub.score1, score2: sub.score2, advancerId: sub.advancerId, statsJson: sub.statsJson,
       note: sub.note, reviewNote: sub.reviewNote, screenshotUrls: parseScreenshotUrls(sub.screenshotUrls),
     };
   });
@@ -1041,6 +1058,28 @@ export default async function TournamentDetailPage({
 
   // ── Aktionsleiste: genau eine Hauptaktion je Phase, daneben Kalender/Discord/Zuschauer/Stream ──
   const BTN_SECONDARY = "inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] transition-colors";
+  // Nach der Auslosung: eigener Einstieg direkt in der Aktionsleiste (nächstes Match, Freilos, nicht ausgelost)
+  const myDrawInfo = (() => {
+    if (!isDrawn || !userId || !isRegistered || pagePhase === "after") return null;
+    const mine = event.matches.filter(m => m.player1Id === userId || m.player2Id === userId);
+    if (mine.length === 0) return { tone: "muted" as const, text: "Nicht ausgelost" };
+    const isByeM = (m: (typeof mine)[number]) => !!m.winnerId && (!m.player1Id || !m.player2Id);
+    const next = mine.filter(m => !m.playedAt && !isByeM(m))
+      .sort((a, b) => a.round - b.round || (a.leg ?? 0) - (b.leg ?? 0))[0];
+    if (!next) return null;
+    const oppId = next.player1Id === userId ? next.player2Id : next.player1Id;
+    const opp = oppId ? userById.get(oppId) : null;
+    const stage = event.format === "single_elimination" || (event.format === "group_knockout" && next.groupIndex == null)
+      ? `Runde ${next.round}` : `Spieltag ${next.round}`;
+    const byeFirst = event.format === "single_elimination" && mine.some(m => m.round === 1 && isByeM(m)) && next.round === 2 && !oppId;
+    return {
+      tone: "info" as const,
+      text: byeFirst ? "Freilos in Runde 1 · du steigst in Runde 2 ein"
+        : opp ? `Dein nächstes Match: ${opp.username ?? opp.name ?? "?"} · ${stage}${next.scheduledAt ? ` · ${formatBerlinDateTime(next.scheduledAt, { weekday: "short", hour: "2-digit", minute: "2-digit" })} Uhr` : ""}`
+        : `Dein nächstes Match: ${stage} · Gegner steht noch nicht fest`,
+    };
+  })();
+
   const primaryAction = (() => {
     if (myPendingVote) {
       return <a href="#abstimmung" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400"><Vote className="w-3.5 h-3.5" /> Abstimmen</a>;
@@ -1051,10 +1090,20 @@ export default async function TournamentDetailPage({
     if (pagePhase === "after" && isRegistered) {
       return <a href="#clip" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400"><Clapperboard className="w-3.5 h-3.5" /> Clip einreichen</a>;
     }
-    if (canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember))) {
+    if (canRegister && isRegistered) {
       return (
-        <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl}
-          joinLabel={period ? "Jetzt einsteigen" : pagePhase === "live" ? "Einsteigen" : "Anmelden"} coins={participationCoins} />
+        <RegisterButton eventId={event.id} isRegistered isFull={false} discordEventUrl={discordEventUrl}
+          coins={participationCoins} canUnregister={canUnregister} checkIn={event.checkInEnabled} />
+      );
+    }
+    if (canRegister && joinClosed) {
+      return <span className="text-xs text-gray-500">{isDrawn ? "Ausgelost · Anmeldung geschlossen" : deadlinePassed && !regStarted ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span>;
+    }
+    if (canRegister && !isRegistrationLocked && isSquadMember) {
+      return (
+        <RegisterButton eventId={event.id} isRegistered={false} isFull={isFullEvent} discordEventUrl={discordEventUrl}
+          joinLabel={regPeriodOpen && regStarted ? "Jetzt einsteigen" : "Anmelden"} coins={participationCoins}
+          waitlist={{ position: myWaitlistPos }} checkIn={event.checkInEnabled} />
       );
     }
     return null;
@@ -1062,6 +1111,13 @@ export default async function TournamentDetailPage({
   const actionBar = (
     <div className="glass rounded-2xl px-4 py-3 mb-3 flex flex-wrap items-center gap-2">
       {primaryAction}
+      {myDrawInfo && (
+        <a href="#turnier" className={`text-xs rounded-lg px-3 py-1.5 border ${myDrawInfo.tone === "info"
+          ? "bg-sky-500/10 border-sky-500/25 text-sky-200 hover:bg-sky-500/15"
+          : "bg-white/[0.03] border-white/[0.08] text-gray-400"}`}>
+          {myDrawInfo.text}
+        </a>
+      )}
       {isRegistered && event.checkInEnabled && event.status !== "finished" && (
         <CheckInButton
           eventId={event.id}
@@ -1070,13 +1126,19 @@ export default async function TournamentDetailPage({
           checkedIn={!!myReg?.checkedInAt}
         />
       )}
-      {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !isRegistrationLocked) && (
+      {canRegister && event.spectatorMode && !isRegistered && (isSpectator || (!isRegistrationLocked && (!joinClosed || (isDrawn && !regStarted && !deadlinePassed)))) && (
         <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
       )}
       {canRegister && !isRegistered && !isSpectator && (isRegistrationLocked || !isSquadMember) && (
-        <span className="flex items-center gap-1 text-xs text-gray-500">
-          <Lock className="w-3.5 h-3.5" /> {isRegistrationLocked ? "Anmeldung nur durch Admins" : "Anmeldung nur für Squad-Mitglieder"}
-        </span>
+        isRegistrationLocked ? (
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <Lock className="w-3.5 h-3.5" /> Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.
+          </span>
+        ) : (
+          <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+            <Lock className="w-3.5 h-3.5" /> Nur für Mitglieder des Squads · zum Squad
+          </Link>
+        )
       )}
       {period && !isRegistered && canRegister && (
         <span className="text-xs text-gray-500">Einstieg jederzeit bis zum Ende möglich</span>

@@ -84,9 +84,12 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
   }
 
   // Noch offene Termine — beim ersten Abschluss fragt der Assistent, was mit ihnen passiert
-  const openEvents = isReEdit ? [] : series.events
-    .filter(isOpenSeasonEvent)
-    .map(e => ({ id: e.id, title: e.title, startAt: e.startAt.toISOString(), registrations: e.registrations.length }));
+  // Getrennt: kommende (verschieben/löschen/lassen) und bereits gespielte, aber nicht abgeschlossene
+  // Termine (sollten vorher abgeschlossen werden — sonst fehlen ihre Punkte in der Endtabelle)
+  const nowTs = new Date();
+  const toOpen = (e: (typeof series.events)[number]) => ({ id: e.id, title: e.title, startAt: e.startAt.toISOString(), registrations: e.registrations.length });
+  const openEvents = isReEdit ? [] : series.events.filter(e => isOpenSeasonEvent(e) && e.startAt > nowTs).map(toOpen);
+  const playedOpenEvents = isReEdit ? [] : series.events.filter(e => isOpenSeasonEvent(e) && e.startAt <= nowTs).map(toOpen);
   const isTournamentSeries = series.events[0]?.type === "tournament";
 
   return (
@@ -102,6 +105,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
       pollPhaseComplete={pollPhaseComplete}
       initialData={isReEdit ? existingCompletion : null}
       openEvents={openEvents}
+      playedOpenEvents={playedOpenEvents}
       isTournamentSeries={isTournamentSeries}
     />
   );

@@ -247,7 +247,10 @@ export async function castBallot(
   let registration: "registered" | "already" | "none" | "full" | "locked" | "squad" | "closed" = "none";
   if (!hadBallots && ids.length > 0) {
     const reg = await ensurePlayerRegistration(userId, eventId);
-    registration = reg.result === "blocked" ? reg.block.reason : reg.result;
+    // Neue Sperrgründe (ausgeblendet, Anmeldeschluss) zählen für die Spielwahl wie "geschlossen"
+    registration = reg.result === "blocked"
+      ? (["full", "locked", "squad"].includes(reg.block.reason) ? reg.block.reason as "full" | "locked" | "squad" : "closed")
+      : reg.result;
   }
   return { ok: true, registration, candidateIds: ids };
 }

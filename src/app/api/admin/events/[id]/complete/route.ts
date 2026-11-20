@@ -19,6 +19,7 @@ import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { isPeriodEvent } from "@/lib/event-period";
+import { updateQuestProgress } from "@/lib/quests";
 import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { bestAvgIds, computeAvgTotals, parseAvgDirection, resolveAvgDirection } from "@/lib/avg-stats";
@@ -296,7 +297,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      registrations: { select: { userId: true, role: true } },
+      registrations: { select: { userId: true, role: true, checkedInAt: true } },
+      participants: { select: { userId: true } },
       series: true,
       polls: {
         where: { rewardsPaid: false },
@@ -518,9 +520,17 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const roundBasedFormat = event.format === "coop_stats" || event.format === "avg_stats";
   // Von Hand als "nicht da" markierte Spieler (Abschluss-Seite) zählen genauso als No-Show
   const absentSet = new Set((body.absentPlayerIds ?? []).filter(id => playerIds.includes(id)));
+  // Check-in: Wer bei aktivem Check-in nicht eingecheckt war und deshalb nicht ausgelost wurde (nicht im
+  // Turnier), war nicht da — keine Teilnahme-Belohnung, keine Tabellenpunkte. Früher erkannte der Abschluss
+  // Nicht-Erschienene nur bei Runden-Formaten, bei K.O./Liga gab es für sie trotzdem Münzen.
+  const inTournament = new Set(event.participants.map(p => p.userId));
+  const notCheckedIn = event.checkInEnabled && event.matches.length > 0
+    ? event.registrations.filter(r => r.role !== "spectator" && !r.checkedInAt && !inTournament.has(r.userId)).map(r => r.userId)
+    : [];
   const noShowSet = new Set([
     ...(roundBasedFormat && playedSet.size > 0 ? playerIds.filter(id => !playedSet.has(id)) : []),
     ...absentSet,
+    ...notCheckedIn,
   ]);
 
   // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
@@ -1317,6 +1327,22 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // "alles abgeschlossen" zu unterscheiden — muss daher exakt hasPendingPollPhase widerspiegeln.
   const pollPhaseComplete = !hasPendingPollPhase;
 
+  // Quest "Events besuchen" (EVENT_ATTEND): zählt erst beim Abschluss, für alle, die wirklich dabei waren
+  // (Spieler ohne Disqualifikation/No-Show, anwesende Zuschauer) — und je Event nur einmal. Früher zählte
+  // schon die Anmeldung, und An-/Abmelden ließ sich beliebig wiederholen.
+  const questCredited = new Set<string>([
+    ...playerIds.filter(id => !excludedSet.has(id) && !noShowSet.has(id)),
+    ...(body.spectatorAttendedIds ?? []).filter(id => spectatorIds.includes(id) && !excludedSet.has(id)),
+  ]);
+  // Ältere Abschlüsse ohne diese Liste: Quest wurde damals bei der Anmeldung gezählt → nichts nachholen
+  const questAlready = new Set<string>(
+    Array.isArray(oldCompletion.questCreditedIds) ? oldCompletion.questCreditedIds as string[]
+      : isReEdit ? [...questCredited] : [],
+  );
+  const questNew = [...questCredited].filter(id => !questAlready.has(id));
+  // Wer einmal gezählt wurde, bleibt in der Liste (die Quest wird nie zurückgenommen)
+  for (const id of questAlready) questCredited.add(id);
+
   const completionData = {
     mvpUserId:               body.mvpUserId ?? null,
     winnerStatField:         body.winnerStatField ?? null,
@@ -1342,6 +1368,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     // Ausgeschlossene User (Disqualifikation) — Begründung steht in finalRankingNote
     excludedUserIds:         excludedSet.size > 0 ? [...excludedSet] : null,
     absentPlayerIds:         absentSet.size > 0 ? [...absentSet] : null,
+    questCreditedIds:        [...questCredited],
     // Ledger der zuletzt vergebenen Beträge, für Diff-basiertes Nachbuchen/Rückbuchen bei jedem Speichern
     rewardLedger: {
       participationCoins: newParticipationCoins,
@@ -1393,6 +1420,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
         })]
       : []),
   ]);
+
+  for (const userId of questNew) {
+    await updateQuestProgress(userId, "EVENT_ATTEND", 1).catch(err => console.error("[complete] Quest-Fortschritt", userId, err));
+  }
 
   // Community-Ziel: Abrechnung zum Abschluss der Spielphase (Ø-Ziele, Endstand-Meldung; no-op ohne Ziel, wirft nie)
   await checkCommunityGoal(eventId);

@@ -4,11 +4,12 @@ import { Plus, X, Coins, MessageSquare } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { inputCls, PollConfig, DEFAULT_POLL_ITEM, Section } from "./series-shared";
+import { LimitHint } from "../../neu/wizard/shared";
 import type { SeriesDetail } from "./useSeriesDetail";
 
 /** Reiter "Umfragen" der Reihe. */
 export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
-  const { isArchived, polls, setPolls, expandedPoll, setExpandedPoll, lockedNotice } = ctx;
+  const { rewardLimits, isArchived, polls, setPolls, expandedPoll, setExpandedPoll, lockedNotice } = ctx;
   return (
     <>
           {lockedNotice}
@@ -113,6 +114,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                           <NumberInput min={0} value={p.participationCoins}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationCoins: Number(e.target.value) } : x))}
                             className={inputCls} />
+                          <LimitHint value={p.participationCoins} max={rewardLimits?.pollParticipationCoins} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Teilnahme-Tabellenpunkte</label>
@@ -127,6 +129,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                           <NumberInput min={0} value={p.winnerCoins}
                             onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerCoins: Number(e.target.value) } : x))}
                             className={inputCls} />
+                          <LimitHint value={p.winnerCoins} max={rewardLimits?.pollWinnerCoins} />
                         </div>
                         <div>
                           <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Sieger-Rang-Punkte</label>

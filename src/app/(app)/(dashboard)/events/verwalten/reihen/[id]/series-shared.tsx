@@ -88,10 +88,12 @@ export const DEFAULT_POLL_ITEM: PollConfig = {
   winnerRankPoints: 0,
 };
 export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  open:     { label: "Offen",    cls: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
-  active:   { label: "Aktiv",    cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  umfrage:  { label: "Umfrage",  cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-  finished: { label: "Beendet", cls: "text-gray-500 bg-white/[0.03] border-white/[0.06]" },
+  // Gleiche Begriffe wie in der Übersicht "Verwalten" (lib/event-manage.ts statusText)
+  open:     { label: "Anmeldung offen", cls: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+  closed:   { label: "Voll",            cls: "text-blue-300 bg-blue-500/10 border-blue-500/20" },
+  active:   { label: "Läuft",           cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  umfrage:  { label: "Umfragephase",    cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  finished: { label: "Beendet",         cls: "text-gray-500 bg-white/[0.03] border-white/[0.06]" },
 };
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
@@ -195,4 +197,6 @@ export type SeriesDetailProps = {
   groupStatFields?: string[];
   /** Mitglieder: Obergrenzen für das Community-Ziel (null = Mod/Admin) */
   goalLimits?: { coins: number; seriesPoints: number } | null;
+  /** Mitglieder: Obergrenzen der Reihen-Belohnungen (Anzeige an den Feldern; der Server kürzt beim Speichern) */
+  rewardLimits?: import("@/lib/captain-reward-limits").RewardLimits | null;
 };

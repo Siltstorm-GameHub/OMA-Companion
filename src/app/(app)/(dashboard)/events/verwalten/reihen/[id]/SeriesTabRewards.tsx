@@ -5,11 +5,12 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import RecalculateSeriesButton from "./RecalculateSeriesButton";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { inputCls, numCls, Section, Field, Checkbox } from "./series-shared";
+import { LimitHint } from "../../neu/wizard/shared";
 import type { SeriesDetail } from "./useSeriesDetail";
 
 /** Reiter "Belohnungen": Endwertung, Teilnahme, Platzierungs-Bonus je Event. */
 export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
-  const { series, isArchived, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, eventPlacementCoins, eventPlacementPoints, placementRewards, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, lockedNotice } = ctx;
+  const { rewardLimits, series, isArchived, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, eventPlacementCoins, eventPlacementPoints, placementRewards, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, lockedNotice } = ctx;
   return (
     <>
           {lockedNotice}
@@ -39,6 +40,11 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                   </div>
                 </div>
               ))}
+              {rewardLimits && (
+                <p className="text-[11px] text-amber-200/80">
+                  Für Mitglieder-Reihen hängt die Obergrenze der Endwertung von der Zahl der Termine ab. Zu hohe Werte werden beim Saisonabschluss gekürzt.
+                </p>
+              )}
               <p className="text-[11px] text-gray-500">
                 Wird bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben — nicht mehr pro einzelnem Event.
               </p>
@@ -70,11 +76,13 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                 <NumberInput min={0} value={statParticipationCoins}
                   onChange={e => setStatParticipationCoins(Number(e.target.value))}
                   className={inputCls} />
+                <LimitHint value={statParticipationCoins} max={rewardLimits?.participationCoins} />
               </Field>
               <Field label="Münzen pro Zuschauer-Teilnahme">
                 <NumberInput min={0} value={statSpectatorCoins}
                   onChange={e => setStatSpectatorCoins(Number(e.target.value))}
                   className={inputCls} />
+                <LimitHint value={statSpectatorCoins} max={rewardLimits?.spectatorCoins} />
               </Field>
             </div>
             <p className="text-[11px] text-gray-500">
@@ -102,6 +110,7 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                     <NumberInput min={0} value={r.coins}
                       onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
                       className={numCls} />
+                    <LimitHint value={r.coins} max={rewardLimits ? (rewardLimits.placementCoins[r.place - 1] ?? rewardLimits.placementCoinsOther) : null} />
                   </div>
                   <NumberInput min={0} value={eventPlacementPoints.find(p => p.place === r.place)?.points ?? 0}
                     onChange={e => updateEventPlacementPoints(r.place, Number(e.target.value))}

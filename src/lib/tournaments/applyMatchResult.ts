@@ -270,7 +270,7 @@ async function applyMatchResultInner({
 
     const reset = await prisma.match.update({
       where: { id: matchId },
-      data: { winnerId: null, score1: null, score2: null, playedAt: null, resultConfirmed: true, startedAt: null },
+      data: { winnerId: null, score1: null, score2: null, playedAt: null, resultConfirmed: true, startedAt: null, walkover: false },
     });
     return reset;
   }
@@ -385,6 +385,8 @@ async function applyMatchResultInner({
       resultConfirmed: !skipPoints,
       // Mit dem Ergebnis ist das Match nicht mehr "live"
       startedAt: null,
+      // Ein eingetragenes Ergebnis ersetzt einen früheren Kampflos-Sieg (walkover setzt die Matches-Route danach)
+      walkover: false,
     },
   });
 

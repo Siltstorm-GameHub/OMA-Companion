@@ -3,11 +3,11 @@ import Link from "next/link";
 import { CalendarPlus } from "@/components/icons";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Repeat } from "@/components/icons";
-import { RefreshCw, Save, Coins, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff, Clock, Lock, Unlock } from "@/components/icons";
+import { RefreshCw, Save, Coins, ExternalLink, Archive, Vote, Trash2, EyeOff, Clock, Lock } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { formatBerlinDate } from "@/lib/time";
-import { inputCls, SETTINGS_TABS, needsAttention, STATUS_CONFIG, EventHiddenToggle, SquadOption, type SeriesDetailProps } from "./series-shared";
+import { inputCls, SETTINGS_TABS, needsAttention, STATUS_CONFIG, EventHiddenToggle, type SeriesDetailProps } from "./series-shared";
 import { useSeriesDetail } from "./useSeriesDetail";
 import SeriesTabGeneral from "./SeriesTabGeneral";
 import SeriesTabGoal from "./SeriesTabGoal";
@@ -20,7 +20,10 @@ import SeriesTabLegacy from "./SeriesTabLegacy";
  *  ./useSeriesDetail.tsx, die Reiter in ./SeriesTab*.tsx, gemeinsame Bausteine in ./series-shared.tsx. */
 export default function SeriesDetailClient(props: SeriesDetailProps) {
   const ctx = useSeriesDetail(props);
-  const { series, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, isArchived, undoConfirm, setUndoConfirm, undoing, saving, activeSettingsTab, setActiveSettingsTab, generatingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, seriesColor, recurrenceType, hidden, hiddenBusy, registrationLocked, registrationLockedBusy, squadId, squadIdBusy, sortedSeriesEvents, saveSettings, toggleHidden, toggleRegistrationLocked, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, deleteSeries, ConfirmDialogElement } = ctx;
+  const { series, hasActiveSibling, isModerator, canUndoCompletion, isArchived, undoConfirm, setUndoConfirm, undoing, saving, activeSettingsTab, setActiveSettingsTab, generatingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, description, icon, seriesColor, recurrenceType, hidden, registrationLocked, sortedSeriesEvents, saveSettings, openGenerateModal, generateNextEvent, undoCompletion, deleteSeries, ConfirmDialogElement, settingsDirty, discardSettings, confirm } = ctx;
+  // Mitglieder dürfen ihre Reihe löschen, solange kein Termin abgeschlossen ist (api/admin/series/[id])
+  const memberCanDelete = !isModerator && series.status === "active"
+    && !(series.events as { status: string }[]).some(e => e.status === "finished" || e.status === "umfrage");
 
   return (
     <div className="space-y-4">
@@ -60,64 +63,17 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
             style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
             <SeriesIcon name={icon} className="w-5 h-5" />
           </div>
-          <div className="space-y-1">
-          <input
-            value={name} onChange={e => setName(e.target.value)}
-            className="text-2xl font-bold bg-transparent border-b border-transparent hover:border-white/20 focus:border-teal-500/50 outline-none transition-colors w-full max-w-lg"
-            style={{ color: seriesColor }}
-            placeholder="Reihen-Name"
-          />
-          <input
-            value={description} onChange={e => setDescription(e.target.value)}
-            className="text-sm text-gray-500 bg-transparent border-b border-transparent hover:border-white/10 focus:border-teal-500/30 outline-none transition-colors w-full max-w-lg"
-            placeholder="Beschreibung hinzufügen…"
-          />
-          <textarea
-            value={rules} onChange={e => setRules(e.target.value)}
-            rows={3}
-            className="mt-2 w-full max-w-lg text-sm text-gray-400 bg-transparent border rounded-lg px-2.5 py-2 outline-none transition-colors resize-none border-white/[0.08] hover:border-white/20 focus:border-teal-500/40"
-            placeholder="Regelwerk (wird Usern über dem Punktesystem angezeigt)…"
-          />
+          <div className="space-y-1 min-w-0">
+            {/* Name, Beschreibung und Regeln bearbeitest du im Reiter "Allgemein" */}
+            <h1 className="text-2xl font-bold break-words" style={{ color: seriesColor }}>{name || series.name}</h1>
+            {description && <p className="text-sm text-gray-500">{description}</p>}
+            <p className="text-[11px] text-gray-500">
+              {hidden ? "Ausgeblendet" : "Sichtbar"} · {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 max-w-full overflow-x-auto scrollbar-none">
-          <button
-            onClick={toggleHidden}
-            disabled={hiddenBusy}
-            title={hidden ? "Reihe einblenden (für alle sichtbar machen)" : "Reihe ausblenden (nur in der Verwaltung sichtbar)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
-              hidden
-                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
-            }`}
-          >
-            {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            {hidden ? "Ausgeblendet" : "Sichtbar"}
-          </button>
-          <button
-            onClick={toggleRegistrationLocked}
-            disabled={registrationLockedBusy}
-            title={registrationLocked ? "Selbst-Anmeldung für die Reihe wieder erlauben" : "Selbst-Anmeldung für die ganze Reihe deaktivieren (nur Admins tragen Teilnehmer ein)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
-              registrationLocked
-                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
-            }`}
-          >
-            {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
-          </button>
-          {squads.length > 0 && (
-            <select value={squadId} disabled={squadIdBusy}
-              onChange={e => saveSquadId(e.target.value)}
-              title="Spieler-Anmeldung für die ganze Reihe auf ein Squad beschränken"
-              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 shrink-0 ${
-                squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
-              }`}>
-              <option value="">Für alle offen</option>
-              {squads.map((s: SquadOption) => <option key={s.id} value={s.id}>Nur: {s.name}</option>)}
-            </select>
-          )}
+        {/* Sichtbarkeit, Anmeldung und Squad: Reiter "Allgemein" (wirken sofort) */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href={`/events/series/${series.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
@@ -140,13 +96,6 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
           )}
-          <button
-            onClick={saveSettings} disabled={saving}
-            className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
-          >
-            <Save className="w-3.5 h-3.5" />
-            {saving ? "Speichert…" : "Speichern"}
-          </button>
         </div>
       </div>
 
@@ -166,7 +115,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                     ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
                     : "text-gray-500 hover:text-gray-300"
                 }`}>
-                {tab.label}
+                {!isModerator && tab.key === "stats" ? "Mehr" : tab.label}
               </button>
             ))}
           </div>
@@ -198,21 +147,14 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
                 <Lock className="w-3 h-3" /> Saison abgeschlossen — keine neuen Termine
               </span>
-            ) : isModerator ? (
+            ) : (
             <button
               onClick={openGenerateModal} disabled={generatingNext}
               className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
-              {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
+              {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin anlegen" : "Termin hinzufügen"}
             </button>
-            ) : (
-            // Mitglieder: "Nächsten Termin generieren" ist Mods vorbehalten — neue Termine legen sie
-            // über den Assistenten an, die Reihe ist dort schon ausgewählt
-            <Link href={`/events/verwalten/neu?mode=event&series=${series.id}`}
-              className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all">
-              <CalendarPlus className="w-3.5 h-3.5" /> Termin hinzufügen
-            </Link>
             )}
           </div>
 
@@ -231,25 +173,16 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 });
                 const attention = needsAttention(ev);
                 return (
-                  <Link
+                  <div
                     key={ev.id}
-                    href={attention?.href ?? `/events/verwalten/${ev.id}`}
                     className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors ${
                       i > 0 ? "border-t border-white/[0.05]" : ""
                     } ${isFirstFinished ? "border-t-2 border-t-white/[0.08]" : ""} ${
                       isFinished ? "opacity-60 hover:opacity-90" : ""
                     } ${ev.hidden ? "opacity-60" : ""}`}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate flex items-center gap-2 flex-wrap">
-                        {attention && (
-                          <span
-                            title={attention.label}
-                            className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0"
-                          >
-                            <Clock className="w-2.5 h-2.5" /> Aufmerksamkeit
-                          </span>
-                        )}
+                    <Link href={`/events/verwalten/${ev.id}`} className="flex-1 min-w-0 group">
+                      <p className="text-sm text-white truncate flex items-center gap-2 flex-wrap group-hover:text-teal-200">
                         {ev.title}
                         <span className="text-gray-500 font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
@@ -259,7 +192,13 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                         )}
                       </p>
                       <p className="text-xs text-gray-600">{date}</p>
-                    </div>
+                    </Link>
+                    {attention && (
+                      <Link href={attention.href} title={attention.label}
+                        className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 hover:bg-amber-500/20">
+                        <Clock className="w-2.5 h-2.5" /> {attention.label}
+                      </Link>
+                    )}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-gray-600">
                         {ev._count.registrations}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""} Spieler
@@ -268,9 +207,8 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                         {st.label}
                       </span>
                       <EventHiddenToggle id={ev.id} hidden={ev.hidden} />
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -279,11 +217,11 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
       </div>
 
       {/* Danger Zone — Löschen bleibt Moderatoren/Admins vorbehalten, auch für Captains ihres eigenen Squads */}
-      {isModerator && (
+      {(isModerator || memberCanDelete) && (
       <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
         <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
 
-        {isAdmin && isArchived && (
+        {isModerator && isArchived && (
           <div className="space-y-2 pb-3 border-b border-red-900/30">
             {!undoConfirm ? (
               <div className="flex items-center justify-between gap-4">
@@ -295,7 +233,13 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       : "Nicht mehr möglich — es gibt bereits eine spätere Saison."}
                   </p>
                 </div>
-                <button onClick={() => setUndoConfirm(true)} disabled={!canUndoCompletion}
+                <button onClick={async () => {
+                    if (await confirm({
+                      title: "Saisonabschluss aufheben",
+                      description: `Die Saison „${series.name}“ wird wieder aktiv. Alle Münzen und Rang-Punkte aus Endplatzierung und Saison-Abstimmung werden zurückgebucht, der Eventreihen-Pokal entfällt. Beim Abschluss gelöschte Termine kommen nicht zurück.`,
+                      variant: "danger", confirmLabel: "Abschluss aufheben",
+                    })) await undoCompletion();
+                  }} disabled={!canUndoCompletion || undoing}
                   className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none">
                   <RefreshCw className="w-3.5 h-3.5" /> Aufheben
                 </button>
@@ -343,7 +287,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               alle <span className="font-semibold text-white">{series.events.length} zugehörigen Events</span> (inkl.
               Anmeldungen, Turniere &amp; Matches) werden unwiderruflich gelöscht.
             </p>
-            <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3">
+            {isModerator && <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3">
               <p className="text-[11px] text-gray-500">
                 Bereits vergebene Belohnungen aus abgeschlossenen Events dieser Reihe:
               </p>
@@ -370,7 +314,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <p className="text-[11px] text-gray-600">
                 Unangeklickt behalten User ihre bisher erhaltenen Münzen/Rang-Punkte aus dieser Reihe.
               </p>
-            </div>
+            </div>}
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(false)}
@@ -424,6 +368,23 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 {generatingNext ? "Erstellt…" : "Termin erstellen"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Speicherleiste: erscheint bei ungespeicherten Änderungen ── */}
+      {settingsDirty && (
+        <div className="sticky bottom-20 lg:bottom-4 z-30">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+            <span className="flex-1 min-w-0 truncate text-sm text-gray-200">Ungespeicherte Änderungen an der Reihe</span>
+            <button type="button" onClick={discardSettings} disabled={saving}
+              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-50">
+              Verwerfen
+            </button>
+            <button type="button" onClick={saveSettings} disabled={saving}
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+              <Save className="w-3.5 h-3.5" /> {saving ? "Speichert…" : "Speichern"}
+            </button>
           </div>
         </div>
       )}

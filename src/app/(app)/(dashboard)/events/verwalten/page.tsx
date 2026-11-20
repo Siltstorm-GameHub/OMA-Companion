@@ -144,8 +144,42 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
       played: p.played, total: p.total,
       next: p.next?.toISOString() ?? null, seasonDone: p.seasonDone,
       createdBy: isStaff && s.approvalStatus ? who(s.createdBy) : null,
+      archived: false, newSeasonDue: false,
     };
   });
+
+  // Abgeschlossene Saisons ohne Folgesaison: bleiben in der Liste (sonst fände man "Neue Saison
+  // einrichten" und "Abschluss bearbeiten" nicht mehr). Nur die jeweils neueste Saison einer Reihe.
+  const archivedRaw = await prisma.eventSeries.findMany({
+    where: { status: "archived", ...seriesWhere },
+    orderBy: { name: "asc" },
+    take: 50,
+    select: {
+      id: true, name: true, icon: true, seasonNumber: true, groupId: true, hidden: true,
+      createdBy: { select: { name: true, username: true } }, approvalStatus: true,
+      events: { orderBy: { startAt: "desc" }, take: 1, select: { startAt: true } },
+      _count: { select: { events: true } },
+    },
+  });
+  const groupIds = [...new Set(archivedRaw.map((s) => s.groupId).filter((g): g is string => !!g))];
+  const groupMembers = groupIds.length
+    ? await prisma.eventSeries.findMany({ where: { groupId: { in: groupIds } }, select: { id: true, groupId: true, status: true, seasonNumber: true } })
+    : [];
+  const NEW_SEASON_HINT_MS = 30 * 24 * 60 * 60 * 1000;
+  for (const s of archivedRaw) {
+    const siblings = groupMembers.filter((g) => g.groupId && g.groupId === s.groupId && g.id !== s.id);
+    const superseded = siblings.some((g) => g.status === "active" || (g.seasonNumber ?? 0) > (s.seasonNumber ?? 0));
+    if (superseded) continue;
+    const lastStart = s.events[0]?.startAt ?? null;
+    seriesDTO.push({
+      id: s.id, name: s.seasonNumber ? `${s.name} · Saison ${s.seasonNumber}` : s.name, icon: s.icon, hidden: s.hidden,
+      awaitingApproval: false, rejected: false, played: s._count.events, total: s._count.events, next: null, seasonDone: false,
+      createdBy: isStaff && s.approvalStatus ? who(s.createdBy) : null,
+      archived: true,
+      // Mods: kurz nach dem Saisonende unter "Braucht dich" an eine neue Saison erinnern
+      newSeasonDue: isStaff && !!lastStart && now.getTime() - lastStart.getTime() < NEW_SEASON_HINT_MS,
+    });
+  }
 
   const RECURRENCE: Record<string, string> = { weekly: "wöchentlich", biweekly: "alle zwei Wochen", monthly: "monatlich" };
   const approvals: ManageApproval[] = [

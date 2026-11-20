@@ -2,6 +2,8 @@ import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
+import { getCommunityLimits } from "@/lib/community-event-limits";
+import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
 import { applyEventStatOverride, computeTurnierpunkte, hasEventPoints, resolveRankStatField, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { computeAvgTotals, resolveAvgDirection } from "@/lib/avg-stats";
 import { eventHasPlacement } from "@/lib/event-placement";
@@ -70,7 +72,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
             seriesStandingsJson: true,
           },
         },
-        registrations: { select: { userId: true, role: true } },
+        registrations: { select: { userId: true, role: true, checkedInAt: true } },
+        participants: { select: { userId: true } },
         matches: {
           include: {
             entries: { select: { userId: true, statsJson: true } },
@@ -93,6 +96,15 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   ]);
 
   if (!event) notFound();
+
+  // Spiele ohne Ergebnis bzw. nur vorläufig (Spieler-Meldung, noch nicht bestätigt) — Hinweis oben
+  const isByeMatch = (m: { winnerId: string | null; player1Id: string | null; player2Id: string | null }) =>
+    !!m.winnerId && (!m.player1Id || !m.player2Id);
+  const matchCheck = {
+    open: event.matches.filter(m => !m.playedAt && !isByeMatch(m)
+      && (m.entries.length > 0 || (!!m.player1Id && !!m.player2Id))).length,
+    provisional: event.matches.filter(m => !!m.playedAt && !m.resultConfirmed).length,
+  };
 
   // Separate players and spectators
   const playerIds    = new Set(event.registrations.filter(r => r.role !== "spectator").map(r => r.userId));
@@ -222,6 +234,26 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // Rewards: event-level overrides series, series overrides defaults
   const rewardsConfig = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
 
+  // Mitglieder: Beträge so anzeigen, wie der Server sie auszahlt — auf die Obergrenzen gekürzt
+  // (gleiche Kappung wie /api/admin/events/[id]/complete)
+  const isMod = hasMinRole(currentUser.role, "moderator");
+  let rewardsCapped = false;
+  if (!isMod) {
+    const all = await getCommunityLimits();
+    const L = event.seriesId ? all.seriesEvent : all.standalone;
+    const capped = {
+      participationCoins: capParticipationCoins(rewardsConfig.participationCoins, L),
+      participationRankPts: capValue(rewardsConfig.participationRankPts ?? 0, L.participationRankPts),
+      placements: capPlacements(rewardsConfig.placements, L),
+    };
+    rewardsCapped = JSON.stringify(capped) !== JSON.stringify({
+      participationCoins: rewardsConfig.participationCoins,
+      participationRankPts: rewardsConfig.participationRankPts ?? 0,
+      placements: rewardsConfig.placements,
+    });
+    Object.assign(rewardsConfig, capped);
+  }
+
   // Override participationCoins from legacy pointReward if no placementRewardsJson set
   if (!event.placementRewardsJson && !event.series?.placementRewardsJson && event.pointReward) {
     rewardsConfig.participationCoins = event.pointReward;
@@ -248,6 +280,22 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
 
   // Completion data for re-edit
   const isReEdit = !!event.completionData;
+
+  // Protokoll: Buchungen aus Abschluss, Korrekturen und Rückbuchungen dieses Events. PointTransaction hat
+  // keinen Event-Bezug — die Gründe enden aber immer auf ": <Eventtitel>" (siehe complete/route.ts,
+  // revert-event-completion.ts). Begrenzt auf die Angemeldeten und die letzten 200 Buchungen.
+  const historyRows = isReEdit
+    ? await prisma.pointTransaction.findMany({
+        where: { userId: { in: event.registrations.map(r => r.userId) }, reason: { endsWith: `: ${event.title}` } },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: { createdAt: true, amount: true, reason: true, userId: true },
+      })
+    : [];
+  const rewardHistory = historyRows.map(h => {
+    const u = allUsers.find(x => x.id === h.userId);
+    return { at: h.createdAt.toISOString(), name: u?.username ?? u?.name ?? "?", amount: h.amount, reason: h.reason.replace(`: ${event.title}`, "") };
+  });
   const initialData: Record<string, unknown> | null = isReEdit
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return null; } })()
     : null;
@@ -294,7 +342,12 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       pendingEventPolls={pendingEventPolls}
       spectatorRewardJson={spectatorRewardJson}
       isAdmin={currentUser.role === "admin"}
-      isMod={hasMinRole(currentUser.role, "moderator")}
+      isMod={isMod}
+      rewardHistory={rewardHistory}
+      defaultAbsentIds={event.checkInEnabled && event.matches.length > 0
+        ? event.registrations.filter(r => r.role !== "spectator" && !r.checkedInAt && !event.participants.some(p => p.userId === r.userId)).map(r => r.userId)
+        : []}
+      rewardsCapped={rewardsCapped}
       isReEdit={isReEdit}
       status={event.status}
       initialData={initialData}
@@ -302,6 +355,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       initialRankingGroups={initialRankingGroups}
       initialFinalRankingNote={event.finalRankingNote ?? null}
       pendingSubmissions={pendingSubmissions}
+      matchCheck={matchCheck}
     />
   );
 }

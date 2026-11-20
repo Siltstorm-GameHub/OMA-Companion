@@ -15,7 +15,7 @@ import CompletePolls from "./CompletePolls";
  *  Zustand und Aktionen in ./useEventComplete.tsx, die Abschnitte in ./Complete*.tsx, Bausteine in ./complete-shared.tsx. */
 export default function EventCompleteClient(props: Props) {
   const ctx = useEventComplete(props);
-  const { eventId, pendingSubmissions, rewardHistory, rewardsCapped, absentPlayers, actionSummary, pollAutoEnd, eventTitle, seriesId, seriesIcon, registeredUsers, spectatorUsers, spectatorRewardJson, isMod, hasPlacement, ConfirmDialogElement, timingWarning, isPollOnly, isFinishedSummary, mvpUserId, spectatorAttended, rankingDirty, excludedUsers, loading, pollWinners, canDeferPoll, pollPhasePending, totals, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, steps, noRanking, mainLabel, nameOf } = ctx;
+  const { eventId, pendingSubmissions, matchCheck, rewardHistory, rewardsCapped, absentPlayers, actionSummary, pollAutoEnd, eventTitle, seriesId, seriesIcon, registeredUsers, spectatorUsers, spectatorRewardJson, isMod, hasPlacement, ConfirmDialogElement, timingWarning, isPollOnly, isFinishedSummary, mvpUserId, spectatorAttended, rankingDirty, excludedUsers, loading, pollWinners, canDeferPoll, pollPhasePending, totals, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, steps, noRanking, mainLabel, nameOf } = ctx;
 
   return (
     <div className="space-y-4 pb-36">
@@ -63,6 +63,24 @@ export default function EventCompleteClient(props: Props) {
             <p className="text-xs text-amber-200/80 mt-0.5">Ungeprüfte Werte zählen beim Abschluss nicht. Prüf sie am besten vorher.</p>
           </div>
           <Link href={`/events/verwalten/${eventId}/results`} className="shrink-0 text-xs font-semibold text-amber-200 underline hover:text-white">Zur Ergebnis-Prüfung</Link>
+        </div>
+      )}
+      {/* Spiele ohne Ergebnis bzw. nur vorläufig: vor dem Abschluss eintragen bzw. bestätigen */}
+      {matchCheck && (matchCheck.open > 0 || matchCheck.provisional > 0) && !isFinishedSummary && (
+        <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+          <div className="flex-1">
+            <p className="font-semibold">
+              {[
+                matchCheck.open > 0 ? `${matchCheck.open} ${matchCheck.open === 1 ? "Spiel" : "Spiele"} ohne Ergebnis` : null,
+                matchCheck.provisional > 0 ? `${matchCheck.provisional} nur vorläufig` : null,
+              ].filter(Boolean).join(", ")}
+            </p>
+            <p className="text-xs text-amber-200/80 mt-0.5">
+              Fehlende Ergebnisse fehlen auch in Tabelle und Platzierung. Vorläufige stammen aus Spieler-Meldungen und sollten vorher bestätigt werden.
+            </p>
+          </div>
+          <Link href={`/events/verwalten/${eventId}`} className="shrink-0 text-xs font-semibold text-amber-200 underline hover:text-white">Zum Spielplan</Link>
         </div>
       )}
       {rewardsCapped && (
