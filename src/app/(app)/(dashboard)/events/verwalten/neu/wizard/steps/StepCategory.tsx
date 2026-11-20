@@ -41,6 +41,15 @@ export default function StepCategory({ w }: { w: EventWizard }) {
             </button>
           ))}
         </div>
+        {eventType === "community" && (
+          <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-violet-500/20 bg-violet-500/[0.06] px-3 py-2 text-xs text-violet-200">
+            <span aria-hidden>ℹ️</span>
+            <span>
+              Bei einem Community-Event gibt es keine Platzierung und keinen Sieger — alle Teilnehmer bekommen nur
+              die Teilnahme-Belohnung. Für eine Platzierung wähle „Turnier“.
+            </span>
+          </p>
+        )}
       </div>
 
       {showSpectatorToggle && (
