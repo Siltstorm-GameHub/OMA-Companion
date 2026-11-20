@@ -110,6 +110,8 @@ const getGlobalDashboardData = unstable_cache(
           // Events, die ganz ohne Spieler-Anmeldung "still" beendet wurden (siehe complete/route.ts),
           // sollen nicht als "Ergebnisse sind da" auftauchen — es gibt schlicht keine Ergebnisse.
           registrations: { some: { role: "player" } },
+          // Community-Events haben keine Platzierung (lib/event-placement.ts) → keine "Ergebnisse sind da"-Kachel
+          type: { not: "community" },
           OR: [{ seriesId: null }, { series: { hidden: false } }],
         },
         orderBy: { startAt: "desc" },
