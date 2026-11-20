@@ -1,10 +1,8 @@
 "use client";
 import { DEFAULT_ADVANCE_PER_GROUP, GROUP_KNOCKOUT_FORMAT } from "@/lib/tournaments/groupStage";
 import { CHECK_IN_MINUTES } from "@/lib/checkin";
-import { useEffect, useState } from "react";
 import type { TournamentTemplate } from "@/lib/series-seasons";
-import { goalFieldsFor, supportsCommunityGoal } from "@/lib/community-goal";
-import CommunityGoalEditor, { formToGoal, goalToForm, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
+import SeriesGoalEditor from "@/components/SeriesGoalEditor";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50";
@@ -15,8 +13,13 @@ const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-g
  * gezeigt — sie greifen dann nur bei Terminen mit dem passenden Format.
  */
 export default function TournamentTemplateEditor({
-  format, value, onChange, disabled = false, statFields = [],
+  format, value, onChange, disabled = false, statFields = [], hideGoal = false, goalRewardLimit = null, goalSeriesPointsLimit = null,
 }: {
+  /** Mitglieder: Obergrenzen der Ziel-Belohnungen (Anzeige am Feld) */
+  goalRewardLimit?: number | null;
+  goalSeriesPointsLimit?: number | null;
+  /** Ziel nicht hier zeigen (die Reihen-Seite hat dafür den Reiter "Ziel") */
+  hideGoal?: boolean;
   /** Festes Format der Reihe (leer = verschiedene Formate) */
   format: string | null | undefined;
   value: TournamentTemplate;
@@ -26,29 +29,6 @@ export default function TournamentTemplateEditor({
   statFields?: string[];
 }) {
   const anyFormat = !format;
-  const showGoal = anyFormat || supportsCommunityGoal(format);
-  // Auswertbare Felder: bei Liga/K.O. & Co. das Spielergebnis, sonst die Stat-Felder der Reihe
-  const goalFields = format ? goalFieldsFor(format, statFields) : statFields;
-  // Lokaler Formularzustand: ein unvollständiges Ziel (z.B. noch kein Feld gewählt) ergibt in der
-  // Vorlage null, darf das Formular aber nicht zurücksetzen
-  const [goalForm, setGoalForm] = useState<CommunityGoalForm>(() => goalToForm(value.communityGoal ?? null));
-  const changeGoal = (form: CommunityGoalForm) => {
-    setGoalForm(form);
-    onChange({ ...value, communityGoal: formToGoal(form, goalFields) });
-  };
-  // Ändern sich die Stat-Felder NACH dem Ausfüllen des Ziels (z.B. Ziel zuerst ausgefüllt, Statistiken
-  // danach angelegt oder umbenannt), muss das gespeicherte Ziel neu berechnet werden — sonst zeigt das
-  // Formular ein vollständiges Ziel, in der Vorlage steht aber keins (bzw. eins mit veralteten Feldern).
-  const statFieldsKey = goalFields.join("\u0000");
-  const derivedGoal = formToGoal(goalForm, goalFields);
-  const derivedGoalKey = JSON.stringify(derivedGoal);
-  useEffect(() => {
-    if (JSON.stringify(value.communityGoal ?? null) !== derivedGoalKey) {
-      onChange({ ...value, communityGoal: derivedGoal });
-    }
-    // Nur auf geänderte Stat-Felder bzw. abgeleitetes Ziel reagieren, nicht auf jeden neuen value
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statFieldsKey, derivedGoalKey]);
   const showGroups = anyFormat || format === GROUP_KNOCKOUT_FORMAT;
   const showPoints = anyFormat || format === "round_robin" || format === "liga";
   const gs = value.groupStage ?? null;
@@ -147,15 +127,8 @@ export default function TournamentTemplateEditor({
         </div>
       )}
 
-      {showGoal && (
-        <div className="space-y-1">
-          {anyFormat && <p className="text-[11px] text-gray-600">Ohne festes Format wertet das Ziel die Stat-Felder der Reihe aus (Punktewertung/Durchschnittswerte). Für ein Ziel auf Spielergebnisse lege das Format der Reihe fest.</p>}
-          <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={goalFields} inSeries />
-          <p className="text-[10px] text-gray-500">
-            Gilt automatisch für alle Termine der Reihe. Einzelne Termine können es in ihren Einstellungen überschreiben oder abschalten.
-          </p>
-        </div>
-      )}
+      {!hideGoal && <SeriesGoalEditor format={format} value={value} onChange={onChange} statFields={statFields}
+        rewardLimit={goalRewardLimit} seriesPointsLimit={goalSeriesPointsLimit} />}
     </fieldset>
   );
 }

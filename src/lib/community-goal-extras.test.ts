@@ -122,10 +122,16 @@ describe("Ziel-Planung", () => {
     assert.deepEqual(r.rest, [plan[1]]);
   });
 
-  test("passt das Feld nicht zum Termin, wird das Ziel verbraucht, aber nicht gesetzt", () => {
+  test("passt das erste Ziel nicht, nimmt der Termin das nächste passende — das andere bleibt stehen", () => {
     const r = takePlannedGoal(plan, "coop_stats", ["Tore"]);
+    assert.deepEqual(r.goal, plan[1]);
+    assert.deepEqual(r.rest, [plan[0]]);
+  });
+
+  test("passt keins, bleibt der Plan unverändert", () => {
+    const r = takePlannedGoal(plan, "coop_stats", ["Assists"]);
     assert.equal(r.goal, null);
-    assert.deepEqual(r.rest, [plan[1]]);
+    assert.deepEqual(r.rest, plan);
   });
 
   test("Formate ohne Ziel verbrauchen nichts", () => {

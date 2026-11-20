@@ -7,7 +7,7 @@ import { generateBracket, generateRoundRobin } from "@/lib/tournaments/generate"
 import { withSanitizedGoal } from "@/lib/community-goal";
 
 export async function POST(req: NextRequest) {
-  const { eventId, format, participantIds, pointsConfig: rawPointsConfig, statFields, statConfig: rawStatConfig, autoGenerate, status } = await req.json();
+  const { eventId, format, participantIds, pointsConfig: rawPointsConfig, statFields, statConfig: rawStatConfig, autoGenerate, status, keepType } = await req.json();
   // Community-Ziel nur bei Skill-Index und nur mit vorhandenen Stat-Feldern, siehe lib/community-goal.ts
   const statConfig = withSanitizedGoal(rawStatConfig, format ?? "single_elimination", statFields);
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
@@ -48,7 +48,9 @@ export async function POST(req: NextRequest) {
       format: resolvedFormat,
       // "pending" = Einstellungen gespeichert, Turnier noch nicht gestartet ("bereit zum Start").
       tournamentStatus: status === "pending" ? "pending" : "active",
-      type: "tournament",
+      // keepType: Community-Ziel für ein Event "Ohne Platzierung" (Reiter "Ziel") — Werte-Erfassung ja,
+      // Platzierung nein. Sonst wird ein Event mit Spielplan wie bisher zum Event mit Platzierung.
+      ...(keepType !== true && { type: "tournament" }),
       pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null,
       statFields: statFields ? JSON.stringify(statFields) : null,
       statConfigJson: statConfig ? JSON.stringify(statConfig) : null,

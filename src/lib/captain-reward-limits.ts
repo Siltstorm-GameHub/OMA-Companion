@@ -35,6 +35,8 @@ export type RewardLimits = {
   matchDrawCoins: number;
   /** Community-Ziel erreicht: Münzen pro Mitwirkendem */
   goalRewardCoins: number;
+  /** Community-Ziel erreicht: Tabellenpunkte der Eventreihe pro Belohntem */
+  goalSeriesPoints: number;
 };
 
 /** Standardgrenzen (= Standardwerte des Event-Wizards). */
@@ -56,6 +58,7 @@ export const CAPTAIN_REWARD_LIMITS: RewardLimits = {
   matchWinCoins: 30,
   matchDrawCoins: 10,
   goalRewardCoins: 20,
+  goalSeriesPoints: 3,
 };
 
 const DEFAULT = CAPTAIN_REWARD_LIMITS;

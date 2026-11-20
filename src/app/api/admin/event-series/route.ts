@@ -63,9 +63,10 @@ export async function GET(req: NextRequest) {
  *   fixedFormat?: string | null,
  * }
  * Änderungen an Spiel, Format, Stat-Feldern und Umfragen werden beim Speichern immer
- * automatisch auf alle noch offenen Events der Reihe übertragen (nicht "finished"/"closed").
+ * automatisch auf alle noch offenen Events der Reihe übertragen (nicht "finished"/"archived";
+ * "closed" heißt nur "voll" und steht noch an).
  */
-const OPEN_EVENT_STATUS_FILTER = { notIn: ["finished", "closed"] };
+const OPEN_EVENT_STATUS_FILTER = { notIn: ["finished", "archived"] };
 const SEASON_LOCKED_FIELDS = ["seriesStatConfig", "legacyStandings", "placementRewardsJson", "pollsConfigJson", "fixedGame", "fixedFormat"] as const;
 
 export async function PATCH(req: NextRequest) {
@@ -91,10 +92,26 @@ export async function PATCH(req: NextRequest) {
     delete fields.cycleConfigJson;
     // Cover: nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
     if (fields.coverImageUrl && !isPresetCover(fields.coverImageUrl)) delete fields.coverImageUrl;
+    // Altstand (Legacy-Punkte für beliebige Mitglieder) pflegen nur Mods
+    delete fields.legacyStandings;
   }
+  delete fields.hiddenByModAt;
+  delete fields.approvalNote;
 
-  const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true, tournamentTemplateJson: true } });
+  const current = await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true, status: true, groupId: true, tournamentTemplateJson: true, hidden: true, hiddenByModAt: true } });
   if (!current) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+
+  // Von einem Mod ausgeblendet: nur Mods dürfen die Reihe wieder einblenden. Nur ein echter Wechsel
+  // sichtbar → ausgeblendet durch einen Mod sperrt den Ersteller aus.
+  let hiddenByModAt: Date | null | undefined;
+  if (fields.hidden !== undefined) {
+    fields.hidden = fields.hidden === true;
+    if (!fields.hidden && limits && current.hiddenByModAt) {
+      return NextResponse.json({ error: "Ein Mod hat diese Reihe ausgeblendet. Nur ein Mod kann sie wieder einblenden." }, { status: 403 });
+    }
+    if (!limits && fields.hidden && !current.hidden) hiddenByModAt = new Date();
+    if (!limits && !fields.hidden) hiddenByModAt = null;
+  }
 
   // Abgeschlossene Saison: Punkteregeln, Altstand, Belohnungen, Umfragen, Spiel und Format sind
   // eingefroren (die Endtabelle und Auszahlung beruhen darauf). Name, Texte und Aussehen bleiben änderbar.
@@ -156,6 +173,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.pollsConfigJson        !== undefined && { pollsConfigJson:       fields.pollsConfigJson }),
       ...(fields.category              !== undefined && { category:              fields.category || null }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
+      ...(hiddenByModAt                !== undefined && { hiddenByModAt }),
       ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
       // OMA Original — nur Mods (für Captains oben entfernt), siehe lib/oma-original.ts
       ...(fields.omaOriginal           !== undefined && { omaOriginal:           fields.omaOriginal === true }),
@@ -264,7 +282,7 @@ export async function PATCH(req: NextRequest) {
   if (fields.hidden !== undefined) {
     await prisma.event.updateMany({
       where: { seriesId },
-      data:  { hidden: fields.hidden },
+      data:  { hidden: fields.hidden, ...(hiddenByModAt !== undefined && { hiddenByModAt }) },
     });
   }
 

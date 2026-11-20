@@ -306,8 +306,11 @@ model EventSeries {
   createdById            String?
   createdBy              User?         @relation("EventSeriesCreator", fields: [createdById], references: [id], onDelete: SetNull)
   // null = keine Freigabe nötig (von Mod/Admin angelegt oder Altbestand), "pending" = wartet auf
-  // Mod-Freigabe (sichtbar, aber ohne Discord-Ankündigung/Push), "approved" = freigegeben
+  // Mod-Freigabe (sichtbar, aber ohne Discord-Ankündigung/Push), "approved" = freigegeben,
+  // "rejected" = abgelehnt (ausgeblendet, Grund in approvalNote)
   approvalStatus         String?
+  approvalNote           String? // Grund einer Ablehnung, sieht der Ersteller
+  hiddenByModAt          DateTime? // von einem Mod ausgeblendet: nur Mods dürfen wieder einblenden
   createdAt              DateTime      @default(now())
   events                 Event[]
   lulSeason              LulSeason?
@@ -414,6 +417,8 @@ model Event {
   // null | "pending" | "approved" — siehe EventSeries.approvalStatus. Events einer wartenden Reihe
   // gelten ebenfalls als wartend (lib/community-events.ts → isAwaitingApproval).
   approvalStatus String?
+  approvalNote   String? // Grund einer Ablehnung, sieht der Ersteller
+  hiddenByModAt  DateTime? // von einem Mod ausgeblendet: nur Mods dürfen wieder einblenden
 
   series             EventSeries?             @relation(fields: [seriesId], references: [id])
   lulSpieltag        LulSpieltag?

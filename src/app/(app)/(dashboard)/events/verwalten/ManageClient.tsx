@@ -4,20 +4,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
-  CalendarClock, Check, ChevronDown, Copy, Edit2, ExternalLink, Eye, EyeOff, Flag, Loader2, Search, Trophy, UserCheck, Vote,
+  CalendarClock, Check, ChevronDown, ChevronRight, Copy, Edit2, ExternalLink, Eye, EyeOff, Flag, Loader2, Search, Trophy, UserCheck, Vote,
 } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { dateBlock, type DayBucket } from "@/lib/event-display";
 import { groupManageEvents, matchesQuery, statusText, type ManageAction, type ManageEvent } from "@/lib/event-manage";
 import { formatBerlinDate } from "@/lib/time";
+import { RejectControl } from "./ApprovalBanner";
 
 export type ManageEventDTO = Omit<ManageEvent, "startAt" | "endAt"> & { startAt: string; endAt: string | null };
 export type ManageSeriesDTO = {
-  id: string; name: string; icon: string | null; hidden: boolean; awaitingApproval: boolean;
+  id: string; name: string; icon: string | null; hidden: boolean; awaitingApproval: boolean; rejected: boolean;
   played: number; total: number; next: string | null; seasonDone: boolean; createdBy: string | null;
 };
-export type ManageApproval = { kind: "events" | "series"; id: string; title: string; by: string; since: string; detail: string | null; href: string };
+/** Freigabe-Eintrag; `facts` = das Wichtigste auf einen Blick (Termin, Art, Anmeldungen, Belohnungen) */
+export type ManageApproval = { kind: "events" | "series"; id: string; title: string; by: string; since: string; facts: string[]; href: string };
 
 const BUCKETS: { key: DayBucket; label: string }[] = [
   { key: "today", label: "Heute" },
@@ -59,6 +61,24 @@ function Tag({ children, tone = "gray", title }: { children: ReactNode; tone?: "
   return <span title={title} className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${cls}`}>{children}</span>;
 }
 
+/** Status-Markierungen einer Event-Zeile — auf dem Handy unter dem Titel, ab Tablet rechts daneben */
+function EventTags({ ev, status }: { ev: ManageEvent; status: string }) {
+  return (
+    <>
+      {ev.approvalStatus === "pending" && <Tag tone="amber" title="Discord-Ankündigung und Push erst nach der Freigabe">Freigabe offen</Tag>}
+      {ev.approvalStatus === "rejected" && <Tag tone="rose" title="Von einem Mod nicht freigegeben">Abgelehnt</Tag>}
+      {ev.hidden && ev.approvalStatus !== "rejected" && <Tag tone="rose">Ausgeblendet</Tag>}
+      {status !== "Anmeldung offen" && <Tag tone={status === "Läuft" ? "teal" : "gray"}>{status}</Tag>}
+      {ev.goal && (
+        <Tag tone={ev.goal.reached ? "teal" : ev.goal.settled ? "rose" : "gray"}
+          title={ev.goal.settled ? (ev.goal.reached ? "Community-Ziel geschafft" : "Community-Ziel verfehlt") : "Community-Ziel: Stand"}>
+          🎯 {ev.goal.settled && !ev.goal.reached ? "verfehlt" : ev.goal.reached ? "geschafft" : `${Math.floor(ev.goal.percent)} %`}
+        </Tag>
+      )}
+    </>
+  );
+}
+
 /** ⋯-Menü einer Event-Zeile: öffentliche Seite, duplizieren, ein-/ausblenden */
 function RowMenu({ ev }: { ev: ManageEvent }) {
   const router = useRouter();
@@ -83,7 +103,7 @@ function RowMenu({ ev }: { ev: ManageEvent }) {
     setBusy(false);
     setOpen(false);
     if (res.ok) { toast.success(ev.hidden ? "Wieder für alle sichtbar" : "Ausgeblendet, nur noch in der Verwaltung sichtbar"); router.refresh(); }
-    else toast.error("Das hat nicht geklappt");
+    else toast.error((await res.json().catch(() => null))?.error ?? "Das hat nicht geklappt");
   }
 
   const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-200 hover:bg-white/[0.06]";
@@ -127,12 +147,9 @@ function EventLine({ ev, now, right }: { ev: ManageEvent; now: Date; right?: Rea
           {ev.series ? `${ev.series.name} · Termin ${ev.series.index} von ${ev.series.total}` : ev.game ?? "Kein Spiel festgelegt"}
           {ev.createdBy && ` · von ${ev.createdBy}`}
         </span>
+        <span className="mt-1 flex flex-wrap gap-1 sm:hidden empty:hidden"><EventTags ev={ev} status={status} /></span>
       </Link>
-      <span className="hidden sm:flex items-center gap-1">
-        {ev.approvalStatus === "pending" && <Tag tone="amber" title="Discord-Ankündigung und Push erst nach der Freigabe">Freigabe offen</Tag>}
-        {ev.hidden && <Tag tone="rose">Ausgeblendet</Tag>}
-        {status !== "Anmeldung offen" && <Tag tone={status === "Läuft" ? "teal" : "gray"}>{status}</Tag>}
-      </span>
+      <span className="hidden sm:flex items-center gap-1"><EventTags ev={ev} status={status} /></span>
       <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
         ev.players === 0 ? "bg-amber-500/10 text-amber-300" : "bg-white/[0.05] text-gray-300"
       }`} title="Anmeldungen als Spieler">
@@ -153,8 +170,8 @@ function EventLine({ ev, now, right }: { ev: ManageEvent; now: Date; right?: Rea
 const ACTION_ICON: Record<ManageAction["kind"], typeof Trophy> = { tournament: Trophy, poll: Vote, complete: CalendarClock };
 
 /**
- * Events → Verwalten: "Braucht dich", "Anstehend" (Heute / Diese Woche / Später), Eventreihen und
- * Beendete — alles mit einer gemeinsamen Suche. Logik in lib/event-manage.ts.
+ * Events → Verwalten: "Braucht dich", "Anstehend" (Heute / Diese Woche / Später, filterbar nach Reihe),
+ * Eventreihen und Beendete — alles mit einer gemeinsamen Suche. Logik in lib/event-manage.ts.
  */
 export default function ManageClient({ isStaff, nowIso, events, series, approvals, pastLimit }: {
   isStaff: boolean; nowIso: string; events: ManageEventDTO[]; series: ManageSeriesDTO[]; approvals: ManageApproval[];
@@ -167,35 +184,25 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   const [pastOpen, setPastOpen] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
-  // Reihen-Filter: nur die anstehenden Termine der ausgewählten Reihen (leer = alle Events)
-  const [selectedSeries, setSelectedSeries] = useState<Set<string>>(new Set());
+  // Filter "Anstehend" nach einer Reihe ("" = alle Events)
+  const [seriesFilter, setSeriesFilter] = useState("");
 
   const all: ManageEvent[] = events.map((e) => ({ ...e, startAt: new Date(e.startAt), endAt: e.endAt ? new Date(e.endAt) : null }));
   const q = query.trim().toLowerCase();
   const groups = groupManageEvents(all.filter((e) => matchesQuery(e, query)), now);
   const seriesShown = series.filter((s) => !q || s.name.toLowerCase().includes(q) || (s.createdBy ?? "").toLowerCase().includes(q));
   const approvalsShown = approvals.filter((a) => !q || a.title.toLowerCase().includes(q) || a.by.toLowerCase().includes(q));
-  const seasonsDone = seriesShown.filter((s) => s.seasonDone);
+  // Saisonabschluss (Endwertung, Auszahlung) machen nur Mods — Mitglieder sehen den Stand in der Reihen-Liste
+  const seasonsDone = isStaff ? seriesShown.filter((s) => s.seasonDone) : [];
   const attentionCount = approvalsShown.length + seasonsDone.length + groups.action.length;
-  const filtering = selectedSeries.size > 0;
-  const inFilter = (ev: ManageEvent) => !filtering || (!!ev.series && selectedSeries.has(ev.series.id));
+  const filterSeries = series.find((s) => s.id === seriesFilter) ?? null;
+  const inFilter = (ev: ManageEvent) => !filterSeries || ev.series?.id === filterSeries.id;
   const upcoming: Record<DayBucket, ManageEvent[]> = {
     today: groups.upcoming.today.filter(inFilter),
     week: groups.upcoming.week.filter(inFilter),
     later: groups.upcoming.later.filter(inFilter),
   };
   const upcomingCount = upcoming.today.length + upcoming.week.length + upcoming.later.length;
-  // Anstehende Termine je Reihe (Zahl in der Reihen-Zeile)
-  const upcomingBySeries = new Map<string, number>();
-  for (const ev of [...groups.upcoming.today, ...groups.upcoming.week, ...groups.upcoming.later]) {
-    if (ev.series) upcomingBySeries.set(ev.series.id, (upcomingBySeries.get(ev.series.id) ?? 0) + 1);
-  }
-  const toggleSeries = (id: string) => setSelectedSeries((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
-  const selectedNames = series.filter((s) => selectedSeries.has(s.id)).map((s) => s.name);
   const pastShown = showAllPast || q ? groups.past : groups.past.slice(0, PAST_VISIBLE);
 
   async function approve(a: ManageApproval) {
@@ -235,18 +242,27 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
         <Section title="Braucht dich" count={attentionCount} tone="attention">
           <ul className="mt-1 divide-y divide-white/[0.05]">
             {approvalsShown.map((a) => (
-              <li key={`a-${a.id}`} className="flex items-center gap-3 py-2.5">
+              <li key={`a-${a.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
                 <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><UserCheck className="w-4 h-4" /></span>
-                <span className="min-w-0 flex-1">
+                {/* basis-56: auf schmalen Bildschirmen rutschen die Knöpfe in eine eigene Zeile */}
+                <span className="min-w-0 flex-1 basis-56">
                   <span className="block truncate text-sm font-medium text-white">{a.title}</span>
                   <span className="block truncate text-[11px] text-gray-500">
-                    Community-{a.kind === "series" ? "Reihe" : "Event"} von {a.by}{a.detail && ` · ${a.detail}`} · wartet {since(a.since, now).replace("seit ", "")}
+                    {a.kind === "series" ? "Reihe" : "Event"} von {a.by} · wartet {since(a.since, now).replace("seit ", "")}
                   </span>
+                  {a.facts.length > 0 && (
+                    <span className="mt-0.5 block text-[11px] text-gray-400">{a.facts.join(" · ")}</span>
+                  )}
                 </span>
-                <Link href={a.href} className={BTN}>Ansehen</Link>
-                <button type="button" onClick={() => approve(a)} disabled={approving === a.id} className={BTN_PRIMARY}>
-                  {approving === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Freigeben
-                </button>
+                {/* "contents": die Knöpfe sind direkte Flex-Kinder der Zeile — so öffnet das Ablehnen-Feld
+                    (basis-full) in voller Breite unter der Zeile */}
+                <span className="contents">
+                  <Link href={a.href} className={BTN}>Ansehen</Link>
+                  <button type="button" onClick={() => approve(a)} disabled={approving === a.id} className={BTN_PRIMARY}>
+                    {approving === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Freigeben
+                  </button>
+                  <RejectControl kind={a.kind} id={a.id} compact />
+                </span>
               </li>
             ))}
             {seasonsDone.map((s) => (
@@ -279,59 +295,46 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
         </Section>
       )}
 
-      {/* ── Eventreihen (Filter) und Anstehend — große Bildschirme nebeneinander ── */}
+      {/* ── Eventreihen und Anstehend — große Bildschirme nebeneinander ── */}
       {(seriesShown.length > 0 || upcomingCount > 0 || (!empty && !q)) && (
         <div className={`grid gap-4 items-start ${seriesShown.length > 0 ? "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" : ""}`}>
           {seriesShown.length > 0 && (
             <section aria-label="Eventreihen" className="glass rounded-2xl p-4 lg:sticky lg:top-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white">
-                  Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
-                </h2>
-                {filtering && (
-                  <button type="button" onClick={() => setSelectedSeries(new Set())}
-                    className="ml-auto text-[11px] font-semibold text-teal-300 hover:text-teal-200">
-                    Alle Events zeigen
-                  </button>
-                )}
-              </div>
-              <p className="mt-0.5 text-[11px] text-gray-500">Antippen filtert die anstehenden Termine nach dieser Reihe.</p>
+              <h2 className="text-sm font-semibold text-white">
+                Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
+              </h2>
               <ul className="mt-1 divide-y divide-white/[0.05]">
                 {seriesShown.map((s) => {
                   const color = resolveSeriesColor(s.icon);
                   const pct = s.total > 0 ? Math.round((s.played / s.total) * 100) : 0;
-                  const on = selectedSeries.has(s.id);
-                  const upcomingN = upcomingBySeries.get(s.id) ?? 0;
                   return (
-                    <li key={s.id} className="flex items-center gap-1">
-                      <button type="button" onClick={() => toggleSeries(s.id)} aria-pressed={on}
-                        className={`group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-2 text-left transition-colors ${on ? "bg-teal-500/10 ring-1 ring-teal-500/30" : "hover:bg-white/[0.03]"}`}>
-                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? "border-teal-400 bg-teal-500 text-black" : "border-white/20"}`}>
-                          {on && <Check className="w-3 h-3" />}
-                        </span>
-                        <span className="w-1 h-8 rounded-full shrink-0" style={{ background: color }} />
+                    <li key={s.id}>
+                      <Link href={`/events/verwalten/reihen/${s.id}`}
+                        className="group flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-white/[0.03] transition-colors">
+                        <span className="w-1 h-9 rounded-full shrink-0" style={{ background: color }} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 min-w-0">
                             <SeriesIcon name={s.icon} className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate text-sm font-medium text-white">{s.name}</span>
+                            <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{s.name}</span>
                           </span>
                           <span className="block truncate text-[11px] text-gray-500">
-                            {s.seasonDone ? "Alle Termine gespielt, Endwertung offen"
-                              : s.next ? `Nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
-                              : "Kein Termin geplant"}
-                            {s.total > 0 && ` · ${Math.min(s.played + 1, s.total)}/${s.total}`}
-                            {upcomingN > 0 && ` · ${upcomingN} anstehend`}
-                            {s.awaitingApproval && " · Freigabe offen"}
-                            {s.hidden && " · ausgeblendet"}
+                            {s.total > 0 ? `${s.played} von ${s.total} gespielt` : "Noch keine Termine"}
+                            {s.seasonDone ? (isStaff ? " · Endwertung offen" : " · ein Mod schließt die Saison ab")
+                              : s.next ? ` · nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
+                              : s.total > 0 ? " · kein Termin geplant" : ""}
                           </span>
-                          <span className="mt-1 block h-1 w-full rounded-full bg-white/[0.06] overflow-hidden" title={`${s.played} von ${s.total} Terminen gespielt`}>
+                          {(s.awaitingApproval || s.rejected || s.hidden) && (
+                            <span className="mt-1 flex flex-wrap gap-1">
+                              {s.awaitingApproval && <Tag tone="amber">Freigabe offen</Tag>}
+                              {s.rejected && <Tag tone="rose">Abgelehnt</Tag>}
+                              {s.hidden && !s.rejected && <Tag tone="rose">Ausgeblendet</Tag>}
+                            </span>
+                          )}
+                          <span className="mt-1 block h-1 w-full rounded-full bg-white/[0.06] overflow-hidden" aria-hidden>
                             <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                           </span>
                         </span>
-                      </button>
-                      <Link href={`/events/verwalten/reihen/${s.id}`} aria-label={`${s.name} verwalten`} title="Reihe verwalten"
-                        className="w-7 h-7 shrink-0 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] flex items-center justify-center">
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <ChevronRight className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-gray-300" />
                       </Link>
                     </li>
                   );
@@ -345,20 +348,19 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
               <h2 className="text-sm font-semibold text-white">
                 Anstehend <span className="ml-1 font-normal text-gray-500">· {upcomingCount}</span>
               </h2>
-              {filtering && (
-                <span className="min-w-0 truncate rounded-md bg-teal-500/10 px-2 py-0.5 text-[11px] text-teal-200">
-                  {selectedNames.join(", ")}
-                </span>
-              )}
-              {filtering && (
-                <button type="button" onClick={() => setSelectedSeries(new Set())}
-                  className="ml-auto text-[11px] font-semibold text-teal-300 hover:text-teal-200">
-                  Filter aufheben
-                </button>
+              {series.length > 0 && (
+                <label className="ml-auto flex items-center gap-1.5 text-[11px] text-gray-500">
+                  Zeigen:
+                  <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}
+                    className="max-w-[12rem] rounded-md bg-white/[0.04] border border-white/[0.08] px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-teal-400/50">
+                    <option value="">Alle Events</option>
+                    {series.map((s) => <option key={s.id} value={s.id}>Nur {s.name}</option>)}
+                  </select>
+                </label>
               )}
             </div>
             {upcomingCount === 0 ? (
-              <p className="mt-2 text-sm text-gray-500">{filtering ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
+              <p className="mt-2 text-sm text-gray-500">{filterSeries ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
             ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
               <div key={key} className="mt-2">
                 <p className="text-[11px] font-semibold text-gray-500">{label}</p>

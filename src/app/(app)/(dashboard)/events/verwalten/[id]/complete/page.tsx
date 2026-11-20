@@ -55,7 +55,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   const { id } = await params;
   const currentUser = await requireEventManager(id);
 
-  const [event, allUsers] = await Promise.all([
+  const [event, allUsers, pendingSubmissions] = await Promise.all([
     prisma.event.findUnique({
       where: { id },
       include: {
@@ -82,10 +82,14 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
         },
       },
     }),
+    // Nur die Angemeldeten (Spieler und Zuschauer) — früher kam hier die komplette Mitgliederliste mit
     prisma.user.findMany({
+      where: { eventRegistrations: { some: { eventId: id } } },
       select: { id: true, name: true, username: true, image: true },
       orderBy: { name: "asc" },
     }),
+    // Ungeprüfte Screenshot-/Ergebnis-Meldungen — Hinweis oben auf der Seite
+    prisma.matchResultSubmission.count({ where: { match: { eventId: id }, status: "pending" } }),
   ]);
 
   if (!event) notFound();
@@ -105,6 +109,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       try { parsed = JSON.parse(entry.statsJson); } catch { continue; }
       if (!userStats[entry.userId]) userStats[entry.userId] = {};
       for (const [field, val] of Object.entries(parsed)) {
+        // Interne Felder ("_team" = "A"/"B") und Nicht-Zahlen überspringen — sonst entsteht NaN
+        if (field.startsWith("_") || !Number.isFinite(Number(val))) continue;
         userStats[entry.userId][field] = (userStats[entry.userId][field] ?? 0) + Number(val);
       }
     }
@@ -295,6 +301,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       initialFinalRanking={initialFinalRanking}
       initialRankingGroups={initialRankingGroups}
       initialFinalRankingNote={event.finalRankingNote ?? null}
+      pendingSubmissions={pendingSubmissions}
     />
   );
 }

@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventEditClient from "./EventEditClient";
 import ApprovalBanner from "../ApprovalBanner";
-import { APPROVAL_PENDING, isAwaitingApproval } from "@/lib/community-events";
+import { getCommunityLimits } from "@/lib/community-event-limits";
+import { loadGoalStatus } from "@/lib/goal-status";
+import { APPROVAL_PENDING, APPROVAL_REJECTED, isAwaitingApproval, isRejected } from "@/lib/community-events";
 
 export default async function AdminEventEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -11,11 +13,11 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
   const isModerator = hasMinRole(user.role, "moderator");
   const captainedSquadIds = isModerator ? null : await getCaptainedSquadIds(user.id);
 
-  const [event, allUsers, squads] = await Promise.all([
+  const [event, registeredUsers, squads] = await Promise.all([
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true, icon: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true, fixedFormat: true, seriesStatConfig: true, squadId: true, tournamentTemplateJson: true, omaOriginal: true } },
+        series: { select: { id: true, name: true, icon: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true, fixedFormat: true, seriesStatConfig: true, squadId: true, tournamentTemplateJson: true, omaOriginal: true, approvalStatus: true, hiddenByModAt: true } },
         registrations: { select: { userId: true, role: true, checkedInAt: true } },
         streamingPartners: { select: { partnerId: true } },
         clipSubmissions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { createdAt: "desc" } },
@@ -32,7 +34,10 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
         blocksChallenge: { select: { metric: true, goal: true, minContribution: true, rewardCoins: true, rewardRankPoints: true, finalizedAt: true } },
       },
     }),
+    // Nur die Angemeldeten (Spieler und Zuschauer) — weitere Mitglieder findet die Suche im Reiter
+    // "Teilnehmer" (/api/events/[id]/member-search), statt die ganze Mitgliederliste mitzuschicken
     prisma.user.findMany({
+      where: { eventRegistrations: { some: { eventId: id } } },
       select: { id: true, name: true, username: true, image: true },
       orderBy: { name: "asc" },
     }),
@@ -44,20 +49,29 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
   ]);
 
   if (!event) notFound();
+  // Mitglieder: Obergrenzen an den Belohnungsfeldern anzeigen (Einzel-Event bzw. Reihen-Termin)
+  const limits = isModerator ? null : await getCommunityLimits();
+  const rewardLimits = limits ? (event.seriesId ? limits.seriesEvent : limits.standalone) : null;
 
   const seriesApproval = event.seriesId
-    ? (await prisma.eventSeries.findUnique({ where: { id: event.seriesId }, select: { approvalStatus: true } }))?.approvalStatus
+    ? await prisma.eventSeries.findUnique({ where: { id: event.seriesId }, select: { approvalStatus: true, approvalNote: true } })
     : null;
-  const awaiting = isAwaitingApproval({ approvalStatus: event.approvalStatus, series: { approvalStatus: seriesApproval } });
-  const inheritedFromSeries = awaiting && event.approvalStatus !== APPROVAL_PENDING;
+  const approvalInput = { approvalStatus: event.approvalStatus, series: { approvalStatus: seriesApproval?.approvalStatus } };
+  const rejected = isRejected(approvalInput);
+  const awaiting = !rejected && isAwaitingApproval(approvalInput);
+  const ownStatus = rejected ? APPROVAL_REJECTED : APPROVAL_PENDING;
+  const inheritedFromSeries = (awaiting || rejected) && event.approvalStatus !== ownStatus;
+  const rejectedNote = !rejected ? null : (inheritedFromSeries ? seriesApproval?.approvalNote : event.approvalNote) ?? "";
+  // Stand des Community-Ziels für den Reiter "Ziel" (null = kein Ziel)
+  const goalStatus = await loadGoalStatus(event);
 
   return (
     <>
-      {awaiting && (
+      {(awaiting || rejected) && (
         <ApprovalBanner kind={inheritedFromSeries ? "series" : "events"} id={inheritedFromSeries ? event.seriesId! : event.id}
-          canApprove={isModerator} inheritedFromSeries={inheritedFromSeries} />
+          canApprove={isModerator} inheritedFromSeries={inheritedFromSeries} rejectedNote={rejectedNote} />
       )}
-      <EventEditClient event={event} allUsers={allUsers} squads={squads} />
+      <EventEditClient event={event} registeredUsers={registeredUsers} squads={squads} rewardLimits={rewardLimits} goalStatus={goalStatus} />
     </>
   );
 }

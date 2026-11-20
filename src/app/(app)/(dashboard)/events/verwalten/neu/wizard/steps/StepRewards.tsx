@@ -3,13 +3,15 @@ import PlaceMedal from "@/components/PlaceMedal";
 import Image from "next/image";
 import { Plus, Trash2 } from "@/components/icons";
 import InfoTooltip from "@/components/InfoTooltip";
-import { PollConfig, inputCls, inputStyle, labelCls } from "../shared";
+import { LimitHint, PollConfig, inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 import { NumberInput } from "@/components/ui/NumberInput";
+import CommunityGoalEditor from "@/components/CommunityGoalEditor";
+import StatFieldEditor from "@/components/StatFieldEditor";
 
 // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
 export default function StepRewards({ w }: { w: EventWizard }) {
-  const { eventType, spectatorMode, seriesMode, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll } = w;
+  const { eventType, spectatorMode, seriesMode, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll, rewardLimits: lim } = w;
   if (w.isBlocksChallenge) {
     return (
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm text-gray-300">
@@ -33,6 +35,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <NumberInput min="0" value={participationCoins}
                 onChange={e => setParticipationCoins(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
+              <LimitHint value={participationCoins} max={lim?.participationCoins} />
             </div>
           )}
           {!belongsToSeries && (
@@ -41,6 +44,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <NumberInput min="0" value={participationRankPts}
                 onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
+              <LimitHint value={participationRankPts} max={lim?.participationRankPts} />
             </div>
           )}
         </div>
@@ -53,7 +57,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
       </div>
 
       {eventType === "community" ? (
-        <p className="text-[11px] text-gray-500 -mt-3 px-1">Community-Event: keine Platzierung — es gibt nur die Teilnahme-Belohnung.</p>
+        <p className="text-[11px] text-gray-500 -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
       ) : (
       <div className="rounded-xl p-4 border border-white/8 bg-white/2">
         <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
@@ -70,18 +74,45 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                   <NumberInput min="0" value={p.coins}
                     onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, coins: Number(e.target.value) } : pp))}
                     className={inputCls} style={inputStyle} />
+                  {isEventMode && <LimitHint value={p.coins} max={lim ? (lim.placementCoins[i] ?? lim.placementCoinsOther) : null} />}
                 </div>
                 <div>
                   <label className={labelCls}>Rang-Punkte</label>
                   <NumberInput min="0" value={p.rankPoints}
                     onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
                     className={inputCls} style={inputStyle} />
+                  {isEventMode && <LimitHint value={p.rankPoints} max={lim ? (lim.placementRankPoints[i] ?? 0) : null} />}
                 </div>
               </div>
             </div>
           ))}
         </div>
+        {isSeriesMode && lim && (
+          <p className="mt-2 text-[11px] text-gray-500">
+            Die Grenzen der Endwertung richten sich nach der Zahl der Termine. Zu hohe Werte werden beim Abschluss der Saison gekürzt.
+          </p>
+        )}
       </div>
+      )}
+
+      {/* "Ohne Platzierung": gemeinsames Community-Ziel (legt eine Werte-Erfassung an, keine Platzierung) */}
+      {isEventMode && eventType === "community" && !w.isBlocksEvent && seriesMode === "none" && (
+        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
+          <CommunityGoalEditor value={w.communityGoal} onChange={w.setCommunityGoal} statFields={w.statFields}
+            rewardLimit={lim?.goalRewardCoins ?? null} hasEnd={!!w.endAt} />
+          {w.communityGoal.enabled && (
+            <div>
+              <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
+              <StatFieldEditor fields={w.statFields} onChange={w.setStatFields} isAvg={false} />
+              <p className="text-[10px] text-gray-500 mt-1">
+                Diese Werte trägst du (oder tragen die Teilnehmer per Screenshot) im Reiter „Spielplan“ ein. Eine Platzierung gibt es weiterhin nicht.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      {isEventMode && eventType === "community" && seriesMode !== "none" && (
+        <p className="text-[11px] text-gray-500 -mt-3 px-1">🎯 Ein Community-Ziel kommt bei Terminen einer Reihe aus der Reihe (Reiter „Ziel“ der Reihe).</p>
       )}
 
       {spectatorMode && (
@@ -94,6 +125,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                 <NumberInput min="0" value={spectatorCoins}
                   onChange={e => setSpectatorCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
+                <LimitHint value={spectatorCoins} max={lim?.spectatorCoins} />
               </div>
             )}
             <div>
@@ -101,6 +133,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <NumberInput min="0" value={spectatorRankPts}
                 onChange={e => setSpectatorRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
+              <LimitHint value={spectatorRankPts} max={lim?.spectatorRankPoints} />
             </div>
           </div>
           {isSeriesMode && (
@@ -131,6 +164,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               <NumberInput min="0" value={participationCoins}
                 onChange={e => setParticipationCoins(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
+              <LimitHint value={participationCoins} max={lim?.participationCoins} />
             </div>
           </div>
           {spectatorMode && (
@@ -146,6 +180,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                 <NumberInput min="0" value={spectatorCoins}
                   onChange={e => setSpectatorCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
+                <LimitHint value={spectatorCoins} max={lim?.spectatorCoins} />
               </div>
             </div>
           )}
@@ -247,6 +282,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                   <NumberInput min="0" value={poll.participationCoins}
                     onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
+                  <LimitHint value={poll.participationCoins} max={lim?.pollParticipationCoins} />
                 </div>
                 <div>
                   <label className={labelCls}>Belohnung Abstimmung — Tabellenpunkte</label>
@@ -261,6 +297,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                   <NumberInput min="0" value={poll.winnerCoins}
                     onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })}
                     className={inputCls} style={inputStyle} />
+                  <LimitHint value={poll.winnerCoins} max={lim?.pollWinnerCoins} />
                 </div>
                 <div>
                   <label className={labelCls}>Sieger-Belohnung — Tabellenpunkte</label>

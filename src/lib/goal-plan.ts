@@ -2,8 +2,9 @@
 // Geplante Community-Ziele einer Eventreihe
 // ============================================
 // Die Reihe hält eine Warteschlange von Zielen (TournamentTemplate.goalPlan). Wird ein neuer Termin
-// (Zyklus) angelegt, übernimmt er das erste geplante Ziel als eigenes Ziel (Abweichung vom
-// Reihen-Ziel, siehe lib/event-goal.ts) und es fällt aus der Liste. Ist die Liste leer, gilt wie
+// (Zyklus) angelegt, übernimmt er das erste geplante Ziel, das zu ihm passt (Format und Stat-Felder),
+// als eigenes Ziel (Abweichung vom Reihen-Ziel, siehe lib/event-goal.ts) und nur dieses fällt aus der
+// Liste. Ziele, die nicht passen, bleiben für spätere Termine stehen. Ist keins passend, gilt wie
 // gehabt das Ziel der Reihe.
 
 import { prisma } from "@/lib/prisma";
@@ -11,12 +12,17 @@ import { goalFieldsFor, sanitizeCommunityGoal, supportsCommunityGoal, type Commu
 import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
 import { parseTournamentTemplate, serializeTournamentTemplate } from "@/lib/series-seasons";
 
-/** Reine Funktion: erstes passendes Ziel aus dem Plan nehmen (nur Felder, die der Termin hat). */
+/** Reine Funktion: erstes passendes Ziel aus dem Plan nehmen (nur Felder, die der Termin hat).
+ *  Nicht passende Ziele bleiben im Plan — früher fielen sie still heraus, ohne gesetzt zu werden. */
 export function takePlannedGoal(plan: CommunityGoal[], format: string | null | undefined, statFields: string[]):
   { goal: CommunityGoal | null; rest: CommunityGoal[] } {
   if (plan.length === 0 || !supportsCommunityGoal(format)) return { goal: null, rest: plan };
-  const [first, ...rest] = plan;
-  return { goal: sanitizeCommunityGoal(first, goalFieldsFor(format, statFields)), rest };
+  const allowed = goalFieldsFor(format, statFields);
+  for (let i = 0; i < plan.length; i++) {
+    const goal = sanitizeCommunityGoal(plan[i], allowed);
+    if (goal) return { goal, rest: [...plan.slice(0, i), ...plan.slice(i + 1)] };
+  }
+  return { goal: null, rest: plan };
 }
 
 /**
@@ -41,6 +47,7 @@ export async function applyPlannedGoal(eventId: string): Promise<CommunityGoal |
       let statFields: string[] = [];
       try { statFields = ev.statFields ? JSON.parse(ev.statFields) as string[] : []; } catch { statFields = []; }
       const { goal, rest } = takePlannedGoal(template.goalPlan, ev.format, statFields);
+      if (!goal) return null;
       await tx.eventSeries.update({
         where: { id: ev.seriesId },
         data: { tournamentTemplateJson: serializeTournamentTemplate({ ...template, goalPlan: rest }) },

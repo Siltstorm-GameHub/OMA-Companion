@@ -2,8 +2,8 @@
 // Community-Ziel eines Events — mit Vererbung aus der Eventreihe
 // ============================================
 // Das Ziel einer Eventreihe steht in deren Turniervorlage (EventSeries.tournamentTemplateJson →
-// communityGoal) und gilt automatisch für ALLE Termine der Reihe in den Formaten Punktewertung
-// und Durchschnittswerte. Ein Termin
+// communityGoal) und gilt automatisch für ALLE Termine der Reihe, deren Format ein Ziel kennt (GOAL_FORMATS in
+// lib/community-goal.ts: Stat-Formate und Liga/K.O. mit Toren laut Ergebnis). Ein Termin
 // speichert nur eine Abweichung in seiner statConfigJson:
 //   - goal:    eigenes Ziel nur für diesen Termin (überschreibt das der Reihe)
 //   - goalOff: true → dieser Termin hat bewusst kein Ziel
@@ -42,7 +42,8 @@ export function parseOwnGoalConfig(statConfigJson: string | null | undefined): O
 }
 
 /**
- * Gültiges Ziel eines Events. Nur Punktewertung (coop_stats) und Durchschnittswerte (avg_stats) haben Ziele.
+ * Gültiges Ziel eines Events. Ziele gibt es in den Formaten aus GOAL_FORMATS (lib/community-goal.ts):
+ * Punktewertung, Durchschnittswerte, FFA (Stat-Felder) sowie Liga/Round Robin/K.O. (Tore laut Ergebnis).
  * statFields: optional — Felder, die das Event erfasst; geerbte Ziel-Felder ohne passendes Stat-Feld
  * fallen heraus (bleibt keins übrig, gilt kein Ziel).
  */

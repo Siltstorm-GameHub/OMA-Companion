@@ -2,6 +2,7 @@
 import { Check } from "@/components/icons";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
+import SeriesGoalEditor from "@/components/SeriesGoalEditor";
 import { EVENTPUNKTE_LABEL, TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { inputCls, inputStyle, labelCls } from "../shared";
 import type { EventWizard } from "../useEventWizard";
@@ -37,7 +38,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         {variousGames && (
           <p className="text-[11px] text-blue-300/90 rounded-lg px-3 py-2 border border-blue-500/20 bg-blue-500/5">
             Bei wechselnden Spielen: Lege hier nur Stats an, die es in jedem Spiel gibt. Spielspezifische Stats ergänzt
-            du im jeweiligen Event (Reiter „Turnier“) — die zählen dann nur im Event, nicht für die Reihentabelle.
+            du im jeweiligen Event (Reiter „Spielplan“) — die zählen dann nur im Event, nicht für die Reihentabelle.
           </p>
         )}
         <StatRowsEditor
@@ -84,6 +85,19 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         </div>
       )}
 
+      {/* "Ohne Platzierung": gemeinsames Ziel je Termin — legt für alle Termine eine Werte-Erfassung an */}
+      {eventType === "community" && (
+        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-2">
+          <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel (optional)</p>
+          {eventStatFields.length === 0 ? (
+            <p className="text-xs text-gray-500">Lege oben unter „Statistiken“ fest, welche Werte gezählt werden (z. B. Tore). Dann kannst du hier ein gemeinsames Ziel setzen.</p>
+          ) : (
+            <SeriesGoalEditor format="coop_stats" value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields}
+              rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} />
+          )}
+        </div>
+      )}
+
       {eventType === "tournament" && (
         <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-3">
           <div>
@@ -92,7 +106,8 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
               Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
             </p>
           </div>
-          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} />
+          <TournamentTemplateEditor format={variousGames ? null : seriesFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields}
+            goalRewardLimit={w.rewardLimits?.goalRewardCoins ?? null} goalSeriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} />
         </div>
       )}
 

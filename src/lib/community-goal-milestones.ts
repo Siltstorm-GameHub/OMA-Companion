@@ -6,7 +6,12 @@
 //   - eine Meldung an alle Teilnehmer (Push/In-App, optional Discord-Kanal) — Regel
 //     "event_goal_milestone", bei mehreren neuen Stufen auf einmal nur die höchste
 //   - sobald das Ziel erreicht ist: Münzen an alle Mitwirkenden (goal.rewardCoins), jede Person nur
-//     einmal; Community-Events (von normalen Usern angelegt) auf die Community-Obergrenze gekappt.
+//     einmal; Mitglieder-Events (von normalen Usern angelegt) auf die Obergrenze gekappt
+//     (goalRewardCoins, Tabellenpunkte: goalSeriesPoints).
+//   - Mitglieder-Events, die noch auf die Mod-Freigabe warten oder abgelehnt sind, zahlen nichts aus und
+//     melden nichts — die Freigabe stößt die Prüfung erneut an (lib/community-events.ts).
+//   - Ausgezahlte Beträge stehen in goalStateJson.paid: "Neu auswerten" (reevaluateGoal) und das Löschen
+//     eines Events buchen genau diese zurück (revertGoalRewards).
 //
 // Ende des Zeitraums (Event.endAt vorbei oder Spielphase abgeschlossen): einmalige Abrechnung
 // (settledAt/settledReached). Ausgelöst vom Cron event-reminders (settleEndedGoals) und vom Abschluss.
@@ -113,13 +118,14 @@ export function resultText(progress: CommunityGoalProgress): { title: string; te
   return { title: "Verfehlt", text: "Der Zeitraum ist vorbei — diesmal hat es nicht gereicht. Nächstes Mal packen wir es!" };
 }
 
-const isClosed = (status: string) => status === "finished" || status === "closed";
+// "closed" heißt nur "voll" — beendet sind finished/archived
+const isClosed = (status: string) => status === "finished" || status === "archived";
 
 /**
  * Prüft das Community-Ziel eines Events nach einer Ergebnis-Änderung bzw. am Ende des Zeitraums. Wirft
  * nie (Fehler werden nur geloggt), damit das Speichern eines Rundenwerts nie daran scheitert.
  */
-export async function checkCommunityGoal(eventId: string): Promise<void> {
+export async function checkCommunityGoal(eventId: string, opts: { silent?: boolean } = {}): Promise<void> {
   try {
     const peek = await prisma.event.findUnique({
       where: { id: eventId },
@@ -150,26 +156,34 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
       });
       const goal = ev ? resolveEventGoal(ev).goal : null;
       if (!ev || !goal) return null;
+      // Wartet auf die Freigabe oder abgelehnt: nichts auszahlen, nichts festhalten — nach der Freigabe
+      // läuft die Prüfung erneut und erledigt alles auf einmal
+      const blocked = [ev.approvalStatus, ev.series?.approvalStatus].some(s => s === "pending" || s === "rejected");
+      if (blocked) return null;
       const progress = computeCommunityGoalProgress(ev.matches, goal);
       const state = parseGoalState(ev.goalStateJson);
       const { newMilestone, milestones, rewardUserIds } = evaluateGoal(progress, state, userTeams(toGoalMatches(ev.matches)));
 
-      // Belohnung — Community-Events (von normalen Usern angelegt) auf die Community-Obergrenze kappen
+      // Belohnung — Mitglieder-Events (von normalen Usern angelegt) auf die Obergrenzen kappen
       const isCommunity = !!(ev.approvalStatus || ev.series?.approvalStatus);
-      const limits = isCommunity ? await getCommunityLimits() : null;
-      const cap = (coins: number) => limits ? capValue(coins, (ev.seriesId ? limits.seriesEvent : limits.standalone).goalRewardCoins) : coins;
+      const allLimits = isCommunity ? await getCommunityLimits() : null;
+      const limits = allLimits ? (ev.seriesId ? allLimits.seriesEvent : allLimits.standalone) : null;
+      const cap = (coins: number) => limits ? capValue(coins, limits.goalRewardCoins) : coins;
       const coins = cap(goal.rewardCoins ?? 0);
+      const seriesPointsPer = limits ? capValue(goal.rewardSeriesPoints ?? 0, limits.goalSeriesPoints) : (goal.rewardSeriesPoints ?? 0);
+      const paid = { ...state.paid };
       const payCoins = async (ids: string[], amount: number, reason: string) => {
         if (amount <= 0 || ids.length === 0) return;
         await tx.user.updateMany({ where: { id: { in: ids } }, data: { points: { increment: amount } } });
         await tx.pointTransaction.createMany({ data: ids.map(userId => ({ userId, amount, reason })) });
+        for (const id of ids) paid[id] = (paid[id] ?? 0) + amount;
       };
       await payCoins(rewardUserIds, coins, `Community-Ziel erreicht: ${goal.title || ev.title}`);
 
       // Tabellenpunkte der Reihe für jeden neu Belohnten (eingefroren — spätere Ziel-Änderungen wirken nicht zurück)
       const seriesPoints = { ...state.seriesPoints };
-      if (ev.seriesId && (goal.rewardSeriesPoints ?? 0) > 0) {
-        for (const uid of rewardUserIds) seriesPoints[uid] = goal.rewardSeriesPoints!;
+      if (ev.seriesId && seriesPointsPer > 0) {
+        for (const uid of rewardUserIds) seriesPoints[uid] = seriesPointsPer;
       }
 
       // Serie: beim ersten Erreichen die geschafften Zyklen in Folge zählen, ggf. Bonus
@@ -214,16 +228,17 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
           ...(Object.keys(seriesPoints).length > 0 && { seriesPoints }),
           ...(streak !== undefined && { streak }),
           ...(streakBonusUserIds.length > 0 && { streakBonusUserIds }),
+          ...(Object.keys(paid).length > 0 && { paid }),
         };
         await tx.event.update({ where: { id: eventId }, data: { goalStateJson: JSON.stringify(next) } });
       }
       const awaitingApproval = ev.approvalStatus === "pending" || ev.series?.approvalStatus === "pending";
-      return { goal, progress, newMilestone, awaitingApproval, payees: rewardUserIds, coins, settleNow, streak, streakPaid };
+      return { goal, progress, newMilestone, awaitingApproval, payees: rewardUserIds, coins, seriesPointsPer, settleNow, streak, streakPaid };
     });
 
     // Meldungen nach der Transaktion (Push/Discord dürfen den Lock nicht halten). Community-Events ohne
     // Mod-Freigabe melden nichts nach außen — wie alle anderen Ankündigungen.
-    if (!result || result.awaitingApproval) return;
+    if (!result || result.awaitingApproval || opts.silent) return;
     const { goal, progress, newMilestone } = result;
     const common = {
       "{goalTitle}": goal.title || "Community-Ziel",
@@ -235,7 +250,7 @@ export async function checkCommunityGoal(eventId: string): Promise<void> {
     if (newMilestone) {
       const extras = [
         newMilestone >= 100 && result.coins > 0 && result.payees.length > 0 ? `Alle Mitwirkenden bekommen ${result.coins} Münzen.` : "",
-        newMilestone >= 100 && (goal.rewardSeriesPoints ?? 0) > 0 && result.payees.length > 0 ? `Dazu ${goal.rewardSeriesPoints} Tabellenpunkte für die Eventreihe.` : "",
+        newMilestone >= 100 && result.seriesPointsPer > 0 && result.payees.length > 0 ? `Dazu ${result.seriesPointsPer} Tabellenpunkte für die Eventreihe.` : "",
         result.streakPaid ? `🔥 ${result.streak}× in Folge geschafft — ${result.streakPaid.coins} Bonus-Münzen obendrauf!` : "",
       ].filter(Boolean).join(" ");
       await dispatchEventNotification("event_goal_milestone", { id: eventId }, {
@@ -275,4 +290,61 @@ export async function settleEndedGoals(now = new Date()): Promise<number> {
     settled++;
   }
   return settled;
+}
+
+type GoalTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Bucht alle Münzen zurück, die das Ziel dieses Events ausgezahlt hat (Belohnung + Serien-Bonus), und
+ * setzt den Ziel-Zustand zurück (Stufen, Belohnte, Tabellenpunkte, Abrechnung). Genutzt von
+ * "Neu auswerten" und vom Löschen eines Events. Altdaten ohne goalStateJson.paid: Rückbuchung des
+ * aktuell gültigen (gekappten) Betrags je Belohntem bzw. Bonus-Empfänger — bestmögliche Schätzung.
+ * Gibt die Zahl der Personen mit Rückbuchung zurück.
+ */
+export async function revertGoalRewards(eventId: string, reason: string, txArg?: GoalTx): Promise<number> {
+  const run = async (tx: GoalTx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"goal:" + eventId}))`;
+    const ev = await tx.event.findUnique({
+      where: { id: eventId },
+      select: {
+        title: true, format: true, statConfigJson: true, goalStateJson: true, approvalStatus: true, seriesId: true,
+        series: { select: { approvalStatus: true, tournamentTemplateJson: true } },
+      },
+    });
+    if (!ev?.goalStateJson) return 0;
+    const state = parseGoalState(ev.goalStateJson);
+    let amounts: Record<string, number> = state.paid ?? {};
+    if (!state.paid) {
+      // Altdaten: Betrag aus dem aktuell gültigen Ziel schätzen
+      const goal = resolveEventGoal(ev).goal;
+      const isCommunity = !!(ev.approvalStatus || ev.series?.approvalStatus);
+      const all = isCommunity ? await getCommunityLimits() : null;
+      const lim = all ? (ev.seriesId ? all.seriesEvent : all.standalone) : null;
+      const cap = (c: number) => (lim ? capValue(c, lim.goalRewardCoins) : c);
+      amounts = {};
+      for (const id of state.rewardedUserIds) amounts[id] = (amounts[id] ?? 0) + cap(goal?.rewardCoins ?? 0);
+      for (const id of state.streakBonusUserIds ?? []) amounts[id] = (amounts[id] ?? 0) + cap(goal?.streakBonus?.coins ?? 0);
+    }
+    const entries = Object.entries(amounts).filter(([, v]) => v > 0);
+    for (const [userId, amount] of entries) {
+      await tx.user.update({ where: { id: userId }, data: { points: { decrement: amount } } }).catch(() => {});
+    }
+    if (entries.length) {
+      await tx.pointTransaction.createMany({ data: entries.map(([userId, amount]) => ({ userId, amount: -amount, reason: `${reason}: ${ev.title}` })) });
+    }
+    await tx.event.update({ where: { id: eventId }, data: { goalStateJson: null } });
+    return entries.length;
+  };
+  return txArg ? run(txArg) : prisma.$transaction(run);
+}
+
+/**
+ * "Neu auswerten": Belohnungen des Ziels zurückbuchen und mit den aktuellen Werten neu prüfen — z.B.
+ * nachdem ein falsch eingetragener Wert korrigiert wurde. Ohne Meldungen an die Teilnehmer.
+ */
+export async function reevaluateGoal(eventId: string): Promise<{ reverted: number; rewarded: number }> {
+  const reverted = await revertGoalRewards(eventId, "Community-Ziel neu ausgewertet (Rückbuchung)");
+  await checkCommunityGoal(eventId, { silent: true });
+  const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { goalStateJson: true } });
+  return { reverted, rewarded: parseGoalState(ev?.goalStateJson).rewardedUserIds.length };
 }

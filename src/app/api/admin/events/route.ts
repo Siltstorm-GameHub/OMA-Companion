@@ -98,10 +98,22 @@ export async function PATCH(req: NextRequest) {
     if (at && isNaN(at.getTime())) return NextResponse.json({ error: "Ungültiger Veröffentlichungszeitpunkt" }, { status: 400 });
     data.publishAt = at;
   }
+  delete data.hiddenByModAt;
+  delete data.approvalNote;
   if ("hidden" in data) {
     data.hidden = data.hidden === true;
+    const current = await prisma.event.findUnique({
+      where: { id: eventId }, select: { hidden: true, hiddenByModAt: true, series: { select: { hiddenByModAt: true } } },
+    });
+    // Von einem Mod ausgeblendet (direkt oder über die Reihe): nur Mods dürfen wieder einblenden
+    if (!data.hidden && !isModerator && (current?.hiddenByModAt || current?.series?.hiddenByModAt)) {
+      return NextResponse.json({ error: "Ein Mod hat dieses Event ausgeblendet. Nur ein Mod kann es wieder einblenden." }, { status: 403 });
+    }
+    // Nur ein echter Wechsel sichtbar → ausgeblendet durch einen Mod sperrt den Ersteller aus (ein Mod,
+    // der nur andere Felder eines vom Ersteller ausgeblendeten Events speichert, ändert daran nichts)
+    if (isModerator && data.hidden && !current?.hidden) data.hiddenByModAt = new Date();
+    if (isModerator && !data.hidden) data.hiddenByModAt = null;
     if (!data.hidden) {
-      const current = await prisma.event.findUnique({ where: { id: eventId }, select: { hidden: true } });
       if (current?.hidden) {
         // Unsichtbar → sichtbar: jetzt ankündigen (Discord-Event, Kanal-Post, Push) — vorher passierte
         // beim nachträglichen Sichtbarschalten gar nichts. Läuft nach der Antwort; publishEvent prüft
@@ -153,8 +165,14 @@ export async function PATCH(req: NextRequest) {
   // Ein Wechsel INNERHALB der bereits abgeschlossenen Zustände ("finished" <-> "umfrage") ist davon
   // bewusst ausgenommen — die Spielphase gilt in beiden Fällen weiterhin als abgeschlossen, daher bleibt
   // completionData (inkl. Finaler Platzierung, Begründung und Disqualifikationen) unangetastet erhalten.
+  // Status von Hand: nur Mods. "Umfragephase"/"Beendet" entstehen ausschließlich durch den Abschluss
+  // (Belohnungen, Meldungen, Discord-Post) — von Hand gesetzt blieb das Event ohne all das hängen.
+  if (!isModerator) delete data.status;
   if (data.status !== undefined) {
     const current = await prisma.event.findUnique({ where: { id: eventId }, select: { status: true, completionData: true } });
+    if ((data.status === "finished" || data.status === "umfrage") && current?.status !== data.status && !current?.completionData) {
+      return NextResponse.json({ error: "Beendet wird ein Event über „Event abschließen“, damit Belohnungen und Meldungen rausgehen." }, { status: 409 });
+    }
     const revertsPastGamePhase = data.status === "active" || data.status === "open";
     if (current?.completionData && current.status !== data.status && revertsPastGamePhase) {
       await revertEventCompletion(eventId, { includeBaseRewards: true });

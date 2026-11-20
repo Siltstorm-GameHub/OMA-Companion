@@ -16,8 +16,8 @@ export function parseEventKind(value: unknown): EventKind | null {
 
 /** Anzeige des Event-Typs (Badge auf Karten, Auswahl im Bearbeiten) */
 export const EVENT_KIND_LABEL: Record<EventKind, { emoji: string; label: string }> = {
-  community:  { emoji: "🤝", label: "Community-Event" },
-  tournament: { emoji: "⚔️", label: "Turnier" },
+  community:  { emoji: "🤝", label: "Ohne Platzierung" },
+  tournament: { emoji: "🏆", label: "Mit Platzierung" },
 };
 
 export const eventKindOf = (ev: { type?: string | null }): EventKind => (eventHasPlacement(ev) ? "tournament" : "community");

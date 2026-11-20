@@ -1,4 +1,5 @@
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
+import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
@@ -140,6 +141,37 @@ export async function POST(
   }
 }
 
+/**
+ * DELETE — Abschluss aufheben: alle Belohnungen dieses Abschlusses zurückbuchen (Teilnahme, Platzierung,
+ * Zuschauer, Umfragen, Reihentabelle), completionData löschen und das Event wieder auf "läuft" bzw.
+ * "Anmeldung offen" setzen. Danach kann es neu abgeschlossen werden. Gleiche Sperre wie der Abschluss.
+ */
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: eventId } = await ctx.params;
+  await requireEventManager(eventId);
+  const staleBefore = new Date(Date.now() - COMPLETION_LOCK_TIMEOUT_MS);
+  const claimed = await prisma.event.updateMany({
+    where: { id: eventId, OR: [{ completionLockAt: null }, { completionLockAt: { lt: staleBefore } }] },
+    data: { completionLockAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return NextResponse.json({ error: "Dieses Event wird gerade abgeschlossen. Bitte einen Moment warten." }, { status: 409 });
+  }
+  try {
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { completionData: true, startAt: true } });
+    if (!ev) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
+    if (!ev.completionData) return NextResponse.json({ error: "Dieses Event ist nicht abgeschlossen." }, { status: 409 });
+    await revertEventCompletion(eventId, { includeBaseRewards: true, reasonLabel: "Abschluss aufgehoben" });
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { status: ev.startAt <= new Date() ? "active" : "open" },
+    });
+    return NextResponse.json({ ok: true });
+  } finally {
+    await prisma.event.updateMany({ where: { id: eventId }, data: { completionLockAt: null } });
+  }
+}
+
 /** Erlaubt dem Cron-Job (/api/cron/close-event-polls), diese Route ohne Admin-Session
  *  aufzurufen, um eine abgelaufene Umfragephase automatisch abzuschließen — sonst identisch
  *  zum normalen Admin-Abschluss (gleiche Sperre, gleiche Auszahlungslogik). */
@@ -217,6 +249,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
     /** Nachträglich/beim Abschluss ausgeschlossene User (z.B. Disqualifikation): bleiben in den Stats
      *  und Tabellen sichtbar, erhalten aber keine Münzen, Tabellenpunkte oder Rang-Punkte aus diesem Event. */
     excludedUserIds?: string[];
+    /** Angemeldete Spieler, die nicht da waren: keine Teilnahme-Belohnung, keine Platzierung, keine
+     *  Tabellenpunkte — wie die automatisch erkannten No-Shows bei Runden-Formaten. Anders als
+     *  excludedUserIds kein "Disqualifiziert" in der Anzeige. */
+    absentPlayerIds?: string[];
     /** Erzwingt, dass die Umfragephase nach diesem Speichern (Status "umfrage") aktiv bleibt — auch wenn
      *  alle zugrunde liegenden Umfragen ihr Abstimmungsfenster technisch schon überschritten haben.
      *  Umfragen werden in diesem Durchlauf bewusst NICHT ausgewertet/ausgezahlt, damit sich an ihrem
@@ -224,11 +260,14 @@ async function completeEvent(req: NextRequest, eventId: string) {
     keepPollOpen?: boolean;
   };
 
-  // Nicht-Moderatoren (Ersteller, Squad-Captains): Beträge aus dem Request (Überschreibungen der
-  // Event-Konfiguration) auf die Community-Obergrenzen kappen — Einzel-Event bzw. Reihen-Termin,
-  // siehe lib/community-event-limits.ts
-  // Teilnahme-Rang-Punkte kommen nur aus der gespeicherten Event-Konfiguration — für Nicht-Moderatoren
-  // ebenfalls auf die Community-Obergrenze gekappt (siehe unten)
+  // Teilnahme- und Platzierungs-Beträge kommen AUSSCHLIESSLICH aus der gespeicherten Konfiguration —
+  // nie aus dem Request. Früher schickte die Abschluss-Seite sie mit: ein veralteter Tab zahlte so alte
+  // Werte aus, und Mitglieder konnten per API bis zur Obergrenze auszahlen, auch wenn ihr Event weniger
+  // vorsah. Für Nicht-Moderatoren (Ersteller, Squad-Captains) wird die gespeicherte Konfiguration auf die
+  // Obergrenzen gekappt (falls die Grenzen seit dem Anlegen gesenkt wurden), siehe
+  // lib/community-event-limits.ts.
+  body.participationCoins = undefined;
+  body.placements = undefined;
   let participationRankPtsCap = (n: number) => n;
   if (!hasMinRole(currentUser.role, "moderator")) {
     const limits = await getCommunityLimits();
@@ -240,8 +279,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
     // Ohne Überschreibung gilt die gespeicherte Konfiguration — auch die wird gekappt (falls die
     // Grenzen seit dem Anlegen gesenkt wurden oder die Reihe mehr für ihre Endwertung vorsieht)
     const stored = parseRewards(ev?.placementRewardsJson ?? ev?.series?.placementRewardsJson);
-    body.participationCoins = capParticipationCoins(body.participationCoins ?? stored.participationCoins, L);
-    body.placements = capPlacements(Array.isArray(body.placements) ? body.placements : stored.placements, L);
+    body.participationCoins = capParticipationCoins(stored.participationCoins, L);
+    body.placements = capPlacements(stored.placements, L);
     participationRankPtsCap = n => capValue(n, L.participationRankPts);
     if (body.pollBonusCoins !== undefined) body.pollBonusCoins = capValue(body.pollBonusCoins, L.pollBonusCoins);
     if (body.pollBonusRankPoints !== undefined) body.pollBonusRankPoints = capValue(body.pollBonusRankPoints, L.pollBonusRankPoints);
@@ -436,7 +475,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   } else {
     // manual: use body.finalRanking[0] or body.mvpUserId as winner
-    const manualWinner = body.finalRanking?.[0] ?? body.mvpUserId;
+    // Nur angemeldete Spieler — sonst ließe sich per API jemand Nicht-Angemeldetes als Sieger eintragen
+    const isPlayer = (id: string | undefined) => !!id && event.registrations.some(r => r.userId === id && r.role !== "spectator");
+    const manualWinner = [body.finalRanking?.[0], body.mvpUserId].find(isPlayer);
     if (manualWinner) {
       eventWinnerId = manualWinner;
       eventWinnerIds = [manualWinner];
@@ -475,7 +516,12 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   }
   const roundBasedFormat = event.format === "coop_stats" || event.format === "avg_stats";
-  const noShowSet = new Set(roundBasedFormat && playedSet.size > 0 ? playerIds.filter(id => !playedSet.has(id)) : []);
+  // Von Hand als "nicht da" markierte Spieler (Abschluss-Seite) zählen genauso als No-Show
+  const absentSet = new Set((body.absentPlayerIds ?? []).filter(id => playerIds.includes(id)));
+  const noShowSet = new Set([
+    ...(roundBasedFormat && playedSet.size > 0 ? playerIds.filter(id => !playedSet.has(id)) : []),
+    ...absentSet,
+  ]);
 
   // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
   // Admin manuell überschrieben werden (z.B. nachträgliche Disqualifikation eines Spielers, der laut
@@ -597,7 +643,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       for (const group of body.finalRankingGroups) {
         const reward = rewards.placements.find(p => p.place === place);
         if (reward) {
-          for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
+          for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id) && !absentSet.has(id))) {
             newPlacementRewards[userId] = { coins: reward.coins, rankPoints: reward.rankPoints };
           }
         }
@@ -611,7 +657,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
         const reward = rewards.placements.find(p => p.place === place);
         if (!reward) continue;
         const userId = ranking[i];
-        if (excludedSet.has(userId)) continue;
+        if (excludedSet.has(userId) || absentSet.has(userId)) continue;
         newPlacementRewards[userId] = { coins: reward.coins, rankPoints: reward.rankPoints };
       }
     }
@@ -623,7 +669,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
         for (const group of body.finalRankingGroups) {
           const reward = eventPlacementCoins.find(p => p.place === place);
           if (reward && reward.coins > 0) {
-            for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
+            for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id) && !absentSet.has(id))) {
               newPlacementRewards[userId] = { coins: reward.coins, rankPoints: 0 };
             }
           }
@@ -636,7 +682,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
           const reward = eventPlacementCoins.find(p => p.place === place);
           if (!reward || reward.coins <= 0) continue;
           const userId = ranking[i];
-          if (excludedSet.has(userId)) continue;
+          if (excludedSet.has(userId) || absentSet.has(userId)) continue;
           newPlacementRewards[userId] = { coins: reward.coins, rankPoints: 0 };
         }
       }
@@ -705,7 +751,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   // Neue Poll-Gewinner vergeben (legacy single poll) — bei forcePollPhase noch nicht auswerten, auch
   // wenn im selben Request schon Stimmen mitgeschickt wurden (siehe forcePollPhase oben).
-  const newPollWinners = forcePollPhase ? [] : (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id) && !excludedSet.has(id));
+  const newPollWinners = forcePollPhase ? [] : (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id) && !excludedSet.has(id) && !absentSet.has(id));
   const pollCoins = body.pollBonusCoins ?? 0;
   const pollRankPts = body.pollBonusRankPoints ?? 0;
 
@@ -1076,7 +1122,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       }
       // Neue Werte addieren (ohne ausgeschlossene User)
       for (const { userId } of event.registrations) {
-        if (excludedSet.has(userId)) continue;
+        if (excludedSet.has(userId) || absentSet.has(userId)) continue;
         const eStats = userStats[userId] ?? {};
         for (const field of statCfg.aggregatedStatFields) {
           const val = eStats[field] ?? 0;
@@ -1295,6 +1341,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     finalRankingGroups:      body.finalRankingGroups ?? null,
     // Ausgeschlossene User (Disqualifikation) — Begründung steht in finalRankingNote
     excludedUserIds:         excludedSet.size > 0 ? [...excludedSet] : null,
+    absentPlayerIds:         absentSet.size > 0 ? [...absentSet] : null,
     // Ledger der zuletzt vergebenen Beträge, für Diff-basiertes Nachbuchen/Rückbuchen bei jedem Speichern
     rewardLedger: {
       participationCoins: newParticipationCoins,
@@ -1388,17 +1435,22 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const eventNotifBody  = hasPlacement
     ? "Schau dir deine Punkte und das Ergebnis an!"
     : "Deine Teilnahme-Belohnung ist gutgeschrieben.";
+  // Erster Übergang in die Umfrage-/Ergebnisphase: vorher noch nicht abgeschlossen. Früher nur bei
+  // Status "active" — volle Events ("closed") oder nie aktivierte ("open") bekamen so keine Meldung.
+  const firstCompletion = ["open", "active", "closed"].includes(event.status) || (event.status === "finished" && !isReEdit);
+  // Mitglieder-Events ohne Freigabe (wartend/abgelehnt): nichts auf Discord (wie alle Ankündigungen)
+  const blockedByApproval = [event.approvalStatus, event.series?.approvalStatus].some(s => s === "pending" || s === "rejected");
   // Nur beim tatsächlichen Übergang von "aktiv" in die Umfrage-/Ergebnisphase benachrichtigen —
   // damit ist die Spielphase abgeschlossen und erste Ergebnisse stehen fest. Bei erneutem
   // Abschließen/Korrigieren eines Events, das schon "umfrage" oder "finished" war, keine erneute Meldung.
-  if (event.status === "active" && !isEventHidden(event)) {
+  if (firstCompletion && !isEventHidden(event)) {
     sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
     createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
   }
 
   // Discord-Kanal-Post: nur beim tatsächlichen Übergang "aktiv" → "umfrage" (siehe Bedingung
   // oben) — nicht bei jedem erneuten Speichern während bereits laufender Umfragephase.
-  if (event.status === "active" && hasPendingPollPhase && !isEventHidden(event)) {
+  if (firstCompletion && hasPendingPollPhase && !isEventHidden(event) && !blockedByApproval) {
     dispatchEventNotification("event_poll_started", { id: eventId }, {
       discordChannelIdOverride: resolveEventChannelId(event),
       discordColor: DISCORD_COLORS.eventPoll,
@@ -1410,7 +1462,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // (sonst würde der Kanal bei jeder nachträglichen Korrektur erneut zugespammt).
   // Stilles Beenden ohne Teilnehmer: kein Discord-Ergebnis-Post, wenn keine einzige
   // Spieler-Anmeldung existiert (Zuschauer zählen nicht) — es gibt schlicht nichts zu verkünden.
-  if (!hasPendingPollPhase && event.status !== "finished" && event.registrations.some(r => r.role === "player")) {
+  if (!hasPendingPollPhase && firstCompletion && event.registrations.some(r => r.role === "player")
+      && !isEventHidden(event) && !blockedByApproval) {
     (async () => {
       const winners = eventWinnerIds.length > 0
         ? await prisma.user.findMany({

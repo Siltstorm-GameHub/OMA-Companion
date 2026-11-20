@@ -13,12 +13,13 @@ import { ChevronDown, ChevronUp, X } from "@/components/icons";
  * Zyklen. Jeder neu angelegte Termin übernimmt das oberste Ziel als eigenes Ziel und es fällt aus der
  * Liste; ist sie leer, gilt das Ziel der Reihe. Speichert direkt über PUT /api/admin/event-series/goal-plan.
  */
-export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disabled }: {
+export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disabled, goalLimits = null }: {
   seriesId: string;
   initialPlan: CommunityGoal[];
   /** Auswertbare Felder der Reihe (goalFieldsFor) */
   goalFields: string[];
   disabled?: boolean;
+  goalLimits?: { coins: number; seriesPoints: number } | null;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState<CommunityGoal[]>(initialPlan);
@@ -67,14 +68,14 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-gray-500">
-        Lege Ziele für die nächsten Zyklen im Voraus fest. Jeder neu angelegte Termin übernimmt das oberste Ziel —
-        ist die Liste leer, gilt das Ziel der Reihe.
+        Lege Ziele für die nächsten Zyklen im Voraus fest. Jeder neu angelegte Termin übernimmt das oberste Ziel, das zu
+        ihm passt. Ziele, die nicht passen (z. B. fehlendes Stat-Feld), bleiben stehen. Ist keins passend, gilt das Ziel der Reihe.
       </p>
       {plan.length > 0 && (
         <ol className="rounded-xl overflow-hidden border border-white/[0.06] divide-y divide-white/[0.05]">
           {plan.map((g, i) => (
             <li key={i} className="flex items-center gap-2 px-3 py-2">
-              <span className="text-[11px] text-gray-500 w-24 shrink-0">{i === 0 ? "Nächster Zyklus" : `${i + 1}. neuer Zyklus`}</span>
+              <span className="text-[11px] text-gray-500 w-24 shrink-0">{i === 0 ? "Als Nächstes" : `${i + 1}. in der Liste`}</span>
               <span className="text-xs text-teal-300/90 flex-1 min-w-0 truncate">🎯 {goalSummary(g)}</span>
               {!disabled && (
                 <span className="flex items-center gap-1 shrink-0">
@@ -104,7 +105,8 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
         <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
           <p className="text-sm font-semibold text-teal-200">{editing === -1 ? "Neues geplantes Ziel" : `Geplantes Ziel ${editing + 1} ändern`}</p>
           <CommunityGoalEditor value={{ ...form, enabled: true }} onChange={f => setForm({ ...f, enabled: true })}
-            statFields={goalFields} inSeries hideToggle />
+            statFields={goalFields} inSeries hideToggle
+            rewardLimit={goalLimits?.coins ?? null} seriesPointsLimit={goalLimits?.seriesPoints ?? null} />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setEditing(null)} className="text-sm text-gray-400 hover:text-white px-3 py-1.5">Abbrechen</button>
             <button type="button" onClick={submitForm} disabled={saving}

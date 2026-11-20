@@ -125,9 +125,14 @@ export default function StepEventData({ w }: { w: EventWizard }) {
 
       <div className="rounded-xl p-4 border border-white/8 bg-white/2 space-y-2">
         <p className="text-sm text-gray-200">Veröffentlichung</p>
-        {([
+        {(w.isCommunity ? [
+          // Mitglieder: angekündigt wird erst nach der Mod-Freigabe (lib/community-events.ts)
+          ["now", "Sofort veröffentlichen", "Direkt in der App sichtbar. Discord-Ankündigung und Push folgen, sobald ein Mod es freigegeben hat."],
+          ["hidden", "Unsichtbar erstellen", "Noch nicht veröffentlicht. Du schaltest es später in den Event-Einstellungen sichtbar."],
+          ["scheduled", "Zu einem Zeitpunkt veröffentlichen", "Bleibt bis dahin unsichtbar und wird dann automatisch sichtbar. Angekündigt wird nach der Freigabe."],
+        ] as const : [
           ["now", "Sofort veröffentlichen", "Event ist direkt sichtbar und wird auf Discord und per Push angekündigt."],
-          ["hidden", "Unsichtbar erstellen", "Noch nicht veröffentlicht — erst beim Sichtbarschalten in den Event-Einstellungen angekündigt."],
+          ["hidden", "Unsichtbar erstellen", "Noch nicht veröffentlicht. Erst beim Sichtbarschalten in den Event-Einstellungen angekündigt."],
           ["scheduled", "Zu einem Zeitpunkt veröffentlichen", "Bleibt bis dahin unsichtbar und wird dann automatisch sichtbar geschaltet und angekündigt."],
         ] as const).map(([value, label, hint]) => (
           <label key={value} className="flex items-start gap-3 cursor-pointer select-none">

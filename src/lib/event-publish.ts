@@ -53,7 +53,9 @@ export async function publishEvent(eventId: string): Promise<PublishState> {
   // Community-Events (von normalen Usern angelegt) werden erst nach Mod-Freigabe angekündigt —
   // die Freigabe ruft publishEvent erneut auf (lib/community-events.ts). Bewusst inline statt
   // isAwaitingApproval, um keinen Import-Zyklus mit community-events.ts zu erzeugen.
-  if (event.approvalStatus === "pending" || event.series?.approvalStatus === "pending") {
+  // Abgelehnte Events ("rejected") werden ebenfalls nie angekündigt.
+  const blocked = ["pending", "rejected"];
+  if (blocked.includes(event.approvalStatus ?? "") || blocked.includes(event.series?.approvalStatus ?? "")) {
     return parsePublishState(event.publishStateJson);
   }
 

@@ -17,12 +17,13 @@ export const goalSummary = (g: CommunityGoal) =>
  * übernommen). Nur bei Bedarf überschreiben oder für diesen Termin abschalten. Speichert über
  * PATCH /api/events/[id]/goal, ohne die übrige Turnier-Konfiguration anzufassen (lib/event-goal.ts).
  */
-export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, statFields }: {
+export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, statFields, goalLimits = null }: {
   eventId: string;
   source: EventGoalSource;
   ownGoal: CommunityGoal | null;
   seriesGoal: CommunityGoal | null;
   statFields: string[];
+  goalLimits?: { coins: number; seriesPoints: number } | null;
 }) {
   const router = useRouter();
   const initialMode: Mode = source === "event" ? "override" : source === "off" ? "off" : "inherit";
@@ -78,7 +79,8 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
       </div>
 
       {mode === "override" && (
-        <CommunityGoalEditor value={{ ...form, enabled: true }} onChange={f => setForm({ ...f, enabled: true })} statFields={statFields} inSeries hideToggle />
+        <CommunityGoalEditor value={{ ...form, enabled: true }} onChange={f => setForm({ ...f, enabled: true })} statFields={statFields} inSeries hideToggle
+          rewardLimit={goalLimits?.coins ?? null} seriesPointsLimit={goalLimits?.seriesPoints ?? null} />
       )}
 
       <div className="flex justify-end">

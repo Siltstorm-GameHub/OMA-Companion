@@ -52,7 +52,7 @@ export function seasonChanges(prev: SeasonPrefill, cur: SeasonState): string[] {
   };
 
   changed("Kategorie", prev.category, cur.category);
-  if (prev.eventType !== cur.eventType) out.push(`Reihentyp: ${prev.eventType === "tournament" ? "Turnier" : "Community"} → ${cur.eventType === "tournament" ? "Turnier" : "Community"}`);
+  if (prev.eventType !== cur.eventType) out.push(`Reihentyp: ${prev.eventType === "tournament" ? "Mit Platzierung" : "Ohne Platzierung"} → ${cur.eventType === "tournament" ? "Mit Platzierung" : "Ohne Platzierung"}`);
   changed("Spiel", prev.variousGames ? "verschiedene" : prev.fixedGame, cur.variousGames ? "verschiedene" : cur.fixedGame);
   if (cur.eventType === "tournament") changed("Format", prev.seriesFormat, cur.seriesFormat);
   changed("Wiederholung", prev.recurrenceType, cur.recurrenceType);

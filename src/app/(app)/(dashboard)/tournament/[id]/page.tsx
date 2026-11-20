@@ -457,6 +457,8 @@ export default async function TournamentDetailPage({
     excludedUserIds?: string[] | null;
     /** Beim Abschluss als anwesend markierte Zuschauer */
     spectatorAttendedIds?: string[] | null;
+    /** Beim Abschluss als "nicht da" markierte Spieler — erscheinen nicht unter "Mit dabei waren" */
+    absentPlayerIds?: string[] | null;
   };
   const completionData: CompletionData = (() => {
     try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
@@ -472,6 +474,7 @@ export default async function TournamentDetailPage({
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
   const excludedUserIds     = new Set(completionData.excludedUserIds ?? []);
+  const absentPlayerIds     = new Set(completionData.absentPlayerIds ?? []);
 
   // Anstehende Spiele mit feststehenden Gegnern (für "Dein nächstes Match" / "Nächste Spiele")
   const koRounds = Math.max(0, ...event.matches.filter(m => m.groupIndex == null && !m.isThirdPlace).map(m => m.round));
@@ -1176,7 +1179,7 @@ export default async function TournamentDetailPage({
   const spectatorAttended = new Set(completionData.spectatorAttendedIds ?? []);
   const communityPeople = isCommunityDone
     ? [
-        ...event.registrations.filter(r => r.role === "player" && !excludedUserIds.has(r.userId)).map(r => ({ user: r.user, spectator: false })),
+        ...event.registrations.filter(r => r.role === "player" && !excludedUserIds.has(r.userId) && !absentPlayerIds.has(r.userId)).map(r => ({ user: r.user, spectator: false })),
         ...event.registrations.filter(r => r.role === "spectator" && spectatorAttended.has(r.userId) && !excludedUserIds.has(r.userId)).map(r => ({ user: r.user, spectator: true })),
       ]
     : [];
@@ -1209,7 +1212,7 @@ export default async function TournamentDetailPage({
               </span>
             )}
           </div>
-          <p className="text-[11px] text-gray-500">Community-Event: keine Platzierung — alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
+          <p className="text-[11px] text-gray-500">Ohne Platzierung: kein Sieger, alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
           {communityPeople.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-2">
               {communityPeople.map(({ user: u, spectator }) => {
@@ -1738,7 +1741,7 @@ export default async function TournamentDetailPage({
 
       {communityBy && (
         <p className="text-xs text-violet-300/90 mb-3">
-          Community-Event von <span className="font-semibold">@{communityBy}</span>
+          Mitglieder-Event von <span className="font-semibold">@{communityBy}</span>
           {awaitingApproval && <span className="text-amber-300/90"> · wartet noch auf Freigabe durch einen Mod</span>}
         </p>
       )}

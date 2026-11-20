@@ -103,6 +103,7 @@ function normalizeRewardLimits(input: unknown, fallback: RewardLimits): RewardLi
     matchWinCoins:          num(o.matchWinCoins, fallback.matchWinCoins),
     matchDrawCoins:         num(o.matchDrawCoins, fallback.matchDrawCoins),
     goalRewardCoins:        num(o.goalRewardCoins, fallback.goalRewardCoins),
+    goalSeriesPoints:       num(o.goalSeriesPoints, fallback.goalSeriesPoints),
   };
 }
 

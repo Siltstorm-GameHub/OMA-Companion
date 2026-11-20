@@ -24,6 +24,7 @@ export function buildRecompleteBody(completionData: string | null | undefined, f
     finalRankingGroups:      old.finalRankingGroups ?? undefined,
     finalRankingNote:        finalRankingNote ?? undefined,
     excludedUserIds:         old.excludedUserIds ?? undefined,
+    absentPlayerIds:         old.absentPlayerIds ?? undefined,
     rankingManual:           typeof old.rankingManual === "boolean" ? old.rankingManual : undefined,
   };
 }

@@ -19,6 +19,7 @@ const SCALAR_FIELDS: { key: ScalarKey; label: string }[] = [
   { key: "matchWinCoins",          label: "Liga: Münzen je Sieg" },
   { key: "matchDrawCoins",         label: "Liga: Münzen je Unentschieden" },
   { key: "goalRewardCoins",        label: "Community-Ziel: Münzen je Mitwirkendem" },
+  { key: "goalSeriesPoints",       label: "Community-Ziel: Tabellenpunkte je Belohntem" },
 ];
 
 const inputCls = "w-full bg-gray-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-teal-500/50 disabled:opacity-60";
@@ -144,7 +145,7 @@ export default function CommunityLimitsEditor({ initial, canEdit }: { initial: C
   return (
     <div className="space-y-4">
       <div className="glass rounded-2xl p-4">
-        <h2 className="text-sm font-semibold text-white">Community-Events</h2>
+        <h2 className="text-sm font-semibold text-white">Mitglieder-Events</h2>
         <p className="text-xs text-gray-500 mt-0.5">
           Obergrenzen für Belohnungen, die normale User (ohne Mod-Rolle) bei ihren eigenen Events und Reihen
           vergeben dürfen. Höhere Werte werden beim Speichern und beim Abschluss still gekappt.

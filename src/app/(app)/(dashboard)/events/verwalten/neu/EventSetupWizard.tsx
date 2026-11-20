@@ -27,12 +27,12 @@ export default function EventSetupWizard(props: EventWizardProps) {
   const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepSeriesEventSettings, StepRewards, StepSeriesSummary];
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
-  // Community-Events (Ersteller ohne Mod-Rolle): Hinweis auf Limits und Freigabe
+  // Mitglieder-Events (Ersteller ohne Mod-Rolle): Hinweis auf Freigabe und Obergrenzen
   const communityHint = props.isCommunity && (
     <div className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 space-y-1">
-      <p className="font-semibold text-amber-300">Community-Event</p>
+      <p className="font-semibold text-amber-300">Mitglieder-Event</p>
       <p>Dein Event ist sofort in der App sichtbar. Auf Discord angekündigt und per Push gemeldet wird es erst, nachdem ein Mod es freigegeben hat.</p>
-      <p>Belohnungen (Münzen, Rang-Punkte) werden beim Speichern automatisch auf die Community-Obergrenzen gekürzt.</p>
+      <p>Für Belohnungen (Münzen, Rang-Punkte) gibt es Obergrenzen. Du siehst sie direkt an den Feldern.</p>
     </div>
   );
 

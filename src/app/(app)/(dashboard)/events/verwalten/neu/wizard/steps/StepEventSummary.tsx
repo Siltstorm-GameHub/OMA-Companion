@@ -22,7 +22,7 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
           {catCfg && <AppIcon kind="category" name={catCfg.value} size={40} className="text-3xl" />}
           <div>
             <p className={`text-lg font-bold ${catCfg?.color}`}>{title}</p>
-            <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Turnier" : "Community-Event"}</p>
+            <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Mit Platzierung" : "Ohne Platzierung"}</p>
           </div>
         </div>
         <div className="space-y-1 text-sm text-gray-300">

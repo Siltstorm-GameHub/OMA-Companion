@@ -116,7 +116,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
             </span>
           )}
         </div>
-        <Pill tone="violet"><span aria-hidden>🤝</span> Community-Event</Pill>
+        <Pill tone="violet"><span aria-hidden>🤝</span> Ohne Platzierung</Pill>
         {r.avatars && r.avatars.length > 0 && (
           <div className="absolute bottom-2.5 right-2.5 z-10">
             <AvatarStack users={r.avatars} max={5} size="xs" />

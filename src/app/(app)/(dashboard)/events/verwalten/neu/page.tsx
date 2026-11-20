@@ -4,6 +4,7 @@ import { requireEventArea, seriesScopeWhere, canManageEvent } from "@/lib/roles"
 import { toDatetimeLocalBerlin } from "@/lib/time";
 import { parseCommunityGoal } from "@/lib/community-goal";
 import EventSetupWizard from "./EventSetupWizard";
+import { getCommunityLimits } from "@/lib/community-event-limits";
 import type { GamePrefill } from "./wizard/useEventWizard";
 import { eventGenreForGame } from "@/lib/games/event-genre";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
@@ -87,15 +88,15 @@ async function loadGamePrefill(slug: string): Promise<GamePrefill | null> {
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string; blocks?: string }>;
+  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string; blocks?: string; series?: string }>;
 }) {
   // Jeder eingeloggte User darf Events/Reihen anlegen (Community-Events). Nicht-Moderatoren sehen
   // nur Reihen, die sie selbst verwalten, und nur Squads, die sie captainen (Squad-Bindung optional).
   const { user, scope, captainedSquadIds } = await requireEventArea();
-  const { mode, squadId: initialSquadId, from, game: gameSlug, blocks } = await searchParams;
+  const { mode, squadId: initialSquadId, from, game: gameSlug, blocks, series: initialSeriesId } = await searchParams;
   const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
-  const [series, squads, eventTemplate] = await Promise.all([
+  const [series, squads, eventTemplate, communityLimits] = await Promise.all([
     prisma.eventSeries.findMany({
       where: { status: "active", ...seriesScopeWhere(scope) },
       orderBy: { name: "asc" },
@@ -117,6 +118,7 @@ export default async function NewEventPage({
       select: { id: true, name: true },
     }),
     from && (await canManageEvent(user, from)) ? loadTemplate(from) : Promise.resolve(null),
+    scope !== null ? getCommunityLimits() : Promise.resolve(null),
   ]);
   // "Event mit diesem Spiel anlegen" aus der Spieleliste (/spiele/[slug]) bzw. "Versus-Turnier planen" aus
   // OMA Blocks (?blocks=1 — OMA Blocks steht als App-Spiel nicht in der Spieleliste)
@@ -131,10 +133,12 @@ export default async function NewEventPage({
       series={series}
       squads={squads}
       isCommunity={scope !== null}
+      communityLimits={communityLimits ? { standalone: communityLimits.standalone, seriesEvent: communityLimits.seriesEvent } : null}
       initialSquadId={eventTemplate?.squadId || initialSquadId}
       initialMode={eventTemplate || gamePrefill || mode === "event" ? "event" : mode === "series" ? "series" : "select"}
       eventTemplate={eventTemplate ?? undefined}
       gamePrefill={gamePrefill ?? undefined}
+      initialSeriesId={initialSeriesId && series.some(s => s.id === initialSeriesId) ? initialSeriesId : undefined}
     />
   );
 }

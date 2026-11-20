@@ -29,7 +29,7 @@ const SOURCE_LABEL = { event: "eigenes Ziel", series: "Ziel der Reihe", off: "ke
  * gespeichert wird wie im Termin selbst über EventGoalPanel (PATCH /api/events/[id]/goal). Darunter die
  * Ziel-Planung für noch nicht angelegte Zyklen (GoalPlanEditor, lib/goal-plan.ts).
  */
-export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tournamentTemplateJson, statFields, disabled }: {
+export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tournamentTemplateJson, statFields, disabled, goalLimits = null }: {
   seriesId: string;
   /** Festes Format der Reihe — bestimmt, was geplante Ziele auswerten (Stat-Felder oder Spielergebnis) */
   fixedFormat: string | null;
@@ -38,6 +38,8 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
   tournamentTemplateJson: string | null;
   statFields: string[];
   disabled?: boolean;
+  /** Mitglieder: Obergrenzen der Ziel-Belohnungen (Anzeige am Feld) */
+  goalLimits?: { coins: number; seriesPoints: number } | null;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
@@ -51,7 +53,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
   const planFields = fixedFormat ? goalFieldsFor(fixedFormat, statFields) : statFields;
 
   const isPast = (e: CycleEvent) =>
-    e.status === "finished" || e.status === "closed" || (!!e.endAt && new Date(e.endAt).getTime() <= now);
+    e.status === "finished" || (!!e.endAt && new Date(e.endAt).getTime() <= now);
   const past = cycles.filter(isPast);
   const current = cycles.filter(e => !isPast(e));
   const shown = showPast ? [...past, ...current] : current;
@@ -111,7 +113,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
               </div>
               {open && (
                 <div className="px-3 pb-3">
-                  <EventGoalPanel eventId={ev.id} source={resolved.source} ownGoal={resolved.ownGoal}
+                  <EventGoalPanel goalLimits={goalLimits} eventId={ev.id} source={resolved.source} ownGoal={resolved.ownGoal}
                     seriesGoal={resolved.seriesGoal} statFields={goalFieldsFor(ev.format, statFields)} />
                 </div>
               )}
@@ -128,7 +130,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
 
     <div className="space-y-2 pt-4 border-t border-white/[0.06]">
       <p className="text-sm font-semibold text-gray-200">🗓️ Ziele im Voraus planen</p>
-      <GoalPlanEditor key={JSON.stringify(goalPlan)} seriesId={seriesId} initialPlan={goalPlan} goalFields={planFields} disabled={disabled} />
+      <GoalPlanEditor goalLimits={goalLimits} key={JSON.stringify(goalPlan)} seriesId={seriesId} initialPlan={goalPlan} goalFields={planFields} disabled={disabled} />
     </div>
     </div>
   );

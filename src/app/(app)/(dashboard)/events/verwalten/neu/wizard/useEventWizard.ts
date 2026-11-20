@@ -15,6 +15,7 @@ import { parseTournamentTemplate, type TournamentTemplate } from "@/lib/series-s
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { clearDraft, useInitialDraft, writeDraft } from "./draft";
+import type { RewardLimits } from "@/lib/captain-reward-limits";
 import { FORMATS, type EventTemplate, type SeriesOption, type SquadOption, type PollConfig, type PlacementReward, type StatRow, type SeasonPrefill } from "./shared";
 
 export type EventWizardProps = {
@@ -27,9 +28,13 @@ export type EventWizardProps = {
   /** true = Aufrufer ist kein Moderator/Admin (Community-Event): kein eigener Discord-Kanal,
    *  Belohnungen werden serverseitig gekappt, Ankündigung erst nach Mod-Freigabe. */
   isCommunity?: boolean;
+  /** Mitglieder: Belohnungs-Obergrenzen (Einzel-Event / Reihen-Termin), werden an den Feldern angezeigt */
+  communityLimits?: { standalone: RewardLimits; seriesEvent: RewardLimits } | null;
   /** Vorausgewähltes Squad (z.B. von der Squad-Seite aus "+ Neues Event" gestartet) — nur eine Vorbelegung,
    *  bleibt bei forceSquad=false änderbar. */
   initialSquadId?: string;
+  /** Vorausgewählte Reihe ("Termin hinzufügen" auf der Reihen-Seite) */
+  initialSeriesId?: string;
   initialMode?: "select" | "event" | "series";
   seasonPrefill?: SeasonPrefill;
   /** "Event duplizieren": Einstellungen eines bestehenden Events als Vorbelegung */
@@ -45,7 +50,9 @@ export function useEventWizard({
   squads = [],
   forceSquad = false,
   isCommunity = false,
+  communityLimits = null,
   initialSquadId,
+  initialSeriesId,
   initialMode = "select",
   seasonPrefill,
   eventTemplate,
@@ -77,8 +84,9 @@ export function useEventWizard({
   // Eigenes Cover (Upload, URL oder Vorlage aus EVENT_COVER_PRESETS) — leer = Spiel-Cover bzw. Standard-Motiv
   const [eventCoverUrl, setEventCoverUrl] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState(tpl?.discordChannelId ?? "");
-  const [seriesMode, setSeriesMode]   = useState<"none" | "existing" | "new">(tpl?.seriesId && series.some(s => s.id === tpl.seriesId) ? "existing" : "none");
-  const [selectedSeriesId, setSelectedSeriesId] = useState(tpl?.seriesId && series.some(s => s.id === tpl.seriesId) ? tpl.seriesId : "");
+  const presetSeriesId = [tpl?.seriesId, initialSeriesId].find(id => id && series.some(s => s.id === id)) ?? "";
+  const [seriesMode, setSeriesMode]   = useState<"none" | "existing" | "new">(presetSeriesId ? "existing" : "none");
+  const [selectedSeriesId, setSelectedSeriesId] = useState(presetSeriesId);
   const [newSeriesName, setNewSeriesName] = useState("");
   const [newSeriesDesc, setNewSeriesDesc] = useState("");
   const [format, setFormat]           = useState(tpl?.format ?? "single_elimination");
@@ -171,6 +179,8 @@ export function useEventWizard({
   // Wird dieses Event Teil einer Reihe? Dann kommen Teilnahme-/Zuschauer-Münzen seriesweit
   // fest aus der Reihentabellen-Konfiguration der Reihe, nicht aus den Event-Belohnungen hier.
   const belongsToSeries = isSeriesMode || (isEventMode && seriesMode !== "none");
+  // Obergrenzen, die an den Belohnungsfeldern angezeigt werden (nur Mitglieder, siehe StepRewards)
+  const rewardLimits: RewardLimits | null = communityLimits ? (belongsToSeries ? communityLimits.seriesEvent : communityLimits.standalone) : null;
   const selectedSeries = series.find(s => s.id === selectedSeriesId);
   // Bestehende Reihe mit festem Turnierformat: das Format der Reihe gilt (der Server überschreibt es)
   const seriesFixedFormat = seriesMode === "existing" ? (selectedSeries?.fixedFormat ?? null) : null;
@@ -525,6 +535,18 @@ export function useEventWizard({
       }
     }
 
+    // "Ohne Platzierung" mit Community-Ziel: Werte-Erfassung (Format Punktewertung) mit den gewählten
+    // Stat-Feldern — der Event-Typ bleibt "community", es gibt weiterhin keine Platzierung.
+    // In einer Reihe mit festem Format entscheidet die Reihe (das Ziel wird dann von ihr geerbt).
+    if (eventType === "community" && !isBlocksEvent && !seriesFixedFormat && communityGoal.enabled) {
+      const goal = formToGoal(communityGoal, statFields);
+      if (goal) {
+        body.format = "coop_stats";
+        body.statFields = JSON.stringify(statFields);
+        body.statConfig = { stats: [], goal };
+      }
+    }
+
     if (isBlocksEvent) {
       body.blocks = blocks;
       if (blocks.kind === "tournament" && checkInEnabled) {
@@ -595,7 +617,9 @@ export function useEventWizard({
         genre: fixedGenre || null,
         platform: fixedPlatforms.length > 0 ? fixedPlatforms.join(", ") : null,
         fixedGame: variousGames ? null : (fixedGame || null),
-        fixedFormat: (eventType === "tournament" && !variousGames) ? seriesFormat : null,
+        // "Ohne Platzierung" mit Community-Ziel: Werte-Erfassung (Punktewertung) für alle Termine
+        fixedFormat: (eventType === "tournament" && !variousGames) ? seriesFormat
+          : (eventType === "community" && tournamentTemplate.communityGoal) ? "coop_stats" : null,
         discordChannelId: seriesDiscordId || null,
         recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
@@ -613,7 +637,8 @@ export function useEventWizard({
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         groupId: seasonPrefill?.groupId,
-        tournamentTemplateJson: eventType === "tournament" ? tournamentTemplate : null,
+        tournamentTemplateJson: eventType === "tournament" ? tournamentTemplate
+          : tournamentTemplate.communityGoal ? { communityGoal: tournamentTemplate.communityGoal } : null,
       }),
     });
 
@@ -645,6 +670,7 @@ export function useEventWizard({
     squads,
     forceSquad,
     isCommunity,
+    rewardLimits,
     initialSquadId,
     initialMode,
     seasonPrefill,

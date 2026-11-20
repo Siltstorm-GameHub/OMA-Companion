@@ -1,4 +1,5 @@
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
+import { revertGoalRewards } from "@/lib/community-goal-milestones";
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
@@ -117,6 +118,11 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
       }
     } catch { /* ungültige JSON-Daten – ignorieren */ }
   }
+
+  // Münzen aus dem Community-Ziel zurückbuchen (lib/community-goal-milestones.ts) — sonst blieben sie
+  // nach dem Löschen bei den Spielern
+  await revertGoalRewards(eventId, "Community-Ziel zurückgebucht (Event gelöscht)").catch(err =>
+    console.error("[delete-event] Ziel-Rückbuchung fehlgeschlagen", eventId, err));
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { eventId } });

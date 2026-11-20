@@ -14,7 +14,7 @@ const ev = (o: Partial<ManageEvent>): ManageEvent => ({
 
 describe("Verwalten: Aktionen", () => {
   test("Turnier, Umfragephase, vorbei und nicht abgeschlossen", () => {
-    assert.equal(actionFor(ev({ tournamentStatus: "active" }), NOW)?.button, "Turnierbaum");
+    assert.equal(actionFor(ev({ tournamentStatus: "active" }), NOW)?.button, "Spielplan");
     assert.equal(actionFor(ev({ status: "umfrage", startAt: at(-5) }), NOW)?.kind, "poll");
     const late = actionFor(ev({ startAt: at(-80) }), NOW);
     assert.equal(late?.kind, "complete");
@@ -46,10 +46,14 @@ describe("Verwalten: Gruppen", () => {
       ev({ id: "fresh", startAt: at(-2) }),
       ev({ id: "done", status: "finished", startAt: at(-100), completed: true }),
       ev({ id: "running", startAt: at(-24), endAt: at(24) }),
+      // "closed" = voll: steht weiter an, ist nicht beendet
+      ev({ id: "full", status: "closed", startAt: at(26) }),
+      // voll und vorbei: braucht trotzdem einen Abschluss
+      ev({ id: "fullPast", status: "closed", startAt: at(-1) }),
     ], NOW);
-    assert.deepEqual(g.action.map((a) => a.ev.id), ["overdue", "fresh"]);
+    assert.deepEqual(g.action.map((a) => a.ev.id), ["overdue", "fresh", "fullPast"]);
     assert.deepEqual(g.upcoming.today.map((e) => e.id), ["running", "today"]);
-    assert.deepEqual(g.upcoming.week.map((e) => e.id), ["week"]);
+    assert.deepEqual(g.upcoming.week.map((e) => e.id), ["full", "week"]);
     assert.deepEqual(g.upcoming.later.map((e) => e.id), ["later"]);
     assert.deepEqual(g.past.map((e) => e.id), ["done"]);
   });

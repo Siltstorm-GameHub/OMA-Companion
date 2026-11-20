@@ -20,6 +20,9 @@ export type GoalState = {
   streak?: number;
   /** Wer den Serien-Bonus für diesen Zyklus bekommen hat */
   streakBonusUserIds?: string[];
+  /** Tatsächlich ausgezahlte Münzen je Person (Belohnung + Serien-Bonus) — für "Neu auswerten" und das
+   *  Löschen eines Events, damit genau diese Beträge zurückgebucht werden. Fehlt bei Altdaten. */
+  paid?: Record<string, number>;
 };
 
 export function parseGoalState(json: string | null | undefined): GoalState {
@@ -36,6 +39,9 @@ export function parseGoalState(json: string | null | undefined): GoalState {
       }),
       ...(typeof raw.streak === "number" && { streak: raw.streak }),
       ...(Array.isArray(raw.streakBonusUserIds) && { streakBonusUserIds: raw.streakBonusUserIds.filter(x => typeof x === "string") }),
+      ...(raw.paid && typeof raw.paid === "object" && !Array.isArray(raw.paid) && {
+        paid: Object.fromEntries(Object.entries(raw.paid).filter(([, v]) => typeof v === "number" && Number.isFinite(v))),
+      }),
       ...(raw.milestoneAt && typeof raw.milestoneAt === "object" && !Array.isArray(raw.milestoneAt) && {
         milestoneAt: Object.fromEntries(Object.entries(raw.milestoneAt).filter(([, v]) => typeof v === "string")),
       }),

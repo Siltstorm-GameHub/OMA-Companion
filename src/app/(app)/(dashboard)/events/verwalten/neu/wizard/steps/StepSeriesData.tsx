@@ -1,5 +1,6 @@
 "use client";
 import ImageUploadField from "@/components/ImageUploadField";
+import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
@@ -101,9 +102,8 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
 
       {!w.isCommunity && (
         <div>
-          <label className={labelCls}>Discord-Textkanal ID (optional)</label>
-          <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
-            placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+          <label className={labelCls}>Discord-Textkanal (optional)</label>
+          <DiscordChannelSelect value={seriesDiscordId} onChange={setSeriesDiscordId} emptyLabel="Standard (News-Kanal)" />
         </div>
       )}
 

@@ -403,9 +403,11 @@ export default async function DashboardPage() {
         ...(resultCompletion.pollWinnerIds?.includes(userId) ? [resultCompletion.pollLabel || "Umfrage"] : []),
       ]
     : [];
-  // Community-Events: Disqualifizierte bekommen weder Dank noch Kachel
-  const myCommunityDone = myCommunityEvents.filter(ev =>
-    !(parseJsonObject<{ excludedUserIds?: string[] | null }>(ev.completionData).excludedUserIds ?? []).includes(userId ?? ""));
+  // Community-Events: Disqualifizierte und als "nicht da" Markierte bekommen weder Dank noch Kachel
+  const myCommunityDone = myCommunityEvents.filter(ev => {
+    const cd = parseJsonObject<{ excludedUserIds?: string[] | null; absentPlayerIds?: string[] | null }>(ev.completionData);
+    return ![...(cd.excludedUserIds ?? []), ...(cd.absentPlayerIds ?? [])].includes(userId ?? "");
+  });
   const communityThanks = myCommunityDone.map(ev => {
     const r = participationRewardOf(ev.completionData, userId);
     return { id: ev.id, title: ev.title, href: `/tournament/${ev.id}`, coins: r?.coins ?? 0, rankPoints: r?.rankPoints ?? 0 };

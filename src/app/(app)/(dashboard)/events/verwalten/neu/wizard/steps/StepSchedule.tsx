@@ -3,6 +3,7 @@ import { CalendarDays } from "@/components/icons";
 import type { RecurrenceType } from "@/lib/recurrence";
 import { formatBerlinDateTime } from "@/lib/time";
 import { FORMATS, RECURRENCE_OPTS, inputCls, inputStyle, labelCls } from "../shared";
+import { supportsCommunityGoal } from "@/lib/community-goal";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Step 2 (Series): Termine & Wiederholung ───────────────────────────────────
@@ -22,6 +23,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                 }`}>
                 <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
                 <span className="text-xs text-gray-500">{f.desc}</span>
+                {supportsCommunityGoal(f.value) && <span className="text-[10px] font-medium text-teal-300">🎯 Ziel möglich</span>}
               </button>
             ))}
           </div>

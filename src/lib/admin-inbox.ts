@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { countPendingApplications } from "./gameservers";
-import { APPROVAL_PENDING } from "./community-events";
+import { APPROVAL_PENDING, pendingApprovalEventWhere } from "./community-events";
 import type { AdminCounts } from "./admin-nav";
 import { coinsAwarded, isLate, pulse, type PulseValue } from "./admin-overview";
 
@@ -9,14 +9,11 @@ import { coinsAwarded, isLate, pulse, type PulseValue } from "./admin-overview";
  * Übersicht (/admin). Eine Quelle, damit Zähler und Liste nie auseinanderlaufen.
  */
 
-const NOT_ACTIVE = ["finished", "closed", "archived"];
+// "closed" heißt "voll" — das Event steht noch an bzw. braucht nach dem Ende einen Abschluss
+const NOT_ACTIVE = ["finished", "archived"];
 
 /** Event-Freigaben: Einzel-Events (nicht in wartender Reihe) und wartende Reihen */
-const pendingEventWhere = {
-  approvalStatus: APPROVAL_PENDING,
-  status: { notIn: ["finished", "closed"] },
-  OR: [{ seriesId: null }, { series: { approvalStatus: null } }, { series: { approvalStatus: { not: APPROVAL_PENDING } } }],
-};
+const pendingEventWhere = pendingApprovalEventWhere;
 const pendingSeriesWhere = { approvalStatus: APPROVAL_PENDING, status: "active" };
 
 const DISPUTED = { disputed: true, disputeResolution: "PENDING" } as const;

@@ -24,6 +24,10 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       ) : (
       <div>
         <h2 className="text-base font-semibold text-white mb-1">Format</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Ein gemeinsames Community-Ziel (z. B. „1.000 Tore zusammen“) gibt es bei Formaten mit „🎯 Ziel möglich“. Ganz ohne
+          Sieger geht es auch: wähle in Schritt 1 „Ohne Platzierung“.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATS.map(f => (
             <button key={f.value} type="button" onClick={() => setFormat(f.value)}
@@ -32,6 +36,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
               }`}>
               <span className={`text-sm font-semibold ${format === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
               <span className="text-xs text-gray-500">{f.desc}</span>
+              {supportsCommunityGoal(f.value) && <span className="text-[10px] font-medium text-teal-300">🎯 Ziel möglich</span>}
             </button>
           ))}
         </div>
@@ -51,7 +56,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
             <div className="mt-4 space-y-2">
               <p className="text-sm font-medium text-amber-300">Punkte pro Statistik</p>
               <p className="text-[11px] text-gray-500">
-                Wie viele Punkte gibt jede Einheit einer Statistik? Lässt sich später im Reiter „Turnier“ des Events ändern.
+                Wie viele Punkte gibt jede Einheit einer Statistik? Lässt sich später im Reiter „Spielplan“ des Events ändern.
               </p>
               <StatPointsTable
                 fields={statFields}
@@ -62,7 +67,8 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           )}
           {supportsCommunityGoal(format) && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
-              <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} inSeries={!!selectedSeries} />
+              <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} inSeries={!!selectedSeries}
+                rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} hasEnd={!!w.endAt} />
             </div>
           )}
         </div>
@@ -71,13 +77,14 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       {/* Liga, K.O. & Co.: Community-Ziel auf die Tore laut Spielergebnis (lib/community-goal.ts) */}
       {!hasStat && !seriesFixedFormat && isResultGoalFormat(format) && (
         <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
-          <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={[RESULT_SCORE_FIELD]} inSeries={!!selectedSeries} />
+          <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={[RESULT_SCORE_FIELD]} inSeries={!!selectedSeries}
+            rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} hasEnd={!!w.endAt} />
         </div>
       )}
 
       {(seriesFixedFormat ?? format) === "group_knockout" && (
         <p className="text-xs text-gray-500">
-          Gruppenanzahl und Weiterkommende pro Gruppe legst du nach dem Erstellen im Reiter „Turnier“ des
+          Gruppenanzahl und Weiterkommende pro Gruppe legst du nach dem Erstellen im Reiter „Spielplan“ des
           Events fest — dort werden die angemeldeten Spieler auch ausgelost.
         </p>
       )}

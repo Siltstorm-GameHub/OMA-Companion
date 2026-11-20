@@ -35,7 +35,7 @@ export type EventCardData = {
   /** "Max, Lena" — Freunde unter den Teilnehmenden (max. 2) */
   friendNames: string[];
   communityBy: string | null;
-  /** Event-Typ: Turnier (mit Platzierung) oder Community-Event (nur Teilnahme), lib/event-placement.ts */
+  /** Event-Typ: Mit Platzierung ("tournament") oder Ohne Platzierung ("community", nur Teilnahme), lib/event-placement.ts */
   kind?: EventKind;
   /** Event-Absprachen: Nachrichten gesamt / ungelesen (nachträglich gesetzt, lib/event-comments.ts) */
   comments?: { total: number; unread: number } | null;
@@ -175,7 +175,7 @@ export default function EventCard({
             <span
               title={ev.kind === "community" ? "Keine Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
               className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${ev.kind === "community" ? "bg-violet-500/15 text-violet-300" : "bg-amber-500/15 text-amber-300"}`}>
-              <span aria-hidden>{EVENT_KIND_LABEL[ev.kind].emoji}</span>{ev.kind === "community" ? "Community" : "Turnier"}
+              <span aria-hidden>{EVENT_KIND_LABEL[ev.kind].emoji}</span>{EVENT_KIND_LABEL[ev.kind].label}
             </span>
           )}
           {ev.metaLine && <span className={`${row ? "inline" : "hidden sm:inline"} text-[11px] text-gray-500 truncate`}>{ev.metaLine}</span>}

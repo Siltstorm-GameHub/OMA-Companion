@@ -23,12 +23,15 @@ export type ManageEvent = {
   series: { id: string; name: string; icon: string | null; index: number; total: number } | null;
   /** Ersteller bei Community-Events (für Mods), sonst null */
   createdBy: string | null;
+  /** Community-Ziel (eigen oder von der Reihe): Fortschritt in %, erreicht, abgerechnet — fehlt = kein Ziel */
+  goal?: { percent: number; reached: boolean; settled: boolean } | null;
 };
 
 export type ManageAction = { kind: "tournament" | "poll" | "complete"; label: string; button: string; href: string; since: Date | null; late: boolean };
 
 // Client-sicher (keine Server-Importe): wird auch von der Suche im Browser genutzt.
-const CLOSED = ["finished", "closed", "archived"];
+// Achtung: "closed" heißt "voll / Anmeldung geschlossen" — das Event steht noch an und ist NICHT beendet.
+const CLOSED = ["finished", "archived"];
 /** Ab 2 Tagen gilt ein vorbeigegangenes, nicht abgeschlossenes Event als überfällig */
 const LATE_MS = 2 * 24 * 60 * 60 * 1000;
 const isLate = (since: Date, now: Date) => now.getTime() - since.getTime() >= LATE_MS;
@@ -39,19 +42,21 @@ export function actionFor(e: ManageEvent, now: Date = new Date()): ManageAction 
   if (e.status === "finished" || e.status === "archived") return null;
   if (e.tournamentStatus === "active" || e.tournamentStatus === "pending") {
     return {
-      kind: "tournament", button: "Turnierbaum", href: `/events/verwalten/${e.id}/bracket`, since: null, late: false,
-      label: e.tournamentStatus === "active" ? "Turnier läuft, Ergebnisse eintragen" : "Turnier bereit zum Start",
+      kind: "tournament", button: "Spielplan", href: `/events/verwalten/${e.id}/bracket`, since: null, late: false,
+      label: e.tournamentStatus === "active" ? "Läuft, Ergebnisse eintragen" : "Spielplan bereit zum Start",
     };
   }
   if (e.status === "umfrage") {
     return { kind: "poll", button: "Abschließen", href: `/events/verwalten/${e.id}/complete`, since: null, late: false, label: "Umfragephase, danach abschließen" };
   }
-  if (!e.tournamentStatus && e.status !== "closed" && isEnded(e, now)) {
+  if (!e.tournamentStatus && isEnded(e, now)) {
     const since = e.endAt ?? e.startAt;
     const late = isLate(since, now);
+    // Community-Ziel: noch nicht abgerechnet → passiert mit dem Abschluss
+    const goalNote = e.goal && !e.goal.settled ? ` · Ziel ${Math.floor(e.goal.percent)} %, wird mit dem Abschluss abgerechnet` : "";
     return {
       kind: "complete", button: "Abschließen", href: `/events/verwalten/${e.id}/complete`, since, late,
-      label: late ? "Vorbei, Belohnungen stehen aus" : "Vorbei, noch nicht abgeschlossen",
+      label: (late ? "Vorbei, Belohnungen stehen aus" : "Vorbei, noch nicht abgeschlossen") + goalNote,
     };
   }
   return null;

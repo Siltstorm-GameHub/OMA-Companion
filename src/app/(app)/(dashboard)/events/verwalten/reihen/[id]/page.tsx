@@ -1,9 +1,10 @@
 import { requireSeriesManager, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
+import { getCommunityLimits } from "@/lib/community-event-limits";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
 import ApprovalBanner from "../../ApprovalBanner";
-import { APPROVAL_PENDING } from "@/lib/community-events";
+import { APPROVAL_PENDING, APPROVAL_REJECTED } from "@/lib/community-events";
 import { parseSeriesCompletion, parseStatConfig } from "@/lib/series-seasons";
 import GameVoteSettings from "./GameVoteSettings";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
@@ -28,10 +29,14 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         },
       },
     }),
-    prisma.user.findMany({
-      select: { id: true, name: true, username: true, image: true },
-      orderBy: { name: "asc" },
-    }),
+    // Die Mitgliederliste braucht nur der Reiter "Legacy" (Altstand), den nur Mods sehen
+    isModerator
+      ? prisma.user.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true, username: true, image: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
     prisma.squad.findMany({
       where: { hidden: false, ...(captainedSquadIds && { id: { in: captainedSquadIds } }) },
       orderBy: { name: "asc" },
@@ -74,15 +79,21 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
     return [...cfg.stats.map(st => st.field), ...(cfg.eventStatFields ?? []), ...snapshotFields];
   }))].filter(fld => fld && !fld.startsWith("_streak_")).sort((a, b) => a.localeCompare(b, "de"));
 
+  // Mitglieder: Obergrenzen der Ziel-Belohnungen (je Termin einer Reihe) — Anzeige an den Feldern
+  const memberLimits = isModerator ? null : (await getCommunityLimits()).seriesEvent;
+  const goalLimits = memberLimits ? { coins: memberLimits.goalRewardCoins, seriesPoints: memberLimits.goalSeriesPoints } : null;
+
   return (
     <>
-      {series.approvalStatus === APPROVAL_PENDING && (
-        <ApprovalBanner kind="series" id={series.id} canApprove={isModerator} />
+      {(series.approvalStatus === APPROVAL_PENDING || series.approvalStatus === APPROVAL_REJECTED) && (
+        <ApprovalBanner kind="series" id={series.id} canApprove={isModerator}
+          rejectedNote={series.approvalStatus === APPROVAL_REJECTED ? series.approvalNote ?? "" : null} />
       )}
       <SeriesDetailClient
         series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
         isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
         seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
+        goalLimits={goalLimits}
       />
       {isModerator && series.status !== "archived" && (
         <GameVoteSettings
